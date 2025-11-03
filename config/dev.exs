@@ -1,5 +1,37 @@
 import Config
 
+# Load .env file for development
+if File.exists?(".env") do
+  File.read!(".env")
+  |> String.split("\n")
+  |> Enum.each(fn line ->
+    line = String.trim(line)
+    unless String.starts_with?(line, "#") or line == "" do
+      case String.split(line, "=", parts: 2) do
+        [key, value] ->
+          # Remove quotes if present
+          value = String.trim(value)
+          value = if String.starts_with?(value, "'") and String.ends_with?(value, "'") do
+            String.slice(value, 1..-2//1)
+          else
+            value
+          end
+          System.put_env(key, value)
+        _ -> :ok
+      end
+    end
+  end)
+end
+
+# Configure your database
+database_url = System.get_env("DATABASE_URL") || "postgres://postgres:postgres@localhost/jarga_dev"
+
+config :jarga, Jarga.Repo,
+  url: database_url,
+  show_sensitive_data_on_connection_error: true,
+  pool_size: 10,
+  ssl: [verify: :verify_none]
+
 # For development, we disable any cache and enable
 # debugging and code reloading.
 #

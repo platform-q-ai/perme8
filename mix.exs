@@ -41,6 +41,9 @@ defmodule Jarga.MixProject do
   defp deps do
     [
       {:phoenix, "~> 1.8.1"},
+      {:phoenix_ecto, "~> 4.6"},
+      {:ecto_sql, "~> 3.12"},
+      {:postgrex, ">= 0.0.0"},
       {:phoenix_html, "~> 4.1"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
       {:phoenix_live_view, "~> 1.1.0"},
@@ -56,13 +59,16 @@ defmodule Jarga.MixProject do
        compile: false,
        depth: 1},
       {:swoosh, "~> 1.16"},
+      {:finch, "~> 0.13"},
       {:req, "~> 0.5"},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
       {:gettext, "~> 0.26"},
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.2.0"},
-      {:bandit, "~> 1.5"}
+      {:bandit, "~> 1.5"},
+      {:bcrypt_elixir, "~> 3.0"},
+      {:dotenvy, "~> 0.8.0", only: [:dev, :test]}
     ]
   end
 

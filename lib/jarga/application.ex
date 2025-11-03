@@ -9,8 +9,11 @@ defmodule Jarga.Application do
   def start(_type, _args) do
     children = [
       JargaWeb.Telemetry,
+      Jarga.Repo,
       {DNSCluster, query: Application.get_env(:jarga, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Jarga.PubSub},
+      # Start the Finch HTTP client for sending emails
+      {Finch, name: Jarga.Finch},
       # Start a worker by calling: Jarga.Worker.start_link(arg)
       # {Jarga.Worker, arg},
       # Start to serve requests, typically the last entry

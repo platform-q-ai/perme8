@@ -7,8 +7,22 @@
 # General application configuration
 import Config
 
+config :jarga, :scopes,
+  user: [
+    default: true,
+    module: Jarga.Accounts.Scope,
+    assign_key: :current_scope,
+    access_path: [:user, :user_id],
+    schema_key: :user_id,
+    schema_type: :string,
+    schema_table: :users,
+    test_data_fixture: Jarga.AccountsFixtures,
+    test_setup_helper: :register_and_log_in_user
+  ]
+
 config :jarga,
-  generators: [timestamp_type: :utc_datetime]
+  ecto_repos: [Jarga.Repo],
+  generators: [timestamp_type: :utc_datetime, binary_id: true]
 
 # Configures the endpoint
 config :jarga, JargaWeb.Endpoint,
