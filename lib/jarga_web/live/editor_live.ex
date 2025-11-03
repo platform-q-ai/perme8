@@ -1,12 +1,12 @@
-defmodule PhoenixCodemirrorWeb.EditorLive do
-  use PhoenixCodemirrorWeb, :live_view
+defmodule JargaWeb.EditorLive do
+  use JargaWeb, :live_view
 
   @impl true
   def mount(%{"doc_id" => doc_id}, _session, socket) do
     user_id = generate_user_id()
 
     if connected?(socket) do
-      Phoenix.PubSub.subscribe(PhoenixCodemirror.PubSub, "document:#{doc_id}")
+      Phoenix.PubSub.subscribe(Jarga.PubSub, "document:#{doc_id}")
     end
 
     {:ok,
@@ -32,7 +32,7 @@ defmodule PhoenixCodemirrorWeb.EditorLive do
 
     # Broadcast to other clients
     Phoenix.PubSub.broadcast_from(
-      PhoenixCodemirror.PubSub,
+      Jarga.PubSub,
       self(),
       "document:#{doc_id}",
       {:yjs_update, %{update: update, user_id: user_id}}
@@ -47,7 +47,7 @@ defmodule PhoenixCodemirrorWeb.EditorLive do
 
     # Broadcast awareness updates to other clients
     Phoenix.PubSub.broadcast_from(
-      PhoenixCodemirror.PubSub,
+      Jarga.PubSub,
       self(),
       "document:#{doc_id}",
       {:awareness_update, %{update: update, user_id: user_id}}

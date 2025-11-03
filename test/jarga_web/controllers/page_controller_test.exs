@@ -1,5 +1,5 @@
-defmodule PhoenixCodemirrorWeb.PageControllerTest do
-  use PhoenixCodemirrorWeb.ConnCase
+defmodule JargaWeb.PageControllerTest do
+  use JargaWeb.ConnCase
 
   test "GET /", %{conn: conn} do
     conn = get(conn, ~p"/")

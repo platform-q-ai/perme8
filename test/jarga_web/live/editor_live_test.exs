@@ -1,5 +1,5 @@
-defmodule PhoenixCodemirrorWeb.EditorLiveTest do
-  use PhoenixCodemirrorWeb.ConnCase
+defmodule JargaWeb.EditorLiveTest do
+  use JargaWeb.ConnCase
   import Phoenix.LiveViewTest
 
   describe "EditorLive" do
@@ -54,10 +54,10 @@ defmodule PhoenixCodemirrorWeb.EditorLiveTest do
       {:ok, _view, _html} = live(conn, ~p"/editor/doc_pubsub_test")
 
       # Verify subscription by subscribing ourselves and broadcasting a message
-      Phoenix.PubSub.subscribe(PhoenixCodemirror.PubSub, "document:doc_pubsub_test")
+      Phoenix.PubSub.subscribe(Jarga.PubSub, "document:doc_pubsub_test")
 
       Phoenix.PubSub.broadcast(
-        PhoenixCodemirror.PubSub,
+        Jarga.PubSub,
         "document:doc_pubsub_test",
         {:test_message, "hello"}
       )
@@ -74,7 +74,7 @@ defmodule PhoenixCodemirrorWeb.EditorLiveTest do
       {:ok, _view2, _html} = live(conn, ~p"/editor/#{doc_id}")
 
       # Subscribe to PubSub to capture broadcasts
-      Phoenix.PubSub.subscribe(PhoenixCodemirror.PubSub, "document:#{doc_id}")
+      Phoenix.PubSub.subscribe(Jarga.PubSub, "document:#{doc_id}")
 
       # Push update from first client
       render_hook(view1, "yjs_update", %{
@@ -94,7 +94,7 @@ defmodule PhoenixCodemirrorWeb.EditorLiveTest do
       {:ok, _view2, _html} = live(conn, ~p"/editor/#{doc_id}")
 
       # Subscribe to PubSub to capture broadcasts
-      Phoenix.PubSub.subscribe(PhoenixCodemirror.PubSub, "document:#{doc_id}")
+      Phoenix.PubSub.subscribe(Jarga.PubSub, "document:#{doc_id}")
 
       # Push awareness update from first client
       render_hook(view1, "awareness_update", %{
@@ -112,7 +112,7 @@ defmodule PhoenixCodemirrorWeb.EditorLiveTest do
       {:ok, view, _html} = live(conn, ~p"/editor/#{doc_id}")
 
       # Subscribe to PubSub from test process
-      Phoenix.PubSub.subscribe(PhoenixCodemirror.PubSub, "document:#{doc_id}")
+      Phoenix.PubSub.subscribe(Jarga.PubSub, "document:#{doc_id}")
 
       # Push update
       render_hook(view, "yjs_update", %{
@@ -151,11 +151,11 @@ defmodule PhoenixCodemirrorWeb.EditorLiveTest do
       {:ok, _view, _html} = live(conn, ~p"/editor/#{doc_id}")
 
       # External services can subscribe to the same topic
-      Phoenix.PubSub.subscribe(PhoenixCodemirror.PubSub, "document:#{doc_id}")
+      Phoenix.PubSub.subscribe(Jarga.PubSub, "document:#{doc_id}")
 
       # EditorLive doesn't need to know about subscribers
       assert :ok == Phoenix.PubSub.broadcast(
-        PhoenixCodemirror.PubSub,
+        Jarga.PubSub,
         "document:#{doc_id}",
         {:custom_event, %{}}
       )

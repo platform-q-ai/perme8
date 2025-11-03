@@ -106,7 +106,7 @@ You can also share specific documents by using the URL format: `http://localhost
 
 ```
 lib/
-├── phoenix_codemirror_web/
+├── jarga_web/
 │   ├── live/
 │   │   └── editor_live.ex          # LiveView module for Yjs transport
 │   └── router.ex                    # Routes configuration

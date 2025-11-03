@@ -1,4 +1,4 @@
-defmodule PhoenixCodemirror.Application do
+defmodule Jarga.Application do
   # See https://hexdocs.pm/elixir/Application.html
   # for more information on OTP Applications
   @moduledoc false
@@ -8,18 +8,18 @@ defmodule PhoenixCodemirror.Application do
   @impl true
   def start(_type, _args) do
     children = [
-      PhoenixCodemirrorWeb.Telemetry,
-      {DNSCluster, query: Application.get_env(:phoenix_codemirror, :dns_cluster_query) || :ignore},
-      {Phoenix.PubSub, name: PhoenixCodemirror.PubSub},
-      # Start a worker by calling: PhoenixCodemirror.Worker.start_link(arg)
-      # {PhoenixCodemirror.Worker, arg},
+      JargaWeb.Telemetry,
+      {DNSCluster, query: Application.get_env(:jarga, :dns_cluster_query) || :ignore},
+      {Phoenix.PubSub, name: Jarga.PubSub},
+      # Start a worker by calling: Jarga.Worker.start_link(arg)
+      # {Jarga.Worker, arg},
       # Start to serve requests, typically the last entry
-      PhoenixCodemirrorWeb.Endpoint
+      JargaWeb.Endpoint
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
-    opts = [strategy: :one_for_one, name: PhoenixCodemirror.Supervisor]
+    opts = [strategy: :one_for_one, name: Jarga.Supervisor]
     Supervisor.start_link(children, opts)
   end
 
@@ -27,7 +27,7 @@ defmodule PhoenixCodemirror.Application do
   # whenever the application is updated.
   @impl true
   def config_change(changed, _new, removed) do
-    PhoenixCodemirrorWeb.Endpoint.config_change(changed, removed)
+    JargaWeb.Endpoint.config_change(changed, removed)
     :ok
   end
 end

@@ -7,18 +7,18 @@
 # General application configuration
 import Config
 
-config :phoenix_codemirror,
+config :jarga,
   generators: [timestamp_type: :utc_datetime]
 
 # Configures the endpoint
-config :phoenix_codemirror, PhoenixCodemirrorWeb.Endpoint,
+config :jarga, JargaWeb.Endpoint,
   url: [host: "localhost"],
   adapter: Bandit.PhoenixAdapter,
   render_errors: [
-    formats: [html: PhoenixCodemirrorWeb.ErrorHTML, json: PhoenixCodemirrorWeb.ErrorJSON],
+    formats: [html: JargaWeb.ErrorHTML, json: JargaWeb.ErrorJSON],
     layout: false
   ],
-  pubsub_server: PhoenixCodemirror.PubSub,
+  pubsub_server: Jarga.PubSub,
   live_view: [signing_salt: "5rdQlpgP"]
 
 # Configures the mailer
@@ -28,12 +28,12 @@ config :phoenix_codemirror, PhoenixCodemirrorWeb.Endpoint,
 #
 # For production it's recommended to configure a different adapter
 # at the `config/runtime.exs`.
-config :phoenix_codemirror, PhoenixCodemirror.Mailer, adapter: Swoosh.Adapters.Local
+config :jarga, Jarga.Mailer, adapter: Swoosh.Adapters.Local
 
 # Configure esbuild (the version is required)
 config :esbuild,
   version: "0.25.4",
-  phoenix_codemirror: [
+  jarga: [
     args:
       ~w(js/app.js --bundle --target=es2022 --outdir=../priv/static/assets/js --external:/fonts/* --external:/images/* --alias:@=.),
     cd: Path.expand("../assets", __DIR__),
@@ -43,7 +43,7 @@ config :esbuild,
 # Configure tailwind (the version is required)
 config :tailwind,
   version: "4.1.7",
-  phoenix_codemirror: [
+  jarga: [
     args: ~w(
       --input=assets/css/app.css
       --output=priv/static/assets/css/app.css

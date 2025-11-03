@@ -1,12 +1,12 @@
-defmodule PhoenixCodemirrorWeb do
+defmodule JargaWeb do
   @moduledoc """
   The entrypoint for defining your web interface, such
   as controllers, components, channels, and so on.
 
   This can be used in your application as:
 
-      use PhoenixCodemirrorWeb, :controller
-      use PhoenixCodemirrorWeb, :html
+      use JargaWeb, :controller
+      use JargaWeb, :html
 
   The definitions below will be executed for every controller,
   component, etc, so keep them short and clean, focused
@@ -40,7 +40,7 @@ defmodule PhoenixCodemirrorWeb do
     quote do
       use Phoenix.Controller, formats: [:html, :json]
 
-      use Gettext, backend: PhoenixCodemirrorWeb.Gettext
+      use Gettext, backend: JargaWeb.Gettext
 
       import Plug.Conn
 
@@ -80,16 +80,16 @@ defmodule PhoenixCodemirrorWeb do
   defp html_helpers do
     quote do
       # Translation
-      use Gettext, backend: PhoenixCodemirrorWeb.Gettext
+      use Gettext, backend: JargaWeb.Gettext
 
       # HTML escaping functionality
       import Phoenix.HTML
       # Core UI components
-      import PhoenixCodemirrorWeb.CoreComponents
+      import JargaWeb.CoreComponents
 
       # Common modules used in templates
       alias Phoenix.LiveView.JS
-      alias PhoenixCodemirrorWeb.Layouts
+      alias JargaWeb.Layouts
 
       # Routes generation with the ~p sigil
       unquote(verified_routes())
@@ -99,9 +99,9 @@ defmodule PhoenixCodemirrorWeb do
   def verified_routes do
     quote do
       use Phoenix.VerifiedRoutes,
-        endpoint: PhoenixCodemirrorWeb.Endpoint,
-        router: PhoenixCodemirrorWeb.Router,
-        statics: PhoenixCodemirrorWeb.static_paths()
+        endpoint: JargaWeb.Endpoint,
+        router: JargaWeb.Router,
+        statics: JargaWeb.static_paths()
     end
   end
 

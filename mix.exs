@@ -1,9 +1,9 @@
-defmodule PhoenixCodemirror.MixProject do
+defmodule Jarga.MixProject do
   use Mix.Project
 
   def project do
     [
-      app: :phoenix_codemirror,
+      app: :jarga,
       version: "0.1.0",
       elixir: "~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
@@ -20,7 +20,7 @@ defmodule PhoenixCodemirror.MixProject do
   # Type `mix help compile.app` for more information.
   def application do
     [
-      mod: {PhoenixCodemirror.Application, []},
+      mod: {Jarga.Application, []},
       extra_applications: [:logger, :runtime_tools]
     ]
   end
@@ -76,10 +76,10 @@ defmodule PhoenixCodemirror.MixProject do
     [
       setup: ["deps.get", "assets.setup", "assets.build"],
       "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
-      "assets.build": ["compile", "tailwind phoenix_codemirror", "esbuild phoenix_codemirror"],
+      "assets.build": ["compile", "tailwind jarga", "esbuild jarga"],
       "assets.deploy": [
-        "tailwind phoenix_codemirror --minify",
-        "esbuild phoenix_codemirror --minify",
+        "tailwind jarga --minify",
+        "esbuild jarga --minify",
         "phx.digest"
       ],
       precommit: ["compile --warning-as-errors", "deps.unlock --unused", "format", "test"]

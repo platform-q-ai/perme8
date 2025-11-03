@@ -1,4 +1,4 @@
-defmodule PhoenixCodemirrorWeb.CoreComponents do
+defmodule JargaWeb.CoreComponents do
   @moduledoc """
   Provides core UI components.
 
@@ -27,7 +27,7 @@ defmodule PhoenixCodemirrorWeb.CoreComponents do
 
   """
   use Phoenix.Component
-  use Gettext, backend: PhoenixCodemirrorWeb.Gettext
+  use Gettext, backend: JargaWeb.Gettext
 
   alias Phoenix.LiveView.JS
 
@@ -457,9 +457,9 @@ defmodule PhoenixCodemirrorWeb.CoreComponents do
     # with our gettext backend as first argument. Translations are
     # available in the errors.po file (as we use the "errors" domain).
     if count = opts[:count] do
-      Gettext.dngettext(PhoenixCodemirrorWeb.Gettext, "errors", msg, msg, count, opts)
+      Gettext.dngettext(JargaWeb.Gettext, "errors", msg, msg, count, opts)
     else
-      Gettext.dgettext(PhoenixCodemirrorWeb.Gettext, "errors", msg, opts)
+      Gettext.dgettext(JargaWeb.Gettext, "errors", msg, opts)
     end
   end
 

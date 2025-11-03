@@ -1,6 +1,6 @@
-defmodule PhoenixCodemirror do
+defmodule Jarga do
   @moduledoc """
-  PhoenixCodemirror keeps the contexts that define your domain
+  Jarga keeps the contexts that define your domain
   and business logic.
 
   Contexts are also responsible for managing your data, regardless

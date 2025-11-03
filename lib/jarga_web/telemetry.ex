@@ -1,4 +1,4 @@
-defmodule PhoenixCodemirrorWeb.Telemetry do
+defmodule JargaWeb.Telemetry do
   use Supervisor
   import Telemetry.Metrics
 
@@ -64,7 +64,7 @@ defmodule PhoenixCodemirrorWeb.Telemetry do
     [
       # A module, function and arguments to be invoked periodically.
       # This function must call :telemetry.execute/3 and a metric must be added above.
-      # {PhoenixCodemirrorWeb, :count_users, []}
+      # {JargaWeb, :count_users, []}
     ]
   end
 end
