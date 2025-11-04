@@ -694,4 +694,14 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
 
     {:noreply, assign(socket, projects: projects)}
   end
+
+  @impl true
+  def handle_info({:page_visibility_changed, _page_id, _is_public}, socket) do
+    # Reload pages when a page's visibility changes
+    user = socket.assigns.current_scope.user
+    workspace_id = socket.assigns.workspace.id
+    pages = Pages.list_pages_for_workspace(user, workspace_id)
+
+    {:noreply, assign(socket, pages: pages)}
+  end
 end

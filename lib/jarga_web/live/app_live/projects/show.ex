@@ -174,6 +174,11 @@ defmodule JargaWeb.AppLive.Projects.Show do
     project = Projects.get_project_by_slug!(user, workspace.id, project_slug)
     pages = Pages.list_pages_for_project(user, workspace.id, project.id)
 
+    # Subscribe to workspace-specific PubSub topic for real-time updates
+    if connected?(socket) do
+      Phoenix.PubSub.subscribe(Jarga.PubSub, "workspace:#{workspace.id}")
+    end
+
     {:ok,
      socket
      |> assign(:workspace, workspace)
@@ -239,5 +244,16 @@ defmodule JargaWeb.AppLive.Projects.Show do
       {:error, _reason} ->
         {:noreply, put_flash(socket, :error, "Failed to delete project")}
     end
+  end
+
+  @impl true
+  def handle_info({:page_visibility_changed, _page_id, _is_public}, socket) do
+    # Reload pages when a page's visibility changes
+    user = socket.assigns.current_scope.user
+    workspace_id = socket.assigns.workspace.id
+    project_id = socket.assigns.project.id
+    pages = Pages.list_pages_for_project(user, workspace_id, project_id)
+
+    {:noreply, assign(socket, pages: pages)}
   end
 end

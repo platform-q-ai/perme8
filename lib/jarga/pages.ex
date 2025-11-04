@@ -148,9 +148,21 @@ defmodule Jarga.Pages do
   def update_page(%User{} = user, page_id, attrs) do
     case Authorization.verify_page_access(user, page_id) do
       {:ok, page} ->
-        page
+        result = page
         |> Page.changeset(attrs)
         |> Repo.update()
+
+        # Broadcast visibility changes to workspace members
+        case result do
+          {:ok, updated_page} ->
+            if Map.has_key?(attrs, :is_public) and attrs.is_public != page.is_public do
+              broadcast_page_visibility_change(updated_page)
+            end
+            {:ok, updated_page}
+
+          error ->
+            error
+        end
 
       {:error, reason} ->
         {:error, reason}
@@ -223,5 +235,15 @@ defmodule Jarga.Pages do
     |> Queries.viewable_by_user(user)
     |> Queries.ordered()
     |> Repo.all()
+  end
+
+  # Private functions
+
+  defp broadcast_page_visibility_change(page) do
+    Phoenix.PubSub.broadcast(
+      Jarga.PubSub,
+      "workspace:#{page.workspace_id}",
+      {:page_visibility_changed, page.id, page.is_public}
+    )
   end
 end
