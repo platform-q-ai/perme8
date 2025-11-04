@@ -122,4 +122,22 @@ defmodule JargaWeb.AppLive.Workspaces.Index do
 
     {:noreply, assign(socket, workspaces: workspaces)}
   end
+
+  @impl true
+  def handle_info({:page_visibility_changed, _page_id, _is_public}, socket) do
+    # Page visibility changed - not relevant to workspace index view
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info({:page_pinned_changed, _page_id, _is_pinned}, socket) do
+    # Page pinned state changed - not relevant to workspace index view
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info({:page_title_changed, _page_id, _title}, socket) do
+    # Page title changed - not relevant to workspace index view
+    {:noreply, socket}
+  end
 end

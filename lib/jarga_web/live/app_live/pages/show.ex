@@ -207,10 +207,25 @@ defmodule JargaWeb.AppLive.Pages.Show do
   end
 
   @impl true
-  def handle_info({:page_visibility_changed, _page_id, _is_public}, socket) do
-    # Page visibility changed - no action needed in page show view
-    # (this message is broadcast to workspace topic which we're subscribed to)
-    {:noreply, socket}
+  def handle_info({:page_visibility_changed, page_id, is_public}, socket) do
+    # Update page visibility in real-time when changed by another user
+    if socket.assigns.page.id == page_id do
+      page = %{socket.assigns.page | is_public: is_public}
+      {:noreply, assign(socket, :page, page)}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  @impl true
+  def handle_info({:page_pinned_changed, page_id, is_pinned}, socket) do
+    # Update page pinned state in real-time when changed by another user
+    if socket.assigns.page.id == page_id do
+      page = %{socket.assigns.page | is_pinned: is_pinned}
+      {:noreply, assign(socket, :page, page)}
+    else
+      {:noreply, socket}
+    end
   end
 
   @impl true

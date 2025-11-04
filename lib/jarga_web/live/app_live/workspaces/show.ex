@@ -733,6 +733,20 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
   end
 
   @impl true
+  def handle_info({:page_pinned_changed, page_id, is_pinned}, socket) do
+    # Update page pinned state in the list
+    pages = Enum.map(socket.assigns.pages, fn page ->
+      if page.id == page_id do
+        %{page | is_pinned: is_pinned}
+      else
+        page
+      end
+    end)
+
+    {:noreply, assign(socket, pages: pages)}
+  end
+
+  @impl true
   def handle_info({:page_title_changed, page_id, title}, socket) do
     # Update page title in the list
     pages = Enum.map(socket.assigns.pages, fn page ->

@@ -204,6 +204,9 @@ defmodule Jarga.Pages do
           if Map.has_key?(attrs, :is_public) and attrs.is_public != page.is_public do
             broadcast_page_visibility_change(updated_page)
           end
+          if Map.has_key?(attrs, :is_pinned) and attrs.is_pinned != page.is_pinned do
+            broadcast_page_pinned_change(updated_page)
+          end
           if Map.has_key?(attrs, :title) and attrs.title != page.title do
             broadcast_page_title_change(updated_page)
           end
@@ -371,6 +374,28 @@ defmodule Jarga.Pages do
       Jarga.PubSub,
       "workspace:#{page.workspace_id}",
       {:page_visibility_changed, page.id, page.is_public}
+    )
+
+    # Also broadcast to the page itself for page show view
+    Phoenix.PubSub.broadcast(
+      Jarga.PubSub,
+      "page:#{page.id}",
+      {:page_visibility_changed, page.id, page.is_public}
+    )
+  end
+
+  defp broadcast_page_pinned_change(page) do
+    Phoenix.PubSub.broadcast(
+      Jarga.PubSub,
+      "workspace:#{page.workspace_id}",
+      {:page_pinned_changed, page.id, page.is_pinned}
+    )
+
+    # Also broadcast to the page itself for page show view
+    Phoenix.PubSub.broadcast(
+      Jarga.PubSub,
+      "page:#{page.id}",
+      {:page_pinned_changed, page.id, page.is_pinned}
     )
   end
 
