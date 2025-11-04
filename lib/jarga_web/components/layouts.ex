@@ -94,16 +94,16 @@ defmodule JargaWeb.Layouts do
             <.theme_toggle />
           </div>
         </div>
-
-        <!-- Page content -->
+        
+    <!-- Page content -->
         <main class="flex-1 p-6 lg:p-8">
           {render_slot(@inner_block)}
         </main>
 
         <.flash_group flash={@flash} />
       </div>
-
-      <!-- Sidebar -->
+      
+    <!-- Sidebar -->
       <div class="drawer-side">
         <label for="admin-drawer" aria-label="close sidebar" class="drawer-overlay"></label>
         <aside class="bg-base-200 min-h-full w-80 p-4 flex flex-col">
@@ -114,8 +114,8 @@ defmodule JargaWeb.Layouts do
               <span class="text-xl font-bold">Jarga</span>
             </.link>
           </div>
-
-          <!-- User info -->
+          
+    <!-- User info -->
           <div class="px-4 py-4 border-b border-base-300">
             <div class="flex items-center gap-3">
               <div class="avatar placeholder">
@@ -133,8 +133,8 @@ defmodule JargaWeb.Layouts do
               </div>
             </div>
           </div>
-
-          <!-- Navigation -->
+          
+    <!-- Navigation -->
           <nav class="flex-1 py-4">
             <ul class="menu gap-1">
               <li>
@@ -163,8 +163,8 @@ defmodule JargaWeb.Layouts do
               </li>
             </ul>
           </nav>
-
-          <!-- Theme switcher at bottom -->
+          
+    <!-- Theme switcher at bottom -->
           <div class="border-t border-base-300 pt-4">
             <div class="px-4">
               <p class="text-xs text-base-content/70 mb-2">Theme</p>
@@ -182,7 +182,10 @@ defmodule JargaWeb.Layouts do
 
   See <head> in root.html.heex which applies the theme before page load.
   """
-  attr :size, :string, default: "md", values: ["xs", "sm", "md"], doc: "Size of the toggle component"
+  attr :size, :string,
+    default: "md",
+    values: ["xs", "sm", "md"],
+    doc: "Size of the toggle component"
 
   def theme_toggle(assigns) do
     {padding, icon_size} =
@@ -206,7 +209,10 @@ defmodule JargaWeb.Layouts do
         phx-click={JS.dispatch("phx:set-theme")}
         data-phx-theme="system"
       >
-        <.icon name="hero-computer-desktop-micro" class={"#{@icon_size} opacity-75 hover:opacity-100"} />
+        <.icon
+          name="hero-computer-desktop-micro"
+          class={"#{@icon_size} opacity-75 hover:opacity-100"}
+        />
       </button>
 
       <button

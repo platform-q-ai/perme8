@@ -1,5 +1,5 @@
 <div class="min-h-screen flex flex-col">
-  <header class="navbar bg-base-200 px-4 sm:px-6 lg:px-8">
+  <header class="navbar bg-base-100 px-4 sm:px-6 lg:px-8">
     <div class="flex-1">
       <a href="/" class="flex items-center">
         <img
@@ -13,7 +13,7 @@
       <ul class="menu menu-horizontal flex items-center gap-4">
         <%= if @current_scope && @current_scope.user do %>
           <li>
-            <span class="text-sm"><%= @current_scope.user.email %></span>
+            <span class="text-sm">{@current_scope.user.email}</span>
           </li>
           <li>
             <.link navigate={~p"/users/settings"} class="btn btn-ghost btn-sm">
@@ -45,7 +45,7 @@
   </header>
 
   <main class="flex-1">
-    <%= if Map.has_key?(assigns, :inner_content), do: @inner_content, else: render_slot(@inner_block) %>
+    {if Map.has_key?(assigns, :inner_content), do: @inner_content, else: render_slot(@inner_block)}
   </main>
 
   <.flash_group flash={@flash} />

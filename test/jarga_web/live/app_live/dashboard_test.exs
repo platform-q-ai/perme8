@@ -68,7 +68,8 @@ defmodule JargaWeb.AppLive.DashboardTest do
                lv |> element("button", "New Document") |> render_click()
 
       # Should redirect to /app/editor/{uuid}
-      assert redirect_path =~ ~r|^/app/editor/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$|
+      assert redirect_path =~
+               ~r|^/app/editor/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$|
 
       # Follow redirect and verify editor loads
       {:ok, editor_lv, html} = live(conn, redirect_path)

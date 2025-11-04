@@ -1,12 +1,37 @@
 <!-- Hero Section -->
-<div class="hero min-h-screen bg-base-100">
-  <div class="hero-content text-center max-w-5xl px-4 self-start pt-32 md:pt-40">
+<div class="hero min-h-screen bg-base-100 relative overflow-hidden">
+  <!-- Chat bubble - behind heading, top right -->
+  <img
+    src={~p"/images/chat-bubble.png"}
+    alt=""
+    class="absolute top-16 md:top-20 right-[20%] md:right-[24%] w-14 md:w-20 lg:w-24 opacity-80"
+    style="z-index: 0;"
+  />
+  
+<!-- Paper plane - bottom left -->
+  <img
+    src={~p"/images/paper-plane.png"}
+    alt=""
+    class="absolute bottom-20 left-[5%] w-32 md:w-40 lg:w-48 opacity-90"
+  />
+  
+<!-- Pencil task - bottom right -->
+  <img
+    src={~p"/images/pencil-task.png"}
+    alt=""
+    class="absolute bottom-32 md:bottom-36 lg:bottom-38 right-[11%] md:right-[12%] w-24 md:w-30 lg:w-36 opacity-90"
+  />
+
+  <div
+    class="hero-content text-center max-w-5xl px-4 self-start pt-32 md:pt-40 relative"
+    style="z-index: 1;"
+  >
     <div>
       <h1 class="text-5xl md:text-7xl font-bold mb-6 leading-tight">
-        Make Teamwork Easy!
+        Teamwork that<br /><em>just works!</em>
       </h1>
       <p class="text-lg md:text-xl mb-8 text-base-content/70">
-        All your information in one place, for all to see, from anywhere.
+        Jarga helps your teams keep vital information in one place,<br />so everybody knows what to do!.
       </p>
       <div class="card-actions justify-center">
         <a href={~p"/users/register"} class="btn btn-primary btn-lg">
@@ -31,43 +56,47 @@
       <!-- Pain Point 1 -->
       <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
-          <div class="text-4xl mb-4">🔄</div>
-          <h3 class="card-title text-2xl mb-2">Context switching kills productivity</h3>
+          <h3 class="card-title text-2xl mb-2">
+            Knowledge required to complete a task is often spread across the organisation
+          </h3>
           <p class="text-base-content/70">
-            Too many tools: Slack, Notion, Jira, Google Docs, Trello... Losing track of what matters.
+            Too many tools: Slack, Notion, Jira, Google Docs, Trello... There is no single source of truth.
           </p>
         </div>
       </div>
-
-      <!-- Pain Point 2 -->
+      
+<!-- Pain Point 2 -->
       <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
-          <div class="text-4xl mb-4">🧩</div>
-          <h3 class="card-title text-2xl mb-2">Complexity kills creativity</h3>
+          <h3 class="card-title text-2xl mb-2">
+            Rework and meetings plague the business because information is hard to find
+          </h3>
           <p class="text-base-content/70">
-            Overwhelming interfaces. Endless configuration and setup. More time managing tools than doing work.
+            Nobody likes sitting in meetings all day or pestering colleagues for answers but its often needed to gather critical info to complete a task well.
           </p>
         </div>
       </div>
-
-      <!-- Pain Point 3 -->
+      
+<!-- Pain Point 3 -->
       <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
-          <div class="text-4xl mb-4">🔍</div>
-          <h3 class="card-title text-2xl mb-2">Information is hard to find</h3>
+          <h3 class="card-title text-2xl mb-2">
+            Complicated systems take weeks to learn and years to master
+          </h3>
           <p class="text-base-content/70">
-            Knowledge buried in threads and channels. Constant rework because context is lost. "Where did we document that again?"
+            Complexity kills productivity. Staff end up working for their tools rather than the tools serving them.
           </p>
         </div>
       </div>
-
-      <!-- Pain Point 4 -->
+      
+<!-- Pain Point 4 -->
       <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
-          <div class="text-4xl mb-4">😓</div>
-          <h3 class="card-title text-2xl mb-2">Collaboration shouldn't be hard</h3>
+          <h3 class="card-title text-2xl mb-2">
+            Working from home or across offices kills creativity and team spirit
+          </h3>
           <p class="text-base-content/70">
-            Version conflicts and overwrites. "Who has the latest version?" Working apart feels impossible.
+            Miscommunication, version conflicts, missed priorities...Working apart can sometimes feel impossible.
           </p>
         </div>
       </div>
@@ -89,77 +118,73 @@
       <!-- Feature 1 -->
       <div class="card bg-base-200">
         <div class="card-body">
-          <div class="text-4xl mb-4">👑</div>
           <h3 class="card-title text-xl mb-2">Context is King</h3>
           <ul class="space-y-2 text-base-content/80">
             <li>• Agree on ground truth—everyone sees the same information</li>
-            <li>• Real-time collaborative editing with full context preservation</li>
-            <li>• Never lose track of why decisions were made</li>
+            <li>• Real-time collaborative document editing</li>
+            <li>• Assign tasks to users with full documentation of the task attached</li>
           </ul>
         </div>
       </div>
-
-      <!-- Feature 2 -->
+      
+<!-- Feature 2 -->
       <div class="card bg-base-200">
         <div class="card-body">
-          <div class="text-4xl mb-4">⚡</div>
           <h3 class="card-title text-xl mb-2">One Tool, Zero Context Switching</h3>
           <ul class="space-y-2 text-base-content/80">
-            <li>• Projects, notes, sheets, and collaboration—all in one place</li>
+            <li>• Workspaces, Projects, Notes, Tasks, and collaboration—all in one place</li>
             <li>• Stay in flow without juggling multiple apps</li>
-            <li>• Basecamp-style simplicity with modern power</li>
+            <li>• Extreme simplicity with collaboration baked in</li>
           </ul>
         </div>
       </div>
-
-      <!-- Feature 3 -->
+      
+<!-- Feature 3 -->
       <div class="card bg-base-200">
         <div class="card-body">
-          <div class="text-4xl mb-4">✨</div>
-          <h3 class="card-title text-xl mb-2">Beautiful and Simple</h3>
+          <h3 class="card-title text-xl mb-2">Find Information Fast</h3>
           <ul class="space-y-2 text-base-content/80">
-            <li>• Clean, intuitive interface that gets out of your way</li>
-            <li>• Information that's easy to understand at a glance</li>
-            <li>• Dark and light themes</li>
+            <li>
+              • Upload existing docs and make them immediately available across the business
+            </li>
+            <li>• Chat to docs to find answers fast</li>
+            <li>• Search for tasks and pages for instant access to the truth</li>
           </ul>
         </div>
       </div>
-
-      <!-- Feature 4 -->
+      
+<!-- Feature 4 -->
       <div class="card bg-base-200">
         <div class="card-body">
-          <div class="text-4xl mb-4">🤝</div>
           <h3 class="card-title text-xl mb-2">Effortless Collaboration</h3>
           <ul class="space-y-2 text-base-content/80">
-            <li>• Real-time editing with CRDT technology (no conflicts, ever!)</li>
+            <li>• Real-time editing with no conflicts, ever!</li>
             <li>• See who's working on what, right now</li>
-            <li>• Async-friendly but real-time capable</li>
+            <li>• Collaborate on docs or tasks fast, from anywhere</li>
           </ul>
         </div>
       </div>
-
-      <!-- Feature 5 -->
+      
+<!-- Feature 5 -->
       <div class="card bg-base-200">
         <div class="card-body">
-          <div class="text-4xl mb-4">🔓</div>
           <h3 class="card-title text-xl mb-2">Easy to Join, Easy to Leave</h3>
           <ul class="space-y-2 text-base-content/80">
             <li>• No proprietary lock-ins—export your data anytime</li>
-            <li>• Open standards (Markdown, JSON, CSV)</li>
+            <li>• All documents stored as markdown for easy migration</li>
             <li>• Own your data forever</li>
           </ul>
         </div>
       </div>
-
-      <!-- Feature 6 -->
+      
+<!-- Feature 6 -->
       <div class="card bg-base-200">
         <div class="card-body">
-          <div class="text-4xl mb-4">🎨</div>
           <h3 class="card-title text-xl mb-2">Work Your Way</h3>
           <ul class="space-y-2 text-base-content/80">
-            <li>• Keyboard shortcuts for power users, mouse for clickers</li>
-            <li>• Flexible workspaces, projects, notes, sheets, and pages</li>
-            <li>• Accessible and intuitive for everyone</li>
+            <li>• Keyboard shortcuts for power users</li>
+            <li>• Simple interface needs no training</li>
+            <li>• World class infrastructure delivers blistering speed</li>
           </ul>
         </div>
       </div>
@@ -171,35 +196,22 @@
 <div class="bg-base-200 py-20 px-4">
   <div class="max-w-5xl mx-auto">
     <h2 class="text-4xl md:text-5xl font-bold text-center mb-4">
-      Inspired by Basecamp. Built for Today.
+      Manage tasks, documents and the truth to bring your ideas to life!
     </h2>
     <p class="text-xl text-center text-base-content/70 mb-16">
-      The simplicity you love, with the collaboration you need.
+      Simplicity you'll love, with the collaboration you need.
     </p>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-      <div class="card bg-base-100">
+    <div class="flex justify-center">
+      <div class="card bg-primary text-primary-content max-w-2xl w-full">
         <div class="card-body">
-          <h3 class="card-title text-xl mb-4">What You Love About Basecamp</h3>
-          <ul class="space-y-3 text-base-content/80">
+          <h3 class="card-title text-xl mb-4">What You Will Love About Jarga</h3>
+          <ul class="space-y-3">
             <li>✓ Simple, all-in-one approach</li>
             <li>✓ No feature bloat</li>
             <li>✓ Beautiful, calm interface</li>
             <li>✓ Team-focused philosophy</li>
-            <li>✓ Straightforward pricing</li>
-          </ul>
-        </div>
-      </div>
-
-      <div class="card bg-primary text-primary-content">
-        <div class="card-body">
-          <h3 class="card-title text-xl mb-4">What Jarga Adds</h3>
-          <ul class="space-y-3">
-            <li>✨ Real-time collaboration at the core</li>
-            <li>✨ Context-aware by design</li>
-            <li>✨ Modern tech stack (Elixir/Phoenix)</li>
-            <li>✨ CRDT conflict-free editing</li>
-            <li>✨ No lock-in, open by default</li>
+            <li>✓ Free for teams up to 5 and above</li>
           </ul>
         </div>
       </div>
@@ -211,14 +223,13 @@
 <div class="bg-base-100 py-20 px-4">
   <div class="max-w-6xl mx-auto">
     <h2 class="text-4xl md:text-5xl font-bold text-center mb-16">
-      Built for Teams Who Make Things
+      Built for Teams Who Make Things Happen!
     </h2>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
       <!-- Use Case 1 -->
       <div class="card bg-base-200">
         <div class="card-body">
-          <div class="text-4xl mb-4">🚀</div>
           <h3 class="card-title text-2xl mb-2">Startup Teams</h3>
           <p class="text-base-content/80 mb-4">
             Move fast without losing context. Stay aligned from idea to launch. Scale without adding complexity.
@@ -228,11 +239,10 @@
           </p>
         </div>
       </div>
-
-      <!-- Use Case 2 -->
+      
+<!-- Use Case 2 -->
       <div class="card bg-base-200">
         <div class="card-body">
-          <div class="text-4xl mb-4">💡</div>
           <h3 class="card-title text-2xl mb-2">Creative Teams</h3>
           <p class="text-base-content/80 mb-4">
             Keep ideas organized and accessible. Collaborate on content in real-time. No more version chaos.
@@ -242,11 +252,10 @@
           </p>
         </div>
       </div>
-
-      <!-- Use Case 3 -->
+      
+<!-- Use Case 3 -->
       <div class="card bg-base-200">
         <div class="card-body">
-          <div class="text-4xl mb-4">🛠️</div>
           <h3 class="card-title text-2xl mb-2">Product Teams</h3>
           <p class="text-base-content/80 mb-4">
             From concept to launch in one place. Requirements, design, and implementation together. Context never gets lost.
@@ -256,11 +265,10 @@
           </p>
         </div>
       </div>
-
-      <!-- Use Case 4 -->
+      
+<!-- Use Case 4 -->
       <div class="card bg-base-200">
         <div class="card-body">
-          <div class="text-4xl mb-4">📝</div>
           <h3 class="card-title text-2xl mb-2">Remote Teams</h3>
           <p class="text-base-content/80 mb-4">
             Collaborate like you're in the same room. Async-friendly with real-time superpowers. No timezone troubles.
@@ -285,7 +293,6 @@
       <!-- Principle 1 -->
       <div class="card bg-base-100">
         <div class="card-body">
-          <div class="text-4xl mb-4">🎯</div>
           <h3 class="card-title text-xl mb-2">Meet People Where They Are</h3>
           <ul class="space-y-2 text-base-content/80">
             <li>• Minimal disruption to your flow</li>
@@ -294,11 +301,10 @@
           </ul>
         </div>
       </div>
-
-      <!-- Principle 2 -->
+      
+<!-- Principle 2 -->
       <div class="card bg-base-100">
         <div class="card-body">
-          <div class="text-4xl mb-4">🔍</div>
           <h3 class="card-title text-xl mb-2">Everything is Easy to Find</h3>
           <ul class="space-y-2 text-base-content/80">
             <li>• Powerful search that actually works</li>
@@ -307,11 +313,10 @@
           </ul>
         </div>
       </div>
-
-      <!-- Principle 3 -->
+      
+<!-- Principle 3 -->
       <div class="card bg-base-100">
         <div class="card-body">
-          <div class="text-4xl mb-4">⌨️</div>
           <h3 class="card-title text-xl mb-2">Different People, Different Ways</h3>
           <ul class="space-y-2 text-base-content/80">
             <li>• Keyboard shortcuts vs mouse—work however you prefer</li>
@@ -320,11 +325,10 @@
           </ul>
         </div>
       </div>
-
-      <!-- Principle 4 -->
+      
+<!-- Principle 4 -->
       <div class="card bg-base-100">
         <div class="card-body">
-          <div class="text-4xl mb-4">👑</div>
           <h3 class="card-title text-xl mb-2">Context is King</h3>
           <ul class="space-y-2 text-base-content/80">
             <li>• Ground truth for your team—no more "which version is right?"</li>
@@ -370,8 +374,8 @@
           <a href="#testimonial2" class="btn btn-circle btn-sm">❯</a>
         </div>
       </div>
-
-      <!-- Testimonial 2 -->
+      
+<!-- Testimonial 2 -->
       <div id="testimonial2" class="carousel-item relative w-full justify-center">
         <div class="card bg-base-200 max-w-2xl w-full">
           <div class="card-body">
@@ -396,8 +400,8 @@
           <a href="#testimonial3" class="btn btn-circle btn-sm">❯</a>
         </div>
       </div>
-
-      <!-- Testimonial 3 -->
+      
+<!-- Testimonial 3 -->
       <div id="testimonial3" class="carousel-item relative w-full justify-center">
         <div class="card bg-base-200 max-w-2xl w-full">
           <div class="card-body">
@@ -422,8 +426,8 @@
           <a href="#testimonial4" class="btn btn-circle btn-sm">❯</a>
         </div>
       </div>
-
-      <!-- Testimonial 4 -->
+      
+<!-- Testimonial 4 -->
       <div id="testimonial4" class="carousel-item relative w-full justify-center">
         <div class="card bg-base-200 max-w-2xl w-full">
           <div class="card-body">
@@ -449,8 +453,8 @@
         </div>
       </div>
     </div>
-
-    <!-- Carousel Indicators -->
+    
+<!-- Carousel Indicators -->
     <div class="flex justify-center w-full py-6 gap-2">
       <a href="#testimonial1" class="btn btn-xs">1</a>
       <a href="#testimonial2" class="btn btn-xs">2</a>
@@ -465,7 +469,7 @@
   <div class="hero-content text-center max-w-4xl px-4">
     <div>
       <h2 class="text-4xl md:text-6xl font-bold mb-6">
-        Ready to Make Teamwork Simple?
+        Ready to Make Teamwork Easy?
       </h2>
       <p class="text-xl md:text-2xl mb-8 text-base-content/80">
         Join teams who've ditched the chaos for clarity
@@ -473,25 +477,19 @@
 
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8 text-left">
         <div class="flex items-center gap-2">
-          <span class="text-2xl">✅</span>
-          <span>Free to start</span>
+          <span>✓ Free for teams of 4 or less</span>
         </div>
         <div class="flex items-center gap-2">
-          <span class="text-2xl">✅</span>
-          <span>No credit card required</span>
+          <span>✓ No long term contracts</span>
         </div>
         <div class="flex items-center gap-2">
-          <span class="text-2xl">✅</span>
-          <span>Export your data anytime</span>
+          <span>✓ Export your data anytime</span>
         </div>
       </div>
 
       <div class="card-actions justify-center">
         <a href={~p"/users/register"} class="btn btn-primary btn-lg text-lg px-8">
           Start For Free
-        </a>
-        <a href={~p"/app/editor"} class="btn btn-outline btn-lg text-lg px-8">
-          Try the Editor
         </a>
       </div>
 
@@ -512,11 +510,11 @@
         <ul class="space-y-2">
           <li><a href="#features" class="link link-hover">Features</a></li>
           <li><a href={~p"/app/editor"} class="link link-hover">Try Editor</a></li>
-          <li><span class="text-base-content/50">Pricing (coming soon)</span></li>
+          <li><span class="text-base-content/50">Pricing</span></li>
         </ul>
       </div>
-
-      <!-- Company -->
+      
+<!-- Company -->
       <div>
         <h3 class="font-bold text-lg mb-3">Company</h3>
         <ul class="space-y-2">
@@ -524,8 +522,8 @@
           <li><span class="text-base-content/50">Contact</span></li>
         </ul>
       </div>
-
-      <!-- Resources -->
+      
+<!-- Resources -->
       <div>
         <h3 class="font-bold text-lg mb-3">Resources</h3>
         <ul class="space-y-2">
@@ -533,8 +531,8 @@
           <li><span class="text-base-content/50">Help Center</span></li>
         </ul>
       </div>
-
-      <!-- Legal -->
+      
+<!-- Legal -->
       <div>
         <h3 class="font-bold text-lg mb-3">Legal</h3>
         <ul class="space-y-2">
@@ -548,10 +546,10 @@
 
     <div class="text-center">
       <p class="text-lg font-semibold mb-2">
-        We exist to make working in teams simple.
+        We exist to make working in teams easy.
       </p>
       <p class="text-sm text-base-content/70">
-        © 2025 Jarga. Making teamwork simple.
+        © 2025 Jarga. Making teamwork easy.
       </p>
     </div>
   </div>

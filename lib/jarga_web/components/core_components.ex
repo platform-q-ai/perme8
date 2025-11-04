@@ -198,7 +198,8 @@ defmodule JargaWeb.CoreComponents do
 
   attr :variant, :string,
     default: nil,
-    doc: "the input variant style (ghost, neutral, primary, secondary, accent, info, success, warning, error)"
+    doc:
+      "the input variant style (ghost, neutral, primary, secondary, accent, info, success, warning, error)"
 
   attr :size, :string,
     default: nil,

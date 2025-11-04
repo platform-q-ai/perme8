@@ -26,6 +26,7 @@ defmodule JargaWeb.EditorLiveTest do
       user = user_fixture()
       %{conn: log_in_user(conn, user), user: user}
     end
+
     test "redirects to random doc when no doc_id provided", %{conn: conn} do
       # EditorLive redirects to a random doc_id
       assert {:error, {:live_redirect, %{to: to}}} = live(conn, ~p"/app/editor")
