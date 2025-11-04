@@ -12,7 +12,10 @@ defmodule JargaWeb.PageSaveDebouncer do
 
   require Logger
 
-  @debounce_time 2_000  # 2 seconds
+  # Configurable debounce time via environment variable
+  # Defaults to 2 seconds (2000ms)
+  # Can be overridden with PAGE_SAVE_DEBOUNCE_MS environment variable (e.g., "1" for tests)
+  @debounce_time String.to_integer(System.get_env("PAGE_SAVE_DEBOUNCE_MS", "2000"))
 
   ## Client API
 

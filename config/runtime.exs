@@ -8,8 +8,15 @@ import Config
 # The block below contains prod specific runtime configuration.
 
 # Load .env file in development and test environments
+# In test mode, .env.test will override values from .env
 if config_env() in [:dev, :test] do
-  Dotenvy.source!([".env", System.get_env()])
+  env_files = if config_env() == :test do
+    [".env", ".env.test", System.get_env()]
+  else
+    [".env", System.get_env()]
+  end
+
+  Dotenvy.source!(env_files)
 end
 
 # ## Using releases
