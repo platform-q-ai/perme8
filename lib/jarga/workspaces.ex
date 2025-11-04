@@ -8,6 +8,14 @@ defmodule Jarga.Workspaces do
   - Policies (domain layer) for business rules
   """
 
+  # Core context - cannot depend on JargaWeb (interface layer)
+  # Exports: Main context module and shared types (Workspace)
+  # Internal modules (WorkspaceMember, Queries, Policies) remain private
+  use Boundary,
+    top_level?: true,
+    deps: [Jarga.Accounts, Jarga.Repo],
+    exports: [{Workspace, []}]
+
   alias Jarga.Repo
   alias Jarga.Accounts.User
   alias Jarga.Workspaces.{Workspace, WorkspaceMember, Queries}
@@ -145,5 +153,29 @@ defmodule Jarga.Workspaces do
       {:error, reason} ->
         {:error, reason}
     end
+  end
+
+  @doc """
+  Verifies that a user is a member of a workspace.
+
+  This is a public API for other contexts to verify workspace membership.
+
+  ## Returns
+
+  - `{:ok, workspace}` - User is a member of the workspace
+  - `{:error, :unauthorized}` - Workspace exists but user is not a member
+  - `{:error, :workspace_not_found}` - Workspace does not exist
+
+  ## Examples
+
+      iex> verify_membership(user, workspace_id)
+      {:ok, %Workspace{}}
+
+      iex> verify_membership(user, non_member_workspace_id)
+      {:error, :unauthorized}
+
+  """
+  def verify_membership(%User{} = user, workspace_id) do
+    Authorization.verify_membership(user, workspace_id)
   end
 end

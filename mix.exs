@@ -10,7 +10,8 @@ defmodule Jarga.MixProject do
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       deps: deps(),
-      compilers: [:phoenix_live_view] ++ Mix.compilers(),
+      compilers: [:boundary, :phoenix_live_view] ++ Mix.compilers(),
+      boundary: boundary(),
       listeners: [Phoenix.CodeReloader]
     ]
   end
@@ -20,7 +21,7 @@ defmodule Jarga.MixProject do
   # Type `mix help compile.app` for more information.
   def application do
     [
-      mod: {Jarga.Application, []},
+      mod: {JargaApp, []},
       extra_applications: [:logger, :runtime_tools]
     ]
   end
@@ -34,6 +35,39 @@ defmodule Jarga.MixProject do
   # Specifies which paths to compile per environment.
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
+
+  # Boundary configuration for enforcing architectural layers
+  defp boundary do
+    [
+      # Only warn about calls crossing internal application boundaries
+      # Framework dependencies (Ecto, Phoenix) are not checked
+      externals_mode: :relaxed,
+
+      # NOTE: All modules now have boundary declarations:
+      # - Jarga: Parent boundary for domain contexts
+      # - JargaApp: OTP application boundary (renamed from Jarga.Application)
+      # - JargaWeb: Web interface boundary
+      # All boundaries properly declared to avoid namespace hierarchy conflicts.
+
+      # Specific framework apps we allow (not strictly checked due to relaxed mode)
+      default: [
+        check: [
+          apps: [
+            # Web framework
+            {:phoenix, :relaxed},
+            {:phoenix_live_view, :relaxed},
+            {:phoenix_html, :relaxed},
+            {:phoenix_ecto, :relaxed},
+            # Database
+            {:ecto, :relaxed},
+            {:ecto_sql, :relaxed},
+            # Other
+            {:mix, :runtime}
+          ]
+        ]
+      ]
+    ]
+  end
 
   # Specifies your project dependencies.
   #
@@ -68,7 +102,9 @@ defmodule Jarga.MixProject do
       {:dns_cluster, "~> 0.2.0"},
       {:bandit, "~> 1.5"},
       {:bcrypt_elixir, "~> 3.0"},
-      {:dotenvy, "~> 0.8.0", only: [:dev, :test]}
+      {:dotenvy, "~> 0.8.0", only: [:dev, :test]},
+      {:boundary, "~> 0.10", runtime: false},
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false}
     ]
   end
 
@@ -88,7 +124,14 @@ defmodule Jarga.MixProject do
         "esbuild jarga --minify",
         "phx.digest"
       ],
-      precommit: ["compile --warning-as-errors", "deps.unlock --unused", "format", "test"]
+      precommit: [
+        "compile --warning-as-errors",
+        "deps.unlock --unused",
+        "format",
+        "credo --strict",
+        "boundary",
+        "test"
+      ]
     ]
   end
 end

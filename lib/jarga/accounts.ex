@@ -3,6 +3,14 @@ defmodule Jarga.Accounts do
   The Accounts context.
   """
 
+  # Core context - cannot depend on JargaWeb (interface layer)
+  # Exports: Main context module and shared types (User, Scope)
+  # Internal modules (UserToken, UserNotifier) remain private
+  use Boundary,
+    top_level?: true,
+    deps: [Jarga.Repo, Jarga.Mailer],
+    exports: [{User, []}, {Scope, []}]
+
   import Ecto.Query, warn: false
   alias Jarga.Repo
 

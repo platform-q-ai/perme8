@@ -15,6 +15,12 @@ defmodule JargaWeb.ConnCase do
   this option is not recommended for other databases.
   """
 
+  # Test support module - top-level boundary for web testing infrastructure
+  use Boundary,
+    top_level?: true,
+    deps: [JargaWeb, Jarga.Accounts, Jarga.DataCase, Jarga.AccountsFixtures],
+    exports: []
+
   use ExUnit.CaseTemplate
 
   using do

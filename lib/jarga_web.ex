@@ -17,6 +17,11 @@ defmodule JargaWeb do
   those modules here.
   """
 
+  # Interface layer - can depend on Core contexts but not vice versa
+  use Boundary,
+    deps: [Jarga, Jarga.Accounts, Jarga.Workspaces, Jarga.Projects, Jarga.Repo, Jarga.Mailer],
+    exports: [Endpoint, Telemetry]
+
   def static_paths, do: ~w(assets fonts images favicon.ico robots.txt)
 
   def router do

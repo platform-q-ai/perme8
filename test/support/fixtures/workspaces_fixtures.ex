@@ -4,6 +4,9 @@ defmodule Jarga.WorkspacesFixtures do
   entities via the `Jarga.Workspaces` context.
   """
 
+  # Test fixture module - top-level boundary for test data creation
+  use Boundary, top_level?: true, deps: [Jarga.Workspaces], exports: []
+
   alias Jarga.Workspaces
 
   def valid_workspace_attributes(attrs \\ %{}) do

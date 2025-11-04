@@ -2,6 +2,24 @@
 
 This file provides guidance to Claude Code when working with Elixir and Phoenix code in this repository.
 
+## Architecture
+
+**This project enforces architectural boundaries using the [Boundary](https://hexdocs.pm/boundary) library.**
+
+📖 **See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for complete architectural documentation.**
+
+Key architectural principles:
+- **Core vs Interface Separation**: Web layer (JargaWeb) cannot be accessed by contexts
+- **Context Independence**: Each context (Accounts, Workspaces, Projects) is an independent boundary
+- **Public APIs Only**: Cross-context communication only through exported functions
+- **Compile-Time Enforcement**: Boundary violations are caught during compilation
+
+When adding or modifying code:
+1. Respect boundary constraints defined with `use Boundary`
+2. Never access internal modules (Queries, Policies) from other boundaries
+3. Use context public APIs for cross-context communication
+4. Verify with `mix compile` - no "forbidden reference" warnings
+
 ## Development Approach
 
 **This project follows Test-Driven Development (TDD).**

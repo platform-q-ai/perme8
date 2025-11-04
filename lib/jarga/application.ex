@@ -1,9 +1,13 @@
-defmodule Jarga.Application do
+defmodule JargaApp do
   # See https://hexdocs.pm/elixir/Application.html
   # for more information on OTP Applications
   @moduledoc false
 
   use Application
+
+  # OTP Application supervisor - sibling to Jarga and JargaWeb boundaries
+  # Can depend on all parts of the application for supervision purposes
+  use Boundary, deps: [Jarga, JargaWeb], exports: []
 
   @impl true
   def start(_type, _args) do

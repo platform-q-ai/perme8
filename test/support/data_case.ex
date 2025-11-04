@@ -14,6 +14,9 @@ defmodule Jarga.DataCase do
   this option is not recommended for other databases.
   """
 
+  # Test support module - top-level boundary for test infrastructure
+  use Boundary, top_level?: true, deps: [Jarga.Repo], exports: []
+
   use ExUnit.CaseTemplate
 
   using do

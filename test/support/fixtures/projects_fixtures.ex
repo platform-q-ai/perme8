@@ -4,6 +4,9 @@ defmodule Jarga.ProjectsFixtures do
   entities via the `Jarga.Projects` context.
   """
 
+  # Test fixture module - top-level boundary for test data creation
+  use Boundary, top_level?: true, deps: [Jarga.Projects], exports: []
+
   alias Jarga.Projects
 
   def valid_project_attributes(attrs \\ %{}) do

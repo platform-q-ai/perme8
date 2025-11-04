@@ -4,6 +4,9 @@ defmodule Jarga.AccountsFixtures do
   entities via the `Jarga.Accounts` context.
   """
 
+  # Test fixture module - top-level boundary for test data creation
+  use Boundary, top_level?: true, deps: [Jarga.Accounts, Jarga.Repo], exports: []
+
   import Ecto.Query
 
   alias Jarga.Accounts

@@ -8,11 +8,19 @@ defmodule Jarga.Projects do
   - Policies (domain layer) for business rules
   """
 
+  # Core context - cannot depend on JargaWeb (interface layer)
+  # Exports: Main context module and shared types (Project)
+  # Internal modules (Queries, Policies) remain private
+  use Boundary,
+    top_level?: true,
+    deps: [Jarga.Accounts, Jarga.Workspaces, Jarga.Repo],
+    exports: [{Project, []}]
+
   alias Jarga.Repo
   alias Jarga.Accounts.User
   alias Jarga.Projects.{Project, Queries}
   alias Jarga.Projects.Policies.Authorization
-  alias Jarga.Workspaces.Policies.Authorization, as: WorkspaceAuth
+  alias Jarga.Workspaces
 
   @doc """
   Returns the list of projects for a given workspace.
@@ -53,7 +61,7 @@ defmodule Jarga.Projects do
   """
   def create_project(%User{} = user, workspace_id, attrs) do
     # First verify the user is a member of the workspace
-    case WorkspaceAuth.verify_membership(user, workspace_id) do
+    case Workspaces.verify_membership(user, workspace_id) do
       {:ok, _workspace} ->
         # Convert atom keys to string keys to avoid mixed keys
         string_attrs =
