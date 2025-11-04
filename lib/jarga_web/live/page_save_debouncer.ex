@@ -121,6 +121,15 @@ defmodule JargaWeb.PageSaveDebouncer do
     case Jarga.Notes.update_note_via_page(user, note_id, update_attrs) do
       {:ok, _note} ->
         :ok
+      {:error, :note_not_found} ->
+        # In test mode, notes may be deleted before debouncer fires - this is expected
+        # In production, log as warning since it might indicate a race condition
+        if Application.get_env(:jarga, :sql_sandbox) do
+          :ok
+        else
+          Logger.warning("Note #{note_id} not found during debounced save")
+          :error
+        end
       {:error, reason} ->
         Logger.error("Failed to save note #{note_id}: #{inspect(reason)}")
         :error

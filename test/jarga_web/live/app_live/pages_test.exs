@@ -1,5 +1,5 @@
 defmodule JargaWeb.AppLive.PagesTest do
-  use JargaWeb.ConnCase, async: true
+  use JargaWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
   import Jarga.AccountsFixtures
@@ -44,21 +44,28 @@ defmodule JargaWeb.AppLive.PagesTest do
 
     test "displays page in project context", %{conn: conn, user: user, workspace: workspace} do
       project = project_fixture(user, workspace)
-      {:ok, page} = Pages.create_page(user, workspace.id, %{
-        title: "Project Page",
-        project_id: project.id
-      })
+
+      {:ok, page} =
+        Pages.create_page(user, workspace.id, %{
+          title: "Project Page",
+          project_id: project.id
+        })
 
       {:ok, _lv, html} = live(conn, ~p"/app/workspaces/#{workspace.slug}/pages/#{page.slug}")
 
       assert html =~ project.name
     end
 
-    test "shows pinned indicator for pinned pages", %{conn: conn, user: user, workspace: workspace} do
-      {:ok, page} = Pages.create_page(user, workspace.id, %{
-        title: "Pinned Page",
-        is_pinned: true
-      })
+    test "shows pinned indicator for pinned pages", %{
+      conn: conn,
+      user: user,
+      workspace: workspace
+    } do
+      {:ok, page} =
+        Pages.create_page(user, workspace.id, %{
+          title: "Pinned Page",
+          is_pinned: true
+        })
 
       {:ok, _lv, html} = live(conn, ~p"/app/workspaces/#{workspace.slug}/pages/#{page.slug}")
 
@@ -82,10 +89,11 @@ defmodule JargaWeb.AppLive.PagesTest do
     end
 
     test "allows toggling pin status", %{conn: conn, user: user, workspace: workspace} do
-      {:ok, page} = Pages.create_page(user, workspace.id, %{
-        title: "Test Page",
-        is_pinned: false
-      })
+      {:ok, page} =
+        Pages.create_page(user, workspace.id, %{
+          title: "Test Page",
+          is_pinned: false
+        })
 
       {:ok, lv, _html} = live(conn, ~p"/app/workspaces/#{workspace.slug}/pages/#{page.slug}")
 
@@ -98,10 +106,11 @@ defmodule JargaWeb.AppLive.PagesTest do
     end
 
     test "allows toggling public status", %{conn: conn, user: user, workspace: workspace} do
-      {:ok, page} = Pages.create_page(user, workspace.id, %{
-        title: "Test Page",
-        is_public: false
-      })
+      {:ok, page} =
+        Pages.create_page(user, workspace.id, %{
+          title: "Test Page",
+          is_public: false
+        })
 
       {:ok, lv, _html} = live(conn, ~p"/app/workspaces/#{workspace.slug}/pages/#{page.slug}")
 
@@ -122,41 +131,59 @@ defmodule JargaWeb.AppLive.PagesTest do
     test "does not allow access to private pages from other users", %{conn: conn} do
       other_user = user_fixture()
       other_workspace = workspace_fixture(other_user)
-      {:ok, other_page} = Pages.create_page(other_user, other_workspace.id, %{
-        title: "Private Page",
-        is_public: false
-      })
+
+      {:ok, other_page} =
+        Pages.create_page(other_user, other_workspace.id, %{
+          title: "Private Page",
+          is_public: false
+        })
 
       {:error, {:redirect, %{to: "/app/workspaces"}}} =
         live(conn, ~p"/app/workspaces/#{other_workspace.slug}/pages/#{other_page.slug}")
     end
 
-    test "allows workspace members to view public pages from other users", %{conn: conn, user: user, workspace: workspace} do
+    test "allows workspace members to view public pages from other users", %{
+      conn: conn,
+      user: user,
+      workspace: workspace
+    } do
       # Create another user and add them to the same workspace
       other_user = user_fixture()
-      {:ok, _member} = Jarga.Workspaces.invite_member(user, workspace.id, other_user.email, :member)
+
+      {:ok, _member} =
+        Jarga.Workspaces.invite_member(user, workspace.id, other_user.email, :member)
 
       # Other user creates a public page
-      {:ok, public_page} = Pages.create_page(other_user, workspace.id, %{
-        title: "Public Page",
-        is_public: true
-      })
+      {:ok, public_page} =
+        Pages.create_page(other_user, workspace.id, %{
+          title: "Public Page",
+          is_public: true
+        })
 
       # First user should be able to view it
-      {:ok, _lv, html} = live(conn, ~p"/app/workspaces/#{workspace.slug}/pages/#{public_page.slug}")
+      {:ok, _lv, html} =
+        live(conn, ~p"/app/workspaces/#{workspace.slug}/pages/#{public_page.slug}")
+
       assert html =~ "Public Page"
     end
 
-    test "workspace members cannot view private pages from other users", %{conn: conn, user: user, workspace: workspace} do
+    test "workspace members cannot view private pages from other users", %{
+      conn: conn,
+      user: user,
+      workspace: workspace
+    } do
       # Create another user and add them to the same workspace
       other_user = user_fixture()
-      {:ok, _member} = Jarga.Workspaces.invite_member(user, workspace.id, other_user.email, :member)
+
+      {:ok, _member} =
+        Jarga.Workspaces.invite_member(user, workspace.id, other_user.email, :member)
 
       # Other user creates a private page
-      {:ok, private_page} = Pages.create_page(other_user, workspace.id, %{
-        title: "Private Page",
-        is_public: false
-      })
+      {:ok, private_page} =
+        Pages.create_page(other_user, workspace.id, %{
+          title: "Private Page",
+          is_public: false
+        })
 
       # First user should NOT be able to view it
       {:error, {:redirect, %{to: "/app/workspaces"}}} =
@@ -176,7 +203,11 @@ defmodule JargaWeb.AppLive.PagesTest do
       assert lv |> element("button[phx-click='delete_page']") |> has_element?()
     end
 
-    test "deletes page and redirects when delete button clicked", %{conn: conn, user: user, workspace: workspace} do
+    test "deletes page and redirects when delete button clicked", %{
+      conn: conn,
+      user: user,
+      workspace: workspace
+    } do
       {:ok, page} = Pages.create_page(user, workspace.id, %{title: "To Delete"})
 
       {:ok, lv, _html} = live(conn, ~p"/app/workspaces/#{workspace.slug}/pages/#{page.slug}")
@@ -202,7 +233,11 @@ defmodule JargaWeb.AppLive.PagesTest do
       %{conn: log_in_user(conn, user), user: user, workspace: workspace, page: page}
     end
 
-    test "sends yjs updates for real-time broadcast", %{conn: conn, workspace: workspace, page: page} do
+    test "sends yjs updates for real-time broadcast", %{
+      conn: conn,
+      workspace: workspace,
+      page: page
+    } do
       {:ok, lv, _html} = live(conn, ~p"/app/workspaces/#{workspace.slug}/pages/#{page.slug}")
 
       # Subscribe to see the broadcast
@@ -227,7 +262,12 @@ defmodule JargaWeb.AppLive.PagesTest do
       assert_receive {:yjs_update, %{update: ^update_data, user_id: ^user_id}}
     end
 
-    test "debounces database saves on server side", %{conn: conn, user: user, workspace: workspace, page: page} do
+    test "debounces database saves on server side", %{
+      conn: conn,
+      user: user,
+      workspace: workspace,
+      page: page
+    } do
       {:ok, lv, _html} = live(conn, ~p"/app/workspaces/#{workspace.slug}/pages/#{page.slug}")
 
       # Simulate multiple rapid updates
@@ -237,6 +277,7 @@ defmodule JargaWeb.AppLive.PagesTest do
       # Send 3 rapid updates
       for i <- 1..3 do
         update_data = Base.encode64(<<i>>)
+
         lv
         |> element("#editor-container")
         |> render_hook("yjs_update", %{
@@ -246,15 +287,6 @@ defmodule JargaWeb.AppLive.PagesTest do
           "markdown" => markdown
         })
       end
-
-      # Allow the debouncer GenServer to access the test database
-      debouncer_pid = JargaWeb.PageSaveDebouncer.get_debouncer_pid(page.id)
-      if debouncer_pid do
-        Ecto.Adapters.SQL.Sandbox.allow(Jarga.Repo, self(), debouncer_pid)
-      end
-
-      # Wait for debounce (2 seconds + buffer)
-      Process.sleep(2500)
 
       # Wait for the GenServer to complete any pending saves
       JargaWeb.PageSaveDebouncer.wait_for_save(page.id)
@@ -268,7 +300,12 @@ defmodule JargaWeb.AppLive.PagesTest do
       assert note.note_content["markdown"] == markdown
     end
 
-    test "force_save bypasses debouncing", %{conn: conn, user: user, workspace: workspace, page: page} do
+    test "force_save bypasses debouncing", %{
+      conn: conn,
+      user: user,
+      workspace: workspace,
+      page: page
+    } do
       {:ok, lv, _html} = live(conn, ~p"/app/workspaces/#{workspace.slug}/pages/#{page.slug}")
 
       # Simulate force save (e.g., on page unload)
@@ -291,7 +328,11 @@ defmodule JargaWeb.AppLive.PagesTest do
       assert note.note_content["markdown"] == markdown
     end
 
-    test "broadcasts yjs updates to other clients", %{conn: conn, workspace: workspace, page: page} do
+    test "broadcasts yjs updates to other clients", %{
+      conn: conn,
+      workspace: workspace,
+      page: page
+    } do
       {:ok, lv, _html} = live(conn, ~p"/app/workspaces/#{workspace.slug}/pages/#{page.slug}")
 
       # Subscribe to the page topic to listen for broadcasts
@@ -316,11 +357,16 @@ defmodule JargaWeb.AppLive.PagesTest do
       assert_receive {:yjs_update, %{update: ^update_data, user_id: ^user_id}}
     end
 
-    test "receives yjs updates from other clients", %{conn: conn, workspace: workspace, page: page} do
+    test "receives yjs updates from other clients", %{
+      conn: conn,
+      workspace: workspace,
+      page: page
+    } do
       {:ok, lv, _html} = live(conn, ~p"/app/workspaces/#{workspace.slug}/pages/#{page.slug}")
 
       # Simulate update from another client via PubSub
       update_data = Base.encode64(<<9, 10, 11, 12>>)
+
       Phoenix.PubSub.broadcast(
         Jarga.PubSub,
         "page:#{page.id}",

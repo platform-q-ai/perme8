@@ -57,13 +57,18 @@ defmodule JargaWeb.AppLive.Pages.Show do
 
     # 2. Send to debouncer for eventual database save (server-side debouncing)
     complete_state_binary = Base.decode64!(complete_state)
-    JargaWeb.PageSaveDebouncer.request_save(
+    debouncer_pid = JargaWeb.PageSaveDebouncer.request_save(
       page.id,
       current_user,
       note.id,
       complete_state_binary,
       markdown
     )
+
+    # In test mode, allow the debouncer to access the database
+    if Application.get_env(:jarga, :sql_sandbox) && debouncer_pid do
+      Ecto.Adapters.SQL.Sandbox.allow(Jarga.Repo, self(), debouncer_pid)
+    end
 
     {:noreply, socket}
   end
