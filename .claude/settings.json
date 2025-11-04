@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "if echo \"$PROMPT\" | grep -qiE '(implement|add|create|build|develop|write|feature|functionality)'; then echo '\n⚠️  TDD Reminder: This appears to be a feature implementation request. Remember to write tests FIRST following the Red-Green-Refactor cycle:\n1. RED: Write a failing test\n2. GREEN: Write minimal code to pass\n3. REFACTOR: Improve while keeping tests green\n\nStart with domain tests, then use cases, then infrastructure, and finally the interface layer.'; fi"
+            "command": "if echo \"$PROMPT\" | grep -qiE '(implement|add|update|create|build|develop|write|feature|functionality)'; then echo '\n⚠️  TDD Reminder: This appears to be a feature implementation request. Remember to write tests FIRST following the Red-Green-Refactor cycle:\n1. RED: Write a failing test\n2. GREEN: Write minimal code to pass\n3. REFACTOR: Improve while keeping tests green\n\nStart with domain tests, then use cases, then infrastructure, and finally the interface layer.'; fi"
           }
         ]
       }
