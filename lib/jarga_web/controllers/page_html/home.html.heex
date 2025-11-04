@@ -1,17 +1,14 @@
 <!-- Hero Section -->
 <div class="hero min-h-screen bg-base-100">
-  <div class="hero-content text-center max-w-5xl px-4">
+  <div class="hero-content text-center max-w-5xl px-4 self-start pt-32 md:pt-40">
     <div>
       <h1 class="text-5xl md:text-7xl font-bold mb-6 leading-tight">
-        Make Working in Teams Simple
+        Make Teamwork Easy!
       </h1>
-      <p class="text-xl md:text-2xl mb-4 text-base-content/80">
-        One tool for all your work. No context switching. No chaos. Just pure collaboration.
-      </p>
       <p class="text-lg md:text-xl mb-8 text-base-content/70">
-        Context is king. Keep it simple. Work together effortlessly.
+        All your information in one place, for all to see, from anywhere.
       </p>
-      <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
+      <div class="card-actions justify-center">
         <a href={~p"/users/register"} class="btn btn-primary btn-lg">
           Start For Free
         </a>
@@ -347,86 +344,118 @@
       Teams Love Working with Jarga
     </h2>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+    <div class="carousel w-full">
       <!-- Testimonial 1 -->
-      <div class="card bg-base-200">
-        <div class="card-body">
-          <p class="text-lg italic mb-4">
-            "Finally, one tool that does it all. We went from 5 tools to 1 and our team is happier than ever."
-          </p>
-          <div class="flex items-center gap-3">
-            <div class="avatar placeholder">
-              <div class="bg-primary text-primary-content rounded-full w-12">
-                <span class="text-xl">SC</span>
+      <div id="testimonial1" class="carousel-item relative w-full justify-center">
+        <div class="card bg-base-200 max-w-2xl w-full">
+          <div class="card-body">
+            <p class="text-xl italic mb-6">
+              "Finally, one tool that does it all. We went from 5 tools to 1 and our team is happier than ever."
+            </p>
+            <div class="flex items-center gap-3">
+              <div class="avatar placeholder">
+                <div class="bg-primary text-primary-content rounded-full w-14">
+                  <span class="text-2xl">SC</span>
+                </div>
+              </div>
+              <div>
+                <p class="font-bold text-lg">Sarah Chen</p>
+                <p class="text-sm text-base-content/70">Product Lead @ TechCo</p>
               </div>
             </div>
-            <div>
-              <p class="font-bold">Sarah Chen</p>
-              <p class="text-sm text-base-content/70">Product Lead @ TechCo</p>
-            </div>
           </div>
+        </div>
+        <div class="absolute flex justify-between transform -translate-y-1/2 left-5 right-5 top-1/2">
+          <a href="#testimonial4" class="btn btn-circle btn-sm">❮</a>
+          <a href="#testimonial2" class="btn btn-circle btn-sm">❯</a>
         </div>
       </div>
 
       <!-- Testimonial 2 -->
-      <div class="card bg-base-200">
-        <div class="card-body">
-          <p class="text-lg italic mb-4">
-            "No more context switching! Everything we need is right here. Game changer for our remote team."
-          </p>
-          <div class="flex items-center gap-3">
-            <div class="avatar placeholder">
-              <div class="bg-primary text-primary-content rounded-full w-12">
-                <span class="text-xl">MJ</span>
+      <div id="testimonial2" class="carousel-item relative w-full justify-center">
+        <div class="card bg-base-200 max-w-2xl w-full">
+          <div class="card-body">
+            <p class="text-xl italic mb-6">
+              "No more context switching! Everything we need is right here. Game changer for our remote team."
+            </p>
+            <div class="flex items-center gap-3">
+              <div class="avatar placeholder">
+                <div class="bg-primary text-primary-content rounded-full w-14">
+                  <span class="text-2xl">MJ</span>
+                </div>
+              </div>
+              <div>
+                <p class="font-bold text-lg">Marcus Johnson</p>
+                <p class="text-sm text-base-content/70">Founder @ StartupXYZ</p>
               </div>
             </div>
-            <div>
-              <p class="font-bold">Marcus Johnson</p>
-              <p class="text-sm text-base-content/70">Founder @ StartupXYZ</p>
-            </div>
           </div>
+        </div>
+        <div class="absolute flex justify-between transform -translate-y-1/2 left-5 right-5 top-1/2">
+          <a href="#testimonial1" class="btn btn-circle btn-sm">❮</a>
+          <a href="#testimonial3" class="btn btn-circle btn-sm">❯</a>
         </div>
       </div>
 
       <!-- Testimonial 3 -->
-      <div class="card bg-base-200">
-        <div class="card-body">
-          <p class="text-lg italic mb-4">
-            "Our team actually enjoys collaborating now. The real-time editing is magical."
-          </p>
-          <div class="flex items-center gap-3">
-            <div class="avatar placeholder">
-              <div class="bg-primary text-primary-content rounded-full w-12">
-                <span class="text-xl">ER</span>
+      <div id="testimonial3" class="carousel-item relative w-full justify-center">
+        <div class="card bg-base-200 max-w-2xl w-full">
+          <div class="card-body">
+            <p class="text-xl italic mb-6">
+              "Our team actually enjoys collaborating now. The real-time editing is magical."
+            </p>
+            <div class="flex items-center gap-3">
+              <div class="avatar placeholder">
+                <div class="bg-primary text-primary-content rounded-full w-14">
+                  <span class="text-2xl">ER</span>
+                </div>
+              </div>
+              <div>
+                <p class="font-bold text-lg">Emily Rodriguez</p>
+                <p class="text-sm text-base-content/70">Creative Director @ DesignStudio</p>
               </div>
             </div>
-            <div>
-              <p class="font-bold">Emily Rodriguez</p>
-              <p class="text-sm text-base-content/70">Creative Director @ DesignStudio</p>
-            </div>
           </div>
+        </div>
+        <div class="absolute flex justify-between transform -translate-y-1/2 left-5 right-5 top-1/2">
+          <a href="#testimonial2" class="btn btn-circle btn-sm">❮</a>
+          <a href="#testimonial4" class="btn btn-circle btn-sm">❯</a>
         </div>
       </div>
 
       <!-- Testimonial 4 -->
-      <div class="card bg-base-200">
-        <div class="card-body">
-          <p class="text-lg italic mb-4">
-            "We shipped our product 2x faster because we stopped losing context. Jarga keeps everyone aligned."
-          </p>
-          <div class="flex items-center gap-3">
-            <div class="avatar placeholder">
-              <div class="bg-primary text-primary-content rounded-full w-12">
-                <span class="text-xl">DP</span>
+      <div id="testimonial4" class="carousel-item relative w-full justify-center">
+        <div class="card bg-base-200 max-w-2xl w-full">
+          <div class="card-body">
+            <p class="text-xl italic mb-6">
+              "We shipped our product 2x faster because we stopped losing context. Jarga keeps everyone aligned."
+            </p>
+            <div class="flex items-center gap-3">
+              <div class="avatar placeholder">
+                <div class="bg-primary text-primary-content rounded-full w-14">
+                  <span class="text-2xl">DP</span>
+                </div>
               </div>
-            </div>
-            <div>
-              <p class="font-bold">David Park</p>
-              <p class="text-sm text-base-content/70">Engineering Manager @ DevTeam</p>
+              <div>
+                <p class="font-bold text-lg">David Park</p>
+                <p class="text-sm text-base-content/70">Engineering Manager @ DevTeam</p>
+              </div>
             </div>
           </div>
         </div>
+        <div class="absolute flex justify-between transform -translate-y-1/2 left-5 right-5 top-1/2">
+          <a href="#testimonial3" class="btn btn-circle btn-sm">❮</a>
+          <a href="#testimonial1" class="btn btn-circle btn-sm">❯</a>
+        </div>
       </div>
+    </div>
+
+    <!-- Carousel Indicators -->
+    <div class="flex justify-center w-full py-6 gap-2">
+      <a href="#testimonial1" class="btn btn-xs">1</a>
+      <a href="#testimonial2" class="btn btn-xs">2</a>
+      <a href="#testimonial3" class="btn btn-xs">3</a>
+      <a href="#testimonial4" class="btn btn-xs">4</a>
     </div>
   </div>
 </div>
@@ -457,7 +486,7 @@
         </div>
       </div>
 
-      <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
+      <div class="card-actions justify-center">
         <a href={~p"/users/register"} class="btn btn-primary btn-lg text-lg px-8">
           Start For Free
         </a>

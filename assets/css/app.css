@@ -104,6 +104,13 @@
 
 /* This file is for your main application CSS */
 
+/* Set Inter as the default font family */
+@layer base {
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  }
+}
+
 /* Milkdown Editor Styles */
 @import '@milkdown/theme-nord/style.css';
 
