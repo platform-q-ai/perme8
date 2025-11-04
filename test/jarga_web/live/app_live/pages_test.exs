@@ -204,21 +204,43 @@ defmodule JargaWeb.AppLive.PagesTest do
       %{conn: log_in_user(conn, user), user: user, workspace: workspace, page: page}
     end
 
-    test "sends yjs updates to server", %{conn: conn, workspace: workspace, page: page} do
+    test "sends yjs updates for real-time broadcast", %{conn: conn, workspace: workspace, page: page} do
       {:ok, lv, _html} = live(conn, ~p"/app/workspaces/#{workspace.slug}/pages/#{page.slug}")
 
-      # Simulate yjs update from client
+      # Subscribe to see the broadcast
+      Phoenix.PubSub.subscribe(Jarga.PubSub, "page:#{page.id}")
+
+      # Simulate yjs update from client (real-time, no database save)
       update_data = Base.encode64(<<1, 2, 3, 4>>)
-      complete_state = Base.encode64(<<1, 2, 3, 4, 5, 6, 7, 8>>)
       user_id = "user_123"
+
+      lv
+      |> element("#editor-container")
+      |> render_hook("yjs_update", %{"update" => update_data, "user_id" => user_id})
+
+      # Should receive broadcast immediately
+      assert_receive {:yjs_update, %{update: ^update_data, user_id: ^user_id}}
+    end
+
+    test "saves note content with debounced save_note event", %{conn: conn, user: user, workspace: workspace, page: page} do
+      {:ok, lv, _html} = live(conn, ~p"/app/workspaces/#{workspace.slug}/pages/#{page.slug}")
+
+      # Simulate debounced save event (happens after user stops typing)
+      complete_state = Base.encode64(<<1, 2, 3, 4, 5, 6, 7, 8>>)
       markdown = "# Test Content"
 
       lv
       |> element("#editor-container")
-      |> render_hook("yjs_update", %{"update" => update_data, "complete_state" => complete_state, "user_id" => user_id, "markdown" => markdown})
+      |> render_hook("save_note", %{"complete_state" => complete_state, "markdown" => markdown})
 
-      # Note should be updated with yjs state
-      # This would be verified by checking the note's yjs_state in the database
+      # Note should be updated in database
+      # Reload the note to check
+      page = Pages.get_page!(user, page.id) |> Jarga.Repo.preload(:page_components)
+      note_component = Enum.find(page.page_components, fn pc -> pc.component_type == "note" end)
+      note = Jarga.Repo.get!(Jarga.Notes.Note, note_component.component_id)
+
+      assert note.yjs_state == Base.decode64!(complete_state)
+      assert note.note_content["markdown"] == markdown
     end
 
     test "broadcasts yjs updates to other clients", %{conn: conn, workspace: workspace, page: page} do
@@ -229,13 +251,11 @@ defmodule JargaWeb.AppLive.PagesTest do
 
       # Simulate yjs update
       update_data = Base.encode64(<<5, 6, 7, 8>>)
-      complete_state = Base.encode64(<<5, 6, 7, 8, 9, 10, 11, 12>>)
       user_id = "user_456"
-      markdown = "## Another Section"
 
       lv
       |> element("#editor-container")
-      |> render_hook("yjs_update", %{"update" => update_data, "complete_state" => complete_state, "user_id" => user_id, "markdown" => markdown})
+      |> render_hook("yjs_update", %{"update" => update_data, "user_id" => user_id})
 
       # Should receive broadcast
       assert_receive {:yjs_update, %{update: ^update_data, user_id: ^user_id}}

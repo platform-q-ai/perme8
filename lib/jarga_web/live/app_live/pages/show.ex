@@ -45,12 +45,27 @@ defmodule JargaWeb.AppLive.Pages.Show do
   end
 
   @impl true
-  def handle_event("yjs_update", %{"update" => update, "complete_state" => complete_state, "user_id" => user_id, "markdown" => markdown}, socket) do
+  def handle_event("yjs_update", %{"update" => update, "user_id" => user_id}, socket) do
     page = socket.assigns.page
+
+    # ONLY broadcast the incremental update to other clients
+    # DO NOT save to database here - that's handled by the debounced save_note event
+    Phoenix.PubSub.broadcast_from(
+      Jarga.PubSub,
+      self(),
+      "page:#{page.id}",
+      {:yjs_update, %{update: update, user_id: user_id}}
+    )
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("save_note", %{"complete_state" => complete_state, "markdown" => markdown}, socket) do
     note = socket.assigns.note
     current_user = socket.assigns.current_scope.user
 
-    # Decode the complete state (not just the update)
+    # This is the debounced save - only happens after user stops typing
     complete_state_binary = Base.decode64!(complete_state)
 
     # Update the note with complete yjs state and markdown content
@@ -62,18 +77,7 @@ defmodule JargaWeb.AppLive.Pages.Show do
     case Notes.update_note(current_user, note.id, update_attrs) do
       {:ok, updated_note} ->
         # Update socket assigns with new note
-        socket = assign(socket, :note, updated_note)
-
-        # Broadcast to other clients (excluding sender)
-        # Only broadcast the incremental update, not the complete state
-        Phoenix.PubSub.broadcast_from(
-          Jarga.PubSub,
-          self(),
-          "page:#{page.id}",
-          {:yjs_update, %{update: update, user_id: user_id}}
-        )
-
-        {:noreply, socket}
+        {:noreply, assign(socket, :note, updated_note)}
 
       {:error, _changeset} ->
         {:noreply, socket}

@@ -23,20 +23,33 @@ export const MilkdownEditor = {
     this.collaborationManager = new CollaborationManager()
     this.collaborationManager.initialize(initialYjsState)
 
+    // Debounce timer for database saves
+    this.saveTimer = null
+    this.SAVE_DEBOUNCE_MS = 2000 // Save 2 seconds after user stops typing
+
     // Set up callback for local updates to send to server
     this.collaborationManager.onLocalUpdate((updateBase64, userId) => {
-      // Extract markdown content from editor
-      const markdown = this.getMarkdownContent()
-
-      // Get the complete document state for persistence
-      const completeState = this.collaborationManager.getCompleteState()
-
+      // IMMEDIATELY broadcast update to other clients for real-time collaboration
       this.pushEvent('yjs_update', {
         update: updateBase64,
-        complete_state: completeState,
-        user_id: userId,
-        markdown: markdown
+        user_id: userId
       })
+
+      // DEBOUNCE database saves to prevent race conditions
+      if (this.saveTimer) {
+        clearTimeout(this.saveTimer)
+      }
+
+      this.saveTimer = setTimeout(() => {
+        // Extract markdown content and complete state for persistence
+        const markdown = this.getMarkdownContent()
+        const completeState = this.collaborationManager.getCompleteState()
+
+        this.pushEvent('save_note', {
+          complete_state: completeState,
+          markdown: markdown
+        })
+      }, this.SAVE_DEBOUNCE_MS)
     })
 
     // Set up callback for awareness updates
@@ -107,6 +120,12 @@ export const MilkdownEditor = {
   },
 
   destroyed() {
+    // Clear any pending save timer
+    if (this.saveTimer) {
+      clearTimeout(this.saveTimer)
+      this.saveTimer = null
+    }
+
     if (this.collaborationManager) {
       this.collaborationManager.destroy()
     }
