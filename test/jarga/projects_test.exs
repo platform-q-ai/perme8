@@ -183,4 +183,114 @@ defmodule Jarga.ProjectsTest do
       end
     end
   end
+
+  describe "update_project/4" do
+    test "updates project with valid attributes" do
+      user = user_fixture()
+      workspace = workspace_fixture(user)
+      project = project_fixture(user, workspace, %{name: "Original Name"})
+
+      attrs = %{name: "Updated Name", description: "Updated description"}
+
+      assert {:ok, updated_project} = Projects.update_project(user, workspace.id, project.id, attrs)
+      assert updated_project.name == "Updated Name"
+      assert updated_project.description == "Updated description"
+      assert updated_project.id == project.id
+    end
+
+    test "updates project with partial attributes" do
+      user = user_fixture()
+      workspace = workspace_fixture(user)
+      project = project_fixture(user, workspace, %{name: "Original", description: "Original desc"})
+
+      attrs = %{name: "New Name"}
+
+      assert {:ok, updated_project} = Projects.update_project(user, workspace.id, project.id, attrs)
+      assert updated_project.name == "New Name"
+      assert updated_project.description == "Original desc"
+    end
+
+    test "returns error for invalid attributes" do
+      user = user_fixture()
+      workspace = workspace_fixture(user)
+      project = project_fixture(user, workspace)
+
+      attrs = %{name: ""}
+
+      assert {:error, changeset} = Projects.update_project(user, workspace.id, project.id, attrs)
+      assert "can't be blank" in errors_on(changeset).name
+    end
+
+    test "returns error when user is not a member of workspace" do
+      user = user_fixture()
+      other_user = user_fixture()
+      workspace = workspace_fixture(other_user)
+      project = project_fixture(other_user, workspace)
+
+      attrs = %{name: "Updated Name"}
+
+      assert {:error, :unauthorized} = Projects.update_project(user, workspace.id, project.id, attrs)
+    end
+
+    test "returns error when project doesn't exist" do
+      user = user_fixture()
+      workspace = workspace_fixture(user)
+
+      attrs = %{name: "Updated Name"}
+
+      assert {:error, :project_not_found} = Projects.update_project(user, workspace.id, Ecto.UUID.generate(), attrs)
+    end
+
+    test "returns error when project belongs to different workspace" do
+      user = user_fixture()
+      workspace1 = workspace_fixture(user)
+      workspace2 = workspace_fixture(user)
+      project = project_fixture(user, workspace2)
+
+      attrs = %{name: "Updated Name"}
+
+      assert {:error, :project_not_found} = Projects.update_project(user, workspace1.id, project.id, attrs)
+    end
+  end
+
+  describe "delete_project/3" do
+    test "deletes project when user is workspace member" do
+      user = user_fixture()
+      workspace = workspace_fixture(user)
+      project = project_fixture(user, workspace)
+
+      assert {:ok, deleted_project} = Projects.delete_project(user, workspace.id, project.id)
+      assert deleted_project.id == project.id
+
+      # Verify project is deleted
+      assert_raise Ecto.NoResultsError, fn ->
+        Projects.get_project!(user, workspace.id, project.id)
+      end
+    end
+
+    test "returns error when user is not a member of workspace" do
+      user = user_fixture()
+      other_user = user_fixture()
+      workspace = workspace_fixture(other_user)
+      project = project_fixture(other_user, workspace)
+
+      assert {:error, :unauthorized} = Projects.delete_project(user, workspace.id, project.id)
+    end
+
+    test "returns error when project doesn't exist" do
+      user = user_fixture()
+      workspace = workspace_fixture(user)
+
+      assert {:error, :project_not_found} = Projects.delete_project(user, workspace.id, Ecto.UUID.generate())
+    end
+
+    test "returns error when project belongs to different workspace" do
+      user = user_fixture()
+      workspace1 = workspace_fixture(user)
+      workspace2 = workspace_fixture(user)
+      project = project_fixture(user, workspace2)
+
+      assert {:error, :project_not_found} = Projects.delete_project(user, workspace1.id, project.id)
+    end
+  end
 end

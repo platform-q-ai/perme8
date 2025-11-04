@@ -15,7 +15,6 @@ defmodule JargaWeb.CoreComponentsTest do
         """)
 
       assert html =~ "btn"
-      assert html =~ "btn-soft"
       assert html =~ "btn-primary"
       assert html =~ "Click me"
     end
@@ -30,7 +29,6 @@ defmodule JargaWeb.CoreComponentsTest do
 
       assert html =~ "btn"
       assert html =~ "btn-primary"
-      refute html =~ "btn-soft"
     end
 
     test "renders secondary variant button" do
@@ -179,44 +177,6 @@ defmodule JargaWeb.CoreComponentsTest do
       assert html =~ "btn-error"
     end
 
-    test "renders soft variant button" do
-      assigns = %{}
-
-      html =
-        rendered_to_string(~H"""
-        <.button variant="soft">Soft</.button>
-        """)
-
-      assert html =~ "btn"
-      assert html =~ "btn-soft"
-    end
-
-    test "renders soft-primary variant button" do
-      assigns = %{}
-
-      html =
-        rendered_to_string(~H"""
-        <.button variant="soft-primary">Soft Primary</.button>
-        """)
-
-      assert html =~ "btn"
-      assert html =~ "btn-soft"
-      assert html =~ "btn-primary"
-    end
-
-    test "renders soft-error variant button" do
-      assigns = %{}
-
-      html =
-        rendered_to_string(~H"""
-        <.button variant="soft-error">Soft Error</.button>
-        """)
-
-      assert html =~ "btn"
-      assert html =~ "btn-soft"
-      assert html =~ "btn-error"
-    end
-
     test "renders extra small size button" do
       assigns = %{}
 
@@ -263,18 +223,6 @@ defmodule JargaWeb.CoreComponentsTest do
 
       assert html =~ "btn"
       assert html =~ "btn-lg"
-    end
-
-    test "renders extra large size button" do
-      assigns = %{}
-
-      html =
-        rendered_to_string(~H"""
-        <.button size="xl">Extra Large</.button>
-        """)
-
-      assert html =~ "btn"
-      assert html =~ "btn-xl"
     end
 
     test "renders button with custom classes" do

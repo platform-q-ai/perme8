@@ -3,14 +3,16 @@ defmodule Jarga.Projects do
   The Projects context.
 
   Handles project creation, management within workspaces.
+  This module follows Clean Architecture patterns by delegating to:
+  - Query Objects (infrastructure layer) for data access
+  - Policies (domain layer) for business rules
   """
 
-  import Ecto.Query, warn: false
   alias Jarga.Repo
-
   alias Jarga.Accounts.User
-  alias Jarga.Projects.Project
-  alias Jarga.Workspaces.{Workspace, WorkspaceMember}
+  alias Jarga.Projects.{Project, Queries}
+  alias Jarga.Projects.Policies.Authorization
+  alias Jarga.Workspaces.Policies.Authorization, as: WorkspaceAuth
 
   @doc """
   Returns the list of projects for a given workspace.
@@ -24,16 +26,11 @@ defmodule Jarga.Projects do
 
   """
   def list_projects_for_workspace(%User{} = user, workspace_id) do
-    from(p in Project,
-      join: w in Workspace,
-      on: p.workspace_id == w.id,
-      join: wm in WorkspaceMember,
-      on: wm.workspace_id == w.id,
-      where: p.workspace_id == ^workspace_id,
-      where: wm.user_id == ^user.id,
-      where: p.is_archived == false,
-      order_by: [desc: p.inserted_at]
-    )
+    Queries.base()
+    |> Queries.for_workspace(workspace_id)
+    |> Queries.for_user(user)
+    |> Queries.active()
+    |> Queries.ordered()
     |> Repo.all()
   end
 
@@ -56,7 +53,7 @@ defmodule Jarga.Projects do
   """
   def create_project(%User{} = user, workspace_id, attrs) do
     # First verify the user is a member of the workspace
-    case verify_workspace_membership(user, workspace_id) do
+    case WorkspaceAuth.verify_membership(user, workspace_id) do
       {:ok, _workspace} ->
         # Convert atom keys to string keys to avoid mixed keys
         string_attrs =
@@ -92,37 +89,66 @@ defmodule Jarga.Projects do
 
   """
   def get_project!(%User{} = user, workspace_id, project_id) do
-    from(p in Project,
-      join: w in Workspace,
-      on: p.workspace_id == w.id,
-      join: wm in WorkspaceMember,
-      on: wm.workspace_id == w.id,
-      where: p.id == ^project_id,
-      where: p.workspace_id == ^workspace_id,
-      where: wm.user_id == ^user.id
-    )
+    Queries.for_user_by_id(user, workspace_id, project_id)
     |> Repo.one!()
   end
 
-  defp verify_workspace_membership(user, workspace_id) do
-    query =
-      from w in Workspace,
-        join: wm in WorkspaceMember,
-        on: wm.workspace_id == w.id,
-        where: w.id == ^workspace_id,
-        where: wm.user_id == ^user.id
+  @doc """
+  Updates a project for a user in a workspace.
 
-    case Repo.one(query) do
-      nil ->
-        # Check if workspace exists
-        if Repo.get(Workspace, workspace_id) do
-          {:error, :unauthorized}
-        else
-          {:error, :workspace_not_found}
-        end
+  The user must be a member of the workspace to update projects.
 
-      workspace ->
-        {:ok, workspace}
+  ## Examples
+
+      iex> update_project(user, workspace_id, project_id, %{name: "Updated"})
+      {:ok, %Project{}}
+
+      iex> update_project(user, workspace_id, project_id, %{name: ""})
+      {:error, %Ecto.Changeset{}}
+
+      iex> update_project(user, non_member_workspace_id, project_id, %{name: "Updated"})
+      {:error, :unauthorized}
+
+  """
+  def update_project(%User{} = user, workspace_id, project_id, attrs) do
+    case Authorization.verify_project_access(user, workspace_id, project_id) do
+      {:ok, project} ->
+        # Convert atom keys to string keys to avoid mixed keys
+        string_attrs =
+          attrs
+          |> Enum.map(fn {k, v} -> {to_string(k), v} end)
+          |> Enum.into(%{})
+
+        project
+        |> Project.changeset(string_attrs)
+        |> Repo.update()
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  @doc """
+  Deletes a project for a user in a workspace.
+
+  The user must be a member of the workspace to delete projects.
+
+  ## Examples
+
+      iex> delete_project(user, workspace_id, project_id)
+      {:ok, %Project{}}
+
+      iex> delete_project(user, non_member_workspace_id, project_id)
+      {:error, :unauthorized}
+
+  """
+  def delete_project(%User{} = user, workspace_id, project_id) do
+    case Authorization.verify_project_access(user, workspace_id, project_id) do
+      {:ok, project} ->
+        Repo.delete(project)
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 end

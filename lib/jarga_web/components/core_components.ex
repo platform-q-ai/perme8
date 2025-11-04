@@ -92,7 +92,7 @@ defmodule JargaWeb.CoreComponents do
   """
   attr :rest, :global, include: ~w(href navigate patch method download name value disabled)
   attr :class, :string, default: nil
-  attr :variant, :string, default: "soft-primary"
+  attr :variant, :string, default: "primary"
   attr :size, :string, default: nil
   slot :inner_block, required: true
 
@@ -117,14 +117,6 @@ defmodule JargaWeb.CoreComponents do
         "outline-success" -> "btn-outline btn-success"
         "outline-warning" -> "btn-outline btn-warning"
         "outline-error" -> "btn-outline btn-error"
-        "soft" -> "btn-soft"
-        "soft-primary" -> "btn-soft btn-primary"
-        "soft-secondary" -> "btn-soft btn-secondary"
-        "soft-accent" -> "btn-soft btn-accent"
-        "soft-info" -> "btn-soft btn-info"
-        "soft-success" -> "btn-soft btn-success"
-        "soft-warning" -> "btn-soft btn-warning"
-        "soft-error" -> "btn-soft btn-error"
       end
 
     size_class =
@@ -133,7 +125,6 @@ defmodule JargaWeb.CoreComponents do
         "sm" -> "btn-sm"
         "md" -> "btn-md"
         "lg" -> "btn-lg"
-        "xl" -> "btn-xl"
         nil -> nil
       end
 
@@ -211,7 +202,7 @@ defmodule JargaWeb.CoreComponents do
 
   attr :size, :string,
     default: nil,
-    doc: "the input size (xs, sm, md, lg, xl)"
+    doc: "the input size (xs, sm, md, lg)"
 
   attr :rest, :global,
     include: ~w(accept autocomplete capture cols disabled form list max maxlength min minlength
@@ -268,7 +259,7 @@ defmodule JargaWeb.CoreComponents do
           id={@id}
           name={@name}
           class={[
-            @class || "w-full select",
+            @class || "w-full select select-bordered",
             @errors != [] && (@error_class || "select-error"),
             input_variant_class("select", @variant),
             input_size_class("select", @size)
@@ -294,7 +285,7 @@ defmodule JargaWeb.CoreComponents do
           id={@id}
           name={@name}
           class={[
-            @class || "w-full textarea",
+            @class || "w-full textarea textarea-bordered",
             @errors != [] && (@error_class || "textarea-error"),
             input_variant_class("textarea", @variant),
             input_size_class("textarea", @size)
@@ -319,7 +310,7 @@ defmodule JargaWeb.CoreComponents do
           id={@id}
           value={Phoenix.HTML.Form.normalize_value(@type, @value)}
           class={[
-            @class || "w-full input",
+            @class || "w-full input input-bordered",
             @errors != [] && (@error_class || "input-error"),
             input_variant_class("input", @variant),
             input_size_class("input", @size)
@@ -563,5 +554,42 @@ defmodule JargaWeb.CoreComponents do
   """
   def translate_errors(errors, field) when is_list(errors) do
     for {^field, {msg, opts}} <- errors, do: translate_error({msg, opts})
+  end
+
+  @doc """
+  Renders breadcrumb navigation.
+
+  ## Examples
+
+      <.breadcrumbs>
+        <:crumb navigate={~p"/app"}>Home</:crumb>
+        <:crumb navigate={~p"/app/workspaces"}>Workspaces</:crumb>
+        <:crumb>Current Page</:crumb>
+      </.breadcrumbs>
+  """
+  slot :crumb, required: true do
+    attr :navigate, :string
+  end
+
+  def breadcrumbs(assigns) do
+    ~H"""
+    <nav class="breadcrumbs text-sm mb-4">
+      <ul>
+        <%= for {crumb, index} <- Enum.with_index(@crumb) do %>
+          <li>
+            <%= if crumb[:navigate] do %>
+              <.link navigate={crumb.navigate} class="hover:underline">
+                {render_slot(crumb)}
+              </.link>
+            <% else %>
+              <span class="text-base-content/70">
+                {render_slot(crumb)}
+              </span>
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+    </nav>
+    """
   end
 end

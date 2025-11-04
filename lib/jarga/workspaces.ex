@@ -3,13 +3,15 @@ defmodule Jarga.Workspaces do
   The Workspaces context.
 
   Handles workspace creation, management, and membership.
+  This module follows Clean Architecture patterns by delegating to:
+  - Query Objects (infrastructure layer) for data access
+  - Policies (domain layer) for business rules
   """
 
-  import Ecto.Query, warn: false
   alias Jarga.Repo
-
   alias Jarga.Accounts.User
-  alias Jarga.Workspaces.{Workspace, WorkspaceMember}
+  alias Jarga.Workspaces.{Workspace, WorkspaceMember, Queries}
+  alias Jarga.Workspaces.Policies.Authorization
 
   @doc """
   Returns the list of workspaces for a given user.
@@ -23,13 +25,10 @@ defmodule Jarga.Workspaces do
 
   """
   def list_workspaces_for_user(%User{} = user) do
-    from(w in Workspace,
-      join: wm in WorkspaceMember,
-      on: wm.workspace_id == w.id,
-      where: wm.user_id == ^user.id,
-      where: w.is_archived == false,
-      order_by: [desc: w.inserted_at]
-    )
+    Queries.base()
+    |> Queries.for_user(user)
+    |> Queries.active()
+    |> Queries.ordered()
     |> Repo.all()
   end
 
@@ -90,12 +89,7 @@ defmodule Jarga.Workspaces do
 
   """
   def get_workspace!(%User{} = user, id) do
-    from(w in Workspace,
-      join: wm in WorkspaceMember,
-      on: wm.workspace_id == w.id,
-      where: w.id == ^id,
-      where: wm.user_id == ^user.id
-    )
+    Queries.for_user_by_id(user, id)
     |> Repo.one!()
   end
 
@@ -117,7 +111,7 @@ defmodule Jarga.Workspaces do
 
   """
   def update_workspace(%User{} = user, workspace_id, attrs) do
-    case verify_workspace_membership(user, workspace_id) do
+    case Authorization.verify_membership(user, workspace_id) do
       {:ok, workspace} ->
         workspace
         |> Workspace.changeset(attrs)
@@ -144,34 +138,12 @@ defmodule Jarga.Workspaces do
 
   """
   def delete_workspace(%User{} = user, workspace_id) do
-    case verify_workspace_membership(user, workspace_id) do
+    case Authorization.verify_membership(user, workspace_id) do
       {:ok, workspace} ->
         Repo.delete(workspace)
 
       {:error, reason} ->
         {:error, reason}
-    end
-  end
-
-  defp verify_workspace_membership(user, workspace_id) do
-    query =
-      from w in Workspace,
-        join: wm in WorkspaceMember,
-        on: wm.workspace_id == w.id,
-        where: w.id == ^workspace_id,
-        where: wm.user_id == ^user.id
-
-    case Repo.one(query) do
-      nil ->
-        # Check if workspace exists
-        if Repo.get(Workspace, workspace_id) do
-          {:error, :unauthorized}
-        else
-          {:error, :workspace_not_found}
-        end
-
-      workspace ->
-        {:ok, workspace}
     end
   end
 end

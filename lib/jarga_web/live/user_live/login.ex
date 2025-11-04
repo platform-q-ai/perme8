@@ -89,7 +89,7 @@ defmodule JargaWeb.UserLive.Login do
           >
             Log in and stay logged in <span aria-hidden="true">→</span>
           </.button>
-          <.button variant="soft-primary" class="w-full mt-2">
+          <.button variant="ghost" class="w-full mt-2">
             Log in only this time
           </.button>
         </.form>

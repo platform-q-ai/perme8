@@ -9,6 +9,11 @@ defmodule JargaWeb.AppLive.Workspaces.Index do
     ~H"""
     <Layouts.admin flash={@flash} current_scope={@current_scope}>
       <div class="space-y-8">
+        <.breadcrumbs>
+          <:crumb navigate={~p"/app"}>Home</:crumb>
+          <:crumb>Workspaces</:crumb>
+        </.breadcrumbs>
+
         <div class="flex items-center justify-between">
           <.header>
             Workspaces

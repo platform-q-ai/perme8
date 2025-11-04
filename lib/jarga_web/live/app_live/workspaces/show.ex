@@ -10,6 +10,12 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
     ~H"""
     <Layouts.admin flash={@flash} current_scope={@current_scope}>
       <div class="space-y-8">
+        <.breadcrumbs>
+          <:crumb navigate={~p"/app"}>Home</:crumb>
+          <:crumb navigate={~p"/app/workspaces"}>Workspaces</:crumb>
+          <:crumb>{@workspace.name}</:crumb>
+        </.breadcrumbs>
+
         <div class="flex items-center justify-between">
           <.header>
             {@workspace.name}
@@ -65,7 +71,8 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
           <% else %>
             <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               <%= for project <- @projects do %>
-                <div
+                <.link
+                  navigate={~p"/app/workspaces/#{@workspace.id}/projects/#{project.id}"}
                   class="card bg-base-200 hover:bg-base-300 transition-colors"
                   data-project-id={project.id}
                 >
@@ -81,7 +88,7 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
                       <p class="text-sm text-base-content/70">{project.description}</p>
                     <% end %>
                   </div>
-                </div>
+                </.link>
               <% end %>
             </div>
           <% end %>

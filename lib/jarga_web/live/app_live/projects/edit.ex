@@ -1,7 +1,7 @@
-defmodule JargaWeb.AppLive.Workspaces.Edit do
+defmodule JargaWeb.AppLive.Projects.Edit do
   use JargaWeb, :live_view
 
-  alias Jarga.Workspaces
+  alias Jarga.{Workspaces, Projects}
   alias JargaWeb.Layouts
 
   @impl true
@@ -13,15 +13,21 @@ defmodule JargaWeb.AppLive.Workspaces.Edit do
           <:crumb navigate={~p"/app"}>Home</:crumb>
           <:crumb navigate={~p"/app/workspaces"}>Workspaces</:crumb>
           <:crumb navigate={~p"/app/workspaces/#{@workspace.id}"}>{@workspace.name}</:crumb>
+          <:crumb navigate={~p"/app/workspaces/#{@workspace.id}/projects/#{@project.id}"}>
+            {@project.name}
+          </:crumb>
           <:crumb>Edit</:crumb>
         </.breadcrumbs>
 
         <div>
           <.header>
-            Edit Workspace
+            Edit Project
             <:subtitle>
-              <.link navigate={~p"/app/workspaces/#{@workspace.id}"} class="text-sm hover:underline">
-                ← Back to {@workspace.name}
+              <.link
+                navigate={~p"/app/workspaces/#{@workspace.id}/projects/#{@project.id}"}
+                class="text-sm hover:underline"
+              >
+                ← Back to {@project.name}
               </.link>
             </:subtitle>
           </.header>
@@ -29,17 +35,12 @@ defmodule JargaWeb.AppLive.Workspaces.Edit do
 
         <div class="card bg-base-200">
           <div class="card-body">
-            <.form
-              for={@form}
-              id="workspace-form"
-              phx-submit="save"
-              class="space-y-4"
-            >
+            <.form for={@form} id="project-form" phx-submit="save" class="space-y-4">
               <.input
                 field={@form[:name]}
                 type="text"
                 label="Name"
-                placeholder="My Workspace"
+                placeholder="My Project"
                 required
               />
 
@@ -47,22 +48,20 @@ defmodule JargaWeb.AppLive.Workspaces.Edit do
                 field={@form[:description]}
                 type="textarea"
                 label="Description"
-                placeholder="Describe your workspace..."
+                placeholder="Describe your project..."
               />
 
-              <.input
-                field={@form[:color]}
-                type="text"
-                label="Color"
-                placeholder="#4A90E2"
-              />
+              <.input field={@form[:color]} type="text" label="Color" placeholder="#10B981" />
 
               <div class="flex gap-2 justify-end">
-                <.link navigate={~p"/app/workspaces/#{@workspace.id}"} class="btn btn-ghost">
+                <.link
+                  navigate={~p"/app/workspaces/#{@workspace.id}/projects/#{@project.id}"}
+                  class="btn btn-ghost"
+                >
                   Cancel
                 </.link>
                 <.button type="submit" variant="primary">
-                  Update Workspace
+                  Update Project
                 </.button>
               </div>
             </.form>
@@ -74,36 +73,39 @@ defmodule JargaWeb.AppLive.Workspaces.Edit do
   end
 
   @impl true
-  def mount(%{"workspace_id" => workspace_id}, _session, socket) do
+  def mount(%{"workspace_id" => workspace_id, "id" => project_id}, _session, socket) do
     user = socket.assigns.current_scope.user
 
     # This will raise if user is not a member
     workspace = Workspaces.get_workspace!(user, workspace_id)
-    changeset = Workspaces.Workspace.changeset(workspace, %{})
+    project = Projects.get_project!(user, workspace_id, project_id)
+    changeset = Projects.Project.changeset(project, %{})
 
     {:ok,
      socket
      |> assign(:workspace, workspace)
+     |> assign(:project, project)
      |> assign(:form, to_form(changeset))}
   end
 
   @impl true
-  def handle_event("save", %{"workspace" => workspace_params}, socket) do
+  def handle_event("save", %{"project" => project_params}, socket) do
     user = socket.assigns.current_scope.user
     workspace_id = socket.assigns.workspace.id
+    project_id = socket.assigns.project.id
 
-    case Workspaces.update_workspace(user, workspace_id, workspace_params) do
-      {:ok, workspace} ->
+    case Projects.update_project(user, workspace_id, project_id, project_params) do
+      {:ok, project} ->
         {:noreply,
          socket
-         |> put_flash(:info, "Workspace updated successfully")
-         |> push_navigate(to: ~p"/app/workspaces/#{workspace.id}")}
+         |> put_flash(:info, "Project updated successfully")
+         |> push_navigate(to: ~p"/app/workspaces/#{workspace_id}/projects/#{project.id}")}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, form: to_form(changeset))}
 
       {:error, _reason} ->
-        {:noreply, put_flash(socket, :error, "Failed to update workspace")}
+        {:noreply, put_flash(socket, :error, "Failed to update project")}
     end
   end
 end
