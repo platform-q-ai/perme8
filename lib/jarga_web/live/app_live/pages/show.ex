@@ -10,7 +10,8 @@ defmodule JargaWeb.AppLive.Pages.Show do
     # Get workspace first
     with {:ok, workspace} <- Workspaces.get_workspace_by_slug(user, workspace_slug),
          {:ok, page} <- get_page_by_slug(user, workspace.id, page_slug),
-         {:ok, project} <- get_project_if_exists(user, page) do
+         {:ok, project} <- get_project_if_exists(user, page),
+         {:ok, member} <- Workspaces.get_member(user, workspace.id) do
       # Get the note component (first note in page_components)
       note = get_note_component(page)
 
@@ -23,14 +24,19 @@ defmodule JargaWeb.AppLive.Pages.Show do
       # Generate user ID for collaborative editing
       collab_user_id = generate_user_id()
 
+      # Determine if the editor should be read-only (guests can only view)
+      readonly = member.role == :guest
+
       {:ok,
        socket
        |> assign(:page, page)
        |> assign(:note, note)
        |> assign(:workspace, workspace)
        |> assign(:project, project)
+       |> assign(:current_member, member)
        |> assign(:user_id, collab_user_id)
        |> assign(:editing_title, false)
+       |> assign(:readonly, readonly)
        |> assign(:page_form, to_form(%{"title" => page.title}))}
     else
       {:error, _reason} ->
@@ -310,39 +316,41 @@ defmodule JargaWeb.AppLive.Pages.Show do
           </.breadcrumbs>
         <% end %>
 
-        <!-- Action Buttons -->
-        <div class="flex items-center justify-end gap-2">
-          <!-- Share toggle button -->
-          <.button
-            variant={if @page.is_public, do: "primary", else: "ghost"}
-            size="sm"
-            phx-click="toggle_public"
-          >
-            <.icon name={if @page.is_public, do: "hero-globe-alt", else: "hero-lock-closed"} class="size-4" />
-            <%= if @page.is_public, do: "Shared", else: "Private" %>
-          </.button>
+        <!-- Action Buttons (hidden for guests) -->
+        <%= if not @readonly do %>
+          <div class="flex items-center justify-end gap-2">
+            <!-- Share toggle button -->
+            <.button
+              variant={if @page.is_public, do: "primary", else: "ghost"}
+              size="sm"
+              phx-click="toggle_public"
+            >
+              <.icon name={if @page.is_public, do: "hero-globe-alt", else: "hero-lock-closed"} class="size-4" />
+              <%= if @page.is_public, do: "Shared", else: "Private" %>
+            </.button>
 
-          <!-- Pin button -->
-          <.button
-            variant={if @page.is_pinned, do: "warning", else: "ghost"}
-            size="sm"
-            phx-click="toggle_pin"
-          >
-            <.icon name="hero-star" class="size-4" />
-            <%= if @page.is_pinned, do: "Pinned", else: "Pin" %>
-          </.button>
+            <!-- Pin button -->
+            <.button
+              variant={if @page.is_pinned, do: "warning", else: "ghost"}
+              size="sm"
+              phx-click="toggle_pin"
+            >
+              <.icon name="hero-star" class="size-4" />
+              <%= if @page.is_pinned, do: "Pinned", else: "Pin" %>
+            </.button>
 
-          <!-- Delete button -->
-          <.button
-            variant="error"
-            size="sm"
-            phx-click="delete_page"
-            data-confirm="Are you sure you want to delete this page?"
-          >
-            <.icon name="hero-trash" class="size-4" />
-            Delete
-          </.button>
-        </div>
+            <!-- Delete button -->
+            <.button
+              variant="error"
+              size="sm"
+              phx-click="delete_page"
+              data-confirm="Are you sure you want to delete this page?"
+            >
+              <.icon name="hero-trash" class="size-4" />
+              Delete
+            </.button>
+          </div>
+        <% end %>
 
         <!-- Title Section -->
         <div class="border-b border-base-300 pb-4">
@@ -369,9 +377,12 @@ defmodule JargaWeb.AppLive.Pages.Show do
             </form>
           <% else %>
             <h1
-              class="text-2xl font-bold cursor-pointer hover:text-primary transition-colors"
-              phx-click="start_edit_title"
-              title="Click to edit title"
+              class={[
+                "text-2xl font-bold",
+                if(@readonly, do: "", else: "cursor-pointer hover:text-primary transition-colors")
+              ]}
+              phx-click={if @readonly, do: nil, else: "start_edit_title"}
+              title={if @readonly, do: nil, else: "Click to edit title"}
             >
               {@page.title}
             </h1>
@@ -380,13 +391,23 @@ defmodule JargaWeb.AppLive.Pages.Show do
 
         <!-- Editor -->
         <div class="flex-1 overflow-auto">
+          <%= if @readonly do %>
+            <div class="alert alert-info mb-4">
+              <.icon name="hero-eye" class="size-5" />
+              <span>You are viewing this page in read-only mode.</span>
+            </div>
+          <% end %>
           <div
             id="editor-container"
             phx-hook="MilkdownEditor"
             phx-update="ignore"
             data-yjs-state={if @note.yjs_state, do: Base.encode64(@note.yjs_state), else: ""}
             data-initial-content={get_initial_markdown(@note)}
-            class="border border-base-300 rounded-lg h-full min-h-[600px]"
+            data-readonly={if @readonly, do: "true", else: "false"}
+            class={[
+              "border rounded-lg h-full min-h-[600px]",
+              if(@readonly, do: "border-base-300 bg-base-100 opacity-90", else: "border-base-300")
+            ]}
           >
           </div>
         </div>

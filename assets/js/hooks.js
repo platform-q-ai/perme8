@@ -18,6 +18,15 @@ export const MilkdownEditor = {
     // Get initial state from data attributes
     const initialYjsState = this.el.dataset.yjsState || ''
     const initialContent = this.el.dataset.initialContent || ''
+    const readonly = this.el.dataset.readonly === 'true'
+
+    this.readonly = readonly
+
+    // For readonly mode: use Milkdown to render but make it completely non-editable
+    if (readonly) {
+      this.createReadonlyMilkdownEditor(initialContent)
+      return
+    }
 
     // Initialize collaboration manager with initial state
     this.collaborationManager = new CollaborationManager()
@@ -117,6 +126,69 @@ export const MilkdownEditor = {
     })
   },
 
+  createReadonlyMilkdownEditor(initialContent) {
+    // Create a Milkdown editor that's completely read-only
+    const editor = Editor.make()
+      .config((ctx) => {
+        ctx.set(rootCtx, this.el)
+        ctx.set(defaultValueCtx, initialContent || '')
+      })
+      .use(nord)
+      .use(commonmark)
+
+    this.editor = editor
+
+    editor.create().then(() => {
+      this.editor.action((ctx) => {
+        const view = ctx.get(editorViewCtx)
+
+        // Make editor completely non-editable with aggressive blocking
+        view.setProps({
+          editable: () => false,
+          attributes: {
+            contenteditable: 'false',
+            style: 'cursor: default; user-select: text;'
+          },
+          handleDOMEvents: {
+            // Block ALL input events
+            beforeinput: () => true,
+            input: () => true,
+            keydown: () => true,
+            keypress: () => true,
+            keyup: () => true,
+            paste: () => true,
+            cut: () => true,
+            copy: () => false, // Allow copy
+            drop: () => true,
+            dragstart: () => true,
+            dragover: () => true,
+            compositionstart: () => true,
+            compositionupdate: () => true,
+            compositionend: () => true,
+          }
+        })
+
+        // Force contenteditable to false on DOM
+        if (view.dom) {
+          view.dom.contentEditable = 'false'
+          view.dom.style.cursor = 'default'
+          view.dom.style.userSelect = 'text'
+
+          // Add a mutation observer to ensure contenteditable stays false
+          const observer = new MutationObserver((mutations) => {
+            if (view.dom.contentEditable !== 'false') {
+              view.dom.contentEditable = 'false'
+            }
+          })
+          observer.observe(view.dom, { attributes: true, attributeFilter: ['contenteditable'] })
+          this.readonlyObserver = observer
+        }
+      })
+    }).catch((error) => {
+      console.error('Failed to create readonly Milkdown editor:', error)
+    })
+  },
+
   getMarkdownContent() {
     if (!this.editor) {
       return ''
@@ -141,7 +213,8 @@ export const MilkdownEditor = {
   },
 
   forceSave() {
-    if (!this.collaborationManager || !this.hasPendingChanges) {
+    // Skip if readonly or no pending changes or no collaboration manager
+    if (this.readonly || !this.collaborationManager || !this.hasPendingChanges) {
       return
     }
 
@@ -189,6 +262,12 @@ export const MilkdownEditor = {
     }
     if (this.beforeUnloadHandler) {
       window.removeEventListener('beforeunload', this.beforeUnloadHandler)
+    }
+
+    // Disconnect readonly observer
+    if (this.readonlyObserver) {
+      this.readonlyObserver.disconnect()
+      this.readonlyObserver = null
     }
 
     if (this.collaborationManager) {
