@@ -60,8 +60,6 @@ defmodule JargaWeb.Router do
       live "/workspaces/:workspace_slug/projects/:project_slug", AppLive.Projects.Show, :show
       live "/workspaces/:workspace_slug/pages/:page_slug", AppLive.Pages.Show, :show
       live "/workspaces/:slug", AppLive.Workspaces.Show, :show
-      live "/editor", EditorLive
-      live "/editor/:doc_id", EditorLive
     end
   end
 

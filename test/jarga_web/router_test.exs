@@ -12,22 +12,6 @@ defmodule JargaWeb.RouterTest do
       assert path == ~p"/users/log-in"
       assert %{"error" => "You must log in to access this page."} = flash
     end
-
-    test "GET /app/editor redirects to login", %{conn: conn} do
-      assert {:error, redirect} = live(conn, ~p"/app/editor")
-
-      assert {:redirect, %{to: path, flash: flash}} = redirect
-      assert path == ~p"/users/log-in"
-      assert %{"error" => "You must log in to access this page."} = flash
-    end
-
-    test "GET /app/editor/:doc_id redirects to login", %{conn: conn} do
-      assert {:error, redirect} = live(conn, ~p"/app/editor/doc_123")
-
-      assert {:redirect, %{to: path, flash: flash}} = redirect
-      assert path == ~p"/users/log-in"
-      assert %{"error" => "You must log in to access this page."} = flash
-    end
   end
 
   describe "/app/* routes (authenticated)" do
@@ -39,17 +23,6 @@ defmodule JargaWeb.RouterTest do
     test "GET /app allows access", %{conn: conn} do
       {:ok, _lv, html} = live(conn, ~p"/app")
       assert html =~ "Welcome to Jarga"
-    end
-
-    test "GET /app/editor redirects to specific document", %{conn: conn} do
-      # EditorLive without doc_id redirects to a random doc_id
-      assert {:error, {:live_redirect, %{to: to}}} = live(conn, ~p"/app/editor")
-      assert to =~ ~r|^/app/editor/doc_\d+$|
-    end
-
-    test "GET /app/editor/:doc_id allows access", %{conn: conn} do
-      {:ok, _lv, html} = live(conn, ~p"/app/editor/doc_123")
-      assert html =~ "Collaborative Markdown Editor"
     end
 
     test "all /app routes use :require_authenticated_user pipeline", %{conn: conn} do
@@ -73,9 +46,9 @@ defmodule JargaWeb.RouterTest do
           String.starts_with?(route.path, "/app")
         end)
 
-      # Verify all /app routes exist
-      assert length(app_routes) >= 3,
-             "Expected at least 3 /app routes (/, /editor, /editor/:doc_id)"
+      # Verify /app routes exist
+      assert length(app_routes) >= 1,
+             "Expected at least 1 /app route"
 
       # Verify routes are configured (Phoenix routing internals)
       for route <- app_routes do
@@ -101,7 +74,7 @@ defmodule JargaWeb.RouterTest do
 
     test "stores intended path and redirects after login", %{conn: conn} do
       # Try to access protected route
-      {:error, redirect} = live(conn, ~p"/app/editor/doc_test")
+      {:error, redirect} = live(conn, ~p"/app")
       assert {:redirect, %{to: login_path}} = redirect
       assert login_path == ~p"/users/log-in"
 

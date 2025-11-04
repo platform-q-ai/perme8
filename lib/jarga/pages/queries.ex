@@ -71,10 +71,10 @@ defmodule Jarga.Pages.Queries do
   end
 
   @doc """
-  Order pages by creation date (newest first).
+  Order pages with pinned pages first, then by updated_at (newest first).
   """
   def ordered(query) do
     from [page: p] in query,
-      order_by: [desc: p.inserted_at]
+      order_by: [desc: p.is_pinned, desc: p.updated_at]
   end
 end

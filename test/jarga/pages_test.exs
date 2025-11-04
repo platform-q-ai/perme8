@@ -310,6 +310,35 @@ defmodule Jarga.PagesTest do
       assert length(pages_user2) == 1
       assert hd(pages_user2).id == page2.id
     end
+
+    test "orders pages with pinned first, then by updated_at desc" do
+      user = user_fixture()
+      workspace = workspace_fixture(user)
+
+      # Create pages
+      {:ok, page1} = Pages.create_page(user, workspace.id, %{title: "Page 1"})
+      {:ok, page2} = Pages.create_page(user, workspace.id, %{title: "Page 2"})
+      {:ok, page3} = Pages.create_page(user, workspace.id, %{title: "Page 3"})
+      {:ok, page4} = Pages.create_page(user, workspace.id, %{title: "Page 4"})
+
+      # Manually set updated_at timestamps and pin status to create specific ordering
+      # Use raw Ecto queries to bypass the context and set timestamps directly
+      base_time = ~U[2025-01-01 12:00:00Z]
+
+      page1 |> Ecto.Changeset.change(updated_at: DateTime.add(base_time, 0, :second)) |> Repo.update!()
+      page2 |> Ecto.Changeset.change(is_pinned: true, updated_at: DateTime.add(base_time, 1, :second)) |> Repo.update!()
+      page3 |> Ecto.Changeset.change(updated_at: DateTime.add(base_time, 2, :second)) |> Repo.update!()
+      page4 |> Ecto.Changeset.change(is_pinned: true, updated_at: DateTime.add(base_time, 3, :second)) |> Repo.update!()
+
+      pages = Pages.list_pages_for_workspace(user, workspace.id)
+
+      # Should be ordered: page4 (pinned, newest), page2 (pinned, older), page3 (unpinned, newest), page1 (unpinned, oldest)
+      assert length(pages) == 4
+      assert Enum.at(pages, 0).id == page4.id
+      assert Enum.at(pages, 1).id == page2.id
+      assert Enum.at(pages, 2).id == page3.id
+      assert Enum.at(pages, 3).id == page1.id
+    end
   end
 
   describe "list_pages_for_project/3" do
@@ -362,6 +391,48 @@ defmodule Jarga.PagesTest do
 
       assert length(pages) == 1
       assert hd(pages).id == page1.id
+    end
+
+    test "orders pages with pinned first, then by updated_at desc" do
+      user = user_fixture()
+      workspace = workspace_fixture(user)
+      project = project_fixture(user, workspace)
+
+      # Create pages
+      {:ok, page1} = Pages.create_page(user, workspace.id, %{
+        title: "Page 1",
+        project_id: project.id
+      })
+      {:ok, page2} = Pages.create_page(user, workspace.id, %{
+        title: "Page 2",
+        project_id: project.id
+      })
+      {:ok, page3} = Pages.create_page(user, workspace.id, %{
+        title: "Page 3",
+        project_id: project.id
+      })
+      {:ok, page4} = Pages.create_page(user, workspace.id, %{
+        title: "Page 4",
+        project_id: project.id
+      })
+
+      # Manually set updated_at timestamps and pin status to create specific ordering
+      # Use raw Ecto queries to bypass the context and set timestamps directly
+      base_time = ~U[2025-01-01 12:00:00Z]
+
+      page1 |> Ecto.Changeset.change(updated_at: DateTime.add(base_time, 0, :second)) |> Repo.update!()
+      page2 |> Ecto.Changeset.change(is_pinned: true, updated_at: DateTime.add(base_time, 1, :second)) |> Repo.update!()
+      page3 |> Ecto.Changeset.change(updated_at: DateTime.add(base_time, 2, :second)) |> Repo.update!()
+      page4 |> Ecto.Changeset.change(is_pinned: true, updated_at: DateTime.add(base_time, 3, :second)) |> Repo.update!()
+
+      pages = Pages.list_pages_for_project(user, workspace.id, project.id)
+
+      # Should be ordered: page4 (pinned, newest), page2 (pinned, older), page3 (unpinned, newest), page1 (unpinned, oldest)
+      assert length(pages) == 4
+      assert Enum.at(pages, 0).id == page4.id
+      assert Enum.at(pages, 1).id == page2.id
+      assert Enum.at(pages, 2).id == page3.id
+      assert Enum.at(pages, 3).id == page1.id
     end
   end
 
