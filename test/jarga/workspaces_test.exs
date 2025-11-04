@@ -113,6 +113,31 @@ defmodule Jarga.WorkspacesTest do
     end
   end
 
+  describe "get_workspace/2" do
+    test "returns workspace when user is a member" do
+      user = user_fixture()
+      workspace = workspace_fixture(user)
+
+      assert {:ok, fetched} = Workspaces.get_workspace(user, workspace.id)
+      assert fetched.id == workspace.id
+      assert fetched.name == workspace.name
+    end
+
+    test "returns :workspace_not_found when workspace doesn't exist" do
+      user = user_fixture()
+
+      assert {:error, :workspace_not_found} = Workspaces.get_workspace(user, Ecto.UUID.generate())
+    end
+
+    test "returns :unauthorized when user is not a member of workspace" do
+      user = user_fixture()
+      other_user = user_fixture()
+      workspace = workspace_fixture(other_user)
+
+      assert {:error, :unauthorized} = Workspaces.get_workspace(user, workspace.id)
+    end
+  end
+
   describe "get_workspace!/2" do
     test "returns workspace when user is a member" do
       user = user_fixture()
@@ -232,6 +257,242 @@ defmodule Jarga.WorkspacesTest do
       user = user_fixture()
 
       assert {:error, :workspace_not_found} = Workspaces.delete_workspace(user, Ecto.UUID.generate())
+    end
+  end
+
+  describe "invite_member/4 - existing user" do
+    test "successfully invites an existing user as admin" do
+      owner = user_fixture()
+      workspace = workspace_fixture(owner)
+      invitee = user_fixture()
+
+      assert {:ok, {:member_added, member}} = Workspaces.invite_member(owner, workspace.id, invitee.email, :admin)
+      assert member.workspace_id == workspace.id
+      assert member.user_id == invitee.id
+      assert member.email == invitee.email
+      assert member.role == :admin
+      assert member.invited_by == owner.id
+      assert member.invited_at != nil
+      assert member.joined_at != nil
+    end
+
+    test "successfully invites an existing user as member" do
+      owner = user_fixture()
+      workspace = workspace_fixture(owner)
+      invitee = user_fixture()
+
+      assert {:ok, {:member_added, member}} = Workspaces.invite_member(owner, workspace.id, invitee.email, :member)
+      assert member.role == :member
+    end
+
+    test "successfully invites an existing user as guest" do
+      owner = user_fixture()
+      workspace = workspace_fixture(owner)
+      invitee = user_fixture()
+
+      assert {:ok, {:member_added, member}} = Workspaces.invite_member(owner, workspace.id, invitee.email, :guest)
+      assert member.role == :guest
+    end
+
+    test "returns error when inviting with owner role" do
+      owner = user_fixture()
+      workspace = workspace_fixture(owner)
+      invitee = user_fixture()
+
+      assert {:error, :invalid_role} = Workspaces.invite_member(owner, workspace.id, invitee.email, :owner)
+    end
+
+    test "returns error when user is already a member" do
+      owner = user_fixture()
+      workspace = workspace_fixture(owner)
+      invitee = user_fixture()
+
+      # First invitation succeeds
+      assert {:ok, {:member_added, _member}} = Workspaces.invite_member(owner, workspace.id, invitee.email, :admin)
+
+      # Second invitation fails
+      assert {:error, :already_member} = Workspaces.invite_member(owner, workspace.id, invitee.email, :admin)
+    end
+
+    test "returns error when inviter is not a member of workspace" do
+      owner = user_fixture()
+      workspace = workspace_fixture(owner)
+      non_member = user_fixture()
+      invitee = user_fixture()
+
+      assert {:error, :unauthorized} = Workspaces.invite_member(non_member, workspace.id, invitee.email, :admin)
+    end
+
+    test "returns error when workspace does not exist" do
+      owner = user_fixture()
+      invitee = user_fixture()
+
+      assert {:error, :workspace_not_found} = Workspaces.invite_member(owner, Ecto.UUID.generate(), invitee.email, :admin)
+    end
+  end
+
+  describe "invite_member/4 - non-existing user" do
+    test "creates pending invitation for non-existing user" do
+      owner = user_fixture()
+      workspace = workspace_fixture(owner)
+      email = "newuser@example.com"
+
+      assert {:ok, {:invitation_sent, invitation}} = Workspaces.invite_member(owner, workspace.id, email, :admin)
+      assert invitation.workspace_id == workspace.id
+      assert invitation.user_id == nil
+      assert invitation.email == email
+      assert invitation.role == :admin
+      assert invitation.invited_by == owner.id
+      assert invitation.invited_at != nil
+      assert invitation.joined_at == nil
+    end
+
+    test "email is case-insensitive when checking for existing users" do
+      owner = user_fixture()
+      workspace = workspace_fixture(owner)
+      invitee = user_fixture(%{email: "User@Example.Com"})
+
+      # Should find existing user despite case difference
+      assert {:ok, {:member_added, member}} = Workspaces.invite_member(owner, workspace.id, "user@example.com", :admin)
+      assert member.user_id == invitee.id
+    end
+  end
+
+  describe "list_members/1" do
+    test "returns all members of a workspace" do
+      owner = user_fixture()
+      workspace = workspace_fixture(owner)
+      member1 = user_fixture()
+      member2 = user_fixture()
+
+      {:ok, {:member_added, _}} = Workspaces.invite_member(owner, workspace.id, member1.email, :admin)
+      {:ok, {:member_added, _}} = Workspaces.invite_member(owner, workspace.id, member2.email, :member)
+
+      members = Workspaces.list_members(workspace.id)
+
+      assert length(members) == 3
+      member_emails = Enum.map(members, & &1.email)
+      assert owner.email in member_emails
+      assert member1.email in member_emails
+      assert member2.email in member_emails
+    end
+
+    test "returns empty list when workspace has no members" do
+      # This shouldn't happen in practice, but test the query
+      assert Workspaces.list_members(Ecto.UUID.generate()) == []
+    end
+
+    test "includes pending invitations" do
+      owner = user_fixture()
+      workspace = workspace_fixture(owner)
+
+      {:ok, {:invitation_sent, _}} = Workspaces.invite_member(owner, workspace.id, "pending@example.com", :admin)
+
+      members = Workspaces.list_members(workspace.id)
+
+      assert length(members) == 2
+      pending = Enum.find(members, &(&1.email == "pending@example.com"))
+      assert pending.user_id == nil
+      assert pending.joined_at == nil
+    end
+  end
+
+  describe "change_member_role/4" do
+    test "successfully changes member role" do
+      owner = user_fixture()
+      workspace = workspace_fixture(owner)
+      member = user_fixture()
+
+      {:ok, {:member_added, _}} = Workspaces.invite_member(owner, workspace.id, member.email, :admin)
+
+      assert {:ok, updated_member} = Workspaces.change_member_role(owner, workspace.id, member.email, :member)
+      assert updated_member.role == :member
+    end
+
+    test "returns error when trying to change owner role" do
+      owner = user_fixture()
+      workspace = workspace_fixture(owner)
+
+      assert {:error, :cannot_change_owner_role} =
+               Workspaces.change_member_role(owner, workspace.id, owner.email, :admin)
+    end
+
+    test "returns error when actor not a member" do
+      owner = user_fixture()
+      workspace = workspace_fixture(owner)
+      non_member = user_fixture()
+      member = user_fixture()
+
+      {:ok, {:member_added, _}} = Workspaces.invite_member(owner, workspace.id, member.email, :admin)
+
+      assert {:error, :unauthorized} =
+               Workspaces.change_member_role(non_member, workspace.id, member.email, :member)
+    end
+
+    test "returns error when member not found" do
+      owner = user_fixture()
+      workspace = workspace_fixture(owner)
+
+      assert {:error, :member_not_found} =
+               Workspaces.change_member_role(owner, workspace.id, "nonexistent@example.com", :admin)
+    end
+  end
+
+  describe "remove_member/3" do
+    test "successfully removes a member" do
+      owner = user_fixture()
+      workspace = workspace_fixture(owner)
+      member = user_fixture()
+
+      {:ok, {:member_added, _}} = Workspaces.invite_member(owner, workspace.id, member.email, :admin)
+
+      # Verify member exists
+      members_before = Workspaces.list_members(workspace.id)
+      assert length(members_before) == 2
+
+      assert {:ok, deleted_member} = Workspaces.remove_member(owner, workspace.id, member.email)
+      assert deleted_member.user_id == member.id
+
+      # Verify member removed
+      members_after = Workspaces.list_members(workspace.id)
+      assert length(members_after) == 1
+    end
+
+    test "successfully removes a pending invitation" do
+      owner = user_fixture()
+      workspace = workspace_fixture(owner)
+      email = "pending@example.com"
+
+      {:ok, {:invitation_sent, _}} = Workspaces.invite_member(owner, workspace.id, email, :admin)
+
+      assert {:ok, deleted_invitation} = Workspaces.remove_member(owner, workspace.id, email)
+      assert deleted_invitation.email == email
+    end
+
+    test "returns error when trying to remove owner" do
+      owner = user_fixture()
+      workspace = workspace_fixture(owner)
+
+      assert {:error, :cannot_remove_owner} = Workspaces.remove_member(owner, workspace.id, owner.email)
+    end
+
+    test "returns error when actor not a member" do
+      owner = user_fixture()
+      workspace = workspace_fixture(owner)
+      non_member = user_fixture()
+      member = user_fixture()
+
+      {:ok, {:member_added, _}} = Workspaces.invite_member(owner, workspace.id, member.email, :admin)
+
+      assert {:error, :unauthorized} = Workspaces.remove_member(non_member, workspace.id, member.email)
+    end
+
+    test "returns error when member not found" do
+      owner = user_fixture()
+      workspace = workspace_fixture(owner)
+
+      assert {:error, :member_not_found} =
+               Workspaces.remove_member(owner, workspace.id, "nonexistent@example.com")
     end
   end
 end

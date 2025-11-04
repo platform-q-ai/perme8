@@ -16,15 +16,7 @@ defmodule JargaWeb.AppLive.Projects.Show do
           <:crumb>{@project.name}</:crumb>
         </.breadcrumbs>
 
-        <div class="flex items-center justify-between">
-          <.header>
-            {@project.name}
-            <:subtitle>
-              <.link navigate={~p"/app/workspaces/#{@workspace.id}"} class="text-sm hover:underline">
-                ← Back to {@workspace.name}
-              </.link>
-            </:subtitle>
-          </.header>
+        <div class="flex items-center justify-end">
           <div class="flex gap-2">
             <.link
               navigate={~p"/app/workspaces/#{@workspace.id}/projects/#{@project.id}/edit"}

@@ -298,15 +298,29 @@ defmodule JargaWeb.AppLive.WorkspacesTest do
       assert %{"error" => "You must log in to access this page."} = flash
     end
 
-    test "raises when user is not a member of workspace" do
+    test "redirects with error when user is not a member of workspace" do
       user = user_fixture()
       other_user = user_fixture()
       workspace = workspace_fixture(other_user)
       conn = build_conn() |> log_in_user(user)
 
-      assert_raise Ecto.NoResultsError, fn ->
+      {:error, {:live_redirect, %{to: path, flash: flash}}} =
         live(conn, ~p"/app/workspaces/#{workspace.id}")
-      end
+
+      assert path == ~p"/app/workspaces"
+      assert %{"error" => "You don't have access to this workspace"} = flash
+    end
+
+    test "redirects with error when workspace does not exist" do
+      user = user_fixture()
+      conn = build_conn() |> log_in_user(user)
+      non_existent_id = Ecto.UUID.generate()
+
+      {:error, {:live_redirect, %{to: path, flash: flash}}} =
+        live(conn, ~p"/app/workspaces/#{non_existent_id}")
+
+      assert path == ~p"/app/workspaces"
+      assert %{"error" => "Workspace not found"} = flash
     end
   end
 

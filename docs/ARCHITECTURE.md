@@ -101,7 +101,13 @@ use Boundary,
 
 - **Can depend on**: Accounts context and shared infrastructure
 - **Exports**: `Workspace` schema
-- **Private**: `WorkspaceMember`, `Queries`, `Policies`
+- **Private**:
+  - `WorkspaceMember` (schema)
+  - `Queries` (infrastructure - query objects)
+  - `Policies.MembershipPolicy` (domain - business rules)
+  - `UseCases.*` (application - orchestration)
+  - `Infrastructure.MembershipRepository` (infrastructure - data access)
+  - `Services.*` (infrastructure - external services)
 
 #### Core Context: `Jarga.Projects`
 
@@ -182,21 +188,96 @@ end
 
 ### Core Layer (Contexts)
 
-#### What Belongs Here
+The Core Layer is further organized into three sub-layers following Clean Architecture:
+
+```
+Core Layer (lib/jarga/)
+├── Domain Layer       (Pure business logic, no I/O)
+│   ├── Entities       (Schemas - data structures)
+│   └── Policies       (Business rules - pure functions)
+├── Application Layer  (Use cases, orchestration)
+│   └── UseCases       (Coordinate domain + infrastructure)
+└── Infrastructure     (Data access, external services)
+    ├── Queries        (Database query objects)
+    └── Repositories   (Data access abstraction)
+```
+
+#### Domain Layer
+
+**Pure business logic with zero external dependencies.**
 
 ✅ **DO** put here:
-- Business logic and domain rules
-- Data validation (must hold regardless of interface)
-- Authorization policies
-- Database operations
-- Email sending (content composition)
-- Complex queries
+- Business rules and validation logic
+- Domain policies (pure functions)
+- Value object transformations
+- Business calculations
 
 ❌ **DON'T** put here:
-- HTTP-specific code (status codes, headers)
-- Request parameter parsing
+- Database queries (use Repo, Ecto.Query)
+- External API calls
+- File I/O
+- Any side effects
+
+**Example: Pure Domain Policy**
+```elixir
+# lib/jarga/workspaces/policies/membership_policy.ex
+defmodule Jarga.Workspaces.Policies.MembershipPolicy do
+  @moduledoc """
+  Pure domain policy with no infrastructure dependencies.
+  All functions are side-effect free and deterministic.
+  """
+
+  def valid_invitation_role?(role), do: role in [:admin, :member, :guest]
+  def can_change_role?(role), do: role not in [:owner]
+  def can_remove_member?(role), do: role not in [:owner]
+end
+```
+
+#### Application Layer
+
+**Orchestrates domain logic with infrastructure.**
+
+✅ **DO** put here:
+- Use cases (business operations)
+- Transaction boundaries
+- Orchestration of domain + infrastructure
+- Side effect coordination (emails, notifications)
+
+❌ **DON'T** put here:
+- HTTP-specific code
+- Pure business rules (put in domain)
+- Direct SQL (use query objects)
+
+**Example: Use Case**
+```elixir
+# lib/jarga/workspaces/use_cases/invite_member.ex
+def execute(params, opts) do
+  with :ok <- validate_role(params.role),                    # Domain policy
+       {:ok, workspace} <- verify_membership(...),            # Infrastructure
+       :ok <- check_not_already_member(...),                 # Infrastructure
+       user <- find_user(...) do                             # Infrastructure
+    add_member(workspace, user, params.role)                 # Infrastructure
+    send_notification(user, workspace)                       # Side effect
+  end
+end
+```
+
+#### Infrastructure Layer
+
+**Data access and external service integration.**
+
+✅ **DO** put here:
+- Database queries (Ecto, Repo)
+- Query objects
+- Repository pattern implementations
+- External API clients
+- Email delivery
+- File storage
+
+❌ **DON'T** put here:
+- Business rules
+- HTTP request handling
 - Session management
-- Template rendering (except for emails)
 
 #### Context Public API Pattern
 
@@ -268,14 +349,14 @@ end
 The Workspaces context exposes this as a public function:
 
 ```elixir
-# lib/jarga/workspaces.ex:177
+# lib/jarga/workspaces.ex:222
 @doc """
 Verifies that a user is a member of a workspace.
 
 This is a public API for other contexts to verify workspace membership.
 """
 def verify_membership(%User{} = user, workspace_id) do
-  Authorization.verify_membership(user, workspace_id)
+  get_workspace(user, workspace_id)
 end
 ```
 
@@ -335,48 +416,281 @@ end
 - Testable in isolation
 - Clear separation from business logic
 
-##### Policy Objects Pattern
+##### Domain Policy Pattern
 
-Encapsulate authorization rules in policy modules.
+**Pure domain policies** contain business rules with no infrastructure dependencies.
 
 ```elixir
-# lib/jarga/workspaces/policies/authorization.ex
-defmodule Jarga.Workspaces.Policies.Authorization do
+# lib/jarga/workspaces/policies/membership_policy.ex
+defmodule Jarga.Workspaces.Policies.MembershipPolicy do
   @moduledoc """
-  Authorization policy for workspace access control.
-  This module is internal to the Workspaces context.
+  Pure domain policy for workspace membership business rules.
+
+  No infrastructure dependencies - pure functions only.
   """
 
-  alias Jarga.Accounts.User
-  alias Jarga.Workspaces.Queries
-  alias Jarga.Repo
+  @allowed_invitation_roles [:admin, :member, :guest]
+  @protected_roles [:owner]
 
-  @spec verify_membership(User.t(), binary()) ::
-    {:ok, Workspace.t()} | {:error, :unauthorized | :workspace_not_found}
-  def verify_membership(%User{} = user, workspace_id) do
-    case Queries.for_user_by_id(user, workspace_id) |> Repo.one() do
-      nil ->
-        if workspace_exists?(workspace_id) do
-          {:error, :unauthorized}
-        else
-          {:error, :workspace_not_found}
-        end
-      workspace ->
-        {:ok, workspace}
+  def valid_invitation_role?(role), do: role in @allowed_invitation_roles
+  def valid_role_change?(role), do: role in @allowed_invitation_roles
+  def can_change_role?(member_role), do: member_role not in @protected_roles
+  def can_remove_member?(member_role), do: member_role not in @protected_roles
+end
+```
+
+**Benefits**:
+- Testable without database
+- No side effects
+- Clear, focused business rules
+- Fast unit tests
+
+##### Repository Pattern
+
+**Infrastructure repositories** handle data access and abstract database queries.
+
+```elixir
+# lib/jarga/workspaces/infrastructure/membership_repository.ex
+defmodule Jarga.Workspaces.Infrastructure.MembershipRepository do
+  @moduledoc """
+  Repository for workspace membership data access.
+
+  Infrastructure layer - handles database queries.
+  """
+
+  alias Jarga.Repo
+  alias Jarga.Workspaces.Queries
+
+  def get_workspace_for_user(user, workspace_id, repo \\ Repo) do
+    Queries.for_user_by_id(user, workspace_id)
+    |> repo.one()
+  end
+
+  def workspace_exists?(workspace_id, repo \\ Repo) do
+    case Queries.exists?(workspace_id) |> repo.one() do
+      count when count > 0 -> true
+      _ -> false
     end
   end
 
-  defp workspace_exists?(workspace_id) do
-    # Implementation
+  def find_member_by_email(workspace_id, email, repo \\ Repo) do
+    Queries.find_member_by_email(workspace_id, email)
+    |> repo.one()
   end
 end
 ```
 
 **Benefits**:
-- Business rules centralized
-- Clear authorization semantics
-- Reusable across context operations
-- Easy to test and modify
+- Encapsulates data access
+- Allows dependency injection for testing
+- Clear separation from business logic
+- Reusable across use cases
+
+##### Use Cases Pattern
+
+**Use cases** implement business operations by orchestrating domain policies and infrastructure.
+
+```elixir
+# lib/jarga/workspaces/use_cases/use_case.ex
+defmodule Jarga.Workspaces.UseCases.UseCase do
+  @moduledoc """
+  Behavior for use cases in the application layer.
+
+  Use cases encapsulate business operations and orchestrate domain logic,
+  infrastructure services, and side effects.
+  """
+
+  @callback execute(params :: map(), opts :: keyword()) :: {:ok, term()} | {:error, term()}
+end
+```
+
+**Example: InviteMember Use Case**
+```elixir
+# lib/jarga/workspaces/use_cases/invite_member.ex
+defmodule Jarga.Workspaces.UseCases.InviteMember do
+  @behaviour Jarga.Workspaces.UseCases.UseCase
+
+  alias Jarga.Workspaces.Policies.MembershipPolicy
+  alias Jarga.Workspaces.Infrastructure.MembershipRepository
+
+  @impl true
+  def execute(params, opts \\ []) do
+    with :ok <- validate_role(params.role),                      # Domain policy
+         {:ok, workspace} <- verify_membership(...),              # Infrastructure
+         :ok <- check_not_already_member(...),                   # Infrastructure
+         user <- find_user(...) do                               # Infrastructure
+      add_member_and_notify(workspace, user, params, opts)       # Infrastructure + side effects
+    end
+  end
+
+  # Apply pure domain policy
+  defp validate_role(role) do
+    if MembershipPolicy.valid_invitation_role?(role) do
+      :ok
+    else
+      {:error, :invalid_role}
+    end
+  end
+
+  # Use infrastructure for data access
+  defp verify_membership(inviter, workspace_id) do
+    case MembershipRepository.get_workspace_for_user(inviter, workspace_id) do
+      nil -> {:error, :unauthorized}
+      workspace -> {:ok, workspace}
+    end
+  end
+end
+```
+
+**Benefits**:
+- Single Responsibility: Each use case handles one business operation
+- Testable: Can inject mock repositories and notifiers
+- Clear flow: Read top-to-bottom what the operation does
+- Transaction boundaries: Define where database transactions occur
+
+**Context delegates to use cases**:
+```elixir
+# lib/jarga/workspaces.ex
+def invite_member(inviter, workspace_id, email, role, opts \\ []) do
+  params = %{
+    inviter: inviter,
+    workspace_id: workspace_id,
+    email: email,
+    role: role
+  }
+
+  InviteMember.execute(params, opts)
+end
+```
+
+##### Authorization Error Handling Pattern
+
+Context functions should provide both safe and unsafe versions for authorization checks:
+
+**Safe version** - Returns error tuples:
+```elixir
+# lib/jarga/workspaces.ex:114
+@spec get_workspace(User.t(), binary()) ::
+  {:ok, Workspace.t()} | {:error, :unauthorized | :workspace_not_found}
+def get_workspace(%User{} = user, id) do
+  # Uses infrastructure repository for data access
+  case MembershipRepository.get_workspace_for_user(user, id) do
+    nil ->
+      if MembershipRepository.workspace_exists?(id) do
+        {:error, :unauthorized}
+      else
+        {:error, :workspace_not_found}
+      end
+
+    workspace ->
+      {:ok, workspace}
+  end
+end
+```
+
+**Unsafe version** - Raises on error (for cases where user must have access):
+```elixir
+# lib/jarga/workspaces.ex:133
+@spec get_workspace!(User.t(), binary()) :: Workspace.t()
+def get_workspace!(%User{} = user, id) do
+  Queries.for_user_by_id(user, id)
+  |> Repo.one!()
+end
+```
+
+**Interface layer handling** - LiveViews should use safe versions and handle errors gracefully:
+
+```elixir
+# lib/jarga_web/live/app_live/workspaces/show.ex:279
+def mount(%{"id" => workspace_id}, _session, socket) do
+  user = socket.assigns.current_scope.user
+
+  case Workspaces.get_workspace(user, workspace_id) do
+    {:ok, workspace} ->
+      # Load data and render page
+      {:ok, assign(socket, :workspace, workspace)}
+
+    {:error, :unauthorized} ->
+      {:ok,
+       socket
+       |> put_flash(:error, "You don't have access to this workspace")
+       |> push_navigate(to: ~p"/app/workspaces")}
+
+    {:error, :workspace_not_found} ->
+      {:ok,
+       socket
+       |> put_flash(:error, "Workspace not found")
+       |> push_navigate(to: ~p"/app/workspaces")}
+  end
+end
+```
+
+**Key principles**:
+- **Distinguish authorization from existence**: Return `:unauthorized` when resource exists but user lacks access, `:resource_not_found` when it doesn't exist
+- **Provide both safe and unsafe versions**: Safe for user-facing operations, unsafe for system operations where access is guaranteed
+- **Handle all error cases in interface**: Never let technical errors (like `Ecto.NoResultsError`) reach the user
+- **Consistent error semantics**: Use atoms like `:unauthorized`, `:workspace_not_found`, `:invalid_role` for business errors
+- **User-friendly messages**: Convert technical error atoms to readable flash messages in the interface layer
+
+**Testing authorization**:
+
+Test authorization at three levels:
+
+1. **Domain policy level** - Fast unit tests for business rules (no database):
+```elixir
+# test/jarga/workspaces/policies/membership_policy_test.exs
+test "valid_invitation_role?/1 returns true for admin, member, guest" do
+  assert MembershipPolicy.valid_invitation_role?(:admin)
+  assert MembershipPolicy.valid_invitation_role?(:member)
+  assert MembershipPolicy.valid_invitation_role?(:guest)
+  refute MembershipPolicy.valid_invitation_role?(:owner)
+end
+
+test "can_change_role?/1 prevents changing owner role" do
+  refute MembershipPolicy.can_change_role?(:owner)
+  assert MembershipPolicy.can_change_role?(:admin)
+  assert MembershipPolicy.can_change_role?(:member)
+end
+```
+
+2. **Context level** - Integration tests for safe/unsafe versions (with database):
+```elixir
+# test/jarga/workspaces_test.exs
+test "get_workspace/2 returns :unauthorized when user is not a member" do
+  user = user_fixture()
+  other_user = user_fixture()
+  workspace = workspace_fixture(other_user)
+
+  assert {:error, :unauthorized} = Workspaces.get_workspace(user, workspace.id)
+end
+
+test "get_workspace!/2 raises when user is not a member" do
+  user = user_fixture()
+  other_user = user_fixture()
+  workspace = workspace_fixture(other_user)
+
+  assert_raise Ecto.NoResultsError, fn ->
+    Workspaces.get_workspace!(user, workspace.id)
+  end
+end
+```
+
+3. **Interface level** - End-to-end tests for user experience:
+```elixir
+# test/jarga_web/live/app_live/workspaces_test.exs
+test "redirects with error when user is not a member of workspace" do
+  user = user_fixture()
+  other_user = user_fixture()
+  workspace = workspace_fixture(other_user)
+  conn = build_conn() |> log_in_user(user)
+
+  {:error, {:live_redirect, %{to: path, flash: flash}}} =
+    live(conn, ~p"/app/workspaces/#{workspace.id}")
+
+  assert path == ~p"/app/workspaces"
+  assert %{"error" => "You don't have access to this workspace"} = flash
+end
+```
 
 ### Shared Infrastructure
 

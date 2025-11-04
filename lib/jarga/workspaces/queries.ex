@@ -95,4 +95,34 @@ defmodule Jarga.Workspaces.Queries do
       where: w.id == ^workspace_id,
       select: count(w.id)
   end
+
+  @doc """
+  Finds a workspace member by workspace ID and email (case-insensitive).
+
+  ## Examples
+
+      iex> find_member_by_email(workspace_id, "user@example.com") |> Repo.one()
+      %WorkspaceMember{}
+
+  """
+  def find_member_by_email(workspace_id, email) do
+    from wm in WorkspaceMember,
+      where: wm.workspace_id == ^workspace_id,
+      where: fragment("LOWER(?)", wm.email) == ^String.downcase(email)
+  end
+
+  @doc """
+  Lists all members of a workspace, ordered by joined_at.
+
+  ## Examples
+
+      iex> list_members(workspace_id) |> Repo.all()
+      [%WorkspaceMember{}, ...]
+
+  """
+  def list_members(workspace_id) do
+    from wm in WorkspaceMember,
+      where: wm.workspace_id == ^workspace_id,
+      order_by: [asc: wm.joined_at, asc: wm.invited_at]
+  end
 end
