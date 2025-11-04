@@ -152,11 +152,14 @@ defmodule Jarga.Pages do
         |> Page.changeset(attrs)
         |> Repo.update()
 
-        # Broadcast visibility changes to workspace members
+        # Broadcast changes to workspace members
         case result do
           {:ok, updated_page} ->
             if Map.has_key?(attrs, :is_public) and attrs.is_public != page.is_public do
               broadcast_page_visibility_change(updated_page)
+            end
+            if Map.has_key?(attrs, :title) and attrs.title != page.title do
+              broadcast_page_title_change(updated_page)
             end
             {:ok, updated_page}
 
@@ -244,6 +247,22 @@ defmodule Jarga.Pages do
       Jarga.PubSub,
       "workspace:#{page.workspace_id}",
       {:page_visibility_changed, page.id, page.is_public}
+    )
+  end
+
+  defp broadcast_page_title_change(page) do
+    # Broadcast to workspace for list updates
+    Phoenix.PubSub.broadcast(
+      Jarga.PubSub,
+      "workspace:#{page.workspace_id}",
+      {:page_title_changed, page.id, page.title}
+    )
+
+    # Also broadcast to the page itself for page show view
+    Phoenix.PubSub.broadcast(
+      Jarga.PubSub,
+      "page:#{page.id}",
+      {:page_title_changed, page.id, page.title}
     )
   end
 end

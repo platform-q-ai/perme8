@@ -28,6 +28,7 @@ defmodule JargaWeb.AppLive.Pages.Show do
     # Subscribe to page updates via PubSub for collaborative editing
     if connected?(socket) do
       Phoenix.PubSub.subscribe(Jarga.PubSub, "page:#{page.id}")
+      Phoenix.PubSub.subscribe(Jarga.PubSub, "workspace:#{workspace.id}")
     end
 
     # Generate user ID for collaborative editing
@@ -202,6 +203,47 @@ defmodule JargaWeb.AppLive.Pages.Show do
   def handle_info({:awareness_update, %{update: update, user_id: _user_id}}, socket) do
     # broadcast_from already ensures we don't receive our own messages
     {:noreply, push_event(socket, "awareness_update", %{update: update})}
+  end
+
+  @impl true
+  def handle_info({:page_visibility_changed, _page_id, _is_public}, socket) do
+    # Page visibility changed - no action needed in page show view
+    # (this message is broadcast to workspace topic which we're subscribed to)
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info({:page_title_changed, page_id, title}, socket) do
+    # Update page title in the page show view (from another user's edit)
+    if socket.assigns.page.id == page_id do
+      page = %{socket.assigns.page | title: title}
+      page_form = to_form(%{"title" => title})
+      {:noreply, socket |> assign(:page, page) |> assign(:page_form, page_form)}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  @impl true
+  def handle_info({:workspace_updated, workspace_id, name}, socket) do
+    # Update workspace name in breadcrumbs
+    if socket.assigns.workspace.id == workspace_id do
+      workspace = %{socket.assigns.workspace | name: name}
+      {:noreply, assign(socket, workspace: workspace)}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  @impl true
+  def handle_info({:project_updated, project_id, name}, socket) do
+    # Update project name in breadcrumbs
+    if socket.assigns.project && socket.assigns.project.id == project_id do
+      project = %{socket.assigns.project | name: name}
+      {:noreply, assign(socket, project: project)}
+    else
+      {:noreply, socket}
+    end
   end
 
   defp generate_user_id do

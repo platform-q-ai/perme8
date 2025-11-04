@@ -44,23 +44,23 @@ defmodule Jarga.Projects.Project do
   end
 
   defp generate_slug(changeset) do
-    case get_change(changeset, :name) do
-      nil ->
-        changeset
+    # Only generate slug if it doesn't exist yet (for new records)
+    # This keeps the slug stable even when the name is updated
+    existing_slug = get_field(changeset, :slug)
 
-      name ->
-        project_id = get_field(changeset, :id)
-        workspace_id = get_field(changeset, :workspace_id)
+    if existing_slug do
+      changeset
+    else
+      case get_change(changeset, :name) do
+        nil ->
+          changeset
 
-        slug =
-          SlugGenerator.generate(
-            name,
-            workspace_id,
-            &ProjectRepository.slug_exists_in_workspace?/3,
-            project_id
-          )
-
-        put_change(changeset, :slug, slug)
+        name ->
+          project_id = get_field(changeset, :id)
+          workspace_id = get_field(changeset, :workspace_id)
+          slug = SlugGenerator.generate(name, workspace_id, &ProjectRepository.slug_exists_in_workspace?/3, project_id)
+          put_change(changeset, :slug, slug)
+      end
     end
   end
 end

@@ -220,9 +220,19 @@ defmodule Jarga.Workspaces do
   def update_workspace(%User{} = user, workspace_id, attrs) do
     case get_workspace(user, workspace_id) do
       {:ok, workspace} ->
-        workspace
+        result = workspace
         |> Workspace.changeset(attrs)
         |> Repo.update()
+
+        # Broadcast workspace updates to all members
+        case result do
+          {:ok, updated_workspace} ->
+            broadcast_workspace_update(updated_workspace)
+            {:ok, updated_workspace}
+
+          error ->
+            error
+        end
 
       {:error, reason} ->
         {:error, reason}
@@ -396,5 +406,15 @@ defmodule Jarga.Workspaces do
     }
 
     RemoveMember.execute(params)
+  end
+
+  # Private functions
+
+  defp broadcast_workspace_update(workspace) do
+    Phoenix.PubSub.broadcast(
+      Jarga.PubSub,
+      "workspace:#{workspace.id}",
+      {:workspace_updated, workspace.id, workspace.name}
+    )
   end
 end

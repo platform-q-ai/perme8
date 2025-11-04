@@ -704,4 +704,43 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
 
     {:noreply, assign(socket, pages: pages)}
   end
+
+  @impl true
+  def handle_info({:page_title_changed, page_id, title}, socket) do
+    # Update page title in the list
+    pages = Enum.map(socket.assigns.pages, fn page ->
+      if page.id == page_id do
+        %{page | title: title}
+      else
+        page
+      end
+    end)
+
+    {:noreply, assign(socket, pages: pages)}
+  end
+
+  @impl true
+  def handle_info({:workspace_updated, workspace_id, name}, socket) do
+    # Update workspace name in breadcrumbs
+    if socket.assigns.workspace.id == workspace_id do
+      workspace = %{socket.assigns.workspace | name: name}
+      {:noreply, assign(socket, workspace: workspace)}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  @impl true
+  def handle_info({:project_updated, project_id, name}, socket) do
+    # Update project name in the list
+    projects = Enum.map(socket.assigns.projects, fn project ->
+      if project.id == project_id do
+        %{project | name: name}
+      else
+        project
+      end
+    end)
+
+    {:noreply, assign(socket, projects: projects)}
+  end
 end

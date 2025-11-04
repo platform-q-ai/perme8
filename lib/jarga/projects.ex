@@ -138,9 +138,19 @@ defmodule Jarga.Projects do
           |> Enum.map(fn {k, v} -> {to_string(k), v} end)
           |> Enum.into(%{})
 
-        project
+        result = project
         |> Project.changeset(string_attrs)
         |> Repo.update()
+
+        # Broadcast project updates to workspace members
+        case result do
+          {:ok, updated_project} ->
+            broadcast_project_update(updated_project)
+            {:ok, updated_project}
+
+          error ->
+            error
+        end
 
       {:error, reason} ->
         {:error, reason}
@@ -169,6 +179,16 @@ defmodule Jarga.Projects do
         project_id: project_id
       },
       opts
+    )
+  end
+
+  # Private functions
+
+  defp broadcast_project_update(project) do
+    Phoenix.PubSub.broadcast(
+      Jarga.PubSub,
+      "workspace:#{project.workspace_id}",
+      {:project_updated, project.id, project.name}
     )
   end
 end

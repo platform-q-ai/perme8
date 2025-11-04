@@ -78,16 +78,24 @@ defmodule JargaWeb.AppLive.Workspaces.Index do
     # Subscribe to user-specific PubSub topic for real-time updates
     if connected?(socket) do
       Phoenix.PubSub.subscribe(Jarga.PubSub, "user:#{user.id}")
+
+      # Subscribe to each workspace for name updates
+      Enum.each(workspaces, fn workspace ->
+        Phoenix.PubSub.subscribe(Jarga.PubSub, "workspace:#{workspace.id}")
+      end)
     end
 
     {:ok, assign(socket, workspaces: workspaces)}
   end
 
   @impl true
-  def handle_info({:workspace_invitation, _workspace_id, _workspace_name, _inviter_name}, socket) do
+  def handle_info({:workspace_invitation, workspace_id, _workspace_name, _inviter_name}, socket) do
     # Reload workspaces when user is added to a workspace
     user = socket.assigns.current_scope.user
     workspaces = Workspaces.list_workspaces_for_user(user)
+
+    # Subscribe to the new workspace
+    Phoenix.PubSub.subscribe(Jarga.PubSub, "workspace:#{workspace_id}")
 
     {:noreply, assign(socket, workspaces: workspaces)}
   end
@@ -97,6 +105,20 @@ defmodule JargaWeb.AppLive.Workspaces.Index do
     # Reload workspaces when user is removed from a workspace
     user = socket.assigns.current_scope.user
     workspaces = Workspaces.list_workspaces_for_user(user)
+
+    {:noreply, assign(socket, workspaces: workspaces)}
+  end
+
+  @impl true
+  def handle_info({:workspace_updated, workspace_id, name}, socket) do
+    # Update workspace name in the list
+    workspaces = Enum.map(socket.assigns.workspaces, fn workspace ->
+      if workspace.id == workspace_id do
+        %{workspace | name: name}
+      else
+        workspace
+      end
+    end)
 
     {:noreply, assign(socket, workspaces: workspaces)}
   end

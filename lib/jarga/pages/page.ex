@@ -41,15 +41,23 @@ defmodule Jarga.Pages.Page do
   end
 
   defp generate_slug(changeset) do
-    case get_change(changeset, :title) do
-      nil ->
-        changeset
+    # Only generate slug if it doesn't exist yet (for new records)
+    # This keeps the slug stable even when the title is updated
+    existing_slug = get_field(changeset, :slug)
 
-      title ->
-        page_id = get_field(changeset, :id)
-        workspace_id = get_field(changeset, :workspace_id)
-        slug = SlugGenerator.generate(title, workspace_id, &PageRepository.slug_exists_in_workspace?/3, page_id)
-        put_change(changeset, :slug, slug)
+    if existing_slug do
+      changeset
+    else
+      case get_change(changeset, :title) do
+        nil ->
+          changeset
+
+        title ->
+          page_id = get_field(changeset, :id)
+          workspace_id = get_field(changeset, :workspace_id)
+          slug = SlugGenerator.generate(title, workspace_id, &PageRepository.slug_exists_in_workspace?/3, page_id)
+          put_change(changeset, :slug, slug)
+      end
     end
   end
 end

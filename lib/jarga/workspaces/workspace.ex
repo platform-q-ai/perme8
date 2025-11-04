@@ -32,14 +32,22 @@ defmodule Jarga.Workspaces.Workspace do
   end
 
   defp generate_slug(changeset) do
-    case get_change(changeset, :name) do
-      nil ->
-        changeset
+    # Only generate slug if it doesn't exist yet (for new records)
+    # This keeps the slug stable even when the name is updated
+    existing_slug = get_field(changeset, :slug)
 
-      name ->
-        workspace_id = get_field(changeset, :id)
-        slug = SlugGenerator.generate(name, &MembershipRepository.slug_exists?/2, workspace_id)
-        put_change(changeset, :slug, slug)
+    if existing_slug do
+      changeset
+    else
+      case get_change(changeset, :name) do
+        nil ->
+          changeset
+
+        name ->
+          workspace_id = get_field(changeset, :id)
+          slug = SlugGenerator.generate(name, &MembershipRepository.slug_exists?/2, workspace_id)
+          put_change(changeset, :slug, slug)
+      end
     end
   end
 end
