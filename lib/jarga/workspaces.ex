@@ -9,12 +9,12 @@ defmodule Jarga.Workspaces do
   """
 
   # Core context - cannot depend on JargaWeb (interface layer)
-  # Exports: Main context module and shared types (Workspace)
-  # Internal modules (WorkspaceMember, Queries, Policies) remain private
+  # Exports: Main context module, shared types (Workspace), and PermissionsPolicy for use by other contexts
+  # Internal modules (WorkspaceMember, Queries, other Policies) remain private
   use Boundary,
     top_level?: true,
     deps: [Jarga.Accounts, Jarga.Repo, Jarga.Mailer],
-    exports: [{Workspace, []}]
+    exports: [{Workspace, []}, {Policies.PermissionsPolicy, []}]
 
   import Ecto.Query, warn: false
 
@@ -24,6 +24,7 @@ defmodule Jarga.Workspaces do
   alias Jarga.Workspaces.Infrastructure.MembershipRepository
   alias Jarga.Workspaces.UseCases.{InviteMember, ChangeMemberRole, RemoveMember}
   alias Jarga.Workspaces.Services.EmailAndPubSubNotifier
+  alias Jarga.Workspaces.Policies.PermissionsPolicy
 
   @doc """
   Returns the list of workspaces for a given user.
@@ -203,7 +204,8 @@ defmodule Jarga.Workspaces do
   @doc """
   Updates a workspace for a user.
 
-  The user must be a member of the workspace to update it.
+  The user must be a member of the workspace with permission to edit it.
+  Only admins and owners can edit workspaces.
 
   ## Examples
 
@@ -216,51 +218,80 @@ defmodule Jarga.Workspaces do
       iex> update_workspace(user, non_member_workspace_id, %{name: "Updated"})
       {:error, :unauthorized}
 
+      iex> update_workspace(guest_user, workspace_id, %{name: "Updated"})
+      {:error, :forbidden}
+
   """
   def update_workspace(%User{} = user, workspace_id, attrs) do
-    case get_workspace(user, workspace_id) do
-      {:ok, workspace} ->
-        result = workspace
-        |> Workspace.changeset(attrs)
-        |> Repo.update()
+    with {:ok, member} <- get_member(user, workspace_id),
+         :ok <- authorize_edit_workspace(member.role) do
+      case get_workspace(user, workspace_id) do
+        {:ok, workspace} ->
+          result = workspace
+          |> Workspace.changeset(attrs)
+          |> Repo.update()
 
-        # Broadcast workspace updates to all members
-        case result do
-          {:ok, updated_workspace} ->
-            broadcast_workspace_update(updated_workspace)
-            {:ok, updated_workspace}
+          # Broadcast workspace updates to all members
+          case result do
+            {:ok, updated_workspace} ->
+              broadcast_workspace_update(updated_workspace)
+              {:ok, updated_workspace}
 
-          error ->
-            error
-        end
+            error ->
+              error
+          end
 
-      {:error, reason} ->
-        {:error, reason}
+        {:error, reason} ->
+          {:error, reason}
+      end
+    end
+  end
+
+  defp authorize_edit_workspace(role) do
+    if PermissionsPolicy.can?(role, :edit_workspace) do
+      :ok
+    else
+      {:error, :forbidden}
     end
   end
 
   @doc """
   Deletes a workspace for a user.
 
-  The user must be a member of the workspace to delete it.
+  The user must be the owner of the workspace to delete it.
+  Only owners can delete workspaces.
   Deleting a workspace will cascade delete all associated projects.
 
   ## Examples
 
-      iex> delete_workspace(user, workspace_id)
+      iex> delete_workspace(owner, workspace_id)
       {:ok, %Workspace{}}
+
+      iex> delete_workspace(admin, workspace_id)
+      {:error, :forbidden}
 
       iex> delete_workspace(user, non_member_workspace_id)
       {:error, :unauthorized}
 
   """
   def delete_workspace(%User{} = user, workspace_id) do
-    case get_workspace(user, workspace_id) do
-      {:ok, workspace} ->
-        Repo.delete(workspace)
+    with {:ok, member} <- get_member(user, workspace_id),
+         :ok <- authorize_delete_workspace(member.role) do
+      case get_workspace(user, workspace_id) do
+        {:ok, workspace} ->
+          Repo.delete(workspace)
 
-      {:error, reason} ->
-        {:error, reason}
+        {:error, reason} ->
+          {:error, reason}
+      end
+    end
+  end
+
+  defp authorize_delete_workspace(role) do
+    if PermissionsPolicy.can?(role, :delete_workspace) do
+      :ok
+    else
+      {:error, :forbidden}
     end
   end
 
@@ -286,6 +317,40 @@ defmodule Jarga.Workspaces do
   """
   def verify_membership(%User{} = user, workspace_id) do
     get_workspace(user, workspace_id)
+  end
+
+  @doc """
+  Gets a user's workspace member record.
+
+  This is a public API for other contexts to get the user's role in a workspace.
+
+  ## Returns
+
+  - `{:ok, workspace_member}` - User is a member with their member record
+  - `{:error, :unauthorized}` - Workspace exists but user is not a member
+  - `{:error, :workspace_not_found}` - Workspace does not exist
+
+  ## Examples
+
+      iex> get_member(user, workspace_id)
+      {:ok, %WorkspaceMember{role: :owner}}
+
+      iex> get_member(user, non_member_workspace_id)
+      {:error, :unauthorized}
+
+  """
+  def get_member(%User{} = user, workspace_id) do
+    case MembershipRepository.get_member(user, workspace_id) do
+      nil ->
+        if MembershipRepository.workspace_exists?(workspace_id) do
+          {:error, :unauthorized}
+        else
+          {:error, :workspace_not_found}
+        end
+
+      member ->
+        {:ok, member}
+    end
   end
 
   @doc """

@@ -5,6 +5,7 @@ defmodule Jarga.Projects.UseCases.CreateProject do
   ## Business Rules
 
   - Actor must be a member of the workspace
+  - Actor must have permission to create projects (member, admin, or owner)
   - Project name is required and must be valid
   - Generates a unique slug for the project
 
@@ -22,6 +23,7 @@ defmodule Jarga.Projects.UseCases.CreateProject do
   alias Jarga.Projects.Project
   alias Jarga.Projects.Services.EmailAndPubSubNotifier
   alias Jarga.Workspaces
+  alias Jarga.Workspaces.Policies.PermissionsPolicy
 
   @doc """
   Executes the create project use case.
@@ -51,16 +53,26 @@ defmodule Jarga.Projects.UseCases.CreateProject do
 
     notifier = Keyword.get(opts, :notifier, EmailAndPubSubNotifier)
 
-    with {:ok, _workspace} <- verify_workspace_membership(actor, workspace_id),
+    with {:ok, member} <- get_workspace_member(actor, workspace_id),
+         :ok <- authorize_create_project(member.role),
          {:ok, project} <- create_project(actor, workspace_id, attrs) do
       notifier.notify_project_created(project)
       {:ok, project}
     end
   end
 
-  # Verify actor is a member of the workspace
-  defp verify_workspace_membership(%User{} = user, workspace_id) do
-    Workspaces.verify_membership(user, workspace_id)
+  # Get actor's workspace membership
+  defp get_workspace_member(%User{} = user, workspace_id) do
+    Workspaces.get_member(user, workspace_id)
+  end
+
+  # Authorize project creation based on role
+  defp authorize_create_project(role) do
+    if PermissionsPolicy.can?(role, :create_project) do
+      :ok
+    else
+      {:error, :forbidden}
+    end
   end
 
   # Create the project

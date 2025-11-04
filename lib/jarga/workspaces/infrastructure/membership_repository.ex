@@ -76,6 +76,23 @@ defmodule Jarga.Workspaces.Infrastructure.MembershipRepository do
   end
 
   @doc """
+  Gets a user's workspace member record.
+
+  ## Examples
+
+      iex> get_member(user, workspace_id)
+      %WorkspaceMember{role: :owner}
+
+      iex> get_member(non_member, workspace_id)
+      nil
+
+  """
+  def get_member(%User{} = user, workspace_id, repo \\ Repo) do
+    Queries.get_member(user, workspace_id)
+    |> repo.one()
+  end
+
+  @doc """
   Finds a workspace member by email (case-insensitive).
 
   ## Examples

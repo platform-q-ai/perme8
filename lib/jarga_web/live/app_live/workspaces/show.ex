@@ -1,6 +1,8 @@
 defmodule JargaWeb.AppLive.Workspaces.Show do
   use JargaWeb, :live_view
 
+  import JargaWeb.Live.PermissionsHelper
+
   alias Jarga.{Workspaces, Projects, Pages}
   alias Jarga.Projects.Project
   alias JargaWeb.Layouts
@@ -18,22 +20,29 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
 
         <div class="flex items-center justify-end">
           <div class="flex gap-2">
-            <.link navigate={~p"/app/workspaces/#{@workspace.slug}/edit"} class="btn btn-ghost">
-              <.icon name="hero-pencil" class="size-5" /> Edit
-            </.link>
-            <.button variant="ghost" phx-click="show_members_modal">
-              <.icon name="hero-user-group" class="size-5" /> Manage Members
-            </.button>
-            <.button
-              variant="error"
-              phx-click="delete_workspace"
-              data-confirm="Are you sure you want to delete this workspace? All projects will also be deleted."
-            >
-              <.icon name="hero-trash" class="size-5" /> Delete Workspace
-            </.button>
-            <.button variant="primary" phx-click="show_project_modal">
-              New Project
-            </.button>
+            <%= if can_edit_workspace?(@current_member) do %>
+              <.link navigate={~p"/app/workspaces/#{@workspace.slug}/edit"} class="btn btn-ghost">
+                <.icon name="hero-pencil" class="size-5" />
+                Edit
+              </.link>
+            <% end %>
+            <%= if can_manage_members?(@current_member) do %>
+              <.button variant="ghost" phx-click="show_members_modal">
+                <.icon name="hero-user-group" class="size-5" />
+                Manage Members
+              </.button>
+            <% end %>
+            <%= if can_delete_workspace?(@current_member) do %>
+              <.button variant="error" phx-click="delete_workspace" data-confirm="Are you sure you want to delete this workspace? All projects will also be deleted.">
+                <.icon name="hero-trash" class="size-5" />
+                Delete Workspace
+              </.button>
+            <% end %>
+            <%= if can_create_project?(@current_member) do %>
+              <.button variant="primary" phx-click="show_project_modal">
+                New Project
+              </.button>
+            <% end %>
           </div>
         </div>
 
@@ -49,10 +58,12 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
         <div>
           <div class="flex items-center justify-between mb-4">
             <h2 class="text-lg font-semibold">Pages</h2>
-            <.button variant="primary" size="sm" phx-click="show_page_modal">
-              <.icon name="hero-document-plus" class="size-4" />
-              New Page
-            </.button>
+            <%= if can_create_page?(@current_member) do %>
+              <.button variant="primary" size="sm" phx-click="show_page_modal">
+                <.icon name="hero-document-plus" class="size-4" />
+                New Page
+              </.button>
+            <% end %>
           </div>
 
           <%= if @pages == [] do %>
@@ -63,12 +74,18 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
                   <div>
                     <h3 class="text-lg font-semibold">No pages yet</h3>
                     <p class="text-base-content/70">
-                      Create your first page to start documenting
+                      <%= if can_create_page?(@current_member) do %>
+                        Create your first page to start documenting
+                      <% else %>
+                        No pages have been created yet
+                      <% end %>
                     </p>
                   </div>
-                  <.button variant="primary" phx-click="show_page_modal">
-                    Create Page
-                  </.button>
+                  <%= if can_create_page?(@current_member) do %>
+                    <.button variant="primary" phx-click="show_page_modal">
+                      Create Page
+                    </.button>
+                  <% end %>
                 </div>
               </div>
             </div>
@@ -113,12 +130,18 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
                   <div>
                     <h3 class="text-lg font-semibold">No projects yet</h3>
                     <p class="text-base-content/70">
-                      Create your first project to get started
+                      <%= if can_create_project?(@current_member) do %>
+                        Create your first project to get started
+                      <% else %>
+                        No projects have been created yet
+                      <% end %>
                     </p>
                   </div>
-                  <.button variant="primary" phx-click="show_project_modal">
-                    Create Project
-                  </.button>
+                  <%= if can_create_project?(@current_member) do %>
+                    <.button variant="primary" phx-click="show_project_modal">
+                      Create Project
+                    </.button>
+                  <% end %>
                 </div>
               </div>
             </div>
@@ -439,6 +462,9 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
         projects = Projects.list_projects_for_workspace(user, workspace.id)
         members = Workspaces.list_members(workspace.id)
 
+        # Get the current user's workspace member record for permission checking
+        {:ok, current_member} = Workspaces.get_member(user, workspace.id)
+
         # Subscribe to workspace-specific PubSub topic for real-time updates
         if connected?(socket) do
           Phoenix.PubSub.subscribe(Jarga.PubSub, "workspace:#{workspace.id}")
@@ -447,6 +473,7 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
         {:ok,
          socket
          |> assign(:workspace, workspace)
+         |> assign(:current_member, current_member)
          |> assign(:pages, pages)
          |> assign(:projects, projects)
          |> assign(:members, members)

@@ -149,4 +149,19 @@ defmodule Jarga.Workspaces.Queries do
       order_by: [asc: wm.joined_at, asc: wm.invited_at]
     )
   end
+
+  @doc """
+  Gets a user's workspace member record for a workspace.
+
+  ## Examples
+
+      iex> get_member(user, workspace_id) |> Repo.one()
+      %WorkspaceMember{}
+
+  """
+  def get_member(%User{} = user, workspace_id) do
+    from wm in WorkspaceMember,
+      where: wm.workspace_id == ^workspace_id,
+      where: wm.user_id == ^user.id
+  end
 end

@@ -20,6 +20,8 @@ defmodule Jarga.Pages do
   alias Jarga.Pages.{Page, Queries}
   alias Jarga.Pages.Policies.Authorization
   alias Jarga.Notes
+  alias Jarga.Workspaces
+  alias Jarga.Workspaces.Policies.PermissionsPolicy
 
   @doc """
   Gets a single page for a user.
@@ -96,7 +98,8 @@ defmodule Jarga.Pages do
   @doc """
   Creates a page for a user in a workspace.
 
-  The user must be a member of the workspace.
+  The user must be a member of the workspace with permission to create pages.
+  Members, admins, and owners can create pages. Guests cannot.
   The page is private to the user who created it.
   A default note is created and embedded in the page.
 
@@ -108,11 +111,15 @@ defmodule Jarga.Pages do
       iex> create_page(user, non_member_workspace_id, %{title: "Page"})
       {:error, :unauthorized}
 
+      iex> create_page(guest, workspace_id, %{title: "Page"})
+      {:error, :forbidden}
+
   """
   def create_page(%User{} = user, workspace_id, attrs) do
     alias Jarga.Pages.PageComponent
 
-    with {:ok, _workspace} <- Authorization.verify_workspace_access(user, workspace_id),
+    with {:ok, member} <- Workspaces.get_member(user, workspace_id),
+         :ok <- authorize_create_page(member.role),
          :ok <- Authorization.verify_project_in_workspace(workspace_id, Map.get(attrs, :project_id)) do
       # Create the page, note, and page_component in a transaction
       Ecto.Multi.new()
@@ -158,7 +165,12 @@ defmodule Jarga.Pages do
   @doc """
   Updates a page.
 
-  Only the owner of the page can update it.
+  Permission rules:
+  - Users can edit their own pages
+  - Members and admins can edit shared (public) pages
+  - Admins can only edit shared pages, not private pages of others
+  - Owners cannot edit pages they don't own (respects privacy)
+  - Pinning follows the same rules as editing
 
   ## Examples
 
@@ -168,41 +180,106 @@ defmodule Jarga.Pages do
       iex> update_page(user, page_id, %{title: ""})
       {:error, %Ecto.Changeset{}}
 
-      iex> update_page(user, other_user_page_id, %{title: "Hacked"})
-      {:error, :unauthorized}
+      iex> update_page(member, other_user_private_page_id, %{title: "Hacked"})
+      {:error, :forbidden}
+
+      iex> update_page(member, other_user_public_page_id, %{title: "Edit"})
+      {:ok, %Page{}}
+
+      iex> update_page(member, other_user_public_page_id, %{is_pinned: true})
+      {:ok, %Page{}}
 
   """
   def update_page(%User{} = user, page_id, attrs) do
-    case Authorization.verify_page_access(user, page_id) do
-      {:ok, page} ->
-        result = page
-        |> Page.changeset(attrs)
-        |> Repo.update()
+    with {:ok, page} <- get_page_with_workspace_member(user, page_id),
+         {:ok, member} <- Workspaces.get_member(user, page.workspace_id),
+         :ok <- authorize_page_update(member.role, page, user.id, attrs) do
+      result = page
+      |> Page.changeset(attrs)
+      |> Repo.update()
 
-        # Broadcast changes to workspace members
-        case result do
-          {:ok, updated_page} ->
-            if Map.has_key?(attrs, :is_public) and attrs.is_public != page.is_public do
-              broadcast_page_visibility_change(updated_page)
-            end
-            if Map.has_key?(attrs, :title) and attrs.title != page.title do
-              broadcast_page_title_change(updated_page)
-            end
-            {:ok, updated_page}
+      # Broadcast changes to workspace members
+      case result do
+        {:ok, updated_page} ->
+          if Map.has_key?(attrs, :is_public) and attrs.is_public != page.is_public do
+            broadcast_page_visibility_change(updated_page)
+          end
+          if Map.has_key?(attrs, :title) and attrs.title != page.title do
+            broadcast_page_title_change(updated_page)
+          end
+          {:ok, updated_page}
 
-          error ->
-            error
+        error ->
+          error
+      end
+    end
+  end
+
+  defp authorize_page_update(role, page, user_id, attrs) do
+    owns_page = page.user_id == user_id
+
+    # If updating is_pinned, check pin permissions
+    if Map.has_key?(attrs, :is_pinned) do
+      if PermissionsPolicy.can?(role, :pin_page, owns_resource: owns_page, is_public: page.is_public) do
+        :ok
+      else
+        {:error, :forbidden}
+      end
+    else
+      # Otherwise check edit permissions
+      if PermissionsPolicy.can?(role, :edit_page, owns_resource: owns_page, is_public: page.is_public) do
+        :ok
+      else
+        {:error, :forbidden}
+      end
+    end
+  end
+
+  defp get_page_with_workspace_member(user, page_id) do
+    # First get the page without user filter to check if it exists
+    page = Queries.base()
+    |> Queries.by_id(page_id)
+    |> Repo.one()
+
+    case page do
+      nil ->
+        {:error, :page_not_found}
+
+      page ->
+        # Check if user is a workspace member
+        case Workspaces.verify_membership(user, page.workspace_id) do
+          {:ok, _workspace} ->
+            # Check if user can view this page (own or public)
+            if page.user_id == user.id or page.is_public do
+              {:ok, page}
+            else
+              # User is a member but can't view this private page
+              {:error, :forbidden}
+            end
+
+          {:error, _reason} ->
+            # User is not a workspace member
+            {:error, :unauthorized}
         end
+    end
+  end
 
-      {:error, reason} ->
-        {:error, reason}
+  defp authorize_create_page(role) do
+    if PermissionsPolicy.can?(role, :create_page) do
+      :ok
+    else
+      {:error, :forbidden}
     end
   end
 
   @doc """
   Deletes a page.
 
-  Only the owner of the page can delete it.
+  Permission rules:
+  - Users can delete their own pages
+  - Admins can delete shared (public) pages
+  - Admins cannot delete private pages of others
+  - Owners cannot delete pages they don't own (respects privacy)
   Deleting a page also deletes its embedded note.
 
   ## Examples
@@ -210,17 +287,37 @@ defmodule Jarga.Pages do
       iex> delete_page(user, page_id)
       {:ok, %Page{}}
 
-      iex> delete_page(user, other_user_page_id)
-      {:error, :unauthorized}
+      iex> delete_page(member, other_user_page_id)
+      {:error, :forbidden}
+
+      iex> delete_page(admin, other_user_public_page_id)
+      {:ok, %Page{}}
 
   """
   def delete_page(%User{} = user, page_id) do
-    case Authorization.verify_page_access(user, page_id) do
-      {:ok, page} ->
-        Repo.delete(page)
+    with {:ok, page} <- get_page_with_workspace_member(user, page_id),
+         {:ok, member} <- Workspaces.get_member(user, page.workspace_id),
+         :ok <- authorize_delete_page(member.role, page, user.id) do
+      Repo.delete(page)
+    end
+  end
 
-      {:error, reason} ->
-        {:error, reason}
+  defp authorize_delete_page(role, page, user_id) do
+    owns_page = page.user_id == user_id
+
+    # For delete, we need to check if it's public when not the owner
+    if owns_page do
+      if PermissionsPolicy.can?(role, :delete_page, owns_resource: true) do
+        :ok
+      else
+        {:error, :forbidden}
+      end
+    else
+      if PermissionsPolicy.can?(role, :delete_page, owns_resource: false, is_public: page.is_public) do
+        :ok
+      else
+        {:error, :forbidden}
+      end
     end
   end
 

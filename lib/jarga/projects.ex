@@ -21,6 +21,8 @@ defmodule Jarga.Projects do
   alias Jarga.Projects.{Project, Queries}
   alias Jarga.Projects.Policies.Authorization
   alias Jarga.Projects.UseCases.{CreateProject, DeleteProject}
+  alias Jarga.Workspaces
+  alias Jarga.Workspaces.Policies.PermissionsPolicy
 
   @doc """
   Returns the list of projects for a given workspace.
@@ -163,7 +165,9 @@ defmodule Jarga.Projects do
   @doc """
   Updates a project for a user in a workspace.
 
-  The user must be a member of the workspace to update projects.
+  The user must have permission to edit the project based on their role and ownership.
+  - Members can only edit their own projects
+  - Admins and owners can edit any project in the workspace
 
   ## Examples
 
@@ -176,32 +180,43 @@ defmodule Jarga.Projects do
       iex> update_project(user, non_member_workspace_id, project_id, %{name: "Updated"})
       {:error, :unauthorized}
 
+      iex> update_project(member, workspace_id, other_users_project_id, %{name: "Updated"})
+      {:error, :forbidden}
+
   """
   def update_project(%User{} = user, workspace_id, project_id, attrs) do
-    case Authorization.verify_project_access(user, workspace_id, project_id) do
-      {:ok, project} ->
-        # Convert atom keys to string keys to avoid mixed keys
-        string_attrs =
-          attrs
-          |> Enum.map(fn {k, v} -> {to_string(k), v} end)
-          |> Enum.into(%{})
+    with {:ok, member} <- Workspaces.get_member(user, workspace_id),
+         {:ok, project} <- Authorization.verify_project_access(user, workspace_id, project_id),
+         :ok <- authorize_edit_project(member.role, project, user.id) do
+      # Convert atom keys to string keys to avoid mixed keys
+      string_attrs =
+        attrs
+        |> Enum.map(fn {k, v} -> {to_string(k), v} end)
+        |> Enum.into(%{})
 
-        result = project
-        |> Project.changeset(string_attrs)
-        |> Repo.update()
+      result = project
+      |> Project.changeset(string_attrs)
+      |> Repo.update()
 
-        # Broadcast project updates to workspace members
-        case result do
-          {:ok, updated_project} ->
-            broadcast_project_update(updated_project)
-            {:ok, updated_project}
+      # Broadcast project updates to workspace members
+      case result do
+        {:ok, updated_project} ->
+          broadcast_project_update(updated_project)
+          {:ok, updated_project}
 
-          error ->
-            error
-        end
+        error ->
+          error
+      end
+    end
+  end
 
-      {:error, reason} ->
-        {:error, reason}
+  defp authorize_edit_project(role, project, user_id) do
+    owns_project = project.user_id == user_id
+
+    if PermissionsPolicy.can?(role, :edit_project, owns_resource: owns_project) do
+      :ok
+    else
+      {:error, :forbidden}
     end
   end
 
