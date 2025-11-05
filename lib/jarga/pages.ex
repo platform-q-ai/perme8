@@ -276,26 +276,22 @@ defmodule Jarga.Pages do
       |> Queries.by_id(page_id)
       |> Repo.one()
 
-    case page do
-      nil ->
-        {:error, :page_not_found}
+    with {:page, %{} = page} <- {:page, page},
+         {:ok, _workspace} <- Workspaces.verify_membership(user, page.workspace_id),
+         :ok <- authorize_page_access(user, page) do
+      {:ok, page}
+    else
+      {:page, nil} -> {:error, :page_not_found}
+      {:error, :forbidden} -> {:error, :forbidden}
+      {:error, _reason} -> {:error, :unauthorized}
+    end
+  end
 
-      page ->
-        # Check if user is a workspace member
-        case Workspaces.verify_membership(user, page.workspace_id) do
-          {:ok, _workspace} ->
-            # Check if user can view this page (own or public)
-            if page.user_id == user.id or page.is_public do
-              {:ok, page}
-            else
-              # User is a member but can't view this private page
-              {:error, :forbidden}
-            end
-
-          {:error, _reason} ->
-            # User is not a workspace member
-            {:error, :unauthorized}
-        end
+  defp authorize_page_access(user, page) do
+    if page.user_id == user.id or page.is_public do
+      :ok
+    else
+      {:error, :forbidden}
     end
   end
 

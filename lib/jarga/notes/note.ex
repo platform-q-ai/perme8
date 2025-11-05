@@ -1,4 +1,8 @@
 defmodule Jarga.Notes.Note do
+  @moduledoc """
+  Schema for collaborative notes using Yjs for real-time editing.
+  """
+
   use Ecto.Schema
   import Ecto.Changeset
 

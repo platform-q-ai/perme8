@@ -1,4 +1,8 @@
 defmodule JargaWeb.AppLive.Workspaces.New do
+  @moduledoc """
+  LiveView for creating a new workspace.
+  """
+
   use JargaWeb, :live_view
 
   alias Jarga.Workspaces

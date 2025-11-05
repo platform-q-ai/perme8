@@ -1,4 +1,8 @@
 defmodule Jarga.Workspaces.WorkspaceMember do
+  @moduledoc """
+  Schema for workspace membership with roles and invitation tracking.
+  """
+
   use Ecto.Schema
   import Ecto.Changeset
 

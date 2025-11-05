@@ -1,4 +1,8 @@
 defmodule JargaWeb.AppLive.Pages.Show do
+  @moduledoc """
+  LiveView for displaying and editing page content with collaborative notes.
+  """
+
   use JargaWeb, :live_view
 
   alias Jarga.{Pages, Notes, Workspaces, Projects}

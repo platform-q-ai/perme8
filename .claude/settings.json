@@ -1,5 +1,52 @@
 {
   "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash(git commit*)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"$CLAUDE_PROJECT_DIR\" && mix precommit"
+          }
+        ]
+      },
+      {
+        "matcher": "Write(*)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"$CLAUDE_PROJECT_DIR\" && mix precommit"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit(*)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"$CLAUDE_PROJECT_DIR\" && mix precommit"
+          }
+        ]
+      },
+      {
+        "matcher": "Write(*test*.exs)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"$CLAUDE_PROJECT_DIR\" && mix coveralls --min-coverage 90"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit(*test*.exs)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"$CLAUDE_PROJECT_DIR\" && mix coveralls --min-coverage 90"
+          }
+        ]
+      }
+    ],
     "UserPromptSubmit": [
       {
         "matcher": "*",
@@ -7,26 +54,6 @@
           {
             "type": "command",
             "command": "if echo \"$PROMPT\" | grep -qiE '(implement|add|update|create|build|develop|write|feature|functionality)'; then echo '\n⚠️  TDD Reminder: This appears to be a feature implementation request. Remember to write tests FIRST following the Red-Green-Refactor cycle:\n1. RED: Write a failing test\n2. GREEN: Write minimal code to pass\n3. REFACTOR: Improve while keeping tests green\n\nStart with domain tests, then use cases, then infrastructure, and finally the interface layer.'; fi"
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "if git diff --name-only | grep -qE '\\.(ex|exs)$'; then echo '\n✨ Refactoring Checklist - Review your changes against these principles:\n\n📋 SOLID Principles:\n  • Single Responsibility: Does each module have one reason to change?\n  • Open/Closed: Can behavior be extended without modification?\n  • Liskov Substitution: Are behavior implementations substitutable?\n  • Interface Segregation: Are APIs focused and minimal?\n  • Dependency Inversion: Depending on abstractions, not concretions?\n\n🏗️  Clean Architecture:\n  • Domain layer: Pure business logic, no framework dependencies?\n  • Application layer: Use cases orchestrating domain logic?\n  • Infrastructure: Repos/queries separate from domain?\n  • Interface layer: Controllers/LiveViews delegating to contexts?\n\n🔒 Boundary Constraints:\n  • No forbidden references across boundaries?\n  • Using only public context APIs?\n  • Run: mix compile (check for boundary violations)\n\n✅ Tests:\n  • All tests passing? Run: mix test\n  • Tests still follow TDD principles?\n  • Test coverage adequate for changes?\n'; fi"
-          }
-        ]
-      },
-      {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "cd \"$CLAUDE_PROJECT_DIR\" && mix precommit"
           }
         ]
       }

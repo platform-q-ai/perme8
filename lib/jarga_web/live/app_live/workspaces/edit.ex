@@ -1,4 +1,8 @@
 defmodule JargaWeb.AppLive.Workspaces.Edit do
+  @moduledoc """
+  LiveView for editing workspace details and managing members.
+  """
+
   use JargaWeb, :live_view
 
   alias Jarga.Workspaces

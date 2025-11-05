@@ -1,4 +1,8 @@
 defmodule Jarga.Projects.Project do
+  @moduledoc """
+  Schema for projects that organize pages within workspaces.
+  """
+
   use Ecto.Schema
   import Ecto.Changeset
 

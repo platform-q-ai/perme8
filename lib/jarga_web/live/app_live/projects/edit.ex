@@ -1,4 +1,8 @@
 defmodule JargaWeb.AppLive.Projects.Edit do
+  @moduledoc """
+  LiveView for editing project details.
+  """
+
   use JargaWeb, :live_view
 
   alias Jarga.{Workspaces, Projects}

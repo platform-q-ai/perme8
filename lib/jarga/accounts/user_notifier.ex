@@ -1,4 +1,8 @@
 defmodule Jarga.Accounts.UserNotifier do
+  @moduledoc """
+  Delivers email notifications for user account actions.
+  """
+
   import Swoosh.Email
 
   alias Jarga.Mailer

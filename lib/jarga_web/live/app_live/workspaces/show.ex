@@ -1,4 +1,8 @@
 defmodule JargaWeb.AppLive.Workspaces.Show do
+  @moduledoc """
+  LiveView for displaying workspace details with projects and pages.
+  """
+
   use JargaWeb, :live_view
 
   import JargaWeb.Live.PermissionsHelper

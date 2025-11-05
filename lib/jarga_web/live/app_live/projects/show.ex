@@ -1,4 +1,8 @@
 defmodule JargaWeb.AppLive.Projects.Show do
+  @moduledoc """
+  LiveView for displaying project details with associated pages.
+  """
+
   use JargaWeb, :live_view
 
   alias Jarga.{Workspaces, Projects, Pages}

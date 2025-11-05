@@ -1,4 +1,8 @@
 defmodule Jarga.Accounts.UserToken do
+  @moduledoc """
+  Schema for user authentication tokens used for sessions, magic links, and email changes.
+  """
+
   use Ecto.Schema
   import Ecto.Query
   alias Jarga.Accounts.UserToken

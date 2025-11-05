@@ -1,4 +1,8 @@
 defmodule Jarga.Workspaces.Workspace do
+  @moduledoc """
+  Schema for workspaces that organize projects and team members.
+  """
+
   use Ecto.Schema
   import Ecto.Changeset
 

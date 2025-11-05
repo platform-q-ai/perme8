@@ -97,37 +97,8 @@ defmodule JargaWeb.CoreComponents do
   slot :inner_block, required: true
 
   def button(%{rest: rest} = assigns) do
-    variant_classes =
-      case assigns.variant do
-        "primary" -> "btn-primary"
-        "secondary" -> "btn-secondary"
-        "accent" -> "btn-accent"
-        "neutral" -> "btn-neutral"
-        "info" -> "btn-info"
-        "success" -> "btn-success"
-        "warning" -> "btn-warning"
-        "error" -> "btn-error"
-        "ghost" -> "btn-ghost"
-        "link" -> "btn-link"
-        "outline" -> "btn-outline"
-        "outline-primary" -> "btn-outline btn-primary"
-        "outline-secondary" -> "btn-outline btn-secondary"
-        "outline-accent" -> "btn-outline btn-accent"
-        "outline-info" -> "btn-outline btn-info"
-        "outline-success" -> "btn-outline btn-success"
-        "outline-warning" -> "btn-outline btn-warning"
-        "outline-error" -> "btn-outline btn-error"
-      end
-
-    size_class =
-      case assigns.size do
-        "xs" -> "btn-xs"
-        "sm" -> "btn-sm"
-        "md" -> "btn-md"
-        "lg" -> "btn-lg"
-        nil -> nil
-      end
-
+    variant_classes = button_variant_class(assigns.variant)
+    size_class = button_size_class(assigns.size)
     button_classes = ["btn", variant_classes, size_class, assigns.class]
 
     assigns = assign(assigns, :button_classes, button_classes)
@@ -146,6 +117,31 @@ defmodule JargaWeb.CoreComponents do
       """
     end
   end
+
+  defp button_variant_class("primary"), do: "btn-primary"
+  defp button_variant_class("secondary"), do: "btn-secondary"
+  defp button_variant_class("accent"), do: "btn-accent"
+  defp button_variant_class("neutral"), do: "btn-neutral"
+  defp button_variant_class("info"), do: "btn-info"
+  defp button_variant_class("success"), do: "btn-success"
+  defp button_variant_class("warning"), do: "btn-warning"
+  defp button_variant_class("error"), do: "btn-error"
+  defp button_variant_class("ghost"), do: "btn-ghost"
+  defp button_variant_class("link"), do: "btn-link"
+  defp button_variant_class("outline"), do: "btn-outline"
+  defp button_variant_class("outline-primary"), do: "btn-outline btn-primary"
+  defp button_variant_class("outline-secondary"), do: "btn-outline btn-secondary"
+  defp button_variant_class("outline-accent"), do: "btn-outline btn-accent"
+  defp button_variant_class("outline-info"), do: "btn-outline btn-info"
+  defp button_variant_class("outline-success"), do: "btn-outline btn-success"
+  defp button_variant_class("outline-warning"), do: "btn-outline btn-warning"
+  defp button_variant_class("outline-error"), do: "btn-outline btn-error"
+
+  defp button_size_class("xs"), do: "btn-xs"
+  defp button_size_class("sm"), do: "btn-sm"
+  defp button_size_class("md"), do: "btn-md"
+  defp button_size_class("lg"), do: "btn-lg"
+  defp button_size_class(nil), do: nil
 
   @doc """
   Renders an input with label and error messages.
@@ -336,21 +332,16 @@ defmodule JargaWeb.CoreComponents do
 
   # Helper to generate DaisyUI variant classes for inputs
   defp input_variant_class(_base, nil), do: nil
-
-  defp input_variant_class(base, variant) do
-    case variant do
-      "ghost" -> "#{base}-ghost"
-      "neutral" -> "#{base}-neutral"
-      "primary" -> "#{base}-primary"
-      "secondary" -> "#{base}-secondary"
-      "accent" -> "#{base}-accent"
-      "info" -> "#{base}-info"
-      "success" -> "#{base}-success"
-      "warning" -> "#{base}-warning"
-      "error" -> "#{base}-error"
-      _ -> nil
-    end
-  end
+  defp input_variant_class(base, "ghost"), do: "#{base}-ghost"
+  defp input_variant_class(base, "neutral"), do: "#{base}-neutral"
+  defp input_variant_class(base, "primary"), do: "#{base}-primary"
+  defp input_variant_class(base, "secondary"), do: "#{base}-secondary"
+  defp input_variant_class(base, "accent"), do: "#{base}-accent"
+  defp input_variant_class(base, "info"), do: "#{base}-info"
+  defp input_variant_class(base, "success"), do: "#{base}-success"
+  defp input_variant_class(base, "warning"), do: "#{base}-warning"
+  defp input_variant_class(base, "error"), do: "#{base}-error"
+  defp input_variant_class(_base, _), do: nil
 
   # Helper to generate DaisyUI size classes for inputs
   defp input_size_class(_base, nil), do: nil

@@ -66,14 +66,14 @@ defmodule Jarga.Credo.Check.Architecture.NoDatabaseQueriesInLiveViews do
     issue_meta = IssueMeta.for(source_file, params)
 
     # Only check LiveView files
-    if is_live_view?(source_file) do
+    if live_view?(source_file) do
       Credo.Code.prewalk(source_file, &traverse(&1, &2, issue_meta))
     else
       []
     end
   end
 
-  defp is_live_view?(source_file) do
+  defp live_view?(source_file) do
     String.contains?(source_file.filename, "/jarga_web/live/") or
       String.contains?(source_file.filename, "/live_view/")
   end

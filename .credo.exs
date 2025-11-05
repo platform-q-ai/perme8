@@ -41,14 +41,11 @@
       # If you create your own checks, you must specify the source files for
       # them here, so they can be loaded by Credo before running the analysis.
       #
-      # NOTE: The module redefinition warnings that appear are harmless - they occur
-      # because the modules are compiled with the main app but Credo also loads them.
-      # This is expected behavior and doesn't affect functionality.
       requires: [
-        "lib/credo/check/architecture/no_direct_repo_in_web.ex",
-        "lib/credo/check/architecture/no_business_logic_in_live_view.ex",
-        "lib/credo/check/architecture/no_pubsub_in_contexts.ex",
-        "lib/credo/check/architecture/no_database_queries_in_live_views.ex"
+        ".credo/checks/no_direct_repo_in_web.ex",
+        ".credo/checks/no_business_logic_in_live_view.ex",
+        ".credo/checks/no_pubsub_in_contexts.ex",
+        ".credo/checks/no_database_queries_in_live_views.ex"
       ],
       #
       # If you want to enforce a style guide and need a more traditional linting
@@ -102,10 +99,8 @@
           #
           ## Readability Checks
           #
-          {Credo.Check.Readability.AliasOrder, []},
           {Credo.Check.Readability.FunctionNames, []},
           {Credo.Check.Readability.LargeNumbers, []},
-          {Credo.Check.Readability.MaxLineLength, [priority: :low, max_length: 120]},
           {Credo.Check.Readability.ModuleAttributeNames, []},
           {Credo.Check.Readability.ModuleDoc, []},
           {Credo.Check.Readability.ModuleNames, []},

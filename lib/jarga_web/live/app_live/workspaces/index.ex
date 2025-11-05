@@ -1,4 +1,8 @@
 defmodule JargaWeb.AppLive.Workspaces.Index do
+  @moduledoc """
+  LiveView for listing all workspaces.
+  """
+
   use JargaWeb, :live_view
 
   alias Jarga.Workspaces

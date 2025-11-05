@@ -1,4 +1,8 @@
 defmodule JargaWeb.UserAuth do
+  @moduledoc """
+  Authentication and authorization plugs for user sessions.
+  """
+
   use JargaWeb, :verified_routes
 
   import Plug.Conn

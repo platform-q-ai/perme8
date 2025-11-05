@@ -1,4 +1,8 @@
 defmodule Jarga.Pages.Page do
+  @moduledoc """
+  Schema for pages that contain notes and content.
+  """
+
   use Ecto.Schema
   import Ecto.Changeset
 

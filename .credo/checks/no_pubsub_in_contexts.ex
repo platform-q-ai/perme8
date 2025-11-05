@@ -95,7 +95,7 @@ defmodule Jarga.Credo.Check.Architecture.NoPubSubInContexts do
          issue_meta
        ) do
     new_issues =
-      if is_pubsub_call?(module_parts, function_name) do
+      if pubsub_call?(module_parts, function_name) do
         [issue_for(issue_meta, meta, function_name) | issues]
       else
         issues
@@ -108,12 +108,12 @@ defmodule Jarga.Credo.Check.Architecture.NoPubSubInContexts do
     {ast, issues}
   end
 
-  defp is_pubsub_call?(module_parts, function_name)
+  defp pubsub_call?(module_parts, function_name)
        when is_list(module_parts) and is_atom(function_name) do
     module_parts == [:Phoenix, :PubSub] and function_name in [:broadcast, :broadcast_from]
   end
 
-  defp is_pubsub_call?(_, _), do: false
+  defp pubsub_call?(_, _), do: false
 
   defp issue_for(issue_meta, meta, function_name) do
     trigger = "Phoenix.PubSub.#{function_name}"
