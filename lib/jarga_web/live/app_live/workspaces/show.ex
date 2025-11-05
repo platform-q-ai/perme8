@@ -798,12 +798,12 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
     {:noreply, assign(socket, projects: projects)}
   end
 
+  # Chat panel streaming messages
+  handle_chat_messages()
+
   # Catch-all for unhandled messages (e.g., email notifications from Swoosh)
   @impl true
   def handle_info(_msg, socket) do
     {:noreply, socket}
   end
-
-  # Chat panel streaming messages
-  handle_chat_messages()
 end

@@ -3,7 +3,6 @@ defmodule JargaWeb.ChatLive.Components.Message do
   Message component for displaying chat messages.
   """
   use Phoenix.Component
-  import JargaWeb.CoreComponents
 
   attr :message, :map, required: true
 
