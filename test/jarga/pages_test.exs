@@ -12,9 +12,10 @@ defmodule Jarga.PagesTest do
       user = user_fixture()
       workspace = workspace_fixture(user)
 
-      {:ok, page} = Pages.create_page(user, workspace.id, %{
-        title: "Test Page"
-      })
+      {:ok, page} =
+        Pages.create_page(user, workspace.id, %{
+          title: "Test Page"
+        })
 
       assert fetched = Pages.get_page!(user, page.id)
       assert fetched.id == page.id
@@ -36,9 +37,10 @@ defmodule Jarga.PagesTest do
       user2 = user_fixture()
       workspace = workspace_fixture(user1)
 
-      {:ok, page} = Pages.create_page(user1, workspace.id, %{
-        title: "Private Page"
-      })
+      {:ok, page} =
+        Pages.create_page(user1, workspace.id, %{
+          title: "Private Page"
+        })
 
       assert_raise Ecto.NoResultsError, fn ->
         Pages.get_page!(user2, page.id)
@@ -325,10 +327,21 @@ defmodule Jarga.PagesTest do
       # Use raw Ecto queries to bypass the context and set timestamps directly
       base_time = ~U[2025-01-01 12:00:00Z]
 
-      page1 |> Ecto.Changeset.change(updated_at: DateTime.add(base_time, 0, :second)) |> Repo.update!()
-      page2 |> Ecto.Changeset.change(is_pinned: true, updated_at: DateTime.add(base_time, 1, :second)) |> Repo.update!()
-      page3 |> Ecto.Changeset.change(updated_at: DateTime.add(base_time, 2, :second)) |> Repo.update!()
-      page4 |> Ecto.Changeset.change(is_pinned: true, updated_at: DateTime.add(base_time, 3, :second)) |> Repo.update!()
+      page1
+      |> Ecto.Changeset.change(updated_at: DateTime.add(base_time, 0, :second))
+      |> Repo.update!()
+
+      page2
+      |> Ecto.Changeset.change(is_pinned: true, updated_at: DateTime.add(base_time, 1, :second))
+      |> Repo.update!()
+
+      page3
+      |> Ecto.Changeset.change(updated_at: DateTime.add(base_time, 2, :second))
+      |> Repo.update!()
+
+      page4
+      |> Ecto.Changeset.change(is_pinned: true, updated_at: DateTime.add(base_time, 3, :second))
+      |> Repo.update!()
 
       pages = Pages.list_pages_for_workspace(user, workspace.id)
 
@@ -355,14 +368,17 @@ defmodule Jarga.PagesTest do
       workspace = workspace_fixture(user)
       project = project_fixture(user, workspace)
 
-      {:ok, page1} = Pages.create_page(user, workspace.id, %{
-        title: "Project Page 1",
-        project_id: project.id
-      })
-      {:ok, page2} = Pages.create_page(user, workspace.id, %{
-        title: "Project Page 2",
-        project_id: project.id
-      })
+      {:ok, page1} =
+        Pages.create_page(user, workspace.id, %{
+          title: "Project Page 1",
+          project_id: project.id
+        })
+
+      {:ok, page2} =
+        Pages.create_page(user, workspace.id, %{
+          title: "Project Page 2",
+          project_id: project.id
+        })
 
       pages = Pages.list_pages_for_project(user, workspace.id, project.id)
 
@@ -378,14 +394,17 @@ defmodule Jarga.PagesTest do
       project1 = project_fixture(user, workspace)
       project2 = project_fixture(user, workspace)
 
-      {:ok, page1} = Pages.create_page(user, workspace.id, %{
-        title: "P1 Page",
-        project_id: project1.id
-      })
-      {:ok, _page2} = Pages.create_page(user, workspace.id, %{
-        title: "P2 Page",
-        project_id: project2.id
-      })
+      {:ok, page1} =
+        Pages.create_page(user, workspace.id, %{
+          title: "P1 Page",
+          project_id: project1.id
+        })
+
+      {:ok, _page2} =
+        Pages.create_page(user, workspace.id, %{
+          title: "P2 Page",
+          project_id: project2.id
+        })
 
       pages = Pages.list_pages_for_project(user, workspace.id, project1.id)
 
@@ -399,31 +418,49 @@ defmodule Jarga.PagesTest do
       project = project_fixture(user, workspace)
 
       # Create pages
-      {:ok, page1} = Pages.create_page(user, workspace.id, %{
-        title: "Page 1",
-        project_id: project.id
-      })
-      {:ok, page2} = Pages.create_page(user, workspace.id, %{
-        title: "Page 2",
-        project_id: project.id
-      })
-      {:ok, page3} = Pages.create_page(user, workspace.id, %{
-        title: "Page 3",
-        project_id: project.id
-      })
-      {:ok, page4} = Pages.create_page(user, workspace.id, %{
-        title: "Page 4",
-        project_id: project.id
-      })
+      {:ok, page1} =
+        Pages.create_page(user, workspace.id, %{
+          title: "Page 1",
+          project_id: project.id
+        })
+
+      {:ok, page2} =
+        Pages.create_page(user, workspace.id, %{
+          title: "Page 2",
+          project_id: project.id
+        })
+
+      {:ok, page3} =
+        Pages.create_page(user, workspace.id, %{
+          title: "Page 3",
+          project_id: project.id
+        })
+
+      {:ok, page4} =
+        Pages.create_page(user, workspace.id, %{
+          title: "Page 4",
+          project_id: project.id
+        })
 
       # Manually set updated_at timestamps and pin status to create specific ordering
       # Use raw Ecto queries to bypass the context and set timestamps directly
       base_time = ~U[2025-01-01 12:00:00Z]
 
-      page1 |> Ecto.Changeset.change(updated_at: DateTime.add(base_time, 0, :second)) |> Repo.update!()
-      page2 |> Ecto.Changeset.change(is_pinned: true, updated_at: DateTime.add(base_time, 1, :second)) |> Repo.update!()
-      page3 |> Ecto.Changeset.change(updated_at: DateTime.add(base_time, 2, :second)) |> Repo.update!()
-      page4 |> Ecto.Changeset.change(is_pinned: true, updated_at: DateTime.add(base_time, 3, :second)) |> Repo.update!()
+      page1
+      |> Ecto.Changeset.change(updated_at: DateTime.add(base_time, 0, :second))
+      |> Repo.update!()
+
+      page2
+      |> Ecto.Changeset.change(is_pinned: true, updated_at: DateTime.add(base_time, 1, :second))
+      |> Repo.update!()
+
+      page3
+      |> Ecto.Changeset.change(updated_at: DateTime.add(base_time, 2, :second))
+      |> Repo.update!()
+
+      page4
+      |> Ecto.Changeset.change(is_pinned: true, updated_at: DateTime.add(base_time, 3, :second))
+      |> Repo.update!()
 
       pages = Pages.list_pages_for_project(user, workspace.id, project.id)
 

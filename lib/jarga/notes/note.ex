@@ -6,12 +6,12 @@ defmodule Jarga.Notes.Note do
   @foreign_key_type :binary_id
 
   schema "notes" do
-    field :note_content, :map
-    field :yjs_state, :binary
+    field(:note_content, :map)
+    field(:yjs_state, :binary)
 
-    belongs_to :user, Jarga.Accounts.User
-    belongs_to :workspace, Jarga.Workspaces.Workspace, type: Ecto.UUID
-    belongs_to :project, Jarga.Projects.Project, type: Ecto.UUID
+    belongs_to(:user, Jarga.Accounts.User)
+    belongs_to(:workspace, Jarga.Workspaces.Workspace, type: Ecto.UUID)
+    belongs_to(:project, Jarga.Projects.Project, type: Ecto.UUID)
 
     timestamps(type: :utc_datetime)
   end

@@ -13,10 +13,11 @@ defmodule Jarga.NotesTest do
       workspace = workspace_fixture(user)
       note_id = Ecto.UUID.generate()
 
-      {:ok, note} = Notes.create_note(user, workspace.id, %{
-        id: note_id,
-        note_content: %{"type" => "doc", "content" => []}
-      })
+      {:ok, note} =
+        Notes.create_note(user, workspace.id, %{
+          id: note_id,
+          note_content: %{"type" => "doc", "content" => []}
+        })
 
       assert fetched = Notes.get_note!(user, note_id)
       assert fetched.id == note.id
@@ -37,10 +38,11 @@ defmodule Jarga.NotesTest do
       workspace = workspace_fixture(user1)
       note_id = Ecto.UUID.generate()
 
-      {:ok, note} = Notes.create_note(user1, workspace.id, %{
-        id: note_id,
-        note_content: %{"type" => "doc"}
-      })
+      {:ok, note} =
+        Notes.create_note(user1, workspace.id, %{
+          id: note_id,
+          note_content: %{"type" => "doc"}
+        })
 
       assert_raise Ecto.NoResultsError, fn ->
         Notes.get_note!(user2, note.id)
@@ -141,10 +143,11 @@ defmodule Jarga.NotesTest do
       workspace = workspace_fixture(user)
       note_id = Ecto.UUID.generate()
 
-      {:ok, note} = Notes.create_note(user, workspace.id, %{
-        id: note_id,
-        note_content: %{"type" => "doc", "content" => []}
-      })
+      {:ok, note} =
+        Notes.create_note(user, workspace.id, %{
+          id: note_id,
+          note_content: %{"type" => "doc", "content" => []}
+        })
 
       new_content = %{"type" => "doc", "content" => [%{"type" => "paragraph"}]}
       attrs = %{note_content: new_content}
@@ -159,10 +162,11 @@ defmodule Jarga.NotesTest do
       workspace = workspace_fixture(user)
       note_id = Ecto.UUID.generate()
 
-      {:ok, note} = Notes.create_note(user, workspace.id, %{
-        id: note_id,
-        yjs_state: <<1, 2, 3>>
-      })
+      {:ok, note} =
+        Notes.create_note(user, workspace.id, %{
+          id: note_id,
+          yjs_state: <<1, 2, 3>>
+        })
 
       new_yjs_state = <<4, 5, 6, 7>>
       attrs = %{yjs_state: new_yjs_state}
@@ -326,14 +330,17 @@ defmodule Jarga.NotesTest do
       note1_id = Ecto.UUID.generate()
       note2_id = Ecto.UUID.generate()
 
-      {:ok, note1} = Notes.create_note(user, workspace.id, %{
-        id: note1_id,
-        project_id: project.id
-      })
-      {:ok, note2} = Notes.create_note(user, workspace.id, %{
-        id: note2_id,
-        project_id: project.id
-      })
+      {:ok, note1} =
+        Notes.create_note(user, workspace.id, %{
+          id: note1_id,
+          project_id: project.id
+        })
+
+      {:ok, note2} =
+        Notes.create_note(user, workspace.id, %{
+          id: note2_id,
+          project_id: project.id
+        })
 
       notes = Notes.list_notes_for_project(user, workspace.id, project.id)
 
@@ -351,14 +358,17 @@ defmodule Jarga.NotesTest do
       note1_id = Ecto.UUID.generate()
       note2_id = Ecto.UUID.generate()
 
-      {:ok, note1} = Notes.create_note(user, workspace.id, %{
-        id: note1_id,
-        project_id: project1.id
-      })
-      {:ok, _note2} = Notes.create_note(user, workspace.id, %{
-        id: note2_id,
-        project_id: project2.id
-      })
+      {:ok, note1} =
+        Notes.create_note(user, workspace.id, %{
+          id: note1_id,
+          project_id: project1.id
+        })
+
+      {:ok, _note2} =
+        Notes.create_note(user, workspace.id, %{
+          id: note2_id,
+          project_id: project2.id
+        })
 
       notes = Notes.list_notes_for_project(user, workspace.id, project1.id)
 

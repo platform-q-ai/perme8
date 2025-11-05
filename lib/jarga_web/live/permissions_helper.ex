@@ -99,7 +99,11 @@ defmodule JargaWeb.Live.PermissionsHelper do
   """
   def can_edit_page?(member, page, current_user) do
     owns_page = page.user_id == current_user.id
-    PermissionsPolicy.can?(member.role, :edit_page, owns_resource: owns_page, is_public: page.is_public)
+
+    PermissionsPolicy.can?(member.role, :edit_page,
+      owns_resource: owns_page,
+      is_public: page.is_public
+    )
   end
 
   @doc """
@@ -117,7 +121,10 @@ defmodule JargaWeb.Live.PermissionsHelper do
     if owns_page do
       PermissionsPolicy.can?(member.role, :delete_page, owns_resource: true)
     else
-      PermissionsPolicy.can?(member.role, :delete_page, owns_resource: false, is_public: page.is_public)
+      PermissionsPolicy.can?(member.role, :delete_page,
+        owns_resource: false,
+        is_public: page.is_public
+      )
     end
   end
 
@@ -132,7 +139,11 @@ defmodule JargaWeb.Live.PermissionsHelper do
   """
   def can_pin_page?(member, page, current_user) do
     owns_page = page.user_id == current_user.id
-    PermissionsPolicy.can?(member.role, :pin_page, owns_resource: owns_page, is_public: page.is_public)
+
+    PermissionsPolicy.can?(member.role, :pin_page,
+      owns_resource: owns_page,
+      is_public: page.is_public
+    )
   end
 
   @doc """

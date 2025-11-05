@@ -11,14 +11,14 @@ defmodule Jarga.Pages.PageComponent do
   @foreign_key_type :binary_id
 
   schema "page_components" do
-    belongs_to :page, Jarga.Pages.Page
+    belongs_to(:page, Jarga.Pages.Page)
 
     # Polymorphic association
-    field :component_type, :string
-    field :component_id, Ecto.UUID
+    field(:component_type, :string)
+    field(:component_id, Ecto.UUID)
 
     # For ordering components on the page
-    field :position, :integer, default: 0
+    field(:position, :integer, default: 0)
 
     timestamps(type: :utc_datetime)
   end

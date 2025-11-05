@@ -33,25 +33,28 @@ defmodule JargaWeb.PageSaveDebouncer do
   Returns the GenServer PID for test database ownership setup.
   """
   def request_save(page_id, user, note_id, yjs_state, markdown) do
-    pid = case GenServer.whereis(via_tuple(page_id)) do
-      nil ->
-        # Start the debouncer if it doesn't exist
-        case DynamicSupervisor.start_child(
-          JargaWeb.PageSaveDebouncerSupervisor,
-          {__MODULE__, page_id}
-        ) do
-          {:ok, pid} ->
-            pid
-          {:error, {:already_started, pid}} ->
-            pid
-          error ->
-            Logger.error("Failed to start PageSaveDebouncer: #{inspect(error)}")
-            nil
-        end
+    pid =
+      case GenServer.whereis(via_tuple(page_id)) do
+        nil ->
+          # Start the debouncer if it doesn't exist
+          case DynamicSupervisor.start_child(
+                 JargaWeb.PageSaveDebouncerSupervisor,
+                 {__MODULE__, page_id}
+               ) do
+            {:ok, pid} ->
+              pid
 
-      pid ->
-        pid
-    end
+            {:error, {:already_started, pid}} ->
+              pid
+
+            error ->
+              Logger.error("Failed to start PageSaveDebouncer: #{inspect(error)}")
+              nil
+          end
+
+        pid ->
+          pid
+      end
 
     if pid do
       GenServer.cast(via_tuple(page_id), {:save, user, note_id, yjs_state, markdown})
@@ -64,11 +67,12 @@ defmodule JargaWeb.PageSaveDebouncer do
 
   @impl true
   def init(page_id) do
-    {:ok, %{
-      page_id: page_id,
-      pending_save: nil,
-      timer_ref: nil
-    }}
+    {:ok,
+     %{
+       page_id: page_id,
+       pending_save: nil,
+       timer_ref: nil
+     }}
   end
 
   @impl true
@@ -124,6 +128,7 @@ defmodule JargaWeb.PageSaveDebouncer do
     case Jarga.Notes.update_note_via_page(user, note_id, update_attrs) do
       {:ok, _note} ->
         :ok
+
       {:error, :note_not_found} ->
         # In test mode, notes may be deleted before debouncer fires - this is expected
         # In production, log as warning since it might indicate a race condition
@@ -133,6 +138,7 @@ defmodule JargaWeb.PageSaveDebouncer do
           Logger.warning("Note #{note_id} not found during debounced save")
           :error
         end
+
       {:error, reason} ->
         Logger.error("Failed to save note #{note_id}: #{inspect(reason)}")
         :error
@@ -154,6 +160,7 @@ defmodule JargaWeb.PageSaveDebouncer do
     case get_debouncer_pid(page_id) do
       nil ->
         :ok
+
       pid ->
         wait_until = System.monotonic_time(:millisecond) + timeout
         wait_for_save_loop(pid, wait_until)
@@ -167,6 +174,7 @@ defmodule JargaWeb.PageSaveDebouncer do
       case :sys.get_state(pid) do
         %{pending_save: nil} ->
           :ok
+
         _ ->
           Process.sleep(100)
           wait_for_save_loop(pid, wait_until)

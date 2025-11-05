@@ -29,20 +29,34 @@ defmodule Jarga.Pages do
   Only returns the page if it belongs to the user.
   Raises `Ecto.NoResultsError` if the page does not exist or belongs to another user.
 
+  ## Options
+
+    * `:preload_components` - If true, preloads page_components association. Defaults to false.
+
   ## Examples
 
       iex> get_page!(user, page_id)
       %Page{}
 
+      iex> get_page!(user, page_id, preload_components: true)
+      %Page{page_components: [...]}
+
       iex> get_page!(user, "non-existent-id")
       ** (Ecto.NoResultsError)
 
   """
-  def get_page!(%User{} = user, page_id) do
-    Queries.base()
-    |> Queries.by_id(page_id)
-    |> Queries.for_user(user)
-    |> Repo.one!()
+  def get_page!(%User{} = user, page_id, opts \\ []) do
+    page =
+      Queries.base()
+      |> Queries.by_id(page_id)
+      |> Queries.for_user(user)
+      |> Repo.one!()
+
+    if Keyword.get(opts, :preload_components, false) do
+      Repo.preload(page, :page_components)
+    else
+      page
+    end
   end
 
   @doc """
@@ -60,11 +74,12 @@ defmodule Jarga.Pages do
 
   """
   def get_page_by_slug(%User{} = user, workspace_id, slug) do
-    page = Queries.base()
-    |> Queries.by_slug(slug)
-    |> Queries.for_workspace(workspace_id)
-    |> Queries.viewable_by_user(user)
-    |> Repo.one()
+    page =
+      Queries.base()
+      |> Queries.by_slug(slug)
+      |> Queries.for_workspace(workspace_id)
+      |> Queries.viewable_by_user(user)
+      |> Repo.one()
 
     case page do
       nil -> {:error, :page_not_found}
@@ -120,7 +135,8 @@ defmodule Jarga.Pages do
 
     with {:ok, member} <- Workspaces.get_member(user, workspace_id),
          :ok <- authorize_create_page(member.role),
-         :ok <- Authorization.verify_project_in_workspace(workspace_id, Map.get(attrs, :project_id)) do
+         :ok <-
+           Authorization.verify_project_in_workspace(workspace_id, Map.get(attrs, :project_id)) do
       # Create the page, note, and page_component in a transaction
       Ecto.Multi.new()
       |> Ecto.Multi.run(:note, fn _repo, _changes ->
@@ -132,11 +148,12 @@ defmodule Jarga.Pages do
         Notes.create_note(user, workspace_id, note_attrs)
       end)
       |> Ecto.Multi.run(:page, fn _repo, _changes ->
-        attrs_with_user = Map.merge(attrs, %{
-          user_id: user.id,
-          workspace_id: workspace_id,
-          created_by: user.id
-        })
+        attrs_with_user =
+          Map.merge(attrs, %{
+            user_id: user.id,
+            workspace_id: workspace_id,
+            created_by: user.id
+          })
 
         %Page{}
         |> Page.changeset(attrs_with_user)
@@ -194,9 +211,10 @@ defmodule Jarga.Pages do
     with {:ok, page} <- get_page_with_workspace_member(user, page_id),
          {:ok, member} <- Workspaces.get_member(user, page.workspace_id),
          :ok <- authorize_page_update(member.role, page, user.id, attrs) do
-      result = page
-      |> Page.changeset(attrs)
-      |> Repo.update()
+      result =
+        page
+        |> Page.changeset(attrs)
+        |> Repo.update()
 
       # Broadcast changes to workspace members
       case result do
@@ -204,12 +222,15 @@ defmodule Jarga.Pages do
           if Map.has_key?(attrs, :is_public) and attrs.is_public != page.is_public do
             broadcast_page_visibility_change(updated_page)
           end
+
           if Map.has_key?(attrs, :is_pinned) and attrs.is_pinned != page.is_pinned do
             broadcast_page_pinned_change(updated_page)
           end
+
           if Map.has_key?(attrs, :title) and attrs.title != page.title do
             broadcast_page_title_change(updated_page)
           end
+
           {:ok, updated_page}
 
         error ->
@@ -223,14 +244,20 @@ defmodule Jarga.Pages do
 
     # If updating is_pinned, check pin permissions
     if Map.has_key?(attrs, :is_pinned) do
-      if PermissionsPolicy.can?(role, :pin_page, owns_resource: owns_page, is_public: page.is_public) do
+      if PermissionsPolicy.can?(role, :pin_page,
+           owns_resource: owns_page,
+           is_public: page.is_public
+         ) do
         :ok
       else
         {:error, :forbidden}
       end
     else
       # Otherwise check edit permissions
-      if PermissionsPolicy.can?(role, :edit_page, owns_resource: owns_page, is_public: page.is_public) do
+      if PermissionsPolicy.can?(role, :edit_page,
+           owns_resource: owns_page,
+           is_public: page.is_public
+         ) do
         :ok
       else
         {:error, :forbidden}
@@ -240,9 +267,10 @@ defmodule Jarga.Pages do
 
   defp get_page_with_workspace_member(user, page_id) do
     # First get the page without user filter to check if it exists
-    page = Queries.base()
-    |> Queries.by_id(page_id)
-    |> Repo.one()
+    page =
+      Queries.base()
+      |> Queries.by_id(page_id)
+      |> Repo.one()
 
     case page do
       nil ->
@@ -316,7 +344,10 @@ defmodule Jarga.Pages do
         {:error, :forbidden}
       end
     else
-      if PermissionsPolicy.can?(role, :delete_page, owns_resource: false, is_public: page.is_public) do
+      if PermissionsPolicy.can?(role, :delete_page,
+           owns_resource: false,
+           is_public: page.is_public
+         ) do
         :ok
       else
         {:error, :forbidden}
@@ -365,6 +396,28 @@ defmodule Jarga.Pages do
     |> Queries.viewable_by_user(user)
     |> Queries.ordered()
     |> Repo.all()
+  end
+
+  @doc """
+  Gets the note component from a page.
+
+  Returns the Note associated with the first note component in the page.
+  Raises if the page has no note component.
+
+  ## Examples
+
+      iex> get_page_note(page)
+      %Note{}
+
+  """
+  def get_page_note(%Page{page_components: page_components}) do
+    case Enum.find(page_components, fn pc -> pc.component_type == "note" end) do
+      %{component_id: note_id} ->
+        Repo.get!(Jarga.Notes.Note, note_id)
+
+      nil ->
+        raise "Page has no note component"
+    end
   end
 
   # Private functions

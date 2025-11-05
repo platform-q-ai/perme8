@@ -9,18 +9,18 @@ defmodule Jarga.Pages.Page do
   @foreign_key_type :binary_id
 
   schema "pages" do
-    field :title, :string
-    field :slug, :string
-    field :is_public, :boolean, default: false
-    field :is_pinned, :boolean, default: false
+    field(:title, :string)
+    field(:slug, :string)
+    field(:is_public, :boolean, default: false)
+    field(:is_pinned, :boolean, default: false)
 
-    belongs_to :user, Jarga.Accounts.User
-    belongs_to :workspace, Jarga.Workspaces.Workspace, type: Ecto.UUID
-    belongs_to :project, Jarga.Projects.Project, type: Ecto.UUID
-    belongs_to :created_by_user, Jarga.Accounts.User, foreign_key: :created_by
+    belongs_to(:user, Jarga.Accounts.User)
+    belongs_to(:workspace, Jarga.Workspaces.Workspace, type: Ecto.UUID)
+    belongs_to(:project, Jarga.Projects.Project, type: Ecto.UUID)
+    belongs_to(:created_by_user, Jarga.Accounts.User, foreign_key: :created_by)
 
     # Polymorphic components (notes, task lists, sheets, etc.)
-    has_many :page_components, Jarga.Pages.PageComponent, preload_order: [asc: :position]
+    has_many(:page_components, Jarga.Pages.PageComponent, preload_order: [asc: :position])
 
     timestamps(type: :utc_datetime)
   end
@@ -28,7 +28,15 @@ defmodule Jarga.Pages.Page do
   @doc false
   def changeset(page, attrs) do
     page
-    |> cast(attrs, [:title, :user_id, :workspace_id, :project_id, :created_by, :is_public, :is_pinned])
+    |> cast(attrs, [
+      :title,
+      :user_id,
+      :workspace_id,
+      :project_id,
+      :created_by,
+      :is_public,
+      :is_pinned
+    ])
     |> validate_required([:title, :user_id, :workspace_id, :created_by])
     |> validate_length(:title, min: 1)
     |> generate_slug()
@@ -55,7 +63,15 @@ defmodule Jarga.Pages.Page do
         title ->
           page_id = get_field(changeset, :id)
           workspace_id = get_field(changeset, :workspace_id)
-          slug = SlugGenerator.generate(title, workspace_id, &PageRepository.slug_exists_in_workspace?/3, page_id)
+
+          slug =
+            SlugGenerator.generate(
+              title,
+              workspace_id,
+              &PageRepository.slug_exists_in_workspace?/3,
+              page_id
+            )
+
           put_change(changeset, :slug, slug)
       end
     end

@@ -20,6 +20,15 @@
             "command": "if git diff --name-only | grep -qE '\\.(ex|exs)$'; then echo '\n✨ Refactoring Checklist - Review your changes against these principles:\n\n📋 SOLID Principles:\n  • Single Responsibility: Does each module have one reason to change?\n  • Open/Closed: Can behavior be extended without modification?\n  • Liskov Substitution: Are behavior implementations substitutable?\n  • Interface Segregation: Are APIs focused and minimal?\n  • Dependency Inversion: Depending on abstractions, not concretions?\n\n🏗️  Clean Architecture:\n  • Domain layer: Pure business logic, no framework dependencies?\n  • Application layer: Use cases orchestrating domain logic?\n  • Infrastructure: Repos/queries separate from domain?\n  • Interface layer: Controllers/LiveViews delegating to contexts?\n\n🔒 Boundary Constraints:\n  • No forbidden references across boundaries?\n  • Using only public context APIs?\n  • Run: mix compile (check for boundary violations)\n\n✅ Tests:\n  • All tests passing? Run: mix test\n  • Tests still follow TDD principles?\n  • Test coverage adequate for changes?\n'; fi"
           }
         ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd $PWD && mix precommit"
+          }
+        ]
       }
     ]
   }

@@ -87,8 +87,9 @@ defmodule Jarga.Projects do
 
   """
   def get_project(%User{} = user, workspace_id, project_id) do
-    project = Queries.for_user_by_id(user, workspace_id, project_id)
-    |> Repo.one()
+    project =
+      Queries.for_user_by_id(user, workspace_id, project_id)
+      |> Repo.one()
 
     case project do
       nil -> {:error, :project_not_found}
@@ -132,8 +133,9 @@ defmodule Jarga.Projects do
 
   """
   def get_project_by_slug(%User{} = user, workspace_id, slug) do
-    project = Queries.for_user_by_slug(user, workspace_id, slug)
-    |> Repo.one()
+    project =
+      Queries.for_user_by_slug(user, workspace_id, slug)
+      |> Repo.one()
 
     case project do
       nil -> {:error, :project_not_found}
@@ -194,9 +196,10 @@ defmodule Jarga.Projects do
         |> Enum.map(fn {k, v} -> {to_string(k), v} end)
         |> Enum.into(%{})
 
-      result = project
-      |> Project.changeset(string_attrs)
-      |> Repo.update()
+      result =
+        project
+        |> Project.changeset(string_attrs)
+        |> Repo.update()
 
       # Broadcast project updates to workspace members
       case result do

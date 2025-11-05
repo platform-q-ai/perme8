@@ -58,11 +58,13 @@ defmodule Jarga.Notes do
   """
   def create_note(%User{} = user, workspace_id, attrs) do
     with {:ok, _workspace} <- Authorization.verify_workspace_access(user, workspace_id),
-         :ok <- Authorization.verify_project_in_workspace(workspace_id, Map.get(attrs, :project_id)) do
-      attrs_with_user = Map.merge(attrs, %{
-        user_id: user.id,
-        workspace_id: workspace_id
-      })
+         :ok <-
+           Authorization.verify_project_in_workspace(workspace_id, Map.get(attrs, :project_id)) do
+      attrs_with_user =
+        Map.merge(attrs, %{
+          user_id: user.id,
+          workspace_id: workspace_id
+        })
 
       %Note{}
       |> Note.changeset(attrs_with_user)

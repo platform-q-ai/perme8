@@ -52,7 +52,7 @@ defmodule Jarga.Notes.Policies.Authorization do
 
     # Find the note and its associated page via page_components
     query =
-      from n in Note,
+      from(n in Note,
         join: pc in Jarga.Pages.PageComponent,
         on: pc.component_id == n.id and pc.component_type == "note",
         join: p in Jarga.Pages.Page,
@@ -62,6 +62,7 @@ defmodule Jarga.Notes.Policies.Authorization do
         where: n.id == ^note_id,
         where: p.user_id == ^user.id or (p.is_public == true and not is_nil(wm.id)),
         select: n
+      )
 
     case Repo.one(query) do
       nil ->

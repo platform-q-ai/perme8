@@ -4,6 +4,8 @@ defmodule JargaWeb.UserLive.LoginTest do
   import Phoenix.LiveViewTest
   import Jarga.AccountsFixtures
 
+  alias Jarga.Accounts
+
   describe "login page" do
     test "renders login page", %{conn: conn} do
       {:ok, _lv, html} = live(conn, ~p"/users/log-in")
@@ -27,8 +29,7 @@ defmodule JargaWeb.UserLive.LoginTest do
 
       assert html =~ "If your email is in our system"
 
-      assert Jarga.Repo.get_by!(Jarga.Accounts.UserToken, user_id: user.id).context ==
-               "login"
+      assert Accounts.get_user_token_by_user_id(user.id).context == "login"
     end
 
     test "does not disclose if user is registered", %{conn: conn} do

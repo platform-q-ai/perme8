@@ -47,8 +47,7 @@ defmodule JargaWeb.AppLive.Projects.Show do
           <div class="flex items-center justify-between mb-4">
             <h2 class="text-lg font-semibold">Pages</h2>
             <.button variant="primary" size="sm" phx-click="show_page_modal">
-              <.icon name="hero-document-plus" class="size-4" />
-              New Page
+              <.icon name="hero-document-plus" class="size-4" /> New Page
             </.button>
           </div>
 
@@ -87,8 +86,7 @@ defmodule JargaWeb.AppLive.Projects.Show do
                     </div>
                     <%= if page.is_pinned do %>
                       <div class="badge badge-warning badge-sm gap-1">
-                        <span class="text-xs">📌</span>
-                        Pinned
+                        <span class="text-xs">📌</span> Pinned
                       </div>
                     <% end %>
                   </div>
@@ -224,7 +222,9 @@ defmodule JargaWeb.AppLive.Projects.Show do
          |> assign(:show_page_modal, false)
          |> assign(:page_form, to_form(%{"title" => ""}))
          |> put_flash(:info, "Page created successfully")
-         |> push_navigate(to: ~p"/app/workspaces/#{socket.assigns.workspace.slug}/pages/#{page.slug}")}
+         |> push_navigate(
+           to: ~p"/app/workspaces/#{socket.assigns.workspace.slug}/pages/#{page.slug}"
+         )}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, page_form: to_form(changeset))}
@@ -266,13 +266,14 @@ defmodule JargaWeb.AppLive.Projects.Show do
   @impl true
   def handle_info({:page_title_changed, page_id, title}, socket) do
     # Update page title in the list
-    pages = Enum.map(socket.assigns.pages, fn page ->
-      if page.id == page_id do
-        %{page | title: title}
-      else
-        page
-      end
-    end)
+    pages =
+      Enum.map(socket.assigns.pages, fn page ->
+        if page.id == page_id do
+          %{page | title: title}
+        else
+          page
+        end
+      end)
 
     {:noreply, assign(socket, pages: pages)}
   end

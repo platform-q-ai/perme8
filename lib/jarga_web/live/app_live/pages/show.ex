@@ -13,7 +13,7 @@ defmodule JargaWeb.AppLive.Pages.Show do
          {:ok, project} <- get_project_if_exists(user, page),
          {:ok, member} <- Workspaces.get_member(user, workspace.id) do
       # Get the note component (first note in page_components)
-      note = get_note_component(page)
+      note = Pages.get_page_note(page)
 
       # Subscribe to page updates via PubSub for collaborative editing
       if connected?(socket) do
@@ -48,7 +48,16 @@ defmodule JargaWeb.AppLive.Pages.Show do
   end
 
   @impl true
-  def handle_event("yjs_update", %{"update" => update, "complete_state" => complete_state, "user_id" => user_id, "markdown" => markdown}, socket) do
+  def handle_event(
+        "yjs_update",
+        %{
+          "update" => update,
+          "complete_state" => complete_state,
+          "user_id" => user_id,
+          "markdown" => markdown
+        },
+        socket
+      ) do
     page = socket.assigns.page
     note = socket.assigns.note
     current_user = socket.assigns.current_scope.user
@@ -63,13 +72,15 @@ defmodule JargaWeb.AppLive.Pages.Show do
 
     # 2. Send to debouncer for eventual database save (server-side debouncing)
     complete_state_binary = Base.decode64!(complete_state)
-    debouncer_pid = JargaWeb.PageSaveDebouncer.request_save(
-      page.id,
-      current_user,
-      note.id,
-      complete_state_binary,
-      markdown
-    )
+
+    debouncer_pid =
+      JargaWeb.PageSaveDebouncer.request_save(
+        page.id,
+        current_user,
+        note.id,
+        complete_state_binary,
+        markdown
+      )
 
     # In test mode, allow the debouncer to access the database
     if Application.get_env(:jarga, :sql_sandbox) && debouncer_pid do
@@ -80,7 +91,11 @@ defmodule JargaWeb.AppLive.Pages.Show do
   end
 
   @impl true
-  def handle_event("force_save", %{"complete_state" => complete_state, "markdown" => markdown}, socket) do
+  def handle_event(
+        "force_save",
+        %{"complete_state" => complete_state, "markdown" => markdown},
+        socket
+      ) do
     note = socket.assigns.note
     current_user = socket.assigns.current_scope.user
 
@@ -175,7 +190,13 @@ defmodule JargaWeb.AppLive.Pages.Show do
         {:noreply,
          socket
          |> assign(:page, updated_page)
-         |> put_flash(:info, if(updated_page.is_public, do: "Page is now shared with workspace members", else: "Page is now private"))}
+         |> put_flash(
+           :info,
+           if(updated_page.is_public,
+             do: "Page is now shared with workspace members",
+             else: "Page is now private"
+           )
+         )}
 
       {:error, _} ->
         {:noreply, put_flash(socket, :error, "Failed to update sharing status")}
@@ -280,17 +301,6 @@ defmodule JargaWeb.AppLive.Pages.Show do
     end
   end
 
-  defp get_note_component(page) do
-    # Get the first note component from page_components
-    case Enum.find(page.page_components, fn pc -> pc.component_type == "note" end) do
-      %{component_id: note_id} ->
-        Jarga.Repo.get!(Jarga.Notes.Note, note_id)
-
-      nil ->
-        raise "Page has no note component"
-    end
-  end
-
   @impl true
   def render(assigns) do
     ~H"""
@@ -315,8 +325,8 @@ defmodule JargaWeb.AppLive.Pages.Show do
             <:crumb>{@page.title}</:crumb>
           </.breadcrumbs>
         <% end %>
-
-        <!-- Action Buttons (hidden for guests) -->
+        
+    <!-- Action Buttons (hidden for guests) -->
         <%= if not @readonly do %>
           <div class="flex items-center justify-end gap-2">
             <!-- Share toggle button -->
@@ -325,34 +335,36 @@ defmodule JargaWeb.AppLive.Pages.Show do
               size="sm"
               phx-click="toggle_public"
             >
-              <.icon name={if @page.is_public, do: "hero-globe-alt", else: "hero-lock-closed"} class="size-4" />
-              <%= if @page.is_public, do: "Shared", else: "Private" %>
+              <.icon
+                name={if @page.is_public, do: "hero-globe-alt", else: "hero-lock-closed"}
+                class="size-4"
+              />
+              {if @page.is_public, do: "Shared", else: "Private"}
             </.button>
-
-            <!-- Pin button -->
+            
+    <!-- Pin button -->
             <.button
               variant={if @page.is_pinned, do: "warning", else: "ghost"}
               size="sm"
               phx-click="toggle_pin"
             >
               <.icon name="hero-star" class="size-4" />
-              <%= if @page.is_pinned, do: "Pinned", else: "Pin" %>
+              {if @page.is_pinned, do: "Pinned", else: "Pin"}
             </.button>
-
-            <!-- Delete button -->
+            
+    <!-- Delete button -->
             <.button
               variant="error"
               size="sm"
               phx-click="delete_page"
               data-confirm="Are you sure you want to delete this page?"
             >
-              <.icon name="hero-trash" class="size-4" />
-              Delete
+              <.icon name="hero-trash" class="size-4" /> Delete
             </.button>
           </div>
         <% end %>
-
-        <!-- Title Section -->
+        
+    <!-- Title Section -->
         <div class="border-b border-base-300 pb-4">
           <%= if @editing_title do %>
             <form phx-submit="update_title" class="flex items-center gap-2">
@@ -388,8 +400,8 @@ defmodule JargaWeb.AppLive.Pages.Show do
             </h1>
           <% end %>
         </div>
-
-        <!-- Editor -->
+        
+    <!-- Editor -->
         <div class="flex-1 overflow-auto">
           <%= if @readonly do %>
             <div class="alert alert-info mb-4">

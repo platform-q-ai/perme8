@@ -92,10 +92,11 @@ defmodule JargaWeb.AppLive.DashboardTest do
     end
 
     test "displays workspace descriptions", %{conn: conn, user: user} do
-      _workspace = workspace_fixture(user, %{
-        name: "Test Workspace",
-        description: "This is a test description"
-      })
+      _workspace =
+        workspace_fixture(user, %{
+          name: "Test Workspace",
+          description: "This is a test description"
+        })
 
       {:ok, _lv, html} = live(conn, ~p"/app")
 
@@ -103,16 +104,19 @@ defmodule JargaWeb.AppLive.DashboardTest do
     end
 
     test "displays workspace colors", %{conn: conn, user: user} do
-      workspace = workspace_fixture(user, %{
-        name: "Colorful Workspace",
-        color: "#FF5733"
-      })
+      workspace =
+        workspace_fixture(user, %{
+          name: "Colorful Workspace",
+          color: "#FF5733"
+        })
 
       {:ok, lv, _html} = live(conn, ~p"/app")
 
       # Verify color bar is displayed with the correct color
       assert lv
-             |> element("[data-workspace-id='#{workspace.id}'] [style*='background-color: #{workspace.color}']")
+             |> element(
+               "[data-workspace-id='#{workspace.id}'] [style*='background-color: #{workspace.color}']"
+             )
              |> has_element?()
     end
 
@@ -122,7 +126,10 @@ defmodule JargaWeb.AppLive.DashboardTest do
       assert lv |> element("a", "New Workspace") |> has_element?()
     end
 
-    test "workspace cards are clickable and navigate to workspace show page", %{conn: conn, user: user} do
+    test "workspace cards are clickable and navigate to workspace show page", %{
+      conn: conn,
+      user: user
+    } do
       workspace = workspace_fixture(user, %{name: "Test Workspace"})
 
       {:ok, lv, _html} = live(conn, ~p"/app")
@@ -133,7 +140,10 @@ defmodule JargaWeb.AppLive.DashboardTest do
       assert redirect_path == ~p"/app/workspaces/#{workspace.slug}"
     end
 
-    test "updates workspace list in real-time when user is added to a workspace", %{conn: conn, user: user} do
+    test "updates workspace list in real-time when user is added to a workspace", %{
+      conn: conn,
+      user: user
+    } do
       {:ok, lv, _html} = live(conn, ~p"/app")
 
       # Verify no workspaces initially
@@ -144,18 +154,24 @@ defmodule JargaWeb.AppLive.DashboardTest do
       workspace = workspace_fixture(other_user, %{name: "Team Workspace"})
 
       # Add the user to the workspace (this will trigger the PubSub broadcast)
-      {:ok, {:member_added, _member}} = Workspaces.invite_member(other_user, workspace.id, user.email, :member)
+      {:ok, {:member_added, _member}} =
+        Workspaces.invite_member(other_user, workspace.id, user.email, :member)
 
       # Verify workspace appears in the UI
       assert render(lv) =~ "Team Workspace"
       assert lv |> element("[data-workspace-id='#{workspace.id}']") |> has_element?()
     end
 
-    test "updates workspace list in real-time when user is removed from a workspace", %{conn: conn, user: user} do
+    test "updates workspace list in real-time when user is removed from a workspace", %{
+      conn: conn,
+      user: user
+    } do
       # Create a workspace with two members
       other_user = user_fixture()
       workspace = workspace_fixture(other_user, %{name: "To Be Removed"})
-      {:ok, {:member_added, _member}} = Workspaces.invite_member(other_user, workspace.id, user.email, :member)
+
+      {:ok, {:member_added, _member}} =
+        Workspaces.invite_member(other_user, workspace.id, user.email, :member)
 
       {:ok, lv, _html} = live(conn, ~p"/app")
 
@@ -171,7 +187,10 @@ defmodule JargaWeb.AppLive.DashboardTest do
       refute lv |> element("[data-workspace-id='#{workspace.id}']") |> has_element?()
     end
 
-    test "updates workspace name in real-time when workspace is updated", %{conn: conn, user: user} do
+    test "updates workspace name in real-time when workspace is updated", %{
+      conn: conn,
+      user: user
+    } do
       workspace = workspace_fixture(user, %{name: "Original Name"})
 
       {:ok, lv, _html} = live(conn, ~p"/app")

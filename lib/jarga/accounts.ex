@@ -295,6 +295,21 @@ defmodule Jarga.Accounts do
     :ok
   end
 
+  @doc """
+  Gets a user token by user_id.
+
+  This is primarily for testing purposes.
+
+  ## Examples
+
+      iex> get_user_token_by_user_id(user.id)
+      %UserToken{}
+
+  """
+  def get_user_token_by_user_id(user_id) do
+    Repo.get_by!(UserToken, user_id: user_id)
+  end
+
   ## Token helper
 
   defp update_user_and_delete_all_tokens(changeset) do

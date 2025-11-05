@@ -113,13 +113,14 @@ defmodule JargaWeb.AppLive.Dashboard do
   @impl true
   def handle_info({:workspace_updated, workspace_id, name}, socket) do
     # Update workspace name in the list
-    workspaces = Enum.map(socket.assigns.workspaces, fn workspace ->
-      if workspace.id == workspace_id do
-        %{workspace | name: name}
-      else
-        workspace
-      end
-    end)
+    workspaces =
+      Enum.map(socket.assigns.workspaces, fn workspace ->
+        if workspace.id == workspace_id do
+          %{workspace | name: name}
+        else
+          workspace
+        end
+      end)
 
     {:noreply, assign(socket, workspaces: workspaces)}
   end

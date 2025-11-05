@@ -58,7 +58,15 @@ defmodule Jarga.Projects.Project do
         name ->
           project_id = get_field(changeset, :id)
           workspace_id = get_field(changeset, :workspace_id)
-          slug = SlugGenerator.generate(name, workspace_id, &ProjectRepository.slug_exists_in_workspace?/3, project_id)
+
+          slug =
+            SlugGenerator.generate(
+              name,
+              workspace_id,
+              &ProjectRepository.slug_exists_in_workspace?/3,
+              project_id
+            )
+
           put_change(changeset, :slug, slug)
       end
     end

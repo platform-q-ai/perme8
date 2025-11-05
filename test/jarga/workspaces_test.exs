@@ -574,7 +574,9 @@ defmodule Jarga.WorkspacesTest do
 
       assert workspace.slug == "original-name"
 
-      assert {:ok, updated_workspace} = Workspaces.update_workspace(user, workspace.id, %{name: "New Name"})
+      assert {:ok, updated_workspace} =
+               Workspaces.update_workspace(user, workspace.id, %{name: "New Name"})
+
       assert updated_workspace.slug == "original-name"
       assert updated_workspace.name == "New Name"
     end
@@ -588,7 +590,9 @@ defmodule Jarga.WorkspacesTest do
       assert workspace2.slug == "second-workspace"
 
       # Update workspace2 to have same name as workspace1
-      assert {:ok, updated} = Workspaces.update_workspace(user, workspace2.id, %{name: "First Workspace"})
+      assert {:ok, updated} =
+               Workspaces.update_workspace(user, workspace2.id, %{name: "First Workspace"})
+
       # Slug should remain unchanged
       assert updated.slug == "second-workspace"
       assert updated.name == "First Workspace"

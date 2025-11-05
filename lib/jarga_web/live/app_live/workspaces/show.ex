@@ -22,20 +22,21 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
           <div class="flex gap-2">
             <%= if can_edit_workspace?(@current_member) do %>
               <.link navigate={~p"/app/workspaces/#{@workspace.slug}/edit"} class="btn btn-ghost">
-                <.icon name="hero-pencil" class="size-5" />
-                Edit
+                <.icon name="hero-pencil" class="size-5" /> Edit
               </.link>
             <% end %>
             <%= if can_manage_members?(@current_member) do %>
               <.button variant="ghost" phx-click="show_members_modal">
-                <.icon name="hero-user-group" class="size-5" />
-                Manage Members
+                <.icon name="hero-user-group" class="size-5" /> Manage Members
               </.button>
             <% end %>
             <%= if can_delete_workspace?(@current_member) do %>
-              <.button variant="error" phx-click="delete_workspace" data-confirm="Are you sure you want to delete this workspace? All projects will also be deleted.">
-                <.icon name="hero-trash" class="size-5" />
-                Delete Workspace
+              <.button
+                variant="error"
+                phx-click="delete_workspace"
+                data-confirm="Are you sure you want to delete this workspace? All projects will also be deleted."
+              >
+                <.icon name="hero-trash" class="size-5" /> Delete Workspace
               </.button>
             <% end %>
             <%= if can_create_project?(@current_member) do %>
@@ -60,8 +61,7 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
             <h2 class="text-lg font-semibold">Pages</h2>
             <%= if can_create_page?(@current_member) do %>
               <.button variant="primary" size="sm" phx-click="show_page_modal">
-                <.icon name="hero-document-plus" class="size-4" />
-                New Page
+                <.icon name="hero-document-plus" class="size-4" /> New Page
               </.button>
             <% end %>
           </div>
@@ -107,8 +107,7 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
                     </div>
                     <%= if page.is_pinned do %>
                       <div class="badge badge-warning badge-sm gap-1">
-                        <span class="text-xs">📌</span>
-                        Pinned
+                        <span class="text-xs">📌</span> Pinned
                       </div>
                     <% end %>
                   </div>
@@ -521,7 +520,9 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
          |> assign(:show_page_modal, false)
          |> assign(:page_form, to_form(%{"title" => ""}))
          |> put_flash(:info, "Page created successfully")
-         |> push_navigate(to: ~p"/app/workspaces/#{socket.assigns.workspace.slug}/pages/#{page.slug}")}
+         |> push_navigate(
+           to: ~p"/app/workspaces/#{socket.assigns.workspace.slug}/pages/#{page.slug}"
+         )}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, page_form: to_form(changeset))}
@@ -735,13 +736,14 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
   @impl true
   def handle_info({:page_pinned_changed, page_id, is_pinned}, socket) do
     # Update page pinned state in the list
-    pages = Enum.map(socket.assigns.pages, fn page ->
-      if page.id == page_id do
-        %{page | is_pinned: is_pinned}
-      else
-        page
-      end
-    end)
+    pages =
+      Enum.map(socket.assigns.pages, fn page ->
+        if page.id == page_id do
+          %{page | is_pinned: is_pinned}
+        else
+          page
+        end
+      end)
 
     {:noreply, assign(socket, pages: pages)}
   end
@@ -749,13 +751,14 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
   @impl true
   def handle_info({:page_title_changed, page_id, title}, socket) do
     # Update page title in the list
-    pages = Enum.map(socket.assigns.pages, fn page ->
-      if page.id == page_id do
-        %{page | title: title}
-      else
-        page
-      end
-    end)
+    pages =
+      Enum.map(socket.assigns.pages, fn page ->
+        if page.id == page_id do
+          %{page | title: title}
+        else
+          page
+        end
+      end)
 
     {:noreply, assign(socket, pages: pages)}
   end
@@ -774,13 +777,14 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
   @impl true
   def handle_info({:project_updated, project_id, name}, socket) do
     # Update project name in the list
-    projects = Enum.map(socket.assigns.projects, fn project ->
-      if project.id == project_id do
-        %{project | name: name}
-      else
-        project
-      end
-    end)
+    projects =
+      Enum.map(socket.assigns.projects, fn project ->
+        if project.id == project_id do
+          %{project | name: name}
+        else
+          project
+        end
+      end)
 
     {:noreply, assign(socket, projects: projects)}
   end

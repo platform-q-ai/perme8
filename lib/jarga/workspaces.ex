@@ -227,9 +227,10 @@ defmodule Jarga.Workspaces do
          :ok <- authorize_edit_workspace(member.role) do
       case get_workspace(user, workspace_id) do
         {:ok, workspace} ->
-          result = workspace
-          |> Workspace.changeset(attrs)
-          |> Repo.update()
+          result =
+            workspace
+            |> Workspace.changeset(attrs)
+            |> Repo.update()
 
           # Broadcast workspace updates to all members
           case result do

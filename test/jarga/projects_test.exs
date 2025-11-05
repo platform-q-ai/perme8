@@ -465,7 +465,9 @@ defmodule Jarga.ProjectsTest do
 
       assert project.slug == "original-name"
 
-      assert {:ok, updated_project} = Projects.update_project(user, workspace.id, project.id, %{name: "New Name"})
+      assert {:ok, updated_project} =
+               Projects.update_project(user, workspace.id, project.id, %{name: "New Name"})
+
       assert updated_project.slug == "original-name"
       assert updated_project.name == "New Name"
     end
@@ -480,7 +482,9 @@ defmodule Jarga.ProjectsTest do
       assert project2.slug == "second-project"
 
       # Update project2 to have same name as project1
-      assert {:ok, updated} = Projects.update_project(user, workspace.id, project2.id, %{name: "First Project"})
+      assert {:ok, updated} =
+               Projects.update_project(user, workspace.id, project2.id, %{name: "First Project"})
+
       # Slug should remain unchanged
       assert updated.slug == "second-project"
       assert updated.name == "First Project"

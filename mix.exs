@@ -61,8 +61,8 @@ defmodule Jarga.MixProject do
             # Database
             {:ecto, :relaxed},
             {:ecto_sql, :relaxed},
-            # Other
-            {:mix, :runtime}
+            # Other - allow Mix for compile tasks
+            {:mix, :relaxed}
           ]
         ]
       ]

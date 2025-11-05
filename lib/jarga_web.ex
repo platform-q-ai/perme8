@@ -19,7 +19,16 @@ defmodule JargaWeb do
 
   # Interface layer - can depend on Core contexts but not vice versa
   use Boundary,
-    deps: [Jarga, Jarga.Accounts, Jarga.Workspaces, Jarga.Projects, Jarga.Pages, Jarga.Notes, Jarga.Repo, Jarga.Mailer],
+    deps: [
+      Jarga,
+      Jarga.Accounts,
+      Jarga.Workspaces,
+      Jarga.Projects,
+      Jarga.Pages,
+      Jarga.Notes,
+      Jarga.Repo,
+      Jarga.Mailer
+    ],
     exports: [Endpoint, Telemetry]
 
   def static_paths, do: ~w(assets fonts images favicon.ico robots.txt)

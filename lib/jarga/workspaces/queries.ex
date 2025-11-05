@@ -160,8 +160,9 @@ defmodule Jarga.Workspaces.Queries do
 
   """
   def get_member(%User{} = user, workspace_id) do
-    from wm in WorkspaceMember,
+    from(wm in WorkspaceMember,
       where: wm.workspace_id == ^workspace_id,
       where: wm.user_id == ^user.id
+    )
   end
 end

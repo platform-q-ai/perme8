@@ -292,9 +292,8 @@ defmodule JargaWeb.AppLive.PagesTest do
       JargaWeb.PageSaveDebouncer.wait_for_save(page.id)
 
       # Note should be updated with the final state
-      page = Pages.get_page!(user, page.id) |> Jarga.Repo.preload(:page_components)
-      note_component = Enum.find(page.page_components, fn pc -> pc.component_type == "note" end)
-      note = Jarga.Repo.get!(Jarga.Notes.Note, note_component.component_id)
+      page = Pages.get_page!(user, page.id, preload_components: true)
+      note = Pages.get_page_note(page)
 
       assert note.yjs_state == Base.decode64!(complete_state)
       assert note.note_content["markdown"] == markdown
@@ -320,9 +319,8 @@ defmodule JargaWeb.AppLive.PagesTest do
       })
 
       # Should save immediately without waiting for debounce
-      page = Pages.get_page!(user, page.id) |> Jarga.Repo.preload(:page_components)
-      note_component = Enum.find(page.page_components, fn pc -> pc.component_type == "note" end)
-      note = Jarga.Repo.get!(Jarga.Notes.Note, note_component.component_id)
+      page = Pages.get_page!(user, page.id, preload_components: true)
+      note = Pages.get_page_note(page)
 
       assert note.yjs_state == Base.decode64!(complete_state)
       assert note.note_content["markdown"] == markdown

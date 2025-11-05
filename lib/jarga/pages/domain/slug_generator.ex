@@ -20,8 +20,12 @@ defmodule Jarga.Pages.Domain.SlugGenerator do
 
   defp ensure_unique(slug, workspace_id, uniqueness_checker, excluding_id) do
     case uniqueness_checker.(slug, workspace_id, excluding_id) do
-      false -> slug
-      true -> "#{slug}-#{generate_random_suffix()}" |> ensure_unique(workspace_id, uniqueness_checker, excluding_id)
+      false ->
+        slug
+
+      true ->
+        "#{slug}-#{generate_random_suffix()}"
+        |> ensure_unique(workspace_id, uniqueness_checker, excluding_id)
     end
   end
 

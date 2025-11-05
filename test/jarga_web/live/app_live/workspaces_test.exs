@@ -429,10 +429,16 @@ defmodule JargaWeb.AppLive.WorkspacesTest do
       refute lv |> element("[data-project-id='#{project.id}']") |> has_element?()
     end
 
-    test "updates page list in real-time when page becomes public", %{conn: conn, user: user, workspace: workspace} do
+    test "updates page list in real-time when page becomes public", %{
+      conn: conn,
+      user: user,
+      workspace: workspace
+    } do
       # Create another user who is a member of the workspace
       other_user = user_fixture()
-      {:ok, {:member_added, _}} = Jarga.Workspaces.invite_member(user, workspace.id, other_user.email, :member)
+
+      {:ok, {:member_added, _}} =
+        Jarga.Workspaces.invite_member(user, workspace.id, other_user.email, :member)
 
       # Other user creates a private page
       {:ok, page} = Jarga.Pages.create_page(other_user, workspace.id, %{title: "Private Page"})
@@ -452,10 +458,16 @@ defmodule JargaWeb.AppLive.WorkspacesTest do
       assert lv |> element("[data-page-id='#{page.id}']") |> has_element?()
     end
 
-    test "updates page list in real-time when page becomes private", %{conn: conn, user: user, workspace: workspace} do
+    test "updates page list in real-time when page becomes private", %{
+      conn: conn,
+      user: user,
+      workspace: workspace
+    } do
       # Create another user who is a member of the workspace
       other_user = user_fixture()
-      {:ok, {:member_added, _}} = Jarga.Workspaces.invite_member(user, workspace.id, other_user.email, :member)
+
+      {:ok, {:member_added, _}} =
+        Jarga.Workspaces.invite_member(user, workspace.id, other_user.email, :member)
 
       # Other user creates a public page
       {:ok, page} = Jarga.Pages.create_page(other_user, workspace.id, %{title: "Public Page"})
@@ -584,8 +596,8 @@ defmodule JargaWeb.AppLive.WorkspacesTest do
       # Click delete button
       lv |> element("button", "Delete Workspace") |> render_click()
 
-      # Verify project is also deleted
-      assert Jarga.Repo.get(Jarga.Projects.Project, project.id) == nil
+      # Verify project is also deleted (cascading delete)
+      assert {:error, :project_not_found} = Projects.get_project(user, workspace.id, project.id)
     end
 
     test "shows delete confirmation", %{conn: conn, workspace: workspace} do
