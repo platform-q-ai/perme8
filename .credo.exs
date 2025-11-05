@@ -45,7 +45,10 @@
         ".credo/checks/no_direct_repo_in_web.ex",
         ".credo/checks/no_business_logic_in_live_view.ex",
         ".credo/checks/no_pubsub_in_contexts.ex",
-        ".credo/checks/no_database_queries_in_live_views.ex"
+        ".credo/checks/no_database_queries_in_live_views.ex",
+        ".credo/checks/no_infrastructure_in_policies.ex",
+        ".credo/checks/no_business_logic_in_schemas.ex",
+        ".credo/checks/no_direct_queries_in_use_cases.ex"
       ],
       #
       # If you want to enforce a style guide and need a more traditional linting
@@ -173,7 +176,13 @@
           {Jarga.Credo.Check.Architecture.NoDirectRepoInWeb, []},
           {Jarga.Credo.Check.Architecture.NoBusinessLogicInLiveView, []},
           {Jarga.Credo.Check.Architecture.NoPubSubInContexts, []},
-          {Jarga.Credo.Check.Architecture.NoDatabaseQueriesInLiveViews, []}
+          {Jarga.Credo.Check.Architecture.NoDatabaseQueriesInLiveViews, []},
+          # Detect infrastructure (DB queries) in domain Policy modules
+          {Jarga.Credo.Check.Architecture.NoInfrastructureInPolicies, []},
+          # Detect business logic in Ecto schemas (SRP violation)
+          {Jarga.Credo.Check.Architecture.NoBusinessLogicInSchemas, []},
+          # Detect direct Ecto queries in UseCase modules
+          {Jarga.Credo.Check.Architecture.NoDirectQueriesInUseCases, []}
         ],
         disabled: [
           #

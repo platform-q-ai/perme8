@@ -588,7 +588,11 @@ defmodule JargaWeb.AppLive.Workspaces.ShowTest do
       %{conn: log_in_user(conn, owner), owner: owner, workspace: workspace, member: member_user}
     end
 
-    test "shows member with role select dropdown", %{conn: conn, workspace: workspace, member: member} do
+    test "shows member with role select dropdown", %{
+      conn: conn,
+      workspace: workspace,
+      member: member
+    } do
       {:ok, lv, _html} = live(conn, ~p"/app/workspaces/#{workspace.slug}")
 
       # Open members modal
@@ -615,7 +619,11 @@ defmodule JargaWeb.AppLive.Workspaces.ShowTest do
       %{conn: log_in_user(conn, owner), owner: owner, workspace: workspace, member: member_user}
     end
 
-    test "shows remove button for non-owner members", %{conn: conn, workspace: workspace, member: member} do
+    test "shows remove button for non-owner members", %{
+      conn: conn,
+      workspace: workspace,
+      member: member
+    } do
       {:ok, lv, _html} = live(conn, ~p"/app/workspaces/#{workspace.slug}")
 
       # Open members modal
