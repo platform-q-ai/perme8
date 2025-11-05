@@ -50,6 +50,18 @@ defmodule Jarga.Workspaces.Services.EmailAndPubSubNotifier do
     :ok
   end
 
+  @impl true
+  def notify_workspace_updated(%Workspace{} = workspace) do
+    # Broadcast in-app notification via PubSub to all workspace members
+    Phoenix.PubSub.broadcast(
+      Jarga.PubSub,
+      "workspace:#{workspace.id}",
+      {:workspace_updated, workspace.id, workspace.name}
+    )
+
+    :ok
+  end
+
   # URL builders - can be overridden via application config
   defp build_workspace_url(workspace_id) do
     base_url = Application.get_env(:jarga, :base_url, "http://localhost:4000")

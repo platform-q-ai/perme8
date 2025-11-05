@@ -22,11 +22,11 @@
         ]
       },
       {
-        "matcher": "",
+        "matcher": "*",
         "hooks": [
           {
             "type": "command",
-            "command": "cd $PWD && mix precommit"
+            "command": "cd \"$CLAUDE_PROJECT_DIR\" && mix precommit"
           }
         ]
       }

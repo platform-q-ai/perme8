@@ -17,9 +17,10 @@ defmodule Jarga.Pages do
 
   alias Jarga.Repo
   alias Jarga.Accounts.User
+  alias Jarga.Notes
   alias Jarga.Pages.{Page, Queries}
   alias Jarga.Pages.Policies.Authorization
-  alias Jarga.Notes
+  alias Jarga.Pages.Services.PubSubNotifier
   alias Jarga.Workspaces
   alias Jarga.Workspaces.Policies.PermissionsPolicy
 
@@ -207,7 +208,10 @@ defmodule Jarga.Pages do
       {:ok, %Page{}}
 
   """
-  def update_page(%User{} = user, page_id, attrs) do
+  def update_page(%User{} = user, page_id, attrs, opts \\ []) do
+    # Get notifier from opts or use default
+    notifier = Keyword.get(opts, :notifier, PubSubNotifier)
+
     with {:ok, page} <- get_page_with_workspace_member(user, page_id),
          {:ok, member} <- Workspaces.get_member(user, page.workspace_id),
          :ok <- authorize_page_update(member.role, page, user.id, attrs) do
@@ -216,19 +220,19 @@ defmodule Jarga.Pages do
         |> Page.changeset(attrs)
         |> Repo.update()
 
-      # Broadcast changes to workspace members
+      # Notify workspace members via injected notifier
       case result do
         {:ok, updated_page} ->
           if Map.has_key?(attrs, :is_public) and attrs.is_public != page.is_public do
-            broadcast_page_visibility_change(updated_page)
+            notifier.notify_page_visibility_changed(updated_page)
           end
 
           if Map.has_key?(attrs, :is_pinned) and attrs.is_pinned != page.is_pinned do
-            broadcast_page_pinned_change(updated_page)
+            notifier.notify_page_pinned_changed(updated_page)
           end
 
           if Map.has_key?(attrs, :title) and attrs.title != page.title do
-            broadcast_page_title_change(updated_page)
+            notifier.notify_page_title_changed(updated_page)
           end
 
           {:ok, updated_page}
@@ -418,53 +422,5 @@ defmodule Jarga.Pages do
       nil ->
         raise "Page has no note component"
     end
-  end
-
-  # Private functions
-
-  defp broadcast_page_visibility_change(page) do
-    Phoenix.PubSub.broadcast(
-      Jarga.PubSub,
-      "workspace:#{page.workspace_id}",
-      {:page_visibility_changed, page.id, page.is_public}
-    )
-
-    # Also broadcast to the page itself for page show view
-    Phoenix.PubSub.broadcast(
-      Jarga.PubSub,
-      "page:#{page.id}",
-      {:page_visibility_changed, page.id, page.is_public}
-    )
-  end
-
-  defp broadcast_page_pinned_change(page) do
-    Phoenix.PubSub.broadcast(
-      Jarga.PubSub,
-      "workspace:#{page.workspace_id}",
-      {:page_pinned_changed, page.id, page.is_pinned}
-    )
-
-    # Also broadcast to the page itself for page show view
-    Phoenix.PubSub.broadcast(
-      Jarga.PubSub,
-      "page:#{page.id}",
-      {:page_pinned_changed, page.id, page.is_pinned}
-    )
-  end
-
-  defp broadcast_page_title_change(page) do
-    # Broadcast to workspace for list updates
-    Phoenix.PubSub.broadcast(
-      Jarga.PubSub,
-      "workspace:#{page.workspace_id}",
-      {:page_title_changed, page.id, page.title}
-    )
-
-    # Also broadcast to the page itself for page show view
-    Phoenix.PubSub.broadcast(
-      Jarga.PubSub,
-      "page:#{page.id}",
-      {:page_title_changed, page.id, page.title}
-    )
   end
 end

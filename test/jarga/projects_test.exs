@@ -12,6 +12,7 @@ defmodule Jarga.ProjectsTest do
 
     def notify_project_created(_project), do: :ok
     def notify_project_deleted(_project, _workspace_id), do: :ok
+    def notify_project_updated(_project), do: :ok
   end
 
   describe "list_projects_for_workspace/2" do

@@ -20,6 +20,7 @@ defmodule Jarga.Projects do
   alias Jarga.Accounts.User
   alias Jarga.Projects.{Project, Queries}
   alias Jarga.Projects.Policies.Authorization
+  alias Jarga.Projects.Services.EmailAndPubSubNotifier
   alias Jarga.Projects.UseCases.{CreateProject, DeleteProject}
   alias Jarga.Workspaces
   alias Jarga.Workspaces.Policies.PermissionsPolicy
@@ -186,7 +187,10 @@ defmodule Jarga.Projects do
       {:error, :forbidden}
 
   """
-  def update_project(%User{} = user, workspace_id, project_id, attrs) do
+  def update_project(%User{} = user, workspace_id, project_id, attrs, opts \\ []) do
+    # Get notifier from opts or use default
+    notifier = Keyword.get(opts, :notifier, EmailAndPubSubNotifier)
+
     with {:ok, member} <- Workspaces.get_member(user, workspace_id),
          {:ok, project} <- Authorization.verify_project_access(user, workspace_id, project_id),
          :ok <- authorize_edit_project(member.role, project, user.id) do
@@ -201,10 +205,10 @@ defmodule Jarga.Projects do
         |> Project.changeset(string_attrs)
         |> Repo.update()
 
-      # Broadcast project updates to workspace members
+      # Notify workspace members via injected notifier
       case result do
         {:ok, updated_project} ->
-          broadcast_project_update(updated_project)
+          notifier.notify_project_updated(updated_project)
           {:ok, updated_project}
 
         error ->
@@ -245,16 +249,6 @@ defmodule Jarga.Projects do
         project_id: project_id
       },
       opts
-    )
-  end
-
-  # Private functions
-
-  defp broadcast_project_update(project) do
-    Phoenix.PubSub.broadcast(
-      Jarga.PubSub,
-      "workspace:#{project.workspace_id}",
-      {:project_updated, project.id, project.name}
     )
   end
 end

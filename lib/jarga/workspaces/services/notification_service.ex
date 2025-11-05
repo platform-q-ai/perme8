@@ -30,4 +30,10 @@ defmodule Jarga.Workspaces.Services.NotificationService do
   """
   @callback notify_user_removed(user :: User.t(), workspace :: Workspace.t()) ::
               :ok | {:error, term()}
+
+  @doc """
+  Notifies workspace members that the workspace has been updated.
+  """
+  @callback notify_workspace_updated(workspace :: Workspace.t()) ::
+              :ok | {:error, term()}
 end

@@ -222,7 +222,10 @@ defmodule Jarga.Workspaces do
       {:error, :forbidden}
 
   """
-  def update_workspace(%User{} = user, workspace_id, attrs) do
+  def update_workspace(%User{} = user, workspace_id, attrs, opts \\ []) do
+    # Get notifier from opts or use default
+    notifier = Keyword.get(opts, :notifier, EmailAndPubSubNotifier)
+
     with {:ok, member} <- get_member(user, workspace_id),
          :ok <- authorize_edit_workspace(member.role) do
       case get_workspace(user, workspace_id) do
@@ -232,10 +235,10 @@ defmodule Jarga.Workspaces do
             |> Workspace.changeset(attrs)
             |> Repo.update()
 
-          # Broadcast workspace updates to all members
+          # Notify workspace members via injected notifier
           case result do
             {:ok, updated_workspace} ->
-              broadcast_workspace_update(updated_workspace)
+              notifier.notify_workspace_updated(updated_workspace)
               {:ok, updated_workspace}
 
             error ->
@@ -472,15 +475,5 @@ defmodule Jarga.Workspaces do
     }
 
     RemoveMember.execute(params)
-  end
-
-  # Private functions
-
-  defp broadcast_workspace_update(workspace) do
-    Phoenix.PubSub.broadcast(
-      Jarga.PubSub,
-      "workspace:#{workspace.id}",
-      {:workspace_updated, workspace.id, workspace.name}
-    )
   end
 end

@@ -32,4 +32,16 @@ defmodule Jarga.Projects.Services.EmailAndPubSubNotifier do
 
     :ok
   end
+
+  @impl true
+  def notify_project_updated(%Project{} = project) do
+    # Broadcast in-app notification via PubSub
+    Phoenix.PubSub.broadcast(
+      Jarga.PubSub,
+      "workspace:#{project.workspace_id}",
+      {:project_updated, project.id, project.name}
+    )
+
+    :ok
+  end
 end

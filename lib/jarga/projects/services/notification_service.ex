@@ -19,4 +19,10 @@ defmodule Jarga.Projects.Services.NotificationService do
   """
   @callback notify_project_deleted(project :: Project.t(), workspace_id :: Ecto.UUID.t()) ::
               :ok | {:error, term()}
+
+  @doc """
+  Notifies workspace members that a project has been updated.
+  """
+  @callback notify_project_updated(project :: Project.t()) ::
+              :ok | {:error, term()}
 end
