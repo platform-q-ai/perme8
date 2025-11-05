@@ -1,5 +1,6 @@
 import { Editor, rootCtx, editorViewCtx, defaultValueCtx, serializerCtx } from '@milkdown/core'
 import { commonmark } from '@milkdown/preset-commonmark'
+import { gfm } from '@milkdown/preset-gfm'
 import { nord } from '@milkdown/theme-nord'
 import { clipboard } from '@milkdown/plugin-clipboard'
 import { CollaborationManager } from './collaboration'
@@ -107,6 +108,7 @@ export const MilkdownEditor = {
       })
       .use(nord)
       .use(commonmark)
+      .use(gfm)
       .use(clipboard)
 
     this.editor = editor
@@ -120,6 +122,9 @@ export const MilkdownEditor = {
         // Configure ProseMirror with collaboration + undo/redo plugins
         const newState = this.collaborationManager.configureProseMirrorPlugins(view, state)
         view.updateState(newState)
+
+        // Add click handler for task list checkboxes
+        this.setupTaskListClickHandler(view)
       })
     }).catch((error) => {
       console.error('Failed to create Milkdown editor:', error)
@@ -135,6 +140,7 @@ export const MilkdownEditor = {
       })
       .use(nord)
       .use(commonmark)
+      .use(gfm)
 
     this.editor = editor
 
@@ -187,6 +193,67 @@ export const MilkdownEditor = {
     }).catch((error) => {
       console.error('Failed to create readonly Milkdown editor:', error)
     })
+  },
+
+  setupTaskListClickHandler(view) {
+    // Add click handler to toggle task list checkboxes
+    const clickHandler = (event) => {
+      // Only handle clicks on the checkbox area (::before pseudo-element area)
+      const taskItem = event.target.closest('li[data-item-type="task"]')
+      if (!taskItem) return
+
+      // Check if click was on the checkbox area (left 2rem padding)
+      const rect = taskItem.getBoundingClientRect()
+      const clickX = event.clientX - rect.left
+
+      // Only process clicks in the checkbox area (first 2rem)
+      if (clickX > 32) return // 2rem = 32px typically
+
+      try {
+        // Get the position of the clicked element in the document
+        const pos = view.posAtDOM(taskItem, 0)
+        if (pos == null) return
+
+        const { state } = view
+        const { doc } = state
+        const $pos = doc.resolve(pos)
+
+        // Find the list item node
+        let listItemNode = null
+        let listItemPos = null
+
+        for (let depth = $pos.depth; depth > 0; depth--) {
+          const node = $pos.node(depth)
+          if (node.type.name === 'task_list_item' || node.type.name === 'list_item') {
+            listItemNode = node
+            listItemPos = $pos.before(depth)
+            break
+          }
+        }
+
+        if (!listItemNode || listItemNode.attrs.checked === undefined) return
+
+        // Toggle the checked attribute
+        const currentChecked = listItemNode.attrs.checked
+        const newAttrs = { ...listItemNode.attrs, checked: !currentChecked }
+
+        // Create a transaction to update the node without changing selection
+        const tr = state.tr.setNodeMarkup(listItemPos, null, newAttrs)
+
+        // Dispatch without scrolling into view
+        view.dispatch(tr)
+
+        // Prevent default to avoid selection changes
+        event.preventDefault()
+        event.stopPropagation()
+      } catch (error) {
+        console.error('Error toggling task list item:', error)
+      }
+    }
+
+    // Store the handler so we can remove it later
+    this.taskListClickHandler = clickHandler
+    view.dom.addEventListener('click', clickHandler)
   },
 
   getMarkdownContent() {
@@ -268,6 +335,17 @@ export const MilkdownEditor = {
     if (this.readonlyObserver) {
       this.readonlyObserver.disconnect()
       this.readonlyObserver = null
+    }
+
+    // Remove task list click handler
+    if (this.taskListClickHandler) {
+      this.editor?.action((ctx) => {
+        const view = ctx.get(editorViewCtx)
+        if (view?.dom) {
+          view.dom.removeEventListener('click', this.taskListClickHandler)
+        }
+      })
+      this.taskListClickHandler = null
     }
 
     if (this.collaborationManager) {
