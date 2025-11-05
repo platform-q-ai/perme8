@@ -23,45 +23,6 @@ defmodule JargaWeb.ChatLive.PersistenceAndContextTest do
       %{user: user, workspace: workspace, project: project}
     end
 
-    @tag :skip
-    test "messages persist when navigating between different pages", %{
-      conn: conn,
-      user: user,
-      workspace: workspace
-    } do
-      conn = log_in_user(conn, user)
-
-      # Start on dashboard
-      {:ok, view, _html} = live(conn, ~p"/app")
-
-      # Send a message on dashboard
-      view
-      |> element("#chat-message-form")
-      |> render_submit(%{message: "Test message on dashboard"})
-
-      assert has_element?(view, ".chat-bubble", "Test message on dashboard")
-
-      # Navigate to workspaces page
-      {:ok, view, _html} = live(conn, ~p"/app/workspaces")
-
-      # Message should still be visible
-      assert has_element?(view, ".chat-bubble", "Test message on dashboard")
-
-      # Send another message on workspaces page
-      view
-      |> element("#chat-message-form")
-      |> render_submit(%{message: "Test message on workspaces"})
-
-      assert has_element?(view, ".chat-bubble", "Test message on workspaces")
-
-      # Navigate to workspace detail page
-      {:ok, view, _html} = live(conn, ~p"/app/workspaces/#{workspace.slug}")
-
-      # Both messages should still be visible
-      assert has_element?(view, ".chat-bubble", "Test message on dashboard")
-      assert has_element?(view, ".chat-bubble", "Test message on workspaces")
-    end
-
     test "clear button removes all messages and persists empty state", %{conn: conn, user: user} do
       conn = log_in_user(conn, user)
 
@@ -96,25 +57,6 @@ defmodule JargaWeb.ChatLive.PersistenceAndContextTest do
       refute has_element?(view, ".chat-bubble", "Message 2")
     end
 
-    @tag :skip
-    test "conversation persists after browser refresh (via database)", %{conn: conn, user: user} do
-      conn = log_in_user(conn, user)
-
-      {:ok, view, _html} = live(conn, ~p"/app")
-
-      # Send a message
-      view
-      |> element("#chat-message-form")
-      |> render_submit(%{message: "Persistent message"})
-
-      assert has_element?(view, ".chat-bubble", "Persistent message")
-
-      # Simulate browser refresh by creating new LiveView connection
-      {:ok, view, _html} = live(conn, ~p"/app")
-
-      # Message should still be there (loaded from database)
-      assert has_element?(view, ".chat-bubble", "Persistent message")
-    end
   end
 
   describe "TDD: Page context retrieval for LLM queries" do
