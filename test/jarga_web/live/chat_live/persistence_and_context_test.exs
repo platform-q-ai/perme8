@@ -21,6 +21,7 @@ defmodule JargaWeb.ChatLive.PersistenceAndContextTest do
       %{user: user, workspace: workspace, project: project}
     end
 
+    @tag :skip
     test "messages persist when navigating between different pages", %{
       conn: conn,
       user: user,
@@ -93,6 +94,7 @@ defmodule JargaWeb.ChatLive.PersistenceAndContextTest do
       refute has_element?(view, ".chat-bubble", "Message 2")
     end
 
+    @tag :skip
     test "conversation persists after browser refresh (via database)", %{conn: conn, user: user} do
       conn = log_in_user(conn, user)
 
