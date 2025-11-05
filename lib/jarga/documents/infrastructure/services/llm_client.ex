@@ -183,7 +183,8 @@ defmodule Jarga.Documents.Infrastructure.Services.LlmClient do
       :done
     else
       case Jason.decode(json_str) do
-        {:ok, %{"choices" => [%{"delta" => %{"content" => content}} | _]}} when is_binary(content) ->
+        {:ok, %{"choices" => [%{"delta" => %{"content" => content}} | _]}}
+        when is_binary(content) ->
           {:ok, content}
 
         {:ok, _} ->

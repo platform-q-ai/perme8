@@ -11,12 +11,12 @@ defmodule JargaWeb.ChatLive.Components.Message do
     <div class={"chat #{if @message.role == "user", do: "chat-end", else: "chat-start"}"}>
       <%= if !Map.get(@message, :streaming, false) do %>
         <div class="chat-header opacity-50 text-xs">
-          <%= format_timestamp(@message.timestamp) %>
+          {format_timestamp(@message.timestamp)}
         </div>
       <% end %>
 
       <div class={"chat-bubble #{if @message.role == "user", do: "chat-bubble-primary", else: ""}"}>
-        <%= @message.content %>
+        {@message.content}
         <%= if Map.get(@message, :streaming, false) do %>
           <span class="inline-block w-2 h-4 bg-current opacity-75 animate-pulse ml-1">▊</span>
         <% end %>

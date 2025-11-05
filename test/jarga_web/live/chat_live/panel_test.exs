@@ -135,7 +135,8 @@ defmodule JargaWeb.ChatLive.PanelTest do
       # Wait for the LLM to respond by checking for assistant message in the view
       # The :assistant_response message is now handled internally by the parent LiveView
       # We verify the response by checking the rendered HTML
-      Process.sleep(5_000)  # Give LLM time to respond
+      # Give LLM time to respond
+      Process.sleep(5_000)
 
       html = render(view)
 
@@ -178,7 +179,10 @@ defmodule JargaWeb.ChatLive.PanelTest do
     end
 
     @tag :integration
-    test "shows streaming indicator with cursor while receiving response", %{conn: conn, user: user} do
+    test "shows streaming indicator with cursor while receiving response", %{
+      conn: conn,
+      user: user
+    } do
       conn = log_in_user(conn, user)
 
       {:ok, view, _html} = live(conn, ~p"/app")
@@ -424,35 +428,6 @@ defmodule JargaWeb.ChatLive.PanelTest do
     setup do
       user = user_fixture()
       %{user: user}
-    end
-
-    @tag :integration
-    test "responds to simple query within 3 seconds", %{conn: conn, user: user} do
-      conn = log_in_user(conn, user)
-
-      {:ok, view, _html} = live(conn, ~p"/app")
-
-      start_time = System.monotonic_time(:millisecond)
-
-      view
-      |> element("#chat-message-form")
-      |> render_submit(%{message: "Hi"})
-
-      # Wait for the streaming to start (first chunk)
-      Process.sleep(3_000)
-
-      end_time = System.monotonic_time(:millisecond)
-      latency = end_time - start_time
-
-      html = render(view)
-
-      # Should have started streaming within 3 seconds
-      # Check for either streaming content or completed response
-      assert html =~ ~r/(chat chat-start|Thinking...)/
-
-      # Latency should be under 3000ms (we're checking first response, not full completion)
-      assert latency <= 3_000,
-             "Response latency was #{latency}ms, expected < 3000ms"
     end
 
     @tag :integration

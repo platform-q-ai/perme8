@@ -26,14 +26,14 @@
       for={"chat-drawer-#{@id}"}
       aria-label="close chat"
       class="drawer-overlay"
-    ></label>
+    >
+    </label>
 
     <%!-- Chat panel content --%>
     <ul class="menu bg-base-100 min-h-full w-96 p-0 flex flex-col">
       <%!-- Header --%>
       <div class="navbar bg-base-200 border-b border-base-300">
-        <div class="flex-1">
-        </div>
+        <div class="flex-1"></div>
         <div class="flex-none">
           <label
             for={"chat-drawer-#{@id}"}
@@ -63,8 +63,7 @@
           <.message message={message} />
           <%= if message.role == "assistant" && Map.get(message, :source) do %>
             <div class="text-xs opacity-70 ml-12 -mt-2 mb-2">
-              <.icon name="hero-document-text-mini" class="w-3 h-3 inline" />
-              Source:
+              <.icon name="hero-document-text-mini" class="w-3 h-3 inline" /> Source:
               <.link navigate={message.source.page_url} class="link link-primary">
                 {message.source.page_title}
               </.link>
@@ -73,7 +72,14 @@
         <% end %>
 
         <%= if @streaming and @stream_buffer != "" do %>
-          <.message message={%{role: "assistant", content: @stream_buffer, timestamp: DateTime.utc_now(), streaming: true}} />
+          <.message message={
+            %{
+              role: "assistant",
+              content: @stream_buffer,
+              timestamp: DateTime.utc_now(),
+              streaming: true
+            }
+          } />
         <% end %>
 
         <%= if @streaming and @stream_buffer == "" do %>
@@ -86,7 +92,7 @@
         <%= if @error do %>
           <div role="alert" class="alert alert-error">
             <.icon name="hero-exclamation-triangle" class="w-5 h-5" />
-            <span><%= @error %></span>
+            <span>{@error}</span>
           </div>
         <% end %>
       </div>
@@ -120,8 +126,7 @@
               class="btn btn-outline btn-sm"
               disabled={Enum.empty?(@messages)}
             >
-              <.icon name="hero-trash" class="w-4 h-4" />
-              Clear
+              <.icon name="hero-trash" class="w-4 h-4" /> Clear
             </button>
             <button
               type="submit"
@@ -129,11 +134,9 @@
               disabled={@streaming or @current_message == ""}
             >
               <%= if @streaming do %>
-                <span class="loading loading-spinner loading-xs"></span>
-                Sending...
+                <span class="loading loading-spinner loading-xs"></span> Sending...
               <% else %>
-                <.icon name="hero-paper-airplane" class="w-4 h-4" />
-                Send
+                <.icon name="hero-paper-airplane" class="w-4 h-4" /> Send
               <% end %>
             </button>
           </div>

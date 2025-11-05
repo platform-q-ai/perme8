@@ -101,7 +101,7 @@ defmodule JargaWeb.Layouts do
             <.theme_toggle />
           </div>
         </div>
-
+        
     <!-- Page content -->
         <main class="flex-1 p-6 lg:p-8">
           {render_slot(@inner_block)}
@@ -109,7 +109,7 @@ defmodule JargaWeb.Layouts do
 
         <.flash_group flash={@flash} />
       </div>
-
+      
     <!-- Sidebar -->
       <div class="drawer-side">
         <label for="admin-drawer" aria-label="close sidebar" class="drawer-overlay"></label>

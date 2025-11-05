@@ -259,8 +259,7 @@ defmodule JargaWeb.ChatLive.Panel do
     if Enum.empty?(context_parts) do
       %{
         role: "system",
-        content:
-          "You are a helpful assistant. Answer questions based on the context provided."
+        content: "You are a helpful assistant. Answer questions based on the context provided."
       }
     else
       context_text = Enum.join(context_parts, "\n")
@@ -278,5 +277,4 @@ defmodule JargaWeb.ChatLive.Panel do
       }
     end
   end
-
 end
