@@ -31,12 +31,13 @@ defmodule Jarga.Projects.Infrastructure.ProjectRepository do
   """
   def slug_exists_in_workspace?(slug, workspace_id, excluding_id \\ nil, repo \\ Repo) do
     query =
-      from p in Project,
+      from(p in Project,
         where: p.slug == ^slug and p.workspace_id == ^workspace_id
+      )
 
     query =
       if excluding_id do
-        from p in query, where: p.id != ^excluding_id
+        from(p in query, where: p.id != ^excluding_id)
       else
         query
       end

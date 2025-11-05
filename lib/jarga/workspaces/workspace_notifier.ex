@@ -26,7 +26,12 @@ defmodule Jarga.Workspaces.WorkspaceNotifier do
   @doc """
   Deliver workspace invitation email to a new user.
   """
-  def deliver_invitation_to_new_user(email, %Workspace{} = workspace, %User{} = inviter, signup_url) do
+  def deliver_invitation_to_new_user(
+        email,
+        %Workspace{} = workspace,
+        %User{} = inviter,
+        signup_url
+      ) do
     deliver(email, "You've been invited to #{workspace.name}", """
 
     ==============================
@@ -48,7 +53,12 @@ defmodule Jarga.Workspaces.WorkspaceNotifier do
   @doc """
   Deliver workspace invitation notification to an existing user.
   """
-  def deliver_invitation_to_existing_user(%User{} = user, %Workspace{} = workspace, %User{} = inviter, workspace_url) do
+  def deliver_invitation_to_existing_user(
+        %User{} = user,
+        %Workspace{} = workspace,
+        %User{} = inviter,
+        workspace_url
+      ) do
     deliver(user.email, "You've been invited to #{workspace.name}", """
 
     ==============================

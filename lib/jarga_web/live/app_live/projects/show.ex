@@ -22,16 +22,14 @@ defmodule JargaWeb.AppLive.Projects.Show do
               navigate={~p"/app/workspaces/#{@workspace.slug}/projects/#{@project.slug}/edit"}
               class="btn btn-ghost"
             >
-              <.icon name="hero-pencil" class="size-5" />
-              Edit
+              <.icon name="hero-pencil" class="size-5" /> Edit
             </.link>
             <.button
               variant="error"
               phx-click="delete_project"
               data-confirm="Are you sure you want to delete this project?"
             >
-              <.icon name="hero-trash" class="size-5" />
-              Delete Project
+              <.icon name="hero-trash" class="size-5" /> Delete Project
             </.button>
           </div>
         </div>
@@ -74,7 +72,11 @@ defmodule JargaWeb.AppLive.Projects.Show do
   end
 
   @impl true
-  def mount(%{"workspace_slug" => workspace_slug, "project_slug" => project_slug}, _session, socket) do
+  def mount(
+        %{"workspace_slug" => workspace_slug, "project_slug" => project_slug},
+        _session,
+        socket
+      ) do
     user = socket.assigns.current_scope.user
 
     # This will raise if user is not a member

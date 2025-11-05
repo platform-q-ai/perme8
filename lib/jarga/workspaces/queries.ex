@@ -30,10 +30,11 @@ defmodule Jarga.Workspaces.Queries do
 
   """
   def for_user(query \\ base(), %User{} = user) do
-    from w in query,
+    from(w in query,
       join: wm in WorkspaceMember,
       on: wm.workspace_id == w.id,
       where: wm.user_id == ^user.id
+    )
   end
 
   @doc """
@@ -46,8 +47,9 @@ defmodule Jarga.Workspaces.Queries do
 
   """
   def active(query \\ base()) do
-    from w in query,
+    from(w in query,
       where: w.is_archived == false
+    )
   end
 
   @doc """
@@ -60,8 +62,9 @@ defmodule Jarga.Workspaces.Queries do
 
   """
   def ordered(query \\ base()) do
-    from w in query,
+    from(w in query,
       order_by: [desc: w.inserted_at]
+    )
   end
 
   @doc """
@@ -108,9 +111,10 @@ defmodule Jarga.Workspaces.Queries do
 
   """
   def exists?(workspace_id) do
-    from w in base(),
+    from(w in base(),
       where: w.id == ^workspace_id,
       select: count(w.id)
+    )
   end
 
   @doc """
@@ -123,10 +127,11 @@ defmodule Jarga.Workspaces.Queries do
 
   """
   def find_member_by_email(workspace_id, email) do
-    from wm in WorkspaceMember,
+    from(wm in WorkspaceMember,
       where: wm.workspace_id == ^workspace_id,
       where: fragment("LOWER(?)", wm.email) == ^String.downcase(email),
       preload: [:user, :workspace]
+    )
   end
 
   @doc """
@@ -139,8 +144,9 @@ defmodule Jarga.Workspaces.Queries do
 
   """
   def list_members(workspace_id) do
-    from wm in WorkspaceMember,
+    from(wm in WorkspaceMember,
       where: wm.workspace_id == ^workspace_id,
       order_by: [asc: wm.joined_at, asc: wm.invited_at]
+    )
   end
 end

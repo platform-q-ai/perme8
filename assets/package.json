@@ -4,6 +4,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@fontsource/inter": "^5.2.8",
     "@milkdown/core": "^7.17.1",
     "@milkdown/ctx": "^7.17.1",
     "@milkdown/plugin-clipboard": "^7.17.1",

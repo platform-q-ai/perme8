@@ -73,7 +73,11 @@ defmodule JargaWeb.AppLive.Projects.Edit do
   end
 
   @impl true
-  def mount(%{"workspace_slug" => workspace_slug, "project_slug" => project_slug}, _session, socket) do
+  def mount(
+        %{"workspace_slug" => workspace_slug, "project_slug" => project_slug},
+        _session,
+        socket
+      ) do
     user = socket.assigns.current_scope.user
 
     # This will raise if user is not a member
@@ -99,7 +103,9 @@ defmodule JargaWeb.AppLive.Projects.Edit do
         {:noreply,
          socket
          |> put_flash(:info, "Project updated successfully")
-         |> push_navigate(to: ~p"/app/workspaces/#{socket.assigns.workspace.slug}/projects/#{project.slug}")}
+         |> push_navigate(
+           to: ~p"/app/workspaces/#{socket.assigns.workspace.slug}/projects/#{project.slug}"
+         )}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, form: to_form(changeset))}

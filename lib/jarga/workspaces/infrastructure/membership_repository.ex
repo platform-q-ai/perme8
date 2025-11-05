@@ -141,12 +141,13 @@ defmodule Jarga.Workspaces.Infrastructure.MembershipRepository do
     import Ecto.Query
 
     query =
-      from w in Jarga.Workspaces.Workspace,
+      from(w in Jarga.Workspaces.Workspace,
         where: w.slug == ^slug
+      )
 
     query =
       if excluding_id do
-        from w in query, where: w.id != ^excluding_id
+        from(w in query, where: w.id != ^excluding_id)
       else
         query
       end

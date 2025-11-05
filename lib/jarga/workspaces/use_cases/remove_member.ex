@@ -97,7 +97,11 @@ defmodule Jarga.Workspaces.UseCases.RemoveMember do
   end
 
   # Notify user if they had already joined (not just a pending invitation)
-  defp notify_user_if_joined(%WorkspaceMember{user: user, joined_at: joined_at}, workspace, notifier)
+  defp notify_user_if_joined(
+         %WorkspaceMember{user: user, joined_at: joined_at},
+         workspace,
+         notifier
+       )
        when not is_nil(user) and not is_nil(joined_at) do
     notifier.notify_user_removed(user, workspace)
   end

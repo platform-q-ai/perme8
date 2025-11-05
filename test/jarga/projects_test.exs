@@ -144,7 +144,8 @@ defmodule Jarga.ProjectsTest do
 
       attrs = %{name: "Project"}
 
-      assert {:error, :workspace_not_found} = Projects.create_project(user, Ecto.UUID.generate(), attrs)
+      assert {:error, :workspace_not_found} =
+               Projects.create_project(user, Ecto.UUID.generate(), attrs)
     end
 
     test "uses mock notifier when provided via opts" do
@@ -154,7 +155,9 @@ defmodule Jarga.ProjectsTest do
       attrs = %{name: "Mock Notifier Test"}
 
       # Pass MockNotifier via opts to avoid real broadcast
-      assert {:ok, project} = Projects.create_project(user, workspace.id, attrs, notifier: MockNotifier)
+      assert {:ok, project} =
+               Projects.create_project(user, workspace.id, attrs, notifier: MockNotifier)
+
       assert project.name == "Mock Notifier Test"
     end
 
@@ -243,7 +246,9 @@ defmodule Jarga.ProjectsTest do
 
       attrs = %{name: "Updated Name", description: "Updated description"}
 
-      assert {:ok, updated_project} = Projects.update_project(user, workspace.id, project.id, attrs)
+      assert {:ok, updated_project} =
+               Projects.update_project(user, workspace.id, project.id, attrs)
+
       assert updated_project.name == "Updated Name"
       assert updated_project.description == "Updated description"
       assert updated_project.id == project.id
@@ -252,11 +257,15 @@ defmodule Jarga.ProjectsTest do
     test "updates project with partial attributes" do
       user = user_fixture()
       workspace = workspace_fixture(user)
-      project = project_fixture(user, workspace, %{name: "Original", description: "Original desc"})
+
+      project =
+        project_fixture(user, workspace, %{name: "Original", description: "Original desc"})
 
       attrs = %{name: "New Name"}
 
-      assert {:ok, updated_project} = Projects.update_project(user, workspace.id, project.id, attrs)
+      assert {:ok, updated_project} =
+               Projects.update_project(user, workspace.id, project.id, attrs)
+
       assert updated_project.name == "New Name"
       assert updated_project.description == "Original desc"
     end
@@ -280,7 +289,8 @@ defmodule Jarga.ProjectsTest do
 
       attrs = %{name: "Updated Name"}
 
-      assert {:error, :unauthorized} = Projects.update_project(user, workspace.id, project.id, attrs)
+      assert {:error, :unauthorized} =
+               Projects.update_project(user, workspace.id, project.id, attrs)
     end
 
     test "returns error when project doesn't exist" do
@@ -289,7 +299,8 @@ defmodule Jarga.ProjectsTest do
 
       attrs = %{name: "Updated Name"}
 
-      assert {:error, :project_not_found} = Projects.update_project(user, workspace.id, Ecto.UUID.generate(), attrs)
+      assert {:error, :project_not_found} =
+               Projects.update_project(user, workspace.id, Ecto.UUID.generate(), attrs)
     end
 
     test "returns error when project belongs to different workspace" do
@@ -300,7 +311,8 @@ defmodule Jarga.ProjectsTest do
 
       attrs = %{name: "Updated Name"}
 
-      assert {:error, :project_not_found} = Projects.update_project(user, workspace1.id, project.id, attrs)
+      assert {:error, :project_not_found} =
+               Projects.update_project(user, workspace1.id, project.id, attrs)
     end
   end
 
@@ -332,7 +344,8 @@ defmodule Jarga.ProjectsTest do
       user = user_fixture()
       workspace = workspace_fixture(user)
 
-      assert {:error, :project_not_found} = Projects.delete_project(user, workspace.id, Ecto.UUID.generate())
+      assert {:error, :project_not_found} =
+               Projects.delete_project(user, workspace.id, Ecto.UUID.generate())
     end
 
     test "returns error when project belongs to different workspace" do
@@ -341,7 +354,8 @@ defmodule Jarga.ProjectsTest do
       workspace2 = workspace_fixture(user)
       project = project_fixture(user, workspace2)
 
-      assert {:error, :project_not_found} = Projects.delete_project(user, workspace1.id, project.id)
+      assert {:error, :project_not_found} =
+               Projects.delete_project(user, workspace1.id, project.id)
     end
 
     test "uses mock notifier when provided via opts" do
@@ -350,7 +364,9 @@ defmodule Jarga.ProjectsTest do
       project = project_fixture(user, workspace)
 
       # Pass MockNotifier via opts to avoid real broadcast
-      assert {:ok, deleted_project} = Projects.delete_project(user, workspace.id, project.id, notifier: MockNotifier)
+      assert {:ok, deleted_project} =
+               Projects.delete_project(user, workspace.id, project.id, notifier: MockNotifier)
+
       assert deleted_project.id == project.id
     end
 
@@ -378,7 +394,8 @@ defmodule Jarga.ProjectsTest do
       # Subscribe to the workspace topic
       Phoenix.PubSub.subscribe(Jarga.PubSub, "workspace:#{workspace.id}")
 
-      assert {:error, :project_not_found} = Projects.delete_project(user, workspace.id, Ecto.UUID.generate())
+      assert {:error, :project_not_found} =
+               Projects.delete_project(user, workspace.id, Ecto.UUID.generate())
 
       # Verify no broadcast was sent
       refute_receive {:project_removed, _}, 100
@@ -448,7 +465,9 @@ defmodule Jarga.ProjectsTest do
 
       assert project.slug == "original-name"
 
-      assert {:ok, updated_project} = Projects.update_project(user, workspace.id, project.id, %{name: "New Name"})
+      assert {:ok, updated_project} =
+               Projects.update_project(user, workspace.id, project.id, %{name: "New Name"})
+
       assert updated_project.slug == "new-name"
     end
 
@@ -462,7 +481,9 @@ defmodule Jarga.ProjectsTest do
       assert project2.slug == "second-project"
 
       # Try to update project2 to have same name as project1
-      assert {:ok, updated} = Projects.update_project(user, workspace.id, project2.id, %{name: "First Project"})
+      assert {:ok, updated} =
+               Projects.update_project(user, workspace.id, project2.id, %{name: "First Project"})
+
       # Should have random suffix to avoid collision
       assert updated.slug =~ ~r/^first-project-[a-z0-9]+$/
       assert updated.slug != project1.slug

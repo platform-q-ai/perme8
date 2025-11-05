@@ -19,16 +19,17 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
         <div class="flex items-center justify-end">
           <div class="flex gap-2">
             <.link navigate={~p"/app/workspaces/#{@workspace.slug}/edit"} class="btn btn-ghost">
-              <.icon name="hero-pencil" class="size-5" />
-              Edit
+              <.icon name="hero-pencil" class="size-5" /> Edit
             </.link>
             <.button variant="ghost" phx-click="show_members_modal">
-              <.icon name="hero-user-group" class="size-5" />
-              Manage Members
+              <.icon name="hero-user-group" class="size-5" /> Manage Members
             </.button>
-            <.button variant="error" phx-click="delete_workspace" data-confirm="Are you sure you want to delete this workspace? All projects will also be deleted.">
-              <.icon name="hero-trash" class="size-5" />
-              Delete Workspace
+            <.button
+              variant="error"
+              phx-click="delete_workspace"
+              data-confirm="Are you sure you want to delete this workspace? All projects will also be deleted."
+            >
+              <.icon name="hero-trash" class="size-5" /> Delete Workspace
             </.button>
             <.button variant="primary" phx-click="show_project_modal">
               New Project
@@ -116,8 +117,7 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
               <div class="card bg-base-200">
                 <div class="card-body p-4">
                   <h4 class="font-semibold mb-3 flex items-center gap-2">
-                    <.icon name="hero-envelope" class="size-5 text-primary" />
-                    Invite New Member
+                    <.icon name="hero-envelope" class="size-5 text-primary" /> Invite New Member
                   </h4>
                   <.form
                     for={@invite_form}
@@ -153,8 +153,7 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
                       <label>
                         <span class="label mb-1">&nbsp;</span>
                         <.button type="submit" variant="primary" class="w-full">
-                          <.icon name="hero-user-plus" class="size-4" />
-                          Invite
+                          <.icon name="hero-user-plus" class="size-4" /> Invite
                         </.button>
                       </label>
                     </div>
@@ -166,8 +165,7 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
               <div>
                 <div class="flex items-center justify-between mb-4">
                   <h4 class="font-semibold flex items-center gap-2">
-                    <.icon name="hero-user-group" class="size-5 text-primary" />
-                    Team Members
+                    <.icon name="hero-user-group" class="size-5 text-primary" /> Team Members
                   </h4>
                   <span class="badge badge-neutral badge-sm">
                     {length(@members)} {if length(@members) == 1, do: "member", else: "members"}
@@ -211,8 +209,7 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
                             <td>
                               <%= if member.role == :owner do %>
                                 <div class="badge badge-primary badge-sm gap-1">
-                                  <.icon name="hero-star-solid" class="size-3" />
-                                  Owner
+                                  <.icon name="hero-star-solid" class="size-3" /> Owner
                                 </div>
                               <% else %>
                                 <select
@@ -240,8 +237,7 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
                                 </div>
                               <% else %>
                                 <div class="badge badge-warning badge-sm gap-1">
-                                  <.icon name="hero-clock" class="size-3" />
-                                  Pending
+                                  <.icon name="hero-clock" class="size-3" /> Pending
                                 </div>
                               <% end %>
                             </td>

@@ -6,14 +6,14 @@ defmodule Jarga.Workspaces.WorkspaceMember do
   @foreign_key_type :binary_id
 
   schema "workspace_members" do
-    field :email, :string
-    field :role, Ecto.Enum, values: [:owner, :admin, :member, :guest], default: :member
-    field :invited_at, :utc_datetime
-    field :joined_at, :utc_datetime
+    field(:email, :string)
+    field(:role, Ecto.Enum, values: [:owner, :admin, :member, :guest], default: :member)
+    field(:invited_at, :utc_datetime)
+    field(:joined_at, :utc_datetime)
 
-    belongs_to :workspace, Jarga.Workspaces.Workspace
-    belongs_to :user, Jarga.Accounts.User
-    belongs_to :inviter, Jarga.Accounts.User, foreign_key: :invited_by
+    belongs_to(:workspace, Jarga.Workspaces.Workspace)
+    belongs_to(:user, Jarga.Accounts.User)
+    belongs_to(:inviter, Jarga.Accounts.User, foreign_key: :invited_by)
 
     timestamps(type: :utc_datetime)
   end

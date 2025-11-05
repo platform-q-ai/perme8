@@ -31,8 +31,9 @@ defmodule Jarga.Projects.Queries do
 
   """
   def for_workspace(query \\ base(), workspace_id) do
-    from p in query,
+    from(p in query,
       where: p.workspace_id == ^workspace_id
+    )
   end
 
   @doc """
@@ -45,12 +46,13 @@ defmodule Jarga.Projects.Queries do
 
   """
   def for_user(query \\ base(), %User{} = user) do
-    from p in query,
+    from(p in query,
       join: w in Workspace,
       on: p.workspace_id == w.id,
       join: wm in WorkspaceMember,
       on: wm.workspace_id == w.id,
       where: wm.user_id == ^user.id
+    )
   end
 
   @doc """
@@ -63,8 +65,9 @@ defmodule Jarga.Projects.Queries do
 
   """
   def active(query \\ base()) do
-    from p in query,
+    from(p in query,
       where: p.is_archived == false
+    )
   end
 
   @doc """
@@ -77,8 +80,9 @@ defmodule Jarga.Projects.Queries do
 
   """
   def ordered(query \\ base()) do
-    from p in query,
+    from(p in query,
       order_by: [desc: p.inserted_at]
+    )
   end
 
   @doc """

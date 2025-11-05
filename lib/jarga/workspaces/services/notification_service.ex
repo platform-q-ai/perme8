@@ -12,7 +12,11 @@ defmodule Jarga.Workspaces.Services.NotificationService do
   @doc """
   Notifies an existing user that they've been added to a workspace.
   """
-  @callback notify_existing_user(user :: User.t(), workspace :: Workspace.t(), inviter :: User.t()) ::
+  @callback notify_existing_user(
+              user :: User.t(),
+              workspace :: Workspace.t(),
+              inviter :: User.t()
+            ) ::
               :ok | {:error, term()}
 
   @doc """

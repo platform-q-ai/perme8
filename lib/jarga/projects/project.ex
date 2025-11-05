@@ -9,15 +9,15 @@ defmodule Jarga.Projects.Project do
   @foreign_key_type :binary_id
 
   schema "projects" do
-    field :name, :string
-    field :slug, :string
-    field :description, :string
-    field :color, :string
-    field :is_default, :boolean, default: false
-    field :is_archived, :boolean, default: false
+    field(:name, :string)
+    field(:slug, :string)
+    field(:description, :string)
+    field(:color, :string)
+    field(:is_default, :boolean, default: false)
+    field(:is_archived, :boolean, default: false)
 
-    belongs_to :user, Jarga.Accounts.User
-    belongs_to :workspace, Jarga.Workspaces.Workspace
+    belongs_to(:user, Jarga.Accounts.User)
+    belongs_to(:workspace, Jarga.Workspaces.Workspace)
 
     timestamps(type: :utc_datetime)
   end
@@ -25,7 +25,15 @@ defmodule Jarga.Projects.Project do
   @doc false
   def changeset(project, attrs) do
     project
-    |> cast(attrs, [:name, :description, :color, :is_default, :is_archived, :user_id, :workspace_id])
+    |> cast(attrs, [
+      :name,
+      :description,
+      :color,
+      :is_default,
+      :is_archived,
+      :user_id,
+      :workspace_id
+    ])
     |> validate_required([:name, :user_id, :workspace_id])
     |> validate_length(:name, min: 1)
     |> generate_slug()
@@ -43,7 +51,15 @@ defmodule Jarga.Projects.Project do
       name ->
         project_id = get_field(changeset, :id)
         workspace_id = get_field(changeset, :workspace_id)
-        slug = SlugGenerator.generate(name, workspace_id, &ProjectRepository.slug_exists_in_workspace?/3, project_id)
+
+        slug =
+          SlugGenerator.generate(
+            name,
+            workspace_id,
+            &ProjectRepository.slug_exists_in_workspace?/3,
+            project_id
+          )
+
         put_change(changeset, :slug, slug)
     end
   end

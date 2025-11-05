@@ -9,13 +9,13 @@ defmodule Jarga.Workspaces.Workspace do
   @foreign_key_type :binary_id
 
   schema "workspaces" do
-    field :name, :string
-    field :slug, :string
-    field :description, :string
-    field :color, :string
-    field :is_archived, :boolean, default: false
+    field(:name, :string)
+    field(:slug, :string)
+    field(:description, :string)
+    field(:color, :string)
+    field(:is_archived, :boolean, default: false)
 
-    has_many :workspace_members, Jarga.Workspaces.WorkspaceMember
+    has_many(:workspace_members, Jarga.Workspaces.WorkspaceMember)
 
     timestamps(type: :utc_datetime)
   end

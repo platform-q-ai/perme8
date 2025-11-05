@@ -216,7 +216,8 @@ defmodule Jarga.WorkspacesTest do
 
       attrs = %{name: "Updated Name"}
 
-      assert {:error, :workspace_not_found} = Workspaces.update_workspace(user, Ecto.UUID.generate(), attrs)
+      assert {:error, :workspace_not_found} =
+               Workspaces.update_workspace(user, Ecto.UUID.generate(), attrs)
     end
   end
 
@@ -256,7 +257,8 @@ defmodule Jarga.WorkspacesTest do
     test "returns error when workspace does not exist" do
       user = user_fixture()
 
-      assert {:error, :workspace_not_found} = Workspaces.delete_workspace(user, Ecto.UUID.generate())
+      assert {:error, :workspace_not_found} =
+               Workspaces.delete_workspace(user, Ecto.UUID.generate())
     end
   end
 
@@ -266,7 +268,9 @@ defmodule Jarga.WorkspacesTest do
       workspace = workspace_fixture(owner)
       invitee = user_fixture()
 
-      assert {:ok, {:member_added, member}} = Workspaces.invite_member(owner, workspace.id, invitee.email, :admin)
+      assert {:ok, {:member_added, member}} =
+               Workspaces.invite_member(owner, workspace.id, invitee.email, :admin)
+
       assert member.workspace_id == workspace.id
       assert member.user_id == invitee.id
       assert member.email == invitee.email
@@ -281,7 +285,9 @@ defmodule Jarga.WorkspacesTest do
       workspace = workspace_fixture(owner)
       invitee = user_fixture()
 
-      assert {:ok, {:member_added, member}} = Workspaces.invite_member(owner, workspace.id, invitee.email, :member)
+      assert {:ok, {:member_added, member}} =
+               Workspaces.invite_member(owner, workspace.id, invitee.email, :member)
+
       assert member.role == :member
     end
 
@@ -290,7 +296,9 @@ defmodule Jarga.WorkspacesTest do
       workspace = workspace_fixture(owner)
       invitee = user_fixture()
 
-      assert {:ok, {:member_added, member}} = Workspaces.invite_member(owner, workspace.id, invitee.email, :guest)
+      assert {:ok, {:member_added, member}} =
+               Workspaces.invite_member(owner, workspace.id, invitee.email, :guest)
+
       assert member.role == :guest
     end
 
@@ -299,7 +307,8 @@ defmodule Jarga.WorkspacesTest do
       workspace = workspace_fixture(owner)
       invitee = user_fixture()
 
-      assert {:error, :invalid_role} = Workspaces.invite_member(owner, workspace.id, invitee.email, :owner)
+      assert {:error, :invalid_role} =
+               Workspaces.invite_member(owner, workspace.id, invitee.email, :owner)
     end
 
     test "returns error when user is already a member" do
@@ -308,10 +317,12 @@ defmodule Jarga.WorkspacesTest do
       invitee = user_fixture()
 
       # First invitation succeeds
-      assert {:ok, {:member_added, _member}} = Workspaces.invite_member(owner, workspace.id, invitee.email, :admin)
+      assert {:ok, {:member_added, _member}} =
+               Workspaces.invite_member(owner, workspace.id, invitee.email, :admin)
 
       # Second invitation fails
-      assert {:error, :already_member} = Workspaces.invite_member(owner, workspace.id, invitee.email, :admin)
+      assert {:error, :already_member} =
+               Workspaces.invite_member(owner, workspace.id, invitee.email, :admin)
     end
 
     test "returns error when inviter is not a member of workspace" do
@@ -320,14 +331,16 @@ defmodule Jarga.WorkspacesTest do
       non_member = user_fixture()
       invitee = user_fixture()
 
-      assert {:error, :unauthorized} = Workspaces.invite_member(non_member, workspace.id, invitee.email, :admin)
+      assert {:error, :unauthorized} =
+               Workspaces.invite_member(non_member, workspace.id, invitee.email, :admin)
     end
 
     test "returns error when workspace does not exist" do
       owner = user_fixture()
       invitee = user_fixture()
 
-      assert {:error, :workspace_not_found} = Workspaces.invite_member(owner, Ecto.UUID.generate(), invitee.email, :admin)
+      assert {:error, :workspace_not_found} =
+               Workspaces.invite_member(owner, Ecto.UUID.generate(), invitee.email, :admin)
     end
   end
 
@@ -337,7 +350,9 @@ defmodule Jarga.WorkspacesTest do
       workspace = workspace_fixture(owner)
       email = "newuser@example.com"
 
-      assert {:ok, {:invitation_sent, invitation}} = Workspaces.invite_member(owner, workspace.id, email, :admin)
+      assert {:ok, {:invitation_sent, invitation}} =
+               Workspaces.invite_member(owner, workspace.id, email, :admin)
+
       assert invitation.workspace_id == workspace.id
       assert invitation.user_id == nil
       assert invitation.email == email
@@ -353,7 +368,9 @@ defmodule Jarga.WorkspacesTest do
       invitee = user_fixture(%{email: "User@Example.Com"})
 
       # Should find existing user despite case difference
-      assert {:ok, {:member_added, member}} = Workspaces.invite_member(owner, workspace.id, "user@example.com", :admin)
+      assert {:ok, {:member_added, member}} =
+               Workspaces.invite_member(owner, workspace.id, "user@example.com", :admin)
+
       assert member.user_id == invitee.id
     end
   end
@@ -365,8 +382,11 @@ defmodule Jarga.WorkspacesTest do
       member1 = user_fixture()
       member2 = user_fixture()
 
-      {:ok, {:member_added, _}} = Workspaces.invite_member(owner, workspace.id, member1.email, :admin)
-      {:ok, {:member_added, _}} = Workspaces.invite_member(owner, workspace.id, member2.email, :member)
+      {:ok, {:member_added, _}} =
+        Workspaces.invite_member(owner, workspace.id, member1.email, :admin)
+
+      {:ok, {:member_added, _}} =
+        Workspaces.invite_member(owner, workspace.id, member2.email, :member)
 
       members = Workspaces.list_members(workspace.id)
 
@@ -386,7 +406,8 @@ defmodule Jarga.WorkspacesTest do
       owner = user_fixture()
       workspace = workspace_fixture(owner)
 
-      {:ok, {:invitation_sent, _}} = Workspaces.invite_member(owner, workspace.id, "pending@example.com", :admin)
+      {:ok, {:invitation_sent, _}} =
+        Workspaces.invite_member(owner, workspace.id, "pending@example.com", :admin)
 
       members = Workspaces.list_members(workspace.id)
 
@@ -403,9 +424,12 @@ defmodule Jarga.WorkspacesTest do
       workspace = workspace_fixture(owner)
       member = user_fixture()
 
-      {:ok, {:member_added, _}} = Workspaces.invite_member(owner, workspace.id, member.email, :admin)
+      {:ok, {:member_added, _}} =
+        Workspaces.invite_member(owner, workspace.id, member.email, :admin)
 
-      assert {:ok, updated_member} = Workspaces.change_member_role(owner, workspace.id, member.email, :member)
+      assert {:ok, updated_member} =
+               Workspaces.change_member_role(owner, workspace.id, member.email, :member)
+
       assert updated_member.role == :member
     end
 
@@ -423,7 +447,8 @@ defmodule Jarga.WorkspacesTest do
       non_member = user_fixture()
       member = user_fixture()
 
-      {:ok, {:member_added, _}} = Workspaces.invite_member(owner, workspace.id, member.email, :admin)
+      {:ok, {:member_added, _}} =
+        Workspaces.invite_member(owner, workspace.id, member.email, :admin)
 
       assert {:error, :unauthorized} =
                Workspaces.change_member_role(non_member, workspace.id, member.email, :member)
@@ -434,7 +459,12 @@ defmodule Jarga.WorkspacesTest do
       workspace = workspace_fixture(owner)
 
       assert {:error, :member_not_found} =
-               Workspaces.change_member_role(owner, workspace.id, "nonexistent@example.com", :admin)
+               Workspaces.change_member_role(
+                 owner,
+                 workspace.id,
+                 "nonexistent@example.com",
+                 :admin
+               )
     end
   end
 
@@ -444,7 +474,8 @@ defmodule Jarga.WorkspacesTest do
       workspace = workspace_fixture(owner)
       member = user_fixture()
 
-      {:ok, {:member_added, _}} = Workspaces.invite_member(owner, workspace.id, member.email, :admin)
+      {:ok, {:member_added, _}} =
+        Workspaces.invite_member(owner, workspace.id, member.email, :admin)
 
       # Verify member exists
       members_before = Workspaces.list_members(workspace.id)
@@ -473,7 +504,8 @@ defmodule Jarga.WorkspacesTest do
       owner = user_fixture()
       workspace = workspace_fixture(owner)
 
-      assert {:error, :cannot_remove_owner} = Workspaces.remove_member(owner, workspace.id, owner.email)
+      assert {:error, :cannot_remove_owner} =
+               Workspaces.remove_member(owner, workspace.id, owner.email)
     end
 
     test "returns error when actor not a member" do
@@ -482,9 +514,11 @@ defmodule Jarga.WorkspacesTest do
       non_member = user_fixture()
       member = user_fixture()
 
-      {:ok, {:member_added, _}} = Workspaces.invite_member(owner, workspace.id, member.email, :admin)
+      {:ok, {:member_added, _}} =
+        Workspaces.invite_member(owner, workspace.id, member.email, :admin)
 
-      assert {:error, :unauthorized} = Workspaces.remove_member(non_member, workspace.id, member.email)
+      assert {:error, :unauthorized} =
+               Workspaces.remove_member(non_member, workspace.id, member.email)
     end
 
     test "returns error when member not found" do
@@ -540,7 +574,9 @@ defmodule Jarga.WorkspacesTest do
 
       assert workspace.slug == "original-name"
 
-      assert {:ok, updated_workspace} = Workspaces.update_workspace(user, workspace.id, %{name: "New Name"})
+      assert {:ok, updated_workspace} =
+               Workspaces.update_workspace(user, workspace.id, %{name: "New Name"})
+
       assert updated_workspace.slug == "new-name"
     end
 
@@ -553,7 +589,9 @@ defmodule Jarga.WorkspacesTest do
       assert workspace2.slug == "second-workspace"
 
       # Try to update workspace2 to have same name as workspace1
-      assert {:ok, updated} = Workspaces.update_workspace(user, workspace2.id, %{name: "First Workspace"})
+      assert {:ok, updated} =
+               Workspaces.update_workspace(user, workspace2.id, %{name: "First Workspace"})
+
       # Should have random suffix to avoid collision
       assert updated.slug =~ ~r/^first-workspace-[a-z0-9]+$/
       assert updated.slug != workspace1.slug
@@ -573,7 +611,8 @@ defmodule Jarga.WorkspacesTest do
     test "returns :workspace_not_found when workspace doesn't exist" do
       user = user_fixture()
 
-      assert {:error, :workspace_not_found} = Workspaces.get_workspace_by_slug(user, "nonexistent")
+      assert {:error, :workspace_not_found} =
+               Workspaces.get_workspace_by_slug(user, "nonexistent")
     end
 
     test "returns :workspace_not_found when user is not a member of workspace" do
@@ -581,7 +620,8 @@ defmodule Jarga.WorkspacesTest do
       other_user = user_fixture()
       _workspace = workspace_fixture(other_user, %{name: "Other Workspace"})
 
-      assert {:error, :workspace_not_found} = Workspaces.get_workspace_by_slug(user, "other-workspace")
+      assert {:error, :workspace_not_found} =
+               Workspaces.get_workspace_by_slug(user, "other-workspace")
     end
   end
 end

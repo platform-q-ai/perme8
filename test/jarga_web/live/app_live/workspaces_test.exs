@@ -61,10 +61,11 @@ defmodule JargaWeb.AppLive.WorkspacesTest do
     end
 
     test "displays workspace descriptions", %{conn: conn, user: user} do
-      _workspace = workspace_fixture(user, %{
-        name: "Test Workspace",
-        description: "This is a test description"
-      })
+      _workspace =
+        workspace_fixture(user, %{
+          name: "Test Workspace",
+          description: "This is a test description"
+        })
 
       {:ok, _lv, html} = live(conn, ~p"/app/workspaces")
 
@@ -86,7 +87,10 @@ defmodule JargaWeb.AppLive.WorkspacesTest do
       assert redirect_path == ~p"/app/workspaces/new"
     end
 
-    test "updates workspace list in real-time when user is added to a workspace", %{conn: conn, user: user} do
+    test "updates workspace list in real-time when user is added to a workspace", %{
+      conn: conn,
+      user: user
+    } do
       {:ok, lv, _html} = live(conn, ~p"/app/workspaces")
 
       # Verify no workspaces initially
@@ -97,18 +101,24 @@ defmodule JargaWeb.AppLive.WorkspacesTest do
       workspace = workspace_fixture(other_user, %{name: "Team Workspace"})
 
       # Add the user to the workspace (this will trigger the PubSub broadcast)
-      {:ok, {:member_added, _member}} = Workspaces.invite_member(other_user, workspace.id, user.email, :member)
+      {:ok, {:member_added, _member}} =
+        Workspaces.invite_member(other_user, workspace.id, user.email, :member)
 
       # Verify workspace appears in the UI
       assert render(lv) =~ "Team Workspace"
       assert lv |> element("[data-workspace-id='#{workspace.id}']") |> has_element?()
     end
 
-    test "updates workspace list in real-time when user is removed from a workspace", %{conn: conn, user: user} do
+    test "updates workspace list in real-time when user is removed from a workspace", %{
+      conn: conn,
+      user: user
+    } do
       # Create a workspace with two members
       other_user = user_fixture()
       workspace = workspace_fixture(other_user, %{name: "To Be Removed"})
-      {:ok, {:member_added, _member}} = Workspaces.invite_member(other_user, workspace.id, user.email, :member)
+
+      {:ok, {:member_added, _member}} =
+        Workspaces.invite_member(other_user, workspace.id, user.email, :member)
 
       {:ok, lv, _html} = live(conn, ~p"/app/workspaces")
 
@@ -141,9 +151,10 @@ defmodule JargaWeb.AppLive.WorkspacesTest do
     test "creates workspace with valid data", %{conn: conn, user: _user} do
       {:ok, lv, _html} = live(conn, ~p"/app/workspaces/new")
 
-      result = lv
-             |> form("#workspace-form", workspace: %{name: "New Test Workspace"})
-             |> render_submit()
+      result =
+        lv
+        |> form("#workspace-form", workspace: %{name: "New Test Workspace"})
+        |> render_submit()
 
       # Should redirect to index with success flash
       assert {:error, {:live_redirect, %{to: path, flash: _flash}}} = result
@@ -158,11 +169,13 @@ defmodule JargaWeb.AppLive.WorkspacesTest do
       {:ok, lv, _html} = live(conn, ~p"/app/workspaces/new")
 
       assert lv
-             |> form("#workspace-form", workspace: %{
-               name: "Full Workspace",
-               description: "A complete workspace",
-               color: "#FF5733"
-             })
+             |> form("#workspace-form",
+               workspace: %{
+                 name: "Full Workspace",
+                 description: "A complete workspace",
+                 color: "#FF5733"
+               }
+             )
              |> render_submit()
 
       assert_redirected(lv, ~p"/app/workspaces")
@@ -205,7 +218,10 @@ defmodule JargaWeb.AppLive.WorkspacesTest do
       assert html =~ "Projects"
     end
 
-    test "displays empty state when workspace has no projects", %{conn: conn, workspace: workspace} do
+    test "displays empty state when workspace has no projects", %{
+      conn: conn,
+      workspace: workspace
+    } do
       {:ok, _lv, html} = live(conn, ~p"/app/workspaces/#{workspace.slug}")
 
       assert html =~ "No projects yet"
@@ -223,7 +239,11 @@ defmodule JargaWeb.AppLive.WorkspacesTest do
       assert html =~ project2.id
     end
 
-    test "does not display projects from other workspaces", %{conn: conn, user: user, workspace: workspace} do
+    test "does not display projects from other workspaces", %{
+      conn: conn,
+      user: user,
+      workspace: workspace
+    } do
       other_workspace = workspace_fixture(user, %{name: "Other Workspace"})
       _my_project = project_fixture(user, workspace, %{name: "My Project"})
       _other_project = project_fixture(user, other_workspace, %{name: "Other Project"})
@@ -235,10 +255,11 @@ defmodule JargaWeb.AppLive.WorkspacesTest do
     end
 
     test "displays project descriptions", %{conn: conn, user: user, workspace: workspace} do
-      _project = project_fixture(user, workspace, %{
-        name: "Test Project",
-        description: "This is a test project description"
-      })
+      _project =
+        project_fixture(user, workspace, %{
+          name: "Test Project",
+          description: "This is a test project description"
+        })
 
       {:ok, _lv, html} = live(conn, ~p"/app/workspaces/#{workspace.slug}")
 
@@ -251,7 +272,10 @@ defmodule JargaWeb.AppLive.WorkspacesTest do
       assert lv |> element("button", "New Project") |> has_element?()
     end
 
-    test "opens new project modal when clicking new project button", %{conn: conn, workspace: workspace} do
+    test "opens new project modal when clicking new project button", %{
+      conn: conn,
+      workspace: workspace
+    } do
       {:ok, lv, _html} = live(conn, ~p"/app/workspaces/#{workspace.slug}")
 
       html = lv |> element("button", "New Project") |> render_click()
@@ -289,11 +313,13 @@ defmodule JargaWeb.AppLive.WorkspacesTest do
 
       # Submit the form with full data
       lv
-      |> form("#project-form", project: %{
-        name: "Full Project",
-        description: "A complete project",
-        color: "#10B981"
-      })
+      |> form("#project-form",
+        project: %{
+          name: "Full Project",
+          description: "A complete project",
+          color: "#10B981"
+        }
+      )
       |> render_submit()
 
       # Verify project appears with all attributes
@@ -363,7 +389,11 @@ defmodule JargaWeb.AppLive.WorkspacesTest do
       assert %{"error" => "Workspace not found"} = flash
     end
 
-    test "updates project list in real-time when project is added", %{conn: conn, user: user, workspace: workspace} do
+    test "updates project list in real-time when project is added", %{
+      conn: conn,
+      user: user,
+      workspace: workspace
+    } do
       {:ok, lv, _html} = live(conn, ~p"/app/workspaces/#{workspace.slug}")
 
       # Verify no projects initially
@@ -377,7 +407,11 @@ defmodule JargaWeb.AppLive.WorkspacesTest do
       assert lv |> element("[data-project-id='#{project.id}']") |> has_element?()
     end
 
-    test "updates project list in real-time when project is removed", %{conn: conn, user: user, workspace: workspace} do
+    test "updates project list in real-time when project is removed", %{
+      conn: conn,
+      user: user,
+      workspace: workspace
+    } do
       # Create a project
       project = project_fixture(user, workspace, %{name: "To Delete"})
 
@@ -399,7 +433,10 @@ defmodule JargaWeb.AppLive.WorkspacesTest do
   describe "workspace edit page (authenticated)" do
     setup %{conn: conn} do
       user = user_fixture()
-      workspace = workspace_fixture(user, %{name: "Test Workspace", description: "Test Description"})
+
+      workspace =
+        workspace_fixture(user, %{name: "Test Workspace", description: "Test Description"})
+
       %{conn: log_in_user(conn, user), user: user, workspace: workspace}
     end
 
@@ -416,10 +453,12 @@ defmodule JargaWeb.AppLive.WorkspacesTest do
 
       result =
         lv
-        |> form("#workspace-form", workspace: %{
-          name: "Updated Workspace",
-          description: "Updated Description"
-        })
+        |> form("#workspace-form",
+          workspace: %{
+            name: "Updated Workspace",
+            description: "Updated Description"
+          }
+        )
         |> render_submit()
 
       assert {:error, {:live_redirect, %{to: path, flash: _flash}}} = result
