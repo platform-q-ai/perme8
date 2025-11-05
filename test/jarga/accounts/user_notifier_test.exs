@@ -13,7 +13,7 @@ defmodule Jarga.Accounts.UserNotifierTest do
       assert {:ok, email} = UserNotifier.deliver_update_email_instructions(user, url)
 
       assert email.to == [{"", "test@example.com"}]
-      assert email.from == {"Jarga", "contact@example.com"}
+      assert email.from == {"Jarga", "noreply@jarga.app"}
       assert email.subject == "Update email instructions"
       assert email.text_body =~ "Hi test@example.com"
       assert email.text_body =~ url
@@ -120,7 +120,7 @@ defmodule Jarga.Accounts.UserNotifierTest do
 
       {:ok, email} = UserNotifier.deliver_login_instructions(user, url)
 
-      assert email.from == {"Jarga", "contact@example.com"}
+      assert email.from == {"Jarga", "noreply@jarga.app"}
     end
 
     test "email is text format" do
