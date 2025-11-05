@@ -109,9 +109,20 @@ defmodule JargaWeb.Layouts do
         <aside class="bg-base-200 min-h-full w-80 p-4 flex flex-col">
           <!-- Logo/Brand -->
           <div class="px-4 py-6">
-            <.link navigate={~p"/app"} class="flex items-center gap-2">
-              <img src={~p"/images/logo.svg"} width="36" />
-              <span class="text-xl font-bold">Jarga</span>
+            <.link navigate={~p"/app"} class="flex items-center gap-3">
+              <img
+                src={~p"/images/j-logo-black.svg"}
+                alt="Jarga"
+                width="40"
+                class="dark:hidden"
+              />
+              <img
+                src={~p"/images/j-logo-white.svg"}
+                alt="Jarga"
+                width="40"
+                class="hidden dark:block"
+              />
+              <span class="text-4xl font-bold">Jarga</span>
             </.link>
           </div>
           
