@@ -73,6 +73,14 @@ config :logger, :default_formatter,
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 
+# Configure OpenRouter for LLM chat
+config :jarga, :openrouter,
+  api_key: System.get_env("OPENROUTER_API_KEY"),
+  base_url: "https://openrouter.ai/api/v1",
+  chat_model: System.get_env("CHAT_MODEL", "google/gemini-2.0-flash-exp:free"),
+  site_url: System.get_env("OPENROUTER_SITE_URL", "https://jarga.app"),
+  app_name: System.get_env("OPENROUTER_APP_NAME", "Jarga")
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"

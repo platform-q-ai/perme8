@@ -117,6 +117,9 @@
   }
 }
 
+/* Chat Panel Styles */
+@import './chat.css';
+
 /* Milkdown Editor Styles */
 @import '@milkdown/theme-nord/style.css';
 

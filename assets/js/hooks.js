@@ -357,6 +357,11 @@ export const MilkdownEditor = {
   }
 }
 
+import { ChatPanel, ChatMessages, ChatInput } from './chat_hooks'
+
 export default {
-  MilkdownEditor
+  MilkdownEditor,
+  ChatPanel,
+  ChatMessages,
+  ChatInput
 }

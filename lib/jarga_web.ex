@@ -26,6 +26,7 @@ defmodule JargaWeb do
       Jarga.Projects,
       Jarga.Pages,
       Jarga.Notes,
+      Jarga.Documents,
       Jarga.Repo,
       Jarga.Mailer
     ],

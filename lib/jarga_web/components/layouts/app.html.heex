@@ -1,57 +1,71 @@
-<div class="min-h-screen flex flex-col">
-  <header class="navbar bg-base-100 px-4 sm:px-6 lg:px-8">
-    <div class="flex-1">
-      <a href="/" class="flex items-center">
-        <img
-          src={~p"/images/j-logo-black.svg"}
-          alt="Jarga"
-          class="h-12 w-auto dark:hidden"
-        />
-        <img
-          src={~p"/images/j-logo-white.svg"}
-          alt="Jarga"
-          class="h-12 w-auto hidden dark:block"
-        />
-      </a>
-    </div>
-    <div class="flex-none">
-      <ul class="menu menu-horizontal flex items-center gap-4">
-        <%= if @current_scope && @current_scope.user do %>
+<div class="min-h-screen flex">
+  <%!-- Main content area --%>
+  <div class="flex-1 flex flex-col min-w-0">
+    <header class="navbar bg-base-100 px-4 sm:px-6 lg:px-8">
+      <div class="flex-1">
+        <a href="/" class="flex items-center">
+          <img
+            src={~p"/images/j-logo-black.svg"}
+            alt="Jarga"
+            class="h-12 w-auto dark:hidden"
+          />
+          <img
+            src={~p"/images/j-logo-white.svg"}
+            alt="Jarga"
+            class="h-12 w-auto hidden dark:block"
+          />
+        </a>
+      </div>
+      <div class="flex-none">
+        <ul class="menu menu-horizontal flex items-center gap-4">
+          <%= if @current_scope && @current_scope.user do %>
+            <li>
+              <span class="text-sm">{@current_scope.user.email}</span>
+            </li>
+            <li>
+              <.link navigate={~p"/users/settings"} class="btn btn-ghost btn-sm">
+                Settings
+              </.link>
+            </li>
+            <li>
+              <.link href={~p"/users/log-out"} method="delete" class="btn btn-ghost btn-sm">
+                Log out
+              </.link>
+            </li>
+          <% else %>
+            <li>
+              <.link navigate={~p"/users/register"} class="btn btn-ghost btn-sm">
+                Register
+              </.link>
+            </li>
+            <li>
+              <.link navigate={~p"/users/log-in"} class="btn btn-primary btn-sm">
+                Log in
+              </.link>
+            </li>
+          <% end %>
           <li>
-            <span class="text-sm">{@current_scope.user.email}</span>
+            <.theme_toggle size="xs" />
           </li>
-          <li>
-            <.link navigate={~p"/users/settings"} class="btn btn-ghost btn-sm">
-              Settings
-            </.link>
-          </li>
-          <li>
-            <.link href={~p"/users/log-out"} method="delete" class="btn btn-ghost btn-sm">
-              Log out
-            </.link>
-          </li>
-        <% else %>
-          <li>
-            <.link navigate={~p"/users/register"} class="btn btn-ghost btn-sm">
-              Register
-            </.link>
-          </li>
-          <li>
-            <.link navigate={~p"/users/log-in"} class="btn btn-primary btn-sm">
-              Log in
-            </.link>
-          </li>
-        <% end %>
-        <li>
-          <.theme_toggle size="xs" />
-        </li>
-      </ul>
-    </div>
-  </header>
+        </ul>
+      </div>
+    </header>
 
   <main class="flex-1">
     {if Map.has_key?(assigns, :inner_content), do: @inner_content, else: render_slot(@inner_block)}
   </main>
 
-  <.flash_group flash={@flash} />
+    <.flash_group flash={@flash} />
+  </div>
+  <%!-- Global Chat Panel (only show when user is logged in) --%>
+  <%= if @current_scope && @current_scope.user do %>
+    <.live_component
+      module={JargaWeb.ChatLive.Panel}
+      id="global-chat-panel"
+      current_user={@current_scope.user}
+      current_workspace={Map.get(assigns, :current_workspace)}
+      current_project={Map.get(assigns, :current_project)}
+      page_title={Map.get(assigns, :page_title)}
+    />
+  <% end %>
 </div>

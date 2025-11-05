@@ -1,0 +1,123 @@
+<%!-- Global Chat Panel Component --%>
+<div
+  id="global-chat-panel"
+  class={"chat-panel #{if @collapsed, do: "collapsed", else: "expanded"}"}
+  data-collapsed={@collapsed}
+  phx-hook="ChatPanel"
+>
+  <%!-- Collapsed toggle button --%>
+  <%= if @collapsed do %>
+    <button
+      id="chat-toggle-button"
+      phx-click="toggle_panel"
+      phx-target={@myself}
+      class="chat-toggle-button"
+      aria-label="Open chat"
+    >
+      <.icon name="hero-chat-bubble-left-right" class="w-5 h-5" />
+      <span class="ml-2 hidden sm:inline">Chat</span>
+    </button>
+  <% end %>
+  <%!-- Expanded panel --%>
+  <%= if !@collapsed do %>
+    <div class="chat-panel-content">
+      <%!-- Header --%>
+      <div class="chat-header">
+        <div class="flex items-center gap-2">
+          <.icon name="hero-chat-bubble-left-right" class="w-5 h-5" />
+          <h2 class="text-lg font-semibold">Chat</h2>
+        </div>
+        <button
+          phx-click="toggle_panel"
+          phx-target={@myself}
+          class="chat-close-button"
+          aria-label="Close chat"
+        >
+          <.icon name="hero-x-mark" class="w-5 h-5" />
+        </button>
+      </div>
+      <%!-- Messages area --%>
+      <div
+        id="chat-messages"
+        class="chat-messages"
+        phx-hook="ChatMessages"
+        data-loading={@streaming}
+      >
+        <%= if Enum.empty?(@messages) and @stream_buffer == "" do %>
+          <div class="chat-empty-state">
+            <.icon name="hero-chat-bubble-left-ellipsis" class="w-12 h-12 text-gray-400" />
+            <p class="text-gray-500 text-sm mt-2">Ask me anything about this page</p>
+          </div>
+        <% end %>
+        <%= for message <- @messages do %>
+          <.message message={message} />
+        <% end %>
+        <%= if @streaming and @stream_buffer != "" do %>
+          <.message message={%{role: "assistant", content: @stream_buffer, timestamp: DateTime.utc_now(), streaming: true}} />
+        <% end %>
+        <%= if @streaming and @stream_buffer == "" do %>
+          <div class="flex items-center gap-2 text-gray-500 text-sm p-4">
+            <div class="typing-indicator">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+            <span>Thinking...</span>
+          </div>
+        <% end %>
+        <%= if @error do %>
+          <div class="chat-error">
+            <.icon name="hero-exclamation-triangle" class="w-5 h-5" />
+            <span><%= @error %></span>
+          </div>
+        <% end %>
+      </div>
+      <%!-- Input area --%>
+      <div class="chat-input-area">
+        <form
+          id="chat-message-form"
+          phx-submit="send_message"
+          phx-target={@myself}
+          class="flex flex-col gap-2"
+        >
+          <div class="relative">
+            <textarea
+              id="chat-input"
+              name="message"
+              value={@current_message}
+              phx-change="update_message"
+              phx-target={@myself}
+              placeholder="Ask about this page..."
+              rows="2"
+              class="chat-input"
+              disabled={@streaming}
+              phx-hook="ChatInput"
+            />
+          </div>
+          <div class="flex items-center justify-between">
+            <button
+              type="button"
+              phx-click="clear_chat"
+              phx-target={@myself}
+              class="text-sm text-gray-500 hover:text-gray-700"
+              disabled={Enum.empty?(@messages)}
+            >
+              Clear chat
+            </button>
+            <button
+              type="submit"
+              class="chat-send-button"
+              disabled={@streaming or @current_message == ""}
+            >
+              <%= if @streaming do %>
+                <.icon name="hero-arrow-path" class="w-5 h-5 animate-spin" />
+              <% else %>
+                <.icon name="hero-paper-airplane" class="w-5 h-5" />
+              <% end %>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  <% end %>
+</div>

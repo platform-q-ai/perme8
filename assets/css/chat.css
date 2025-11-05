@@ -1,0 +1,217 @@
+/* Chat Panel Styles */
+
+.chat-panel {
+  @apply fixed right-0 top-0 h-screen bg-white dark:bg-gray-900 shadow-2xl;
+  @apply flex flex-col;
+  @apply transition-all duration-300 ease-in-out;
+  @apply z-50;
+  width: 400px;
+  max-width: 100vw;
+}
+
+.chat-panel.collapsed {
+  @apply translate-x-full;
+}
+
+.chat-panel.expanded {
+  @apply translate-x-0;
+}
+
+/* Toggle button (when collapsed) */
+.chat-toggle-button {
+  @apply fixed right-4 top-20;
+  @apply bg-blue-600 hover:bg-blue-700 text-white;
+  @apply px-4 py-2 rounded-lg shadow-lg;
+  @apply flex items-center gap-2;
+  @apply transition-colors duration-200;
+  @apply cursor-pointer;
+}
+
+/* Panel content */
+.chat-panel-content {
+  @apply flex flex-col h-full;
+}
+
+/* Header */
+.chat-header {
+  @apply flex items-center justify-between;
+  @apply px-4 py-3 border-b border-gray-200 dark:border-gray-700;
+  @apply bg-white dark:bg-gray-900;
+}
+
+.chat-close-button {
+  @apply p-2 rounded-lg;
+  @apply hover:bg-gray-100 dark:hover:bg-gray-800;
+  @apply transition-colors duration-200;
+}
+
+/* Messages area */
+.chat-messages {
+  @apply flex-1 overflow-y-auto;
+  @apply p-4 space-y-4;
+  @apply bg-gray-50 dark:bg-gray-950;
+}
+
+.chat-empty-state {
+  @apply flex flex-col items-center justify-center;
+  @apply h-full text-center;
+}
+
+/* Individual message */
+.chat-message {
+  @apply flex gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300;
+}
+
+.chat-message.user {
+  @apply flex-row-reverse;
+}
+
+.message-avatar {
+  @apply flex-shrink-0;
+  @apply w-8 h-8 rounded-full;
+  @apply flex items-center justify-center;
+  @apply bg-gray-200 dark:bg-gray-800;
+}
+
+.chat-message.user .message-avatar {
+  @apply bg-blue-500 text-white;
+}
+
+.chat-message.assistant .message-avatar {
+  @apply bg-purple-500 text-white;
+}
+
+.message-content {
+  @apply flex-1 min-w-0;
+}
+
+.chat-message.user .message-content {
+  @apply flex flex-col items-end;
+}
+
+.message-text {
+  @apply px-4 py-2 rounded-lg;
+  @apply max-w-[85%];
+  @apply whitespace-pre-wrap break-words;
+}
+
+.chat-message.user .message-text {
+  @apply bg-blue-500 text-white;
+}
+
+.chat-message.assistant .message-text {
+  @apply bg-white dark:bg-gray-800;
+  @apply border border-gray-200 dark:border-gray-700;
+}
+
+.message-timestamp {
+  @apply text-xs text-gray-500 dark:text-gray-400;
+  @apply mt-1 px-1;
+}
+
+.streaming-cursor {
+  @apply inline-block animate-pulse;
+  @apply text-blue-500;
+}
+
+/* Typing indicator */
+.typing-indicator {
+  @apply flex gap-1;
+}
+
+.typing-indicator span {
+  @apply w-2 h-2 rounded-full bg-gray-400;
+  @apply animate-bounce;
+}
+
+.typing-indicator span:nth-child(1) {
+  animation-delay: 0ms;
+}
+
+.typing-indicator span:nth-child(2) {
+  animation-delay: 150ms;
+}
+
+.typing-indicator span:nth-child(3) {
+  animation-delay: 300ms;
+}
+
+/* Error message */
+.chat-error {
+  @apply flex items-center gap-2;
+  @apply px-4 py-3 rounded-lg;
+  @apply bg-red-50 dark:bg-red-900/20;
+  @apply text-red-700 dark:text-red-400;
+  @apply text-sm;
+}
+
+/* Input area */
+.chat-input-area {
+  @apply p-4 border-t border-gray-200 dark:border-gray-700;
+  @apply bg-white dark:bg-gray-900;
+}
+
+.chat-input {
+  @apply w-full px-4 py-2 rounded-lg;
+  @apply border border-gray-300 dark:border-gray-600;
+  @apply bg-white dark:bg-gray-800;
+  @apply text-gray-900 dark:text-gray-100;
+  @apply placeholder-gray-400 dark:placeholder-gray-500;
+  @apply focus:outline-none focus:ring-2 focus:ring-blue-500;
+  @apply resize-none;
+  @apply transition-all duration-200;
+  min-height: 44px;
+  max-height: 150px;
+}
+
+.chat-input:disabled {
+  @apply opacity-50 cursor-not-allowed;
+}
+
+.chat-send-button {
+  @apply px-4 py-2 rounded-lg;
+  @apply bg-blue-600 hover:bg-blue-700;
+  @apply text-white;
+  @apply disabled:opacity-50 disabled:cursor-not-allowed;
+  @apply transition-colors duration-200;
+  @apply flex items-center justify-center;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 640px) {
+  .chat-panel {
+    width: 100vw;
+  }
+
+  .chat-panel.expanded {
+    @apply translate-x-0;
+  }
+
+  .message-text {
+    @apply max-w-[90%];
+  }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .chat-panel,
+  .chat-message,
+  .typing-indicator span {
+    @apply transition-none animate-none;
+  }
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+  .chat-panel {
+    @apply bg-gray-900;
+  }
+
+  .chat-messages {
+    @apply bg-gray-950;
+  }
+
+  .chat-input {
+    @apply bg-gray-800 border-gray-700;
+  }
+}
