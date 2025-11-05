@@ -5,20 +5,26 @@
 
 export const ChatPanel = {
   mounted() {
-    const toggleBtn = document.getElementById('chat-toggle-btn')
+    this.toggleBtn = document.getElementById('chat-toggle-btn')
 
-    // Function to update button visibility
-    const updateButtonVisibility = () => {
-      if (this.el.checked) {
-        toggleBtn.classList.add('hidden')
-      } else {
-        toggleBtn.classList.remove('hidden')
+    // Store reference to update function
+    this.updateButtonVisibility = () => {
+      if (!this.toggleBtn) {
+        this.toggleBtn = document.getElementById('chat-toggle-btn')
+      }
+
+      if (this.toggleBtn) {
+        if (this.el.checked) {
+          this.toggleBtn.classList.add('hidden')
+        } else {
+          this.toggleBtn.classList.remove('hidden')
+        }
       }
     }
 
     // Watch for checkbox changes
     this.el.addEventListener('change', () => {
-      updateButtonVisibility()
+      this.updateButtonVisibility()
 
       if (this.el.checked) {
         // Drawer is opening - focus the input after animation
@@ -41,7 +47,7 @@ export const ChatPanel = {
     }
 
     // Initial button visibility
-    updateButtonVisibility()
+    this.updateButtonVisibility()
 
     // Keyboard shortcut: Cmd/Ctrl + K to toggle
     this.handleKeyboard = (e) => {
@@ -57,6 +63,13 @@ export const ChatPanel = {
     }
 
     document.addEventListener('keydown', this.handleKeyboard)
+  },
+
+  updated() {
+    // Ensure button visibility is correct after LiveView updates
+    if (this.updateButtonVisibility) {
+      this.updateButtonVisibility()
+    }
   },
 
   destroyed() {
@@ -90,10 +103,6 @@ export const ChatInput = {
         const form = this.el.closest('form')
         if (form && this.el.value.trim() !== '') {
           form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
-          // Refocus after submit
-          setTimeout(() => {
-            this.el.focus()
-          }, 0)
         }
       }
       // Shift+Enter will create a new line (default textarea behavior)
@@ -102,7 +111,9 @@ export const ChatInput = {
 
   updated() {
     // Keep focus on input after form submission and LiveView updates
-    if (document.activeElement !== this.el) {
+    // Only refocus if drawer is still open
+    const drawer = document.getElementById(this.el.closest('.drawer').querySelector('input[type="checkbox"]').id)
+    if (drawer && drawer.checked && document.activeElement !== this.el) {
       this.el.focus()
     }
   }

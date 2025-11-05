@@ -191,19 +191,19 @@ defmodule JargaWeb.Layouts do
           </div>
         </aside>
       </div>
-
-      <%!-- Global Chat Panel --%>
-      <.live_component
-        module={JargaWeb.ChatLive.Panel}
-        id="global-chat-panel"
-        current_user={@current_scope.user}
-        current_workspace={@workspace}
-        current_project={@project}
-        page_title={@page_title}
-        note={@note}
-        page={@page}
-      />
     </div>
+
+    <%!-- Global Chat Panel (outside admin drawer) --%>
+    <.live_component
+      module={JargaWeb.ChatLive.Panel}
+      id="global-chat-panel"
+      current_user={@current_scope.user}
+      current_workspace={@workspace}
+      current_project={@project}
+      page_title={@page_title}
+      note={@note}
+      page={@page}
+    />
     """
   end
 

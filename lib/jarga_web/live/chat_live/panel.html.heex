@@ -9,17 +9,19 @@
   />
 
   <%!-- Toggle button (floating) - always rendered, visibility controlled by CSS --%>
-  <label
-    for={"chat-drawer-#{@id}"}
-    id="chat-toggle-btn"
-    class="btn btn-circle btn-primary fixed right-4 top-4 shadow-lg z-40"
-    aria-label="Open chat"
-  >
-    <.icon name="hero-chat-bubble-left-right" class="w-6 h-6" />
-  </label>
+  <div phx-update="ignore" id="chat-toggle-container">
+    <label
+      for={"chat-drawer-#{@id}"}
+      id="chat-toggle-btn"
+      class="btn btn-circle btn-primary fixed right-4 top-4 shadow-lg z-40"
+      aria-label="Open chat"
+    >
+      <.icon name="hero-chat-bubble-left-right" class="w-6 h-6" />
+    </label>
+  </div>
 
   <%!-- Drawer side (chat panel) --%>
-  <div class="drawer-side" id="chat-drawer-side">
+  <div class="drawer-side">
     <label
       for={"chat-drawer-#{@id}"}
       aria-label="close chat"
@@ -27,12 +29,10 @@
     ></label>
 
     <%!-- Chat panel content --%>
-    <div class="bg-base-100 min-h-full w-full sm:w-96 flex flex-col">
+    <ul class="menu bg-base-100 min-h-full w-96 p-0 flex flex-col">
       <%!-- Header --%>
       <div class="navbar bg-base-200 border-b border-base-300">
         <div class="flex-1">
-          <.icon name="hero-chat-bubble-left-right" class="w-5 h-5 mr-2" />
-          <span class="text-lg font-semibold">Chat</span>
         </div>
         <div class="flex-none">
           <label
@@ -117,9 +117,10 @@
               type="button"
               phx-click="clear_chat"
               phx-target={@myself}
-              class="btn btn-ghost btn-sm"
+              class="btn btn-outline btn-sm"
               disabled={Enum.empty?(@messages)}
             >
+              <.icon name="hero-trash" class="w-4 h-4" />
               Clear
             </button>
             <button
@@ -138,6 +139,6 @@
           </div>
         </form>
       </div>
-    </div>
+    </ul>
   </div>
 </div>
