@@ -6,7 +6,27 @@ defmodule Jarga.Pages.Infrastructure.PageRepository do
 
   import Ecto.Query
   alias Jarga.Repo
-  alias Jarga.Pages.Page
+  alias Jarga.Pages.{Page, Queries}
+
+  @doc """
+  Gets a page by ID.
+
+  Returns the page if found, nil otherwise.
+
+  ## Examples
+
+      iex> get_by_id("existing-id")
+      %Page{}
+
+      iex> get_by_id("non-existent-id")
+      nil
+
+  """
+  def get_by_id(page_id) do
+    Queries.base()
+    |> Queries.by_id(page_id)
+    |> Repo.one()
+  end
 
   @doc """
   Checks if a slug already exists within a workspace, optionally excluding a specific page.

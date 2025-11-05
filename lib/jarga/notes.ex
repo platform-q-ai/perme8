@@ -17,7 +17,26 @@ defmodule Jarga.Notes do
   alias Jarga.Repo
   alias Jarga.Accounts.User
   alias Jarga.Notes.{Note, Queries}
-  alias Jarga.Notes.Policies.Authorization
+  alias Jarga.Notes.Infrastructure.AuthorizationRepository
+
+  @doc """
+  Gets a single note by ID.
+
+  This is an internal function for cross-context use (e.g., loading page components).
+  For user-facing operations, use `get_note!/2` which includes authorization.
+
+  ## Examples
+
+      iex> get_note_by_id(note_id)
+      %Note{}
+
+      iex> get_note_by_id("non-existent-id")
+      nil
+
+  """
+  def get_note_by_id(note_id) do
+    Repo.get(Note, note_id)
+  end
 
   @doc """
   Gets a single note for a user.
@@ -57,9 +76,12 @@ defmodule Jarga.Notes do
 
   """
   def create_note(%User{} = user, workspace_id, attrs) do
-    with {:ok, _workspace} <- Authorization.verify_workspace_access(user, workspace_id),
+    with {:ok, _workspace} <- AuthorizationRepository.verify_workspace_access(user, workspace_id),
          :ok <-
-           Authorization.verify_project_in_workspace(workspace_id, Map.get(attrs, :project_id)) do
+           AuthorizationRepository.verify_project_in_workspace(
+             workspace_id,
+             Map.get(attrs, :project_id)
+           ) do
       attrs_with_user =
         Map.merge(attrs, %{
           user_id: user.id,
@@ -90,7 +112,7 @@ defmodule Jarga.Notes do
 
   """
   def update_note(%User{} = user, note_id, attrs) do
-    case Authorization.verify_note_access(user, note_id) do
+    case AuthorizationRepository.verify_note_access(user, note_id) do
       {:ok, note} ->
         note
         |> Note.changeset(attrs)
@@ -117,7 +139,7 @@ defmodule Jarga.Notes do
 
   """
   def update_note_via_page(%User{} = user, note_id, attrs) do
-    case Authorization.verify_note_access_via_page(user, note_id) do
+    case AuthorizationRepository.verify_note_access_via_page(user, note_id) do
       {:ok, note} ->
         note
         |> Note.changeset(attrs)
@@ -143,7 +165,7 @@ defmodule Jarga.Notes do
 
   """
   def delete_note(%User{} = user, note_id) do
-    case Authorization.verify_note_access(user, note_id) do
+    case AuthorizationRepository.verify_note_access(user, note_id) do
       {:ok, note} ->
         Repo.delete(note)
 

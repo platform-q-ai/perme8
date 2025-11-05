@@ -176,9 +176,11 @@ defmodule Jarga.Credo.Check.Architecture.NoDirectQueriesInUseCases do
   end
 
   # Check if this is a Repo query function
+  # Note: Repo.insert/update/delete are acceptable in use cases for orchestration
+  # We only flag query operations (get, all, one) and preload
   defp repo_query_function?(module_parts, function) do
     List.last(module_parts) == :Repo and
-      function in [:get, :get!, :get_by, :get_by!, :all, :one, :one!, :insert, :update, :delete, :preload]
+      function in [:get, :get!, :get_by, :get_by!, :all, :one, :one!, :preload]
   end
 
   defp issue_for(issue_meta, meta, trigger, description) do

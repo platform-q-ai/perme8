@@ -11,7 +11,7 @@ defmodule Jarga.Workspaces.WorkspaceMember do
 
   schema "workspace_members" do
     field(:email, :string)
-    field(:role, Ecto.Enum, values: [:owner, :admin, :member, :guest], default: :member)
+    field(:role, Ecto.Enum, values: [:owner, :admin, :member, :guest])
     field(:invited_at, :utc_datetime)
     field(:joined_at, :utc_datetime)
 

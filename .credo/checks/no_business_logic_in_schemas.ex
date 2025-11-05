@@ -207,11 +207,19 @@ defmodule Jarga.Credo.Check.Architecture.NoBusinessLogicInSchemas do
     module_name = format_module(module_parts)
 
     # Check for calls to generators, repositories, or other services
+    # Exclude standard library and Phoenix auth functions only
     cond do
+      # Standard library modules are fine
+      module_name in ["Keyword", "Enum", "Map", "List", "String"] -> false
+      # Phoenix auth functions are fine (standard pattern in phx.gen.auth)
+      module_name == "Phoenix.Token" -> false
+      function in [:unsafe_validate_unique] -> false
+      # Business logic indicators - including Repo operations
       String.ends_with?(module_name, "Generator") -> true
       String.ends_with?(module_name, "Repository") -> true
       String.ends_with?(module_name, "Service") -> true
       String.contains?(module_name, "Queries") -> true
+      String.ends_with?(module_name, "Repo") -> true
       function in [:exists?, :slug_exists?, :find, :get, :create, :update, :delete] -> true
       true -> false
     end

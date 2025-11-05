@@ -14,7 +14,8 @@ defmodule Jarga.Accounts do
   import Ecto.Query, warn: false
   alias Jarga.Repo
 
-  alias Jarga.Accounts.{User, UserToken, UserNotifier}
+  alias Jarga.Accounts.{Queries, User, UserToken, UserNotifier}
+  alias Jarga.Accounts.UseCases
 
   ## Database getters
 
@@ -32,6 +33,24 @@ defmodule Jarga.Accounts do
   """
   def get_user_by_email(email) when is_binary(email) do
     Repo.get_by(User, email: email)
+  end
+
+  @doc """
+  Gets a user by email (case-insensitive).
+
+  ## Examples
+
+      iex> get_user_by_email_case_insensitive("Foo@Example.COM")
+      %User{email: "foo@example.com"}
+
+      iex> get_user_by_email_case_insensitive("unknown@example.com")
+      nil
+
+  """
+  def get_user_by_email_case_insensitive(email) when is_binary(email) do
+    email
+    |> Queries.by_email_case_insensitive()
+    |> Repo.one()
   end
 
   @doc """
@@ -125,19 +144,10 @@ defmodule Jarga.Accounts do
   If the token matches, the user email is updated and the token is deleted.
   """
   def update_user_email(user, token) do
-    context = "change:#{user.email}"
-
-    Repo.transact(fn ->
-      with {:ok, query} <- UserToken.verify_change_email_token_query(token, context),
-           %UserToken{sent_to: email} <- Repo.one(query),
-           {:ok, user} <- Repo.update(User.email_changeset(user, %{email: email})),
-           {_count, _result} <-
-             Repo.delete_all(from(UserToken, where: [user_id: ^user.id, context: ^context])) do
-        {:ok, user}
-      else
-        _ -> {:error, :transaction_aborted}
-      end
-    end)
+    UseCases.UpdateUserEmail.execute(%{
+      user: user,
+      token: token
+    })
   end
 
   @doc """
@@ -226,38 +236,40 @@ defmodule Jarga.Accounts do
      when they click the magic link sent to their email.
   """
   def login_user_by_magic_link(token) do
-    {:ok, query} = UserToken.verify_magic_link_token_query(token)
-
-    case Repo.one(query) do
-      # Auto-confirm users with passwords when they click the magic link
-      {%User{confirmed_at: nil, hashed_password: hash} = user, token} when not is_nil(hash) ->
-        # For password-based registration, we confirm the user when they click the magic link
-        # This is safe because they have proven ownership of the email
-        user
-        |> User.confirm_changeset()
-        |> Repo.update()
-        |> case do
-          {:ok, confirmed_user} ->
-            # Delete the magic link token after confirmation
-            Repo.delete!(token)
-            {:ok, {confirmed_user, []}}
-
-          error ->
-            error
-        end
-
-      {%User{confirmed_at: nil} = user, _token} ->
-        user
-        |> User.confirm_changeset()
-        |> update_user_and_delete_all_tokens()
-
-      {user, token} ->
-        Repo.delete!(token)
-        {:ok, {user, []}}
-
-      nil ->
-        {:error, :not_found}
+    with {:ok, query} <- UserToken.verify_magic_link_token_query(token),
+         result when not is_nil(result) <- Repo.one(query) do
+      handle_magic_link_result(result)
+    else
+      nil -> {:error, :not_found}
+      :error -> {:error, :invalid_token}
     end
+  end
+
+  # Auto-confirm users with passwords when they click the magic link
+  defp handle_magic_link_result({%User{confirmed_at: nil, hashed_password: hash} = user, token})
+       when not is_nil(hash) do
+    # For password-based registration, we confirm the user when they click the magic link
+    # This is safe because they have proven ownership of the email
+    case User.confirm_changeset(user) |> Repo.update() do
+      {:ok, confirmed_user} ->
+        # Delete the magic link token after confirmation
+        Repo.delete!(token)
+        {:ok, {confirmed_user, []}}
+
+      error ->
+        error
+    end
+  end
+
+  defp handle_magic_link_result({%User{confirmed_at: nil} = user, _token}) do
+    user
+    |> User.confirm_changeset()
+    |> update_user_and_delete_all_tokens()
+  end
+
+  defp handle_magic_link_result({user, token}) do
+    Repo.delete!(token)
+    {:ok, {user, []}}
   end
 
   @doc ~S"""
@@ -291,7 +303,7 @@ defmodule Jarga.Accounts do
   Deletes the signed token with the given context.
   """
   def delete_user_session_token(token) do
-    Repo.delete_all(from(UserToken, where: [token: ^token, context: "session"]))
+    Repo.delete_all(Queries.tokens_by_token_and_context(token, "session"))
     :ok
   end
 
@@ -317,7 +329,7 @@ defmodule Jarga.Accounts do
       with {:ok, user} <- Repo.update(changeset) do
         tokens_to_expire = Repo.all_by(UserToken, user_id: user.id)
 
-        Repo.delete_all(from(t in UserToken, where: t.id in ^Enum.map(tokens_to_expire, & &1.id)))
+        Repo.delete_all(Queries.tokens_by_ids(Enum.map(tokens_to_expire, & &1.id)))
 
         {:ok, {user, tokens_to_expire}}
       end

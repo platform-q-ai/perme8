@@ -48,7 +48,15 @@
         ".credo/checks/no_database_queries_in_live_views.ex",
         ".credo/checks/no_infrastructure_in_policies.ex",
         ".credo/checks/no_business_logic_in_schemas.ex",
-        ".credo/checks/no_direct_queries_in_use_cases.ex"
+        ".credo/checks/no_direct_queries_in_use_cases.ex",
+        ".credo/checks/use_case_adoption.ex",
+        ".credo/checks/missing_domain_tests.ex",
+        ".credo/checks/domain_test_purity.ex",
+        ".credo/checks/no_inline_queries_in_contexts.ex",
+        ".credo/checks/no_repo_in_services.ex",
+        ".credo/checks/no_cross_context_policy_access.ex",
+        ".credo/checks/no_cross_context_schema_access.ex",
+        ".credo/checks/missing_queries_module.ex"
       ],
       #
       # If you want to enforce a style guide and need a more traditional linting
@@ -182,7 +190,29 @@
           # Detect business logic in Ecto schemas (SRP violation)
           {Jarga.Credo.Check.Architecture.NoBusinessLogicInSchemas, []},
           # Detect direct Ecto queries in UseCase modules
-          {Jarga.Credo.Check.Architecture.NoDirectQueriesInUseCases, []}
+          {Jarga.Credo.Check.Architecture.NoDirectQueriesInUseCases, []},
+          # Detect complex orchestration logic that should be extracted to use cases
+          {Jarga.Credo.Check.Architecture.UseCaseAdoption, [with_clause_threshold: 3]},
+          # Detect inline Ecto queries in contexts instead of Query objects
+          {Jarga.Credo.Check.Architecture.NoInlineQueriesInContexts, []},
+          # Detect direct Repo access in Service modules
+          {Jarga.Credo.Check.Architecture.NoRepoInServices, []},
+          # Detect cross-context Policy access (should use context public API)
+          {Jarga.Credo.Check.Architecture.NoCrossContextPolicyAccess, []},
+          # Detect cross-context Schema access (should use context public API)
+          {Jarga.Credo.Check.Architecture.NoCrossContextSchemaAccess, []},
+          # Detect contexts missing Queries modules (pattern consistency)
+          {Jarga.Credo.Check.Architecture.MissingQueriesModule, []},
+
+          #
+          ## Custom Testing Checks (TDD Enforcement)
+          #
+          # These checks enforce TDD practices and test pyramid structure
+          #
+          # Detect missing tests for domain modules (policies, services)
+          {Jarga.Credo.Check.Testing.MissingDomainTests, []},
+          # Detect domain tests incorrectly using DataCase instead of ExUnit.Case
+          {Jarga.Credo.Check.Testing.DomainTestPurity, []}
         ],
         disabled: [
           #

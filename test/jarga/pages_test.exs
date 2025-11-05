@@ -152,7 +152,7 @@ defmodule Jarga.PagesTest do
         project_id: project.id
       }
 
-      assert {:error, :invalid_project} = Pages.create_page(user, workspace1.id, attrs)
+      assert {:error, :project_not_in_workspace} = Pages.create_page(user, workspace1.id, attrs)
     end
   end
 

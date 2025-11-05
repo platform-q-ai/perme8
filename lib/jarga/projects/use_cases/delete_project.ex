@@ -21,7 +21,7 @@ defmodule Jarga.Projects.UseCases.DeleteProject do
 
   alias Jarga.Repo
   alias Jarga.Accounts.User
-  alias Jarga.Projects.Policies.Authorization
+  alias Jarga.Projects.Infrastructure.AuthorizationRepository
   alias Jarga.Projects.Services.EmailAndPubSubNotifier
   alias Jarga.Workspaces
   alias Jarga.Workspaces.Policies.PermissionsPolicy
@@ -70,7 +70,7 @@ defmodule Jarga.Projects.UseCases.DeleteProject do
 
   # Verify actor has access to the project
   defp verify_project_access(%User{} = user, workspace_id, project_id) do
-    Authorization.verify_project_access(user, workspace_id, project_id)
+    AuthorizationRepository.verify_project_access(user, workspace_id, project_id)
   end
 
   # Authorize project deletion based on role and ownership

@@ -1,7 +1,7 @@
-defmodule Jarga.Pages.Policies.AuthorizationTest do
+defmodule Jarga.Pages.Infrastructure.AuthorizationRepositoryTest do
   use Jarga.DataCase, async: true
 
-  alias Jarga.Pages.Policies.Authorization
+  alias Jarga.Pages.Infrastructure.AuthorizationRepository
   alias Jarga.Pages
 
   import Jarga.AccountsFixtures
@@ -13,7 +13,9 @@ defmodule Jarga.Pages.Policies.AuthorizationTest do
       user = user_fixture()
       workspace = workspace_fixture(user)
 
-      assert {:ok, fetched_workspace} = Authorization.verify_workspace_access(user, workspace.id)
+      assert {:ok, fetched_workspace} =
+               AuthorizationRepository.verify_workspace_access(user, workspace.id)
+
       assert fetched_workspace.id == workspace.id
     end
 
@@ -21,7 +23,8 @@ defmodule Jarga.Pages.Policies.AuthorizationTest do
       user = user_fixture()
       fake_id = Ecto.UUID.generate()
 
-      assert {:error, :workspace_not_found} = Authorization.verify_workspace_access(user, fake_id)
+      assert {:error, :workspace_not_found} =
+               AuthorizationRepository.verify_workspace_access(user, fake_id)
     end
 
     test "returns {:error, :unauthorized} when user is not a member" do
@@ -29,7 +32,8 @@ defmodule Jarga.Pages.Policies.AuthorizationTest do
       user2 = user_fixture()
       workspace = workspace_fixture(user1)
 
-      assert {:error, :unauthorized} = Authorization.verify_workspace_access(user2, workspace.id)
+      assert {:error, :unauthorized} =
+               AuthorizationRepository.verify_workspace_access(user2, workspace.id)
     end
   end
 
@@ -39,7 +43,7 @@ defmodule Jarga.Pages.Policies.AuthorizationTest do
       workspace = workspace_fixture(user)
       {:ok, page} = Pages.create_page(user, workspace.id, %{title: "My Page"})
 
-      assert {:ok, fetched_page} = Authorization.verify_page_access(user, page.id)
+      assert {:ok, fetched_page} = AuthorizationRepository.verify_page_access(user, page.id)
       assert fetched_page.id == page.id
     end
 
@@ -47,7 +51,7 @@ defmodule Jarga.Pages.Policies.AuthorizationTest do
       user = user_fixture()
       fake_id = Ecto.UUID.generate()
 
-      assert {:error, :page_not_found} = Authorization.verify_page_access(user, fake_id)
+      assert {:error, :page_not_found} = AuthorizationRepository.verify_page_access(user, fake_id)
     end
 
     test "returns {:error, :unauthorized} when page exists but belongs to another user" do
@@ -56,7 +60,7 @@ defmodule Jarga.Pages.Policies.AuthorizationTest do
       workspace = workspace_fixture(user1)
       {:ok, page} = Pages.create_page(user1, workspace.id, %{title: "Private Page"})
 
-      assert {:error, :unauthorized} = Authorization.verify_page_access(user2, page.id)
+      assert {:error, :unauthorized} = AuthorizationRepository.verify_page_access(user2, page.id)
     end
   end
 
@@ -64,7 +68,7 @@ defmodule Jarga.Pages.Policies.AuthorizationTest do
     test "returns :ok when project_id is nil" do
       workspace = workspace_fixture(user_fixture())
 
-      assert :ok = Authorization.verify_project_in_workspace(workspace.id, nil)
+      assert :ok = AuthorizationRepository.verify_project_in_workspace(workspace.id, nil)
     end
 
     test "returns :ok when project belongs to workspace" do
@@ -72,25 +76,25 @@ defmodule Jarga.Pages.Policies.AuthorizationTest do
       workspace = workspace_fixture(user)
       project = project_fixture(user, workspace)
 
-      assert :ok = Authorization.verify_project_in_workspace(workspace.id, project.id)
+      assert :ok = AuthorizationRepository.verify_project_in_workspace(workspace.id, project.id)
     end
 
-    test "returns {:error, :invalid_project} when project doesn't exist" do
+    test "returns {:error, :project_not_in_workspace} when project doesn't exist" do
       workspace = workspace_fixture(user_fixture())
       fake_project_id = Ecto.UUID.generate()
 
-      assert {:error, :invalid_project} =
-               Authorization.verify_project_in_workspace(workspace.id, fake_project_id)
+      assert {:error, :project_not_in_workspace} =
+               AuthorizationRepository.verify_project_in_workspace(workspace.id, fake_project_id)
     end
 
-    test "returns {:error, :invalid_project} when project belongs to different workspace" do
+    test "returns {:error, :project_not_in_workspace} when project belongs to different workspace" do
       user = user_fixture()
       workspace1 = workspace_fixture(user)
       workspace2 = workspace_fixture(user)
       project = project_fixture(user, workspace2)
 
-      assert {:error, :invalid_project} =
-               Authorization.verify_project_in_workspace(workspace1.id, project.id)
+      assert {:error, :project_not_in_workspace} =
+               AuthorizationRepository.verify_project_in_workspace(workspace1.id, project.id)
     end
   end
 end

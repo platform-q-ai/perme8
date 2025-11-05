@@ -1,12 +1,11 @@
-defmodule Jarga.Projects.Policies.Authorization do
+defmodule Jarga.Projects.Infrastructure.AuthorizationRepository do
   @moduledoc """
-  Authorization policy for project access control.
+  Infrastructure repository for project authorization queries.
 
-  This module encapsulates business rules for determining whether a user
-  has access to perform operations on projects.
+  This module belongs to the Infrastructure layer and handles database operations
+  for verifying project access. It encapsulates Ecto queries and Repo calls.
 
-  Following the Domain Layer pattern, this module contains pure business logic
-  without dependencies on infrastructure (Ecto, Repo, etc.).
+  For pure authorization business rules, see the domain policy modules.
   """
 
   alias Jarga.Accounts.User

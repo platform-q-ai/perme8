@@ -460,11 +460,11 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
     user = socket.assigns.current_scope.user
 
     # Optimized: fetch workspace and member in single query
+    # Members list is deferred until modal opens for better initial load performance
     case Workspaces.get_workspace_and_member_by_slug(user, workspace_slug) do
       {:ok, workspace, current_member} ->
         pages = Pages.list_pages_for_workspace(user, workspace.id)
         projects = Projects.list_projects_for_workspace(user, workspace.id)
-        members = Workspaces.list_members(workspace.id)
 
         # Subscribe to workspace-specific PubSub topic for real-time updates
         if connected?(socket) do
@@ -477,7 +477,7 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
          |> assign(:current_member, current_member)
          |> assign(:pages, pages)
          |> assign(:projects, projects)
-         |> assign(:members, members)
+         |> assign(:members, [])
          |> assign(:show_page_modal, false)
          |> assign(:show_project_modal, false)
          |> assign(:show_members_modal, false)
@@ -591,7 +591,13 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
 
   @impl true
   def handle_event("show_members_modal", _params, socket) do
-    {:noreply, assign(socket, show_members_modal: true)}
+    # Load members when modal is opened (deferred loading for performance)
+    members = Workspaces.list_members(socket.assigns.workspace.id)
+
+    {:noreply,
+     socket
+     |> assign(:members, members)
+     |> assign(:show_members_modal, true)}
   end
 
   @impl true

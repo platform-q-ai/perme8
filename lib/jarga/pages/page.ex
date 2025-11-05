@@ -6,9 +6,6 @@ defmodule Jarga.Pages.Page do
   use Ecto.Schema
   import Ecto.Changeset
 
-  alias Jarga.Pages.Domain.SlugGenerator
-  alias Jarga.Pages.Infrastructure.PageRepository
-
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
 
@@ -34,6 +31,7 @@ defmodule Jarga.Pages.Page do
     page
     |> cast(attrs, [
       :title,
+      :slug,
       :user_id,
       :workspace_id,
       :project_id,
@@ -41,43 +39,12 @@ defmodule Jarga.Pages.Page do
       :is_public,
       :is_pinned
     ])
-    |> validate_required([:title, :user_id, :workspace_id, :created_by])
+    |> validate_required([:title, :slug, :user_id, :workspace_id, :created_by])
     |> validate_length(:title, min: 1)
-    |> generate_slug()
-    |> validate_required([:slug])
     |> unique_constraint(:slug, name: :pages_workspace_id_slug_index)
     |> foreign_key_constraint(:user_id)
     |> foreign_key_constraint(:workspace_id)
     |> foreign_key_constraint(:project_id)
     |> foreign_key_constraint(:created_by)
-  end
-
-  defp generate_slug(changeset) do
-    # Only generate slug if it doesn't exist yet (for new records)
-    # This keeps the slug stable even when the title is updated
-    existing_slug = get_field(changeset, :slug)
-
-    if existing_slug do
-      changeset
-    else
-      case get_change(changeset, :title) do
-        nil ->
-          changeset
-
-        title ->
-          page_id = get_field(changeset, :id)
-          workspace_id = get_field(changeset, :workspace_id)
-
-          slug =
-            SlugGenerator.generate(
-              title,
-              workspace_id,
-              &PageRepository.slug_exists_in_workspace?/3,
-              page_id
-            )
-
-          put_change(changeset, :slug, slug)
-      end
-    end
   end
 end

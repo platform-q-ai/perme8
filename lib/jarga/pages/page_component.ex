@@ -2,6 +2,8 @@ defmodule Jarga.Pages.PageComponent do
   @moduledoc """
   Join table for pages and their components (notes, tasks, sheets, etc.)
   Uses a polymorphic association pattern.
+
+  For loading the actual component records, see `Jarga.Pages.Services.ComponentLoader`.
   """
 
   use Ecto.Schema
@@ -31,22 +33,5 @@ defmodule Jarga.Pages.PageComponent do
     |> validate_inclusion(:component_type, ["note", "task_list", "sheet"])
     |> foreign_key_constraint(:page_id)
     |> unique_constraint([:page_id, :component_type, :component_id])
-  end
-
-  @doc """
-  Get the actual component record based on the polymorphic type.
-  """
-  def get_component(%__MODULE__{component_type: "note", component_id: id}) do
-    Jarga.Repo.get(Jarga.Notes.Note, id)
-  end
-
-  def get_component(%__MODULE__{component_type: "task_list", component_id: _id}) do
-    # Future: Jarga.Repo.get(Jarga.TaskLists.TaskList, _id)
-    nil
-  end
-
-  def get_component(%__MODULE__{component_type: "sheet", component_id: _id}) do
-    # Future: Jarga.Repo.get(Jarga.Sheets.Sheet, _id)
-    nil
   end
 end

@@ -166,7 +166,9 @@ defmodule Jarga.Accounts.User do
   """
   def confirm_changeset(user) do
     now = DateTime.utc_now(:second)
-    change(user, confirmed_at: now)
+    user
+    |> change()
+    |> force_change(:confirmed_at, now)
   end
 
   @doc """

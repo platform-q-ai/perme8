@@ -2,6 +2,7 @@ defmodule Jarga.Pages.PageComponentTest do
   use Jarga.DataCase, async: true
 
   alias Jarga.Pages.PageComponent
+  alias Jarga.Pages.Services.ComponentLoader
   alias Jarga.{Pages, Notes}
 
   import Jarga.AccountsFixtures
@@ -149,7 +150,7 @@ defmodule Jarga.Pages.PageComponentTest do
         component_id: note.id
       }
 
-      fetched_note = PageComponent.get_component(page_component)
+      fetched_note = ComponentLoader.load_component(page_component)
 
       assert fetched_note.id == note.id
     end
@@ -160,7 +161,7 @@ defmodule Jarga.Pages.PageComponentTest do
         component_id: Ecto.UUID.generate()
       }
 
-      assert PageComponent.get_component(page_component) == nil
+      assert ComponentLoader.load_component(page_component) == nil
     end
 
     test "returns nil for task_list component (not yet implemented)" do
@@ -169,7 +170,7 @@ defmodule Jarga.Pages.PageComponentTest do
         component_id: Ecto.UUID.generate()
       }
 
-      assert PageComponent.get_component(page_component) == nil
+      assert ComponentLoader.load_component(page_component) == nil
     end
 
     test "returns nil for sheet component (not yet implemented)" do
@@ -178,7 +179,7 @@ defmodule Jarga.Pages.PageComponentTest do
         component_id: Ecto.UUID.generate()
       }
 
-      assert PageComponent.get_component(page_component) == nil
+      assert ComponentLoader.load_component(page_component) == nil
     end
   end
 end

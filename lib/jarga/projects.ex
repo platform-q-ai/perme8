@@ -18,12 +18,8 @@ defmodule Jarga.Projects do
 
   alias Jarga.Repo
   alias Jarga.Accounts.User
-  alias Jarga.Projects.{Project, Queries}
-  alias Jarga.Projects.Policies.Authorization
-  alias Jarga.Projects.Services.EmailAndPubSubNotifier
-  alias Jarga.Projects.UseCases.{CreateProject, DeleteProject}
-  alias Jarga.Workspaces
-  alias Jarga.Workspaces.Policies.PermissionsPolicy
+  alias Jarga.Projects.Queries
+  alias Jarga.Projects.UseCases.{CreateProject, DeleteProject, UpdateProject}
 
   @doc """
   Returns the list of projects for a given workspace.
@@ -188,43 +184,15 @@ defmodule Jarga.Projects do
 
   """
   def update_project(%User{} = user, workspace_id, project_id, attrs, opts \\ []) do
-    # Get notifier from opts or use default
-    notifier = Keyword.get(opts, :notifier, EmailAndPubSubNotifier)
-
-    with {:ok, member} <- Workspaces.get_member(user, workspace_id),
-         {:ok, project} <- Authorization.verify_project_access(user, workspace_id, project_id),
-         :ok <- authorize_edit_project(member.role, project, user.id) do
-      # Convert atom keys to string keys to avoid mixed keys
-      string_attrs =
-        attrs
-        |> Enum.map(fn {k, v} -> {to_string(k), v} end)
-        |> Enum.into(%{})
-
-      result =
-        project
-        |> Project.changeset(string_attrs)
-        |> Repo.update()
-
-      # Notify workspace members via injected notifier
-      case result do
-        {:ok, updated_project} ->
-          notifier.notify_project_updated(updated_project)
-          {:ok, updated_project}
-
-        error ->
-          error
-      end
-    end
-  end
-
-  defp authorize_edit_project(role, project, user_id) do
-    owns_project = project.user_id == user_id
-
-    if PermissionsPolicy.can?(role, :edit_project, owns_resource: owns_project) do
-      :ok
-    else
-      {:error, :forbidden}
-    end
+    UpdateProject.execute(
+      %{
+        actor: user,
+        workspace_id: workspace_id,
+        project_id: project_id,
+        attrs: attrs
+      },
+      opts
+    )
   end
 
   @doc """

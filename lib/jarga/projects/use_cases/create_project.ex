@@ -21,6 +21,8 @@ defmodule Jarga.Projects.UseCases.CreateProject do
   alias Jarga.Repo
   alias Jarga.Accounts.User
   alias Jarga.Projects.Project
+  alias Jarga.Projects.Domain.SlugGenerator
+  alias Jarga.Projects.Infrastructure.ProjectRepository
   alias Jarga.Projects.Services.EmailAndPubSubNotifier
   alias Jarga.Workspaces
   alias Jarga.Workspaces.Policies.PermissionsPolicy
@@ -84,6 +86,22 @@ defmodule Jarga.Projects.UseCases.CreateProject do
       |> Enum.into(%{})
       |> Map.put("user_id", user.id)
       |> Map.put("workspace_id", workspace_id)
+
+    # Generate slug in use case (business logic) - fixed Credo violation
+    # Only generate slug if name is present and slug is not already provided
+    string_attrs =
+      if string_attrs["name"] && !string_attrs["slug"] do
+        slug =
+          SlugGenerator.generate(
+            string_attrs["name"],
+            workspace_id,
+            &ProjectRepository.slug_exists_in_workspace?/3
+          )
+
+        Map.put(string_attrs, "slug", slug)
+      else
+        string_attrs
+      end
 
     %Project{}
     |> Project.changeset(string_attrs)

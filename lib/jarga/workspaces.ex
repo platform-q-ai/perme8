@@ -21,6 +21,7 @@ defmodule Jarga.Workspaces do
   alias Jarga.Repo
   alias Jarga.Accounts.User
   alias Jarga.Workspaces.{Workspace, WorkspaceMember, Queries}
+  alias Jarga.Workspaces.Domain.SlugGenerator
   alias Jarga.Workspaces.Infrastructure.MembershipRepository
   alias Jarga.Workspaces.UseCases.{InviteMember, ChangeMemberRole, RemoveMember}
   alias Jarga.Workspaces.Services.EmailAndPubSubNotifier
@@ -69,8 +70,24 @@ defmodule Jarga.Workspaces do
   end
 
   defp create_workspace_record(attrs) do
+    # Generate slug in context before passing to changeset (business logic)
+    # Only generate slug if name is present
+    name = attrs["name"] || attrs[:name]
+
+    attrs_with_slug =
+      attrs
+      |> Map.new(fn {k, v} -> {to_string(k), v} end)
+      |> then(fn normalized_attrs ->
+        if name do
+          slug = SlugGenerator.generate(name, &MembershipRepository.slug_exists?/2)
+          Map.put(normalized_attrs, "slug", slug)
+        else
+          normalized_attrs
+        end
+      end)
+
     %Workspace{}
-    |> Workspace.changeset(attrs)
+    |> Workspace.changeset(attrs_with_slug)
     |> Repo.insert()
   end
 

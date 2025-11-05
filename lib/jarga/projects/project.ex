@@ -6,9 +6,6 @@ defmodule Jarga.Projects.Project do
   use Ecto.Schema
   import Ecto.Changeset
 
-  alias Jarga.Projects.Domain.SlugGenerator
-  alias Jarga.Projects.Infrastructure.ProjectRepository
-
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
 
@@ -31,6 +28,7 @@ defmodule Jarga.Projects.Project do
     project
     |> cast(attrs, [
       :name,
+      :slug,
       :description,
       :color,
       :is_default,
@@ -38,41 +36,10 @@ defmodule Jarga.Projects.Project do
       :user_id,
       :workspace_id
     ])
-    |> validate_required([:name, :user_id, :workspace_id])
+    |> validate_required([:name, :slug, :user_id, :workspace_id])
     |> validate_length(:name, min: 1)
-    |> generate_slug()
-    |> validate_required([:slug])
     |> unique_constraint(:slug, name: :projects_workspace_id_slug_index)
     |> foreign_key_constraint(:user_id)
     |> foreign_key_constraint(:workspace_id)
-  end
-
-  defp generate_slug(changeset) do
-    # Only generate slug if it doesn't exist yet (for new records)
-    # This keeps the slug stable even when the name is updated
-    existing_slug = get_field(changeset, :slug)
-
-    if existing_slug do
-      changeset
-    else
-      case get_change(changeset, :name) do
-        nil ->
-          changeset
-
-        name ->
-          project_id = get_field(changeset, :id)
-          workspace_id = get_field(changeset, :workspace_id)
-
-          slug =
-            SlugGenerator.generate(
-              name,
-              workspace_id,
-              &ProjectRepository.slug_exists_in_workspace?/3,
-              project_id
-            )
-
-          put_change(changeset, :slug, slug)
-      end
-    end
   end
 end

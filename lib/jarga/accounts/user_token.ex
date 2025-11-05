@@ -113,7 +113,7 @@ defmodule Jarga.Accounts.UserToken do
   """
   def verify_magic_link_token_query(token) do
     case Base.url_decode64(token, padding: false) do
-      {:ok, decoded_token} ->
+      {:ok, decoded_token} when byte_size(decoded_token) == @rand_size ->
         hashed_token = :crypto.hash(@hash_algorithm, decoded_token)
 
         query =
@@ -126,7 +126,7 @@ defmodule Jarga.Accounts.UserToken do
 
         {:ok, query}
 
-      :error ->
+      _ ->
         :error
     end
   end
@@ -144,7 +144,7 @@ defmodule Jarga.Accounts.UserToken do
   """
   def verify_change_email_token_query(token, "change:" <> _ = context) do
     case Base.url_decode64(token, padding: false) do
-      {:ok, decoded_token} ->
+      {:ok, decoded_token} when byte_size(decoded_token) == @rand_size ->
         hashed_token = :crypto.hash(@hash_algorithm, decoded_token)
 
         query =
@@ -154,7 +154,7 @@ defmodule Jarga.Accounts.UserToken do
 
         {:ok, query}
 
-      :error ->
+      _ ->
         :error
     end
   end

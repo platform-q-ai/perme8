@@ -25,7 +25,7 @@ defmodule Jarga.Workspaces.UseCases.InviteMember do
   import Ecto.Query, warn: false
 
   alias Jarga.Repo
-  alias Jarga.Accounts.User
+  alias Jarga.Accounts
   alias Jarga.Workspaces.WorkspaceMember
   alias Jarga.Workspaces.Policies.MembershipPolicy
   alias Jarga.Workspaces.Infrastructure.MembershipRepository
@@ -108,12 +108,8 @@ defmodule Jarga.Workspaces.UseCases.InviteMember do
   end
 
   defp find_user_by_email_case_insensitive(email) do
-    downcased_email = String.downcase(email)
-
-    from(u in User,
-      where: fragment("LOWER(?)", u.email) == ^downcased_email
-    )
-    |> Repo.one()
+    # Delegate to Accounts context - fixed Credo violation
+    Accounts.get_user_by_email_case_insensitive(email)
   end
 
   defp add_existing_user_as_member(workspace, user, role, inviter, notifier) do

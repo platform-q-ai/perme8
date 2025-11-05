@@ -1,13 +1,18 @@
-defmodule Jarga.Pages.Policies.Authorization do
+defmodule Jarga.Pages.Infrastructure.AuthorizationRepository do
   @moduledoc """
-  Authorization policies for Pages context.
-  Encapsulates business rules for page access control.
+  Infrastructure repository for page authorization queries.
+
+  This module belongs to the Infrastructure layer and handles database operations
+  for verifying page access. It encapsulates Ecto queries and Repo calls.
+
+  For pure authorization business rules, see the domain policy modules.
   """
 
   alias Jarga.Repo
   alias Jarga.Accounts.User
   alias Jarga.Workspaces
   alias Jarga.Pages.{Page, Queries}
+  import Ecto.Query
 
   @doc """
   Verifies that a user can create a page in a workspace.
@@ -47,15 +52,13 @@ defmodule Jarga.Pages.Policies.Authorization do
 
   def verify_project_in_workspace(workspace_id, project_id) do
     # Check if project exists and belongs to workspace
-    import Ecto.Query
-
     query =
       from(p in Jarga.Projects.Project,
         where: p.id == ^project_id and p.workspace_id == ^workspace_id
       )
 
     case Repo.one(query) do
-      nil -> {:error, :invalid_project}
+      nil -> {:error, :project_not_in_workspace}
       _project -> :ok
     end
   end

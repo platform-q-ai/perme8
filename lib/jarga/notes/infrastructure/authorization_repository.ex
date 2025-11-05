@@ -1,13 +1,18 @@
-defmodule Jarga.Notes.Policies.Authorization do
+defmodule Jarga.Notes.Infrastructure.AuthorizationRepository do
   @moduledoc """
-  Authorization policies for Notes context.
-  Encapsulates business rules for note access control.
+  Infrastructure repository for note authorization queries.
+
+  This module belongs to the Infrastructure layer and handles database operations
+  for verifying note access. It encapsulates Ecto queries and Repo calls.
+
+  For pure authorization business rules, see the domain policy modules.
   """
 
   alias Jarga.Repo
   alias Jarga.Accounts.User
   alias Jarga.Workspaces
   alias Jarga.Notes.{Note, Queries}
+  import Ecto.Query
 
   @doc """
   Verifies that a user can create a note in a workspace.
@@ -48,8 +53,6 @@ defmodule Jarga.Notes.Policies.Authorization do
   Returns {:ok, note} if authorized, {:error, reason} otherwise.
   """
   def verify_note_access_via_page(%User{} = user, note_id) do
-    import Ecto.Query
-
     # Find the note and its associated page via page_components
     query =
       from(n in Note,
@@ -86,8 +89,6 @@ defmodule Jarga.Notes.Policies.Authorization do
 
   def verify_project_in_workspace(workspace_id, project_id) do
     # Check if project exists and belongs to workspace
-    import Ecto.Query
-
     query =
       from(p in Jarga.Projects.Project,
         where: p.id == ^project_id and p.workspace_id == ^workspace_id

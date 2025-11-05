@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  MIX_ENV: test
+  SKIP_CREDO_CHECK: 1
+  PAGE_SAVE_DEBOUNCE_MS: 1
+
+jobs:
+  test:
+    name: Build and test
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: jarga_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Elixir
+      uses: erlef/setup-beam@v1
+      with:
+        elixir-version: '1.18.1'
+        otp-version: '27.2'
+
+    - name: Restore dependencies cache
+      uses: actions/cache@v4
+      with:
+        path: |
+          deps
+          _build
+        key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
+        restore-keys: ${{ runner.os }}-mix-
+
+    - name: Install dependencies
+      run: mix deps.get
+
+    - name: Compile dependencies
+      run: mix deps.compile
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: assets/package-lock.json
+
+    - name: Install JavaScript dependencies
+      run: |
+        cd assets
+        npm ci
+
+    - name: Check formatting
+      run: mix format --check-formatted
+
+    - name: Compile application with warnings as errors
+      run: mix compile --warnings-as-errors
+
+    - name: Run Credo code quality checks
+      run: mix credo --strict
+
+    - name: Run Elixir tests
+      run: mix test
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jarga_test
+
+    - name: Run JavaScript tests
+      run: |
+        cd assets
+        npm test
