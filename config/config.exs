@@ -24,6 +24,11 @@ config :jarga,
   ecto_repos: [Jarga.Repo],
   generators: [timestamp_type: :utc_datetime, binary_id: true]
 
+# Chat context configuration
+config :jarga, :chat_context,
+  max_content_chars: 3000,
+  max_messages_history: 20
+
 # Configures the endpoint
 config :jarga, JargaWeb.Endpoint,
   url: [host: "localhost"],
