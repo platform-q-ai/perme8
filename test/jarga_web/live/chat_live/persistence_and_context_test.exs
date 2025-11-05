@@ -327,7 +327,9 @@ defmodule JargaWeb.ChatLive.PersistenceAndContextTest do
       assert html =~ "chat chat-start", "Should have received an assistant response"
 
       # The key test: verify source citation is present, proving context was used
-      assert html =~ "Source:", "Source citation should be displayed, proving page content was sent"
+      assert html =~ "Source:",
+             "Source citation should be displayed, proving page content was sent"
+
       assert html =~ page.title, "Source should reference the page title"
 
       # Optionally verify the note content structure exists (this proves it was loaded)
