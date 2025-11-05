@@ -39,3 +39,7 @@ npm-debug.log
 .env
 .env.local
 .env.*.local
+
+# Planning and strategy docs (for development use only)
+docs/CHAT_WITH_DOCS_PLAN.md
+docs/CHAT_WITH_DOCS_PR_STRATEGY.md
