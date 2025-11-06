@@ -1,0 +1,119 @@
+/* Milkdown Editor Styles */
+/* These styles target library internals and use pseudo-elements that can't be done with Tailwind */
+
+/* Milkdown internal styling - targets library internals */
+#editor-container .milkdown {
+  height: 100%;
+  padding: 0;
+}
+
+#editor-container .milkdown .editor {
+  height: 100%;
+  overflow: auto;
+}
+
+/* Remote Cursor and Selection Styles */
+.remote-cursor {
+  position: absolute;
+  border-left: 2px solid;
+  height: 1.2em;
+  margin-left: -1px;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.remote-cursor-label {
+  position: absolute;
+  top: -1.4em;
+  left: -1px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 3px 3px 3px 0;
+  white-space: nowrap;
+  pointer-events: none;
+  line-height: 1.2;
+}
+
+.remote-selection {
+  /* Background color is set inline with user's color */
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+/* Task List (Checkbox) Styles for GFM */
+/* Target task list items by data attribute - use high specificity to override theme */
+#editor-container .milkdown li[data-item-type="task"] {
+  list-style: none !important;
+  position: relative;
+  padding-left: 2rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+/* Hide the bullet point */
+#editor-container .milkdown li[data-item-type="task"]::marker {
+  content: '' !important;
+  display: none !important;
+}
+
+/* Create checkbox using ::before pseudo-element */
+#editor-container .milkdown li[data-item-type="task"]::before {
+  content: "" !important;
+  display: block !important;
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 2px solid #888;
+  border-radius: 0.25rem;
+  background-color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 1;
+}
+
+/* Dark mode checkbox */
+@media (prefers-color-scheme: dark) {
+  #editor-container .milkdown li[data-item-type="task"]::before {
+    background-color: #2e3440;
+    border-color: #666;
+  }
+}
+
+/* Checked state styling */
+#editor-container .milkdown li[data-item-type="task"][data-checked="true"]::before {
+  background-color: #5e81ac !important;
+  border-color: #5e81ac !important;
+}
+
+/* Checkmark for checked items */
+#editor-container .milkdown li[data-item-type="task"][data-checked="true"]::after {
+  content: "" !important;
+  display: block !important;
+  position: absolute;
+  left: 0.45rem;
+  top: 50%;
+  width: 0.35rem;
+  height: 0.65rem;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: translateY(-60%) rotate(45deg);
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Hover state */
+#editor-container .milkdown li[data-item-type="task"]:hover::before {
+  border-color: #444 !important;
+}
+
+/* Remove extra margin from paragraph inside task items */
+#editor-container .milkdown li[data-item-type="task"] > p {
+  margin: 0 !important;
+  user-select: text;
+  cursor: text;
+}

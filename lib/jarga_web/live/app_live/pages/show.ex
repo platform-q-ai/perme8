@@ -432,7 +432,7 @@ defmodule JargaWeb.AppLive.Pages.Show do
             data-initial-content={get_initial_markdown(@note)}
             data-readonly={if @readonly, do: "true", else: "false"}
             class={[
-              "h-full min-h-[calc(100vh-16rem)]",
+              "h-full min-h-[calc(100vh-16rem)] overflow-hidden",
               if(@readonly, do: "bg-base-100 opacity-90", else: "")
             ]}
           >

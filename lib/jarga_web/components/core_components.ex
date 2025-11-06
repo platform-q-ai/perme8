@@ -566,8 +566,8 @@ defmodule JargaWeb.CoreComponents do
 
   def breadcrumbs(assigns) do
     ~H"""
-    <nav class="breadcrumbs text-sm mb-4">
-      <ul>
+    <nav class="breadcrumbs text-sm mb-4 overflow-x-visible">
+      <ul class="flex-wrap">
         <%= for {crumb, index} <- Enum.with_index(@crumb) do %>
           <li>
             <%= if crumb[:navigate] do %>
