@@ -71,7 +71,7 @@
   background-color: white;
   cursor: pointer;
   transition: all 0.2s ease;
-  z-index: 1;
+  z-index: 0;
 }
 
 /* Dark mode checkbox */
@@ -101,7 +101,7 @@
   border-width: 0 2px 2px 0;
   transform: translateY(-60%) rotate(45deg);
   pointer-events: none;
-  z-index: 2;
+  z-index: 1;
 }
 
 /* Hover state */
