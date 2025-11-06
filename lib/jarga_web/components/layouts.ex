@@ -88,22 +88,16 @@ defmodule JargaWeb.Layouts do
       <input id="admin-drawer" type="checkbox" class="drawer-toggle" />
       <div class="drawer-content flex flex-col min-w-0">
         <!-- Navbar for mobile -->
-        <div class="navbar bg-base-300 lg:hidden">
+        <div class="navbar lg:hidden">
           <div class="flex-none">
             <label for="admin-drawer" class="btn btn-square btn-ghost">
               <.icon name="hero-bars-3" class="size-6" />
             </label>
           </div>
-          <div class="flex-1 px-2 mx-2">
-            <span class="text-lg font-bold">Jarga</span>
-          </div>
-          <div class="flex-none">
-            <.theme_toggle />
-          </div>
         </div>
-        
+
     <!-- Page content -->
-        <main class="flex-1 p-6 lg:p-8">
+        <main class="flex-1 px-3 sm:px-6 pb-6 pt-0 lg:p-8">
           {render_slot(@inner_block)}
         </main>
 
