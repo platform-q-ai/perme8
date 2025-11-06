@@ -18,12 +18,12 @@
   <img
     src={~p"/images/paper-plane-black.svg"}
     alt=""
-    class="absolute bottom-20 left-[5%] w-32 md:w-40 lg:w-48 opacity-90 dark:hidden"
+    class="absolute bottom-[35%] left-[5%] w-32 md:w-40 lg:w-48 opacity-90 dark:hidden"
   />
   <img
     src={~p"/images/paper-plane-white.svg"}
     alt=""
-    class="absolute bottom-20 left-[5%] w-32 md:w-40 lg:w-48 opacity-90 hidden dark:block"
+    class="absolute bottom-[35%] left-[5%] w-32 md:w-40 lg:w-48 opacity-90 hidden dark:block"
   />
   
 <!-- Pencil task - bottom right -->
@@ -44,18 +44,35 @@
   >
     <div>
       <h1 class="text-5xl md:text-7xl font-bold mb-6 leading-tight">
-        Teamwork that<br /><em>just works!</em>
+        Ship Features.<br />Kill Tech Debt.<br /><em>Do Both.</em>
       </h1>
       <p class="text-lg md:text-xl mb-8 text-base-content/70">
-        Jarga helps your teams keep vital information in one place,<br />so everybody knows what to do.
+        The first development platform where AI agents handle the maintenance<br />while your team builds the future. No more choosing between progress and stability.
       </p>
       <div class="card-actions justify-center">
         <a href={~p"/users/register"} class="btn btn-primary btn-lg">
           Start For Free
         </a>
-        <a href="#features" class="btn btn-outline btn-lg">
-          See How It Works
-        </a>
+        <div class="relative inline-block">
+          <a href="#features" class="btn btn-outline btn-lg relative" style="z-index: 2;">
+            How It Works
+          </a>
+          
+<!-- Jarga Robot Head - appearing upside down from behind the button -->
+          <img
+            src={~p"/images/jarga-robot-head.svg"}
+            alt=""
+            class="absolute pointer-events-none"
+            style="
+              top: 100%;
+              left: 50%;
+              transform: translateX(-50%);
+              width: 72px;
+              height: auto;
+              z-index: 1;
+            "
+          />
+        </div>
       </div>
     </div>
   </div>
@@ -63,144 +80,119 @@
 
 <!-- Problem Statement Section -->
 <div class="bg-base-200 py-20 px-4">
-  <div class="max-w-6xl mx-auto">
-    <h2 class="text-4xl md:text-5xl font-bold text-center mb-16">
-      Teams Deserve Better
+  <div class="max-w-4xl mx-auto text-center">
+    <h2 class="text-4xl md:text-5xl font-bold mb-6">
+      The Development Dilemma is Over
     </h2>
+    <h3 class="text-2xl md:text-3xl font-semibold mb-8 text-base-content/90">
+      Your Team Shouldn't Have to Choose
+    </h3>
+    <p class="text-lg md:text-xl text-base-content/80 mb-6 leading-relaxed">
+      Every sprint, the same painful decision: Build what customers need, or fix what's already broken?
+    </p>
+    <p class="text-lg md:text-xl text-base-content/80 mb-6 leading-relaxed">
+      Traditional development forces this impossible trade-off. New features pile onto shaky foundations. Technical debt compounds. Your best engineers burn out fighting fires instead of innovating.
+    </p>
+    <p class="text-2xl font-bold text-primary mt-8">
+      Until now.
+    </p>
+  </div>
+</div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-      <!-- Pain Point 1 -->
-      <div class="card bg-base-100 shadow-xl">
-        <div class="card-body">
-          <h3 class="card-title text-2xl mb-2">
-            Knowledge required to complete a task is often spread across the organisation
-          </h3>
-          <p class="text-base-content/70">
-            Too many tools: Slack, Notion, Jira, Google Docs, Trello... There is no single source of truth.
-          </p>
-        </div>
-      </div>
-      
-<!-- Pain Point 2 -->
-      <div class="card bg-base-100 shadow-xl">
-        <div class="card-body">
-          <h3 class="card-title text-2xl mb-2">
-            Rework and meetings plague the business because information is hard to find
-          </h3>
-          <p class="text-base-content/70">
-            Nobody likes sitting in meetings all day or pestering colleagues for answers but its often needed to gather critical info to complete a task well.
-          </p>
-        </div>
-      </div>
-      
-<!-- Pain Point 3 -->
-      <div class="card bg-base-100 shadow-xl">
-        <div class="card-body">
-          <h3 class="card-title text-2xl mb-2">
-            Complicated systems take weeks to learn and years to master
-          </h3>
-          <p class="text-base-content/70">
-            Complexity kills productivity. Staff end up working for their tools rather than the tools serving them.
-          </p>
-        </div>
-      </div>
-      
-<!-- Pain Point 4 -->
-      <div class="card bg-base-100 shadow-xl">
-        <div class="card-body">
-          <h3 class="card-title text-2xl mb-2">
-            Working from home or across offices kills creativity and team spirit
-          </h3>
-          <p class="text-base-content/70">
-            Miscommunication, version conflicts, missed priorities...Working apart can sometimes feel impossible.
-          </p>
-        </div>
-      </div>
-    </div>
+<!-- Hybrid Development Section -->
+<div class="bg-base-100 py-20 px-4">
+  <div class="max-w-4xl mx-auto text-center">
+    <h2 class="text-4xl md:text-5xl font-bold mb-6">
+      Welcome to Hybrid Development
+    </h2>
+    <h3 class="text-2xl md:text-3xl font-semibold mb-8 text-base-content/90">
+      Where AI Agents Handle the Maintenance, So Humans Can Innovate
+    </h3>
+    <p class="text-lg md:text-xl text-base-content/80 mb-6 leading-relaxed">
+      Jarga orchestrates a new kind of development team—one where specialized AI agents continuously refactor, test, and improve your codebase while your human developers focus on what they do best: solving complex problems and shipping features that matter.
+    </p>
+    <p class="text-2xl font-bold text-primary mt-8">
+      No more compromises. Just continuous progress.
+    </p>
   </div>
 </div>
 
 <!-- Features Section -->
-<div id="features" class="bg-base-100 py-20 px-4">
+<div id="features" class="bg-base-200 py-20 px-4">
   <div class="max-w-7xl mx-auto">
     <h2 class="text-4xl md:text-5xl font-bold text-center mb-4">
-      One Tool. All Your Work. Pure Flow.
+      Features That Transform How You Build
     </h2>
     <p class="text-xl text-center text-base-content/70 mb-16">
-      Everything you need to work together, nothing you don't.
+      Everything you need to orchestrate humans and AI together
     </p>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
       <!-- Feature 1 -->
-      <div class="card bg-base-200">
+      <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
-          <h3 class="card-title text-xl mb-2">Context is King</h3>
-          <ul class="space-y-2 text-base-content/80">
-            <li>• Agree on ground truth—everyone sees the same information</li>
-            <li>• Real-time collaborative document editing</li>
-            <li>• Assign tasks to users with full documentation of the task attached</li>
-          </ul>
+          <h3 class="card-title text-2xl mb-3">Living Documentation That Writes Itself</h3>
+          <p class="text-base-content/80 leading-relaxed">
+            Every requirement lives in one place. Your entire team—product, engineering, design, even AI agents—collaborate on PRDs in real-time. No more telephone games. No more "that's not what we meant." Just crystal-clear alignment from idea to implementation.
+          </p>
         </div>
       </div>
       
 <!-- Feature 2 -->
-      <div class="card bg-base-200">
+      <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
-          <h3 class="card-title text-xl mb-2">One Tool, Zero Context Switching</h3>
+          <h3 class="card-title text-2xl mb-3">AI Agents That Actually Ship Code</h3>
+          <p class="text-base-content/80 leading-relaxed mb-3">
+            Deploy specialized agents for the work that slows teams down:
+          </p>
           <ul class="space-y-2 text-base-content/80">
-            <li>• Workspaces, Projects, Notes, Tasks, and collaboration—all in one place</li>
-            <li>• Stay in flow without juggling multiple apps</li>
-            <li>• Extreme simplicity with collaboration baked in</li>
+            <li>
+              • <strong>Decomposition agents</strong> break complex features into manageable tasks
+            </li>
+            <li>
+              • <strong>Test agents</strong> ensure 100% coverage without human intervention
+            </li>
+            <li>• <strong>Refactoring agents</strong> continuously improve code quality</li>
+            <li>
+              • <strong>Quality agents</strong>
+              enforce your team's principles before PRs ever reach human review
+            </li>
           </ul>
+          <p class="text-base-content/80 leading-relaxed mt-3">
+            All code is tested, validated, and submitted as PRs for human approval. Your team stays in control while moving 3x faster.
+          </p>
         </div>
       </div>
       
 <!-- Feature 3 -->
-      <div class="card bg-base-200">
+      <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
-          <h3 class="card-title text-xl mb-2">Find Information Fast</h3>
-          <ul class="space-y-2 text-base-content/80">
-            <li>
-              • Upload existing docs and make them immediately available across the business
-            </li>
-            <li>• Chat to docs to find answers fast</li>
-            <li>• Search for tasks and pages for instant access to the truth</li>
-          </ul>
+          <h3 class="card-title text-2xl mb-3">One Platform, Zero Context Switching</h3>
+          <p class="text-base-content/80 leading-relaxed">
+            Tasks, docs, code reviews, team collaboration—everything happens in Jarga. Assign work to humans or AI with a single click. Track progress across your entire hybrid team. No juggling tools. No lost context. Just flow.
+          </p>
         </div>
       </div>
       
 <!-- Feature 4 -->
-      <div class="card bg-base-200">
+      <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
-          <h3 class="card-title text-xl mb-2">Effortless Collaboration</h3>
-          <ul class="space-y-2 text-base-content/80">
-            <li>• Real-time editing with no conflicts, ever!</li>
-            <li>• See who's working on what, right now</li>
-            <li>• Collaborate on docs or tasks fast, from anywhere</li>
-          </ul>
+          <h3 class="card-title text-2xl mb-3">Intelligence at Your Fingertips</h3>
+          <p class="text-base-content/80 leading-relaxed">
+            Upload your existing documentation and make it instantly searchable. Ask questions in natural language. Find any task, document, or decision in seconds. Your institutional knowledge becomes a competitive advantage, not a bottleneck.
+          </p>
         </div>
       </div>
       
 <!-- Feature 5 -->
-      <div class="card bg-base-200">
+      <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
-          <h3 class="card-title text-xl mb-2">Easy to Join, Easy to Leave</h3>
+          <h3 class="card-title text-2xl mb-3">Built for Teams, Not Lock-in</h3>
           <ul class="space-y-2 text-base-content/80">
-            <li>• No proprietary lock-ins—export your data anytime</li>
-            <li>• All documents stored as markdown for easy migration</li>
-            <li>• Own your data forever</li>
-          </ul>
-        </div>
-      </div>
-      
-<!-- Feature 6 -->
-      <div class="card bg-base-200">
-        <div class="card-body">
-          <h3 class="card-title text-xl mb-2">Work Your Way</h3>
-          <ul class="space-y-2 text-base-content/80">
+            <li>• Export everything, anytime—your data in clean Markdown</li>
+            <li>• Real-time collaboration that actually works</li>
             <li>• Keyboard shortcuts for power users</li>
-            <li>• Simple interface needs no training</li>
-            <li>• World class infrastructure delivers blistering speed</li>
+            <li>• Enterprise-grade reliability you can bet your business on</li>
           </ul>
         </div>
       </div>
@@ -208,169 +200,69 @@
   </div>
 </div>
 
-<!-- How Jarga is Different Section -->
-<div class="bg-base-200 py-20 px-4">
-  <div class="max-w-5xl mx-auto">
-    <h2 class="text-4xl md:text-5xl font-bold text-center mb-4">
-      Manage tasks, documents and the truth to bring your ideas to life!
+<!-- Value Proposition Section -->
+<div class="bg-base-100 py-20 px-4">
+  <div class="max-w-5xl mx-auto text-center">
+    <h2 class="text-4xl md:text-5xl font-bold mb-8">
+      Stop Choosing. Start Shipping.
     </h2>
-    <p class="text-xl text-center text-base-content/70 mb-16">
-      Simplicity you'll love, with the collaboration you need.
+    <h3 class="text-2xl md:text-3xl font-semibold mb-8 text-base-content/90">
+      The Math is Simple
+    </h3>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto mb-12">
+      <div class="card bg-base-200 shadow-xl">
+        <div class="card-body text-left">
+          <h4 class="font-bold text-xl mb-3">Traditional Team:</h4>
+          <p class="text-lg text-base-content/80">70% maintenance, 30% features</p>
+        </div>
+      </div>
+
+      <div class="card bg-primary text-primary-content shadow-xl">
+        <div class="card-body text-left">
+          <h4 class="font-bold text-xl mb-3">Jarga Hybrid Team:</h4>
+          <p class="text-lg">20% reviewing AI work, 80% building what matters</p>
+        </div>
+      </div>
+    </div>
+
+    <p class="text-lg md:text-xl text-base-content/80 mb-6 leading-relaxed">
+      Your competitors are still choosing between progress and stability. You're achieving both. Every day you wait is a day they could discover what you already know—the future of development is hybrid.
     </p>
 
-    <div class="flex justify-center">
-      <div class="card bg-primary text-primary-content max-w-2xl w-full">
-        <div class="card-body">
-          <h3 class="card-title text-xl mb-4">What You Will Love About Jarga</h3>
-          <ul class="space-y-3">
-            <li>✓ Simple, all-in-one approach</li>
-            <li>✓ No feature bloat</li>
-            <li>✓ Beautiful, calm interface</li>
-            <li>✓ Team-focused philosophy</li>
-            <li>✓ Free for teams up to 5 and above</li>
-          </ul>
-        </div>
-      </div>
+    <h3 class="text-2xl md:text-3xl font-semibold mb-8 mt-12">
+      Ready to Lead the Revolution?
+    </h3>
+
+    <div class="card-actions justify-center mb-8">
+      <a href={~p"/users/register"} class="btn btn-primary btn-lg text-lg px-8">
+        Start Free Trial
+      </a>
+      <a href="#features" class="btn btn-outline btn-lg text-lg px-8">
+        See Customer Results
+      </a>
     </div>
-  </div>
-</div>
 
-<!-- Use Case Section -->
-<div class="bg-base-100 py-20 px-4">
-  <div class="max-w-6xl mx-auto">
-    <h2 class="text-4xl md:text-5xl font-bold text-center mb-16">
-      Built for Teams Who Make Things Happen!
-    </h2>
-
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-      <!-- Use Case 1 -->
-      <div class="card bg-base-200">
-        <div class="card-body">
-          <h3 class="card-title text-2xl mb-2">Startup Teams</h3>
-          <p class="text-base-content/80 mb-4">
-            Move fast without losing context. Stay aligned from idea to launch. Scale without adding complexity.
-          </p>
-          <p class="italic text-base-content/70">
-            "Every conversation matters when you're building something new"
-          </p>
-        </div>
-      </div>
-      
-<!-- Use Case 2 -->
-      <div class="card bg-base-200">
-        <div class="card-body">
-          <h3 class="card-title text-2xl mb-2">Creative Teams</h3>
-          <p class="text-base-content/80 mb-4">
-            Keep ideas organized and accessible. Collaborate on content in real-time. No more version chaos.
-          </p>
-          <p class="italic text-base-content/70">
-            "Creativity thrives with clarity"
-          </p>
-        </div>
-      </div>
-      
-<!-- Use Case 3 -->
-      <div class="card bg-base-200">
-        <div class="card-body">
-          <h3 class="card-title text-2xl mb-2">Product Teams</h3>
-          <p class="text-base-content/80 mb-4">
-            From concept to launch in one place. Requirements, design, and implementation together. Context never gets lost.
-          </p>
-          <p class="italic text-base-content/70">
-            "Ship better products with full context"
-          </p>
-        </div>
-      </div>
-      
-<!-- Use Case 4 -->
-      <div class="card bg-base-200">
-        <div class="card-body">
-          <h3 class="card-title text-2xl mb-2">Remote Teams</h3>
-          <p class="text-base-content/80 mb-4">
-            Collaborate like you're in the same room. Async-friendly with real-time superpowers. No timezone troubles.
-          </p>
-          <p class="italic text-base-content/70">
-            "Distance doesn't have to mean disconnect"
-          </p>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Principles Section -->
-<div class="bg-base-200 py-20 px-4">
-  <div class="max-w-6xl mx-auto">
-    <h2 class="text-4xl md:text-5xl font-bold text-center mb-16">
-      Our Principles, Your Success
-    </h2>
-
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-      <!-- Principle 1 -->
-      <div class="card bg-base-100">
-        <div class="card-body">
-          <h3 class="card-title text-xl mb-2">Meet People Where They Are</h3>
-          <ul class="space-y-2 text-base-content/80">
-            <li>• Minimal disruption to your flow</li>
-            <li>• Works with your existing processes</li>
-            <li>• Email notifications, mobile-friendly</li>
-          </ul>
-        </div>
-      </div>
-      
-<!-- Principle 2 -->
-      <div class="card bg-base-100">
-        <div class="card-body">
-          <h3 class="card-title text-xl mb-2">Everything is Easy to Find</h3>
-          <ul class="space-y-2 text-base-content/80">
-            <li>• Powerful search that actually works</li>
-            <li>• Intuitive organization</li>
-            <li>• No more hunting for information</li>
-          </ul>
-        </div>
-      </div>
-      
-<!-- Principle 3 -->
-      <div class="card bg-base-100">
-        <div class="card-body">
-          <h3 class="card-title text-xl mb-2">Different People, Different Ways</h3>
-          <ul class="space-y-2 text-base-content/80">
-            <li>• Keyboard shortcuts vs mouse—work however you prefer</li>
-            <li>• Power users can fly through tasks</li>
-            <li>• Full keyboard navigation support</li>
-          </ul>
-        </div>
-      </div>
-      
-<!-- Principle 4 -->
-      <div class="card bg-base-100">
-        <div class="card-body">
-          <h3 class="card-title text-xl mb-2">Context is King</h3>
-          <ul class="space-y-2 text-base-content/80">
-            <li>• Ground truth for your team—no more "which version is right?"</li>
-            <li>• Everything stays connected</li>
-            <li>• Single source of truth, always</li>
-          </ul>
-        </div>
-      </div>
-    </div>
+    <p class="text-base text-base-content/70 italic">
+      Join companies already shipping 3x faster with half the technical debt. No credit card required. Full access in 60 seconds.
+    </p>
   </div>
 </div>
 
 <!-- Testimonials Section -->
-<div class="bg-base-100 py-20 px-4">
+<div class="bg-base-200 py-20 px-4">
   <div class="max-w-6xl mx-auto">
     <h2 class="text-4xl md:text-5xl font-bold text-center mb-16">
-      Teams Love Working with Jarga
+      Teams Already Shipping Faster
     </h2>
 
     <div class="carousel w-full">
       <!-- Testimonial 1 -->
       <div id="testimonial1" class="carousel-item relative w-full justify-center">
-        <div class="card bg-base-200 max-w-2xl w-full">
+        <div class="card bg-base-100 max-w-2xl w-full shadow-xl">
           <div class="card-body">
             <p class="text-xl italic mb-6">
-              "Finally, one tool that does it all. We went from 5 tools to 1 and our team is happier than ever."
+              "We've tripled our feature velocity while cutting technical debt in half. The AI agents handle all the grunt work—refactoring, tests, documentation—while our team focuses on solving real problems."
             </p>
             <div class="flex items-center gap-3">
               <div class="avatar placeholder">
@@ -380,23 +272,23 @@
               </div>
               <div>
                 <p class="font-bold text-lg">Sarah Chen</p>
-                <p class="text-sm text-base-content/70">Product Lead @ TechCo</p>
+                <p class="text-sm text-base-content/70">VP Engineering @ TechCo</p>
               </div>
             </div>
           </div>
         </div>
         <div class="absolute flex justify-between transform -translate-y-1/2 left-5 right-5 top-1/2">
-          <a href="#testimonial4" class="btn btn-circle btn-sm">❮</a>
+          <a href="#testimonial3" class="btn btn-circle btn-sm">❮</a>
           <a href="#testimonial2" class="btn btn-circle btn-sm">❯</a>
         </div>
       </div>
       
 <!-- Testimonial 2 -->
       <div id="testimonial2" class="carousel-item relative w-full justify-center">
-        <div class="card bg-base-200 max-w-2xl w-full">
+        <div class="card bg-base-100 max-w-2xl w-full shadow-xl">
           <div class="card-body">
             <p class="text-xl italic mb-6">
-              "No more context switching! Everything we need is right here. Game changer for our remote team."
+              "The hybrid approach is game-changing. Our developers are energized again because they're building new things instead of fighting legacy code. The AI keeps our codebase healthy automatically."
             </p>
             <div class="flex items-center gap-3">
               <div class="avatar placeholder">
@@ -406,7 +298,7 @@
               </div>
               <div>
                 <p class="font-bold text-lg">Marcus Johnson</p>
-                <p class="text-sm text-base-content/70">Founder @ StartupXYZ</p>
+                <p class="text-sm text-base-content/70">CTO @ StartupXYZ</p>
               </div>
             </div>
           </div>
@@ -419,36 +311,10 @@
       
 <!-- Testimonial 3 -->
       <div id="testimonial3" class="carousel-item relative w-full justify-center">
-        <div class="card bg-base-200 max-w-2xl w-full">
+        <div class="card bg-base-100 max-w-2xl w-full shadow-xl">
           <div class="card-body">
             <p class="text-xl italic mb-6">
-              "Our team actually enjoys collaborating now. The real-time editing is magical."
-            </p>
-            <div class="flex items-center gap-3">
-              <div class="avatar placeholder">
-                <div class="bg-primary text-primary-content rounded-full w-14">
-                  <span class="text-2xl">ER</span>
-                </div>
-              </div>
-              <div>
-                <p class="font-bold text-lg">Emily Rodriguez</p>
-                <p class="text-sm text-base-content/70">Creative Director @ DesignStudio</p>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="absolute flex justify-between transform -translate-y-1/2 left-5 right-5 top-1/2">
-          <a href="#testimonial2" class="btn btn-circle btn-sm">❮</a>
-          <a href="#testimonial4" class="btn btn-circle btn-sm">❯</a>
-        </div>
-      </div>
-      
-<!-- Testimonial 4 -->
-      <div id="testimonial4" class="carousel-item relative w-full justify-center">
-        <div class="card bg-base-200 max-w-2xl w-full">
-          <div class="card-body">
-            <p class="text-xl italic mb-6">
-              "We shipped our product 2x faster because we stopped losing context. Jarga keeps everyone aligned."
+              "We shipped a major feature in 3 weeks that would have taken 3 months before. The AI agents handled all the supporting work—migrations, tests, refactoring—while our team focused on the core logic."
             </p>
             <div class="flex items-center gap-3">
               <div class="avatar placeholder">
@@ -458,13 +324,13 @@
               </div>
               <div>
                 <p class="font-bold text-lg">David Park</p>
-                <p class="text-sm text-base-content/70">Engineering Manager @ DevTeam</p>
+                <p class="text-sm text-base-content/70">Engineering Lead @ ProductCo</p>
               </div>
             </div>
           </div>
         </div>
         <div class="absolute flex justify-between transform -translate-y-1/2 left-5 right-5 top-1/2">
-          <a href="#testimonial3" class="btn btn-circle btn-sm">❮</a>
+          <a href="#testimonial2" class="btn btn-circle btn-sm">❮</a>
           <a href="#testimonial1" class="btn btn-circle btn-sm">❯</a>
         </div>
       </div>
@@ -475,28 +341,27 @@
       <a href="#testimonial1" class="btn btn-xs">1</a>
       <a href="#testimonial2" class="btn btn-xs">2</a>
       <a href="#testimonial3" class="btn btn-xs">3</a>
-      <a href="#testimonial4" class="btn btn-xs">4</a>
     </div>
   </div>
 </div>
 
 <!-- Final CTA Section -->
-<div class="hero min-h-[60vh] bg-base-200">
+<div class="hero min-h-[60vh] bg-base-100">
   <div class="hero-content text-center max-w-4xl px-4">
     <div>
       <h2 class="text-4xl md:text-6xl font-bold mb-6">
-        Ready to Make Teamwork Easy?
+        The Future of Development is Hybrid
       </h2>
       <p class="text-xl md:text-2xl mb-8 text-base-content/80">
-        Join teams who've ditched the chaos for clarity
+        Join the teams shipping 3x faster with less technical debt
       </p>
 
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8 text-left">
         <div class="flex items-center gap-2">
-          <span>✓ Free for teams of 4 or less</span>
+          <span>✓ No credit card required</span>
         </div>
         <div class="flex items-center gap-2">
-          <span>✓ No long term contracts</span>
+          <span>✓ Full access in 60 seconds</span>
         </div>
         <div class="flex items-center gap-2">
           <span>✓ Export your data anytime</span>
@@ -561,10 +426,10 @@
 
     <div class="text-center">
       <p class="text-lg font-semibold mb-2">
-        We exist to make working in teams easy.
+        Ship features. Kill tech debt. Do both.
       </p>
       <p class="text-sm text-base-content/70">
-        © 2025 Jarga. Making teamwork easy.
+        © 2025 Jarga. The hybrid development platform.
       </p>
     </div>
   </div>
