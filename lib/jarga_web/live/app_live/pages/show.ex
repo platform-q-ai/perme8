@@ -415,9 +415,9 @@ defmodule JargaWeb.AppLive.Pages.Show do
             </h1>
           <% end %>
         </div>
-        
+
     <!-- Editor -->
-        <div class="flex-1 overflow-auto">
+        <div class="flex-1">
           <%= if @readonly do %>
             <div class="alert alert-info mb-4">
               <.icon name="hero-eye" class="size-5" />
@@ -432,8 +432,8 @@ defmodule JargaWeb.AppLive.Pages.Show do
             data-initial-content={get_initial_markdown(@note)}
             data-readonly={if @readonly, do: "true", else: "false"}
             class={[
-              "border rounded-lg h-full min-h-[600px]",
-              if(@readonly, do: "border-base-300 bg-base-100 opacity-90", else: "border-base-300")
+              "h-full min-h-[calc(100vh-16rem)]",
+              if(@readonly, do: "bg-base-100 opacity-90", else: "")
             ]}
           >
           </div>

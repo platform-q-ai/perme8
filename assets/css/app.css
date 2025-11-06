@@ -130,7 +130,7 @@
 
 #editor-container .milkdown {
   height: 100%;
-  padding: 1rem;
+  padding: 0;
 }
 
 #editor-container .milkdown .editor {
