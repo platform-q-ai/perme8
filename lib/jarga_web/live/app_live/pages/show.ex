@@ -342,7 +342,7 @@ defmodule JargaWeb.AppLive.Pages.Show do
             </.breadcrumbs>
           <% end %>
         </div>
-
+        
     <!-- Action Buttons (hidden for guests) -->
         <%= if not @readonly do %>
           <div class="flex items-center justify-end gap-2 flex-shrink-0">
@@ -380,7 +380,7 @@ defmodule JargaWeb.AppLive.Pages.Show do
             </.button>
           </div>
         <% end %>
-
+        
     <!-- Title Section -->
         <div class="border-b border-base-300 pb-4 flex-shrink-0">
           <%= if @editing_title do %>
@@ -417,7 +417,7 @@ defmodule JargaWeb.AppLive.Pages.Show do
             </h1>
           <% end %>
         </div>
-
+        
     <!-- Editor -->
         <div class="min-h-[calc(100vh-16rem)]">
           <%= if @readonly do %>

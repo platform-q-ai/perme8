@@ -95,7 +95,7 @@ defmodule JargaWeb.Layouts do
             </label>
           </div>
         </div>
-
+        
     <!-- Page content -->
         <main class="flex-1 px-3 sm:px-6 pb-6 pt-0 lg:p-8">
           {render_slot(@inner_block)}

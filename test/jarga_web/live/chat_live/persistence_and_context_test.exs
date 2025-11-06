@@ -56,7 +56,6 @@ defmodule JargaWeb.ChatLive.PersistenceAndContextTest do
       refute has_element?(view, ".chat-bubble", "Message 1")
       refute has_element?(view, ".chat-bubble", "Message 2")
     end
-
   end
 
   describe "TDD: Page context retrieval for LLM queries" do
