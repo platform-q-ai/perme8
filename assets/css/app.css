@@ -135,19 +135,3 @@
 /* Milkdown Editor Styles */
 @import '@milkdown/theme-nord/style.css';
 @import './editor.css';
-@import './marketing-site-editor.css';
-
-#editor-container {
-  height: 100%;
-  overflow: hidden;
-}
-
-#editor-container .milkdown {
-  height: 100%;
-  padding: 1rem;
-}
-
-#editor-container .milkdown .editor {
-  height: 100%;
-  overflow: auto;
-}
