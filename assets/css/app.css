@@ -129,6 +129,7 @@
 
 /* Milkdown Editor Styles */
 @import '@milkdown/theme-nord/style.css';
+@import './editor.css';
 @import './marketing-site-editor.css';
 
 #editor-container {
