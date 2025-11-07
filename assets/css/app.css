@@ -16,6 +16,10 @@
    The heroicons installation itself is managed by your mix.exs */
 @plugin "../vendor/heroicons";
 
+/* A Tailwind plugin that makes "lucide-#{ICON}" classes available.
+   Lucide icons are installed via npm (lucide-static package) */
+@plugin "../vendor/lucide";
+
 /* daisyUI Tailwind Plugin. You can update this file by fetching the latest version with:
    curl -sLO https://github.com/saadeghi/daisyui/releases/latest/download/daisyui.js
    Make sure to look at the daisyUI changelog: https://daisyui.com/docs/changelog/ */

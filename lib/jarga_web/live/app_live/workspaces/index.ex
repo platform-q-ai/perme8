@@ -20,15 +20,15 @@ defmodule JargaWeb.AppLive.Workspaces.Index do
           <:crumb>Workspaces</:crumb>
         </.breadcrumbs>
 
-        <div class="flex items-center justify-between">
-          <.header>
-            Workspaces
-            <:subtitle>Manage your workspaces and collaborate with your team</:subtitle>
-          </.header>
-          <.link navigate={~p"/app/workspaces/new"} class="btn btn-primary">
-            New Workspace
-          </.link>
-        </div>
+        <.header>
+          Workspaces
+          <:subtitle>Manage your workspaces and collaborate with your team</:subtitle>
+          <:actions>
+            <.button variant="primary" size="sm" navigate={~p"/app/workspaces/new"}>
+              <.icon name="hero-plus" class="size-4" /> New Workspace
+            </.button>
+          </:actions>
+        </.header>
 
         <%= if @workspaces == [] do %>
           <div class="card bg-base-200">
@@ -62,7 +62,10 @@ defmodule JargaWeb.AppLive.Workspaces.Index do
                       style={"background-color: #{workspace.color}"}
                     />
                   <% end %>
-                  <h2 class="card-title">{workspace.name}</h2>
+                  <h2 class="card-title">
+                    <.icon name="hero-briefcase" class="size-5 text-primary" />
+                    {workspace.name}
+                  </h2>
                   <%= if workspace.description do %>
                     <p class="text-sm text-base-content/70">{workspace.description}</p>
                   <% end %>

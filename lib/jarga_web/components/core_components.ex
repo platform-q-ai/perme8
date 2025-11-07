@@ -485,15 +485,26 @@ defmodule JargaWeb.CoreComponents do
   Icons are extracted from the `deps/heroicons` directory and bundled within
   your compiled app.css by the plugin in `assets/vendor/heroicons.js`.
 
+  Lucide icons are available from the `lucide-static` npm package and bundled
+  via the plugin in `assets/vendor/lucide.js`.
+
   ## Examples
 
       <.icon name="hero-x-mark" />
       <.icon name="hero-arrow-path" class="ml-1 size-3 motion-safe:animate-spin" />
+      <.icon name="lucide-pin" />
+      <.icon name="lucide-star" class="size-5" />
   """
   attr :name, :string, required: true
   attr :class, :string, default: "size-4"
 
   def icon(%{name: "hero-" <> _} = assigns) do
+    ~H"""
+    <span class={[@name, @class]} />
+    """
+  end
+
+  def icon(%{name: "lucide-" <> _} = assigns) do
     ~H"""
     <span class={[@name, @class]} />
     """
@@ -586,4 +597,87 @@ defmodule JargaWeb.CoreComponents do
     </nav>
     """
   end
+
+  @doc """
+  Renders a kebab menu (vertical 3-dot menu) with dropdown actions.
+
+  ## Examples
+
+      <.kebab_menu>
+        <:item icon="hero-pencil" navigate={~p"/edit"}>Edit</:item>
+        <:item icon="hero-trash" variant="error" data-confirm="Are you sure?">Delete</:item>
+      </.kebab_menu>
+
+      <.kebab_menu button_class="btn-sm">
+        <:item icon="hero-share" phx-click="toggle_share">Share</:item>
+        <:item icon="lucide-pin" variant="warning">Pin</:item>
+      </.kebab_menu>
+  """
+  attr :button_class, :string, default: nil, doc: "Additional classes for the menu button"
+  attr :dropdown_class, :string, default: nil, doc: "Additional classes for the dropdown menu"
+
+  slot :item, required: true do
+    attr :icon, :string, doc: "Heroicon name for the menu item"
+    attr :variant, :string, doc: "Button variant (error, warning, etc.)"
+    attr :navigate, :string, doc: "Phoenix navigation path"
+    attr :patch, :string, doc: "Phoenix patch path"
+    attr :href, :string, doc: "Link href"
+    attr :phx_click, :string, doc: "Phoenix click event"
+    attr :data_confirm, :string, doc: "Confirmation message"
+  end
+
+  def kebab_menu(assigns) do
+    ~H"""
+    <div class="dropdown dropdown-end">
+      <button
+        tabindex="0"
+        role="button"
+        class={["btn btn-ghost btn-square", @button_class]}
+        aria-label="Actions menu"
+      >
+        <.icon name="hero-ellipsis-vertical" class="size-5" />
+      </button>
+      <ul
+        tabindex="0"
+        class={[
+          "dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow-lg border border-base-300",
+          @dropdown_class
+        ]}
+      >
+        <%= for item <- @item do %>
+          <li>
+            <%= if item[:navigate] || item[:patch] || item[:href] do %>
+              <.link
+                navigate={item[:navigate]}
+                patch={item[:patch]}
+                href={item[:href]}
+                class={menu_item_class(item[:variant])}
+                data-confirm={item[:data_confirm]}
+              >
+                <.icon :if={item[:icon]} name={item[:icon]} class="size-5" />
+                {render_slot(item)}
+              </.link>
+            <% else %>
+              <button
+                type="button"
+                phx-click={item[:phx_click]}
+                class={menu_item_class(item[:variant])}
+                data-confirm={item[:data_confirm]}
+              >
+                <.icon :if={item[:icon]} name={item[:icon]} class="size-5" />
+                {render_slot(item)}
+              </button>
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+    </div>
+    """
+  end
+
+  defp menu_item_class("error"), do: "text-error hover:bg-error hover:text-error-content"
+  defp menu_item_class("warning"), do: "text-warning hover:bg-warning hover:text-warning-content"
+  defp menu_item_class("success"), do: "text-success hover:bg-success hover:text-success-content"
+  defp menu_item_class("info"), do: "text-info hover:bg-info hover:text-info-content"
+  defp menu_item_class(_), do: nil
 end

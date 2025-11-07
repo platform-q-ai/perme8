@@ -20,9 +20,9 @@ defmodule JargaWeb.AppLive.Dashboard do
         <div class="space-y-4">
           <div class="flex items-center justify-between">
             <h3 class="text-lg font-semibold">Your Workspaces</h3>
-            <.link navigate={~p"/app/workspaces/new"} class="btn btn-primary btn-sm">
-              New Workspace
-            </.link>
+            <.button variant="primary" size="sm" navigate={~p"/app/workspaces/new"}>
+              <.icon name="hero-plus" class="size-4" /> New Workspace
+            </.button>
           </div>
 
           <%= if @workspaces == [] do %>
@@ -57,7 +57,10 @@ defmodule JargaWeb.AppLive.Dashboard do
                         style={"background-color: #{workspace.color}"}
                       />
                     <% end %>
-                    <h2 class="card-title">{workspace.name}</h2>
+                    <h2 class="card-title">
+                      <.icon name="hero-briefcase" class="size-5 text-primary" />
+                      {workspace.name}
+                    </h2>
                     <%= if workspace.description do %>
                       <p class="text-sm text-base-content/70">{workspace.description}</p>
                     <% end %>

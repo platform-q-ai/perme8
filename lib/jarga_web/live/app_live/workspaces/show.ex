@@ -23,34 +23,35 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
           <:crumb>{@workspace.name}</:crumb>
         </.breadcrumbs>
 
-        <div class="flex items-center justify-end">
-          <div class="flex gap-2">
-            <%= if can_edit_workspace?(@current_member) do %>
-              <.link navigate={~p"/app/workspaces/#{@workspace.slug}/edit"} class="btn btn-ghost">
-                <.icon name="hero-pencil" class="size-5" /> Edit
-              </.link>
-            <% end %>
-            <%= if can_manage_members?(@current_member) do %>
-              <.button variant="ghost" phx-click="show_members_modal">
-                <.icon name="hero-user-group" class="size-5" /> Manage Members
-              </.button>
-            <% end %>
-            <%= if can_delete_workspace?(@current_member) do %>
-              <.button
-                variant="error"
-                phx-click="delete_workspace"
-                data-confirm="Are you sure you want to delete this workspace? All projects will also be deleted."
+        <%= if can_edit_workspace?(@current_member) || can_manage_members?(@current_member) || can_delete_workspace?(@current_member) do %>
+          <div class="flex items-center justify-end">
+            <.kebab_menu>
+              <:item
+                :if={can_edit_workspace?(@current_member)}
+                icon="hero-pencil"
+                navigate={~p"/app/workspaces/#{@workspace.slug}/edit"}
               >
-                <.icon name="hero-trash" class="size-5" /> Delete Workspace
-              </.button>
-            <% end %>
-            <%= if can_create_project?(@current_member) do %>
-              <.button variant="primary" phx-click="show_project_modal">
-                New Project
-              </.button>
-            <% end %>
+                Edit Workspace
+              </:item>
+              <:item
+                :if={can_manage_members?(@current_member)}
+                icon="hero-user-group"
+                phx_click="show_members_modal"
+              >
+                Manage Members
+              </:item>
+              <:item
+                :if={can_delete_workspace?(@current_member)}
+                icon="hero-trash"
+                variant="error"
+                phx_click="delete_workspace"
+                data_confirm="Are you sure you want to delete this workspace? All projects will also be deleted."
+              >
+                Delete Workspace
+              </:item>
+            </.kebab_menu>
           </div>
-        </div>
+        <% end %>
 
         <%= if @workspace.description do %>
           <div class="card bg-base-200">
@@ -111,9 +112,7 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
                       </p>
                     </div>
                     <%= if page.is_pinned do %>
-                      <div class="badge badge-warning badge-sm gap-1">
-                        <span class="text-xs">📌</span> Pinned
-                      </div>
+                      <.icon name="lucide-pin" class="size-5 text-warning" />
                     <% end %>
                   </div>
                 </.link>
@@ -124,7 +123,14 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
 
         <%!-- Projects Section --%>
         <div>
-          <h2 class="text-lg font-semibold mb-4">Projects</h2>
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-semibold">Projects</h2>
+            <%= if can_create_project?(@current_member) do %>
+              <.button variant="primary" size="sm" phx-click="show_project_modal">
+                <.icon name="hero-folder-plus" class="size-4" /> New Project
+              </.button>
+            <% end %>
+          </div>
 
           <%= if @projects == [] do %>
             <div class="card bg-base-200">
@@ -164,7 +170,10 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
                         style={"background-color: #{project.color}"}
                       />
                     <% end %>
-                    <h3 class="card-title">{project.name}</h3>
+                    <h3 class="card-title">
+                      <.icon name="hero-folder" class="size-5 text-primary" />
+                      {project.name}
+                    </h3>
                     <%= if project.description do %>
                       <p class="text-sm text-base-content/70">{project.description}</p>
                     <% end %>

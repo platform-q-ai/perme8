@@ -125,6 +125,9 @@ export const MilkdownEditor = {
 
         // Add click handler for task list checkboxes
         this.setupTaskListClickHandler(view)
+
+        // Add click handler to focus editor when clicking on empty space
+        this.setupClickToFocus(view)
       })
     }).catch((error) => {
       console.error('Failed to create Milkdown editor:', error)
@@ -256,6 +259,52 @@ export const MilkdownEditor = {
     view.dom.addEventListener('click', clickHandler)
   },
 
+  setupClickToFocus(view) {
+    // Add click handler to the editor container to focus editor when clicking on empty space
+    const clickToFocusHandler = (event) => {
+      // Check if click is on the editor container or its wrapper/empty areas
+      // Don't focus if clicking on interactive elements or actual content
+      const target = event.target
+
+      // If clicking directly on the container
+      if (target === this.el) {
+        this.focusEditorAtEnd(view)
+        event.preventDefault()
+        return
+      }
+
+      // If clicking on the prosemirror editor wrapper or empty space within it
+      // Check if the target has the milkdown/prosemirror classes or is relatively empty
+      if (target.classList.contains('milkdown') ||
+          target.classList.contains('ProseMirror') ||
+          target.classList.contains('editor') ||
+          target === view.dom ||
+          // Allow clicking on paragraph/div containers if they're mostly empty
+          (target.closest('.ProseMirror') &&
+           ['P', 'DIV', 'SECTION', 'ARTICLE'].includes(target.tagName) &&
+           target.textContent.trim().length === 0)) {
+        this.focusEditorAtEnd(view)
+        event.preventDefault()
+        return
+      }
+    }
+
+    // Store the handler so we can remove it later
+    this.clickToFocusHandler = clickToFocusHandler
+    this.el.addEventListener('click', clickToFocusHandler)
+  },
+
+  focusEditorAtEnd(view) {
+    // Focus the editor at the end of the document
+    const { state } = view
+    const endPos = state.doc.content.size
+    const tr = state.tr.setSelection(
+      state.constructor.Selection.near(state.doc.resolve(endPos))
+    )
+    view.dispatch(tr)
+    view.focus()
+  },
+
   getMarkdownContent() {
     if (!this.editor) {
       return ''
@@ -346,6 +395,12 @@ export const MilkdownEditor = {
         }
       })
       this.taskListClickHandler = null
+    }
+
+    // Remove click-to-focus handler
+    if (this.clickToFocusHandler) {
+      this.el.removeEventListener('click', this.clickToFocusHandler)
+      this.clickToFocusHandler = null
     }
 
     if (this.collaborationManager) {

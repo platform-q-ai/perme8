@@ -23,21 +23,22 @@ defmodule JargaWeb.AppLive.Projects.Show do
         </.breadcrumbs>
 
         <div class="flex items-center justify-end">
-          <div class="flex gap-2">
-            <.link
+          <.kebab_menu>
+            <:item
+              icon="hero-pencil"
               navigate={~p"/app/workspaces/#{@workspace.slug}/projects/#{@project.slug}/edit"}
-              class="btn btn-ghost"
             >
-              <.icon name="hero-pencil" class="size-5" /> Edit
-            </.link>
-            <.button
+              Edit Project
+            </:item>
+            <:item
+              icon="hero-trash"
               variant="error"
-              phx-click="delete_project"
-              data-confirm="Are you sure you want to delete this project?"
+              phx_click="delete_project"
+              data_confirm="Are you sure you want to delete this project?"
             >
-              <.icon name="hero-trash" class="size-5" /> Delete Project
-            </.button>
-          </div>
+              Delete Project
+            </:item>
+          </.kebab_menu>
         </div>
 
         <%= if @project.description do %>
@@ -91,9 +92,7 @@ defmodule JargaWeb.AppLive.Projects.Show do
                       </p>
                     </div>
                     <%= if page.is_pinned do %>
-                      <div class="badge badge-warning badge-sm gap-1">
-                        <span class="text-xs">📌</span> Pinned
-                      </div>
+                      <.icon name="hero-star-solid" class="size-5 text-warning" />
                     <% end %>
                   </div>
                 </.link>

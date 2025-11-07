@@ -84,9 +84,9 @@ defmodule JargaWeb.Layouts do
 
   def admin(assigns) do
     ~H"""
-    <div class="drawer lg:drawer-open">
+    <div class="drawer lg:drawer-open h-screen">
       <input id="admin-drawer" type="checkbox" class="drawer-toggle" />
-      <div class="drawer-content flex flex-col min-w-0">
+      <div class="drawer-content flex flex-col min-w-0 h-full">
         <!-- Navbar for mobile -->
         <div class="navbar lg:hidden">
           <div class="flex-none">
@@ -97,7 +97,7 @@ defmodule JargaWeb.Layouts do
         </div>
         
     <!-- Page content -->
-        <main class="flex-1 px-3 sm:px-6 pb-6 pt-0 lg:p-8">
+        <main class="flex-1 flex flex-col px-3 sm:px-6 pb-6 pt-0 lg:p-8">
           {render_slot(@inner_block)}
         </main>
 
@@ -157,7 +157,7 @@ defmodule JargaWeb.Layouts do
               </li>
               <li>
                 <.link navigate={~p"/app/workspaces"} class="flex items-center gap-3">
-                  <.icon name="hero-rectangle-group" class="size-5" />
+                  <.icon name="hero-briefcase" class="size-5" />
                   <span>Workspaces</span>
                 </.link>
               </li>

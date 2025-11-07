@@ -224,13 +224,13 @@ defmodule JargaWeb.AppLive.Workspaces.ShowTest do
 
       {:ok, lv, html} = live(conn, ~p"/app/workspaces/#{workspace.slug}")
 
-      refute html =~ "Pinned"
+      refute html =~ "lucide-pin"
 
       # Simulate PubSub event
       send(lv.pid, {:page_pinned_changed, page.id, true})
 
       html = render(lv)
-      assert html =~ "Pinned"
+      assert html =~ "lucide-pin"
     end
 
     test "updates page title when page_title_changed event received", %{

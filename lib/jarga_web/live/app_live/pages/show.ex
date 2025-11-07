@@ -320,9 +320,9 @@ defmodule JargaWeb.AppLive.Pages.Show do
       project={@project}
       page_title={@page.title}
     >
-      <div class="flex flex-col space-y-4">
+      <div class="flex flex-col h-full">
         <!-- Breadcrumbs -->
-        <div class="flex-shrink-0">
+        <div class="flex-shrink-0 mb-4">
           <%= if @project do %>
             <.breadcrumbs>
               <:crumb navigate={~p"/app"}>Home</:crumb>
@@ -342,47 +342,39 @@ defmodule JargaWeb.AppLive.Pages.Show do
             </.breadcrumbs>
           <% end %>
         </div>
-        
-    <!-- Action Buttons (hidden for guests) -->
+
+    <!-- Action Menu (hidden for guests) -->
         <%= if not @readonly do %>
-          <div class="flex items-center justify-end gap-2 flex-shrink-0">
-            <!-- Share toggle button -->
-            <.button
-              variant={if @page.is_public, do: "primary", else: "ghost"}
-              size="sm"
-              phx-click="toggle_public"
-            >
-              <.icon
-                name={if @page.is_public, do: "hero-globe-alt", else: "hero-lock-closed"}
-                class="size-4"
-              />
-              {if @page.is_public, do: "Shared", else: "Private"}
-            </.button>
-            
-    <!-- Pin button -->
-            <.button
-              variant={if @page.is_pinned, do: "warning", else: "ghost"}
-              size="sm"
-              phx-click="toggle_pin"
-            >
-              <.icon name="hero-star" class="size-4" />
-              {if @page.is_pinned, do: "Pinned", else: "Pin"}
-            </.button>
-            
-    <!-- Delete button -->
-            <.button
-              variant="error"
-              size="sm"
-              phx-click="delete_page"
-              data-confirm="Are you sure you want to delete this page?"
-            >
-              <.icon name="hero-trash" class="size-4" /> Delete
-            </.button>
+          <div class="flex items-center justify-end flex-shrink-0 mb-4">
+            <.kebab_menu button_class="btn-sm">
+              <:item
+                icon={if @page.is_public, do: "hero-globe-alt", else: "hero-lock-closed"}
+                variant={if @page.is_public, do: "info", else: nil}
+                phx_click="toggle_public"
+              >
+                {if @page.is_public, do: "Make Private", else: "Make Public"}
+              </:item>
+              <:item
+                icon={if @page.is_pinned, do: "lucide-pin-off", else: "lucide-pin"}
+                variant={if @page.is_pinned, do: "warning", else: nil}
+                phx_click="toggle_pin"
+              >
+                {if @page.is_pinned, do: "Unpin Page", else: "Pin Page"}
+              </:item>
+              <:item
+                icon="hero-trash"
+                variant="error"
+                phx_click="delete_page"
+                data_confirm="Are you sure you want to delete this page?"
+              >
+                Delete Page
+              </:item>
+            </.kebab_menu>
           </div>
         <% end %>
-        
+
     <!-- Title Section -->
-        <div class="border-b border-base-300 pb-4 flex-shrink-0">
+        <div class="border-b border-base-300 pb-4 mb-4 flex-shrink-0">
           <%= if @editing_title do %>
             <form phx-submit="update_title" class="flex items-center gap-2">
               <input
@@ -417,11 +409,11 @@ defmodule JargaWeb.AppLive.Pages.Show do
             </h1>
           <% end %>
         </div>
-        
+
     <!-- Editor -->
-        <div class="min-h-[calc(100vh-16rem)]">
+        <div class="flex-1 flex flex-col overflow-hidden">
           <%= if @readonly do %>
-            <div class="alert alert-info mb-4">
+            <div class="alert alert-info mb-4 flex-shrink-0">
               <.icon name="hero-eye" class="size-5" />
               <span>You are viewing this page in read-only mode.</span>
             </div>
@@ -434,6 +426,7 @@ defmodule JargaWeb.AppLive.Pages.Show do
             data-initial-content={get_initial_markdown(@note)}
             data-readonly={if @readonly, do: "true", else: "false"}
             class={[
+              "flex-1 min-h-0 cursor-text",
               if(@readonly, do: "bg-base-100 opacity-90", else: "")
             ]}
           >
