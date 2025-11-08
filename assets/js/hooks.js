@@ -134,6 +134,9 @@ export const MilkdownEditor = {
 
         // Add click handler to focus editor when clicking on empty space
         this.setupClickToFocus(view)
+
+        // Set up staleness detection on editor focus
+        this.setupStalenessDetection(view)
       })
     }).catch((error) => {
       console.error('Failed to create Milkdown editor:', error)
@@ -437,6 +440,57 @@ export const MilkdownEditor = {
     }
   },
 
+  setupStalenessDetection(view) {
+    // Check for stale state on editor focus
+    const focusHandler = () => {
+      this.checkForStaleness()
+    }
+
+    // Store handler for cleanup
+    this.stalenessCheckHandler = focusHandler
+    view.dom.addEventListener('focus', focusHandler)
+
+    // Also check when LiveView reconnects
+    this.handleEvent('phx:connected', () => {
+      this.checkForStaleness()
+    })
+  },
+
+  async checkForStaleness() {
+    if (!this.collaborationManager || this.readonly) {
+      return
+    }
+
+    try {
+      await this.collaborationManager.checkForStaleness(
+        this.pushEvent.bind(this),
+        (freshDbState) => {
+          this.showStaleStateModal(freshDbState)
+        }
+      )
+    } catch (error) {
+      console.error('Error checking for staleness:', error)
+    }
+  },
+
+  showStaleStateModal(freshDbState) {
+    // Use browser's confirm dialog for simplicity
+    // In a production app, you might want to use a more sophisticated modal
+    const userWantsReload = confirm(
+      'This page has been edited elsewhere. Would you like to reload to see the latest version?\n\n' +
+      'Click OK to reload with the latest content.\n' +
+      'Click Cancel to continue editing (your changes may conflict with recent edits).'
+    )
+
+    if (userWantsReload) {
+      // Apply the fresh state from database
+      this.collaborationManager.applyFreshState(freshDbState)
+
+      // Clear pending changes flag since we just reloaded
+      this.hasPendingChanges = false
+    }
+  },
+
   destroyed() {
     // Force save any pending changes before cleanup
     if (this.hasPendingChanges) {
@@ -478,6 +532,17 @@ export const MilkdownEditor = {
     if (this.clickToFocusHandler) {
       this.el.removeEventListener('click', this.clickToFocusHandler)
       this.clickToFocusHandler = null
+    }
+
+    // Remove staleness check handler
+    if (this.stalenessCheckHandler) {
+      this.editor?.action((ctx) => {
+        const view = ctx.get(editorViewCtx)
+        if (view?.dom) {
+          view.dom.removeEventListener('focus', this.stalenessCheckHandler)
+        }
+      })
+      this.stalenessCheckHandler = null
     }
 
     if (this.collaborationManager) {

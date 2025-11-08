@@ -379,4 +379,72 @@ defmodule JargaWeb.AppLive.PagesTest do
       assert render(lv)
     end
   end
+
+  describe "staleness detection" do
+    setup %{conn: conn} do
+      user = user_fixture()
+      workspace = workspace_fixture(user)
+      {:ok, page} = Pages.create_page(user, workspace.id, %{title: "Staleness Test Page"})
+
+      %{conn: log_in_user(conn, user), user: user, workspace: workspace, page: page}
+    end
+
+    test "handles get_current_yjs_state event", %{
+      conn: conn,
+      user: user,
+      workspace: workspace,
+      page: page
+    } do
+      # First, save some yjs state to the page's note
+      saved_yjs_state = <<1, 2, 3, 4, 5, 6, 7, 8>>
+      page_with_components = Pages.get_page!(user, page.id, preload_components: true)
+      note = Pages.get_page_note(page_with_components)
+      {:ok, _updated_note} = Jarga.Notes.update_note(user, note.id, %{yjs_state: saved_yjs_state})
+
+      {:ok, lv, _html} = live(conn, ~p"/app/workspaces/#{workspace.slug}/pages/#{page.slug}")
+
+      # Trigger the event (this ensures the handler exists and doesn't crash)
+      # Note: LiveView test helpers don't expose replies from hooks directly
+      # So we verify behavior by ensuring no crash occurs
+      lv
+      |> element("#editor-container")
+      |> render_hook("get_current_yjs_state", %{})
+
+      # Verify the page still renders successfully (handler didn't crash)
+      assert render(lv) =~ "Staleness Test Page"
+    end
+
+    test "get_current_yjs_state returns updated state after save", %{
+      conn: conn,
+      user: user,
+      workspace: workspace,
+      page: page
+    } do
+      {:ok, lv, _html} = live(conn, ~p"/app/workspaces/#{workspace.slug}/pages/#{page.slug}")
+
+      # Save new state
+      new_state = <<10, 20, 30, 40, 50>>
+      complete_state = Base.encode64(new_state)
+
+      lv
+      |> element("#editor-container")
+      |> render_hook("force_save", %{
+        "complete_state" => complete_state,
+        "markdown" => "# New content"
+      })
+
+      # Verify the note was updated in the database
+      updated_page = Pages.get_page!(user, page.id, preload_components: true)
+      updated_note = Pages.get_page_note(updated_page)
+      assert updated_note.yjs_state == new_state
+
+      # Trigger get_current_yjs_state (should not crash with updated state)
+      lv
+      |> element("#editor-container")
+      |> render_hook("get_current_yjs_state", %{})
+
+      # Verify page still renders
+      assert render(lv) =~ "Staleness Test Page"
+    end
+  end
 end

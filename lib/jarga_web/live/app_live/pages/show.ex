@@ -140,6 +140,14 @@ defmodule JargaWeb.AppLive.Pages.Show do
   end
 
   @impl true
+  def handle_event("get_current_yjs_state", _params, socket) do
+    note = socket.assigns.note
+
+    # Return current yjs_state from database
+    {:reply, %{yjs_state: Base.encode64(note.yjs_state || <<>>)}, socket}
+  end
+
+  @impl true
   def handle_event("start_edit_title", _params, socket) do
     {:noreply, assign(socket, :editing_title, true)}
   end

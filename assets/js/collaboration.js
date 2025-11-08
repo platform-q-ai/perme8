@@ -227,6 +227,97 @@ export class CollaborationManager {
   }
 
   /**
+   * Check if the client's Yjs state is behind the database state.
+   *
+   * @param {Function} pushEventFn - Phoenix LiveView pushEvent function
+   * @param {Function} onStaleCallback - Callback when stale state detected
+   * @returns {Promise<boolean>} True if client is stale
+   */
+  async checkForStaleness(pushEventFn, onStaleCallback) {
+    if (!this.ydoc) {
+      return false
+    }
+
+    // Request current DB state from server
+    return new Promise((resolve) => {
+      pushEventFn('get_current_yjs_state', {}, (reply) => {
+        try {
+          const dbYjsStateBase64 = reply.yjs_state
+
+          // Check if we're behind
+          const isStale = this._isStateBehind(dbYjsStateBase64)
+
+          if (isStale && onStaleCallback) {
+            // Pass the fresh DB state to the callback
+            onStaleCallback(dbYjsStateBase64)
+          }
+
+          resolve(isStale)
+        } catch (error) {
+          console.error('Error checking staleness:', error)
+          resolve(false)
+        }
+      })
+    })
+  }
+
+  /**
+   * Check if client state is behind DB state using Yjs state vectors.
+   *
+   * @private
+   * @param {string} dbYjsStateBase64 - Base64 encoded DB yjs_state
+   * @returns {boolean} True if client is missing updates from DB
+   */
+  _isStateBehind(dbYjsStateBase64) {
+    if (!this.ydoc || !dbYjsStateBase64 || dbYjsStateBase64.length === 0) {
+      return false
+    }
+
+    try {
+      // Decode DB state
+      const dbYjsState = Uint8Array.from(atob(dbYjsStateBase64), c => c.charCodeAt(0))
+
+      // Get my current state vector
+      const myStateVector = Y.encodeStateVector(this.ydoc)
+
+      // Calculate what updates DB has that I don't have
+      const missingUpdates = Y.diffUpdate(dbYjsState, myStateVector)
+
+      // If missingUpdates has content, DB has changes I'm missing
+      return missingUpdates.length > 0
+    } catch (error) {
+      console.error('Error comparing state vectors:', error)
+      return false
+    }
+  }
+
+  /**
+   * Apply fresh state from the database, replacing current state.
+   *
+   * @param {string} freshYjsStateBase64 - Base64 encoded fresh yjs_state from DB
+   * @returns {void}
+   */
+  applyFreshState(freshYjsStateBase64) {
+    if (!this.ydoc || !freshYjsStateBase64 || freshYjsStateBase64.length === 0) {
+      return
+    }
+
+    try {
+      const freshYjsState = Uint8Array.from(atob(freshYjsStateBase64), c => c.charCodeAt(0))
+
+      // Apply fresh state to current doc
+      // Using 'remote' origin prevents this from being sent back to server
+      Y.applyUpdate(this.ydoc, freshYjsState, 'remote')
+
+      // Editor will automatically re-render via ySyncPlugin
+      console.log('Applied fresh state from database')
+    } catch (error) {
+      console.error('Error applying fresh state:', error)
+      throw error
+    }
+  }
+
+  /**
    * Clean up resources.
    *
    * @returns {void}
