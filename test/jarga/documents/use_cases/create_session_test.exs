@@ -30,10 +30,11 @@ defmodule Jarga.Documents.UseCases.CreateSessionTest do
       user = user_fixture()
       workspace = workspace_fixture(user)
 
-      assert {:ok, session} = CreateSession.execute(%{
-        user_id: user.id,
-        workspace_id: workspace.id
-      })
+      assert {:ok, session} =
+               CreateSession.execute(%{
+                 user_id: user.id,
+                 workspace_id: workspace.id
+               })
 
       assert session.user_id == user.id
       assert session.workspace_id == workspace.id
@@ -45,11 +46,12 @@ defmodule Jarga.Documents.UseCases.CreateSessionTest do
       workspace = workspace_fixture(user)
       project = project_fixture(user, workspace)
 
-      assert {:ok, session} = CreateSession.execute(%{
-        user_id: user.id,
-        workspace_id: workspace.id,
-        project_id: project.id
-      })
+      assert {:ok, session} =
+               CreateSession.execute(%{
+                 user_id: user.id,
+                 workspace_id: workspace.id,
+                 project_id: project.id
+               })
 
       assert session.user_id == user.id
       assert session.workspace_id == workspace.id
@@ -59,10 +61,11 @@ defmodule Jarga.Documents.UseCases.CreateSessionTest do
     test "creates a session with title" do
       user = user_fixture()
 
-      assert {:ok, session} = CreateSession.execute(%{
-        user_id: user.id,
-        title: "My Chat Session"
-      })
+      assert {:ok, session} =
+               CreateSession.execute(%{
+                 user_id: user.id,
+                 title: "My Chat Session"
+               })
 
       assert session.title == "My Chat Session"
     end
@@ -84,10 +87,11 @@ defmodule Jarga.Documents.UseCases.CreateSessionTest do
       user = user_fixture()
 
       # Create session without title
-      {:ok, session} = CreateSession.execute(%{
-        user_id: user.id,
-        first_message: "What is the status of project Alpha?"
-      })
+      {:ok, session} =
+        CreateSession.execute(%{
+          user_id: user.id,
+          first_message: "What is the status of project Alpha?"
+        })
 
       # Title should be generated from first message (truncated to reasonable length)
       expected_title = "What is the status of project Alpha?"
@@ -96,12 +100,15 @@ defmodule Jarga.Documents.UseCases.CreateSessionTest do
 
     test "truncates auto-generated title to 50 characters" do
       user = user_fixture()
-      long_message = "This is a very long message that exceeds fifty characters and should be truncated"
 
-      {:ok, session} = CreateSession.execute(%{
-        user_id: user.id,
-        first_message: long_message
-      })
+      long_message =
+        "This is a very long message that exceeds fifty characters and should be truncated"
+
+      {:ok, session} =
+        CreateSession.execute(%{
+          user_id: user.id,
+          first_message: long_message
+        })
 
       assert String.length(session.title) <= 50
       assert String.ends_with?(session.title, "...")
@@ -110,11 +117,12 @@ defmodule Jarga.Documents.UseCases.CreateSessionTest do
     test "uses provided title even when first_message is present" do
       user = user_fixture()
 
-      {:ok, session} = CreateSession.execute(%{
-        user_id: user.id,
-        title: "Custom Title",
-        first_message: "Some message content"
-      })
+      {:ok, session} =
+        CreateSession.execute(%{
+          user_id: user.id,
+          title: "Custom Title",
+          first_message: "Some message content"
+        })
 
       assert session.title == "Custom Title"
     end

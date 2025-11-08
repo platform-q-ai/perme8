@@ -16,11 +16,11 @@ defmodule Jarga.Documents.ChatMessage do
   @valid_roles ~w(user assistant)
 
   schema "chat_messages" do
-    field :role, :string
-    field :content, :string
-    field :context_chunks, {:array, :binary_id}, default: []
+    field(:role, :string)
+    field(:content, :string)
+    field(:context_chunks, {:array, :binary_id}, default: [])
 
-    belongs_to :chat_session, Jarga.Documents.ChatSession
+    belongs_to(:chat_session, Jarga.Documents.ChatSession)
 
     timestamps(type: :utc_datetime)
   end
@@ -48,15 +48,20 @@ defmodule Jarga.Documents.ChatMessage do
 
   defp trim_content(changeset) do
     case get_change(changeset, :content) do
-      nil -> changeset
+      nil ->
+        changeset
+
       content when is_binary(content) ->
         trimmed = String.trim(content)
+
         if trimmed == "" do
           put_change(changeset, :content, nil)
         else
           put_change(changeset, :content, trimmed)
         end
-      _ -> changeset
+
+      _ ->
+        changeset
     end
   end
 end

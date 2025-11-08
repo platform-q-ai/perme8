@@ -24,10 +24,10 @@ defmodule Jarga.Documents.UseCases.LoadSessionTest do
 
       # Messages should be ordered by insertion time (oldest first)
       assert Enum.map(loaded_session.messages, & &1.content) == [
-        "Hello",
-        "Hi there!",
-        "How are you?"
-      ]
+               "Hello",
+               "Hi there!",
+               "How are you?"
+             ]
     end
 
     test "loads a session without messages" do
@@ -65,12 +65,13 @@ defmodule Jarga.Documents.UseCases.LoadSessionTest do
       session = chat_session_fixture()
       chunk_ids = [Ecto.UUID.generate(), Ecto.UUID.generate()]
 
-      _msg = chat_message_fixture(
-        chat_session: session,
-        role: "assistant",
-        content: "Based on documents...",
-        context_chunks: chunk_ids
-      )
+      _msg =
+        chat_message_fixture(
+          chat_session: session,
+          role: "assistant",
+          content: "Based on documents...",
+          context_chunks: chunk_ids
+        )
 
       assert {:ok, loaded_session} = LoadSession.execute(session.id)
 

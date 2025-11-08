@@ -11,6 +11,11 @@ defmodule Jarga.Documents.UseCases.LoadSession do
   - Preload user, workspace, and project relationships
   - Return error if session not found
 
+  ## Clean Architecture
+  This use case orchestrates infrastructure (Queries, Repo) without
+  containing direct query logic. All queries are delegated to the
+  Queries module as per ARCHITECTURE.md guidelines.
+
   ## Examples
 
       iex> LoadSession.execute(session_id)
@@ -20,10 +25,7 @@ defmodule Jarga.Documents.UseCases.LoadSession do
       {:error, :not_found}
   """
 
-  import Ecto.Query
-
-  alias Jarga.Repo
-  alias Jarga.Documents.ChatSession
+  alias Jarga.Documents.Infrastructure.SessionRepository
 
   @doc """
   Loads a chat session with all its data.
@@ -35,24 +37,9 @@ defmodule Jarga.Documents.UseCases.LoadSession do
   or `{:error, :not_found}` if the session doesn't exist.
   """
   def execute(session_id) do
-    query =
-      from s in ChatSession,
-        where: s.id == ^session_id,
-        preload: [
-          :user,
-          :workspace,
-          :project,
-          messages: ^messages_query()
-        ]
-
-    case Repo.one(query) do
+    case SessionRepository.get_session_by_id(session_id) do
       nil -> {:error, :not_found}
       session -> {:ok, session}
     end
-  end
-
-  defp messages_query do
-    from m in Jarga.Documents.ChatMessage,
-      order_by: [asc: m.inserted_at]
   end
 end

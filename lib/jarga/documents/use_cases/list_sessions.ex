@@ -5,16 +5,18 @@ defmodule Jarga.Documents.UseCases.ListSessions do
   Returns sessions ordered by most recent first, with message count
   and preview of the first message.
 
+  ## Clean Architecture
+  This use case orchestrates infrastructure (Queries, Repo) without
+  containing direct query logic. All queries are delegated to the
+  Queries module as per ARCHITECTURE.md guidelines.
+
   ## Examples
 
       iex> ListSessions.execute(user_id)
       {:ok, [%{id: ..., title: "...", message_count: 5, preview: "..."}]}
   """
 
-  import Ecto.Query
-
-  alias Jarga.Repo
-  alias Jarga.Documents.ChatSession
+  alias Jarga.Documents.Infrastructure.SessionRepository
 
   @default_limit 50
   @preview_max_length 100
@@ -36,36 +38,18 @@ defmodule Jarga.Documents.UseCases.ListSessions do
     limit = Keyword.get(opts, :limit, @default_limit)
 
     sessions =
-      from(s in ChatSession,
-        left_join: m in assoc(s, :messages),
-        where: s.user_id == ^user_id,
-        group_by: s.id,
-        order_by: [desc: s.updated_at],
-        limit: ^limit,
-        select: %{
-          id: s.id,
-          title: s.title,
-          inserted_at: s.inserted_at,
-          updated_at: s.updated_at,
-          message_count: count(m.id)
-        }
-      )
-      |> Repo.all()
+      user_id
+      |> SessionRepository.list_user_sessions(limit)
       |> Enum.map(&add_preview/1)
 
     {:ok, sessions}
   end
 
   defp add_preview(session) do
-    # Get the first message for preview
+    # Get the first message for preview using Repository
     preview =
-      from(m in Jarga.Documents.ChatMessage,
-        where: m.chat_session_id == ^session.id,
-        order_by: [asc: m.inserted_at],
-        limit: 1,
-        select: m.content
-      )
-      |> Repo.one()
+      session.id
+      |> SessionRepository.get_first_message_content()
       |> truncate_preview()
 
     Map.put(session, :preview, preview)

@@ -21,7 +21,15 @@ defmodule Jarga.Documents do
     ]
 
   alias Jarga.Documents.Infrastructure.Services.LlmClient
-  alias Jarga.Documents.UseCases.{PrepareContext, CreateSession, SaveMessage, LoadSession, ListSessions, DeleteSession}
+
+  alias Jarga.Documents.UseCases.{
+    PrepareContext,
+    CreateSession,
+    SaveMessage,
+    LoadSession,
+    ListSessions,
+    DeleteSession
+  }
 
   @doc """
   Prepares chat context from LiveView assigns.

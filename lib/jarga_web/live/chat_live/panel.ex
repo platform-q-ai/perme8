@@ -47,11 +47,12 @@ defmodule JargaWeb.ChatLive.Panel do
 
           # Save assistant message to database if we have a session
           if socket.assigns.current_session_id do
-            {:ok, _saved_assistant_msg} = Documents.save_message(%{
-              chat_session_id: socket.assigns.current_session_id,
-              role: "assistant",
-              content: assigns.done
-            })
+            {:ok, _saved_assistant_msg} =
+              Documents.save_message(%{
+                chat_session_id: socket.assigns.current_session_id,
+                role: "assistant",
+                content: assigns.done
+              })
           end
 
           # Add assistant message with source attribution
@@ -97,34 +98,24 @@ defmodule JargaWeb.ChatLive.Panel do
   end
 
   @impl true
-  def handle_event("restore_session", %{"session_id" => session_id}, socket) when session_id != "" do
-    case Documents.load_session(session_id) do
-      {:ok, session} ->
-        # Verify the session belongs to the current user
-        current_user_id = get_nested(socket.assigns, [:current_user, :id])
+  def handle_event("restore_session", %{"session_id" => session_id}, socket)
+      when session_id != "" do
+    current_user_id = get_nested(socket.assigns, [:current_user, :id])
 
-        if session.user_id == current_user_id do
-          # Convert database messages to UI format
-          ui_messages = Enum.map(session.messages, fn msg ->
-            %{
-              role: msg.role,
-              content: msg.content,
-              timestamp: msg.inserted_at
-            }
-          end)
+    with {:ok, session} <- Documents.load_session(session_id),
+         :ok <- verify_session_ownership(session, current_user_id) do
+      ui_messages = convert_messages_to_ui_format(session.messages)
 
-          {:noreply,
-           socket
-           |> assign(:current_session_id, session.id)
-           |> assign(:messages, ui_messages)}
-        else
-          # Session doesn't belong to this user, ignore
-          {:noreply, socket}
-        end
-
+      {:noreply,
+       socket
+       |> assign(:current_session_id, session.id)
+       |> assign(:messages, ui_messages)}
+    else
       {:error, :not_found} ->
-        # Session not found, clear localStorage
         {:noreply, push_event(socket, "clear_session", %{})}
+
+      {:error, :unauthorized} ->
+        {:noreply, socket}
     end
   end
 
@@ -148,11 +139,12 @@ defmodule JargaWeb.ChatLive.Panel do
       socket = ensure_session(socket, message_text)
 
       # Save user message to database
-      {:ok, _saved_user_msg} = Documents.save_message(%{
-        chat_session_id: socket.assigns.current_session_id,
-        role: "user",
-        content: message_text
-      })
+      {:ok, _saved_user_msg} =
+        Documents.save_message(%{
+          chat_session_id: socket.assigns.current_session_id,
+          role: "user",
+          content: message_text
+        })
 
       # Add user message to UI
       user_message = %{
@@ -253,32 +245,20 @@ defmodule JargaWeb.ChatLive.Panel do
 
   @impl true
   def handle_event("load_session", %{"session-id" => session_id}, socket) do
-    case Documents.load_session(session_id) do
-      {:ok, session} ->
-        # Verify the session belongs to the current user
-        current_user_id = get_nested(socket.assigns, [:current_user, :id])
+    current_user_id = get_nested(socket.assigns, [:current_user, :id])
 
-        if session.user_id == current_user_id do
-          # Convert database messages to UI format
-          ui_messages = Enum.map(session.messages, fn msg ->
-            %{
-              role: msg.role,
-              content: msg.content,
-              timestamp: msg.inserted_at
-            }
-          end)
+    with {:ok, session} <- Documents.load_session(session_id),
+         :ok <- verify_session_ownership(session, current_user_id) do
+      ui_messages = convert_messages_to_ui_format(session.messages)
 
-          {:noreply,
-           socket
-           |> assign(:current_session_id, session.id)
-           |> assign(:messages, ui_messages)
-           |> assign(:view_mode, :chat)
-           |> push_event("save_session", %{session_id: session.id})}
-        else
-          {:noreply, socket}
-        end
-
-      {:error, :not_found} ->
+      {:noreply,
+       socket
+       |> assign(:current_session_id, session.id)
+       |> assign(:messages, ui_messages)
+       |> assign(:view_mode, :chat)
+       |> push_event("save_session", %{session_id: session.id})}
+    else
+      _error ->
         {:noreply, socket}
     end
   end
@@ -288,36 +268,60 @@ defmodule JargaWeb.ChatLive.Panel do
     user_id = get_nested(socket.assigns, [:current_user, :id])
 
     socket =
-      if user_id do
-        case Documents.delete_session(session_id, user_id) do
-          {:ok, _deleted_session} ->
-            # Reload sessions list
-            {:ok, sessions} = Documents.list_sessions(user_id, limit: 20)
-
-            # Clear current chat if we deleted the active session
-            socket =
-              if socket.assigns.current_session_id == session_id do
-                socket
-                |> assign(:current_session_id, nil)
-                |> assign(:messages, [])
-                |> push_event("clear_session", %{})
-              else
-                socket
-              end
-
-            assign(socket, :sessions, sessions)
-
-          {:error, _} ->
-            socket
-        end
-      else
-        socket
+      case delete_and_refresh_sessions(session_id, user_id, socket) do
+        {:ok, updated_socket} -> updated_socket
+        {:error, _} -> socket
       end
 
     {:noreply, socket}
   end
 
   # Private helper functions
+
+  defp verify_session_ownership(session, current_user_id) do
+    if session.user_id == current_user_id do
+      :ok
+    else
+      {:error, :unauthorized}
+    end
+  end
+
+  defp convert_messages_to_ui_format(messages) do
+    Enum.map(messages, fn msg ->
+      %{
+        role: msg.role,
+        content: msg.content,
+        timestamp: msg.inserted_at
+      }
+    end)
+  end
+
+  defp delete_and_refresh_sessions(_session_id, nil, _socket) do
+    {:error, :no_user}
+  end
+
+  defp delete_and_refresh_sessions(session_id, user_id, socket) do
+    with {:ok, _deleted_session} <- Documents.delete_session(session_id, user_id),
+         {:ok, sessions} <- Documents.list_sessions(user_id, limit: 20) do
+      updated_socket =
+        socket
+        |> clear_session_if_active(session_id)
+        |> assign(:sessions, sessions)
+
+      {:ok, updated_socket}
+    end
+  end
+
+  defp clear_session_if_active(socket, session_id) do
+    if socket.assigns.current_session_id == session_id do
+      socket
+      |> assign(:current_session_id, nil)
+      |> assign(:messages, [])
+      |> push_event("clear_session", %{})
+    else
+      socket
+    end
+  end
 
   defp ensure_session(socket, first_message) do
     case socket.assigns.current_session_id do
@@ -326,12 +330,13 @@ defmodule JargaWeb.ChatLive.Panel do
         user_id = get_nested(socket.assigns, [:current_user, :id])
 
         if user_id do
-          {:ok, session} = Documents.create_session(%{
-            user_id: user_id,
-            workspace_id: get_nested(socket.assigns, [:current_workspace, :id]),
-            project_id: get_nested(socket.assigns, [:current_project, :id]),
-            first_message: first_message
-          })
+          {:ok, session} =
+            Documents.create_session(%{
+              user_id: user_id,
+              workspace_id: get_nested(socket.assigns, [:current_workspace, :id]),
+              project_id: get_nested(socket.assigns, [:current_project, :id]),
+              first_message: first_message
+            })
 
           assign(socket, :current_session_id, session.id)
         else
@@ -365,10 +370,10 @@ defmodule JargaWeb.ChatLive.Panel do
 
     cond do
       diff_seconds < 60 -> "just now"
-      diff_seconds < 3600 -> "#{div(diff_seconds, 60)}m ago"
-      diff_seconds < 86400 -> "#{div(diff_seconds, 3600)}h ago"
-      diff_seconds < 604800 -> "#{div(diff_seconds, 86400)}d ago"
-      true -> "#{div(diff_seconds, 604800)}w ago"
+      diff_seconds < 3_600 -> "#{div(diff_seconds, 60)}m ago"
+      diff_seconds < 86_400 -> "#{div(diff_seconds, 3_600)}h ago"
+      diff_seconds < 604_800 -> "#{div(diff_seconds, 86_400)}d ago"
+      true -> "#{div(diff_seconds, 604_800)}w ago"
     end
   end
 end

@@ -4,12 +4,17 @@ defmodule Jarga.DocumentsFixtures do
   entities via the `Jarga.Documents` context.
   """
 
-  use Boundary, top_level?: true, deps: [Jarga.Documents, Jarga.Repo], exports: []
+  use Boundary,
+    top_level?: true,
+    deps: [Jarga.Documents, Jarga.Repo, Jarga.AccountsFixtures, Jarga.WorkspacesFixtures],
+    exports: []
 
   import Jarga.AccountsFixtures
   import Jarga.WorkspacesFixtures
 
   alias Jarga.Repo
+  alias Jarga.Documents.ChatSession
+  alias Jarga.Documents.ChatMessage
 
   @doc """
   Generate a chat session.
@@ -19,8 +24,8 @@ defmodule Jarga.DocumentsFixtures do
     workspace = attrs[:workspace] || workspace_fixture(user)
 
     {:ok, session} =
-      %Jarga.Documents.ChatSession{}
-      |> Jarga.Documents.ChatSession.changeset(%{
+      %ChatSession{}
+      |> ChatSession.changeset(%{
         user_id: user.id,
         workspace_id: workspace.id,
         title: attrs[:title],
@@ -38,8 +43,8 @@ defmodule Jarga.DocumentsFixtures do
     session = attrs[:chat_session] || chat_session_fixture()
 
     {:ok, message} =
-      %Jarga.Documents.ChatMessage{}
-      |> Jarga.Documents.ChatMessage.changeset(%{
+      %ChatMessage{}
+      |> ChatMessage.changeset(%{
         chat_session_id: session.id,
         role: attrs[:role] || "user",
         content: attrs[:content] || "Test message content",

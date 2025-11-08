@@ -13,13 +13,13 @@ defmodule Jarga.Documents.ChatSession do
   @foreign_key_type :binary_id
 
   schema "chat_sessions" do
-    field :title, :string
+    field(:title, :string)
 
-    belongs_to :user, Jarga.Accounts.User
-    belongs_to :workspace, Jarga.Workspaces.Workspace
-    belongs_to :project, Jarga.Projects.Project
+    belongs_to(:user, Jarga.Accounts.User)
+    belongs_to(:workspace, Jarga.Workspaces.Workspace)
+    belongs_to(:project, Jarga.Projects.Project)
 
-    has_many :messages, Jarga.Documents.ChatMessage
+    has_many(:messages, Jarga.Documents.ChatMessage)
 
     timestamps(type: :utc_datetime)
   end

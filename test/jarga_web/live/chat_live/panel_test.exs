@@ -525,7 +525,9 @@ defmodule JargaWeb.ChatLive.PanelTest do
       import Jarga.DocumentsFixtures
       other_user = user_fixture(%{email: "other@example.com"})
       other_session = chat_session_fixture(user: other_user, title: "Other User's Chat")
-      _msg = chat_message_fixture(chat_session: other_session, role: "user", content: "Secret message")
+
+      _msg =
+        chat_message_fixture(chat_session: other_session, role: "user", content: "Secret message")
 
       {:ok, view, _html} = live(conn, ~p"/app")
 
@@ -614,9 +616,9 @@ defmodule JargaWeb.ChatLive.PanelTest do
       # Session should be removed from the UI
       refute has_element?(view, "p", "Old Conversation")
 
-      # Verify session was deleted from database
-      alias Jarga.Repo
-      assert Repo.get(Jarga.Documents.ChatSession, session.id) == nil
+      # Verify session was deleted from database via context
+      alias Jarga.Documents
+      assert {:error, :not_found} = Documents.load_session(session.id)
     end
   end
 

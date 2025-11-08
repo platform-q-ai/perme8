@@ -120,7 +120,8 @@ defmodule Jarga.Documents.UseCases.ListSessionsTest do
       assert {:ok, sessions} = ListSessions.execute(user.id)
 
       session_with_preview = List.first(sessions)
-      assert String.length(session_with_preview.preview) <= 103  # 100 + "..."
+      # 100 + "..."
+      assert String.length(session_with_preview.preview) <= 103
       assert String.ends_with?(session_with_preview.preview, "...")
     end
   end

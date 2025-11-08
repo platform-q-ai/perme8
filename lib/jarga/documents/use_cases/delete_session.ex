@@ -4,6 +4,11 @@ defmodule Jarga.Documents.UseCases.DeleteSession do
 
   Only allows users to delete their own sessions (authorization check).
 
+  ## Clean Architecture
+  This use case orchestrates infrastructure (Queries, Repo) without
+  containing direct query logic. All queries are delegated to the
+  Queries module as per ARCHITECTURE.md guidelines.
+
   ## Examples
 
       iex> DeleteSession.execute(session_id, user_id)
@@ -13,10 +18,8 @@ defmodule Jarga.Documents.UseCases.DeleteSession do
       {:error, :not_found}
   """
 
-  import Ecto.Query
-
   alias Jarga.Repo
-  alias Jarga.Documents.ChatSession
+  alias Jarga.Documents.Infrastructure.SessionRepository
 
   @doc """
   Deletes a chat session.
@@ -31,11 +34,7 @@ defmodule Jarga.Documents.UseCases.DeleteSession do
   Messages are automatically deleted via database cascade.
   """
   def execute(session_id, user_id) do
-    query =
-      from s in ChatSession,
-        where: s.id == ^session_id and s.user_id == ^user_id
-
-    case Repo.one(query) do
+    case SessionRepository.get_session_by_id_and_user(session_id, user_id) do
       nil ->
         {:error, :not_found}
 

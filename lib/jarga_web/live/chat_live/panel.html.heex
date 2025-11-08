@@ -85,95 +85,95 @@
           phx-hook="ChatMessages"
           data-loading={to_string(@streaming)}
         >
-        <%= if Enum.empty?(@messages) and @stream_buffer == "" do %>
-          <div class="flex flex-col items-center justify-center h-full text-center">
-            <.icon name="hero-chat-bubble-left-ellipsis" class="w-12 h-12 opacity-30" />
-            <p class="text-sm mt-2 opacity-60">Ask me anything about this page</p>
-          </div>
-        <% end %>
-
-        <%= for message <- @messages do %>
-          <.message message={message} />
-          <%= if message.role == "assistant" && Map.get(message, :source) do %>
-            <div class="text-xs opacity-70 ml-12 -mt-2 mb-2">
-              <.icon name="hero-document-text-mini" class="w-3 h-3 inline" /> Source:
-              <.link navigate={message.source.page_url} class="link link-primary">
-                {message.source.page_title}
-              </.link>
+          <%= if Enum.empty?(@messages) and @stream_buffer == "" do %>
+            <div class="flex flex-col items-center justify-center h-full text-center">
+              <.icon name="hero-chat-bubble-left-ellipsis" class="w-12 h-12 opacity-30" />
+              <p class="text-sm mt-2 opacity-60">Ask me anything about this page</p>
             </div>
           <% end %>
-        <% end %>
 
-        <%= if @streaming and @stream_buffer != "" do %>
-          <.message message={
-            %{
-              role: "assistant",
-              content: @stream_buffer,
-              timestamp: DateTime.utc_now(),
-              streaming: true
-            }
-          } />
-        <% end %>
+          <%= for message <- @messages do %>
+            <.message message={message} />
+            <%= if message.role == "assistant" && Map.get(message, :source) do %>
+              <div class="text-xs opacity-70 ml-12 -mt-2 mb-2">
+                <.icon name="hero-document-text-mini" class="w-3 h-3 inline" /> Source:
+                <.link navigate={message.source.page_url} class="link link-primary">
+                  {message.source.page_title}
+                </.link>
+              </div>
+            <% end %>
+          <% end %>
 
-        <%= if @streaming and @stream_buffer == "" do %>
-          <div class="flex items-center gap-2 p-4">
-            <span class="loading loading-dots loading-sm"></span>
-            <span class="text-sm opacity-60">Thinking...</span>
-          </div>
-        <% end %>
+          <%= if @streaming and @stream_buffer != "" do %>
+            <.message message={
+              %{
+                role: "assistant",
+                content: @stream_buffer,
+                timestamp: DateTime.utc_now(),
+                streaming: true
+              }
+            } />
+          <% end %>
 
-        <%= if @error do %>
-          <div role="alert" class="alert alert-error">
-            <.icon name="hero-exclamation-triangle" class="w-5 h-5" />
-            <span>{@error}</span>
-          </div>
-        <% end %>
+          <%= if @streaming and @stream_buffer == "" do %>
+            <div class="flex items-center gap-2 p-4">
+              <span class="loading loading-dots loading-sm"></span>
+              <span class="text-sm opacity-60">Thinking...</span>
+            </div>
+          <% end %>
+
+          <%= if @error do %>
+            <div role="alert" class="alert alert-error">
+              <.icon name="hero-exclamation-triangle" class="w-5 h-5" />
+              <span>{@error}</span>
+            </div>
+          <% end %>
         </div>
 
         <%!-- Input area --%>
         <div class="p-4 bg-base-100 border-t border-base-300">
-        <form
-          id="chat-message-form"
-          phx-submit="send_message"
-          phx-target={@myself}
-          class="space-y-2"
-        >
-          <textarea
-            id="chat-input"
-            name="message"
-            value={@current_message}
-            phx-change="update_message"
+          <form
+            id="chat-message-form"
+            phx-submit="send_message"
             phx-target={@myself}
-            placeholder="Ask about this page..."
-            rows="3"
-            class="textarea textarea-bordered w-full resize-none"
-            disabled={@streaming}
-            phx-hook="ChatInput"
-          />
-
-          <div class="flex items-center justify-between gap-2">
-            <button
-              type="button"
-              phx-click="clear_chat"
+            class="space-y-2"
+          >
+            <textarea
+              id="chat-input"
+              name="message"
+              value={@current_message}
+              phx-change="update_message"
               phx-target={@myself}
-              class="btn btn-outline btn-sm"
-              disabled={Enum.empty?(@messages)}
-            >
-              <.icon name="hero-trash" class="w-4 h-4" /> Clear
-            </button>
-            <button
-              type="submit"
-              class="btn btn-primary btn-sm"
-              disabled={@streaming or @current_message == ""}
-            >
-              <%= if @streaming do %>
-                <span class="loading loading-spinner loading-xs"></span> Sending...
-              <% else %>
-                <.icon name="hero-paper-airplane" class="w-4 h-4" /> Send
-              <% end %>
-            </button>
-          </div>
-        </form>
+              placeholder="Ask about this page..."
+              rows="3"
+              class="textarea textarea-bordered w-full resize-none"
+              disabled={@streaming}
+              phx-hook="ChatInput"
+            />
+
+            <div class="flex items-center justify-between gap-2">
+              <button
+                type="button"
+                phx-click="clear_chat"
+                phx-target={@myself}
+                class="btn btn-outline btn-sm"
+                disabled={Enum.empty?(@messages)}
+              >
+                <.icon name="hero-trash" class="w-4 h-4" /> Clear
+              </button>
+              <button
+                type="submit"
+                class="btn btn-primary btn-sm"
+                disabled={@streaming or @current_message == ""}
+              >
+                <%= if @streaming do %>
+                  <span class="loading loading-spinner loading-xs"></span> Sending...
+                <% else %>
+                  <.icon name="hero-paper-airplane" class="w-4 h-4" /> Send
+                <% end %>
+              </button>
+            </div>
+          </form>
         </div>
       <% else %>
         <%!-- Conversations list view --%>
@@ -205,17 +205,17 @@
                       <div class="flex items-start justify-between w-full">
                         <div class="flex-1 min-w-0">
                           <p class="font-medium text-sm truncate">
-                            <%= session.title || "Untitled conversation" %>
+                            {session.title || "Untitled conversation"}
                           </p>
                           <%= if session.preview do %>
                             <p class="text-xs opacity-60 truncate mt-1">
-                              <%= session.preview %>
+                              {session.preview}
                             </p>
                           <% end %>
                           <div class="flex items-center gap-2 mt-2 text-xs opacity-50">
-                            <span><%= session.message_count %> messages</span>
+                            <span>{session.message_count} messages</span>
                             <span>•</span>
-                            <span><%= relative_time(session.updated_at) %></span>
+                            <span>{relative_time(session.updated_at)}</span>
                           </div>
                         </div>
                       </div>
