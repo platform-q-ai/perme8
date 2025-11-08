@@ -40,3 +40,6 @@ config :phoenix_live_view,
 
 # Enable SQL sandbox for GenServer processes in tests
 config :jarga, :sql_sandbox, true
+
+# Speed up tests by reducing debounce time to 1ms
+config :jarga, :page_save_debounce_ms, 1

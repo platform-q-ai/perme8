@@ -29,94 +29,108 @@ defmodule JargaWeb.ChatLive.Panel do
 
   @impl true
   def update(assigns, socket) do
-    socket = assign(socket, assigns)
-
-    # Restore most recent session from database on first mount
     socket =
-      if !socket.assigns[:session_restored] do
-        current_user_id = get_nested(assigns, [:current_user, :id])
-
-        restored_socket =
-          if current_user_id do
-            # Try to restore the most recent session for this user
-            case Documents.list_sessions(current_user_id, limit: 1) do
-              {:ok, [most_recent_session | _]} ->
-                case Documents.load_session(most_recent_session.id) do
-                  {:ok, db_session} ->
-                    ui_messages = convert_messages_to_ui_format(db_session.messages)
-
-                    socket
-                    |> assign(:current_session_id, db_session.id)
-                    |> assign(:messages, ui_messages)
-
-                  {:error, _} ->
-                    socket
-                end
-
-              _ ->
-                socket
-            end
-          else
-            socket
-          end
-
-        assign(restored_socket, :session_restored, true)
-      else
-        socket
-      end
-
-    # Handle streaming messages sent via send_update from parent
-    socket =
-      cond do
-        Map.has_key?(assigns, :chunk) ->
-          buffer = socket.assigns.stream_buffer <> assigns.chunk
-
-          socket
-          |> assign(:stream_buffer, buffer)
-          |> push_event("scroll_to_bottom", %{})
-
-        Map.has_key?(assigns, :done) ->
-          # Extract page info for source attribution
-          {:ok, page_context} = Documents.prepare_chat_context(socket.assigns)
-
-          # Save assistant message to database if we have a session
-          if socket.assigns.current_session_id do
-            {:ok, _saved_assistant_msg} =
-              Documents.save_message(%{
-                chat_session_id: socket.assigns.current_session_id,
-                role: "assistant",
-                content: assigns.done
-              })
-          end
-
-          # Add assistant message with source attribution
-          assistant_message = %{
-            role: "assistant",
-            content: assigns.done,
-            timestamp: DateTime.utc_now(),
-            source: page_context[:page_info]
-          }
-
-          # Send for test assertions
-          send(self(), {:assistant_response, assigns.done})
-
-          socket
-          |> assign(:messages, socket.assigns.messages ++ [assistant_message])
-          |> assign(:streaming, false)
-          |> assign(:stream_buffer, "")
-          |> push_event("scroll_to_bottom", %{})
-
-        Map.has_key?(assigns, :error) ->
-          socket
-          |> assign(:streaming, false)
-          |> assign(:stream_buffer, "")
-          |> assign(:error, "Error: #{assigns.error}")
-
-        true ->
-          socket
-      end
+      socket
+      |> assign(assigns)
+      |> maybe_restore_session(assigns)
+      |> handle_streaming_updates(assigns)
 
     {:ok, socket}
+  end
+
+  # Restores the most recent session from database on first mount
+  defp maybe_restore_session(socket, assigns) do
+    if socket.assigns[:session_restored] do
+      socket
+    else
+      socket
+      |> restore_user_session(assigns)
+      |> assign(:session_restored, true)
+    end
+  end
+
+  defp restore_user_session(socket, assigns) do
+    current_user_id = get_nested(assigns, [:current_user, :id])
+
+    if current_user_id do
+      load_most_recent_session(socket, current_user_id)
+    else
+      socket
+    end
+  end
+
+  defp load_most_recent_session(socket, user_id) do
+    with {:ok, [most_recent_session | _]} <- Documents.list_sessions(user_id, limit: 1),
+         {:ok, db_session} <- Documents.load_session(most_recent_session.id) do
+      ui_messages = convert_messages_to_ui_format(db_session.messages)
+
+      socket
+      |> assign(:current_session_id, db_session.id)
+      |> assign(:messages, ui_messages)
+    else
+      _ -> socket
+    end
+  end
+
+  # Handles streaming message updates sent via send_update from parent
+  defp handle_streaming_updates(socket, assigns) do
+    cond do
+      Map.has_key?(assigns, :chunk) ->
+        handle_chunk(socket, assigns.chunk)
+
+      Map.has_key?(assigns, :done) ->
+        handle_done(socket, assigns.done)
+
+      Map.has_key?(assigns, :error) ->
+        handle_error(socket, assigns.error)
+
+      true ->
+        socket
+    end
+  end
+
+  defp handle_chunk(socket, chunk) do
+    buffer = socket.assigns.stream_buffer <> chunk
+
+    socket
+    |> assign(:stream_buffer, buffer)
+    |> push_event("scroll_to_bottom", %{})
+  end
+
+  defp handle_done(socket, content) do
+    {:ok, page_context} = Documents.prepare_chat_context(socket.assigns)
+
+    # Save assistant message to database if we have a session
+    if socket.assigns.current_session_id do
+      Documents.save_message(%{
+        chat_session_id: socket.assigns.current_session_id,
+        role: "assistant",
+        content: content
+      })
+    end
+
+    assistant_message = %{
+      role: "assistant",
+      content: content,
+      timestamp: DateTime.utc_now(),
+      source: page_context[:page_info]
+    }
+
+    # Send for test assertions
+    send(self(), {:assistant_response, content})
+
+    socket
+    |> assign(:messages, socket.assigns.messages ++ [assistant_message])
+    |> assign(:streaming, false)
+    |> assign(:stream_buffer, "")
+    |> push_event("scroll_to_bottom", %{})
+  end
+
+  defp handle_error(socket, error) do
+    socket
+    |> assign(:streaming, false)
+    |> assign(:stream_buffer, "")
+    |> assign(:error, "Error: #{error}")
   end
 
   @impl true

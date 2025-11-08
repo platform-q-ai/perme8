@@ -35,8 +35,8 @@
     <ul class="menu bg-base-100 min-h-full w-96 p-0 flex flex-col">
       <%!-- Header --%>
       <div class="navbar bg-base-200 border-b border-base-300">
-        <div class="flex-1">
-          <%= if @view_mode == :chat do %>
+        <%= if @view_mode == :chat do %>
+          <div class="flex-1">
             <button
               type="button"
               phx-click="new_conversation"
@@ -54,7 +54,18 @@
             >
               <.icon name="hero-queue-list" class="w-4 h-4" /> History
             </button>
-          <% else %>
+          </div>
+          <div class="flex-none">
+            <label
+              for={"chat-drawer-#{@id}"}
+              class="btn btn-ghost btn-circle btn-sm cursor-pointer"
+              aria-label="Close chat"
+            >
+              <.icon name="hero-x-mark" class="w-5 h-5" />
+            </label>
+          </div>
+        <% else %>
+          <div class="flex-1">
             <button
               type="button"
               phx-click="show_chat"
@@ -63,18 +74,20 @@
             >
               <.icon name="hero-arrow-left" class="w-4 h-4" /> Back
             </button>
-            <span class="text-sm font-medium">Conversations</span>
-          <% end %>
-        </div>
-        <div class="flex-none">
-          <label
-            for={"chat-drawer-#{@id}"}
-            class="btn btn-ghost btn-circle btn-sm cursor-pointer"
-            aria-label="Close chat"
-          >
-            <.icon name="hero-x-mark" class="w-5 h-5" />
-          </label>
-        </div>
+          </div>
+          <div class="flex-none">
+            <h2 class="text-lg font-semibold">Conversations</h2>
+          </div>
+          <div class="flex-1 flex justify-end">
+            <label
+              for={"chat-drawer-#{@id}"}
+              class="btn btn-ghost btn-circle btn-sm cursor-pointer"
+              aria-label="Close chat"
+            >
+              <.icon name="hero-x-mark" class="w-5 h-5" />
+            </label>
+          </div>
+        <% end %>
       </div>
 
       <%= if @view_mode == :chat do %>
@@ -192,48 +205,46 @@
               </button>
             </div>
           <% else %>
-            <ul class="menu p-2">
+            <div class="w-full">
               <%= for session <- @sessions do %>
-                <li class="mb-2">
-                  <div class="flex flex-col items-start p-3 hover:bg-base-300 rounded-lg cursor-pointer group">
-                    <div
-                      class="flex-1 w-full"
-                      phx-click="load_session"
-                      phx-value-session-id={session.id}
-                      phx-target={@myself}
-                    >
-                      <div class="flex items-start justify-between w-full">
-                        <div class="flex-1 min-w-0">
-                          <p class="font-medium text-sm truncate">
-                            {session.title || "Untitled conversation"}
+                <div class="flex items-start p-4 hover:bg-base-300 cursor-pointer group relative w-full border-b border-base-300">
+                  <div
+                    class="flex-1 w-full"
+                    phx-click="load_session"
+                    phx-value-session-id={session.id}
+                    phx-target={@myself}
+                  >
+                    <div class="flex items-start justify-between w-full">
+                      <div class="flex-1 min-w-0 pr-8">
+                        <p class="font-medium text-sm truncate">
+                          {session.title || "Untitled conversation"}
+                        </p>
+                        <%= if session.preview do %>
+                          <p class="text-xs opacity-60 truncate mt-1">
+                            {session.preview}
                           </p>
-                          <%= if session.preview do %>
-                            <p class="text-xs opacity-60 truncate mt-1">
-                              {session.preview}
-                            </p>
-                          <% end %>
-                          <div class="flex items-center gap-2 mt-2 text-xs opacity-50">
-                            <span>{session.message_count} messages</span>
-                            <span>•</span>
-                            <span>{relative_time(session.updated_at)}</span>
-                          </div>
+                        <% end %>
+                        <div class="flex items-center gap-2 mt-2 text-xs opacity-50">
+                          <span>{session.message_count} messages</span>
+                          <span>•</span>
+                          <span>{relative_time(session.updated_at)}</span>
                         </div>
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      phx-click="delete_session"
-                      phx-value-session-id={session.id}
-                      phx-target={@myself}
-                      class="btn btn-ghost btn-xs btn-circle opacity-0 group-hover:opacity-100 absolute right-4"
-                      data-confirm="Delete this conversation?"
-                    >
-                      <.icon name="hero-trash" class="w-4 h-4" />
-                    </button>
                   </div>
-                </li>
+                  <button
+                    type="button"
+                    phx-click="delete_session"
+                    phx-value-session-id={session.id}
+                    phx-target={@myself}
+                    class="btn btn-ghost btn-xs btn-circle opacity-0 group-hover:opacity-100 absolute right-4 top-4"
+                    data-confirm="Delete this conversation?"
+                  >
+                    <.icon name="hero-trash" class="w-4 h-4" />
+                  </button>
+                </div>
               <% end %>
-            </ul>
+            </div>
           <% end %>
         </div>
       <% end %>

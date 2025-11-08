@@ -67,9 +67,10 @@ defmodule Jarga.Documents.Queries do
 
   @doc """
   Orders sessions by most recent first.
+  Uses updated_at as primary sort, inserted_at as tiebreaker for consistent ordering.
   """
   def ordered_by_recent(query \\ session_base()) do
-    from(s in query, order_by: [desc: s.updated_at])
+    from(s in query, order_by: [desc: s.updated_at, desc: s.inserted_at])
   end
 
   @doc """
