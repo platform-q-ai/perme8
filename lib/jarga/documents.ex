@@ -7,11 +7,21 @@ defmodule Jarga.Documents do
 
   use Boundary,
     top_level?: true,
-    deps: [Jarga.Accounts, Jarga.Repo],
-    exports: [Infrastructure.Services.LlmClient, UseCases.PrepareContext]
+    deps: [Jarga.Accounts, Jarga.Workspaces, Jarga.Projects, Jarga.Repo],
+    exports: [
+      Infrastructure.Services.LlmClient,
+      UseCases.PrepareContext,
+      UseCases.CreateSession,
+      UseCases.SaveMessage,
+      UseCases.LoadSession,
+      UseCases.ListSessions,
+      UseCases.DeleteSession,
+      ChatSession,
+      ChatMessage
+    ]
 
   alias Jarga.Documents.Infrastructure.Services.LlmClient
-  alias Jarga.Documents.UseCases.PrepareContext
+  alias Jarga.Documents.UseCases.{PrepareContext, CreateSession, SaveMessage, LoadSession, ListSessions, DeleteSession}
 
   @doc """
   Prepares chat context from LiveView assigns.
@@ -61,4 +71,59 @@ defmodule Jarga.Documents do
 
   """
   defdelegate chat_stream(messages, caller_pid, opts \\ []), to: LlmClient
+
+  @doc """
+  Creates a new chat session.
+
+  ## Examples
+
+      iex> create_session(%{user_id: user.id})
+      {:ok, %ChatSession{}}
+
+  """
+  defdelegate create_session(attrs), to: CreateSession, as: :execute
+
+  @doc """
+  Saves a message to a chat session.
+
+  ## Examples
+
+      iex> save_message(%{chat_session_id: session.id, role: "user", content: "Hello"})
+      {:ok, %ChatMessage{}}
+
+  """
+  defdelegate save_message(attrs), to: SaveMessage, as: :execute
+
+  @doc """
+  Loads a chat session with its messages.
+
+  ## Examples
+
+      iex> load_session(session_id)
+      {:ok, %ChatSession{messages: [...]}}
+
+  """
+  defdelegate load_session(session_id), to: LoadSession, as: :execute
+
+  @doc """
+  Lists chat sessions for a user.
+
+  ## Examples
+
+      iex> list_sessions(user_id)
+      {:ok, [%{id: ..., title: "...", message_count: 5}]}
+
+  """
+  defdelegate list_sessions(user_id, opts \\ []), to: ListSessions, as: :execute
+
+  @doc """
+  Deletes a chat session.
+
+  ## Examples
+
+      iex> delete_session(session_id, user_id)
+      {:ok, %ChatSession{}}
+
+  """
+  defdelegate delete_session(session_id, user_id), to: DeleteSession, as: :execute
 end

@@ -491,6 +491,135 @@ defmodule JargaWeb.ChatLive.PanelTest do
     end
   end
 
+  describe "PR #7: Session persistence and restoration" do
+    setup do
+      user = user_fixture()
+      %{user: user}
+    end
+
+    test "restore_session event handler loads session from database", %{conn: conn, user: user} do
+      conn = log_in_user(conn, user)
+
+      # Create a session with messages in the database
+      import Jarga.DocumentsFixtures
+      session = chat_session_fixture(user: user, title: "Previous Chat")
+      _msg1 = chat_message_fixture(chat_session: session, role: "user", content: "Hello")
+      _msg2 = chat_message_fixture(chat_session: session, role: "assistant", content: "Hi there!")
+
+      {:ok, view, _html} = live(conn, ~p"/app")
+
+      # Simulate the restore_session event from the JavaScript hook
+      view
+      |> element("#chat-drawer-global-chat-panel")
+      |> render_hook("restore_session", %{"session_id" => session.id})
+
+      # Messages should be restored
+      assert has_element?(view, ".chat-bubble", "Hello")
+      assert has_element?(view, ".chat-bubble", "Hi there!")
+    end
+
+    test "restore_session ignores sessions from other users", %{conn: conn, user: user} do
+      conn = log_in_user(conn, user)
+
+      # Create a session for a different user
+      import Jarga.DocumentsFixtures
+      other_user = user_fixture(%{email: "other@example.com"})
+      other_session = chat_session_fixture(user: other_user, title: "Other User's Chat")
+      _msg = chat_message_fixture(chat_session: other_session, role: "user", content: "Secret message")
+
+      {:ok, view, _html} = live(conn, ~p"/app")
+
+      # Try to restore the other user's session
+      view
+      |> element("#chat-drawer-global-chat-panel")
+      |> render_hook("restore_session", %{"session_id" => other_session.id})
+
+      # Message should NOT be restored (security check)
+      refute has_element?(view, ".chat-bubble", "Secret message")
+    end
+
+    test "restore_session handles non-existent session gracefully", %{conn: conn, user: user} do
+      conn = log_in_user(conn, user)
+
+      {:ok, view, _html} = live(conn, ~p"/app")
+
+      fake_session_id = Ecto.UUID.generate()
+
+      # Should not crash when restoring non-existent session
+      view
+      |> element("#chat-drawer-global-chat-panel")
+      |> render_hook("restore_session", %{"session_id" => fake_session_id})
+
+      # Chat should remain empty
+      assert has_element?(view, "#chat-messages")
+      assert render(view) =~ "Ask me anything about this page"
+    end
+
+    test "new_conversation button clears current session", %{conn: conn, user: user} do
+      conn = log_in_user(conn, user)
+
+      {:ok, view, _html} = live(conn, ~p"/app")
+
+      # Send a message to create a session
+      view
+      |> element("#chat-message-form")
+      |> render_submit(%{message: "Test message"})
+
+      assert has_element?(view, ".chat-bubble", "Test message")
+
+      # Click "New" conversation button
+      view
+      |> element("button[phx-click='new_conversation']")
+      |> render_click()
+
+      # Messages should be cleared
+      refute has_element?(view, ".chat-bubble", "Test message")
+      # Should show empty state
+      assert render(view) =~ "Ask me anything about this page"
+    end
+
+    test "chat panel has phx-target for component-scoped events", %{conn: conn, user: user} do
+      conn = log_in_user(conn, user)
+
+      {:ok, _view, html} = live(conn, ~p"/app")
+
+      # The chat drawer checkbox should have phx-target pointing to the component
+      assert html =~ ~r/phx-target=.*chat.*panel/i
+    end
+
+    test "delete_session removes conversation from database", %{conn: conn, user: user} do
+      conn = log_in_user(conn, user)
+
+      # Create a session with messages
+      import Jarga.DocumentsFixtures
+      session = chat_session_fixture(user: user, title: "Old Conversation")
+      _msg1 = chat_message_fixture(chat_session: session, content: "Test message 1")
+      _msg2 = chat_message_fixture(chat_session: session, content: "Test message 2")
+
+      {:ok, view, _html} = live(conn, ~p"/app")
+
+      # Switch to conversations view
+      view
+      |> element("button[phx-click='show_conversations']")
+      |> render_click()
+
+      # Verify the session appears in the list
+      assert has_element?(view, "p", "Old Conversation")
+
+      # Delete the session
+      view
+      |> element("button[phx-click='delete_session'][phx-value-session-id='#{session.id}']")
+      |> render_click()
+
+      # Session should be removed from the UI
+      refute has_element?(view, "p", "Old Conversation")
+
+      # Verify session was deleted from database
+      alias Jarga.Repo
+      assert Repo.get(Jarga.Documents.ChatSession, session.id) == nil
+    end
+  end
+
   describe "PR Goal: Panel state persists across navigation" do
     setup do
       user = user_fixture()

@@ -49,6 +49,29 @@ export const ChatPanel = {
     // Initial button visibility
     this.updateButtonVisibility()
 
+    // Listen for server events to manage localStorage
+    this.handleEvent('save_session', ({ session_id }) => {
+      localStorage.setItem('current_chat_session_id', session_id)
+    })
+
+    this.handleEvent('clear_session', () => {
+      localStorage.removeItem('current_chat_session_id')
+    })
+
+    // Restore session from localStorage on mount (after a short delay to ensure LiveView is ready)
+    setTimeout(() => {
+      const sessionId = localStorage.getItem('current_chat_session_id')
+      if (sessionId) {
+        // Get the component target from phx-target attribute
+        const target = this.el.getAttribute('phx-target')
+        if (target) {
+          this.pushEventTo(target, 'restore_session', { session_id: sessionId })
+        } else {
+          this.pushEvent('restore_session', { session_id: sessionId })
+        }
+      }
+    }, 100)
+
     // Keyboard shortcut: Cmd/Ctrl + K to toggle
     this.handleKeyboard = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {

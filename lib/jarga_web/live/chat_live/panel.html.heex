@@ -5,6 +5,8 @@
     type="checkbox"
     class="drawer-toggle"
     phx-hook="ChatPanel"
+    phx-target={@myself}
+    data-component-id={@id}
     phx-update="ignore"
   />
 
@@ -33,7 +35,37 @@
     <ul class="menu bg-base-100 min-h-full w-96 p-0 flex flex-col">
       <%!-- Header --%>
       <div class="navbar bg-base-200 border-b border-base-300">
-        <div class="flex-1"></div>
+        <div class="flex-1">
+          <%= if @view_mode == :chat do %>
+            <button
+              type="button"
+              phx-click="new_conversation"
+              phx-target={@myself}
+              class="btn btn-ghost btn-sm"
+              disabled={Enum.empty?(@messages)}
+            >
+              <.icon name="hero-plus" class="w-4 h-4" /> New
+            </button>
+            <button
+              type="button"
+              phx-click="show_conversations"
+              phx-target={@myself}
+              class="btn btn-ghost btn-sm"
+            >
+              <.icon name="hero-queue-list" class="w-4 h-4" /> History
+            </button>
+          <% else %>
+            <button
+              type="button"
+              phx-click="show_chat"
+              phx-target={@myself}
+              class="btn btn-ghost btn-sm"
+            >
+              <.icon name="hero-arrow-left" class="w-4 h-4" /> Back
+            </button>
+            <span class="text-sm font-medium">Conversations</span>
+          <% end %>
+        </div>
         <div class="flex-none">
           <label
             for={"chat-drawer-#{@id}"}
@@ -45,13 +77,14 @@
         </div>
       </div>
 
-      <%!-- Messages area --%>
-      <div
-        id="chat-messages"
-        class="flex-1 overflow-y-auto p-4 space-y-4 bg-base-200"
-        phx-hook="ChatMessages"
-        data-loading={to_string(@streaming)}
-      >
+      <%= if @view_mode == :chat do %>
+        <%!-- Messages area --%>
+        <div
+          id="chat-messages"
+          class="flex-1 overflow-y-auto p-4 space-y-4 bg-base-200"
+          phx-hook="ChatMessages"
+          data-loading={to_string(@streaming)}
+        >
         <%= if Enum.empty?(@messages) and @stream_buffer == "" do %>
           <div class="flex flex-col items-center justify-center h-full text-center">
             <.icon name="hero-chat-bubble-left-ellipsis" class="w-12 h-12 opacity-30" />
@@ -95,10 +128,10 @@
             <span>{@error}</span>
           </div>
         <% end %>
-      </div>
+        </div>
 
-      <%!-- Input area --%>
-      <div class="p-4 bg-base-100 border-t border-base-300">
+        <%!-- Input area --%>
+        <div class="p-4 bg-base-100 border-t border-base-300">
         <form
           id="chat-message-form"
           phx-submit="send_message"
@@ -141,7 +174,69 @@
             </button>
           </div>
         </form>
-      </div>
+        </div>
+      <% else %>
+        <%!-- Conversations list view --%>
+        <div class="flex-1 overflow-y-auto bg-base-200">
+          <%= if Enum.empty?(@sessions) do %>
+            <div class="flex flex-col items-center justify-center h-full text-center p-4">
+              <.icon name="hero-chat-bubble-left-ellipsis" class="w-12 h-12 opacity-30" />
+              <p class="text-sm mt-2 opacity-60">No conversations yet</p>
+              <button
+                type="button"
+                phx-click="show_chat"
+                phx-target={@myself}
+                class="btn btn-primary btn-sm mt-4"
+              >
+                Start chatting
+              </button>
+            </div>
+          <% else %>
+            <ul class="menu p-2">
+              <%= for session <- @sessions do %>
+                <li class="mb-2">
+                  <div class="flex flex-col items-start p-3 hover:bg-base-300 rounded-lg cursor-pointer group">
+                    <div
+                      class="flex-1 w-full"
+                      phx-click="load_session"
+                      phx-value-session-id={session.id}
+                      phx-target={@myself}
+                    >
+                      <div class="flex items-start justify-between w-full">
+                        <div class="flex-1 min-w-0">
+                          <p class="font-medium text-sm truncate">
+                            <%= session.title || "Untitled conversation" %>
+                          </p>
+                          <%= if session.preview do %>
+                            <p class="text-xs opacity-60 truncate mt-1">
+                              <%= session.preview %>
+                            </p>
+                          <% end %>
+                          <div class="flex items-center gap-2 mt-2 text-xs opacity-50">
+                            <span><%= session.message_count %> messages</span>
+                            <span>•</span>
+                            <span><%= relative_time(session.updated_at) %></span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      phx-click="delete_session"
+                      phx-value-session-id={session.id}
+                      phx-target={@myself}
+                      class="btn btn-ghost btn-xs btn-circle opacity-0 group-hover:opacity-100 absolute right-4"
+                      data-confirm="Delete this conversation?"
+                    >
+                      <.icon name="hero-trash" class="w-4 h-4" />
+                    </button>
+                  </div>
+                </li>
+              <% end %>
+            </ul>
+          <% end %>
+        </div>
+      <% end %>
     </ul>
   </div>
 </div>

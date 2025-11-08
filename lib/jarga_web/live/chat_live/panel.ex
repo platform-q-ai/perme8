@@ -21,7 +21,10 @@ defmodule JargaWeb.ChatLive.Panel do
      |> assign(:current_message, "")
      |> assign(:streaming, false)
      |> assign(:stream_buffer, "")
-     |> assign(:error, nil)}
+     |> assign(:error, nil)
+     |> assign(:current_session_id, nil)
+     |> assign(:view_mode, :chat)
+     |> assign(:sessions, [])}
   end
 
   @impl true
@@ -41,6 +44,15 @@ defmodule JargaWeb.ChatLive.Panel do
         Map.has_key?(assigns, :done) ->
           # Extract page info for source attribution
           {:ok, page_context} = Documents.prepare_chat_context(socket.assigns)
+
+          # Save assistant message to database if we have a session
+          if socket.assigns.current_session_id do
+            {:ok, _saved_assistant_msg} = Documents.save_message(%{
+              chat_session_id: socket.assigns.current_session_id,
+              role: "assistant",
+              content: assigns.done
+            })
+          end
 
           # Add assistant message with source attribution
           assistant_message = %{
@@ -85,6 +97,42 @@ defmodule JargaWeb.ChatLive.Panel do
   end
 
   @impl true
+  def handle_event("restore_session", %{"session_id" => session_id}, socket) when session_id != "" do
+    case Documents.load_session(session_id) do
+      {:ok, session} ->
+        # Verify the session belongs to the current user
+        current_user_id = get_nested(socket.assigns, [:current_user, :id])
+
+        if session.user_id == current_user_id do
+          # Convert database messages to UI format
+          ui_messages = Enum.map(session.messages, fn msg ->
+            %{
+              role: msg.role,
+              content: msg.content,
+              timestamp: msg.inserted_at
+            }
+          end)
+
+          {:noreply,
+           socket
+           |> assign(:current_session_id, session.id)
+           |> assign(:messages, ui_messages)}
+        else
+          # Session doesn't belong to this user, ignore
+          {:noreply, socket}
+        end
+
+      {:error, :not_found} ->
+        # Session not found, clear localStorage
+        {:noreply, push_event(socket, "clear_session", %{})}
+    end
+  end
+
+  def handle_event("restore_session", _params, socket) do
+    {:noreply, socket}
+  end
+
+  @impl true
   def handle_event("send_message", params, socket) do
     message_text =
       case params do
@@ -96,7 +144,17 @@ defmodule JargaWeb.ChatLive.Panel do
     if message_text == "" do
       {:noreply, socket}
     else
-      # Add user message
+      # Get or create session
+      socket = ensure_session(socket, message_text)
+
+      # Save user message to database
+      {:ok, _saved_user_msg} = Documents.save_message(%{
+        chat_session_id: socket.assigns.current_session_id,
+        role: "user",
+        content: message_text
+      })
+
+      # Add user message to UI
       user_message = %{
         role: "user",
         content: message_text,
@@ -121,6 +179,14 @@ defmodule JargaWeb.ChatLive.Panel do
         |> assign(:stream_buffer, "")
         |> assign(:error, nil)
 
+      # Push session_id to localStorage if this is a new session
+      socket =
+        if socket.assigns.current_session_id do
+          push_event(socket, "save_session", %{session_id: socket.assigns.current_session_id})
+        else
+          socket
+        end
+
       # Start streaming response
       case Documents.chat_stream(llm_messages, self()) do
         {:ok, _pid} ->
@@ -143,5 +209,166 @@ defmodule JargaWeb.ChatLive.Panel do
      |> assign(:current_message, "")
      |> assign(:stream_buffer, "")
      |> assign(:error, nil)}
+  end
+
+  @impl true
+  def handle_event("new_conversation", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:messages, [])
+     |> assign(:current_message, "")
+     |> assign(:stream_buffer, "")
+     |> assign(:error, nil)
+     |> assign(:current_session_id, nil)
+     |> assign(:view_mode, :chat)
+     |> push_event("clear_session", %{})}
+  end
+
+  @impl true
+  def handle_event("show_conversations", _params, socket) do
+    user_id = get_nested(socket.assigns, [:current_user, :id])
+
+    socket =
+      if user_id do
+        case Documents.list_sessions(user_id, limit: 20) do
+          {:ok, sessions} ->
+            socket
+            |> assign(:view_mode, :conversations)
+            |> assign(:sessions, sessions)
+
+          {:error, _} ->
+            socket
+        end
+      else
+        socket
+      end
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("show_chat", _params, socket) do
+    {:noreply, assign(socket, :view_mode, :chat)}
+  end
+
+  @impl true
+  def handle_event("load_session", %{"session-id" => session_id}, socket) do
+    case Documents.load_session(session_id) do
+      {:ok, session} ->
+        # Verify the session belongs to the current user
+        current_user_id = get_nested(socket.assigns, [:current_user, :id])
+
+        if session.user_id == current_user_id do
+          # Convert database messages to UI format
+          ui_messages = Enum.map(session.messages, fn msg ->
+            %{
+              role: msg.role,
+              content: msg.content,
+              timestamp: msg.inserted_at
+            }
+          end)
+
+          {:noreply,
+           socket
+           |> assign(:current_session_id, session.id)
+           |> assign(:messages, ui_messages)
+           |> assign(:view_mode, :chat)
+           |> push_event("save_session", %{session_id: session.id})}
+        else
+          {:noreply, socket}
+        end
+
+      {:error, :not_found} ->
+        {:noreply, socket}
+    end
+  end
+
+  @impl true
+  def handle_event("delete_session", %{"session-id" => session_id}, socket) do
+    user_id = get_nested(socket.assigns, [:current_user, :id])
+
+    socket =
+      if user_id do
+        case Documents.delete_session(session_id, user_id) do
+          {:ok, _deleted_session} ->
+            # Reload sessions list
+            {:ok, sessions} = Documents.list_sessions(user_id, limit: 20)
+
+            # Clear current chat if we deleted the active session
+            socket =
+              if socket.assigns.current_session_id == session_id do
+                socket
+                |> assign(:current_session_id, nil)
+                |> assign(:messages, [])
+                |> push_event("clear_session", %{})
+              else
+                socket
+              end
+
+            assign(socket, :sessions, sessions)
+
+          {:error, _} ->
+            socket
+        end
+      else
+        socket
+      end
+
+    {:noreply, socket}
+  end
+
+  # Private helper functions
+
+  defp ensure_session(socket, first_message) do
+    case socket.assigns.current_session_id do
+      nil ->
+        # Create new session
+        user_id = get_nested(socket.assigns, [:current_user, :id])
+
+        if user_id do
+          {:ok, session} = Documents.create_session(%{
+            user_id: user_id,
+            workspace_id: get_nested(socket.assigns, [:current_workspace, :id]),
+            project_id: get_nested(socket.assigns, [:current_project, :id]),
+            first_message: first_message
+          })
+
+          assign(socket, :current_session_id, session.id)
+        else
+          # No user, can't create session
+          socket
+        end
+
+      _session_id ->
+        # Session already exists
+        socket
+    end
+  end
+
+  defp get_nested(data, [key]) when is_map(data) do
+    Map.get(data, key)
+  end
+
+  defp get_nested(data, [key | rest]) when is_map(data) do
+    case Map.get(data, key) do
+      nil -> nil
+      value when is_map(value) -> get_nested(value, rest)
+      _ -> nil
+    end
+  end
+
+  defp get_nested(_, _), do: nil
+
+  defp relative_time(datetime) do
+    now = DateTime.utc_now()
+    diff_seconds = DateTime.diff(now, datetime)
+
+    cond do
+      diff_seconds < 60 -> "just now"
+      diff_seconds < 3600 -> "#{div(diff_seconds, 60)}m ago"
+      diff_seconds < 86400 -> "#{div(diff_seconds, 3600)}h ago"
+      diff_seconds < 604800 -> "#{div(diff_seconds, 86400)}d ago"
+      true -> "#{div(diff_seconds, 604800)}w ago"
+    end
   end
 end
