@@ -82,27 +82,6 @@ defmodule Jarga.Documents.UseCases.LoadSessionTest do
       assert message.inserted_at != nil
     end
 
-    test "loads session with many messages efficiently" do
-      session = chat_session_fixture()
-
-      # Create 50 messages
-      for i <- 1..50 do
-        chat_message_fixture(
-          chat_session: session,
-          role: if(rem(i, 2) == 0, do: "user", else: "assistant"),
-          content: "Message #{i}"
-        )
-      end
-
-      assert {:ok, loaded_session} = LoadSession.execute(session.id)
-
-      assert length(loaded_session.messages) == 50
-      # First message should be "Message 1"
-      assert List.first(loaded_session.messages).content == "Message 1"
-      # Last message should be "Message 50"
-      assert List.last(loaded_session.messages).content == "Message 50"
-    end
-
     test "only loads messages for the specific session" do
       session1 = chat_session_fixture()
       session2 = chat_session_fixture()

@@ -2,7 +2,6 @@ defmodule Jarga.PagesTest do
   use Jarga.DataCase, async: true
 
   alias Jarga.Pages
-  alias Jarga.Workspaces
 
   import Jarga.AccountsFixtures
   import Jarga.WorkspacesFixtures
@@ -262,7 +261,7 @@ defmodule Jarga.PagesTest do
       workspace = workspace_fixture(owner)
 
       # Add admin to workspace with admin role
-      {:ok, _membership} = Workspaces.invite_member(owner, workspace.id, admin.email, :admin)
+      {:ok, _membership} = invite_and_accept_member(owner, workspace.id, admin.email, :admin)
 
       # Owner creates a public page
       {:ok, page} =
@@ -279,7 +278,7 @@ defmodule Jarga.PagesTest do
       workspace = workspace_fixture(owner)
 
       # Add admin to workspace
-      Workspaces.invite_member(owner, workspace.id, admin.email, :admin)
+      {:ok, _membership} = invite_and_accept_member(owner, workspace.id, admin.email, :admin)
 
       # Owner creates a private page
       {:ok, page} =
@@ -296,8 +295,11 @@ defmodule Jarga.PagesTest do
       workspace = workspace_fixture(owner)
 
       # Add both members to workspace
-      {:ok, _membership1} = Workspaces.invite_member(owner, workspace.id, member1.email, :member)
-      {:ok, _membership2} = Workspaces.invite_member(owner, workspace.id, member2.email, :member)
+      {:ok, _membership1} =
+        invite_and_accept_member(owner, workspace.id, member1.email, :member)
+
+      {:ok, _membership2} =
+        invite_and_accept_member(owner, workspace.id, member2.email, :member)
 
       # Member1 creates a public page
       {:ok, page} =
