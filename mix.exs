@@ -113,7 +113,8 @@ defmodule Jarga.MixProject do
       {:boundary, "~> 0.10", runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:excoveralls, "~> 0.18", only: :test},
-      {:slugy, "~> 4.1"}
+      {:slugy, "~> 4.1"},
+      {:mdex, "~> 0.2"}
     ]
   end
 

@@ -824,8 +824,12 @@ defmodule JargaWeb.ChatLive.PanelTest do
       |> render_hook("restore_session", %{"session_id" => session.id})
 
       # All messages should be converted properly
+      # User message displays as plain text
       assert has_element?(view, ".chat-bubble", "Simple")
-      assert has_element?(view, ".chat-bubble", "Response with **markdown**")
+      # Assistant message markdown is rendered to HTML
+      html = render(view)
+      assert html =~ "Response with"
+      assert html =~ "<strong>markdown</strong>"
     end
 
     test "verify_session_ownership blocks other users", %{conn: conn, user: user} do
@@ -1265,6 +1269,92 @@ defmodule JargaWeb.ChatLive.PanelTest do
 
       # Panel should have fixed width (w-96 = 384px)
       assert html =~ "w-96"
+    end
+  end
+
+  describe "Markdown rendering in messages" do
+    test "renders inline markdown (bold, italic, code)" do
+      message = %{role: "assistant", content: "**Bold** and *italic* and `code`", timestamp: DateTime.utc_now()}
+
+      html = render_component(&JargaWeb.ChatLive.Components.Message.message/1, message: message, show_insert: false, panel_target: nil)
+
+      assert html =~ "<strong>Bold</strong>"
+      assert html =~ "<em>italic</em>"
+      assert html =~ "<code>code</code>"
+    end
+
+    test "renders headings" do
+      message = %{role: "assistant", content: "# H1\n## H2\n### H3", timestamp: DateTime.utc_now()}
+      html = render_component(&JargaWeb.ChatLive.Components.Message.message/1, message: message, show_insert: false, panel_target: nil)
+
+      assert html =~ "<h1>H1</h1>"
+      assert html =~ "<h2>H2</h2>"
+      assert html =~ "<h3>H3</h3>"
+    end
+
+    test "renders lists" do
+      message = %{role: "assistant", content: "- Item 1\n- Item 2\n\n1. First\n2. Second", timestamp: DateTime.utc_now()}
+      html = render_component(&JargaWeb.ChatLive.Components.Message.message/1, message: message, show_insert: false, panel_target: nil)
+
+      assert html =~ "<ul>"
+      assert html =~ "Item 1"
+      assert html =~ "<ol>"
+      assert html =~ "First"
+    end
+
+    test "renders code blocks" do
+      message = %{role: "assistant", content: "```elixir\ndef hello, do: :world\n```", timestamp: DateTime.utc_now()}
+      html = render_component(&JargaWeb.ChatLive.Components.Message.message/1, message: message, show_insert: false, panel_target: nil)
+
+      # Code blocks render with syntax highlighting
+      assert html =~ "<pre"
+      assert html =~ "hello"
+      assert html =~ ":world"
+    end
+
+    test "renders blockquotes" do
+      message = %{role: "assistant", content: "> This is a quote", timestamp: DateTime.utc_now()}
+      html = render_component(&JargaWeb.ChatLive.Components.Message.message/1, message: message, show_insert: false, panel_target: nil)
+
+      assert html =~ "<blockquote>"
+      assert html =~ "This is a quote"
+    end
+
+    test "renders links" do
+      message = %{role: "assistant", content: "[Click here](https://example.com)", timestamp: DateTime.utc_now()}
+      html = render_component(&JargaWeb.ChatLive.Components.Message.message/1, message: message, show_insert: false, panel_target: nil)
+
+      assert html =~ "href=\"https://example.com\""
+      assert html =~ "Click here"
+    end
+
+    test "renders strikethrough" do
+      message = %{role: "assistant", content: "This is ~~crossed out~~ text", timestamp: DateTime.utc_now()}
+      html = render_component(&JargaWeb.ChatLive.Components.Message.message/1, message: message, show_insert: false, panel_target: nil)
+
+      assert html =~ "<del>"
+      assert html =~ "crossed out"
+    end
+
+    test "renders task lists (checkboxes)" do
+      message = %{role: "assistant", content: "- [ ] Unchecked task\n- [x] Checked task", timestamp: DateTime.utc_now()}
+      html = render_component(&JargaWeb.ChatLive.Components.Message.message/1, message: message, show_insert: false, panel_target: nil)
+
+      assert html =~ "<input"
+      assert html =~ "type=\"checkbox\""
+      assert html =~ "Unchecked task"
+      assert html =~ "Checked task"
+      # One should be checked
+      assert html =~ "checked"
+    end
+
+    test "user messages display as plain text (no markdown rendering)" do
+      message = %{role: "user", content: "**This should not be bold**", timestamp: DateTime.utc_now()}
+      html = render_component(&JargaWeb.ChatLive.Components.Message.message/1, message: message, show_insert: false, panel_target: nil)
+
+      # User messages should not render markdown
+      refute html =~ "<strong>This should not be bold</strong>"
+      assert html =~ "**This should not be bold**"
     end
   end
 

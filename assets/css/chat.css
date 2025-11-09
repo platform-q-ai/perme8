@@ -70,6 +70,147 @@ html:has(.drawer-toggle:checked) {
   opacity: 1 !important;
 }
 
+/* Markdown styling in chat bubbles */
+.chat-markdown {
+  /* Typography */
+  line-height: 1.6;
+}
+
+.chat-markdown p {
+  margin-bottom: 0.75rem;
+}
+
+.chat-markdown p:last-child {
+  margin-bottom: 0;
+}
+
+.chat-markdown strong {
+  font-weight: 600;
+}
+
+.chat-markdown em {
+  font-style: italic;
+}
+
+.chat-markdown code {
+  background-color: rgba(0, 0, 0, 0.1);
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.875em;
+}
+
+[data-theme="dark"] .chat-markdown code {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.chat-markdown pre {
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 0.75rem;
+  border-radius: 0.375rem;
+  overflow-x: auto;
+  margin-bottom: 0.75rem;
+}
+
+[data-theme="dark"] .chat-markdown pre {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.chat-markdown pre code {
+  background-color: transparent;
+  padding: 0;
+  font-size: 0.875rem;
+}
+
+.chat-markdown ul,
+.chat-markdown ol {
+  margin-bottom: 0.75rem;
+  padding-left: 1.5rem;
+  list-style-position: outside;
+  display: block;
+}
+
+.chat-markdown ul {
+  list-style-type: disc !important;
+}
+
+.chat-markdown ol {
+  list-style-type: decimal !important;
+}
+
+.chat-markdown li {
+  margin-bottom: 0.25rem;
+  display: list-item !important;
+}
+
+/* Task list (checkbox) styling */
+.chat-markdown ul:has(input[type="checkbox"]) {
+  list-style-type: none !important;
+  padding-left: 0.5rem;
+}
+
+.chat-markdown li:has(input[type="checkbox"]) {
+  list-style-type: none !important;
+  margin-left: 0;
+  display: grid !important;
+  grid-template-columns: auto 1fr;
+  gap: 0.5rem;
+  align-items: start;
+}
+
+/* Ensure content after checkbox doesn't break layout */
+.chat-markdown li:has(input[type="checkbox"]) > :not(input[type="checkbox"]) {
+  margin: 0;
+  display: inline;
+}
+
+.chat-markdown input[type="checkbox"] {
+  appearance: auto;
+  -webkit-appearance: checkbox;
+  -moz-appearance: checkbox;
+  width: 1rem;
+  height: 1rem;
+  margin-top: 0.125rem;
+  cursor: default;
+  pointer-events: none;
+}
+
+.chat-markdown del {
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+.chat-markdown h1,
+.chat-markdown h2,
+.chat-markdown h3,
+.chat-markdown h4,
+.chat-markdown h5,
+.chat-markdown h6 {
+  font-weight: 600;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.chat-markdown h1 { font-size: 1.5rem; }
+.chat-markdown h2 { font-size: 1.25rem; }
+.chat-markdown h3 { font-size: 1.125rem; }
+
+.chat-markdown blockquote {
+  border-left: 0.25rem solid currentColor;
+  padding-left: 1rem;
+  opacity: 0.8;
+  margin-bottom: 0.75rem;
+}
+
+.chat-markdown a {
+  color: hsl(var(--p));
+  text-decoration: underline;
+}
+
+.chat-markdown a:hover {
+  opacity: 0.8;
+}
+
 /* Accessibility */
 @media (prefers-reduced-motion: reduce) {
   * {

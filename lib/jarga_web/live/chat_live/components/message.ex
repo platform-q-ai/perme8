@@ -9,6 +9,9 @@ defmodule JargaWeb.ChatLive.Components.Message do
   attr :panel_target, :any, default: nil
 
   def message(assigns) do
+    # Pre-render markdown for assistant messages
+    assigns = assign(assigns, :rendered_content, render_content(assigns.message))
+
     ~H"""
     <div class={"chat #{if @message.role == "user", do: "chat-end", else: "chat-start"}"}>
       <%= if !Map.get(@message, :streaming, false) do %>
@@ -18,7 +21,13 @@ defmodule JargaWeb.ChatLive.Components.Message do
       <% end %>
 
       <div class={"chat-bubble #{if @message.role == "user", do: "chat-bubble-primary", else: ""}"}>
-        {@message.content}
+        <%= if @message.role == "assistant" do %>
+          <div class="chat-markdown">
+            <%= Phoenix.HTML.raw(@rendered_content) %>
+          </div>
+        <% else %>
+          {@message.content}
+        <% end %>
         <%= if Map.get(@message, :streaming, false) do %>
           <span class="inline-block w-2 h-4 bg-current opacity-75 animate-pulse ml-1">▊</span>
         <% end %>
@@ -30,7 +39,7 @@ defmodule JargaWeb.ChatLive.Components.Message do
             phx-click="insert_into_note"
             phx-target={@panel_target}
             phx-value-content={@message.content}
-            class="link link-info cursor-pointer"
+            class="link cursor-pointer"
             role="button"
             tabindex="0"
             title="Insert this text into the current note"
@@ -42,6 +51,26 @@ defmodule JargaWeb.ChatLive.Components.Message do
     </div>
     """
   end
+
+  # Render markdown for assistant messages, plain text for user messages
+  defp render_content(%{role: "assistant", content: content}) do
+    # Enable GFM extensions (includes strikethrough, tables, task lists, etc.)
+    opts = [
+      extension: [
+        strikethrough: true,
+        table: true,
+        tasklist: true,
+        autolink: true
+      ]
+    ]
+
+    case MDEx.to_html(content, opts) do
+      {:ok, html} -> html
+      {:error, _} -> content
+    end
+  end
+
+  defp render_content(%{content: content}), do: content
 
   # Only show insert link for assistant messages that aren't streaming
   defp should_show_insert_link?(assigns) do
