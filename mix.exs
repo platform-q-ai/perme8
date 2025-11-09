@@ -143,6 +143,7 @@ defmodule Jarga.MixProject do
         "format",
         "credo --strict",
         "cmd npm test --prefix assets",
+        "cmd MIX_ENV=prod mix assets.deploy",
         "coveralls.html"
       ]
     ]

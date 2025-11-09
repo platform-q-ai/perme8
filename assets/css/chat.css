@@ -66,8 +66,10 @@ html:has(.drawer-toggle:checked) {
 }
 
 /* Show insert link on hover */
-.chat:hover .chat-footer {
-  @apply opacity-100 #{!important};
+@important {
+  .chat:hover .chat-footer {
+    @apply opacity-100;
+  }
 }
 
 /* Markdown styling in chat bubbles */
