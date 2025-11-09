@@ -136,15 +136,9 @@ async function networkFirstStrategy(request, cacheName = DYNAMIC_CACHE, maxAge =
 
     const cachedResponse = await caches.match(request);
     if (cachedResponse) {
-      // Check if cached response is too old
-      if (maxAge) {
-        const cachedDate = new Date(cachedResponse.headers.get('date'));
-        const now = new Date();
-        if (now - cachedDate > maxAge) {
-          console.log('[Service Worker] Cached response too old');
-          return offlineResponse(request);
-        }
-      }
+      // When offline, serve cached data regardless of age
+      // Stale data is better than no data when network is unavailable
+      console.log('[Service Worker] Serving cached response (offline)');
       return cachedResponse;
     }
 

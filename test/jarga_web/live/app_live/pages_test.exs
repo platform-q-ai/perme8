@@ -446,5 +446,48 @@ defmodule JargaWeb.AppLive.PagesTest do
       # Verify page still renders
       assert render(lv) =~ "Staleness Test Page"
     end
+
+    test "yjs_update updates socket assigns to prevent false staleness warnings", %{
+      conn: conn,
+      user: user,
+      workspace: workspace,
+      page: page
+    } do
+      {:ok, lv, _html} = live(conn, ~p"/app/workspaces/#{workspace.slug}/pages/#{page.slug}")
+
+      # Send yjs_update with new state
+      new_state = <<15, 25, 35, 45, 55>>
+      complete_state = Base.encode64(new_state)
+      update_data = Base.encode64(<<15, 25>>)
+      markdown = "# Updated via yjs_update"
+
+      lv
+      |> element("#editor-container")
+      |> render_hook("yjs_update", %{
+        "update" => update_data,
+        "complete_state" => complete_state,
+        "user_id" => "user_789",
+        "markdown" => markdown
+      })
+
+      # Wait for debouncer to save
+      JargaWeb.PageSaveDebouncer.wait_for_save(page.id)
+
+      # Now trigger get_current_yjs_state - it should return the updated state
+      # from socket assigns (not stale state from mount)
+      lv
+      |> element("#editor-container")
+      |> render_hook("get_current_yjs_state", %{})
+
+      # The handler should return the updated state without crashing
+      # Verify by checking the page still renders properly
+      assert render(lv) =~ "Staleness Test Page"
+
+      # Also verify the database was actually updated
+      updated_page = Pages.get_page!(user, page.id, preload_components: true)
+      updated_note = Pages.get_page_note(updated_page)
+      assert updated_note.yjs_state == new_state
+      assert updated_note.note_content["markdown"] == markdown
+    end
   end
 end

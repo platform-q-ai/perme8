@@ -365,7 +365,9 @@ export const MilkdownEditor = {
   },
 
   setupStalenessDetection(view) {
-    // Check for stale state on editor focus
+    // Check for stale state on editor focus (e.g., switching tabs)
+    // The improved staleness detection will handle false positives by only
+    // warning when DB has content we're missing (not when client is ahead)
     const focusHandler = () => {
       this.checkForStaleness()
     }
@@ -398,21 +400,61 @@ export const MilkdownEditor = {
   },
 
   showStaleStateModal(freshDbState) {
-    // Use browser's confirm dialog for simplicity
-    // In a production app, you might want to use a more sophisticated modal
-    const userWantsReload = confirm(
-      'This page has been edited elsewhere. Would you like to reload to see the latest version?\n\n' +
-      'Click OK to reload with the latest content.\n' +
-      'Click Cancel to continue editing (your changes may conflict with recent edits).'
-    )
+    const hasLocalChanges = this.hasPendingChanges
+    const message = this._buildSyncMessage(hasLocalChanges)
 
-    if (userWantsReload) {
-      // Apply the fresh state from database
-      this.collaborationManager.applyFreshState(freshDbState)
-
-      // Clear pending changes flag since we just reloaded
+    if (confirm(message)) {
+      this._performSync(freshDbState, hasLocalChanges)
       this.hasPendingChanges = false
     }
+  },
+
+  _buildSyncMessage(hasLocalChanges) {
+    let message = 'This page has been edited elsewhere.\n\n'
+
+    if (hasLocalChanges) {
+      message += 'You have unsaved local changes. Click OK to:\n' +
+                 '1. Save your local changes\n' +
+                 '2. Merge them with the latest version\n\n' +
+                 'Your changes will NOT be lost - they will be combined with the latest edits.\n\n' +
+                 'Click Cancel to continue editing without syncing.'
+    } else {
+      message += 'Click OK to load the latest version.\n' +
+                 'Click Cancel to continue viewing the current version.'
+    }
+
+    return message
+  },
+
+  _performSync(freshDbState, hasLocalChanges) {
+    if (hasLocalChanges) {
+      // Save local changes first, then merge and broadcast
+      this.forceSave()
+      setTimeout(() => {
+        this.collaborationManager.applyFreshState(freshDbState)
+        setTimeout(() => this.broadcastMergedState(), 100)
+      }, 100)
+    } else {
+      // No local changes, just merge DB state and broadcast
+      this.collaborationManager.applyFreshState(freshDbState)
+      setTimeout(() => this.broadcastMergedState(), 100)
+    }
+  },
+
+  broadcastMergedState() {
+    // After merging, send the merged state to the server
+    // which will broadcast it to other clients
+    const markdown = this.getMarkdownContent()
+    const completeState = this.collaborationManager.getCompleteState()
+    const userId = this.collaborationManager.getUserId()
+
+    // Send as a yjs_update which will be broadcast to other clients
+    this.pushEvent('yjs_update', {
+      update: completeState,
+      complete_state: completeState,
+      user_id: userId,
+      markdown: markdown
+    })
   },
 
   destroyed() {

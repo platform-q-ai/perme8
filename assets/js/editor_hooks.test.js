@@ -215,9 +215,12 @@ describe('MilkdownEditor Hook', () => {
         )
       })
 
-      it('should apply fresh state when user confirms', () => {
+      it('should apply fresh state when user confirms without local changes', () => {
+        vi.useFakeTimers()
         global.confirm.mockReturnValue(true)
+
         const applyFreshStateSpy = vi.spyOn(hook.collaborationManager, 'applyFreshState')
+        const broadcastSpy = vi.spyOn(hook, 'broadcastMergedState')
 
         // Create a valid yjs state
         const doc = new CollaborationManager()
@@ -225,10 +228,57 @@ describe('MilkdownEditor Hook', () => {
         const freshDbState = doc.getCompleteState()
         doc.destroy()
 
+        // No pending changes
+        hook.hasPendingChanges = false
+
         hook.showStaleStateModal(freshDbState)
 
+        // Should apply immediately when no pending changes
         expect(applyFreshStateSpy).toHaveBeenCalledWith(freshDbState)
+
+        // Run timers to execute broadcast
+        vi.runAllTimers()
+
+        // Should broadcast merged state to other clients
+        expect(broadcastSpy).toHaveBeenCalled()
+
         expect(hook.hasPendingChanges).toBe(false)
+
+        vi.useRealTimers()
+      })
+
+      it('should save and merge when user confirms with local changes', () => {
+        vi.useFakeTimers()
+        global.confirm.mockReturnValue(true)
+
+        const applyFreshStateSpy = vi.spyOn(hook.collaborationManager, 'applyFreshState')
+        const forceSaveSpy = vi.spyOn(hook, 'forceSave')
+        const broadcastSpy = vi.spyOn(hook, 'broadcastMergedState')
+
+        // Create a valid yjs state
+        const doc = new CollaborationManager()
+        doc.initialize()
+        const freshDbState = doc.getCompleteState()
+        doc.destroy()
+
+        // Has pending changes
+        hook.hasPendingChanges = true
+
+        hook.showStaleStateModal(freshDbState)
+
+        // Should save first
+        expect(forceSaveSpy).toHaveBeenCalled()
+
+        // Run timers to execute the async behavior
+        vi.runAllTimers()
+
+        // Should apply fresh state after saving
+        expect(applyFreshStateSpy).toHaveBeenCalledWith(freshDbState)
+
+        // Should broadcast merged state to other clients
+        expect(broadcastSpy).toHaveBeenCalled()
+
+        vi.useRealTimers()
       })
 
       it('should not apply fresh state when user cancels', () => {
@@ -247,6 +297,47 @@ describe('MilkdownEditor Hook', () => {
 
         expect(applyFreshStateSpy).not.toHaveBeenCalled()
         expect(hook.hasPendingChanges).toBe(true)
+      })
+    })
+
+    describe('broadcastMergedState', () => {
+      beforeEach(() => {
+        hook.collaborationManager = new CollaborationManager()
+        hook.collaborationManager.initialize()
+
+        // Setup editor with mock for getMarkdownContent()
+        let getCallCount = 0
+        hook.editor = {
+          action: vi.fn((callback) => {
+            const mockCtx = {
+              get: vi.fn(() => {
+                getCallCount++
+                if (getCallCount === 1) {
+                  return { state: { doc: {} } }
+                }
+                if (getCallCount === 2) {
+                  return vi.fn(() => '# Test Content')
+                }
+                return null
+              })
+            }
+            return callback(mockCtx)
+          })
+        }
+      })
+
+      it('should send yjs_update event with merged state', () => {
+        hook.broadcastMergedState()
+
+        expect(mockPushEvent).toHaveBeenCalledWith(
+          'yjs_update',
+          expect.objectContaining({
+            update: expect.any(String),
+            complete_state: expect.any(String),
+            user_id: expect.any(String),
+            markdown: expect.any(String)
+          })
+        )
       })
     })
   })

@@ -264,6 +264,9 @@ export class CollaborationManager {
   /**
    * Check if client state is behind DB state using Yjs state vectors.
    *
+   * Strategy: Test if applying DB state would change client content.
+   * Only warn if DB has content client is MISSING (not if client is ahead).
+   *
    * @private
    * @param {string} dbYjsStateBase64 - Base64 encoded DB yjs_state
    * @returns {boolean} True if client is missing updates from DB
@@ -277,14 +280,43 @@ export class CollaborationManager {
       // Decode DB state
       const dbYjsState = Uint8Array.from(atob(dbYjsStateBase64), c => c.charCodeAt(0))
 
-      // Get my current state vector
-      const myStateVector = Y.encodeStateVector(this.ydoc)
+      // Get my current state and content
+      const myState = Y.encodeStateAsUpdate(this.ydoc)
+      const myContent = this.ydoc.get('prosemirror', Y.XmlFragment)
+      const myXml = myContent.toString()
 
-      // Calculate what updates DB has that I don't have
-      const missingUpdates = Y.diffUpdate(dbYjsState, myStateVector)
+      // Quick check: if states are byte-identical, definitely in sync
+      if (dbYjsState.length === myState.length) {
+        let identical = true
+        for (let i = 0; i < dbYjsState.length; i++) {
+          if (dbYjsState[i] !== myState[i]) {
+            identical = false
+            break
+          }
+        }
+        if (identical) {
+          return false
+        }
+      }
 
-      // If missingUpdates has content, DB has changes I'm missing
-      return missingUpdates.length > 0
+      // Test: What would happen if we applied DB state to our current doc?
+      // Create a temp doc with our current state, then apply DB state
+      const testDoc = new Y.Doc()
+      Y.applyUpdate(testDoc, myState)
+      Y.applyUpdate(testDoc, dbYjsState)
+
+      // Get content after applying DB state
+      const testContent = testDoc.get('prosemirror', Y.XmlFragment)
+      const testXml = testContent.toString()
+
+      // If content changed after applying DB state, then DB has updates we're missing
+      const dbHasNewContent = testXml !== myXml
+
+      // Clean up temp docs
+      testDoc.destroy()
+
+      // Only warn if DB has content we're missing
+      return dbHasNewContent
     } catch (error) {
       console.error('Error comparing state vectors:', error)
       return false
@@ -292,7 +324,10 @@ export class CollaborationManager {
   }
 
   /**
-   * Apply fresh state from the database, replacing current state.
+   * Merge fresh state from the database with current local state.
+   *
+   * This uses Yjs CRDT merge semantics - local changes are NOT lost.
+   * Yjs automatically merges the states, preserving both local and remote edits.
    *
    * @param {string} freshYjsStateBase64 - Base64 encoded fresh yjs_state from DB
    * @returns {void}
@@ -305,12 +340,12 @@ export class CollaborationManager {
     try {
       const freshYjsState = Uint8Array.from(atob(freshYjsStateBase64), c => c.charCodeAt(0))
 
-      // Apply fresh state to current doc
+      // MERGE fresh state with current doc using Yjs CRDT algorithm
+      // This preserves both local and remote changes - nothing is lost!
       // Using 'remote' origin prevents this from being sent back to server
       Y.applyUpdate(this.ydoc, freshYjsState, 'remote')
 
       // Editor will automatically re-render via ySyncPlugin
-      console.log('Applied fresh state from database')
     } catch (error) {
       console.error('Error applying fresh state:', error)
       throw error

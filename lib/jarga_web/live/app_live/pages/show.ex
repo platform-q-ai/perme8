@@ -94,7 +94,15 @@ defmodule JargaWeb.AppLive.Pages.Show do
       Sandbox.allow(Jarga.Repo, self(), debouncer_pid)
     end
 
-    {:noreply, socket}
+    # 3. Update socket assigns with latest state so get_current_yjs_state returns fresh data
+    # This prevents false "out of sync" warnings before the debouncer saves to DB
+    updated_note = %{
+      note
+      | yjs_state: complete_state_binary,
+        note_content: %{"markdown" => markdown}
+    }
+
+    {:noreply, assign(socket, :note, updated_note)}
   end
 
   @impl true
