@@ -75,55 +75,68 @@ describe('ChatPanel Hook', () => {
     })
 
     it('should show toggle button when checkbox is unchecked', () => {
-      mockCheckbox.checked = false
       mockToggleBtn.classList.add('hidden')
+      // Mock mobile viewport to keep drawer closed after mount
+      global.innerWidth = 768
 
       hook.mounted()
 
+      // On mobile, drawer defaults to closed, so toggle button should be visible
+      expect(mockCheckbox.checked).toBe(false)
       expect(mockToggleBtn.classList.contains('hidden')).toBe(false)
     })
 
-    it('should save state to localStorage when checkbox changes', () => {
-      hook.mounted()
-
-      mockCheckbox.checked = true
-      mockCheckbox.dispatchEvent(new Event('change'))
-
-      expect(localStorage.setItem).toHaveBeenCalledWith('chat_collapsed', false)
-    })
-
-    it('should save collapsed state to localStorage', () => {
-      hook.mounted()
-
-      mockCheckbox.checked = false
-      mockCheckbox.dispatchEvent(new Event('change'))
-
-      expect(localStorage.setItem).toHaveBeenCalledWith('chat_collapsed', true)
-    })
-
-    it('should load collapsed state from localStorage', () => {
-      localStorage.getItem.mockReturnValue('false')
+    it('should set initial state to open on desktop', () => {
+      // Mock desktop viewport
+      global.innerWidth = 1024
 
       hook.mounted()
 
-      expect(localStorage.getItem).toHaveBeenCalledWith('chat_collapsed')
       expect(mockCheckbox.checked).toBe(true)
     })
 
-    it('should load expanded state from localStorage', () => {
-      localStorage.getItem.mockReturnValue('true')
+    it('should set initial state to closed on mobile', () => {
+      // Mock mobile viewport
+      global.innerWidth = 768
 
       hook.mounted()
 
       expect(mockCheckbox.checked).toBe(false)
     })
 
-    it('should not change state if localStorage is empty', () => {
-      localStorage.getItem.mockReturnValue(null)
-      mockCheckbox.checked = true
+    it('should mark user interaction on checkbox click', () => {
+      hook.mounted()
+
+      expect(hook.userInteracted).toBe(false)
+
+      mockCheckbox.click()
+
+      expect(hook.userInteracted).toBe(true)
+    })
+
+    it('should not auto-adjust after user interaction', () => {
+      global.innerWidth = 1024
+      hook.mounted()
+
+      // User closes the panel
+      mockCheckbox.click()
+      expect(hook.userInteracted).toBe(true)
+
+      // Simulate resize to mobile
+      global.innerWidth = 768
+      window.dispatchEvent(new Event('resize'))
+
+      // Should NOT auto-adjust because user interacted
+      expect(mockCheckbox.checked).toBe(false)
+    })
+
+    it('should set initial state based on viewport size', () => {
+      // Desktop viewport
+      global.innerWidth = 1024
 
       hook.mounted()
 
+      // Desktop defaults to open
       expect(mockCheckbox.checked).toBe(true)
     })
 
@@ -194,8 +207,12 @@ describe('ChatPanel Hook', () => {
 
     it('should not close drawer on Escape when already closed', () => {
       const clickSpy = vi.spyOn(mockCheckbox, 'click')
-      mockCheckbox.checked = false
+      // Mock mobile viewport to ensure drawer is closed by default
+      global.innerWidth = 768
       hook.mounted()
+
+      // Drawer should be closed on mobile
+      expect(mockCheckbox.checked).toBe(false)
 
       const event = new KeyboardEvent('keydown', {
         key: 'Escape'

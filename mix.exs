@@ -142,6 +142,7 @@ defmodule Jarga.MixProject do
         "deps.unlock --unused",
         "format",
         "credo --strict",
+        "cmd npm test --prefix assets",
         "coveralls.html"
       ]
     ]
