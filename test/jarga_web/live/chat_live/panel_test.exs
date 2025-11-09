@@ -7,6 +7,8 @@ defmodule JargaWeb.ChatLive.PanelTest do
   import Jarga.ProjectsFixtures
   import Jarga.PagesFixtures
 
+  alias JargaWeb.ChatLive.Components.Message
+
   describe "Panel component" do
     setup do
       user = user_fixture()
@@ -1274,9 +1276,18 @@ defmodule JargaWeb.ChatLive.PanelTest do
 
   describe "Markdown rendering in messages" do
     test "renders inline markdown (bold, italic, code)" do
-      message = %{role: "assistant", content: "**Bold** and *italic* and `code`", timestamp: DateTime.utc_now()}
+      message = %{
+        role: "assistant",
+        content: "**Bold** and *italic* and `code`",
+        timestamp: DateTime.utc_now()
+      }
 
-      html = render_component(&JargaWeb.ChatLive.Components.Message.message/1, message: message, show_insert: false, panel_target: nil)
+      html =
+        render_component(&Message.message/1,
+          message: message,
+          show_insert: false,
+          panel_target: nil
+        )
 
       assert html =~ "<strong>Bold</strong>"
       assert html =~ "<em>italic</em>"
@@ -1284,8 +1295,18 @@ defmodule JargaWeb.ChatLive.PanelTest do
     end
 
     test "renders headings" do
-      message = %{role: "assistant", content: "# H1\n## H2\n### H3", timestamp: DateTime.utc_now()}
-      html = render_component(&JargaWeb.ChatLive.Components.Message.message/1, message: message, show_insert: false, panel_target: nil)
+      message = %{
+        role: "assistant",
+        content: "# H1\n## H2\n### H3",
+        timestamp: DateTime.utc_now()
+      }
+
+      html =
+        render_component(&Message.message/1,
+          message: message,
+          show_insert: false,
+          panel_target: nil
+        )
 
       assert html =~ "<h1>H1</h1>"
       assert html =~ "<h2>H2</h2>"
@@ -1293,8 +1314,18 @@ defmodule JargaWeb.ChatLive.PanelTest do
     end
 
     test "renders lists" do
-      message = %{role: "assistant", content: "- Item 1\n- Item 2\n\n1. First\n2. Second", timestamp: DateTime.utc_now()}
-      html = render_component(&JargaWeb.ChatLive.Components.Message.message/1, message: message, show_insert: false, panel_target: nil)
+      message = %{
+        role: "assistant",
+        content: "- Item 1\n- Item 2\n\n1. First\n2. Second",
+        timestamp: DateTime.utc_now()
+      }
+
+      html =
+        render_component(&Message.message/1,
+          message: message,
+          show_insert: false,
+          panel_target: nil
+        )
 
       assert html =~ "<ul>"
       assert html =~ "Item 1"
@@ -1303,8 +1334,18 @@ defmodule JargaWeb.ChatLive.PanelTest do
     end
 
     test "renders code blocks" do
-      message = %{role: "assistant", content: "```elixir\ndef hello, do: :world\n```", timestamp: DateTime.utc_now()}
-      html = render_component(&JargaWeb.ChatLive.Components.Message.message/1, message: message, show_insert: false, panel_target: nil)
+      message = %{
+        role: "assistant",
+        content: "```elixir\ndef hello, do: :world\n```",
+        timestamp: DateTime.utc_now()
+      }
+
+      html =
+        render_component(&Message.message/1,
+          message: message,
+          show_insert: false,
+          panel_target: nil
+        )
 
       # Code blocks render with syntax highlighting
       assert html =~ "<pre"
@@ -1314,31 +1355,67 @@ defmodule JargaWeb.ChatLive.PanelTest do
 
     test "renders blockquotes" do
       message = %{role: "assistant", content: "> This is a quote", timestamp: DateTime.utc_now()}
-      html = render_component(&JargaWeb.ChatLive.Components.Message.message/1, message: message, show_insert: false, panel_target: nil)
+
+      html =
+        render_component(&Message.message/1,
+          message: message,
+          show_insert: false,
+          panel_target: nil
+        )
 
       assert html =~ "<blockquote>"
       assert html =~ "This is a quote"
     end
 
     test "renders links" do
-      message = %{role: "assistant", content: "[Click here](https://example.com)", timestamp: DateTime.utc_now()}
-      html = render_component(&JargaWeb.ChatLive.Components.Message.message/1, message: message, show_insert: false, panel_target: nil)
+      message = %{
+        role: "assistant",
+        content: "[Click here](https://example.com)",
+        timestamp: DateTime.utc_now()
+      }
+
+      html =
+        render_component(&Message.message/1,
+          message: message,
+          show_insert: false,
+          panel_target: nil
+        )
 
       assert html =~ "href=\"https://example.com\""
       assert html =~ "Click here"
     end
 
     test "renders strikethrough" do
-      message = %{role: "assistant", content: "This is ~~crossed out~~ text", timestamp: DateTime.utc_now()}
-      html = render_component(&JargaWeb.ChatLive.Components.Message.message/1, message: message, show_insert: false, panel_target: nil)
+      message = %{
+        role: "assistant",
+        content: "This is ~~crossed out~~ text",
+        timestamp: DateTime.utc_now()
+      }
+
+      html =
+        render_component(&Message.message/1,
+          message: message,
+          show_insert: false,
+          panel_target: nil
+        )
 
       assert html =~ "<del>"
       assert html =~ "crossed out"
     end
 
     test "renders task lists (checkboxes)" do
-      message = %{role: "assistant", content: "- [ ] Unchecked task\n- [x] Checked task", timestamp: DateTime.utc_now()}
-      html = render_component(&JargaWeb.ChatLive.Components.Message.message/1, message: message, show_insert: false, panel_target: nil)
+      message = %{
+        role: "assistant",
+        content: "- [ ] Unchecked task\n- [x] Checked task",
+        timestamp: DateTime.utc_now()
+      }
+
+      html =
+        render_component(&Message.message/1,
+          message: message,
+          show_insert: false,
+          panel_target: nil
+        )
 
       assert html =~ "<input"
       assert html =~ "type=\"checkbox\""
@@ -1349,8 +1426,18 @@ defmodule JargaWeb.ChatLive.PanelTest do
     end
 
     test "user messages display as plain text (no markdown rendering)" do
-      message = %{role: "user", content: "**This should not be bold**", timestamp: DateTime.utc_now()}
-      html = render_component(&JargaWeb.ChatLive.Components.Message.message/1, message: message, show_insert: false, panel_target: nil)
+      message = %{
+        role: "user",
+        content: "**This should not be bold**",
+        timestamp: DateTime.utc_now()
+      }
+
+      html =
+        render_component(&Message.message/1,
+          message: message,
+          show_insert: false,
+          panel_target: nil
+        )
 
       # User messages should not render markdown
       refute html =~ "<strong>This should not be bold</strong>"

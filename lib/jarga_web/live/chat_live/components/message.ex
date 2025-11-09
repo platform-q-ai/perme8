@@ -23,7 +23,7 @@ defmodule JargaWeb.ChatLive.Components.Message do
       <div class={"chat-bubble #{if @message.role == "user", do: "chat-bubble-primary", else: ""}"}>
         <%= if @message.role == "assistant" do %>
           <div class="chat-markdown">
-            <%= Phoenix.HTML.raw(@rendered_content) %>
+            {Phoenix.HTML.raw(@rendered_content)}
           </div>
         <% else %>
           {@message.content}

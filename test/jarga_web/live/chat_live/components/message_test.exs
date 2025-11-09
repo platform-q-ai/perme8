@@ -37,7 +37,7 @@ defmodule JargaWeb.ChatLive.Components.MessageTest do
       assert html =~ ~s(phx-click="insert_into_note")
       assert html =~ ~s(phx-target="test-target")
       assert html =~ ~s(phx-value-content="Here is some helpful text")
-      assert html =~ ~s(class="link link-primary cursor-pointer")
+      assert html =~ ~s(class="link cursor-pointer")
     end
 
     test "does not render insert link for user messages" do

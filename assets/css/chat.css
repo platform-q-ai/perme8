@@ -62,122 +62,89 @@ html:has(.drawer-toggle:checked) {
 /* Insert into note link styles */
 /* Use DaisyUI's chat-footer with native link styling */
 .chat-footer {
-  transition: opacity 0.2s ease-in-out;
+  @apply transition-opacity duration-200 ease-in-out;
 }
 
 /* Show insert link on hover */
 .chat:hover .chat-footer {
-  opacity: 1 !important;
+  @apply opacity-100 #{!important};
 }
 
 /* Markdown styling in chat bubbles */
 .chat-markdown {
-  /* Typography */
-  line-height: 1.6;
+  @apply leading-relaxed;
 }
 
 .chat-markdown p {
-  margin-bottom: 0.75rem;
+  @apply mb-3;
 }
 
 .chat-markdown p:last-child {
-  margin-bottom: 0;
+  @apply mb-0;
 }
 
 .chat-markdown strong {
-  font-weight: 600;
+  @apply font-semibold;
 }
 
 .chat-markdown em {
-  font-style: italic;
+  @apply italic;
 }
 
 .chat-markdown code {
-  background-color: rgba(0, 0, 0, 0.1);
-  padding: 0.125rem 0.25rem;
-  border-radius: 0.25rem;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.875em;
-}
-
-[data-theme="dark"] .chat-markdown code {
-  background-color: rgba(255, 255, 255, 0.1);
+  @apply bg-black/10 dark:bg-white/10 px-1 py-0.5 rounded font-mono text-[0.875em];
 }
 
 .chat-markdown pre {
-  background-color: rgba(0, 0, 0, 0.05);
-  padding: 0.75rem;
-  border-radius: 0.375rem;
-  overflow-x: auto;
-  margin-bottom: 0.75rem;
-}
-
-[data-theme="dark"] .chat-markdown pre {
-  background-color: rgba(255, 255, 255, 0.05);
+  @apply bg-black/5 dark:bg-white/5 p-3 rounded-md overflow-x-auto mb-3;
 }
 
 .chat-markdown pre code {
-  background-color: transparent;
-  padding: 0;
-  font-size: 0.875rem;
+  @apply bg-transparent p-0 text-sm;
 }
 
 .chat-markdown ul,
 .chat-markdown ol {
-  margin-bottom: 0.75rem;
-  padding-left: 1.5rem;
-  list-style-position: outside;
-  display: block;
+  @apply mb-3 pl-6 list-outside block;
 }
 
 .chat-markdown ul {
-  list-style-type: disc !important;
+  @apply list-disc;
 }
 
 .chat-markdown ol {
-  list-style-type: decimal !important;
+  @apply list-decimal;
 }
 
 .chat-markdown li {
-  margin-bottom: 0.25rem;
+  @apply mb-1;
   display: list-item !important;
 }
 
 /* Task list (checkbox) styling */
 .chat-markdown ul:has(input[type="checkbox"]) {
-  list-style-type: none !important;
-  padding-left: 0.5rem;
+  @apply list-none pl-2;
 }
 
 .chat-markdown li:has(input[type="checkbox"]) {
-  list-style-type: none !important;
-  margin-left: 0;
+  @apply list-none ml-0 grid grid-cols-[auto_1fr] gap-2 items-start;
   display: grid !important;
-  grid-template-columns: auto 1fr;
-  gap: 0.5rem;
-  align-items: start;
 }
 
 /* Ensure content after checkbox doesn't break layout */
 .chat-markdown li:has(input[type="checkbox"]) > :not(input[type="checkbox"]) {
-  margin: 0;
-  display: inline;
+  @apply m-0 inline;
 }
 
 .chat-markdown input[type="checkbox"] {
+  @apply w-4 h-4 mt-0.5 cursor-default pointer-events-none;
   appearance: auto;
   -webkit-appearance: checkbox;
   -moz-appearance: checkbox;
-  width: 1rem;
-  height: 1rem;
-  margin-top: 0.125rem;
-  cursor: default;
-  pointer-events: none;
 }
 
 .chat-markdown del {
-  text-decoration: line-through;
-  opacity: 0.7;
+  @apply line-through opacity-70;
 }
 
 .chat-markdown h1,
@@ -186,29 +153,23 @@ html:has(.drawer-toggle:checked) {
 .chat-markdown h4,
 .chat-markdown h5,
 .chat-markdown h6 {
-  font-weight: 600;
-  margin-top: 1rem;
-  margin-bottom: 0.5rem;
+  @apply font-semibold mt-4 mb-2;
 }
 
-.chat-markdown h1 { font-size: 1.5rem; }
-.chat-markdown h2 { font-size: 1.25rem; }
-.chat-markdown h3 { font-size: 1.125rem; }
+.chat-markdown h1 { @apply text-2xl; }
+.chat-markdown h2 { @apply text-xl; }
+.chat-markdown h3 { @apply text-lg; }
 
 .chat-markdown blockquote {
-  border-left: 0.25rem solid currentColor;
-  padding-left: 1rem;
-  opacity: 0.8;
-  margin-bottom: 0.75rem;
+  @apply border-l-4 border-current pl-4 opacity-80 mb-3;
 }
 
 .chat-markdown a {
-  color: hsl(var(--p));
-  text-decoration: underline;
+  @apply text-primary underline;
 }
 
 .chat-markdown a:hover {
-  opacity: 0.8;
+  @apply opacity-80;
 }
 
 /* Accessibility */
