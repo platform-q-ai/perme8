@@ -79,6 +79,11 @@ export const MilkdownEditor = {
       this.collaborationManager.applyRemoteAwarenessUpdate(update)
     })
 
+    // Listen for insert-text events from chat panel
+    this.handleEvent('insert-text', ({ content }) => {
+      this.insertTextIntoEditor(content)
+    })
+
     // Handle page visibility changes (tab switching, minimizing)
     this.visibilityHandler = () => {
       if (document.hidden && this.hasPendingChanges) {
@@ -457,6 +462,77 @@ export const MilkdownEditor = {
     })
   },
 
+  insertTextIntoEditor(content) {
+    // Insert text from chat into the editor at current cursor position
+    if (!this.editor || !content || this.readonly) {
+      return
+    }
+
+    try {
+      this.editor.action((ctx) => {
+        const view = ctx.get(editorViewCtx)
+        if (!view) return
+
+        const { state } = view
+        const { schema } = state
+        const { selection } = state
+
+        // Split content into paragraphs
+        const paragraphs = content.trim().split('\n\n').filter(p => p.trim().length > 0)
+
+        // Create paragraph nodes for each paragraph
+        const nodes = []
+
+        paragraphs.forEach(para => {
+          // Split by single newlines to handle line breaks within paragraphs
+          const lines = para.split('\n').filter(l => l.trim().length > 0)
+
+          if (lines.length > 0) {
+            // Create text nodes with hard breaks
+            const textNodes = []
+            lines.forEach((line, idx) => {
+              textNodes.push(schema.text(line))
+              if (idx < lines.length - 1) {
+                textNodes.push(schema.nodes.hardbreak.create())
+              }
+            })
+            nodes.push(schema.nodes.paragraph.create(null, textNodes))
+          }
+        })
+
+        // Add empty paragraph for spacing
+        nodes.push(schema.nodes.paragraph.create())
+
+        // Get cursor position and parent node info
+        const $pos = selection.$head
+        const parent = $pos.parent
+
+        // Check if we're in an empty paragraph
+        const isEmptyParagraph = parent.type.name === 'paragraph' && parent.content.size === 0
+
+        let insertPos
+        if (isEmptyParagraph) {
+          // If in empty paragraph, replace it
+          const parentPos = $pos.before($pos.depth)
+          const tr = state.tr.replaceWith(parentPos, parentPos + parent.nodeSize, nodes)
+          view.dispatch(tr)
+        } else {
+          // If paragraph has content, insert after current paragraph
+          insertPos = $pos.after($pos.depth)
+          const tr = state.tr.insert(insertPos, nodes)
+          view.dispatch(tr)
+        }
+
+        // Focus the editor
+        view.focus()
+
+        console.log(`Inserted ${nodes.length} paragraph nodes`)
+      })
+    } catch (error) {
+      console.error('Error inserting text into editor:', error)
+    }
+  },
+
   destroyed() {
     // Force save any pending changes before cleanup
     if (this.hasPendingChanges) {
@@ -517,5 +593,37 @@ export const MilkdownEditor = {
     if (this.editor) {
       this.editor.destroy()
     }
+  }
+}
+
+/**
+ * PageTitleInput Hook
+ *
+ * Handles keyboard interactions for the page title input:
+ * - Enter key: blur input (triggers autosave) and focus editor
+ * - Escape key: cancel editing without saving
+ */
+export const PageTitleInput = {
+  mounted() {
+    this.handleKeyDown = (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault()
+        // Blur to trigger autosave
+        this.el.blur()
+        // Focus editor after a short delay to allow blur event to process
+        setTimeout(() => {
+          const editor = document.querySelector('#editor-container .ProseMirror')
+          if (editor) {
+            editor.focus()
+          }
+        }, 100)
+      }
+    }
+
+    this.el.addEventListener('keydown', this.handleKeyDown)
+  },
+
+  destroyed() {
+    this.el.removeEventListener('keydown', this.handleKeyDown)
   }
 }

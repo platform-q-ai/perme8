@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { MilkdownEditor } from './editor_hooks'
+import { MilkdownEditor } from './page_hooks'
 import { CollaborationManager } from './collaboration'
 
 // Mock Milkdown modules - inline everything to avoid hoisting issues
@@ -784,6 +784,271 @@ describe('MilkdownEditor Hook', () => {
       hook.focusEditorAtEnd(mockView)
 
       expect(mockView.state.tr.setSelection).toHaveBeenCalled()
+    })
+  })
+
+  describe('insertTextIntoEditor', () => {
+    let mockView
+    let mockTransaction
+    let mockSchema
+    let mockTextNode
+    let mockHardbreakNode
+    let mockParagraphNode
+    let consoleLogSpy
+
+    beforeEach(() => {
+      // Mock ProseMirror nodes
+      mockTextNode = { type: 'text', text: '' }
+      mockHardbreakNode = { type: 'hardbreak' }
+      mockParagraphNode = { type: 'paragraph', content: [] }
+
+      // Mock schema
+      mockSchema = {
+        text: vi.fn((text) => ({ ...mockTextNode, text })),
+        nodes: {
+          hardbreak: {
+            create: vi.fn(() => mockHardbreakNode)
+          },
+          paragraph: {
+            create: vi.fn((attrs, content) => ({ ...mockParagraphNode, content: content || [] }))
+          }
+        }
+      }
+
+      // Mock transaction with chaining support
+      mockTransaction = {
+        replaceWith: vi.fn(function() { return this }),
+        insert: vi.fn(function() { return this })
+      }
+
+      // Mock selection with position info
+      const mockSelection = {
+        $head: {
+          before: vi.fn(() => 0),
+          after: vi.fn(() => 10),
+          depth: 1,
+          parent: {
+            type: { name: 'paragraph' },
+            content: { size: 5 },
+            nodeSize: 5
+          }
+        }
+      }
+
+      // Mock editor view
+      mockView = {
+        state: {
+          schema: mockSchema,
+          selection: mockSelection,
+          tr: mockTransaction
+        },
+        dispatch: vi.fn(),
+        focus: vi.fn()
+      }
+
+      // Setup editor with action method
+      hook.editor = {
+        action: vi.fn((callback) => {
+          const mockCtx = {
+            get: vi.fn(() => mockView)
+          }
+          return callback(mockCtx)
+        })
+      }
+
+      hook.readonly = false
+
+      // Spy on console.log
+      consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    })
+
+    afterEach(() => {
+      consoleLogSpy.mockRestore()
+    })
+
+    it('should return early if no editor', () => {
+      hook.editor = null
+
+      hook.insertTextIntoEditor('test content')
+
+      expect(consoleLogSpy).not.toHaveBeenCalled()
+    })
+
+    it('should return early if readonly', () => {
+      hook.readonly = true
+
+      hook.insertTextIntoEditor('test content')
+
+      expect(hook.editor.action).not.toHaveBeenCalled()
+    })
+
+    it('should return early if no content', () => {
+      hook.insertTextIntoEditor('')
+
+      expect(hook.editor.action).not.toHaveBeenCalled()
+    })
+
+    it('should return early if content is null', () => {
+      hook.insertTextIntoEditor(null)
+
+      expect(hook.editor.action).not.toHaveBeenCalled()
+    })
+
+    it('should insert single paragraph', () => {
+      hook.insertTextIntoEditor('Hello world')
+
+      expect(mockSchema.text).toHaveBeenCalledWith('Hello world')
+      expect(mockSchema.nodes.paragraph.create).toHaveBeenCalled()
+      expect(mockView.dispatch).toHaveBeenCalled()
+      expect(mockView.focus).toHaveBeenCalled()
+    })
+
+    it('should insert multiple paragraphs separated by double newlines', () => {
+      hook.insertTextIntoEditor('First paragraph\n\nSecond paragraph')
+
+      // Should create text nodes for both paragraphs
+      expect(mockSchema.text).toHaveBeenCalledWith('First paragraph')
+      expect(mockSchema.text).toHaveBeenCalledWith('Second paragraph')
+
+      // Should create paragraph nodes (2 content + 1 empty spacing = 3 total)
+      expect(mockSchema.nodes.paragraph.create).toHaveBeenCalledTimes(3)
+
+      expect(mockView.dispatch).toHaveBeenCalled()
+    })
+
+    it('should handle line breaks within paragraphs with hardbreak nodes', () => {
+      hook.insertTextIntoEditor('Line 1\nLine 2')
+
+      // Should create text nodes for both lines
+      expect(mockSchema.text).toHaveBeenCalledWith('Line 1')
+      expect(mockSchema.text).toHaveBeenCalledWith('Line 2')
+
+      // Should create one hardbreak between lines
+      expect(mockSchema.nodes.hardbreak.create).toHaveBeenCalledTimes(1)
+
+      // Should create paragraph with both text nodes and hardbreak
+      expect(mockSchema.nodes.paragraph.create).toHaveBeenCalled()
+    })
+
+    it('should replace empty paragraph', () => {
+      // Mock empty paragraph
+      mockView.state.selection.$head.parent = {
+        type: { name: 'paragraph' },
+        content: { size: 0 },
+        nodeSize: 2
+      }
+
+      hook.insertTextIntoEditor('New content')
+
+      // Should use replaceWith for empty paragraph
+      expect(mockTransaction.replaceWith).toHaveBeenCalled()
+      expect(mockView.dispatch).toHaveBeenCalled()
+    })
+
+    it('should insert after current paragraph when paragraph has content', () => {
+      // Mock non-empty paragraph (size > 0)
+      mockView.state.selection.$head.parent = {
+        type: { name: 'paragraph' },
+        content: { size: 10 },
+        nodeSize: 12
+      }
+
+      hook.insertTextIntoEditor('New content')
+
+      // Should use insert for non-empty paragraph
+      expect(mockTransaction.insert).toHaveBeenCalled()
+      expect(mockView.dispatch).toHaveBeenCalled()
+    })
+
+    it('should focus editor after insertion', () => {
+      hook.insertTextIntoEditor('Test content')
+
+      expect(mockView.focus).toHaveBeenCalled()
+    })
+
+    it('should log number of paragraph nodes inserted', () => {
+      hook.insertTextIntoEditor('Paragraph 1\n\nParagraph 2')
+
+      // Should log 3 nodes (2 content paragraphs + 1 empty spacing paragraph)
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        expect.stringMatching(/Inserted \d+ paragraph nodes/)
+      )
+    })
+
+    it('should handle errors gracefully', () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+      // Make editor.action throw
+      hook.editor = {
+        action: vi.fn(() => {
+          throw new Error('Test error')
+        })
+      }
+
+      hook.insertTextIntoEditor('Test content')
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'Error inserting text into editor:',
+        expect.any(Error)
+      )
+
+      consoleErrorSpy.mockRestore()
+    })
+
+    it('should trim content before processing', () => {
+      hook.insertTextIntoEditor('  \n\n  Test content  \n\n  ')
+
+      // Should only create one content paragraph (whitespace-only paragraphs filtered)
+      expect(mockSchema.text).toHaveBeenCalledWith('Test content')
+    })
+
+    it('should filter out empty paragraphs', () => {
+      hook.insertTextIntoEditor('Content\n\n\n\nMore content')
+
+      // Should create text for both non-empty paragraphs
+      expect(mockSchema.text).toHaveBeenCalledWith('Content')
+      expect(mockSchema.text).toHaveBeenCalledWith('More content')
+
+      // Should create 3 paragraphs: 2 content + 1 empty spacing
+      expect(mockSchema.nodes.paragraph.create).toHaveBeenCalledTimes(3)
+    })
+
+    it('should filter out empty lines within paragraphs', () => {
+      hook.insertTextIntoEditor('Line 1\n\nLine 2')
+
+      // Should create separate paragraphs, not hardbreaks
+      expect(mockSchema.text).toHaveBeenCalledWith('Line 1')
+      expect(mockSchema.text).toHaveBeenCalledWith('Line 2')
+
+      // Should NOT create hardbreak for double newline (it's a paragraph separator)
+      expect(mockSchema.nodes.hardbreak.create).not.toHaveBeenCalled()
+    })
+
+    it('should add empty paragraph for spacing at the end', () => {
+      hook.insertTextIntoEditor('Content')
+
+      // Call create: once for content paragraph, once for empty spacing paragraph
+      expect(mockSchema.nodes.paragraph.create).toHaveBeenCalledTimes(2)
+
+      // Last call should be with no content (empty paragraph)
+      const lastCall = mockSchema.nodes.paragraph.create.mock.calls[
+        mockSchema.nodes.paragraph.create.mock.calls.length - 1
+      ]
+      expect(lastCall).toEqual([])
+    })
+
+    it('should return early if view is not available', () => {
+      hook.editor = {
+        action: vi.fn((callback) => {
+          const mockCtx = {
+            get: vi.fn(() => null) // No view
+          }
+          return callback(mockCtx)
+        })
+      }
+
+      // Should not throw
+      expect(() => hook.insertTextIntoEditor('Test')).not.toThrow()
     })
   })
 })
