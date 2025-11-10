@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { MilkdownEditor } from './page_hooks'
 import { CollaborationManager } from './collaboration'
+import { editorViewCtx, parserCtx } from '@milkdown/core'
 
 // Mock Milkdown modules - inline everything to avoid hoisting issues
 vi.mock('@milkdown/core', () => {
@@ -9,7 +10,8 @@ vi.mock('@milkdown/core', () => {
     rootCtx: Symbol('rootCtx'),
     editorViewCtx: Symbol('editorViewCtx'),
     defaultValueCtx: Symbol('defaultValueCtx'),
-    serializerCtx: Symbol('serializerCtx')
+    serializerCtx: Symbol('serializerCtx'),
+    parserCtx: Symbol('parserCtx')
   }
 
   return {
@@ -25,7 +27,8 @@ vi.mock('@milkdown/core', () => {
     rootCtx: mockSymbols.rootCtx,
     editorViewCtx: mockSymbols.editorViewCtx,
     defaultValueCtx: mockSymbols.defaultValueCtx,
-    serializerCtx: mockSymbols.serializerCtx
+    serializerCtx: mockSymbols.serializerCtx,
+    parserCtx: mockSymbols.parserCtx
   }
 })
 
@@ -791,6 +794,7 @@ describe('MilkdownEditor Hook', () => {
     let mockView
     let mockTransaction
     let mockSchema
+    let mockParser
     let mockTextNode
     let mockHardbreakNode
     let mockParagraphNode
@@ -835,6 +839,21 @@ describe('MilkdownEditor Hook', () => {
         }
       }
 
+      // Mock parser that simulates Milkdown's markdown parser
+      mockParser = vi.fn((content) => {
+        // Simulate parser returning a document with content nodes
+        const paragraphs = content.split('\n\n').filter(p => p.trim())
+        const nodes = paragraphs.map(p => ({
+          type: 'paragraph',
+          content: [{ type: 'text', text: p.trim() }]
+        }))
+
+        return {
+          type: 'doc',
+          content: nodes
+        }
+      })
+
       // Mock editor view
       mockView = {
         state: {
@@ -850,7 +869,12 @@ describe('MilkdownEditor Hook', () => {
       hook.editor = {
         action: vi.fn((callback) => {
           const mockCtx = {
-            get: vi.fn(() => mockView)
+            get: vi.fn((key) => {
+              // Return parser for parserCtx, view for editorViewCtx
+              if (key === parserCtx) return mockParser
+              if (key === editorViewCtx) return mockView
+              return mockView
+            })
           }
           return callback(mockCtx)
         })
@@ -897,8 +921,7 @@ describe('MilkdownEditor Hook', () => {
     it('should insert single paragraph', () => {
       hook.insertTextIntoEditor('Hello world')
 
-      expect(mockSchema.text).toHaveBeenCalledWith('Hello world')
-      expect(mockSchema.nodes.paragraph.create).toHaveBeenCalled()
+      expect(mockParser).toHaveBeenCalledWith('Hello world')
       expect(mockView.dispatch).toHaveBeenCalled()
       expect(mockView.focus).toHaveBeenCalled()
     })
@@ -906,12 +929,8 @@ describe('MilkdownEditor Hook', () => {
     it('should insert multiple paragraphs separated by double newlines', () => {
       hook.insertTextIntoEditor('First paragraph\n\nSecond paragraph')
 
-      // Should create text nodes for both paragraphs
-      expect(mockSchema.text).toHaveBeenCalledWith('First paragraph')
-      expect(mockSchema.text).toHaveBeenCalledWith('Second paragraph')
-
-      // Should create paragraph nodes (2 content + 1 empty spacing = 3 total)
-      expect(mockSchema.nodes.paragraph.create).toHaveBeenCalledTimes(3)
+      // Parser should be called with the content
+      expect(mockParser).toHaveBeenCalledWith('First paragraph\n\nSecond paragraph')
 
       expect(mockView.dispatch).toHaveBeenCalled()
     })
@@ -919,15 +938,10 @@ describe('MilkdownEditor Hook', () => {
     it('should handle line breaks within paragraphs with hardbreak nodes', () => {
       hook.insertTextIntoEditor('Line 1\nLine 2')
 
-      // Should create text nodes for both lines
-      expect(mockSchema.text).toHaveBeenCalledWith('Line 1')
-      expect(mockSchema.text).toHaveBeenCalledWith('Line 2')
+      // Parser should be called with the content
+      expect(mockParser).toHaveBeenCalledWith('Line 1\nLine 2')
 
-      // Should create one hardbreak between lines
-      expect(mockSchema.nodes.hardbreak.create).toHaveBeenCalledTimes(1)
-
-      // Should create paragraph with both text nodes and hardbreak
-      expect(mockSchema.nodes.paragraph.create).toHaveBeenCalled()
+      expect(mockView.dispatch).toHaveBeenCalled()
     })
 
     it('should replace empty paragraph', () => {
@@ -966,15 +980,6 @@ describe('MilkdownEditor Hook', () => {
       expect(mockView.focus).toHaveBeenCalled()
     })
 
-    it('should log number of paragraph nodes inserted', () => {
-      hook.insertTextIntoEditor('Paragraph 1\n\nParagraph 2')
-
-      // Should log 3 nodes (2 content paragraphs + 1 empty spacing paragraph)
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringMatching(/Inserted \d+ paragraph nodes/)
-      )
-    })
-
     it('should handle errors gracefully', () => {
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
@@ -998,50 +1003,48 @@ describe('MilkdownEditor Hook', () => {
     it('should trim content before processing', () => {
       hook.insertTextIntoEditor('  \n\n  Test content  \n\n  ')
 
-      // Should only create one content paragraph (whitespace-only paragraphs filtered)
-      expect(mockSchema.text).toHaveBeenCalledWith('Test content')
+      // Parser should be called with trimmed content
+      expect(mockParser).toHaveBeenCalledWith('Test content')
     })
 
-    it('should filter out empty paragraphs', () => {
-      hook.insertTextIntoEditor('Content\n\n\n\nMore content')
+    it('should parse markdown content', () => {
+      hook.insertTextIntoEditor('Content\n\nMore content')
 
-      // Should create text for both non-empty paragraphs
-      expect(mockSchema.text).toHaveBeenCalledWith('Content')
-      expect(mockSchema.text).toHaveBeenCalledWith('More content')
-
-      // Should create 3 paragraphs: 2 content + 1 empty spacing
-      expect(mockSchema.nodes.paragraph.create).toHaveBeenCalledTimes(3)
+      // Parser should be called to handle markdown
+      expect(mockParser).toHaveBeenCalledWith('Content\n\nMore content')
+      expect(mockView.dispatch).toHaveBeenCalled()
     })
 
-    it('should filter out empty lines within paragraphs', () => {
-      hook.insertTextIntoEditor('Line 1\n\nLine 2')
+    it('should handle parser errors gracefully', () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
-      // Should create separate paragraphs, not hardbreaks
-      expect(mockSchema.text).toHaveBeenCalledWith('Line 1')
-      expect(mockSchema.text).toHaveBeenCalledWith('Line 2')
+      // Mock parser to return a string (error case)
+      mockParser.mockReturnValueOnce('Error parsing')
 
-      // Should NOT create hardbreak for double newline (it's a paragraph separator)
-      expect(mockSchema.nodes.hardbreak.create).not.toHaveBeenCalled()
+      hook.insertTextIntoEditor('Test content')
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith('Error parsing markdown:', 'Error parsing')
+      expect(mockView.dispatch).not.toHaveBeenCalled()
+
+      consoleErrorSpy.mockRestore()
     })
 
     it('should add empty paragraph for spacing at the end', () => {
       hook.insertTextIntoEditor('Content')
 
-      // Call create: once for content paragraph, once for empty spacing paragraph
-      expect(mockSchema.nodes.paragraph.create).toHaveBeenCalledTimes(2)
+      // Parser should be called
+      expect(mockParser).toHaveBeenCalledWith('Content')
 
-      // Last call should be with no content (empty paragraph)
-      const lastCall = mockSchema.nodes.paragraph.create.mock.calls[
-        mockSchema.nodes.paragraph.create.mock.calls.length - 1
-      ]
-      expect(lastCall).toEqual([])
+      // Empty paragraph should be added via schema.nodes.paragraph.create()
+      expect(mockSchema.nodes.paragraph.create).toHaveBeenCalled()
+      expect(mockView.dispatch).toHaveBeenCalled()
     })
 
-    it('should return early if view is not available', () => {
+    it('should return early if view or parser is not available', () => {
       hook.editor = {
         action: vi.fn((callback) => {
           const mockCtx = {
-            get: vi.fn(() => null) // No view
+            get: vi.fn(() => null) // No view or parser
           }
           return callback(mockCtx)
         })
