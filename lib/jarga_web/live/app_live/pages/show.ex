@@ -265,12 +265,36 @@ defmodule JargaWeb.AppLive.Pages.Show do
       }
 
       case Documents.ai_query(params, parent) do
-        {:ok, _pid} -> :ok
-        {:error, reason} -> send(parent, {:ai_error, node_id, reason})
+        {:ok, query_pid} ->
+          # Send PID back to LiveView for tracking
+          send(parent, {:ai_query_started, node_id, query_pid})
+
+        {:error, reason} ->
+          send(parent, {:ai_error, node_id, reason})
       end
     end)
 
     {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("ai_cancel", %{"node_id" => node_id}, socket) do
+    # Look up the query PID for this node_id
+    active_queries = Map.get(socket.assigns, :active_ai_queries, %{})
+
+    case Map.get(active_queries, node_id) do
+      nil ->
+        # Query not found or already completed
+        {:noreply, socket}
+
+      query_pid ->
+        # Cancel the query
+        Documents.cancel_ai_query(query_pid, node_id)
+
+        # Remove from tracking
+        updated_queries = Map.delete(active_queries, node_id)
+        {:noreply, assign(socket, :active_ai_queries, updated_queries)}
+    end
   end
 
   @impl true
@@ -342,6 +366,15 @@ defmodule JargaWeb.AppLive.Pages.Show do
   end
 
   @impl true
+  def handle_info({:ai_query_started, node_id, query_pid}, socket) do
+    # Track the query PID for potential cancellation
+    active_queries = Map.get(socket.assigns, :active_ai_queries, %{})
+    updated_queries = Map.put(active_queries, node_id, query_pid)
+
+    {:noreply, assign(socket, :active_ai_queries, updated_queries)}
+  end
+
+  @impl true
   def handle_info({:ai_chunk, node_id, chunk}, socket) do
     # Forward AI chunk to client via push_event
     {:noreply, push_event(socket, "ai_chunk", %{node_id: node_id, chunk: chunk})}
@@ -349,15 +382,33 @@ defmodule JargaWeb.AppLive.Pages.Show do
 
   @impl true
   def handle_info({:ai_done, node_id, response}, socket) do
-    # Forward AI completion to client
-    {:noreply, push_event(socket, "ai_done", %{node_id: node_id, response: response})}
+    # Remove from tracking
+    active_queries = Map.get(socket.assigns, :active_ai_queries, %{})
+    updated_queries = Map.delete(active_queries, node_id)
+
+    socket =
+      socket
+      |> assign(:active_ai_queries, updated_queries)
+      |> push_event("ai_done", %{node_id: node_id, response: response})
+
+    {:noreply, socket}
   end
 
   @impl true
   def handle_info({:ai_error, node_id, reason}, socket) do
+    # Remove from tracking
+    active_queries = Map.get(socket.assigns, :active_ai_queries, %{})
+    updated_queries = Map.delete(active_queries, node_id)
+
     # Forward AI error to client
     error_message = if is_binary(reason), do: reason, else: inspect(reason)
-    {:noreply, push_event(socket, "ai_error", %{node_id: node_id, error: error_message})}
+
+    socket =
+      socket
+      |> assign(:active_ai_queries, updated_queries)
+      |> push_event("ai_error", %{node_id: node_id, error: error_message})
+
+    {:noreply, socket}
   end
 
   defp generate_user_id do

@@ -86,6 +86,19 @@ defmodule Jarga.Documents.UseCases.AIQuery do
 
   defp forward_stream(caller_pid, node_id) do
     receive do
+      # Handle cancellation request
+      {:cancel, ^node_id} ->
+        error = "Query cancelled by user"
+
+        if node_id do
+          send(caller_pid, {:ai_error, node_id, error})
+        else
+          send(caller_pid, {:error, error})
+        end
+
+        # Exit gracefully after sending error
+        :ok
+
       {:chunk, chunk} ->
         if node_id do
           send(caller_pid, {:ai_chunk, node_id, chunk})

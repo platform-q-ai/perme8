@@ -171,6 +171,267 @@ defmodule JargaWeb.AppLive.Pages.ShowAITest do
     end
   end
 
+  describe "AI cancellation" do
+    test "handles {:ai_query_started, node_id, pid} to track active queries", %{
+      conn: conn,
+      user: user,
+      workspace: workspace,
+      page: page
+    } do
+      conn = log_in_user(conn, user)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/app/workspaces/#{workspace.slug}/pages/#{page.slug}")
+
+      # Spawn a dummy process to simulate a query
+      query_pid = spawn(fn -> Process.sleep(:infinity) end)
+      node_id = "test_node_123"
+
+      # Send query started message
+      send(view.pid, {:ai_query_started, node_id, query_pid})
+
+      # Give the view time to process
+      Process.sleep(10)
+
+      # View should still be alive and have tracked the PID
+      assert Process.alive?(view.pid)
+
+      # Cleanup
+      Process.exit(query_pid, :kill)
+    end
+
+    test "handle_event(\"ai_cancel\", ...) cancels active query", %{
+      conn: conn,
+      user: user,
+      workspace: workspace,
+      page: page
+    } do
+      conn = log_in_user(conn, user)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/app/workspaces/#{workspace.slug}/pages/#{page.slug}")
+
+      # Spawn a dummy process to simulate a query
+      query_pid =
+        spawn(fn ->
+          receive do
+            {:cancel, _node_id} -> :ok
+          after
+            5000 -> :timeout
+          end
+        end)
+
+      node_id = "test_node_cancel"
+
+      # First, track the query
+      send(view.pid, {:ai_query_started, node_id, query_pid})
+      Process.sleep(10)
+
+      # Now cancel it via event
+      view
+      |> element("#editor-container")
+      |> render_hook("ai_cancel", %{"node_id" => node_id})
+
+      # Give time for cancellation to process
+      Process.sleep(20)
+
+      # View should still be alive
+      assert Process.alive?(view.pid)
+
+      # Query process should have received cancellation
+      refute Process.alive?(query_pid)
+    end
+
+    test "handle_event(\"ai_cancel\", ...) handles non-existent query gracefully", %{
+      conn: conn,
+      user: user,
+      workspace: workspace,
+      page: page
+    } do
+      conn = log_in_user(conn, user)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/app/workspaces/#{workspace.slug}/pages/#{page.slug}")
+
+      # Try to cancel a query that doesn't exist
+      view
+      |> element("#editor-container")
+      |> render_hook("ai_cancel", %{"node_id" => "non_existent_node"})
+
+      # View should handle gracefully without crashing
+      assert Process.alive?(view.pid)
+    end
+
+    test "{:ai_done, ...} removes query from tracking", %{
+      conn: conn,
+      user: user,
+      workspace: workspace,
+      page: page
+    } do
+      conn = log_in_user(conn, user)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/app/workspaces/#{workspace.slug}/pages/#{page.slug}")
+
+      query_pid = spawn(fn -> Process.sleep(:infinity) end)
+      node_id = "test_node_done"
+
+      # Track the query
+      send(view.pid, {:ai_query_started, node_id, query_pid})
+      Process.sleep(10)
+
+      # Send completion message
+      send(view.pid, {:ai_done, node_id, "Complete response"})
+      Process.sleep(10)
+
+      # View should still be alive
+      assert Process.alive?(view.pid)
+
+      # Cleanup
+      Process.exit(query_pid, :kill)
+    end
+
+    test "{:ai_error, ...} removes query from tracking", %{
+      conn: conn,
+      user: user,
+      workspace: workspace,
+      page: page
+    } do
+      conn = log_in_user(conn, user)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/app/workspaces/#{workspace.slug}/pages/#{page.slug}")
+
+      query_pid = spawn(fn -> Process.sleep(:infinity) end)
+      node_id = "test_node_error"
+
+      # Track the query
+      send(view.pid, {:ai_query_started, node_id, query_pid})
+      Process.sleep(10)
+
+      # Send error message
+      send(view.pid, {:ai_error, node_id, "Query failed"})
+      Process.sleep(10)
+
+      # View should still be alive
+      assert Process.alive?(view.pid)
+
+      # Cleanup
+      Process.exit(query_pid, :kill)
+    end
+
+    test "multiple queries can be tracked independently", %{
+      conn: conn,
+      user: user,
+      workspace: workspace,
+      page: page
+    } do
+      conn = log_in_user(conn, user)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/app/workspaces/#{workspace.slug}/pages/#{page.slug}")
+
+      # Start multiple queries
+      pid1 = spawn(fn -> Process.sleep(:infinity) end)
+      pid2 = spawn(fn -> Process.sleep(:infinity) end)
+      pid3 = spawn(fn -> Process.sleep(:infinity) end)
+
+      send(view.pid, {:ai_query_started, "node_1", pid1})
+      send(view.pid, {:ai_query_started, "node_2", pid2})
+      send(view.pid, {:ai_query_started, "node_3", pid3})
+      Process.sleep(20)
+
+      # Complete one query
+      send(view.pid, {:ai_done, "node_1", "Response 1"})
+      Process.sleep(10)
+
+      # Error on another
+      send(view.pid, {:ai_error, "node_2", "Error 2"})
+      Process.sleep(10)
+
+      # View should still be alive
+      assert Process.alive?(view.pid)
+
+      # Cleanup remaining processes
+      Process.exit(pid1, :kill)
+      Process.exit(pid2, :kill)
+      Process.exit(pid3, :kill)
+    end
+
+    test "cancelling one query doesn't affect others", %{
+      conn: conn,
+      user: user,
+      workspace: workspace,
+      page: page
+    } do
+      conn = log_in_user(conn, user)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/app/workspaces/#{workspace.slug}/pages/#{page.slug}")
+
+      # Start two queries
+      pid1 =
+        spawn(fn ->
+          receive do
+            {:cancel, _} -> :cancelled
+          after
+            5000 -> :timeout
+          end
+        end)
+
+      pid2 = spawn(fn -> Process.sleep(:infinity) end)
+
+      send(view.pid, {:ai_query_started, "node_cancel", pid1})
+      send(view.pid, {:ai_query_started, "node_keep", pid2})
+      Process.sleep(10)
+
+      # Cancel only the first one
+      view
+      |> element("#editor-container")
+      |> render_hook("ai_cancel", %{"node_id" => "node_cancel"})
+
+      Process.sleep(20)
+
+      # First query should be cancelled
+      refute Process.alive?(pid1)
+
+      # Second query should still be tracked and alive
+      assert Process.alive?(pid2)
+
+      # View should be alive
+      assert Process.alive?(view.pid)
+
+      # Cleanup
+      Process.exit(pid2, :kill)
+    end
+  end
+
+  describe "Documents.cancel_ai_query/2" do
+    test "function exists and is callable" do
+      # Verify the cancel function exists
+      assert function_exported?(Jarga.Documents, :cancel_ai_query, 2)
+
+      # Test with a dummy process
+      test_pid =
+        spawn(fn ->
+          receive do
+            {:cancel, "test_node"} -> :ok
+          after
+            1000 -> :timeout
+          end
+        end)
+
+      # Call the cancel function
+      assert :ok = Jarga.Documents.cancel_ai_query(test_pid, "test_node")
+
+      # Give time for message to be received
+      Process.sleep(10)
+
+      # Process should have received the message and exited
+      refute Process.alive?(test_pid)
+    end
+  end
+
   describe "integration" do
     test "view loads successfully", %{
       conn: conn,

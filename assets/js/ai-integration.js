@@ -256,8 +256,8 @@ export class AIAssistantManager {
       // Remove from active queries
       this.activeQueries.delete(nodeId)
 
-      // TODO: Send cancellation to server if backend supports it
-      // this.pushEvent('ai_cancel', { node_id: nodeId })
+      // Send cancellation to server
+      this.pushEvent('ai_cancel', { node_id: nodeId })
     }
   }
 

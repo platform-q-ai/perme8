@@ -172,6 +172,9 @@ export const MilkdownEditor = {
 
         // Set up staleness detection on editor focus
         this.setupStalenessDetection(view)
+
+        // Set up ESC key handler for canceling AI queries
+        this.setupESCKeyHandler(view)
       })
     }).catch((error) => {
       console.error('Failed to create Milkdown editor:', error)
@@ -560,6 +563,27 @@ export const MilkdownEditor = {
     }
   },
 
+  setupESCKeyHandler(view) {
+    // Add ESC key handler to cancel active AI queries
+    const escHandler = (event) => {
+      if (event.key === 'Escape' && this.aiAssistant) {
+        // Check if there are active AI queries
+        const activeInfo = this.aiAssistant.getActiveQueriesInfo()
+
+        if (activeInfo.count > 0) {
+          // Cancel all active queries when ESC is pressed
+          this.aiAssistant.cancelAllQueries()
+          event.preventDefault()
+          event.stopPropagation()
+        }
+      }
+    }
+
+    // Store handler for cleanup
+    this.escKeyHandler = escHandler
+    view.dom.addEventListener('keydown', escHandler)
+  },
+
   destroyed() {
     // Force save any pending changes before cleanup
     if (this.hasPendingChanges) {
@@ -612,6 +636,17 @@ export const MilkdownEditor = {
         }
       })
       this.stalenessCheckHandler = null
+    }
+
+    // Remove ESC key handler
+    if (this.escKeyHandler) {
+      this.editor?.action((ctx) => {
+        const view = ctx.get(editorViewCtx)
+        if (view?.dom) {
+          view.dom.removeEventListener('keydown', this.escKeyHandler)
+        }
+      })
+      this.escKeyHandler = null
     }
 
     // Cleanup AI assistant
