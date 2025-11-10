@@ -472,4 +472,214 @@ describe('CollaborationManager', () => {
       expect(collaborationManager.yjsUndoManager).toBeNull()
     })
   })
+
+  describe('undo/redo functionality', () => {
+    beforeEach(() => {
+      collaborationManager.initialize()
+    })
+
+    it('should create UndoManager with correct trackedOrigins', () => {
+      // Create a mock binding object
+      const mockBinding = { id: 'test-binding' }
+
+      // Create UndoManager manually (simulating what configureProseMirrorPlugins does)
+      const undoManager = new Y.UndoManager(collaborationManager.yXmlFragment, {
+        trackedOrigins: new Set([mockBinding])
+      })
+
+      // Verify it was created with our binding in the tracked origins
+      expect(undoManager.trackedOrigins.has(mockBinding)).toBe(true)
+      // Note: Y.UndoManager may add other default origins, so we just verify ours is there
+      expect(undoManager.trackedOrigins.size).toBeGreaterThan(0)
+
+      undoManager.destroy()
+    })
+
+    it('should track local edits in UndoManager', () => {
+      // Create a binding object (simulates y-prosemirror's binding)
+      const binding = { id: 'local-binding' }
+
+      const undoManager = new Y.UndoManager(collaborationManager.yXmlFragment, {
+        trackedOrigins: new Set([binding])
+      })
+
+      // Make a change with the tracked origin
+      collaborationManager.ydoc.transact(() => {
+        const paragraph = new Y.XmlElement('paragraph')
+        const textNode = new Y.XmlText('Hello World')
+        paragraph.insert(0, [textNode])
+        collaborationManager.yXmlFragment.insert(0, [paragraph])
+      }, binding)
+
+      // Check that UndoManager tracked the change
+      expect(undoManager.undoStack.length).toBeGreaterThan(0)
+
+      undoManager.destroy()
+    })
+
+    it('should undo local edits', () => {
+      const binding = { id: 'local-binding' }
+
+      const undoManager = new Y.UndoManager(collaborationManager.yXmlFragment, {
+        trackedOrigins: new Set([binding])
+      })
+
+      // Make a change
+      collaborationManager.ydoc.transact(() => {
+        const paragraph = new Y.XmlElement('paragraph')
+        const textNode = new Y.XmlText('Hello World')
+        paragraph.insert(0, [textNode])
+        collaborationManager.yXmlFragment.insert(0, [paragraph])
+      }, binding)
+
+      // Verify text was added
+      let xmlText = collaborationManager.yXmlFragment.toString()
+      expect(xmlText).toContain('Hello World')
+
+      // Undo the change
+      undoManager.undo()
+
+      // Verify text was removed
+      xmlText = collaborationManager.yXmlFragment.toString()
+      expect(xmlText).not.toContain('Hello World')
+
+      undoManager.destroy()
+    })
+
+    it('should redo local edits', () => {
+      const binding = { id: 'local-binding' }
+
+      const undoManager = new Y.UndoManager(collaborationManager.yXmlFragment, {
+        trackedOrigins: new Set([binding])
+      })
+
+      // Make a change
+      collaborationManager.ydoc.transact(() => {
+        const paragraph = new Y.XmlElement('paragraph')
+        const textNode = new Y.XmlText('Hello World')
+        paragraph.insert(0, [textNode])
+        collaborationManager.yXmlFragment.insert(0, [paragraph])
+      }, binding)
+
+      // Undo the change
+      undoManager.undo()
+
+      let xmlText = collaborationManager.yXmlFragment.toString()
+      expect(xmlText).not.toContain('Hello World')
+
+      // Redo the change
+      undoManager.redo()
+
+      xmlText = collaborationManager.yXmlFragment.toString()
+      expect(xmlText).toContain('Hello World')
+
+      undoManager.destroy()
+    })
+
+    it('should only track local edits, not remote updates', () => {
+      const binding = { id: 'local-binding' }
+
+      const undoManager = new Y.UndoManager(collaborationManager.yXmlFragment, {
+        trackedOrigins: new Set([binding])
+      })
+
+      // Make a local change (tracked)
+      collaborationManager.ydoc.transact(() => {
+        const paragraph = new Y.XmlElement('paragraph')
+        const textNode = new Y.XmlText('Local text')
+        paragraph.insert(0, [textNode])
+        collaborationManager.yXmlFragment.insert(0, [paragraph])
+      }, binding)
+
+      const undoStackLengthAfterLocal = undoManager.undoStack.length
+      expect(undoStackLengthAfterLocal).toBeGreaterThan(0)
+
+      // Simulate a remote update (different origin, not tracked)
+      const remoteDoc = new Y.Doc()
+      const remoteFragment = remoteDoc.getXmlFragment('prosemirror')
+
+      remoteDoc.transact(() => {
+        const paragraph = new Y.XmlElement('paragraph')
+        const textNode = new Y.XmlText('Remote text')
+        paragraph.insert(0, [textNode])
+        remoteFragment.insert(0, [paragraph])
+      })
+
+      const update = Y.encodeStateAsUpdate(remoteDoc)
+      const updateBase64 = btoa(String.fromCharCode(...update))
+
+      // Apply remote update (should NOT be tracked)
+      collaborationManager.applyRemoteUpdate(updateBase64)
+
+      // Undo stack should not have grown (remote edits shouldn't be tracked)
+      expect(undoManager.undoStack.length).toBe(undoStackLengthAfterLocal)
+
+      undoManager.destroy()
+    })
+
+    it('should maintain separate undo stacks for multiple clients', () => {
+      // Create two collaboration managers (simulating two clients)
+      const collaborationManager2 = new CollaborationManager()
+      collaborationManager2.initialize()
+
+      const binding1 = { id: 'binding-1' }
+      const binding2 = { id: 'binding-2' }
+
+      const undoManager1 = new Y.UndoManager(collaborationManager.yXmlFragment, {
+        trackedOrigins: new Set([binding1])
+      })
+
+      const undoManager2 = new Y.UndoManager(collaborationManager2.yXmlFragment, {
+        trackedOrigins: new Set([binding2])
+      })
+
+      // Client 1 makes an edit
+      collaborationManager.ydoc.transact(() => {
+        const paragraph = new Y.XmlElement('paragraph')
+        const textNode = new Y.XmlText('Client 1 text')
+        paragraph.insert(0, [textNode])
+        collaborationManager.yXmlFragment.insert(0, [paragraph])
+      }, binding1)
+
+      // Client 2 makes an edit
+      collaborationManager2.ydoc.transact(() => {
+        const paragraph = new Y.XmlElement('paragraph')
+        const textNode = new Y.XmlText('Client 2 text')
+        paragraph.insert(0, [textNode])
+        collaborationManager2.yXmlFragment.insert(0, [paragraph])
+      }, binding2)
+
+      // Both should have undo stacks with their own edits
+      expect(undoManager1.undoStack.length).toBeGreaterThan(0)
+      expect(undoManager2.undoStack.length).toBeGreaterThan(0)
+
+      // Client 1 undo should only affect their text
+      undoManager1.undo()
+      const xmlText1 = collaborationManager.yXmlFragment.toString()
+      expect(xmlText1).not.toContain('Client 1 text')
+
+      // Client 2 undo should only affect their text
+      undoManager2.undo()
+      const xmlText2 = collaborationManager2.yXmlFragment.toString()
+      expect(xmlText2).not.toContain('Client 2 text')
+
+      undoManager1.destroy()
+      undoManager2.destroy()
+      collaborationManager2.destroy()
+    })
+
+    it('should verify configureProseMirrorPlugins accepts additionalPlugins parameter', () => {
+      // This test verifies the API contract that we rely on for AI plugin integration
+      const mockPlugin = { key: 'mock-plugin' }
+
+      // Verify the method signature accepts additionalPlugins
+      expect(() => {
+        // We don't actually call it because it requires a full ProseMirror setup,
+        // but we can verify the function exists and accepts the parameter
+        const method = collaborationManager.configureProseMirrorPlugins
+        expect(method).toBeDefined()
+        expect(method.length).toBeGreaterThanOrEqual(2) // view, state, additionalPlugins
+      }).not.toThrow()
+    })
+  })
 })

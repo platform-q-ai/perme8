@@ -11,6 +11,7 @@ defmodule Jarga.Documents do
     exports: [
       Infrastructure.Services.LlmClient,
       UseCases.PrepareContext,
+      UseCases.AIQuery,
       UseCases.CreateSession,
       UseCases.SaveMessage,
       UseCases.LoadSession,
@@ -24,6 +25,7 @@ defmodule Jarga.Documents do
 
   alias Jarga.Documents.UseCases.{
     PrepareContext,
+    AIQuery,
     CreateSession,
     SaveMessage,
     LoadSession,
@@ -134,4 +136,37 @@ defmodule Jarga.Documents do
 
   """
   defdelegate delete_session(session_id, user_id), to: DeleteSession, as: :execute
+
+  @doc """
+  Executes an AI query with page context and streams response.
+
+  This is used for in-editor AI assistance. The AI response is streamed
+  to the caller process as chunks.
+
+  ## Parameters
+    - params: Map with required keys:
+      - :question - The user's question
+      - :assigns - LiveView assigns containing page context
+      - :node_id (optional) - Node ID for tracking in the editor
+    - caller_pid: Process to receive streaming chunks
+
+  ## Examples
+
+      iex> params = %{
+      ...>   question: "How do I structure a Phoenix context?",
+      ...>   assigns: socket.assigns,
+      ...>   node_id: "ai_node_123"
+      ...> }
+      iex> ai_query(params, self())
+      {:ok, #PID<0.123.0>}
+
+      # Then receive messages:
+      receive do
+        {:ai_chunk, node_id, chunk} -> IO.puts(chunk)
+        {:ai_done, node_id, response} -> IO.puts("Complete!")
+        {:ai_error, node_id, reason} -> IO.puts("Error: " <> reason)
+      end
+
+  """
+  defdelegate ai_query(params, caller_pid), to: AIQuery, as: :execute
 end

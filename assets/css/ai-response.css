@@ -1,0 +1,47 @@
+/**
+ * AI Response Node Styles
+ *
+ * Minimal styles for seamless AI responses in the editor
+ */
+
+/* AI Mention Active State (while typing @ai) */
+.ai-mention-active {
+  background-color: rgba(147, 197, 253, 0.2); /* light blue highlight */
+  border-radius: 3px;
+  padding: 2px 4px;
+}
+
+/* Remove ProseMirror selection outline from AI response nodes */
+span[data-node-id] {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* When AI response is selected, remove ProseMirror's default node selection styling */
+.ProseMirror-selectednode[data-node-id] {
+  outline: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+/* Blinking cursor animation for streaming AI responses */
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+.ai-streaming-cursor {
+  animation: blink 1s step-end infinite;
+}
+
+/* Dark mode for mention highlighting */
+@media (prefers-color-scheme: dark) {
+  .ai-mention-active {
+    background-color: rgba(96, 165, 250, 0.2);
+  }
+}
+
+[data-theme="dark"] .ai-mention-active {
+  background-color: rgba(96, 165, 250, 0.2);
+}

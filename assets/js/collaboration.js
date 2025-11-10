@@ -83,9 +83,10 @@ export class CollaborationManager {
    *
    * @param {EditorView} view - ProseMirror editor view
    * @param {EditorState} state - ProseMirror editor state
+   * @param {Array} additionalPlugins - Optional array of additional plugins to add
    * @returns {EditorState} New editor state with collaboration plugins
    */
-  configureProseMirrorPlugins(view, state) {
+  configureProseMirrorPlugins(view, state, additionalPlugins = []) {
     if (!this.ydoc || !this.yXmlFragment || !this.awareness) {
       throw new Error('CollaborationManager not initialized. Call initialize() first.')
     }
@@ -136,8 +137,10 @@ export class CollaborationManager {
     const selectionPlugin = this._createSelectionPlugin()
 
     // Step 9: Apply all plugins
+    // IMPORTANT: Add any additional plugins (like AI plugin) BEFORE collaboration plugins
+    // so they can intercept events (like Enter key) before collaboration processes them
     newState = view.state.reconfigure({
-      plugins: [...view.state.plugins, yUndo, undoRedoKeymap, awarenessPlugin, selectionPlugin]
+      plugins: [...additionalPlugins, ...view.state.plugins, yUndo, undoRedoKeymap, awarenessPlugin, selectionPlugin]
     })
 
     return newState

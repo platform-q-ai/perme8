@@ -35,7 +35,7 @@ defmodule Jarga.MixProject do
 
   def cli do
     [
-      preferred_envs: [precommit: :test]
+      preferred_envs: [precommit: :test, "assets.deploy": :prod]
     ]
   end
 
@@ -143,7 +143,7 @@ defmodule Jarga.MixProject do
         "format",
         "credo --strict",
         "cmd npm test --prefix assets",
-        "cmd MIX_ENV=prod mix assets.deploy",
+        "assets.deploy",
         "coveralls.html"
       ]
     ]

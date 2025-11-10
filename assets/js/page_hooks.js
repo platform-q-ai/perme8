@@ -4,6 +4,8 @@ import { gfm } from '@milkdown/preset-gfm'
 import { nord } from '@milkdown/theme-nord'
 import { clipboard } from '@milkdown/plugin-clipboard'
 import { CollaborationManager } from './collaboration'
+import { aiResponseNode } from './ai-response-node'
+import { AIAssistantManager } from './ai-integration'
 
 /**
  * MilkdownEditor Hook
@@ -84,6 +86,25 @@ export const MilkdownEditor = {
       this.insertTextIntoEditor(content)
     })
 
+    // Listen for AI streaming events
+    this.handleEvent('ai_chunk', (data) => {
+      if (this.aiAssistant) {
+        this.aiAssistant.handleAIChunk(data)
+      }
+    })
+
+    this.handleEvent('ai_done', (data) => {
+      if (this.aiAssistant) {
+        this.aiAssistant.handleAIDone(data)
+      }
+    })
+
+    this.handleEvent('ai_error', (data) => {
+      if (this.aiAssistant) {
+        this.aiAssistant.handleAIError(data)
+      }
+    })
+
     // Handle page visibility changes (tab switching, minimizing)
     this.visibilityHandler = () => {
       if (document.hidden && this.hasPendingChanges) {
@@ -116,6 +137,7 @@ export const MilkdownEditor = {
       .use(commonmark)
       .use(gfm)
       .use(clipboard)
+      .use(aiResponseNode)
 
     this.editor = editor
 
@@ -125,9 +147,23 @@ export const MilkdownEditor = {
         const view = ctx.get(editorViewCtx)
         const state = view.state
 
-        // Configure ProseMirror with collaboration + undo/redo plugins
-        const newState = this.collaborationManager.configureProseMirrorPlugins(view, state)
+        // Initialize AI Assistant Manager BEFORE configuring plugins
+        console.log('[MilkdownEditor] Initializing AI Assistant')
+        this.aiAssistant = new AIAssistantManager({
+          view,
+          schema: state.schema,
+          pushEvent: this.pushEvent.bind(this)
+        })
+
+        // Create AI mention plugin
+        console.log('[MilkdownEditor] Creating AI mention plugin')
+        const aiPlugin = this.aiAssistant.createPlugin()
+
+        // Configure ProseMirror with collaboration + undo/redo + AI plugins
+        // IMPORTANT: AI plugin is added FIRST so it can handle Enter key before other plugins
+        const newState = this.collaborationManager.configureProseMirrorPlugins(view, state, [aiPlugin])
         view.updateState(newState)
+        console.log('[MilkdownEditor] AI Assistant initialized successfully')
 
         // Add click handler for task list checkboxes
         this.setupTaskListClickHandler(view)
@@ -585,6 +621,12 @@ export const MilkdownEditor = {
         }
       })
       this.stalenessCheckHandler = null
+    }
+
+    // Cleanup AI assistant
+    if (this.aiAssistant) {
+      this.aiAssistant.destroy()
+      this.aiAssistant = null
     }
 
     if (this.collaborationManager) {

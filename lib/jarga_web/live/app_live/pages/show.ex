@@ -7,7 +7,7 @@ defmodule JargaWeb.AppLive.Pages.Show do
 
   import JargaWeb.ChatLive.MessageHandlers
 
-  alias Jarga.{Pages, Notes, Workspaces, Projects}
+  alias Jarga.{Pages, Notes, Workspaces, Projects, Documents}
   alias Ecto.Adapters.SQL.Sandbox
 
   @impl true
@@ -253,6 +253,27 @@ defmodule JargaWeb.AppLive.Pages.Show do
   end
 
   @impl true
+  def handle_event("ai_query", %{"question" => question, "node_id" => node_id}, socket) do
+    # Spawn async process for streaming AI response
+    parent = self()
+
+    spawn_link(fn ->
+      params = %{
+        question: question,
+        node_id: node_id,
+        assigns: socket.assigns
+      }
+
+      case Documents.ai_query(params, parent) do
+        {:ok, _pid} -> :ok
+        {:error, reason} -> send(parent, {:ai_error, node_id, reason})
+      end
+    end)
+
+    {:noreply, socket}
+  end
+
+  @impl true
   def handle_info({:yjs_update, %{update: update, user_id: _user_id}}, socket) do
     # broadcast_from already ensures we don't receive our own messages
     {:noreply, push_event(socket, "yjs_update", %{update: update})}
@@ -318,6 +339,25 @@ defmodule JargaWeb.AppLive.Pages.Show do
     else
       {:noreply, socket}
     end
+  end
+
+  @impl true
+  def handle_info({:ai_chunk, node_id, chunk}, socket) do
+    # Forward AI chunk to client via push_event
+    {:noreply, push_event(socket, "ai_chunk", %{node_id: node_id, chunk: chunk})}
+  end
+
+  @impl true
+  def handle_info({:ai_done, node_id, response}, socket) do
+    # Forward AI completion to client
+    {:noreply, push_event(socket, "ai_done", %{node_id: node_id, response: response})}
+  end
+
+  @impl true
+  def handle_info({:ai_error, node_id, reason}, socket) do
+    # Forward AI error to client
+    error_message = if is_binary(reason), do: reason, else: inspect(reason)
+    {:noreply, push_event(socket, "ai_error", %{node_id: node_id, error: error_message})}
   end
 
   defp generate_user_id do

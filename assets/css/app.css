@@ -135,3 +135,6 @@
 /* Milkdown Editor Styles */
 @import '@milkdown/theme-nord/style.css';
 @import './editor.css';
+
+/* AI Response Styles */
+@import './ai-response.css';
