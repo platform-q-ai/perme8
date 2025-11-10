@@ -23,8 +23,6 @@ export class AIAssistantManager {
    * @param {Function} options.pushEvent - LiveView pushEvent function
    */
   constructor(options) {
-    console.log('[AIAssistantManager] Constructing with options:', { hasView: !!options.view, hasSchema: !!options.schema, hasParser: !!options.parser, hasPushEvent: !!options.pushEvent })
-
     this.view = options.view
     this.schema = options.schema
     this.parser = options.parser
@@ -38,8 +36,6 @@ export class AIAssistantManager {
     this.handleAIChunk = this.handleAIChunk.bind(this)
     this.handleAIDone = this.handleAIDone.bind(this)
     this.handleAIError = this.handleAIError.bind(this)
-
-    console.log('[AIAssistantManager] Construction complete')
   }
 
   /**
@@ -65,8 +61,6 @@ export class AIAssistantManager {
    * @param {string} params.nodeId - AI response node ID
    */
   handleAIQuery({ question, nodeId }) {
-    console.log(`[AIAssistant] Query triggered: "${question}" (${nodeId})`)
-
     // Track query
     this.activeQueries.set(nodeId, {
       question,
@@ -88,14 +82,8 @@ export class AIAssistantManager {
    * @param {string} data.chunk - Text chunk
    */
   handleAIChunk({ node_id, chunk }) {
-    console.log(`[AIAssistant] Chunk received for ${node_id}: ${chunk.length} chars`)
-
     // Append chunk to node
-    const success = appendChunkToNode(this.view, node_id, chunk)
-
-    if (!success) {
-      console.warn(`[AIAssistant] Failed to append chunk to node ${node_id}`)
-    }
+    appendChunkToNode(this.view, node_id, chunk)
   }
 
   /**
@@ -106,8 +94,6 @@ export class AIAssistantManager {
    * @param {string} data.response - Complete response text
    */
   handleAIDone({ node_id, response }) {
-    console.log(`[AIAssistant] Query completed for ${node_id}`)
-
     // Find the AI response node and replace it with properly formatted content
     const { state } = this.view
     const { doc, schema } = state
@@ -183,15 +169,8 @@ export class AIAssistantManager {
 
       this.view.dispatch(tr)
 
-      // Log completion time
-      const query = this.activeQueries.get(node_id)
-      if (query) {
-        const duration = Date.now() - query.startTime
-        console.log(`[AIAssistant] Query took ${duration}ms`)
-        this.activeQueries.delete(node_id)
-      }
-    } else {
-      console.warn(`[AIAssistant] Failed to find node ${node_id}`)
+      // Clean up completed query
+      this.activeQueries.delete(node_id)
     }
   }
 
@@ -203,8 +182,6 @@ export class AIAssistantManager {
    * @param {string} data.error - Error message
    */
   handleAIError({ node_id, error }) {
-    console.error(`[AIAssistant] Error for ${node_id}: ${error}`)
-
     // Update node to error state
     const success = updateAIResponseNode(this.view, node_id, {
       state: 'error',
@@ -215,8 +192,6 @@ export class AIAssistantManager {
     if (success) {
       // Remove from active queries
       this.activeQueries.delete(node_id)
-    } else {
-      console.warn(`[AIAssistant] Failed to update node ${node_id} to error state`)
     }
   }
 
@@ -245,8 +220,6 @@ export class AIAssistantManager {
     const query = this.activeQueries.get(nodeId)
 
     if (query) {
-      console.log(`[AIAssistant] Cancelling query ${nodeId}`)
-
       // Update node to error state (cancelled)
       updateAIResponseNode(this.view, nodeId, {
         state: 'error',
@@ -268,8 +241,6 @@ export class AIAssistantManager {
   cancelAllQueries() {
     const nodeIds = Array.from(this.activeQueries.keys())
 
-    console.log(`[AIAssistant] Cancelling ${nodeIds.length} active queries`)
-
     nodeIds.forEach(nodeId => {
       this.cancelQuery(nodeId)
     })
@@ -279,8 +250,6 @@ export class AIAssistantManager {
    * Cleanup
    */
   destroy() {
-    console.log('[AIAssistant] Destroying manager')
-
     // Cancel all active queries
     this.cancelAllQueries()
 

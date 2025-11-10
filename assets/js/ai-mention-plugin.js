@@ -17,8 +17,6 @@ export const aiMentionPluginKey = new PluginKey('ai-mention')
 export function createAIMentionPlugin(options) {
   const { onAIQuery, schema } = options
 
-  console.log('[AI Mention Plugin] Initializing with schema:', schema)
-
   return new Plugin({
     key: aiMentionPluginKey,
 
@@ -70,12 +68,9 @@ export function createAIMentionPlugin(options) {
         const pluginState = this.getState(view.state)
         const mention = pluginState?.activeMention
 
-        console.log('[AI Mention Plugin] Enter pressed, mention:', mention)
-
         if (!mention) return false
 
         const question = extractQuestion(mention.text)
-        console.log('[AI Mention Plugin] Question extracted:', question)
 
         if (!question || question.trim().length === 0) return false
 
@@ -85,15 +80,12 @@ export function createAIMentionPlugin(options) {
         const aiNode = createAIResponseNode(schema, nodeId)
         const { from, to } = mention
 
-        console.log('[AI Mention Plugin] Creating AI node:', { nodeId, question })
-
         const tr = view.state.tr
         tr.delete(from, to)
         tr.insert(from, aiNode)
         view.dispatch(tr)
 
         if (onAIQuery) {
-          console.log('[AI Mention Plugin] Triggering onAIQuery callback')
           onAIQuery({ question, nodeId })
         }
 
@@ -176,7 +168,6 @@ export function updateAIResponseNode(view, nodeId, updates) {
   })
 
   if (nodePos === null || !nodeToUpdate) {
-    console.warn(`AI response node not found: ${nodeId}`)
     return false
   }
 
