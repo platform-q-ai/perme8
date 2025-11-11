@@ -6,7 +6,7 @@ defmodule JargaWeb.AppLive.Projects.ShowTest do
   import Jarga.WorkspacesFixtures
   import Jarga.ProjectsFixtures
 
-  alias Jarga.Pages
+  alias Jarga.Documents
 
   describe "show project page" do
     test "redirects if user is not logged in", %{conn: conn} do
@@ -73,7 +73,7 @@ defmodule JargaWeb.AppLive.Projects.ShowTest do
       assert lv |> element("button", "Delete Project") |> has_element?()
     end
 
-    test "displays empty state when no pages", %{
+    test "displays empty state when no documents", %{
       conn: conn,
       workspace: workspace,
       project: project
@@ -81,30 +81,30 @@ defmodule JargaWeb.AppLive.Projects.ShowTest do
       {:ok, _lv, html} =
         live(conn, ~p"/app/workspaces/#{workspace.slug}/projects/#{project.slug}")
 
-      assert html =~ "No pages yet"
-      assert html =~ "Create your first page for this project"
+      assert html =~ "No documents yet"
+      assert html =~ "Create your first document for this project"
     end
 
-    test "displays pages when they exist", %{
+    test "displays documents when they exist", %{
       conn: conn,
       user: user,
       workspace: workspace,
       project: project
     } do
-      {:ok, page1} =
-        Pages.create_page(user, workspace.id, %{title: "Page One", project_id: project.id})
+      {:ok, document1} =
+        Documents.create_page(user, workspace.id, %{title: "Document One", project_id: project.id})
 
-      {:ok, page2} =
-        Pages.create_page(user, workspace.id, %{title: "Page Two", project_id: project.id})
+      {:ok, document2} =
+        Documents.create_page(user, workspace.id, %{title: "Document Two", project_id: project.id})
 
       {:ok, _lv, html} =
         live(conn, ~p"/app/workspaces/#{workspace.slug}/projects/#{project.slug}")
 
-      refute html =~ "No pages yet"
-      assert html =~ "Page One"
-      assert html =~ "Page Two"
-      assert html =~ page1.id
-      assert html =~ page2.id
+      refute html =~ "No documents yet"
+      assert html =~ "Document One"
+      assert html =~ "Document Two"
+      assert html =~ document1.id
+      assert html =~ document2.id
     end
 
     test "shows pinned badge for pinned pages", %{
@@ -113,9 +113,9 @@ defmodule JargaWeb.AppLive.Projects.ShowTest do
       workspace: workspace,
       project: project
     } do
-      {:ok, page} =
-        Pages.create_page(user, workspace.id, %{
-          title: "Pinned Page",
+      {:ok, document} =
+        Documents.create_page(user, workspace.id, %{
+          title: "Pinned Document",
           project_id: project.id,
           is_pinned: true
         })
@@ -124,17 +124,17 @@ defmodule JargaWeb.AppLive.Projects.ShowTest do
         live(conn, ~p"/app/workspaces/#{workspace.slug}/projects/#{project.slug}")
 
       assert html =~ "Pinned"
-      assert html =~ page.id
+      assert html =~ document.id
     end
 
-    test "displays new page button", %{conn: conn, workspace: workspace, project: project} do
+    test "displays new document button", %{conn: conn, workspace: workspace, project: project} do
       {:ok, lv, _html} =
         live(conn, ~p"/app/workspaces/#{workspace.slug}/projects/#{project.slug}")
 
-      assert lv |> element("button", "New Page") |> has_element?()
+      assert lv |> element("button", "New Document") |> has_element?()
     end
 
-    test "shows page modal when clicking new page button", %{
+    test "shows document modal when clicking new document button", %{
       conn: conn,
       workspace: workspace,
       project: project
@@ -142,18 +142,18 @@ defmodule JargaWeb.AppLive.Projects.ShowTest do
       {:ok, lv, _html} =
         live(conn, ~p"/app/workspaces/#{workspace.slug}/projects/#{project.slug}")
 
-      refute render(lv) =~ "Create New Page"
+      refute render(lv) =~ "Create New Document"
 
       html =
         lv
-        |> element("button", "New Page")
+        |> element("button", "New Document")
         |> render_click()
 
-      assert html =~ "Create New Page"
+      assert html =~ "Create New Document"
       assert html =~ "modal-open"
     end
 
-    test "hides page modal when clicking cancel", %{
+    test "hides document modal when clicking cancel", %{
       conn: conn,
       workspace: workspace,
       project: project
@@ -163,7 +163,7 @@ defmodule JargaWeb.AppLive.Projects.ShowTest do
 
       # Show modal
       lv
-      |> element("button", "New Page")
+      |> element("button", "New Document")
       |> render_click()
 
       # Hide modal
@@ -172,11 +172,11 @@ defmodule JargaWeb.AppLive.Projects.ShowTest do
         |> element("button", "Cancel")
         |> render_click()
 
-      refute html =~ "Create New Page"
+      refute html =~ "Create New Document"
       refute html =~ "modal-open"
     end
 
-    test "creates page and redirects when submitting modal", %{
+    test "creates document and redirects when submitting modal", %{
       conn: conn,
       workspace: workspace,
       project: project
@@ -186,16 +186,16 @@ defmodule JargaWeb.AppLive.Projects.ShowTest do
 
       # Show modal
       lv
-      |> element("button", "New Page")
+      |> element("button", "New Document")
       |> render_click()
 
       # Submit form
       lv
-      |> form("#page-form", title: "New Test Page")
+      |> form("#document-form", title: "New Test Document")
       |> render_submit()
 
       # Should redirect to new page
-      assert_redirect(lv, ~p"/app/workspaces/#{workspace.slug}/pages/new-test-page")
+      assert_redirect(lv, ~p"/app/workspaces/#{workspace.slug}/documents/new-test-document")
     end
 
     test "deletes project and redirects when clicking delete", %{
@@ -260,44 +260,44 @@ defmodule JargaWeb.AppLive.Projects.ShowTest do
       assert path == ~p"/app/workspaces"
     end
 
-    test "updates page title in real-time when page_title_changed event is received", %{
+    test "updates document title in real-time when document_title_changed event is received", %{
       conn: conn,
       user: user,
       workspace: workspace,
       project: project
     } do
-      {:ok, page} =
-        Pages.create_page(user, workspace.id, %{title: "Original Title", project_id: project.id})
+      {:ok, document} =
+        Documents.create_page(user, workspace.id, %{title: "Original Title", project_id: project.id})
 
       {:ok, lv, html} = live(conn, ~p"/app/workspaces/#{workspace.slug}/projects/#{project.slug}")
 
       assert html =~ "Original Title"
 
       # Simulate PubSub event
-      send(lv.pid, {:page_title_changed, page.id, "Updated Title"})
+      send(lv.pid, {:page_title_changed, document.id, "Updated Title"})
 
       html = render(lv)
       assert html =~ "Updated Title"
       refute html =~ "Original Title"
     end
 
-    test "reloads pages when page_visibility_changed event is received", %{
+    test "reloads documents when document_visibility_changed event is received", %{
       conn: conn,
       user: user,
       workspace: workspace,
       project: project
     } do
-      {:ok, page} =
-        Pages.create_page(user, workspace.id, %{title: "Test Page", project_id: project.id})
+      {:ok, document} =
+        Documents.create_page(user, workspace.id, %{title: "Test Document", project_id: project.id})
 
       {:ok, lv, _html} =
         live(conn, ~p"/app/workspaces/#{workspace.slug}/projects/#{project.slug}")
 
       # Simulate PubSub event
-      send(lv.pid, {:page_visibility_changed, page.id, true})
+      send(lv.pid, {:page_visibility_changed, document.id, true})
 
       # Page list should be reloaded
-      assert render(lv) =~ "Test Page"
+      assert render(lv) =~ "Test Document"
     end
 
     test "updates workspace name when workspace_updated event is received", %{

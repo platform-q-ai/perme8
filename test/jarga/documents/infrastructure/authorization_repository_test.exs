@@ -1,0 +1,100 @@
+defmodule Jarga.Documents.Infrastructure.AuthorizationRepositoryTest do
+  use Jarga.DataCase, async: true
+
+  alias Jarga.Documents.Infrastructure.AuthorizationRepository
+  alias Jarga.Documents
+
+  import Jarga.AccountsFixtures
+  import Jarga.WorkspacesFixtures
+  import Jarga.ProjectsFixtures
+
+  describe "verify_workspace_access/2" do
+    test "returns {:ok, workspace} when user is a member" do
+      user = user_fixture()
+      workspace = workspace_fixture(user)
+
+      assert {:ok, fetched_workspace} =
+               AuthorizationRepository.verify_workspace_access(user, workspace.id)
+
+      assert fetched_workspace.id == workspace.id
+    end
+
+    test "returns {:error, :workspace_not_found} when workspace doesn't exist" do
+      user = user_fixture()
+      fake_id = Ecto.UUID.generate()
+
+      assert {:error, :workspace_not_found} =
+               AuthorizationRepository.verify_workspace_access(user, fake_id)
+    end
+
+    test "returns {:error, :unauthorized} when user is not a member" do
+      user1 = user_fixture()
+      user2 = user_fixture()
+      workspace = workspace_fixture(user1)
+
+      assert {:error, :unauthorized} =
+               AuthorizationRepository.verify_workspace_access(user2, workspace.id)
+    end
+  end
+
+  describe "verify_document_access/2" do
+    test "returns {:ok, document} when user owns the document" do
+      user = user_fixture()
+      workspace = workspace_fixture(user)
+      {:ok, document} = Documents.create_document(user, workspace.id, %{title: "My Document"})
+
+      assert {:ok, fetched_document} = AuthorizationRepository.verify_document_access(user, document.id)
+      assert fetched_document.id == document.id
+    end
+
+    test "returns {:error, :document_not_found} when document doesn't exist" do
+      user = user_fixture()
+      fake_id = Ecto.UUID.generate()
+
+      assert {:error, :document_not_found} = AuthorizationRepository.verify_document_access(user, fake_id)
+    end
+
+    test "returns {:error, :unauthorized} when document exists but belongs to another user" do
+      user1 = user_fixture()
+      user2 = user_fixture()
+      workspace = workspace_fixture(user1)
+      {:ok, document} = Documents.create_document(user1, workspace.id, %{title: "Private Document"})
+
+      assert {:error, :unauthorized} = AuthorizationRepository.verify_document_access(user2, document.id)
+    end
+  end
+
+  describe "verify_project_in_workspace/2" do
+    test "returns :ok when project_id is nil" do
+      workspace = workspace_fixture(user_fixture())
+
+      assert :ok = AuthorizationRepository.verify_project_in_workspace(workspace.id, nil)
+    end
+
+    test "returns :ok when project belongs to workspace" do
+      user = user_fixture()
+      workspace = workspace_fixture(user)
+      project = project_fixture(user, workspace)
+
+      assert :ok = AuthorizationRepository.verify_project_in_workspace(workspace.id, project.id)
+    end
+
+    test "returns {:error, :project_not_in_workspace} when project doesn't exist" do
+      workspace = workspace_fixture(user_fixture())
+      fake_project_id = Ecto.UUID.generate()
+
+      assert {:error, :project_not_in_workspace} =
+               AuthorizationRepository.verify_project_in_workspace(workspace.id, fake_project_id)
+    end
+
+    test "returns {:error, :project_not_in_workspace} when project belongs to different workspace" do
+      user = user_fixture()
+      workspace1 = workspace_fixture(user)
+      workspace2 = workspace_fixture(user)
+      project = project_fixture(user, workspace2)
+
+      assert {:error, :project_not_in_workspace} =
+               AuthorizationRepository.verify_project_in_workspace(workspace1.id, project.id)
+    end
+  end
+end

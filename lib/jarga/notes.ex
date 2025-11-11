@@ -131,15 +131,15 @@ defmodule Jarga.Notes do
 
   ## Examples
 
-      iex> update_note_via_page(user, note_id, %{note_content: content})
+      iex> update_note_via_document(user, note_id, %{note_content: content})
       {:ok, %Note{}}
 
-      iex> update_note_via_page(user, unauthorized_note_id, %{note_content: content})
+      iex> update_note_via_document(user, unauthorized_note_id, %{note_content: content})
       {:error, :unauthorized}
 
   """
-  def update_note_via_page(%User{} = user, note_id, attrs) do
-    case AuthorizationRepository.verify_note_access_via_page(user, note_id) do
+  def update_note_via_document(%User{} = user, note_id, attrs) do
+    case AuthorizationRepository.verify_note_access_via_document(user, note_id) do
       {:ok, note} ->
         note
         |> Note.changeset(attrs)

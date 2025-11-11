@@ -24,9 +24,9 @@ defmodule JargaWeb do
       Jarga.Accounts,
       Jarga.Workspaces,
       Jarga.Projects,
-      Jarga.Pages,
-      Jarga.Notes,
       Jarga.Documents,
+      Jarga.Notes,
+      Jarga.Agents,
       Jarga.Notifications,
       Jarga.Repo,
       Jarga.Mailer

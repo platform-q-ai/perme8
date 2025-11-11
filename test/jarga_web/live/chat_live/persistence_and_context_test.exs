@@ -11,7 +11,7 @@ defmodule JargaWeb.ChatLive.PersistenceAndContextTest do
   import Jarga.AccountsFixtures
   import Jarga.WorkspacesFixtures
   import Jarga.ProjectsFixtures
-  import Jarga.PagesFixtures
+  import Jarga.DocumentsFixtures
   import Jarga.NotesFixtures
 
   describe "TDD: Chat conversation persistence across navigation" do
@@ -66,9 +66,9 @@ defmodule JargaWeb.ChatLive.PersistenceAndContextTest do
       user = user_fixture()
       workspace = workspace_fixture(user, %{name: "Engineering Team"})
       project = project_fixture(user, workspace, %{name: "Mobile App"})
-      page = page_fixture(user, workspace, project, %{title: "API Documentation"})
+      document = document_fixture(user, workspace, project, %{title: "API Documentation"})
 
-      %{user: user, workspace: workspace, project: project, page: page}
+      %{user: user, workspace: workspace, project: project, document: document}
     end
 
     test "extracts and sends workspace name to LLM", %{
@@ -143,11 +143,11 @@ defmodule JargaWeb.ChatLive.PersistenceAndContextTest do
       conn: conn,
       user: user,
       workspace: workspace,
-      page: page
+      document: document
     } do
       conn = log_in_user(conn, user)
 
-      {:ok, view, _html} = live(conn, ~p"/app/workspaces/#{workspace.slug}/pages/#{page.slug}")
+      {:ok, view, _html} = live(conn, ~p"/app/workspaces/#{workspace.slug}/documents/#{document.slug}")
 
       view
       |> element("#chat-message-form")
@@ -225,22 +225,22 @@ defmodule JargaWeb.ChatLive.PersistenceAndContextTest do
       workspace = workspace_fixture(user)
       project = project_fixture(user, workspace)
 
-      # Create a page
-      page =
-        page_fixture(user, workspace, project, %{
+      # Create a document
+      document =
+        document_fixture(user, workspace, project, %{
           title: "Authentication Guide"
         })
 
-      # Create a note with markdown content for the page
+      # Create a note with markdown content for the document
       note =
         note_fixture(user, workspace.id, %{
-          id: page.id,
+          id: document.id,
           note_content: %{
             "markdown" => "This page explains how to authenticate users using JWT tokens."
           }
         })
 
-      %{user: user, workspace: workspace, project: project, page: page, note: note}
+      %{user: user, workspace: workspace, project: project, document: document, note: note}
     end
 
     @tag :evaluation
@@ -248,15 +248,15 @@ defmodule JargaWeb.ChatLive.PersistenceAndContextTest do
       conn: conn,
       user: user,
       workspace: workspace,
-      page: page,
+      document: document,
       note: _note
     } do
       conn = log_in_user(conn, user)
 
-      {:ok, view, _html} = live(conn, ~p"/app/workspaces/#{workspace.slug}/pages/#{page.slug}")
+      {:ok, view, _html} = live(conn, ~p"/app/workspaces/#{workspace.slug}/documents/#{document.slug}")
 
       # Verify we're on the correct page
-      assert render(view) =~ page.title
+      assert render(view) =~ document.title
 
       view
       |> element("#chat-message-form")
@@ -274,7 +274,7 @@ defmodule JargaWeb.ChatLive.PersistenceAndContextTest do
       assert html =~ "Source:",
              "Source citation should be displayed, proving page content was sent"
 
-      assert html =~ page.title, "Source should reference the page title"
+      assert html =~ document.title, "Source should reference the page title"
 
       # Optionally verify the note content structure exists (this proves it was loaded)
       # We test indirectly by checking the source attribution worked

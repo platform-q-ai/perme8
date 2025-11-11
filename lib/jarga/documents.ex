@@ -2,194 +2,274 @@ defmodule Jarga.Documents do
   @moduledoc """
   The Documents context.
 
-  Handles document management, processing, and AI-powered chat functionality.
+  Handles document creation, management, and embedded notes.
+  Documents are private to the user who created them, regardless of workspace membership.
+  Each document has an embedded note for collaborative editing.
   """
 
+  # Core context - cannot depend on JargaWeb (interface layer)
+  # Exports: Main context module and shared types (Document)
+  # Internal modules (Queries, Policies) remain private
   use Boundary,
     top_level?: true,
-    deps: [Jarga.Accounts, Jarga.Workspaces, Jarga.Projects, Jarga.Repo],
-    exports: [
-      Infrastructure.Services.LlmClient,
-      UseCases.PrepareContext,
-      UseCases.AIQuery,
-      UseCases.CreateSession,
-      UseCases.SaveMessage,
-      UseCases.LoadSession,
-      UseCases.ListSessions,
-      UseCases.DeleteSession,
-      ChatSession,
-      ChatMessage
-    ]
+    deps: [Jarga.Accounts, Jarga.Workspaces, Jarga.Projects, Jarga.Notes, Jarga.Repo],
+    exports: [{Document, []}]
 
-  alias Jarga.Documents.Infrastructure.Services.LlmClient
-
-  alias Jarga.Documents.UseCases.{
-    PrepareContext,
-    AIQuery,
-    CreateSession,
-    SaveMessage,
-    LoadSession,
-    ListSessions,
-    DeleteSession
-  }
+  alias Jarga.Repo
+  alias Jarga.Accounts.User
+  alias Jarga.Notes
+  alias Jarga.Documents.{Document, Queries}
+  alias Jarga.Documents.UseCases
 
   @doc """
-  Prepares chat context from LiveView assigns.
+  Gets a single document for a user.
 
-  Extracts relevant page information (workspace, project, content) and
-  formats it for use in chat interactions.
+  Only returns the document if it belongs to the user.
+  Raises `Ecto.NoResultsError` if the document does not exist or belongs to another user.
+
+  ## Options
+
+    * `:preload_components` - If true, preloads document_components association. Defaults to false.
 
   ## Examples
 
-      iex> prepare_chat_context(%{current_workspace: %{name: "ACME"}})
-      {:ok, %{current_workspace: "ACME", ...}}
+      iex> get_document!(user, document_id)
+      %Document{}
+
+      iex> get_document!(user, document_id, preload_components: true)
+      %Document{document_components: [...]}
+
+      iex> get_document!(user, "non-existent-id")
+      ** (Ecto.NoResultsError)
 
   """
-  defdelegate prepare_chat_context(assigns), to: PrepareContext, as: :execute
+  def get_document!(%User{} = user, document_id, opts \\ []) do
+    document =
+      Queries.base()
+      |> Queries.by_id(document_id)
+      |> Queries.for_user(user)
+      |> Repo.one!()
+
+    if Keyword.get(opts, :preload_components, false) do
+      Repo.preload(document, :document_components)
+    else
+      document
+    end
+  end
 
   @doc """
-  Builds a system message for the LLM from extracted context.
+  Gets a single document by slug for a user in a workspace.
+
+  Returns {:ok, document} or {:error, :document_not_found}
 
   ## Examples
 
-      iex> build_system_message(%{current_workspace: "ACME"})
-      {:ok, %{role: "system", content: "..."}}
+      iex> get_document_by_slug(user, workspace_id, "my-document")
+      {:ok, %Document{}}
+
+      iex> get_document_by_slug(user, workspace_id, "nonexistent")
+      {:error, :document_not_found}
 
   """
-  defdelegate build_system_message(context), to: PrepareContext
+  def get_document_by_slug(%User{} = user, workspace_id, slug) do
+    document =
+      Queries.base()
+      |> Queries.by_slug(slug)
+      |> Queries.for_workspace(workspace_id)
+      |> Queries.viewable_by_user(user)
+      |> Queries.with_components()
+      |> Repo.one()
+
+    case document do
+      nil -> {:error, :document_not_found}
+      document -> {:ok, document}
+    end
+  end
 
   @doc """
-  Sends a chat completion request to the LLM.
+  Gets a single document by slug for a user in a workspace.
+
+  Only returns the document if it belongs to the user.
+  Raises `Ecto.NoResultsError` if the document does not exist with that slug or belongs to another user.
 
   ## Examples
 
-      iex> chat([%{role: "user", content: "Hello!"}])
-      {:ok, "Hello! How can I help you?"}
+      iex> get_document_by_slug!(user, workspace_id, "my-document")
+      %Document{}
+
+      iex> get_document_by_slug!(user, workspace_id, "nonexistent")
+      ** (Ecto.NoResultsError)
 
   """
-  defdelegate chat(messages, opts \\ []), to: LlmClient
+  def get_document_by_slug!(%User{} = user, workspace_id, slug) do
+    Queries.base()
+    |> Queries.by_slug(slug)
+    |> Queries.for_workspace(workspace_id)
+    |> Queries.viewable_by_user(user)
+    |> Repo.one!()
+  end
 
   @doc """
-  Streams a chat completion response in chunks.
+  Creates a document for a user in a workspace.
+
+  The user must be a member of the workspace with permission to create documents.
+  Members, admins, and owners can create documents. Guests cannot.
+  The document is private to the user who created it.
+  A default note is created and embedded in the document.
 
   ## Examples
 
-      iex> {:ok, _pid} = chat_stream(messages, self())
-      iex> receive do
-      ...>   {:chunk, text} -> IO.puts(text)
-      ...> end
+      iex> create_document(user, workspace_id, %{title: "My Document"})
+      {:ok, %Document{}}
+
+      iex> create_document(user, non_member_workspace_id, %{title: "Document"})
+      {:error, :unauthorized}
+
+      iex> create_document(guest, workspace_id, %{title: "Document"})
+      {:error, :forbidden}
 
   """
-  defdelegate chat_stream(messages, caller_pid, opts \\ []), to: LlmClient
+  def create_document(%User{} = user, workspace_id, attrs) do
+    UseCases.CreateDocument.execute(%{
+      actor: user,
+      workspace_id: workspace_id,
+      attrs: attrs
+    })
+  end
 
   @doc """
-  Creates a new chat session.
+  Updates a document.
+
+  Permission rules:
+  - Users can edit their own documents
+  - Members and admins can edit shared (public) documents
+  - Admins can only edit shared documents, not private documents of others
+  - Owners cannot edit documents they don't own (respects privacy)
+  - Pinning follows the same rules as editing
 
   ## Examples
 
-      iex> create_session(%{user_id: user.id})
-      {:ok, %ChatSession{}}
+      iex> update_document(user, document_id, %{title: "New Title"})
+      {:ok, %Document{}}
+
+      iex> update_document(user, document_id, %{title: ""})
+      {:error, %Ecto.Changeset{}}
+
+      iex> update_document(member, other_user_private_document_id, %{title: "Hacked"})
+      {:error, :forbidden}
+
+      iex> update_document(member, other_user_public_document_id, %{title: "Edit"})
+      {:ok, %Document{}}
+
+      iex> update_document(member, other_user_public_document_id, %{is_pinned: true})
+      {:ok, %Document{}}
 
   """
-  defdelegate create_session(attrs), to: CreateSession, as: :execute
+  def update_document(%User{} = user, document_id, attrs, opts \\ []) do
+    UseCases.UpdateDocument.execute(
+      %{
+        actor: user,
+        document_id: document_id,
+        attrs: attrs
+      },
+      opts
+    )
+  end
 
   @doc """
-  Saves a message to a chat session.
+  Deletes a document.
+
+  Permission rules:
+  - Users can delete their own documents
+  - Admins can delete shared (public) documents
+  - Admins cannot delete private documents of others
+  - Owners cannot delete documents they don't own (respects privacy)
+  Deleting a document also deletes its embedded note.
 
   ## Examples
 
-      iex> save_message(%{chat_session_id: session.id, role: "user", content: "Hello"})
-      {:ok, %ChatMessage{}}
+      iex> delete_document(user, document_id)
+      {:ok, %Document{}}
+
+      iex> delete_document(member, other_user_document_id)
+      {:error, :forbidden}
+
+      iex> delete_document(admin, other_user_public_document_id)
+      {:ok, %Document{}}
 
   """
-  defdelegate save_message(attrs), to: SaveMessage, as: :execute
+  def delete_document(%User{} = user, document_id) do
+    UseCases.DeleteDocument.execute(%{
+      actor: user,
+      document_id: document_id
+    })
+  end
 
   @doc """
-  Loads a chat session with its messages.
+  Lists all documents viewable by a user in a workspace.
+
+  Returns documents that are either:
+  - Created by the user, OR
+  - Public documents created by other workspace members
 
   ## Examples
 
-      iex> load_session(session_id)
-      {:ok, %ChatSession{messages: [...]}}
+      iex> list_documents_for_workspace(user, workspace_id)
+      [%Document{}, ...]
 
   """
-  defdelegate load_session(session_id), to: LoadSession, as: :execute
+  def list_documents_for_workspace(%User{} = user, workspace_id) do
+    Queries.base()
+    |> Queries.for_workspace(workspace_id)
+    |> Queries.viewable_by_user(user)
+    |> Queries.ordered()
+    |> Repo.all()
+  end
 
   @doc """
-  Lists chat sessions for a user.
+  Lists all documents viewable by a user in a project.
+
+  Returns documents that are either:
+  - Created by the user, OR
+  - Public documents created by other workspace members
 
   ## Examples
 
-      iex> list_sessions(user_id)
-      {:ok, [%{id: ..., title: "...", message_count: 5}]}
+      iex> list_documents_for_project(user, workspace_id, project_id)
+      [%Document{}, ...]
 
   """
-  defdelegate list_sessions(user_id, opts \\ []), to: ListSessions, as: :execute
+  def list_documents_for_project(%User{} = user, workspace_id, project_id) do
+    Queries.base()
+    |> Queries.for_workspace(workspace_id)
+    |> Queries.for_project(project_id)
+    |> Queries.viewable_by_user(user)
+    |> Queries.ordered()
+    |> Repo.all()
+  end
 
   @doc """
-  Deletes a chat session.
+  Gets the note component from a document.
+
+  Returns the Note associated with the first note component in the document.
+  Raises if the document has no note component.
 
   ## Examples
 
-      iex> delete_session(session_id, user_id)
-      {:ok, %ChatSession{}}
+      iex> get_document_note(document)
+      %Note{}
 
   """
-  defdelegate delete_session(session_id, user_id), to: DeleteSession, as: :execute
+  def get_document_note(%Document{document_components: document_components}) do
+    case Enum.find(document_components, fn dc -> dc.component_type == "note" end) do
+      %{component_id: note_id} ->
+        case Notes.get_note_by_id(note_id) do
+          nil -> raise "Note not found: #{note_id}"
+          note -> note
+        end
 
-  @doc """
-  Executes an AI query with page context and streams response.
-
-  This is used for in-editor AI assistance. The AI response is streamed
-  to the caller process as chunks.
-
-  ## Parameters
-    - params: Map with required keys:
-      - :question - The user's question
-      - :assigns - LiveView assigns containing page context
-      - :node_id (optional) - Node ID for tracking in the editor
-    - caller_pid: Process to receive streaming chunks
-
-  ## Examples
-
-      iex> params = %{
-      ...>   question: "How do I structure a Phoenix context?",
-      ...>   assigns: socket.assigns,
-      ...>   node_id: "ai_node_123"
-      ...> }
-      iex> ai_query(params, self())
-      {:ok, #PID<0.123.0>}
-
-      # Then receive messages:
-      receive do
-        {:ai_chunk, node_id, chunk} -> IO.puts(chunk)
-        {:ai_done, node_id, response} -> IO.puts("Complete!")
-        {:ai_error, node_id, reason} -> IO.puts("Error: " <> reason)
-      end
-
-  """
-  defdelegate ai_query(params, caller_pid), to: AIQuery, as: :execute
-
-  @doc """
-  Cancels an active AI query.
-
-  Terminates the streaming process for the given node_id.
-
-  ## Parameters
-    - query_pid: Process PID returned from ai_query/2
-    - node_id: Node ID for the query
-
-  ## Examples
-
-      iex> {:ok, pid} = Documents.ai_query(params, self())
-      iex> Documents.cancel_ai_query(pid, "node_123")
-      :ok
-
-  """
-  @spec cancel_ai_query(pid(), String.t()) :: :ok
-  def cancel_ai_query(query_pid, node_id) when is_pid(query_pid) and is_binary(node_id) do
-    # Send cancel signal to the query process
-    send(query_pid, {:cancel, node_id})
-    :ok
+      nil ->
+        raise "Document has no note component"
+    end
   end
 end

@@ -8,7 +8,7 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
   import JargaWeb.Live.PermissionsHelper
   import JargaWeb.ChatLive.MessageHandlers
 
-  alias Jarga.{Workspaces, Projects, Pages}
+  alias Jarga.{Workspaces, Projects, Documents}
   alias Jarga.Projects.Project
   alias JargaWeb.Layouts
 
@@ -55,35 +55,35 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
           </div>
         <% end %>
 
-        <%!-- Pages Section --%>
+        <%!-- Documents Section --%>
         <div>
           <div class="flex items-center justify-between mb-4">
-            <h2 class="text-lg font-semibold">Pages</h2>
-            <%= if can_create_page?(@current_member) do %>
-              <.button variant="primary" size="sm" phx-click="show_page_modal">
-                <.icon name="hero-document-plus" class="size-4" /> New Page
+            <h2 class="text-lg font-semibold">Documents</h2>
+            <%= if can_create_document?(@current_member) do %>
+              <.button variant="primary" size="sm" phx-click="show_document_modal">
+                <.icon name="hero-document-plus" class="size-4" /> New Document
               </.button>
             <% end %>
           </div>
 
-          <%= if @pages == [] do %>
+          <%= if @documents == [] do %>
             <div class="card bg-base-200">
               <div class="card-body text-center">
                 <div class="flex flex-col items-center gap-4 py-8">
                   <.icon name="hero-document" class="size-16 opacity-50" />
                   <div>
-                    <h3 class="text-lg font-semibold">No pages yet</h3>
+                    <h3 class="text-lg font-semibold">No documents yet</h3>
                     <p class="text-base-content/70">
-                      <%= if can_create_page?(@current_member) do %>
-                        Create your first page to start documenting
+                      <%= if can_create_document?(@current_member) do %>
+                        Create your first document to start documenting
                       <% else %>
-                        No pages have been created yet
+                        No documents have been created yet
                       <% end %>
                     </p>
                   </div>
-                  <%= if can_create_page?(@current_member) do %>
-                    <.button variant="primary" phx-click="show_page_modal">
-                      Create Page
+                  <%= if can_create_document?(@current_member) do %>
+                    <.button variant="primary" phx-click="show_document_modal">
+                      Create Document
                     </.button>
                   <% end %>
                 </div>
@@ -91,21 +91,21 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
             </div>
           <% else %>
             <div class="grid gap-2">
-              <%= for page <- @pages do %>
+              <%= for document <- @documents do %>
                 <.link
-                  navigate={~p"/app/workspaces/#{@workspace.slug}/pages/#{page.slug}"}
+                  navigate={~p"/app/workspaces/#{@workspace.slug}/documents/#{document.slug}"}
                   class="card bg-base-200 hover:bg-base-300 transition-colors"
-                  data-page-id={page.id}
+                  data-document-id={document.id}
                 >
                   <div class="card-body p-4 flex-row items-center gap-3">
                     <.icon name="hero-document-text" class="size-5 text-primary" />
                     <div class="flex-1 min-w-0">
-                      <h3 class="font-semibold truncate">{page.title}</h3>
+                      <h3 class="font-semibold truncate">{document.title}</h3>
                       <p class="text-xs text-base-content/70">
-                        Updated {Calendar.strftime(page.updated_at, "%b %d, %Y at %I:%M %p")}
+                        Updated {Calendar.strftime(document.updated_at, "%b %d, %Y at %I:%M %p")}
                       </p>
                     </div>
-                    <%= if page.is_pinned do %>
+                    <%= if document.is_pinned do %>
                       <.icon name="lucide-pin" class="size-5 text-warning" />
                     <% end %>
                   </div>
@@ -374,37 +374,37 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
         </div>
       <% end %>
 
-      <%!-- New Page Modal --%>
-      <%= if @show_page_modal do %>
+      <%!-- New Document Modal --%>
+      <%= if @show_document_modal do %>
         <div class="modal modal-open">
           <div class="modal-box">
-            <h3 class="font-bold text-lg mb-4">Create New Page</h3>
+            <h3 class="font-bold text-lg mb-4">Create New Document</h3>
 
             <.form
-              for={@page_form}
-              id="page-form"
-              phx-submit="create_page"
+              for={@document_form}
+              id="document-form"
+              phx-submit="create_document"
               class="space-y-4"
             >
               <.input
-                field={@page_form[:title]}
+                field={@document_form[:title]}
                 type="text"
                 label="Title"
-                placeholder="Page Title"
+                placeholder="Document Title"
                 required
               />
 
               <div class="modal-action">
-                <.button type="button" variant="ghost" phx-click="hide_page_modal">
+                <.button type="button" variant="ghost" phx-click="hide_document_modal">
                   Cancel
                 </.button>
                 <.button type="submit" variant="primary">
-                  Create Page
+                  Create Document
                 </.button>
               </div>
             </.form>
           </div>
-          <div class="modal-backdrop" phx-click="hide_page_modal"></div>
+          <div class="modal-backdrop" phx-click="hide_document_modal"></div>
         </div>
       <% end %>
 
@@ -467,7 +467,7 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
     # Members list is deferred until modal opens for better initial load performance
     case Workspaces.get_workspace_and_member_by_slug(user, workspace_slug) do
       {:ok, workspace, current_member} ->
-        pages = Pages.list_pages_for_workspace(user, workspace.id)
+        documents = Documents.list_documents_for_workspace(user, workspace.id)
         projects = Projects.list_projects_for_workspace(user, workspace.id)
 
         # Subscribe to workspace-specific PubSub topic for real-time updates
@@ -479,13 +479,13 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
          socket
          |> assign(:workspace, workspace)
          |> assign(:current_member, current_member)
-         |> assign(:pages, pages)
+         |> assign(:documents, documents)
          |> assign(:projects, projects)
          |> assign(:members, [])
-         |> assign(:show_page_modal, false)
+         |> assign(:show_document_modal, false)
          |> assign(:show_project_modal, false)
          |> assign(:show_members_modal, false)
-         |> assign(:page_form, to_form(%{"title" => ""}))
+         |> assign(:document_form, to_form(%{"title" => ""}))
          |> assign(:project_form, to_form(Project.changeset(%Project{}, %{})))
          |> assign(:invite_form, to_form(%{"email" => "", "role" => "member"}))}
 
@@ -498,43 +498,43 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
   end
 
   @impl true
-  def handle_event("show_page_modal", _params, socket) do
-    {:noreply, assign(socket, show_page_modal: true)}
+  def handle_event("show_document_modal", _params, socket) do
+    {:noreply, assign(socket, show_document_modal: true)}
   end
 
   @impl true
-  def handle_event("hide_page_modal", _params, socket) do
+  def handle_event("hide_document_modal", _params, socket) do
     {:noreply,
      socket
-     |> assign(:show_page_modal, false)
-     |> assign(:page_form, to_form(%{"title" => ""}))}
+     |> assign(:show_document_modal, false)
+     |> assign(:document_form, to_form(%{"title" => ""}))}
   end
 
   @impl true
-  def handle_event("create_page", %{"title" => title}, socket) do
+  def handle_event("create_document", %{"title" => title}, socket) do
     user = socket.assigns.current_scope.user
     workspace_id = socket.assigns.workspace.id
 
-    case Pages.create_page(user, workspace_id, %{title: title}) do
-      {:ok, page} ->
-        # Reload pages
-        pages = Pages.list_pages_for_workspace(user, workspace_id)
+    case Documents.create_document(user, workspace_id, %{title: title}) do
+      {:ok, document} ->
+        # Reload documents
+        documents = Documents.list_documents_for_workspace(user, workspace_id)
 
         {:noreply,
          socket
-         |> assign(:pages, pages)
-         |> assign(:show_page_modal, false)
-         |> assign(:page_form, to_form(%{"title" => ""}))
-         |> put_flash(:info, "Page created successfully")
+         |> assign(:documents, documents)
+         |> assign(:show_document_modal, false)
+         |> assign(:document_form, to_form(%{"title" => ""}))
+         |> put_flash(:info, "Document created successfully")
          |> push_navigate(
-           to: ~p"/app/workspaces/#{socket.assigns.workspace.slug}/pages/#{page.slug}"
+           to: ~p"/app/workspaces/#{socket.assigns.workspace.slug}/documents/#{document.slug}"
          )}
 
       {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, assign(socket, page_form: to_form(changeset))}
+        {:noreply, assign(socket, document_form: to_form(changeset))}
 
       {:error, _reason} ->
-        {:noreply, put_flash(socket, :error, "Failed to create page")}
+        {:noreply, put_flash(socket, :error, "Failed to create document")}
     end
   end
 
@@ -736,43 +736,43 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
   end
 
   @impl true
-  def handle_info({:page_visibility_changed, _page_id, _is_public}, socket) do
-    # Reload pages when a page's visibility changes
+  def handle_info({:document_visibility_changed, _document_id, _is_public}, socket) do
+    # Reload documents when a document's visibility changes
     user = socket.assigns.current_scope.user
     workspace_id = socket.assigns.workspace.id
-    pages = Pages.list_pages_for_workspace(user, workspace_id)
+    documents = Documents.list_documents_for_workspace(user, workspace_id)
 
-    {:noreply, assign(socket, pages: pages)}
+    {:noreply, assign(socket, documents: documents)}
   end
 
   @impl true
-  def handle_info({:page_pinned_changed, page_id, is_pinned}, socket) do
-    # Update page pinned state in the list
-    pages =
-      Enum.map(socket.assigns.pages, fn page ->
-        if page.id == page_id do
-          %{page | is_pinned: is_pinned}
+  def handle_info({:document_pinned_changed, document_id, is_pinned}, socket) do
+    # Update document pinned state in the list
+    documents =
+      Enum.map(socket.assigns.documents, fn document ->
+        if document.id == document_id do
+          %{document | is_pinned: is_pinned}
         else
-          page
+          document
         end
       end)
 
-    {:noreply, assign(socket, pages: pages)}
+    {:noreply, assign(socket, documents: documents)}
   end
 
   @impl true
-  def handle_info({:page_title_changed, page_id, title}, socket) do
-    # Update page title in the list
-    pages =
-      Enum.map(socket.assigns.pages, fn page ->
-        if page.id == page_id do
-          %{page | title: title}
+  def handle_info({:document_title_changed, document_id, title}, socket) do
+    # Update document title in the list
+    documents =
+      Enum.map(socket.assigns.documents, fn document ->
+        if document.id == document_id do
+          %{document | title: title}
         else
-          page
+          document
         end
       end)
 
-    {:noreply, assign(socket, pages: pages)}
+    {:noreply, assign(socket, documents: documents)}
   end
 
   @impl true

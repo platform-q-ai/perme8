@@ -5,7 +5,7 @@ defmodule JargaWeb.ChatLive.PanelTest do
   import Jarga.AccountsFixtures
   import Jarga.WorkspacesFixtures
   import Jarga.ProjectsFixtures
-  import Jarga.PagesFixtures
+  import Jarga.DocumentsFixtures
 
   alias JargaWeb.ChatLive.Components.Message
 
@@ -224,13 +224,13 @@ defmodule JargaWeb.ChatLive.PanelTest do
       workspace = workspace_fixture(user, %{name: "Test Workspace"})
       project = project_fixture(user, workspace)
 
-      page =
-        page_fixture(user, workspace, project, %{
+      document =
+        document_fixture(user, workspace, project, %{
           title: "Test Page",
           content: "The Porsche 911 is a legendary sports car."
         })
 
-      {:ok, view, _html} = live(conn, ~p"/app/workspaces/#{workspace.slug}/pages/#{page.slug}")
+      {:ok, view, _html} = live(conn, ~p"/app/workspaces/#{workspace.slug}/documents/#{document.slug}")
 
       # Send a message to trigger context extraction
       view
@@ -503,7 +503,7 @@ defmodule JargaWeb.ChatLive.PanelTest do
       conn = log_in_user(conn, user)
 
       # Create a session with messages in the database
-      import Jarga.DocumentsFixtures
+      import Jarga.AgentsFixtures
       session = chat_session_fixture(user: user, title: "Previous Chat")
       _msg1 = chat_message_fixture(chat_session: session, role: "user", content: "Hello")
       _msg2 = chat_message_fixture(chat_session: session, role: "assistant", content: "Hi there!")
@@ -524,7 +524,7 @@ defmodule JargaWeb.ChatLive.PanelTest do
       conn = log_in_user(conn, user)
 
       # Create a session for a different user
-      import Jarga.DocumentsFixtures
+      import Jarga.AgentsFixtures
       other_user = user_fixture(%{email: "other@example.com"})
       other_session = chat_session_fixture(user: other_user, title: "Other User's Chat")
 
@@ -595,7 +595,7 @@ defmodule JargaWeb.ChatLive.PanelTest do
       conn = log_in_user(conn, user)
 
       # Create a session with messages
-      import Jarga.DocumentsFixtures
+      import Jarga.AgentsFixtures
       session = chat_session_fixture(user: user, title: "Old Conversation")
       _msg1 = chat_message_fixture(chat_session: session, content: "Test message 1")
       _msg2 = chat_message_fixture(chat_session: session, content: "Test message 2")
@@ -619,7 +619,7 @@ defmodule JargaWeb.ChatLive.PanelTest do
       refute has_element?(view, "p", "Old Conversation")
 
       # Verify session was deleted from database via context
-      alias Jarga.Documents
+      alias Jarga.Agents
       assert {:error, :not_found} = Documents.load_session(session.id)
     end
   end
@@ -703,12 +703,12 @@ defmodule JargaWeb.ChatLive.PanelTest do
     test "handles delete_session for already deleted session", %{conn: conn, user: user} do
       conn = log_in_user(conn, user)
 
-      import Jarga.DocumentsFixtures
+      import Jarga.AgentsFixtures
       session = chat_session_fixture(user: user)
       session_id = session.id
 
       # Delete the session via context
-      {:ok, _} = Jarga.Documents.delete_session(session_id, user.id)
+      {:ok, _} = Jarga.Agents.delete_session(session_id, user.id)
 
       {:ok, view, _html} = live(conn, ~p"/app")
 
@@ -740,7 +740,7 @@ defmodule JargaWeb.ChatLive.PanelTest do
     test "clear_session_if_active handles non-matching session", %{conn: conn, user: user} do
       conn = log_in_user(conn, user)
 
-      import Jarga.DocumentsFixtures
+      import Jarga.AgentsFixtures
       session1 = chat_session_fixture(user: user, title: "Session 1")
       session2 = chat_session_fixture(user: user, title: "Session 2")
 
@@ -805,7 +805,7 @@ defmodule JargaWeb.ChatLive.PanelTest do
     } do
       conn = log_in_user(conn, user)
 
-      import Jarga.DocumentsFixtures
+      import Jarga.AgentsFixtures
       session = chat_session_fixture(user: user)
 
       # Create messages with different content
@@ -838,7 +838,7 @@ defmodule JargaWeb.ChatLive.PanelTest do
       # Already tested in "restore_session ignores sessions from other users"
       # but good to be explicit about the security check
 
-      import Jarga.DocumentsFixtures
+      import Jarga.AgentsFixtures
       other_user = user_fixture(%{email: "hacker@example.com"})
       other_session = chat_session_fixture(user: other_user)
 
@@ -871,7 +871,7 @@ defmodule JargaWeb.ChatLive.PanelTest do
       assert has_element?(view, ".chat-bubble", "Create session")
 
       # Verify session was created
-      alias Jarga.Documents
+      alias Jarga.Agents
       {:ok, sessions} = Documents.list_sessions(user.id, limit: 1)
       assert length(sessions) == 1
     end
@@ -891,7 +891,7 @@ defmodule JargaWeb.ChatLive.PanelTest do
       |> render_submit(%{message: "Second"})
 
       # Should only have one session
-      alias Jarga.Documents
+      alias Jarga.Agents
       {:ok, sessions} = Documents.list_sessions(user.id, limit: 10)
       assert length(sessions) == 1
 
@@ -912,10 +912,10 @@ defmodule JargaWeb.ChatLive.PanelTest do
 
       workspace = workspace_fixture(user)
       project = project_fixture(user, workspace)
-      page = page_fixture(user, workspace, project)
+      document = document_fixture(user, workspace, project)
 
       conn = log_in_user(conn, user)
-      {:ok, view, _html} = live(conn, ~p"/app/workspaces/#{workspace.slug}/pages/#{page.slug}")
+      {:ok, view, _html} = live(conn, ~p"/app/workspaces/#{workspace.slug}/documents/#{document.slug}")
 
       # Send message to trigger context extraction
       view
@@ -940,7 +940,7 @@ defmodule JargaWeb.ChatLive.PanelTest do
     end
 
     test "handles session with no messages", %{conn: conn, user: user} do
-      import Jarga.DocumentsFixtures
+      import Jarga.AgentsFixtures
 
       # Create session with no messages
       session = chat_session_fixture(user: user, title: "Empty Session")
@@ -996,7 +996,7 @@ defmodule JargaWeb.ChatLive.PanelTest do
     end
 
     test "chat session auto-restores from database on mount", %{conn: conn, user: user} do
-      import Jarga.DocumentsFixtures
+      import Jarga.AgentsFixtures
 
       # Create a session in the database first
       session = chat_session_fixture(user: user, title: "Previous Chat")
@@ -1058,8 +1058,8 @@ defmodule JargaWeb.ChatLive.PanelTest do
       conn: conn,
       user: user
     } do
-      import Jarga.DocumentsFixtures
-      alias Jarga.Documents
+      import Jarga.AgentsFixtures
+      alias Jarga.Agents
 
       conn = log_in_user(conn, user)
       {:ok, view, _html} = live(conn, ~p"/app")
@@ -1115,7 +1115,7 @@ defmodule JargaWeb.ChatLive.PanelTest do
 
     test "different users see their own sessions only", %{conn: conn, user: user} do
       # Create another user with a session
-      import Jarga.DocumentsFixtures
+      import Jarga.AgentsFixtures
       other_user = user_fixture(%{email: "other@example.com"})
       other_session = chat_session_fixture(user: other_user, title: "Other User's Chat")
 
@@ -1205,13 +1205,13 @@ defmodule JargaWeb.ChatLive.PanelTest do
       workspace = workspace_fixture(user, %{name: "Test Workspace"})
       project = project_fixture(user, workspace)
 
-      page =
-        page_fixture(user, workspace, project, %{
+      document =
+        document_fixture(user, workspace, project, %{
           title: "Test Page",
           content: "This is test content about authentication."
         })
 
-      {:ok, view, _html} = live(conn, ~p"/app/workspaces/#{workspace.slug}/pages/#{page.slug}")
+      {:ok, view, _html} = live(conn, ~p"/app/workspaces/#{workspace.slug}/documents/#{document.slug}")
 
       # Send a message
       view
@@ -1225,9 +1225,9 @@ defmodule JargaWeb.ChatLive.PanelTest do
 
       # Should show source citation
       assert html =~ "Source:"
-      assert html =~ page.title
+      assert html =~ document.title
       # Should have a link to the page
-      assert html =~ ~r/href=".*#{page.slug}"/
+      assert html =~ ~r/href=".*#{document.slug}"/
     end
   end
 
@@ -1483,10 +1483,10 @@ defmodule JargaWeb.ChatLive.PanelTest do
       user = user_fixture()
       workspace = workspace_fixture(user)
       project = project_fixture(user, workspace)
-      page = page_fixture(user, workspace, project)
+      document = document_fixture(user, workspace, project)
 
       conn = log_in_user(conn, user)
-      {:ok, _view, html} = live(conn, ~p"/app/workspaces/#{workspace.slug}/pages/#{page.slug}")
+      {:ok, _view, html} = live(conn, ~p"/app/workspaces/#{workspace.slug}/documents/#{document.slug}")
 
       # Chat panel should be present
       assert html =~ "chat-panel"
@@ -1497,13 +1497,13 @@ defmodule JargaWeb.ChatLive.PanelTest do
       user = user_fixture()
       workspace = workspace_fixture(user)
       project = project_fixture(user, workspace)
-      page = page_fixture(user, workspace, project)
+      document = document_fixture(user, workspace, project)
 
       # Create note for this workspace
       _note = note_fixture(user, workspace.id, %{})
 
       conn = log_in_user(conn, user)
-      {:ok, _view, html} = live(conn, ~p"/app/workspaces/#{workspace.slug}/pages/#{page.slug}")
+      {:ok, _view, html} = live(conn, ~p"/app/workspaces/#{workspace.slug}/documents/#{document.slug}")
 
       # Chat panel should be present
       assert html =~ "chat-panel"

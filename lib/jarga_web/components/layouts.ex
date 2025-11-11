@@ -74,11 +74,11 @@ defmodule JargaWeb.Layouts do
     doc: "the current [scope](https://hexdocs.pm/phoenix/scopes.html)"
 
   # Optional assigns for chat panel context
-  attr :page, :map, default: nil, doc: "current page (optional)"
+  attr :document, :map, default: nil, doc: "current document (optional)"
   attr :note, :map, default: nil, doc: "current note (optional)"
   attr :workspace, :map, default: nil, doc: "current workspace (optional)"
   attr :project, :map, default: nil, doc: "current project (optional)"
-  attr :page_title, :string, default: nil, doc: "page title (optional)"
+  attr :document_title, :string, default: nil, doc: "document title (optional)"
 
   slot :inner_block, required: true
 
@@ -101,7 +101,7 @@ defmodule JargaWeb.Layouts do
             </label>
           </div>
           <div class="flex-1 min-w-0">
-            <%= if @workspace || @project || @page || @breadcrumbs != [] do %>
+            <%= if @workspace || @project || @document || @breadcrumbs != [] do %>
               <nav class="breadcrumbs text-sm overflow-x-auto ml-2 md:ml-4 lg:ml-6">
                 <ul class="flex-nowrap">
                   <%= if @breadcrumbs != [] do %>
@@ -145,9 +145,9 @@ defmodule JargaWeb.Layouts do
                         </.link>
                       </li>
                     <% end %>
-                    <%= if @page do %>
+                    <%= if @document do %>
                       <li>
-                        <span class="text-base-content/70">{@page.title}</span>
+                        <span class="text-base-content/70">{@document.title}</span>
                       </li>
                     <% end %>
                   <% end %>
@@ -269,9 +269,9 @@ defmodule JargaWeb.Layouts do
       current_user={@current_scope.user}
       current_workspace={@workspace}
       current_project={@project}
-      page_title={@page_title}
+      document_title={@document_title}
       note={@note}
-      page={@page}
+      document={@document}
     />
     """
   end

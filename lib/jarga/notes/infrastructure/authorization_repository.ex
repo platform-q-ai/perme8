@@ -52,18 +52,18 @@ defmodule Jarga.Notes.Infrastructure.AuthorizationRepository do
 
   Returns {:ok, note} if authorized, {:error, reason} otherwise.
   """
-  def verify_note_access_via_page(%User{} = user, note_id) do
-    # Find the note and its associated page via page_components
+  def verify_note_access_via_document(%User{} = user, note_id) do
+    # Find the note and its associated document via document_components
     query =
       from(n in Note,
-        join: pc in Jarga.Pages.PageComponent,
-        on: pc.component_id == n.id and pc.component_type == "note",
-        join: p in Jarga.Pages.Page,
-        on: p.id == pc.page_id,
+        join: dc in Jarga.Documents.DocumentComponent,
+        on: dc.component_id == n.id and dc.component_type == "note",
+        join: d in Jarga.Documents.Document,
+        on: d.id == dc.document_id,
         left_join: wm in Jarga.Workspaces.WorkspaceMember,
-        on: wm.workspace_id == p.workspace_id and wm.user_id == ^user.id,
+        on: wm.workspace_id == d.workspace_id and wm.user_id == ^user.id,
         where: n.id == ^note_id,
-        where: p.user_id == ^user.id or (p.is_public == true and not is_nil(wm.id)),
+        where: d.user_id == ^user.id or (d.is_public == true and not is_nil(wm.id)),
         select: n
       )
 

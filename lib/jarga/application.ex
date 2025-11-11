@@ -19,10 +19,10 @@ defmodule JargaApp do
         {Phoenix.PubSub, name: Jarga.PubSub},
         # Start the Finch HTTP client for sending emails
         {Finch, name: Jarga.Finch},
-        # Registry for PageSaveDebouncer processes
-        {Registry, keys: :unique, name: JargaWeb.PageSaveDebouncerRegistry},
-        # DynamicSupervisor for PageSaveDebouncer processes
-        JargaWeb.PageSaveDebouncerSupervisor,
+        # Registry for DocumentSaveDebouncer processes
+        {Registry, keys: :unique, name: JargaWeb.DocumentSaveDebouncerRegistry},
+        # DynamicSupervisor for DocumentSaveDebouncer processes
+        JargaWeb.DocumentSaveDebouncerSupervisor,
         # Start a worker by calling: Jarga.Worker.start_link(arg)
         # {Jarga.Worker, arg},
         # Start to serve requests, typically the last entry

@@ -2,8 +2,8 @@ defmodule Jarga.Notes.Infrastructure.AuthorizationRepositoryTest do
   use Jarga.DataCase, async: true
 
   alias Jarga.Notes.Infrastructure.AuthorizationRepository
-  alias Jarga.Pages
-  alias Jarga.Pages.PageComponent
+  alias Jarga.Documents
+  alias Jarga.Documents.DocumentComponent
   alias Jarga.Repo
 
   import Jarga.AccountsFixtures
@@ -82,18 +82,18 @@ defmodule Jarga.Notes.Infrastructure.AuthorizationRepositoryTest do
     end
   end
 
-  describe "verify_note_access_via_page/2" do
-    test "returns {:ok, note} when user owns the page containing the note" do
+  describe "verify_note_access_via_document/2" do
+    test "returns {:ok, note} when user owns the document containing the note" do
       user = user_fixture()
       workspace = workspace_fixture(user)
       note = note_fixture(user, workspace.id)
 
-      # Create a page with the note as a component
-      {:ok, page} = Pages.create_page(user, workspace.id, %{title: "My Page"})
+      # Create a document with the note as a component
+      {:ok, document} = Documents.create_document(user, workspace.id, %{title: "My Document"})
 
-      %PageComponent{}
-      |> PageComponent.changeset(%{
-        page_id: page.id,
+      %DocumentComponent{}
+      |> DocumentComponent.changeset(%{
+        document_id: document.id,
         component_type: "note",
         component_id: note.id,
         position: 0
@@ -101,12 +101,12 @@ defmodule Jarga.Notes.Infrastructure.AuthorizationRepositoryTest do
       |> Repo.insert!()
 
       assert {:ok, fetched_note} =
-               AuthorizationRepository.verify_note_access_via_page(user, note.id)
+               AuthorizationRepository.verify_note_access_via_document(user, note.id)
 
       assert fetched_note.id == note.id
     end
 
-    test "returns {:ok, note} when note is in a public page in user's workspace" do
+    test "returns {:ok, note} when note is in a public document in user's workspace" do
       owner = user_fixture()
       member = user_fixture()
       workspace = workspace_fixture(owner)
@@ -117,28 +117,28 @@ defmodule Jarga.Notes.Infrastructure.AuthorizationRepositoryTest do
       # Create note owned by owner
       note = note_fixture(owner, workspace.id)
 
-      # Create a public page with the note
-      {:ok, page} = Pages.create_page(owner, workspace.id, %{title: "Public Page"})
+      # Create a public document with the note
+      {:ok, document} = Documents.create_document(owner, workspace.id, %{title: "Public Document"})
 
-      %PageComponent{}
-      |> PageComponent.changeset(%{
-        page_id: page.id,
+      %DocumentComponent{}
+      |> DocumentComponent.changeset(%{
+        document_id: document.id,
         component_type: "note",
         component_id: note.id,
         position: 0
       })
       |> Repo.insert!()
 
-      {:ok, _page} = Pages.update_page(owner, page.id, %{is_public: true})
+      {:ok, _document} = Documents.update_document(owner, document.id, %{is_public: true})
 
-      # Member can access the note through the public page
+      # Member can access the note through the public document
       assert {:ok, fetched_note} =
-               AuthorizationRepository.verify_note_access_via_page(member, note.id)
+               AuthorizationRepository.verify_note_access_via_document(member, note.id)
 
       assert fetched_note.id == note.id
     end
 
-    test "returns {:error, :unauthorized} when note is in a private page" do
+    test "returns {:error, :unauthorized} when note is in a private document" do
       user1 = user_fixture()
       user2 = user_fixture()
       workspace = workspace_fixture(user1)
@@ -149,21 +149,21 @@ defmodule Jarga.Notes.Infrastructure.AuthorizationRepositoryTest do
       # Create note owned by user1
       note = note_fixture(user1, workspace.id)
 
-      # Create a private page with the note
-      {:ok, page} = Pages.create_page(user1, workspace.id, %{title: "Private Page"})
+      # Create a private document with the note
+      {:ok, document} = Documents.create_document(user1, workspace.id, %{title: "Private Document"})
 
-      %PageComponent{}
-      |> PageComponent.changeset(%{
-        page_id: page.id,
+      %DocumentComponent{}
+      |> DocumentComponent.changeset(%{
+        document_id: document.id,
         component_type: "note",
         component_id: note.id,
         position: 0
       })
       |> Repo.insert!()
 
-      # user2 cannot access the note through the private page
+      # user2 cannot access the note through the private document
       assert {:error, :unauthorized} =
-               AuthorizationRepository.verify_note_access_via_page(user2, note.id)
+               AuthorizationRepository.verify_note_access_via_document(user2, note.id)
     end
 
     test "returns {:error, :note_not_found} when note doesn't exist" do
@@ -171,7 +171,7 @@ defmodule Jarga.Notes.Infrastructure.AuthorizationRepositoryTest do
       fake_id = Ecto.UUID.generate()
 
       assert {:error, :note_not_found} =
-               AuthorizationRepository.verify_note_access_via_page(user, fake_id)
+               AuthorizationRepository.verify_note_access_via_document(user, fake_id)
     end
 
     test "returns {:error, :unauthorized} when user is not in any workspace with the note" do
@@ -180,12 +180,12 @@ defmodule Jarga.Notes.Infrastructure.AuthorizationRepositoryTest do
       workspace = workspace_fixture(user1)
       note = note_fixture(user1, workspace.id)
 
-      # Create a page with the note
-      {:ok, page} = Pages.create_page(user1, workspace.id, %{title: "Page"})
+      # Create a document with the note
+      {:ok, document} = Documents.create_document(user1, workspace.id, %{title: "Document"})
 
-      %PageComponent{}
-      |> PageComponent.changeset(%{
-        page_id: page.id,
+      %DocumentComponent{}
+      |> DocumentComponent.changeset(%{
+        document_id: document.id,
         component_type: "note",
         component_id: note.id,
         position: 0
@@ -194,7 +194,7 @@ defmodule Jarga.Notes.Infrastructure.AuthorizationRepositoryTest do
 
       # user2 is not a workspace member
       assert {:error, :unauthorized} =
-               AuthorizationRepository.verify_note_access_via_page(user2, note.id)
+               AuthorizationRepository.verify_note_access_via_document(user2, note.id)
     end
   end
 

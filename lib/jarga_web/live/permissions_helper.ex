@@ -76,73 +76,73 @@ defmodule JargaWeb.Live.PermissionsHelper do
   end
 
   @doc """
-  Checks if a workspace member can create pages.
+  Checks if a workspace member can create documents.
 
   ## Examples
 
-      <%= if can_create_page?(@current_member) do %>
-        <button>New Page</button>
+      <%= if can_create_document?(@current_member) do %>
+        <button>New Document</button>
       <% end %>
   """
-  def can_create_page?(member) do
-    PermissionsPolicy.can?(member.role, :create_page)
+  def can_create_document?(member) do
+    PermissionsPolicy.can?(member.role, :create_document)
   end
 
   @doc """
-  Checks if a workspace member can edit a page.
+  Checks if a workspace member can edit a document.
 
   ## Examples
 
-      <%= if can_edit_page?(@current_member, @page, @current_user) do %>
-        <button>Edit Page</button>
+      <%= if can_edit_document?(@current_member, @document, @current_user) do %>
+        <button>Edit Document</button>
       <% end %>
   """
-  def can_edit_page?(member, page, current_user) do
-    owns_page = page.user_id == current_user.id
+  def can_edit_document?(member, document, current_user) do
+    owns_document = document.user_id == current_user.id
 
-    PermissionsPolicy.can?(member.role, :edit_page,
-      owns_resource: owns_page,
-      is_public: page.is_public
+    PermissionsPolicy.can?(member.role, :edit_document,
+      owns_resource: owns_document,
+      is_public: document.is_public
     )
   end
 
   @doc """
-  Checks if a workspace member can delete a page.
+  Checks if a workspace member can delete a document.
 
   ## Examples
 
-      <%= if can_delete_page?(@current_member, @page, @current_user) do %>
-        <button>Delete Page</button>
+      <%= if can_delete_document?(@current_member, @document, @current_user) do %>
+        <button>Delete Document</button>
       <% end %>
   """
-  def can_delete_page?(member, page, current_user) do
-    owns_page = page.user_id == current_user.id
+  def can_delete_document?(member, document, current_user) do
+    owns_document = document.user_id == current_user.id
 
-    if owns_page do
-      PermissionsPolicy.can?(member.role, :delete_page, owns_resource: true)
+    if owns_document do
+      PermissionsPolicy.can?(member.role, :delete_document, owns_resource: true)
     else
-      PermissionsPolicy.can?(member.role, :delete_page,
+      PermissionsPolicy.can?(member.role, :delete_document,
         owns_resource: false,
-        is_public: page.is_public
+        is_public: document.is_public
       )
     end
   end
 
   @doc """
-  Checks if a workspace member can pin/unpin a page.
+  Checks if a workspace member can pin/unpin a document.
 
   ## Examples
 
-      <%= if can_pin_page?(@current_member, @page, @current_user) do %>
-        <button>Pin Page</button>
+      <%= if can_pin_document?(@current_member, @document, @current_user) do %>
+        <button>Pin Document</button>
       <% end %>
   """
-  def can_pin_page?(member, page, current_user) do
-    owns_page = page.user_id == current_user.id
+  def can_pin_document?(member, document, current_user) do
+    owns_document = document.user_id == current_user.id
 
-    PermissionsPolicy.can?(member.role, :pin_page,
-      owns_resource: owns_page,
-      is_public: page.is_public
+    PermissionsPolicy.can?(member.role, :pin_document,
+      owns_resource: owns_document,
+      is_public: document.is_public
     )
   end
 

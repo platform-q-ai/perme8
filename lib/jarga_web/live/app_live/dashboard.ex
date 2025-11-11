@@ -154,20 +154,20 @@ defmodule JargaWeb.AppLive.Dashboard do
   end
 
   @impl true
-  def handle_info({:page_visibility_changed, _page_id, _is_public}, socket) do
-    # Page visibility changed - not relevant to dashboard view
+  def handle_info({:document_visibility_changed, _document_id, _is_public}, socket) do
+    # Document visibility changed - not relevant to dashboard view
     {:noreply, socket}
   end
 
   @impl true
-  def handle_info({:page_pinned_changed, _page_id, _is_pinned}, socket) do
-    # Page pinned state changed - not relevant to dashboard view
+  def handle_info({:document_pinned_changed, _document_id, _is_pinned}, socket) do
+    # Document pinned state changed - not relevant to dashboard view
     {:noreply, socket}
   end
 
   @impl true
-  def handle_info({:page_title_changed, _page_id, _title}, socket) do
-    # Page title changed - not relevant to dashboard view
+  def handle_info({:document_title_changed, _document_id, _title}, socket) do
+    # Document title changed - not relevant to dashboard view
     {:noreply, socket}
   end
 

@@ -4,54 +4,29 @@ defmodule Jarga.DocumentsFixtures do
   entities via the `Jarga.Documents` context.
   """
 
-  use Boundary,
-    top_level?: true,
-    deps: [Jarga.Documents, Jarga.Repo, Jarga.AccountsFixtures, Jarga.WorkspacesFixtures],
-    exports: []
+  # Test fixture module - top-level boundary for test data creation
+  use Boundary, top_level?: true, deps: [Jarga.Documents], exports: []
 
-  import Jarga.AccountsFixtures
-  import Jarga.WorkspacesFixtures
+  alias Jarga.Documents
 
-  alias Jarga.Repo
-  alias Jarga.Documents.ChatSession
-  alias Jarga.Documents.ChatMessage
-
-  @doc """
-  Generate a chat session.
-  """
-  def chat_session_fixture(attrs \\ %{}) do
-    user = attrs[:user] || user_fixture()
-    workspace = attrs[:workspace] || workspace_fixture(user)
-
-    {:ok, session} =
-      %ChatSession{}
-      |> ChatSession.changeset(%{
-        user_id: user.id,
-        workspace_id: workspace.id,
-        title: attrs[:title],
-        project_id: attrs[:project_id]
-      })
-      |> Repo.insert()
-
-    session
+  def valid_document_attributes(attrs \\ %{}) do
+    Enum.into(attrs, %{
+      title: "Test Document #{System.unique_integer([:positive])}",
+      content: "Test document content"
+    })
   end
 
-  @doc """
-  Generate a chat message.
-  """
-  def chat_message_fixture(attrs \\ %{}) do
-    session = attrs[:chat_session] || chat_session_fixture()
+  def document_fixture(user, workspace, project \\ nil, attrs \\ %{}) do
+    attrs = valid_document_attributes(attrs)
 
-    {:ok, message} =
-      %ChatMessage{}
-      |> ChatMessage.changeset(%{
-        chat_session_id: session.id,
-        role: attrs[:role] || "user",
-        content: attrs[:content] || "Test message content",
-        context_chunks: attrs[:context_chunks] || []
-      })
-      |> Repo.insert()
+    attrs =
+      if project do
+        Map.put(attrs, :project_id, project.id)
+      else
+        attrs
+      end
 
-    message
+    {:ok, document} = Documents.create_document(user, workspace.id, attrs)
+    document
   end
 end
