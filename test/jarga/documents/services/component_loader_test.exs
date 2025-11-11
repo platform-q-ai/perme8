@@ -103,7 +103,7 @@ defmodule Jarga.Documents.Services.ComponentLoaderTest do
       assert ComponentLoader.load_component(document_component) == nil
     end
 
-    test "returns nil for invalid page component struct" do
+    test "returns nil for invalid document component struct" do
       assert ComponentLoader.load_component(%{}) == nil
     end
 

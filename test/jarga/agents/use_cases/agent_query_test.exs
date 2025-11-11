@@ -67,7 +67,7 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
       end
     end
 
-    test "includes page title in system message", %{assigns: assigns} do
+    test "includes document title in system message", %{assigns: assigns} do
       params = %{
         question: "Page context test",
         assigns: assigns
@@ -100,7 +100,7 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
       end
     end
 
-    test "truncates very long page content" do
+    test "truncates very long document content" do
       # Create very long markdown content
       long_content = String.duplicate("test content ", 500)
 
@@ -185,7 +185,7 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
       Process.sleep(10)
     end
 
-    test "includes page content when available" do
+    test "includes document content when available" do
       markdown = """
       # My Page Title
 

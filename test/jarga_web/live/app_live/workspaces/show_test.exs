@@ -68,7 +68,7 @@ defmodule JargaWeb.AppLive.Workspaces.ShowTest do
     end
   end
 
-  describe "workspace show page pages section" do
+  describe "workspace show page documents section" do
     setup %{conn: conn} do
       user = user_fixture()
       workspace = workspace_fixture(user)

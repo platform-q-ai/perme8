@@ -8,7 +8,7 @@ defmodule Jarga.PagesTest do
   import Jarga.ProjectsFixtures
 
   describe "get_page!/2" do
-    test "returns page when it exists and belongs to user" do
+    test "returns document when it exists and belongs to user" do
       user = user_fixture()
       workspace = workspace_fixture(user)
 
@@ -24,7 +24,7 @@ defmodule Jarga.PagesTest do
       assert fetched.created_by == user.id
     end
 
-    test "raises when page doesn't exist" do
+    test "raises when document doesn't exist" do
       user = user_fixture()
 
       assert_raise Ecto.NoResultsError, fn ->
@@ -32,7 +32,7 @@ defmodule Jarga.PagesTest do
       end
     end
 
-    test "raises when page belongs to different user" do
+    test "raises when document belongs to different user" do
       user1 = user_fixture()
       user2 = user_fixture()
       workspace = workspace_fixture(user1)
@@ -49,7 +49,7 @@ defmodule Jarga.PagesTest do
   end
 
   describe "create_page/3" do
-    test "creates page with valid attributes in workspace" do
+    test "creates document with valid attributes in workspace" do
       user = user_fixture()
       workspace = workspace_fixture(user)
 
@@ -76,7 +76,7 @@ defmodule Jarga.PagesTest do
       assert component.component_id != nil
     end
 
-    test "creates page with valid attributes in project" do
+    test "creates document with valid attributes in project" do
       user = user_fixture()
       workspace = workspace_fixture(user)
       project = project_fixture(user, workspace)
@@ -91,7 +91,7 @@ defmodule Jarga.PagesTest do
       assert page.workspace_id == workspace.id
     end
 
-    test "creates page with minimal attributes" do
+    test "creates document with minimal attributes" do
       user = user_fixture()
       workspace = workspace_fixture(user)
 
@@ -159,7 +159,7 @@ defmodule Jarga.PagesTest do
   end
 
   describe "update_page/3" do
-    test "updates page title" do
+    test "updates document title" do
       user = user_fixture()
       workspace = workspace_fixture(user)
 
@@ -172,7 +172,7 @@ defmodule Jarga.PagesTest do
       assert updated.id == page.id
     end
 
-    test "updates page pinned status" do
+    test "updates document pinned status" do
       user = user_fixture()
       workspace = workspace_fixture(user)
 
@@ -182,7 +182,7 @@ defmodule Jarga.PagesTest do
       assert updated.is_pinned == true
     end
 
-    test "updates page public status" do
+    test "updates document public status" do
       user = user_fixture()
       workspace = workspace_fixture(user)
 
@@ -192,7 +192,7 @@ defmodule Jarga.PagesTest do
       assert updated.is_public == true
     end
 
-    test "returns error when page doesn't exist" do
+    test "returns error when document doesn't exist" do
       user = user_fixture()
 
       attrs = %{title: "Updated"}
@@ -201,7 +201,7 @@ defmodule Jarga.PagesTest do
                Documents.update_document(user, Ecto.UUID.generate(), attrs)
     end
 
-    test "returns error when page belongs to different user" do
+    test "returns error when document belongs to different user" do
       user1 = user_fixture()
       user2 = user_fixture()
       workspace = workspace_fixture(user1)
@@ -227,7 +227,7 @@ defmodule Jarga.PagesTest do
   end
 
   describe "delete_page/2" do
-    test "deletes page when it belongs to user" do
+    test "deletes document when it belongs to user" do
       user = user_fixture()
       workspace = workspace_fixture(user)
 
@@ -242,13 +242,13 @@ defmodule Jarga.PagesTest do
       end
     end
 
-    test "returns error when page doesn't exist" do
+    test "returns error when document doesn't exist" do
       user = user_fixture()
 
       assert {:error, :document_not_found} = Documents.delete_document(user, Ecto.UUID.generate())
     end
 
-    test "returns error when page belongs to different user" do
+    test "returns error when document belongs to different user" do
       user1 = user_fixture()
       user2 = user_fixture()
       workspace = workspace_fixture(user1)
@@ -258,7 +258,7 @@ defmodule Jarga.PagesTest do
       assert {:error, :unauthorized} = Documents.delete_document(user2, page.id)
     end
 
-    test "allows admin to delete another user's public page" do
+    test "allows admin to delete another user's public document" do
       owner = user_fixture()
       admin = user_fixture()
       workspace = workspace_fixture(owner)
@@ -266,16 +266,16 @@ defmodule Jarga.PagesTest do
       # Add admin to workspace with admin role
       {:ok, _membership} = invite_and_accept_member(owner, workspace.id, admin.email, :admin)
 
-      # Owner creates a public page
+      # Owner creates a public document
       {:ok, page} =
         Documents.create_document(owner, workspace.id, %{title: "Public Page", is_public: true})
 
-      # Admin can delete the public page
+      # Admin can delete the public document
       assert {:ok, deleted} = Documents.delete_document(admin, page.id)
       assert deleted.id == page.id
     end
 
-    test "returns error when admin tries to delete another user's private page" do
+    test "returns error when admin tries to delete another user's private document" do
       owner = user_fixture()
       admin = user_fixture()
       workspace = workspace_fixture(owner)
@@ -283,15 +283,15 @@ defmodule Jarga.PagesTest do
       # Add admin to workspace
       {:ok, _membership} = invite_and_accept_member(owner, workspace.id, admin.email, :admin)
 
-      # Owner creates a private page
+      # Owner creates a private document
       {:ok, page} =
         Documents.create_document(owner, workspace.id, %{title: "Private Page", is_public: false})
 
-      # Admin cannot delete private page they don't own
+      # Admin cannot delete private document they don't own
       assert {:error, :forbidden} = Documents.delete_document(admin, page.id)
     end
 
-    test "returns error when member tries to delete another member's public page" do
+    test "returns error when member tries to delete another member's public document" do
       owner = user_fixture()
       member1 = user_fixture()
       member2 = user_fixture()
@@ -304,11 +304,11 @@ defmodule Jarga.PagesTest do
       {:ok, _membership2} =
         invite_and_accept_member(owner, workspace.id, member2.email, :member)
 
-      # Member1 creates a public page
+      # Member1 creates a public document
       {:ok, page} =
         Documents.create_document(member1, workspace.id, %{title: "Member1 Page", is_public: true})
 
-      # Member2 cannot delete Member1's page (only admins can delete others' public pages)
+      # Member2 cannot delete Member1's page (only admins can delete others' public documents)
       assert {:error, :forbidden} = Documents.delete_document(member2, page.id)
     end
   end
@@ -530,7 +530,7 @@ defmodule Jarga.PagesTest do
     end
   end
 
-  describe "page slugs" do
+  describe "document slugs" do
     test "generates slug from title on create" do
       user = user_fixture()
       workspace = workspace_fixture(user)
@@ -626,7 +626,7 @@ defmodule Jarga.PagesTest do
       assert fetched.title == page.title
     end
 
-    test "raises when page doesn't exist with that slug" do
+    test "raises when document doesn't exist with that slug" do
       user = user_fixture()
       workspace = workspace_fixture(user)
 

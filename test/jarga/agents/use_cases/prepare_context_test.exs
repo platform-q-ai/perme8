@@ -4,7 +4,7 @@ defmodule Jarga.Agents.UseCases.PrepareContextTest do
   alias Jarga.Agents.UseCases.PrepareContext
 
   describe "execute/1" do
-    test "extracts context from assigns with full page data" do
+    test "extracts context from assigns with full document data" do
       assigns = %{
         current_user: %{email: "user@example.com"},
         current_workspace: %{name: "My Workspace", slug: "my-workspace"},
@@ -38,7 +38,7 @@ defmodule Jarga.Agents.UseCases.PrepareContextTest do
       assert context.current_project == nil
     end
 
-    test "handles missing page content" do
+    test "handles missing document content" do
       assigns = %{
         current_workspace: %{name: "Workspace"},
         page_title: "Page"
@@ -49,7 +49,7 @@ defmodule Jarga.Agents.UseCases.PrepareContextTest do
       assert context.document_content == nil
     end
 
-    test "truncates page content to max_content_chars from config" do
+    test "truncates document content to max_content_chars from config" do
       # Create content longer than default 3000 chars
       long_content = String.duplicate("a", 4000)
 
@@ -74,7 +74,7 @@ defmodule Jarga.Agents.UseCases.PrepareContextTest do
       assert context.document_content == nil
     end
 
-    test "handles missing page info when workspace slug is missing" do
+    test "handles missing document info when workspace slug is missing" do
       assigns = %{
         page_title: "Page",
         page: %{slug: "page"}
@@ -86,7 +86,7 @@ defmodule Jarga.Agents.UseCases.PrepareContextTest do
       assert context.document_info == nil
     end
 
-    test "handles missing page info when page slug is missing" do
+    test "handles missing document info when document slug is missing" do
       assigns = %{
         page_title: "Page",
         current_workspace: %{slug: "workspace"}
@@ -98,7 +98,7 @@ defmodule Jarga.Agents.UseCases.PrepareContextTest do
       assert context.document_info == nil
     end
 
-    test "builds correct page URL from workspace and page slugs" do
+    test "builds correct document URL from workspace and document slugs" do
       assigns = %{
         current_workspace: %{slug: "acme-corp"},
         page: %{slug: "roadmap-2024"},

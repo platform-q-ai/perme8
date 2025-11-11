@@ -161,7 +161,7 @@ defmodule JargaWeb.Live.PermissionsHelperTest do
   end
 
   describe "can_edit_document?/3" do
-    test "returns true when member owns the page" do
+    test "returns true when member owns the document" do
       member = %WorkspaceMember{role: :member}
       page = %{user_id: "user-123", is_public: false}
       current_user = %{id: "user-123"}
@@ -169,7 +169,7 @@ defmodule JargaWeb.Live.PermissionsHelperTest do
       assert PermissionsHelper.can_edit_document?(member, page, current_user)
     end
 
-    test "returns false when guest doesn't own private page" do
+    test "returns false when guest doesn't own private document" do
       member = %WorkspaceMember{role: :guest}
       page = %{user_id: "user-456", is_public: false}
       current_user = %{id: "user-123"}
@@ -177,7 +177,7 @@ defmodule JargaWeb.Live.PermissionsHelperTest do
       refute PermissionsHelper.can_edit_document?(member, page, current_user)
     end
 
-    test "returns true when member can edit public page" do
+    test "returns true when member can edit public document" do
       member = %WorkspaceMember{role: :member}
       page = %{user_id: "user-456", is_public: true}
       current_user = %{id: "user-123"}
@@ -185,7 +185,7 @@ defmodule JargaWeb.Live.PermissionsHelperTest do
       assert PermissionsHelper.can_edit_document?(member, page, current_user)
     end
 
-    test "returns false when regular member doesn't own private page" do
+    test "returns false when regular member doesn't own private document" do
       member = %WorkspaceMember{role: :member}
       page = %{user_id: "user-456", is_public: false}
       current_user = %{id: "user-123"}
@@ -193,7 +193,7 @@ defmodule JargaWeb.Live.PermissionsHelperTest do
       refute PermissionsHelper.can_edit_document?(member, page, current_user)
     end
 
-    test "returns true when admin can edit public page" do
+    test "returns true when admin can edit public document" do
       member = %WorkspaceMember{role: :admin}
       page = %{user_id: "user-456", is_public: true}
       current_user = %{id: "user-123"}
@@ -203,7 +203,7 @@ defmodule JargaWeb.Live.PermissionsHelperTest do
   end
 
   describe "can_delete_document?/3" do
-    test "returns true when member owns the page" do
+    test "returns true when member owns the document" do
       member = %WorkspaceMember{role: :member}
       page = %{user_id: "user-123", is_public: false}
       current_user = %{id: "user-123"}
@@ -211,7 +211,7 @@ defmodule JargaWeb.Live.PermissionsHelperTest do
       assert PermissionsHelper.can_delete_document?(member, page, current_user)
     end
 
-    test "returns false when guest doesn't own the page" do
+    test "returns false when guest doesn't own the document" do
       member = %WorkspaceMember{role: :guest}
       page = %{user_id: "user-456", is_public: false}
       current_user = %{id: "user-123"}
@@ -219,7 +219,7 @@ defmodule JargaWeb.Live.PermissionsHelperTest do
       refute PermissionsHelper.can_delete_document?(member, page, current_user)
     end
 
-    test "returns true when admin can delete public page" do
+    test "returns true when admin can delete public document" do
       member = %WorkspaceMember{role: :admin}
       page = %{user_id: "user-456", is_public: true}
       current_user = %{id: "user-123"}
@@ -227,7 +227,7 @@ defmodule JargaWeb.Live.PermissionsHelperTest do
       assert PermissionsHelper.can_delete_document?(member, page, current_user)
     end
 
-    test "returns false when regular member doesn't own the page" do
+    test "returns false when regular member doesn't own the document" do
       member = %WorkspaceMember{role: :member}
       page = %{user_id: "user-456", is_public: false}
       current_user = %{id: "user-123"}
@@ -235,7 +235,7 @@ defmodule JargaWeb.Live.PermissionsHelperTest do
       refute PermissionsHelper.can_delete_document?(member, page, current_user)
     end
 
-    test "returns false when admin can't delete private page they don't own" do
+    test "returns false when admin can't delete private document they don't own" do
       member = %WorkspaceMember{role: :admin}
       page = %{user_id: "user-456", is_public: false}
       current_user = %{id: "user-123"}
@@ -245,7 +245,7 @@ defmodule JargaWeb.Live.PermissionsHelperTest do
   end
 
   describe "can_pin_document?/3" do
-    test "returns true when member owns the page" do
+    test "returns true when member owns the document" do
       member = %WorkspaceMember{role: :member}
       page = %{user_id: "user-123", is_public: false}
       current_user = %{id: "user-123"}
@@ -253,7 +253,7 @@ defmodule JargaWeb.Live.PermissionsHelperTest do
       assert PermissionsHelper.can_pin_document?(member, page, current_user)
     end
 
-    test "returns false when guest doesn't own private page" do
+    test "returns false when guest doesn't own private document" do
       member = %WorkspaceMember{role: :guest}
       page = %{user_id: "user-456", is_public: false}
       current_user = %{id: "user-123"}
@@ -261,7 +261,7 @@ defmodule JargaWeb.Live.PermissionsHelperTest do
       refute PermissionsHelper.can_pin_document?(member, page, current_user)
     end
 
-    test "returns true when member can pin public page" do
+    test "returns true when member can pin public document" do
       member = %WorkspaceMember{role: :member}
       page = %{user_id: "user-456", is_public: true}
       current_user = %{id: "user-123"}
@@ -269,7 +269,7 @@ defmodule JargaWeb.Live.PermissionsHelperTest do
       assert PermissionsHelper.can_pin_document?(member, page, current_user)
     end
 
-    test "returns false when regular member doesn't own private page" do
+    test "returns false when regular member doesn't own private document" do
       member = %WorkspaceMember{role: :member}
       page = %{user_id: "user-456", is_public: false}
       current_user = %{id: "user-123"}
@@ -277,7 +277,7 @@ defmodule JargaWeb.Live.PermissionsHelperTest do
       refute PermissionsHelper.can_pin_document?(member, page, current_user)
     end
 
-    test "returns true when admin can pin public page" do
+    test "returns true when admin can pin public document" do
       member = %WorkspaceMember{role: :admin}
       page = %{user_id: "user-456", is_public: true}
       current_user = %{id: "user-123"}
@@ -285,7 +285,7 @@ defmodule JargaWeb.Live.PermissionsHelperTest do
       assert PermissionsHelper.can_pin_document?(member, page, current_user)
     end
 
-    test "returns true when owner can pin public page" do
+    test "returns true when owner can pin public document" do
       member = %WorkspaceMember{role: :owner}
       page = %{user_id: "user-456", is_public: true}
       current_user = %{id: "user-123"}

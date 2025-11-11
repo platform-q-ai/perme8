@@ -203,7 +203,7 @@ defmodule JargaWeb.ChatLive.PanelTest do
       assert html =~ "Thinking..." or html =~ "▊"
     end
 
-    test "extracts page context correctly", %{conn: conn, user: user} do
+    test "extracts document context correctly", %{conn: conn, user: user} do
       conn = log_in_user(conn, user)
 
       {:ok, view, _html} = live(conn, ~p"/app")
@@ -218,7 +218,7 @@ defmodule JargaWeb.ChatLive.PanelTest do
       assert has_element?(view, ".chat.chat-end .chat-bubble", "What page am I on?")
     end
 
-    test "extracts page content from note when viewing a page", %{conn: conn, user: user} do
+    test "extracts document content from note when viewing a document", %{conn: conn, user: user} do
       conn = log_in_user(conn, user)
 
       # Create a page with specific content
@@ -358,7 +358,7 @@ defmodule JargaWeb.ChatLive.PanelTest do
     end
   end
 
-  describe "PR Goal: Users can ask questions about page content" do
+  describe "PR Goal: Users can ask questions about document content" do
     setup do
       user = user_fixture()
       %{user: user}
@@ -1198,7 +1198,7 @@ defmodule JargaWeb.ChatLive.PanelTest do
     end
 
     @tag :evaluation
-    test "assistant messages include source citation when on a page", %{conn: conn, user: user} do
+    test "assistant messages include source citation when on a document", %{conn: conn, user: user} do
       conn = log_in_user(conn, user)
 
       # Create a workspace and page with content
@@ -1480,7 +1480,7 @@ defmodule JargaWeb.ChatLive.PanelTest do
       # But no note context (page assign not present at project level)
     end
 
-    test "chat panel available on page view without note", %{conn: conn} do
+    test "chat panel available on document view without note", %{conn: conn} do
       user = user_fixture()
       workspace = workspace_fixture(user)
       project = project_fixture(user, workspace)
@@ -1496,7 +1496,7 @@ defmodule JargaWeb.ChatLive.PanelTest do
       # Page context exists, but no note attached
     end
 
-    test "chat panel available on page view with note", %{conn: conn} do
+    test "chat panel available on document view with note", %{conn: conn} do
       user = user_fixture()
       workspace = workspace_fixture(user)
       project = project_fixture(user, workspace)

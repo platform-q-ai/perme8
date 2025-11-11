@@ -178,7 +178,7 @@ defmodule Jarga.Documents.QueriesTest do
       assert result.id == document1.id
     end
 
-    test "returns nil when page doesn't exist" do
+    test "returns nil when document doesn't exist" do
       fake_id = Ecto.UUID.generate()
 
       result =

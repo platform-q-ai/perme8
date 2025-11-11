@@ -139,7 +139,7 @@ defmodule JargaWeb.ChatLive.PersistenceAndContextTest do
     end
 
     @tag :evaluation
-    test "LLM can answer questions about current page", %{
+    test "LLM can answer questions about current document", %{
       conn: conn,
       user: user,
       workspace: workspace,
@@ -245,7 +245,7 @@ defmodule JargaWeb.ChatLive.PersistenceAndContextTest do
     end
 
     @tag :evaluation
-    test "page content is included in LLM context", %{
+    test "document content is included in LLM context", %{
       conn: conn,
       user: user,
       workspace: workspace,

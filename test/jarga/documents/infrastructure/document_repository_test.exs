@@ -36,7 +36,7 @@ defmodule Jarga.Documents.Infrastructure.DocumentRepositoryTest do
       assert DocumentRepository.slug_exists_in_workspace?(document.slug, workspace2.id) == false
     end
 
-    test "excludes specified page ID when checking", %{user: user, workspace: workspace} do
+    test "excludes specified document ID when checking", %{user: user, workspace: workspace} do
       {:ok, document1} =
         Jarga.Documents.create_document(user, workspace.id, %{title: "Document 1"})
 
@@ -49,7 +49,7 @@ defmodule Jarga.Documents.Infrastructure.DocumentRepositoryTest do
                false
     end
 
-    test "returns true when slug exists but belongs to excluded page", %{
+    test "returns true when slug exists but belongs to excluded document", %{
       user: user,
       workspace: workspace
     } do

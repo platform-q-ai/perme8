@@ -161,7 +161,7 @@ defmodule Jarga.Workspaces.Policies.PermissionsPolicyTest do
     end
   end
 
-  describe "page permissions - viewing" do
+  describe "document permissions - viewing" do
     test "guest can view pages" do
       assert PermissionsPolicy.can?(:guest, :view_document)
     end
@@ -179,89 +179,89 @@ defmodule Jarga.Workspaces.Policies.PermissionsPolicyTest do
     end
   end
 
-  describe "page permissions - creating" do
-    test "guest cannot create page" do
+  describe "document permissions - creating" do
+    test "guest cannot create document" do
       refute PermissionsPolicy.can?(:guest, :create_document)
     end
 
-    test "member can create page" do
+    test "member can create document" do
       assert PermissionsPolicy.can?(:member, :create_document)
     end
 
-    test "admin can create page" do
+    test "admin can create document" do
       assert PermissionsPolicy.can?(:admin, :create_document)
     end
 
-    test "owner can create page" do
+    test "owner can create document" do
       assert PermissionsPolicy.can?(:owner, :create_document)
     end
   end
 
-  describe "page permissions - editing own page" do
-    test "guest cannot edit own page" do
+  describe "document permissions - editing own page" do
+    test "guest cannot edit own document" do
       refute PermissionsPolicy.can?(:guest, :edit_document, owns_resource: true, is_public: false)
     end
 
-    test "member can edit own page" do
+    test "member can edit own document" do
       assert PermissionsPolicy.can?(:member, :edit_document,
                owns_resource: true,
                is_public: false
              )
     end
 
-    test "admin can edit own page" do
+    test "admin can edit own document" do
       assert PermissionsPolicy.can?(:admin, :edit_document, owns_resource: true, is_public: false)
     end
 
-    test "owner can edit own page" do
+    test "owner can edit own document" do
       assert PermissionsPolicy.can?(:owner, :edit_document, owns_resource: true, is_public: false)
     end
   end
 
-  describe "page permissions - editing shared (public) page" do
-    test "guest cannot edit shared page" do
+  describe "document permissions - editing shared (public) page" do
+    test "guest cannot edit shared document" do
       refute PermissionsPolicy.can?(:guest, :edit_document, owns_resource: false, is_public: true)
     end
 
-    test "member can edit shared page" do
+    test "member can edit shared document" do
       assert PermissionsPolicy.can?(:member, :edit_document,
                owns_resource: false,
                is_public: true
              )
     end
 
-    test "admin can edit shared page" do
+    test "admin can edit shared document" do
       assert PermissionsPolicy.can?(:admin, :edit_document, owns_resource: false, is_public: true)
     end
 
-    test "owner cannot edit shared page they don't own (per requirements)" do
+    test "owner cannot edit shared document they don't own (per requirements)" do
       refute PermissionsPolicy.can?(:owner, :edit_document, owns_resource: false, is_public: true)
     end
   end
 
-  describe "page permissions - editing others' non-public page" do
-    test "guest cannot edit others' non-public page" do
+  describe "document permissions - editing others' non-public document" do
+    test "guest cannot edit others' non-public document" do
       refute PermissionsPolicy.can?(:guest, :edit_document,
                owns_resource: false,
                is_public: false
              )
     end
 
-    test "member cannot edit others' non-public page" do
+    test "member cannot edit others' non-public document" do
       refute PermissionsPolicy.can?(:member, :edit_document,
                owns_resource: false,
                is_public: false
              )
     end
 
-    test "admin cannot edit others' non-public page (per requirements)" do
+    test "admin cannot edit others' non-public document (per requirements)" do
       refute PermissionsPolicy.can?(:admin, :edit_document,
                owns_resource: false,
                is_public: false
              )
     end
 
-    test "owner cannot edit others' non-public page (per requirements)" do
+    test "owner cannot edit others' non-public document (per requirements)" do
       refute PermissionsPolicy.can?(:owner, :edit_document,
                owns_resource: false,
                is_public: false
@@ -269,47 +269,47 @@ defmodule Jarga.Workspaces.Policies.PermissionsPolicyTest do
     end
   end
 
-  describe "page permissions - deleting own page" do
-    test "guest cannot delete own page" do
+  describe "document permissions - deleting own page" do
+    test "guest cannot delete own document" do
       refute PermissionsPolicy.can?(:guest, :delete_document, owns_resource: true)
     end
 
-    test "member can delete own page" do
+    test "member can delete own document" do
       assert PermissionsPolicy.can?(:member, :delete_document, owns_resource: true)
     end
 
-    test "admin can delete own page" do
+    test "admin can delete own document" do
       assert PermissionsPolicy.can?(:admin, :delete_document, owns_resource: true)
     end
 
-    test "owner can delete own page" do
+    test "owner can delete own document" do
       assert PermissionsPolicy.can?(:owner, :delete_document, owns_resource: true)
     end
   end
 
-  describe "page permissions - deleting others' shared page" do
-    test "guest cannot delete others' shared page" do
+  describe "document permissions - deleting others' shared document" do
+    test "guest cannot delete others' shared document" do
       refute PermissionsPolicy.can?(:guest, :delete_document,
                owns_resource: false,
                is_public: true
              )
     end
 
-    test "member cannot delete others' shared page" do
+    test "member cannot delete others' shared document" do
       refute PermissionsPolicy.can?(:member, :delete_document,
                owns_resource: false,
                is_public: true
              )
     end
 
-    test "admin can delete others' shared page" do
+    test "admin can delete others' shared document" do
       assert PermissionsPolicy.can?(:admin, :delete_document,
                owns_resource: false,
                is_public: true
              )
     end
 
-    test "owner cannot delete others' shared page (per requirements)" do
+    test "owner cannot delete others' shared document (per requirements)" do
       refute PermissionsPolicy.can?(:owner, :delete_document,
                owns_resource: false,
                is_public: true
@@ -317,29 +317,29 @@ defmodule Jarga.Workspaces.Policies.PermissionsPolicyTest do
     end
   end
 
-  describe "page permissions - deleting others' non-shared page" do
-    test "guest cannot delete others' non-shared page" do
+  describe "document permissions - deleting others' non-shared document" do
+    test "guest cannot delete others' non-shared document" do
       refute PermissionsPolicy.can?(:guest, :delete_document,
                owns_resource: false,
                is_public: false
              )
     end
 
-    test "member cannot delete others' non-shared page" do
+    test "member cannot delete others' non-shared document" do
       refute PermissionsPolicy.can?(:member, :delete_document,
                owns_resource: false,
                is_public: false
              )
     end
 
-    test "admin cannot delete others' non-shared page (per requirements)" do
+    test "admin cannot delete others' non-shared document (per requirements)" do
       refute PermissionsPolicy.can?(:admin, :delete_document,
                owns_resource: false,
                is_public: false
              )
     end
 
-    test "owner cannot delete others' non-shared page (per requirements)" do
+    test "owner cannot delete others' non-shared document (per requirements)" do
       refute PermissionsPolicy.can?(:owner, :delete_document,
                owns_resource: false,
                is_public: false
@@ -347,59 +347,59 @@ defmodule Jarga.Workspaces.Policies.PermissionsPolicyTest do
     end
   end
 
-  describe "page permissions - pinning shared (public) page" do
-    test "guest cannot pin shared page" do
+  describe "document permissions - pinning shared (public) page" do
+    test "guest cannot pin shared document" do
       refute PermissionsPolicy.can?(:guest, :pin_document, owns_resource: false, is_public: true)
     end
 
-    test "member can pin shared page" do
+    test "member can pin shared document" do
       assert PermissionsPolicy.can?(:member, :pin_document, owns_resource: false, is_public: true)
     end
 
-    test "admin can pin shared page" do
+    test "admin can pin shared document" do
       assert PermissionsPolicy.can?(:admin, :pin_document, owns_resource: false, is_public: true)
     end
 
-    test "owner can pin shared page" do
+    test "owner can pin shared document" do
       assert PermissionsPolicy.can?(:owner, :pin_document, owns_resource: false, is_public: true)
     end
   end
 
-  describe "page permissions - pinning own page" do
-    test "guest cannot pin own page" do
+  describe "document permissions - pinning own page" do
+    test "guest cannot pin own document" do
       refute PermissionsPolicy.can?(:guest, :pin_document, owns_resource: true, is_public: false)
     end
 
-    test "member can pin own page" do
+    test "member can pin own document" do
       assert PermissionsPolicy.can?(:member, :pin_document, owns_resource: true, is_public: false)
     end
 
-    test "admin can pin own page" do
+    test "admin can pin own document" do
       assert PermissionsPolicy.can?(:admin, :pin_document, owns_resource: true, is_public: false)
     end
 
-    test "owner can pin own page" do
+    test "owner can pin own document" do
       assert PermissionsPolicy.can?(:owner, :pin_document, owns_resource: true, is_public: false)
     end
   end
 
-  describe "page permissions - pinning others' non-public page" do
-    test "guest cannot pin others' non-public page" do
+  describe "document permissions - pinning others' non-public document" do
+    test "guest cannot pin others' non-public document" do
       refute PermissionsPolicy.can?(:guest, :pin_document, owns_resource: false, is_public: false)
     end
 
-    test "member cannot pin others' non-public page" do
+    test "member cannot pin others' non-public document" do
       refute PermissionsPolicy.can?(:member, :pin_document,
                owns_resource: false,
                is_public: false
              )
     end
 
-    test "admin cannot pin others' non-public page (per requirements)" do
+    test "admin cannot pin others' non-public document (per requirements)" do
       refute PermissionsPolicy.can?(:admin, :pin_document, owns_resource: false, is_public: false)
     end
 
-    test "owner cannot pin others' non-public page (per requirements)" do
+    test "owner cannot pin others' non-public document (per requirements)" do
       refute PermissionsPolicy.can?(:owner, :pin_document, owns_resource: false, is_public: false)
     end
   end

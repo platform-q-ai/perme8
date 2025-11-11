@@ -425,7 +425,7 @@ defmodule JargaWeb.AppLive.WorkspacesTest do
       refute lv |> element("[data-project-id='#{project.id}']") |> has_element?()
     end
 
-    test "updates page list in real-time when page becomes public", %{
+    test "updates document list in real-time when document becomes public", %{
       conn: conn,
       user: user,
       workspace: workspace
@@ -454,7 +454,7 @@ defmodule JargaWeb.AppLive.WorkspacesTest do
       assert lv |> element("[data-document-id='#{page.id}']") |> has_element?()
     end
 
-    test "updates page list in real-time when page becomes private", %{
+    test "updates document list in real-time when document becomes private", %{
       conn: conn,
       user: user,
       workspace: workspace

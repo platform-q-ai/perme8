@@ -450,7 +450,7 @@ defmodule JargaWeb.AppLive.Documents.ShowAITest do
       assert Process.alive?(view.pid)
     end
 
-    test "AI events don't interfere with normal page operations", %{
+    test "AI events don't interfere with normal document operations", %{
       conn: conn,
       user: user,
       workspace: workspace,

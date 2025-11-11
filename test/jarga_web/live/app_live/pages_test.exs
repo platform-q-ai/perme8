@@ -26,7 +26,7 @@ defmodule JargaWeb.AppLive.PagesTest do
       %{conn: log_in_user(conn, user), user: user, workspace: workspace}
     end
 
-    test "renders page title and editor", %{conn: conn, user: user, workspace: workspace} do
+    test "renders document title and editor", %{conn: conn, user: user, workspace: workspace} do
       {:ok, page} = Documents.create_document(user, workspace.id, %{title: "My Test Page"})
 
       {:ok, _lv, html} = live(conn, ~p"/app/workspaces/#{workspace.slug}/documents/#{page.slug}")
@@ -35,7 +35,7 @@ defmodule JargaWeb.AppLive.PagesTest do
       assert html =~ "editor-container"
     end
 
-    test "displays page in workspace context", %{conn: conn, user: user, workspace: workspace} do
+    test "displays document in workspace context", %{conn: conn, user: user, workspace: workspace} do
       {:ok, page} = Documents.create_document(user, workspace.id, %{title: "Workspace Page"})
 
       {:ok, _lv, html} = live(conn, ~p"/app/workspaces/#{workspace.slug}/documents/#{page.slug}")
@@ -43,7 +43,7 @@ defmodule JargaWeb.AppLive.PagesTest do
       assert html =~ workspace.name
     end
 
-    test "displays page in project context", %{conn: conn, user: user, workspace: workspace} do
+    test "displays document in project context", %{conn: conn, user: user, workspace: workspace} do
       project = project_fixture(user, workspace)
 
       {:ok, page} =
@@ -57,7 +57,7 @@ defmodule JargaWeb.AppLive.PagesTest do
       assert html =~ project.name
     end
 
-    test "shows pinned indicator for pinned pages", %{
+    test "shows pinned indicator for pinned documents", %{
       conn: conn,
       user: user,
       workspace: workspace
@@ -73,7 +73,7 @@ defmodule JargaWeb.AppLive.PagesTest do
       assert html =~ "pinned" or html =~ "Pinned"
     end
 
-    test "allows updating page title with autosave on blur", %{
+    test "allows updating document title with autosave on blur", %{
       conn: conn,
       user: user,
       workspace: workspace
@@ -193,12 +193,12 @@ defmodule JargaWeb.AppLive.PagesTest do
         live(conn, ~p"/app/workspaces/#{workspace.slug}/documents/#{private_page.slug}")
     end
 
-    test "shows 404 for non-existent page", %{conn: conn, workspace: workspace} do
+    test "shows 404 for non-existent document", %{conn: conn, workspace: workspace} do
       {:error, {:redirect, %{to: "/app/workspaces"}}} =
         live(conn, ~p"/app/workspaces/#{workspace.slug}/documents/nonexistent-slug")
     end
 
-    test "has delete page button", %{conn: conn, user: user, workspace: workspace} do
+    test "has delete document button", %{conn: conn, user: user, workspace: workspace} do
       {:ok, page} = Documents.create_document(user, workspace.id, %{title: "To Delete"})
 
       {:ok, lv, _html} = live(conn, ~p"/app/workspaces/#{workspace.slug}/documents/#{page.slug}")
@@ -206,7 +206,7 @@ defmodule JargaWeb.AppLive.PagesTest do
       assert lv |> element("button[phx-click='delete_document']") |> has_element?()
     end
 
-    test "deletes page and redirects when delete button clicked", %{
+    test "deletes document and redirects when delete button clicked", %{
       conn: conn,
       user: user,
       workspace: workspace
