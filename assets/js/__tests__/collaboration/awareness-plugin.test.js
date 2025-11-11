@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { createAwarenessPlugin, awarenessPluginKey } from './awareness-plugin'
+import { createAwarenessPlugin, awarenessPluginKey } from '../../collaboration/awareness-plugin'
 import { DecorationSet } from '@milkdown/prose/view'
 
 // Mock DecorationSet to avoid needing a real ProseMirror document
@@ -21,7 +21,7 @@ vi.mock('@milkdown/prose/view', () => {
 })
 
 // Mock user-colors module
-vi.mock('./user-colors', () => ({
+vi.mock('../../collaboration/user-colors', () => ({
   getUserColor: vi.fn((userId) => {
     // Return different colors for different users
     const colors = {
@@ -34,7 +34,7 @@ vi.mock('./user-colors', () => ({
 }))
 
 // Mock cursor-decorations module
-vi.mock('./cursor-decorations', () => ({
+vi.mock('../../collaboration/cursor-decorations', () => ({
   createUserDecorations: vi.fn((state, color) => {
     // Return mock decorations
     if (!state.selection) return []
@@ -94,8 +94,8 @@ describe('Awareness Plugin', () => {
     })
 
     it('should filter out local user from decorations', async () => {
-      const { getUserColor } = await import('./user-colors')
-      const { createUserDecorations } = await import('./cursor-decorations')
+      const { getUserColor } = await import('../../collaboration/user-colors')
+      const { createUserDecorations } = await import('../../collaboration/cursor-decorations')
 
       // Setup awareness states with local and remote users
       const awarenessStates = new Map([
@@ -174,7 +174,7 @@ describe('Awareness Plugin', () => {
     })
 
     it('should handle multiple remote users', async () => {
-      const { createUserDecorations } = await import('./cursor-decorations')
+      const { createUserDecorations } = await import('../../collaboration/cursor-decorations')
 
       const awarenessStates = new Map([
         [1, { userId: 'user_local', userName: 'Local', selection: { anchor: 0, head: 5 } }],
@@ -195,7 +195,7 @@ describe('Awareness Plugin', () => {
     })
 
     it('should handle users without selection', async () => {
-      const { createUserDecorations } = await import('./cursor-decorations')
+      const { createUserDecorations } = await import('../../collaboration/cursor-decorations')
 
       const awarenessStates = new Map([
         [2, { userId: 'user_456', userName: 'User 2', selection: null }]

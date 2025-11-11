@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { CollaborationManager } from './collaboration'
+import { CollaborationManager } from '../../collaboration/collaboration'
 import * as Y from 'yjs'
 
 describe('CollaborationManager', () => {

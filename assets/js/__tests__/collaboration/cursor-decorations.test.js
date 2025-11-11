@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { createCursorWidget, createSelectionDecoration, createUserDecorations } from './cursor-decorations'
+import { createCursorWidget, createSelectionDecoration, createUserDecorations } from '../../collaboration/cursor-decorations'
 
 describe('CursorDecorations', () => {
   describe('createCursorWidget', () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { AutoHideFlash } from './flash_hooks'
+import { AutoHideFlash } from '../../ui/flash_hooks'
 
 describe('AutoHideFlash Hook', () => {
   let hook

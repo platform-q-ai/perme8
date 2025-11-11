@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { getUserColor, getColorPalette } from './user-colors'
+import { getUserColor, getColorPalette } from '../../collaboration/user-colors'
 
 describe('UserColors', () => {
   describe('getUserColor', () => {

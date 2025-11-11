@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { MilkdownEditor } from './document_hooks'
-import { CollaborationManager } from './collaboration'
+import { MilkdownEditor } from '../../editor/document_hooks'
+import { CollaborationManager } from '../../collaboration/collaboration'
 import { editorViewCtx, parserCtx } from '@milkdown/core'
 
 // Mock Milkdown modules - inline everything to avoid hoisting issues

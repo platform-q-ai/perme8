@@ -24,7 +24,7 @@ import { Socket } from "phoenix"
 import { LiveSocket } from "phoenix_live_view"
 import topbar from "../vendor/topbar"
 import Hooks from "./hooks"
-import {observeCollabEditor} from "./collab_editor_observer"
+import {observeCollabEditor} from "./editor/collab_editor_observer"
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { ChatPanel, ChatMessages, ChatInput } from './chat_hooks'
+import { ChatPanel, ChatMessages, ChatInput } from '../../chat/chat_hooks'
 
 describe('ChatPanel Hook', () => {
   let hook

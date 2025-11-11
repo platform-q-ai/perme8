@@ -6,6 +6,7 @@
  */
 
 import { $ctx, $node } from '@milkdown/utils'
+import { updateAgentResponseNode, appendChunkToAgentNode } from '../../mentions/mention-utils'
 
 /**
  * Agent Response Node Schema
@@ -81,62 +82,5 @@ export const agentResponseNode = $node('agent_response', (ctx) => ({
   }
 }))
 
-/**
- * Update agent response node by ID
- */
-export function updateAgentResponseNode(view, nodeId, updates) {
-  const { state } = view
-  const { doc } = state
-
-  let nodePos = null
-  let nodeToUpdate = null
-
-  doc.descendants((node, pos) => {
-    if (node.type.name === 'agent_response' && node.attrs.nodeId === nodeId) {
-      nodePos = pos
-      nodeToUpdate = node
-      return false
-    }
-  })
-
-  if (nodePos === null || !nodeToUpdate) {
-    console.warn(`Agent response node not found: ${nodeId}`)
-    return false
-  }
-
-  const newAttrs = { ...nodeToUpdate.attrs, ...updates }
-  const tr = state.tr.setNodeMarkup(nodePos, null, newAttrs)
-  view.dispatch(tr)
-
-  return true
-}
-
-/**
- * Append chunk to agent response node
- */
-export function appendChunkToAgentNode(view, nodeId, chunk) {
-  const { state } = view
-  const { doc } = state
-
-  let nodePos = null
-  let nodeToUpdate = null
-
-  doc.descendants((node, pos) => {
-    if (node.type.name === 'agent_response' && node.attrs.nodeId === nodeId) {
-      nodePos = pos
-      nodeToUpdate = node
-      return false
-    }
-  })
-
-  if (nodePos === null || !nodeToUpdate) {
-    return false
-  }
-
-  const newContent = (nodeToUpdate.attrs.content || '') + chunk
-  const newAttrs = { ...nodeToUpdate.attrs, content: newContent }
-  const tr = state.tr.setNodeMarkup(nodePos, null, newAttrs)
-  view.dispatch(tr)
-
-  return true
-}
+// Re-export utilities for backwards compatibility
+export { updateAgentResponseNode, appendChunkToAgentNode }

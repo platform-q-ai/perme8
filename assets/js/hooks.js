@@ -6,18 +6,18 @@
  */
 
 // Editor and document hooks
-export { MilkdownEditor, DocumentTitleInput } from './document_hooks'
+export { MilkdownEditor, DocumentTitleInput } from './editor/document_hooks'
 
 // Chat hooks
-export { ChatPanel, ChatMessages, ChatInput } from './chat_hooks'
+export { ChatPanel, ChatMessages, ChatInput } from './chat/chat_hooks'
 
 // Flash hooks
-export { AutoHideFlash } from './flash_hooks'
+export { AutoHideFlash } from './ui/flash_hooks'
 
 // Default export for Phoenix LiveView
-import { MilkdownEditor, DocumentTitleInput } from './document_hooks'
-import { ChatPanel, ChatMessages, ChatInput } from './chat_hooks'
-import { AutoHideFlash } from './flash_hooks'
+import { MilkdownEditor, DocumentTitleInput } from './editor/document_hooks'
+import { ChatPanel, ChatMessages, ChatInput } from './chat/chat_hooks'
+import { AutoHideFlash } from './ui/flash_hooks'
 
 export default {
   MilkdownEditor,

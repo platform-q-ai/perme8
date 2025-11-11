@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { AgentAssistantManager } from './agent-integration'
+import { AgentAssistantManager } from '../../agents/agent-integration'
 
 describe('AgentAssistantManager - Integration', () => {
   let agentAssistant

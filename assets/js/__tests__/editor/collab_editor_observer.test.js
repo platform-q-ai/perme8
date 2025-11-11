@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { observeCollabEditor } from './collab_editor_observer'
+import { observeCollabEditor } from '../../editor/collab_editor_observer'
 
 describe('Collab Editor Observer', () => {
   let mockSection

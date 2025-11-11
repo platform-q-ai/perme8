@@ -3,9 +3,9 @@ import { commonmark } from '@milkdown/preset-commonmark'
 import { gfm } from '@milkdown/preset-gfm'
 import { nord } from '@milkdown/theme-nord'
 import { clipboard } from '@milkdown/plugin-clipboard'
-import { CollaborationManager } from './collaboration'
-import { agentResponseNode } from './agent-response-node'
-import { AgentAssistantManager } from './agent-integration'
+import { CollaborationManager } from '../collaboration/collaboration'
+import { agentResponseNode } from './nodes/agent-response-node'
+import { AgentAssistantManager } from '../agents/agent-integration'
 
 /**
  * MilkdownEditor Hook

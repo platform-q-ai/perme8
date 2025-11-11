@@ -6,6 +6,7 @@
 
 import { Plugin, PluginKey } from '@milkdown/prose/state'
 import { Decoration, DecorationSet } from '@milkdown/prose/view'
+import { updateAgentResponseNode, appendChunkToAgentNode } from './mention-utils'
 
 const MENTION_REGEX = /@j\s+(.+)/i
 
@@ -152,55 +153,5 @@ function generateNodeId() {
   return `agent_node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 }
 
-export function updateAgentResponseNode(view, nodeId, updates) {
-  const { state } = view
-  const { doc } = state
-
-  let nodePos = null
-  let nodeToUpdate = null
-
-  doc.descendants((node, pos) => {
-    if (node.type.name === 'agent_response' && node.attrs.nodeId === nodeId) {
-      nodePos = pos
-      nodeToUpdate = node
-      return false
-    }
-  })
-
-  if (nodePos === null || !nodeToUpdate) {
-    return false
-  }
-
-  const newAttrs = { ...nodeToUpdate.attrs, ...updates }
-  const tr = state.tr.setNodeMarkup(nodePos, null, newAttrs)
-  view.dispatch(tr)
-
-  return true
-}
-
-export function appendChunkToAgentNode(view, nodeId, chunk) {
-  const { state } = view
-  const { doc } = state
-
-  let nodePos = null
-  let nodeToUpdate = null
-
-  doc.descendants((node, pos) => {
-    if (node.type.name === 'agent_response' && node.attrs.nodeId === nodeId) {
-      nodePos = pos
-      nodeToUpdate = node
-      return false
-    }
-  })
-
-  if (nodePos === null || !nodeToUpdate) {
-    return false
-  }
-
-  const newContent = (nodeToUpdate.attrs.content || '') + chunk
-  const newAttrs = { ...nodeToUpdate.attrs, content: newContent }
-  const tr = state.tr.setNodeMarkup(nodePos, null, newAttrs)
-  view.dispatch(tr)
-
-  return true
-}
+// Re-export utilities for backwards compatibility
+export { updateAgentResponseNode, appendChunkToAgentNode }
