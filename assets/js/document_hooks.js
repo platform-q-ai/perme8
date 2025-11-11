@@ -87,19 +87,19 @@ export const MilkdownEditor = {
     })
 
     // Listen for agent streaming events
-    this.handleEvent('ai_chunk', (data) => {
+    this.handleEvent('agent_chunk', (data) => {
       if (this.agentAssistant) {
         this.agentAssistant.handleChunk(data)
       }
     })
 
-    this.handleEvent('ai_done', (data) => {
+    this.handleEvent('agent_done', (data) => {
       if (this.agentAssistant) {
         this.agentAssistant.handleDone(data)
       }
     })
 
-    this.handleEvent('ai_error', (data) => {
+    this.handleEvent('agent_error', (data) => {
       if (this.agentAssistant) {
         this.agentAssistant.handleError(data)
       }

@@ -77,7 +77,7 @@ defmodule Jarga.Agents.UseCases.AIQuery do
       {:error, reason} ->
         # Send error to caller
         if node_id do
-          send(caller_pid, {:ai_error, node_id, reason})
+          send(caller_pid, {:agent_error, node_id, reason})
         else
           send(caller_pid, {:error, reason})
         end
@@ -91,7 +91,7 @@ defmodule Jarga.Agents.UseCases.AIQuery do
         error = "Query cancelled by user"
 
         if node_id do
-          send(caller_pid, {:ai_error, node_id, error})
+          send(caller_pid, {:agent_error, node_id, error})
         else
           send(caller_pid, {:error, error})
         end
@@ -101,7 +101,7 @@ defmodule Jarga.Agents.UseCases.AIQuery do
 
       {:chunk, chunk} ->
         if node_id do
-          send(caller_pid, {:ai_chunk, node_id, chunk})
+          send(caller_pid, {:agent_chunk, node_id, chunk})
         else
           send(caller_pid, {:chunk, chunk})
         end
@@ -111,14 +111,14 @@ defmodule Jarga.Agents.UseCases.AIQuery do
 
       {:done, full_response} ->
         if node_id do
-          send(caller_pid, {:ai_done, node_id, full_response})
+          send(caller_pid, {:agent_done, node_id, full_response})
         else
           send(caller_pid, {:done, full_response})
         end
 
       {:error, reason} ->
         if node_id do
-          send(caller_pid, {:ai_error, node_id, reason})
+          send(caller_pid, {:agent_error, node_id, reason})
         else
           send(caller_pid, {:error, reason})
         end
@@ -128,7 +128,7 @@ defmodule Jarga.Agents.UseCases.AIQuery do
         error = "AI query timed out after 60 seconds"
 
         if node_id do
-          send(caller_pid, {:ai_error, node_id, error})
+          send(caller_pid, {:agent_error, node_id, error})
         else
           send(caller_pid, {:error, error})
         end

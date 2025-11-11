@@ -253,8 +253,8 @@ defmodule JargaWeb.AppLive.Documents.Show do
   end
 
   @impl true
-  def handle_event("ai_query", %{"question" => question, "node_id" => node_id}, socket) do
-    # Spawn async process for streaming AI response
+  def handle_event("agent_query", %{"question" => question, "node_id" => node_id}, socket) do
+    # Spawn async process for streaming agent response
     parent = self()
 
     spawn_link(fn ->
@@ -278,9 +278,9 @@ defmodule JargaWeb.AppLive.Documents.Show do
   end
 
   @impl true
-  def handle_event("ai_cancel", %{"node_id" => node_id}, socket) do
+  def handle_event("agent_cancel", %{"node_id" => node_id}, socket) do
     # Look up the query PID for this node_id
-    active_queries = Map.get(socket.assigns, :active_ai_queries, %{})
+    active_queries = Map.get(socket.assigns, :active_agent_queries, %{})
 
     case Map.get(active_queries, node_id) do
       nil ->
@@ -293,7 +293,7 @@ defmodule JargaWeb.AppLive.Documents.Show do
 
         # Remove from tracking
         updated_queries = Map.delete(active_queries, node_id)
-        {:noreply, assign(socket, :active_ai_queries, updated_queries)}
+        {:noreply, assign(socket, :active_agent_queries, updated_queries)}
     end
   end
 
@@ -368,45 +368,45 @@ defmodule JargaWeb.AppLive.Documents.Show do
   @impl true
   def handle_info({:ai_query_started, node_id, query_pid}, socket) do
     # Track the query PID for potential cancellation
-    active_queries = Map.get(socket.assigns, :active_ai_queries, %{})
+    active_queries = Map.get(socket.assigns, :active_agent_queries, %{})
     updated_queries = Map.put(active_queries, node_id, query_pid)
 
-    {:noreply, assign(socket, :active_ai_queries, updated_queries)}
+    {:noreply, assign(socket, :active_agent_queries, updated_queries)}
   end
 
   @impl true
-  def handle_info({:ai_chunk, node_id, chunk}, socket) do
-    # Forward AI chunk to client via push_event
-    {:noreply, push_event(socket, "ai_chunk", %{node_id: node_id, chunk: chunk})}
+  def handle_info({:agent_chunk, node_id, chunk}, socket) do
+    # Forward agent chunk to client via push_event
+    {:noreply, push_event(socket, "agent_chunk", %{node_id: node_id, chunk: chunk})}
   end
 
   @impl true
-  def handle_info({:ai_done, node_id, response}, socket) do
+  def handle_info({:agent_done, node_id, response}, socket) do
     # Remove from tracking
-    active_queries = Map.get(socket.assigns, :active_ai_queries, %{})
+    active_queries = Map.get(socket.assigns, :active_agent_queries, %{})
     updated_queries = Map.delete(active_queries, node_id)
 
     socket =
       socket
-      |> assign(:active_ai_queries, updated_queries)
-      |> push_event("ai_done", %{node_id: node_id, response: response})
+      |> assign(:active_agent_queries, updated_queries)
+      |> push_event("agent_done", %{node_id: node_id, response: response})
 
     {:noreply, socket}
   end
 
   @impl true
-  def handle_info({:ai_error, node_id, reason}, socket) do
+  def handle_info({:agent_error, node_id, reason}, socket) do
     # Remove from tracking
-    active_queries = Map.get(socket.assigns, :active_ai_queries, %{})
+    active_queries = Map.get(socket.assigns, :active_agent_queries, %{})
     updated_queries = Map.delete(active_queries, node_id)
 
-    # Forward AI error to client
+    # Forward agent error to client
     error_message = if is_binary(reason), do: reason, else: inspect(reason)
 
     socket =
       socket
-      |> assign(:active_ai_queries, updated_queries)
-      |> push_event("ai_error", %{node_id: node_id, error: error_message})
+      |> assign(:active_agent_queries, updated_queries)
+      |> push_event("agent_error", %{node_id: node_id, error: error_message})
 
     {:noreply, socket}
   end

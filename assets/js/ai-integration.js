@@ -68,7 +68,7 @@ export class AgentAssistantManager {
     })
 
     // Send to LiveView
-    this.pushEvent('ai_query', {
+    this.pushEvent('agent_query', {
       question,
       node_id: nodeId
     })
@@ -257,7 +257,7 @@ export class AgentAssistantManager {
       this.activeQueries.delete(nodeId)
 
       // Send cancellation to server
-      this.pushEvent('ai_cancel', { node_id: nodeId })
+      this.pushEvent('agent_cancel', { node_id: nodeId })
     }
   }
 

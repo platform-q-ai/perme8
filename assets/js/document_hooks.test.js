@@ -214,7 +214,7 @@ describe('MilkdownEditor Hook', () => {
         hook.showStaleStateModal(freshDbState)
 
         expect(global.confirm).toHaveBeenCalledWith(
-          expect.stringContaining('This page has been edited elsewhere')
+          expect.stringContaining('This document has been edited elsewhere')
         )
       })
 

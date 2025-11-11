@@ -81,7 +81,7 @@ describe('AgentAssistantManager - Integration', () => {
 
       agentAssistant.handleQuery({ question, nodeId })
 
-      expect(mockPushEvent).toHaveBeenCalledWith('ai_query', {
+      expect(mockPushEvent).toHaveBeenCalledWith('agent_query', {
         question,
         node_id: nodeId
       })
