@@ -3,7 +3,7 @@ defmodule Jarga.Agents.UseCases.AgentQuery do
   Execute agent query within editor context and stream response.
 
   This use case handles in-editor agent requests by:
-  - Extracting page context from assigns
+  - Extracting document context from assigns
   - Building contextualized system message
   - Streaming LLM response to caller process
 
@@ -29,12 +29,12 @@ defmodule Jarga.Agents.UseCases.AgentQuery do
   @max_content_chars 3000
 
   @doc """
-  Executes an agent query with page context.
+  Executes an agent query with document context.
 
   ## Parameters
     - params: Map with required keys:
       - :question - The user's question
-      - :assigns - LiveView assigns containing page context
+      - :assigns - LiveView assigns containing document context
       - :node_id (optional) - Node ID for tracking
     - caller_pid: Process to receive streaming chunks
 
@@ -47,7 +47,7 @@ defmodule Jarga.Agents.UseCases.AgentQuery do
     assigns = Map.fetch!(params, :assigns)
     node_id = Map.get(params, :node_id)
 
-    # Extract page context
+    # Extract document context
     context = extract_context(assigns)
 
     # Build contextualized messages

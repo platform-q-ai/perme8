@@ -36,7 +36,7 @@ defmodule Jarga.Agents do
   @doc """
   Prepares chat context from LiveView assigns.
 
-  Extracts relevant page information (workspace, project, content) and
+  Extracts relevant document information (workspace, project, content) and
   formats it for use in chat interactions.
 
   ## Examples
@@ -138,7 +138,7 @@ defmodule Jarga.Agents do
   defdelegate delete_session(session_id, user_id), to: DeleteSession, as: :execute
 
   @doc """
-  Executes an AI query with page context and streams response.
+  Executes an AI query with document context and streams response.
 
   This is used for in-editor AI assistance. The AI response is streamed
   to the caller process as chunks.
@@ -146,7 +146,7 @@ defmodule Jarga.Agents do
   ## Parameters
     - params: Map with required keys:
       - :question - The user's question
-      - :assigns - LiveView assigns containing page context
+      - :assigns - LiveView assigns containing document context
       - :node_id (optional) - Node ID for tracking in the editor
     - caller_pid: Process to receive streaming chunks
 

@@ -2,13 +2,13 @@ defmodule Jarga.Agents.UseCases.PrepareContext do
   @moduledoc """
   Prepares chat context from LiveView assigns.
 
-  This use case extracts relevant information from the current page (workspace,
-  project, page content) and formats it for inclusion in LLM prompts.
+  This use case extracts relevant information from the current document (workspace,
+  project, document content) and formats it for inclusion in LLM prompts.
 
   ## Responsibilities
   - Extract user and workspace context
-  - Extract page content with truncation
-  - Build page URLs for citations
+  - Extract document content with truncation
+  - Build document URLs for citations
   - Format system messages for LLM
 
   ## Examples
@@ -25,18 +25,18 @@ defmodule Jarga.Agents.UseCases.PrepareContext do
   - `current_user` - User email
   - `current_workspace` - Workspace name
   - `current_project` - Project name
-  - `page_title` - Current page title
-  - `page_content` - Page markdown content (truncated)
-  - `page_info` - Page metadata for citations (%{page_title, page_url})
+  - `document_title` - Current document title
+  - `document_content` - Document markdown content (truncated)
+  - `document_info` - Document metadata for citations (%{document_title, document_url})
   """
   def execute(assigns) do
     context = %{
       current_user: get_nested(assigns, [:current_user, :email]),
       current_workspace: get_nested(assigns, [:current_workspace, :name]),
       current_project: get_nested(assigns, [:current_project, :name]),
-      page_title: assigns[:page_title],
-      page_content: extract_page_content(assigns),
-      page_info: extract_page_info(assigns)
+      document_title: assigns[:page_title],
+      document_content: extract_document_content(assigns),
+      document_info: extract_document_info(assigns)
     }
 
     {:ok, context}
@@ -65,15 +65,15 @@ defmodule Jarga.Agents.UseCases.PrepareContext do
       end
 
     context_parts =
-      if context[:page_title] do
-        context_parts ++ ["Page title: #{context.page_title}"]
+      if context[:document_title] do
+        context_parts ++ ["Document title: #{context.document_title}"]
       else
         context_parts
       end
 
     context_parts =
-      if context[:page_content] do
-        context_parts ++ ["Page content:\n#{context.page_content}"]
+      if context[:document_content] do
+        context_parts ++ ["Document content:\n#{context.document_content}"]
       else
         context_parts
       end
@@ -95,7 +95,7 @@ defmodule Jarga.Agents.UseCases.PrepareContext do
           Current context:
           #{context_text}
 
-          Answer questions based on the current page context. Be concise and helpful.
+          Answer questions based on the current document context. Be concise and helpful.
           """
         }
       end
@@ -105,8 +105,8 @@ defmodule Jarga.Agents.UseCases.PrepareContext do
 
   # Private functions
 
-  defp extract_page_content(assigns) do
-    # Check if we have a note (page content)
+  defp extract_document_content(assigns) do
+    # Check if we have a note (document content)
     case get_nested(assigns, [:note, :note_content]) do
       %{"markdown" => markdown} when is_binary(markdown) and markdown != "" ->
         # Get max chars from config, defaulting to 3000
@@ -118,24 +118,24 @@ defmodule Jarga.Agents.UseCases.PrepareContext do
     end
   end
 
-  defp extract_page_info(assigns) do
-    # Extract page metadata for source citations
+  defp extract_document_info(assigns) do
+    # Extract document metadata for source citations
     workspace_slug = get_nested(assigns, [:current_workspace, :slug])
-    page_slug = get_nested(assigns, [:page, :slug])
-    page_title = assigns[:page_title]
+    document_slug = get_nested(assigns, [:page, :slug])
+    document_title = assigns[:page_title]
 
-    # Build the page URL if we have the necessary information
-    page_url =
-      if workspace_slug && page_slug do
-        "/app/workspaces/#{workspace_slug}/documents/#{page_slug}"
+    # Build the document URL if we have the necessary information
+    document_url =
+      if workspace_slug && document_slug do
+        "/app/workspaces/#{workspace_slug}/documents/#{document_slug}"
       else
         nil
       end
 
-    if page_url && page_title do
+    if document_url && document_title do
       %{
-        page_title: page_title,
-        page_url: page_url
+        document_title: document_title,
+        document_url: document_url
       }
     else
       nil

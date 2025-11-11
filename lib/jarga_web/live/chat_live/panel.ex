@@ -3,7 +3,7 @@ defmodule JargaWeb.ChatLive.Panel do
   Global chat panel LiveView component.
 
   Provides an always-accessible chat interface that can be toggled from any page.
-  In PR #1, this chats with the current page content.
+  In PR #1, this chats with the current document content.
   Future PRs will add document chat functionality.
   """
   use JargaWeb, :live_component
@@ -101,7 +101,7 @@ defmodule JargaWeb.ChatLive.Panel do
   end
 
   defp handle_done(socket, content) do
-    {:ok, page_context} = Agents.prepare_chat_context(socket.assigns)
+    {:ok, document_context} = Agents.prepare_chat_context(socket.assigns)
 
     # Save assistant message to database if we have a session
     if socket.assigns.current_session_id do
@@ -116,7 +116,7 @@ defmodule JargaWeb.ChatLive.Panel do
       role: "assistant",
       content: content,
       timestamp: DateTime.utc_now(),
-      source: page_context[:page_info]
+      source: document_context[:document_info]
     }
 
     # Send for test assertions
@@ -205,8 +205,8 @@ defmodule JargaWeb.ChatLive.Panel do
       }
 
       # Prepare context from current assigns using Documents context
-      {:ok, page_context} = Agents.prepare_chat_context(socket.assigns)
-      {:ok, system_message} = Agents.build_system_message(page_context)
+      {:ok, document_context} = Agents.prepare_chat_context(socket.assigns)
+      {:ok, system_message} = Agents.build_system_message(document_context)
 
       # Build updated message list
       updated_messages = socket.assigns.messages ++ [user_message]
@@ -417,9 +417,9 @@ defmodule JargaWeb.ChatLive.Panel do
   defp get_nested(_, _), do: nil
 
   # Determines if insert link should be shown based on context
-  # Only show when on a page with a note attached
+  # Only show when on a document with a note attached
   defp should_show_insert?(assigns) do
-    Map.has_key?(assigns, :page) && !is_nil(assigns[:page]) &&
+    Map.has_key?(assigns, :document) && !is_nil(assigns[:document]) &&
       Map.has_key?(assigns, :note) && !is_nil(assigns[:note])
   end
 

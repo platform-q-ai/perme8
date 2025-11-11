@@ -19,12 +19,12 @@ defmodule Jarga.Agents.UseCases.PrepareContextTest do
       assert context.current_user == "user@example.com"
       assert context.current_workspace == "My Workspace"
       assert context.current_project == "My Project"
-      assert context.page_title == "Project Plan"
-      assert context.page_content == "# Project Plan\n\nThis is the content"
+      assert context.document_title == "Project Plan"
+      assert context.document_content == "# Project Plan\n\nThis is the content"
 
-      assert context.page_info == %{
-               page_title: "Project Plan",
-               page_url: "/app/workspaces/my-workspace/documents/project-plan"
+      assert context.document_info == %{
+               document_title: "Project Plan",
+               document_url: "/app/workspaces/my-workspace/documents/project-plan"
              }
     end
 
@@ -46,7 +46,7 @@ defmodule Jarga.Agents.UseCases.PrepareContextTest do
 
       assert {:ok, context} = PrepareContext.execute(assigns)
 
-      assert context.page_content == nil
+      assert context.document_content == nil
     end
 
     test "truncates page content to max_content_chars from config" do
@@ -61,7 +61,7 @@ defmodule Jarga.Agents.UseCases.PrepareContextTest do
 
       # Should be truncated to 3000 chars by default
       max_chars = Application.get_env(:jarga, :chat_context)[:max_content_chars] || 3000
-      assert String.length(context.page_content) == max_chars
+      assert String.length(context.document_content) == max_chars
     end
 
     test "handles empty note content" do
@@ -71,7 +71,7 @@ defmodule Jarga.Agents.UseCases.PrepareContextTest do
 
       assert {:ok, context} = PrepareContext.execute(assigns)
 
-      assert context.page_content == nil
+      assert context.document_content == nil
     end
 
     test "handles missing page info when workspace slug is missing" do
@@ -83,7 +83,7 @@ defmodule Jarga.Agents.UseCases.PrepareContextTest do
 
       assert {:ok, context} = PrepareContext.execute(assigns)
 
-      assert context.page_info == nil
+      assert context.document_info == nil
     end
 
     test "handles missing page info when page slug is missing" do
@@ -95,7 +95,7 @@ defmodule Jarga.Agents.UseCases.PrepareContextTest do
 
       assert {:ok, context} = PrepareContext.execute(assigns)
 
-      assert context.page_info == nil
+      assert context.document_info == nil
     end
 
     test "builds correct page URL from workspace and page slugs" do
@@ -107,9 +107,9 @@ defmodule Jarga.Agents.UseCases.PrepareContextTest do
 
       assert {:ok, context} = PrepareContext.execute(assigns)
 
-      assert context.page_info == %{
-               page_title: "Roadmap 2024",
-               page_url: "/app/workspaces/acme-corp/documents/roadmap-2024"
+      assert context.document_info == %{
+               document_title: "Roadmap 2024",
+               document_url: "/app/workspaces/acme-corp/documents/roadmap-2024"
              }
     end
   end
@@ -119,8 +119,8 @@ defmodule Jarga.Agents.UseCases.PrepareContextTest do
       context = %{
         current_workspace: "My Workspace",
         current_project: "My Project",
-        page_title: "Page Title",
-        page_content: "Page content here"
+        document_title: "Document Title",
+        document_content: "Document content here"
       }
 
       assert {:ok, message} = PrepareContext.build_system_message(context)
@@ -128,8 +128,8 @@ defmodule Jarga.Agents.UseCases.PrepareContextTest do
       assert message.role == "system"
       assert message.content =~ "My Workspace"
       assert message.content =~ "My Project"
-      assert message.content =~ "Page Title"
-      assert message.content =~ "Page content here"
+      assert message.content =~ "Document Title"
+      assert message.content =~ "Document content here"
       assert message.content =~ "Jarga"
     end
 
@@ -146,8 +146,8 @@ defmodule Jarga.Agents.UseCases.PrepareContextTest do
       context = %{
         current_workspace: "Workspace",
         current_project: nil,
-        page_title: nil,
-        page_content: nil
+        document_title: nil,
+        document_content: nil
       }
 
       assert {:ok, message} = PrepareContext.build_system_message(context)
