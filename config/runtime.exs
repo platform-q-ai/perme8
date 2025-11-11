@@ -69,7 +69,7 @@ if config_env() == :prod do
       You can generate one by calling: mix phx.gen.secret
       """
 
-  host = System.get_env("RENDER_EXTERNAL_HOSTNAME") || System.get_env("PHX_HOST") || "localhost"
+  host = System.get_env("PHX_HOST") || "localhost"
   port = String.to_integer(System.get_env("PORT") || "4000")
 
   config :jarga, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
