@@ -68,12 +68,6 @@ jobs:
         cd assets
         npm ci
 
-    - name: Compile application with warnings as errors
-      run: mix compile --warnings-as-errors
-
-    - name: Run Credo code quality checks
-      run: mix credo --strict
-
     - name: Create test database
       run: MIX_ENV=test mix ecto.create
       env:
@@ -84,15 +78,10 @@ jobs:
       env:
         DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jarga_test
 
-    - name: Run Elixir tests
-      run: mix test
+    - name: Run precommit checks
+      run: mix precommit
       env:
         DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jarga_test
-
-    - name: Run JavaScript tests
-      run: |
-        cd assets
-        npm test
 
   deploy:
     name: Deploy to Render

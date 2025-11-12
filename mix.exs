@@ -135,28 +135,18 @@ defmodule Jarga.MixProject do
         "esbuild jarga --minify",
         "phx.digest"
       ],
-      compile: compile_with_credo(Mix.env()),
+      compile: ["compile"],
       test: ["compile", "test"],
       precommit: [
         "compile --warning-as-errors",
         "deps.unlock --unused",
         "format",
         "credo --strict",
+        "cmd npm run lint --prefix assets",
         "cmd npm test --prefix assets",
         "assets.deploy",
         "coveralls.html"
       ]
     ]
-  end
-
-  # Run Credo after compilation in dev and test, skip in prod
-  defp compile_with_credo(:prod), do: ["compile"]
-
-  defp compile_with_credo(_env) do
-    if System.get_env("SKIP_CREDO_CHECK") == "1" do
-      ["compile"]
-    else
-      ["compile", "credo.check"]
-    end
   end
 end

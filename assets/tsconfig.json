@@ -22,11 +22,33 @@
 {
   "compilerOptions": {
     "baseUrl": ".",
-    "paths": {
-      "*": ["../deps/*"]
-    },
     "allowJs": true,
-    "noEmit": true
+    "noEmit": true,
+
+    // Strict type checking
+    "strict": true,
+    "noImplicitAny": true,
+
+    // Additional strict checks
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+
+    // Module resolution
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+
+    // Target modern JS
+    "target": "ES2020",
+    "module": "ESNext",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+
+    // Type roots for Phoenix libraries
+    "typeRoots": ["./js/types", "./node_modules/@types"]
   },
-  "include": ["js/**/*"]
+  "include": ["js/**/*"],
+  "exclude": ["node_modules"]
 }

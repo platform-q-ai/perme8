@@ -523,6 +523,7 @@ defmodule JargaWeb.AppLive.Documents.Show do
             data-yjs-state={if @note.yjs_state, do: Base.encode64(@note.yjs_state), else: ""}
             data-initial-content={get_initial_markdown(@note)}
             data-readonly={if @readonly, do: "true", else: "false"}
+            data-user-id={@user_id}
             data-user-name={format_user_name(@current_scope.user)}
             class={[
               "flex-1 min-h-screen cursor-text",
