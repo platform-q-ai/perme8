@@ -46,7 +46,8 @@ describe('MarkdownContentInserter', () => {
     } as any
 
     mockParser = {
-      parse: vi.fn()
+      parse: vi.fn(),
+      parseInline: vi.fn()
     }
 
     inserter = new MarkdownContentInserter(
@@ -59,13 +60,12 @@ describe('MarkdownContentInserter', () => {
     test('parses markdown and inserts nodes at cursor', () => {
       const markdown = '# Heading'
       const mockNode = { nodeSize: 10 } as ProseMirrorNode
-      const parsed = { content: [mockNode] }
 
-      vi.mocked(mockParser.parse).mockReturnValue(parsed)
+      vi.mocked(mockParser.parseInline).mockReturnValue([mockNode])
 
       inserter.insertMarkdown(markdown)
 
-      expect(mockParser.parse).toHaveBeenCalledWith(markdown)
+      expect(mockParser.parseInline).toHaveBeenCalledWith(markdown)
       expect(mockView.state!.tr.insert).toHaveBeenCalledWith(5, mockNode)
       expect(mockDispatch).toHaveBeenCalled()
       expect(mockFocus).toHaveBeenCalled()
@@ -75,9 +75,8 @@ describe('MarkdownContentInserter', () => {
       const markdown = '# Heading\n\nParagraph'
       const mockNode1 = { nodeSize: 10 } as ProseMirrorNode
       const mockNode2 = { nodeSize: 15 } as ProseMirrorNode
-      const parsed = { content: [mockNode1, mockNode2] }
 
-      vi.mocked(mockParser.parse).mockReturnValue(parsed)
+      vi.mocked(mockParser.parseInline).mockReturnValue([mockNode1, mockNode2])
 
       inserter.insertMarkdown(markdown)
 
@@ -90,7 +89,6 @@ describe('MarkdownContentInserter', () => {
     test('deletes selection before inserting when selection is not empty', () => {
       const markdown = '# Heading'
       const mockNode = { nodeSize: 10 } as ProseMirrorNode
-      const parsed = { content: [mockNode] }
 
       // Create a new mock selection with non-empty range
       const mockNonEmptySelection = {
@@ -105,7 +103,7 @@ describe('MarkdownContentInserter', () => {
         tr: mockView.state!.tr
       } as any
 
-      vi.mocked(mockParser.parse).mockReturnValue(parsed)
+      vi.mocked(mockParser.parseInline).mockReturnValue([mockNode])
 
       inserter.insertMarkdown(markdown)
 
@@ -113,9 +111,9 @@ describe('MarkdownContentInserter', () => {
       expect(mockView.state!.tr.insert).toHaveBeenCalledWith(5, mockNode)
     })
 
-    test('does nothing when parser returns null', () => {
+    test('does nothing when parser returns empty array', () => {
       const markdown = 'invalid'
-      vi.mocked(mockParser.parse).mockReturnValue(null)
+      vi.mocked(mockParser.parseInline).mockReturnValue([])
 
       const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
@@ -129,28 +127,12 @@ describe('MarkdownContentInserter', () => {
       consoleSpy.mockRestore()
     })
 
-    test('does nothing when parser returns empty content', () => {
-      const markdown = ''
-      vi.mocked(mockParser.parse).mockReturnValue({ content: [] })
-
-      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
-
-      inserter.insertMarkdown(markdown)
-
-      expect(mockDispatch).not.toHaveBeenCalled()
-      expect(consoleSpy).toHaveBeenCalledWith(
-        '[MarkdownContentInserter] Failed to parse markdown'
-      )
-
-      consoleSpy.mockRestore()
-    })
 
     test('moves cursor to end of inserted content', () => {
       const markdown = '# Heading'
       const mockNode = { nodeSize: 10 } as ProseMirrorNode
-      const parsed = { content: [mockNode] }
 
-      vi.mocked(mockParser.parse).mockReturnValue(parsed)
+      vi.mocked(mockParser.parseInline).mockReturnValue([mockNode])
 
       inserter.insertMarkdown(markdown)
 

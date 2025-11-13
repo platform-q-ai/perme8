@@ -21,4 +21,10 @@ export interface IMarkdownParserAdapter {
    * Returns the parsed content or null on error
    */
   parse(markdown: string): ParsedDocument | null
+
+  /**
+   * Parse inline markdown content (without block-level wrapping)
+   * Returns array of inline ProseMirror nodes
+   */
+  parseInline(markdown: string): ProseMirrorNode[]
 }

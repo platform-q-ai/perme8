@@ -48,7 +48,8 @@ describe('AgentNodeAdapter', () => {
 
     // Create mock parser adapter
     mockParser = {
-      parse: vi.fn()
+      parse: vi.fn(),
+      parseInline: vi.fn()
     }
 
     // Create initial state

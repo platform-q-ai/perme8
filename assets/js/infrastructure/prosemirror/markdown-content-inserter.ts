@@ -18,9 +18,9 @@ export class MarkdownContentInserter implements IMarkdownContentInserter {
   ) {}
 
   insertMarkdown(markdown: string): void {
-    // Parse markdown into ProseMirror nodes
-    const parsed = this.parser.parse(markdown)
-    if (!parsed || !parsed.content || parsed.content.length === 0) {
+    // Parse markdown as inline content to avoid creating new paragraphs
+    const nodes = this.parser.parseInline(markdown)
+    if (!nodes || nodes.length === 0) {
       console.warn('[MarkdownContentInserter] Failed to parse markdown')
       return
     }
@@ -36,7 +36,6 @@ export class MarkdownContentInserter implements IMarkdownContentInserter {
 
     // Insert parsed nodes at the cursor position
     let insertPos = selection.from
-    const nodes = parsed.content
 
     nodes.forEach((node: ProseMirrorNode) => {
       tr.insert(insertPos, node)
