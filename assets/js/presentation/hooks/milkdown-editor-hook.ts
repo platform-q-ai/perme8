@@ -20,31 +20,35 @@
  * @module presentation/hooks
  */
 
-import { ViewHook } from 'phoenix_live_view'
-import { Editor, rootCtx, defaultValueCtx, editorViewCtx } from '@milkdown/core'
-import { commonmark } from '@milkdown/preset-commonmark'
-import { gfm } from '@milkdown/preset-gfm'
-import { nord } from '@milkdown/theme-nord'
-import { InitializeCollaborativeEditor } from '../../application/use-cases/initialize-collaborative-editor'
-import { HandleDocumentSync } from '../../application/use-cases/handle-document-sync'
-import { HandleAwarenessSync } from '../../application/use-cases/handle-awareness-sync'
-import type { YjsDocumentAdapter } from '../../infrastructure/yjs/yjs-document-adapter'
-import type { YjsAwarenessAdapter } from '../../infrastructure/yjs/yjs-awareness-adapter'
-import type { MilkdownEditorAdapter } from '../../infrastructure/milkdown/milkdown-editor-adapter'
-import type { ProseMirrorCollaborationAdapter } from '../../infrastructure/prosemirror/prosemirror-collaboration-adapter'
+import { ViewHook } from "phoenix_live_view";
+import {
+  Editor,
+  rootCtx,
+  defaultValueCtx,
+  editorViewCtx,
+} from "@milkdown/core";
+import { commonmark } from "@milkdown/preset-commonmark";
+import { gfm } from "@milkdown/preset-gfm";
+import { nord } from "@milkdown/theme-nord";
+import { InitializeCollaborativeEditor } from "../../application/use-cases/initialize-collaborative-editor";
+import { HandleDocumentSync } from "../../application/use-cases/handle-document-sync";
+import { HandleAwarenessSync } from "../../application/use-cases/handle-awareness-sync";
+import type { YjsDocumentAdapter } from "../../infrastructure/yjs/yjs-document-adapter";
+import type { YjsAwarenessAdapter } from "../../infrastructure/yjs/yjs-awareness-adapter";
+import type { MilkdownEditorAdapter } from "../../infrastructure/milkdown/milkdown-editor-adapter";
+import type { ProseMirrorCollaborationAdapter } from "../../infrastructure/prosemirror/prosemirror-collaboration-adapter";
 // Import agent assistance components
-import { AgentQueryAdapter } from '../../infrastructure/prosemirror/agent-query-adapter'
-import { AgentNodeAdapter } from '../../infrastructure/prosemirror/agent-node-adapter'
-import { MarkdownParserAdapter } from '../../infrastructure/milkdown/markdown-parser-adapter'
-import { MarkdownContentInserter } from '../../infrastructure/prosemirror/markdown-content-inserter'
-import { HandleAgentChunk } from '../../application/use-cases/handle-agent-chunk'
-import { HandleAgentCompletion } from '../../application/use-cases/handle-agent-completion'
-import { HandleAgentError } from '../../application/use-cases/handle-agent-error'
-import { InsertMarkdownContent } from '../../application/use-cases/insert-markdown-content'
-import { AgentQuery } from '../../domain/entities/agent-query'
-import { NodeId } from '../../domain/value-objects/node-id'
-import { parserCtx } from '@milkdown/core'
-import { logger } from '../../infrastructure/browser/logger'
+import { AgentQueryAdapter } from "../../infrastructure/prosemirror/agent-query-adapter";
+import { AgentNodeAdapter } from "../../infrastructure/prosemirror/agent-node-adapter";
+import { MilkdownParserAdapter } from "../../infrastructure/milkdown/milkdown-parser-adapter";
+import { MarkdownContentInserter } from "../../infrastructure/prosemirror/markdown-content-inserter";
+import { HandleAgentChunk } from "../../application/use-cases/handle-agent-chunk";
+import { HandleAgentCompletion } from "../../application/use-cases/handle-agent-completion";
+import { HandleAgentError } from "../../application/use-cases/handle-agent-error";
+import { InsertMarkdownContent } from "../../application/use-cases/insert-markdown-content";
+import { AgentQuery } from "../../domain/entities/agent-query";
+import { NodeId } from "../../domain/value-objects/node-id";
+import { logger } from "../../infrastructure/browser/logger";
 
 /**
  * Clean Architecture implementation of Milkdown editor hook
@@ -58,35 +62,35 @@ import { logger } from '../../infrastructure/browser/logger'
  */
 export class MilkdownEditorHook extends ViewHook {
   // Adapters (created in mounted)
-  private yjsDocumentAdapter?: YjsDocumentAdapter
-  private yjsAwarenessAdapter?: YjsAwarenessAdapter
-  private milkdownAdapter?: MilkdownEditorAdapter
-  private collaborationAdapter?: ProseMirrorCollaborationAdapter
+  private yjsDocumentAdapter?: YjsDocumentAdapter;
+  private yjsAwarenessAdapter?: YjsAwarenessAdapter;
+  private milkdownAdapter?: MilkdownEditorAdapter;
+  private collaborationAdapter?: ProseMirrorCollaborationAdapter;
 
   // Agent adapters
-  private agentQueryAdapter?: AgentQueryAdapter
-  private agentNodeAdapter?: AgentNodeAdapter
-  private markdownInserter?: MarkdownContentInserter
+  private agentQueryAdapter?: AgentQueryAdapter;
+  private agentNodeAdapter?: AgentNodeAdapter;
+  private markdownInserter?: MarkdownContentInserter;
 
   // Use cases
-  private initializeEditor?: InitializeCollaborativeEditor
-  private handleDocumentSync?: HandleDocumentSync
-  private handleAwarenessSync?: HandleAwarenessSync
+  private initializeEditor?: InitializeCollaborativeEditor;
+  private handleDocumentSync?: HandleDocumentSync;
+  private handleAwarenessSync?: HandleAwarenessSync;
 
   // Agent use cases
-  private handleAgentChunkUseCase?: HandleAgentChunk
-  private handleAgentCompletionUseCase?: HandleAgentCompletion
-  private handleAgentErrorUseCase?: HandleAgentError
-  private insertMarkdownContentUseCase?: InsertMarkdownContent
+  private handleAgentChunkUseCase?: HandleAgentChunk;
+  private handleAgentCompletionUseCase?: HandleAgentCompletion;
+  private handleAgentErrorUseCase?: HandleAgentError;
+  private insertMarkdownContentUseCase?: InsertMarkdownContent;
 
   // Cleanup functions
-  private cleanupDocumentSync?: () => void
-  private cleanupAwarenessSync?: () => void
+  private cleanupDocumentSync?: () => void;
+  private cleanupAwarenessSync?: () => void;
 
   // Configuration
-  private isReadonly = false
-  private userId = ''
-  private userName = ''
+  private isReadonly = false;
+  private userId = "";
+  private userName = "";
 
   /**
    * Phoenix hook lifecycle: mounted
@@ -100,28 +104,31 @@ export class MilkdownEditorHook extends ViewHook {
    */
   mounted(): void {
     // Step 1: Read configuration from data attributes
-    const yjsState = this.el.dataset.yjsState || ''
-    const initialContent = this.el.dataset.initialContent || ''
-    this.isReadonly = this.el.dataset.readonly === 'true'
-    this.userName = this.el.dataset.userName || ''
-    this.userId = this.el.dataset.userId || ''
+    const yjsState = this.el.dataset.yjsState || "";
+    const initialContent = this.el.dataset.initialContent || "";
+    this.isReadonly = this.el.dataset.readonly === "true";
+    this.userName = this.el.dataset.userName || "";
+    this.userId = this.el.dataset.userId || "";
 
     // Step 1.1: Validate required userId
-    if (!this.userId || this.userId.trim() === '') {
-      logger.error('MilkdownEditorHook', 'Missing required userId data attribute')
-      return
+    if (!this.userId || this.userId.trim() === "") {
+      logger.error(
+        "MilkdownEditorHook",
+        "Missing required userId data attribute",
+      );
+      return;
     }
 
     // Step 2: Handle readonly mode (simpler case)
     if (this.isReadonly) {
-      this.mountReadonlyEditor(initialContent)
-      return
+      this.mountReadonlyEditor(initialContent);
+      return;
     }
 
     // Step 3: Create use cases
-    this.initializeEditor = new InitializeCollaborativeEditor()
-    this.handleDocumentSync = new HandleDocumentSync()
-    this.handleAwarenessSync = new HandleAwarenessSync()
+    this.initializeEditor = new InitializeCollaborativeEditor();
+    this.handleDocumentSync = new HandleDocumentSync();
+    this.handleAwarenessSync = new HandleAwarenessSync();
 
     // Step 4: Execute initialization use case
     this.initializeEditor
@@ -133,43 +140,47 @@ export class MilkdownEditorHook extends ViewHook {
         onAgentQuery: (data) => {
           // Track the query in the adapter so we can find it when agent completes
           if (this.agentQueryAdapter) {
-            const nodeId = new NodeId(data.nodeId)
-            const query = AgentQuery.createWithNodeId(nodeId, data.question)
-            this.agentQueryAdapter.add(query)
+            const nodeId = new NodeId(data.nodeId);
+            const query = AgentQuery.createWithNodeId(nodeId, data.question);
+            this.agentQueryAdapter.add(query);
           }
 
           // Push agent query to LiveView server
-          this.pushEvent('agent_query', {
+          this.pushEvent("agent_query", {
             question: data.question,
-            node_id: data.nodeId
-          })
-        }
+            node_id: data.nodeId,
+          });
+        },
       })
       .then((result) => {
         // Store adapters for lifecycle management
-        this.yjsDocumentAdapter = result.yjsDocumentAdapter
-        this.yjsAwarenessAdapter = result.yjsAwarenessAdapter
-        this.milkdownAdapter = result.milkdownAdapter
-        this.collaborationAdapter = result.collaborationAdapter
+        this.yjsDocumentAdapter = result.yjsDocumentAdapter;
+        this.yjsAwarenessAdapter = result.yjsAwarenessAdapter;
+        this.milkdownAdapter = result.milkdownAdapter;
+        this.collaborationAdapter = result.collaborationAdapter;
 
         // Step 5: Set up agent assistance
-        this.setupAgentAssistance()
+        this.setupAgentAssistance();
 
         // Step 6: Set up document sync
-        this.setupDocumentSync()
+        this.setupDocumentSync();
 
         // Step 7: Set up awareness sync
-        this.setupAwarenessSync()
+        this.setupAwarenessSync();
 
         // Step 8: Wire up LiveView events
-        this.wireUpLiveViewEvents()
+        this.wireUpLiveViewEvents();
 
         // Step 9: Set up additional UI interactions
-        this.setupEditorInteractions()
+        this.setupEditorInteractions();
       })
       .catch((error) => {
-        logger.error('MilkdownEditorHook', 'Failed to initialize collaborative editor', error)
-      })
+        logger.error(
+          "MilkdownEditorHook",
+          "Failed to initialize collaborative editor",
+          error,
+        );
+      });
   }
 
   /**
@@ -179,31 +190,37 @@ export class MilkdownEditorHook extends ViewHook {
    */
   private mountReadonlyEditor(initialContent: string): void {
     // For readonly, we just need to render the content with editable set to false
-    const editor = Editor.make()
-      .config((ctx) => {
-        ctx.set(rootCtx, this.el)
-        ctx.set(defaultValueCtx, initialContent || '')
-        // Apply theme configuration
-        nord(ctx)
-      })
+    const editor = Editor.make().config((ctx) => {
+      ctx.set(rootCtx, this.el);
+      ctx.set(defaultValueCtx, initialContent || "");
+      // Apply theme configuration
+      nord(ctx);
+    });
 
     // Add markdown plugins
-    editor.use(commonmark)
-    editor.use(gfm)
+    editor.use(commonmark);
+    editor.use(gfm);
 
     // Create editor
-    editor.create().then(() => {
-      // After editor is created, set it to non-editable
-      editor.action((ctx) => {
-        const view = ctx.get(editorViewCtx)
-        // Update the view to be non-editable
-        view.setProps({
-          editable: () => false
-        })
+    editor
+      .create()
+      .then(() => {
+        // After editor is created, set it to non-editable
+        editor.action((ctx) => {
+          const view = ctx.get(editorViewCtx);
+          // Update the view to be non-editable
+          view.setProps({
+            editable: () => false,
+          });
+        });
       })
-    }).catch((error) => {
-      logger.error('MilkdownEditorHook', 'Failed to create readonly editor', error)
-    })
+      .catch((error) => {
+        logger.error(
+          "MilkdownEditorHook",
+          "Failed to create readonly editor",
+          error,
+        );
+      });
   }
 
   /**
@@ -213,51 +230,61 @@ export class MilkdownEditorHook extends ViewHook {
    */
   private setupAgentAssistance(): void {
     if (!this.milkdownAdapter || !this.collaborationAdapter) {
-      logger.warn('MilkdownEditorHook', 'Cannot setup agent assistance without adapters')
-      return
+      logger.warn(
+        "MilkdownEditorHook",
+        "Cannot setup agent assistance without adapters",
+      );
+      return;
     }
 
-    const view = this.milkdownAdapter.getEditorView()
+    const view = this.milkdownAdapter.getEditorView();
     if (!view) {
-      logger.warn('MilkdownEditorHook', 'Cannot setup agent assistance without editor view')
-      return
+      logger.warn(
+        "MilkdownEditorHook",
+        "Cannot setup agent assistance without editor view",
+      );
+      return;
     }
 
-    const schema = view.state.schema
+    const schema = view.state.schema;
 
     // Create markdown parser adapter
-    let parserAdapter: MarkdownParserAdapter | null = null
+    let parserAdapter: MilkdownParserAdapter | null = null;
     this.milkdownAdapter.action((ctx) => {
-      const parser = ctx.get(parserCtx)
-      parserAdapter = new MarkdownParserAdapter(parser)
-    })
+      parserAdapter = new MilkdownParserAdapter(ctx);
+    });
 
     if (!parserAdapter) {
-      logger.warn('MilkdownEditorHook', 'Cannot setup agent assistance without parser')
-      return
+      logger.warn(
+        "MilkdownEditorHook",
+        "Cannot setup agent assistance without parser",
+      );
+      return;
     }
 
     // Create agent adapters
-    this.agentQueryAdapter = new AgentQueryAdapter()
-    this.agentNodeAdapter = new AgentNodeAdapter(view, schema, parserAdapter)
-    this.markdownInserter = new MarkdownContentInserter(view, parserAdapter)
+    this.agentQueryAdapter = new AgentQueryAdapter();
+    this.agentNodeAdapter = new AgentNodeAdapter(view, schema, parserAdapter);
+    this.markdownInserter = new MarkdownContentInserter(view, parserAdapter);
 
     // Create agent use cases
     this.handleAgentChunkUseCase = new HandleAgentChunk(
       this.agentNodeAdapter,
-      this.agentQueryAdapter
-    )
+      this.agentQueryAdapter,
+    );
     this.handleAgentCompletionUseCase = new HandleAgentCompletion(
       this.agentQueryAdapter,
-      this.agentNodeAdapter
-    )
+      this.agentNodeAdapter,
+    );
     this.handleAgentErrorUseCase = new HandleAgentError(
       this.agentQueryAdapter,
-      this.agentNodeAdapter
-    )
+      this.agentNodeAdapter,
+    );
 
     // Create markdown insertion use case
-    this.insertMarkdownContentUseCase = new InsertMarkdownContent(this.markdownInserter)
+    this.insertMarkdownContentUseCase = new InsertMarkdownContent(
+      this.markdownInserter,
+    );
   }
 
   /**
@@ -266,8 +293,12 @@ export class MilkdownEditorHook extends ViewHook {
    * Uses HandleDocumentSync use case to coordinate document changes.
    */
   private setupDocumentSync(): void {
-    if (!this.handleDocumentSync || !this.yjsDocumentAdapter || !this.milkdownAdapter) {
-      return
+    if (
+      !this.handleDocumentSync ||
+      !this.yjsDocumentAdapter ||
+      !this.milkdownAdapter
+    ) {
+      return;
     }
 
     this.cleanupDocumentSync = this.handleDocumentSync.execute({
@@ -276,14 +307,14 @@ export class MilkdownEditorHook extends ViewHook {
       userId: this.userId,
       onLocalChange: (update, markdown, completeState) => {
         // Push to LiveView server
-        this.pushEvent('yjs_update', {
+        this.pushEvent("yjs_update", {
           update,
           markdown,
           complete_state: completeState,
-          user_id: this.userId
-        })
-      }
-    })
+          user_id: this.userId,
+        });
+      },
+    });
   }
 
   /**
@@ -293,7 +324,7 @@ export class MilkdownEditorHook extends ViewHook {
    */
   private setupAwarenessSync(): void {
     if (!this.handleAwarenessSync || !this.yjsAwarenessAdapter) {
-      return
+      return;
     }
 
     this.cleanupAwarenessSync = this.handleAwarenessSync.execute({
@@ -301,12 +332,12 @@ export class MilkdownEditorHook extends ViewHook {
       userId: this.userId,
       onLocalChange: (update) => {
         // Push to LiveView server
-        this.pushEvent('awareness_update', {
+        this.pushEvent("awareness_update", {
           update,
-          user_id: this.userId
-        })
-      }
-    })
+          user_id: this.userId,
+        });
+      },
+    });
   }
 
   /**
@@ -316,38 +347,53 @@ export class MilkdownEditorHook extends ViewHook {
    */
   private wireUpLiveViewEvents(): void {
     // Handle remote document updates
-    this.handleEvent('yjs_update', ({ update }: { update: string }) => {
+    this.handleEvent("yjs_update", ({ update }: { update: string }) => {
       if (this.handleDocumentSync && this.yjsDocumentAdapter) {
-        this.handleDocumentSync.applyRemoteUpdate(this.yjsDocumentAdapter, update)
+        this.handleDocumentSync.applyRemoteUpdate(
+          this.yjsDocumentAdapter,
+          update,
+        );
       }
-    })
+    });
 
     // Handle remote awareness updates
-    this.handleEvent('awareness_update', ({ update }: { update: string }) => {
+    this.handleEvent("awareness_update", ({ update }: { update: string }) => {
       if (this.handleAwarenessSync && this.yjsAwarenessAdapter) {
-        this.handleAwarenessSync.applyRemoteUpdate(this.yjsAwarenessAdapter, update)
+        this.handleAwarenessSync.applyRemoteUpdate(
+          this.yjsAwarenessAdapter,
+          update,
+        );
       }
-    })
+    });
 
     // Handle insert-text events from chat
-    this.handleEvent('insert-text', ({ content }: { content: string }) => {
-      this.handleInsertText(content)
-    })
+    this.handleEvent("insert-text", ({ content }: { content: string }) => {
+      this.handleInsertText(content);
+    });
 
     // Handle agent streaming chunk
-    this.handleEvent('agent_chunk', ({ node_id, chunk }: { node_id: string; chunk: string }) => {
-      this.handleAgentChunk(node_id, chunk)
-    })
+    this.handleEvent(
+      "agent_chunk",
+      ({ node_id, chunk }: { node_id: string; chunk: string }) => {
+        this.handleAgentChunk(node_id, chunk);
+      },
+    );
 
     // Handle agent completion
-    this.handleEvent('agent_done', ({ node_id, response }: { node_id: string; response: string }) => {
-      this.handleAgentDone(node_id, response)
-    })
+    this.handleEvent(
+      "agent_done",
+      ({ node_id, response }: { node_id: string; response: string }) => {
+        this.handleAgentDone(node_id, response);
+      },
+    );
 
     // Handle agent error
-    this.handleEvent('agent_error', ({ node_id, error }: { node_id: string; error: string }) => {
-      this.handleAgentError(node_id, error)
-    })
+    this.handleEvent(
+      "agent_error",
+      ({ node_id, error }: { node_id: string; error: string }) => {
+        this.handleAgentError(node_id, error);
+      },
+    );
   }
 
   /**
@@ -356,10 +402,10 @@ export class MilkdownEditorHook extends ViewHook {
    * Add UI enhancements like task list clicking, focus handling, etc.
    */
   private setupEditorInteractions(): void {
-    if (!this.milkdownAdapter) return
+    if (!this.milkdownAdapter) return;
 
-    const view = this.milkdownAdapter.getEditorView()
-    if (!view) return
+    const view = this.milkdownAdapter.getEditorView();
+    if (!view) return;
 
     // Add task list checkbox click handler
     // Add click-to-focus handler
@@ -376,18 +422,25 @@ export class MilkdownEditorHook extends ViewHook {
    */
   private handleInsertText(content: string): void {
     if (!this.insertMarkdownContentUseCase) {
-      logger.warn('MilkdownEditorHook', 'Markdown insertion use case not initialized')
-      return
+      logger.warn(
+        "MilkdownEditorHook",
+        "Markdown insertion use case not initialized",
+      );
+      return;
     }
 
     if (!content || content.trim().length === 0) {
-      return
+      return;
     }
 
     try {
-      this.insertMarkdownContentUseCase.execute({ markdown: content })
+      this.insertMarkdownContentUseCase.execute({ markdown: content });
     } catch (error) {
-      logger.error('MilkdownEditorHook', 'Failed to insert markdown content', error)
+      logger.error(
+        "MilkdownEditorHook",
+        "Failed to insert markdown content",
+        error,
+      );
     }
   }
 
@@ -401,14 +454,14 @@ export class MilkdownEditorHook extends ViewHook {
    */
   private handleAgentChunk(nodeId: string, chunk: string): void {
     if (!this.handleAgentChunkUseCase) {
-      logger.warn('MilkdownEditorHook', 'Agent chunk use case not initialized')
-      return
+      logger.warn("MilkdownEditorHook", "Agent chunk use case not initialized");
+      return;
     }
 
     try {
-      this.handleAgentChunkUseCase.execute({ nodeId, chunk })
+      this.handleAgentChunkUseCase.execute({ nodeId, chunk });
     } catch (error) {
-      logger.error('MilkdownEditorHook', 'Failed to handle agent chunk', error)
+      logger.error("MilkdownEditorHook", "Failed to handle agent chunk", error);
     }
   }
 
@@ -422,14 +475,21 @@ export class MilkdownEditorHook extends ViewHook {
    */
   private handleAgentDone(nodeId: string, response: string): void {
     if (!this.handleAgentCompletionUseCase) {
-      logger.warn('MilkdownEditorHook', 'Agent completion use case not initialized')
-      return
+      logger.warn(
+        "MilkdownEditorHook",
+        "Agent completion use case not initialized",
+      );
+      return;
     }
 
     try {
-      this.handleAgentCompletionUseCase.execute({ nodeId, response })
+      this.handleAgentCompletionUseCase.execute({ nodeId, response });
     } catch (error) {
-      logger.error('MilkdownEditorHook', 'Failed to handle agent completion', error)
+      logger.error(
+        "MilkdownEditorHook",
+        "Failed to handle agent completion",
+        error,
+      );
     }
   }
 
@@ -443,14 +503,14 @@ export class MilkdownEditorHook extends ViewHook {
    */
   private handleAgentError(nodeId: string, error: string): void {
     if (!this.handleAgentErrorUseCase) {
-      logger.warn('MilkdownEditorHook', 'Agent error use case not initialized')
-      return
+      logger.warn("MilkdownEditorHook", "Agent error use case not initialized");
+      return;
     }
 
     try {
-      this.handleAgentErrorUseCase.execute({ nodeId, error })
+      this.handleAgentErrorUseCase.execute({ nodeId, error });
     } catch (error) {
-      logger.error('MilkdownEditorHook', 'Failed to handle agent error', error)
+      logger.error("MilkdownEditorHook", "Failed to handle agent error", error);
     }
   }
 
@@ -463,42 +523,42 @@ export class MilkdownEditorHook extends ViewHook {
   destroyed(): void {
     // Clean up sync listeners
     if (this.cleanupDocumentSync) {
-      this.cleanupDocumentSync()
+      this.cleanupDocumentSync();
     }
     if (this.cleanupAwarenessSync) {
-      this.cleanupAwarenessSync()
+      this.cleanupAwarenessSync();
     }
 
     // Destroy adapters in reverse order
     if (this.collaborationAdapter) {
-      this.collaborationAdapter.destroy()
+      this.collaborationAdapter.destroy();
     }
     if (this.milkdownAdapter) {
-      this.milkdownAdapter.destroy()
+      this.milkdownAdapter.destroy();
     }
     if (this.yjsAwarenessAdapter) {
-      this.yjsAwarenessAdapter.destroy()
+      this.yjsAwarenessAdapter.destroy();
     }
     if (this.yjsDocumentAdapter) {
-      this.yjsDocumentAdapter.destroy()
+      this.yjsDocumentAdapter.destroy();
     }
 
     // Clear references
-    this.yjsDocumentAdapter = undefined
-    this.yjsAwarenessAdapter = undefined
-    this.milkdownAdapter = undefined
-    this.collaborationAdapter = undefined
-    this.initializeEditor = undefined
-    this.handleDocumentSync = undefined
-    this.handleAwarenessSync = undefined
+    this.yjsDocumentAdapter = undefined;
+    this.yjsAwarenessAdapter = undefined;
+    this.milkdownAdapter = undefined;
+    this.collaborationAdapter = undefined;
+    this.initializeEditor = undefined;
+    this.handleDocumentSync = undefined;
+    this.handleAwarenessSync = undefined;
 
     // Clear agent references
-    this.agentQueryAdapter = undefined
-    this.agentNodeAdapter = undefined
-    this.markdownInserter = undefined
-    this.handleAgentChunkUseCase = undefined
-    this.handleAgentCompletionUseCase = undefined
-    this.handleAgentErrorUseCase = undefined
-    this.insertMarkdownContentUseCase = undefined
+    this.agentQueryAdapter = undefined;
+    this.agentNodeAdapter = undefined;
+    this.markdownInserter = undefined;
+    this.handleAgentChunkUseCase = undefined;
+    this.handleAgentCompletionUseCase = undefined;
+    this.handleAgentErrorUseCase = undefined;
+    this.insertMarkdownContentUseCase = undefined;
   }
 }

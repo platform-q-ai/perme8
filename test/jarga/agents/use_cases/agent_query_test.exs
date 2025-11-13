@@ -253,4 +253,197 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
       Process.sleep(10)
     end
   end
+
+  describe "context extraction edge cases" do
+    test "handles assigns with nil current_workspace" do
+      assigns = %{current_workspace: nil}
+
+      params = %{
+        question: "Test question",
+        assigns: assigns
+      }
+
+      {:ok, pid} = AgentQuery.execute(params, self())
+      assert is_pid(pid)
+      Process.sleep(10)
+    end
+
+    test "handles assigns with workspace without name" do
+      assigns = %{current_workspace: %{id: 123}}
+
+      params = %{
+        question: "Test question",
+        assigns: assigns
+      }
+
+      {:ok, pid} = AgentQuery.execute(params, self())
+      assert is_pid(pid)
+      Process.sleep(10)
+    end
+
+    test "handles assigns with nil current_project" do
+      assigns = %{current_project: nil}
+
+      params = %{
+        question: "Test question",
+        assigns: assigns
+      }
+
+      {:ok, pid} = AgentQuery.execute(params, self())
+      assert is_pid(pid)
+      Process.sleep(10)
+    end
+
+    test "handles assigns with project without name" do
+      assigns = %{current_project: %{id: 456}}
+
+      params = %{
+        question: "Test question",
+        assigns: assigns
+      }
+
+      {:ok, pid} = AgentQuery.execute(params, self())
+      assert is_pid(pid)
+      Process.sleep(10)
+    end
+
+    test "handles assigns without page_title" do
+      assigns = %{page_title: nil}
+
+      params = %{
+        question: "Test question",
+        assigns: assigns
+      }
+
+      {:ok, pid} = AgentQuery.execute(params, self())
+      assert is_pid(pid)
+      Process.sleep(10)
+    end
+
+    test "handles note without markdown content" do
+      assigns = %{note: %{note_content: %{"html" => "<p>test</p>"}}}
+
+      params = %{
+        question: "Test question",
+        assigns: assigns
+      }
+
+      {:ok, pid} = AgentQuery.execute(params, self())
+      assert is_pid(pid)
+      Process.sleep(10)
+    end
+
+    test "handles note with nil note_content" do
+      assigns = %{note: %{note_content: nil}}
+
+      params = %{
+        question: "Test question",
+        assigns: assigns
+      }
+
+      {:ok, pid} = AgentQuery.execute(params, self())
+      assert is_pid(pid)
+      Process.sleep(10)
+    end
+
+    test "handles note without note_content key" do
+      assigns = %{note: %{id: 789}}
+
+      params = %{
+        question: "Test question",
+        assigns: assigns
+      }
+
+      {:ok, pid} = AgentQuery.execute(params, self())
+      assert is_pid(pid)
+      Process.sleep(10)
+    end
+
+    test "handles assigns with content exactly at 3000 chars" do
+      content = String.duplicate("x", 3000)
+      assigns = %{note: %{note_content: %{"markdown" => content}}}
+
+      params = %{
+        question: "Test question",
+        assigns: assigns
+      }
+
+      {:ok, pid} = AgentQuery.execute(params, self())
+      assert is_pid(pid)
+      Process.sleep(10)
+    end
+
+    test "handles assigns with content over 3000 chars" do
+      content = String.duplicate("x", 5000)
+      assigns = %{note: %{note_content: %{"markdown" => content}}}
+
+      params = %{
+        question: "Test question",
+        assigns: assigns
+      }
+
+      {:ok, pid} = AgentQuery.execute(params, self())
+      assert is_pid(pid)
+      Process.sleep(10)
+    end
+
+    test "builds system message with all context fields present" do
+      assigns = %{
+        current_workspace: %{name: "My Workspace"},
+        current_project: %{name: "My Project"},
+        page_title: "My Page",
+        note: %{note_content: %{"markdown" => "My content"}}
+      }
+
+      params = %{
+        question: "Test with full context",
+        assigns: assigns
+      }
+
+      {:ok, pid} = AgentQuery.execute(params, self())
+      assert is_pid(pid)
+      Process.sleep(10)
+    end
+
+    test "builds system message with no context fields present" do
+      assigns = %{}
+
+      params = %{
+        question: "Test with no context",
+        assigns: assigns
+      }
+
+      {:ok, pid} = AgentQuery.execute(params, self())
+      assert is_pid(pid)
+      Process.sleep(10)
+    end
+
+    test "handles content with exactly 500 chars for preview" do
+      content = String.duplicate("x", 500)
+      assigns = %{note: %{note_content: %{"markdown" => content}}}
+
+      params = %{
+        question: "Test preview truncation",
+        assigns: assigns
+      }
+
+      {:ok, pid} = AgentQuery.execute(params, self())
+      assert is_pid(pid)
+      Process.sleep(10)
+    end
+
+    test "handles content over 500 chars for preview" do
+      content = String.duplicate("x", 1000)
+      assigns = %{note: %{note_content: %{"markdown" => content}}}
+
+      params = %{
+        question: "Test preview truncation",
+        assigns: assigns
+      }
+
+      {:ok, pid} = AgentQuery.execute(params, self())
+      assert is_pid(pid)
+      Process.sleep(10)
+    end
+  end
 end

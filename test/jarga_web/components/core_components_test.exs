@@ -341,4 +341,339 @@ defmodule JargaWeb.CoreComponentsTest do
       refute html =~ "<a"
     end
   end
+
+  describe "flash/1" do
+    test "renders info flash message" do
+      assigns = %{flash: %{"info" => "Operation successful"}}
+
+      html =
+        rendered_to_string(~H"""
+        <.flash kind={:info} flash={@flash} />
+        """)
+
+      assert html =~ "Operation successful"
+      assert html =~ "alert-info"
+    end
+
+    test "renders error flash message" do
+      assigns = %{flash: %{"error" => "Operation failed"}}
+
+      html =
+        rendered_to_string(~H"""
+        <.flash kind={:error} flash={@flash} />
+        """)
+
+      assert html =~ "Operation failed"
+      assert html =~ "alert-error"
+    end
+
+    test "renders flash with title" do
+      assigns = %{flash: %{"info" => "Message"}}
+
+      html =
+        rendered_to_string(~H"""
+        <.flash kind={:info} flash={@flash} title="Success" />
+        """)
+
+      assert html =~ "Success"
+      assert html =~ "Message"
+    end
+
+    test "renders flash with inner block content" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.flash kind={:info}>Custom message from block</.flash>
+        """)
+
+      assert html =~ "Custom message from block"
+    end
+
+    test "does not render when no flash message" do
+      assigns = %{flash: %{}}
+
+      html =
+        rendered_to_string(~H"""
+        <.flash kind={:info} flash={@flash} />
+        """)
+
+      refute html =~ "alert"
+    end
+
+    test "renders with custom id" do
+      assigns = %{flash: %{"info" => "Test"}}
+
+      html =
+        rendered_to_string(~H"""
+        <.flash kind={:info} flash={@flash} id="custom-flash" />
+        """)
+
+      assert html =~ ~s(id="custom-flash")
+    end
+  end
+
+  describe "icon/1" do
+    test "renders heroicon" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.icon name="hero-user" />
+        """)
+
+      assert html =~ "hero-user"
+    end
+
+    test "renders lucide icon" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.icon name="lucide-settings" />
+        """)
+
+      assert html =~ "lucide-settings"
+    end
+
+    test "applies custom class to icon" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.icon name="hero-home" class="size-6 text-blue-500" />
+        """)
+
+      assert html =~ "size-6"
+      assert html =~ "text-blue-500"
+    end
+  end
+
+  describe "header/1" do
+    test "renders header with title" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.header>
+          Page Title
+        </.header>
+        """)
+
+      assert html =~ "Page Title"
+    end
+
+    test "renders header with subtitle" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.header>
+          Main Title
+          <:subtitle>Subtitle text</:subtitle>
+        </.header>
+        """)
+
+      assert html =~ "Main Title"
+      assert html =~ "Subtitle text"
+    end
+
+    test "renders header with actions" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.header>
+          Title
+          <:actions>
+            <.button>Action</.button>
+          </:actions>
+        </.header>
+        """)
+
+      assert html =~ "Title"
+      assert html =~ "Action"
+    end
+  end
+
+  describe "list/1" do
+    test "renders basic list" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.list>
+          <:item title="Name">John Doe</:item>
+          <:item title="Email">john@example.com</:item>
+        </.list>
+        """)
+
+      assert html =~ "Name"
+      assert html =~ "John Doe"
+      assert html =~ "Email"
+      assert html =~ "john@example.com"
+    end
+  end
+
+  describe "table/1" do
+    test "renders table with rows" do
+      assigns = %{users: [%{id: 1, name: "Alice"}, %{id: 2, name: "Bob"}]}
+
+      html =
+        rendered_to_string(~H"""
+        <.table id="users" rows={@users}>
+          <:col :let={user} label="ID">{user.id}</:col>
+          <:col :let={user} label="Name">{user.name}</:col>
+        </.table>
+        """)
+
+      assert html =~ "ID"
+      assert html =~ "Name"
+      assert html =~ "Alice"
+      assert html =~ "Bob"
+    end
+
+    test "renders table with actions" do
+      assigns = %{users: [%{id: 1, name: "Alice"}]}
+
+      html =
+        rendered_to_string(~H"""
+        <.table id="users" rows={@users}>
+          <:col :let={user} label="Name">{user.name}</:col>
+          <:action :let={user}>
+            <.button>Edit</.button>
+          </:action>
+        </.table>
+        """)
+
+      assert html =~ "Alice"
+      assert html =~ "Edit"
+    end
+  end
+
+  describe "breadcrumbs/1" do
+    test "renders breadcrumbs with links" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.breadcrumbs>
+          <:crumb navigate="/">Home</:crumb>
+          <:crumb navigate="/users">Users</:crumb>
+          <:crumb>Current Page</:crumb>
+        </.breadcrumbs>
+        """)
+
+      assert html =~ "Home"
+      assert html =~ "Users"
+      assert html =~ "Current Page"
+    end
+  end
+
+  describe "kebab_menu/1" do
+    test "renders kebab menu with items" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.kebab_menu>
+          <:item phx_click="edit">Edit</:item>
+          <:item phx_click="delete">Delete</:item>
+        </.kebab_menu>
+        """)
+
+      assert html =~ "Edit"
+      assert html =~ "Delete"
+    end
+  end
+
+  describe "input/1" do
+    test "renders text input" do
+      assigns = %{form: to_form(%{"name" => "test"})}
+
+      html =
+        rendered_to_string(~H"""
+        <.input field={@form[:name]} type="text" label="Name" />
+        """)
+
+      assert html =~ "Name"
+      assert html =~ ~s(type="text")
+    end
+
+    test "renders checkbox input" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.input type="checkbox" name="agree" label="I agree" value="true" />
+        """)
+
+      assert html =~ "I agree"
+      assert html =~ ~s(type="checkbox")
+    end
+
+    test "renders select input" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.input
+          type="select"
+          name="role"
+          label="Role"
+          value=""
+          options={[{"Admin", "admin"}, {"User", "user"}]}
+        />
+        """)
+
+      assert html =~ "Role"
+      assert html =~ "Admin"
+      assert html =~ "User"
+    end
+
+    test "renders textarea input" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.input type="textarea" name="description" label="Description" value="" />
+        """)
+
+      assert html =~ "Description"
+      assert html =~ "<textarea"
+    end
+
+    test "renders input with errors" do
+      assigns = %{form: to_form(%{"email" => ""}, errors: [email: {"can't be blank", []}])}
+
+      html =
+        rendered_to_string(~H"""
+        <.input field={@form[:email]} type="email" label="Email" />
+        """)
+
+      assert html =~ "can&#39;t be blank"
+    end
+
+    test "renders input with placeholder" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.input type="text" name="search" value="" placeholder="Search..." />
+        """)
+
+      assert html =~ ~s(placeholder="Search...")
+    end
+
+    test "renders required input" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.input type="text" name="username" value="" required />
+        """)
+
+      assert html =~ "required"
+    end
+  end
 end

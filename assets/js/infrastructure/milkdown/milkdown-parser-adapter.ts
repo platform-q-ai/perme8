@@ -21,6 +21,7 @@
 import { parserCtx } from '@milkdown/core'
 import type { Ctx } from '@milkdown/ctx'
 import type { Node } from 'prosemirror-model'
+import { IMarkdownParserAdapter, ParsedDocument } from '../../application/interfaces/markdown-parser-adapter'
 
 /**
  * Milkdown Parser adapter
@@ -36,7 +37,7 @@ import type { Node } from 'prosemirror-model'
  * })
  * ```
  */
-export class MilkdownParserAdapter {
+export class MilkdownParserAdapter implements IMarkdownParserAdapter {
   private ctx: Ctx
 
   /**
@@ -56,9 +57,9 @@ export class MilkdownParserAdapter {
    * Handles errors gracefully by returning null.
    *
    * @param markdown - Markdown string to parse
-   * @returns ProseMirror node or null
+   * @returns ParsedDocument with content nodes or null
    */
-  parse(markdown: string): Node | null {
+  parse(markdown: string): ParsedDocument | null {
     try {
       // Handle empty or whitespace-only markdown
       if (!markdown || markdown.trim().length === 0) {
@@ -71,7 +72,19 @@ export class MilkdownParserAdapter {
       // Convert markdown to ProseMirror node
       const node = parser(markdown)
 
-      return node || null
+      if (!node) {
+        return null
+      }
+
+      // Extract content nodes from the parsed document
+      const nodes: Node[] = []
+      if (node.content) {
+        node.content.forEach((childNode: Node) => {
+          nodes.push(childNode)
+        })
+      }
+
+      return { content: nodes }
     } catch (error) {
       console.error('Error parsing markdown:', error)
       return null
@@ -96,21 +109,22 @@ export class MilkdownParserAdapter {
       }
 
       // Parse as full document first
-      const doc = this.parse(markdown)
+      const parsedDoc = this.parse(markdown)
 
-      if (!doc) {
+      if (!parsedDoc || !parsedDoc.content) {
         return []
       }
 
       // Extract inline content from first paragraph if available
-      // In real implementation, this would extract the inline nodes properly
-      // For tests, we return a simplified structure
-      if ((doc as any).content && Array.isArray((doc as any).content)) {
-        // Get content from first paragraph-like node
-        const firstBlock = (doc as any).content[0]
-        if (firstBlock && firstBlock.content) {
-          return firstBlock.content
-        }
+      // Get content from first paragraph-like node
+      const firstBlock = parsedDoc.content[0]
+      if (firstBlock && firstBlock.content) {
+        // ProseMirror Node.content is a Fragment, convert to array
+        const nodes: Node[] = []
+        firstBlock.content.forEach((node: Node) => {
+          nodes.push(node)
+        })
+        return nodes
       }
 
       return []

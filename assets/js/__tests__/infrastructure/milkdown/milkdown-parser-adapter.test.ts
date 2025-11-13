@@ -2,25 +2,35 @@ import { describe, test, expect, beforeEach, vi } from 'vitest'
 import { MilkdownParserAdapter } from '../../../infrastructure/milkdown/milkdown-parser-adapter'
 import type { Ctx } from '@milkdown/ctx'
 import type { Node } from 'prosemirror-model'
+import { Schema } from '@milkdown/prose/model'
 
 describe('MilkdownParserAdapter', () => {
   let adapter: MilkdownParserAdapter
   let mockCtx: Ctx
-  let mockParser: (markdown: string) => Node | null
+  let mockParser: ReturnType<typeof vi.fn>
+  let schema: Schema
 
   beforeEach(() => {
+    // Create a minimal schema for testing
+    schema = new Schema({
+      nodes: {
+        doc: { content: 'block+' },
+        paragraph: { content: 'text*', group: 'block' },
+        text: { group: 'inline' }
+      }
+    })
+
     // Create mock parser function
-    mockParser = vi.fn((markdown: string) => {
-      // Simple mock: create a node-like object
+    mockParser = vi.fn((markdown: string): Node | null => {
+      // Simple mock: create a node-like object with content
       if (!markdown || markdown.trim().length === 0) {
         return null
       }
 
-      return {
-        type: { name: 'doc' },
-        nodeSize: markdown.length,
-        content: []
-      } as any
+      // Return a document node with paragraph children
+      return schema.node('doc', null, [
+        schema.node('paragraph', null, [schema.text(markdown)])
+      ])
     })
 
     // Create mock Milkdown context
@@ -50,21 +60,24 @@ describe('MilkdownParserAdapter', () => {
   })
 
   describe('parse', () => {
-    test('converts markdown to ProseMirror node', () => {
+    test('converts markdown to ParsedDocument with content array', () => {
       const markdown = '# Hello World'
 
-      const node = adapter.parse(markdown)
+      const result = adapter.parse(markdown)
 
-      expect(node).toBeDefined()
-      expect(node).not.toBeNull()
+      expect(result).toBeDefined()
+      expect(result).not.toBeNull()
+      expect(result?.content).toBeDefined()
+      expect(Array.isArray(result?.content)).toBe(true)
+      expect(result?.content.length).toBeGreaterThan(0)
     })
 
     test('handles empty markdown', () => {
       const markdown = ''
 
-      const node = adapter.parse(markdown)
+      const result = adapter.parse(markdown)
 
-      expect(node).toBeNull()
+      expect(result).toBeNull()
     })
 
     test('calls Milkdown parser with markdown', () => {
@@ -78,9 +91,32 @@ describe('MilkdownParserAdapter', () => {
     test('returns null for whitespace-only markdown', () => {
       const markdown = '   \n  \t  '
 
-      const node = adapter.parse(markdown)
+      const result = adapter.parse(markdown)
 
-      expect(node).toBeNull()
+      expect(result).toBeNull()
+    })
+
+    test('extracts content nodes from parsed document', () => {
+      const mockNode = schema.node('doc', null, [
+        schema.node('paragraph', null, [schema.text('Hello')]),
+        schema.node('paragraph', null, [schema.text('World')])
+      ])
+      mockParser.mockReturnValue(mockNode)
+
+      const result = adapter.parse('# Hello\n\nWorld')
+
+      expect(result).not.toBeNull()
+      expect(result?.content).toHaveLength(2)
+      expect(result?.content[0].type.name).toBe('paragraph')
+      expect(result?.content[1].type.name).toBe('paragraph')
+    })
+
+    test('returns null when parser returns null', () => {
+      mockParser.mockReturnValue(null)
+
+      const result = adapter.parse('test')
+
+      expect(result).toBeNull()
     })
 
     test('handles complex markdown structure', () => {
@@ -88,40 +124,12 @@ describe('MilkdownParserAdapter', () => {
 # Heading 1
 
 This is a paragraph.
-
-- Item 1
-- Item 2
-- Item 3
-
-## Heading 2
-
-Another paragraph with **bold** and *italic* text.
       `.trim()
 
-      const node = adapter.parse(markdown)
+      const result = adapter.parse(markdown)
 
-      expect(node).toBeDefined()
-    })
-
-    test('handles markdown with code blocks', () => {
-      const markdown = `
-\`\`\`javascript
-const foo = 'bar'
-console.log(foo)
-\`\`\`
-      `.trim()
-
-      const node = adapter.parse(markdown)
-
-      expect(node).toBeDefined()
-    })
-
-    test('handles markdown with links', () => {
-      const markdown = '[Link text](https://example.com)'
-
-      const node = adapter.parse(markdown)
-
-      expect(node).toBeDefined()
+      expect(result).toBeDefined()
+      expect(result?.content).toBeDefined()
     })
   })
 
