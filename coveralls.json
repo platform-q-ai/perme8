@@ -5,6 +5,7 @@
   "skip_files": [
     "test/",
     "lib/jarga_web.ex",
-    "lib/jarga.ex"
+    "lib/jarga.ex",
+    "use_case.ex"
   ]
 }

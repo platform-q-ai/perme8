@@ -540,7 +540,7 @@ defmodule JargaWeb.CoreComponentsTest do
         rendered_to_string(~H"""
         <.table id="users" rows={@users}>
           <:col :let={user} label="Name">{user.name}</:col>
-          <:action :let={user}>
+          <:action :let={_user}>
             <.button>Edit</.button>
           </:action>
         </.table>

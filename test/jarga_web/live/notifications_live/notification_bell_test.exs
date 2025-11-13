@@ -272,12 +272,18 @@ defmodule JargaWeb.NotificationsLive.NotificationBellTest do
       owner: owner,
       workspace: workspace
     } do
+      # Create a proper invitation using invite_member
+      # This creates the workspace_member record
+      {:ok, {:invitation_sent, _member}} =
+        Workspaces.invite_member(owner, workspace.id, invitee.email, :member)
+
+      # Create the notification directly (in tests, PubSub might not be fully set up)
       {:ok, notification} =
         Notifications.create_workspace_invitation_notification(%{
           user_id: invitee.id,
           workspace_id: workspace.id,
           workspace_name: workspace.name,
-          invited_by_name: owner.email,
+          invited_by_name: "#{owner.first_name} #{owner.last_name}",
           role: "member"
         })
 
@@ -304,7 +310,7 @@ defmodule JargaWeb.NotificationsLive.NotificationBellTest do
       # The notification should have been processed successfully
       # Verify that a workspace member exists for this user
       members = Jarga.Workspaces.list_members(workspace.id)
-      assert Enum.any?(members, fn m -> m.user_id == invitee.id end)
+      assert Enum.any?(members, fn m -> m.user_id == invitee.id and not is_nil(m.joined_at) end)
     end
 
     test "declines workspace invitation", %{
@@ -408,12 +414,17 @@ defmodule JargaWeb.NotificationsLive.NotificationBellTest do
       owner: owner,
       workspace: workspace
     } do
+      # Create a proper invitation using invite_member
+      {:ok, {:invitation_sent, _member}} =
+        Workspaces.invite_member(owner, workspace.id, invitee.email, :member)
+
+      # Create the notification directly (in tests, PubSub might not be fully set up)
       {:ok, notification} =
         Notifications.create_workspace_invitation_notification(%{
           user_id: invitee.id,
           workspace_id: workspace.id,
           workspace_name: workspace.name,
-          invited_by_name: owner.email,
+          invited_by_name: "#{owner.first_name} #{owner.last_name}",
           role: "member"
         })
 
@@ -434,7 +445,7 @@ defmodule JargaWeb.NotificationsLive.NotificationBellTest do
 
       # Verify the workspace membership was created (invitation accepted)
       members = Jarga.Workspaces.list_members(workspace.id)
-      assert Enum.any?(members, fn m -> m.user_id == invitee.id end)
+      assert Enum.any?(members, fn m -> m.user_id == invitee.id and not is_nil(m.joined_at) end)
 
       # Reload the page to get updated notification state
       {:ok, view, _html} = live(conn, ~p"/app")
@@ -478,11 +489,5 @@ defmodule JargaWeb.NotificationsLive.NotificationBellTest do
       html = render(view)
       assert html =~ "Invitation declined"
     end
-  end
-
-  defp get_component_id(view) do
-    # Extract component ID from the view
-    # This is a helper to target the live component
-    "notification-bell"
   end
 end

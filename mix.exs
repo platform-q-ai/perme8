@@ -13,7 +13,9 @@ defmodule Jarga.MixProject do
       compilers: [:boundary, :phoenix_live_view] ++ Mix.compilers(),
       boundary: boundary(),
       listeners: [Phoenix.CodeReloader],
-      test_coverage: [tool: ExCoveralls],
+      test_coverage: [
+        tool: ExCoveralls
+      ],
       preferred_cli_env: [
         coveralls: :test,
         "coveralls.detail": :test,
@@ -113,6 +115,8 @@ defmodule Jarga.MixProject do
       {:boundary, "~> 0.10", runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:excoveralls, "~> 0.18", only: :test},
+      {:bypass, "~> 2.1", only: :test},
+      {:mox, "~> 1.0", only: :test},
       {:slugy, "~> 4.1"},
       {:mdex, "~> 0.2"}
     ]

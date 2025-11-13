@@ -6,6 +6,8 @@ defmodule Jarga.Agents.Infrastructure.Services.LlmClient do
   Supports both synchronous and streaming responses.
   """
 
+  @behaviour Jarga.Agents.Infrastructure.Services.Behaviours.LlmClientBehaviour
+
   require Logger
 
   @default_model "google/gemini-2.5-flash-lite:free"

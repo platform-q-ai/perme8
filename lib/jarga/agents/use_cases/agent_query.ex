@@ -36,6 +36,7 @@ defmodule Jarga.Agents.UseCases.AgentQuery do
       - :question - The user's question
       - :assigns - LiveView assigns containing document context
       - :node_id (optional) - Node ID for tracking
+      - :llm_client (optional) - LLM client module for dependency injection (default: LlmClient)
     - caller_pid: Process to receive streaming chunks
 
   ## Returns
@@ -46,6 +47,7 @@ defmodule Jarga.Agents.UseCases.AgentQuery do
     question = Map.fetch!(params, :question)
     assigns = Map.fetch!(params, :assigns)
     node_id = Map.get(params, :node_id)
+    llm_client = Map.get(params, :llm_client, LlmClient)
 
     # Extract document context
     context = extract_context(assigns)
@@ -56,20 +58,20 @@ defmodule Jarga.Agents.UseCases.AgentQuery do
     # Start streaming process that wraps LlmClient
     pid =
       spawn_link(fn ->
-        handle_streaming(messages, caller_pid, node_id)
+        handle_streaming(messages, caller_pid, node_id, llm_client)
       end)
 
     {:ok, pid}
   end
 
-  defp handle_streaming(messages, caller_pid, node_id) do
+  defp handle_streaming(messages, caller_pid, node_id, llm_client) do
     # Set node_id in process dictionary for tracking
     if node_id do
       Process.put(:agent_node_id, node_id)
     end
 
     # Call LlmClient to start streaming
-    case LlmClient.chat_stream(messages, self()) do
+    case llm_client.chat_stream(messages, self()) do
       {:ok, _stream_pid} ->
         # Forward messages from LlmClient to caller
         forward_stream(caller_pid, node_id)
