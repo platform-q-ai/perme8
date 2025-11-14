@@ -386,9 +386,24 @@ live "/weather", WeatherLive
 
 ### JavaScript Hooks
 
+**Responsibility Division:**
+- **Phoenix/LiveView (Server-Side)**: Reference hooks in templates using `phx-hook` attributes
+- **TypeScript (Client-Side)**: Implement the actual hook logic in `assets/js/`
+
+When integrating LiveView with JavaScript hooks in your templates:
+
 Remember anytime you use `phx-hook="MyHook"` and that JS hook manages its own DOM, you **must** also set the `phx-update="ignore"` attribute.
 
+**Example (server-side template):**
+```heex
+<div id="my-element" phx-hook="MyHook" phx-update="ignore">
+  <!-- Content managed by the JS hook -->
+</div>
+```
+
 **Never** write embedded `<script>` tags in HEEx. Instead, always write your scripts and hooks in the `assets/js` directory and integrate them with the `assets/js/app.js` file.
+
+**Note**: The actual hook implementation (in TypeScript) is handled separately. Your responsibility is to correctly reference and integrate hooks in your LiveView templates.
 
 ### Input Normalization Pattern
 
@@ -1068,10 +1083,13 @@ Tailwind CSS v4 **no longer needs a tailwind.config.js** and uses a new import s
 
 #### JavaScript and Asset Bundles
 
+**Important for LiveView templates:**
+
 Out of the box, **only the app.js and app.css bundles are supported**:
 - You cannot reference an external vendored script `src` or link `href` in the layouts
-- You must import the vendor deps into app.js and app.css to use them
 - **Never write inline `<script>custom js</script>` tags within templates**
+
+**Note**: The actual JavaScript/TypeScript code and vendor dependency management is handled by the TypeScript development workflow. As a Phoenix/LiveView developer, you only need to ensure templates don't include inline scripts.
 
 ### Design Principles
 
