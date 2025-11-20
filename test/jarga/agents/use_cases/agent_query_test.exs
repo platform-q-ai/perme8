@@ -19,7 +19,7 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
       assigns = %{
         current_workspace: %{name: "Test Workspace"},
         current_project: %{name: "Test Project"},
-        page_title: "Test Page",
+        document_title: "Test Document",
         note: %{note_content: %{"markdown" => "Some test content"}},
         current_scope: %{user: %{email: "test@example.com"}}
       }
@@ -90,7 +90,7 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
     test "includes document title in system message", %{assigns: assigns} do
       expect(LlmClientMock, :chat_stream, fn messages, _pid, _opts ->
         [system_msg | _] = messages
-        assert system_msg.content =~ "Page: Test Page"
+        assert system_msg.content =~ "Document: Test Document"
         {:ok, spawn(fn -> :ok end)}
       end)
 
@@ -163,12 +163,12 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
 
       expect(LlmClientMock, :chat_stream, fn messages, _pid, _opts ->
         [system_msg | _] = messages
-        assert system_msg.content =~ "Page content preview:"
+        assert system_msg.content =~ "Document content preview:"
         {:ok, spawn(fn -> :ok end)}
       end)
 
       assigns = %{
-        page_title: "Test Page",
+        document_title: "Test Document",
         note: %{note_content: %{"markdown" => markdown}}
       }
 
@@ -555,12 +555,12 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
       assert is_pid(pid)
     end
 
-    test "handles assigns without page_title" do
+    test "handles assigns without document_title" do
       expect(LlmClientMock, :chat_stream, fn _messages, _pid, _opts ->
         {:ok, spawn(fn -> :ok end)}
       end)
 
-      assigns = %{page_title: nil}
+      assigns = %{document_title: nil}
 
       params = %{
         question: "Test question",
@@ -664,15 +664,15 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
         [system_msg | _] = messages
         assert system_msg.content =~ "Workspace: My Workspace"
         assert system_msg.content =~ "Project: My Project"
-        assert system_msg.content =~ "Page: My Page"
-        assert system_msg.content =~ "Page content preview:"
+        assert system_msg.content =~ "Document: My Document"
+        assert system_msg.content =~ "Document content preview:"
         {:ok, spawn(fn -> :ok end)}
       end)
 
       assigns = %{
         current_workspace: %{name: "My Workspace"},
         current_project: %{name: "My Project"},
-        page_title: "My Page",
+        document_title: "My Document",
         note: %{note_content: %{"markdown" => "My content"}}
       }
 
@@ -729,7 +729,7 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
       expect(LlmClientMock, :chat_stream, fn messages, _pid, _opts ->
         [system_msg | _] = messages
         # Preview should be truncated to 500 chars + "..."
-        preview_match = Regex.run(~r/Page content preview:\n(.+)\.\.\./s, system_msg.content)
+        preview_match = Regex.run(~r/Document content preview:\n(.+)\.\.\./s, system_msg.content)
         assert preview_match, "Should have preview with truncation"
         [_, preview] = preview_match
         # Preview should be around 500 chars (allow some margin for trimming)

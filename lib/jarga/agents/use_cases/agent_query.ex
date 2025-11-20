@@ -141,8 +141,8 @@ defmodule Jarga.Agents.UseCases.AgentQuery do
     %{
       workspace_name: get_workspace_name(assigns),
       project_name: get_project_name(assigns),
-      page_title: get_page_title(assigns),
-      page_content: get_page_content(assigns)
+      document_title: get_document_title(assigns),
+      document_content: get_document_content(assigns)
     }
   end
 
@@ -160,11 +160,11 @@ defmodule Jarga.Agents.UseCases.AgentQuery do
     end
   end
 
-  defp get_page_title(assigns) do
-    Map.get(assigns, :page_title)
+  defp get_document_title(assigns) do
+    Map.get(assigns, :document_title)
   end
 
-  defp get_page_content(assigns) do
+  defp get_document_content(assigns) do
     case Map.get(assigns, :note) do
       %{note_content: %{"markdown" => markdown}} when is_binary(markdown) ->
         # Truncate to max chars to avoid huge context
@@ -219,21 +219,21 @@ defmodule Jarga.Agents.UseCases.AgentQuery do
       end
 
     context_parts =
-      if context[:page_title] do
-        context_parts ++ ["Page: #{context.page_title}"]
+      if context[:document_title] do
+        context_parts ++ ["Document: #{context.document_title}"]
       else
         context_parts
       end
 
     context_parts =
-      if context[:page_content] do
+      if context[:document_content] do
         # Truncate preview of content
         preview =
-          context.page_content
+          context.document_content
           |> String.slice(0, 500)
           |> String.trim()
 
-        context_parts ++ ["Page content preview:\n#{preview}..."]
+        context_parts ++ ["Document content preview:\n#{preview}..."]
       else
         context_parts
       end
