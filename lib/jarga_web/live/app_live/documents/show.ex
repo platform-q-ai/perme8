@@ -199,6 +199,23 @@ defmodule JargaWeb.AppLive.Documents.Show do
   end
 
   @impl true
+  def handle_event("handle_title_key", %{"key" => "Enter"}, socket) do
+    # Blur will trigger update_title, then focus editor
+    # Use JS.dispatch to send event to editor after short delay
+    {:noreply, push_event(socket, "focus-editor", %{})}
+  end
+
+  def handle_event("handle_title_key", %{"key" => "Escape"}, socket) do
+    # Cancel editing without saving changes
+    {:noreply, assign(socket, :editing_title, false)}
+  end
+
+  def handle_event("handle_title_key", _params, socket) do
+    # Ignore other keys
+    {:noreply, socket}
+  end
+
+  @impl true
   def handle_event("toggle_pin", _params, socket) do
     document = socket.assigns.document
     user = socket.assigns.current_scope.user
@@ -418,6 +435,23 @@ defmodule JargaWeb.AppLive.Documents.Show do
     {:noreply, socket}
   end
 
+  @impl true
+  def handle_info({:workspace_agent_updated, _agent}, socket) do
+    # Reload workspace agents and send to chat panel
+    workspace_id = socket.assigns.workspace.id
+    user = socket.assigns.current_scope.user
+
+    agents = Jarga.Agents.get_workspace_agents_list(workspace_id, user.id, enabled_only: true)
+
+    send_update(JargaWeb.ChatLive.Panel,
+      id: "global-chat-panel",
+      workspace_agents: agents,
+      from_pubsub: true
+    )
+
+    {:noreply, socket}
+  end
+
   defp generate_user_id do
     "user_#{:crypto.strong_rand_bytes(8) |> Base.encode16()}"
   end
@@ -485,11 +519,11 @@ defmodule JargaWeb.AppLive.Documents.Show do
           <%= if @editing_title do %>
             <input
               id="document-title-input"
-              phx-hook="DocumentTitleInput"
               type="text"
               name="document[title]"
               value={@document_form[:title].value}
               phx-blur="update_title"
+              phx-keydown="handle_title_key"
               phx-value-title={@document_form[:title].value}
               class="w-full text-[2em] font-bold leading-tight m-0 input input-bordered focus:input-primary"
               autofocus

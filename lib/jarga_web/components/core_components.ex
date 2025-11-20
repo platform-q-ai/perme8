@@ -253,7 +253,7 @@ defmodule JargaWeb.CoreComponents do
     ~H"""
     <div class="fieldset mb-2">
       <label>
-        <span :if={@label} class="label mb-1">{@label}</span>
+        <span :if={@label} class="label mb-1 text-sm font-medium">{@label}</span>
         <select
           id={@id}
           name={@name}
@@ -279,7 +279,7 @@ defmodule JargaWeb.CoreComponents do
     ~H"""
     <div class="fieldset mb-2">
       <label>
-        <span :if={@label} class="label mb-1">{@label}</span>
+        <span :if={@label} class="label mb-1 text-sm font-medium">{@label}</span>
         <textarea
           id={@id}
           name={@name}
@@ -302,7 +302,7 @@ defmodule JargaWeb.CoreComponents do
     ~H"""
     <div class="fieldset mb-2">
       <label>
-        <span :if={@label} class="label mb-1">{@label}</span>
+        <span :if={@label} class="label mb-1 text-sm font-medium">{@label}</span>
         <input
           type={@type}
           name={@name}
@@ -370,7 +370,7 @@ defmodule JargaWeb.CoreComponents do
     ~H"""
     <header class={[@actions != [] && "flex items-center justify-between gap-6", "pb-4"]}>
       <div>
-        <h1 class="text-lg font-semibold leading-8">
+        <h1 class="text-2xl font-bold leading-8">
           {render_slot(@inner_block)}
         </h1>
         <p :if={@subtitle != []} class="text-sm text-base-content/70">
@@ -623,7 +623,9 @@ defmodule JargaWeb.CoreComponents do
     attr :patch, :string, doc: "Phoenix patch path"
     attr :href, :string, doc: "Link href"
     attr :phx_click, :string, doc: "Phoenix click event"
+    attr :phx_value_id, :string, doc: "Phoenix value parameter"
     attr :data_confirm, :string, doc: "Confirmation message"
+    attr :aria_label, :string, doc: "Accessible label for screen readers"
   end
 
   def kebab_menu(assigns) do
@@ -661,8 +663,10 @@ defmodule JargaWeb.CoreComponents do
               <button
                 type="button"
                 phx-click={item[:phx_click]}
+                phx-value-id={item[:phx_value_id]}
                 class={menu_item_class(item[:variant])}
                 data-confirm={item[:data_confirm]}
+                aria-label={item[:aria_label]}
               >
                 <.icon :if={item[:icon]} name={item[:icon]} class="size-5" />
                 {render_slot(item)}

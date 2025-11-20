@@ -29,7 +29,7 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
 
     test "builds contextualized messages with question", %{assigns: assigns} do
       # Mock LlmClient to return success and verify it was called
-      expect(LlmClientMock, :chat_stream, fn messages, _pid ->
+      expect(LlmClientMock, :chat_stream, fn messages, _pid, _opts ->
         # Verify messages structure
         assert length(messages) == 2
         [system_msg, user_msg] = messages
@@ -56,7 +56,7 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
     end
 
     test "includes workspace context in system message", %{assigns: assigns} do
-      expect(LlmClientMock, :chat_stream, fn messages, _pid ->
+      expect(LlmClientMock, :chat_stream, fn messages, _pid, _opts ->
         [system_msg | _] = messages
         assert system_msg.content =~ "Workspace: Test Workspace"
         {:ok, spawn(fn -> :ok end)}
@@ -72,7 +72,7 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
     end
 
     test "includes project context in system message", %{assigns: assigns} do
-      expect(LlmClientMock, :chat_stream, fn messages, _pid ->
+      expect(LlmClientMock, :chat_stream, fn messages, _pid, _opts ->
         [system_msg | _] = messages
         assert system_msg.content =~ "Project: Test Project"
         {:ok, spawn(fn -> :ok end)}
@@ -88,7 +88,7 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
     end
 
     test "includes document title in system message", %{assigns: assigns} do
-      expect(LlmClientMock, :chat_stream, fn messages, _pid ->
+      expect(LlmClientMock, :chat_stream, fn messages, _pid, _opts ->
         [system_msg | _] = messages
         assert system_msg.content =~ "Page: Test Page"
         {:ok, spawn(fn -> :ok end)}
@@ -104,7 +104,7 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
     end
 
     test "handles missing context gracefully" do
-      expect(LlmClientMock, :chat_stream, fn messages, _pid ->
+      expect(LlmClientMock, :chat_stream, fn messages, _pid, _opts ->
         [system_msg | _] = messages
         # Should not contain workspace/project/page context
         refute system_msg.content =~ "Workspace:"
@@ -129,7 +129,7 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
       # Create very long markdown content (over 3000 chars)
       long_content = String.duplicate("test content ", 500)
 
-      expect(LlmClientMock, :chat_stream, fn messages, _pid ->
+      expect(LlmClientMock, :chat_stream, fn messages, _pid, _opts ->
         [system_msg | _] = messages
         # Content should be truncated to max 3000 chars
         # The preview in system message is further truncated to 500 chars
@@ -161,7 +161,7 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
       More content here.
       """
 
-      expect(LlmClientMock, :chat_stream, fn messages, _pid ->
+      expect(LlmClientMock, :chat_stream, fn messages, _pid, _opts ->
         [system_msg | _] = messages
         assert system_msg.content =~ "Page content preview:"
         {:ok, spawn(fn -> :ok end)}
@@ -183,7 +183,7 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
     end
 
     test "formats user question correctly" do
-      expect(LlmClientMock, :chat_stream, fn messages, _pid ->
+      expect(LlmClientMock, :chat_stream, fn messages, _pid, _opts ->
         [_system_msg, user_msg] = messages
         assert user_msg.role == "user"
         assert user_msg.content == "How do I structure Ecto changesets?"
@@ -204,7 +204,7 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
   describe "streaming without node_id" do
     test "forwards chunk messages to caller" do
       # Mock LlmClient to send chunks
-      expect(LlmClientMock, :chat_stream, fn _messages, stream_pid ->
+      expect(LlmClientMock, :chat_stream, fn _messages, stream_pid, _opts ->
         # Spawn a process that sends chunks
         pid =
           spawn(fn ->
@@ -231,7 +231,7 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
     end
 
     test "forwards done message to caller" do
-      expect(LlmClientMock, :chat_stream, fn _messages, stream_pid ->
+      expect(LlmClientMock, :chat_stream, fn _messages, stream_pid, _opts ->
         pid =
           spawn(fn ->
             send(stream_pid, {:done, "Complete response"})
@@ -253,7 +253,7 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
     end
 
     test "forwards error message to caller" do
-      expect(LlmClientMock, :chat_stream, fn _messages, stream_pid ->
+      expect(LlmClientMock, :chat_stream, fn _messages, stream_pid, _opts ->
         pid =
           spawn(fn ->
             send(stream_pid, {:error, "Stream error"})
@@ -275,7 +275,7 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
     end
 
     test "handles error from LlmClient.chat_stream/2" do
-      expect(LlmClientMock, :chat_stream, fn _messages, _pid ->
+      expect(LlmClientMock, :chat_stream, fn _messages, _pid, _opts ->
         {:error, "API connection failed"}
       end)
 
@@ -292,7 +292,7 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
     end
 
     test "handles cancellation during streaming" do
-      expect(LlmClientMock, :chat_stream, fn _messages, stream_pid ->
+      expect(LlmClientMock, :chat_stream, fn _messages, stream_pid, _opts ->
         # Spawn process that receives cancellation
         pid =
           spawn(fn ->
@@ -316,7 +316,7 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
     end
 
     test "handles timeout after 60 seconds" do
-      expect(LlmClientMock, :chat_stream, fn _messages, _stream_pid ->
+      expect(LlmClientMock, :chat_stream, fn _messages, _stream_pid, _opts ->
         # Spawn process that never sends anything (to trigger timeout)
         pid =
           spawn(fn ->
@@ -345,7 +345,7 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
 
   describe "streaming with node_id" do
     test "forwards chunk messages with node_id prefix" do
-      expect(LlmClientMock, :chat_stream, fn _messages, stream_pid ->
+      expect(LlmClientMock, :chat_stream, fn _messages, stream_pid, _opts ->
         pid =
           spawn(fn ->
             send(stream_pid, {:chunk, "Test "})
@@ -372,7 +372,7 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
     end
 
     test "forwards done message with node_id prefix" do
-      expect(LlmClientMock, :chat_stream, fn _messages, stream_pid ->
+      expect(LlmClientMock, :chat_stream, fn _messages, stream_pid, _opts ->
         pid =
           spawn(fn ->
             send(stream_pid, {:done, "Final response"})
@@ -395,7 +395,7 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
     end
 
     test "forwards error message with node_id prefix" do
-      expect(LlmClientMock, :chat_stream, fn _messages, stream_pid ->
+      expect(LlmClientMock, :chat_stream, fn _messages, stream_pid, _opts ->
         pid =
           spawn(fn ->
             send(stream_pid, {:error, "Processing error"})
@@ -418,7 +418,7 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
     end
 
     test "handles error from LlmClient.chat_stream/2 with node_id" do
-      expect(LlmClientMock, :chat_stream, fn _messages, _pid ->
+      expect(LlmClientMock, :chat_stream, fn _messages, _pid, _opts ->
         {:error, "Network timeout"}
       end)
 
@@ -438,7 +438,7 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
     test "handles cancellation with node_id" do
       node_id = "node_cancel"
 
-      expect(LlmClientMock, :chat_stream, fn _messages, stream_pid ->
+      expect(LlmClientMock, :chat_stream, fn _messages, stream_pid, _opts ->
         pid =
           spawn(fn ->
             # Send cancel message with matching node_id
@@ -462,7 +462,7 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
     end
 
     test "handles timeout with node_id" do
-      expect(LlmClientMock, :chat_stream, fn _messages, _stream_pid ->
+      expect(LlmClientMock, :chat_stream, fn _messages, _stream_pid, _opts ->
         pid =
           spawn(fn ->
             :timer.sleep(:infinity)
@@ -488,7 +488,7 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
 
   describe "context extraction edge cases" do
     test "handles assigns with nil current_workspace" do
-      expect(LlmClientMock, :chat_stream, fn _messages, _pid ->
+      expect(LlmClientMock, :chat_stream, fn _messages, _pid, _opts ->
         {:ok, spawn(fn -> :ok end)}
       end)
 
@@ -505,7 +505,7 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
     end
 
     test "handles assigns with workspace without name" do
-      expect(LlmClientMock, :chat_stream, fn _messages, _pid ->
+      expect(LlmClientMock, :chat_stream, fn _messages, _pid, _opts ->
         {:ok, spawn(fn -> :ok end)}
       end)
 
@@ -522,7 +522,7 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
     end
 
     test "handles assigns with nil current_project" do
-      expect(LlmClientMock, :chat_stream, fn _messages, _pid ->
+      expect(LlmClientMock, :chat_stream, fn _messages, _pid, _opts ->
         {:ok, spawn(fn -> :ok end)}
       end)
 
@@ -539,7 +539,7 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
     end
 
     test "handles assigns with project without name" do
-      expect(LlmClientMock, :chat_stream, fn _messages, _pid ->
+      expect(LlmClientMock, :chat_stream, fn _messages, _pid, _opts ->
         {:ok, spawn(fn -> :ok end)}
       end)
 
@@ -556,7 +556,7 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
     end
 
     test "handles assigns without page_title" do
-      expect(LlmClientMock, :chat_stream, fn _messages, _pid ->
+      expect(LlmClientMock, :chat_stream, fn _messages, _pid, _opts ->
         {:ok, spawn(fn -> :ok end)}
       end)
 
@@ -573,7 +573,7 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
     end
 
     test "handles note without markdown content" do
-      expect(LlmClientMock, :chat_stream, fn _messages, _pid ->
+      expect(LlmClientMock, :chat_stream, fn _messages, _pid, _opts ->
         {:ok, spawn(fn -> :ok end)}
       end)
 
@@ -590,7 +590,7 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
     end
 
     test "handles note with nil note_content" do
-      expect(LlmClientMock, :chat_stream, fn _messages, _pid ->
+      expect(LlmClientMock, :chat_stream, fn _messages, _pid, _opts ->
         {:ok, spawn(fn -> :ok end)}
       end)
 
@@ -607,7 +607,7 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
     end
 
     test "handles note without note_content key" do
-      expect(LlmClientMock, :chat_stream, fn _messages, _pid ->
+      expect(LlmClientMock, :chat_stream, fn _messages, _pid, _opts ->
         {:ok, spawn(fn -> :ok end)}
       end)
 
@@ -624,7 +624,7 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
     end
 
     test "handles assigns with content exactly at 3000 chars" do
-      expect(LlmClientMock, :chat_stream, fn _messages, _pid ->
+      expect(LlmClientMock, :chat_stream, fn _messages, _pid, _opts ->
         {:ok, spawn(fn -> :ok end)}
       end)
 
@@ -642,7 +642,7 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
     end
 
     test "handles assigns with content over 3000 chars" do
-      expect(LlmClientMock, :chat_stream, fn _messages, _pid ->
+      expect(LlmClientMock, :chat_stream, fn _messages, _pid, _opts ->
         {:ok, spawn(fn -> :ok end)}
       end)
 
@@ -660,7 +660,7 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
     end
 
     test "builds system message with all context fields present" do
-      expect(LlmClientMock, :chat_stream, fn messages, _pid ->
+      expect(LlmClientMock, :chat_stream, fn messages, _pid, _opts ->
         [system_msg | _] = messages
         assert system_msg.content =~ "Workspace: My Workspace"
         assert system_msg.content =~ "Project: My Project"
@@ -687,7 +687,7 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
     end
 
     test "builds system message with no context fields present" do
-      expect(LlmClientMock, :chat_stream, fn messages, _pid ->
+      expect(LlmClientMock, :chat_stream, fn messages, _pid, _opts ->
         [system_msg | _] = messages
         refute system_msg.content =~ "Workspace:"
         refute system_msg.content =~ "Project:"
@@ -708,7 +708,7 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
     end
 
     test "handles content with exactly 500 chars for preview" do
-      expect(LlmClientMock, :chat_stream, fn _messages, _pid ->
+      expect(LlmClientMock, :chat_stream, fn _messages, _pid, _opts ->
         {:ok, spawn(fn -> :ok end)}
       end)
 
@@ -726,7 +726,7 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
     end
 
     test "handles content over 500 chars for preview" do
-      expect(LlmClientMock, :chat_stream, fn messages, _pid ->
+      expect(LlmClientMock, :chat_stream, fn messages, _pid, _opts ->
         [system_msg | _] = messages
         # Preview should be truncated to 500 chars + "..."
         preview_match = Regex.run(~r/Page content preview:\n(.+)\.\.\./s, system_msg.content)
@@ -753,7 +753,7 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
 
   describe "message format" do
     test "creates system message with AI assistant role" do
-      expect(LlmClientMock, :chat_stream, fn messages, _pid ->
+      expect(LlmClientMock, :chat_stream, fn messages, _pid, _opts ->
         [system_msg | _] = messages
         assert system_msg.role == "system"
         assert system_msg.content =~ "agent assistant"
@@ -771,7 +771,7 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
     end
 
     test "creates user message with question" do
-      expect(LlmClientMock, :chat_stream, fn messages, _pid ->
+      expect(LlmClientMock, :chat_stream, fn messages, _pid, _opts ->
         [_system_msg, user_msg] = messages
         assert user_msg.role == "user"
         assert user_msg.content == "My specific question here"

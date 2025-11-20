@@ -24,7 +24,7 @@ end
 config :jarga, :openrouter,
   api_key: System.get_env("OPENROUTER_API_KEY"),
   base_url: System.get_env("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"),
-  chat_model: System.get_env("CHAT_MODEL", "google/gemini-2.0-flash-exp:free"),
+  chat_model: System.get_env("CHAT_MODEL", "google/gemini-2.5-flash-lite"),
   site_url: System.get_env("OPENROUTER_SITE_URL", "https://jarga.app"),
   app_name: System.get_env("OPENROUTER_APP_NAME", "Jarga")
 

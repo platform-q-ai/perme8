@@ -19,55 +19,49 @@ defmodule JargaWeb.AppLive.Workspaces.New do
       <:breadcrumbs navigate={~p"/app/workspaces"}>Workspaces</:breadcrumbs>
       <:breadcrumbs>New</:breadcrumbs>
 
-      <div class="max-w-2xl mx-auto space-y-8">
-        <div>
-          <.header>
-            New Workspace
-            <:subtitle>Create a new workspace to organize your work</:subtitle>
-          </.header>
-        </div>
+      <div class="w-full space-y-6">
+        <.header>
+          New Workspace
+          <:subtitle>Create a new workspace to organize your work</:subtitle>
+        </.header>
 
-        <div class="card bg-base-200">
-          <div class="card-body">
-            <.form
-              for={@form}
-              id="workspace-form"
-              phx-submit="save"
-              class="space-y-4"
-            >
-              <.input
-                field={@form[:name]}
-                type="text"
-                label="Name"
-                placeholder="My Workspace"
-                required
-              />
+        <.form
+          for={@form}
+          id="workspace-form"
+          phx-submit="save"
+          class="space-y-6"
+        >
+          <.input
+            field={@form[:name]}
+            type="text"
+            label="Name"
+            placeholder="My Workspace"
+            required
+          />
 
-              <.input
-                field={@form[:description]}
-                type="textarea"
-                label="Description"
-                placeholder="Describe your workspace..."
-              />
+          <.input
+            field={@form[:description]}
+            type="textarea"
+            label="Description"
+            placeholder="Describe your workspace..."
+          />
 
-              <.input
-                field={@form[:color]}
-                type="text"
-                label="Color"
-                placeholder="#4A90E2"
-              />
+          <.input
+            field={@form[:color]}
+            type="text"
+            label="Color"
+            placeholder="#4A90E2"
+          />
 
-              <div class="flex gap-2 justify-end">
-                <.link navigate={~p"/app/workspaces"} class="btn btn-ghost">
-                  Cancel
-                </.link>
-                <.button type="submit" variant="primary">
-                  Create Workspace
-                </.button>
-              </div>
-            </.form>
+          <div class="flex gap-4">
+            <.button type="submit" variant="primary">
+              Create Workspace
+            </.button>
+            <.link navigate={~p"/app/workspaces"} class="btn btn-ghost">
+              Cancel
+            </.link>
           </div>
-        </div>
+        </.form>
       </div>
     </Layouts.admin>
     """

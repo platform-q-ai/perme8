@@ -71,7 +71,7 @@ defmodule Jarga.Agents.UseCases.AgentQuery do
     end
 
     # Call LlmClient to start streaming
-    case llm_client.chat_stream(messages, self()) do
+    case llm_client.chat_stream(messages, self(), []) do
       {:ok, _stream_pid} ->
         # Forward messages from LlmClient to caller
         forward_stream(caller_pid, node_id)

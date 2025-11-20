@@ -22,55 +22,49 @@ defmodule JargaWeb.AppLive.Projects.Edit do
       </:breadcrumbs>
       <:breadcrumbs>Edit</:breadcrumbs>
 
-      <div class="max-w-2xl mx-auto space-y-8">
-        <div>
-          <.header>
-            Edit Project
-            <:subtitle>
-              <.link
-                navigate={~p"/app/workspaces/#{@workspace.slug}/projects/#{@project.slug}"}
-                class="text-sm hover:underline"
-              >
-                ← Back to {@project.name}
-              </.link>
-            </:subtitle>
-          </.header>
-        </div>
+      <div class="w-full space-y-6">
+        <.header>
+          Edit Project
+          <:subtitle>
+            <.link
+              navigate={~p"/app/workspaces/#{@workspace.slug}/projects/#{@project.slug}"}
+              class="text-sm hover:underline"
+            >
+              ← Back to {@project.name}
+            </.link>
+          </:subtitle>
+        </.header>
 
-        <div class="card bg-base-200">
-          <div class="card-body">
-            <.form for={@form} id="project-form" phx-submit="save" class="space-y-4">
-              <.input
-                field={@form[:name]}
-                type="text"
-                label="Name"
-                placeholder="My Project"
-                required
-              />
+        <.form for={@form} id="project-form" phx-submit="save" class="space-y-6">
+          <.input
+            field={@form[:name]}
+            type="text"
+            label="Name"
+            placeholder="My Project"
+            required
+          />
 
-              <.input
-                field={@form[:description]}
-                type="textarea"
-                label="Description"
-                placeholder="Describe your project..."
-              />
+          <.input
+            field={@form[:description]}
+            type="textarea"
+            label="Description"
+            placeholder="Describe your project..."
+          />
 
-              <.input field={@form[:color]} type="text" label="Color" placeholder="#10B981" />
+          <.input field={@form[:color]} type="text" label="Color" placeholder="#10B981" />
 
-              <div class="flex gap-2 justify-end">
-                <.link
-                  navigate={~p"/app/workspaces/#{@workspace.slug}/projects/#{@project.slug}"}
-                  class="btn btn-ghost"
-                >
-                  Cancel
-                </.link>
-                <.button type="submit" variant="primary">
-                  Update Project
-                </.button>
-              </div>
-            </.form>
+          <div class="flex gap-4">
+            <.button type="submit" variant="primary">
+              Update Project
+            </.button>
+            <.link
+              navigate={~p"/app/workspaces/#{@workspace.slug}/projects/#{@project.slug}"}
+              class="btn btn-ghost"
+            >
+              Cancel
+            </.link>
           </div>
-        </div>
+        </.form>
       </div>
     </Layouts.admin>
     """

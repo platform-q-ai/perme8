@@ -7,7 +7,7 @@ defmodule Jarga.WorkspacesFixtures do
   # Test fixture module - top-level boundary for test data creation
   use Boundary,
     top_level?: true,
-    deps: [Jarga.Workspaces, Jarga.Accounts, Jarga.Notifications],
+    deps: [Jarga.Workspaces, Jarga.Accounts, Jarga.Notifications, Jarga.Repo],
     exports: []
 
   alias Jarga.Workspaces
@@ -25,6 +25,26 @@ defmodule Jarga.WorkspacesFixtures do
     attrs = valid_workspace_attributes(attrs)
     {:ok, workspace} = Workspaces.create_workspace(user, attrs)
     workspace
+  end
+
+  @doc """
+  Adds a workspace member directly (bypassing invitation flow).
+
+  This is for testing purposes only - bypasses the normal invitation/acceptance flow.
+
+  Returns the workspace_member struct.
+  """
+  def add_workspace_member_fixture(workspace_id, user, role) do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    Jarga.Repo.insert!(%Jarga.Workspaces.WorkspaceMember{
+      workspace_id: workspace_id,
+      user_id: user.id,
+      email: user.email,
+      role: role,
+      invited_at: now,
+      joined_at: now
+    })
   end
 
   @doc """

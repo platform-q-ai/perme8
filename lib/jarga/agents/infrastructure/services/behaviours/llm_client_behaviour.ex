@@ -5,6 +5,6 @@ defmodule Jarga.Agents.Infrastructure.Services.Behaviours.LlmClientBehaviour do
   This allows mocking LlmClient in tests for testing streaming functionality.
   """
 
-  @callback chat_stream(messages :: list(map()), caller_pid :: pid()) ::
+  @callback chat_stream(messages :: list(map()), caller_pid :: pid(), opts :: keyword()) ::
               {:ok, pid()} | {:error, String.t()}
 end

@@ -376,6 +376,22 @@ defmodule Jarga.Workspaces do
   end
 
   @doc """
+  Checks if a user is a member of a workspace.
+
+  ## Examples
+
+      iex> member?(user_id, workspace_id)
+      true
+
+      iex> member?(user_id, other_workspace_id)
+      false
+
+  """
+  def member?(user_id, workspace_id) do
+    MembershipRepository.member?(user_id, workspace_id)
+  end
+
+  @doc """
   Gets a user's workspace member record.
 
   This is a public API for other contexts to get the user's role in a workspace.

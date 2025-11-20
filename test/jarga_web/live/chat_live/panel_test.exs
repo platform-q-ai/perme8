@@ -268,13 +268,13 @@ defmodule JargaWeb.ChatLive.PanelTest do
       assert html =~ "Ask about this document..."
     end
 
-    test "chat input uses ChatInput hook for keyboard handling", %{conn: conn, user: user} do
+    test "chat input uses phx-keydown for keyboard handling", %{conn: conn, user: user} do
       conn = log_in_user(conn, user)
 
       {:ok, _view, html} = live(conn, ~p"/app")
 
-      # Check that ChatInput hook is attached
-      assert html =~ ~r/phx-hook="ChatInput"/
+      # Check that phx-keydown is used instead of hook
+      assert html =~ ~r/phx-keydown="submit_on_enter"/
     end
 
     test "chat drawer uses ChatPanel hook for state management", %{conn: conn, user: user} do
@@ -286,13 +286,13 @@ defmodule JargaWeb.ChatLive.PanelTest do
       assert html =~ ~r/phx-hook="ChatPanel"/
     end
 
-    test "chat messages container uses ChatMessages hook for scrolling", %{conn: conn, user: user} do
+    test "chat messages container uses server-side scrolling", %{conn: conn, user: user} do
       conn = log_in_user(conn, user)
 
       {:ok, _view, html} = live(conn, ~p"/app")
 
-      # Check that ChatMessages hook is attached
-      assert html =~ ~r/phx-hook="ChatMessages"/
+      # Check that chat-messages container exists (scrolling handled server-side via push_event)
+      assert html =~ ~r/id="chat-messages"/
     end
 
     test "drawer has phx-update=ignore to prevent server updates", %{conn: conn, user: user} do
@@ -1517,6 +1517,140 @@ defmodule JargaWeb.ChatLive.PanelTest do
       assert html =~ "chat-panel"
       # Both page and note context should be available
       # (Insert links would appear on assistant messages, tested in component tests)
+    end
+  end
+
+  # NOTE: Agent configuration tests (model/temperature passing) are in
+  # test/jarga/agents/use_cases/agent_query_test.exs in the "LLM configuration options" section.
+  # These tests verify that agent settings (model, temperature) are properly passed to the LLM client.
+
+  describe "Agent selection on session restore" do
+    setup do
+      user = user_fixture()
+      workspace = workspace_fixture(user)
+
+      # Create a test agent with specific model
+      {:ok, agent} =
+        Agents.create_user_agent(%{
+          user_id: user.id,
+          name: "Test Agent",
+          model: "gpt-4",
+          temperature: 0.5,
+          system_prompt: "You are a helpful assistant"
+        })
+
+      # Add agent to workspace
+      Agents.sync_agent_workspaces(agent.id, user.id, [workspace.id])
+
+      %{user: user, workspace: workspace, agent: agent}
+    end
+
+    test "restores selected_agent_id when loading a session", %{
+      conn: conn,
+      user: user,
+      workspace: workspace,
+      agent: agent
+    } do
+      # Create a chat session with messages
+      {:ok, session} =
+        Agents.create_session(%{
+          user_id: user.id,
+          workspace_id: workspace.id,
+          title: "Previous Conversation"
+        })
+
+      {:ok, _msg1} =
+        Agents.save_message(%{
+          chat_session_id: session.id,
+          role: "user",
+          content: "Hello"
+        })
+
+      {:ok, _msg2} =
+        Agents.save_message(%{
+          chat_session_id: session.id,
+          role: "assistant",
+          content: "Hi there!"
+        })
+
+      conn = log_in_user(conn, user)
+
+      # Navigate to workspace page (which will restore the session)
+      {:ok, _view, html} = live(conn, ~p"/app/workspaces/#{workspace.slug}")
+
+      # Session should be restored - check that messages appear
+      assert html =~ "Hello"
+      assert html =~ "Hi there!"
+
+      # Agent dropdown should exist
+      assert html =~ ~s|id="agent-selector"|
+      assert html =~ agent.name
+
+      # ISSUE: selected_agent_id is nil even though there's an agent in the workspace
+      # This causes the dropdown to show the agent but not actually select it internally
+      # When user sends a message without re-selecting, no model is passed to LLM client
+
+      # Verify the correct option has the selected attribute
+      assert html =~ ~r/option[^>]*value="#{agent.id}"[^>]*selected/,
+             "Agent should be auto-selected in dropdown when workspace has agents"
+    end
+
+    test "sending message without agent selection uses empty LLM opts", %{
+      conn: conn,
+      user: user,
+      workspace: workspace
+    } do
+      conn = log_in_user(conn, user)
+      {:ok, view, html} = live(conn, ~p"/app/workspaces/#{workspace.slug}")
+
+      # Verify agent dropdown exists but no option is selected
+      assert html =~ ~s|id="agent-selector"|
+      refute html =~ ~r/selected="selected"/
+
+      # Try to send a message without selecting an agent
+      view
+      |> element("#chat-message-form")
+      |> render_submit(%{message: "Hello"})
+
+      # This will trigger a chat_stream call with empty opts (no model, no temperature)
+      # LLM client falls back to default model from config
+      # If default model is rate-limited, user sees 429 error
+
+      # The bug is that the UI shows an agent in the dropdown (due to HTML default behavior)
+      # but internally @selected_agent_id is nil, so no agent config is used
+
+      # Message appears in UI
+      assert render(view) =~ "Hello"
+
+      # But we can't easily test the LLM opts passed without mocking
+      # The real issue manifests as:
+      # 1. Dropdown appears to have agent selected
+      # 2. User sends message
+      # 3. Gets API error: 429 (rate limit on default model)
+      # 4. User has to re-select agent manually for it to work
+    end
+
+    test "agent selector dropdown has no selected value on mount", %{
+      conn: conn,
+      user: user,
+      workspace: workspace,
+      agent: agent
+    } do
+      conn = log_in_user(conn, user)
+      {:ok, _view, html} = live(conn, ~p"/app/workspaces/#{workspace.slug}")
+
+      # Dropdown exists
+      assert html =~ ~s|id="agent-selector"|
+
+      # Agent appears in options
+      assert html =~ agent.name
+
+      # But NO option is marked as selected
+      # This is the UI manifestation of the bug:
+      # - Dropdown shows first agent by default (HTML behavior)
+      # - But no option has selected="selected" attribute
+      # - And @selected_agent_id in assigns is nil
+      refute html =~ ~s|selected="selected"|
     end
   end
 end

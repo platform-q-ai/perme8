@@ -16,7 +16,7 @@ defmodule Jarga.Workspaces.Infrastructure.MembershipRepository do
 
   alias Jarga.Repo
   alias Jarga.Accounts.User
-  alias Jarga.Workspaces.Queries
+  alias Jarga.Workspaces.{Queries, WorkspaceMember}
 
   @doc """
   Finds a workspace and verifies the user is a member.
@@ -197,6 +197,57 @@ defmodule Jarga.Workspaces.Infrastructure.MembershipRepository do
       else
         query
       end
+
+    repo.exists?(query)
+  end
+
+  @doc """
+  Adds a member to a workspace (for testing purposes).
+
+  ## Parameters
+    - workspace_id: ID of the workspace
+    - user_id: ID of the user to add
+    - email: User's email
+    - role: Member role (:owner, :admin, or :member)
+
+  ## Returns
+    - `{:ok, workspace_member}` if successful
+    - `{:error, changeset}` if validation fails
+
+  ## Examples
+
+      iex> add_member(workspace_id, user_id, "user@example.com", :member)
+      {:ok, %WorkspaceMember{}}
+
+  """
+  def add_member(workspace_id, user_id, email, role, repo \\ Repo) do
+    %WorkspaceMember{}
+    |> WorkspaceMember.changeset(%{
+      workspace_id: workspace_id,
+      user_id: user_id,
+      email: email,
+      role: role
+    })
+    |> repo.insert()
+  end
+
+  @doc """
+  Checks if a user is a member of a workspace.
+
+  ## Examples
+
+      iex> member?(user_id, workspace_id)
+      true
+
+      iex> member?(user_id, other_workspace_id)
+      false
+
+  """
+  def member?(user_id, workspace_id, repo \\ Repo) do
+    query =
+      from(wm in WorkspaceMember,
+        where: wm.user_id == ^user_id and wm.workspace_id == ^workspace_id
+      )
 
     repo.exists?(query)
   end

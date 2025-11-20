@@ -160,4 +160,51 @@ defmodule JargaWeb.Live.PermissionsHelper do
   def can_manage_members?(member) do
     member.role in [:admin, :owner]
   end
+
+  @doc """
+  Checks if a workspace member can create agents.
+
+  Members, admins, and owners can create agents. Guests cannot.
+
+  ## Examples
+
+      <%= if can_create_agent?(@current_member) do %>
+        <button>New Agent</button>
+      <% end %>
+  """
+  def can_create_agent?(member) do
+    member.role in [:member, :admin, :owner]
+  end
+
+  @doc """
+  Checks if a workspace member can edit an agent.
+
+  Users can edit their own agents. Admins and owners can edit all agents.
+
+  ## Examples
+
+      <%= if can_edit_agent?(@current_member, @agent, @current_user) do %>
+        <button>Edit Agent</button>
+      <% end %>
+  """
+  def can_edit_agent?(member, agent, current_user) do
+    owns_agent = agent.created_by_user_id == current_user.id
+    owns_agent || member.role in [:admin, :owner]
+  end
+
+  @doc """
+  Checks if a workspace member can delete an agent.
+
+  Users can delete their own agents. Admins and owners can delete all agents.
+
+  ## Examples
+
+      <%= if can_delete_agent?(@current_member, @agent, @current_user) do %>
+        <button>Delete Agent</button>
+      <% end %>
+  """
+  def can_delete_agent?(member, agent, current_user) do
+    owns_agent = agent.created_by_user_id == current_user.id
+    owns_agent || member.role in [:admin, :owner]
+  end
 end

@@ -19,14 +19,26 @@ defmodule JargaWeb.ChatLive.MessageHandlers do
   """
 
   @doc """
-  Defines handle_info callbacks for chat panel streaming messages.
+  Defines handle_info callbacks for chat panel streaming messages and handle_event for agent selection.
 
   This macro injects the necessary handle_info/2 callbacks that forward
   streaming messages from the LLM client to the global chat panel component,
-  and notification events to the notification bell component.
+  notification events to the notification bell component, and handle_event/3
+  for agent selection events from the JavaScript hook.
   """
   defmacro handle_chat_messages do
     quote do
+      @impl true
+      def handle_event("agent-selected", %{"agent_id" => agent_id}, socket) do
+        # Forward agent selection to chat panel component
+        Phoenix.LiveView.send_update(JargaWeb.ChatLive.Panel,
+          id: "global-chat-panel",
+          selected_agent_id: agent_id
+        )
+
+        {:noreply, socket}
+      end
+
       @impl true
       def handle_info({:chunk, chunk}, socket) do
         Phoenix.LiveView.send_update(JargaWeb.ChatLive.Panel,

@@ -10,7 +10,7 @@ defmodule Jarga.Agents.Infrastructure.Services.LlmClient do
 
   require Logger
 
-  @default_model "google/gemini-2.5-flash-lite:free"
+  @default_model "google/gemini-2.5-flash-lite"
   @default_base_url "https://openrouter.ai/api/v1"
   @default_timeout 30_000
 

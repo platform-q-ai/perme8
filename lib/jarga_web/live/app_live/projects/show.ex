@@ -52,7 +52,7 @@ defmodule JargaWeb.AppLive.Projects.Show do
           <div class="flex items-center justify-between mb-4">
             <h2 class="text-lg font-semibold">Documents</h2>
             <.button variant="primary" size="sm" phx-click="show_document_modal">
-              <.icon name="hero-document-plus" class="size-4" /> New Document
+              <.icon name="hero-plus" class="size-4" /> New Document
             </.button>
           </div>
 
@@ -62,7 +62,7 @@ defmodule JargaWeb.AppLive.Projects.Show do
                 <div class="flex flex-col items-center gap-4 py-8">
                   <.icon name="hero-document" class="size-16 opacity-50" />
                   <div>
-                    <h3 class="text-lg font-semibold">No documents yet</h3>
+                    <h3 class="text-base font-semibold">No documents yet</h3>
                     <p class="text-base-content/70">
                       Create your first document for this project
                     </p>
@@ -74,27 +74,41 @@ defmodule JargaWeb.AppLive.Projects.Show do
               </div>
             </div>
           <% else %>
-            <div class="grid gap-2">
-              <%= for document <- @documents do %>
-                <.link
-                  navigate={~p"/app/workspaces/#{@workspace.slug}/documents/#{document.slug}"}
-                  class="card bg-base-200 hover:bg-base-300 transition-colors"
-                  data-document-id={document.id}
-                >
-                  <div class="card-body p-4 flex-row items-center gap-3">
-                    <.icon name="hero-document-text" class="size-5 text-primary" />
-                    <div class="flex-1 min-w-0">
-                      <h3 class="font-semibold truncate">{document.title}</h3>
-                      <p class="text-xs text-base-content/70">
-                        Updated {Calendar.strftime(document.updated_at, "%b %d, %Y at %I:%M %p")}
-                      </p>
-                    </div>
-                    <%= if document.is_pinned do %>
-                      <.icon name="hero-star-solid" class="size-5 text-warning" />
-                    <% end %>
-                  </div>
-                </.link>
-              <% end %>
+            <div class="overflow-x-auto">
+              <table class="table table-zebra">
+                <thead>
+                  <tr>
+                    <th class="text-sm font-semibold">Title</th>
+                    <th class="text-sm font-semibold">Last Updated</th>
+                    <th class="text-sm font-semibold text-right">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <%= for document <- @documents do %>
+                    <tr data-document-id={document.id}>
+                      <td>
+                        <.link
+                          navigate={~p"/app/workspaces/#{@workspace.slug}/documents/#{document.slug}"}
+                          class="text-sm font-medium hover:text-primary transition-colors flex items-center gap-2"
+                        >
+                          <.icon name="hero-document-text" class="size-4" />
+                          {document.title}
+                        </.link>
+                      </td>
+                      <td class="text-sm">
+                        {Calendar.strftime(document.updated_at, "%b %d, %Y at %I:%M %p")}
+                      </td>
+                      <td class="text-sm text-right">
+                        <%= if document.is_pinned do %>
+                          <span class="badge badge-sm badge-warning gap-1">
+                            <.icon name="lucide-pin" class="size-3" /> Pinned
+                          </span>
+                        <% end %>
+                      </td>
+                    </tr>
+                  <% end %>
+                </tbody>
+              </table>
             </div>
           <% end %>
         </div>
@@ -129,7 +143,7 @@ defmodule JargaWeb.AppLive.Projects.Show do
       <%= if @show_document_modal do %>
         <div class="modal modal-open">
           <div class="modal-box">
-            <h3 class="font-bold text-lg mb-4">Create New Document</h3>
+            <h3 class="text-lg font-bold mb-4">Create New Document</h3>
 
             <.form
               for={@document_form}
@@ -155,7 +169,9 @@ defmodule JargaWeb.AppLive.Projects.Show do
               </div>
             </.form>
           </div>
-          <div class="modal-backdrop" phx-click="hide_document_modal"></div>
+          <form method="dialog" class="modal-backdrop" phx-click="hide_document_modal">
+            <button>close</button>
+          </form>
         </div>
       <% end %>
     </Layouts.admin>
@@ -301,6 +317,23 @@ defmodule JargaWeb.AppLive.Projects.Show do
     else
       {:noreply, socket}
     end
+  end
+
+  @impl true
+  def handle_info({:workspace_agent_updated, _agent}, socket) do
+    # Reload workspace agents and send to chat panel
+    workspace_id = socket.assigns.workspace.id
+    user = socket.assigns.current_scope.user
+
+    agents = Jarga.Agents.get_workspace_agents_list(workspace_id, user.id, enabled_only: true)
+
+    send_update(JargaWeb.ChatLive.Panel,
+      id: "global-chat-panel",
+      workspace_agents: agents,
+      from_pubsub: true
+    )
+
+    {:noreply, socket}
   end
 
   defp get_project_by_slug(user, workspace_id, slug) do

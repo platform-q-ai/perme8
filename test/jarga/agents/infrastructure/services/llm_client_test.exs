@@ -560,8 +560,8 @@ defmodule Jarga.Agents.Infrastructure.Services.LlmClientTest do
       assert {:ok, "Response"} =
                LlmClient.chat(messages, api_key: "test-api-key", base_url: base_url)
 
-      # Note: Config default is "google/gemini-2.0-flash-exp:free"
-      assert_received {:default_model, "google/gemini-2.0-flash-exp:free"}
+      # Note: Config default is "google/gemini-2.5-flash-lite"
+      assert_received {:default_model, "google/gemini-2.5-flash-lite"}
     end
   end
 

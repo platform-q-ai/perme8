@@ -21,6 +21,7 @@ defmodule Jarga.Accounts.User do
     field(:authenticated_at, :utc_datetime, virtual: true)
     field(:last_login, :naive_datetime)
     field(:date_created, :naive_datetime)
+    field(:preferences, :map, default: %{})
 
     # Legacy timestamp fields - not using standard inserted_at/updated_at
     # timestamps(type: :utc_datetime)

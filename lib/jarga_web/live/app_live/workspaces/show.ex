@@ -8,7 +8,7 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
   import JargaWeb.Live.PermissionsHelper
   import JargaWeb.ChatLive.MessageHandlers
 
-  alias Jarga.{Workspaces, Projects, Documents}
+  alias Jarga.{Workspaces, Projects, Documents, Agents}
   alias Jarga.Projects.Project
   alias JargaWeb.Layouts
 
@@ -55,73 +55,13 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
           </div>
         <% end %>
 
-        <%!-- Documents Section --%>
-        <div>
-          <div class="flex items-center justify-between mb-4">
-            <h2 class="text-lg font-semibold">Documents</h2>
-            <%= if can_create_document?(@current_member) do %>
-              <.button variant="primary" size="sm" phx-click="show_document_modal">
-                <.icon name="hero-document-plus" class="size-4" /> New Document
-              </.button>
-            <% end %>
-          </div>
-
-          <%= if @documents == [] do %>
-            <div class="card bg-base-200">
-              <div class="card-body text-center">
-                <div class="flex flex-col items-center gap-4 py-8">
-                  <.icon name="hero-document" class="size-16 opacity-50" />
-                  <div>
-                    <h3 class="text-lg font-semibold">No documents yet</h3>
-                    <p class="text-base-content/70">
-                      <%= if can_create_document?(@current_member) do %>
-                        Create your first document to start documenting
-                      <% else %>
-                        No documents have been created yet
-                      <% end %>
-                    </p>
-                  </div>
-                  <%= if can_create_document?(@current_member) do %>
-                    <.button variant="primary" phx-click="show_document_modal">
-                      Create Document
-                    </.button>
-                  <% end %>
-                </div>
-              </div>
-            </div>
-          <% else %>
-            <div class="grid gap-2">
-              <%= for document <- @documents do %>
-                <.link
-                  navigate={~p"/app/workspaces/#{@workspace.slug}/documents/#{document.slug}"}
-                  class="card bg-base-200 hover:bg-base-300 transition-colors"
-                  data-document-id={document.id}
-                >
-                  <div class="card-body p-4 flex-row items-center gap-3">
-                    <.icon name="hero-document-text" class="size-5 text-primary" />
-                    <div class="flex-1 min-w-0">
-                      <h3 class="font-semibold truncate">{document.title}</h3>
-                      <p class="text-xs text-base-content/70">
-                        Updated {Calendar.strftime(document.updated_at, "%b %d, %Y at %I:%M %p")}
-                      </p>
-                    </div>
-                    <%= if document.is_pinned do %>
-                      <.icon name="lucide-pin" class="size-5 text-warning" />
-                    <% end %>
-                  </div>
-                </.link>
-              <% end %>
-            </div>
-          <% end %>
-        </div>
-
         <%!-- Projects Section --%>
         <div>
           <div class="flex items-center justify-between mb-4">
             <h2 class="text-lg font-semibold">Projects</h2>
             <%= if can_create_project?(@current_member) do %>
               <.button variant="primary" size="sm" phx-click="show_project_modal">
-                <.icon name="hero-folder-plus" class="size-4" /> New Project
+                <.icon name="hero-plus" class="size-4" /> New Project
               </.button>
             <% end %>
           </div>
@@ -132,7 +72,7 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
                 <div class="flex flex-col items-center gap-4 py-8">
                   <.icon name="hero-folder" class="size-16 opacity-50" />
                   <div>
-                    <h3 class="text-lg font-semibold">No projects yet</h3>
+                    <h3 class="text-base font-semibold">No projects yet</h3>
                     <p class="text-base-content/70">
                       <%= if can_create_project?(@current_member) do %>
                         Create your first project to get started
@@ -150,31 +90,224 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
               </div>
             </div>
           <% else %>
-            <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div class="grid gap-2">
               <%= for project <- @projects do %>
                 <.link
                   navigate={~p"/app/workspaces/#{@workspace.slug}/projects/#{project.slug}"}
                   class="card bg-base-200 hover:bg-base-300 transition-colors"
                   data-project-id={project.id}
                 >
-                  <div class="card-body">
-                    <%= if project.color do %>
-                      <div
-                        class="w-12 h-1 rounded mb-2"
-                        style={"background-color: #{project.color}"}
-                      />
-                    <% end %>
-                    <h3 class="card-title">
-                      <.icon name="hero-folder" class="size-5 text-primary" />
-                      {project.name}
-                    </h3>
-                    <%= if project.description do %>
-                      <p class="text-sm text-base-content/70">{project.description}</p>
-                    <% end %>
+                  <div class="card-body p-4 flex-row items-center gap-3">
+                    <.icon name="hero-folder" class="size-5 text-primary" />
+                    <div class="flex-1 min-w-0">
+                      <%= if project.color do %>
+                        <div
+                          class="w-12 h-1 rounded mb-1"
+                          style={"background-color: #{project.color}"}
+                        />
+                      <% end %>
+                      <h3 class="text-sm font-semibold truncate">{project.name}</h3>
+                      <%= if project.description do %>
+                        <p class="text-xs text-base-content/70 truncate">{project.description}</p>
+                      <% end %>
+                    </div>
                   </div>
                 </.link>
               <% end %>
             </div>
+          <% end %>
+        </div>
+
+        <%!-- Documents Section --%>
+        <div>
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-semibold">Documents</h2>
+            <%= if can_create_document?(@current_member) do %>
+              <.button variant="primary" size="sm" phx-click="show_document_modal">
+                <.icon name="hero-plus" class="size-4" /> New Document
+              </.button>
+            <% end %>
+          </div>
+
+          <%= if @documents == [] do %>
+            <div class="card bg-base-200">
+              <div class="card-body text-center">
+                <div class="flex flex-col items-center gap-4 py-8">
+                  <.icon name="hero-document" class="size-16 opacity-50" />
+                  <div>
+                    <h3 class="text-base font-semibold">No documents yet</h3>
+                    <p class="text-base-content/70">
+                      <%= if can_create_document?(@current_member) do %>
+                        Create your first document to start documenting
+                      <% else %>
+                        No documents have been created yet
+                      <% end %>
+                    </p>
+                  </div>
+                  <%= if can_create_document?(@current_member) do %>
+                    <.button variant="primary" phx-click="show_document_modal">
+                      Create Document
+                    </.button>
+                  <% end %>
+                </div>
+              </div>
+            </div>
+          <% else %>
+            <div class="overflow-x-auto">
+              <table class="table table-zebra">
+                <thead>
+                  <tr>
+                    <th class="text-sm font-semibold">Title</th>
+                    <th class="text-sm font-semibold">Last Updated</th>
+                    <th class="text-sm font-semibold text-right">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <%= for document <- @documents do %>
+                    <tr data-document-id={document.id}>
+                      <td>
+                        <.link
+                          navigate={~p"/app/workspaces/#{@workspace.slug}/documents/#{document.slug}"}
+                          class="text-sm font-medium hover:text-primary transition-colors flex items-center gap-2"
+                        >
+                          <.icon name="hero-document-text" class="size-4" />
+                          {document.title}
+                        </.link>
+                      </td>
+                      <td class="text-sm">
+                        {Calendar.strftime(document.updated_at, "%b %d, %Y at %I:%M %p")}
+                      </td>
+                      <td class="text-sm text-right">
+                        <%= if document.is_pinned do %>
+                          <span class="badge badge-sm badge-warning gap-1">
+                            <.icon name="lucide-pin" class="size-3" /> Pinned
+                          </span>
+                        <% end %>
+                      </td>
+                    </tr>
+                  <% end %>
+                </tbody>
+              </table>
+            </div>
+          <% end %>
+        </div>
+
+        <%!-- Agents Section --%>
+        <div>
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-semibold">Agents</h2>
+            <.button
+              variant="primary"
+              size="sm"
+              navigate={~p"/app/agents/new"}
+            >
+              <.icon name="hero-plus" class="size-4" /> New Agent
+            </.button>
+          </div>
+
+          <%= if @my_agents == [] && @other_agents == [] do %>
+            <div class="card bg-base-200">
+              <div class="card-body text-center">
+                <div class="flex flex-col items-center gap-4 py-8">
+                  <.icon name="hero-cpu-chip" class="size-16 opacity-50" />
+                  <div>
+                    <h3 class="text-base font-semibold">No agents in this workspace yet</h3>
+                    <p class="text-base-content/70">
+                      Add your agents to this workspace to collaborate
+                    </p>
+                  </div>
+                  <.button variant="primary" navigate={~p"/app/agents/new"}>
+                    Create Agent
+                  </.button>
+                </div>
+              </div>
+            </div>
+          <% else %>
+            <%!-- My Agents Section --%>
+            <%= if @my_agents != [] do %>
+              <div class="mb-6">
+                <h3 class="text-base font-semibold mb-3">My Agents</h3>
+                <div class="overflow-x-auto">
+                  <table class="table table-zebra">
+                    <thead>
+                      <tr>
+                        <th class="text-sm font-semibold">Name</th>
+                        <th class="text-sm font-semibold">Model</th>
+                        <th class="text-sm font-semibold text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <%= for agent <- @my_agents do %>
+                        <tr data-agent-id={agent.id}>
+                          <td class="text-sm font-medium">{agent.name}</td>
+                          <td class="text-sm">{agent.model || "Not set"}</td>
+                          <td class="text-sm text-right">
+                            <div class="flex justify-end gap-1">
+                              <.link
+                                navigate={
+                                  ~p"/app/agents/#{agent.id}/edit?return_to=workspace&workspace_slug=#{@workspace.slug}"
+                                }
+                                class="btn btn-sm btn-ghost"
+                                title="Edit agent"
+                              >
+                                <.icon name="hero-pencil" class="size-4" />
+                              </.link>
+                            </div>
+                          </td>
+                        </tr>
+                      <% end %>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            <% end %>
+
+            <%!-- Shared Agents Section --%>
+            <%= if @other_agents != [] do %>
+              <div>
+                <h3 class="text-base font-semibold mb-3">Shared by Others</h3>
+                <div class="overflow-x-auto">
+                  <table class="table table-zebra">
+                    <thead>
+                      <tr>
+                        <th class="text-sm font-semibold">Name</th>
+                        <th class="text-sm font-semibold">Model</th>
+                        <th class="text-sm font-semibold text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <%= for agent <- @other_agents do %>
+                        <tr data-agent-id={agent.id}>
+                          <td class="text-sm font-medium">{agent.name}</td>
+                          <td class="text-sm">{agent.model || "Not set"}</td>
+                          <td class="text-sm text-right">
+                            <div class="flex justify-end gap-1">
+                              <.link
+                                navigate={
+                                  ~p"/app/agents/#{agent.id}/view?return_to=workspace&workspace_slug=#{@workspace.slug}"
+                                }
+                                class="btn btn-sm btn-ghost"
+                                title="View agent details"
+                              >
+                                <.icon name="hero-eye" class="size-4" />
+                              </.link>
+                              <button
+                                phx-click="clone_agent"
+                                phx-value-agent-id={agent.id}
+                                class="btn btn-sm btn-primary"
+                                title="Clone to my agents"
+                              >
+                                <.icon name="hero-document-duplicate" class="size-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      <% end %>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            <% end %>
           <% end %>
         </div>
       </div>
@@ -202,7 +335,7 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
               <%!-- Invite Section --%>
               <div class="card bg-base-200">
                 <div class="card-body p-4">
-                  <h4 class="font-semibold mb-3 flex items-center gap-2">
+                  <h4 class="text-sm font-semibold mb-3 flex items-center gap-2">
                     <.icon name="hero-envelope" class="size-5 text-primary" /> Invite New Member
                   </h4>
                   <.form
@@ -250,7 +383,7 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
               <%!-- Members List --%>
               <div>
                 <div class="flex items-center justify-between mb-4">
-                  <h4 class="font-semibold flex items-center gap-2">
+                  <h4 class="text-sm font-semibold flex items-center gap-2">
                     <.icon name="hero-user-group" class="size-5 text-primary" /> Team Members
                   </h4>
                   <span class="badge badge-neutral badge-sm">
@@ -270,11 +403,11 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
                     <table class="table table-sm">
                       <thead class="bg-base-200">
                         <tr>
-                          <th class="font-semibold">Member</th>
-                          <th class="font-semibold">Role</th>
-                          <th class="font-semibold">Status</th>
-                          <th class="font-semibold">Joined</th>
-                          <th class="font-semibold text-right">Actions</th>
+                          <th class="text-sm font-semibold">Member</th>
+                          <th class="text-sm font-semibold">Role</th>
+                          <th class="text-sm font-semibold">Status</th>
+                          <th class="text-sm font-semibold">Joined</th>
+                          <th class="text-sm font-semibold text-right">Actions</th>
                         </tr>
                       </thead>
                       <tbody id="members-list">
@@ -289,7 +422,7 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
                                     </span>
                                   </div>
                                 </div>
-                                <span class="font-medium">{member.email}</span>
+                                <span class="text-sm font-medium">{member.email}</span>
                               </div>
                             </td>
                             <td>
@@ -327,14 +460,14 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
                                 </div>
                               <% end %>
                             </td>
-                            <td class="text-sm text-base-content/70">
+                            <td class="text-sm">
                               <%= if member.joined_at do %>
                                 {Calendar.strftime(member.joined_at, "%b %d, %Y")}
                               <% else %>
                                 <span class="text-base-content/50 italic">Not yet</span>
                               <% end %>
                             </td>
-                            <td class="text-right">
+                            <td class="text-sm text-right">
                               <%= if member.role != :owner do %>
                                 <.button
                                   variant="ghost"
@@ -378,7 +511,7 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
       <%= if @show_document_modal do %>
         <div class="modal modal-open">
           <div class="modal-box">
-            <h3 class="font-bold text-lg mb-4">Create New Document</h3>
+            <h3 class="text-lg font-bold mb-4">Create New Document</h3>
 
             <.form
               for={@document_form}
@@ -404,7 +537,9 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
               </div>
             </.form>
           </div>
-          <div class="modal-backdrop" phx-click="hide_document_modal"></div>
+          <form method="dialog" class="modal-backdrop" phx-click="hide_document_modal">
+            <button>close</button>
+          </form>
         </div>
       <% end %>
 
@@ -412,7 +547,7 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
       <%= if @show_project_modal do %>
         <div class="modal modal-open">
           <div class="modal-box">
-            <h3 class="font-bold text-lg mb-4">Create New Project</h3>
+            <h3 class="text-lg font-bold mb-4">Create New Project</h3>
 
             <.form
               for={@project_form}
@@ -452,7 +587,9 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
               </div>
             </.form>
           </div>
-          <div class="modal-backdrop" phx-click="hide_project_modal"></div>
+          <form method="dialog" class="modal-backdrop" phx-click="hide_project_modal">
+            <button>close</button>
+          </form>
         </div>
       <% end %>
     </Layouts.admin>
@@ -470,6 +607,9 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
         documents = Documents.list_documents_for_workspace(user, workspace.id)
         projects = Projects.list_projects_for_workspace(user, workspace.id)
 
+        # Load agents available in this workspace
+        agents_result = Jarga.Agents.list_workspace_available_agents(workspace.id, user.id)
+
         # Subscribe to workspace-specific PubSub topic for real-time updates
         if connected?(socket) do
           Phoenix.PubSub.subscribe(Jarga.PubSub, "workspace:#{workspace.id}")
@@ -481,6 +621,8 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
          |> assign(:current_member, current_member)
          |> assign(:documents, documents)
          |> assign(:projects, projects)
+         |> assign(:my_agents, agents_result.my_agents)
+         |> assign(:other_agents, agents_result.other_agents)
          |> assign(:members, [])
          |> assign(:show_document_modal, false)
          |> assign(:show_project_modal, false)
@@ -494,6 +636,43 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
          socket
          |> put_flash(:error, "Workspace not found")
          |> push_navigate(to: ~p"/app/workspaces")}
+    end
+  end
+
+  @impl true
+  def handle_params(params, _url, socket) do
+    {:noreply, apply_action(socket, socket.assigns.live_action, params)}
+  end
+
+  defp apply_action(socket, :show, _params) do
+    socket
+  end
+
+  @impl true
+  def handle_event("clone_agent", %{"agent-id" => agent_id}, socket) do
+    user_id = socket.assigns.current_scope.user.id
+    workspace_id = socket.assigns.workspace.id
+
+    # Clone with workspace context for authorization
+    case Agents.clone_shared_agent(agent_id, user_id, workspace_id: workspace_id) do
+      {:ok, cloned_agent} ->
+        # Add cloned agent to current workspace
+        Agents.sync_agent_workspaces(cloned_agent.id, user_id, [workspace_id])
+
+        # Refresh workspace-scoped agents
+        agents_result = Agents.list_workspace_available_agents(workspace_id, user_id)
+
+        {:noreply,
+         socket
+         |> assign(:my_agents, agents_result.my_agents)
+         |> assign(:other_agents, agents_result.other_agents)
+         |> put_flash(:info, "Agent '#{cloned_agent.name}' cloned successfully")}
+
+      {:error, :not_found} ->
+        {:noreply, put_flash(socket, :error, "Agent not found")}
+
+      {:error, :forbidden} ->
+        {:noreply, put_flash(socket, :error, "Cannot clone this agent")}
     end
   end
 
@@ -821,6 +1000,30 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
     else
       {:noreply, socket}
     end
+  end
+
+  @impl true
+  def handle_info({:workspace_agent_updated, _agent}, socket) do
+    # Reload workspace agents and send to chat panel
+    workspace_id = socket.assigns.workspace.id
+    user = socket.assigns.current_scope.user
+
+    # Reload for chat panel (flat list with enabled only)
+    agents = Jarga.Agents.get_workspace_agents_list(workspace_id, user.id, enabled_only: true)
+
+    send_update(JargaWeb.ChatLive.Panel,
+      id: "global-chat-panel",
+      workspace_agents: agents,
+      from_pubsub: true
+    )
+
+    # Reload for workspace overview page (my_agents and other_agents)
+    agents_result = Jarga.Agents.list_workspace_available_agents(workspace_id, user.id)
+
+    {:noreply,
+     socket
+     |> assign(:my_agents, agents_result.my_agents)
+     |> assign(:other_agents, agents_result.other_agents)}
   end
 
   # Chat panel streaming messages

@@ -17,19 +17,13 @@
 
 // Import hook classes from Clean Architecture presentation layer
 import { MilkdownEditorHook } from './presentation/hooks/milkdown-editor-hook'
-import { DocumentTitleHook } from './presentation/hooks/document-title-hook'
 import { ChatPanelHook } from './presentation/hooks/chat-panel-hook'
-import { ChatMessagesHook } from './presentation/hooks/chat-messages-hook'
-import { ChatInputHook } from './presentation/hooks/chat-input-hook'
 import { FlashHook } from './presentation/hooks/flash-hook'
 
 // Export individual hooks for selective import
 export {
   MilkdownEditorHook as MilkdownEditor,
-  DocumentTitleHook as DocumentTitleInput,
   ChatPanelHook as ChatPanel,
-  ChatMessagesHook as ChatMessages,
-  ChatInputHook as ChatInput,
   FlashHook as AutoHideFlash
 }
 
@@ -38,8 +32,5 @@ export {
 export default {
   MilkdownEditor: MilkdownEditorHook,
   ChatPanel: ChatPanelHook,
-  ChatMessages: ChatMessagesHook,
-  ChatInput: ChatInputHook,
-  AutoHideFlash: FlashHook,
-  DocumentTitleInput: DocumentTitleHook
+  AutoHideFlash: FlashHook
 }

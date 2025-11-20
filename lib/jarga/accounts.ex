@@ -352,4 +352,40 @@ defmodule Jarga.Accounts do
       end
     end)
   end
+
+  ## User preferences
+
+  @doc """
+  Gets a user's selected agent for a specific workspace.
+  Returns nil if no preference is set.
+  """
+  def get_selected_agent_id(user_id, workspace_id)
+      when is_binary(user_id) and is_binary(workspace_id) do
+    case Repo.get(User, user_id) do
+      nil -> nil
+      user -> get_in(user.preferences, ["selected_agents", workspace_id])
+    end
+  end
+
+  @doc """
+  Sets a user's selected agent for a specific workspace.
+  """
+  def set_selected_agent_id(user_id, workspace_id, agent_id)
+      when is_binary(user_id) and is_binary(workspace_id) and is_binary(agent_id) do
+    case Repo.get(User, user_id) do
+      nil ->
+        {:error, :user_not_found}
+
+      user ->
+        selected_agents = Map.get(user.preferences, "selected_agents", %{})
+        updated_selected_agents = Map.put(selected_agents, workspace_id, agent_id)
+
+        updated_preferences =
+          Map.put(user.preferences, "selected_agents", updated_selected_agents)
+
+        user
+        |> Ecto.Changeset.change(preferences: updated_preferences)
+        |> Repo.update()
+    end
+  end
 end

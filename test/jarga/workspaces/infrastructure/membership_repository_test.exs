@@ -139,4 +139,26 @@ defmodule Jarga.Workspaces.Infrastructure.MembershipRepositoryTest do
       assert Enum.any?(members, &(&1.email == "pending@example.com" and is_nil(&1.user_id)))
     end
   end
+
+  describe "add_member/5" do
+    test "successfully adds a member to a workspace" do
+      owner = user_fixture()
+      workspace = workspace_fixture(owner)
+      new_user = user_fixture()
+
+      {:ok, member} =
+        MembershipRepository.add_member(workspace.id, new_user.id, new_user.email, :member)
+
+      assert member.workspace_id == workspace.id
+      assert member.user_id == new_user.id
+      assert member.email == new_user.email
+      assert member.role == :member
+    end
+
+    test "returns error with invalid attributes" do
+      result = MembershipRepository.add_member(nil, nil, nil, :invalid_role)
+
+      assert {:error, %Ecto.Changeset{}} = result
+    end
+  end
 end

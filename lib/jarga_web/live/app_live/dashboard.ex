@@ -19,7 +19,7 @@ defmodule JargaWeb.AppLive.Dashboard do
 
         <div class="space-y-4">
           <div class="flex items-center justify-between">
-            <h3 class="text-lg font-semibold">Your Workspaces</h3>
+            <h2 class="text-lg font-semibold">Your Workspaces</h2>
             <.button variant="primary" size="sm" navigate={~p"/app/workspaces/new"}>
               <.icon name="hero-plus" class="size-4" /> New Workspace
             </.button>
@@ -31,7 +31,7 @@ defmodule JargaWeb.AppLive.Dashboard do
                 <div class="flex flex-col items-center gap-4 py-8">
                   <.icon name="hero-rectangle-group" class="size-16 opacity-50" />
                   <div>
-                    <h3 class="text-lg font-semibold">No workspaces yet</h3>
+                    <h3 class="text-base font-semibold">No workspaces yet</h3>
                     <p class="text-base-content/70">
                       Create your first workspace to get started
                     </p>
@@ -168,6 +168,25 @@ defmodule JargaWeb.AppLive.Dashboard do
   @impl true
   def handle_info({:document_title_changed, _document_id, _title}, socket) do
     # Document title changed - not relevant to dashboard view
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info({:workspace_agent_updated, _agent}, socket) do
+    # On dashboard (no workspace context): reload all user's agents
+    # This allows testing agents during creation/editing
+    user = socket.assigns.current_scope.user
+
+    # Reload all user's agents (not workspace-scoped since we're on dashboard)
+    agents = Jarga.Agents.list_user_agents(user.id)
+
+    # Update the chat panel with fresh agent list
+    send_update(JargaWeb.ChatLive.Panel,
+      id: "global-chat-panel",
+      workspace_agents: agents,
+      from_pubsub: true
+    )
+
     {:noreply, socket}
   end
 

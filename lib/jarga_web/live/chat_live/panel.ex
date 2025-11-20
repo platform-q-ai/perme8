@@ -27,18 +27,126 @@ defmodule JargaWeb.ChatLive.Panel do
      |> assign(:error, nil)
      |> assign(:current_session_id, nil)
      |> assign(:view_mode, :chat)
-     |> assign(:sessions, [])}
+     |> assign(:sessions, [])
+     |> assign(:workspace_agents, [])
+     |> assign(:selected_agent_id, nil)}
   end
 
   @impl true
   def update(assigns, socket) do
+    # Store current selected_agent_id to preserve it across updates
+    current_selected_agent_id = socket.assigns[:selected_agent_id]
+
     socket =
       socket
       |> assign(assigns)
       |> maybe_restore_session(assigns)
+      |> maybe_load_workspace_agents(assigns)
+      |> handle_workspace_agents_update(assigns)
+      |> handle_agent_selection_update(assigns)
       |> handle_streaming_updates(assigns)
+      |> preserve_selected_agent(current_selected_agent_id, assigns)
 
     {:ok, socket}
+  end
+
+  # Preserves selected_agent_id unless explicitly updated
+  defp preserve_selected_agent(socket, previous_selected_agent_id, assigns) do
+    # If the update didn't explicitly include selected_agent_id, restore the previous value
+    if !Map.has_key?(assigns, :selected_agent_id) && previous_selected_agent_id do
+      assign(socket, :selected_agent_id, previous_selected_agent_id)
+    else
+      socket
+    end
+  end
+
+  # Handles agent selection updates sent via send_update from parent LiveView
+  defp handle_agent_selection_update(socket, assigns) do
+    if Map.has_key?(assigns, :selected_agent_id) do
+      assign(socket, :selected_agent_id, assigns.selected_agent_id)
+    else
+      socket
+    end
+  end
+
+  # Loads workspace agents on first mount
+  # When in a workspace: loads workspace-scoped agents (shared + user's own)
+  # When outside workspace (e.g. dashboard): loads all user's agents for testing
+  defp maybe_load_workspace_agents(socket, assigns) do
+    if socket.assigns[:agents_loaded] do
+      socket
+    else
+      workspace_id = get_nested(assigns, [:current_workspace, :id])
+      current_user = get_nested(assigns, [:current_user])
+
+      agents =
+        cond do
+          workspace_id && current_user ->
+            # In workspace: get workspace-scoped agents
+            Agents.get_workspace_agents_list(workspace_id, current_user.id, enabled_only: true)
+
+          current_user ->
+            # Outside workspace: get all user's agents for testing during creation/editing
+            Agents.list_user_agents(current_user.id)
+
+          true ->
+            []
+        end
+
+      # Load selected agent from user preferences
+      selected_agent_id =
+        if workspace_id && current_user do
+          Jarga.Accounts.get_selected_agent_id(current_user.id, workspace_id)
+        else
+          nil
+        end
+
+      socket
+      |> assign(:workspace_agents, agents)
+      |> assign(:agents_loaded, true)
+      |> assign(:selected_agent_id, selected_agent_id)
+      |> auto_select_first_agent(agents)
+    end
+  end
+
+  # Auto-selects the first agent if no agent is currently selected
+  defp auto_select_first_agent(socket, agents) do
+    if socket.assigns.selected_agent_id == nil && !Enum.empty?(agents) do
+      [first_agent | _] = agents
+      assign(socket, :selected_agent_id, first_agent.id)
+    else
+      socket
+    end
+  end
+
+  # Handles workspace agents updates sent via send_update from parent LiveView
+  # This is triggered when agents are created/updated/deleted via PubSub
+  defp handle_workspace_agents_update(socket, assigns) do
+    if Map.has_key?(assigns, :workspace_agents) && Map.has_key?(assigns, :from_pubsub) do
+      # Update from PubSub - refresh the agent list
+      socket = assign(socket, :workspace_agents, assigns.workspace_agents)
+
+      # Clear selection if the selected agent no longer exists, or auto-select first
+      socket
+      |> clear_invalid_agent_selection(assigns.workspace_agents)
+      |> auto_select_first_agent(assigns.workspace_agents)
+    else
+      socket
+    end
+  end
+
+  defp clear_invalid_agent_selection(socket, workspace_agents) do
+    selected_agent_id = socket.assigns.selected_agent_id
+
+    if selected_agent_id && !agent_exists?(workspace_agents, selected_agent_id) do
+      assign(socket, :selected_agent_id, nil)
+    else
+      socket
+    end
+  end
+
+  defp agent_exists?(workspace_agents, agent_id) do
+    Enum.any?(workspace_agents, fn agent -> agent.id == agent_id end)
   end
 
   # Restores the most recent session from database on first mount
@@ -149,6 +257,34 @@ defmodule JargaWeb.ChatLive.Panel do
   end
 
   @impl true
+  def handle_event("submit_on_enter", %{"key" => "Enter", "shiftKey" => true}, socket) do
+    # Shift+Enter: allow default behavior (new line)
+    {:noreply, socket}
+  end
+
+  def handle_event("submit_on_enter", %{"key" => "Enter"}, socket) do
+    # Enter without Shift: submit form if message is not empty
+    if String.trim(socket.assigns.current_message) != "" do
+      handle_event("send_message", %{"message" => socket.assigns.current_message}, socket)
+    else
+      {:noreply, socket}
+    end
+  end
+
+  @impl true
+  def handle_event("select_agent", %{"agent_id" => agent_id}, socket) do
+    # Save selection to user preferences (database)
+    workspace_id = get_nested(socket.assigns, [:current_workspace, :id])
+    current_user = get_nested(socket.assigns, [:current_user])
+
+    if workspace_id && current_user do
+      Jarga.Accounts.set_selected_agent_id(current_user.id, workspace_id, agent_id)
+    end
+
+    {:noreply, assign(socket, :selected_agent_id, agent_id)}
+  end
+
+  @impl true
   def handle_event("restore_session", %{"session_id" => session_id}, socket)
       when session_id != "" do
     current_user_id = get_nested(socket.assigns, [:current_user, :id])
@@ -176,63 +312,14 @@ defmodule JargaWeb.ChatLive.Panel do
 
   @impl true
   def handle_event("send_message", params, socket) do
-    message_text =
-      case params do
-        %{"message" => %{"content" => content}} -> String.trim(content)
-        %{"message" => content} when is_binary(content) -> String.trim(content)
-        _ -> ""
-      end
+    message_text = extract_message_text(params)
 
     if message_text == "" do
       {:noreply, socket}
     else
-      # Get or create session
-      socket = ensure_session(socket, message_text)
-
-      # Save user message to database
-      {:ok, _saved_user_msg} =
-        Agents.save_message(%{
-          chat_session_id: socket.assigns.current_session_id,
-          role: "user",
-          content: message_text
-        })
-
-      # Add user message to UI
-      user_message = %{
-        role: "user",
-        content: message_text,
-        timestamp: DateTime.utc_now()
-      }
-
-      # Prepare context from current assigns using Documents context
-      {:ok, document_context} = Agents.prepare_chat_context(socket.assigns)
-      {:ok, system_message} = Agents.build_system_message(document_context)
-
-      # Build updated message list
-      updated_messages = socket.assigns.messages ++ [user_message]
-
-      # Prepare messages for LLM (system message + conversation history)
-      llm_messages = [system_message | updated_messages]
-
-      socket =
-        socket
-        |> assign(:messages, updated_messages)
-        |> assign(:current_message, "")
-        |> assign(:streaming, true)
-        |> assign(:stream_buffer, "")
-        |> assign(:error, nil)
-
-      # Start streaming response
-      case Agents.chat_stream(llm_messages, self()) do
-        {:ok, _pid} ->
-          {:noreply, socket}
-
-        {:error, reason} ->
-          {:noreply,
-           socket
-           |> assign(:streaming, false)
-           |> assign(:error, reason)}
-      end
+      socket
+      |> process_message(message_text)
+      |> send_chat_response()
     end
   end
 
@@ -433,6 +520,115 @@ defmodule JargaWeb.ChatLive.Panel do
       diff_seconds < 86_400 -> "#{div(diff_seconds, 3_600)}h ago"
       diff_seconds < 604_800 -> "#{div(diff_seconds, 86_400)}d ago"
       true -> "#{div(diff_seconds, 604_800)}w ago"
+    end
+  end
+
+  # Finds the selected agent from workspace_agents by selected_agent_id
+  defp find_selected_agent(assigns) do
+    selected_agent_id = Map.get(assigns, :selected_agent_id)
+    workspace_agents = Map.get(assigns, :workspace_agents, [])
+
+    if selected_agent_id do
+      Enum.find(workspace_agents, fn agent -> agent.id == selected_agent_id end)
+    else
+      nil
+    end
+  end
+
+  # Extracts message text from params
+  defp extract_message_text(params) do
+    case params do
+      %{"message" => %{"content" => content}} -> String.trim(content)
+      %{"message" => content} when is_binary(content) -> String.trim(content)
+      _ -> ""
+    end
+  end
+
+  # Processes user message and prepares socket for streaming
+  defp process_message(socket, message_text) do
+    # Get or create session
+    socket = ensure_session(socket, message_text)
+
+    # Save user message to database
+    {:ok, _saved_user_msg} =
+      Agents.save_message(%{
+        chat_session_id: socket.assigns.current_session_id,
+        role: "user",
+        content: message_text
+      })
+
+    # Add user message to UI
+    user_message = %{
+      role: "user",
+      content: message_text,
+      timestamp: DateTime.utc_now()
+    }
+
+    # Get selected agent and prepare messages
+    selected_agent = find_selected_agent(socket.assigns)
+    {:ok, document_context} = Agents.prepare_chat_context(socket.assigns)
+    {:ok, system_message} = build_system_message(selected_agent, document_context)
+
+    updated_messages = socket.assigns.messages ++ [user_message]
+    llm_messages = [system_message | updated_messages]
+    llm_opts = build_llm_options(selected_agent)
+
+    socket
+    |> assign(:messages, updated_messages)
+    |> assign(:current_message, "")
+    |> assign(:streaming, true)
+    |> assign(:stream_buffer, "")
+    |> assign(:error, nil)
+    |> assign(:llm_messages, llm_messages)
+    |> assign(:llm_opts, llm_opts)
+  end
+
+  # Builds system message based on agent configuration
+  defp build_system_message(selected_agent, document_context) do
+    if selected_agent && selected_agent.system_prompt && selected_agent.system_prompt != "" do
+      {:ok, %{role: "system", content: selected_agent.system_prompt}}
+    else
+      Agents.build_system_message(document_context)
+    end
+  end
+
+  # Builds LLM options based on agent configuration
+  defp build_llm_options(selected_agent) do
+    []
+    |> maybe_add_model(selected_agent)
+    |> maybe_add_temperature(selected_agent)
+  end
+
+  defp maybe_add_model(opts, selected_agent) do
+    if selected_agent && selected_agent.model && selected_agent.model != "" do
+      Keyword.put(opts, :model, selected_agent.model)
+    else
+      opts
+    end
+  end
+
+  defp maybe_add_temperature(opts, selected_agent) do
+    if selected_agent && selected_agent.temperature do
+      Keyword.put(opts, :temperature, selected_agent.temperature)
+    else
+      opts
+    end
+  end
+
+  # Sends chat response via streaming
+  defp send_chat_response(socket) do
+    llm_messages = socket.assigns.llm_messages
+    llm_opts = socket.assigns.llm_opts
+
+    case Agents.chat_stream(llm_messages, self(), llm_opts) do
+      {:ok, _pid} ->
+        {:noreply, socket}
+
+      {:error, reason} ->
+        {:noreply,
+         socket
+         |> assign(:streaming, false)
+         |> assign(:error, reason)}
     end
   end
 end

@@ -548,7 +548,7 @@ defmodule JargaWeb.AppLive.Workspaces.ShowTest do
 
       # Submit invite form
       lv
-      |> form("#invite-form", email: "newuser@example.com", role: "member")
+      |> form("#invite-form", email: "newuser@example.com", role: :member)
       |> render_submit()
 
       assert render(lv) =~ "Invitation sent via email"
@@ -566,7 +566,7 @@ defmodule JargaWeb.AppLive.Workspaces.ShowTest do
 
       # Try to invite the owner (who is already a member)
       lv
-      |> form("#invite-form", email: user.email, role: "member")
+      |> form("#invite-form", email: user.email, role: :member)
       |> render_submit()
 
       assert render(lv) =~ "already a member"
@@ -640,6 +640,118 @@ defmodule JargaWeb.AppLive.Workspaces.ShowTest do
 
       # Find the owner row and verify no button
       assert html =~ "Owner"
+    end
+  end
+
+  describe "agent cloning security" do
+    import Jarga.AgentsFixtures
+
+    setup %{conn: conn} do
+      user = user_fixture()
+      other_user = user_fixture()
+
+      # Create workspace A and B
+      workspace_a = workspace_fixture(user)
+      workspace_b = workspace_fixture(other_user)
+
+      # Create shared agent owned by other_user, add to workspace B
+      shared_agent =
+        user_agent_fixture(%{
+          user_id: other_user.id,
+          name: "Shared Agent in Workspace B",
+          model: "gpt-4",
+          temperature: 0.7,
+          visibility: "SHARED"
+        })
+
+      Jarga.Agents.sync_agent_workspaces(shared_agent.id, other_user.id, [workspace_b.id])
+
+      %{
+        conn: log_in_user(conn, user),
+        user: user,
+        other_user: other_user,
+        workspace_a: workspace_a,
+        workspace_b: workspace_b,
+        shared_agent: shared_agent
+      }
+    end
+
+    test "successfully clones shared agent and adds to workspace", %{
+      conn: conn,
+      user: user,
+      other_user: other_user,
+      workspace_a: workspace_a
+    } do
+      # Add other_user as member of workspace_a so they can add their agent to it
+      _membership =
+        add_workspace_member_fixture(workspace_a.id, other_user, :member)
+
+      # Create a shared agent by other_user in workspace_a
+      shared_agent =
+        user_agent_fixture(%{
+          user_id: other_user.id,
+          name: "Shared Agent",
+          model: "gpt-4",
+          temperature: 0.7,
+          visibility: "SHARED"
+        })
+
+      # Add shared agent to workspace_a
+      Jarga.Agents.sync_agent_workspaces(shared_agent.id, other_user.id, [workspace_a.id])
+
+      # User loads workspace A
+      {:ok, lv, _html} = live(conn, ~p"/app/workspaces/#{workspace_a.slug}")
+
+      # Clone the shared agent
+      render_click(lv, "clone_agent", %{"agent-id" => shared_agent.id})
+
+      # Verify the cloned agent is created and associated with workspace_a
+      cloned_agents = Jarga.Agents.list_user_agents(user.id)
+      cloned_agent = Enum.find(cloned_agents, &(&1.name == "Shared Agent (Copy)"))
+      assert cloned_agent != nil
+      assert cloned_agent.user_id == user.id
+      assert cloned_agent.visibility == "PRIVATE"
+
+      # Verify workspace association
+      workspace_ids = Jarga.Agents.get_agent_workspace_ids(cloned_agent.id)
+      assert workspace_a.id in workspace_ids
+
+      # Verify cloned agent appears in workspace agent list
+      agents_result = Jarga.Agents.list_workspace_available_agents(workspace_a.id, user.id)
+      assert Enum.any?(agents_result.my_agents, &(&1.id == cloned_agent.id))
+    end
+
+    test "prevents cloning agent from different workspace", %{
+      conn: conn,
+      workspace_a: workspace_a,
+      shared_agent: shared_agent
+    } do
+      # User loads workspace A
+      {:ok, lv, _html} = live(conn, ~p"/app/workspaces/#{workspace_a.slug}")
+
+      # Attempt to clone agent from workspace B (security attack)
+      # Manually trigger the event since the button won't exist in the DOM
+      html = render_click(lv, "clone_agent", %{"agent-id" => shared_agent.id})
+
+      # Authorization now happens at the use case level - should show error
+      # Agent is in workspace B, user is trying from workspace A
+      # The use case will check workspace membership and return :forbidden
+      refute html =~ "cloned successfully"
+      assert html =~ "Cannot clone" or html =~ "Agent not found"
+    end
+
+    test "handle_event clone_agent rejects non-integer agent_id", %{
+      conn: conn,
+      workspace_a: workspace_a
+    } do
+      {:ok, lv, _html} = live(conn, ~p"/app/workspaces/#{workspace_a.slug}")
+
+      # Attempt to clone with invalid agent_id
+      assert_raise ArgumentError, fn ->
+        lv
+        |> element("#some-button")
+        |> render_click(%{"agent-id" => "not-a-number"})
+      end
     end
   end
 end

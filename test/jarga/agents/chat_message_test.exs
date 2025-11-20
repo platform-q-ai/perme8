@@ -157,5 +157,35 @@ defmodule Jarga.Agents.ChatMessageTest do
       # Default value is applied at database level, so no change in changeset
       assert get_change(changeset, :context_chunks) == nil
     end
+
+    test "handles non-binary content gracefully" do
+      session = chat_session_fixture()
+
+      attrs = %{
+        chat_session_id: session.id,
+        role: "user",
+        content: 123
+      }
+
+      changeset = ChatMessage.changeset(%ChatMessage{}, attrs)
+
+      # Should have validation error for content type
+      refute changeset.valid?
+    end
+
+    test "handles nil content without changes" do
+      session = chat_session_fixture()
+
+      attrs = %{
+        chat_session_id: session.id,
+        role: "user"
+      }
+
+      changeset = ChatMessage.changeset(%ChatMessage{}, attrs)
+
+      # Nil content should not be modified by trim_content
+      refute changeset.valid?
+      assert "can't be blank" in errors_on(changeset).content
+    end
   end
 end

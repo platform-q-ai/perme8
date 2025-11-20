@@ -237,6 +237,12 @@ defmodule JargaWeb.Layouts do
                 </.link>
               </li>
               <li>
+                <.link navigate={~p"/app/agents"} class="flex items-center gap-3">
+                  <.icon name="hero-cpu-chip" class="size-5" />
+                  <span>Agents</span>
+                </.link>
+              </li>
+              <li>
                 <.link navigate={~p"/users/settings"} class="flex items-center gap-3">
                   <.icon name="hero-cog-6-tooth" class="size-5" />
                   <span>Settings</span>

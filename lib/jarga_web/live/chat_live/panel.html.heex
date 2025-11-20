@@ -1,5 +1,5 @@
 <%!-- Global Chat Panel Component using DaisyUI Drawer --%>
-<div class="drawer drawer-end z-48">
+<div class="drawer drawer-end z-40">
   <input
     id={"chat-drawer-#{@id}"}
     type="checkbox"
@@ -15,7 +15,7 @@
     <label
       for={"chat-drawer-#{@id}"}
       id="chat-toggle-btn"
-      class="btn btn-circle btn-primary fixed right-4 top-4 shadow-lg z-49"
+      class="btn btn-circle btn-primary fixed right-4 top-4 shadow-lg z-50"
       aria-label="Open chat"
     >
       <.icon name="hero-chat-bubble-left-right" class="w-6 h-6" />
@@ -91,11 +91,31 @@
       </div>
 
       <%= if @view_mode == :chat do %>
+        <%!-- Agent Selector --%>
+        <%= if !Enum.empty?(@workspace_agents) do %>
+          <div class="p-3 bg-base-200 border-b border-base-300">
+            <label for="agent-selector" class="label">
+              <span class="label-text text-xs font-medium">Select Agent</span>
+            </label>
+            <form phx-change="select_agent" phx-target={@myself}>
+              <select
+                id="agent-selector"
+                name="agent_id"
+                class="select select-bordered select-sm w-full"
+              >
+                <%= for agent <- @workspace_agents do %>
+                  <option value={agent.id} selected={agent.id == @selected_agent_id}>
+                    {agent.name}
+                  </option>
+                <% end %>
+              </select>
+            </form>
+          </div>
+        <% end %>
         <%!-- Messages area --%>
         <div
           id="chat-messages"
           class="flex-1 overflow-y-auto p-4 space-y-4 bg-base-200"
-          phx-hook="ChatMessages"
           data-loading={to_string(@streaming)}
         >
           <%= if Enum.empty?(@messages) and @stream_buffer == "" do %>
@@ -164,12 +184,13 @@
               name="message"
               value={@current_message}
               phx-change="update_message"
+              phx-keydown="submit_on_enter"
+              phx-key="enter"
               phx-target={@myself}
               placeholder="Ask about this document..."
               rows="3"
               class="textarea textarea-bordered w-full resize-none"
               disabled={@streaming}
-              phx-hook="ChatInput"
             />
 
             <div class="flex items-center justify-between gap-2">

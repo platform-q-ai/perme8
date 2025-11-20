@@ -34,7 +34,7 @@ defmodule JargaWeb.AppLive.Workspaces.Index do
               <div class="flex flex-col items-center gap-4 py-8">
                 <.icon name="hero-briefcase" class="size-16 opacity-50" />
                 <div>
-                  <h3 class="text-lg font-semibold">No workspaces yet</h3>
+                  <h3 class="text-base font-semibold">No workspaces yet</h3>
                   <p class="text-base-content/70">
                     Create your first workspace to get started
                   </p>

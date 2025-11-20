@@ -19,59 +19,53 @@ defmodule JargaWeb.AppLive.Workspaces.Edit do
       <:breadcrumbs navigate={~p"/app/workspaces/#{@workspace.slug}"}>{@workspace.name}</:breadcrumbs>
       <:breadcrumbs>Edit</:breadcrumbs>
 
-      <div class="max-w-2xl mx-auto space-y-8">
-        <div>
-          <.header>
-            Edit Workspace
-            <:subtitle>
-              <.link navigate={~p"/app/workspaces/#{@workspace.slug}"} class="text-sm hover:underline">
-                ← Back to {@workspace.name}
-              </.link>
-            </:subtitle>
-          </.header>
-        </div>
+      <div class="w-full space-y-6">
+        <.header>
+          Edit Workspace
+          <:subtitle>
+            <.link navigate={~p"/app/workspaces/#{@workspace.slug}"} class="text-sm hover:underline">
+              ← Back to {@workspace.name}
+            </.link>
+          </:subtitle>
+        </.header>
 
-        <div class="card bg-base-200">
-          <div class="card-body">
-            <.form
-              for={@form}
-              id="workspace-form"
-              phx-submit="save"
-              class="space-y-4"
-            >
-              <.input
-                field={@form[:name]}
-                type="text"
-                label="Name"
-                placeholder="My Workspace"
-                required
-              />
+        <.form
+          for={@form}
+          id="workspace-form"
+          phx-submit="save"
+          class="space-y-6"
+        >
+          <.input
+            field={@form[:name]}
+            type="text"
+            label="Name"
+            placeholder="My Workspace"
+            required
+          />
 
-              <.input
-                field={@form[:description]}
-                type="textarea"
-                label="Description"
-                placeholder="Describe your workspace..."
-              />
+          <.input
+            field={@form[:description]}
+            type="textarea"
+            label="Description"
+            placeholder="Describe your workspace..."
+          />
 
-              <.input
-                field={@form[:color]}
-                type="text"
-                label="Color"
-                placeholder="#4A90E2"
-              />
+          <.input
+            field={@form[:color]}
+            type="text"
+            label="Color"
+            placeholder="#4A90E2"
+          />
 
-              <div class="flex gap-2 justify-end">
-                <.link navigate={~p"/app/workspaces/#{@workspace.slug}"} class="btn btn-ghost">
-                  Cancel
-                </.link>
-                <.button type="submit" variant="primary">
-                  Update Workspace
-                </.button>
-              </div>
-            </.form>
+          <div class="flex gap-4">
+            <.button type="submit" variant="primary">
+              Update Workspace
+            </.button>
+            <.link navigate={~p"/app/workspaces/#{@workspace.slug}"} class="btn btn-ghost">
+              Cancel
+            </.link>
           </div>
-        </div>
+        </.form>
       </div>
     </Layouts.admin>
     """
