@@ -58,6 +58,10 @@
         ".credo/checks/no_cross_context_policy_access.ex",
         ".credo/checks/no_cross_context_schema_access.ex",
         ".credo/checks/missing_queries_module.ex",
+        # Clean Code Principle Checks
+        ".credo/checks/no_repo_in_domain.ex",
+        ".credo/checks/no_side_effects_in_domain.ex",
+        ".credo/checks/no_env_in_runtime.ex",
         # Folder structure enforcement checks
         ".credo/checks/entities_in_domain_layer.ex",
         ".credo/checks/use_cases_in_application_layer.ex",
@@ -212,6 +216,19 @@
           # Detect contexts missing Queries modules (pattern consistency)
           # Disabled: Queries modules are optional based on context needs
           # {Jarga.Credo.Check.Architecture.MissingQueriesModule, []},
+
+          #
+          ## Clean Code Principle Checks
+          #
+          # These checks enforce clean code principles identified in code reviews
+          #
+          # Detect Repo or database dependencies in domain entities (DIP violation)
+          {Jarga.Credo.Check.Architecture.NoRepoInDomain, []},
+          # Detect side effects (crypto, I/O) in domain entities (SRP violation)
+          {Jarga.Credo.Check.Architecture.NoSideEffectsInDomain, []},
+          # Detect runtime env variable access that should use Application config
+          {Jarga.Credo.Check.Architecture.NoEnvInRuntime, []},
+
           #
           ## Folder Structure Enforcement
           #
