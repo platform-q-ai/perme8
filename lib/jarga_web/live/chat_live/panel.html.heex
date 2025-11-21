@@ -32,7 +32,14 @@
     </label>
 
     <%!-- Chat panel content - h-full with flex so only messages scroll --%>
-    <div class="bg-base-200 h-full w-96 p-0 flex flex-col">
+    <div id="chat-panel-content" class="bg-base-200 h-full w-96 p-0 flex flex-col relative">
+      <%!-- Resize handle on left edge --%>
+      <div
+        id="chat-panel-resize-handle"
+        class="absolute left-0 top-0 bottom-0 w-1 cursor-ew-resize hover:bg-primary/50 active:bg-primary transition-colors z-10"
+        phx-update="ignore"
+      >
+      </div>
       <%!-- Header section (navbar + agent selector) - flex-shrink-0 prevents shrinking --%>
       <div id="chat-panel-header" class="flex-shrink-0 bg-base-200">
         <%!-- Header --%>

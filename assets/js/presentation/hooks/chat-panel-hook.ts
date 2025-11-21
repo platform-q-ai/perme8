@@ -46,10 +46,21 @@ export class ChatPanelHook extends ViewHook<HTMLInputElement> {
   private handleResize?: () => void
   private handleChange?: () => void
   private handleClick?: () => void
+  private handleResizeMouseDown?: (e: MouseEvent) => void
+  private handleResizeMouseMove?: (e: MouseEvent) => void
+  private handleResizeMouseUp?: () => void
   private toggleBtn: HTMLButtonElement | null = null
+  private resizeHandle: HTMLElement | null = null
+  private panelContent: HTMLElement | null = null
   private userInteracted = false
+  private isResizing = false
+  private startX = 0
+  private startWidth = 0
   private readonly DESKTOP_BREAKPOINT = 1024
   private readonly STORAGE_KEY = 'chat-panel-open'
+  private readonly WIDTH_STORAGE_KEY = 'chat-panel-width'
+  private readonly MIN_WIDTH = 384 // w-96
+  private readonly MAX_WIDTH_PERCENT = 0.8
 
   /**
    * Phoenix hook lifecycle: mounted
@@ -133,6 +144,54 @@ export class ChatPanelHook extends ViewHook<HTMLInputElement> {
     this.updated = () => {
       this.updateButtonVisibility()
     }
+
+    // Setup resize handle
+    this.resizeHandle = document.getElementById('chat-panel-resize-handle')
+    this.panelContent = document.getElementById('chat-panel-content')
+
+    // Restore saved width
+    const savedWidth = localStorage.getItem(this.WIDTH_STORAGE_KEY)
+    if (savedWidth && this.panelContent) {
+      this.panelContent.style.width = `${savedWidth}px`
+    }
+
+    if (this.resizeHandle) {
+      this.handleResizeMouseDown = (e: MouseEvent) => {
+        e.preventDefault()
+        this.isResizing = true
+        this.startX = e.clientX
+        this.startWidth = this.panelContent?.offsetWidth ?? this.MIN_WIDTH
+        document.body.style.cursor = 'col-resize'
+        document.body.style.userSelect = 'none'
+      }
+      this.resizeHandle.addEventListener('mousedown', this.handleResizeMouseDown)
+
+      this.handleResizeMouseMove = (e: MouseEvent) => {
+        if (!this.isResizing || !this.panelContent) return
+
+        // Calculate new width (dragging left increases width)
+        const delta = this.startX - e.clientX
+        let newWidth = this.startWidth + delta
+
+        // Enforce min/max constraints
+        const maxWidth = window.innerWidth * this.MAX_WIDTH_PERCENT
+        newWidth = Math.max(this.MIN_WIDTH, Math.min(maxWidth, newWidth))
+
+        this.panelContent.style.width = `${newWidth}px`
+      }
+      document.addEventListener('mousemove', this.handleResizeMouseMove)
+
+      this.handleResizeMouseUp = () => {
+        if (this.isResizing && this.panelContent) {
+          // Save width to localStorage
+          localStorage.setItem(this.WIDTH_STORAGE_KEY, String(this.panelContent.offsetWidth))
+        }
+        this.isResizing = false
+        document.body.style.cursor = ''
+        document.body.style.userSelect = ''
+      }
+      document.addEventListener('mouseup', this.handleResizeMouseUp)
+    }
   }
 
   /**
@@ -151,6 +210,15 @@ export class ChatPanelHook extends ViewHook<HTMLInputElement> {
     }
     if (this.handleClick) {
       this.el.removeEventListener('click', this.handleClick)
+    }
+    if (this.handleResizeMouseDown && this.resizeHandle) {
+      this.resizeHandle.removeEventListener('mousedown', this.handleResizeMouseDown)
+    }
+    if (this.handleResizeMouseMove) {
+      document.removeEventListener('mousemove', this.handleResizeMouseMove)
+    }
+    if (this.handleResizeMouseUp) {
+      document.removeEventListener('mouseup', this.handleResizeMouseUp)
     }
   }
 

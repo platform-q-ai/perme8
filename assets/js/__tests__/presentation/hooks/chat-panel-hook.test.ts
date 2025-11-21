@@ -475,4 +475,130 @@ describe('ChatPanelHook', () => {
       expect(mockToggleButton.classList.contains('hidden')).toBe(true)
     })
   })
+
+  describe('panel resizing', () => {
+    let mockResizeHandle: HTMLDivElement
+    let mockPanelContent: HTMLDivElement
+
+    beforeEach(() => {
+      Object.defineProperty(window, 'innerWidth', {
+        writable: true,
+        configurable: true,
+        value: 1024
+      })
+
+      // Create resize handle element
+      mockResizeHandle = document.createElement('div')
+      mockResizeHandle.id = 'chat-panel-resize-handle'
+      document.body.appendChild(mockResizeHandle)
+
+      // Create panel content element
+      mockPanelContent = document.createElement('div')
+      mockPanelContent.id = 'chat-panel-content'
+      mockPanelContent.style.width = '384px' // Default w-96
+      document.body.appendChild(mockPanelContent)
+    })
+
+    afterEach(() => {
+      mockResizeHandle.parentNode?.removeChild(mockResizeHandle)
+      mockPanelContent.parentNode?.removeChild(mockPanelContent)
+    })
+
+    test('starts resize on mousedown on handle', () => {
+      hook.mounted()
+
+      const mousedownEvent = new MouseEvent('mousedown', { clientX: 500 })
+      mockResizeHandle.dispatchEvent(mousedownEvent)
+
+      // Should be in resizing state (cursor should change)
+      expect(document.body.style.cursor).toBe('col-resize')
+    })
+
+    test('resizes panel on mousemove during drag', () => {
+      // Mock offsetWidth since jsdom doesn't compute it
+      Object.defineProperty(mockPanelContent, 'offsetWidth', {
+        value: 384,
+        configurable: true
+      })
+
+      hook.mounted()
+
+      // Start drag
+      const mousedownEvent = new MouseEvent('mousedown', { clientX: 500 })
+      mockResizeHandle.dispatchEvent(mousedownEvent)
+
+      // Drag left to make panel wider
+      const mousemoveEvent = new MouseEvent('mousemove', { clientX: 400 })
+      document.dispatchEvent(mousemoveEvent)
+
+      // Panel should be wider (moved 100px left = 100px wider = 484px)
+      expect(parseInt(mockPanelContent.style.width)).toBe(484)
+    })
+
+    test('stops resize on mouseup', () => {
+      hook.mounted()
+
+      // Start drag
+      mockResizeHandle.dispatchEvent(new MouseEvent('mousedown', { clientX: 500 }))
+      expect(document.body.style.cursor).toBe('col-resize')
+
+      // Stop drag
+      document.dispatchEvent(new MouseEvent('mouseup'))
+
+      expect(document.body.style.cursor).toBe('')
+    })
+
+    test('saves panel width to localStorage after resize', () => {
+      vi.useFakeTimers()
+      hook.mounted()
+
+      // Start drag
+      mockResizeHandle.dispatchEvent(new MouseEvent('mousedown', { clientX: 500 }))
+
+      // Drag to resize
+      document.dispatchEvent(new MouseEvent('mousemove', { clientX: 400 }))
+
+      // Stop drag
+      document.dispatchEvent(new MouseEvent('mouseup'))
+      vi.advanceTimersByTime(0)
+
+      expect(mockStorage['chat-panel-width']).toBeDefined()
+      vi.useRealTimers()
+    })
+
+    test('restores panel width from localStorage on mount', () => {
+      mockStorage['chat-panel-width'] = '500'
+
+      hook.mounted()
+
+      expect(mockPanelContent.style.width).toBe('500px')
+    })
+
+    test('enforces minimum panel width', () => {
+      hook.mounted()
+
+      // Start drag
+      mockResizeHandle.dispatchEvent(new MouseEvent('mousedown', { clientX: 500 }))
+
+      // Try to drag far right to make panel very narrow
+      document.dispatchEvent(new MouseEvent('mousemove', { clientX: 900 }))
+
+      // Panel should not go below minimum (384px = w-96)
+      expect(parseInt(mockPanelContent.style.width)).toBeGreaterThanOrEqual(384)
+    })
+
+    test('enforces maximum panel width', () => {
+      hook.mounted()
+
+      // Start drag
+      mockResizeHandle.dispatchEvent(new MouseEvent('mousedown', { clientX: 500 }))
+
+      // Try to drag far left to make panel very wide
+      document.dispatchEvent(new MouseEvent('mousemove', { clientX: 0 }))
+
+      // Panel should not exceed 80% of viewport
+      const maxWidth = window.innerWidth * 0.8
+      expect(parseInt(mockPanelContent.style.width)).toBeLessThanOrEqual(maxWidth)
+    })
+  })
 })
