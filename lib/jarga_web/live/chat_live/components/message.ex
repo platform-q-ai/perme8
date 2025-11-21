@@ -34,7 +34,7 @@ defmodule JargaWeb.ChatLive.Components.Message do
       </div>
 
       <%= if should_show_footer?(assigns) do %>
-        <div class="chat-footer text-xs opacity-70 flex gap-2">
+        <div class="chat-footer text-xs opacity-70 flex gap-4">
           <%= if should_show_insert_link?(assigns) do %>
             <span
               phx-click="insert_into_note"
@@ -53,6 +53,7 @@ defmodule JargaWeb.ChatLive.Components.Message do
               phx-click="delete_message"
               phx-target={@panel_target}
               phx-value-message-id={@message.id}
+              data-confirm="Delete this message?"
               class="link cursor-pointer text-error"
               role="button"
               tabindex="0"
