@@ -339,6 +339,33 @@ defmodule JargaWeb.ChatLive.Panel do
   end
 
   @impl true
+  def handle_event("cancel_streaming", _params, socket) do
+    # Stop streaming and keep any partial response
+    stream_buffer = socket.assigns.stream_buffer
+
+    socket =
+      if stream_buffer != "" do
+        # Add partial response as a message
+        partial_message = %{
+          role: "assistant",
+          content: stream_buffer <> "\n\n_(Response cancelled)_",
+          timestamp: DateTime.utc_now()
+        }
+
+        socket
+        |> assign(:streaming, false)
+        |> assign(:stream_buffer, "")
+        |> assign(:messages, socket.assigns.messages ++ [partial_message])
+      else
+        socket
+        |> assign(:streaming, false)
+        |> assign(:stream_buffer, "")
+      end
+
+    {:noreply, socket}
+  end
+
+  @impl true
   def handle_event("new_conversation", _params, socket) do
     {:noreply,
      socket

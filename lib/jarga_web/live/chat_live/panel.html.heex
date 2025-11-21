@@ -193,22 +193,37 @@
               phx-keydown="submit_on_enter"
               phx-key="enter"
               phx-target={@myself}
-              placeholder="Ask about this document..."
+              placeholder={
+                if @streaming,
+                  do: "Streaming agent response...",
+                  else: "Ask about this document..."
+              }
               rows="3"
               class="textarea textarea-bordered w-full resize-none"
               disabled={@streaming}
             />
 
             <div class="flex items-center justify-between gap-2">
-              <button
-                type="button"
-                phx-click="clear_chat"
-                phx-target={@myself}
-                class="btn btn-outline btn-sm"
-                disabled={Enum.empty?(@messages)}
-              >
-                <.icon name="hero-trash" class="w-4 h-4" /> Clear
-              </button>
+              <%= if @streaming do %>
+                <button
+                  type="button"
+                  phx-click="cancel_streaming"
+                  phx-target={@myself}
+                  class="btn btn-outline btn-sm btn-warning"
+                >
+                  <.icon name="hero-stop" class="w-4 h-4" /> Cancel
+                </button>
+              <% else %>
+                <button
+                  type="button"
+                  phx-click="clear_chat"
+                  phx-target={@myself}
+                  class="btn btn-outline btn-sm"
+                  disabled={Enum.empty?(@messages)}
+                >
+                  <.icon name="hero-trash" class="w-4 h-4" /> Clear
+                </button>
+              <% end %>
               <button
                 type="submit"
                 class="btn btn-primary btn-sm"
