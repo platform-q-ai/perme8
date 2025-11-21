@@ -36,9 +36,12 @@
       <%!-- Resize handle on left edge --%>
       <div
         id="chat-panel-resize-handle"
-        class="absolute left-0 top-0 bottom-0 w-1 cursor-ew-resize hover:bg-primary/50 active:bg-primary transition-colors z-10"
+        class="absolute left-0 top-0 bottom-0 w-1 cursor-ew-resize hover:bg-primary/50 active:bg-primary transition-colors z-10 flex items-center justify-center"
         phx-update="ignore"
       >
+        <%!-- Grab handle indicator in center --%>
+        <div class="w-1 h-8 rounded-full bg-base-content/20 hover:bg-base-content/40 transition-colors">
+        </div>
       </div>
       <%!-- Header section (navbar + agent selector) - flex-shrink-0 prevents shrinking --%>
       <div id="chat-panel-header" class="flex-shrink-0 bg-base-200">
