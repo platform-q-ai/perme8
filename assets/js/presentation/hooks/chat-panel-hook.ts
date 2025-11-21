@@ -49,6 +49,7 @@ export class ChatPanelHook extends ViewHook<HTMLInputElement> {
   private toggleBtn: HTMLButtonElement | null = null
   private userInteracted = false
   private readonly DESKTOP_BREAKPOINT = 1024
+  private readonly STORAGE_KEY = 'chat-panel-open'
 
   /**
    * Phoenix hook lifecycle: mounted
@@ -58,8 +59,12 @@ export class ChatPanelHook extends ViewHook<HTMLInputElement> {
     this.toggleBtn = document.getElementById('chat-toggle-btn') as HTMLButtonElement | null
     this.userInteracted = false
 
-    // Set initial state based on screen size
-    if (this.isDesktop()) {
+    // Restore state from localStorage, or use responsive default
+    const savedState = localStorage.getItem(this.STORAGE_KEY)
+    if (savedState !== null) {
+      this.el.checked = savedState === 'true'
+      this.userInteracted = true // Treat restored state as user preference
+    } else if (this.isDesktop()) {
       this.el.checked = true
     } else {
       this.el.checked = false
@@ -84,9 +89,13 @@ export class ChatPanelHook extends ViewHook<HTMLInputElement> {
     }
     this.el.addEventListener('change', this.handleChange)
 
-    // Mark as user interaction on click
+    // Mark as user interaction on click and save state
     this.handleClick = () => {
       this.userInteracted = true
+      // Save state after click toggles the checkbox
+      setTimeout(() => {
+        localStorage.setItem(this.STORAGE_KEY, String(this.el.checked))
+      }, 0)
     }
     this.el.addEventListener('click', this.handleClick)
 

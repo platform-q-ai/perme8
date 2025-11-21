@@ -8,6 +8,26 @@
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest'
 import { ChatPanelHook } from '../../../presentation/hooks/chat-panel-hook'
 
+// Mock localStorage at module level
+const mockStorage: Record<string, string> = {}
+const localStorageMock = {
+  getItem: vi.fn((key: string) => mockStorage[key] ?? null),
+  setItem: vi.fn((key: string, value: string) => {
+    mockStorage[key] = value
+  }),
+  removeItem: vi.fn((key: string) => {
+    delete mockStorage[key]
+  }),
+  clear: vi.fn(() => {
+    Object.keys(mockStorage).forEach((key) => delete mockStorage[key])
+  })
+}
+
+Object.defineProperty(window, 'localStorage', {
+  value: localStorageMock,
+  writable: true
+})
+
 describe('ChatPanelHook', () => {
   let hook: ChatPanelHook
   let mockCheckbox: HTMLInputElement
@@ -15,6 +35,10 @@ describe('ChatPanelHook', () => {
   let mockChatInput: HTMLInputElement
 
   beforeEach(() => {
+    // Clear mock storage before each test
+    Object.keys(mockStorage).forEach((key) => delete mockStorage[key])
+    vi.clearAllMocks()
+
     // Create mock DOM elements
     mockCheckbox = document.createElement('input')
     mockCheckbox.type = 'checkbox'
@@ -335,6 +359,85 @@ describe('ChatPanelHook', () => {
         'change',
         expect.any(Function)
       )
+    })
+  })
+
+  describe('state persistence across navigation', () => {
+    beforeEach(() => {
+      Object.defineProperty(window, 'innerWidth', {
+        writable: true,
+        configurable: true,
+        value: 1024
+      })
+    })
+
+    test('saves open state to localStorage when user opens panel', () => {
+      vi.useFakeTimers()
+      hook.mounted()
+      mockCheckbox.checked = false
+
+      // User opens panel
+      mockCheckbox.click()
+      vi.advanceTimersByTime(0)
+
+      expect(mockStorage['chat-panel-open']).toBe('true')
+      vi.useRealTimers()
+    })
+
+    test('saves closed state to localStorage when user closes panel', () => {
+      vi.useFakeTimers()
+      hook.mounted()
+      mockCheckbox.checked = true
+
+      // User closes panel
+      mockCheckbox.click()
+      vi.advanceTimersByTime(0)
+
+      expect(mockStorage['chat-panel-open']).toBe('false')
+      vi.useRealTimers()
+    })
+
+    test('restores open state from localStorage on mount', () => {
+      mockStorage['chat-panel-open'] = 'true'
+
+      // Start on mobile where default would be closed
+      Object.defineProperty(window, 'innerWidth', {
+        writable: true,
+        configurable: true,
+        value: 768
+      })
+
+      hook.mounted()
+
+      expect(mockCheckbox.checked).toBe(true)
+    })
+
+    test('restores closed state from localStorage on mount', () => {
+      mockStorage['chat-panel-open'] = 'false'
+
+      // Start on desktop where default would be open
+      Object.defineProperty(window, 'innerWidth', {
+        writable: true,
+        configurable: true,
+        value: 1024
+      })
+
+      hook.mounted()
+
+      expect(mockCheckbox.checked).toBe(false)
+    })
+
+    test('uses responsive default when no localStorage state exists', () => {
+      // No localStorage set (mockStorage is empty)
+      Object.defineProperty(window, 'innerWidth', {
+        writable: true,
+        configurable: true,
+        value: 1024
+      })
+
+      hook.mounted()
+
+      expect(mockCheckbox.checked).toBe(true) // Desktop default
     })
   })
 
