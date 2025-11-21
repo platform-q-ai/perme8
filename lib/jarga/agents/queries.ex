@@ -133,4 +133,16 @@ defmodule Jarga.Agents.Queries do
       select: m.content
     )
   end
+
+  @doc """
+  Gets a message by ID with user ownership verification through session.
+  """
+  def message_by_id_and_user(message_id, user_id) do
+    from(m in ChatMessage,
+      join: s in ChatSession,
+      on: m.chat_session_id == s.id,
+      where: m.id == ^message_id and s.user_id == ^user_id,
+      select: m
+    )
+  end
 end

@@ -66,4 +66,15 @@ defmodule Jarga.Agents.Infrastructure.SessionRepository do
     |> Queries.by_id_and_user(user_id)
     |> repo.one()
   end
+
+  @doc """
+  Finds a message by ID with user ownership verification through session.
+
+  Returns the message struct or nil if not found or unauthorized.
+  """
+  def get_message_by_id_and_user(message_id, user_id, repo \\ Repo) do
+    message_id
+    |> Queries.message_by_id_and_user(user_id)
+    |> repo.one()
+  end
 end
