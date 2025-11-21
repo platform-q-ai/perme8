@@ -85,6 +85,11 @@ defmodule JargaWeb.ChatLive.MessageHandlers do
 
         {:noreply, socket}
       end
+
+      @impl true
+      def handle_info({:put_flash, type, message}, socket) do
+        {:noreply, Phoenix.LiveView.put_flash(socket, type, message)}
+      end
     end
   end
 end

@@ -24,7 +24,6 @@ defmodule JargaWeb.ChatLive.Panel do
      |> assign(:current_message, "")
      |> assign(:streaming, false)
      |> assign(:stream_buffer, "")
-     |> assign(:error, nil)
      |> assign(:current_session_id, nil)
      |> assign(:view_mode, :chat)
      |> assign(:sessions, [])
@@ -238,10 +237,11 @@ defmodule JargaWeb.ChatLive.Panel do
   end
 
   defp handle_error(socket, error) do
+    send(self(), {:put_flash, :error, "Chat error: #{error}"})
+
     socket
     |> assign(:streaming, false)
     |> assign(:stream_buffer, "")
-    |> assign(:error, "Error: #{error}")
   end
 
   @impl true
@@ -329,8 +329,7 @@ defmodule JargaWeb.ChatLive.Panel do
      socket
      |> assign(:messages, [])
      |> assign(:current_message, "")
-     |> assign(:stream_buffer, "")
-     |> assign(:error, nil)}
+     |> assign(:stream_buffer, "")}
   end
 
   @impl true
@@ -340,7 +339,6 @@ defmodule JargaWeb.ChatLive.Panel do
      |> assign(:messages, [])
      |> assign(:current_message, "")
      |> assign(:stream_buffer, "")
-     |> assign(:error, nil)
      |> assign(:current_session_id, nil)
      |> assign(:view_mode, :chat)}
   end
@@ -578,7 +576,6 @@ defmodule JargaWeb.ChatLive.Panel do
     |> assign(:current_message, "")
     |> assign(:streaming, true)
     |> assign(:stream_buffer, "")
-    |> assign(:error, nil)
     |> assign(:llm_messages, llm_messages)
     |> assign(:llm_opts, llm_opts)
   end
@@ -622,10 +619,8 @@ defmodule JargaWeb.ChatLive.Panel do
         {:noreply, socket}
 
       {:error, reason} ->
-        {:noreply,
-         socket
-         |> assign(:streaming, false)
-         |> assign(:error, reason)}
+        send(self(), {:put_flash, :error, "Chat error: #{reason}"})
+        {:noreply, assign(socket, :streaming, false)}
     end
   end
 end
