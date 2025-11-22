@@ -84,8 +84,8 @@ Grep pattern: <search for related functionality>
 Glob pattern: <find relevant files>
 
 # Read existing documentation
-Read: docs/prompts/backend/PHOENIX_DESIGN_PRINCIPLES.md
-Read: docs/prompts/frontend/FRONTEND_DESIGN_PRINCIPLES.md
+Read: docs/prompts/phoenix/PHOENIX_DESIGN_PRINCIPLES.md
+Read: docs/prompts/typescipt/TYPESCRIPT_DESIGN_PRINCIPLES.md
 ```
 
 ### 4. Create Structured PRD
@@ -391,8 +391,8 @@ Questions that need resolution before implementation:
 2. **Read architectural docs**:
 
    ```bash
-   Read: docs/prompts/backend/PHOENIX_DESIGN_PRINCIPLES.md
-   Read: docs/prompts/frontend/FRONTEND_DESIGN_PRINCIPLES.md
+   Read: docs/prompts/phoenix/PHOENIX_DESIGN_PRINCIPLES.md
+   Read: docs/prompts/typescript/TYPESCRIPT_DESIGN_PRINCIPLES.md
    ```
 
 3. **Identify affected boundaries**:

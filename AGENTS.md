@@ -584,15 +584,15 @@ For detailed documentation on architecture, TDD practices, and implementation gu
 📖 **Architecture & Design:**
 
 - `docs/prompts/architect/FULLSTACK_TDD.md` - Complete TDD methodology
-- `docs/prompts/backend/PHOENIX_DESIGN_PRINCIPLES.md` - Backend architecture
-- `docs/prompts/backend/PHOENIX_BEST_PRACTICES.md` - Phoenix conventions
-- `docs/prompts/frontend/FRONTEND_DESIGN_PRINCIPLES.md` - Frontend architecture
+- `docs/prompts/phoenix/PHOENIX_DESIGN_PRINCIPLES.md` - Phoenix architecture
+- `docs/prompts/phoenix/PHOENIX_BEST_PRACTICES.md` - Phoenix conventions
+- `docs/prompts/typescript/TYPESCRIPT_DESIGN_PRINCIPLES.md` - Frontend assets architecture
 
 🤖 **Subagent Details:**
 
 - `.opencode/agent/prd.md` - Requirements gathering and PRD creation
 - `.opencode/agent/architect.md` - Feature planning process
-- `.opencode/agent/phoenix-tdd.md` - Phoenix backend and LiveView TDD implementation
+- `.opencode/agent/phoenix-tdd.md` - Phoenix and LiveView TDD implementation
 - `.opencode/agent/typescript-tdd.md` - TypeScript TDD implementation
 - `.opencode/agent/test-validator.md` - Test quality validation
 - `.opencode/agent/code-reviewer.md` - Code review process
