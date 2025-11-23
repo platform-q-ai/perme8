@@ -67,7 +67,12 @@
         ".credo/checks/use_cases_in_application_layer.ex",
         ".credo/checks/policies_in_application_layer.ex",
         ".credo/checks/services_in_correct_layer.ex",
-        ".credo/checks/infrastructure_organization.ex"
+        ".credo/checks/infrastructure_organization.ex",
+        # Refactoring enforcement checks
+        ".credo/checks/no_ecto_in_domain_layer.ex",
+        ".credo/checks/no_direct_repo_in_use_cases.ex",
+        ".credo/checks/application_layer_infrastructure_dependency.ex",
+        ".credo/checks/no_io_in_domain_services.ex"
       ],
       #
       # If you want to enforce a style guide and need a more traditional linting
@@ -233,7 +238,9 @@
           ## Folder Structure Enforcement
           #
           # Detect entities (Ecto schemas) not in domain/entities/ subdirectory
-          {Jarga.Credo.Check.Architecture.EntitiesInDomainLayer, []},
+          # DISABLED: Conflicts with Clean Architecture refactoring where Ecto schemas
+          # are intentionally in infrastructure/schemas/, not domain/entities/
+          # {Jarga.Credo.Check.Architecture.EntitiesInDomainLayer, []},
           # Detect use cases not in application/use_cases/ subdirectory
           {Jarga.Credo.Check.Architecture.UseCasesInApplicationLayer, []},
           # Detect policies not in application/policies/ subdirectory
@@ -242,6 +249,20 @@
           {Jarga.Credo.Check.Architecture.ServicesInCorrectLayer, []},
           # Detect infrastructure files not properly organized
           {Jarga.Credo.Check.Architecture.InfrastructureOrganization, []},
+
+          #
+          ## Refactoring Enforcement (Agents Context Violations)
+          #
+          # These checks catch violations from the Agents Context Refactoring Proposal
+          #
+          # Detect Ecto dependencies in domain layer (domain entities should be pure structs)
+          {Jarga.Credo.Check.Architecture.NoEctoInDomainLayer, []},
+          # Detect direct Repo usage in use cases (should delegate to repositories)
+          {Jarga.Credo.Check.Architecture.NoDirectRepoInUseCases, []},
+          # Detect I/O operations in application layer (should be in infrastructure)
+          {Jarga.Credo.Check.Architecture.ApplicationLayerInfrastructureDependency, []},
+          # Detect I/O operations in domain services (should be pure functions)
+          {Jarga.Credo.Check.Architecture.NoIoInDomainServices, []},
 
           #
           ## Custom Testing Checks (TDD Enforcement)
