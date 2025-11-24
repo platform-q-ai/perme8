@@ -146,10 +146,21 @@ export class MilkdownEditorHook extends ViewHook {
           }
 
           // Push agent query to LiveView server
-          this.pushEvent("agent_query", {
-            question: data.question,
-            node_id: data.nodeId,
-          });
+          // NEW: Support agent_query_command event when agent name is provided
+          if (data.agentName) {
+            // Format: @j agent_name Question
+            const command = `@j ${data.agentName} ${data.question}`;
+            this.pushEvent("agent_query_command", {
+              command: command,
+              node_id: data.nodeId,
+            });
+          } else {
+            // Backward compatibility: OLD format without agent name
+            this.pushEvent("agent_query", {
+              question: data.question,
+              node_id: data.nodeId,
+            });
+          }
         },
       })
       .then((result) => {
