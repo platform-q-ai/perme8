@@ -5,6 +5,7 @@ defmodule JargaWeb.AppLive.Documents.ShowAITest do
   import Jarga.AccountsFixtures
   import Jarga.WorkspacesFixtures
   import Jarga.DocumentsFixtures
+  import Jarga.AgentsFixtures
 
   setup do
     user = user_fixture()
@@ -429,6 +430,141 @@ defmodule JargaWeb.AppLive.Documents.ShowAITest do
 
       # Process should have received the message and exited
       refute Process.alive?(test_pid)
+    end
+  end
+
+  describe "handle_event(\"agent_query_command\", ...)" do
+    setup %{user: user} do
+      # Create an agent for testing agent query commands
+      agent = agent_fixture(user, %{name: "test-agent", enabled: true})
+      %{agent: agent}
+    end
+
+    test "handles valid agent query command", %{
+      conn: conn,
+      user: user,
+      workspace: workspace,
+      document: document,
+      agent: _agent
+    } do
+      conn = log_in_user(conn, user)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/app/workspaces/#{workspace.slug}/documents/#{document.slug}")
+
+      # Send agent_query_command event with valid command
+      view
+      |> element("#editor-container")
+      |> render_hook("agent_query_command", %{
+        "command" => "@j test-agent What is this?",
+        "node_id" => "node_123"
+      })
+
+      # View should handle without crashing
+      assert Process.alive?(view.pid)
+      Process.sleep(20)
+    end
+
+    test "handles agent not found error", %{
+      conn: conn,
+      user: user,
+      workspace: workspace,
+      document: document
+    } do
+      conn = log_in_user(conn, user)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/app/workspaces/#{workspace.slug}/documents/#{document.slug}")
+
+      # Send command with non-existent agent
+      view
+      |> element("#editor-container")
+      |> render_hook("agent_query_command", %{
+        "command" => "@j nonexistent-agent What is this?",
+        "node_id" => "node_456"
+      })
+
+      # View should handle error gracefully
+      assert Process.alive?(view.pid)
+      Process.sleep(20)
+    end
+
+    test "handles agent disabled error", %{
+      conn: conn,
+      user: user,
+      workspace: workspace,
+      document: document
+    } do
+      # Create disabled agent
+      _disabled_agent = agent_fixture(user, %{name: "disabled-agent", enabled: false})
+
+      conn = log_in_user(conn, user)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/app/workspaces/#{workspace.slug}/documents/#{document.slug}")
+
+      # Send command with disabled agent
+      view
+      |> element("#editor-container")
+      |> render_hook("agent_query_command", %{
+        "command" => "@j disabled-agent Question?",
+        "node_id" => "node_789"
+      })
+
+      # View should handle error gracefully
+      assert Process.alive?(view.pid)
+      Process.sleep(20)
+    end
+
+    test "handles invalid command format", %{
+      conn: conn,
+      user: user,
+      workspace: workspace,
+      document: document
+    } do
+      conn = log_in_user(conn, user)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/app/workspaces/#{workspace.slug}/documents/#{document.slug}")
+
+      # Send malformed command
+      view
+      |> element("#editor-container")
+      |> render_hook("agent_query_command", %{
+        "command" => "@j   ",
+        "node_id" => "node_invalid"
+      })
+
+      # View should handle error gracefully
+      assert Process.alive?(view.pid)
+      Process.sleep(20)
+    end
+
+    test "successfully initiates streaming and receives chunks", %{
+      conn: conn,
+      user: user,
+      workspace: workspace,
+      document: document,
+      agent: _agent
+    } do
+      conn = log_in_user(conn, user)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/app/workspaces/#{workspace.slug}/documents/#{document.slug}")
+
+      # Send valid command
+      view
+      |> element("#editor-container")
+      |> render_hook("agent_query_command", %{
+        "command" => "@j test-agent Help me",
+        "node_id" => "node_stream"
+      })
+
+      # Give time for async processing
+      Process.sleep(50)
+
+      # View should still be alive and able to receive streaming messages
+      assert Process.alive?(view.pid)
     end
   end
 

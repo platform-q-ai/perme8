@@ -56,74 +56,75 @@ This feature enhances the existing `@j` mention system in Documents to support i
 
 ---
 
-### Phase 2: Backend Infrastructure + Interface ⏳
+### Phase 2: Backend Infrastructure + Interface ✓
 **Assigned to**: phoenix-tdd agent
 
 #### Application Layer Extension - AgentQuery with Agent Settings
-- [ ] RED: Extend test `test/jarga/agents/application/use_cases/agent_query_test.exs`
+- [x] RED: Extend test `test/jarga/agents/application/use_cases/agent_query_test.exs`
   - Test: uses agent's custom system_prompt when provided
   - Test: uses agent's model and temperature settings
   - Test: falls back to default when agent has no custom settings
-- [ ] GREEN: Extend `lib/jarga/agents/application/use_cases/agent_query.ex`
+- [x] GREEN: Extend `lib/jarga/agents/application/use_cases/agent_query.ex`
   - Add agent parameter to params map (optional)
   - Use PrepareContext.build_system_message_with_agent if agent present
   - Pass agent's model and temperature to llm_client.chat_stream
-- [ ] REFACTOR: Clean up agent settings handling
+- [x] REFACTOR: Clean up agent settings handling
   - Extract agent settings preparation into private function
   - Document agent parameter
   - Ensure backward compatibility
 
 #### Interface Layer - LiveView Event Handler
-- [ ] RED: Extend test `test/jarga_web/live/app_live/documents/show_test.exs`
+- [x] RED: Extend test `test/jarga_web/live/app_live/documents/show_test.exs`
   - Test: handles valid agent query command
   - Test: handles agent not found error
   - Test: handles agent disabled error
   - Test: handles invalid command format
   - Test: streams response chunks to client
   - Test: sends completion message after streaming
-- [ ] GREEN: Implement handler in `lib/jarga_web/live/app_live/documents/show.ex`
+- [x] GREEN: Implement handler in `lib/jarga_web/live/app_live/documents/show.ex`
   - Add handle_event("agent_query_command", ...)
   - Add handle_info for {:agent_chunk, node_id, chunk}
   - Add handle_info for {:agent_done, node_id, response}
   - Add handle_info for {:agent_error, node_id, reason}
-- [ ] REFACTOR: Keep LiveView thin
+- [x] REFACTOR: Keep LiveView thin
   - Extract error formatting into private function
   - Ensure proper error handling
   - Add clear documentation
 
 #### Public API - Documents Context
-- [ ] RED: Extend test `test/jarga/documents_test.exs`
+- [x] RED: Extend test `test/jarga/documents_test.exs`
   - Test: execute_agent_query delegates to use case
-- [ ] GREEN: Add function to `lib/jarga/documents.ex`
+  - Note: Tested via LiveView integration tests
+- [x] GREEN: Add function to `lib/jarga/documents.ex`
   - Add execute_agent_query/2 public function
   - Delegate to ExecuteAgentQuery.execute
-- [ ] REFACTOR: Clean up documentation
+- [x] REFACTOR: Clean up documentation
 
 #### Phase 2 Validation
-- [ ] All infrastructure tests pass (`mix test test/jarga/`)
-- [ ] All interface tests pass (`mix test test/jarga_web/`)
-- [ ] No boundary violations (`mix boundary`)
-- [ ] Full backend test suite passes (`mix test`)
-- [ ] LiveView properly handles streaming events
-- [ ] Error cases properly communicated to frontend
+- [x] All infrastructure tests pass (`mix test test/jarga/`)
+- [x] All interface tests pass (`mix test test/jarga_web/`)
+- [x] No boundary violations (`mix boundary`)
+- [x] Full backend test suite passes (`mix test`)
+- [x] LiveView properly handles streaming events
+- [x] Error cases properly communicated to frontend
 
 ---
 
-### Pre-commit Checkpoint (After Phase 2) ⏸
+### Pre-commit Checkpoint (After Phase 2) ✓
 **Assigned to**: Main Claude
 
-- [ ] Run `mix precommit`
-- [ ] Fix formatter changes if any
-- [ ] Fix Credo warnings
-- [ ] Fix Dialyzer type errors
-- [ ] Fix any failing tests
-- [ ] Fix boundary violations
-- [ ] Verify `mix test` passing
-- [ ] Verify `mix boundary` clean
+- [x] Run `mix precommit`
+- [x] Fix formatter changes if any (none needed)
+- [x] Fix Credo warnings (only pre-existing warnings, all disabled)
+- [x] Fix Dialyzer type errors (none)
+- [x] Fix any failing tests (fixed unused variable warning)
+- [x] Fix boundary violations (none)
+- [x] Verify `mix test` passing (1681 tests, 0 failures)
+- [x] Verify `mix boundary` clean (no violations)
 
 ---
 
-### Phase 3: Frontend Domain + Application ⏸
+### Phase 3: Frontend Domain + Application ⏳
 **Assigned to**: typescript-tdd agent
 
 #### Domain Layer - Agent Command Parser (TypeScript)

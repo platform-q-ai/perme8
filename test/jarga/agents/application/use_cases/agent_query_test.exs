@@ -788,4 +788,140 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
       assert is_pid(pid)
     end
   end
+
+  describe "agent-specific settings" do
+    test "uses agent's custom system_prompt when provided" do
+      agent = %{
+        name: "doc-writer",
+        system_prompt: "You are a technical documentation expert. Be precise and thorough.",
+        model: "gpt-4",
+        temperature: 0.8
+      }
+
+      expect(LlmClientMock, :chat_stream, fn messages, _pid, _opts ->
+        [system_msg | _] = messages
+        assert system_msg.role == "system"
+        # Should contain agent's custom prompt
+        assert system_msg.content =~ "technical documentation expert"
+        assert system_msg.content =~ "Be precise and thorough"
+        {:ok, spawn(fn -> :ok end)}
+      end)
+
+      params = %{
+        question: "How do I document this?",
+        agent: agent,
+        assigns: %{},
+        llm_client: LlmClientMock
+      }
+
+      {:ok, pid} = AgentQuery.execute(params, self())
+      assert is_pid(pid)
+    end
+
+    test "uses agent's model and temperature settings" do
+      agent = %{
+        name: "creative-agent",
+        system_prompt: "You are creative",
+        model: "gpt-4-turbo",
+        temperature: 1.5
+      }
+
+      expect(LlmClientMock, :chat_stream, fn _messages, _pid, opts ->
+        # Verify model and temperature are passed in opts
+        assert opts[:model] == "gpt-4-turbo"
+        assert opts[:temperature] == 1.5
+        {:ok, spawn(fn -> :ok end)}
+      end)
+
+      params = %{
+        question: "Generate ideas",
+        agent: agent,
+        assigns: %{},
+        llm_client: LlmClientMock
+      }
+
+      {:ok, pid} = AgentQuery.execute(params, self())
+      assert is_pid(pid)
+    end
+
+    test "combines agent's system_prompt with document context" do
+      agent = %{
+        name: "context-agent",
+        system_prompt: "You are a helpful assistant.",
+        model: "gpt-4",
+        temperature: 0.7
+      }
+
+      assigns = %{
+        current_workspace: %{name: "Test Workspace"},
+        document_title: "Test Doc"
+      }
+
+      expect(LlmClientMock, :chat_stream, fn messages, _pid, _opts ->
+        [system_msg | _] = messages
+        # Should have both agent prompt and context
+        assert system_msg.content =~ "helpful assistant"
+        assert system_msg.content =~ "Workspace: Test Workspace"
+        assert system_msg.content =~ "Document: Test Doc"
+        {:ok, spawn(fn -> :ok end)}
+      end)
+
+      params = %{
+        question: "What is this?",
+        agent: agent,
+        assigns: assigns,
+        llm_client: LlmClientMock
+      }
+
+      {:ok, pid} = AgentQuery.execute(params, self())
+      assert is_pid(pid)
+    end
+
+    test "falls back to default when agent has no custom settings" do
+      # Agent without system_prompt or model
+      agent = %{
+        name: "basic-agent",
+        system_prompt: nil,
+        model: nil,
+        temperature: 0.7
+      }
+
+      expect(LlmClientMock, :chat_stream, fn messages, _pid, opts ->
+        [system_msg | _] = messages
+        # Should use default system message
+        assert system_msg.content =~ "agent assistant"
+        # Should not pass model key when agent model is nil
+        refute Keyword.has_key?(opts, :model)
+        {:ok, spawn(fn -> :ok end)}
+      end)
+
+      params = %{
+        question: "Test question",
+        agent: agent,
+        assigns: %{},
+        llm_client: LlmClientMock
+      }
+
+      {:ok, pid} = AgentQuery.execute(params, self())
+      assert is_pid(pid)
+    end
+
+    test "uses default system message when no agent provided" do
+      # No agent in params - backward compatibility
+      expect(LlmClientMock, :chat_stream, fn messages, _pid, _opts ->
+        [system_msg | _] = messages
+        assert system_msg.content =~ "agent assistant"
+        {:ok, spawn(fn -> :ok end)}
+      end)
+
+      params = %{
+        question: "Test without agent",
+        assigns: %{},
+        llm_client: LlmClientMock
+      }
+
+      {:ok, pid} = AgentQuery.execute(params, self())
+      assert is_pid(pid)
+    end
+  end
 end

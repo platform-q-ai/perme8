@@ -280,4 +280,37 @@ defmodule Jarga.Documents do
         raise "Document has no note component"
     end
   end
+
+  @doc """
+  Executes an agent query command within document context.
+
+  Parses `@j agent_name Question` syntax, looks up agent by name,
+  and streams response inline in the document.
+
+  ## Parameters
+
+    - `params` - Map containing:
+      - `:command` - The command text (e.g., "@j my-agent What is this?")
+      - `:user` - User executing the query
+      - `:workspace_id` - ID of the workspace
+      - `:assigns` - LiveView assigns with document context
+      - `:node_id` - Node ID for streaming responses
+    - `caller_pid` - PID to send streaming responses to
+
+  ## Returns
+
+    - `{:ok, pid}` - Agent query started successfully
+    - `{:error, :invalid_command_format}` - Command parsing failed
+    - `{:error, :agent_not_found}` - Agent doesn't exist in workspace
+    - `{:error, :agent_disabled}` - Agent exists but is disabled
+
+  ## Examples
+
+      iex> execute_agent_query(%{command: "@j agent1 Hello", assigns: assigns, user: user, workspace_id: wid, node_id: "node_1"}, self())
+      {:ok, #PID<...>}
+
+  """
+  def execute_agent_query(params, caller_pid) do
+    UseCases.ExecuteAgentQuery.execute(params, caller_pid)
+  end
 end

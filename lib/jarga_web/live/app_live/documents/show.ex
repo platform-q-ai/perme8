@@ -302,6 +302,33 @@ defmodule JargaWeb.AppLive.Documents.Show do
   end
 
   @impl true
+  def handle_event("agent_query_command", %{"command" => command, "node_id" => node_id}, socket) do
+    user = socket.assigns.current_scope.user
+    workspace = socket.assigns.workspace
+
+    # Delegate to Documents context to parse command and execute agent query
+    params = %{
+      command: command,
+      user: user,
+      workspace_id: workspace.id,
+      assigns: socket.assigns,
+      node_id: node_id
+    }
+
+    case Documents.execute_agent_query(params, self()) do
+      {:ok, query_pid} ->
+        # Track the query PID
+        send(self(), {:agent_query_started, node_id, query_pid})
+        {:noreply, socket}
+
+      {:error, reason} ->
+        error_msg = format_agent_error(reason)
+        send(self(), {:agent_error, node_id, error_msg})
+        {:noreply, socket}
+    end
+  end
+
+  @impl true
   def handle_event("agent_cancel", %{"node_id" => node_id}, socket) do
     # Look up the query PID for this node_id
     active_queries = Map.get(socket.assigns, :active_agent_queries, %{})
@@ -470,6 +497,15 @@ defmodule JargaWeb.AppLive.Documents.Show do
     last_initial = if user.last_name, do: String.first(user.last_name) <> ".", else: ""
     String.trim("#{first_name} #{last_initial}")
   end
+
+  # Format agent query error messages for display to user
+  defp format_agent_error(:invalid_command_format),
+    do: "Invalid command format. Use: @j agent_name Question"
+
+  defp format_agent_error(:agent_not_found), do: "Agent not found in workspace"
+  defp format_agent_error(:agent_disabled), do: "Agent is disabled"
+  defp format_agent_error(reason) when is_binary(reason), do: reason
+  defp format_agent_error(_reason), do: "Failed to execute agent query"
 
   @impl true
   def render(assigns) do

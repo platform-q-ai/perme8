@@ -4,13 +4,32 @@ defmodule Jarga.Agents.Application.UseCases.AgentQuery do
 
   This use case handles in-editor agent requests by:
   - Extracting document context from assigns
-  - Building contextualized system message
+  - Building contextualized system message (with optional agent-specific prompt)
+  - Applying agent-specific settings (model, temperature)
   - Streaming LLM response to caller process
+
+  ## Agent-Specific Settings
+
+  When an `agent` is provided in params, the use case will:
+  - Use the agent's `system_prompt` instead of the default prompt
+  - Pass the agent's `model` to the LLM client
+  - Pass the agent's `temperature` to the LLM client
+  - Combine the agent's prompt with document context
 
   ## Examples
 
+      # Without agent (uses default settings)
       iex> params = %{
       ...>   question: "How do I structure a Phoenix context?",
+      ...>   assigns: socket.assigns
+      ...> }
+      iex> AgentQuery.execute(params, self())
+      {:ok, #PID<0.123.0>}
+
+      # With agent (uses agent-specific settings)
+      iex> params = %{
+      ...>   question: "How do I structure a Phoenix context?",
+      ...>   agent: %{system_prompt: "You are a Phoenix expert", model: "gpt-4", temperature: 0.7},
       ...>   assigns: socket.assigns
       ...> }
       iex> AgentQuery.execute(params, self())
@@ -35,6 +54,7 @@ defmodule Jarga.Agents.Application.UseCases.AgentQuery do
     - params: Map with required keys:
       - :question - The user's question
       - :assigns - LiveView assigns containing document context
+      - :agent (optional) - Agent struct with custom settings (system_prompt, model, temperature)
       - :node_id (optional) - Node ID for tracking
       - :llm_client (optional) - LLM client module for dependency injection (default: LlmClient)
     - caller_pid: Process to receive streaming chunks
@@ -46,32 +66,36 @@ defmodule Jarga.Agents.Application.UseCases.AgentQuery do
   def execute(params, caller_pid) do
     question = Map.fetch!(params, :question)
     assigns = Map.fetch!(params, :assigns)
+    agent = Map.get(params, :agent)
     node_id = Map.get(params, :node_id)
     llm_client = Map.get(params, :llm_client, LlmClient)
 
     # Extract document context
     context = extract_context(assigns)
 
-    # Build contextualized messages
-    messages = build_messages(question, context)
+    # Build contextualized messages with agent-specific settings
+    messages = build_messages(question, context, agent)
+
+    # Prepare LLM client options with agent settings
+    opts = build_llm_opts(agent)
 
     # Start streaming process that wraps LlmClient
     pid =
       spawn_link(fn ->
-        handle_streaming(messages, caller_pid, node_id, llm_client)
+        handle_streaming(messages, caller_pid, node_id, llm_client, opts)
       end)
 
     {:ok, pid}
   end
 
-  defp handle_streaming(messages, caller_pid, node_id, llm_client) do
+  defp handle_streaming(messages, caller_pid, node_id, llm_client, opts) do
     # Set node_id in process dictionary for tracking
     if node_id do
       Process.put(:agent_node_id, node_id)
     end
 
-    # Call LlmClient to start streaming
-    case llm_client.chat_stream(messages, self(), []) do
+    # Call LlmClient to start streaming with agent-specific opts
+    case llm_client.chat_stream(messages, self(), opts) do
       {:ok, _stream_pid} ->
         # Forward messages from LlmClient to caller
         forward_stream(caller_pid, node_id)
@@ -175,19 +199,27 @@ defmodule Jarga.Agents.Application.UseCases.AgentQuery do
     end
   end
 
-  defp build_messages(question, context) do
-    system_message = build_system_message(context)
+  defp build_messages(question, context, agent) do
+    system_message = build_system_message(context, agent)
     user_message = %{role: "user", content: question}
 
     [system_message, user_message]
   end
 
-  defp build_system_message(context) do
-    base_prompt = """
-    You are an agent assistant helping within a note-taking editor.
-    Provide concise, helpful responses in markdown format.
-    Keep responses brief and actionable.
-    """
+  defp build_system_message(context, agent) do
+    # Use agent's custom system_prompt if provided, otherwise use default
+    base_prompt =
+      case get_agent_system_prompt(agent) do
+        prompt when is_binary(prompt) and prompt != "" ->
+          prompt
+
+        _ ->
+          """
+          You are an agent assistant helping within a note-taking editor.
+          Provide concise, helpful responses in markdown format.
+          Keep responses brief and actionable.
+          """
+      end
 
     context_text = build_context_text(context)
 
@@ -240,4 +272,52 @@ defmodule Jarga.Agents.Application.UseCases.AgentQuery do
 
     Enum.join(context_parts, "\n")
   end
+
+  # Build LLM client options from agent settings
+  # Returns keyword list with :model and :temperature if provided by agent
+  defp build_llm_opts(nil), do: []
+
+  defp build_llm_opts(agent) do
+    []
+    |> maybe_put_model(agent)
+    |> maybe_put_temperature(agent)
+  end
+
+  defp maybe_put_model(opts, agent) do
+    case get_agent_model(agent) do
+      model when is_binary(model) and model != "" ->
+        Keyword.put(opts, :model, model)
+
+      _ ->
+        opts
+    end
+  end
+
+  defp maybe_put_temperature(opts, agent) do
+    case get_agent_temperature(agent) do
+      temp when is_number(temp) ->
+        Keyword.put(opts, :temperature, temp)
+
+      _ ->
+        opts
+    end
+  end
+
+  # Helper functions to safely extract agent fields (works with maps and structs)
+  defp get_agent_system_prompt(nil), do: nil
+
+  defp get_agent_system_prompt(agent) do
+    prompt = Map.get(agent, :system_prompt)
+    if is_binary(prompt), do: String.trim(prompt), else: nil
+  end
+
+  defp get_agent_model(nil), do: nil
+
+  defp get_agent_model(agent) do
+    model = Map.get(agent, :model)
+    if is_binary(model), do: String.trim(model), else: nil
+  end
+
+  defp get_agent_temperature(nil), do: nil
+  defp get_agent_temperature(agent), do: Map.get(agent, :temperature)
 end

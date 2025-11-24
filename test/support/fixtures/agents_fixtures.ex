@@ -38,6 +38,19 @@ defmodule Jarga.AgentsFixtures do
   end
 
   @doc """
+  Convenience alias for agent_fixture/2.
+  Accepts a user as first parameter and attrs as second parameter.
+  """
+  def agent_fixture(user, attrs \\ %{}) do
+    attrs_with_defaults =
+      attrs
+      |> Map.put(:user_id, user.id)
+      |> Map.put_new(:temperature, 0.7)
+
+    user_agent_fixture(attrs_with_defaults)
+  end
+
+  @doc """
   Generate a chat session.
   """
   def chat_session_fixture(attrs \\ %{}) do

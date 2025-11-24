@@ -209,7 +209,7 @@ defmodule Jarga.Documents.Application.UseCases.ExecuteAgentQueryTest do
     test "handles agent name case-insensitively", %{
       user: user,
       workspace: workspace,
-      agent: agent,
+      agent: _agent,
       assigns: assigns
     } do
       # Agent name is "my-test-agent", try uppercase version
