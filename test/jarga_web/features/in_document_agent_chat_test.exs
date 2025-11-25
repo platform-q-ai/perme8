@@ -5,7 +5,7 @@ defmodule JargaWeb.Features.InDocumentAgentChatTest do
 
   @moduletag :wallaby
 
-  describe "in-document agent chat - full flow with REAL LLM responses" do
+  describe "in-document agent chat - full E2E flow with mocked LLM responses" do
     setup do
       # Use persistent test user
       user = Jarga.TestUsers.get_user(:alice)
@@ -17,7 +17,8 @@ defmodule JargaWeb.Features.InDocumentAgentChatTest do
       agent =
         agent_fixture(user, %{
           name: "prd-agent",
-          system_prompt: "You are a helpful assistant. Keep responses very brief (1-2 sentences max).",
+          system_prompt:
+            "You are a helpful assistant. Keep responses very brief (1-2 sentences max).",
           model: "gpt-4o-mini",
           temperature: 0.7,
           enabled: true
@@ -38,7 +39,7 @@ defmodule JargaWeb.Features.InDocumentAgentChatTest do
     end
 
     @tag :wallaby
-    test "user invokes prd-agent and gets REAL LLM response about PRDs", %{
+    test "user invokes prd-agent and gets mocked LLM response about PRDs", %{
       session: session,
       user: user,
       workspace: workspace,
@@ -92,7 +93,7 @@ defmodule JargaWeb.Features.InDocumentAgentChatTest do
       session
       |> then(fn s ->
         content = get_editor_content(s)
-        
+
         IO.puts("\n" <> String.duplicate("=", 80))
         IO.puts("📋 RESPONSE FROM prd-agent:")
         IO.puts(String.duplicate("=", 80))
@@ -102,14 +103,14 @@ defmodule JargaWeb.Features.InDocumentAgentChatTest do
         s
       end)
 
-      # Wait for LLM response (max 30 seconds)
+      # Wait for mocked LLM response (should be fast - within 5 seconds)
       session
       |> then(fn s ->
-        wait_for_llm_response(s, 30_000)
+        wait_for_llm_response(s, 5_000)
       end)
       |> take_screenshot(name: "03_prd_final_response")
 
-      # Verify we got a REAL LLM response about PRDs
+      # Verify we got a mocked LLM response about PRDs
       session
       |> then(fn s ->
         content = get_editor_content(s)
@@ -127,7 +128,7 @@ defmodule JargaWeb.Features.InDocumentAgentChatTest do
                "Expected response about PRD"
 
         IO.puts("\n✅ TEST 1 PASSED!")
-        IO.puts("✅ Got REAL LLM response from prd-agent")
+        IO.puts("✅ Got mocked LLM response from prd-agent")
         IO.puts("✅ Response length: #{String.length(content)} characters")
         IO.puts("✅ Response mentions PRD: #{content =~ ~r/PRD/}")
 
@@ -136,7 +137,7 @@ defmodule JargaWeb.Features.InDocumentAgentChatTest do
     end
 
     @tag :wallaby
-    test "user invokes nonexistent agent and gets error OR helpful message", %{
+    test "user invokes nonexistent agent and gets mocked error message", %{
       session: session,
       user: user,
       workspace: workspace,
@@ -181,7 +182,7 @@ defmodule JargaWeb.Features.InDocumentAgentChatTest do
       session
       |> then(fn s ->
         content = get_editor_content(s)
-        
+
         IO.puts("\n" <> String.duplicate("=", 80))
         IO.puts("📋 RESPONSE FOR INVALID AGENT:")
         IO.puts(String.duplicate("=", 80))
@@ -196,7 +197,7 @@ defmodule JargaWeb.Features.InDocumentAgentChatTest do
         # 1. Got error from backend: "Agent not found"
         # 2. Plugin didn't trigger (command still there) and user got help from default agent
         # 3. Got explanation about invalid agent
-        
+
         is_backend_error = content =~ "Agent not found"
         is_explanation = content =~ ~r/not.*valid|invalid|doesn't exist|misspelled/i
         command_still_present = content =~ "@j invalid-xyz-agent"
@@ -208,16 +209,16 @@ defmodule JargaWeb.Features.InDocumentAgentChatTest do
           is_backend_error ->
             IO.puts("\n✅ TEST 2 PASSED!")
             IO.puts("✅ Got backend error: Agent not found")
-          
+
           is_explanation and not command_still_present ->
             IO.puts("\n✅ TEST 2 PASSED!")
             IO.puts("✅ Got LLM explanation about invalid agent")
-          
+
           command_still_present ->
             IO.puts("\n✅ TEST 2 PASSED!")
             IO.puts("✅ Command not processed (plugin didn't trigger for invalid agent)")
             IO.puts("✅ This is acceptable behavior - invalid agents may not trigger")
-          
+
           true ->
             IO.puts("\n✅ TEST 2 PASSED!")
             IO.puts("✅ Got some response about the invalid agent")
@@ -228,7 +229,7 @@ defmodule JargaWeb.Features.InDocumentAgentChatTest do
     end
   end
 
-  # Helper: Wait for LLM response to appear
+  # Helper: Wait for mocked LLM response to appear
   defp wait_for_llm_response(session, timeout_ms) do
     end_time = System.monotonic_time(:millisecond) + timeout_ms
     poll_for_llm_response(session, end_time, 0)
@@ -248,8 +249,9 @@ defmodule JargaWeb.Features.InDocumentAgentChatTest do
         content =~ "Agent thinking" ->
           if rem(attempt, 10) == 0 do
             remaining_secs = div(end_time - now, 1000)
-            IO.puts("⏳ Waiting for LLM... (attempt #{attempt}, #{remaining_secs}s left)")
+            IO.puts("⏳ Waiting for mocked LLM... (attempt #{attempt}, #{remaining_secs}s left)")
           end
+
           Process.sleep(500)
           poll_for_llm_response(session, end_time, attempt + 1)
 

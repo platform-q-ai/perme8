@@ -68,7 +68,8 @@ defmodule Jarga.Agents.Application.UseCases.AgentQuery do
     assigns = Map.fetch!(params, :assigns)
     agent = Map.get(params, :agent)
     node_id = Map.get(params, :node_id)
-    llm_client = Map.get(params, :llm_client, LlmClient)
+    # Allow dependency injection via params, fall back to config, then default
+    llm_client = Map.get(params, :llm_client) || get_llm_client() || LlmClient
 
     # Extract document context
     context = extract_context(assigns)
@@ -320,4 +321,9 @@ defmodule Jarga.Agents.Application.UseCases.AgentQuery do
 
   defp get_agent_temperature(nil), do: nil
   defp get_agent_temperature(agent), do: Map.get(agent, :temperature)
+
+  # Get LLM client from config (allows test environment to override)
+  defp get_llm_client do
+    Application.get_env(:jarga, :llm_client)
+  end
 end

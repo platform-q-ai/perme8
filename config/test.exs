@@ -75,3 +75,6 @@ config :wallaby,
 
 # Enable Ecto Sandbox for Wallaby tests
 config :jarga, :sandbox, Ecto.Adapters.SQL.Sandbox
+
+# Use mock LLM client for tests (fast, deterministic, no API calls)
+config :jarga, :llm_client, Jarga.Test.Support.MockLlmClient
