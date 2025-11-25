@@ -1,52 +1,77 @@
 defmodule Jarga.Documents.Domain.Entities.Document do
   @moduledoc """
-  Schema for documents that contain notes and content.
+  Pure domain entity for documents.
+
+  This is a value object representing a document in the business domain.
+  It contains no infrastructure dependencies (no Ecto, no database concerns).
+
+  For database persistence, see Jarga.Documents.Infrastructure.Schemas.DocumentSchema.
   """
 
-  use Ecto.Schema
-  import Ecto.Changeset
+  @type t :: %__MODULE__{
+          id: String.t() | nil,
+          title: String.t(),
+          slug: String.t(),
+          is_public: boolean(),
+          is_pinned: boolean(),
+          user_id: String.t(),
+          workspace_id: String.t(),
+          project_id: String.t() | nil,
+          created_by: String.t(),
+          document_components: list(any()),
+          inserted_at: DateTime.t() | nil,
+          updated_at: DateTime.t() | nil
+        }
 
-  @primary_key {:id, :binary_id, autogenerate: true}
-  @foreign_key_type :binary_id
+  defstruct [
+    :id,
+    :title,
+    :slug,
+    :user_id,
+    :workspace_id,
+    :project_id,
+    :created_by,
+    :inserted_at,
+    :updated_at,
+    is_public: false,
+    is_pinned: false,
+    document_components: []
+  ]
 
-  schema "documents" do
-    field(:title, :string)
-    field(:slug, :string)
-    field(:is_public, :boolean, default: false)
-    field(:is_pinned, :boolean, default: false)
-
-    belongs_to(:user, Jarga.Accounts.Domain.Entities.User)
-    belongs_to(:workspace, Jarga.Workspaces.Domain.Entities.Workspace, type: Ecto.UUID)
-    belongs_to(:project, Jarga.Projects.Domain.Entities.Project, type: Ecto.UUID)
-    belongs_to(:created_by_user, Jarga.Accounts.Domain.Entities.User, foreign_key: :created_by)
-
-    # Polymorphic components (notes, task lists, sheets, etc.)
-    has_many(:document_components, Jarga.Documents.Domain.Entities.DocumentComponent,
-      preload_order: [asc: :position]
-    )
-
-    timestamps(type: :utc_datetime)
+  @doc """
+  Creates a new Document domain entity from attributes.
+  """
+  def new(attrs) do
+    struct(__MODULE__, attrs)
   end
 
-  @doc false
-  def changeset(document, attrs) do
-    document
-    |> cast(attrs, [
-      :title,
-      :slug,
-      :user_id,
-      :workspace_id,
-      :project_id,
-      :created_by,
-      :is_public,
-      :is_pinned
-    ])
-    |> validate_required([:title, :slug, :user_id, :workspace_id, :created_by])
-    |> validate_length(:title, min: 1)
-    |> unique_constraint(:slug, name: :documents_workspace_id_slug_index)
-    |> foreign_key_constraint(:user_id, name: :pages_user_id_fkey)
-    |> foreign_key_constraint(:workspace_id, name: :pages_workspace_id_fkey)
-    |> foreign_key_constraint(:project_id, name: :pages_project_id_fkey)
-    |> foreign_key_constraint(:created_by, name: :pages_created_by_fkey)
+  @doc """
+  Converts an infrastructure schema to a domain entity.
+  Also converts nested document_components to domain entities.
+  """
+  def from_schema(%{__struct__: _} = schema) do
+    alias Jarga.Documents.Domain.Entities.DocumentComponent
+
+    components =
+      case schema.document_components do
+        nil -> []
+        %Ecto.Association.NotLoaded{} -> []
+        components -> Enum.map(components, &DocumentComponent.from_schema/1)
+      end
+
+    %__MODULE__{
+      id: schema.id,
+      title: schema.title,
+      slug: schema.slug,
+      is_public: schema.is_public,
+      is_pinned: schema.is_pinned,
+      user_id: schema.user_id,
+      workspace_id: schema.workspace_id,
+      project_id: schema.project_id,
+      created_by: schema.created_by,
+      document_components: components,
+      inserted_at: schema.inserted_at,
+      updated_at: schema.updated_at
+    }
   end
 end

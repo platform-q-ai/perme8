@@ -196,7 +196,7 @@ defmodule Jarga.Projects do
   end
 
   @doc """
-  Deletes a project for a user in a workspace.
+  Deletes a project.
 
   The user must be a member of the workspace to delete projects.
 
@@ -205,8 +205,8 @@ defmodule Jarga.Projects do
       iex> delete_project(user, workspace_id, project_id)
       {:ok, %Project{}}
 
-      iex> delete_project(user, non_member_workspace_id, project_id)
-      {:error, :unauthorized}
+      iex> delete_project(user, workspace_id, non_existent_project_id)
+      {:error, :project_not_found}
 
   """
   def delete_project(%User{} = user, workspace_id, project_id, opts \\ []) do
@@ -218,5 +218,39 @@ defmodule Jarga.Projects do
       },
       opts
     )
+  end
+
+  @doc """
+  Verifies that a project belongs to a workspace.
+
+  This is a simple existence check used by other contexts (e.g., Documents)
+  to validate that a project_id belongs to a specific workspace before
+  associating it with other entities.
+
+  Returns `:ok` if the project exists and belongs to the workspace,
+  or if project_id is nil (which means no project association).
+  Returns `{:error, :project_not_in_workspace}` otherwise.
+
+  ## Examples
+
+      iex> verify_project_in_workspace(workspace_id, project_id)
+      :ok
+
+      iex> verify_project_in_workspace(workspace_id, nil)
+      :ok
+
+      iex> verify_project_in_workspace(workspace_id, other_workspace_project_id)
+      {:error, :project_not_in_workspace}
+
+  """
+  @spec verify_project_in_workspace(binary(), binary() | nil) ::
+          :ok | {:error, :project_not_in_workspace}
+  def verify_project_in_workspace(_workspace_id, nil), do: :ok
+
+  def verify_project_in_workspace(workspace_id, project_id) do
+    case Queries.exists_in_workspace(project_id, workspace_id) |> Repo.one() do
+      nil -> {:error, :project_not_in_workspace}
+      _project -> :ok
+    end
   end
 end

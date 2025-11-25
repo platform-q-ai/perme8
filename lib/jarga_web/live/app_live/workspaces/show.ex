@@ -955,6 +955,24 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
   end
 
   @impl true
+  def handle_info({:document_created, document}, socket) do
+    # Add new document to the list if it belongs to this workspace
+    if document.workspace_id == socket.assigns.workspace.id do
+      documents = [document | socket.assigns.documents]
+      {:noreply, assign(socket, documents: documents)}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  @impl true
+  def handle_info({:document_deleted, document_id}, socket) do
+    # Remove document from the list
+    documents = Enum.reject(socket.assigns.documents, fn doc -> doc.id == document_id end)
+    {:noreply, assign(socket, documents: documents)}
+  end
+
+  @impl true
   def handle_info({:workspace_updated, workspace_id, name}, socket) do
     # Update workspace name in breadcrumbs
     if socket.assigns.workspace.id == workspace_id do

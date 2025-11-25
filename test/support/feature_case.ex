@@ -12,8 +12,8 @@ defmodule JargaWeb.FeatureCase do
       Jarga.Repo,
       Jarga.Accounts,
       Jarga.Workspaces,
+      Jarga.Projects,
       Jarga.Documents,
-      Jarga.Agents,
       Jarga.TestUsers
     ],
     exports: []
@@ -30,12 +30,14 @@ defmodule JargaWeb.FeatureCase do
       alias Jarga.Repo
       alias Jarga.Accounts
       alias Jarga.Workspaces
+      alias Jarga.Projects
       alias Jarga.Documents
       alias Jarga.Agents
 
       # Import fixtures for test data creation
       import Jarga.AccountsFixtures
       import Jarga.WorkspacesFixtures
+      import Jarga.ProjectsFixtures
       import Jarga.DocumentsFixtures
       import Jarga.AgentsFixtures
     end

@@ -25,4 +25,16 @@ defmodule Jarga.Documents.Application.Services.NotificationService do
   """
   @callback notify_document_title_changed(document :: Document.t()) ::
               :ok | {:error, term()}
+
+  @doc """
+  Notifies workspace members that a new document has been created.
+  """
+  @callback notify_document_created(document :: Document.t()) ::
+              :ok | {:error, term()}
+
+  @doc """
+  Notifies workspace members that a document has been deleted.
+  """
+  @callback notify_document_deleted(document :: Document.t()) ::
+              :ok | {:error, term()}
 end

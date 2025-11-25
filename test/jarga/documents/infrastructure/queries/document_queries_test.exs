@@ -1,7 +1,7 @@
-defmodule Jarga.Documents.QueriesTest do
+defmodule Jarga.Documents.Infrastructure.Queries.DocumentQueriesTest do
   use Jarga.DataCase, async: true
 
-  alias Jarga.Documents.Infrastructure.Queries.Queries
+  alias Jarga.Documents.Infrastructure.Queries.DocumentQueries
   alias Jarga.Documents
   alias Jarga.Repo
 
@@ -11,7 +11,7 @@ defmodule Jarga.Documents.QueriesTest do
 
   describe "base/0" do
     test "returns a queryable for documents" do
-      query = Queries.base()
+      query = DocumentQueries.base()
 
       assert %Ecto.Query{} = query
     end
@@ -28,8 +28,8 @@ defmodule Jarga.Documents.QueriesTest do
       {:ok, document2} = Documents.create_document(user2, workspace.id, %{title: "Document 2"})
 
       results =
-        Queries.base()
-        |> Queries.for_user(user1)
+        DocumentQueries.base()
+        |> DocumentQueries.for_user(user1)
         |> Repo.all()
 
       document_ids = Enum.map(results, & &1.id)
@@ -46,8 +46,8 @@ defmodule Jarga.Documents.QueriesTest do
       {:ok, document} = Documents.create_document(user, workspace.id, %{title: "My Document"})
 
       results =
-        Queries.base()
-        |> Queries.viewable_by_user(user)
+        DocumentQueries.base()
+        |> DocumentQueries.viewable_by_user(user)
         |> Repo.all()
 
       document_ids = Enum.map(results, & &1.id)
@@ -66,8 +66,8 @@ defmodule Jarga.Documents.QueriesTest do
       {:ok, _document} = Documents.update_document(owner, document.id, %{is_public: true})
 
       results =
-        Queries.base()
-        |> Queries.viewable_by_user(member)
+        DocumentQueries.base()
+        |> DocumentQueries.viewable_by_user(member)
         |> Repo.all()
 
       document_ids = Enum.map(results, & &1.id)
@@ -84,8 +84,8 @@ defmodule Jarga.Documents.QueriesTest do
         Documents.create_document(user1, workspace.id, %{title: "Private Document"})
 
       results =
-        Queries.base()
-        |> Queries.viewable_by_user(user2)
+        DocumentQueries.base()
+        |> DocumentQueries.viewable_by_user(user2)
         |> Repo.all()
 
       document_ids = Enum.map(results, & &1.id)
@@ -103,8 +103,8 @@ defmodule Jarga.Documents.QueriesTest do
       {:ok, _document} = Documents.update_document(user1, document.id, %{is_public: true})
 
       results =
-        Queries.base()
-        |> Queries.viewable_by_user(user2)
+        DocumentQueries.base()
+        |> DocumentQueries.viewable_by_user(user2)
         |> Repo.all()
 
       document_ids = Enum.map(results, & &1.id)
@@ -122,8 +122,8 @@ defmodule Jarga.Documents.QueriesTest do
       {:ok, document2} = Documents.create_document(user, workspace2.id, %{title: "Document 2"})
 
       results =
-        Queries.base()
-        |> Queries.for_workspace(workspace1.id)
+        DocumentQueries.base()
+        |> DocumentQueries.for_workspace(workspace1.id)
         |> Repo.all()
 
       document_ids = Enum.map(results, & &1.id)
@@ -152,8 +152,8 @@ defmodule Jarga.Documents.QueriesTest do
         })
 
       results =
-        Queries.base()
-        |> Queries.for_project(project1.id)
+        DocumentQueries.base()
+        |> DocumentQueries.for_project(project1.id)
         |> Repo.all()
 
       document_ids = Enum.map(results, & &1.id)
@@ -171,8 +171,8 @@ defmodule Jarga.Documents.QueriesTest do
       {:ok, _document2} = Documents.create_document(user, workspace.id, %{title: "Document 2"})
 
       result =
-        Queries.base()
-        |> Queries.by_id(document1.id)
+        DocumentQueries.base()
+        |> DocumentQueries.by_id(document1.id)
         |> Repo.one()
 
       assert result.id == document1.id
@@ -182,8 +182,8 @@ defmodule Jarga.Documents.QueriesTest do
       fake_id = Ecto.UUID.generate()
 
       result =
-        Queries.base()
-        |> Queries.by_id(fake_id)
+        DocumentQueries.base()
+        |> DocumentQueries.by_id(fake_id)
         |> Repo.one()
 
       assert result == nil
@@ -199,8 +199,8 @@ defmodule Jarga.Documents.QueriesTest do
       {:ok, _document2} = Documents.create_document(user, workspace.id, %{title: "Document 2"})
 
       result =
-        Queries.base()
-        |> Queries.by_slug(document1.slug)
+        DocumentQueries.base()
+        |> DocumentQueries.by_slug(document1.slug)
         |> Repo.one()
 
       assert result.id == document1.id
@@ -208,8 +208,8 @@ defmodule Jarga.Documents.QueriesTest do
 
     test "returns nil when slug doesn't exist" do
       result =
-        Queries.base()
-        |> Queries.by_slug("non-existent-slug")
+        DocumentQueries.base()
+        |> DocumentQueries.by_slug("non-existent-slug")
         |> Repo.one()
 
       assert result == nil
@@ -229,9 +229,9 @@ defmodule Jarga.Documents.QueriesTest do
       {:ok, _document1} = Documents.update_document(user, document1.id, %{is_pinned: true})
 
       results =
-        Queries.base()
-        |> Queries.for_user(user)
-        |> Queries.ordered()
+        DocumentQueries.base()
+        |> DocumentQueries.for_user(user)
+        |> DocumentQueries.ordered()
         |> Repo.all()
 
       document_ids = Enum.map(results, & &1.id)
@@ -254,9 +254,9 @@ defmodule Jarga.Documents.QueriesTest do
       {:ok, _document2} = Documents.update_document(user, document2.id, %{is_pinned: true})
 
       results =
-        Queries.base()
-        |> Queries.for_user(user)
-        |> Queries.ordered()
+        DocumentQueries.base()
+        |> DocumentQueries.for_user(user)
+        |> DocumentQueries.ordered()
         |> Repo.all()
 
       # Both should be pinned
@@ -277,9 +277,9 @@ defmodule Jarga.Documents.QueriesTest do
       {:ok, document} = Documents.create_document(user, workspace.id, %{title: "Document"})
 
       result =
-        Queries.base()
-        |> Queries.by_id(document.id)
-        |> Queries.with_components()
+        DocumentQueries.base()
+        |> DocumentQueries.by_id(document.id)
+        |> DocumentQueries.with_components()
         |> Repo.one()
 
       # Components should be loaded (list instead of NotLoaded)
@@ -312,10 +312,10 @@ defmodule Jarga.Documents.QueriesTest do
         })
 
       results =
-        Queries.base()
-        |> Queries.for_user(user1)
-        |> Queries.for_workspace(workspace.id)
-        |> Queries.for_project(project.id)
+        DocumentQueries.base()
+        |> DocumentQueries.for_user(user1)
+        |> DocumentQueries.for_workspace(workspace.id)
+        |> DocumentQueries.for_project(project.id)
         |> Repo.all()
 
       assert length(results) == 1

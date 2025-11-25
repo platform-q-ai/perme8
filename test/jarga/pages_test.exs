@@ -69,9 +69,11 @@ defmodule Jarga.PagesTest do
       assert page.is_pinned == false
 
       # Check that a default note was created via page_component
-      page = Repo.preload(page, :document_components)
-      assert length(page.document_components) == 1
-      [component] = page.document_components
+      # Need to fetch schema to check associations
+      alias Jarga.Documents.Infrastructure.Schemas.DocumentSchema
+      page_schema = Repo.get!(DocumentSchema, page.id) |> Repo.preload(:document_components)
+      assert length(page_schema.document_components) == 1
+      [component] = page_schema.document_components
       assert component.component_type == "note"
       assert component.component_id != nil
     end
@@ -371,6 +373,7 @@ defmodule Jarga.PagesTest do
     end
 
     test "orders pages with pinned first, then by updated_at desc" do
+      alias Jarga.Documents.Infrastructure.Schemas.DocumentSchema
       user = user_fixture()
       workspace = workspace_fixture(user)
 
@@ -384,19 +387,19 @@ defmodule Jarga.PagesTest do
       # Use raw Ecto queries to bypass the context and set timestamps directly
       base_time = ~U[2025-01-01 12:00:00Z]
 
-      page1
+      Repo.get!(DocumentSchema, page1.id)
       |> Ecto.Changeset.change(updated_at: DateTime.add(base_time, 0, :second))
       |> Repo.update!()
 
-      page2
+      Repo.get!(DocumentSchema, page2.id)
       |> Ecto.Changeset.change(is_pinned: true, updated_at: DateTime.add(base_time, 1, :second))
       |> Repo.update!()
 
-      page3
+      Repo.get!(DocumentSchema, page3.id)
       |> Ecto.Changeset.change(updated_at: DateTime.add(base_time, 2, :second))
       |> Repo.update!()
 
-      page4
+      Repo.get!(DocumentSchema, page4.id)
       |> Ecto.Changeset.change(is_pinned: true, updated_at: DateTime.add(base_time, 3, :second))
       |> Repo.update!()
 
@@ -470,6 +473,7 @@ defmodule Jarga.PagesTest do
     end
 
     test "orders pages with pinned first, then by updated_at desc" do
+      alias Jarga.Documents.Infrastructure.Schemas.DocumentSchema
       user = user_fixture()
       workspace = workspace_fixture(user)
       project = project_fixture(user, workspace)
@@ -503,19 +507,19 @@ defmodule Jarga.PagesTest do
       # Use raw Ecto queries to bypass the context and set timestamps directly
       base_time = ~U[2025-01-01 12:00:00Z]
 
-      page1
+      Repo.get!(DocumentSchema, page1.id)
       |> Ecto.Changeset.change(updated_at: DateTime.add(base_time, 0, :second))
       |> Repo.update!()
 
-      page2
+      Repo.get!(DocumentSchema, page2.id)
       |> Ecto.Changeset.change(is_pinned: true, updated_at: DateTime.add(base_time, 1, :second))
       |> Repo.update!()
 
-      page3
+      Repo.get!(DocumentSchema, page3.id)
       |> Ecto.Changeset.change(updated_at: DateTime.add(base_time, 2, :second))
       |> Repo.update!()
 
-      page4
+      Repo.get!(DocumentSchema, page4.id)
       |> Ecto.Changeset.change(is_pinned: true, updated_at: DateTime.add(base_time, 3, :second))
       |> Repo.update!()
 

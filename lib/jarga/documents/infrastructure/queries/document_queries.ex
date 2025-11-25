@@ -1,11 +1,11 @@
-defmodule Jarga.Documents.Infrastructure.Queries.Queries do
+defmodule Jarga.Documents.Infrastructure.Queries.DocumentQueries do
   @moduledoc """
   Query objects for the Documents context.
   Provides composable query functions for building database queries.
   """
 
   import Ecto.Query
-  alias Jarga.Documents.Domain.Entities.Document
+  alias Jarga.Documents.Infrastructure.Schemas.DocumentSchema
   alias Jarga.Accounts.Domain.Entities.User
   alias Jarga.Workspaces.Domain.Entities.WorkspaceMember
 
@@ -13,7 +13,7 @@ defmodule Jarga.Documents.Infrastructure.Queries.Queries do
   Base query for documents.
   """
   def base do
-    from(d in Document, as: :document)
+    from(d in DocumentSchema, as: :document)
   end
 
   @doc """
@@ -55,6 +55,16 @@ defmodule Jarga.Documents.Infrastructure.Queries.Queries do
   def for_project(query, project_id) do
     from([document: d] in query,
       where: d.project_id == ^project_id
+    )
+  end
+
+  @doc """
+  Filter to only workspace-level documents (not in any project).
+  Returns documents where project_id is NULL.
+  """
+  def workspace_level_only(query) do
+    from([document: d] in query,
+      where: is_nil(d.project_id)
     )
   end
 

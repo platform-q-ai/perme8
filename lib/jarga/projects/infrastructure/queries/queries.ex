@@ -126,4 +126,15 @@ defmodule Jarga.Projects.Infrastructure.Queries.Queries do
     |> for_user(user)
     |> where([p], p.slug == ^slug)
   end
+
+  @doc """
+  Check if a project exists in a workspace.
+  Returns a query that will return the project if it exists.
+  Used for verification purposes by other contexts.
+  """
+  def exists_in_workspace(project_id, workspace_id) do
+    from(p in Project,
+      where: p.id == ^project_id and p.workspace_id == ^workspace_id
+    )
+  end
 end

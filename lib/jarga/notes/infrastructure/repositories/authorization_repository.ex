@@ -13,6 +13,9 @@ defmodule Jarga.Notes.Infrastructure.Repositories.AuthorizationRepository do
   alias Jarga.Workspaces
   alias Jarga.Notes.Domain.Entities.Note
   alias Jarga.Notes.Infrastructure.Queries.Queries
+  alias Jarga.Documents.Infrastructure.Schemas.DocumentComponentSchema
+  alias Jarga.Documents.Infrastructure.Schemas.DocumentSchema
+  alias Jarga.Workspaces.Domain.Entities.WorkspaceMember
   import Ecto.Query
 
   @doc """
@@ -57,11 +60,11 @@ defmodule Jarga.Notes.Infrastructure.Repositories.AuthorizationRepository do
     # Find the note and its associated document via document_components
     query =
       from(n in Note,
-        join: dc in Jarga.Documents.Domain.Entities.DocumentComponent,
+        join: dc in DocumentComponentSchema,
         on: dc.component_id == n.id and dc.component_type == "note",
-        join: d in Jarga.Documents.Domain.Entities.Document,
+        join: d in DocumentSchema,
         on: d.id == dc.document_id,
-        left_join: wm in Jarga.Workspaces.Domain.Entities.WorkspaceMember,
+        left_join: wm in WorkspaceMember,
         on: wm.workspace_id == d.workspace_id and wm.user_id == ^user.id,
         where: n.id == ^note_id,
         where: d.user_id == ^user.id or (d.is_public == true and not is_nil(wm.id)),

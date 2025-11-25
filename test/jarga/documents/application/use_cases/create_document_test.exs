@@ -1,7 +1,9 @@
+# credo:disable-for-this-file Jarga.Credo.Check.Architecture.NoDirectRepoInUseCases
 defmodule Jarga.Documents.UseCases.CreateDocumentTest do
   use Jarga.DataCase, async: true
 
   alias Jarga.Documents.Application.UseCases.CreateDocument
+  alias Jarga.Documents.Infrastructure.Schemas.DocumentSchema
 
   import Jarga.AccountsFixtures
   import Jarga.WorkspacesFixtures
@@ -97,11 +99,15 @@ defmodule Jarga.Documents.UseCases.CreateDocumentTest do
 
       assert {:ok, document} = CreateDocument.execute(params)
 
-      # Verify note was created
-      document_with_components = Repo.preload(document, :document_components)
-      assert length(document_with_components.document_components) == 1
+      # Verify note was created - fetch schema from DB to check components
+      document_schema =
+        DocumentSchema
+        |> Repo.get(document.id)
+        |> Repo.preload(:document_components)
 
-      component = hd(document_with_components.document_components)
+      assert length(document_schema.document_components) == 1
+
+      component = hd(document_schema.document_components)
       assert component.component_type == "note"
       assert component.position == 0
     end
@@ -246,7 +252,8 @@ defmodule Jarga.Documents.UseCases.CreateDocumentTest do
       workspace = workspace_fixture(owner)
 
       # Count pages before
-      documents_before = Repo.aggregate(Jarga.Documents.Domain.Entities.Document, :count)
+      documents_before =
+        Repo.aggregate(Jarga.Documents.Infrastructure.Schemas.DocumentSchema, :count)
 
       # This would need to be done with a mock or by causing note creation to fail
       # For now, we'll just verify successful creation
@@ -259,7 +266,9 @@ defmodule Jarga.Documents.UseCases.CreateDocumentTest do
       {:ok, _page} = CreateDocument.execute(params)
 
       # Verify page count increased by 1
-      documents_after = Repo.aggregate(Jarga.Documents.Domain.Entities.Document, :count)
+      documents_after =
+        Repo.aggregate(Jarga.Documents.Infrastructure.Schemas.DocumentSchema, :count)
+
       assert documents_after == documents_before + 1
     end
   end

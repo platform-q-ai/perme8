@@ -19,11 +19,12 @@ defmodule Jarga.Documents.Application.UseCases.UpdateDocument do
 
   @behaviour Jarga.Documents.Application.UseCases.UseCase
 
-  alias Jarga.Repo
-  alias Jarga.Documents.Domain.Entities.Document
+  alias Jarga.Documents.Infrastructure.Schemas.DocumentSchema
+  alias Jarga.Documents.Infrastructure.Repositories.DocumentRepository
   alias Jarga.Documents.Infrastructure.Notifiers.PubSubNotifier
+  alias Jarga.Documents.Application.Policies.DocumentAuthorizationPolicy
+  alias Jarga.Documents.Domain.Policies.DocumentAccessPolicy
   alias Jarga.Workspaces
-  alias Jarga.Workspaces.Application.Policies.PermissionsPolicy
 
   @doc """
   Executes the update document use case.
@@ -62,8 +63,6 @@ defmodule Jarga.Documents.Application.UseCases.UpdateDocument do
 
   # Get document and verify workspace membership
   defp get_document_with_workspace_member(user, document_id) do
-    alias Jarga.Documents.Infrastructure.Repositories.DocumentRepository
-
     document = DocumentRepository.get_by_id(document_id)
 
     with {:document, %{} = document} <- {:document, document},
@@ -77,61 +76,48 @@ defmodule Jarga.Documents.Application.UseCases.UpdateDocument do
     end
   end
 
-  # Check if user can access this document
+  # Check if user can access this document (read permission)
   defp authorize_document_access(user, document) do
-    cond do
-      document.user_id == user.id ->
-        :ok
-
-      document.is_public ->
-        :ok
-
-      true ->
-        {:error, :forbidden}
+    if DocumentAccessPolicy.can_access?(document, user.id) do
+      :ok
+    else
+      {:error, :forbidden}
     end
   end
 
   # Authorize document update based on role and ownership
   defp authorize_document_update(role, document, user_id, attrs) do
-    owns_document = document.user_id == user_id
-
     # If updating is_pinned, check pin permissions
-    if Map.has_key?(attrs, :is_pinned) do
-      if PermissionsPolicy.can?(role, :pin_document,
-           owns_resource: owns_document,
-           is_public: document.is_public
-         ) do
-        :ok
+    action_allowed =
+      if Map.has_key?(attrs, :is_pinned) do
+        DocumentAuthorizationPolicy.can_pin?(document, role, user_id)
       else
-        {:error, :forbidden}
+        # Otherwise check edit permissions
+        DocumentAuthorizationPolicy.can_edit?(document, role, user_id)
       end
+
+    if action_allowed do
+      :ok
     else
-      # Otherwise check edit permissions
-      if PermissionsPolicy.can?(role, :edit_document,
-           owns_resource: owns_document,
-           is_public: document.is_public
-         ) do
-        :ok
-      else
-        {:error, :forbidden}
-      end
+      {:error, :forbidden}
     end
   end
 
   # Update document and send notifications
+  # Note: We use repository's transaction method to ensure notifications are sent AFTER
+  # the database transaction commits successfully
   defp update_document_and_notify(document, attrs, notifier) do
-    result =
-      document
-      |> Document.changeset(attrs)
-      |> Repo.update()
+    changeset = DocumentSchema.changeset(document, attrs)
+    result = DocumentRepository.update_in_transaction(changeset)
 
     case result do
       {:ok, updated_document} ->
+        # Send notifications AFTER transaction commits
         send_notifications(document, updated_document, attrs, notifier)
         {:ok, updated_document}
 
-      error ->
-        error
+      {:error, changeset} ->
+        {:error, changeset}
     end
   end
 

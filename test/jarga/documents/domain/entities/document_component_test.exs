@@ -1,185 +1,108 @@
-defmodule Jarga.Documents.DocumentComponentTest do
-  use Jarga.DataCase, async: true
+defmodule Jarga.Documents.Domain.Entities.DocumentComponentTest do
+  use ExUnit.Case, async: true
 
   alias Jarga.Documents.Domain.Entities.DocumentComponent
-  alias Jarga.Documents.Application.Services.ComponentLoader
-  alias Jarga.{Documents, Notes}
 
-  import Jarga.AccountsFixtures
-  import Jarga.WorkspacesFixtures
-
-  describe "changeset/2" do
-    test "valid changeset with all required fields" do
-      user = user_fixture()
-      workspace = workspace_fixture(user)
-      {:ok, document} = Documents.create_document(user, workspace.id, %{title: "Test"})
-      note_id = Ecto.UUID.generate()
-      {:ok, note} = Notes.create_note(user, workspace.id, %{id: note_id})
-
+  describe "new/1" do
+    test "creates a document component with given attributes" do
       attrs = %{
-        document_id: document.id,
+        id: "comp-123",
+        document_id: "doc-456",
         component_type: "note",
-        component_id: note.id,
+        component_id: "note-789",
         position: 1
       }
 
-      changeset = DocumentComponent.changeset(%DocumentComponent{}, attrs)
+      component = DocumentComponent.new(attrs)
 
-      assert changeset.valid?
-      assert get_change(changeset, :document_id) == document.id
-      assert get_change(changeset, :component_type) == "note"
-      assert get_change(changeset, :component_id) == note.id
-      assert get_change(changeset, :position) == 1
+      assert component.id == "comp-123"
+      assert component.document_id == "doc-456"
+      assert component.component_type == "note"
+      assert component.component_id == "note-789"
+      assert component.position == 1
     end
 
-    test "invalid changeset when document_id is missing" do
+    test "sets default position to 0" do
       attrs = %{
+        document_id: "doc-1",
         component_type: "note",
-        component_id: Ecto.UUID.generate(),
-        position: 0
+        component_id: "note-1"
       }
 
-      changeset = DocumentComponent.changeset(%DocumentComponent{}, attrs)
+      component = DocumentComponent.new(attrs)
 
-      refute changeset.valid?
-      assert "can't be blank" in errors_on(changeset).document_id
+      assert component.position == 0
     end
 
-    test "invalid changeset when component_type is missing" do
-      attrs = %{
-        document_id: Ecto.UUID.generate(),
-        component_id: Ecto.UUID.generate(),
-        position: 0
-      }
-
-      changeset = DocumentComponent.changeset(%DocumentComponent{}, attrs)
-
-      refute changeset.valid?
-      assert "can't be blank" in errors_on(changeset).component_type
-    end
-
-    test "invalid changeset when component_id is missing" do
-      attrs = %{
-        document_id: Ecto.UUID.generate(),
+    test "creates component with different types" do
+      note_attrs = %{
+        document_id: "doc-1",
         component_type: "note",
-        position: 0
+        component_id: "note-1"
       }
 
-      changeset = DocumentComponent.changeset(%DocumentComponent{}, attrs)
-
-      refute changeset.valid?
-      assert "can't be blank" in errors_on(changeset).component_id
-    end
-
-    test "position defaults to 0 when not provided" do
-      attrs = %{
-        document_id: Ecto.UUID.generate(),
-        component_type: "note",
-        component_id: Ecto.UUID.generate()
-      }
-
-      changeset = DocumentComponent.changeset(%DocumentComponent{}, attrs)
-
-      assert changeset.valid?
-      # Position field defaults to 0 as defined in the schema
-    end
-
-    test "invalid changeset with invalid component_type" do
-      attrs = %{
-        document_id: Ecto.UUID.generate(),
-        component_type: "invalid_type",
-        component_id: Ecto.UUID.generate(),
-        position: 0
-      }
-
-      changeset = DocumentComponent.changeset(%DocumentComponent{}, attrs)
-
-      refute changeset.valid?
-      assert "is invalid" in errors_on(changeset).component_type
-    end
-
-    test "valid changeset with component_type 'note'" do
-      attrs = %{
-        document_id: Ecto.UUID.generate(),
-        component_type: "note",
-        component_id: Ecto.UUID.generate(),
-        position: 0
-      }
-
-      changeset = DocumentComponent.changeset(%DocumentComponent{}, attrs)
-
-      assert changeset.valid?
-    end
-
-    test "valid changeset with component_type 'task_list'" do
-      attrs = %{
-        document_id: Ecto.UUID.generate(),
+      task_attrs = %{
+        document_id: "doc-1",
         component_type: "task_list",
-        component_id: Ecto.UUID.generate(),
-        position: 0
+        component_id: "task-1"
       }
 
-      changeset = DocumentComponent.changeset(%DocumentComponent{}, attrs)
-
-      assert changeset.valid?
-    end
-
-    test "valid changeset with component_type 'sheet'" do
-      attrs = %{
-        document_id: Ecto.UUID.generate(),
+      sheet_attrs = %{
+        document_id: "doc-1",
         component_type: "sheet",
-        component_id: Ecto.UUID.generate(),
-        position: 0
+        component_id: "sheet-1"
       }
 
-      changeset = DocumentComponent.changeset(%DocumentComponent{}, attrs)
+      note = DocumentComponent.new(note_attrs)
+      task = DocumentComponent.new(task_attrs)
+      sheet = DocumentComponent.new(sheet_attrs)
 
-      assert changeset.valid?
+      assert note.component_type == "note"
+      assert task.component_type == "task_list"
+      assert sheet.component_type == "sheet"
     end
   end
 
-  describe "get_component/1" do
-    test "returns note when component_type is 'note'" do
-      user = user_fixture()
-      workspace = workspace_fixture(user)
-      note_id = Ecto.UUID.generate()
-      {:ok, note} = Notes.create_note(user, workspace.id, %{id: note_id})
-
-      document_component = %DocumentComponent{
+  describe "from_schema/1" do
+    test "converts a schema to a domain entity" do
+      schema = %{
+        __struct__: SomeSchema,
+        id: "comp-123",
+        document_id: "doc-456",
         component_type: "note",
-        component_id: note.id
+        component_id: "note-789",
+        position: 2,
+        inserted_at: ~U[2025-01-01 00:00:00Z],
+        updated_at: ~U[2025-01-01 00:00:00Z]
       }
 
-      fetched_note = ComponentLoader.load_component(document_component)
+      component = DocumentComponent.from_schema(schema)
 
-      assert fetched_note.id == note.id
+      assert %DocumentComponent{} = component
+      assert component.id == "comp-123"
+      assert component.document_id == "doc-456"
+      assert component.component_type == "note"
+      assert component.component_id == "note-789"
+      assert component.position == 2
+      assert component.inserted_at == ~U[2025-01-01 00:00:00Z]
+      assert component.updated_at == ~U[2025-01-01 00:00:00Z]
     end
 
-    test "returns nil when note doesn't exist" do
-      document_component = %DocumentComponent{
-        component_type: "note",
-        component_id: Ecto.UUID.generate()
-      }
-
-      assert ComponentLoader.load_component(document_component) == nil
-    end
-
-    test "returns nil for task_list component (not yet implemented)" do
-      document_component = %DocumentComponent{
+    test "preserves all component types during conversion" do
+      schema = %{
+        __struct__: SomeSchema,
+        id: "comp-1",
+        document_id: "doc-1",
         component_type: "task_list",
-        component_id: Ecto.UUID.generate()
+        component_id: "task-1",
+        position: 0,
+        inserted_at: ~U[2025-01-01 00:00:00Z],
+        updated_at: ~U[2025-01-01 00:00:00Z]
       }
 
-      assert ComponentLoader.load_component(document_component) == nil
-    end
+      component = DocumentComponent.from_schema(schema)
 
-    test "returns nil for sheet component (not yet implemented)" do
-      document_component = %DocumentComponent{
-        component_type: "sheet",
-        component_id: Ecto.UUID.generate()
-      }
-
-      assert ComponentLoader.load_component(document_component) == nil
+      assert component.component_type == "task_list"
     end
   end
 end

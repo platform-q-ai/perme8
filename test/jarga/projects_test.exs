@@ -534,4 +534,40 @@ defmodule Jarga.ProjectsTest do
       end
     end
   end
+
+  describe "verify_project_in_workspace/2" do
+    test "returns :ok when project belongs to workspace" do
+      user = user_fixture()
+      workspace = workspace_fixture(user)
+      project = project_fixture(user, workspace)
+
+      assert :ok = Projects.verify_project_in_workspace(workspace.id, project.id)
+    end
+
+    test "returns :ok when project_id is nil" do
+      user = user_fixture()
+      workspace = workspace_fixture(user)
+
+      assert :ok = Projects.verify_project_in_workspace(workspace.id, nil)
+    end
+
+    test "returns error when project doesn't exist" do
+      user = user_fixture()
+      workspace = workspace_fixture(user)
+      fake_project_id = Ecto.UUID.generate()
+
+      assert {:error, :project_not_in_workspace} =
+               Projects.verify_project_in_workspace(workspace.id, fake_project_id)
+    end
+
+    test "returns error when project belongs to different workspace" do
+      user = user_fixture()
+      workspace1 = workspace_fixture(user, %{name: "Workspace 1"})
+      workspace2 = workspace_fixture(user, %{name: "Workspace 2"})
+      project = project_fixture(user, workspace2)
+
+      assert {:error, :project_not_in_workspace} =
+               Projects.verify_project_in_workspace(workspace1.id, project.id)
+    end
+  end
 end

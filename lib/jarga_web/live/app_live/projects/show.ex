@@ -85,7 +85,7 @@ defmodule JargaWeb.AppLive.Projects.Show do
                 </thead>
                 <tbody>
                   <%= for document <- @documents do %>
-                    <tr data-document-id={document.id}>
+                    <tr data-document-id={document.id} data-pinned={to_string(document.is_pinned)}>
                       <td>
                         <.link
                           navigate={~p"/app/workspaces/#{@workspace.slug}/documents/#{document.slug}"}
@@ -294,6 +294,39 @@ defmodule JargaWeb.AppLive.Projects.Show do
         end
       end)
 
+    {:noreply, assign(socket, documents: documents)}
+  end
+
+  @impl true
+  def handle_info({:document_pinned_changed, document_id, is_pinned}, socket) do
+    # Update document pinned status in the list
+    documents =
+      Enum.map(socket.assigns.documents, fn document ->
+        if document.id == document_id do
+          %{document | is_pinned: is_pinned}
+        else
+          document
+        end
+      end)
+
+    {:noreply, assign(socket, documents: documents)}
+  end
+
+  @impl true
+  def handle_info({:document_created, document}, socket) do
+    # Add new document to the list if it belongs to this project
+    if document.project_id == socket.assigns.project.id do
+      documents = [document | socket.assigns.documents]
+      {:noreply, assign(socket, documents: documents)}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  @impl true
+  def handle_info({:document_deleted, document_id}, socket) do
+    # Remove document from the list
+    documents = Enum.reject(socket.assigns.documents, fn doc -> doc.id == document_id end)
     {:noreply, assign(socket, documents: documents)}
   end
 

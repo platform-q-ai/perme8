@@ -3,7 +3,7 @@ defmodule Jarga.Notes.Infrastructure.AuthorizationRepositoryTest do
 
   alias Jarga.Notes.Infrastructure.Repositories.AuthorizationRepository
   alias Jarga.Documents
-  alias Jarga.Documents.Domain.Entities.DocumentComponent
+  alias Jarga.Documents.Infrastructure.Schemas.DocumentComponentSchema
   alias Jarga.Repo
 
   import Jarga.AccountsFixtures
@@ -91,8 +91,8 @@ defmodule Jarga.Notes.Infrastructure.AuthorizationRepositoryTest do
       # Create a document with the note as a component
       {:ok, document} = Documents.create_document(user, workspace.id, %{title: "My Document"})
 
-      %DocumentComponent{}
-      |> DocumentComponent.changeset(%{
+      %DocumentComponentSchema{}
+      |> DocumentComponentSchema.changeset(%{
         document_id: document.id,
         component_type: "note",
         component_id: note.id,
@@ -121,8 +121,8 @@ defmodule Jarga.Notes.Infrastructure.AuthorizationRepositoryTest do
       {:ok, document} =
         Documents.create_document(owner, workspace.id, %{title: "Public Document"})
 
-      %DocumentComponent{}
-      |> DocumentComponent.changeset(%{
+      %DocumentComponentSchema{}
+      |> DocumentComponentSchema.changeset(%{
         document_id: document.id,
         component_type: "note",
         component_id: note.id,
@@ -154,8 +154,8 @@ defmodule Jarga.Notes.Infrastructure.AuthorizationRepositoryTest do
       {:ok, document} =
         Documents.create_document(user1, workspace.id, %{title: "Private Document"})
 
-      %DocumentComponent{}
-      |> DocumentComponent.changeset(%{
+      %DocumentComponentSchema{}
+      |> DocumentComponentSchema.changeset(%{
         document_id: document.id,
         component_type: "note",
         component_id: note.id,
@@ -185,8 +185,8 @@ defmodule Jarga.Notes.Infrastructure.AuthorizationRepositoryTest do
       # Create a document with the note
       {:ok, document} = Documents.create_document(user1, workspace.id, %{title: "Document"})
 
-      %DocumentComponent{}
-      |> DocumentComponent.changeset(%{
+      %DocumentComponentSchema{}
+      |> DocumentComponentSchema.changeset(%{
         document_id: document.id,
         component_type: "note",
         component_id: note.id,

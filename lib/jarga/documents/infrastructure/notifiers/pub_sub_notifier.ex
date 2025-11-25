@@ -66,4 +66,28 @@ defmodule Jarga.Documents.Infrastructure.Notifiers.PubSubNotifier do
 
     :ok
   end
+
+  @impl true
+  def notify_document_created(%Document{} = document) do
+    # Broadcast to workspace for list updates
+    Phoenix.PubSub.broadcast(
+      Jarga.PubSub,
+      "workspace:#{document.workspace_id}",
+      {:document_created, document}
+    )
+
+    :ok
+  end
+
+  @impl true
+  def notify_document_deleted(%Document{} = document) do
+    # Broadcast to workspace for list updates
+    Phoenix.PubSub.broadcast(
+      Jarga.PubSub,
+      "workspace:#{document.workspace_id}",
+      {:document_deleted, document.id}
+    )
+
+    :ok
+  end
 end

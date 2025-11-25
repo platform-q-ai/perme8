@@ -8,8 +8,9 @@ defmodule Jarga.Documents do
   """
 
   # Core context - cannot depend on JargaWeb (interface layer)
-  # Exports: Main context module and shared types (Document)
+  # Exports: Main context module and shared types (Document, DocumentComponent)
   # Internal modules (Queries, Policies) remain private
+  # DocumentComponent is exported because Notes context uses it in queries to verify note access
   use Boundary,
     top_level?: true,
     deps: [
@@ -20,13 +21,13 @@ defmodule Jarga.Documents do
       Jarga.Agents,
       Jarga.Repo
     ],
-    exports: [{Domain.Entities.Document, []}]
+    exports: [{Domain.Entities.Document, []}, {Domain.Entities.DocumentComponent, []}]
 
   alias Jarga.Repo
   alias Jarga.Accounts.Domain.Entities.User
   alias Jarga.Notes
   alias Jarga.Documents.Domain.Entities.Document
-  alias Jarga.Documents.Infrastructure.Queries.Queries
+  alias Jarga.Documents.Infrastructure.Queries.DocumentQueries
   alias Jarga.Documents.Application.UseCases
 
   @doc """
@@ -52,17 +53,20 @@ defmodule Jarga.Documents do
 
   """
   def get_document!(%User{} = user, document_id, opts \\ []) do
-    document =
-      Queries.base()
-      |> Queries.by_id(document_id)
-      |> Queries.for_user(user)
+    schema =
+      DocumentQueries.base()
+      |> DocumentQueries.by_id(document_id)
+      |> DocumentQueries.for_user(user)
       |> Repo.one!()
 
-    if Keyword.get(opts, :preload_components, false) do
-      Repo.preload(document, :document_components)
-    else
-      document
-    end
+    schema =
+      if Keyword.get(opts, :preload_components, false) do
+        Repo.preload(schema, :document_components)
+      else
+        schema
+      end
+
+    Document.from_schema(schema)
   end
 
   @doc """
@@ -80,17 +84,17 @@ defmodule Jarga.Documents do
 
   """
   def get_document_by_slug(%User{} = user, workspace_id, slug) do
-    document =
-      Queries.base()
-      |> Queries.by_slug(slug)
-      |> Queries.for_workspace(workspace_id)
-      |> Queries.viewable_by_user(user)
-      |> Queries.with_components()
+    schema =
+      DocumentQueries.base()
+      |> DocumentQueries.by_slug(slug)
+      |> DocumentQueries.for_workspace(workspace_id)
+      |> DocumentQueries.viewable_by_user(user)
+      |> DocumentQueries.with_components()
       |> Repo.one()
 
-    case document do
+    case schema do
       nil -> {:error, :document_not_found}
-      document -> {:ok, document}
+      schema -> {:ok, Document.from_schema(schema)}
     end
   end
 
@@ -110,11 +114,14 @@ defmodule Jarga.Documents do
 
   """
   def get_document_by_slug!(%User{} = user, workspace_id, slug) do
-    Queries.base()
-    |> Queries.by_slug(slug)
-    |> Queries.for_workspace(workspace_id)
-    |> Queries.viewable_by_user(user)
-    |> Repo.one!()
+    schema =
+      DocumentQueries.base()
+      |> DocumentQueries.by_slug(slug)
+      |> DocumentQueries.for_workspace(workspace_id)
+      |> DocumentQueries.viewable_by_user(user)
+      |> Repo.one!()
+
+    Document.from_schema(schema)
   end
 
   @doc """
@@ -227,11 +234,15 @@ defmodule Jarga.Documents do
 
   """
   def list_documents_for_workspace(%User{} = user, workspace_id) do
-    Queries.base()
-    |> Queries.for_workspace(workspace_id)
-    |> Queries.viewable_by_user(user)
-    |> Queries.ordered()
-    |> Repo.all()
+    schemas =
+      DocumentQueries.base()
+      |> DocumentQueries.for_workspace(workspace_id)
+      |> DocumentQueries.workspace_level_only()
+      |> DocumentQueries.viewable_by_user(user)
+      |> DocumentQueries.ordered()
+      |> Repo.all()
+
+    Enum.map(schemas, &Document.from_schema/1)
   end
 
   @doc """
@@ -248,12 +259,15 @@ defmodule Jarga.Documents do
 
   """
   def list_documents_for_project(%User{} = user, workspace_id, project_id) do
-    Queries.base()
-    |> Queries.for_workspace(workspace_id)
-    |> Queries.for_project(project_id)
-    |> Queries.viewable_by_user(user)
-    |> Queries.ordered()
-    |> Repo.all()
+    schemas =
+      DocumentQueries.base()
+      |> DocumentQueries.for_workspace(workspace_id)
+      |> DocumentQueries.for_project(project_id)
+      |> DocumentQueries.viewable_by_user(user)
+      |> DocumentQueries.ordered()
+      |> Repo.all()
+
+    Enum.map(schemas, &Document.from_schema/1)
   end
 
   @doc """

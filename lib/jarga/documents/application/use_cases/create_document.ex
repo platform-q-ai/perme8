@@ -21,13 +21,13 @@ defmodule Jarga.Documents.Application.UseCases.CreateDocument do
   @behaviour Jarga.Documents.Application.UseCases.UseCase
 
   alias Ecto.Multi
-  alias Jarga.Repo
   alias Jarga.Accounts.Domain.Entities.User
   alias Jarga.Notes
-  alias Jarga.Documents.Domain.Entities.{Document, DocumentComponent}
+  alias Jarga.Documents.Infrastructure.Schemas.{DocumentSchema, DocumentComponentSchema}
   alias Jarga.Documents.Domain.SlugGenerator
   alias Jarga.Documents.Infrastructure.Repositories.AuthorizationRepository
   alias Jarga.Documents.Infrastructure.Repositories.DocumentRepository
+  alias Jarga.Documents.Infrastructure.Notifiers.PubSubNotifier
   alias Jarga.Workspaces
   alias Jarga.Workspaces.Application.Policies.PermissionsPolicy
 
@@ -41,7 +41,8 @@ defmodule Jarga.Documents.Application.UseCases.CreateDocument do
     - `:workspace_id` - ID of the workspace
     - `:attrs` - Document attributes (title, project_id, etc.)
 
-  - `opts` - Keyword list of options (currently unused)
+  - `opts` - Keyword list of options:
+    - `:notifier` - Notification service (default: PubSubNotifier)
 
   ## Returns
 
@@ -49,18 +50,20 @@ defmodule Jarga.Documents.Application.UseCases.CreateDocument do
   - `{:error, reason}` - Operation failed
   """
   @impl true
-  def execute(params, _opts \\ []) do
+  def execute(params, opts \\ []) do
     %{
       actor: actor,
       workspace_id: workspace_id,
       attrs: attrs
     } = params
 
+    notifier = Keyword.get(opts, :notifier, PubSubNotifier)
+
     with {:ok, member} <- get_workspace_member(actor, workspace_id),
          :ok <- authorize_create_document(member.role),
          :ok <-
            verify_project_in_workspace(workspace_id, Map.get(attrs, :project_id)) do
-      create_document_with_note(actor, workspace_id, attrs)
+      create_document_with_note_and_notify(actor, workspace_id, attrs, notifier)
     end
   end
 
@@ -84,64 +87,75 @@ defmodule Jarga.Documents.Application.UseCases.CreateDocument do
   end
 
   # Create the document, note, and document_component in a transaction
-  defp create_document_with_note(%User{} = user, workspace_id, attrs) do
-    Multi.new()
-    |> Multi.run(:note, fn _repo, _changes ->
-      note_attrs = %{
-        id: Ecto.UUID.generate(),
-        project_id: Map.get(attrs, :project_id)
-      }
+  # Send notification AFTER transaction commits
+  defp create_document_with_note_and_notify(%User{} = user, workspace_id, attrs, notifier) do
+    multi =
+      Multi.new()
+      |> Multi.run(:note, fn _repo, _changes ->
+        note_attrs = %{
+          id: Ecto.UUID.generate(),
+          project_id: Map.get(attrs, :project_id)
+        }
 
-      Notes.create_note(user, workspace_id, note_attrs)
-    end)
-    |> Multi.run(:document, fn _repo, _changes ->
-      # Generate slug in use case (business logic)
-      # Only generate slug if title is present
-      title = attrs[:title] || attrs["title"]
+        Notes.create_note(user, workspace_id, note_attrs)
+      end)
+      |> Multi.run(:document, fn _repo, _changes ->
+        # Generate slug in use case (business logic)
+        # Title is required - will fail validation if not provided
+        title = attrs[:title] || attrs["title"]
 
-      attrs_with_user =
-        if title do
-          slug =
+        slug =
+          if title do
             SlugGenerator.generate(
               title,
               workspace_id,
               &DocumentRepository.slug_exists_in_workspace?/3
             )
+          else
+            # If no title provided, slug will be nil and validation will fail
+            nil
+          end
 
+        attrs_with_user =
           Map.merge(attrs, %{
             user_id: user.id,
             workspace_id: workspace_id,
             created_by: user.id,
             slug: slug
           })
-        else
-          Map.merge(attrs, %{
-            user_id: user.id,
-            workspace_id: workspace_id,
-            created_by: user.id
-          })
-        end
 
-      %Document{}
-      |> Document.changeset(attrs_with_user)
-      |> Repo.insert()
-    end)
-    |> Multi.run(:document_component, fn _repo, %{document: document, note: note} ->
-      %DocumentComponent{}
-      |> DocumentComponent.changeset(%{
-        document_id: document.id,
-        component_type: "note",
-        component_id: note.id,
-        position: 0
-      })
-      |> Repo.insert()
-    end)
-    |> Repo.transaction()
-    |> case do
-      {:ok, %{document: document}} -> {:ok, document}
-      {:error, :note, reason, _} -> {:error, reason}
-      {:error, :document, reason, _} -> {:error, reason}
-      {:error, :document_component, reason, _} -> {:error, reason}
+        %DocumentSchema{}
+        |> DocumentSchema.changeset(attrs_with_user)
+        |> DocumentRepository.insert()
+      end)
+      |> Multi.run(:document_component, fn _repo, %{document: document, note: note} ->
+        %DocumentComponentSchema{}
+        |> DocumentComponentSchema.changeset(%{
+          document_id: document.id,
+          component_type: "note",
+          component_id: note.id,
+          position: 0
+        })
+        |> DocumentRepository.insert_component()
+      end)
+
+    # Execute transaction through repository
+    result = DocumentRepository.transaction(multi)
+
+    case result do
+      {:ok, %{document: document}} ->
+        # Send notification AFTER transaction commits successfully
+        notifier.notify_document_created(document)
+        {:ok, document}
+
+      {:error, :note, reason, _} ->
+        {:error, reason}
+
+      {:error, :document, reason, _} ->
+        {:error, reason}
+
+      {:error, :document_component, reason, _} ->
+        {:error, reason}
     end
   end
 end

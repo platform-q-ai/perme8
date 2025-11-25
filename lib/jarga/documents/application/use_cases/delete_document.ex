@@ -19,9 +19,11 @@ defmodule Jarga.Documents.Application.UseCases.DeleteDocument do
 
   @behaviour Jarga.Documents.Application.UseCases.UseCase
 
-  alias Jarga.Repo
   alias Jarga.Workspaces
-  alias Jarga.Workspaces.Application.Policies.PermissionsPolicy
+  alias Jarga.Documents.Infrastructure.Repositories.DocumentRepository
+  alias Jarga.Documents.Application.Policies.DocumentAuthorizationPolicy
+  alias Jarga.Documents.Domain.Policies.DocumentAccessPolicy
+  alias Jarga.Documents.Infrastructure.Notifiers.PubSubNotifier
 
   @doc """
   Executes the delete document use case.
@@ -32,7 +34,8 @@ defmodule Jarga.Documents.Application.UseCases.DeleteDocument do
     - `:actor` - User deleting the document
     - `:document_id` - ID of the document to delete
 
-  - `opts` - Keyword list of options (currently unused)
+  - `opts` - Keyword list of options:
+    - `:notifier` - Notification service (default: PubSubNotifier)
 
   ## Returns
 
@@ -40,23 +43,23 @@ defmodule Jarga.Documents.Application.UseCases.DeleteDocument do
   - `{:error, reason}` - Operation failed
   """
   @impl true
-  def execute(params, _opts \\ []) do
+  def execute(params, opts \\ []) do
     %{
       actor: actor,
       document_id: document_id
     } = params
 
+    notifier = Keyword.get(opts, :notifier, PubSubNotifier)
+
     with {:ok, document} <- get_document_with_workspace_member(actor, document_id),
          {:ok, member} <- Workspaces.get_member(actor, document.workspace_id),
          :ok <- authorize_delete_document(member.role, document, actor.id) do
-      Repo.delete(document)
+      delete_document_and_notify(document, notifier)
     end
   end
 
   # Get document and verify workspace membership
   defp get_document_with_workspace_member(user, document_id) do
-    alias Jarga.Documents.Infrastructure.Repositories.DocumentRepository
-
     document = DocumentRepository.get_by_id(document_id)
 
     with {:document, %{} = document} <- {:document, document},
@@ -70,40 +73,36 @@ defmodule Jarga.Documents.Application.UseCases.DeleteDocument do
     end
   end
 
-  # Check if user can access this document
+  # Check if user can access this document (read permission)
   defp authorize_document_access(user, document) do
-    cond do
-      document.user_id == user.id ->
-        :ok
-
-      document.is_public ->
-        :ok
-
-      true ->
-        {:error, :forbidden}
+    if DocumentAccessPolicy.can_access?(document, user.id) do
+      :ok
+    else
+      {:error, :forbidden}
     end
   end
 
   # Authorize document deletion based on role and ownership
   defp authorize_delete_document(role, document, user_id) do
-    owns_document = document.user_id == user_id
-
-    # For delete, we need to check if it's public when not the owner
-    if owns_document do
-      if PermissionsPolicy.can?(role, :delete_document, owns_resource: true) do
-        :ok
-      else
-        {:error, :forbidden}
-      end
+    if DocumentAuthorizationPolicy.can_delete?(document, role, user_id) do
+      :ok
     else
-      if PermissionsPolicy.can?(role, :delete_document,
-           owns_resource: false,
-           is_public: document.is_public
-         ) do
-        :ok
-      else
-        {:error, :forbidden}
-      end
+      {:error, :forbidden}
+    end
+  end
+
+  # Delete document and send notification AFTER transaction commits
+  defp delete_document_and_notify(document, notifier) do
+    result = DocumentRepository.delete_in_transaction(document)
+
+    case result do
+      {:ok, deleted_document} ->
+        # Send notification AFTER transaction commits
+        notifier.notify_document_deleted(deleted_document)
+        {:ok, deleted_document}
+
+      {:error, changeset} ->
+        {:error, changeset}
     end
   end
 end

@@ -1,37 +1,53 @@
 defmodule Jarga.Documents.Domain.Entities.DocumentComponent do
   @moduledoc """
-  Join table for documents and their components (notes, tasks, sheets, etc.)
-  Uses a polymorphic association pattern.
+  Pure domain entity for document components.
 
-  For loading the actual component records, see `Jarga.Documents.Services.ComponentLoader`.
+  Represents the relationship between documents and their components (notes, tasks, sheets, etc.)
+  using a polymorphic association pattern.
+
+  This is a value object with no infrastructure dependencies.
+  For database persistence, see Jarga.Documents.Infrastructure.Schemas.DocumentComponentSchema.
   """
 
-  use Ecto.Schema
-  import Ecto.Changeset
+  @type t :: %__MODULE__{
+          id: String.t() | nil,
+          document_id: String.t(),
+          component_type: String.t(),
+          component_id: String.t(),
+          position: integer(),
+          inserted_at: DateTime.t() | nil,
+          updated_at: DateTime.t() | nil
+        }
 
-  @primary_key {:id, :binary_id, autogenerate: true}
-  @foreign_key_type :binary_id
+  defstruct [
+    :id,
+    :document_id,
+    :component_type,
+    :component_id,
+    :inserted_at,
+    :updated_at,
+    position: 0
+  ]
 
-  schema "document_components" do
-    belongs_to(:document, Jarga.Documents.Domain.Entities.Document)
-
-    # Polymorphic association
-    field(:component_type, :string)
-    field(:component_id, Ecto.UUID)
-
-    # For ordering components on the document
-    field(:position, :integer, default: 0)
-
-    timestamps(type: :utc_datetime)
+  @doc """
+  Creates a new DocumentComponent domain entity from attributes.
+  """
+  def new(attrs) do
+    struct(__MODULE__, attrs)
   end
 
-  @doc false
-  def changeset(document_component, attrs) do
-    document_component
-    |> cast(attrs, [:document_id, :component_type, :component_id, :position])
-    |> validate_required([:document_id, :component_type, :component_id, :position])
-    |> validate_inclusion(:component_type, ["note", "task_list", "sheet"])
-    |> foreign_key_constraint(:document_id)
-    |> unique_constraint([:document_id, :component_type, :component_id])
+  @doc """
+  Converts an infrastructure schema to a domain entity.
+  """
+  def from_schema(%{__struct__: _} = schema) do
+    %__MODULE__{
+      id: schema.id,
+      document_id: schema.document_id,
+      component_type: schema.component_type,
+      component_id: schema.component_id,
+      position: schema.position,
+      inserted_at: schema.inserted_at,
+      updated_at: schema.updated_at
+    }
   end
 end

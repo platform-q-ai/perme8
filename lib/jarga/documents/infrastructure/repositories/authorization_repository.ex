@@ -11,9 +11,8 @@ defmodule Jarga.Documents.Infrastructure.Repositories.AuthorizationRepository do
   alias Jarga.Repo
   alias Jarga.Accounts.Domain.Entities.User
   alias Jarga.Workspaces
-  alias Jarga.Documents.Domain.Entities.Document
-  alias Jarga.Documents.Infrastructure.Queries.Queries
-  import Ecto.Query
+  alias Jarga.Documents.Infrastructure.Schemas.DocumentSchema
+  alias Jarga.Documents.Infrastructure.Queries.DocumentQueries
 
   @doc """
   Verifies that a user can create a document in a workspace.
@@ -26,41 +25,35 @@ defmodule Jarga.Documents.Infrastructure.Repositories.AuthorizationRepository do
   @doc """
   Verifies that a user can access a document (owner only).
   Returns {:ok, document} if authorized, {:error, reason} otherwise.
+  Returns a domain entity on success.
   """
   def verify_document_access(%User{} = user, document_id) do
-    case Queries.base()
-         |> Queries.by_id(document_id)
-         |> Queries.for_user(user)
+    alias Jarga.Documents.Domain.Entities.Document
+
+    case DocumentQueries.base()
+         |> DocumentQueries.by_id(document_id)
+         |> DocumentQueries.for_user(user)
          |> Repo.one() do
       nil ->
         # Check if document exists at all
-        if Repo.get(Document, document_id) do
+        if Repo.get(DocumentSchema, document_id) do
           {:error, :unauthorized}
         else
           {:error, :document_not_found}
         end
 
-      document ->
-        {:ok, document}
+      schema ->
+        {:ok, Document.from_schema(schema)}
     end
   end
 
   @doc """
   Verifies that a project belongs to a workspace.
   Returns :ok if valid, {:error, reason} otherwise.
+
+  Delegates to Projects context to maintain proper boundary separation.
   """
-  def verify_project_in_workspace(_workspace_id, nil), do: :ok
-
   def verify_project_in_workspace(workspace_id, project_id) do
-    # Check if project exists and belongs to workspace
-    query =
-      from(p in Jarga.Projects.Domain.Entities.Project,
-        where: p.id == ^project_id and p.workspace_id == ^workspace_id
-      )
-
-    case Repo.one(query) do
-      nil -> {:error, :project_not_in_workspace}
-      _project -> :ok
-    end
+    Jarga.Projects.verify_project_in_workspace(workspace_id, project_id)
   end
 end
