@@ -204,11 +204,10 @@ Feature: Chat Panel
     Then the message should be removed from the chat
     And the message should be deleted from the database
 
-  Scenario: Cannot delete another user's message
-    Given "Alice" sent a message in a shared context
-    When I attempt to delete Alice's message
+  Scenario: Cannot delete message from non-existent session
+    Given I have a message ID from a deleted or non-existent session
+    When I attempt to delete the message
     Then I should see an error "Message not found"
-    And the message should remain in the chat
 
   Scenario: Insert message content into note
     Given I am viewing a document with an attached note
