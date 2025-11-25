@@ -139,28 +139,20 @@ export class MilkdownEditorHook extends ViewHook {
         userName: this.userName,
         onAgentQuery: (data) => {
           // Track the query in the adapter so we can find it when agent completes
+          // Note: We don't parse the command here - backend does that
           if (this.agentQueryAdapter) {
             const nodeId = new NodeId(data.nodeId);
-            const query = AgentQuery.createWithNodeId(nodeId, data.question);
+            // Create query with placeholder question - backend will parse the real question
+            const query = AgentQuery.createWithNodeId(nodeId, data.command);
             this.agentQueryAdapter.add(query);
           }
 
-          // Push agent query to LiveView server
-          // NEW: Support agent_query_command event when agent name is provided
-          if (data.agentName) {
-            // Format: @j agent_name Question
-            const command = `@j ${data.agentName} ${data.question}`;
-            this.pushEvent("agent_query_command", {
-              command: command,
-              node_id: data.nodeId,
-            });
-          } else {
-            // Backward compatibility: OLD format without agent name
-            this.pushEvent("agent_query", {
-              question: data.question,
-              node_id: data.nodeId,
-            });
-          }
+          // Send full command text to backend for parsing
+          // Backend is the single source of truth for command validation
+          this.pushEvent("agent_query_command", {
+            command: data.command,
+            node_id: data.nodeId,
+          });
         },
       })
       .then((result) => {

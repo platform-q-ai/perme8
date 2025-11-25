@@ -37,7 +37,7 @@ export interface CollaborationConfig {
   documentAdapter: YjsDocumentAdapter;
   awarenessAdapter: YjsAwarenessAdapter;
   userId: string;
-  onAgentQuery?: (data: { question: string; nodeId: string }) => void;
+  onAgentQuery?: (data: { command: string; nodeId: string }) => void;
 }
 
 /**

@@ -1,8 +1,8 @@
 /**
  * Tests for Agent Mention Plugin Factory
  * 
- * Tests the ProseMirror plugin that detects @j agent_name Question commands
- * and triggers agent queries.
+ * Tests the ProseMirror plugin that detects @j commands and sends them to backend.
+ * Backend is responsible for parsing and validation - frontend just detects the pattern.
  * 
  * This is an infrastructure test - we're testing the ProseMirror adapter.
  */
@@ -47,7 +47,7 @@ const createTestSchema = (): Schema => {
   })
 }
 
-describe('Agent Mention Plugin - Extended for Agent Names', () => {
+describe('Agent Mention Plugin - Command Detection', () => {
   let mockOnQuery: any
   let schema: Schema
   let container: HTMLElement
@@ -63,232 +63,141 @@ describe('Agent Mention Plugin - Extended for Agent Names', () => {
     document.body.removeChild(container)
   })
 
-  describe('NEW: @j agent_name Question syntax', () => {
-    test('detects command with single-word agent name', () => {
-      const plugin = createAgentMentionPlugin(schema, mockOnQuery)
-      const doc = schema.node('doc', null, [
-        schema.node('paragraph', null, [
-          schema.text('@j writer What is this?')
-        ])
+  test('detects @j command pattern', () => {
+    const plugin = createAgentMentionPlugin(schema, mockOnQuery)
+    const doc = schema.node('doc', null, [
+      schema.node('paragraph', null, [
+        schema.text('@j writer What is this?')
       ])
+    ])
 
-      const state = EditorState.create({
-        doc,
-        plugins: [plugin]
-      })
-
-      // Set selection at end of mention
-      const pos = 23
-      const $pos = state.doc.resolve(pos)
-      const tr = state.tr.setSelection(TextSelection.near($pos))
-      const newState = state.apply(tr)
-
-      const pluginState = mentionPluginKey.getState(newState)
-      
-      // Should detect active mention
-      expect(pluginState?.activeMention).toBeTruthy()
-      if (pluginState?.activeMention) {
-        expect(pluginState.activeMention.text).toBe('@j writer What is this?')
-      }
+    const state = EditorState.create({
+      doc,
+      plugins: [plugin]
     })
 
-    test('detects command with hyphenated agent name', () => {
-      const plugin = createAgentMentionPlugin(schema, mockOnQuery)
-      const doc = schema.node('doc', null, [
-        schema.node('paragraph', null, [
-          schema.text('@j my-writer-agent Question here')
-        ])
-      ])
+    // Set selection at end of mention
+    const pos = 23
+    const $pos = state.doc.resolve(pos)
+    const tr = state.tr.setSelection(TextSelection.near($pos))
+    const newState = state.apply(tr)
 
-      const state = EditorState.create({
-        doc,
-        plugins: [plugin]
-      })
-
-      const pos = 32
-      const $pos = state.doc.resolve(pos)
-      const tr = state.tr.setSelection(TextSelection.near($pos))
-      const newState = state.apply(tr)
-
-      const pluginState = mentionPluginKey.getState(newState)
-      expect(pluginState?.activeMention).toBeTruthy()
-    })
-
-    test('triggers query with agent name on Enter', () => {
-      const plugin = createAgentMentionPlugin(schema, mockOnQuery)
-      const doc = schema.node('doc', null, [
-        schema.node('paragraph', null, [
-          schema.text('@j writer What is this?')
-        ])
-      ])
-
-      const view = new EditorView(container, {
-        state: EditorState.create({
-          doc,
-          plugins: [plugin]
-        })
-      })
-
-      // Move cursor to end of mention
-      const pos = 23
-      const $pos = view.state.doc.resolve(pos)
-      const tr = view.state.tr.setSelection(TextSelection.near($pos))
-      view.dispatch(tr)
-
-      // Simulate Enter keypress
-      const event = new KeyboardEvent('keydown', {
-        key: 'Enter',
-        bubbles: true,
-        cancelable: true
-      })
-      
-      view.someProp('handleDOMEvents', (handlers: any) => {
-        return handlers.keydown?.(view, event)
-      })
-
-      // Should trigger callback with agent name
-      expect(mockOnQuery).toHaveBeenCalledWith(
-        expect.objectContaining({
-          agentName: 'writer',
-          question: 'What is this?',
-          nodeId: expect.any(String)
-        })
-      )
-
-      view.destroy()
-    })
-
-    test('parses first word as agent name', () => {
-      // "@j Question without agent" parses as agentName="Question", question="without agent"
-      // This is expected behavior - any word after @j becomes the agent name
-      const plugin = createAgentMentionPlugin(schema, mockOnQuery)
-      const doc = schema.node('doc', null, [
-        schema.node('paragraph', null, [
-          schema.text('@j Question without agent')
-        ])
-      ])
-
-      const view = new EditorView(container, {
-        state: EditorState.create({
-          doc,
-          plugins: [plugin]
-        })
-      })
-
-      const pos = 25
-      const $pos = view.state.doc.resolve(pos)
-      const tr = view.state.tr.setSelection(TextSelection.near($pos))
-      view.dispatch(tr)
-
-      const event = new KeyboardEvent('keydown', {
-        key: 'Enter',
-        bubbles: true,
-        cancelable: true
-      })
-      
-      view.someProp('handleDOMEvents', (handlers: any) => {
-        return handlers.keydown?.(view, event)
-      })
-
-      // Should trigger with first word as agent name
-      expect(mockOnQuery).toHaveBeenCalledWith(
-        expect.objectContaining({
-          agentName: 'Question',
-          question: 'without agent',
-          nodeId: expect.any(String)
-        })
-      )
-
-      view.destroy()
-    })
-
-    test('replaces command with loading node', () => {
-      const plugin = createAgentMentionPlugin(schema, mockOnQuery)
-      const doc = schema.node('doc', null, [
-        schema.node('paragraph', null, [
-          schema.text('@j agent Question?')
-        ])
-      ])
-
-      const view = new EditorView(container, {
-        state: EditorState.create({
-          doc,
-          plugins: [plugin]
-        })
-      })
-
-      const initialText = view.state.doc.textContent
-      expect(initialText).toContain('@j agent Question?')
-
-      const pos = 18
-      const $pos = view.state.doc.resolve(pos)
-      const tr = view.state.tr.setSelection(TextSelection.near($pos))
-      view.dispatch(tr)
-
-      const event = new KeyboardEvent('keydown', {
-        key: 'Enter',
-        bubbles: true,
-        cancelable: true
-      })
-      
-      view.someProp('handleDOMEvents', (handlers: any) => {
-        return handlers.keydown?.(view, event)
-      })
-
-      // Command should be removed
-      const newText = view.state.doc.textContent
-      expect(newText).not.toContain('@j agent Question?')
-
-      // Should have agent_response node
-      let hasAgentNode = false
-      view.state.doc.descendants((node) => {
-        if (node.type.name === 'agent_response') {
-          hasAgentNode = true
-          expect(node.attrs.state).toBe('streaming')
-        }
-      })
-      expect(hasAgentNode).toBe(true)
-
-      view.destroy()
-    })
+    const pluginState = mentionPluginKey.getState(newState)
+    
+    // Should detect active mention
+    expect(pluginState?.activeMention).toBeTruthy()
+    if (pluginState?.activeMention) {
+      expect(pluginState.activeMention.text).toBe('@j writer What is this?')
+    }
   })
 
-  describe('BACKWARD COMPATIBILITY: @j Question syntax', () => {
-    test('OLD: still supports @j Question without agent name for backward compatibility', () => {
-      const plugin = createAgentMentionPlugin(schema, mockOnQuery)
-      const doc = schema.node('doc', null, [
-        schema.node('paragraph', null, [
-          schema.text('@j What is the weather?')
-        ])
+  test('sends full command text to backend on Enter', () => {
+    const plugin = createAgentMentionPlugin(schema, mockOnQuery)
+    const doc = schema.node('doc', null, [
+      schema.node('paragraph', null, [
+        schema.text('@j my-agent Question here')
       ])
+    ])
 
-      const view = new EditorView(container, {
-        state: EditorState.create({
-          doc,
-          plugins: [plugin]
-        })
+    const view = new EditorView(container, {
+      state: EditorState.create({
+        doc,
+        plugins: [plugin]
       })
-
-      const pos = 23
-      const $pos = view.state.doc.resolve(pos)
-      const tr = view.state.tr.setSelection(TextSelection.near($pos))
-      view.dispatch(tr)
-
-      const event = new KeyboardEvent('keydown', {
-        key: 'Enter',
-        bubbles: true,
-        cancelable: true
-      })
-      
-      view.someProp('handleDOMEvents', (handlers: any) => {
-        return handlers.keydown?.(view, event)
-      })
-
-      // Should still trigger with question (no agentName in callback)
-      // This is backward compatibility mode
-      expect(mockOnQuery).toHaveBeenCalled()
-
-      view.destroy()
     })
+
+    // Position cursor in the mention
+    const pos = 20
+    const $pos = view.state.doc.resolve(pos)
+    const tr = view.state.tr.setSelection(TextSelection.near($pos))
+    view.dispatch(tr)
+
+    // Simulate Enter key
+    const event = new KeyboardEvent('keydown', {
+      key: 'Enter',
+      bubbles: true,
+      cancelable: true
+    })
+    view.dom.dispatchEvent(event)
+
+    // Should call onQuery with full command text
+    expect(mockOnQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        command: '@j my-agent Question here',
+        nodeId: expect.any(String)
+      })
+    )
+
+    view.destroy()
+  })
+
+  test('replaces command with agent_response node', () => {
+    const plugin = createAgentMentionPlugin(schema, mockOnQuery)
+    const doc = schema.node('doc', null, [
+      schema.node('paragraph', null, [
+        schema.text('@j agent Question?')
+      ])
+    ])
+
+    const view = new EditorView(container, {
+      state: EditorState.create({
+        doc,
+        plugins: [plugin]
+      })
+    })
+
+    // Position cursor in mention
+    const pos = 15
+    const $pos = view.state.doc.resolve(pos)
+    const tr = view.state.tr.setSelection(TextSelection.near($pos))
+    view.dispatch(tr)
+
+    // Simulate Enter
+    const event = new KeyboardEvent('keydown', {
+      key: 'Enter',
+      bubbles: true,
+      cancelable: true
+    })
+    view.dom.dispatchEvent(event)
+
+    // Should replace with agent_response node
+    const nodes = []
+    view.state.doc.descendants((node) => {
+      nodes.push(node.type.name)
+    })
+
+    expect(nodes).toContain('agent_response')
+    expect(view.state.doc.textContent).not.toContain('@j agent Question?')
+
+    view.destroy()
+  })
+
+  test('does not trigger on Enter outside of @j pattern', () => {
+    const plugin = createAgentMentionPlugin(schema, mockOnQuery)
+    const doc = schema.node('doc', null, [
+      schema.node('paragraph', null, [
+        schema.text('Regular text here')
+      ])
+    ])
+
+    const view = new EditorView(container, {
+      state: EditorState.create({
+        doc,
+        plugins: [plugin]
+      })
+    })
+
+    // Simulate Enter
+    const event = new KeyboardEvent('keydown', {
+      key: 'Enter',
+      bubbles: true,
+      cancelable: true
+    })
+    view.dom.dispatchEvent(event)
+
+    // Should not call onQuery
+    expect(mockOnQuery).not.toHaveBeenCalled()
+
+    view.destroy()
   })
 })

@@ -4,16 +4,14 @@
  * Factory for creating the ProseMirror mention detection plugin
  * that integrates with the agent assistant orchestrator.
  * 
- * Supports two formats:
- * 1. NEW: @j agent_name Question (with agent name)
- * 2. OLD: @j Question (backward compatibility - no agent name)
+ * Detects @j commands and sends the full command text to backend for parsing.
+ * Backend is the single source of truth for command validation and parsing.
  */
 
 import { Plugin, PluginKey } from '@milkdown/prose/state'
 import { Decoration, DecorationSet } from '@milkdown/prose/view'
 import { Schema } from '@milkdown/prose/model'
 import { NodeId } from '../../domain/value-objects/node-id'
-import { parseAgentCommand } from '../../domain/parsers/agent-command-parser'
 
 /**
  * Agent mention pattern for triggering queries
@@ -35,12 +33,12 @@ export const mentionPluginKey = new PluginKey('agentMention')
  * Creates the agent mention plugin
  *
  * @param schema - ProseMirror schema with agent_response node
- * @param onQuery - Callback when user triggers an agent query (supports optional agentName)
+ * @param onQuery - Callback when user triggers an agent query with full command text
  * @returns ProseMirror Plugin
  */
 export function createAgentMentionPlugin(
   schema: Schema,
-  onQuery: (params: { question: string; nodeId: string; agentName?: string }) => void
+  onQuery: (params: { command: string; nodeId: string }) => void
 ): Plugin {
   return new Plugin({
     key: mentionPluginKey,
@@ -107,10 +105,11 @@ export function createAgentMentionPlugin(
             return false
           }
 
-          // Parse the mention text to extract agent name and question
-          const commandData = parseCommandText(activeMention.text)
+          // Send full command text to backend for parsing
+          // Backend is the single source of truth for validation
+          const commandText = activeMention.text.trim()
           
-          if (!commandData || !commandData.question || commandData.question.trim().length === 0) {
+          if (!commandText || commandText.length === 0) {
             return false
           }
 
@@ -128,9 +127,8 @@ export function createAgentMentionPlugin(
 
           if (onQuery) {
             onQuery({
-              question: commandData.question,
-              nodeId: nodeId.value,
-              agentName: commandData.agentName
+              command: commandText,
+              nodeId: nodeId.value
             })
           }
 
@@ -177,40 +175,6 @@ function findMentionAtCursor($pos: any): {
     }
   }
 
-  return null
-}
-
-/**
- * Parse command text and extract agent name and question
- * 
- * Supports two formats:
- * - NEW: @j agent_name Question → { question: "Question", agentName: "agent_name" }
- * - OLD: @j Question → { question: "Question", agentName: undefined }
- * 
- * @param text - The mention text to parse
- * @returns Parsed command data or null if invalid
- */
-function parseCommandText(text: string): { question: string; agentName?: string } | null {
-  // Try to parse as new format: @j agent_name Question
-  const parsedCommand = parseAgentCommand(text)
-  
-  if (parsedCommand) {
-    // New format detected
-    return {
-      question: parsedCommand.question,
-      agentName: parsedCommand.agentName
-    }
-  }
-  
-  // Fallback to old format: @j Question (backward compatibility)
-  const match = text.match(MENTION_REGEX)
-  if (match && match[1]) {
-    return {
-      question: match[1].trim(),
-      agentName: undefined
-    }
-  }
-  
   return null
 }
 

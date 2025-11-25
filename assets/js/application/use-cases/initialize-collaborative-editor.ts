@@ -49,7 +49,7 @@ export interface InitializeEditorConfig {
   initialYjsState?: string
   userId: string
   userName: string
-  onAgentQuery?: (data: { question: string; nodeId: string; agentName?: string }) => void
+  onAgentQuery?: (data: { command: string; nodeId: string }) => void
 }
 
 /**
