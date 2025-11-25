@@ -221,6 +221,35 @@ Feature: Chat Panel
     Then the message should be removed from the chat
     And the message should be deleted from the database
 
+  Scenario: Delete link appears in message footer for saved messages
+    Given I have a chat session with saved messages
+    When I view the messages in the chat panel
+    Then each message with an ID should show a "delete" link in the footer
+    And the delete link should be styled as a clickable link in red (text-error)
+    And the delete link should have aria attributes for accessibility
+
+  Scenario: Delete link does not appear for streaming messages
+    Given I am receiving a streaming agent response
+    Then the streaming message should not show a delete link
+    And the message footer should be hidden during streaming
+    When the response completes
+    Then the delete link should appear in the message footer
+
+  Scenario: Delete link does not appear for unsaved messages
+    Given I have a message that hasn't been saved to the database yet
+    When I view the message in the chat panel
+    Then the message should not show a delete link
+    And the message footer should only show other available actions
+
+  Scenario: Delete message shows confirmation dialog
+    Given I have a saved message in the chat
+    When I click the "delete" link
+    Then I should see a confirmation dialog "Delete this message?"
+    When I confirm
+    Then the message should be deleted
+    When I cancel
+    Then the message should remain in the chat
+
   Scenario: Cannot delete message from non-existent session
     Given I have a message ID from a deleted or non-existent session
     When I attempt to delete the message
@@ -290,6 +319,44 @@ Feature: Chat Panel
     And I confirm deletion
     Then "Old Chat" should be removed from the list
     And if it was the active conversation, the chat should be cleared
+
+  Scenario: Delete icon visible on all conversations in history
+    Given I am in the conversations view
+    And I have 5 saved conversations
+    Then each conversation should display a trash icon button
+    And the icon should be positioned on the right side
+    And the icon should be a small circular ghost button
+    And hovering over the icon should show visual feedback
+
+  Scenario: Delete conversation shows confirmation dialog
+    Given I am in the conversations view
+    And there is a conversation "Important Chat"
+    When I click the trash icon
+    Then I should see a confirmation dialog "Delete this conversation?"
+    When I confirm
+    Then the conversation should be deleted from the database
+    And it should be removed from the list
+    When I cancel the deletion
+    Then the conversation should remain in the list
+
+  Scenario: Deleting active conversation clears chat view
+    Given I am viewing conversation "Current Work"
+    And the chat panel shows messages from "Current Work"
+    When I switch to conversations view
+    And I delete "Current Work"
+    Then "Current Work" should be removed from the list
+    And when I return to chat view, the chat should be empty
+    And the current_session_id should be nil
+
+  Scenario: Deleting inactive conversation preserves active chat
+    Given I am viewing conversation "Session A"
+    And the chat panel shows messages from "Session A"
+    When I switch to conversations view
+    And I delete a different conversation "Session B"
+    Then "Session B" should be removed from the list
+    When I return to chat view
+    Then "Session A" messages should still be visible
+    And the current session should still be "Session A"
 
   Scenario: Empty conversations list shows helpful message
     Given I have no saved conversations
