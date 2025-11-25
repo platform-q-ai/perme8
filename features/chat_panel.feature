@@ -54,7 +54,24 @@ Feature: Chat Panel
     Then the panel width should increase
     When I drag the resize handle to the right
     Then the panel width should decrease
-    And the resized width should be preserved across sessions
+    And the resized width should be saved to localStorage
+
+  Scenario: Resized chat panel persists across page navigation
+    Given the chat panel is open
+    And I resize the panel to 500px width
+    When I navigate to another page
+    Then the chat panel should maintain 500px width
+    And the width should be restored from localStorage
+
+  Scenario: Resized chat panel maintains width during agent response
+    Given the chat panel is open
+    And I resize the panel to 600px width
+    When I send a message to the agent
+    And the agent starts streaming a response
+    Then the panel width should remain 600px
+    When the response completes
+    Then the panel width should still be 600px
+    And the panel should not resize or shift
 
   Scenario: Empty chat shows welcome message
     Given I am on desktop (panel open by default)
