@@ -1,7 +1,7 @@
 defmodule JargaWeb.Features.GfmCheckboxTest do
   use JargaWeb.FeatureCase, async: false
 
-  @moduletag :wallaby
+  @moduletag :javascript
 
   describe "GFM checkbox interaction" do
     setup do
@@ -20,7 +20,7 @@ defmodule JargaWeb.Features.GfmCheckboxTest do
       {:ok, user_a: user_a, user_b: user_b, workspace: workspace, document: document}
     end
 
-    @tag :wallaby
+    @tag :javascript
     test "user can insert a checkbox via markdown", %{
       session: session,
       user_a: user_a,
@@ -50,7 +50,7 @@ defmodule JargaWeb.Features.GfmCheckboxTest do
       assert content =~ "Task item"
     end
 
-    @tag :wallaby
+    @tag :javascript
     test "user can check a checkbox by clicking", %{
       session: session,
       user_a: user_a,
@@ -96,7 +96,7 @@ defmodule JargaWeb.Features.GfmCheckboxTest do
       |> assert_has(css("li[data-item-type='task'][data-checked='true']", count: 1))
     end
 
-    @tag :wallaby
+    @tag :javascript
     test "clicking checkbox toggles state, clicking text does not", %{
       session: session,
       user_a: user_a,
@@ -190,7 +190,7 @@ defmodule JargaWeb.Features.GfmCheckboxTest do
       |> assert_has(css("li[data-item-type='task'][data-checked='false']", count: 1))
     end
 
-    @tag :wallaby
+    @tag :javascript
     test "checkbox state syncs between users", %{
       session: session_a,
       user_a: user_a,
@@ -255,7 +255,7 @@ defmodule JargaWeb.Features.GfmCheckboxTest do
       close_session(session_b)
     end
 
-    @tag :wallaby
+    @tag :javascript
     test "multiple checkboxes maintain independent state", %{
       session: session,
       user_a: user_a,

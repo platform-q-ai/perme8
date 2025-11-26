@@ -19,7 +19,7 @@ config :jarga, Jarga.Repo,
     System.get_env("DATABASE_URL") ||
       "postgres://postgres:postgres@localhost:5433/jarga_test#{System.get_env("MIX_TEST_PARTITION")}",
   pool: Ecto.Adapters.SQL.Sandbox,
-  pool_size: System.schedulers_online() * 2
+  pool_size: 10
 
 # Start server for Wallaby E2E tests
 # Wallaby tests are excluded by default via :wallaby tag

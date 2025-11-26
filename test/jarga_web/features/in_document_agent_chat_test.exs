@@ -3,7 +3,7 @@ defmodule JargaWeb.Features.InDocumentAgentChatTest do
 
   import Jarga.AgentsFixtures
 
-  @moduletag :wallaby
+  @moduletag :javascript
 
   describe "in-document agent chat - full E2E flow with mocked LLM responses" do
     setup do
@@ -38,7 +38,7 @@ defmodule JargaWeb.Features.InDocumentAgentChatTest do
       {:ok, user: user, workspace: workspace, agent: agent, document: document}
     end
 
-    @tag :wallaby
+    @tag :javascript
     test "user invokes prd-agent and gets mocked LLM response about PRDs", %{
       session: session,
       user: user,
@@ -84,7 +84,7 @@ defmodule JargaWeb.Features.InDocumentAgentChatTest do
              "Expected response about PRD"
     end
 
-    @tag :wallaby
+    @tag :javascript
     test "user invokes nonexistent agent and gets mocked error message", %{
       session: session,
       user: user,

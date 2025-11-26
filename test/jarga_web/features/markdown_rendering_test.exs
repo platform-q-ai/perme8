@@ -2,7 +2,7 @@ defmodule JargaWeb.Features.MarkdownRenderingTest do
   use JargaWeb.FeatureCase, async: false
   import JargaWeb.FeatureCase.Helpers
 
-  @moduletag :wallaby
+  @moduletag :javascript
 
   describe "Markdown Pasting & Rendering" do
     setup do
@@ -19,7 +19,7 @@ defmodule JargaWeb.Features.MarkdownRenderingTest do
       {:ok, session: session, user_a: user_a, workspace: workspace, document: document}
     end
 
-    @tag :wallaby
+    @tag :javascript
     test "pasted heading renders as styled heading", %{
       session: session,
       user_a: user_a,
@@ -47,7 +47,7 @@ defmodule JargaWeb.Features.MarkdownRenderingTest do
       |> refute_has(css(".ProseMirror", text: "# Heading 1"))
     end
 
-    @tag :wallaby
+    @tag :javascript
     test "pasted bold text renders as bold", %{
       session: session,
       user_a: user_a,
@@ -74,7 +74,7 @@ defmodule JargaWeb.Features.MarkdownRenderingTest do
       # We'll just verify the strong tag exists
     end
 
-    @tag :wallaby
+    @tag :javascript
     test "pasted list renders as formatted list", %{
       session: session,
       user_a: user_a,
@@ -107,7 +107,7 @@ defmodule JargaWeb.Features.MarkdownRenderingTest do
       |> assert_has(css(".ProseMirror ul li", text: "Item 3"))
     end
 
-    @tag :wallaby
+    @tag :javascript
     test "pasted code block renders with monospace font", %{
       session: session,
       user_a: user_a,
@@ -142,7 +142,7 @@ defmodule JargaWeb.Features.MarkdownRenderingTest do
       |> assert_has(css("pre code", text: "defmodule Test do"))
     end
 
-    @tag :wallaby
+    @tag :javascript
     test "typed link markdown auto-converts to clickable link", %{
       session: session,
       user_a: user_a,
@@ -205,7 +205,7 @@ defmodule JargaWeb.Features.MarkdownRenderingTest do
       # - Opening links in new tabs with Cmd/Ctrl+Click
     end
 
-    @tag :wallaby
+    @tag :javascript
     test "typed image markdown auto-converts to image element", %{
       session: session,
       user_a: user_a,
@@ -221,6 +221,9 @@ defmodule JargaWeb.Features.MarkdownRenderingTest do
       |> click_in_editor()
       # Type: "Check out ![Test Image](https://example.com/image.png) here"
       |> send_keys(["Check out ![Test Image](https://example.com/image.png) here"])
+
+      # Give the markdown input rule time to process and render the image
+      Process.sleep(500)
 
       # Verify image is rendered with correct attributes (scope to editor)
       session
@@ -238,7 +241,7 @@ defmodule JargaWeb.Features.MarkdownRenderingTest do
       |> assert_has(css(".ProseMirror", text: "here"))
     end
 
-    @tag :wallaby
+    @tag :javascript
     test "complex markdown document renders correctly", %{
       session: session,
       user_a: user_a,

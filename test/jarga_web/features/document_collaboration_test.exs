@@ -1,7 +1,7 @@
 defmodule JargaWeb.Features.DocumentCollaborationTest do
   use JargaWeb.FeatureCase, async: false
 
-  @moduletag :wallaby
+  @moduletag :javascript
 
   describe "document collaboration" do
     setup do
@@ -20,7 +20,7 @@ defmodule JargaWeb.Features.DocumentCollaborationTest do
       {:ok, user_a: user_a, user_b: user_b, workspace: workspace, document: document}
     end
 
-    @tag :wallaby
+    @tag :javascript
     test "two users can edit the same document simultaneously", %{
       session: session_a,
       user_a: user_a,
@@ -74,7 +74,7 @@ defmodule JargaWeb.Features.DocumentCollaborationTest do
       close_session(session_b)
     end
 
-    @tag :wallaby
+    @tag :javascript
     test "concurrent edits converge to same state", %{
       session: session_a,
       user_a: user_a,
@@ -121,7 +121,7 @@ defmodule JargaWeb.Features.DocumentCollaborationTest do
       close_session(session_b)
     end
 
-    @tag :wallaby
+    @tag :javascript
     test "document saves persist after page refresh", %{
       session: session,
       user_a: user_a,
@@ -137,13 +137,13 @@ defmodule JargaWeb.Features.DocumentCollaborationTest do
       # Refresh the page (auto-save happens automatically before refresh)
       session
       |> refresh_page()
-      |> wait_for_element(css(".milkdown", visible: true, count: 1))
+      |> wait_for_milkdown_editor()
 
       # Content should still be there after refresh
       assert session |> get_editor_content() =~ "Persistent content"
     end
 
-    @tag :wallaby
+    @tag :javascript
     test "late-joining user receives full document state", %{
       session: session_a,
       user_a: user_a,

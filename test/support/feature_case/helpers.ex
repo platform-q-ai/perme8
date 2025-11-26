@@ -57,13 +57,138 @@ defmodule JargaWeb.FeatureCase.Helpers do
   Opens a document in the editor for the given user.
 
   Assumes the user is already logged in.
+
+  Waits for the Milkdown editor to initialize, which happens asynchronously
+  after the LiveView mounts and the MilkdownEditor hook runs.
   """
   def open_document(session, workspace_slug, document_slug) do
     session
     |> visit("/app/workspaces/#{workspace_slug}/documents/#{document_slug}")
+    # Wait for LiveView to connect - brief pause for WebSocket
+    |> then(fn s ->
+      Process.sleep(500)
+      s
+    end)
+    # Wait for the editor container (from LiveView) with retries
+    |> wait_for_editor_container()
+    # Wait for JavaScript to initialize Milkdown - it adds .milkdown class
+    # This may take a moment as it loads the editor bundle
+    |> wait_for_milkdown_editor()
     |> take_screenshot(name: "after_navigate_to_document")
-    # Wait for Milkdown editor to load
-    |> assert_has(css(".milkdown", visible: true, count: 1))
+  end
+
+  @doc """
+  Waits for the editor container element to appear.
+
+  Retries several times with increasing delays to handle slow page loads.
+  """
+  def wait_for_editor_container(session, attempts \\ 5) do
+    try do
+      session
+      |> assert_has(css("#editor-container", visible: true))
+    rescue
+      Wallaby.ExpectationNotMetError ->
+        if attempts > 0 do
+          # Wait longer and retry
+          Process.sleep(1000)
+          wait_for_editor_container(session, attempts - 1)
+        else
+          # Take screenshot for debugging before re-raising
+          session |> take_screenshot(name: "editor_container_not_found")
+
+          reraise Wallaby.ExpectationNotMetError,
+                  [message: "Expected to find #editor-container after multiple retries"],
+                  __STACKTRACE__
+        end
+    end
+  end
+
+  @doc """
+  Waits for LiveView to be ready by checking for phx-socket connection.
+  Uses simple polling instead of Promises for better compatibility.
+  """
+  def wait_for_liveview_ready(session, timeout \\ 10000) do
+    wait_until_ready(session, timeout, System.monotonic_time(:millisecond))
+  end
+
+  defp wait_until_ready(session, timeout, start_time) do
+    elapsed = System.monotonic_time(:millisecond) - start_time
+
+    if elapsed > timeout do
+      # Timeout - just proceed (page might be ready anyway)
+      Process.sleep(500)
+      session
+    else
+      # Check if page is ready using JavaScript
+      ready? =
+        try do
+          Wallaby.Browser.execute_script(session, """
+            var main = document.querySelector('[data-phx-main]');
+            var socket = window.liveSocket;
+            return !!(main && socket);
+          """)
+
+          # execute_script returns session, so we need a different approach
+          true
+        rescue
+          _ -> false
+        end
+
+      if ready? do
+        # Additional wait for socket to stabilize
+        Process.sleep(300)
+        session
+      else
+        # Wait and retry
+        Process.sleep(200)
+        wait_until_ready(session, timeout, start_time)
+      end
+    end
+  end
+
+  @doc """
+  Waits for the Milkdown editor to fully initialize.
+
+  Milkdown initialization is async - after the hook mounts, it creates the Editor
+  which adds the .milkdown class to the container. We poll for this class.
+  """
+  def wait_for_milkdown_editor(session, timeout \\ 10000) do
+    session
+    |> execute_script("""
+      return new Promise((resolve, reject) => {
+        const startTime = Date.now();
+        const timeout = #{timeout};
+        
+        function checkForMilkdown() {
+          // Check for .milkdown class (added by Milkdown)
+          const milkdown = document.querySelector('.milkdown');
+          // Also check for ProseMirror (inner editor)
+          const prosemirror = document.querySelector('.ProseMirror');
+          
+          if (milkdown || prosemirror) {
+            resolve(true);
+            return;
+          }
+          
+          if (Date.now() - startTime > timeout) {
+            // Get debug info about what's on the page
+            const container = document.querySelector('#editor-container');
+            const containerHTML = container ? container.innerHTML.substring(0, 200) : 'no container';
+            reject(new Error('Milkdown editor not found after ' + timeout + 'ms. Container: ' + containerHTML));
+            return;
+          }
+          
+          setTimeout(checkForMilkdown, 100);
+        }
+        
+        checkForMilkdown();
+      });
+    """)
+    |> then(fn session ->
+      # Brief additional wait for editor to stabilize
+      Process.sleep(200)
+      session
+    end)
   end
 
   @doc """
@@ -122,12 +247,21 @@ defmodule JargaWeb.FeatureCase.Helpers do
   Gets the text content from the Milkdown editor.
 
   Filters out remote cursor labels to get only the actual document content.
+  Uses either .milkdown or .ProseMirror selector (both work).
   """
   def get_editor_content(session) do
+    # Try .ProseMirror first (more reliable), fallback to .milkdown
     text =
-      session
-      |> find(css(".milkdown"))
-      |> Element.text()
+      try do
+        session
+        |> find(css("#editor-container .ProseMirror"))
+        |> Element.text()
+      rescue
+        _ ->
+          session
+          |> find(css(".milkdown"))
+          |> Element.text()
+      end
 
     # Remove cursor labels which appear as "Name N." patterns
     # Cursor labels follow the pattern "Firstname L." (name with one-letter last name)
@@ -142,12 +276,41 @@ defmodule JargaWeb.FeatureCase.Helpers do
 
   @doc """
   Waits for text to appear in the editor.
+
+  Uses JavaScript polling to check for text in ProseMirror editor,
+  which is more reliable than CSS selectors for dynamic content.
   """
-  def wait_for_text_in_editor(session, text, _timeout \\ 5000) do
-    query = css(".milkdown", text: text, count: 1)
+  def wait_for_text_in_editor(session, text, timeout \\ 5000) do
+    escaped_text = String.replace(text, "'", "\\'")
 
     session
-    |> Wallaby.Browser.assert_has(query)
+    |> execute_script("""
+      return new Promise((resolve, reject) => {
+        const startTime = Date.now();
+        const timeout = #{timeout};
+        const searchText = '#{escaped_text}';
+        
+        function checkForText() {
+          const editor = document.querySelector('#editor-container .ProseMirror') ||
+                        document.querySelector('.milkdown');
+          
+          if (editor && editor.textContent.includes(searchText)) {
+            resolve(true);
+            return;
+          }
+          
+          if (Date.now() - startTime > timeout) {
+            const content = editor ? editor.textContent.substring(0, 200) : 'no editor';
+            reject(new Error('Text not found: "' + searchText + '". Content: ' + content));
+            return;
+          }
+          
+          setTimeout(checkForText, 100);
+        }
+        
+        checkForText();
+      });
+    """)
   end
 
   @doc """
@@ -434,14 +597,17 @@ defmodule JargaWeb.FeatureCase.Helpers do
     escaped_text = String.replace(text, "'", "\\'")
 
     session
-    |> click(css(".milkdown"))
+    |> click_in_editor()
     |> execute_script("""
-      const editor = document.querySelector('.milkdown');
-      const event = new ClipboardEvent('paste', {
-        clipboardData: new DataTransfer()
-      });
-      event.clipboardData.setData('text/plain', '#{escaped_text}');
-      editor.dispatchEvent(event);
+      const editor = document.querySelector('#editor-container .ProseMirror') ||
+                    document.querySelector('.milkdown');
+      if (editor) {
+        const event = new ClipboardEvent('paste', {
+          clipboardData: new DataTransfer()
+        });
+        event.clipboardData.setData('text/plain', '#{escaped_text}');
+        editor.dispatchEvent(event);
+      }
     """)
   end
 

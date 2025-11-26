@@ -479,6 +479,12 @@ defmodule JargaWeb.AppLive.Documents.Show do
     {:noreply, socket}
   end
 
+  @impl true
+  def handle_info({:document_created, _document}, socket) do
+    # Document created broadcasts - no action needed on document show page
+    {:noreply, socket}
+  end
+
   defp generate_user_id do
     "user_#{:crypto.strong_rand_bytes(8) |> Base.encode16()}"
   end

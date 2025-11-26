@@ -190,6 +190,36 @@ defmodule JargaWeb.AppLive.Dashboard do
     {:noreply, socket}
   end
 
+  @impl true
+  def handle_info({:document_created, _document}, socket) do
+    # Document created broadcasts - no action needed on dashboard
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("load_session", %{"session_id" => session_id}, socket) do
+    # Forward to chat panel component
+    send_update(JargaWeb.ChatLive.Panel,
+      id: "global-chat-panel",
+      action: :load_session,
+      session_id: session_id
+    )
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("restore_session", %{"session_id" => session_id}, socket) do
+    # Forward to chat panel component
+    send_update(JargaWeb.ChatLive.Panel,
+      id: "global-chat-panel",
+      action: :restore_session,
+      session_id: session_id
+    )
+
+    {:noreply, socket}
+  end
+
   # Chat panel streaming messages and notification handlers - provided by MessageHandlers
   handle_chat_messages()
 end

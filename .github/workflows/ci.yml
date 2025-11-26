@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 env:
   MIX_ENV: test
@@ -32,59 +32,59 @@ jobs:
           - 5432:5432
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Elixir
-      uses: erlef/setup-beam@v1
-      with:
-        elixir-version: '1.18.1'
-        otp-version: '27.2'
+      - name: Set up Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: "1.18.1"
+          otp-version: "27.2"
 
-    - name: Restore dependencies cache
-      uses: actions/cache@v4
-      with:
-        path: |
-          deps
-          _build
-        key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
-        restore-keys: ${{ runner.os }}-mix-
+      - name: Restore dependencies cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
+          restore-keys: ${{ runner.os }}-mix-
 
-    - name: Install dependencies
-      run: mix deps.get
+      - name: Install dependencies
+        run: mix deps.get
 
-    - name: Compile dependencies
-      run: mix deps.compile
+      - name: Compile dependencies
+        run: mix deps.compile
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'npm'
-        cache-dependency-path: assets/package-lock.json
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: assets/package-lock.json
 
-    - name: Install JavaScript dependencies
-      run: |
-        cd assets
-        npm ci
+      - name: Install JavaScript dependencies
+        run: |
+          cd assets
+          npm ci
 
-    - name: Create test database
-      run: MIX_ENV=test mix ecto.create
-      env:
-        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jarga_test
+      - name: Create test database
+        run: MIX_ENV=test mix ecto.create
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jarga_test
 
-    - name: Run database migrations
-      run: MIX_ENV=test mix ecto.migrate
-      env:
-        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jarga_test
+      - name: Run database migrations
+        run: MIX_ENV=test mix ecto.migrate
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jarga_test
 
-    - name: Run precommit checks
-      run: mix precommit
-      env:
-        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jarga_test
+      - name: Run precommit checks
+        run: mix precommit
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jarga_test
 
-  e2e:
-    name: E2E Tests (Wallaby)
+  javascript:
+    name: JavaScript Tests
     runs-on: ubuntu-latest
 
     services:
@@ -103,104 +103,104 @@ jobs:
           - 5432:5432
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Elixir
-      uses: erlef/setup-beam@v1
-      with:
-        elixir-version: '1.18.1'
-        otp-version: '27.2'
+      - name: Set up Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: "1.18.1"
+          otp-version: "27.2"
 
-    - name: Restore dependencies cache
-      uses: actions/cache@v4
-      with:
-        path: |
-          deps
-          _build
-        key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
-        restore-keys: ${{ runner.os }}-mix-
+      - name: Restore dependencies cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
+          restore-keys: ${{ runner.os }}-mix-
 
-    - name: Install dependencies
-      run: mix deps.get
+      - name: Install dependencies
+        run: mix deps.get
 
-    - name: Compile dependencies
-      run: mix deps.compile
+      - name: Compile dependencies
+        run: mix deps.compile
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'npm'
-        cache-dependency-path: assets/package-lock.json
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: assets/package-lock.json
 
-    - name: Install JavaScript dependencies
-      run: |
-        cd assets
-        npm ci
+      - name: Install JavaScript dependencies
+        run: |
+          cd assets
+          npm ci
 
-    - name: Install Chrome and ChromeDriver
-      run: |
-        # Install Chrome
-        wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
-        sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
-        sudo apt-get update
-        sudo apt-get install -y google-chrome-stable
-        
-        # Install ChromeDriver
-        CHROME_VERSION=$(google-chrome --version | awk '{print $3}' | cut -d '.' -f 1)
-        CHROMEDRIVER_VERSION=$(curl -s "https://googlechromelabs.github.io/chrome-for-testing/LATEST_RELEASE_$CHROME_VERSION")
-        wget -q "https://storage.googleapis.com/chrome-for-testing-public/$CHROMEDRIVER_VERSION/linux64/chromedriver-linux64.zip"
-        unzip -q chromedriver-linux64.zip
-        sudo mv chromedriver-linux64/chromedriver /usr/local/bin/
-        sudo chmod +x /usr/local/bin/chromedriver
-        
-        # Verify installation
-        google-chrome --version
-        chromedriver --version
+      - name: Install Chrome and ChromeDriver
+        run: |
+          # Install Chrome
+          wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+          sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
+          sudo apt-get update
+          sudo apt-get install -y google-chrome-stable
 
-    - name: Build assets
-      run: mix assets.build
+          # Install ChromeDriver
+          CHROME_VERSION=$(google-chrome --version | awk '{print $3}' | cut -d '.' -f 1)
+          CHROMEDRIVER_VERSION=$(curl -s "https://googlechromelabs.github.io/chrome-for-testing/LATEST_RELEASE_$CHROME_VERSION")
+          wget -q "https://storage.googleapis.com/chrome-for-testing-public/$CHROMEDRIVER_VERSION/linux64/chromedriver-linux64.zip"
+          unzip -q chromedriver-linux64.zip
+          sudo mv chromedriver-linux64/chromedriver /usr/local/bin/
+          sudo chmod +x /usr/local/bin/chromedriver
 
-    - name: Create test database
-      run: MIX_ENV=test mix ecto.create
-      env:
-        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jarga_test
+          # Verify installation
+          google-chrome --version
+          chromedriver --version
 
-    - name: Run database migrations
-      run: MIX_ENV=test mix ecto.migrate
-      env:
-        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jarga_test
+      - name: Build assets
+        run: mix assets.build
 
-    - name: Run E2E tests (with retry)
-      uses: nick-fields/retry@v3
-      with:
-        timeout_minutes: 15
-        max_attempts: 2
-        retry_on: error
-        command: mix test --only wallaby
-      env:
-        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jarga_test
+      - name: Create test database
+        run: MIX_ENV=test mix ecto.create
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jarga_test
 
-    - name: Upload screenshots on failure
-      if: failure()
-      uses: actions/upload-artifact@v4
-      with:
-        name: wallaby-screenshots
-        path: tmp/screenshots/
-        retention-days: 7
+      - name: Run database migrations
+        run: MIX_ENV=test mix ecto.migrate
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jarga_test
+
+      - name: Run JavaScript tests (with retry)
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 15
+          max_attempts: 2
+          retry_on: error
+          command: mix test --only javascript
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jarga_test
+
+      - name: Upload screenshots on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: tmp/screenshots/
+          retention-days: 7
 
   deploy:
     name: Deploy to Render
     runs-on: ubuntu-latest
-    needs: [test, e2e]
+    needs: [test, javascript]
     # Only deploy on push to main (not on PRs)
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
-    - name: Deploy
-      # Only run this step if the branch is main
-      env:
-        deploy_url: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
-      run: |
-        curl "$deploy_url"
+      - name: Deploy
+        # Only run this step if the branch is main
+        env:
+          deploy_url: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          curl "$deploy_url"

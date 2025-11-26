@@ -1,7 +1,7 @@
 defmodule JargaWeb.Features.MultipleCursorsTest do
   use JargaWeb.FeatureCase, async: false
 
-  @moduletag :wallaby
+  @moduletag :javascript
 
   describe "multiple cursors" do
     setup do
@@ -20,7 +20,7 @@ defmodule JargaWeb.Features.MultipleCursorsTest do
       {:ok, user_a: user_a, user_b: user_b, workspace: workspace, document: document}
     end
 
-    @tag :wallaby
+    @tag :javascript
     test "user cursors are visible to other users", %{
       session: session_a,
       user_a: user_a,
@@ -62,7 +62,7 @@ defmodule JargaWeb.Features.MultipleCursorsTest do
       close_session(session_b)
     end
 
-    @tag :wallaby
+    @tag :javascript
     test "cursor positions update in real-time as users type", %{
       session: session_a,
       user_a: user_a,
@@ -107,7 +107,7 @@ defmodule JargaWeb.Features.MultipleCursorsTest do
       close_session(session_b)
     end
 
-    @tag :wallaby
+    @tag :javascript
     test "cursor disappears when user disconnects", %{
       session: session_a,
       user_a: user_a,
@@ -149,7 +149,7 @@ defmodule JargaWeb.Features.MultipleCursorsTest do
       |> wait_for_cursor_to_disappear("Alice", 4000)
     end
 
-    @tag :wallaby
+    @tag :javascript
     test "multiple users see each other's cursors simultaneously", %{
       session: session_a,
       user_a: user_a,

@@ -60,6 +60,30 @@ defmodule CommonSteps do
     end
   end
 
+  # Shorthand: "a workspace X exists" - creates workspace with that name
+  step "a workspace {string} exists", %{args: [name]} = context do
+    # Make slug from name (lowercase, replace spaces with hyphens)
+    slug = name |> String.downcase() |> String.replace(~r/\s+/, "-")
+
+    # Create owner user for workspace
+    owner = user_fixture(%{email: "#{slug}_owner@example.com"})
+
+    workspace = workspace_fixture(owner, %{name: name, slug: slug})
+
+    # Add the current_user as a member if they exist
+    if context[:current_user] do
+      add_workspace_member_fixture(workspace.id, context[:current_user], :member)
+    end
+
+    # Store in workspaces map
+    workspaces = Map.get(context, :workspaces, %{})
+
+    {:ok,
+     context
+     |> Map.put(:workspaces, Map.put(workspaces, name, workspace))
+     |> Map.put(:workspace_owners, Map.put(Map.get(context, :workspace_owners, %{}), name, owner))}
+  end
+
   # ============================================================================
   # USER MEMBERSHIP STEPS
   # ============================================================================
@@ -150,6 +174,16 @@ defmodule CommonSteps do
         refute html =~ title_escaped
         {:ok, context}
 
+      context[:session] ->
+        # Check HTML from Wallaby session
+        html = Wallaby.Browser.page_source(context[:session])
+        title_escaped = Phoenix.HTML.html_escape(item_name) |> Phoenix.HTML.safe_to_string()
+
+        refute html =~ title_escaped,
+               "Expected NOT to see '#{item_name}' in page source but it was found"
+
+        {:ok, context}
+
       true ->
         flunk("Cannot determine context for 'I should not see' step")
     end
@@ -172,6 +206,16 @@ defmodule CommonSteps do
         html = context[:last_html]
         title_escaped = Phoenix.HTML.html_escape(item_name) |> Phoenix.HTML.safe_to_string()
         assert html =~ title_escaped
+        {:ok, context}
+
+      context[:session] ->
+        # Check HTML from Wallaby session
+        html = Wallaby.Browser.page_source(context[:session])
+        title_escaped = Phoenix.HTML.html_escape(item_name) |> Phoenix.HTML.safe_to_string()
+
+        assert html =~ title_escaped,
+               "Expected to see '#{item_name}' in page source but it was not found"
+
         {:ok, context}
 
       true ->

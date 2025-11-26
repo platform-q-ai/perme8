@@ -1,7 +1,7 @@
 defmodule JargaWeb.Features.UndoRedoTest do
   use JargaWeb.FeatureCase, async: false
 
-  @moduletag :wallaby
+  @moduletag :javascript
 
   describe "undo/redo (client-scoped)" do
     setup do
@@ -20,7 +20,7 @@ defmodule JargaWeb.Features.UndoRedoTest do
       {:ok, user_a: user_a, user_b: user_b, workspace: workspace, document: document}
     end
 
-    @tag :wallaby
+    @tag :javascript
     test "undo reverts only local user's changes", %{
       session: session_a,
       user_a: user_a,
@@ -71,7 +71,7 @@ defmodule JargaWeb.Features.UndoRedoTest do
       close_session(session_b)
     end
 
-    @tag :wallaby
+    @tag :javascript
     test "redo re-applies local user's undone changes", %{
       session: session,
       user_a: user_a,
@@ -109,7 +109,7 @@ defmodule JargaWeb.Features.UndoRedoTest do
       assert content =~ "Hello"
     end
 
-    @tag :wallaby
+    @tag :javascript
     test "undo does not affect other users' undo stacks", %{
       session: session_a,
       user_a: user_a,
@@ -175,7 +175,7 @@ defmodule JargaWeb.Features.UndoRedoTest do
       close_session(session_b)
     end
 
-    @tag :wallaby
+    @tag :javascript
     test "undo works correctly after remote changes", %{
       session: session_a,
       user_a: user_a,
