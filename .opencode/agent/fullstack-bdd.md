@@ -25,6 +25,7 @@ Before implementing ANY feature tests, you MUST read:
 3. ✅ **Use ConnCase + LiveViewTest by default** - Only Wallaby for `@javascript` scenarios
 4. ✅ **Mock 3rd party services** - Use Mox for external APIs, LLMs, etc.
 5. ✅ **Use real database** - Ecto Sandbox, not mocked repositories
+6. ❌ **NEVER mock HTML** - Always render real HTML via LiveView/ConnTest, never create mock HTML fragments
 
 ### When to Use This Agent
 
@@ -242,16 +243,23 @@ step "document should be created", context do
   {:ok, context}
 end
 
-# ✅ RIGHT - Full stack
+# ❌ WRONG - Mock HTML (FALSE POSITIVES!)
+step "document should be created", context do
+  mock_html = "<div>#{context[:document].title}</div>"  # NEVER DO THIS
+  assert mock_html =~ context[:document].title
+  {:ok, context}
+end
+
+# ✅ RIGHT - Full stack with real HTML
 step "document should be created", context do
   # Check database
   assert context[:document] != nil
 
-  # Check HTML rendering (REQUIRED)
-  html = context[:last_html]
+  # Render REAL HTML via LiveView (REQUIRED)
+  {:ok, _view, html} = live(context[:conn], ~p"/app/workspaces/#{workspace.slug}/documents")
   assert html =~ context[:document].title
 
-  {:ok, context}
+  {:ok, context |> Map.put(:last_html, html)}
 end
 ```
 
@@ -487,9 +495,25 @@ Before completing, verify:
 ### ❌ Backend-Only Testing
 
 ```elixir
-# WRONG
+# WRONG - Backend only
 step "document exists", context do
   assert Repo.get(Document, id) != nil
+  {:ok, context}
+end
+```
+
+### ❌ Mock HTML Testing (FALSE POSITIVES!)
+
+```elixir
+# WRONG - Mock HTML will give false positives
+step "checkbox should have strikethrough", context do
+  # Creating fake HTML - this doesn't test the real system!
+  mock_html = """
+  <li data-checked="true">
+    <p style="text-decoration: line-through">Task</p>
+  </li>
+  """
+  assert mock_html =~ "line-through"  # This will pass even if real app is broken!
   {:ok, context}
 end
 ```
@@ -497,16 +521,31 @@ end
 ### ✅ Full-Stack Testing
 
 ```elixir
-# RIGHT
+# RIGHT - Test real HTML rendered by the application
 step "document exists", context do
   document = Repo.get(Document, id)
   assert document != nil
 
-  # MUST verify via HTML
+  # MUST verify via REAL rendered HTML
   {:ok, _view, html} = live(context[:conn], ~p"/documents")
   assert html =~ document.title
 
   {:ok, context}
+end
+
+# RIGHT - Test real CSS and real HTML rendering
+step "checkbox should have strikethrough", context do
+  # Render the REAL page that contains checkboxes
+  {:ok, view, html} = live(context[:conn], ~p"/app/workspaces/#{workspace.slug}/documents/#{document.slug}")
+  
+  # Verify real HTML has the checkbox with data attributes
+  assert html =~ ~r/data-checked="true"/
+  
+  # Verify CSS file has the strikethrough rule
+  css_content = File.read!("assets/css/editor.css")
+  assert css_content =~ "text-decoration: line-through"
+  
+  {:ok, Map.put(context, :last_html, html)}
 end
 ```
 
@@ -563,6 +602,7 @@ mcp__context7__get-library-docs("/elixir-wallaby/wallaby")
 ## Remember
 
 - **NEVER test backend in isolation** - Always verify via HTTP → HTML
+- **NEVER mock HTML** - Always render real HTML via LiveView/ConnTest (no fake HTML strings!)
 - **ALWAYS use `context` parameter name** - Not `state` or `vars`
 - **Data table steps are special** - Return context directly
 - **First Background step** - Must checkout Ecto Sandbox

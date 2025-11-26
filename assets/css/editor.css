@@ -161,6 +161,12 @@
   z-index: 1;
 }
 
+/* Strikethrough text for checked items */
+#editor-container .milkdown li[data-item-type="task"][data-checked="true"] > p {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
 /* Hover state */
 #editor-container .milkdown li[data-item-type="task"]:hover::before {
   border-color: #444 !important;
