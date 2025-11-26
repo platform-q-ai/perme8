@@ -45,6 +45,16 @@ if config_env() == :prod do
   # Document save debouncing (2 seconds in production)
   config :jarga, :document_save_debounce_ms, 2000
 
+  # LiveDashboard configuration for production
+  dashboard_username = System.get_env("DASHBOARD_USERNAME")
+  dashboard_password = System.get_env("DASHBOARD_PASSWORD")
+
+  if dashboard_username && dashboard_password do
+    config :jarga, :live_dashboard_in_prod, true
+    config :jarga, :dashboard_username, dashboard_username
+    config :jarga, :dashboard_password, dashboard_password
+  end
+
   database_url =
     System.get_env("DATABASE_URL") ||
       raise """

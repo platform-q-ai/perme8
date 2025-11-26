@@ -45,6 +45,34 @@ defmodule JargaWeb.Router do
     end
   end
 
+  # LiveDashboard for production with HTTP Basic Auth
+  if Application.compile_env(:jarga, :live_dashboard_in_prod) do
+    import Phoenix.LiveDashboard.Router
+
+    pipeline :admin_basic_auth do
+      plug :basic_auth
+    end
+
+    defp basic_auth(conn, _opts) do
+      username = Application.get_env(:jarga, :dashboard_username)
+      password = Application.get_env(:jarga, :dashboard_password)
+
+      if username && password do
+        Plug.BasicAuth.basic_auth(conn, username: username, password: password)
+      else
+        conn
+        |> send_resp(503, "Dashboard authentication not configured")
+        |> halt()
+      end
+    end
+
+    scope "/admin" do
+      pipe_through [:browser, :admin_basic_auth]
+
+      live_dashboard "/dashboard", metrics: JargaWeb.Telemetry
+    end
+  end
+
   ## App routes (authenticated)
 
   scope "/app", JargaWeb do
