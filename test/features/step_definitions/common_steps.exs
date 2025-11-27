@@ -99,4 +99,56 @@ defmodule CommonSteps do
      |> Map.put(:conn, conn)
      |> Map.put(:current_user, user)}
   end
+
+  # ============================================================================
+  # LIST ASSERTION STEPS (Generic for both projects and documents)
+  # ============================================================================
+
+  step "I should not see {string}", %{args: [item_name]} = context do
+    cond do
+      context[:listed_projects] ->
+        # Check project list
+        listed_projects = context[:listed_projects]
+        actual_names = Enum.map(listed_projects, fn project -> project.name end)
+
+        refute item_name in actual_names,
+               "Expected NOT to see '#{item_name}' in project list but it was found"
+
+        {:ok, context}
+
+      context[:last_html] ->
+        # Check HTML (document listing)
+        html = context[:last_html]
+        title_escaped = Phoenix.HTML.html_escape(item_name) |> Phoenix.HTML.safe_to_string()
+        refute html =~ title_escaped
+        {:ok, context}
+
+      true ->
+        flunk("Cannot determine context for 'I should not see' step")
+    end
+  end
+
+  step "I should see {string}", %{args: [item_name]} = context do
+    cond do
+      context[:listed_projects] ->
+        # Check project list
+        listed_projects = context[:listed_projects]
+        actual_names = Enum.map(listed_projects, fn project -> project.name end)
+
+        assert item_name in actual_names,
+               "Expected to see '#{item_name}' in project list but it was not found"
+
+        {:ok, context}
+
+      context[:last_html] ->
+        # Check HTML (document listing)
+        html = context[:last_html]
+        title_escaped = Phoenix.HTML.html_escape(item_name) |> Phoenix.HTML.safe_to_string()
+        assert html =~ title_escaped
+        {:ok, context}
+
+      true ->
+        flunk("Cannot determine context for 'I should see' step")
+    end
+  end
 end

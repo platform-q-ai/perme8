@@ -353,6 +353,19 @@ defmodule JargaWeb.AppLive.Projects.Show do
   end
 
   @impl true
+  def handle_info({:project_removed, project_id}, socket) do
+    # If the current project was removed, redirect to workspace page
+    if socket.assigns.project.id == project_id do
+      {:noreply,
+       socket
+       |> put_flash(:info, "Project was deleted")
+       |> push_navigate(to: ~p"/app/workspaces/#{socket.assigns.workspace.slug}")}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  @impl true
   def handle_info({:workspace_agent_updated, _agent}, socket) do
     # Reload workspace agents and send to chat panel
     workspace_id = socket.assigns.workspace.id

@@ -67,11 +67,4 @@ defmodule DocumentListingSteps do
     # Return context directly for data table steps
     context
   end
-
-  step "I should not see {string}", %{args: [title]} = context do
-    html = context[:last_html]
-    title_escaped = Phoenix.HTML.html_escape(title) |> Phoenix.HTML.safe_to_string()
-    refute html =~ title_escaped
-    {:ok, context}
-  end
 end

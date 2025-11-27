@@ -114,8 +114,25 @@ defmodule DocumentPubsubSteps do
   end
 
   step "the title should update in their UI without refresh", context do
-    # For @javascript tests
-    {:ok, context}
+    import Phoenix.LiveViewTest
+
+    document = context[:document]
+    workspace = context[:workspace]
+    conn = context[:conn]
+
+    # NOTE: The PubSub broadcast was already verified in the previous step:
+    # "user {string} should receive a real-time title update"
+    # This step focuses on verifying the UI would update correctly
+
+    # Mount a fresh LiveView to simulate what the real-time update would show
+    # In a real browser, LiveView would receive the PubSub message and update the DOM
+    {:ok, _view, html} = live(conn, ~p"/app/workspaces/#{workspace.slug}")
+
+    # Verify the updated document title appears in the workspace documents view
+    title_escaped = Phoenix.HTML.html_escape(document.title) |> Phoenix.HTML.safe_to_string()
+    assert html =~ title_escaped
+
+    {:ok, context |> Map.put(:last_html, html)}
   end
 
   step "user {string} should receive a visibility changed notification",
@@ -184,5 +201,53 @@ defmodule DocumentPubsubSteps do
     # For now, just verify the data changed
     assert context[:project].name == new_name
     {:ok, context}
+  end
+
+  step "the project name should update in their UI without refresh", context do
+    import Phoenix.LiveViewTest
+
+    project = context[:project]
+    view = context[:workspace_view]
+
+    # NOTE: The PubSub broadcast was already verified in the previous step:
+    # "user {string} should receive a project updated notification"
+    # This step tests that the LiveView process handles the PubSub message correctly
+
+    # Simulate the PubSub message that the LiveView would receive
+    # This tests the handle_info/2 callback directly
+    send(view.pid, {:project_updated, project.id, project.name})
+
+    # Render the view to see the effects of the PubSub message
+    html = render(view)
+
+    # Verify the updated project name appears in the workspace view
+    name_escaped = Phoenix.HTML.html_escape(project.name) |> Phoenix.HTML.safe_to_string()
+    assert html =~ name_escaped
+
+    {:ok, context |> Map.put(:last_html, html)}
+  end
+
+  step "the project should be removed from their workspace view", context do
+    import Phoenix.LiveViewTest
+
+    project = context[:project]
+    view = context[:workspace_view]
+
+    # NOTE: The PubSub broadcast was already verified in the previous step:
+    # "user {string} should receive a project deleted notification"
+    # This step tests that the LiveView process handles the PubSub message correctly
+
+    # Simulate the PubSub message that the LiveView would receive
+    # This tests the handle_info/2 callback directly
+    send(view.pid, {:project_removed, project.id})
+
+    # Render the view to see the effects of the PubSub message
+    html = render(view)
+
+    # Verify the deleted project name does NOT appear in the workspace view
+    name_escaped = Phoenix.HTML.html_escape(project.name) |> Phoenix.HTML.safe_to_string()
+    refute html =~ name_escaped
+
+    {:ok, context |> Map.put(:last_html, html)}
   end
 end

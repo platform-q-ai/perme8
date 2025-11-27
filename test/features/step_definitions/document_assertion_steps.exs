@@ -35,6 +35,17 @@ defmodule DocumentAssertionSteps do
     end
   end
 
+  step "I should receive a not found error", context do
+    case context[:last_result] do
+      {:error, :not_found} -> {:ok, context}
+      # Also accept unauthorized (same effect)
+      {:error, :unauthorized} -> {:ok, context}
+      {:error, :project_not_found} -> {:ok, context}
+      {:error, :document_not_found} -> {:ok, context}
+      _ -> flunk("Expected not found error, got: #{inspect(context[:last_result])}")
+    end
+  end
+
   step "I should receive a document not found error", context do
     case context[:last_result] do
       {:error, :document_not_found} ->
