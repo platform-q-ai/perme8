@@ -6,22 +6,29 @@ This guide covers best practices for testing Phoenix PubSub broadcasts in Cucumb
 
 ## Testing Approaches
 
-### 1. **Unit Testing Approach** (Recommended for BDD)
+### 1. **PubSub Broadcast Verification** (Verify Message Sent)
 
-Test that the broadcast is sent with the correct message structure, without requiring a second user session.
+Test that the broadcast is sent with the correct message structure.
 
 **Pattern:**
 ```elixir
-step "a visibility changed notification should be broadcast", context do
-  document = context[:document]
+step "user {string} is viewing workspace {string}",
+     %{args: [_user_email, _workspace_slug]} = context do
+  workspace = context[:workspace]
   
-  # Subscribe to the document's PubSub topic
-  Phoenix.PubSub.subscribe(Jarga.PubSub, "document:#{document.id}")
+  # Subscribe to PubSub to simulate another user watching the workspace
+  Phoenix.PubSub.subscribe(Jarga.PubSub, "workspace:#{workspace.id}")
   
-  # The broadcast should have already happened in the previous step
-  # Check if we received it
-  assert_receive {:document_updated, %{document_id: document_id, changes: %{visibility: _}}}, 1000
-  assert document_id == document.id
+  {:ok, context |> Map.put(:pubsub_subscribed, true)}
+end
+
+step "user {string} should receive a project created notification",
+     %{args: [_user_email]} = context do
+  project = context[:project]
+  
+  # Verify we received the project created broadcast
+  assert_receive {:project_added, project_id}, 1000
+  assert project_id == project.id
   
   {:ok, context}
 end
@@ -34,49 +41,70 @@ end
 - ✅ Works in ConnCase (no Wallaby needed)
 
 **Cons:**
-- ⚠️ Doesn't test the full LiveView push/handle_info cycle
-- ⚠️ Requires subscribing after the action (broadcast already sent)
+- ⚠️ Doesn't test the LiveView handle_info/2 callback
+- ⚠️ Doesn't verify UI updates
 
-### 2. **Proactive Subscribe Pattern** (Better for BDD)
+### 2. **LiveView Real-Time Update Testing** (Recommended for UI Updates)
 
-Subscribe BEFORE the action that triggers the broadcast.
+Test that LiveView processes PubSub messages and updates the UI correctly using the same LiveView connection.
 
 **Pattern:**
 ```elixir
-step "user {string} is viewing the document", %{args: [email]} = context do
-  document = context[:document]
+step "user {string} is viewing workspace {string}",
+     %{args: [_user_email, _workspace_slug]} = context do
+  import Phoenix.LiveViewTest
   
-  # Subscribe to document updates on behalf of the "other user"
-  Phoenix.PubSub.subscribe(Jarga.PubSub, "document:#{document.id}")
+  workspace = context[:workspace]
+  conn = context[:conn]
   
-  {:ok, context |> Map.put(:subscribed_to_document, document.id)}
+  # Subscribe to PubSub to receive real-time notifications
+  Phoenix.PubSub.subscribe(Jarga.PubSub, "workspace:#{workspace.id}")
+  
+  # Mount and keep the LiveView connection alive for real-time testing
+  {:ok, view, html} = live(conn, ~p"/app/workspaces/#{workspace.slug}")
+  
+  {:ok,
+   context
+   |> Map.put(:pubsub_subscribed, true)
+   |> Map.put(:workspace_view, view)
+   |> Map.put(:last_html, html)}
 end
 
-step "I make the document private", context do
-  # ... perform action that broadcasts ...
-  {:ok, updated_context}
-end
-
-step "user {string} should receive a visibility changed notification", 
-     %{args: [email]} = context do
-  # Now check for the broadcast
-  assert_receive {:document_updated, %{changes: %{visibility: :private}}}, 1000
-  {:ok, context}
+step "the new project should appear in their workspace view", context do
+  import Phoenix.LiveViewTest
+  
+  project = context[:project]
+  view = context[:workspace_view]
+  
+  # Simulate the PubSub message that the LiveView would receive
+  # This tests the handle_info/2 callback directly
+  send(view.pid, {:project_added, project.id})
+  
+  # Render the view to see the effects of the PubSub message
+  html = render(view)
+  
+  # Verify the new project appears in the workspace view
+  name_escaped = Phoenix.HTML.html_escape(project.name) |> Phoenix.HTML.safe_to_string()
+  assert html =~ name_escaped
+  
+  {:ok, context |> Map.put(:last_html, html)}
 end
 ```
 
 **Pros:**
-- ✅ More realistic test flow
-- ✅ Matches the Gherkin scenario structure
-- ✅ Tests timing of broadcasts
-- ✅ Works in ConnCase
+- ✅ Tests the actual handle_info/2 callback
+- ✅ Verifies that LiveView assigns change in response to messages
+- ✅ Tests the real-time update mechanism directly
+- ✅ Still maintains full-stack testing (HTTP → HTML)
+- ✅ Faster than mounting new connections
+- ✅ No Wallaby needed
 
 **Cons:**
-- ⚠️ Still doesn't test LiveView push cycle
+- ⚠️ Requires storing LiveView connection in context
 
 ### 3. **Full Integration with Wallaby** (For @javascript scenarios)
 
-Test the complete real-time update flow with actual browser sessions.
+Test the complete real-time update flow with actual browser sessions, including JavaScript handling.
 
 **Pattern:**
 ```elixir
@@ -104,91 +132,79 @@ end
 **Pros:**
 - ✅ Tests complete end-to-end flow
 - ✅ Tests LiveView push and JavaScript handling
-- ✅ Tests actual UI updates
+- ✅ Tests actual UI updates in real browsers
 
 **Cons:**
 - ⚠️ Slow (requires browser automation)
 - ⚠️ Complex setup with multiple sessions
 - ⚠️ Only works with `@javascript` tag
 
-## Recommended Approach for Documents Feature
+## Recommended Approach
 
-For the documents feature, use a **hybrid approach**:
+Use a **three-tier testing strategy**:
 
-### Non-JavaScript Scenarios (ConnCase)
+### Tier 1: PubSub Broadcast Verification (Always Required)
 
-Use **Proactive Subscribe Pattern** for simple broadcast verification:
+Verify that the PubSub message is broadcast with correct data:
 
 ```elixir
-# In document_steps.exs
-
-step "user {string} is viewing the document", %{args: [_email]} = context do
-  document = context[:document]
+step "user {string} should receive a project created notification",
+     %{args: [_user_email]} = context do
+  project = context[:project]
   
-  # Subscribe to document-specific PubSub topic
-  Phoenix.PubSub.subscribe(Jarga.PubSub, "document:#{document.id}")
-  
-  {:ok, context |> Map.put(:pubsub_subscribed, true)}
-end
-
-step "user {string} is viewing the workspace", %{args: [_email]} = context do
-  workspace = context[:workspace]
-  
-  # Subscribe to workspace-specific PubSub topic
-  Phoenix.PubSub.subscribe(Jarga.PubSub, "workspace:#{workspace.id}")
-  
-  {:ok, context |> Map.put(:pubsub_subscribed, true)}
-end
-
-step "a visibility changed notification should be broadcast", context do
-  # The broadcast should have been sent in the previous action step
-  # Wait for and verify the message
-  assert_receive {:document_visibility_changed, payload}, 1000
-  
-  document = context[:document]
-  assert payload.document_id == document.id
-  assert payload.is_public in [true, false]
-  
-  {:ok, context}
-end
-
-step "a pin status changed notification should be broadcast", context do
-  assert_receive {:document_pinned_changed, payload}, 1000
-  
-  document = context[:document]
-  assert payload.document_id == document.id
-  assert payload.is_pinned in [true, false]
-  
-  {:ok, context}
-end
-
-step "a document deleted notification should be broadcast", context do
-  assert_receive {:document_deleted, payload}, 1000
-  
-  document = context[:document]
-  assert payload.document_id == document.id
-  
-  {:ok, context}
-end
-
-step "user {string} should receive a real-time title update", 
-     %{args: [_email]} = context do
-  document = context[:document]
-  
-  assert_receive {:document_updated, payload}, 1000
-  assert payload.document_id == document.id
-  assert payload.changes[:title] != nil
+  # Verify the PubSub broadcast was received
+  assert_receive {:project_added, project_id}, 1000
+  assert project_id == project.id
   
   {:ok, context}
 end
 ```
 
-### JavaScript Scenarios (Wallaby)
+### Tier 2: LiveView Real-Time Update Testing (Recommended for UI)
 
-For `@javascript` tagged scenarios, use Wallaby to test the full real-time collaboration:
+Test that LiveView processes the message and updates UI:
 
 ```elixir
-# Mark scenarios with @javascript tag in .feature file
+# Setup: Store LiveView connection
+step "user {string} is viewing workspace {string}",
+     %{args: [_user_email, _workspace_slug]} = context do
+  import Phoenix.LiveViewTest
+  
+  workspace = context[:workspace]
+  conn = context[:conn]
+  
+  Phoenix.PubSub.subscribe(Jarga.PubSub, "workspace:#{workspace.id}")
+  {:ok, view, html} = live(conn, ~p"/app/workspaces/#{workspace.slug}")
+  
+  {:ok,
+   context
+   |> Map.put(:workspace_view, view)
+   |> Map.put(:last_html, html)}
+end
+
+# Test: Simulate PubSub message and verify UI update
+step "the new project should appear in their workspace view", context do
+  import Phoenix.LiveViewTest
+  
+  project = context[:project]
+  view = context[:workspace_view]
+  
+  # Test handle_info/2 callback
+  send(view.pid, {:project_added, project.id})
+  html = render(view)
+  
+  # Verify UI update
+  assert html =~ project.name
+  
+  {:ok, context |> Map.put(:last_html, html)}
+end
+```
+
+### Tier 3: Wallaby Browser Testing (Optional for Complex JavaScript)
+
+Only use for scenarios that require actual JavaScript interaction:
+
+```elixir
 @javascript
 Scenario: Multiple users edit document simultaneously
   Given I am logged in as "alice@example.com"
@@ -198,18 +214,151 @@ Scenario: Multiple users edit document simultaneously
   Then user "charlie@example.com" should see my changes in real-time
 ```
 
+## Complete Example: Project Real-Time Updates
+
+### Feature File:
+```gherkin
+Scenario: Project creation notification to workspace members
+  Given I am logged in as "alice@example.com"
+  And user "charlie@example.com" is viewing workspace "product-team"
+  When I create a project with name "New Project" in workspace "product-team"
+  Then user "charlie@example.com" should receive a project created notification
+  And the new project should appear in their workspace view
+
+Scenario: Project update notification to workspace members
+  Given I am logged in as "alice@example.com"
+  And a project exists with name "Mobile App" owned by "alice@example.com"
+  And user "charlie@example.com" is viewing workspace "product-team"
+  When I update the project name to "Mobile Application"
+  Then user "charlie@example.com" should receive a project updated notification
+  And the project name should update in their UI without refresh
+
+Scenario: Project deletion notification to workspace members
+  Given I am logged in as "alice@example.com"
+  And a project exists with name "Old Project" owned by "alice@example.com"
+  And user "charlie@example.com" is viewing workspace "product-team"
+  When I delete the project
+  Then user "charlie@example.com" should receive a project deleted notification
+  And the project should be removed from their workspace view
+```
+
+### Step Definitions:
+
 ```elixir
-# Implementation would use Wallaby (future work)
-step "user {string} is also viewing the document", %{args: [email]} = context do
-  # This would start a second Wallaby session
-  # For now, just acknowledge it's a @javascript test
-  if context[:javascript] do
-    # Wallaby implementation
-    {:ok, context}
-  else
-    # Skip for non-javascript tests
-    {:ok, context}
-  end
+# Setup: Store LiveView connection for real-time testing
+step "user {string} is viewing workspace {string}",
+     %{args: [_user_email, _workspace_slug]} = context do
+  import Phoenix.LiveViewTest
+  
+  workspace = context[:workspace]
+  conn = context[:conn]
+  
+  # Subscribe to PubSub to simulate another user watching the workspace
+  Phoenix.PubSub.subscribe(Jarga.PubSub, "workspace:#{workspace.id}")
+  
+  # Mount and keep the LiveView connection alive for real-time testing
+  {:ok, view, html} = live(conn, ~p"/app/workspaces/#{workspace.slug}")
+  
+  {:ok,
+   context
+   |> Map.put(:other_user_viewing_workspace, true)
+   |> Map.put(:pubsub_subscribed, true)
+   |> Map.put(:workspace_view, view)
+   |> Map.put(:last_html, html)}
+end
+
+# Tier 1: Verify PubSub broadcast
+step "user {string} should receive a project created notification",
+     %{args: [_user_email]} = context do
+  project = context[:project]
+  
+  # Verify the PubSub broadcast was received
+  assert_receive {:project_added, project_id}, 1000
+  assert project_id == project.id
+  
+  {:ok, context}
+end
+
+step "user {string} should receive a project updated notification",
+     %{args: [_user_email]} = context do
+  project = context[:project]
+  
+  # Verify the PubSub broadcast was received
+  assert_receive {:project_updated, project_id, name}, 1000
+  assert project_id == project.id
+  assert name == project.name
+  
+  {:ok, context}
+end
+
+step "user {string} should receive a project deleted notification",
+     %{args: [_user_email]} = context do
+  project = context[:project]
+  
+  # Verify the PubSub broadcast was received
+  assert_receive {:project_removed, project_id}, 1000
+  assert project_id == project.id
+  
+  {:ok, context}
+end
+
+# Tier 2: Test LiveView handle_info/2 and UI update
+step "the new project should appear in their workspace view", context do
+  import Phoenix.LiveViewTest
+  
+  project = context[:project]
+  view = context[:workspace_view]
+  
+  # Simulate the PubSub message that the LiveView would receive
+  # This tests the handle_info/2 callback directly
+  send(view.pid, {:project_added, project.id})
+  
+  # Render the view to see the effects of the PubSub message
+  html = render(view)
+  
+  # Verify the new project appears in the workspace view
+  name_escaped = Phoenix.HTML.html_escape(project.name) |> Phoenix.HTML.safe_to_string()
+  assert html =~ name_escaped
+  
+  {:ok, context |> Map.put(:last_html, html)}
+end
+
+step "the project name should update in their UI without refresh", context do
+  import Phoenix.LiveViewTest
+  
+  project = context[:project]
+  view = context[:workspace_view]
+  
+  # Simulate the PubSub message that the LiveView would receive
+  send(view.pid, {:project_updated, project.id, project.name})
+  
+  # Render the view to see the effects of the PubSub message
+  html = render(view)
+  
+  # Verify the updated project name appears in the workspace view
+  name_escaped = Phoenix.HTML.html_escape(project.name) |> Phoenix.HTML.safe_to_string()
+  assert html =~ name_escaped
+  
+  {:ok, context |> Map.put(:last_html, html)}
+end
+
+step "the project should be removed from their workspace view", context do
+  import Phoenix.LiveViewTest
+  
+  project = context[:project]
+  view = context[:workspace_view]
+  
+  # Simulate the PubSub message that the LiveView would receive
+  send(view.pid, {:project_removed, project.id})
+  
+  # Render the view to see the effects of the PubSub message
+  html = render(view)
+  
+  # Verify the deleted project name does NOT appear in the workspace view
+  name_escaped = Phoenix.HTML.html_escape(project.name) |> Phoenix.HTML.safe_to_string()
+  refute html =~ name_escaped
+  
+  {:ok, context |> Map.put(:last_html, html)}
 end
 ```
 
@@ -218,6 +367,11 @@ end
 Document the expected PubSub message formats:
 
 ```elixir
+# Project messages
+{:project_added, project_id}
+{:project_updated, project_id, project_name}
+{:project_removed, project_id}
+
 # Document visibility changed
 {:document_visibility_changed, %{
   document_id: UUID,
@@ -243,12 +397,6 @@ Document the expected PubSub message formats:
   document_id: UUID,
   changes: %{title: String.t() | nil}
 }}
-
-# Yjs collaborative editing update
-{:yjs_update, %{
-  update: binary(),
-  user_id: String.t()
-}}
 ```
 
 ## Testing Checklist
@@ -256,27 +404,60 @@ Document the expected PubSub message formats:
 For each PubSub broadcast feature:
 
 - [ ] **Define message structure** - Document expected payload format
-- [ ] **Test broadcast is sent** - Verify message is published
-- [ ] **Test message content** - Verify payload contains correct data
-- [ ] **Test topic routing** - Verify message sent to correct topic
+- [ ] **Test broadcast is sent** - Verify message is published (Tier 1)
+- [ ] **Test message content** - Verify payload contains correct data (Tier 1)
+- [ ] **Test topic routing** - Verify message sent to correct topic (Tier 1)
+- [ ] **Test LiveView handle_info** - Verify LiveView processes message (Tier 2)
+- [ ] **Test UI updates** - Verify UI changes after message received (Tier 2)
 - [ ] **Test authorization** - Only authorized users receive messages
-- [ ] **Test timing** - Broadcast happens at the right time in the flow
-- [ ] **Add @javascript test** (optional) - For full end-to-end validation
+- [ ] **Add @javascript test** (optional) - For full end-to-end validation (Tier 3)
 
 ## Common Pitfalls
+
+### ❌ Not Storing LiveView Connection
+
+```elixir
+# WRONG - LiveView connection is lost
+step "user {string} is viewing workspace {string}", context do
+  {:ok, _view, _html} = live(conn, ~p"/app/workspaces/#{workspace.slug}")
+  {:ok, context}  # View is discarded!
+end
+
+step "the project should appear in their workspace view", context do
+  view = context[:workspace_view]  # nil - no view stored!
+  send(view.pid, {:project_added, project.id})  # Will crash!
+end
+```
+
+### ✅ Store LiveView Connection in Context
+
+```elixir
+# CORRECT - Store the view for later use
+step "user {string} is viewing workspace {string}", context do
+  {:ok, view, html} = live(conn, ~p"/app/workspaces/#{workspace.slug}")
+  {:ok, context |> Map.put(:workspace_view, view)}
+end
+
+step "the project should appear in their workspace view", context do
+  view = context[:workspace_view]  # View is available!
+  send(view.pid, {:project_added, project.id})  # Works!
+  html = render(view)
+  assert html =~ project.name
+end
+```
 
 ### ❌ Subscribing After Broadcast
 
 ```elixir
 # WRONG - The broadcast already happened!
-step "I make the document private", context do
-  result = Documents.update_document(user, document.id, %{is_public: false})
+step "I create a project", context do
+  Projects.create_project(user, workspace.id, %{name: "New Project"})
   {:ok, context}
 end
 
-step "a notification should be broadcast", context do
-  Phoenix.PubSub.subscribe(Jarga.PubSub, "document:#{document.id}")
-  assert_receive {:document_updated, _}, 1000  # Will timeout!
+step "user should receive notification", context do
+  Phoenix.PubSub.subscribe(Jarga.PubSub, "workspace:#{workspace.id}")
+  assert_receive {:project_added, _}, 1000  # Will timeout!
   {:ok, context}
 end
 ```
@@ -285,18 +466,18 @@ end
 
 ```elixir
 # CORRECT - Subscribe first, then act
-step "user {string} is viewing the document", context do
-  Phoenix.PubSub.subscribe(Jarga.PubSub, "document:#{document.id}")
+step "user is viewing workspace", context do
+  Phoenix.PubSub.subscribe(Jarga.PubSub, "workspace:#{workspace.id}")
   {:ok, context}
 end
 
-step "I make the document private", context do
-  result = Documents.update_document(user, document.id, %{is_public: false})
+step "I create a project", context do
+  Projects.create_project(user, workspace.id, %{name: "New Project"})
   {:ok, context}
 end
 
-step "a notification should be broadcast", context do
-  assert_receive {:document_updated, _}, 1000  # Will work!
+step "user should receive notification", context do
+  assert_receive {:project_added, _}, 1000  # Will work!
   {:ok, context}
 end
 ```
@@ -305,7 +486,7 @@ end
 
 ```elixir
 # WRONG - Message pattern doesn't match actual broadcast
-assert_receive {:visibility_changed, _}, 1000
+assert_receive {:created, _}, 1000
 ```
 
 Check the actual broadcast code to know the correct message format:
@@ -314,8 +495,8 @@ Check the actual broadcast code to know the correct message format:
 # In the use case or service
 Phoenix.PubSub.broadcast(
   Jarga.PubSub,
-  "document:#{document.id}",
-  {:document_visibility_changed, payload}
+  "workspace:#{workspace.id}",
+  {:project_added, project.id}
 )
 ```
 
@@ -323,60 +504,21 @@ Phoenix.PubSub.broadcast(
 
 ```elixir
 # CORRECT - Matches the broadcast format
-assert_receive {:document_visibility_changed, payload}, 1000
-```
-
-## Example: Complete Scenario
-
-**Feature File:**
-```gherkin
-Scenario: Document title change notification
-  Given I am logged in as "alice@example.com"
-  And a public document exists with title "Team Doc" owned by "alice@example.com"
-  And user "charlie@example.com" is viewing the document
-  When I update the document title to "Updated Team Doc"
-  Then user "charlie@example.com" should receive a real-time title update
-```
-
-**Step Definitions:**
-```elixir
-step "user {string} is viewing the document", %{args: [_email]} = context do
-  document = context[:document]
-  Phoenix.PubSub.subscribe(Jarga.PubSub, "document:#{document.id}")
-  {:ok, context |> Map.put(:pubsub_document_id, document.id)}
-end
-
-step "I update the document title to {string}", %{args: [new_title]} = context do
-  document = context[:document]
-  user = context[:current_user]
-  
-  {:ok, updated_document} = Documents.update_document(user, document.id, %{title: new_title})
-  
-  {:ok, context |> Map.put(:document, updated_document)}
-end
-
-step "user {string} should receive a real-time title update", %{args: [_email]} = context do
-  document = context[:document]
-  
-  # Wait for the broadcast message
-  assert_receive {:document_updated, payload}, 1000
-  
-  # Verify the payload
-  assert payload.document_id == document.id
-  assert payload.changes.title == document.title
-  
-  {:ok, context}
-end
+assert_receive {:project_added, project_id}, 1000
 ```
 
 ## Summary
 
-**Best Practice for BDD/Cucumber:**
-1. Use **Proactive Subscribe Pattern** for most scenarios (ConnCase)
-2. Subscribe in "user is viewing" setup steps
-3. Verify broadcasts in "should receive notification" assertion steps
-4. Use `@javascript` + Wallaby only for full end-to-end UI update tests
-5. Document expected message structures
-6. Always use `assert_receive` with timeout (1000ms recommended)
+**Best Practices for BDD/Cucumber PubSub Testing:**
 
-This approach keeps tests fast, maintainable, and properly validates the PubSub behavior without needing complex multi-session setups for most scenarios.
+1. **Always use Tier 1 (PubSub Verification)** - Verify messages are broadcast correctly
+2. **Use Tier 2 (LiveView Testing) for UI updates** - Test handle_info/2 callbacks and UI changes
+3. **Subscribe before actions** - PubSub.subscribe in "user is viewing" steps
+4. **Store LiveView connections** - Keep view in context for real-time testing
+5. **Use send/2 to simulate messages** - Test LiveView's handle_info/2 directly
+6. **Verify UI with render/1** - Check that UI updates after message processing
+7. **Only use Tier 3 (Wallaby) for JavaScript** - When client-side JS interaction is critical
+8. **Document message structures** - Keep message format documentation up-to-date
+9. **Use assert_receive with timeout** - 1000ms recommended for PubSub messages
+
+This three-tier approach provides comprehensive PubSub testing while keeping tests fast and maintainable.
