@@ -9,14 +9,14 @@ defmodule Jarga.Projects.Infrastructure.Queries.Queries do
   import Ecto.Query, warn: false
 
   alias Jarga.Accounts.Domain.Entities.User
-  alias Jarga.Projects.Domain.Entities.Project
+  alias Jarga.Projects.Infrastructure.Schemas.ProjectSchema
   alias Jarga.Workspaces.Domain.Entities.{Workspace, WorkspaceMember}
 
   @doc """
   Base query for projects.
   """
   def base do
-    Project
+    ProjectSchema
   end
 
   @doc """
@@ -133,7 +133,7 @@ defmodule Jarga.Projects.Infrastructure.Queries.Queries do
   Used for verification purposes by other contexts.
   """
   def exists_in_workspace(project_id, workspace_id) do
-    from(p in Project,
+    from(p in ProjectSchema,
       where: p.id == ^project_id and p.workspace_id == ^workspace_id
     )
   end

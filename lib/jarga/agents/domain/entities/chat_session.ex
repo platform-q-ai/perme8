@@ -17,7 +17,7 @@ defmodule Jarga.Agents.Domain.Entities.ChatSession do
 
     belongs_to(:user, Jarga.Accounts.Infrastructure.Schemas.UserSchema)
     belongs_to(:workspace, Jarga.Workspaces.Domain.Entities.Workspace)
-    belongs_to(:project, Jarga.Projects.Domain.Entities.Project)
+    belongs_to(:project, Jarga.Projects.Infrastructure.Schemas.ProjectSchema)
 
     has_many(:messages, Jarga.Agents.Domain.Entities.ChatMessage)
 

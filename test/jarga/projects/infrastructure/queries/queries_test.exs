@@ -81,12 +81,16 @@ defmodule Jarga.Projects.QueriesTest do
 
       # Update inserted_at to ensure ordering
       Repo.update_all(
-        from(p in Jarga.Projects.Domain.Entities.Project, where: p.id == ^project1.id),
+        from(p in Jarga.Projects.Infrastructure.Schemas.ProjectSchema,
+          where: p.id == ^project1.id
+        ),
         set: [inserted_at: ~U[2025-01-01 10:00:00Z]]
       )
 
       Repo.update_all(
-        from(p in Jarga.Projects.Domain.Entities.Project, where: p.id == ^project2.id),
+        from(p in Jarga.Projects.Infrastructure.Schemas.ProjectSchema,
+          where: p.id == ^project2.id
+        ),
         set: [inserted_at: ~U[2025-01-02 10:00:00Z]]
       )
 

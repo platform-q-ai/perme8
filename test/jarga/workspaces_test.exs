@@ -243,7 +243,7 @@ defmodule Jarga.WorkspacesTest do
       assert {:ok, _deleted_workspace} = Workspaces.delete_workspace(user, workspace.id)
 
       # Verify project is also deleted
-      assert Repo.get(Jarga.Projects.Domain.Entities.Project, project.id) == nil
+      assert Repo.get(Jarga.Projects.Infrastructure.Schemas.ProjectSchema, project.id) == nil
     end
 
     test "returns error when user is not a member of workspace" do

@@ -19,9 +19,8 @@ defmodule Jarga.Projects.Application.UseCases.DeleteProject do
 
   @behaviour Jarga.Projects.Application.UseCases.UseCase
 
-  alias Jarga.Repo
   alias Jarga.Accounts.Domain.Entities.User
-  alias Jarga.Projects.Infrastructure.Repositories.AuthorizationRepository
+  alias Jarga.Projects.Infrastructure.Repositories.{AuthorizationRepository, ProjectRepository}
   alias Jarga.Projects.Infrastructure.Notifiers.EmailAndPubSubNotifier
   alias Jarga.Workspaces
   alias Jarga.Workspaces.Application.Policies.PermissionsPolicy
@@ -85,7 +84,7 @@ defmodule Jarga.Projects.Application.UseCases.DeleteProject do
   end
 
   # Delete the project
-  defp delete_project(project) do
-    Repo.delete(project)
+  defp delete_project(project_schema) do
+    ProjectRepository.delete(project_schema)
   end
 end

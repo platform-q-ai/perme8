@@ -54,8 +54,10 @@ defmodule Jarga.Projects.Infrastructure.Repositories.AuthorizationRepository do
             {:error, reason}
         end
 
-      project ->
-        {:ok, project}
+      project_schema ->
+        # Returns schema for use cases that need to perform updates/deletes
+        # Repository methods will convert to domain entities
+        {:ok, project_schema}
     end
   end
 end

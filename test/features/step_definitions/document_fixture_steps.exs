@@ -218,10 +218,10 @@ defmodule DocumentFixtureSteps do
 
   defp find_project_by_name(workspace, project_name) do
     import Ecto.Query
-    alias Jarga.Projects.Domain.Entities.Project
+    alias Jarga.Projects.Infrastructure.Schemas.ProjectSchema
 
     Repo.all(
-      from(p in Project,
+      from(p in ProjectSchema,
         where: p.workspace_id == ^workspace.id and p.name == ^project_name
       )
     )

@@ -8,7 +8,7 @@ defmodule ProjectActionSteps do
 
   alias Jarga.Projects
   alias Jarga.Repo
-  alias Jarga.Projects.Domain.Entities.Project
+  alias Jarga.Projects.Infrastructure.Schemas.ProjectSchema
 
   # ============================================================================
   # PROJECT UPDATE ACTIONS
@@ -190,7 +190,7 @@ defmodule ProjectActionSteps do
     conn = context[:conn]
 
     # Reload from database
-    reloaded_project = Repo.get!(Project, project.id)
+    reloaded_project = Repo.get!(ProjectSchema, project.id)
     assert reloaded_project.name == expected_name
 
     # Verify via UI - mount the project show page and check the name appears
@@ -212,7 +212,7 @@ defmodule ProjectActionSteps do
     conn = context[:conn]
 
     # Reload from database
-    reloaded_project = Repo.get!(Project, project.id)
+    reloaded_project = Repo.get!(ProjectSchema, project.id)
     assert reloaded_project.name == expected_name
 
     # Verify via UI - mount the project show page and check the name appears
@@ -234,7 +234,7 @@ defmodule ProjectActionSteps do
     conn = context[:conn]
 
     # Reload from database
-    reloaded_project = Repo.get!(Project, project.id)
+    reloaded_project = Repo.get!(ProjectSchema, project.id)
     assert reloaded_project.name == expected_name
 
     # Verify via UI - mount the project show page and check the name appears
@@ -256,7 +256,7 @@ defmodule ProjectActionSteps do
     conn = context[:conn]
 
     # Reload from database
-    reloaded_project = Repo.get!(Project, project.id)
+    reloaded_project = Repo.get!(ProjectSchema, project.id)
     assert reloaded_project.description == expected_description
 
     # Verify via UI - mount the project show page and check the description appears
@@ -282,7 +282,7 @@ defmodule ProjectActionSteps do
     conn = context[:conn]
 
     # Reload from database
-    reloaded_project = Repo.get!(Project, project.id)
+    reloaded_project = Repo.get!(ProjectSchema, project.id)
     assert reloaded_project.color == expected_color
 
     # Verify via UI - mount the project show page and check the color appears

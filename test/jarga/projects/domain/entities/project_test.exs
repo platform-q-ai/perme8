@@ -1,7 +1,7 @@
 defmodule Jarga.Projects.ProjectTest do
   use Jarga.DataCase, async: true
 
-  alias Jarga.Projects.Domain.Entities.Project
+  alias Jarga.Projects.Infrastructure.Schemas.ProjectSchema
 
   import Jarga.AccountsFixtures
   import Jarga.WorkspacesFixtures
@@ -21,7 +21,7 @@ defmodule Jarga.Projects.ProjectTest do
         workspace_id: workspace.id
       }
 
-      changeset = Project.changeset(%Project{}, attrs)
+      changeset = ProjectSchema.changeset(%ProjectSchema{}, attrs)
 
       assert changeset.valid?
     end
@@ -33,7 +33,7 @@ defmodule Jarga.Projects.ProjectTest do
         workspace_id: workspace.id
       }
 
-      changeset = Project.changeset(%Project{}, attrs)
+      changeset = ProjectSchema.changeset(%ProjectSchema{}, attrs)
 
       assert "can't be blank" in errors_on(changeset).name
     end
@@ -45,7 +45,7 @@ defmodule Jarga.Projects.ProjectTest do
         workspace_id: workspace.id
       }
 
-      changeset = Project.changeset(%Project{}, attrs)
+      changeset = ProjectSchema.changeset(%ProjectSchema{}, attrs)
 
       assert "can't be blank" in errors_on(changeset).slug
     end
@@ -57,7 +57,7 @@ defmodule Jarga.Projects.ProjectTest do
         workspace_id: workspace.id
       }
 
-      changeset = Project.changeset(%Project{}, attrs)
+      changeset = ProjectSchema.changeset(%ProjectSchema{}, attrs)
 
       assert "can't be blank" in errors_on(changeset).user_id
     end
@@ -69,7 +69,7 @@ defmodule Jarga.Projects.ProjectTest do
         user_id: user.id
       }
 
-      changeset = Project.changeset(%Project{}, attrs)
+      changeset = ProjectSchema.changeset(%ProjectSchema{}, attrs)
 
       assert "can't be blank" in errors_on(changeset).workspace_id
     end
@@ -82,7 +82,7 @@ defmodule Jarga.Projects.ProjectTest do
         workspace_id: workspace.id
       }
 
-      changeset = Project.changeset(%Project{}, attrs)
+      changeset = ProjectSchema.changeset(%ProjectSchema{}, attrs)
 
       assert "can't be blank" in errors_on(changeset).name
     end
@@ -96,7 +96,7 @@ defmodule Jarga.Projects.ProjectTest do
         workspace_id: workspace.id
       }
 
-      changeset = Project.changeset(%Project{}, attrs)
+      changeset = ProjectSchema.changeset(%ProjectSchema{}, attrs)
 
       assert changeset.valid?
       assert Ecto.Changeset.get_change(changeset, :description) == "A test project description"
@@ -111,7 +111,7 @@ defmodule Jarga.Projects.ProjectTest do
         workspace_id: workspace.id
       }
 
-      changeset = Project.changeset(%Project{}, attrs)
+      changeset = ProjectSchema.changeset(%ProjectSchema{}, attrs)
 
       assert changeset.valid?
       assert Ecto.Changeset.get_change(changeset, :color) == "#10B981"
@@ -126,14 +126,14 @@ defmodule Jarga.Projects.ProjectTest do
         workspace_id: workspace.id
       }
 
-      changeset = Project.changeset(%Project{}, attrs)
+      changeset = ProjectSchema.changeset(%ProjectSchema{}, attrs)
 
       assert changeset.valid?
       assert Ecto.Changeset.get_change(changeset, :is_default) == true
     end
 
     test "defaults is_default to false" do
-      project = %Project{}
+      project = %ProjectSchema{}
       assert project.is_default == false
     end
 
@@ -146,14 +146,14 @@ defmodule Jarga.Projects.ProjectTest do
         workspace_id: workspace.id
       }
 
-      changeset = Project.changeset(%Project{}, attrs)
+      changeset = ProjectSchema.changeset(%ProjectSchema{}, attrs)
 
       assert changeset.valid?
       assert Ecto.Changeset.get_change(changeset, :is_archived) == true
     end
 
     test "defaults is_archived to false" do
-      project = %Project{}
+      project = %ProjectSchema{}
       assert project.is_archived == false
     end
 
@@ -166,7 +166,7 @@ defmodule Jarga.Projects.ProjectTest do
         workspace_id: workspace.id
       }
 
-      changeset1 = Project.changeset(%Project{}, attrs1)
+      changeset1 = ProjectSchema.changeset(%ProjectSchema{}, attrs1)
       {:ok, _project1} = Repo.insert(changeset1)
 
       # Try to create second project with same slug in same workspace
@@ -177,7 +177,7 @@ defmodule Jarga.Projects.ProjectTest do
         workspace_id: workspace.id
       }
 
-      changeset2 = Project.changeset(%Project{}, attrs2)
+      changeset2 = ProjectSchema.changeset(%ProjectSchema{}, attrs2)
       assert {:error, changeset} = Repo.insert(changeset2)
       assert "has already been taken" in errors_on(changeset).slug
     end
@@ -194,7 +194,7 @@ defmodule Jarga.Projects.ProjectTest do
         workspace_id: workspace1.id
       }
 
-      changeset1 = Project.changeset(%Project{}, attrs1)
+      changeset1 = ProjectSchema.changeset(%ProjectSchema{}, attrs1)
       {:ok, _project1} = Repo.insert(changeset1)
 
       # Create project with same slug in workspace2
@@ -205,7 +205,7 @@ defmodule Jarga.Projects.ProjectTest do
         workspace_id: workspace2.id
       }
 
-      changeset2 = Project.changeset(%Project{}, attrs2)
+      changeset2 = ProjectSchema.changeset(%ProjectSchema{}, attrs2)
       assert {:ok, _project2} = Repo.insert(changeset2)
     end
 
@@ -219,7 +219,7 @@ defmodule Jarga.Projects.ProjectTest do
         workspace_id: workspace.id
       }
 
-      changeset = Project.changeset(%Project{}, attrs)
+      changeset = ProjectSchema.changeset(%ProjectSchema{}, attrs)
 
       assert {:error, changeset} = Repo.insert(changeset)
       assert "does not exist" in errors_on(changeset).user_id
@@ -235,7 +235,7 @@ defmodule Jarga.Projects.ProjectTest do
         workspace_id: fake_workspace_id
       }
 
-      changeset = Project.changeset(%Project{}, attrs)
+      changeset = ProjectSchema.changeset(%ProjectSchema{}, attrs)
 
       assert {:error, changeset} = Repo.insert(changeset)
       assert "does not exist" in errors_on(changeset).workspace_id
@@ -253,7 +253,7 @@ defmodule Jarga.Projects.ProjectTest do
         workspace_id: workspace.id
       }
 
-      changeset = Project.changeset(%Project{}, attrs)
+      changeset = ProjectSchema.changeset(%ProjectSchema{}, attrs)
 
       assert changeset.valid?
       assert Ecto.Changeset.get_change(changeset, :name) == "Full Project"

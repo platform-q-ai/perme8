@@ -9,7 +9,7 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
   import JargaWeb.ChatLive.MessageHandlers
 
   alias Jarga.{Workspaces, Projects, Documents, Agents}
-  alias Jarga.Projects.Domain.Entities.Project
+  alias Jarga.Projects.Infrastructure.Schemas.ProjectSchema
   alias JargaWeb.Layouts
 
   @impl true
@@ -628,7 +628,10 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
          |> assign(:show_project_modal, false)
          |> assign(:show_members_modal, false)
          |> assign(:document_form, to_form(%{"title" => ""}))
-         |> assign(:project_form, to_form(Project.changeset(%Project{}, %{})))
+         |> assign(
+           :project_form,
+           to_form(ProjectSchema.changeset(%ProjectSchema{}, %{}), as: :project)
+         )
          |> assign(:invite_form, to_form(%{"email" => "", "role" => "member"}))}
 
       {:error, :workspace_not_found} ->
@@ -727,7 +730,7 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
     {:noreply,
      socket
      |> assign(:show_project_modal, false)
-     |> assign(:project_form, to_form(Project.changeset(%Project{}, %{})))}
+     |> assign(:project_form, to_form(ProjectSchema.changeset(%ProjectSchema{}, %{})))}
   end
 
   @impl true
@@ -744,7 +747,10 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
          socket
          |> assign(:projects, projects)
          |> assign(:show_project_modal, false)
-         |> assign(:project_form, to_form(Project.changeset(%Project{}, %{})))
+         |> assign(
+           :project_form,
+           to_form(ProjectSchema.changeset(%ProjectSchema{}, %{}), as: :project)
+         )
          |> put_flash(:info, "Project created successfully")}
 
       {:error, %Ecto.Changeset{} = changeset} ->

@@ -18,9 +18,7 @@ defmodule Jarga.Projects.Application.UseCases.CreateProject do
 
   @behaviour Jarga.Projects.Application.UseCases.UseCase
 
-  alias Jarga.Repo
   alias Jarga.Accounts.Domain.Entities.User
-  alias Jarga.Projects.Domain.Entities.Project
   alias Jarga.Projects.Domain.SlugGenerator
   alias Jarga.Projects.Infrastructure.Repositories.ProjectRepository
   alias Jarga.Projects.Infrastructure.Notifiers.EmailAndPubSubNotifier
@@ -103,8 +101,6 @@ defmodule Jarga.Projects.Application.UseCases.CreateProject do
         string_attrs
       end
 
-    %Project{}
-    |> Project.changeset(string_attrs)
-    |> Repo.insert()
+    ProjectRepository.insert(string_attrs)
   end
 end

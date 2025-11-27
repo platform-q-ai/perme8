@@ -20,9 +20,7 @@ defmodule Jarga.Projects.Application.UseCases.UpdateProject do
 
   @behaviour Jarga.Projects.Application.UseCases.UseCase
 
-  alias Jarga.Repo
-  alias Jarga.Projects.Domain.Entities.Project
-  alias Jarga.Projects.Infrastructure.Repositories.AuthorizationRepository
+  alias Jarga.Projects.Infrastructure.Repositories.{AuthorizationRepository, ProjectRepository}
   alias Jarga.Projects.Infrastructure.Notifiers.EmailAndPubSubNotifier
   alias Jarga.Workspaces
   alias Jarga.Workspaces.Application.Policies.PermissionsPolicy
@@ -77,19 +75,14 @@ defmodule Jarga.Projects.Application.UseCases.UpdateProject do
   end
 
   # Update project and send notification
-  defp update_project_and_notify(project, attrs, notifier) do
+  defp update_project_and_notify(project_schema, attrs, notifier) do
     # Convert atom keys to string keys to avoid mixed keys
     string_attrs =
       attrs
       |> Enum.map(fn {k, v} -> {to_string(k), v} end)
       |> Enum.into(%{})
 
-    result =
-      project
-      |> Project.changeset(string_attrs)
-      |> Repo.update()
-
-    case result do
+    case ProjectRepository.update(project_schema, string_attrs) do
       {:ok, updated_project} ->
         notifier.notify_project_updated(updated_project)
         {:ok, updated_project}

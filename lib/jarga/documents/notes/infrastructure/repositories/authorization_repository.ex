@@ -94,7 +94,7 @@ defmodule Jarga.Documents.Notes.Infrastructure.Repositories.AuthorizationReposit
   def verify_project_in_workspace(workspace_id, project_id) do
     # Check if project exists and belongs to workspace
     query =
-      from(p in Jarga.Projects.Domain.Entities.Project,
+      from(p in Jarga.Projects.Infrastructure.Schemas.ProjectSchema,
         where: p.id == ^project_id and p.workspace_id == ^workspace_id
       )
 
