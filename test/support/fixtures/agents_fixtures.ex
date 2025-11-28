@@ -10,7 +10,6 @@ defmodule Jarga.AgentsFixtures do
     exports: []
 
   import Jarga.AccountsFixtures
-  import Jarga.WorkspacesFixtures
 
   @doc """
   Generate a user agent.
@@ -44,40 +43,5 @@ defmodule Jarga.AgentsFixtures do
       |> Map.put_new(:temperature, 0.7)
 
     user_agent_fixture(attrs_with_defaults)
-  end
-
-  @doc """
-  Generate a chat session.
-  """
-  def chat_session_fixture(attrs \\ %{}) do
-    user = attrs[:user] || user_fixture()
-    workspace = attrs[:workspace] || workspace_fixture(user)
-
-    {:ok, session} =
-      Jarga.Agents.create_session(%{
-        user_id: user.id,
-        workspace_id: workspace.id,
-        title: attrs[:title],
-        project_id: attrs[:project_id]
-      })
-
-    session
-  end
-
-  @doc """
-  Generate a chat message.
-  """
-  def chat_message_fixture(attrs \\ %{}) do
-    session = attrs[:chat_session] || chat_session_fixture()
-
-    {:ok, message} =
-      Jarga.Agents.save_message(%{
-        chat_session_id: session.id,
-        role: attrs[:role] || "user",
-        content: attrs[:content] || "Test message content",
-        context_chunks: attrs[:context_chunks] || []
-      })
-
-    message
   end
 end

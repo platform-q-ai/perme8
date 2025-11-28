@@ -494,7 +494,7 @@ defmodule ChatPanelResponseSteps do
 
     if session && expected_content do
       # Load session with messages
-      {:ok, loaded_session} = Jarga.Agents.load_session(session.id)
+      {:ok, loaded_session} = Jarga.Chat.load_session(session.id)
 
       # Verify assistant message exists with content
       assert Enum.any?(loaded_session.messages, fn m ->

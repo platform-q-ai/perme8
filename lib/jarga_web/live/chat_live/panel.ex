@@ -11,6 +11,7 @@ defmodule JargaWeb.ChatLive.Panel do
   import JargaWeb.ChatLive.Components.Message
 
   alias Jarga.Agents
+  alias Jarga.Chat
 
   @impl true
   def mount(socket) do
@@ -170,8 +171,8 @@ defmodule JargaWeb.ChatLive.Panel do
   end
 
   defp load_most_recent_session(socket, user_id) do
-    with {:ok, [most_recent_session | _]} <- Agents.list_sessions(user_id, limit: 1),
-         {:ok, db_session} <- Agents.load_session(most_recent_session.id) do
+    with {:ok, [most_recent_session | _]} <- Chat.list_sessions(user_id, limit: 1),
+         {:ok, db_session} <- Chat.load_session(most_recent_session.id) do
       ui_messages = convert_messages_to_ui_format(db_session.messages)
 
       socket
@@ -212,13 +213,13 @@ defmodule JargaWeb.ChatLive.Panel do
   end
 
   defp handle_done(socket, content) do
-    {:ok, document_context} = Agents.prepare_chat_context(socket.assigns)
+    {:ok, document_context} = Chat.prepare_chat_context(socket.assigns)
 
     # Save assistant message to database if we have a session
     saved_msg =
       if socket.assigns.current_session_id do
         {:ok, msg} =
-          Agents.save_message(%{
+          Chat.save_message(%{
             chat_session_id: socket.assigns.current_session_id,
             role: "assistant",
             content: content
@@ -298,7 +299,7 @@ defmodule JargaWeb.ChatLive.Panel do
       when session_id != "" do
     current_user_id = get_nested(socket.assigns, [:current_user, :id])
 
-    with {:ok, session} <- Agents.load_session(session_id),
+    with {:ok, session} <- Chat.load_session(session_id),
          :ok <- verify_session_ownership(session, current_user_id) do
       ui_messages = convert_messages_to_ui_format(session.messages)
 
@@ -385,7 +386,7 @@ defmodule JargaWeb.ChatLive.Panel do
 
     socket =
       if user_id do
-        case Agents.list_sessions(user_id, limit: 20) do
+        case Chat.list_sessions(user_id, limit: 20) do
           {:ok, sessions} ->
             socket
             |> assign(:view_mode, :conversations)
@@ -410,7 +411,7 @@ defmodule JargaWeb.ChatLive.Panel do
   def handle_event("load_session", %{"session-id" => session_id}, socket) do
     current_user_id = get_nested(socket.assigns, [:current_user, :id])
 
-    with {:ok, session} <- Agents.load_session(session_id),
+    with {:ok, session} <- Chat.load_session(session_id),
          :ok <- verify_session_ownership(session, current_user_id) do
       ui_messages = convert_messages_to_ui_format(session.messages)
 
@@ -454,7 +455,7 @@ defmodule JargaWeb.ChatLive.Panel do
   def handle_event("delete_message", %{"message-id" => message_id}, socket) do
     user_id = get_nested(socket.assigns, [:current_user, :id])
 
-    case Agents.delete_message(message_id, user_id) do
+    case Chat.delete_message(message_id, user_id) do
       {:ok, _} ->
         # Remove message from UI
         updated_messages =
@@ -496,8 +497,8 @@ defmodule JargaWeb.ChatLive.Panel do
   end
 
   defp delete_and_refresh_sessions(session_id, user_id, socket) do
-    with {:ok, _deleted_session} <- Agents.delete_session(session_id, user_id),
-         {:ok, sessions} <- Agents.list_sessions(user_id, limit: 20) do
+    with {:ok, _deleted_session} <- Chat.delete_session(session_id, user_id),
+         {:ok, sessions} <- Chat.list_sessions(user_id, limit: 20) do
       updated_socket =
         socket
         |> clear_session_if_active(session_id)
@@ -526,7 +527,7 @@ defmodule JargaWeb.ChatLive.Panel do
 
         if user_id do
           {:ok, session} =
-            Agents.create_session(%{
+            Chat.create_session(%{
               user_id: user_id,
               workspace_id: get_nested(socket.assigns, [:current_workspace, :id]),
               project_id: get_nested(socket.assigns, [:current_project, :id]),
@@ -607,7 +608,7 @@ defmodule JargaWeb.ChatLive.Panel do
 
     # Save user message to database
     {:ok, saved_user_msg} =
-      Agents.save_message(%{
+      Chat.save_message(%{
         chat_session_id: socket.assigns.current_session_id,
         role: "user",
         content: message_text
@@ -623,7 +624,7 @@ defmodule JargaWeb.ChatLive.Panel do
 
     # Get selected agent and prepare messages
     selected_agent = find_selected_agent(socket.assigns)
-    {:ok, document_context} = Agents.prepare_chat_context(socket.assigns)
+    {:ok, document_context} = Chat.prepare_chat_context(socket.assigns)
     {:ok, system_message} = build_system_message(selected_agent, document_context)
 
     updated_messages = socket.assigns.messages ++ [user_message]
@@ -642,7 +643,7 @@ defmodule JargaWeb.ChatLive.Panel do
   # Builds system message based on agent configuration
   # Always combines agent's custom prompt with document context
   defp build_system_message(selected_agent, document_context) do
-    Agents.build_system_message_with_agent(selected_agent, document_context)
+    Chat.build_system_message_with_agent(selected_agent, document_context)
   end
 
   # Builds LLM options based on agent configuration

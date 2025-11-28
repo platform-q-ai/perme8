@@ -28,31 +28,19 @@ defmodule Jarga.Agents do
   """
 
   # Core context - cannot depend on JargaWeb (interface layer)
-  # Exports: ONLY domain entities (Agent, ChatSession, ChatMessage)
+  # Exports: ONLY domain entities (Agent)
   # All use cases and infrastructure modules are PRIVATE - accessed only via public API functions below
   use Boundary,
     top_level?: true,
     deps: [Jarga.Accounts, Jarga.Workspaces, Jarga.Projects, Jarga.Repo],
     exports: [
-      {Domain.Entities.Agent, []},
-      {Domain.Entities.ChatSession, []},
-      {Domain.Entities.ChatMessage, []}
+      {Domain.Entities.Agent, []}
     ]
 
   alias Jarga.Agents.Infrastructure.Services.LlmClient
 
   alias Jarga.Agents.Application.UseCases.{
-    PrepareContext,
     AgentQuery,
-    CreateSession,
-    SaveMessage,
-    DeleteMessage,
-    LoadSession,
-    ListSessions,
-    DeleteSession
-  }
-
-  alias Jarga.Agents.Application.UseCases.{
     ListUserAgents,
     CreateUserAgent,
     UpdateUserAgent,
@@ -63,47 +51,6 @@ defmodule Jarga.Agents do
     ValidateAgentParams,
     SyncAgentWorkspaces
   }
-
-  @doc """
-  Prepares chat context from LiveView assigns.
-
-  Extracts relevant document information (workspace, project, content) and
-  formats it for use in chat interactions.
-
-  ## Examples
-
-      iex> prepare_chat_context(%{current_workspace: %{name: "ACME"}})
-      {:ok, %{current_workspace: "ACME", ...}}
-
-  """
-  defdelegate prepare_chat_context(assigns), to: PrepareContext, as: :execute
-
-  @doc """
-  Builds a system message for the LLM from extracted context.
-
-  ## Examples
-
-      iex> build_system_message(%{current_workspace: "ACME"})
-      {:ok, %{role: "system", content: "..."}}
-
-  """
-  defdelegate build_system_message(context), to: PrepareContext
-
-  @doc """
-  Builds a system message that combines an agent's custom prompt with document context.
-
-  If the agent has a custom system_prompt, it combines it with document context.
-  Otherwise, uses the default system message with context.
-
-  ## Examples
-
-      iex> agent = %{system_prompt: "You are a code reviewer."}
-      iex> context = %{current_workspace: "ACME", document_content: "..."}
-      iex> build_system_message_with_agent(agent, context)
-      {:ok, %{role: "system", content: "You are a code reviewer.\\n\\nCurrent context:\\n..."}}
-
-  """
-  defdelegate build_system_message_with_agent(agent, context), to: PrepareContext
 
   @doc """
   Sends a chat completion request to the LLM.
@@ -128,75 +75,6 @@ defmodule Jarga.Agents do
 
   """
   defdelegate chat_stream(messages, caller_pid, opts \\ []), to: LlmClient
-
-  @doc """
-  Creates a new chat session.
-
-  ## Examples
-
-      iex> create_session(%{user_id: user.id})
-      {:ok, %ChatSession{}}
-
-  """
-  defdelegate create_session(attrs), to: CreateSession, as: :execute
-
-  @doc """
-  Saves a message to a chat session.
-
-  ## Examples
-
-      iex> save_message(%{chat_session_id: session.id, role: "user", content: "Hello"})
-      {:ok, %ChatMessage{}}
-
-  """
-  defdelegate save_message(attrs), to: SaveMessage, as: :execute
-
-  @doc """
-  Deletes a chat message by ID, verifying user ownership through the session.
-
-  ## Examples
-
-      iex> delete_message(message_id, user_id)
-      {:ok, %ChatMessage{}}
-
-      iex> delete_message(invalid_id, user_id)
-      {:error, :not_found}
-
-  """
-  defdelegate delete_message(message_id, user_id), to: DeleteMessage, as: :execute
-
-  @doc """
-  Loads a chat session with its messages.
-
-  ## Examples
-
-      iex> load_session(session_id)
-      {:ok, %ChatSession{messages: [...]}}
-
-  """
-  defdelegate load_session(session_id), to: LoadSession, as: :execute
-
-  @doc """
-  Lists chat sessions for a user.
-
-  ## Examples
-
-      iex> list_sessions(user_id)
-      {:ok, [%{id: ..., title: "...", message_count: 5}]}
-
-  """
-  defdelegate list_sessions(user_id, opts \\ []), to: ListSessions, as: :execute
-
-  @doc """
-  Deletes a chat session.
-
-  ## Examples
-
-      iex> delete_session(session_id, user_id)
-      {:ok, %ChatSession{}}
-
-  """
-  defdelegate delete_session(session_id, user_id), to: DeleteSession, as: :execute
 
   @doc """
   Executes an AI query with document context and streams response.

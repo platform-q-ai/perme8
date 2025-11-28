@@ -17,7 +17,7 @@ defmodule ChatPanelUISteps do
   import Phoenix.LiveViewTest
   # import Jarga.AccountsFixtures  # Not used in this file
   import Jarga.WorkspacesFixtures
-  import Jarga.AgentsFixtures
+  import Jarga.ChatFixtures
 
   # Wallaby.Query available for browser tests when needed
 

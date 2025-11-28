@@ -17,7 +17,7 @@ defmodule ChatPanelEditorSteps do
   # import Jarga.AccountsFixtures  # Not used in this file
   import Jarga.WorkspacesFixtures
   import Jarga.DocumentsFixtures
-  import Jarga.AgentsFixtures
+  import Jarga.ChatFixtures
 
   # alias Jarga.Agents.Infrastructure.Repositories.WorkspaceAgentRepository  # Not used in this file
 

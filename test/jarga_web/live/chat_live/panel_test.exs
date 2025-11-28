@@ -8,6 +8,7 @@ defmodule JargaWeb.ChatLive.PanelTest do
   import Jarga.DocumentsFixtures
 
   alias Jarga.Agents
+  alias Jarga.Chat
   alias JargaWeb.ChatLive.Components.Message
 
   describe "Panel component" do
@@ -299,7 +300,7 @@ defmodule JargaWeb.ChatLive.PanelTest do
       conn: conn,
       user: user
     } do
-      import Jarga.AgentsFixtures
+      import Jarga.ChatFixtures
 
       conn = log_in_user(conn, user)
 
@@ -568,7 +569,7 @@ defmodule JargaWeb.ChatLive.PanelTest do
       conn = log_in_user(conn, user)
 
       # Create a session with messages in the database
-      import Jarga.AgentsFixtures
+      import Jarga.ChatFixtures
       session = chat_session_fixture(user: user, title: "Previous Chat")
       _msg1 = chat_message_fixture(chat_session: session, role: "user", content: "Hello")
       _msg2 = chat_message_fixture(chat_session: session, role: "assistant", content: "Hi there!")
@@ -589,7 +590,7 @@ defmodule JargaWeb.ChatLive.PanelTest do
       conn = log_in_user(conn, user)
 
       # Create a session for a different user
-      import Jarga.AgentsFixtures
+      import Jarga.ChatFixtures
       other_user = user_fixture(%{email: "other@example.com"})
       other_session = chat_session_fixture(user: other_user, title: "Other User's Chat")
 
@@ -660,7 +661,7 @@ defmodule JargaWeb.ChatLive.PanelTest do
       conn = log_in_user(conn, user)
 
       # Create a session with messages
-      import Jarga.AgentsFixtures
+      import Jarga.ChatFixtures
       session = chat_session_fixture(user: user, title: "Old Conversation")
       _msg1 = chat_message_fixture(chat_session: session, content: "Test message 1")
       _msg2 = chat_message_fixture(chat_session: session, content: "Test message 2")
@@ -684,7 +685,7 @@ defmodule JargaWeb.ChatLive.PanelTest do
       refute has_element?(view, "p", "Old Conversation")
 
       # Verify session was deleted from database via context
-      assert {:error, :not_found} = Agents.load_session(session.id)
+      assert {:error, :not_found} = Chat.load_session(session.id)
     end
   end
 
@@ -767,12 +768,12 @@ defmodule JargaWeb.ChatLive.PanelTest do
     test "handles delete_session for already deleted session", %{conn: conn, user: user} do
       conn = log_in_user(conn, user)
 
-      import Jarga.AgentsFixtures
+      import Jarga.ChatFixtures
       session = chat_session_fixture(user: user)
       session_id = session.id
 
       # Delete the session via context
-      {:ok, _} = Jarga.Agents.delete_session(session_id, user.id)
+      {:ok, _} = Jarga.Chat.delete_session(session_id, user.id)
 
       {:ok, view, _html} = live(conn, ~p"/app")
 
@@ -804,7 +805,7 @@ defmodule JargaWeb.ChatLive.PanelTest do
     test "clear_session_if_active handles non-matching session", %{conn: conn, user: user} do
       conn = log_in_user(conn, user)
 
-      import Jarga.AgentsFixtures
+      import Jarga.ChatFixtures
       session1 = chat_session_fixture(user: user, title: "Session 1")
       session2 = chat_session_fixture(user: user, title: "Session 2")
 
@@ -869,7 +870,7 @@ defmodule JargaWeb.ChatLive.PanelTest do
     } do
       conn = log_in_user(conn, user)
 
-      import Jarga.AgentsFixtures
+      import Jarga.ChatFixtures
       session = chat_session_fixture(user: user)
 
       # Create messages with different content
@@ -902,7 +903,7 @@ defmodule JargaWeb.ChatLive.PanelTest do
       # Already tested in "restore_session ignores sessions from other users"
       # but good to be explicit about the security check
 
-      import Jarga.AgentsFixtures
+      import Jarga.ChatFixtures
       other_user = user_fixture(%{email: "hacker@example.com"})
       other_session = chat_session_fixture(user: other_user)
 
@@ -935,7 +936,7 @@ defmodule JargaWeb.ChatLive.PanelTest do
       assert has_element?(view, ".chat-bubble", "Create session")
 
       # Verify session was created
-      {:ok, sessions} = Agents.list_sessions(user.id, limit: 1)
+      {:ok, sessions} = Chat.list_sessions(user.id, limit: 1)
       assert length(sessions) == 1
     end
 
@@ -954,11 +955,11 @@ defmodule JargaWeb.ChatLive.PanelTest do
       |> render_submit(%{message: "Second"})
 
       # Should only have one session
-      {:ok, sessions} = Agents.list_sessions(user.id, limit: 10)
+      {:ok, sessions} = Chat.list_sessions(user.id, limit: 10)
       assert length(sessions) == 1
 
       # Both messages should be in same session
-      {:ok, session} = Agents.load_session(hd(sessions).id)
+      {:ok, session} = Chat.load_session(hd(sessions).id)
       assert length(session.messages) == 2
     end
 
@@ -1004,7 +1005,7 @@ defmodule JargaWeb.ChatLive.PanelTest do
     end
 
     test "handles session with no messages", %{conn: conn, user: user} do
-      import Jarga.AgentsFixtures
+      import Jarga.ChatFixtures
 
       # Create session with no messages
       session = chat_session_fixture(user: user, title: "Empty Session")
@@ -1060,7 +1061,7 @@ defmodule JargaWeb.ChatLive.PanelTest do
     end
 
     test "chat session auto-restores from database on mount", %{conn: conn, user: user} do
-      import Jarga.AgentsFixtures
+      import Jarga.ChatFixtures
 
       # Create a session in the database first
       session = chat_session_fixture(user: user, title: "Previous Chat")
@@ -1122,7 +1123,7 @@ defmodule JargaWeb.ChatLive.PanelTest do
       conn: conn,
       user: user
     } do
-      import Jarga.AgentsFixtures
+      import Jarga.ChatFixtures
 
       conn = log_in_user(conn, user)
       {:ok, view, _html} = live(conn, ~p"/app")
@@ -1135,7 +1136,7 @@ defmodule JargaWeb.ChatLive.PanelTest do
       assert has_element?(view, ".chat-bubble", "First session")
 
       # Get the first session ID
-      {:ok, sessions_after_first} = Agents.list_sessions(user.id, limit: 10)
+      {:ok, sessions_after_first} = Chat.list_sessions(user.id, limit: 10)
       assert length(sessions_after_first) == 1
       first_session_id = hd(sessions_after_first).id
 
@@ -1155,7 +1156,7 @@ defmodule JargaWeb.ChatLive.PanelTest do
       assert has_element?(view, ".chat-bubble", "Second session")
 
       # Verify we now have 2 sessions in the database
-      {:ok, sessions_after_second} = Agents.list_sessions(user.id, limit: 10)
+      {:ok, sessions_after_second} = Chat.list_sessions(user.id, limit: 10)
       assert length(sessions_after_second) == 2
 
       # Verify both sessions exist and are different
@@ -1166,19 +1167,19 @@ defmodule JargaWeb.ChatLive.PanelTest do
       assert second_session_id != nil
 
       # Load the first session to verify its messages weren't affected
-      {:ok, first_session} = Agents.load_session(first_session_id)
+      {:ok, first_session} = Chat.load_session(first_session_id)
       assert length(first_session.messages) == 1
       assert hd(first_session.messages).content == "First session"
 
       # Load the second session to verify it has the new message
-      {:ok, second_session} = Agents.load_session(second_session_id)
+      {:ok, second_session} = Chat.load_session(second_session_id)
       assert length(second_session.messages) == 1
       assert hd(second_session.messages).content == "Second session"
     end
 
     test "different users see their own sessions only", %{conn: conn, user: user} do
       # Create another user with a session
-      import Jarga.AgentsFixtures
+      import Jarga.ChatFixtures
       other_user = user_fixture(%{email: "other@example.com"})
       other_session = chat_session_fixture(user: other_user, title: "Other User's Chat")
 
@@ -1620,21 +1621,21 @@ defmodule JargaWeb.ChatLive.PanelTest do
     } do
       # Create a chat session with messages
       {:ok, session} =
-        Agents.create_session(%{
+        Chat.create_session(%{
           user_id: user.id,
           workspace_id: workspace.id,
           title: "Previous Conversation"
         })
 
       {:ok, _msg1} =
-        Agents.save_message(%{
+        Chat.save_message(%{
           chat_session_id: session.id,
           role: "user",
           content: "Hello"
         })
 
       {:ok, _msg2} =
-        Agents.save_message(%{
+        Chat.save_message(%{
           chat_session_id: session.id,
           role: "assistant",
           content: "Hi there!"

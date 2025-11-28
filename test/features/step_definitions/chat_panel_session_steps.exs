@@ -17,7 +17,7 @@ defmodule ChatPanelSessionSteps do
   import Phoenix.LiveViewTest
   # import Jarga.AccountsFixtures  # Not used in this file
   import Jarga.WorkspacesFixtures
-  import Jarga.AgentsFixtures
+  import Jarga.ChatFixtures
 
   # alias Jarga.Agents  # Not used in this file
 
