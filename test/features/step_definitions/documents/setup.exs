@@ -188,20 +188,24 @@ defmodule Documents.SetupSteps do
   end
 
   defp resolve_workspace_owner(context, workspace, workspace_slug) do
-    main_workspace = context[:workspace]
-
-    case main_workspace do
-      nil ->
-        context[:workspace_owner] || hd(Map.values(context[:users] || %{}))
-
-      main_ws when workspace.id == main_ws.id ->
-        context[:workspace_owner] || hd(Map.values(context[:users] || %{}))
-
-      _main_ws ->
-        get_in(context, [:additional_owners, workspace_slug]) ||
-          context[:workspace_owner] ||
-          hd(Map.values(context[:users] || %{}))
+    if main_workspace?(context[:workspace], workspace) do
+      get_default_owner(context)
+    else
+      get_additional_workspace_owner(context, workspace_slug)
     end
+  end
+
+  defp main_workspace?(nil, _workspace), do: true
+  defp main_workspace?(main_ws, workspace), do: workspace.id == main_ws.id
+
+  defp get_default_owner(context) do
+    context[:workspace_owner] || hd(Map.values(context[:users] || %{}))
+  end
+
+  defp get_additional_workspace_owner(context, workspace_slug) do
+    get_in(context, [:additional_owners, workspace_slug]) ||
+      context[:workspace_owner] ||
+      hd(Map.values(context[:users] || %{}))
   end
 
   step "user {string} is owner of workspace {string}",

@@ -21,6 +21,11 @@ defmodule JargaWeb.FeatureCase do
 
   use ExUnit.CaseTemplate
 
+  alias Jarga.Test.SandboxHelper
+  alias Jarga.TestUsers
+  alias Phoenix.Ecto.SQL.Sandbox, as: PhoenixSandbox
+  alias JargaWeb.DocumentSaveDebouncerSupervisor
+
   using do
     quote do
       use Wallaby.Feature
@@ -45,16 +50,16 @@ defmodule JargaWeb.FeatureCase do
   end
 
   setup _tags do
-    Jarga.Test.SandboxHelper.setup_test_sandbox()
+    SandboxHelper.setup_test_sandbox()
 
     # Ensure test users exist (idempotent)
-    Jarga.TestUsers.ensure_test_users_exist()
+    TestUsers.ensure_test_users_exist()
 
     # Allow the DocumentSaveDebouncerSupervisor and its children to access the sandbox
     # The supervisor spawns DocumentSaveDebouncer processes dynamically during tests
     allow_debouncer_supervisor()
 
-    metadata = Phoenix.Ecto.SQL.Sandbox.metadata_for(Jarga.Repo, self())
+    metadata = PhoenixSandbox.metadata_for(Jarga.Repo, self())
     {:ok, session} = Wallaby.start_session(metadata: metadata)
 
     # Periodically allow any new debouncer processes that get spawned
@@ -71,9 +76,9 @@ defmodule JargaWeb.FeatureCase do
   end
 
   defp allow_debouncer_supervisor do
-    case Process.whereis(JargaWeb.DocumentSaveDebouncerSupervisor) do
+    case Process.whereis(DocumentSaveDebouncerSupervisor) do
       nil -> :ok
-      pid -> Jarga.Test.SandboxHelper.allow_process_with_children(pid)
+      pid -> SandboxHelper.allow_process_with_children(pid)
     end
   end
 

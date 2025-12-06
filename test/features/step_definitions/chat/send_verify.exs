@@ -34,23 +34,13 @@ defmodule ChatSendVerifySteps do
   defp no_empty_messages_in_database?(nil), do: true
 
   defp no_empty_messages_in_database?(user) do
-    case Jarga.Chat.list_sessions(user.id, limit: 1) do
-      {:ok, []} ->
-        true
-
-      {:ok, [session | _]} ->
-        case Jarga.Chat.load_session(session.id) do
-          {:ok, loaded} ->
-            not Enum.any?(loaded.messages, fn msg ->
-              msg.role == "user" && msg.content == ""
-            end)
-
-          {:error, _} ->
-            true
-        end
-
-      {:error, _} ->
-        true
+    with {:ok, [session | _]} <- Jarga.Chat.list_sessions(user.id, limit: 1),
+         {:ok, loaded} <- Jarga.Chat.load_session(session.id) do
+      not Enum.any?(loaded.messages, fn msg ->
+        msg.role == "user" && msg.content == ""
+      end)
+    else
+      _ -> true
     end
   end
 

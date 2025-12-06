@@ -93,23 +93,27 @@ defmodule Workspaces.QuerySteps do
   # HELPER FUNCTIONS
   # ============================================================================
 
-  defp get_workspace_from_context(context, workspace_slug) do
-    case workspace_slug do
-      "product-team" ->
-        context[:workspace]
+  defp get_workspace_from_context(context, "product-team") do
+    context[:workspace]
+  end
 
-      "Dev Team" ->
-        context[:workspace] || context[:current_workspace]
+  defp get_workspace_from_context(context, "Dev Team") do
+    context[:workspace] || context[:current_workspace]
+  end
 
-      "QA Team" ->
-        Map.get(context[:workspaces] || %{}, "qa-team") ||
-          Map.get(context[:additional_workspaces] || %{}, "qa-team") ||
-          create_workspace_for_test(context, "QA Team", "qa-team")
+  defp get_workspace_from_context(context, "QA Team") do
+    find_or_create_workspace(context, "qa-team", "QA Team")
+  end
 
-      slug when is_binary(slug) ->
-        Map.get(context[:workspaces] || %{}, slug) ||
-          Map.get(context[:additional_workspaces] || %{}, slug)
-    end
+  defp get_workspace_from_context(context, slug) when is_binary(slug) do
+    Map.get(context[:workspaces] || %{}, slug) ||
+      Map.get(context[:additional_workspaces] || %{}, slug)
+  end
+
+  defp find_or_create_workspace(context, slug, name) do
+    Map.get(context[:workspaces] || %{}, slug) ||
+      Map.get(context[:additional_workspaces] || %{}, slug) ||
+      create_workspace_for_test(context, name, slug)
   end
 
   defp create_workspace_for_test(context, name, slug) do

@@ -26,6 +26,7 @@ defmodule JargaWeb.ChatLive.MessageHandlers do
   notification events to the notification bell component, and handle_event/3
   for agent selection events from the JavaScript hook.
   """
+  # credo:disable-for-next-line Credo.Check.Refactor.CyclomaticComplexity
   defmacro handle_chat_messages do
     quote do
       @impl true

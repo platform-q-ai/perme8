@@ -24,6 +24,7 @@ defmodule Jarga.DataCase do
   use ExUnit.CaseTemplate
 
   alias Ecto.Adapters.SQL.Sandbox
+  alias Jarga.Test.SandboxHelper
 
   using do
     quote do
@@ -57,9 +58,9 @@ defmodule Jarga.DataCase do
     end
   end
 
-  defp enable_pubsub_subscribers do
-    alias Jarga.Notifications.Infrastructure.Subscribers.WorkspaceInvitationSubscriber
+  alias Jarga.Notifications.Infrastructure.Subscribers.WorkspaceInvitationSubscriber
 
+  defp enable_pubsub_subscribers do
     # Enable PubSub in test environment
     original_value = Application.get_env(:jarga, :enable_pubsub_in_test, false)
     Application.put_env(:jarga, :enable_pubsub_in_test, true)
@@ -76,7 +77,7 @@ defmodule Jarga.DataCase do
       end
 
     # Allow the subscriber to access the database
-    Jarga.Test.SandboxHelper.allow_process(subscriber_pid)
+    SandboxHelper.allow_process(subscriber_pid)
 
     # Restore original config on test exit
     on_exit(fn ->

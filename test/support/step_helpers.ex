@@ -334,11 +334,9 @@ defmodule Jarga.Test.StepHelpers do
 
   # Check if view has an element (handles exceptions gracefully)
   defp check_has_element?(view, selector) do
-    try do
-      Phoenix.LiveViewTest.has_element?(view, selector)
-    rescue
-      _ -> false
-    end
+    Phoenix.LiveViewTest.has_element?(view, selector)
+  rescue
+    _ -> false
   end
 
   # ============================================================================
@@ -482,16 +480,15 @@ defmodule Jarga.Test.StepHelpers do
     limit = Keyword.get(opts, :limit, 5)
 
     case Jarga.Chat.list_sessions(user_id, limit: limit) do
-      {:ok, sessions} ->
-        Enum.reduce(sessions, 0, fn session, acc ->
-          case Jarga.Chat.load_session(session.id) do
-            {:ok, loaded} -> acc + length(loaded.messages)
-            _ -> acc
-          end
-        end)
+      {:ok, sessions} -> Enum.reduce(sessions, 0, &count_session_messages/2)
+      _ -> 0
+    end
+  end
 
-      _ ->
-        0
+  defp count_session_messages(session, acc) do
+    case Jarga.Chat.load_session(session.id) do
+      {:ok, loaded} -> acc + length(loaded.messages)
+      _ -> acc
     end
   end
 
@@ -509,19 +506,15 @@ defmodule Jarga.Test.StepHelpers do
     limit = Keyword.get(opts, :limit, 5)
 
     case Jarga.Chat.list_sessions(user_id, limit: limit) do
-      {:ok, sessions} ->
-        Enum.any?(sessions, fn session ->
-          case Jarga.Chat.load_session(session.id) do
-            {:ok, loaded} ->
-              Enum.any?(loaded.messages, fn msg -> msg.role == role end)
+      {:ok, sessions} -> Enum.any?(sessions, &session_has_role?(&1, role))
+      _ -> false
+    end
+  end
 
-            _ ->
-              false
-          end
-        end)
-
-      _ ->
-        false
+  defp session_has_role?(session, role) do
+    case Jarga.Chat.load_session(session.id) do
+      {:ok, loaded} -> Enum.any?(loaded.messages, fn msg -> msg.role == role end)
+      _ -> false
     end
   end
 
@@ -540,21 +533,24 @@ defmodule Jarga.Test.StepHelpers do
 
     case Jarga.Chat.list_sessions(user_id, limit: limit) do
       {:ok, sessions} ->
-        Enum.find_value(sessions, fn session ->
-          case Jarga.Chat.load_session(session.id) do
-            {:ok, loaded} ->
-              Enum.find_value(loaded.messages, fn msg ->
-                if msg.content == message_content, do: msg.role
-              end)
-
-            _ ->
-              nil
-          end
-        end)
+        Enum.find_value(sessions, &find_message_role_in_session(&1, message_content))
 
       _ ->
         nil
     end
+  end
+
+  defp find_message_role_in_session(session, message_content) do
+    case Jarga.Chat.load_session(session.id) do
+      {:ok, loaded} -> find_role_by_content(loaded.messages, message_content)
+      _ -> nil
+    end
+  end
+
+  defp find_role_by_content(messages, message_content) do
+    Enum.find_value(messages, fn msg ->
+      if msg.content == message_content, do: msg.role
+    end)
   end
 
   @doc """
@@ -572,16 +568,18 @@ defmodule Jarga.Test.StepHelpers do
 
     case Jarga.Chat.list_sessions(user_id, limit: limit) do
       {:ok, sessions} ->
-        Enum.any?(sessions, fn session ->
-          case Jarga.Chat.load_session(session.id) do
-            {:ok, loaded} ->
-              Enum.any?(loaded.messages, fn msg ->
-                msg.content == message_content && msg.role == role
-              end)
+        Enum.any?(sessions, &message_exists_in_session?(&1, message_content, role))
 
-            _ ->
-              false
-          end
+      _ ->
+        false
+    end
+  end
+
+  defp message_exists_in_session?(session, message_content, role) do
+    case Jarga.Chat.load_session(session.id) do
+      {:ok, loaded} ->
+        Enum.any?(loaded.messages, fn msg ->
+          msg.content == message_content && msg.role == role
         end)
 
       _ ->
@@ -602,28 +600,22 @@ defmodule Jarga.Test.StepHelpers do
   def verify_message_ordering!(user_id, opts \\ []) do
     limit = Keyword.get(opts, :limit, 5)
 
-    case Jarga.Chat.list_sessions(user_id, limit: limit) do
-      {:ok, sessions} ->
-        Enum.each(sessions, fn session ->
-          case Jarga.Chat.load_session(session.id) do
-            {:ok, loaded} ->
-              timestamps = Enum.map(loaded.messages, fn msg -> msg.inserted_at end)
-              sorted_timestamps = Enum.sort(timestamps, DateTime)
+    with {:ok, sessions} <- Jarga.Chat.list_sessions(user_id, limit: limit) do
+      Enum.each(sessions, &verify_session_message_ordering!/1)
+    end
 
-              unless timestamps == sorted_timestamps do
-                raise ExUnit.AssertionError,
-                  message: "Expected messages to be ordered by timestamp"
-              end
+    :ok
+  end
 
-            _ ->
-              :ok
-          end
-        end)
+  defp verify_session_message_ordering!(session) do
+    with {:ok, loaded} <- Jarga.Chat.load_session(session.id) do
+      timestamps = Enum.map(loaded.messages, fn msg -> msg.inserted_at end)
+      sorted_timestamps = Enum.sort(timestamps, DateTime)
 
-        :ok
-
-      _ ->
-        :ok
+      unless timestamps == sorted_timestamps do
+        raise ExUnit.AssertionError,
+          message: "Expected messages to be ordered by timestamp"
+      end
     end
   end
 
@@ -647,28 +639,31 @@ defmodule Jarga.Test.StepHelpers do
     projects
     |> Enum.filter(fn p -> p.name == name end)
     |> Enum.reject(fn p -> existing_project_id && p.id == existing_project_id end)
-    |> case do
-      [] ->
-        # Fallback: get any project with matching name
-        Enum.find(projects, fn p -> p.name == name end)
+    |> select_project_from_matches(projects, name)
+  end
 
-      [single] ->
-        single
+  defp select_project_from_matches([], projects, name) do
+    # Fallback: get any project with matching name
+    Enum.find(projects, fn p -> p.name == name end)
+  end
 
-      multiple ->
-        # Multiple matches: get the most recent one
-        multiple
-        |> Enum.sort_by(
-          fn p -> {p.inserted_at, p.id} end,
-          fn {t1, id1}, {t2, id2} ->
-            case DateTime.compare(t1, t2) do
-              :gt -> true
-              :lt -> false
-              :eq -> id1 > id2
-            end
-          end
-        )
-        |> List.first()
+  defp select_project_from_matches([single], _projects, _name), do: single
+
+  defp select_project_from_matches(multiple, _projects, _name) do
+    # Multiple matches: get the most recent one
+    multiple
+    |> Enum.sort_by(
+      fn p -> {p.inserted_at, p.id} end,
+      &compare_projects_by_date/2
+    )
+    |> List.first()
+  end
+
+  defp compare_projects_by_date({t1, id1}, {t2, id2}) do
+    case DateTime.compare(t1, t2) do
+      :gt -> true
+      :lt -> false
+      :eq -> id1 > id2
     end
   end
 

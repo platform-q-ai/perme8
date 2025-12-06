@@ -36,19 +36,15 @@ defmodule ChatSessionsHistorySteps do
   defp try_click_selectors(view, []), do: render(view)
 
   defp try_click_selectors(view, [{selector, text} | rest]) do
-    try do
-      view |> element(selector, text) |> render_click()
-    rescue
-      _ -> try_click_selectors(view, rest)
-    end
+    view |> element(selector, text) |> render_click()
+  rescue
+    _ -> try_click_selectors(view, rest)
   end
 
   defp try_click_selectors(view, [selector | rest]) do
-    try do
-      view |> element(selector) |> render_click()
-    rescue
-      _ -> try_click_selectors(view, rest)
-    end
+    view |> element(selector) |> render_click()
+  rescue
+    _ -> try_click_selectors(view, rest)
   end
 
   # ============================================================================

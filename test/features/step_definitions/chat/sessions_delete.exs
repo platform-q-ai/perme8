@@ -35,19 +35,15 @@ defmodule ChatSessionsDeleteSteps do
   defp try_click_selectors(view, []), do: render(view)
 
   defp try_click_selectors(view, [{selector, text} | rest]) do
-    try do
-      view |> element(selector, text) |> render_click()
-    rescue
-      _ -> try_click_selectors(view, rest)
-    end
+    view |> element(selector, text) |> render_click()
+  rescue
+    _ -> try_click_selectors(view, rest)
   end
 
   defp try_click_selectors(view, [selector | rest]) do
-    try do
-      view |> element(selector) |> render_click()
-    rescue
-      _ -> try_click_selectors(view, rest)
-    end
+    view |> element(selector) |> render_click()
+  rescue
+    _ -> try_click_selectors(view, rest)
   end
 
   # ============================================================================
@@ -172,18 +168,16 @@ defmodule ChatSessionsDeleteSteps do
   end
 
   defp delete_session_via_ui_or_direct(view, session, user) do
-    try do
-      view
-      |> element(
-        chat_panel_target() <>
-          " [phx-click=delete_session][phx-value-session-id=\"#{session.id}\"]"
-      )
-      |> render_click()
-    rescue
-      _ ->
-        Jarga.Chat.delete_session(session.id, user.id)
-        render(view)
-    end
+    view
+    |> element(
+      chat_panel_target() <>
+        " [phx-click=delete_session][phx-value-session-id=\"#{session.id}\"]"
+    )
+    |> render_click()
+  rescue
+    _ ->
+      Jarga.Chat.delete_session(session.id, user.id)
+      render(view)
   end
 
   # ============================================================================

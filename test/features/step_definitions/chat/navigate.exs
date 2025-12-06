@@ -204,7 +204,7 @@ defmodule ChatNavigateSteps do
     html =
       try do
         view
-        |> element("[phx-click=\"toggle_chat\"], .drawer-toggle, [aria-label*=\"Open\"]")
+        |> element(~s([phx-click="toggle_chat"], .drawer-toggle, [aria-label*="Open"]))
         |> render_click()
       rescue
         _ -> render(view)
@@ -252,12 +252,13 @@ defmodule ChatNavigateSteps do
 
   defp find_auto_selected_agent(user, workspace, agents) do
     case Jarga.Accounts.get_selected_agent_id(user.id, workspace.id) do
-      nil ->
-        nil
-
-      agent_id ->
-        Enum.find_value(agents, fn {_name, agent} -> if agent.id == agent_id, do: agent end)
+      nil -> nil
+      agent_id -> find_agent_by_id(agents, agent_id)
     end
+  end
+
+  defp find_agent_by_id(agents, agent_id) do
+    Enum.find_value(agents, fn {_name, agent} -> if agent.id == agent_id, do: agent end)
   end
 
   step "I view the chat panel", context do
