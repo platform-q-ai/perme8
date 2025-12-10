@@ -137,22 +137,25 @@ defmodule Mix.Tasks.StepLinter.Rules.NoStubs do
   ]
 
   # Patterns in function names that indicate real work
-  @action_patterns [
-    ~r/_fixture$/,
-    ~r/^create_/,
-    ~r/^update_/,
-    ~r/^delete_/,
-    ~r/^get_/,
-    ~r/^fetch_/,
-    ~r/^load_/,
-    ~r/^save_/,
-    ~r/^verify_/,
-    ~r/^validate_/,
-    ~r/^check_/,
-    ~r/^ensure_/,
-    ~r/^assert_/,
-    ~r/^refute_/
-  ]
+  # Note: These are compiled at runtime to avoid serialization issues
+  defp action_patterns do
+    [
+      ~r/_fixture$/,
+      ~r/^create_/,
+      ~r/^update_/,
+      ~r/^delete_/,
+      ~r/^get_/,
+      ~r/^fetch_/,
+      ~r/^load_/,
+      ~r/^save_/,
+      ~r/^verify_/,
+      ~r/^validate_/,
+      ~r/^check_/,
+      ~r/^ensure_/,
+      ~r/^assert_/,
+      ~r/^refute_/
+    ]
+  end
 
   @impl true
   def name, do: "no_stubs"
@@ -276,7 +279,7 @@ defmodule Mix.Tasks.StepLinter.Rules.NoStubs do
   # Check if a function name indicates real work
   defp action_function?(func_name) when is_atom(func_name) do
     func_name in @action_functions ||
-      Enum.any?(@action_patterns, &Regex.match?(&1, Atom.to_string(func_name)))
+      Enum.any?(action_patterns(), &Regex.match?(&1, Atom.to_string(func_name)))
   end
 
   defp action_function?(_), do: false
