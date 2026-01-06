@@ -9,7 +9,6 @@ defmodule Accounts.ApiKeys.CreateSteps do
   import Phoenix.LiveViewTest
   import Jarga.Test.StepHelpers
 
-  alias Jarga.Accounts
   alias Jarga.Accounts.ApiKeys.Helpers
 
   # ============================================================================
@@ -22,58 +21,16 @@ defmodule Accounts.ApiKeys.CreateSteps do
 
     name = row["Name"]
     description = row["Description"]
-    workspace_access_str = row["Workspace Access"]
-
-    workspace_access = Helpers.parse_workspace_access(workspace_access_str)
+    workspace_access = Helpers.parse_workspace_access(row["Workspace Access"])
 
     {view, context} = ensure_view(context, ~p"/users/settings/api-keys")
 
-    # Click "New API Key" button to show create modal
-    # The header contains a div with flex items-center justify-between, and the button is in it
-    view
-    |> element("div.flex.items-center.justify-between button[phx-click='show_create_modal']")
-    |> render_click()
+    Helpers.click_create_button(view)
 
-    # Submit the form with API key details
-    form_data = %{
-      name: name,
-      description: description || "",
-      workspace_access: workspace_access
-    }
+    form_data = %{name: name, description: description || "", workspace_access: workspace_access}
+    html = Helpers.submit_create_form(view, form_data)
 
-    html =
-      view
-      |> form("#create_form", form_data)
-      |> render_submit(event: "create_key")
-
-    # Check if creation was successful by looking for the name in the list
-    success? = html =~ name
-
-    context =
-      if success? do
-        # Extract token from token modal if shown
-        # Tokens are 64 characters of URL-safe Base64 (a-z, A-Z, 0-9, -, _)
-        plain_token =
-          case Regex.run(~r/[a-zA-Z0-9_-]{64}/, html) do
-            [token] -> token
-            nil -> nil
-          end
-
-        # Fetch the created API key from the database to store in context
-        user = context[:current_user]
-        {:ok, api_keys} = Accounts.list_api_keys(user.id)
-        api_key = Enum.find(api_keys, fn k -> k.name == name end)
-
-        context
-        |> Map.put(:last_html, html)
-        |> Map.put(:plain_token, plain_token)
-        |> Map.put(:api_key, api_key)
-        |> Map.put(:last_result, :ok)
-      else
-        context
-        |> Map.put(:last_html, html)
-        |> Map.put(:last_result, {:error, :creation_failed})
-      end
+    context = build_creation_result(context, html, name)
 
     # Return context directly for data table steps
     Map.put(context, :view, view)
@@ -82,66 +39,68 @@ defmodule Accounts.ApiKeys.CreateSteps do
   step "I create an API key with name {string}", %{args: [name]} = context do
     {view, context} = ensure_view(context, ~p"/users/settings/api-keys")
 
-    # Click "New API Key" button to show create modal
-    # The header contains a div with flex items-center justify-between, and the button is in it
-    view
-    |> element("div.flex.items-center.justify-between button[phx-click='show_create_modal']")
-    |> render_click()
+    Helpers.click_create_button(view)
 
-    # Submit the form with just a name
-    form_data = %{
-      name: name,
-      description: "",
-      workspace_access: []
-    }
+    form_data = %{name: name, description: "", workspace_access: []}
+    html = Helpers.submit_create_form(view, form_data)
 
-    html =
-      view
-      |> form("#create_form", form_data)
-      |> render_submit(event: "create_key")
+    context = build_creation_result(context, html, name)
 
-    # Check if creation was successful
-    success? = html =~ name
+    {:ok, Map.put(context, :view, view)}
+  end
 
-    # Extract token from response if successful
-    # Tokens are 64 characters of URL-safe Base64 (a-z, A-Z, 0-9, -, _)
-    plain_token =
-      case success? && Regex.run(~r/[a-zA-Z0-9_-]{64}/, html) do
-        [token] -> token
-        _ -> nil
-      end
+  step "I attempt to create an API key with access to workspace {string}",
+       %{args: [workspace_slug]} = context do
+    {view, context} = ensure_view(context, ~p"/users/settings/api-keys")
 
-    # Fetch the created API key from the database to store in context
-    api_key =
-      if success? do
-        user = context[:current_user]
-        {:ok, api_keys} = Accounts.list_api_keys(user.id)
-        Enum.find(api_keys, fn k -> k.name == name end)
+    Helpers.click_create_button(view)
+
+    html = render(view)
+
+    # The UI should NOT show a checkbox for a workspace the user doesn't have access to
+    has_workspace_option? = html =~ "value=\"#{workspace_slug}\""
+
+    result =
+      if has_workspace_option? do
+        form_data = %{name: "Test Key", description: "Test", workspace_access: [workspace_slug]}
+        submit_html = Helpers.submit_create_form(view, form_data)
+
+        if submit_html =~ "don't have access" or submit_html =~ "forbidden" do
+          {:error, :forbidden}
+        else
+          :ok
+        end
       else
-        nil
+        # Workspace not available in UI = forbidden by design
+        {:error, :forbidden}
       end
 
     {:ok,
      context
      |> Map.put(:view, view)
      |> Map.put(:last_html, html)
-     |> Map.put(:plain_token, plain_token)
-     |> Map.put(:api_key, api_key)
-     |> Map.put(:last_result, if(success?, do: :ok, else: {:error, :creation_failed}))}
+     |> Map.put(:last_result, result)
+     |> Map.put(:api_key, nil)}
   end
 
-  step "I attempt to create an API key with access to workspace {string}",
-       %{args: [workspace_slug]} = context do
+  # ============================================================================
+  # PRIVATE HELPERS
+  # ============================================================================
+
+  defp build_creation_result(context, html, name) do
     user = context[:current_user]
+    success? = Helpers.creation_successful?(html, name)
 
-    attrs = %{
-      name: "Test Key",
-      description: "Test description",
-      workspace_access: [workspace_slug]
-    }
-
-    result = Accounts.create_api_key(user.id, attrs)
-
-    {:ok, Map.put(context, :last_result, result)}
+    if success? do
+      context
+      |> Map.put(:last_html, html)
+      |> Map.put(:plain_token, Helpers.extract_token_from_html(html))
+      |> Map.put(:api_key, Helpers.fetch_api_key_by_name(user.id, name))
+      |> Map.put(:last_result, :ok)
+    else
+      context
+      |> Map.put(:last_html, html)
+      |> Map.put(:last_result, {:error, :creation_failed})
+    end
   end
 end

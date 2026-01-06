@@ -17,16 +17,24 @@ defmodule JargaWeb.Router do
     plug :accepts, ["json"]
   end
 
+  pipeline :api_authenticated do
+    plug :accepts, ["json"]
+    plug JargaWeb.Plugs.ApiAuthPlug
+  end
+
   scope "/", JargaWeb do
     pipe_through :browser
 
     get "/", PageController, :home
   end
 
-  # Other scopes may use custom stacks.
-  # scope "/api", JargaWeb do
-  #   pipe_through :api
-  # end
+  # API routes with API key authentication
+  scope "/api", JargaWeb do
+    pipe_through :api_authenticated
+
+    get "/workspaces", WorkspaceApiController, :index
+    get "/workspaces/:slug", WorkspaceApiController, :show
+  end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development
   if Application.compile_env(:jarga, :dev_routes) do

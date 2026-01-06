@@ -86,8 +86,55 @@ defmodule Jarga.Accounts.Domain.Policies.WorkspaceAccessPolicy do
       iex> WorkspaceAccessPolicy.has_workspace_access?(api_key, "workspace3")
       false
 
+      iex> api_key = %{workspace_access: []}
+      iex> WorkspaceAccessPolicy.has_workspace_access?(api_key, "workspace1")
+      false
+
+      iex> api_key = %{workspace_access: nil}
+      iex> WorkspaceAccessPolicy.has_workspace_access?(api_key, "workspace1")
+      false
+
   """
+  def has_workspace_access?(%{workspace_access: nil}, _workspace_slug), do: false
+  def has_workspace_access?(%{workspace_access: []}, _workspace_slug), do: false
+
   def has_workspace_access?(%{workspace_access: workspace_slugs}, workspace_slug) do
     workspace_slug in workspace_slugs
+  end
+
+  @doc """
+  Filters a list of workspaces to only those the API key has access to.
+
+  Returns workspaces whose slug is in the API key's workspace_access list.
+
+  ## Parameters
+
+    - `api_key` - ApiKey domain entity (must have `workspace_access` field)
+    - `all_workspaces` - List of workspace entities/maps with `slug` field
+
+  ## Returns
+
+  List of workspaces that the API key can access
+
+  ## Examples
+
+      iex> api_key = %{workspace_access: ["product-team"]}
+      iex> workspaces = [%{slug: "product-team"}, %{slug: "engineering"}]
+      iex> WorkspaceAccessPolicy.list_accessible_workspaces(api_key, workspaces)
+      [%{slug: "product-team"}]
+
+      iex> api_key = %{workspace_access: []}
+      iex> WorkspaceAccessPolicy.list_accessible_workspaces(api_key, workspaces)
+      []
+
+  """
+  @spec list_accessible_workspaces(map(), list()) :: list()
+  def list_accessible_workspaces(%{workspace_access: nil}, _all_workspaces), do: []
+  def list_accessible_workspaces(%{workspace_access: []}, _all_workspaces), do: []
+
+  def list_accessible_workspaces(%{workspace_access: workspace_slugs}, all_workspaces) do
+    Enum.filter(all_workspaces, fn workspace ->
+      workspace.slug in workspace_slugs
+    end)
   end
 end

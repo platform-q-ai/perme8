@@ -10,11 +10,11 @@ defmodule Jarga.AccountsFixtures do
   import Ecto.Query
 
   alias Jarga.Accounts
-  alias Jarga.Accounts.Application.Services.PasswordService
+  alias Jarga.Accounts.Application.Services.{ApiKeyTokenService, PasswordService}
   alias Jarga.Accounts.Domain.Entities.User
   alias Jarga.Accounts.Domain.Scope
   alias Jarga.Accounts.Domain.Services.TokenBuilder
-  alias Jarga.Accounts.Infrastructure.Schemas.{UserSchema, UserTokenSchema}
+  alias Jarga.Accounts.Infrastructure.Schemas.{ApiKeySchema, UserSchema, UserTokenSchema}
 
   # Private test helper - updates user directly in database
   defp update_user_directly(user, attrs) do
@@ -124,5 +124,36 @@ defmodule Jarga.AccountsFixtures do
       ),
       []
     )
+  end
+
+  @doc """
+  Creates an API key directly in the database without workspace validation.
+
+  This is useful for testing edge cases where an API key has access to a
+  workspace that doesn't exist (e.g., workspace was deleted after API key
+  was created).
+
+  Returns `{api_key_entity, plain_token}`.
+  """
+  def api_key_fixture_without_validation(user_id, attrs \\ %{}) do
+    plain_token = ApiKeyTokenService.generate_token()
+    hashed_token = ApiKeyTokenService.hash_token(plain_token)
+
+    api_key_attrs = %{
+      name: Map.get(attrs, :name, "Test API Key"),
+      description: Map.get(attrs, :description),
+      hashed_token: hashed_token,
+      user_id: user_id,
+      workspace_access: Map.get(attrs, :workspace_access, []),
+      is_active: Map.get(attrs, :is_active, true)
+    }
+
+    {:ok, schema} =
+      %ApiKeySchema{}
+      |> ApiKeySchema.changeset(api_key_attrs)
+      |> Jarga.Repo.insert()
+
+    api_key = ApiKeySchema.to_entity(schema)
+    {api_key, plain_token}
   end
 end

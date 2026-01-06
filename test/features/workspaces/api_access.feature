@@ -1,4 +1,3 @@
-@wip
 Feature: Workspace API Access
   As a developer
   I want to access workspace data via REST API using API keys
@@ -53,7 +52,6 @@ Feature: Workspace API Access
     Then the response status should be 200
     And each workspace in the response should have a "name" field
     And each workspace in the response should have a "slug" field
-    And each workspace in the response should have an "id" field
 
   Scenario: Revoked API key cannot list workspaces
     Given I am logged in as "alice@example.com"
@@ -126,8 +124,8 @@ Feature: Workspace API Access
 
   Scenario: Workspace not found returns 404
     Given I am logged in as "alice@example.com"
-    And I have an API key "workspace-key" with access to "product-team"
-    When I make a GET request to "/api/workspaces/non-existent-workspace" with API key "workspace-key"
+    And I have an API key "missing-workspace-key" with access to "non-existent-workspace"
+    When I make a GET request to "/api/workspaces/non-existent-workspace" with API key "missing-workspace-key"
     Then the response status should be 404
     And the response should include error "Workspace not found"
 

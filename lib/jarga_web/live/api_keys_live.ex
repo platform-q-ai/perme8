@@ -106,7 +106,7 @@ defmodule JargaWeb.ApiKeysLive do
                       </td>
                       <td>
                         <%= if Enum.empty?(api_key.workspace_access) do %>
-                          <span class="badge badge-primary badge-sm">All Workspaces</span>
+                          <span class="badge badge-warning badge-sm">No Access</span>
                         <% else %>
                           <div class="flex flex-wrap gap-1">
                             <%= for workspace <- api_key.workspace_access do %>
@@ -187,11 +187,11 @@ defmodule JargaWeb.ApiKeysLive do
                     <span class="label-text font-medium">Workspace Access</span>
                   </label>
                   <p class="text-xs text-base-content/70 mb-2">
-                    Select which workspaces this key can access. Leave empty for all workspaces.
+                    Select which workspaces this key can access. If none are selected, the key will have no access.
                   </p>
                   <%= if Enum.empty?(@available_workspaces) do %>
                     <p class="text-sm text-base-content/50 py-2">
-                      No workspaces available. The key will have access to all your workspaces.
+                      No workspaces available. The key will have no workspace access.
                     </p>
                   <% else %>
                     <div class="flex flex-wrap gap-3">

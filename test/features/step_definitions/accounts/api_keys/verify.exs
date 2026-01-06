@@ -103,11 +103,22 @@ defmodule Accounts.ApiKeys.VerifySteps do
   # ============================================================================
 
   step "I should see {int} API keys", %{args: [count]} = context do
-    user = context[:current_user]
-    {:ok, api_keys} = Accounts.list_api_keys(user.id)
+    html = context[:last_html]
 
-    assert length(api_keys) == count,
-           "Expected #{count} API keys, but found #{length(api_keys)}"
+    # Count API keys by counting table rows in tbody only
+    # The thead has one <tr> for headers, so we count rows in tbody
+    # Each API key shows its name in a div with text-sm font-medium class
+    api_key_names = Regex.scan(~r/<div class="text-sm font-medium">([^<]+)<\/div>/, html)
+    actual_count = length(api_key_names)
+
+    # If count is 0, verify the empty state message is shown
+    if count == 0 do
+      assert html =~ "No API keys" or actual_count == 0,
+             "Expected 0 API keys, but found #{actual_count}"
+    else
+      assert actual_count == count,
+             "Expected #{count} API keys, but found #{actual_count} in HTML"
+    end
 
     {:ok, context}
   end

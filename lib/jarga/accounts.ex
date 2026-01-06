@@ -39,15 +39,19 @@ defmodule Jarga.Accounts do
   # Core context - cannot depend on JargaWeb (interface layer)
   # Exports: Main context module and shared types (User, Scope, ApiKey)
   # Internal modules (UserToken, UserNotifier) remain private
+  # Note: Does NOT depend on Jarga.Workspaces to avoid dependency cycle.
+  # Use cases in this context use dependency injection for cross-context calls.
   use Boundary,
     top_level?: true,
-    deps: [Jarga.Repo, Jarga.Mailer, Jarga.Workspaces],
+    deps: [Jarga.Repo, Jarga.Mailer],
     exports: [
       {Domain.Entities.User, []},
       {Domain.Entities.ApiKey, []},
       {Domain.Scope, []},
       {Application.Services.PasswordService, []},
+      {Application.Services.ApiKeyTokenService, []},
       {Domain.Services.TokenBuilder, []},
+      {Domain.Policies.WorkspaceAccessPolicy, []},
       {Infrastructure.Schemas.UserSchema, []},
       {Infrastructure.Schemas.UserTokenSchema, []},
       {Infrastructure.Schemas.ApiKeySchema, []}
@@ -106,6 +110,16 @@ defmodule Jarga.Accounts do
       end
     else
       nil
+    end
+  end
+
+  @doc """
+  Gets a single user by ID. Returns `nil` if not found.
+  """
+  def get_user(id) do
+    case Repo.get(UserSchema, id) do
+      nil -> nil
+      schema -> User.from_schema(schema)
     end
   end
 
@@ -428,5 +442,58 @@ defmodule Jarga.Accounts do
   """
   def verify_api_key(plain_token) when is_binary(plain_token) do
     UseCases.VerifyApiKey.execute(plain_token)
+  end
+
+  ## API Key Workspace Access
+
+  @doc """
+  Lists workspaces accessible via an API key.
+
+  Returns workspaces that the user has access to AND are listed in the
+  API key's workspace_access list.
+
+  ## Parameters
+
+    - `user` - The user entity (API key owner)
+    - `api_key` - The verified API key entity
+    - `opts` - Required options:
+      - `list_workspaces_for_user` - Function to list user's workspaces
+
+  ## Returns
+
+    `{:ok, workspaces}` - List of accessible workspaces with basic info
+
+  """
+  def list_accessible_workspaces(user, api_key, opts) do
+    UseCases.ListAccessibleWorkspaces.execute(user, api_key, opts)
+  end
+
+  @doc """
+  Gets a workspace with documents and projects via API key.
+
+  Retrieves workspace details including documents and projects. The API key
+  acts as its owner, so documents and projects are filtered by user access.
+  All queries use workspace slug, not ID.
+
+  ## Parameters
+
+    - `user` - The user entity (API key owner)
+    - `api_key` - The verified API key entity
+    - `workspace_slug` - The slug of the workspace to retrieve
+    - `opts` - Required options:
+      - `get_workspace_by_slug` - Function (user, slug -> {:ok, workspace} | {:error, reason})
+      - `list_documents_by_slug` - Function (user, workspace_slug -> [document])
+      - `list_projects_by_slug` - Function (user, workspace_slug -> [project])
+
+  ## Returns
+
+    - `{:ok, workspace_data}` - Workspace with documents and projects
+    - `{:error, :forbidden}` - API key lacks workspace access
+    - `{:error, :workspace_not_found}` - Workspace doesn't exist
+    - `{:error, :unauthorized}` - User doesn't have access to workspace
+
+  """
+  def get_workspace_with_details(user, api_key, workspace_slug, opts) do
+    UseCases.GetWorkspaceWithDetails.execute(user, api_key, workspace_slug, opts)
   end
 end
