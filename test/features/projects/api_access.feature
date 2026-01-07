@@ -1,4 +1,3 @@
-@wip
 Feature: Project API Access
   As a developer
   I want to create and retrieve projects via REST API using API keys
@@ -74,11 +73,11 @@ Feature: Project API Access
     And the response should include error "Insufficient permissions"
     And the project "Unauthorized Project" should not exist
 
-  Scenario: API key with viewer role cannot create project
+  Scenario: API key with guest role cannot create project
     Given I am logged in as "alice@example.com"
-    And "alice@example.com" has "viewer" role in workspace "product-team"
-    And I have an API key "viewer-key" with access to "product-team"
-    When I make a POST request to "/api/workspaces/product-team/projects" with API key "viewer-key" and body:
+    And "alice@example.com" has "guest" role in workspace "product-team"
+    And I have an API key "guest-key" with access to "product-team"
+    When I make a POST request to "/api/workspaces/product-team/projects" with API key "guest-key" and body:
       """
       {
         "name": "Should Fail",
@@ -102,19 +101,19 @@ Feature: Project API Access
     Then the response status should be 201
     And the project "Owner Created Project" should exist in workspace "product-team"
 
-  Scenario: API key with editor permissions can create projects
+  Scenario: API key with member permissions can create projects
     Given I am logged in as "alice@example.com"
-    And "alice@example.com" has "editor" role in workspace "product-team"
-    And I have an API key "editor-key" with access to "product-team"
-    When I make a POST request to "/api/workspaces/product-team/projects" with API key "editor-key" and body:
+    And "alice@example.com" has "member" role in workspace "product-team"
+    And I have an API key "member-key" with access to "product-team"
+    When I make a POST request to "/api/workspaces/product-team/projects" with API key "member-key" and body:
       """
       {
-        "name": "Editor Created Project",
-        "description": "Created by editor"
+        "name": "Member Created Project",
+        "description": "Created by member"
       }
       """
     Then the response status should be 201
-    And the project "Editor Created Project" should exist in workspace "product-team"
+    And the project "Member Created Project" should exist in workspace "product-team"
 
   Scenario: Revoked API key cannot create project
     Given I am logged in as "alice@example.com"
@@ -195,11 +194,11 @@ Feature: Project API Access
     Then the response status should be 401
     And the response should include error "Invalid or revoked API key"
 
-  Scenario: User with viewer role can retrieve project
+  Scenario: User with guest role can retrieve project
     Given I am logged in as "alice@example.com"
-    And "alice@example.com" has "viewer" role in workspace "product-team"
-    And I have an API key "viewer-key" with access to "product-team"
+    And "alice@example.com" has "guest" role in workspace "product-team"
+    And I have an API key "guest-key" with access to "product-team"
     And workspace "product-team" has a project "Q1 Launch" with slug "q1-launch"
-    When I make a GET request to "/api/workspaces/product-team/projects/q1-launch" with API key "viewer-key"
+    When I make a GET request to "/api/workspaces/product-team/projects/q1-launch" with API key "guest-key"
     Then the response status should be 200
     And the response should include project "Q1 Launch"

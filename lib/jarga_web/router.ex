@@ -34,6 +34,10 @@ defmodule JargaWeb.Router do
 
     get "/workspaces", WorkspaceApiController, :index
     get "/workspaces/:slug", WorkspaceApiController, :show
+
+    # Project endpoints
+    post "/workspaces/:workspace_slug/projects", ProjectApiController, :create
+    get "/workspaces/:workspace_slug/projects/:slug", ProjectApiController, :show
   end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development

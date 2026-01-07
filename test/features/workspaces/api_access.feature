@@ -131,9 +131,9 @@ Feature: Workspace API Access
 
   Scenario: API key respects user role in workspace
     Given I am logged in as "alice@example.com"
-    And "alice@example.com" has "viewer" role in workspace "product-team"
-    And I have an API key "viewer-key" with access to "product-team"
-    When I make a GET request to "/api/workspaces/product-team" with API key "viewer-key"
+    And "alice@example.com" has "guest" role in workspace "product-team"
+    And I have an API key "guest-key" with access to "product-team"
+    When I make a GET request to "/api/workspaces/product-team" with API key "guest-key"
     Then the response status should be 200
     And the response should include workspace "product-team" details
     And the response should include workspace slug "product-team"

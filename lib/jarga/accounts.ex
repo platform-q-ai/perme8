@@ -496,4 +496,68 @@ defmodule Jarga.Accounts do
   def get_workspace_with_details(user, api_key, workspace_slug, opts) do
     UseCases.GetWorkspaceWithDetails.execute(user, api_key, workspace_slug, opts)
   end
+
+  @doc """
+  Creates a project in a workspace via API key.
+
+  The API key must have access to the workspace and the user must have
+  permission to create projects in that workspace.
+
+  ## Parameters
+
+    - `user` - The user entity (API key owner)
+    - `api_key` - The verified API key entity
+    - `workspace_slug` - The slug of the workspace
+    - `attrs` - Project attributes (name, description, etc.)
+    - `opts` - Required options:
+      - `get_workspace_and_member_by_slug` - Function (user, slug -> {:ok, workspace, member} | {:error, reason})
+      - `create_project` - Function (user, workspace_id, attrs -> {:ok, project} | {:error, reason})
+
+  ## Returns
+
+    - `{:ok, project}` - Project created successfully
+    - `{:error, :forbidden}` - API key lacks workspace access or user lacks permission
+    - `{:error, :workspace_not_found}` - Workspace doesn't exist
+    - `{:error, changeset}` - Validation error
+
+  """
+  def create_project_via_api(user, api_key, workspace_slug, attrs, opts) do
+    UseCases.CreateProjectViaApi.execute(user, api_key, workspace_slug, attrs, opts)
+  end
+
+  @doc """
+  Gets a project with its documents via API key.
+
+  Retrieves project details including associated documents. The API key
+  acts as its owner, so documents are filtered by user access.
+
+  ## Parameters
+
+    - `user` - The user entity (API key owner)
+    - `api_key` - The verified API key entity
+    - `workspace_slug` - The slug of the workspace
+    - `project_slug` - The slug of the project to retrieve
+    - `opts` - Required options:
+      - `get_workspace_and_member_by_slug` - Function (user, slug -> {:ok, workspace, member} | {:error, reason})
+      - `get_project_by_slug` - Function (user, workspace_id, project_slug -> {:ok, project} | {:error, reason})
+      - `list_documents_for_project` - Function (user, workspace_id, project_id -> [document])
+
+  ## Returns
+
+    - `{:ok, %{project: project, documents: documents}}` - Project with documents
+    - `{:error, :forbidden}` - API key lacks workspace access
+    - `{:error, :workspace_not_found}` - Workspace doesn't exist
+    - `{:error, :project_not_found}` - Project doesn't exist
+    - `{:error, :unauthorized}` - User doesn't have access to workspace
+
+  """
+  def get_project_with_documents_via_api(user, api_key, workspace_slug, project_slug, opts) do
+    UseCases.GetProjectWithDocumentsViaApi.execute(
+      user,
+      api_key,
+      workspace_slug,
+      project_slug,
+      opts
+    )
+  end
 end

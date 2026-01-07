@@ -63,4 +63,23 @@ defmodule Jarga.Projects.Domain.Entities.Project do
   Checks if project is default (business rule).
   """
   def default?(%__MODULE__{is_default: is_default}), do: is_default
+
+  @doc """
+  Converts a schema struct to a domain entity.
+  """
+  def from_schema(%{__struct__: _} = schema) do
+    %__MODULE__{
+      id: schema.id,
+      name: schema.name,
+      slug: schema.slug,
+      description: schema.description,
+      color: schema.color,
+      is_default: schema.is_default,
+      is_archived: schema.is_archived,
+      user_id: schema.user_id,
+      workspace_id: schema.workspace_id,
+      inserted_at: schema.inserted_at,
+      updated_at: schema.updated_at
+    }
+  end
 end

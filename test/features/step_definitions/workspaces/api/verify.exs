@@ -100,12 +100,15 @@ defmodule Workspaces.Api.VerifySteps do
   step "the response should include workspace slug {string}",
        %{args: [expected_slug]} = context do
     body = Jason.decode!(context[:response_body])
-    workspace = body["data"]
+    data = body["data"]
 
-    assert workspace != nil, "Expected workspace data in response"
+    assert data != nil, "Expected response data in response"
 
-    assert workspace["slug"] == expected_slug,
-           "Expected workspace slug '#{expected_slug}', but got '#{workspace["slug"]}'"
+    # Check for workspace_slug first (project API), then slug (workspace API)
+    actual_slug = data["workspace_slug"] || data["slug"]
+
+    assert actual_slug == expected_slug,
+           "Expected workspace slug '#{expected_slug}', but got '#{actual_slug}'"
 
     {:ok, context}
   end

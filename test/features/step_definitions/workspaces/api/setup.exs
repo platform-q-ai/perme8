@@ -36,17 +36,32 @@ defmodule Workspaces.Api.SetupSteps do
     # Use String.to_atom/1 since role atoms may not exist yet at compile time
     role_atom = String.to_atom(role)
 
-    # Check if user is already a member (e.g., as owner)
-    try do
-      add_workspace_member_fixture(workspace.id, user, role_atom)
-    rescue
-      # If already a member, we might need to update their role
-      # For now, just ignore the error
-      Ecto.ConstraintError -> :ok
-      Ecto.InvalidChangesetError -> :ok
+    # First check if user is already a member
+    case Jarga.Workspaces.get_member(user, workspace.id) do
+      {:ok, _existing_member} ->
+        # User is already a member - update their role directly in DB
+        # We need to bypass the normal change_member_role as it has restrictions
+        # (e.g., can't change owner's role)
+        update_member_role_directly(workspace.id, user.email, role_atom)
+
+      {:error, _} ->
+        # User is not a member - add them with the specified role
+        add_workspace_member_fixture(workspace.id, user, role_atom)
     end
 
     {:ok, context}
+  end
+
+  defp update_member_role_directly(workspace_id, email, role) do
+    import Ecto.Query
+
+    # Update the member's role directly (for testing purposes)
+    Jarga.Repo.update_all(
+      from(m in Jarga.Workspaces.Infrastructure.Schemas.WorkspaceMemberSchema,
+        where: m.workspace_id == ^workspace_id and m.email == ^email
+      ),
+      set: [role: role, updated_at: DateTime.utc_now()]
+    )
   end
 
   # ============================================================================
