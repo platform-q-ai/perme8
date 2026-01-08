@@ -190,10 +190,11 @@ defmodule Jarga.Agents.Application.UseCases.AgentQuery do
   end
 
   defp get_document_content(assigns) do
+    # note_content is now plain text markdown
     case Map.get(assigns, :note) do
-      %{note_content: %{"markdown" => markdown}} when is_binary(markdown) ->
+      %{note_content: content} when is_binary(content) and content != "" ->
         # Truncate to max chars to avoid huge context
-        String.slice(markdown, 0, @max_content_chars)
+        String.slice(content, 0, @max_content_chars)
 
       _ ->
         nil

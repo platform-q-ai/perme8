@@ -11,7 +11,7 @@ defmodule Jarga.Documents.Notes.Infrastructure.Schemas.NoteSchema do
   @foreign_key_type :binary_id
 
   schema "notes" do
-    field(:note_content, :map)
+    field(:note_content, :string)
     field(:yjs_state, :binary)
 
     belongs_to(:user, Jarga.Accounts.Infrastructure.Schemas.UserSchema)

@@ -19,7 +19,7 @@ defmodule Jarga.Documents.Notes.NoteSchemaTest do
         id: Ecto.UUID.generate(),
         user_id: user.id,
         workspace_id: workspace.id,
-        note_content: %{"text" => "Test note"}
+        note_content: "Test note"
       }
 
       changeset = NoteSchema.changeset(%NoteSchema{}, attrs)
@@ -104,11 +104,8 @@ defmodule Jarga.Documents.Notes.NoteSchemaTest do
       assert Ecto.Changeset.get_change(changeset, :yjs_state) == yjs_binary
     end
 
-    test "accepts note_content as map", %{user: user, workspace: workspace} do
-      content = %{
-        "text" => "Some content",
-        "format" => "markdown"
-      }
+    test "accepts note_content as string", %{user: user, workspace: workspace} do
+      content = "Some markdown content"
 
       attrs = %{
         id: Ecto.UUID.generate(),
@@ -175,7 +172,7 @@ defmodule Jarga.Documents.Notes.NoteSchemaTest do
     test "casts all fields correctly", %{user: user, workspace: workspace} do
       project = project_fixture(user, workspace)
       note_id = Ecto.UUID.generate()
-      content = %{"text" => "Test"}
+      content = "Test markdown content"
       yjs_state = <<1, 2, 3>>
 
       attrs = %{

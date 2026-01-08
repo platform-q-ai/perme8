@@ -137,11 +137,12 @@ defmodule Jarga.Chat.Application.UseCases.PrepareContext do
 
   defp extract_document_content(assigns) do
     # Check if we have a note (document content)
+    # note_content is now plain text markdown
     case get_nested(assigns, [:note, :note_content]) do
-      %{"markdown" => markdown} when is_binary(markdown) and markdown != "" ->
+      content when is_binary(content) and content != "" ->
         # Get max chars from config, defaulting to 3000
         max_chars = Application.get_env(:jarga, :chat_context)[:max_content_chars] || 3000
-        String.slice(markdown, 0, max_chars)
+        String.slice(content, 0, max_chars)
 
       _ ->
         nil

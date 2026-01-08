@@ -10,7 +10,7 @@ defmodule Jarga.Documents.Notes.Domain.Entities.Note do
 
   @type t :: %__MODULE__{
           id: String.t() | nil,
-          note_content: map() | nil,
+          note_content: String.t() | nil,
           yjs_state: binary() | nil,
           user_id: String.t(),
           workspace_id: String.t(),

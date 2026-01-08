@@ -30,7 +30,7 @@ defmodule Jarga.Documents.Application.UseCases.ExecuteAgentQueryTest do
       assigns = %{
         current_workspace: workspace,
         document_title: "Test Document",
-        note: %{note_content: %{"markdown" => "# Test Content\n\nSome markdown here."}}
+        note: %{note_content: "# Test Content\n\nSome markdown here."}
       }
 
       {:ok, user: user, workspace: workspace, agent: agent, assigns: assigns}

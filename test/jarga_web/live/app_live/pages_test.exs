@@ -299,7 +299,7 @@ defmodule JargaWeb.AppLive.PagesTest do
       note = Documents.get_document_note(page)
 
       assert note.yjs_state == Base.decode64!(complete_state)
-      assert note.note_content["markdown"] == markdown
+      assert note.note_content == markdown
     end
 
     test "force_save bypasses debouncing", %{
@@ -326,7 +326,7 @@ defmodule JargaWeb.AppLive.PagesTest do
       note = Documents.get_document_note(page)
 
       assert note.yjs_state == Base.decode64!(complete_state)
-      assert note.note_content["markdown"] == markdown
+      assert note.note_content == markdown
     end
 
     test "broadcasts yjs updates to other clients", %{
@@ -488,7 +488,7 @@ defmodule JargaWeb.AppLive.PagesTest do
       updated_page = Documents.get_document!(user, page.id, preload_components: true)
       updated_note = Documents.get_document_note(updated_page)
       assert updated_note.yjs_state == new_state
-      assert updated_note.note_content["markdown"] == markdown
+      assert updated_note.note_content == markdown
     end
   end
 end

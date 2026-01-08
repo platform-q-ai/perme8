@@ -20,7 +20,7 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
         current_workspace: %{name: "Test Workspace"},
         current_project: %{name: "Test Project"},
         document_title: "Test Document",
-        note: %{note_content: %{"markdown" => "Some test content"}},
+        note: %{note_content: "Some test content"},
         current_scope: %{user: %{email: "test@example.com"}}
       }
 
@@ -138,7 +138,7 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
       end)
 
       assigns = %{
-        note: %{note_content: %{"markdown" => long_content}}
+        note: %{note_content: long_content}
       }
 
       params = %{
@@ -169,7 +169,7 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
 
       assigns = %{
         document_title: "Test Document",
-        note: %{note_content: %{"markdown" => markdown}}
+        note: %{note_content: markdown}
       }
 
       params = %{
@@ -629,7 +629,7 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
       end)
 
       content = String.duplicate("x", 3000)
-      assigns = %{note: %{note_content: %{"markdown" => content}}}
+      assigns = %{note: %{note_content: content}}
 
       params = %{
         question: "Test question",
@@ -647,7 +647,7 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
       end)
 
       content = String.duplicate("x", 5000)
-      assigns = %{note: %{note_content: %{"markdown" => content}}}
+      assigns = %{note: %{note_content: content}}
 
       params = %{
         question: "Test question",
@@ -673,7 +673,7 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
         current_workspace: %{name: "My Workspace"},
         current_project: %{name: "My Project"},
         document_title: "My Document",
-        note: %{note_content: %{"markdown" => "My content"}}
+        note: %{note_content: "My content"}
       }
 
       params = %{
@@ -713,7 +713,7 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
       end)
 
       content = String.duplicate("x", 500)
-      assigns = %{note: %{note_content: %{"markdown" => content}}}
+      assigns = %{note: %{note_content: content}}
 
       params = %{
         question: "Test preview truncation",
@@ -738,7 +738,7 @@ defmodule Jarga.Agents.UseCases.AgentQueryTest do
       end)
 
       content = String.duplicate("x", 1000)
-      assigns = %{note: %{note_content: %{"markdown" => content}}}
+      assigns = %{note: %{note_content: content}}
 
       params = %{
         question: "Test preview truncation",

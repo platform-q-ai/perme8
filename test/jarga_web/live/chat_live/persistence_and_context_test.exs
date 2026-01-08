@@ -236,9 +236,7 @@ defmodule JargaWeb.ChatLive.PersistenceAndContextTest do
       note =
         note_fixture(user, workspace.id, %{
           id: document.id,
-          note_content: %{
-            "markdown" => "This page explains how to authenticate users using JWT tokens."
-          }
+          note_content: "This page explains how to authenticate users using JWT tokens."
         })
 
       %{user: user, workspace: workspace, project: project, document: document, note: note}

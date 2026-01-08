@@ -123,7 +123,7 @@ defmodule JargaWeb.DocumentSaveDebouncer do
   defp execute_save(%{user: user, note_id: note_id, yjs_state: yjs_state, markdown: markdown}) do
     update_attrs = %{
       yjs_state: yjs_state,
-      note_content: %{"markdown" => markdown}
+      note_content: markdown
     }
 
     case Jarga.Notes.update_note_via_document(user, note_id, update_attrs) do

@@ -96,7 +96,7 @@ defmodule JargaWeb.AppLive.Documents.Show do
     updated_note = %{
       note
       | yjs_state: complete_state_binary,
-        note_content: %{"markdown" => markdown}
+        note_content: markdown
     }
 
     {:noreply, assign(socket, :note, updated_note)}
@@ -117,7 +117,7 @@ defmodule JargaWeb.AppLive.Documents.Show do
 
     update_attrs = %{
       yjs_state: complete_state_binary,
-      note_content: %{"markdown" => markdown}
+      note_content: markdown
     }
 
     case Notes.update_note_via_document(current_user, note.id, update_attrs) do
@@ -483,9 +483,9 @@ defmodule JargaWeb.AppLive.Documents.Show do
   end
 
   defp get_initial_markdown(note) do
-    # Try to get markdown from note_content, fallback to empty string
+    # note_content is now plain text markdown
     case note.note_content do
-      %{"markdown" => markdown} when is_binary(markdown) -> markdown
+      content when is_binary(content) -> content
       _ -> ""
     end
   end

@@ -67,9 +67,7 @@ defmodule ChatEditorSteps do
     note =
       note_fixture(user, workspace.id, %{
         id: document.id,
-        note_content: %{
-          "markdown" => "# Note Content\n\nThis is a note."
-        }
+        note_content: "# Note Content\n\nThis is a note."
       })
 
     {:ok, view, html} =

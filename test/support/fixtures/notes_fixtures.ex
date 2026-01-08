@@ -12,10 +12,7 @@ defmodule Jarga.NotesFixtures do
   def valid_note_attributes(attrs \\ %{}) do
     Enum.into(attrs, %{
       id: Ecto.UUID.generate(),
-      note_content: %{
-        "type" => "doc",
-        "content" => []
-      }
+      note_content: ""
     })
   end
 

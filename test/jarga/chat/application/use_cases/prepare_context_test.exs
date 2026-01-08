@@ -11,7 +11,7 @@ defmodule Jarga.Chat.Application.UseCases.PrepareContextTest do
         current_project: %{name: "My Project"},
         document_title: "Project Plan",
         document: %{slug: "project-plan"},
-        note: %{note_content: %{"markdown" => "# Project Plan\n\nThis is the content"}}
+        note: %{note_content: "# Project Plan\n\nThis is the content"}
       }
 
       assert {:ok, context} = PrepareContext.execute(assigns)
@@ -54,7 +54,7 @@ defmodule Jarga.Chat.Application.UseCases.PrepareContextTest do
       long_content = String.duplicate("a", 4000)
 
       assigns = %{
-        note: %{note_content: %{"markdown" => long_content}}
+        note: %{note_content: long_content}
       }
 
       assert {:ok, context} = PrepareContext.execute(assigns)
@@ -66,7 +66,7 @@ defmodule Jarga.Chat.Application.UseCases.PrepareContextTest do
 
     test "handles empty note content" do
       assigns = %{
-        note: %{note_content: %{"markdown" => ""}}
+        note: %{note_content: ""}
       }
 
       assert {:ok, context} = PrepareContext.execute(assigns)

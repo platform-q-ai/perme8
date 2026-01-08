@@ -8,7 +8,7 @@ defmodule Jarga.Documents.Notes.Domain.Entities.NoteTest do
     test "creates a new note entity from attributes" do
       attrs = %{
         id: "123",
-        note_content: %{"text" => "Hello"},
+        note_content: "Hello",
         yjs_state: <<1, 2, 3>>,
         user_id: "user-1",
         workspace_id: "workspace-1",
@@ -18,7 +18,7 @@ defmodule Jarga.Documents.Notes.Domain.Entities.NoteTest do
       note = Note.new(attrs)
 
       assert note.id == "123"
-      assert note.note_content == %{"text" => "Hello"}
+      assert note.note_content == "Hello"
       assert note.yjs_state == <<1, 2, 3>>
       assert note.user_id == "user-1"
       assert note.workspace_id == "workspace-1"
@@ -48,7 +48,7 @@ defmodule Jarga.Documents.Notes.Domain.Entities.NoteTest do
 
       schema = %NoteSchema{
         id: "123",
-        note_content: %{"text" => "Hello"},
+        note_content: "Hello",
         yjs_state: <<1, 2, 3>>,
         user_id: "user-1",
         workspace_id: "workspace-1",
@@ -60,7 +60,7 @@ defmodule Jarga.Documents.Notes.Domain.Entities.NoteTest do
       note = Note.from_schema(schema)
 
       assert note.id == "123"
-      assert note.note_content == %{"text" => "Hello"}
+      assert note.note_content == "Hello"
       assert note.yjs_state == <<1, 2, 3>>
       assert note.user_id == "user-1"
       assert note.workspace_id == "workspace-1"

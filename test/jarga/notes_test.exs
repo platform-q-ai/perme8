@@ -16,7 +16,7 @@ defmodule Jarga.NotesTest do
       {:ok, note} =
         Notes.create_note(user, workspace.id, %{
           id: note_id,
-          note_content: %{"type" => "doc", "content" => []}
+          note_content: "# Test Note"
         })
 
       assert fetched = Notes.get_note!(user, note_id)
@@ -41,7 +41,7 @@ defmodule Jarga.NotesTest do
       {:ok, note} =
         Notes.create_note(user1, workspace.id, %{
           id: note_id,
-          note_content: %{"type" => "doc"}
+          note_content: "Test content"
         })
 
       assert_raise Ecto.NoResultsError, fn ->
@@ -56,9 +56,11 @@ defmodule Jarga.NotesTest do
       workspace = workspace_fixture(user)
       note_id = Ecto.UUID.generate()
 
+      note_content = "# Test Note\n\nSome content"
+
       attrs = %{
         id: note_id,
-        note_content: %{"type" => "doc", "content" => []},
+        note_content: note_content,
         yjs_state: <<1, 2, 3>>
       }
 
@@ -67,7 +69,7 @@ defmodule Jarga.NotesTest do
       assert note.user_id == user.id
       assert note.workspace_id == workspace.id
       assert note.project_id == nil
-      assert note.note_content == %{"type" => "doc", "content" => []}
+      assert note.note_content == note_content
       assert note.yjs_state == <<1, 2, 3>>
     end
 
@@ -79,7 +81,7 @@ defmodule Jarga.NotesTest do
 
       attrs = %{
         id: note_id,
-        note_content: %{"type" => "doc"},
+        note_content: "Test content",
         project_id: project.id
       }
 
@@ -106,7 +108,7 @@ defmodule Jarga.NotesTest do
       workspace = workspace_fixture(other_user)
       note_id = Ecto.UUID.generate()
 
-      attrs = %{id: note_id, note_content: %{"type" => "doc"}}
+      attrs = %{id: note_id, note_content: "Test content"}
 
       assert {:error, :unauthorized} = Notes.create_note(user, workspace.id, attrs)
     end
@@ -115,7 +117,7 @@ defmodule Jarga.NotesTest do
       user = user_fixture()
       note_id = Ecto.UUID.generate()
 
-      attrs = %{id: note_id, note_content: %{"type" => "doc"}}
+      attrs = %{id: note_id, note_content: "Test content"}
 
       assert {:error, :workspace_not_found} = Notes.create_note(user, Ecto.UUID.generate(), attrs)
     end
@@ -146,10 +148,10 @@ defmodule Jarga.NotesTest do
       {:ok, note} =
         Notes.create_note(user, workspace.id, %{
           id: note_id,
-          note_content: %{"type" => "doc", "content" => []}
+          note_content: "Initial content"
         })
 
-      new_content = %{"type" => "doc", "content" => [%{"type" => "paragraph"}]}
+      new_content = "Updated content"
       attrs = %{note_content: new_content}
 
       assert {:ok, updated} = Notes.update_note(user, note.id, attrs)
@@ -183,12 +185,12 @@ defmodule Jarga.NotesTest do
       {:ok, note} = Notes.create_note(user, workspace.id, %{id: note_id})
 
       attrs = %{
-        note_content: %{"type" => "doc", "updated" => true},
+        note_content: "Updated content",
         yjs_state: <<10, 20, 30>>
       }
 
       assert {:ok, updated} = Notes.update_note(user, note.id, attrs)
-      assert updated.note_content == %{"type" => "doc", "updated" => true}
+      assert updated.note_content == "Updated content"
       assert updated.yjs_state == <<10, 20, 30>>
     end
 
