@@ -26,7 +26,6 @@ defmodule Mix.Tasks.StepLinter do
   Create a new module implementing the `Mix.Tasks.StepLinter.Rule` behaviour
   in `lib/mix/tasks/step_linter/rules/`. See `NoBranching` for an example.
   """
-  use Boundary, top_level?: true
   use Mix.Task
 
   alias Mix.Tasks.StepLinter.{Parser, Reporter, RuleRunner}

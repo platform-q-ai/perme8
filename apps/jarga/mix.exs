@@ -21,12 +21,6 @@ defmodule Jarga.MixProject do
       test_pattern: "*_test.exs",
       test_coverage: [
         tool: ExCoveralls
-      ],
-      preferred_cli_env: [
-        coveralls: :test,
-        "coveralls.detail": :test,
-        "coveralls.post": :test,
-        "coveralls.html": :test
       ]
     ]
   end
@@ -43,7 +37,14 @@ defmodule Jarga.MixProject do
 
   def cli do
     [
-      preferred_envs: [precommit: :test, "assets.deploy": :prod]
+      preferred_envs: [
+        coveralls: :test,
+        "coveralls.detail": :test,
+        "coveralls.post": :test,
+        "coveralls.html": :test,
+        precommit: :test,
+        "assets.deploy": :prod
+      ]
     ]
   end
 

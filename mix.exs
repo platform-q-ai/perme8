@@ -8,12 +8,7 @@ defmodule Perme8.MixProject do
       start_permanent: Mix.env() == :prod,
       listeners: [Phoenix.CodeReloader],
       deps: deps(),
-      aliases: aliases(),
-      preferred_cli_env: [
-        precommit: :test,
-        "assets.build": :dev,
-        "assets.deploy": :prod
-      ]
+      aliases: aliases()
     ]
   end
 
@@ -50,6 +45,16 @@ defmodule Perme8.MixProject do
           end
         end,
         "test"
+      ]
+    ]
+  end
+
+  def cli do
+    [
+      preferred_envs: [
+        precommit: :test,
+        "assets.build": :dev,
+        "assets.deploy": :prod
       ]
     ]
   end

@@ -22,7 +22,6 @@ defmodule Mix.Tasks.StepLinter.Rule do
         end
       end
   """
-  use Boundary, top_level?: true
 
   @type step_definition :: %{
           pattern: String.t(),
