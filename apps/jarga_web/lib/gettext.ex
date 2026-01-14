@@ -21,5 +21,5 @@ defmodule JargaWeb.Gettext do
 
   See the [Gettext Docs](https://hexdocs.pm/gettext) for detailed usage.
   """
-  use Gettext.Backend, otp_app: :jarga
+  use Gettext.Backend, otp_app: :jarga_web
 end

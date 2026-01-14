@@ -1,32 +1,23 @@
-defmodule JargaApp do
+defmodule Jarga.Application do
   # See https://hexdocs.pm/elixir/Application.html
   # for more information on OTP Applications
   @moduledoc false
 
   use Application
 
-  # OTP Application supervisor - sibling to Jarga and JargaWeb boundaries
+  # OTP Application supervisor - sibling to Jarga boundary
   # Can depend on all parts of the application for supervision purposes
-  use Boundary, deps: [Jarga, JargaWeb], exports: []
+  use Boundary, deps: [Jarga], exports: []
 
   @impl true
   def start(_type, _args) do
     children =
       [
-        JargaWeb.Telemetry,
         Jarga.Repo,
         {DNSCluster, query: Application.get_env(:jarga, :dns_cluster_query) || :ignore},
         {Phoenix.PubSub, name: Jarga.PubSub},
         # Start the Finch HTTP client for sending emails
-        {Finch, name: Jarga.Finch},
-        # Registry for DocumentSaveDebouncer processes
-        {Registry, keys: :unique, name: JargaWeb.DocumentSaveDebouncerRegistry},
-        # DynamicSupervisor for DocumentSaveDebouncer processes
-        JargaWeb.DocumentSaveDebouncerSupervisor,
-        # Start a worker by calling: Jarga.Worker.start_link(arg)
-        # {Jarga.Worker, arg},
-        # Start to serve requests, typically the last entry
-        JargaWeb.Endpoint
+        {Finch, name: Jarga.Finch}
       ] ++ pubsub_subscribers()
 
     # See https://hexdocs.pm/elixir/Supervisor.html
@@ -47,13 +38,5 @@ defmodule JargaApp do
     else
       []
     end
-  end
-
-  # Tell Phoenix to update the endpoint configuration
-  # whenever the application is updated.
-  @impl true
-  def config_change(changed, _new, removed) do
-    JargaWeb.Endpoint.config_change(changed, removed)
-    :ok
   end
 end

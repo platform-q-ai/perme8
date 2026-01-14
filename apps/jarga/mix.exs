@@ -5,6 +5,10 @@ defmodule Jarga.MixProject do
     [
       app: :jarga,
       version: "0.1.0",
+      build_path: "../../_build",
+      config_path: "../../config/config.exs",
+      deps_path: "../../deps",
+      lockfile: "../../mix.lock",
       elixir: "~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
@@ -32,7 +36,7 @@ defmodule Jarga.MixProject do
   # Type `mix help compile.app` for more information.
   def application do
     [
-      mod: {JargaApp, []},
+      mod: {Jarga.Application, []},
       extra_applications: [:logger, :runtime_tools]
     ]
   end
@@ -88,24 +92,11 @@ defmodule Jarga.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
-      {:phoenix, "~> 1.8.1"},
       {:phoenix_ecto, "~> 4.6"},
       {:ecto_sql, "~> 3.12"},
       {:postgrex, ">= 0.0.0"},
       {:phoenix_html, "~> 4.1"},
-      {:phoenix_live_reload, "~> 1.2", only: :dev},
       {:phoenix_live_view, "~> 1.1.0"},
-      {:lazy_html, ">= 0.1.0", only: :test},
-      {:phoenix_live_dashboard, "~> 0.8.3"},
-      {:esbuild, "~> 0.10", runtime: Mix.env() == :dev},
-      {:tailwind, "~> 0.3", runtime: Mix.env() == :dev},
-      {:heroicons,
-       github: "tailwindlabs/heroicons",
-       tag: "v2.2.0",
-       sparse: "optimized",
-       app: false,
-       compile: false,
-       depth: 1},
       {:swoosh, "~> 1.16"},
       {:finch, "~> 0.13"},
       {:req, "~> 0.5"},
@@ -114,7 +105,6 @@ defmodule Jarga.MixProject do
       {:gettext, "~> 0.26"},
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.2.0"},
-      {:bandit, "~> 1.5"},
       {:bcrypt_elixir, "~> 3.0"},
       {:dotenvy, "~> 0.8.0", only: [:dev, :test]},
       {:boundary, "~> 0.10", runtime: false},
@@ -122,7 +112,6 @@ defmodule Jarga.MixProject do
       {:excoveralls, "~> 0.18", only: :test},
       {:bypass, "~> 2.1", only: :test},
       {:mox, "~> 1.0", only: :test},
-      {:wallaby, "~> 0.30", runtime: false, only: :test},
       {:cucumber, "~> 0.4.2", only: :test},
       {:slugy, "~> 4.1"},
       {:mdex, "~> 0.2"}
@@ -137,28 +126,10 @@ defmodule Jarga.MixProject do
   # See the documentation for `Mix` for more info on aliases.
   defp aliases do
     [
-      setup: ["deps.get", "assets.setup", "assets.build"],
-      "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
-      "assets.build": ["compile", "tailwind jarga", "assets.copy_fonts", "esbuild jarga"],
-      "assets.deploy": [
-        "tailwind jarga --minify",
-        "assets.copy_fonts",
-        "esbuild jarga --minify",
-        "phx.digest"
-      ],
-      compile: ["compile"],
-      test: ["compile", "test"],
-      precommit: [
-        "compile --warning-as-errors",
-        "deps.unlock --unused",
-        "format",
-        "credo --strict",
-        "step_linter",
-        "cmd npm run lint --prefix assets",
-        "cmd npm test --prefix assets",
-        "assets.deploy",
-        "coveralls.html"
-      ]
+      setup: ["deps.get", "ecto.setup"],
+      "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
+      "ecto.reset": ["ecto.drop", "ecto.setup"],
+      test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"]
     ]
   end
 end
