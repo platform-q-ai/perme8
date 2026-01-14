@@ -18,6 +18,28 @@ defmodule Jarga.Projects.Infrastructure.Repositories.ProjectRepository do
   alias Jarga.Projects.Domain.Entities.Project
   alias Jarga.Projects.Infrastructure.Schemas.ProjectSchema
 
+  alias Jarga.Projects.Infrastructure.Queries.Queries
+
+  @doc """
+  Finds a project by name within a workspace.
+  """
+  def get_by_name(workspace_id, project_name, repo \\ Repo) do
+    case Queries.find_by_name(workspace_id, project_name) |> repo.one() do
+      nil -> nil
+      schema -> to_domain(schema)
+    end
+  end
+
+  @doc """
+  Gets a project by ID.
+  """
+  def get(id, repo \\ Repo) do
+    case repo.get(ProjectSchema, id) do
+      nil -> nil
+      schema -> to_domain(schema)
+    end
+  end
+
   @doc """
   Inserts a new project into the database.
 

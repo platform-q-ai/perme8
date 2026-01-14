@@ -105,6 +105,15 @@ defmodule Jarga.Agents.Infrastructure.Repositories.AgentRepository do
   end
 
   @doc """
+  Updates an agent's inserted_at timestamp.
+  """
+  def update_timestamp(agent_id, timestamp) do
+    AgentSchema
+    |> where([a], a.id == ^agent_id)
+    |> Repo.update_all(set: [inserted_at: timestamp])
+  end
+
+  @doc """
   Deletes an agent.
 
   Cascade deletes all workspace_agents entries via database constraint.

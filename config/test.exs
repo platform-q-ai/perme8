@@ -23,14 +23,8 @@ config :jarga_web, JargaWeb.Endpoint,
   secret_key_base: "k/DpMQ7vB/8OirPNBlAhucs6RCPp5ZRK09Is1Sd7Jb+YThz21IeYYYpueAbJYNEd",
   server: true
 
-config :cms, CmsWeb.Endpoint,
-  http: [ip: {127, 0, 0, 1}, port: 4003],
-  secret_key_base: "hd7escMTb3vOmz/NCko9TdhZ3W+gaj7DY4+ufl0c7Q2XTmI3B+QN8qoGmXQ4ekKw",
-  server: true
-
 # In test we don't send emails
 config :jarga, Jarga.Mailer, adapter: Swoosh.Adapters.Test
-config :cms, Cms.Mailer, adapter: Swoosh.Adapters.Test
 
 # Disable swoosh api client as it is only required for production adapters
 config :swoosh, :api_client, false
@@ -79,8 +73,8 @@ config :jarga, :sandbox, Ecto.Adapters.SQL.Sandbox
 config :jarga, :llm_client, Jarga.Test.Support.MockLlmClient
 
 # Configure Cucumber for BDD feature testing
-config :cucumber,
+config :jarga_web, :cucumber,
   features: [
-    "apps/jarga/test/features/**/*.feature"
+    "apps/jarga_web/test/features/**/*.feature"
   ],
-  steps: ["apps/jarga/test/features/step_definitions/**/*.exs"]
+  steps: ["apps/jarga_web/test/features/step_definitions/**/*.exs"]

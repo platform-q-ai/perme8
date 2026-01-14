@@ -33,7 +33,6 @@ defmodule JargaWeb.FeatureCase do
       import Wallaby.Query
       import JargaWeb.FeatureCase.Helpers
 
-      alias Jarga.Repo
       alias Jarga.Accounts
       alias Jarga.Workspaces
       alias Jarga.Projects

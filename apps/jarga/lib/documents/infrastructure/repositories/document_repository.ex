@@ -18,6 +18,86 @@ defmodule Jarga.Documents.Infrastructure.Repositories.DocumentRepository do
   alias Jarga.Documents.Infrastructure.Queries.DocumentQueries
 
   @doc """
+  Updates an existing document in the database.
+  """
+  def update(schema_or_id, attrs) do
+    schema =
+      case schema_or_id do
+        %DocumentSchema{} = s -> s
+        id when is_binary(id) -> Repo.get(DocumentSchema, id)
+      end
+
+    if schema do
+      schema
+      |> DocumentSchema.changeset(attrs)
+      |> Repo.update()
+      |> case do
+        {:ok, schema} -> {:ok, Document.from_schema(schema)}
+        {:error, changeset} -> {:error, changeset}
+      end
+    else
+      {:error, :not_found}
+    end
+  end
+
+  @doc """
+  Gets a document by ID with components preloaded.
+  """
+  def get_by_id_with_components(document_id) do
+    schema =
+      DocumentQueries.base()
+      |> DocumentQueries.by_id(document_id)
+      |> Repo.one()
+      |> Repo.preload(:document_components)
+
+    case schema do
+      nil -> nil
+      schema -> Document.from_schema(schema)
+    end
+  end
+
+  @doc """
+  Gets a document by ID with project preloaded.
+  """
+  def get_by_id_with_project(document_id) do
+    schema =
+      DocumentQueries.base()
+      |> DocumentQueries.by_id(document_id)
+      |> Repo.one()
+      |> Repo.preload(:project)
+
+    case schema do
+      nil -> nil
+      schema -> Document.from_schema(schema)
+    end
+  end
+
+  @doc """
+  Lists all documents belonging to a project.
+  """
+  def list_by_project_id(project_id) do
+    DocumentSchema
+    |> where([d], d.project_id == ^project_id)
+    |> Repo.all()
+    |> Enum.map(&Document.from_schema/1)
+  end
+
+  @doc """
+  Gets a document by title.
+  """
+  def get_by_title(title) do
+    schema =
+      DocumentSchema
+      |> where([d], d.title == ^title)
+      |> Repo.one()
+
+    case schema do
+      nil -> nil
+      schema -> Document.from_schema(schema)
+    end
+  end
+
+  @doc """
   Gets a document by ID.
 
   Returns the document domain entity if found, nil otherwise.

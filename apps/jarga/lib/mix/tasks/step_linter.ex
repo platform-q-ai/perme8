@@ -33,7 +33,7 @@ defmodule Mix.Tasks.StepLinter do
 
   @shortdoc "Lints Cucumber step definitions for common issues"
 
-  @default_path "apps/jarga_web/test/features/features/step_definitions"
+  @default_path "apps/**/test/features/step_definitions"
 
   @impl Mix.Task
   def run(args) do

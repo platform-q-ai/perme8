@@ -9,6 +9,26 @@ defmodule Jarga.Accounts.Infrastructure.Repositories.UserTokenRepository do
   alias Jarga.Accounts.Infrastructure.Schemas.UserTokenSchema
   alias Jarga.Repo
 
+  import Ecto.Query
+
+  @doc """
+  Gets a single token for a user by context.
+  """
+  def get_by_user_id_and_context(user_id, context, repo \\ Repo) do
+    query = from(t in UserTokenSchema, where: t.user_id == ^user_id and t.context == ^context)
+
+    repo.one(query)
+    |> UserTokenSchema.to_entity()
+  end
+
+  @doc """
+  Counts tokens for a user.
+  """
+  def count_by_user_id(user_id, repo \\ Repo) do
+    query = from(t in UserTokenSchema, where: t.user_id == ^user_id)
+    repo.aggregate(query, :count)
+  end
+
   @doc """
   Executes a query and returns a single user token entity.
 

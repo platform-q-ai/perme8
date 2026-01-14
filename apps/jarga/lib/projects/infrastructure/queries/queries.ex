@@ -128,6 +128,15 @@ defmodule Jarga.Projects.Infrastructure.Queries.Queries do
   end
 
   @doc """
+  Finds a project by name within a workspace.
+  """
+  def find_by_name(workspace_id, project_name) do
+    from(p in ProjectSchema,
+      where: p.workspace_id == ^workspace_id and p.name == ^project_name
+    )
+  end
+
+  @doc """
   Check if a project exists in a workspace.
   Returns a query that will return the project if it exists.
   Used for verification purposes by other contexts.

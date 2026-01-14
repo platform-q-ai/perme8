@@ -47,7 +47,7 @@ defmodule JargaWeb.RouterTest do
         end)
 
       # Verify /app routes exist
-      assert length(app_routes) >= 1,
+      assert app_routes != [],
              "Expected at least 1 /app route"
 
       # Verify routes are configured (Phoenix routing internals)

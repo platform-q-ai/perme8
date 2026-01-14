@@ -8,7 +8,12 @@ defmodule Perme8.MixProject do
       start_permanent: Mix.env() == :prod,
       listeners: [Phoenix.CodeReloader],
       deps: deps(),
-      aliases: aliases()
+      aliases: aliases(),
+      preferred_cli_env: [
+        precommit: :test,
+        "assets.build": :dev,
+        "assets.deploy": :prod
+      ]
     ]
   end
 
@@ -36,7 +41,14 @@ defmodule Perme8.MixProject do
         "credo --strict",
         "step_linter",
         "assets.build",
-        "cmd npm test --prefix apps/jarga_web/assets",
+        fn _ ->
+          if System.cmd("npm", ["test", "--prefix", "apps/jarga_web/assets"],
+               into: IO.stream(:stdio, :line)
+             )
+             |> elem(1) != 0 do
+            raise "npm test failed"
+          end
+        end,
         "test"
       ]
     ]

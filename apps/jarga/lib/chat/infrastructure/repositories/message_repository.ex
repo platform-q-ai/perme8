@@ -13,6 +13,13 @@ defmodule Jarga.Chat.Infrastructure.Repositories.MessageRepository do
   alias Jarga.Chat.Infrastructure.Schemas.MessageSchema
 
   @doc """
+  Gets a message by ID.
+  """
+  def get(id, repo \\ Repo) do
+    repo.get(MessageSchema, id)
+  end
+
+  @doc """
   Creates a new chat message.
 
   ## Parameters

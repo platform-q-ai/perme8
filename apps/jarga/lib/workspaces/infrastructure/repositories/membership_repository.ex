@@ -215,6 +215,20 @@ defmodule Jarga.Workspaces.Infrastructure.Repositories.MembershipRepository do
   end
 
   @doc """
+  Updates a workspace member's role directly (for testing).
+  """
+  def update_role(workspace_id, email, role, repo \\ Repo) do
+    import Ecto.Query
+
+    query =
+      from(m in WorkspaceMemberSchema,
+        where: m.workspace_id == ^workspace_id and m.email == ^email
+      )
+
+    repo.update_all(query, set: [role: role, updated_at: DateTime.utc_now()])
+  end
+
+  @doc """
   Adds a member to a workspace (for testing purposes).
 
   ## Parameters

@@ -109,29 +109,37 @@ defmodule Jarga.Documents.Domain.AgentQueryParser do
     # Remove "@j" prefix and check what remains
     remainder = String.replace_prefix(text, "@j", "")
 
-    cond do
-      # "@j" with nothing after it
-      String.trim(remainder) == "" ->
+    if invalid_prefix?(remainder) do
+      {:error, :missing_agent_name}
+    else
+      check_parts(remainder)
+    end
+  end
+
+  defp invalid_prefix?(remainder) do
+    # "@j" with nothing after it
+    # "@j   " (multiple spaces, but no agent name starts immediately after)
+    # If it starts with more than one space, no agent name was provided
+    String.trim(remainder) == "" or
+      String.starts_with?(remainder, "  ")
+  end
+
+  defp check_parts(remainder) do
+    # Try to extract parts after trimming
+    parts = remainder |> String.trim() |> String.split(~r/\s+/, parts: 2)
+
+    case parts do
+      [] ->
         {:error, :missing_agent_name}
 
-      # "@j   " (multiple spaces, but no agent name starts immediately after)
-      # If it starts with more than one space, no agent name was provided
-      String.starts_with?(remainder, "  ") ->
-        {:error, :missing_agent_name}
+      [_agent_name] ->
+        {:error, :missing_question}
 
-      true ->
-        # Try to extract parts after trimming
-        parts = remainder |> String.trim() |> String.split(~r/\s+/, parts: 2)
-
-        case parts do
-          [] ->
-            {:error, :missing_agent_name}
-
-          [_agent_name] ->
-            {:error, :missing_question}
-
-          _ ->
-            {:error, :invalid_format}
+      [agent_name, _question] ->
+        if valid_agent_name?(agent_name) do
+          {:error, :invalid_format}
+        else
+          {:error, :invalid_agent_name}
         end
     end
   end

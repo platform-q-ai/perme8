@@ -67,17 +67,8 @@ config :jarga_web, JargaWeb.Endpoint,
     ]
   ]
 
-config :cms, CmsWeb.Endpoint,
-  http: [ip: {127, 0, 0, 1}, port: 4001],
-  check_origin: false,
-  code_reloader: true,
-  debug_errors: true,
-  secret_key_base: "hd7escMTb3vOmz/NCko9TdhZ3W+gaj7DY4+ufl0c7Q2XTmI3B+QN8qoGmXQ4ekKw",
-  watchers: []
-
 # Enable dev routes for dashboard and mailbox
 config :jarga_web, dev_routes: true
-config :cms, dev_routes: true
 
 # Do not include metadata nor timestamps in development logs
 config :logger, :default_formatter, format: "[$level] $message\n"

@@ -79,6 +79,7 @@ defmodule JargaWeb.MixProject do
       {:jason, "~> 1.2"},
       {:bandit, "~> 1.5"},
       {:wallaby, "~> 0.30", runtime: false, only: :test},
+      {:cucumber, "~> 0.4.2", only: :test},
       {:lazy_html, ">= 0.1.0", only: :test}
     ]
   end

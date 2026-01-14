@@ -38,9 +38,6 @@ config :jarga, :chat_context,
   max_content_chars: 3000,
   max_messages_history: 20
 
-config :cms,
-  generators: [timestamp_type: :utc_datetime]
-
 # Configures the endpoint
 config :jarga_web, JargaWeb.Endpoint,
   url: [host: "localhost"],
@@ -52,19 +49,8 @@ config :jarga_web, JargaWeb.Endpoint,
   pubsub_server: Jarga.PubSub,
   live_view: [signing_salt: "5rdQlpgP"]
 
-config :cms, CmsWeb.Endpoint,
-  url: [host: "localhost"],
-  adapter: Bandit.PhoenixAdapter,
-  render_errors: [
-    formats: [json: CmsWeb.ErrorJSON],
-    layout: false
-  ],
-  pubsub_server: Cms.PubSub,
-  live_view: [signing_salt: "/PrEF0KO"]
-
 # Configures the mailer
 config :jarga, Jarga.Mailer, adapter: Swoosh.Adapters.Local
-config :cms, Cms.Mailer, adapter: Swoosh.Adapters.Local
 
 # Configure esbuild (the version is required)
 config :esbuild,

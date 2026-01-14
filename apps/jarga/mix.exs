@@ -112,7 +112,6 @@ defmodule Jarga.MixProject do
       {:excoveralls, "~> 0.18", only: :test},
       {:bypass, "~> 2.1", only: :test},
       {:mox, "~> 1.0", only: :test},
-      {:cucumber, "~> 0.4.2", only: :test},
       {:slugy, "~> 4.1"},
       {:mdex, "~> 0.2"}
     ]

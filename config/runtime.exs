@@ -17,7 +17,6 @@ import Config
 # Alternatively, you can use `mix phx.gen.release` to generate a `bin/server`
 # script that automatically sets the env var above.
 if System.get_env("PHX_SERVER") do
-  config :cms, CmsWeb.Endpoint, server: true
   config :jarga_web, JargaWeb.Endpoint, server: true
 end
 
@@ -29,20 +28,6 @@ if config_env() == :prod do
       environment variable SECRET_KEY_BASE is missing.
       You can generate one by calling: mix phx.gen.secret
       """
-
-  # CMS Runtime Config
-  cms_host = System.get_env("CMS_HOST") || System.get_env("PHX_HOST") || "example.com"
-  cms_port = String.to_integer(System.get_env("CMS_PORT") || System.get_env("PORT") || "4001")
-
-  config :cms, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
-
-  config :cms, CmsWeb.Endpoint,
-    url: [host: cms_host, port: 443, scheme: "https"],
-    http: [
-      ip: {0, 0, 0, 0, 0, 0, 0, 0},
-      port: cms_port
-    ],
-    secret_key_base: secret_key_base
 
   # Jarga Runtime Config
   jarga_host = System.get_env("JARGA_HOST") || System.get_env("PHX_HOST") || "localhost"
