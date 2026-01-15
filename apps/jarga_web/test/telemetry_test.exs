@@ -7,7 +7,7 @@ defmodule JargaWeb.TelemetryTest do
     test "metrics/0 returns a list of telemetry metrics" do
       metrics = Telemetry.metrics()
       assert is_list(metrics)
-      assert length(metrics) > 0
+      assert match?([_ | _], metrics)
     end
 
     test "start_link/1 handles supervisor start" do
