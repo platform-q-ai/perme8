@@ -545,14 +545,16 @@ defmodule ChatEditorSteps do
   end
 
   step "all markdown formatting should be preserved in the editor", context do
-    assert context[:agent_response_complex] != nil or context[:response_type] == :complex_markdown,
+    assert context[:agent_response_complex] != nil or
+             context[:response_type] == :complex_markdown,
            "Expected complex markdown response for formatting preservation"
 
     {:ok, Map.put(context, :expects_all_formatting_preserved, true)}
   end
 
   step "the heading, list, bold text, inline code, and link should render correctly", context do
-    assert context[:agent_response_complex] != nil or context[:response_type] == :complex_markdown,
+    assert context[:agent_response_complex] != nil or
+             context[:response_type] == :complex_markdown,
            "Expected complex markdown response for element rendering verification"
 
     {:ok, Map.put(context, :expects_all_elements_rendered, true)}

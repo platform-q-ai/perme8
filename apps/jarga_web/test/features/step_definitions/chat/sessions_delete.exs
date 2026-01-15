@@ -24,7 +24,8 @@ defmodule ChatSessionsDeleteSteps do
 
   defp click_delete_button(view, session) do
     selectors = [
-      chat_panel_target() <> " [phx-click=delete_session][phx-value-session-id=\"#{session.id}\"]",
+      chat_panel_target() <>
+        " [phx-click=delete_session][phx-value-session-id=\"#{session.id}\"]",
       chat_panel_target() <> " button[aria-label*=\"delete\"]",
       chat_panel_target() <> " [phx-click*=delete]"
     ]
