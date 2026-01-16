@@ -1,3 +1,12 @@
+# This file is responsible for configuring your umbrella
+# and **all applications** and their dependencies with the
+# help of the Config module.
+#
+# Note that all applications in your umbrella share the
+# same configuration and dependencies, which is why they
+# all use the same configuration file. If you want different
+# configurations or dependencies per app, it is best to
+# move said applications out of the umbrella.
 # This file is responsible for configuring your application
 # and its dependencies with the aid of the Config module.
 #
@@ -30,7 +39,7 @@ config :jarga, :chat_context,
   max_messages_history: 20
 
 # Configures the endpoint
-config :jarga, JargaWeb.Endpoint,
+config :jarga_web, JargaWeb.Endpoint,
   url: [host: "localhost"],
   adapter: Bandit.PhoenixAdapter,
   render_errors: [
@@ -41,12 +50,6 @@ config :jarga, JargaWeb.Endpoint,
   live_view: [signing_salt: "5rdQlpgP"]
 
 # Configures the mailer
-#
-# By default it uses the "Local" adapter which stores the emails
-# locally. You can see the emails in your browser, at "/dev/mailbox".
-#
-# For production it's recommended to configure a different adapter
-# at the `config/runtime.exs`.
 config :jarga, Jarga.Mailer, adapter: Swoosh.Adapters.Local
 
 # Configure esbuild (the version is required)
@@ -55,7 +58,7 @@ config :esbuild,
   jarga: [
     args:
       ~w(js/app.ts --bundle --target=es2022 --outdir=../priv/static/assets/js --external:/fonts/* --external:/images/* --alias:@=.),
-    cd: Path.expand("../assets", __DIR__),
+    cd: Path.expand("../apps/jarga_web/assets", __DIR__),
     env: %{"NODE_PATH" => [Path.expand("../deps", __DIR__), Mix.Project.build_path()]}
   ]
 
@@ -67,7 +70,7 @@ config :tailwind,
       --input=assets/css/app.css
       --output=priv/static/assets/css/app.css
     ),
-    cd: Path.expand("..", __DIR__)
+    cd: Path.expand("../apps/jarga_web", __DIR__)
   ]
 
 # Configures Elixir's Logger
@@ -81,3 +84,13 @@ config :phoenix, :json_library, Jason
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"
+
+# Sample configuration:
+#
+#     config :logger, :default_handler,
+#       level: :info
+#
+#     config :logger, :default_formatter,
+#       format: "$date $time [$level] $metadata$message\n",
+#       metadata: [:user_id]
+#

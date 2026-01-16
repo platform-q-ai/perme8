@@ -1,131 +1,14 @@
-defmodule Jarga.MixProject do
+defmodule Perme8.MixProject do
   use Mix.Project
 
   def project do
     [
-      app: :jarga,
+      apps_path: "apps",
       version: "0.1.0",
-      elixir: "~> 1.15",
-      elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
-      aliases: aliases(),
-      deps: deps(),
-      compilers: [:boundary, :phoenix_live_view] ++ Mix.compilers(),
-      boundary: boundary(),
       listeners: [Phoenix.CodeReloader],
-      # Exclude .feature files from test pattern (Cucumber handles these)
-      test_pattern: "*_test.exs",
-      test_coverage: [
-        tool: ExCoveralls
-      ],
-      preferred_cli_env: [
-        coveralls: :test,
-        "coveralls.detail": :test,
-        "coveralls.post": :test,
-        "coveralls.html": :test
-      ]
-    ]
-  end
-
-  # Configuration for the OTP application.
-  #
-  # Type `mix help compile.app` for more information.
-  def application do
-    [
-      mod: {JargaApp, []},
-      extra_applications: [:logger, :runtime_tools]
-    ]
-  end
-
-  def cli do
-    [
-      preferred_envs: [precommit: :test, "assets.deploy": :prod]
-    ]
-  end
-
-  # Specifies which paths to compile per environment.
-  # Note: test/features/step_definitions is loaded by Cucumber, not elixirc
-  defp elixirc_paths(:test), do: ["lib", "test/support"]
-  defp elixirc_paths(_), do: ["lib"]
-
-  # Boundary configuration for enforcing architectural layers
-  defp boundary do
-    [
-      # Only warn about calls crossing internal application boundaries
-      # Framework dependencies (Ecto, Phoenix) are not checked
-      externals_mode: :relaxed,
-
-      # NOTE: All modules now have boundary declarations:
-      # - Jarga: Parent boundary for domain contexts
-      # - JargaApp: OTP application boundary (renamed from Jarga.Application)
-      # - JargaWeb: Web interface boundary
-      # All boundaries properly declared to avoid namespace hierarchy conflicts.
-
-      # Specific framework apps we allow (not strictly checked due to relaxed mode)
-      default: [
-        check: [
-          apps: [
-            # Web framework
-            {:phoenix, :relaxed},
-            {:phoenix_live_view, :relaxed},
-            {:phoenix_html, :relaxed},
-            {:phoenix_ecto, :relaxed},
-            # Database
-            {:ecto, :relaxed},
-            {:ecto_sql, :relaxed},
-            # Other - allow Mix for compile tasks
-            {:mix, :relaxed}
-          ]
-        ]
-      ],
-      # Ignore test helper modules from boundary checks
-      ignore: [~r/\.Test\./]
-    ]
-  end
-
-  # Specifies your project dependencies.
-  #
-  # Type `mix help deps` for examples and options.
-  defp deps do
-    [
-      {:phoenix, "~> 1.8.1"},
-      {:phoenix_ecto, "~> 4.6"},
-      {:ecto_sql, "~> 3.12"},
-      {:postgrex, ">= 0.0.0"},
-      {:phoenix_html, "~> 4.1"},
-      {:phoenix_live_reload, "~> 1.2", only: :dev},
-      {:phoenix_live_view, "~> 1.1.0"},
-      {:lazy_html, ">= 0.1.0", only: :test},
-      {:phoenix_live_dashboard, "~> 0.8.3"},
-      {:esbuild, "~> 0.10", runtime: Mix.env() == :dev},
-      {:tailwind, "~> 0.3", runtime: Mix.env() == :dev},
-      {:heroicons,
-       github: "tailwindlabs/heroicons",
-       tag: "v2.2.0",
-       sparse: "optimized",
-       app: false,
-       compile: false,
-       depth: 1},
-      {:swoosh, "~> 1.16"},
-      {:finch, "~> 0.13"},
-      {:req, "~> 0.5"},
-      {:telemetry_metrics, "~> 1.0"},
-      {:telemetry_poller, "~> 1.0"},
-      {:gettext, "~> 0.26"},
-      {:jason, "~> 1.2"},
-      {:dns_cluster, "~> 0.2.0"},
-      {:bandit, "~> 1.5"},
-      {:bcrypt_elixir, "~> 3.0"},
-      {:dotenvy, "~> 0.8.0", only: [:dev, :test]},
-      {:boundary, "~> 0.10", runtime: false},
-      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
-      {:excoveralls, "~> 0.18", only: :test},
-      {:bypass, "~> 2.1", only: :test},
-      {:mox, "~> 1.0", only: :test},
-      {:wallaby, "~> 0.30", runtime: false, only: :test},
-      {:cucumber, "~> 0.4.2", only: :test},
-      {:slugy, "~> 4.1"},
-      {:mdex, "~> 0.2"}
+      deps: deps(),
+      aliases: aliases()
     ]
   end
 
@@ -137,28 +20,51 @@ defmodule Jarga.MixProject do
   # See the documentation for `Mix` for more info on aliases.
   defp aliases do
     [
-      setup: ["deps.get", "assets.setup", "assets.build"],
+      setup: ["deps.get"],
       "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
-      "assets.build": ["compile", "tailwind jarga", "assets.copy_fonts", "esbuild jarga"],
+      "assets.build": ["tailwind jarga", "assets.copy_fonts", "esbuild jarga"],
       "assets.deploy": [
         "tailwind jarga --minify",
         "assets.copy_fonts",
         "esbuild jarga --minify",
         "phx.digest"
       ],
-      compile: ["compile"],
-      test: ["compile", "test"],
       precommit: [
         "compile --warning-as-errors",
         "deps.unlock --unused",
-        "format",
+        "format --check-formatted",
         "credo --strict",
         "step_linter",
-        "cmd npm run lint --prefix assets",
-        "cmd npm test --prefix assets",
-        "assets.deploy",
-        "coveralls.html"
+        "assets.build",
+        fn _ ->
+          if System.cmd("npm", ["test", "--prefix", "apps/jarga_web/assets"],
+               into: IO.stream(:stdio, :line)
+             )
+             |> elem(1) != 0 do
+            raise "npm test failed"
+          end
+        end,
+        "test"
       ]
     ]
+  end
+
+  def cli do
+    [
+      preferred_envs: [
+        precommit: :test,
+        "assets.build": :dev,
+        "assets.deploy": :prod
+      ]
+    ]
+  end
+
+  # Dependencies listed here are available only for this
+  # project and cannot be accessed from applications inside
+  # the apps folder.
+  #
+  # Run "mix help deps" for examples and options.
+  defp deps do
+    []
   end
 end

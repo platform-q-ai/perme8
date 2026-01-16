@@ -61,11 +61,11 @@ jobs:
         with:
           node-version: "20"
           cache: "npm"
-          cache-dependency-path: assets/package-lock.json
+          cache-dependency-path: apps/jarga_web/assets/package-lock.json
 
       - name: Install JavaScript dependencies
         run: |
-          cd assets
+          cd apps/jarga_web/assets
           npm ci
 
       - name: Create test database
@@ -132,11 +132,11 @@ jobs:
         with:
           node-version: "20"
           cache: "npm"
-          cache-dependency-path: assets/package-lock.json
+          cache-dependency-path: apps/jarga_web/assets/package-lock.json
 
       - name: Install JavaScript dependencies
         run: |
-          cd assets
+          cd apps/jarga_web/assets
           npm ci
 
       - name: Install Chrome and ChromeDriver

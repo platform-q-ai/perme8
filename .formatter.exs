@@ -1,5 +1,6 @@
 [
-  import_deps: [:phoenix],
+  apps_path: "apps",
   plugins: [Phoenix.LiveView.HTMLFormatter],
-  inputs: ["*.{heex,ex,exs}", "{config,lib,test}/**/*.{heex,ex,exs}"]
+  inputs: ["*.{heex,ex,exs}", "config/**/*.{ex,exs}"],
+  subdirectories: ["apps/*"]
 ]
