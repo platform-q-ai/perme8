@@ -34,42 +34,38 @@ defmodule Alkali.Application.UseCases.ScaffoldNewSite do
 
     site_root = Path.join(target_path, site_name)
 
-    # Check if directory already exists
     if File.exists?(site_root) do
       {:error, "Directory '#{site_name}' already exists"}
     else
-      # Define directory structure
-      dirs = [
-        Path.join(site_root, "config"),
-        Path.join(site_root, "content/posts"),
-        Path.join(site_root, "content/pages"),
-        Path.join(site_root, "layouts"),
-        Path.join(site_root, "layouts/partials"),
-        Path.join(site_root, "static/css"),
-        Path.join(site_root, "static/js"),
-        Path.join(site_root, "static/images")
-      ]
+      do_scaffold(site_root, site_name, opts, dir_creator, file_writer)
+    end
+  end
 
-      # Create directories
-      case create_directories(dirs, dir_creator) do
-        {:ok, created_dirs} ->
-          # Generate and write files
-          files = generate_files(site_root, site_name, opts)
+  defp do_scaffold(site_root, site_name, opts, dir_creator, file_writer) do
+    dirs = [
+      Path.join(site_root, "config"),
+      Path.join(site_root, "content/posts"),
+      Path.join(site_root, "content/pages"),
+      Path.join(site_root, "layouts"),
+      Path.join(site_root, "layouts/partials"),
+      Path.join(site_root, "static/css"),
+      Path.join(site_root, "static/js"),
+      Path.join(site_root, "static/images")
+    ]
 
-          case write_files(files, file_writer) do
-            {:ok, created_files} ->
-              {:ok, %{created_dirs: created_dirs, created_files: created_files}}
+    with {:ok, created_dirs} <- create_directories(dirs, dir_creator),
+         files = generate_files(site_root, site_name, opts),
+         {:ok, created_files} <- write_files(files, file_writer) do
+      {:ok, %{created_dirs: created_dirs, created_files: created_files}}
+    else
+      {:error, :eexist} ->
+        {:error, "Directory '#{site_name}' already exists"}
 
-            {:error, reason} ->
-              {:error, "Failed to create files: #{inspect(reason)}"}
-          end
+      {:error, reason} when is_binary(reason) ->
+        {:error, reason}
 
-        {:error, :eexist} ->
-          {:error, "Directory '#{site_name}' already exists"}
-
-        {:error, reason} ->
-          {:error, "Failed to create directories: #{inspect(reason)}"}
-      end
+      {:error, reason} ->
+        {:error, "Failed to scaffold site: #{inspect(reason)}"}
     end
   end
 
@@ -1543,19 +1539,13 @@ defmodule Alkali.Application.UseCases.ScaffoldNewSite do
     "// Your JavaScript here\n"
   end
 
-  # Default implementations
+  # Default implementations delegating to infrastructure
 
   defp default_dir_creator(path) do
-    case File.mkdir_p(path) do
-      :ok -> {:ok, path}
-      {:error, reason} -> {:error, reason}
-    end
+    Alkali.Infrastructure.FileSystem.mkdir_p_with_path(path)
   end
 
   defp default_file_writer(path, content) do
-    case File.write(path, content) do
-      :ok -> {:ok, path}
-      {:error, reason} -> {:error, reason}
-    end
+    Alkali.Infrastructure.FileSystem.write_with_path(path, content)
   end
 end

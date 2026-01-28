@@ -59,7 +59,7 @@ defmodule Alkali.Infrastructure.Parsers.MarkdownParser do
     "<blockquote>#{process_inline(text)}</blockquote>"
   end
 
-  defp process_special_block(lines = ["| " <> _ | _]) do
+  defp process_special_block(["| " <> _ | _] = lines) do
     rows =
       Enum.map(lines, fn line ->
         cells = String.split(line, "|", trim: true) |> Enum.map(&String.trim/1)

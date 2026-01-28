@@ -26,39 +26,37 @@ defmodule Alkali.Infrastructure.ConfigLoader do
   end
 
   defp load_config_file(config_file, site_path) do
-    try do
-      # Use Config.Reader to read the config file properly
-      config_data = Config.Reader.read!(config_file)
+    # Use Config.Reader to read the config file properly
+    config_data = Config.Reader.read!(config_file)
 
-      # Extract the :alkali config
-      alkali_config =
-        case Keyword.get(config_data, :alkali) do
-          nil ->
-            # If no :alkali key, return default
-            default_config(site_path)
+    # Extract the :alkali config
+    alkali_config =
+      case Keyword.get(config_data, :alkali) do
+        nil ->
+          # If no :alkali key, return default
+          default_config(site_path)
 
-          opts when is_list(opts) ->
-            Enum.into(opts, %{})
+        opts when is_list(opts) ->
+          Enum.into(opts, %{})
 
-          opts when is_map(opts) ->
-            opts
-        end
+        opts when is_map(opts) ->
+          opts
+      end
 
-      # Merge with required paths
-      config =
-        alkali_config
-        |> Map.put_new(:site_path, site_path)
-        |> Map.put_new(:content_path, "content")
-        |> Map.put_new(:output_path, "_site")
-        |> Map.put_new(:assets_path, "assets")
-        |> Map.put_new(:layouts_path, "layouts")
-        |> normalize_site_config()
+    # Merge with required paths
+    config =
+      alkali_config
+      |> Map.put_new(:site_path, site_path)
+      |> Map.put_new(:content_path, "content")
+      |> Map.put_new(:output_path, "_site")
+      |> Map.put_new(:assets_path, "assets")
+      |> Map.put_new(:layouts_path, "layouts")
+      |> normalize_site_config()
 
-      {:ok, config}
-    rescue
-      e ->
-        {:error, "Failed to load config file #{config_file}: #{Exception.message(e)}"}
-    end
+    {:ok, config}
+  rescue
+    e ->
+      {:error, "Failed to load config file #{config_file}: #{Exception.message(e)}"}
   end
 
   defp normalize_site_config(config) do

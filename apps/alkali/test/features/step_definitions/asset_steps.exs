@@ -140,7 +140,7 @@ defmodule Alkali.AssetSteps do
     search_pattern = String.replace(basename, "[hash]", "*") <> ".css"
     matching_files = Path.wildcard(Path.join(output_dir, search_pattern))
 
-    assert length(matching_files) > 0,
+    assert matching_files != [],
            "Expected to find CSS file matching pattern #{search_pattern} in #{output_dir}"
 
     # Store the actual file path for subsequent steps
@@ -199,7 +199,7 @@ defmodule Alkali.AssetSteps do
     search_pattern = String.replace(basename, "[hash]", "*") <> ".js"
     matching_files = Path.wildcard(Path.join(output_dir, search_pattern))
 
-    assert length(matching_files) > 0,
+    assert matching_files != [],
            "Expected to find JS file matching pattern #{search_pattern} in #{output_dir}"
 
     # Store the actual file path for subsequent steps
@@ -216,7 +216,7 @@ defmodule Alkali.AssetSteps do
     output_dir = Path.join(site_path, "_site")
     html_files = Path.wildcard(Path.join(output_dir, "**/*.html"))
 
-    assert length(html_files) > 0,
+    assert html_files != [],
            "Expected to find at least one HTML file in #{output_dir}"
 
     # Check the first HTML file for the fingerprinted asset reference

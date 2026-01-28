@@ -44,7 +44,7 @@ defmodule Alkali.Application.Helpers.PaginateTest do
       pages = Paginate.paginate([], per_page: 10)
 
       # Empty list produces no pages (not even page 1)
-      assert length(pages) == 0
+      assert pages == []
     end
 
     test "assigns correct page numbers" do

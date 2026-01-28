@@ -183,7 +183,7 @@ defmodule Alkali.Application.UseCases.GenerateRssFeedTest do
             title: "Post #{i}",
             content: "<p>Content #{i}</p>",
             url: "/posts/post-#{i}.html",
-            date: DateTime.add(~U[2024-01-01 00:00:00Z], i * 86400, :second),
+            date: DateTime.add(~U[2024-01-01 00:00:00Z], i * 86_400, :second),
             draft: false
           }
         end

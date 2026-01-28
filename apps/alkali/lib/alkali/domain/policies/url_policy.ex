@@ -5,6 +5,8 @@ defmodule Alkali.Domain.Policies.UrlPolicy do
   Pure function with no I/O or side effects.
   """
 
+  alias Alkali.Domain.Policies.SlugPolicy
+
   @doc """
   Generates a URL from a file path.
 
@@ -43,7 +45,7 @@ defmodule Alkali.Domain.Policies.UrlPolicy do
     filename = Path.basename(path, ".md")
 
     # Slugify only the filename, preserve directory structure
-    slugified_filename = Alkali.Domain.Policies.SlugPolicy.generate_slug(filename)
+    slugified_filename = SlugPolicy.generate_slug(filename)
 
     # Recombine
     case dir do

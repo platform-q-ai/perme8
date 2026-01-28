@@ -114,14 +114,14 @@ defmodule Alkali.Infrastructure.Parsers.FrontmatterParser do
     content = String.trim_trailing(rest, "]")
 
     # Check for unclosed bracket
-    if not String.ends_with?(rest, "]") do
-      # Return error indicator - will be caught in parse_kv
-      {:error, "YAML syntax error: Unclosed bracket in list"}
-    else
+    if String.ends_with?(rest, "]") do
       content
       |> String.split(",")
       |> Enum.map(&String.trim/1)
       |> Enum.map(&parse_value/1)
+    else
+      # Return error indicator - will be caught in parse_kv
+      {:error, "YAML syntax error: Unclosed bracket in list"}
     end
   end
 

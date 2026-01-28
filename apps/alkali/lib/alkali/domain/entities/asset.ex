@@ -34,6 +34,8 @@ defmodule Alkali.Domain.Entities.Asset do
 
   Returns a 64-character hexadecimal string.
 
+  Delegates to the infrastructure layer for cryptographic operations.
+
   ## Examples
 
       iex> Asset.calculate_fingerprint("body { margin: 0; }")
@@ -41,8 +43,7 @@ defmodule Alkali.Domain.Entities.Asset do
   """
   @spec calculate_fingerprint(binary()) :: String.t()
   def calculate_fingerprint(content) do
-    :crypto.hash(:sha256, content)
-    |> Base.encode16(case: :lower)
+    Alkali.Infrastructure.CryptoService.sha256_fingerprint(content)
   end
 
   @doc """

@@ -65,6 +65,16 @@ defmodule Alkali do
   """
   defdelegate clean_output(site_path, opts \\ []), to: CleanOutput, as: :execute
 
-  @doc false
-  def hello, do: :world
+  @doc """
+  Hello world function for testing.
+
+  ## Examples
+
+      iex> Alkali.hello()
+      :world
+
+  """
+  def hello do
+    :world
+  end
 end

@@ -107,8 +107,12 @@ defmodule Alkali.Application.UseCases.CreateNewPost do
   end
 
   defp check_slug_pattern_exists(dir, slug, ext, file_checker) do
+    check_with_mock_dates(dir, slug, ext, file_checker) or
+      check_filesystem_for_slug(dir, slug, ext)
+  end
+
+  defp check_with_mock_dates(dir, slug, ext, file_checker) do
     # Strategy 1: Try checking with file_checker (for testing with mocks)
-    # Generate a few test dates to check
     dates = [
       Date.utc_today(),
       Date.add(Date.utc_today(), -1),
@@ -117,33 +121,21 @@ defmodule Alkali.Application.UseCases.CreateNewPost do
       Date.add(Date.utc_today(), -365)
     ]
 
-    mock_file_exists =
-      Enum.any?(dates, fn date ->
-        date_str = Date.to_iso8601(date)
-        test_path = Path.join(dir, "#{date_str}-#{slug}#{ext}")
-        file_checker.(test_path)
-      end)
+    Enum.any?(dates, fn date ->
+      date_str = Date.to_iso8601(date)
+      test_path = Path.join(dir, "#{date_str}-#{slug}#{ext}")
+      file_checker.(test_path)
+    end)
+  end
 
-    if mock_file_exists do
-      true
+  defp check_filesystem_for_slug(dir, slug, ext) do
+    # Strategy 2: Check real filesystem (for production use)
+    with true <- File.dir?(dir),
+         {:ok, files} <- File.ls(dir) do
+      pattern = ~r/^\d{4}-\d{2}-\d{2}-#{Regex.escape(slug)}#{Regex.escape(ext)}$/
+      Enum.any?(files, &Regex.match?(pattern, &1))
     else
-      # Strategy 2: Check real filesystem (for production use)
-      # List files in directory and check for matching slugs
-      if File.dir?(dir) do
-        case File.ls(dir) do
-          {:ok, files} ->
-            pattern = ~r/^\d{4}-\d{2}-\d{2}-#{Regex.escape(slug)}#{Regex.escape(ext)}$/
-
-            Enum.any?(files, fn filename ->
-              Regex.match?(pattern, filename)
-            end)
-
-          {:error, _} ->
-            false
-        end
-      else
-        false
-      end
+      _ -> false
     end
   end
 
@@ -168,12 +160,6 @@ defmodule Alkali.Application.UseCases.CreateNewPost do
   # Default implementations
 
   defp default_file_writer(path, content) do
-    # Ensure parent directory exists
-    File.mkdir_p!(Path.dirname(path))
-
-    case File.write(path, content) do
-      :ok -> {:ok, path}
-      {:error, reason} -> {:error, reason}
-    end
+    Alkali.Infrastructure.FileSystem.write_with_path(path, content)
   end
 end

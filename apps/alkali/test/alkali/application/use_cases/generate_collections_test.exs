@@ -51,8 +51,8 @@ defmodule Alkali.Application.UseCases.GenerateCollectionsTest do
       elixir_collection = Enum.find(collections, &(&1.type == :tag && &1.name == "elixir"))
       news_collection = Enum.find(collections, &(&1.type == :category && &1.name == "news"))
 
-      assert length(elixir_collection.pages) == 1
-      assert length(news_collection.pages) == 0
+      assert Enum.count(elixir_collection.pages) == 1
+      assert news_collection.pages == []
     end
 
     test "sorts pages by date descending" do

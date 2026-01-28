@@ -2,6 +2,8 @@ defmodule Alkali.BuildSteps do
   use Cucumber.StepDefinition
   use ExUnit.Case
 
+  alias Mix.Tasks.Alkali.Build
+
   @tmp_dir System.tmp_dir!() <> "/alkali_build_test"
 
   # ✅ ADD: HTML validation helper
@@ -195,8 +197,7 @@ defmodule Alkali.BuildSteps do
                   slug
                   |> String.replace("-", " ")
                   |> String.split()
-                  |> Enum.map(&String.capitalize/1)
-                  |> Enum.join(" ")
+                  |> Enum.map_join(" ", &String.capitalize/1)
 
                 {title, date_str}
 
@@ -205,8 +206,7 @@ defmodule Alkali.BuildSteps do
                   filename
                   |> String.replace("-", " ")
                   |> String.split()
-                  |> Enum.map(&String.capitalize/1)
-                  |> Enum.join(" ")
+                  |> Enum.map_join(" ", &String.capitalize/1)
 
                 {title, Date.utc_today() |> Date.to_iso8601()}
             end
@@ -258,8 +258,7 @@ defmodule Alkali.BuildSteps do
                 tags
                 |> String.split(",")
                 |> Enum.map(&String.trim/1)
-                |> Enum.map(&"\"#{&1}\"")
-                |> Enum.join(", ")
+                |> Enum.map_join(", ", &"\"#{&1}\"")
 
               frontmatter_parts ++ ["tags: [#{tag_list}]"]
             else
@@ -333,7 +332,7 @@ defmodule Alkali.BuildSteps do
 
             # Run the appropriate Mix task
             case task do
-              "alkali.build" -> Mix.Tasks.Alkali.Build.run(args)
+              "alkali.build" -> Build.run(args)
               _ -> :ok
             end
           end)
@@ -576,7 +575,7 @@ defmodule Alkali.BuildSteps do
         []
       end
 
-    assert length(html_files) > 0,
+    assert html_files != [],
            "Expected HTML files to be generated with slug '#{expected_slug}' - RED state expected failure"
 
     {:ok, context}

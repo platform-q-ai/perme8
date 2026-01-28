@@ -3,6 +3,10 @@ defmodule Alkali.Application.UseCases.BuildSite do
   BuildSite use case orchestrates the full static site build process.
   """
 
+  alias Alkali.Application.UseCases.GenerateRssFeed
+  alias Alkali.Infrastructure.BuildCache
+  alias Alkali.Infrastructure.LayoutResolver
+
   @doc """
   Orchestrates the complete build process for a static site.
 
@@ -40,46 +44,25 @@ defmodule Alkali.Application.UseCases.BuildSite do
     incremental = Keyword.get(opts, :incremental, true)
 
     # Step 0: Load build cache for incremental builds
-    cache =
-      if incremental do
-        if verbose, do: IO.puts("Loading build cache...")
-        Alkali.Infrastructure.BuildCache.load(site_path)
-      else
-        %{}
-      end
+    cache = load_build_cache(site_path, incremental, verbose)
 
     # Step 1: Load config
     config = load_config(site_path, config_loader, verbose)
-    # Ensure site_path is always set in config (config_loader may omit it)
     config = Map.put_new(config, :site_path, site_path)
 
     # Step 2: Parse content
     content_result = parse_content(config, opts, verbose)
-
-    # Validate unique slugs before proceeding
     validate_unique_slugs(content_result.pages, verbose)
-
-    # Filter drafts if not in draft mode
     pages = filter_drafts(content_result.pages, draft)
 
     # Step 2b: Filter pages for incremental build
-    {pages_to_build, pages_skipped} =
-      if incremental && map_size(cache) > 0 do
-        filter_changed_pages(pages, cache, config, verbose)
-      else
-        {pages, []}
-      end
+    {pages_to_build, pages_skipped} = filter_for_incremental_build(pages, cache, config, verbose)
 
     # Step 3: Generate collections
     collections_result = generate_collections(pages, opts, verbose)
 
     # Step 3b: Generate RSS feed (if enabled)
-    rss_file_writer = Keyword.get(opts, :file_writer, &default_file_writer/2)
-
-    rss_mkdir =
-      if Keyword.has_key?(opts, :file_writer), do: fn _ -> :ok end, else: &File.mkdir_p!/1
-
-    rss_written = generate_rss_feed(pages, config, rss_file_writer, rss_mkdir, opts, verbose)
+    rss_written = generate_rss(pages, config, opts, verbose)
 
     # Step 4: Process assets
     assets_result = process_assets(config, opts, verbose)
@@ -109,41 +92,7 @@ defmodule Alkali.Application.UseCases.BuildSite do
     assets_written = write_assets(assets_result.assets, config, opts, verbose)
 
     # Step 7: Update cache for incremental builds
-    if incremental do
-      # Collect content file paths
-      content_file_paths =
-        pages
-        |> Enum.map(&Map.get(&1, :file_path))
-        |> Enum.filter(&(&1 != nil))
-
-      # Collect layout and partial file paths
-      layouts_path = Map.get(config, :layouts_path, "layouts")
-      site_path_str = Map.get(config, :site_path, ".")
-
-      # Ensure site_path is absolute
-      absolute_site_path = Path.expand(site_path_str)
-
-      absolute_layouts_path =
-        if Path.type(layouts_path) == :relative do
-          Path.join(absolute_site_path, layouts_path)
-        else
-          layouts_path
-        end
-
-      layout_file_paths =
-        if File.exists?(absolute_layouts_path) do
-          Path.wildcard(Path.join(absolute_layouts_path, "**/*.{html,heex,eex}"))
-        else
-          []
-        end
-
-      # Combine all file paths to track
-      all_file_paths = content_file_paths ++ layout_file_paths
-
-      updated_cache = Alkali.Infrastructure.BuildCache.update_cache(cache, all_file_paths)
-
-      Alkali.Infrastructure.BuildCache.save(site_path, updated_cache)
-    end
+    if incremental, do: update_build_cache(cache, pages, config, site_path)
 
     # Build summary
     summary = %{
@@ -179,6 +128,58 @@ defmodule Alkali.Application.UseCases.BuildSite do
   end
 
   # Private Functions
+
+  defp load_build_cache(site_path, true, verbose) do
+    if verbose, do: IO.puts("Loading build cache...")
+    BuildCache.load(site_path)
+  end
+
+  defp load_build_cache(_site_path, false, _verbose), do: %{}
+
+  defp filter_for_incremental_build(pages, cache, config, verbose) when map_size(cache) > 0 do
+    filter_changed_pages(pages, cache, config, verbose)
+  end
+
+  defp filter_for_incremental_build(pages, _cache, _config, _verbose), do: {pages, []}
+
+  defp generate_rss(pages, config, opts, verbose) do
+    rss_file_writer = Keyword.get(opts, :file_writer, &default_file_writer/2)
+
+    rss_mkdir =
+      if Keyword.has_key?(opts, :file_writer), do: fn _ -> :ok end, else: &File.mkdir_p!/1
+
+    generate_rss_feed(pages, config, rss_file_writer, rss_mkdir, opts, verbose)
+  end
+
+  defp update_build_cache(cache, pages, config, site_path) do
+    content_file_paths =
+      pages
+      |> Enum.map(&Map.get(&1, :file_path))
+      |> Enum.filter(&(&1 != nil))
+
+    layout_file_paths = collect_layout_file_paths(config)
+
+    all_file_paths = content_file_paths ++ layout_file_paths
+    updated_cache = BuildCache.update_cache(cache, all_file_paths)
+    BuildCache.save(site_path, updated_cache)
+  end
+
+  defp collect_layout_file_paths(config) do
+    layouts_path = Map.get(config, :layouts_path, "layouts")
+    site_path_str = Map.get(config, :site_path, ".")
+    absolute_site_path = Path.expand(site_path_str)
+
+    absolute_layouts_path =
+      if Path.type(layouts_path) == :relative,
+        do: Path.join(absolute_site_path, layouts_path),
+        else: layouts_path
+
+    if File.exists?(absolute_layouts_path) do
+      Path.wildcard(Path.join(absolute_layouts_path, "**/*.{html,heex,eex}"))
+    else
+      []
+    end
+  end
 
   defp load_config(site_path, config_loader, verbose) do
     if verbose, do: IO.puts("Loading configuration...")
@@ -226,64 +227,66 @@ defmodule Alkali.Application.UseCases.BuildSite do
   defp filter_changed_pages(pages, cache, config, verbose) do
     if verbose, do: IO.puts("Checking for changed files...")
 
-    alias Alkali.Infrastructure.BuildCache
+    absolute_layouts_path = get_absolute_layouts_path(config)
 
-    # Check if any layout files have changed
-    layouts_path = Map.get(config, :layouts_path, "layouts")
-    site_path = Map.get(config, :site_path, ".")
-
-    # Ensure site_path is absolute
-    absolute_site_path = Path.expand(site_path)
-
-    absolute_layouts_path =
-      if Path.type(layouts_path) == :relative do
-        Path.join(absolute_site_path, layouts_path)
-      else
-        layouts_path
-      end
-
-    layout_files_changed =
-      if File.exists?(absolute_layouts_path) do
-        layout_files = Path.wildcard(Path.join(absolute_layouts_path, "**/*.{html,heex,eex}"))
-
-        Enum.any?(layout_files, fn layout_file ->
-          changed = BuildCache.file_changed?(layout_file, cache)
-
-          if verbose && changed do
-            IO.puts("  Layout file changed: #{Path.relative_to_cwd(layout_file)}")
-          end
-
-          changed
-        end)
-      else
-        false
-      end
-
-    # If any layout file changed, rebuild all pages
-    if layout_files_changed do
+    if layout_files_changed?(absolute_layouts_path, cache, verbose) do
       if verbose, do: IO.puts("  Layout files changed - rebuilding all pages")
       {pages, []}
     else
-      # Otherwise, only rebuild pages whose content files changed
-      {changed, skipped} =
-        Enum.split_with(pages, fn page ->
-          # Check if the source file has changed
-          file_path = Map.get(page, :file_path)
+      split_pages_by_change_status(pages, cache, verbose)
+    end
+  end
 
-          if file_path && File.exists?(file_path) do
-            BuildCache.file_changed?(file_path, cache)
-          else
-            # If no source file or doesn't exist, assume changed
-            true
-          end
-        end)
+  defp get_absolute_layouts_path(config) do
+    layouts_path = Map.get(config, :layouts_path, "layouts")
+    site_path = Map.get(config, :site_path, ".")
+    absolute_site_path = Path.expand(site_path)
 
-      if verbose do
-        IO.puts("  Changed: #{length(changed)} files")
-        IO.puts("  Skipped: #{length(skipped)} files")
-      end
+    if Path.type(layouts_path) == :relative do
+      Path.join(absolute_site_path, layouts_path)
+    else
+      layouts_path
+    end
+  end
 
-      {changed, skipped}
+  defp layout_files_changed?(absolute_layouts_path, cache, verbose) do
+    if File.exists?(absolute_layouts_path) do
+      layout_files = Path.wildcard(Path.join(absolute_layouts_path, "**/*.{html,heex,eex}"))
+      Enum.any?(layout_files, &layout_file_changed?(&1, cache, verbose))
+    else
+      false
+    end
+  end
+
+  defp layout_file_changed?(layout_file, cache, verbose) do
+    changed = BuildCache.file_changed?(layout_file, cache)
+
+    if verbose && changed do
+      IO.puts("  Layout file changed: #{Path.relative_to_cwd(layout_file)}")
+    end
+
+    changed
+  end
+
+  defp split_pages_by_change_status(pages, cache, verbose) do
+    {changed, skipped} =
+      Enum.split_with(pages, &page_changed?(&1, cache))
+
+    if verbose do
+      IO.puts("  Changed: #{length(changed)} files")
+      IO.puts("  Skipped: #{length(skipped)} files")
+    end
+
+    {changed, skipped}
+  end
+
+  defp page_changed?(page, cache) do
+    file_path = Map.get(page, :file_path)
+
+    if file_path && File.exists?(file_path) do
+      BuildCache.file_changed?(file_path, cache)
+    else
+      true
     end
   end
 
@@ -299,11 +302,10 @@ defmodule Alkali.Application.UseCases.BuildSite do
 
       duplicates ->
         duplicate_info =
-          Enum.map(duplicates, fn {slug, pages} ->
-            files = Enum.map(pages, & &1.file_path) |> Enum.join(", ")
+          Enum.map_join(duplicates, "\n", fn {slug, pages} ->
+            files = Enum.map_join(pages, ", ", & &1.file_path)
             "  - '#{slug}': #{files}"
           end)
-          |> Enum.join("\n")
 
         message = "Duplicate slug detected:\n#{duplicate_info}"
 
@@ -334,68 +336,76 @@ defmodule Alkali.Application.UseCases.BuildSite do
   end
 
   defp generate_rss_feed(pages, config, file_writer, mkdir_fn, opts, verbose) do
-    # Check if RSS generation is enabled (default: true)
-    generate_rss = Keyword.get(opts, :generate_rss, true)
-
-    if not generate_rss do
+    if Keyword.get(opts, :generate_rss, true) do
+      do_generate_rss_feed(pages, config, file_writer, mkdir_fn, opts, verbose)
+    else
       if verbose, do: IO.puts("Skipping RSS feed generation (disabled)")
       0
+    end
+  end
+
+  defp do_generate_rss_feed(pages, config, file_writer, mkdir_fn, opts, verbose) do
+    if verbose, do: IO.puts("Generating RSS feed...")
+
+    site_url = Map.get(config, :site_url)
+
+    if is_nil(site_url) or site_url == "" do
+      if verbose, do: IO.puts("  Warning: site_url not configured, skipping RSS feed")
+      0
     else
-      if verbose, do: IO.puts("Generating RSS feed...")
+      generate_and_write_rss_feed(pages, config, file_writer, mkdir_fn, opts, verbose, site_url)
+    end
+  end
 
-      # Check if site_url is configured
-      site_url = Map.get(config, :site_url)
+  defp generate_and_write_rss_feed(pages, config, file_writer, mkdir_fn, opts, verbose, site_url) do
+    rss_opts = [
+      site_url: site_url,
+      feed_title: Map.get(config, :site_name, "Blog"),
+      feed_description: Map.get(config, :description, "Latest posts"),
+      max_items: Keyword.get(opts, :rss_max_items, 20)
+    ]
 
-      if is_nil(site_url) or site_url == "" do
-        if verbose, do: IO.puts("  Warning: site_url not configured, skipping RSS feed")
+    case GenerateRssFeed.execute(pages, rss_opts) do
+      {:ok, xml} ->
+        write_rss_feed_to_disk(config, file_writer, mkdir_fn, verbose, xml)
+
+      {:error, reason} ->
+        if verbose,
+          do: IO.puts("  Warning: Failed to generate RSS feed: #{inspect(reason)}")
+
         0
-      else
-        # Generate RSS feed
-        rss_opts = [
-          site_url: site_url,
-          feed_title: Map.get(config, :site_name, "Blog"),
-          feed_description: Map.get(config, :description, "Latest posts"),
-          max_items: Keyword.get(opts, :rss_max_items, 20)
-        ]
+    end
+  end
 
-        case Alkali.Application.UseCases.GenerateRssFeed.execute(pages, rss_opts) do
-          {:ok, xml} ->
-            # Write RSS feed to output directory
-            output_path = Map.get(config, :output_path, "_site")
+  defp write_rss_feed_to_disk(config, file_writer, mkdir_fn, verbose, xml) do
+    output_path = Map.get(config, :output_path, "_site")
+    absolute_output_path = get_absolute_output_path(config, output_path)
+    feed_path = Path.join(absolute_output_path, "feed.xml")
 
-            absolute_output_path =
-              if Path.type(output_path) == :relative do
-                Path.join(Map.get(config, :site_path, "."), output_path)
-              else
-                output_path
-              end
+    mkdir_fn.(Path.dirname(feed_path))
 
-            feed_path = Path.join(absolute_output_path, "feed.xml")
-            mkdir_fn.(Path.dirname(feed_path))
+    case file_writer.(feed_path, xml) do
+      :ok ->
+        if verbose, do: IO.puts("  Written: feed.xml")
+        1
 
-            case file_writer.(feed_path, xml) do
-              :ok ->
-                if verbose, do: IO.puts("  Written: feed.xml")
-                1
+      {:ok, _} ->
+        if verbose, do: IO.puts("  Written: feed.xml")
+        1
 
-              {:ok, _} ->
-                if verbose, do: IO.puts("  Written: feed.xml")
-                1
+      {:error, reason} ->
+        if verbose,
+          do: IO.puts("  Warning: Failed to write RSS feed: #{inspect(reason)}")
 
-              {:error, reason} ->
-                if verbose,
-                  do: IO.puts("  Warning: Failed to write RSS feed: #{inspect(reason)}")
+        0
+    end
+  end
 
-                0
-            end
-
-          {:error, reason} ->
-            if verbose,
-              do: IO.puts("  Warning: Failed to generate RSS feed: #{inspect(reason)}")
-
-            0
-        end
-      end
+  defp get_absolute_output_path(config, output_path) do
+    if Path.type(output_path) == :relative do
+      Path.join(Map.get(config, :site_path, "."), output_path)
+    else
+      output_path
     end
   end
 
@@ -451,18 +461,17 @@ defmodule Alkali.Application.UseCases.BuildSite do
   end
 
   defp render_and_write_pages(pages, config, collections, mappings, opts, verbose) do
-    alias Alkali.Infrastructure.LayoutResolver
+    render_ctx = build_render_context(config, collections, mappings, opts)
 
-    template_renderer = Keyword.get(opts, :template_renderer, &default_template_renderer/3)
-    layout_resolver = Keyword.get(opts, :layout_resolver, &LayoutResolver.resolve_layout/3)
+    Enum.reduce(pages, 0, fn page, count ->
+      if verbose, do: IO.puts("  Rendering: #{page.url}")
+      render_and_write_single_page(page, render_ctx, count)
+    end)
+  end
 
-    render_with_layout =
-      Keyword.get(opts, :render_with_layout, &LayoutResolver.render_with_layout/4)
-
-    file_writer = Keyword.get(opts, :file_writer, &default_file_writer/2)
+  defp build_render_context(config, collections, mappings, opts) do
     output_path = Map.get(config, :output_path, "_site")
 
-    # Make output_path absolute if it's relative
     absolute_output_path =
       if Path.type(output_path) == :relative do
         Path.join(Map.get(config, :site_path, "."), output_path)
@@ -470,461 +479,347 @@ defmodule Alkali.Application.UseCases.BuildSite do
         output_path
       end
 
-    Enum.reduce(pages, 0, fn page, count ->
-      if verbose, do: IO.puts("  Rendering: #{page.url}")
+    %{
+      template_renderer: Keyword.get(opts, :template_renderer, &default_template_renderer/3),
+      layout_resolver: Keyword.get(opts, :layout_resolver, &LayoutResolver.resolve_layout/3),
+      render_with_layout:
+        Keyword.get(opts, :render_with_layout, &LayoutResolver.render_with_layout/4),
+      file_writer: Keyword.get(opts, :file_writer, &default_file_writer/2),
+      absolute_output_path: absolute_output_path,
+      config: config,
+      collections: collections,
+      mappings: mappings,
+      opts: opts,
+      has_custom_renderer: Keyword.has_key?(opts, :template_renderer)
+    }
+  end
 
-      # If we have a custom template_renderer, use the old flow for backward compatibility
-      result =
-        if Keyword.has_key?(opts, :template_renderer) do
-          assigns = %{
-            page: page,
-            site: config,
-            collections: collections,
-            assets: mappings
-          }
+  defp render_and_write_single_page(page, ctx, count) do
+    result = render_page_html(page, ctx)
+    handle_render_result(result, page, ctx, count)
+  end
 
-          template_renderer.("layout.html.heex", assigns, opts)
-        else
-          # Use new layout resolution flow
-          with {:ok, layout_path} <- layout_resolver.(page, config, opts) do
-            # Page already has content field with HTML - no need to merge
-            # Just ensure content field exists (it should from ParseContent)
+  defp render_page_html(page, %{has_custom_renderer: true} = ctx) do
+    assigns = %{
+      page: page,
+      site: ctx.config,
+      collections: ctx.collections,
+      assets: ctx.mappings
+    }
 
-            # Render with layout
-            render_opts = [
-              assigns: %{collections: collections, assets: mappings},
-              asset_mappings: mappings
-            ]
+    ctx.template_renderer.("layout.html.heex", assigns, ctx.opts)
+  end
 
-            render_with_layout.(page, layout_path, config, render_opts)
-          end
-        end
+  defp render_page_html(page, ctx) do
+    with {:ok, layout_path} <- ctx.layout_resolver.(page, ctx.config, ctx.opts) do
+      render_opts = [
+        assigns: %{collections: ctx.collections, assets: ctx.mappings},
+        asset_mappings: ctx.mappings
+      ]
 
-      case result do
-        {:ok, html} ->
-          # Calculate output path from URL
-          # URL is like "/posts/2024/my-post", output should be "_site/posts/2024/my-post.html"
-          relative_path = String.trim_leading(page.url, "/")
+      ctx.render_with_layout.(page, layout_path, ctx.config, render_opts)
+    end
+  end
 
-          # Ensure .html extension
-          output_file_path =
-            if String.ends_with?(relative_path, ".html") do
-              relative_path
-            else
-              relative_path <> ".html"
-            end
+  defp handle_render_result({:ok, html}, page, ctx, count) do
+    output_file = build_output_path(page.url, ctx.absolute_output_path)
+    File.mkdir_p!(Path.dirname(output_file))
 
-          output_file = Path.join([absolute_output_path, output_file_path])
-          output_dir = Path.dirname(output_file)
+    case ctx.file_writer.(output_file, html) do
+      :ok -> count + 1
+      {:ok, _} -> count + 1
+      {:error, _} -> count
+    end
+  end
 
-          # Ensure directory exists
-          File.mkdir_p!(output_dir)
+  defp handle_render_result({:error, reason}, page, _ctx, _count) do
+    raise RuntimeError, "Failed to render page #{page.url}: #{reason}"
+  end
 
-          case file_writer.(output_file, html) do
-            :ok -> count + 1
-            {:ok, _} -> count + 1
-            {:error, _} -> count
-          end
+  defp build_output_path(url, absolute_output_path) do
+    relative_path = String.trim_leading(url, "/")
 
-        {:error, reason} ->
-          # Layout errors and rendering errors should fail the build
-          raise RuntimeError, "Failed to render page #{page.url}: #{reason}"
-      end
-    end)
+    output_file_path =
+      if String.ends_with?(relative_path, ".html"),
+        do: relative_path,
+        else: relative_path <> ".html"
+
+    Path.join([absolute_output_path, output_file_path])
   end
 
   defp render_and_write_collection_pages(collections, config, mappings, opts, verbose) do
     if verbose, do: IO.puts("Rendering collection pages...")
 
-    file_writer = Keyword.get(opts, :file_writer, &default_file_writer/2)
-    output_path = Map.get(config, :output_path, "_site")
+    ctx = build_collection_render_context(config, mappings, opts)
 
-    # Get pagination options
-    # nil means no pagination
-    posts_per_page = Keyword.get(opts, :posts_per_page, nil)
-    # Which collections to paginate
-    paginate_collections = Keyword.get(opts, :paginate_collections, [:posts])
-
-    # Make output_path absolute if it's relative
-    absolute_output_path =
-      if Path.type(output_path) == :relative do
-        Path.join(Map.get(config, :site_path, "."), output_path)
-      else
-        output_path
-      end
-
-    # Render each collection as a page (or multiple paginated pages)
-    # Filter to only collections with a type field (tag, category, or posts)
-    result =
-      collections
-      |> Map.values()
-      |> Enum.filter(fn collection ->
-        Map.has_key?(collection, :type) && collection.type in [:tag, :category, :posts]
-      end)
-      |> Enum.reduce(%{tag_pages: 0, category_pages: 0, posts_pages: 0, total: 0}, fn collection,
-                                                                                      acc ->
-        if verbose, do: IO.puts("  Rendering collection: #{collection.name} (#{collection.type})")
-
-        # Check if this collection should be paginated
-        should_paginate =
-          posts_per_page != nil &&
-            collection.type in paginate_collections &&
-            length(collection.pages) > posts_per_page
-
-        if should_paginate do
-          # Render paginated collection pages
-          render_paginated_collection(
-            collection,
-            posts_per_page,
-            config,
-            mappings,
-            opts,
-            absolute_output_path,
-            file_writer,
-            acc,
-            verbose
-          )
-        else
-          # Render single collection page (existing behavior)
-          render_single_collection_page(
-            collection,
-            config,
-            mappings,
-            opts,
-            absolute_output_path,
-            file_writer,
-            acc,
-            verbose
-          )
-        end
-      end)
-
-    result
-  end
-
-  defp render_single_collection_page(
-         collection,
-         config,
-         mappings,
-         opts,
-         absolute_output_path,
-         file_writer,
-         acc,
-         _verbose
-       ) do
-    # Determine output path based on collection type
-    # Tags -> /tags/{name}.html
-    # Categories -> /categories/{name}.html
-    # Posts -> /posts/index.html
-    {collection_dir, filename} =
-      case collection.type do
-        :tag -> {"tags", "#{collection.name}.html"}
-        :category -> {"categories", "#{collection.name}.html"}
-        :posts -> {"posts", "index.html"}
-        _ -> {"#{collection.type}s", "#{collection.name}.html"}
-      end
-
-    output_file_path = Path.join([collection_dir, filename])
-    output_file = Path.join([absolute_output_path, output_file_path])
-    output_dir = Path.dirname(output_file)
-
-    # Ensure directory exists
-    File.mkdir_p!(output_dir)
-
-    # Generate HTML content for collection page (no pagination)
-    html = render_collection_page(collection, config, mappings, opts, nil)
-
-    case file_writer.(output_file, html) do
-      :ok ->
-        # Update counters based on type
-        case collection.type do
-          :tag -> %{acc | tag_pages: acc.tag_pages + 1, total: acc.total + 1}
-          :category -> %{acc | category_pages: acc.category_pages + 1, total: acc.total + 1}
-          :posts -> %{acc | posts_pages: acc.posts_pages + 1, total: acc.total + 1}
-          _ -> %{acc | total: acc.total + 1}
-        end
-
-      {:ok, _} ->
-        case collection.type do
-          :tag -> %{acc | tag_pages: acc.tag_pages + 1, total: acc.total + 1}
-          :category -> %{acc | category_pages: acc.category_pages + 1, total: acc.total + 1}
-          :posts -> %{acc | posts_pages: acc.posts_pages + 1, total: acc.total + 1}
-          _ -> %{acc | total: acc.total + 1}
-        end
-
-      {:error, _} ->
-        acc
-    end
-  end
-
-  defp render_paginated_collection(
-         collection,
-         per_page,
-         config,
-         mappings,
-         opts,
-         absolute_output_path,
-         file_writer,
-         acc,
-         verbose
-       ) do
-    alias Alkali.Application.Helpers.Paginate
-
-    # Determine base path for URLs based on collection type
-    base_path =
-      case collection.type do
-        :tag -> "/tags/#{collection.name}"
-        :category -> "/categories/#{collection.name}"
-        :posts -> "/posts"
-        _ -> "/#{collection.type}s/#{collection.name}"
-      end
-
-    url_template = "#{base_path}/page/:page"
-
-    # Paginate the collection items
-    paginated_pages =
-      Paginate.paginate(collection.pages, per_page: per_page, url_template: url_template)
-
-    # Render each paginated page
-    Enum.reduce(paginated_pages, acc, fn page, page_acc ->
-      if verbose do
-        IO.puts("    Page #{page.page_number}/#{page.pagination.total_pages}")
-      end
-
-      # Determine output file path
-      {collection_dir, filename} =
-        case collection.type do
-          :posts when page.page_number == 1 -> {"posts", "index.html"}
-          :posts -> {"posts", "page/#{page.page_number}.html"}
-          :tag when page.page_number == 1 -> {"tags", "#{collection.name}.html"}
-          :tag -> {"tags", "#{collection.name}/page/#{page.page_number}.html"}
-          :category when page.page_number == 1 -> {"categories", "#{collection.name}.html"}
-          :category -> {"categories", "#{collection.name}/page/#{page.page_number}.html"}
-          _ when page.page_number == 1 -> {"#{collection.type}s", "#{collection.name}.html"}
-          _ -> {"#{collection.type}s", "#{collection.name}/page/#{page.page_number}.html"}
-        end
-
-      output_file_path = Path.join([collection_dir, filename])
-      output_file = Path.join([absolute_output_path, output_file_path])
-      output_dir = Path.dirname(output_file)
-
-      # Ensure directory exists
-      File.mkdir_p!(output_dir)
-
-      # Create a modified collection with just this page's items
-      page_collection = %{collection | pages: page.items}
-
-      # Generate HTML content with pagination metadata
-      html = render_collection_page(page_collection, config, mappings, opts, page.pagination)
-
-      case file_writer.(output_file, html) do
-        :ok ->
-          # Update counters based on type
-          case collection.type do
-            :tag ->
-              %{page_acc | tag_pages: page_acc.tag_pages + 1, total: page_acc.total + 1}
-
-            :category ->
-              %{page_acc | category_pages: page_acc.category_pages + 1, total: page_acc.total + 1}
-
-            :posts ->
-              %{page_acc | posts_pages: page_acc.posts_pages + 1, total: page_acc.total + 1}
-
-            _ ->
-              %{page_acc | total: page_acc.total + 1}
-          end
-
-        {:ok, _} ->
-          case collection.type do
-            :tag ->
-              %{page_acc | tag_pages: page_acc.tag_pages + 1, total: page_acc.total + 1}
-
-            :category ->
-              %{page_acc | category_pages: page_acc.category_pages + 1, total: page_acc.total + 1}
-
-            :posts ->
-              %{page_acc | posts_pages: page_acc.posts_pages + 1, total: page_acc.total + 1}
-
-            _ ->
-              %{page_acc | total: page_acc.total + 1}
-          end
-
-        {:error, _} ->
-          page_acc
-      end
+    collections
+    |> Map.values()
+    |> Enum.filter(&valid_collection?/1)
+    |> Enum.reduce(%{tag_pages: 0, category_pages: 0, posts_pages: 0, total: 0}, fn collection,
+                                                                                    acc ->
+      if verbose, do: IO.puts("  Rendering collection: #{collection.name} (#{collection.type})")
+      render_collection(collection, ctx, acc, verbose)
     end)
   end
 
-  defp render_collection_page(collection, config, mappings, _opts, pagination) do
-    alias Alkali.Infrastructure.LayoutResolver
+  defp build_collection_render_context(config, mappings, opts) do
+    output_path = Map.get(config, :output_path, "_site")
 
-    # Create a simple HTML page listing all posts in the collection
-    # Convert absolute URLs to relative URLs (collections are one level deep)
-    posts_html =
-      collection.pages
-      |> Enum.map(fn page ->
-        # Convert /posts/welcome.html to ../posts/welcome.html
-        relative_url = String.trim_leading(page.url, "/")
-        relative_url = if relative_url != "", do: "../#{relative_url}", else: "../index.html"
+    absolute_output_path =
+      if Path.type(output_path) == :relative,
+        do: Path.join(Map.get(config, :site_path, "."), output_path),
+        else: output_path
 
-        # Format date nicely
-        formatted_date =
-          if page.date do
-            Calendar.strftime(page.date, "%B %d, %Y")
-          else
-            ""
-          end
-
-        # Get intro text from frontmatter
-        intro =
-          case page do
-            %{frontmatter: fm} when is_map(fm) ->
-              Map.get(fm, "intro") || Map.get(fm, "description") || ""
-
-            _ ->
-              ""
-          end
-
-        intro_html =
-          if intro != "" do
-            ~s(<p class="post-intro">#{intro}</p>)
-          else
-            ""
-          end
-
-        """
-        <article class="post-item">
-          <h3 class="post-title"><a href="#{relative_url}">#{page.title}</a></h3>
-          #{intro_html}
-          #{if formatted_date != "", do: "<time class=\"post-date\">#{formatted_date}</time>", else: ""}
-        </article>
-        """
-      end)
-      |> Enum.join("\n")
-
-    # Build pagination HTML if pagination metadata provided
-    pagination_html =
-      if pagination do
-        build_pagination_html(pagination)
-      else
-        ""
-      end
-
-    # Customize content based on collection type
-    {title, content} =
-      case collection.type do
-        :posts ->
-          page_info =
-            if pagination do
-              " (Page #{pagination.current_page} of #{pagination.total_pages})"
-            else
-              ""
-            end
-
-          {"All Posts#{page_info}",
-           """
-           <p class="collection-meta">Total posts: #{length(collection.pages)}</p>
-           <div class="posts">
-             #{posts_html}
-           </div>
-           #{pagination_html}
-           """}
-
-        :tag ->
-          page_info =
-            if pagination do
-              " (Page #{pagination.current_page} of #{pagination.total_pages})"
-            else
-              ""
-            end
-
-          {"#{String.capitalize(to_string(collection.type))}: #{collection.name}#{page_info}",
-           """
-           <p class="collection-meta">Posts: #{length(collection.pages)}</p>
-           <div class="posts">
-             #{posts_html}
-           </div>
-           #{pagination_html}
-           """}
-
-        :category ->
-          page_info =
-            if pagination do
-              " (Page #{pagination.current_page} of #{pagination.total_pages})"
-            else
-              ""
-            end
-
-          {"#{String.capitalize(to_string(collection.type))}: #{collection.name}#{page_info}",
-           """
-           <p class="collection-meta">Posts: #{length(collection.pages)}</p>
-           <div class="posts">
-             #{posts_html}
-           </div>
-           #{pagination_html}
-           """}
-
-        _ ->
-          {"#{String.capitalize(to_string(collection.type))}: #{collection.name}",
-           """
-           <p class="collection-meta">Posts: #{length(collection.pages)}</p>
-           <div class="posts">
-             #{posts_html}
-           </div>
-           """}
-      end
-
-    # Determine output path based on collection type
-    url_path =
-      case collection.type do
-        :tag -> "/tags/#{collection.name}.html"
-        :category -> "/categories/#{collection.name}.html"
-        :posts -> "/posts/index.html"
-        _ -> "/#{collection.type}s/#{collection.name}.html"
-      end
-
-    # Create a pseudo-page for layout resolution
-    page = %{
-      title: title,
-      content: content,
-      url: url_path,
-      layout: "collection"
+    %{
+      config: config,
+      mappings: mappings,
+      opts: opts,
+      file_writer: Keyword.get(opts, :file_writer, &default_file_writer/2),
+      absolute_output_path: absolute_output_path,
+      posts_per_page: Keyword.get(opts, :posts_per_page, nil),
+      paginate_collections: Keyword.get(opts, :paginate_collections, [:posts])
     }
+  end
 
-    # Try to find and use a layout
-    layouts_path = Map.get(config, :layouts_path, "layouts")
-    site_path = Map.get(config, :site_path, ".")
+  defp valid_collection?(collection) do
+    Map.has_key?(collection, :type) && collection.type in [:tag, :category, :posts]
+  end
 
-    absolute_layouts_path =
-      if Path.type(layouts_path) == :relative do
-        Path.join(site_path, layouts_path)
-      else
-        layouts_path
-      end
+  defp render_collection(collection, ctx, acc, verbose) do
+    should_paginate =
+      ctx.posts_per_page != nil and
+        collection.type in ctx.paginate_collections and
+        Enum.count(collection.pages) > ctx.posts_per_page
 
-    # Try collection-specific layout first, then default
-    layout_candidates = [
-      Path.join(absolute_layouts_path, "#{collection.type}.html.heex"),
-      Path.join(absolute_layouts_path, "collection.html.heex"),
-      Path.join(absolute_layouts_path, "default.html.heex")
-    ]
+    if should_paginate do
+      render_paginated_collection(collection, ctx.posts_per_page, ctx, acc, verbose)
+    else
+      render_single_collection_page(collection, ctx, acc)
+    end
+  end
 
-    layout_path = Enum.find(layout_candidates, &File.exists?/1)
+  defp render_single_collection_page(collection, ctx, acc) do
+    {collection_dir, filename} = single_collection_output_path(collection)
+
+    output_file_path = Path.join([collection_dir, filename])
+    output_file = Path.join([ctx.absolute_output_path, output_file_path])
+    File.mkdir_p!(Path.dirname(output_file))
+
+    html = render_collection_page(collection, ctx.config, ctx.mappings, ctx.opts, nil)
+
+    case ctx.file_writer.(output_file, html) do
+      :ok -> increment_collection_counter(acc, collection.type)
+      {:ok, _} -> increment_collection_counter(acc, collection.type)
+      {:error, _} -> acc
+    end
+  end
+
+  defp single_collection_output_path(collection) do
+    case collection.type do
+      :tag -> {"tags", "#{collection.name}.html"}
+      :category -> {"categories", "#{collection.name}.html"}
+      :posts -> {"posts", "index.html"}
+      _ -> {"#{collection.type}s", "#{collection.name}.html"}
+    end
+  end
+
+  defp render_paginated_collection(collection, per_page, ctx, acc, verbose) do
+    alias Alkali.Application.Helpers.Paginate
+
+    base_path = pagination_base_path(collection)
+    url_template = "#{base_path}/page/:page"
+
+    paginated_pages =
+      Paginate.paginate(collection.pages, per_page: per_page, url_template: url_template)
+
+    Enum.reduce(paginated_pages, acc, fn page, page_acc ->
+      if verbose, do: IO.puts("    Page #{page.page_number}/#{page.pagination.total_pages}")
+      render_single_paginated_page(collection, page, ctx, page_acc)
+    end)
+  end
+
+  defp pagination_base_path(collection) do
+    case collection.type do
+      :tag -> "/tags/#{collection.name}"
+      :category -> "/categories/#{collection.name}"
+      :posts -> "/posts"
+      _ -> "/#{collection.type}s/#{collection.name}"
+    end
+  end
+
+  defp render_single_paginated_page(collection, page, ctx, acc) do
+    {collection_dir, filename} = paginated_output_path(collection, page.page_number)
+
+    output_file_path = Path.join([collection_dir, filename])
+    output_file = Path.join([ctx.absolute_output_path, output_file_path])
+    File.mkdir_p!(Path.dirname(output_file))
+
+    page_collection = %{collection | pages: page.items}
+
+    html =
+      render_collection_page(page_collection, ctx.config, ctx.mappings, ctx.opts, page.pagination)
+
+    case ctx.file_writer.(output_file, html) do
+      :ok -> increment_collection_counter(acc, collection.type)
+      {:ok, _} -> increment_collection_counter(acc, collection.type)
+      {:error, _} -> acc
+    end
+  end
+
+  defp paginated_output_path(collection, page_number) do
+    case {collection.type, page_number} do
+      {:posts, 1} -> {"posts", "index.html"}
+      {:posts, n} -> {"posts", "page/#{n}.html"}
+      {:tag, 1} -> {"tags", "#{collection.name}.html"}
+      {:tag, n} -> {"tags", "#{collection.name}/page/#{n}.html"}
+      {:category, 1} -> {"categories", "#{collection.name}.html"}
+      {:category, n} -> {"categories", "#{collection.name}/page/#{n}.html"}
+      {type, 1} -> {"#{type}s", "#{collection.name}.html"}
+      {type, n} -> {"#{type}s", "#{collection.name}/page/#{n}.html"}
+    end
+  end
+
+  defp increment_collection_counter(acc, :tag) do
+    %{acc | tag_pages: acc.tag_pages + 1, total: acc.total + 1}
+  end
+
+  defp increment_collection_counter(acc, :category) do
+    %{acc | category_pages: acc.category_pages + 1, total: acc.total + 1}
+  end
+
+  defp increment_collection_counter(acc, :posts) do
+    %{acc | posts_pages: acc.posts_pages + 1, total: acc.total + 1}
+  end
+
+  defp increment_collection_counter(acc, _other) do
+    %{acc | total: acc.total + 1}
+  end
+
+  defp render_collection_page(collection, config, mappings, _opts, pagination) do
+    posts_html = build_posts_html(collection.pages)
+    pagination_html = if pagination, do: build_pagination_html(pagination), else: ""
+
+    {title, content} =
+      build_collection_content(collection, posts_html, pagination_html, pagination)
+
+    url_path = collection_url_path(collection)
+
+    page = %{title: title, content: content, url: url_path, layout: "collection"}
+
+    render_collection_with_layout(page, content, collection, config, mappings)
+  end
+
+  defp build_posts_html(pages) do
+    Enum.map_join(pages, "\n", &render_post_item/1)
+  end
+
+  defp render_post_item(page) do
+    relative_url = build_relative_url(page.url)
+    formatted_date = format_post_date(page.date)
+    intro = extract_intro(page)
+
+    intro_html = if intro != "", do: ~s(<p class="post-intro">#{intro}</p>), else: ""
+
+    date_html =
+      if formatted_date != "", do: ~s(<time class="post-date">#{formatted_date}</time>), else: ""
+
+    """
+    <article class="post-item">
+      <h3 class="post-title"><a href="#{relative_url}">#{page.title}</a></h3>
+      #{intro_html}
+      #{date_html}
+    </article>
+    """
+  end
+
+  defp build_relative_url(url) do
+    relative = String.trim_leading(url, "/")
+    if relative != "", do: "../#{relative}", else: "../index.html"
+  end
+
+  defp format_post_date(nil), do: ""
+  defp format_post_date(date), do: Calendar.strftime(date, "%B %d, %Y")
+
+  defp extract_intro(%{frontmatter: fm}) when is_map(fm) do
+    Map.get(fm, "intro") || Map.get(fm, "description") || ""
+  end
+
+  defp extract_intro(_), do: ""
+
+  defp build_collection_content(collection, posts_html, pagination_html, pagination) do
+    page_info = pagination_page_info(pagination)
+    count = Enum.count(collection.pages)
+
+    case collection.type do
+      :posts ->
+        {"All Posts#{page_info}",
+         collection_html("Total posts: #{count}", posts_html, pagination_html)}
+
+      type when type in [:tag, :category] ->
+        type_name = String.capitalize(to_string(type))
+
+        {"#{type_name}: #{collection.name}#{page_info}",
+         collection_html("Posts: #{count}", posts_html, pagination_html)}
+
+      _ ->
+        type_name = String.capitalize(to_string(collection.type))
+        {"#{type_name}: #{collection.name}", collection_html("Posts: #{count}", posts_html, "")}
+    end
+  end
+
+  defp pagination_page_info(nil), do: ""
+  defp pagination_page_info(p), do: " (Page #{p.current_page} of #{p.total_pages})"
+
+  defp collection_html(meta, posts_html, pagination_html) do
+    """
+    <p class="collection-meta">#{meta}</p>
+    <div class="posts">
+      #{posts_html}
+    </div>
+    #{pagination_html}
+    """
+  end
+
+  defp collection_url_path(collection) do
+    case collection.type do
+      :tag -> "/tags/#{collection.name}.html"
+      :category -> "/categories/#{collection.name}.html"
+      :posts -> "/posts/index.html"
+      _ -> "/#{collection.type}s/#{collection.name}.html"
+    end
+  end
+
+  defp render_collection_with_layout(page, content, collection, config, mappings) do
+    layout_path = find_collection_layout(collection, config)
 
     if layout_path do
-      # Use LayoutResolver to get asset fingerprinting
-      render_opts = [
-        asset_mappings: mappings
-      ]
+      render_opts = [asset_mappings: mappings]
 
       case LayoutResolver.render_with_layout(page, layout_path, config, render_opts) do
         {:ok, html} -> html
         {:error, _} -> content
       end
     else
-      # No layout found, use bare content
       content
     end
+  end
+
+  defp find_collection_layout(collection, config) do
+    layouts_path = Map.get(config, :layouts_path, "layouts")
+    site_path = Map.get(config, :site_path, ".")
+
+    absolute_layouts_path =
+      if Path.type(layouts_path) == :relative,
+        do: Path.join(site_path, layouts_path),
+        else: layouts_path
+
+    layout_candidates = [
+      Path.join(absolute_layouts_path, "#{collection.type}.html.heex"),
+      Path.join(absolute_layouts_path, "collection.html.heex"),
+      Path.join(absolute_layouts_path, "default.html.heex")
+    ]
+
+    Enum.find(layout_candidates, &File.exists?/1)
   end
 
   defp build_pagination_html(pagination) do
@@ -947,7 +842,7 @@ defmodule Alkali.Application.UseCases.BuildSite do
 
     # Build page number links
     page_links =
-      Enum.map(pagination.page_numbers, fn page_num ->
+      Enum.map_join(pagination.page_numbers, " ", fn page_num ->
         url = if page_num == 1, do: "../index.html", else: "../page/#{page_num}.html"
 
         if page_num == pagination.current_page do
@@ -956,7 +851,6 @@ defmodule Alkali.Application.UseCases.BuildSite do
           ~s(<a href="#{url}" class="pagination-page">#{page_num}</a>)
         end
       end)
-      |> Enum.join(" ")
 
     """
     <nav class="pagination">
@@ -1024,13 +918,10 @@ defmodule Alkali.Application.UseCases.BuildSite do
   end
 
   defp default_file_writer(path, content) do
-    File.write(path, content)
+    Alkali.Infrastructure.FileSystem.write(path, content)
   end
 
   defp default_asset_writer(path, content) do
-    case File.write(path, content) do
-      :ok -> {:ok, path}
-      error -> error
-    end
+    Alkali.Infrastructure.FileSystem.write_with_path(path, content)
   end
 end

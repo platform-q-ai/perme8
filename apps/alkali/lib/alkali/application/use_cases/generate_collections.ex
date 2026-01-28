@@ -43,26 +43,12 @@ defmodule Alkali.Application.UseCases.GenerateCollections do
   # Private Functions
 
   defp build_tag_collections(collections, pages, include_drafts) do
-    # Extract all unique tags from ALL pages
-    all_tags =
-      pages
-      |> Enum.flat_map(& &1.tags)
-      |> Enum.uniq()
+    all_tags = pages |> Enum.flat_map(& &1.tags) |> Enum.uniq()
 
-    # Create a collection for each tag
     tag_collections =
       Enum.map(all_tags, fn tag_name ->
-        # Filter pages for this tag based on include_drafts
-        tag_pages =
-          if include_drafts do
-            Enum.filter(pages, &Enum.member?(&1.tags, tag_name))
-          else
-            pages
-            |> Enum.filter(&(&1.draft == false))
-            |> Enum.filter(&Enum.member?(&1.tags, tag_name))
-          end
+        tag_pages = filter_pages_for_tag(pages, tag_name, include_drafts)
 
-        # Create and sort collection
         Collection.new(tag_name, :tag)
         |> Map.put(:pages, tag_pages)
         |> Collection.sort_by_date()
@@ -71,35 +57,35 @@ defmodule Alkali.Application.UseCases.GenerateCollections do
     collections ++ tag_collections
   end
 
-  defp build_category_collections(collections, pages, include_drafts) do
-    # Extract all unique categories from ALL pages
-    all_categories =
-      pages
-      |> Enum.map(& &1.category)
-      # Remove nil categories
-      |> Enum.filter(& &1)
-      |> Enum.uniq()
+  defp filter_pages_for_tag(pages, tag_name, true) do
+    Enum.filter(pages, &Enum.member?(&1.tags, tag_name))
+  end
 
-    # Create a collection for each category
+  defp filter_pages_for_tag(pages, tag_name, false) do
+    Enum.filter(pages, &(not &1.draft and Enum.member?(&1.tags, tag_name)))
+  end
+
+  defp build_category_collections(collections, pages, include_drafts) do
+    all_categories = pages |> Enum.map(& &1.category) |> Enum.filter(& &1) |> Enum.uniq()
+
     category_collections =
       Enum.map(all_categories, fn category_name ->
-        # Filter pages for this category based on include_drafts
-        category_pages =
-          if include_drafts do
-            Enum.filter(pages, &(&1.category == category_name))
-          else
-            pages
-            |> Enum.filter(&(&1.draft == false))
-            |> Enum.filter(&(&1.category == category_name))
-          end
+        category_pages = filter_pages_for_category(pages, category_name, include_drafts)
 
-        # Create and sort collection
         Collection.new(category_name, :category)
         |> Map.put(:pages, category_pages)
         |> Collection.sort_by_date()
       end)
 
     collections ++ category_collections
+  end
+
+  defp filter_pages_for_category(pages, category_name, true) do
+    Enum.filter(pages, &(&1.category == category_name))
+  end
+
+  defp filter_pages_for_category(pages, category_name, false) do
+    Enum.filter(pages, &(not &1.draft and &1.category == category_name))
   end
 
   defp build_all_posts_collection(collections, pages, include_drafts) do

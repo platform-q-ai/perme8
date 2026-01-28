@@ -74,10 +74,10 @@ defmodule Alkali.Domain.Policies.FrontmatterPolicy do
             errors
 
           true ->
-            [
-              "Invalid date format, expected ISO 8601 (e.g., \"2024-01-15\" or \"2024-01-15T10:30:00Z\"), got: \"#{date}\""
-              | errors
-            ]
+            error_msg =
+              ~s<Invalid date format, expected ISO 8601 (e.g., "2024-01-15" or "2024-01-15T10:30:00Z"), got: "#{date}">
+
+            [error_msg | errors]
         end
 
       _other ->

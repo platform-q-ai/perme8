@@ -16,27 +16,20 @@ defmodule Alkali.Infrastructure.BuildCache do
   def load(site_path) do
     cache_path = Path.join(site_path, @cache_file)
 
-    if File.exists?(cache_path) do
-      case File.read(cache_path) do
-        {:ok, content} ->
-          case Jason.decode(content) do
-            {:ok, json_cache} ->
-              # Convert lists back to tuples
-              Map.new(json_cache, fn
-                {path, [mtime, size]} -> {path, {mtime, size}}
-                {path, mtime} when is_integer(mtime) -> {path, {mtime, 0}}
-              end)
-
-            {:error, _} ->
-              %{}
-          end
-
-        {:error, _} ->
-          %{}
-      end
+    with true <- File.exists?(cache_path),
+         {:ok, content} <- File.read(cache_path),
+         {:ok, json_cache} <- Jason.decode(content) do
+      parse_cache_entries(json_cache)
     else
-      %{}
+      _ -> %{}
     end
+  end
+
+  defp parse_cache_entries(json_cache) do
+    Map.new(json_cache, fn
+      {path, [mtime, size]} -> {path, {mtime, size}}
+      {path, mtime} when is_integer(mtime) -> {path, {mtime, 0}}
+    end)
   end
 
   @doc """

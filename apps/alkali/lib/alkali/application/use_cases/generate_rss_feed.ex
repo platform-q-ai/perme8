@@ -46,7 +46,7 @@ defmodule Alkali.Application.UseCases.GenerateRssFeed do
       # and exclude drafts
       feed_items =
         pages
-        |> Enum.filter(&(&1.date != nil && &1.draft == false && is_post?(&1)))
+        |> Enum.filter(&(&1.date != nil && &1.draft == false && post?(&1)))
         |> Enum.sort_by(& &1.date, {:desc, Date})
         |> Enum.take(max_items)
 
@@ -61,7 +61,7 @@ defmodule Alkali.Application.UseCases.GenerateRssFeed do
   defp build_rss_xml(feed_title, feed_description, site_url, feed_url, items) do
     current_datetime = DateTime.utc_now() |> format_rfc822()
 
-    items_xml = Enum.map(items, &build_item_xml(&1, site_url)) |> Enum.join("\n    ")
+    items_xml = Enum.map_join(items, "\n    ", &build_item_xml(&1, site_url))
 
     """
     <?xml version="1.0" encoding="UTF-8"?>
@@ -143,10 +143,10 @@ defmodule Alkali.Application.UseCases.GenerateRssFeed do
     |> Calendar.strftime("%a, %d %b %Y %H:%M:%S +0000")
   end
 
-  defp is_post?(%{url: url}) when is_binary(url) do
+  defp post?(%{url: url}) when is_binary(url) do
     # Check if URL contains /posts/ to identify blog posts vs regular pages
     String.contains?(url, "/posts/")
   end
 
-  defp is_post?(_), do: false
+  defp post?(_), do: false
 end

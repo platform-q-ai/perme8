@@ -40,11 +40,8 @@ defmodule Alkali.Application.UseCases.CleanOutput do
     end
   end
 
-  # Default implementation using File module
+  # Default implementation delegating to infrastructure
   defp default_file_system({:rm_rf, path}) do
-    case File.rm_rf(path) do
-      {:ok, _files} -> :ok
-      {:error, reason, _file} -> {:error, reason}
-    end
+    Alkali.Infrastructure.FileSystem.rm_rf(path)
   end
 end

@@ -39,46 +39,39 @@ defmodule Alkali.Application.UseCases.ProcessAssets do
 
       # Build mappings
       # Map both the original path AND the web path (without "static/" prefix) to output
-      mappings =
-        Enum.reduce(processed_assets, %{}, fn asset, acc ->
-          # Map from original path (e.g., "static/css/app.css" -> "css/app-abc123.css")
-          acc = Map.put(acc, asset.original_path, asset.output_path)
-
-          # Also map from web path (e.g., "/css/app.css" -> "/css/app-abc123.css")
-          # Extract just the filename part after "static/"
-          # Handle paths like "kris blog/static/css/app.css" or "static/css/app.css"
-          web_path =
-            cond do
-              # If path contains "/static/", extract everything after it
-              String.contains?(asset.original_path, "/static/") ->
-                [_, after_static] = String.split(asset.original_path, "/static/", parts: 2)
-                "/" <> after_static
-
-              # If path starts with "static/", remove it
-              String.starts_with?(asset.original_path, "static/") ->
-                asset.original_path
-                |> String.replace_prefix("static/", "")
-                |> then(&"/#{&1}")
-
-              # Fallback: use as-is with leading slash
-              true ->
-                "/" <> asset.original_path
-            end
-
-          # Remove "_site/" prefix from output path and add leading "/"
-          web_output =
-            asset.output_path
-            |> String.replace_prefix("_site/", "")
-            |> then(&"/#{&1}")
-
-          Map.put(acc, web_path, web_output)
-        end)
+      mappings = build_asset_mappings(processed_assets)
 
       {:ok, %{assets: processed_assets, mappings: mappings}}
     end
   end
 
   # Private Functions
+
+  defp build_asset_mappings(assets) do
+    Enum.reduce(assets, %{}, fn asset, acc ->
+      acc
+      |> Map.put(asset.original_path, asset.output_path)
+      |> Map.put(extract_web_path(asset.original_path), extract_web_output(asset.output_path))
+    end)
+  end
+
+  defp extract_web_path(original_path) do
+    cond do
+      String.contains?(original_path, "/static/") ->
+        [_, after_static] = String.split(original_path, "/static/", parts: 2)
+        "/" <> after_static
+
+      String.starts_with?(original_path, "static/") ->
+        "/" <> String.replace_prefix(original_path, "static/", "")
+
+      true ->
+        "/" <> original_path
+    end
+  end
+
+  defp extract_web_output(output_path) do
+    "/" <> String.replace_prefix(output_path, "_site/", "")
+  end
 
   defp process_single_asset(asset_map, file_reader) do
     original_path = asset_map.original_path
@@ -143,12 +136,9 @@ defmodule Alkali.Application.UseCases.ProcessAssets do
 
   defp minify_content(content, :binary), do: content
 
-  # Default implementation
+  # Default implementation delegating to infrastructure
 
   defp default_file_reader(path) do
-    case File.read(path) do
-      {:ok, content} -> {:ok, content}
-      {:error, reason} -> {:error, reason}
-    end
+    Alkali.Infrastructure.FileSystem.read(path)
   end
 end

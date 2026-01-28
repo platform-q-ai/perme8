@@ -50,7 +50,7 @@ defmodule Alkali.ScaffoldSteps do
           files = File.ls!(full_dir)
           matching_files = Enum.filter(files, &String.ends_with?(&1, filename_pattern))
 
-          assert length(matching_files) > 0,
+          assert matching_files != [],
                  "Expected file matching '#{filename_pattern}' to be created in #{dir_path}. Found files: #{inspect(files)}"
         else
           assert false, "Expected directory to exist: #{dir_path}"

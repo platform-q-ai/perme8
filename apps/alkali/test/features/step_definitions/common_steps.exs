@@ -7,6 +7,12 @@ defmodule Alkali.CommonSteps do
   use ExUnit.Case
   import ExUnit.CaptureIO
 
+  alias Mix.Tasks.Alkali.New, as: NewTask
+  alias Mix.Tasks.Alkali.New.Post, as: NewPostTask
+  alias Mix.Tasks.Alkali.Build, as: BuildTask
+  alias Mix.Tasks.Alkali.Post, as: PostTask
+  alias Mix.Tasks.Alkali.Clean, as: CleanTask
+
   # --- WHEN Steps ---
 
   step "I run {string}", %{args: [command]} = context do
@@ -23,11 +29,11 @@ defmodule Alkali.CommonSteps do
 
               # Execute the appropriate Mix task based on task_name
               case task_name do
-                "alkali.new" -> Mix.Tasks.Alkali.New.run(args)
-                "alkali.new.post" -> Mix.Tasks.Alkali.New.Post.run(args)
-                "alkali.build" -> Mix.Tasks.Alkali.Build.run(args)
-                "alkali.post" -> Mix.Tasks.Alkali.Post.run(args)
-                "alkali.clean" -> Mix.Tasks.Alkali.Clean.run(args)
+                "alkali.new" -> NewTask.run(args)
+                "alkali.new.post" -> NewPostTask.run(args)
+                "alkali.build" -> BuildTask.run(args)
+                "alkali.post" -> PostTask.run(args)
+                "alkali.clean" -> CleanTask.run(args)
                 _ -> :ok
               end
             end)

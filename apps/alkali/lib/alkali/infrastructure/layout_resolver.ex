@@ -36,30 +36,12 @@ defmodule Alkali.Infrastructure.LayoutResolver do
     layouts_path = Map.get(config, :layouts_path, "layouts")
 
     layout_file =
-      cond do
+      if page.layout != nil do
         # Priority 1: Frontmatter layout
-        page.layout != nil ->
-          "#{page.layout}.html.heex"
-
+        "#{page.layout}.html.heex"
+      else
         # Priority 2: Folder-based default
-        true ->
-          folder = extract_folder_from_url(page.url)
-
-          # Try both plural and singular forms
-          # E.g., "posts" → try "posts.html.heex", then "post.html.heex"
-          singular_folder = singularize(folder)
-
-          folder_layout = "#{folder}.html.heex"
-          folder_layout_path = Path.join([site_path, layouts_path, folder_layout])
-
-          singular_layout = "#{singular_folder}.html.heex"
-          singular_layout_path = Path.join([site_path, layouts_path, singular_layout])
-
-          cond do
-            File.exists?(folder_layout_path) -> folder_layout
-            File.exists?(singular_layout_path) -> singular_layout
-            true -> "default.html.heex"
-          end
+        resolve_folder_based_layout(page.url, site_path, layouts_path)
       end
 
     # Build full path and verify it exists
@@ -187,6 +169,26 @@ defmodule Alkali.Infrastructure.LayoutResolver do
   end
 
   # Private helpers
+
+  defp resolve_folder_based_layout(url, site_path, layouts_path) do
+    folder = extract_folder_from_url(url)
+
+    # Try both plural and singular forms
+    # E.g., "posts" → try "posts.html.heex", then "post.html.heex"
+    singular_folder = singularize(folder)
+
+    folder_layout = "#{folder}.html.heex"
+    folder_layout_path = Path.join([site_path, layouts_path, folder_layout])
+
+    singular_layout = "#{singular_folder}.html.heex"
+    singular_layout_path = Path.join([site_path, layouts_path, singular_layout])
+
+    cond do
+      File.exists?(folder_layout_path) -> folder_layout
+      File.exists?(singular_layout_path) -> singular_layout
+      true -> "default.html.heex"
+    end
+  end
 
   # Replaces asset references in HTML with fingerprinted versions
   defp replace_asset_references(html, asset_mappings) do

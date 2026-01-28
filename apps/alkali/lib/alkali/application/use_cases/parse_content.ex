@@ -95,9 +95,7 @@ defmodule Alkali.Application.UseCases.ParseContent do
 
         # Format each error with the file path
         formatted_errors =
-          reasons
-          |> Enum.map(fn reason -> "#{reason} in #{relative_path}" end)
-          |> Enum.join("; ")
+          Enum.map_join(reasons, "; ", fn reason -> "#{reason} in #{relative_path}" end)
 
         {:error, formatted_errors}
 
@@ -128,8 +126,7 @@ defmodule Alkali.Application.UseCases.ParseContent do
 
         # Format file list
         file_list =
-          conflicting_pages
-          |> Enum.map(fn page ->
+          Enum.map_join(conflicting_pages, "\n", fn page ->
             # Get relative path from file_path
             relative_path =
               page.file_path
@@ -139,7 +136,6 @@ defmodule Alkali.Application.UseCases.ParseContent do
 
             "  - #{relative_path}"
           end)
-          |> Enum.join("\n")
 
         {:error, "Duplicate slug detected: '#{slug}'\nConflicting files:\n#{file_list}"}
     end
@@ -155,30 +151,7 @@ defmodule Alkali.Application.UseCases.ParseContent do
   # Default implementations
 
   defp default_content_loader(path) do
-    # Find all .md files recursively using Path.wildcard
-    pattern = Path.join(path, "**/*.md")
-    md_files = Path.wildcard(pattern)
-
-    results =
-      Enum.map(md_files, fn file_path ->
-        case File.read(file_path) do
-          {:ok, content} ->
-            mtime = File.stat!(file_path).mtime
-            {:ok, {file_path, content, mtime}}
-
-          {:error, reason} ->
-            {:error, "Failed to read #{file_path}: #{inspect(reason)}"}
-        end
-      end)
-
-    # Check for errors
-    errors = Enum.filter(results, &match?({:error, _}, &1))
-
-    if Enum.empty?(errors) do
-      {:ok, Enum.map(results, &elem(&1, 1))}
-    else
-      {:error, hd(errors) |> elem(1)}
-    end
+    Alkali.Infrastructure.FileSystem.load_markdown_files(path)
   end
 
   defp default_frontmatter_parser(content) do
