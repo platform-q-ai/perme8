@@ -73,10 +73,14 @@
         ".credo/checks/no_direct_repo_in_use_cases.ex",
         ".credo/checks/application_layer_infrastructure_dependency.ex",
         ".credo/checks/no_io_in_domain_services.ex",
-        # Alkali-specific Clean Architecture checks
+        # Clean Architecture layer boundary checks
         ".credo/checks/no_infrastructure_in_domain_entities.ex",
         ".credo/checks/no_direct_file_operations_in_use_cases.ex",
-        ".credo/checks/interface_layer_uses_public_api.ex"
+        ".credo/checks/interface_layer_uses_public_api.ex",
+        # Domain purity and testability checks
+        ".credo/checks/no_datetime_now_in_domain.ex",
+        ".credo/checks/no_infrastructure_schema_in_web.ex",
+        ".credo/checks/no_application_config_in_use_cases.ex"
       ],
       #
       # If you want to enforce a style guide and need a more traditional linting
@@ -273,6 +277,12 @@
           {Credo.Check.Custom.Architecture.NoDirectFileOperationsInUseCases, []},
           # Detect Mix tasks bypassing public API (interface layer violation)
           {Credo.Check.Custom.Architecture.InterfaceLayerUsesPublicApi, []},
+          # Detect non-deterministic DateTime calls in domain layer
+          {Credo.Check.Custom.Architecture.NoDateTimeNowInDomain, []},
+          # Detect infrastructure schema access from web layer
+          {Credo.Check.Custom.Architecture.NoInfrastructureSchemaInWeb, []},
+          # Detect Application.get_env in use cases (should use dependency injection)
+          {Credo.Check.Custom.Architecture.NoApplicationConfigInUseCases, []},
 
           #
           ## Custom Testing Checks (TDD Enforcement)
