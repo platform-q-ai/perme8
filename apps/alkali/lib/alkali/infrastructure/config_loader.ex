@@ -1,7 +1,12 @@
 defmodule Alkali.Infrastructure.ConfigLoader do
   @moduledoc """
   Loads site configuration from config/alkali.exs file.
+
+  Implements the `Alkali.Application.Behaviours.ConfigLoaderBehaviour` to allow
+  dependency injection and testability in use cases.
   """
+
+  @behaviour Alkali.Application.Behaviours.ConfigLoaderBehaviour
 
   @doc """
   Loads site configuration from the config file.
@@ -13,6 +18,7 @@ defmodule Alkali.Infrastructure.ConfigLoader do
     - `{:ok, map()}` with configuration on success
     - `{:error, String.t()}` on failure
   """
+  @impl true
   @spec load(String.t()) :: {:ok, map()} | {:error, String.t()}
   def load(site_path) do
     config_file = Path.join([site_path, "config", "alkali.exs"])

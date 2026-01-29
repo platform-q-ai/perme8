@@ -72,7 +72,10 @@ defmodule Alkali.MixProject do
       {:ex_doc, "~> 0.31", only: :dev, runtime: false},
 
       # Code quality
-      {:credo, "~> 1.7", only: [:dev, :test], runtime: false}
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+
+      # Architecture boundary enforcement
+      {:boundary, "~> 0.10", runtime: false}
 
       # Dependencies for static site generation
       # {:mdex, "~> 0.2"},

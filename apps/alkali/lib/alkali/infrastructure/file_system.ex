@@ -4,7 +4,12 @@ defmodule Alkali.Infrastructure.FileSystem do
 
   This module provides a clean interface for file system operations,
   keeping I/O concerns isolated from the application and domain layers.
+
+  Implements the `Alkali.Application.Behaviours.FileSystemBehaviour` to allow
+  dependency injection and testability in use cases.
   """
+
+  @behaviour Alkali.Application.Behaviours.FileSystemBehaviour
 
   @doc """
   Reads content from a file.
@@ -17,6 +22,7 @@ defmodule Alkali.Infrastructure.FileSystem do
       iex> FileSystem.read("nonexistent.txt")
       {:error, :enoent}
   """
+  @impl true
   @spec read(Path.t()) :: {:ok, binary()} | {:error, File.posix()}
   def read(path) do
     File.read(path)
@@ -30,6 +36,7 @@ defmodule Alkali.Infrastructure.FileSystem do
       iex> FileSystem.write("path/to/file.txt", "content")
       :ok
   """
+  @impl true
   @spec write(Path.t(), iodata()) :: :ok | {:error, File.posix()}
   def write(path, content) do
     File.write(path, content)
@@ -45,6 +52,7 @@ defmodule Alkali.Infrastructure.FileSystem do
       iex> FileSystem.write_with_path("path/to/file.txt", "content")
       {:ok, "path/to/file.txt"}
   """
+  @impl true
   @spec write_with_path(Path.t(), iodata()) :: {:ok, Path.t()} | {:error, File.posix()}
   def write_with_path(path, content) do
     with :ok <- mkdir_p(Path.dirname(path)),
@@ -61,6 +69,7 @@ defmodule Alkali.Infrastructure.FileSystem do
       iex> FileSystem.mkdir_p("path/to/dir")
       :ok
   """
+  @impl true
   @spec mkdir_p(Path.t()) :: :ok | {:error, File.posix()}
   def mkdir_p(path) do
     File.mkdir_p(path)
@@ -74,6 +83,7 @@ defmodule Alkali.Infrastructure.FileSystem do
       iex> FileSystem.mkdir_p_with_path("path/to/dir")
       {:ok, "path/to/dir"}
   """
+  @impl true
   @spec mkdir_p_with_path(Path.t()) :: {:ok, Path.t()} | {:error, File.posix()}
   def mkdir_p_with_path(path) do
     case File.mkdir_p(path) do
@@ -90,6 +100,7 @@ defmodule Alkali.Infrastructure.FileSystem do
       iex> FileSystem.rm_rf("path/to/dir")
       :ok
   """
+  @impl true
   @spec rm_rf(Path.t()) :: :ok | {:error, File.posix()}
   def rm_rf(path) do
     case File.rm_rf(path) do
@@ -106,6 +117,7 @@ defmodule Alkali.Infrastructure.FileSystem do
       iex> FileSystem.stat("path/to/file.txt")
       {:ok, %File.Stat{}}
   """
+  @impl true
   @spec stat(Path.t()) :: {:ok, File.Stat.t()} | {:error, File.posix()}
   def stat(path) do
     File.stat(path)
@@ -119,6 +131,7 @@ defmodule Alkali.Infrastructure.FileSystem do
       iex> FileSystem.stat!("path/to/file.txt")
       %File.Stat{}
   """
+  @impl true
   @spec stat!(Path.t()) :: File.Stat.t()
   def stat!(path) do
     File.stat!(path)
@@ -132,6 +145,7 @@ defmodule Alkali.Infrastructure.FileSystem do
       iex> FileSystem.wildcard("path/**/*.md")
       ["path/file1.md", "path/subdir/file2.md"]
   """
+  @impl true
   @spec wildcard(Path.t()) :: [Path.t()]
   def wildcard(pattern) do
     Path.wildcard(pattern)
@@ -145,6 +159,7 @@ defmodule Alkali.Infrastructure.FileSystem do
       iex> FileSystem.exists?("path/to/file.txt")
       true
   """
+  @impl true
   @spec exists?(Path.t()) :: boolean()
   def exists?(path) do
     File.exists?(path)
@@ -158,6 +173,7 @@ defmodule Alkali.Infrastructure.FileSystem do
       iex> FileSystem.dir?("path/to/dir")
       true
   """
+  @impl true
   @spec dir?(Path.t()) :: boolean()
   def dir?(path) do
     File.dir?(path)
@@ -171,6 +187,7 @@ defmodule Alkali.Infrastructure.FileSystem do
       iex> FileSystem.regular?("path/to/file.txt")
       true
   """
+  @impl true
   @spec regular?(Path.t()) :: boolean()
   def regular?(path) do
     File.regular?(path)
@@ -184,6 +201,7 @@ defmodule Alkali.Infrastructure.FileSystem do
       iex> FileSystem.ls("path/to/dir")
       {:ok, ["file1.txt", "file2.txt"]}
   """
+  @impl true
   @spec ls(Path.t()) :: {:ok, [Path.t()]} | {:error, File.posix()}
   def ls(path) do
     File.ls(path)
@@ -197,6 +215,7 @@ defmodule Alkali.Infrastructure.FileSystem do
       iex> FileSystem.mkdir_p!("path/to/dir")
       :ok
   """
+  @impl true
   @spec mkdir_p!(Path.t()) :: :ok
   def mkdir_p!(path) do
     File.mkdir_p!(path)
@@ -212,6 +231,7 @@ defmodule Alkali.Infrastructure.FileSystem do
       iex> FileSystem.load_markdown_files("content/")
       {:ok, [{"content/post.md", "# Title", ~N[2024-01-01 00:00:00]}]}
   """
+  @impl true
   @spec load_markdown_files(Path.t()) ::
           {:ok, [{Path.t(), binary(), NaiveDateTime.t()}]} | {:error, String.t()}
   def load_markdown_files(path) do

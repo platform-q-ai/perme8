@@ -4,7 +4,20 @@ defmodule Alkali do
 
   This module provides high-level functions for working with the static site generator.
   It delegates to the application layer use cases for most operations.
+
+  ## Architecture Boundaries
+
+  This application follows Clean Architecture with the following layers:
+
+  - **Domain** (`Alkali.Domain`) - Entities and policies, no dependencies
+  - **Application** (`Alkali.Application`) - Use cases and behaviours, depends on domain
+  - **Infrastructure** (`Alkali.Infrastructure`) - External concerns, implements behaviours
+  - **Interface** (`Mix.Tasks.Alkali.*`) - CLI, depends on public API only
   """
+
+  use Boundary,
+    deps: [Alkali.ApplicationLayer, Alkali.InfrastructureLayer],
+    exports: []
 
   alias Alkali.Application.UseCases.{
     ScaffoldNewSite,

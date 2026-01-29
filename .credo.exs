@@ -29,7 +29,8 @@
           "apps/*/lib/",
           "apps/*/src/",
           "apps/*/test/",
-          "apps/*/web/"
+          "apps/*/web/",
+          "apps/*/mix.exs"
         ],
         excluded: [~r"/_build/", ~r"/deps/", ~r"/node_modules/"]
       },
@@ -80,7 +81,10 @@
         # Domain purity and testability checks
         ".credo/checks/no_datetime_now_in_domain.ex",
         ".credo/checks/no_infrastructure_schema_in_web.ex",
-        ".credo/checks/no_application_config_in_use_cases.ex"
+        ".credo/checks/no_application_config_in_use_cases.ex",
+        # Boundary library enforcement checks
+        ".credo/checks/boundary_package_installed.ex",
+        ".credo/checks/architectural_layers_defined.ex"
       ],
       #
       # If you want to enforce a style guide and need a more traditional linting
@@ -283,6 +287,14 @@
           {Credo.Check.Custom.Architecture.NoInfrastructureSchemaInWeb, []},
           # Detect Application.get_env in use cases (should use dependency injection)
           {Credo.Check.Custom.Architecture.NoApplicationConfigInUseCases, []},
+
+          #
+          ## Boundary Library Enforcement
+          #
+          # Ensure boundary package is installed for compile-time architecture enforcement
+          {CredoChecks.CleanArchitecture.BoundaryPackageInstalled, []},
+          # Ensure architectural layer definition files exist (domain.ex, application_layer.ex, etc.)
+          {CredoChecks.CleanArchitecture.ArchitecturalLayersDefined, []},
 
           #
           ## Custom Testing Checks (TDD Enforcement)

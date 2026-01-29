@@ -1,12 +1,17 @@
 defmodule Alkali.Application.UseCases.BuildSite do
   @moduledoc """
   BuildSite use case orchestrates the full static site build process.
+
+  This use case depends on abstractions (behaviours) rather than concrete
+  infrastructure implementations, following Clean Architecture principles.
+  Infrastructure modules are injected via the `opts` keyword list.
   """
 
   alias Alkali.Application.UseCases.GenerateRssFeed
   alias Alkali.Infrastructure.BuildCache
   alias Alkali.Infrastructure.FileSystem
   alias Alkali.Infrastructure.LayoutResolver
+  alias Alkali.Infrastructure.Renderers.CollectionRenderer
 
   @doc """
   Orchestrates the complete build process for a static site.
@@ -718,89 +723,18 @@ defmodule Alkali.Application.UseCases.BuildSite do
     %{acc | total: acc.total + 1}
   end
 
-  defp render_collection_page(collection, config, mappings, _opts, pagination, file_system) do
-    posts_html = build_posts_html(collection.pages)
-    pagination_html = if pagination, do: build_pagination_html(pagination), else: ""
+  defp render_collection_page(collection, config, mappings, opts, pagination, file_system) do
+    # Delegate HTML generation to infrastructure renderer
+    collection_renderer =
+      Keyword.get(opts, :collection_renderer, CollectionRenderer)
 
-    {title, content} =
-      build_collection_content(collection, posts_html, pagination_html, pagination)
+    {title, content} = collection_renderer.render_collection_content(collection, pagination, opts)
 
     url_path = collection_url_path(collection)
 
     page = %{title: title, content: content, url: url_path, layout: "collection"}
 
     render_collection_with_layout(page, content, collection, config, mappings, file_system)
-  end
-
-  defp build_posts_html(pages) do
-    Enum.map_join(pages, "\n", &render_post_item/1)
-  end
-
-  defp render_post_item(page) do
-    relative_url = build_relative_url(page.url)
-    formatted_date = format_post_date(page.date)
-    intro = extract_intro(page)
-
-    intro_html = if intro != "", do: ~s(<p class="post-intro">#{intro}</p>), else: ""
-
-    date_html =
-      if formatted_date != "", do: ~s(<time class="post-date">#{formatted_date}</time>), else: ""
-
-    """
-    <article class="post-item">
-      <h3 class="post-title"><a href="#{relative_url}">#{page.title}</a></h3>
-      #{intro_html}
-      #{date_html}
-    </article>
-    """
-  end
-
-  defp build_relative_url(url) do
-    relative = String.trim_leading(url, "/")
-    if relative != "", do: "../#{relative}", else: "../index.html"
-  end
-
-  defp format_post_date(nil), do: ""
-  defp format_post_date(date), do: Calendar.strftime(date, "%B %d, %Y")
-
-  defp extract_intro(%{frontmatter: fm}) when is_map(fm) do
-    Map.get(fm, "intro") || Map.get(fm, "description") || ""
-  end
-
-  defp extract_intro(_), do: ""
-
-  defp build_collection_content(collection, posts_html, pagination_html, pagination) do
-    page_info = pagination_page_info(pagination)
-    count = Enum.count(collection.pages)
-
-    case collection.type do
-      :posts ->
-        {"All Posts#{page_info}",
-         collection_html("Total posts: #{count}", posts_html, pagination_html)}
-
-      type when type in [:tag, :category] ->
-        type_name = String.capitalize(to_string(type))
-
-        {"#{type_name}: #{collection.name}#{page_info}",
-         collection_html("Posts: #{count}", posts_html, pagination_html)}
-
-      _ ->
-        type_name = String.capitalize(to_string(collection.type))
-        {"#{type_name}: #{collection.name}", collection_html("Posts: #{count}", posts_html, "")}
-    end
-  end
-
-  defp pagination_page_info(nil), do: ""
-  defp pagination_page_info(p), do: " (Page #{p.current_page} of #{p.total_pages})"
-
-  defp collection_html(meta, posts_html, pagination_html) do
-    """
-    <p class="collection-meta">#{meta}</p>
-    <div class="posts">
-      #{posts_html}
-    </div>
-    #{pagination_html}
-    """
   end
 
   defp collection_url_path(collection) do
@@ -843,45 +777,6 @@ defmodule Alkali.Application.UseCases.BuildSite do
     ]
 
     Enum.find(layout_candidates, &file_system.exists?/1)
-  end
-
-  defp build_pagination_html(pagination) do
-    # Build previous link
-    prev_link =
-      if pagination.has_prev do
-        prev_url = pagination.prev_url || "../index.html"
-        ~s(<a href="#{prev_url}" class="pagination-prev">← Previous</a>)
-      else
-        ~s(<span class="pagination-prev disabled">← Previous</span>)
-      end
-
-    # Build next link
-    next_link =
-      if pagination.has_next do
-        ~s(<a href="#{pagination.next_url}" class="pagination-next">Next →</a>)
-      else
-        ~s(<span class="pagination-next disabled">Next →</span>)
-      end
-
-    # Build page number links
-    page_links =
-      Enum.map_join(pagination.page_numbers, " ", fn page_num ->
-        url = if page_num == 1, do: "../index.html", else: "../page/#{page_num}.html"
-
-        if page_num == pagination.current_page do
-          ~s(<span class="pagination-page current">#{page_num}</span>)
-        else
-          ~s(<a href="#{url}" class="pagination-page">#{page_num}</a>)
-        end
-      end)
-
-    """
-    <nav class="pagination">
-      #{prev_link}
-      <span class="pagination-pages">#{page_links}</span>
-      #{next_link}
-    </nav>
-    """
   end
 
   defp write_assets(assets, config, opts, verbose) do

@@ -3,7 +3,12 @@ defmodule Alkali.Infrastructure.BuildCache do
   Manages build cache for incremental builds.
 
   Tracks file modification times to determine which files need rebuilding.
+
+  Implements the `Alkali.Application.Behaviours.BuildCacheBehaviour` to allow
+  dependency injection and testability in use cases.
   """
+
+  @behaviour Alkali.Application.Behaviours.BuildCacheBehaviour
 
   @cache_file ".alkali_cache.json"
 
@@ -12,6 +17,7 @@ defmodule Alkali.Infrastructure.BuildCache do
 
   Returns a map of file paths to their last modification info {mtime, size}.
   """
+  @impl true
   @spec load(String.t()) :: map()
   def load(site_path) do
     cache_path = Path.join(site_path, @cache_file)
@@ -35,6 +41,7 @@ defmodule Alkali.Infrastructure.BuildCache do
   @doc """
   Saves the build cache to disk.
   """
+  @impl true
   @spec save(String.t(), map()) :: :ok | {:error, term()}
   def save(site_path, cache) do
     cache_path = Path.join(site_path, @cache_file)
@@ -58,6 +65,7 @@ defmodule Alkali.Infrastructure.BuildCache do
   Using both mtime (second precision) and size helps detect changes
   that happen within the same second.
   """
+  @impl true
   @spec get_file_info(String.t()) :: {integer(), integer()} | nil
   def get_file_info(file_path) do
     case File.stat(file_path, time: :posix) do
@@ -75,6 +83,7 @@ defmodule Alkali.Infrastructure.BuildCache do
   Compares both modification time and file size for better change detection
   within the same second.
   """
+  @impl true
   @spec file_changed?(String.t(), map()) :: boolean()
   def file_changed?(file_path, cache) do
     current_info = get_file_info(file_path)
@@ -93,6 +102,7 @@ defmodule Alkali.Infrastructure.BuildCache do
   @doc """
   Updates the cache with current file info (mtime and size).
   """
+  @impl true
   @spec update_cache(map(), list(String.t())) :: map()
   def update_cache(cache, file_paths) do
     Enum.reduce(file_paths, cache, fn file_path, acc ->

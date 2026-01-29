@@ -6,7 +6,12 @@ defmodule Alkali.Infrastructure.LayoutResolver do
   1. Frontmatter `layout` field
   2. Folder-based default (e.g., posts → post.html.heex)
   3. Site default (default.html.heex)
+
+  Implements the `Alkali.Application.Behaviours.LayoutResolverBehaviour` to allow
+  dependency injection and testability in use cases.
   """
+
+  @behaviour Alkali.Application.Behaviours.LayoutResolverBehaviour
 
   @doc """
   Resolves the layout file path for a given page.
@@ -30,6 +35,7 @@ defmodule Alkali.Infrastructure.LayoutResolver do
       iex> resolve_layout(page, config, [])
       {:ok, "/site/layouts/post.html.heex"}  # if exists, else default
   """
+  @impl true
   @spec resolve_layout(map(), map(), keyword()) :: {:ok, String.t()} | {:error, String.t()}
   def resolve_layout(page, config, _opts \\ []) do
     site_path = Map.get(config, :site_path, ".")
@@ -93,6 +99,7 @@ defmodule Alkali.Infrastructure.LayoutResolver do
       iex> extract_folder_from_url("/about")
       "page"
   """
+  @impl true
   @spec extract_folder_from_url(String.t()) :: String.t()
   def extract_folder_from_url(url) do
     case String.split(url, "/", trim: true) do
@@ -128,6 +135,7 @@ defmodule Alkali.Infrastructure.LayoutResolver do
       iex> render_with_layout(page, layout_path, config, [])
       {:ok, "<html>...</html>"}
   """
+  @impl true
   @spec render_with_layout(map(), String.t(), map(), keyword()) ::
           {:ok, String.t()} | {:error, String.t()}
   def render_with_layout(page, layout_path, config, opts \\ []) do

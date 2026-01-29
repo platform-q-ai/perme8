@@ -4,9 +4,13 @@ defmodule Alkali.Application.UseCases.GenerateRssFeed do
 
   This use case generates an RSS 2.0 compliant XML feed that can be used
   by feed readers to subscribe to blog updates.
+
+  XML generation is delegated to the infrastructure layer (RssRenderer)
+  following Clean Architecture principles.
   """
 
   alias Alkali.Domain.Entities.Page
+  alias Alkali.Infrastructure.Renderers.RssRenderer
 
   @doc """
   Generates an RSS feed from a list of pages.
@@ -18,6 +22,7 @@ defmodule Alkali.Application.UseCases.GenerateRssFeed do
   - `:site_url` - Base URL of the site (required)
   - `:feed_url` - URL of the feed itself (default: site_url/feed.xml)
   - `:max_items` - Maximum number of items to include (default: 20)
+  - `:rss_renderer` - Module for rendering RSS XML (default: RssRenderer)
 
   ## Returns
 
@@ -37,110 +42,39 @@ defmodule Alkali.Application.UseCases.GenerateRssFeed do
     if is_nil(site_url) || site_url == "" do
       {:error, "site_url is required for RSS feed generation"}
     else
-      feed_title = Keyword.get(opts, :feed_title, "Blog")
-      feed_description = Keyword.get(opts, :feed_description, "Latest posts")
-      feed_url = Keyword.get(opts, :feed_url, "#{site_url}/feed.xml")
-      max_items = Keyword.get(opts, :max_items, 20)
-
-      # Filter to only posts with dates (posts typically have /posts/ in their URL)
-      # and exclude drafts
-      feed_items =
-        pages
-        |> Enum.filter(&(&1.date != nil && &1.draft == false && post?(&1)))
-        |> Enum.sort_by(& &1.date, {:desc, Date})
-        |> Enum.take(max_items)
-
-      rss_xml = build_rss_xml(feed_title, feed_description, site_url, feed_url, feed_items)
-
-      {:ok, rss_xml}
+      generate_feed(pages, site_url, opts)
     end
   end
 
   # Private Functions
 
-  defp build_rss_xml(feed_title, feed_description, site_url, feed_url, items) do
-    current_datetime = DateTime.utc_now() |> format_rfc822()
+  defp generate_feed(pages, site_url, opts) do
+    feed_title = Keyword.get(opts, :feed_title, "Blog")
+    feed_description = Keyword.get(opts, :feed_description, "Latest posts")
+    feed_url = Keyword.get(opts, :feed_url, "#{site_url}/feed.xml")
+    max_items = Keyword.get(opts, :max_items, 20)
+    rss_renderer = Keyword.get(opts, :rss_renderer, RssRenderer)
 
-    items_xml = Enum.map_join(items, "\n    ", &build_item_xml(&1, site_url))
+    # Filter to only posts with dates (posts typically have /posts/ in their URL)
+    # and exclude drafts
+    feed_items =
+      pages
+      |> Enum.filter(&(&1.date != nil && &1.draft == false && post?(&1)))
+      |> Enum.sort_by(& &1.date, {:desc, Date})
+      |> Enum.take(max_items)
 
-    """
-    <?xml version="1.0" encoding="UTF-8"?>
-    <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
-      <channel>
-        <title>#{escape_xml(feed_title)}</title>
-        <description>#{escape_xml(feed_description)}</description>
-        <link>#{escape_xml(site_url)}</link>
-        <atom:link href="#{escape_xml(feed_url)}" rel="self" type="application/rss+xml"/>
-        <lastBuildDate>#{current_datetime}</lastBuildDate>
-        <generator>Alkali</generator>
-        #{items_xml}
-      </channel>
-    </rss>
-    """
-  end
+    # Delegate XML generation to infrastructure renderer
+    rss_xml =
+      rss_renderer.render_feed(
+        feed_title,
+        feed_description,
+        site_url,
+        feed_url,
+        feed_items,
+        opts
+      )
 
-  defp build_item_xml(page, site_url) do
-    item_url = build_absolute_url(site_url, page.url)
-    pub_date = format_rfc822(page.date)
-
-    # Use first paragraph of content as description, or truncate
-    description = extract_description(page.content)
-
-    """
-    <item>
-      <title>#{escape_xml(page.title)}</title>
-      <link>#{escape_xml(item_url)}</link>
-      <guid>#{escape_xml(item_url)}</guid>
-      <pubDate>#{pub_date}</pubDate>
-      <description>#{escape_xml(description)}</description>
-    </item>
-    """
-  end
-
-  defp build_absolute_url(site_url, path) do
-    # Remove trailing slash from site_url and leading slash from path
-    site_url = String.trim_trailing(site_url, "/")
-    path = String.trim_leading(path, "/")
-
-    "#{site_url}/#{path}"
-  end
-
-  defp extract_description(content) when is_binary(content) do
-    # Remove HTML tags and get first 200 characters
-    content
-    |> String.replace(~r/<[^>]*>/, "")
-    |> String.trim()
-    |> String.slice(0, 200)
-    |> case do
-      desc when byte_size(desc) >= 200 -> desc <> "..."
-      desc -> desc
-    end
-  end
-
-  defp extract_description(_), do: ""
-
-  defp escape_xml(text) when is_binary(text) do
-    text
-    |> String.replace("&", "&amp;")
-    |> String.replace("<", "&lt;")
-    |> String.replace(">", "&gt;")
-    |> String.replace("\"", "&quot;")
-    |> String.replace("'", "&apos;")
-  end
-
-  defp escape_xml(nil), do: ""
-
-  defp format_rfc822(%Date{} = date) do
-    # Convert Date to DateTime at midnight UTC for RFC822 formatting
-    {:ok, datetime} = DateTime.new(date, ~T[00:00:00], "Etc/UTC")
-    format_rfc822(datetime)
-  end
-
-  defp format_rfc822(%DateTime{} = datetime) do
-    # Format as RFC822: "Fri, 15 Jan 2024 10:30:00 +0000"
-    datetime
-    |> DateTime.shift_zone!("Etc/UTC")
-    |> Calendar.strftime("%a, %d %b %Y %H:%M:%S +0000")
+    {:ok, rss_xml}
   end
 
   defp post?(%{url: url}) when is_binary(url) do
