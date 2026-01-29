@@ -23,9 +23,15 @@ defmodule Jarga.TestUsers do
   """
 
   # Test utility module - top-level boundary
+  # Needs access to context + layer boundaries for test user management
   use Boundary,
     top_level?: true,
-    deps: [Jarga.Repo, Jarga.Accounts],
+    deps: [
+      Jarga.Repo,
+      Jarga.Accounts,
+      Jarga.Accounts.Domain,
+      Jarga.Accounts.Infrastructure
+    ],
     exports: []
 
   alias Jarga.Accounts

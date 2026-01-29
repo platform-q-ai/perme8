@@ -16,9 +16,16 @@ defmodule JargaWeb.ConnCase do
   """
 
   # Test support module - top-level boundary for web testing infrastructure
+  # Needs access to Jarga.Accounts.Domain for Scope
   use Boundary,
     top_level?: true,
-    deps: [JargaWeb, Jarga.Accounts, Jarga.DataCase, Jarga.AccountsFixtures],
+    deps: [
+      JargaWeb,
+      Jarga.Accounts,
+      Jarga.Accounts.Domain,
+      Jarga.DataCase,
+      Jarga.AccountsFixtures
+    ],
     exports: []
 
   use ExUnit.CaseTemplate

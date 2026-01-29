@@ -58,7 +58,7 @@ defmodule Documents.ComponentsSteps do
     note_component = hd(document.document_components)
 
     # Load the actual note using ComponentLoader
-    alias Jarga.Documents.Application.Services.ComponentLoader
+    alias Jarga.Documents.Infrastructure.Services.ComponentLoader
     note = ComponentLoader.load_component(note_component)
 
     {:ok, context |> Map.put(:note, note)}
@@ -86,7 +86,7 @@ defmodule Documents.ComponentsSteps do
 
     # Get the note component and load the actual note
     note_component = hd(document.document_components)
-    alias Jarga.Documents.Application.Services.ComponentLoader
+    alias Jarga.Documents.Infrastructure.Services.ComponentLoader
     note = ComponentLoader.load_component(note_component)
 
     project = context[:project]

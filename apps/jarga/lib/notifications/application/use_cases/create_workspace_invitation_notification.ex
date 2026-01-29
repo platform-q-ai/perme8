@@ -3,8 +3,8 @@ defmodule Jarga.Notifications.Application.UseCases.CreateWorkspaceInvitationNoti
   Creates a workspace invitation notification for a user.
   """
 
-  alias Jarga.Notifications.Infrastructure.Repositories.NotificationRepository
-  alias Jarga.Notifications.Infrastructure.Notifiers.PubSubNotifier
+  @default_notification_repository Jarga.Notifications.Infrastructure.Repositories.NotificationRepository
+  @default_notifier Jarga.Notifications.Infrastructure.Notifiers.PubSubNotifier
 
   @doc """
   Creates a workspace invitation notification.
@@ -34,7 +34,10 @@ defmodule Jarga.Notifications.Application.UseCases.CreateWorkspaceInvitationNoti
       {:ok, %Notification{}}
   """
   def execute(params, opts \\ []) do
-    notifier = Keyword.get(opts, :notifier, PubSubNotifier)
+    notification_repository =
+      Keyword.get(opts, :notification_repository, @default_notification_repository)
+
+    notifier = Keyword.get(opts, :notifier, @default_notifier)
     user_id = get_param(params, :user_id)
 
     notification_attrs = %{
@@ -50,7 +53,7 @@ defmodule Jarga.Notifications.Application.UseCases.CreateWorkspaceInvitationNoti
       }
     }
 
-    case NotificationRepository.create(notification_attrs) do
+    case notification_repository.create(notification_attrs) do
       {:ok, notification} = result ->
         # Broadcast notification to user via PubSub
         notifier.broadcast_new_notification(user_id, notification)

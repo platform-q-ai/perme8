@@ -4,6 +4,8 @@ defmodule Jarga.Documents.Infrastructure.Schemas.DocumentSchema do
   This is the infrastructure representation that handles database persistence.
   """
 
+  @behaviour Jarga.Documents.Application.Behaviours.DocumentSchemaBehaviour
+
   use Ecto.Schema
   import Ecto.Changeset
 
@@ -41,6 +43,7 @@ defmodule Jarga.Documents.Infrastructure.Schemas.DocumentSchema do
   Changeset for creating and updating documents.
   Accepts either a schema struct or a domain entity (which will be converted).
   """
+  @impl true
   def changeset(document, attrs) do
     schema = to_schema(document)
 

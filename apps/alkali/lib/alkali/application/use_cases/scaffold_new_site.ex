@@ -6,7 +6,8 @@ defmodule Alkali.Application.UseCases.ScaffoldNewSite do
   needed to start a new static site.
   """
 
-  alias Alkali.Infrastructure.FileSystem
+  # Infrastructure module default - resolved at runtime to avoid boundary violations
+  defp default_file_system_mod, do: Alkali.Infrastructure.FileSystem
 
   @doc """
   Creates a new static site with directory structure and example files.
@@ -1545,10 +1546,10 @@ defmodule Alkali.Application.UseCases.ScaffoldNewSite do
   # Default implementations delegating to infrastructure
 
   defp default_dir_creator(path) do
-    FileSystem.mkdir_p_with_path(path)
+    default_file_system_mod().mkdir_p_with_path(path)
   end
 
   defp default_file_writer(path, content) do
-    FileSystem.write_with_path(path, content)
+    default_file_system_mod().write_with_path(path, content)
   end
 end

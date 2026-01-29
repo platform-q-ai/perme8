@@ -3,6 +3,8 @@ defmodule Jarga.Notifications.Infrastructure.Repositories.NotificationRepository
   Repository for notification data access.
   """
 
+  @behaviour Jarga.Notifications.Application.Behaviours.NotificationRepositoryBehaviour
+
   import Ecto.Query
   alias Jarga.Notifications.Infrastructure.Schemas.NotificationSchema
   alias Jarga.Repo
@@ -10,6 +12,7 @@ defmodule Jarga.Notifications.Infrastructure.Repositories.NotificationRepository
   @doc """
   Creates a notification.
   """
+  @impl true
   def create(attrs) do
     attrs
     |> NotificationSchema.create_changeset()
@@ -19,11 +22,13 @@ defmodule Jarga.Notifications.Infrastructure.Repositories.NotificationRepository
   @doc """
   Gets a notification by ID.
   """
+  @impl true
   def get(id), do: Repo.get(NotificationSchema, id)
 
   @doc """
   Gets a notification by ID for a specific user.
   """
+  @impl true
   def get_by_user(id, user_id) do
     NotificationSchema
     |> where([n], n.id == ^id and n.user_id == ^user_id)
@@ -65,6 +70,7 @@ defmodule Jarga.Notifications.Infrastructure.Repositories.NotificationRepository
   @doc """
   Marks a notification as read.
   """
+  @impl true
   def mark_as_read(notification) do
     notification
     |> NotificationSchema.mark_read_changeset()
@@ -90,6 +96,7 @@ defmodule Jarga.Notifications.Infrastructure.Repositories.NotificationRepository
   Marks when action was taken on a notification.
   Optionally stores the action type in the data field.
   """
+  @impl true
   def mark_action_taken(notification, action \\ nil) do
     changeset = NotificationSchema.mark_action_taken_changeset(notification)
 
@@ -126,6 +133,7 @@ defmodule Jarga.Notifications.Infrastructure.Repositories.NotificationRepository
   This allows use cases to run database operations in a transaction
   without directly depending on Repo.
   """
+  @impl true
   def transact(fun) when is_function(fun, 0) do
     Repo.transact(fun)
   end

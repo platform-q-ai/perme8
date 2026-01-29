@@ -21,7 +21,8 @@ defmodule Jarga.Workspaces.Application.UseCases.ChangeMemberRole do
 
   alias Jarga.Workspaces.Domain.Entities.WorkspaceMember
   alias Jarga.Workspaces.Application.Policies.MembershipPolicy
-  alias Jarga.Workspaces.Infrastructure.Repositories.MembershipRepository
+
+  @default_membership_repository Jarga.Workspaces.Infrastructure.Repositories.MembershipRepository
 
   @doc """
   Executes the change member role use case.
@@ -42,7 +43,7 @@ defmodule Jarga.Workspaces.Application.UseCases.ChangeMemberRole do
   - `{:error, reason}` - Operation failed
   """
   @impl true
-  def execute(params, _opts \\ []) do
+  def execute(params, opts \\ []) do
     %{
       actor: actor,
       workspace_id: workspace_id,
@@ -50,11 +51,14 @@ defmodule Jarga.Workspaces.Application.UseCases.ChangeMemberRole do
       new_role: new_role
     } = params
 
+    membership_repository =
+      Keyword.get(opts, :membership_repository, @default_membership_repository)
+
     with :ok <- validate_role(new_role),
-         {:ok, _workspace} <- verify_actor_membership(actor, workspace_id),
-         {:ok, member} <- find_member(workspace_id, member_email),
+         {:ok, _workspace} <- verify_actor_membership(actor, workspace_id, membership_repository),
+         {:ok, member} <- find_member(workspace_id, member_email, membership_repository),
          :ok <- validate_can_change_role(member) do
-      update_member_role(member, new_role)
+      update_member_role(member, new_role, membership_repository)
     end
   end
 
@@ -68,10 +72,10 @@ defmodule Jarga.Workspaces.Application.UseCases.ChangeMemberRole do
   end
 
   # Use infrastructure repository: verify actor is a member
-  defp verify_actor_membership(actor, workspace_id) do
-    case MembershipRepository.get_workspace_for_user(actor, workspace_id) do
+  defp verify_actor_membership(actor, workspace_id, membership_repository) do
+    case membership_repository.get_workspace_for_user(actor, workspace_id) do
       nil ->
-        if MembershipRepository.workspace_exists?(workspace_id) do
+        if membership_repository.workspace_exists?(workspace_id) do
           {:error, :unauthorized}
         else
           {:error, :workspace_not_found}
@@ -83,8 +87,8 @@ defmodule Jarga.Workspaces.Application.UseCases.ChangeMemberRole do
   end
 
   # Use infrastructure repository: find member by email
-  defp find_member(workspace_id, email) do
-    case MembershipRepository.find_member_by_email(workspace_id, email) do
+  defp find_member(workspace_id, email, membership_repository) do
+    case membership_repository.find_member_by_email(workspace_id, email) do
       nil -> {:error, :member_not_found}
       member -> {:ok, member}
     end
@@ -99,7 +103,7 @@ defmodule Jarga.Workspaces.Application.UseCases.ChangeMemberRole do
     end
   end
 
-  defp update_member_role(member, new_role) do
-    MembershipRepository.update_member(member, %{role: new_role})
+  defp update_member_role(member, new_role, membership_repository) do
+    membership_repository.update_member(member, %{role: new_role})
   end
 end

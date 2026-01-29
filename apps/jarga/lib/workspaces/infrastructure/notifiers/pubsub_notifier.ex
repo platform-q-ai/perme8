@@ -5,6 +5,8 @@ defmodule Jarga.Workspaces.Infrastructure.Notifiers.PubSubNotifier do
   Uses Phoenix PubSub to broadcast real-time updates for workspace invitations.
   """
 
+  @behaviour Jarga.Workspaces.Application.Behaviours.PubSubNotifierBehaviour
+
   @doc """
   Broadcasts a workspace invitation created event.
 
@@ -15,6 +17,7 @@ defmodule Jarga.Workspaces.Infrastructure.Notifiers.PubSubNotifier do
   - `invited_by_name` - The name of the person who sent the invitation
   - `role` - The role they were invited as
   """
+  @impl true
   def broadcast_invitation_created(user_id, workspace_id, workspace_name, invited_by_name, role) do
     Phoenix.PubSub.broadcast(
       Jarga.PubSub,

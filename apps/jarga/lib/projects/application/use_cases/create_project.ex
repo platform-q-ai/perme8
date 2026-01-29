@@ -20,10 +20,11 @@ defmodule Jarga.Projects.Application.UseCases.CreateProject do
 
   alias Jarga.Accounts.Domain.Entities.User
   alias Jarga.Projects.Domain.SlugGenerator
-  alias Jarga.Projects.Infrastructure.Repositories.ProjectRepository
-  alias Jarga.Projects.Infrastructure.Notifiers.EmailAndPubSubNotifier
   alias Jarga.Workspaces
   alias Jarga.Workspaces.Application.Policies.PermissionsPolicy
+
+  @default_project_repository Jarga.Projects.Infrastructure.Repositories.ProjectRepository
+  @default_notifier Jarga.Projects.Infrastructure.Notifiers.EmailAndPubSubNotifier
 
   @doc """
   Executes the create project use case.
@@ -51,11 +52,12 @@ defmodule Jarga.Projects.Application.UseCases.CreateProject do
       attrs: attrs
     } = params
 
-    notifier = Keyword.get(opts, :notifier, EmailAndPubSubNotifier)
+    project_repository = Keyword.get(opts, :project_repository, @default_project_repository)
+    notifier = Keyword.get(opts, :notifier, @default_notifier)
 
     with {:ok, member} <- get_workspace_member(actor, workspace_id),
          :ok <- authorize_create_project(member.role),
-         {:ok, project} <- create_project(actor, workspace_id, attrs) do
+         {:ok, project} <- create_project(actor, workspace_id, attrs, project_repository) do
       notifier.notify_project_created(project)
       {:ok, project}
     end
@@ -76,7 +78,7 @@ defmodule Jarga.Projects.Application.UseCases.CreateProject do
   end
 
   # Create the project
-  defp create_project(%User{} = user, workspace_id, attrs) do
+  defp create_project(%User{} = user, workspace_id, attrs, project_repository) do
     # Convert atom keys to string keys to avoid mixed keys
     string_attrs =
       attrs
@@ -93,7 +95,7 @@ defmodule Jarga.Projects.Application.UseCases.CreateProject do
           SlugGenerator.generate(
             string_attrs["name"],
             workspace_id,
-            &ProjectRepository.slug_exists_in_workspace?/3
+            &project_repository.slug_exists_in_workspace?/3
           )
 
         Map.put(string_attrs, "slug", slug)
@@ -101,6 +103,6 @@ defmodule Jarga.Projects.Application.UseCases.CreateProject do
         string_attrs
       end
 
-    ProjectRepository.insert(string_attrs)
+    project_repository.insert(string_attrs)
   end
 end

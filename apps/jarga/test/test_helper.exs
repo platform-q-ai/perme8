@@ -9,5 +9,5 @@ Ecto.Adapters.SQL.Sandbox.mode(Jarga.Repo, :manual)
 
 # Define mocks for testing
 Mox.defmock(Jarga.Agents.Infrastructure.Services.LlmClientMock,
-  for: Jarga.Agents.Infrastructure.Services.Behaviours.LlmClientBehaviour
+  for: Jarga.Agents.Application.Behaviours.LlmClientBehaviour
 )

@@ -8,17 +8,22 @@ defmodule Jarga.Documents do
   """
 
   # Core context - cannot depend on JargaWeb (interface layer)
-  # Exports: Main context module and shared types (Document, DocumentComponent, Notes subdomain)
-  # Internal modules (Queries, Policies) remain private
-  # DocumentComponent is exported for document-note relationships
-  # Notes subdomain is exported for external access to note functionality
+  # Depends on layer boundaries for Clean Architecture enforcement
+  # Exports: Domain entities and Notes subdomain for external access
   use Boundary,
     top_level?: true,
     deps: [
+      # Cross-context dependencies (context + domain layer for entity access)
       Jarga.Accounts,
+      Jarga.Accounts.Domain,
       Jarga.Workspaces,
       Jarga.Projects,
       Jarga.Agents,
+      # Same-context layer dependencies
+      Jarga.Documents.Domain,
+      Jarga.Documents.Application,
+      Jarga.Documents.Infrastructure,
+      Jarga.Documents.Notes.Infrastructure,
       Jarga.Repo
     ],
     exports: [

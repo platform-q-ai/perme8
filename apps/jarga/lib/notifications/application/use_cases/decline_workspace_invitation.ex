@@ -10,8 +10,9 @@ defmodule Jarga.Notifications.Application.UseCases.DeclineWorkspaceInvitation do
   """
 
   alias Jarga.Workspaces
-  alias Jarga.Notifications.Infrastructure.Repositories.NotificationRepository
-  alias Jarga.Notifications.Infrastructure.Notifiers.PubSubNotifier
+
+  @default_notification_repository Jarga.Notifications.Infrastructure.Repositories.NotificationRepository
+  @default_notifier Jarga.Notifications.Infrastructure.Notifiers.PubSubNotifier
 
   @doc """
   Declines a workspace invitation.
@@ -30,16 +31,21 @@ defmodule Jarga.Notifications.Application.UseCases.DeclineWorkspaceInvitation do
       {:ok, %Notification{}}
   """
   def execute(notification_id, user_id, opts \\ []) do
-    notifier = Keyword.get(opts, :notifier, PubSubNotifier)
+    notification_repository =
+      Keyword.get(opts, :notification_repository, @default_notification_repository)
+
+    notifier = Keyword.get(opts, :notifier, @default_notifier)
 
     result =
-      NotificationRepository.transact(fn ->
-        with {:ok, notification} <- get_notification(notification_id, user_id),
+      notification_repository.transact(fn ->
+        with {:ok, notification} <-
+               get_notification(notification_id, user_id, notification_repository),
              :ok <- validate_notification_type(notification),
              :ok <- check_not_already_actioned(notification),
              :ok <- decline_invitation(notification, user_id),
-             {:ok, notification} <- mark_notification_action_taken(notification) do
-          mark_notification_as_read(notification)
+             {:ok, notification} <-
+               mark_notification_action_taken(notification, notification_repository) do
+          mark_notification_as_read(notification, notification_repository)
         end
       end)
 
@@ -55,8 +61,8 @@ defmodule Jarga.Notifications.Application.UseCases.DeclineWorkspaceInvitation do
     end
   end
 
-  defp get_notification(notification_id, user_id) do
-    case NotificationRepository.get_by_user(notification_id, user_id) do
+  defp get_notification(notification_id, user_id, notification_repository) do
+    case notification_repository.get_by_user(notification_id, user_id) do
       nil -> {:error, :not_found}
       notification -> {:ok, notification}
     end
@@ -83,11 +89,11 @@ defmodule Jarga.Notifications.Application.UseCases.DeclineWorkspaceInvitation do
     Workspaces.decline_invitation_by_workspace(workspace_id, user_id)
   end
 
-  defp mark_notification_action_taken(notification) do
-    NotificationRepository.mark_action_taken(notification, "declined")
+  defp mark_notification_action_taken(notification, notification_repository) do
+    notification_repository.mark_action_taken(notification, "declined")
   end
 
-  defp mark_notification_as_read(notification) do
-    NotificationRepository.mark_as_read(notification)
+  defp mark_notification_as_read(notification, notification_repository) do
+    notification_repository.mark_as_read(notification)
   end
 end

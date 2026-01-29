@@ -6,7 +6,6 @@ defmodule Jarga.Workspaces.Api.Helpers do
   alias Ecto.Adapters.SQL.Sandbox
   alias Jarga.Accounts.Application.Services.ApiKeyTokenService
   alias Jarga.Accounts.Infrastructure.Repositories.ApiKeyRepository
-  alias Jarga.Accounts.Infrastructure.Schemas.ApiKeySchema
 
   def ensure_sandbox_checkout do
     case Sandbox.checkout(Jarga.Repo) do
@@ -63,13 +62,13 @@ defmodule Jarga.Workspaces.Api.Helpers do
       is_active: Map.get(attrs, :is_active, true)
     }
 
-    {:ok, schema} =
+    {:ok, api_key} =
       ApiKeyRepository.insert(
         Jarga.Repo,
         api_key_attrs
       )
 
-    api_key = ApiKeySchema.to_entity(schema)
+    # ApiKeyRepository.insert now returns entity directly
     {api_key, plain_token}
   end
 

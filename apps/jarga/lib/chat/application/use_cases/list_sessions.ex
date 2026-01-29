@@ -16,7 +16,7 @@ defmodule Jarga.Chat.Application.UseCases.ListSessions do
       {:ok, [%{id: ..., title: "...", message_count: 5, preview: "..."}]}
   """
 
-  alias Jarga.Chat.Infrastructure.Repositories.SessionRepository
+  @default_session_repository Jarga.Chat.Infrastructure.Repositories.SessionRepository
 
   @default_limit 50
   @preview_max_length 100
@@ -28,6 +28,7 @@ defmodule Jarga.Chat.Application.UseCases.ListSessions do
     - user_id: The ID of the user
     - opts: Options keyword list
       - :limit - Maximum number of sessions to return (default: 50)
+      - :session_repository - Repository module for session operations (default: SessionRepository)
 
   Returns `{:ok, sessions}` with list of session maps including:
     - id, title, inserted_at, updated_at
@@ -36,20 +37,21 @@ defmodule Jarga.Chat.Application.UseCases.ListSessions do
   """
   def execute(user_id, opts \\ []) do
     limit = Keyword.get(opts, :limit, @default_limit)
+    session_repository = Keyword.get(opts, :session_repository, @default_session_repository)
 
     sessions =
       user_id
-      |> SessionRepository.list_user_sessions(limit)
-      |> Enum.map(&add_preview/1)
+      |> session_repository.list_user_sessions(limit)
+      |> Enum.map(&add_preview(&1, session_repository))
 
     {:ok, sessions}
   end
 
-  defp add_preview(session) do
+  defp add_preview(session, session_repository) do
     # Get the first message for preview using Repository
     preview =
       session.id
-      |> SessionRepository.get_first_message_content()
+      |> session_repository.get_first_message_content()
       |> truncate_preview()
 
     Map.put(session, :preview, preview)

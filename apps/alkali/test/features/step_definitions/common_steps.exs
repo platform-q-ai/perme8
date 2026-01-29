@@ -90,32 +90,30 @@ defmodule Alkali.CommonSteps do
 
   step "I should see error containing:", context do
     output = context[:command_output] || ""
+    assert_error_in_output(output, context)
+    {:ok, context}
+  end
 
-    # Handle both docstring and datatable formats
-    cond do
-      Map.has_key?(context, :docstring) ->
-        error_text = String.trim(context.docstring)
+  defp assert_error_in_output(output, %{docstring: docstring}) do
+    error_text = String.trim(docstring)
 
-        assert output =~ error_text,
-               "Expected error containing '#{error_text}' in output. Got: #{output}"
+    assert output =~ error_text,
+           "Expected error containing '#{error_text}' in output. Got: #{output}"
+  end
 
-        context
+  defp assert_error_in_output(output, %{datatable: datatable}) do
+    table_data = datatable.maps
 
-      Map.has_key?(context, :datatable) ->
-        table_data = context.datatable.maps
+    Enum.each(table_data, fn row ->
+      error_text = row["Error"]
 
-        Enum.each(table_data, fn row ->
-          error_text = row["Error"]
+      assert output =~ error_text,
+             "Expected error containing '#{error_text}' in output. Got: #{output}"
+    end)
+  end
 
-          assert output =~ error_text,
-                 "Expected error containing '#{error_text}' in output. Got: #{output}"
-        end)
-
-        context
-
-      true ->
-        flunk("Step 'I should see error containing:' requires either docstring or datatable")
-    end
+  defp assert_error_in_output(_output, _context) do
+    flunk("Step 'I should see error containing:' requires either docstring or datatable")
   end
 
   # --- THEN Steps (Build) ---

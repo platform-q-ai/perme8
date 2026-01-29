@@ -155,7 +155,6 @@ defmodule Jarga.ApplicationLayer do
       Jarga.Accounts.Application.Services.PasswordService,
       Jarga.Accounts.Application.Services.ApiKeyTokenService,
       # Documents
-      Jarga.Documents.Application.Services.ComponentLoader,
       Jarga.Documents.Application.Services.NotificationService,
       # Projects
       Jarga.Projects.Application.Services.NotificationService,

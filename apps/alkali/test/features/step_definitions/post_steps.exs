@@ -58,38 +58,38 @@ defmodule Alkali.PostSteps do
     file_path = context[:created_file_path]
     table_data = context.datatable.maps
 
-    if File.exists?(file_path) do
-      content = File.read!(file_path)
+    assert File.exists?(file_path), "Expected file to exist at: #{file_path}"
 
-      # Check each expected field
-      Enum.each(table_data, fn row ->
-        field = row["Field"]
-        expected_value = row["Value"]
+    content = File.read!(file_path)
 
-        assert content =~ "#{field}:",
-               "Expected frontmatter to contain field '#{field}' in file: #{file_path}"
+    # Check each expected field
+    Enum.each(table_data, fn row ->
+      field = row["Field"]
+      expected_value = row["Value"]
 
-        assert content =~ expected_value,
-               "Expected frontmatter field '#{field}' to have value '#{expected_value}' in file: #{file_path}"
-      end)
-    end
+      assert content =~ "#{field}:",
+             "Expected frontmatter to contain field '#{field}' in file: #{file_path}"
 
-    context
+      assert content =~ expected_value,
+             "Expected frontmatter field '#{field}' to have value '#{expected_value}' in file: #{file_path}"
+    end)
+
+    {:ok, context}
   end
 
   step "the frontmatter should have date field with today's date", context do
     file_path = context[:created_file_path]
     today = Date.utc_today() |> Date.to_iso8601()
 
-    if File.exists?(file_path) do
-      content = File.read!(file_path)
+    assert File.exists?(file_path), "Expected file to exist at: #{file_path}"
 
-      assert content =~ "date:",
-             "Expected frontmatter to contain 'date:' field in file: #{file_path}"
+    content = File.read!(file_path)
 
-      assert content =~ today,
-             "Expected frontmatter date to be today's date (#{today}) in file: #{file_path}"
-    end
+    assert content =~ "date:",
+           "Expected frontmatter to contain 'date:' field in file: #{file_path}"
+
+    assert content =~ today,
+           "Expected frontmatter date to be today's date (#{today}) in file: #{file_path}"
 
     {:ok, context}
   end

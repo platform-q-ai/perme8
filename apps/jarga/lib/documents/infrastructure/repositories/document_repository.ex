@@ -11,6 +11,8 @@ defmodule Jarga.Documents.Infrastructure.Repositories.DocumentRepository do
   and pure domain entities (Document).
   """
 
+  @behaviour Jarga.Documents.Application.Behaviours.DocumentRepositoryBehaviour
+
   import Ecto.Query
   alias Jarga.Repo
   alias Jarga.Documents.Infrastructure.Schemas.DocumentSchema
@@ -128,6 +130,7 @@ defmodule Jarga.Documents.Infrastructure.Repositories.DocumentRepository do
 
   Used by SlugGenerator to ensure uniqueness.
   """
+  @impl true
   def slug_exists_in_workspace?(slug, workspace_id, excluding_id \\ nil) do
     query =
       from(d in DocumentSchema,
@@ -159,6 +162,7 @@ defmodule Jarga.Documents.Infrastructure.Repositories.DocumentRepository do
   - `{:ok, document}` - Insert succeeded (returns domain entity)
   - `{:error, changeset}` - Insert failed
   """
+  @impl true
   def insert(changeset) do
     case Repo.insert(changeset) do
       {:ok, schema} -> {:ok, Document.from_schema(schema)}
@@ -180,6 +184,7 @@ defmodule Jarga.Documents.Infrastructure.Repositories.DocumentRepository do
   - `{:ok, document_component}` - Insert succeeded
   - `{:error, changeset}` - Insert failed
   """
+  @impl true
   def insert_component(changeset) do
     Repo.insert(changeset)
   end
@@ -246,6 +251,7 @@ defmodule Jarga.Documents.Infrastructure.Repositories.DocumentRepository do
   - `{:ok, changes_map}` - Transaction succeeded
   - `{:error, failed_operation, failed_value, changes_so_far}` - Transaction failed
   """
+  @impl true
   def transaction(multi) do
     Repo.transaction(multi)
   end

@@ -9,9 +9,15 @@ defmodule Alkali.Infrastructure.LayoutResolver do
 
   Implements the `Alkali.Application.Behaviours.LayoutResolverBehaviour` to allow
   dependency injection and testability in use cases.
+
+  All functions accept an optional `opts` keyword list with:
+  - `:file_system` - Module implementing file operations (defaults to File)
   """
 
   @behaviour Alkali.Application.Behaviours.LayoutResolverBehaviour
+
+  # Default file system module for dependency injection
+  defp default_file_system, do: File
 
   @doc """
   Resolves the layout file path for a given page.
@@ -37,7 +43,8 @@ defmodule Alkali.Infrastructure.LayoutResolver do
   """
   @impl true
   @spec resolve_layout(map(), map(), keyword()) :: {:ok, String.t()} | {:error, String.t()}
-  def resolve_layout(page, config, _opts \\ []) do
+  def resolve_layout(page, config, opts \\ []) do
+    file_system = Keyword.get(opts, :file_system, default_file_system())
     site_path = Map.get(config, :site_path, ".")
     layouts_path = Map.get(config, :layouts_path, "layouts")
 
@@ -47,13 +54,13 @@ defmodule Alkali.Infrastructure.LayoutResolver do
         "#{page.layout}.html.heex"
       else
         # Priority 2: Folder-based default
-        resolve_folder_based_layout(page.url, site_path, layouts_path)
+        resolve_folder_based_layout(page.url, site_path, layouts_path, file_system)
       end
 
     # Build full path and verify it exists
     layout_path = Path.join([site_path, layouts_path, layout_file])
 
-    if File.exists?(layout_path) do
+    if file_system.exists?(layout_path) do
       {:ok, layout_path}
     else
       # Extract layout name without extension for error message
@@ -139,14 +146,16 @@ defmodule Alkali.Infrastructure.LayoutResolver do
   @spec render_with_layout(map(), String.t(), map(), keyword()) ::
           {:ok, String.t()} | {:error, String.t()}
   def render_with_layout(page, layout_path, config, opts \\ []) do
-    case File.read(layout_path) do
+    file_system = Keyword.get(opts, :file_system, default_file_system())
+
+    case file_system.read(layout_path) do
       {:ok, layout_template} ->
         # Get layouts directory from layout_path
         layouts_dir = Path.dirname(layout_path)
 
         # Preprocess template to replace render_partial calls
         # This is a simple approach - in production you'd want a proper parser
-        processed_template = preprocess_partials(layout_template, layouts_dir)
+        processed_template = preprocess_partials(layout_template, layouts_dir, file_system)
 
         # Prepare assigns for template
         assigns = %{
@@ -178,7 +187,7 @@ defmodule Alkali.Infrastructure.LayoutResolver do
 
   # Private helpers
 
-  defp resolve_folder_based_layout(url, site_path, layouts_path) do
+  defp resolve_folder_based_layout(url, site_path, layouts_path, file_system) do
     folder = extract_folder_from_url(url)
 
     # Try both plural and singular forms
@@ -192,8 +201,8 @@ defmodule Alkali.Infrastructure.LayoutResolver do
     singular_layout_path = Path.join([site_path, layouts_path, singular_layout])
 
     cond do
-      File.exists?(folder_layout_path) -> folder_layout
-      File.exists?(singular_layout_path) -> singular_layout
+      file_system.exists?(folder_layout_path) -> folder_layout
+      file_system.exists?(singular_layout_path) -> singular_layout
       true -> "default.html.heex"
     end
   end
@@ -208,7 +217,7 @@ defmodule Alkali.Infrastructure.LayoutResolver do
 
   @doc false
   # Preprocesses template to replace render_partial calls with actual partial content
-  defp preprocess_partials(template, layouts_dir) do
+  defp preprocess_partials(template, layouts_dir, file_system) do
     # Find all render_partial calls using regex
     # Pattern: <%= render_partial("partial_name", assigns) %>
     # Also handles: <%= render_partial("partial_name",assigns) %>
@@ -219,7 +228,7 @@ defmodule Alkali.Infrastructure.LayoutResolver do
       partials_dir = Path.join(layouts_dir, "partials")
       partial_path = Path.join(partials_dir, partial_name)
 
-      case File.read(partial_path) do
+      case file_system.read(partial_path) do
         {:ok, partial_content} ->
           # Return the partial content directly (it will be part of the template)
           String.trim(partial_content)

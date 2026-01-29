@@ -9,11 +9,21 @@ defmodule Jarga.Projects do
   """
 
   # Core context - cannot depend on JargaWeb (interface layer)
-  # Exports: Main context module, domain entity (Project), and infrastructure schema (ProjectSchema)
-  # Internal modules (Queries, Policies, other infrastructure) remain private
+  # Depends on layer boundaries for Clean Architecture enforcement
+  # Exports: Domain entity (Project) and infrastructure schema (ProjectSchema)
   use Boundary,
     top_level?: true,
-    deps: [Jarga.Accounts, Jarga.Workspaces, Jarga.Repo],
+    deps: [
+      # Cross-context dependencies (context + domain layer for entity access)
+      Jarga.Accounts,
+      Jarga.Accounts.Domain,
+      Jarga.Workspaces,
+      # Same-context layer dependencies
+      Jarga.Projects.Domain,
+      Jarga.Projects.Application,
+      Jarga.Projects.Infrastructure,
+      Jarga.Repo
+    ],
     exports: [
       {Domain.Entities.Project, []},
       {Infrastructure.Schemas.ProjectSchema, []}

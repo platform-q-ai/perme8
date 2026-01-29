@@ -22,7 +22,7 @@ defmodule Jarga.Chat.Application.UseCases.CreateSession do
       {:ok, %ChatSession{title: "Hello?"}}
   """
 
-  alias Jarga.Chat.Infrastructure.Repositories.SessionRepository
+  @default_session_repository Jarga.Chat.Infrastructure.Repositories.SessionRepository
 
   @max_auto_title_length 50
 
@@ -36,12 +36,15 @@ defmodule Jarga.Chat.Application.UseCases.CreateSession do
       - project_id: (optional) ID of the project
       - title: (optional) Title of the session
       - first_message: (optional) First message content for auto-title generation
+    - opts: Keyword list of options
+      - :session_repository - Repository module for session operations (default: SessionRepository)
 
   Returns `{:ok, session}` if successful, or `{:error, changeset}` if validation fails.
   """
-  def execute(attrs) do
+  def execute(attrs, opts \\ []) do
+    session_repository = Keyword.get(opts, :session_repository, @default_session_repository)
     attrs = maybe_generate_title(attrs)
-    SessionRepository.create_session(attrs)
+    session_repository.create_session(attrs)
   end
 
   defp maybe_generate_title(%{title: title} = attrs) when not is_nil(title) do

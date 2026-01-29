@@ -6,6 +6,8 @@ defmodule Jarga.Workspaces.Infrastructure.Queries.Queries do
   Query Object pattern from the infrastructure layer.
   """
 
+  @behaviour Jarga.Workspaces.Application.Behaviours.QueriesBehaviour
+
   import Ecto.Query, warn: false
 
   alias Jarga.Accounts.Domain.Entities.User
@@ -236,6 +238,7 @@ defmodule Jarga.Workspaces.Infrastructure.Queries.Queries do
       [%WorkspaceMember{}, ...]
 
   """
+  @impl true
   def find_pending_invitations_by_email(email) do
     from(wm in WorkspaceMemberSchema,
       where: is_nil(wm.user_id),
@@ -253,6 +256,7 @@ defmodule Jarga.Workspaces.Infrastructure.Queries.Queries do
       [%WorkspaceMember{workspace: %Workspace{}, inviter: %User{}}, ...]
 
   """
+  @impl true
   def with_workspace_and_inviter(query) do
     from(wm in query,
       preload: [:workspace, :inviter]

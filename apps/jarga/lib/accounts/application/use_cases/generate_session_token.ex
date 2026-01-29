@@ -10,6 +10,12 @@ defmodule Jarga.Accounts.Application.UseCases.GenerateSessionToken do
   - If user has authenticated_at timestamp, it's included in the token
   - Returns the encoded token binary for use in cookies/sessions
 
+  ## Dependency Injection
+
+  This use case accepts the following dependencies via opts:
+  - `:repo` - Ecto.Repo module (default: Jarga.Repo)
+  - `:user_token_repo` - UserTokenRepository module (default: Infrastructure.Repositories.UserTokenRepository)
+
   ## Responsibilities
 
   - Build session token with proper structure
@@ -20,7 +26,10 @@ defmodule Jarga.Accounts.Application.UseCases.GenerateSessionToken do
   @behaviour Jarga.Accounts.Application.UseCases.UseCase
 
   alias Jarga.Accounts.Domain.Services.TokenBuilder
-  alias Jarga.Accounts.Infrastructure.Repositories.UserTokenRepository
+
+  # Default implementations - can be overridden via opts for testing
+  @default_repo Jarga.Repo
+  @default_user_token_repo Jarga.Accounts.Infrastructure.Repositories.UserTokenRepository
 
   @doc """
   Executes the generate session token use case.
@@ -32,6 +41,7 @@ defmodule Jarga.Accounts.Application.UseCases.GenerateSessionToken do
 
   - `opts` - Keyword list of options:
     - `:repo` - Repository module (default: Jarga.Repo)
+    - `:user_token_repo` - UserTokenRepository module (default: Infrastructure.Repositories.UserTokenRepository)
 
   ## Returns
 
@@ -41,13 +51,14 @@ defmodule Jarga.Accounts.Application.UseCases.GenerateSessionToken do
   def execute(params, opts \\ []) do
     %{user: user} = params
 
-    repo = Keyword.get(opts, :repo, Jarga.Repo)
+    repo = Keyword.get(opts, :repo, @default_repo)
+    user_token_repo = Keyword.get(opts, :user_token_repo, @default_user_token_repo)
 
     # Build session token
     {token, user_token} = TokenBuilder.build_session_token(user)
 
     # Persist token in database
-    UserTokenRepository.insert!(user_token, repo)
+    user_token_repo.insert!(user_token, repo)
 
     # Return encoded token
     token

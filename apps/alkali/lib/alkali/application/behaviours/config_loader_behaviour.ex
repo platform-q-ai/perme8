@@ -33,11 +33,13 @@ defmodule Alkali.Application.Behaviours.ConfigLoaderBehaviour do
   ## Parameters
 
     - `site_path` - Path to the site directory containing config/alkali.exs
+    - `opts` - Optional keyword list with:
+      - `:file_system` - Module for file operations (default: File)
 
   ## Returns
 
     - `{:ok, map()}` with configuration on success
     - `{:error, String.t()}` on failure
   """
-  @callback load(String.t()) :: {:ok, config()} | {:error, String.t()}
+  @callback load(String.t(), keyword()) :: {:ok, config()} | {:error, String.t()}
 end

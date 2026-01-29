@@ -90,11 +90,4 @@ defmodule Jarga.Agents.Domain.Entities.Agent do
   def valid_visibilities do
     ["PRIVATE", "SHARED"]
   end
-
-  @doc """
-  Delegates changeset validation to infrastructure schema.
-  Used for form validation and parameter checking.
-  """
-  defdelegate changeset(agent, attrs),
-    to: Jarga.Agents.Infrastructure.Schemas.AgentSchema
 end

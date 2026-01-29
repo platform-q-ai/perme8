@@ -17,7 +17,7 @@ defmodule Alkali do
 
   use Boundary,
     top_level?: true,
-    deps: [],
+    deps: [Alkali.Application],
     exports: []
 
   alias Alkali.Application.UseCases.{

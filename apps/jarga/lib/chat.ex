@@ -44,6 +44,9 @@ defmodule Jarga.Chat do
   use Boundary,
     top_level?: true,
     deps: [
+      Jarga.Chat.Domain,
+      Jarga.Chat.Application,
+      Jarga.Chat.Infrastructure,
       Jarga.Accounts,
       Jarga.Workspaces,
       Jarga.Projects,

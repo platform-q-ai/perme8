@@ -9,12 +9,15 @@ defmodule Jarga.Chat.Infrastructure.Repositories.MessageRepository do
   - Provides clear separation from business logic
   """
 
+  @behaviour Jarga.Chat.Application.Behaviours.MessageRepositoryBehaviour
+
   alias Jarga.Repo
   alias Jarga.Chat.Infrastructure.Schemas.MessageSchema
 
   @doc """
   Gets a message by ID.
   """
+  @impl true
   def get(id, repo \\ Repo) do
     repo.get(MessageSchema, id)
   end
@@ -39,6 +42,7 @@ defmodule Jarga.Chat.Infrastructure.Repositories.MessageRepository do
       iex> create_message(%{role: "user"})
       {:error, %Ecto.Changeset{}}
   """
+  @impl true
   @spec create_message(map(), module()) ::
           {:ok, MessageSchema.t()} | {:error, Ecto.Changeset.t()}
   def create_message(attrs, repo \\ Repo) do
@@ -58,6 +62,7 @@ defmodule Jarga.Chat.Infrastructure.Repositories.MessageRepository do
       iex> delete_message(invalid_message)
       {:error, %Ecto.Changeset{}}
   """
+  @impl true
   @spec delete_message(MessageSchema.t(), module()) ::
           {:ok, MessageSchema.t()} | {:error, Ecto.Changeset.t()}
   def delete_message(%MessageSchema{} = message, repo \\ Repo) do

@@ -4,9 +4,15 @@ defmodule Alkali.Infrastructure.ConfigLoader do
 
   Implements the `Alkali.Application.Behaviours.ConfigLoaderBehaviour` to allow
   dependency injection and testability in use cases.
+
+  All functions accept an optional `opts` keyword list with:
+  - `:file_system` - Module implementing file operations (defaults to File)
   """
 
   @behaviour Alkali.Application.Behaviours.ConfigLoaderBehaviour
+
+  # Default file system module for dependency injection
+  defp default_file_system, do: File
 
   @doc """
   Loads site configuration from the config file.
@@ -14,16 +20,20 @@ defmodule Alkali.Infrastructure.ConfigLoader do
   ## Parameters
     - `site_path` - Path to the site directory containing config/alkali.exs
 
+  ## Options
+    - `:file_system` - Module for file operations (default: File)
+
   ## Returns
     - `{:ok, map()}` with configuration on success
     - `{:error, String.t()}` on failure
   """
   @impl true
-  @spec load(String.t()) :: {:ok, map()} | {:error, String.t()}
-  def load(site_path) do
+  @spec load(String.t(), keyword()) :: {:ok, map()} | {:error, String.t()}
+  def load(site_path, opts \\ []) do
+    file_system = Keyword.get(opts, :file_system, default_file_system())
     config_file = Path.join([site_path, "config", "alkali.exs"])
 
-    if File.exists?(config_file) do
+    if file_system.exists?(config_file) do
       load_config_file(config_file, site_path)
     else
       # Return default config if file doesn't exist

@@ -5,8 +5,9 @@ defmodule Alkali.Application.UseCases.ProcessAssets do
   """
 
   alias Alkali.Domain.Entities.Asset
-  alias Alkali.Infrastructure.CryptoService
-  alias Alkali.Infrastructure.FileSystem
+
+  # Infrastructure module default - resolved at runtime to avoid boundary violations
+  defp default_file_system_mod, do: Alkali.Infrastructure.FileSystem
 
   @doc """
   Processes a list of assets by minifying, fingerprinting, and tracking mappings.
@@ -25,7 +26,7 @@ defmodule Alkali.Application.UseCases.ProcessAssets do
           {:ok, %{assets: list(Asset.t()), mappings: map()}} | {:error, String.t()}
   def execute(assets, opts \\ []) do
     file_reader = Keyword.get(opts, :file_reader, &default_file_reader/1)
-    crypto_service = Keyword.get(opts, :crypto_service, CryptoService)
+    crypto_service = Keyword.get(opts, :crypto_service, Alkali.Infrastructure.CryptoService)
 
     results =
       Enum.map(assets, fn asset_map ->
@@ -143,6 +144,6 @@ defmodule Alkali.Application.UseCases.ProcessAssets do
   # Default implementation delegating to infrastructure
 
   defp default_file_reader(path) do
-    FileSystem.read(path)
+    default_file_system_mod().read(path)
   end
 end

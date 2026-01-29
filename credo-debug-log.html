@@ -1,0 +1,426 @@
+<html>
+
+<head>
+  <title>Credo Debug Log</title>
+
+  <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+    crossorigin="anonymous"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+    }
+    code {
+      font-family: 'Courier New', Courier, monospace;
+      color: #c55953;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>Experimental Credo Debug Log</h1>
+
+  <p>
+    Analysis in
+    <code>
+      /home/akal1k0/workspace/perme8
+    </code> took
+    <strong>269 ms</strong> (19 ms to load, 250 ms running checks)
+  </p>
+
+  <h2>Timings</h2>
+  <p>
+    Please note that these are cumulative timings across all cores, therefore an individual file or check can account for more time than the overall time spent.
+  </p>
+
+  <table border="1" cellpadding="4">
+    <tr>
+      <td></td>
+      <th align=left>Check</th>
+      <th align=left>File</th>
+      <th align=left>Time (ms)</th>
+    </tr>
+    <tr>
+      <th align=left valign=top rowspan="15">Slowest Files</th>
+      
+      <td></td>
+        <td>apps/alkali/lib/alkali/application/use_cases/build_site.ex</td>
+        <td align=right>718</td>
+      </tr>
+      <tr>
+      
+      <td></td>
+        <td>apps/alkali/test/features/step_definitions/build_steps.exs</td>
+        <td align=right>470</td>
+      </tr>
+      <tr>
+      
+      <td></td>
+        <td>apps/alkali/lib/alkali/application/use_cases/scaffold_new_site.ex</td>
+        <td align=right>469</td>
+      </tr>
+      <tr>
+      
+      <td></td>
+        <td>apps/alkali/lib/alkali/application/use_cases/create_new_post.ex</td>
+        <td align=right>339</td>
+      </tr>
+      <tr>
+      
+      <td></td>
+        <td>apps/alkali/lib/alkali/application/helpers/paginate.ex</td>
+        <td align=right>329</td>
+      </tr>
+      <tr>
+      
+      <td></td>
+        <td>apps/alkali/lib/alkali/application/use_cases/generate_rss_feed.ex</td>
+        <td align=right>326</td>
+      </tr>
+      <tr>
+      
+      <td></td>
+        <td>apps/alkali/lib/alkali/application/use_cases/generate_collections.ex</td>
+        <td align=right>315</td>
+      </tr>
+      <tr>
+      
+      <td></td>
+        <td>apps/alkali/lib/alkali/application/use_cases/clean_output.ex</td>
+        <td align=right>299</td>
+      </tr>
+      <tr>
+      
+      <td></td>
+        <td>apps/alkali/lib/alkali.ex</td>
+        <td align=right>295</td>
+      </tr>
+      <tr>
+      
+      <td></td>
+        <td>apps/alkali/lib/alkali/application/behaviours/build_cache_behaviour.ex</td>
+        <td align=right>284</td>
+      </tr>
+      <tr>
+      
+      <td></td>
+        <td>apps/alkali/lib/alkali/application/behaviours/layout_resolver_behaviour.ex</td>
+        <td align=right>273</td>
+      </tr>
+      <tr>
+      
+      <td></td>
+        <td>apps/alkali/test/alkali/application/use_cases/build_site_test.exs</td>
+        <td align=right>272</td>
+      </tr>
+      <tr>
+      
+      <td></td>
+        <td>apps/alkali/lib/alkali/application.ex</td>
+        <td align=right>263</td>
+      </tr>
+      <tr>
+      
+      <td></td>
+        <td>apps/alkali/lib/alkali/application/behaviours/config_loader_behaviour.ex</td>
+        <td align=right>262</td>
+      </tr>
+      <tr>
+      
+      <td></td>
+        <td>apps/alkali/lib/alkali/application/behaviours/file_system_behaviour.ex</td>
+        <td align=right>255</td>
+      </tr>
+      <tr>
+      
+    </tr>
+    <tr>
+      <th align=left valign=top rowspan="15">Slowest Checks</th>
+      
+        <td>Credo.Check.Readability.SpaceAfterCommas</td>
+        <td></td>
+        <td align=right>1863</td>
+      </tr>
+      <tr>
+      
+        <td>Credo.Check.Readability.RedundantBlankLines</td>
+        <td></td>
+        <td align=right>1716</td>
+      </tr>
+      <tr>
+      
+        <td>Credo.Check.Readability.TrailingWhiteSpace</td>
+        <td></td>
+        <td align=right>1362</td>
+      </tr>
+      <tr>
+      
+        <td>Credo.Check.Readability.StringSigils</td>
+        <td></td>
+        <td align=right>780</td>
+      </tr>
+      <tr>
+      
+        <td>Credo.Check.Design.AliasUsage</td>
+        <td></td>
+        <td align=right>629</td>
+      </tr>
+      <tr>
+      
+        <td>Credo.Check.Refactor.FunctionArity</td>
+        <td></td>
+        <td align=right>378</td>
+      </tr>
+      <tr>
+      
+        <td>Credo.Check.Refactor.FilterFilter</td>
+        <td></td>
+        <td align=right>282</td>
+      </tr>
+      <tr>
+      
+        <td>Credo.Check.Consistency.SpaceInParentheses</td>
+        <td></td>
+        <td align=right>249</td>
+      </tr>
+      <tr>
+      
+        <td>Credo.Check.Readability.ModuleDoc</td>
+        <td></td>
+        <td align=right>207</td>
+      </tr>
+      <tr>
+      
+        <td>Credo.Check.Design.TagFIXME</td>
+        <td></td>
+        <td align=right>199</td>
+      </tr>
+      <tr>
+      
+        <td>Credo.Check.Design.TagTODO</td>
+        <td></td>
+        <td align=right>198</td>
+      </tr>
+      <tr>
+      
+        <td>Credo.Check.Warning.UnusedEnumOperation</td>
+        <td></td>
+        <td align=right>186</td>
+      </tr>
+      <tr>
+      
+        <td>Credo.Check.Warning.BoolOperationOnSameValues</td>
+        <td></td>
+        <td align=right>162</td>
+      </tr>
+      <tr>
+      
+        <td>Credo.Check.Warning.UnusedKeywordOperation</td>
+        <td></td>
+        <td align=right>160</td>
+      </tr>
+      <tr>
+      
+        <td>Credo.Check.Warning.UnusedFileOperation</td>
+        <td></td>
+        <td align=right>159</td>
+      </tr>
+      <tr>
+      
+    </tr>
+    <tr>
+      <th align=left valign=top rowspan="15">Slowest Checks/Files</th>
+      
+        <td>Credo.Check.Design.AliasUsage</td>
+        <td>apps/alkali/test/features/step_definitions/build_steps.exs</td>
+        <td align=right>193</td>
+      </tr>
+      <tr>
+      
+        <td>Credo.Check.Readability.RedundantBlankLines</td>
+        <td>apps/alkali/lib/alkali/application/use_cases/scaffold_new_site.ex</td>
+        <td align=right>135</td>
+      </tr>
+      <tr>
+      
+        <td>Credo.Check.Readability.SpaceAfterCommas</td>
+        <td>apps/alkali/lib/alkali/application/use_cases/build_site.ex</td>
+        <td align=right>131</td>
+      </tr>
+      <tr>
+      
+        <td>Credo.Check.Readability.RedundantBlankLines</td>
+        <td>apps/alkali/lib/alkali/application/use_cases/build_site.ex</td>
+        <td align=right>114</td>
+      </tr>
+      <tr>
+      
+        <td>Credo.Check.Readability.SpaceAfterCommas</td>
+        <td>apps/alkali/lib/alkali/application/use_cases/scaffold_new_site.ex</td>
+        <td align=right>111</td>
+      </tr>
+      <tr>
+      
+        <td>Credo.Check.Readability.TrailingWhiteSpace</td>
+        <td>apps/alkali/lib/alkali/application/use_cases/scaffold_new_site.ex</td>
+        <td align=right>110</td>
+      </tr>
+      <tr>
+      
+        <td>Credo.Check.Design.AliasUsage</td>
+        <td>apps/alkali/lib/alkali/infrastructure/config_loader.ex</td>
+        <td align=right>89</td>
+      </tr>
+      <tr>
+      
+        <td>Credo.Check.Readability.SpaceAfterCommas</td>
+        <td>apps/alkali/lib/alkali/application/use_cases/generate_rss_feed.ex</td>
+        <td align=right>81</td>
+      </tr>
+      <tr>
+      
+        <td>Credo.Check.Readability.SpaceAfterCommas</td>
+        <td>apps/alkali/lib/alkali/application/use_cases/clean_output.ex</td>
+        <td align=right>67</td>
+      </tr>
+      <tr>
+      
+        <td>Credo.Check.Readability.SpaceAfterCommas</td>
+        <td>apps/alkali/test/alkali/application/use_cases/generate_rss_feed_test.exs</td>
+        <td align=right>63</td>
+      </tr>
+      <tr>
+      
+        <td>Credo.Check.Readability.TrailingWhiteSpace</td>
+        <td>apps/alkali/lib/alkali/application/use_cases/build_site.ex</td>
+        <td align=right>61</td>
+      </tr>
+      <tr>
+      
+        <td>Credo.Check.Readability.SpaceAfterCommas</td>
+        <td>apps/alkali/lib/alkali/application/behaviours/layout_resolver_behaviour.ex</td>
+        <td align=right>60</td>
+      </tr>
+      <tr>
+      
+        <td>Credo.Check.Readability.RedundantBlankLines</td>
+        <td>apps/alkali/lib/alkali/application/behaviours/config_loader_behaviour.ex</td>
+        <td align=right>56</td>
+      </tr>
+      <tr>
+      
+        <td>Credo.Check.Readability.RedundantBlankLines</td>
+        <td>apps/alkali/lib/alkali.ex</td>
+        <td align=right>56</td>
+      </tr>
+      <tr>
+      
+        <td>Credo.Check.Readability.RedundantBlankLines</td>
+        <td>apps/alkali/lib/alkali/application/behaviours/build_cache_behaviour.ex</td>
+        <td align=right>56</td>
+      </tr>
+      <tr>
+      
+    </tr>
+
+    <tr>
+      <th align=left valign=top rowspan="15">Fastest Checks/Files</th>
+      
+        <td>Credo.Check.Readability.ModuleDoc</td>
+        <td>apps/alkali/test/features/step_definitions/clean_steps.exs</td>
+        <td align=right>0</td>
+      </tr>
+      <tr>
+      
+        <td>Credo.Check.Readability.ModuleDoc</td>
+        <td>apps/alkali/test/alkali/infrastructure/parsers/markdown_parser_test.exs</td>
+        <td align=right>0</td>
+      </tr>
+      <tr>
+      
+        <td>Credo.Check.Readability.ModuleDoc</td>
+        <td>apps/alkali/test/features/step_definitions/common_steps.exs</td>
+        <td align=right>0</td>
+      </tr>
+      <tr>
+      
+        <td>Credo.Check.Readability.ModuleDoc</td>
+        <td>apps/alkali/test/alkali/infrastructure/parsers/frontmatter_parser_test.exs</td>
+        <td align=right>0</td>
+      </tr>
+      <tr>
+      
+        <td>Credo.Check.Readability.ModuleDoc</td>
+        <td>apps/alkali/test/alkali_test.exs</td>
+        <td align=right>0</td>
+      </tr>
+      <tr>
+      
+        <td>Credo.Check.Readability.ModuleDoc</td>
+        <td>apps/alkali/test/alkali/relative_paths_test.exs</td>
+        <td align=right>0</td>
+      </tr>
+      <tr>
+      
+        <td>Credo.Check.Readability.ModuleDoc</td>
+        <td>apps/alkali/test/alkali/application/use_cases/generate_collections_test.exs</td>
+        <td align=right>0</td>
+      </tr>
+      <tr>
+      
+        <td>Credo.Check.Readability.ModuleDoc</td>
+        <td>apps/alkali/test/alkali/application/use_cases/build_site_test.exs</td>
+        <td align=right>0</td>
+      </tr>
+      <tr>
+      
+        <td>Credo.Check.Readability.ModuleDoc</td>
+        <td>apps/alkali/test/alkali/infrastructure/renderers/template_renderer_test.exs</td>
+        <td align=right>0</td>
+      </tr>
+      <tr>
+      
+        <td>Credo.Check.Readability.ModuleDoc</td>
+        <td>apps/alkali/test/alkali/infrastructure/layout_resolver_test.exs</td>
+        <td align=right>0</td>
+      </tr>
+      <tr>
+      
+        <td>Credo.Check.Readability.ModuleDoc</td>
+        <td>apps/alkali/test/alkali/application/helpers/paginate_test.exs</td>
+        <td align=right>0</td>
+      </tr>
+      <tr>
+      
+        <td>Credo.Check.Readability.ModuleDoc</td>
+        <td>apps/alkali/test/alkali/application/use_cases/clean_output_test.exs</td>
+        <td align=right>0</td>
+      </tr>
+      <tr>
+      
+        <td>Credo.Check.Readability.ModuleDoc</td>
+        <td>apps/alkali/test/alkali/domain/policies/url_policy_test.exs</td>
+        <td align=right>0</td>
+      </tr>
+      <tr>
+      
+        <td>Credo.Check.Readability.ModuleDoc</td>
+        <td>apps/alkali/test/features/step_definitions/frontmatter_steps.exs</td>
+        <td align=right>0</td>
+      </tr>
+      <tr>
+      
+        <td>Credo.Check.Readability.ModuleDoc</td>
+        <td>apps/alkali/test/mix/tasks/static_site_post_test.exs</td>
+        <td align=right>0</td>
+      </tr>
+      <tr>
+      
+    </tr>
+  </table>
+
+</body>
+
+</html>

@@ -13,7 +13,16 @@ defmodule Jarga.Notes do
   # Kept as a top-level boundary for backward compatibility
   use Boundary,
     top_level?: true,
-    deps: [Jarga.Documents, Jarga.Accounts, Jarga.Workspaces, Jarga.Projects, Jarga.Repo],
+    deps: [
+      Jarga.Documents,
+      Jarga.Documents.Notes.Infrastructure,
+      # Cross-context dependencies (context + domain layer for entity access)
+      Jarga.Accounts,
+      Jarga.Accounts.Domain,
+      Jarga.Workspaces,
+      Jarga.Projects,
+      Jarga.Repo
+    ],
     exports: []
 
   alias Jarga.Repo

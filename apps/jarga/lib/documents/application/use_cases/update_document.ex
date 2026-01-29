@@ -19,12 +19,14 @@ defmodule Jarga.Documents.Application.UseCases.UpdateDocument do
 
   @behaviour Jarga.Documents.Application.UseCases.UseCase
 
-  alias Jarga.Documents.Infrastructure.Schemas.DocumentSchema
-  alias Jarga.Documents.Infrastructure.Repositories.DocumentRepository
-  alias Jarga.Documents.Infrastructure.Notifiers.PubSubNotifier
   alias Jarga.Documents.Application.Policies.DocumentAuthorizationPolicy
   alias Jarga.Documents.Domain.Policies.DocumentAccessPolicy
   alias Jarga.Workspaces
+
+  # Default Infrastructure implementations (injected via opts for testing)
+  @default_document_schema Jarga.Documents.Infrastructure.Schemas.DocumentSchema
+  @default_document_repository Jarga.Documents.Infrastructure.Repositories.DocumentRepository
+  @default_notifier Jarga.Documents.Infrastructure.Notifiers.PubSubNotifier
 
   @doc """
   Executes the update document use case.
@@ -52,18 +54,28 @@ defmodule Jarga.Documents.Application.UseCases.UpdateDocument do
       attrs: attrs
     } = params
 
-    notifier = Keyword.get(opts, :notifier, PubSubNotifier)
+    # Extract dependencies from opts
+    document_schema = Keyword.get(opts, :document_schema, @default_document_schema)
+    document_repository = Keyword.get(opts, :document_repository, @default_document_repository)
+    notifier = Keyword.get(opts, :notifier, @default_notifier)
 
-    with {:ok, document} <- get_document_with_workspace_member(actor, document_id),
+    deps = %{
+      document_schema: document_schema,
+      document_repository: document_repository,
+      notifier: notifier
+    }
+
+    with {:ok, document} <-
+           get_document_with_workspace_member(actor, document_id, document_repository),
          {:ok, member} <- Workspaces.get_member(actor, document.workspace_id),
          :ok <- authorize_document_update(member.role, document, actor.id, attrs) do
-      update_document_and_notify(document, attrs, notifier)
+      update_document_and_notify(document, attrs, deps)
     end
   end
 
   # Get document and verify workspace membership
-  defp get_document_with_workspace_member(user, document_id) do
-    document = DocumentRepository.get_by_id(document_id)
+  defp get_document_with_workspace_member(user, document_id, document_repository) do
+    document = document_repository.get_by_id(document_id)
 
     with {:document, %{} = document} <- {:document, document},
          {:ok, _workspace} <- Workspaces.verify_membership(user, document.workspace_id),
@@ -106,9 +118,15 @@ defmodule Jarga.Documents.Application.UseCases.UpdateDocument do
   # Update document and send notifications
   # Note: We use repository's transaction method to ensure notifications are sent AFTER
   # the database transaction commits successfully
-  defp update_document_and_notify(document, attrs, notifier) do
-    changeset = DocumentSchema.changeset(document, attrs)
-    result = DocumentRepository.update_in_transaction(changeset)
+  defp update_document_and_notify(document, attrs, deps) do
+    %{
+      document_schema: document_schema,
+      document_repository: document_repository,
+      notifier: notifier
+    } = deps
+
+    changeset = document_schema.changeset(document, attrs)
+    result = document_repository.update_in_transaction(changeset)
 
     case result do
       {:ok, updated_document} ->

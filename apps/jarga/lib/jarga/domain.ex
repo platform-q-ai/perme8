@@ -60,6 +60,11 @@ defmodule Jarga.Domain do
   - Other domain modules within the same context
   """
 
+  use Boundary,
+    top_level?: true,
+    deps: [],
+    exports: []
+
   @doc """
   Lists all known domain entity modules across all contexts.
 

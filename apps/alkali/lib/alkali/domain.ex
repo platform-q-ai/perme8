@@ -1,34 +1,39 @@
 defmodule Alkali.Domain do
   @moduledoc """
-  Domain layer namespace for the Alkali static site generator.
+  Domain layer boundary for the Alkali static site generator.
 
-  The domain layer contains:
+  Contains pure business logic with NO external dependencies:
 
-  - **Entities** (`Alkali.Domain.Entities.*`) - Core business objects
-    - `Asset` - Represents static assets (CSS, JS, images)
-    - `Collection` - Groups of pages (tags, categories, posts)
-    - `Page` - Represents a content page
-    - `Site` - Site configuration and metadata
+  ## Entities (Data Structures)
+  - `Entities.Asset` - Asset file representation
+  - `Entities.Collection` - Collection of pages (e.g., posts, tags)
+  - `Entities.Page` - Content page representation
+  - `Entities.Site` - Site configuration and metadata
 
-  - **Policies** (`Alkali.Domain.Policies.*`) - Business rules
-    - `FrontmatterPolicy` - Validates and processes frontmatter
-    - `SlugPolicy` - Generates URL-safe slugs
-    - `UrlPolicy` - Generates URLs from content
+  ## Policies (Business Rules)
+  - `Policies.FrontmatterPolicy` - Frontmatter validation rules
+  - `Policies.SlugPolicy` - URL slug generation rules
+  - `Policies.UrlPolicy` - URL construction rules
 
-  ## Boundary Rules
+  ## Dependency Rule
 
-  The domain layer has NO external dependencies. It only depends on:
-  - Elixir standard library
-  - Erlang standard library
-
-  Other layers may depend on the domain, but the domain NEVER depends on:
-  - Application layer (use cases, behaviours)
-  - Infrastructure layer (file system, parsers, renderers)
-  - External libraries
+  The Domain layer has NO dependencies. It cannot import:
+  - Application layer (use cases, services)
+  - Infrastructure layer (parsers, renderers, file system)
+  - External libraries (File, IO, etc.)
+  - Other contexts
   """
 
-  # Domain boundary is enforced by Alkali top-level boundary
-  # Dependency rules:
-  # - Domain has NO external dependencies
-  # - Domain is depended upon by Application and Infrastructure layers
+  use Boundary,
+    top_level?: true,
+    deps: [],
+    exports: [
+      Entities.Asset,
+      Entities.Collection,
+      Entities.Page,
+      Entities.Site,
+      Policies.FrontmatterPolicy,
+      Policies.SlugPolicy,
+      Policies.UrlPolicy
+    ]
 end

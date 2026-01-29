@@ -20,10 +20,12 @@ defmodule Jarga.Documents.Application.UseCases.DeleteDocument do
   @behaviour Jarga.Documents.Application.UseCases.UseCase
 
   alias Jarga.Workspaces
-  alias Jarga.Documents.Infrastructure.Repositories.DocumentRepository
   alias Jarga.Documents.Application.Policies.DocumentAuthorizationPolicy
   alias Jarga.Documents.Domain.Policies.DocumentAccessPolicy
-  alias Jarga.Documents.Infrastructure.Notifiers.PubSubNotifier
+
+  # Default Infrastructure implementations (injected via opts for testing)
+  @default_document_repository Jarga.Documents.Infrastructure.Repositories.DocumentRepository
+  @default_notifier Jarga.Documents.Infrastructure.Notifiers.PubSubNotifier
 
   @doc """
   Executes the delete document use case.
@@ -49,18 +51,26 @@ defmodule Jarga.Documents.Application.UseCases.DeleteDocument do
       document_id: document_id
     } = params
 
-    notifier = Keyword.get(opts, :notifier, PubSubNotifier)
+    # Extract dependencies from opts
+    document_repository = Keyword.get(opts, :document_repository, @default_document_repository)
+    notifier = Keyword.get(opts, :notifier, @default_notifier)
 
-    with {:ok, document} <- get_document_with_workspace_member(actor, document_id),
+    deps = %{
+      document_repository: document_repository,
+      notifier: notifier
+    }
+
+    with {:ok, document} <-
+           get_document_with_workspace_member(actor, document_id, document_repository),
          {:ok, member} <- Workspaces.get_member(actor, document.workspace_id),
          :ok <- authorize_delete_document(member.role, document, actor.id) do
-      delete_document_and_notify(document, notifier)
+      delete_document_and_notify(document, deps)
     end
   end
 
   # Get document and verify workspace membership
-  defp get_document_with_workspace_member(user, document_id) do
-    document = DocumentRepository.get_by_id(document_id)
+  defp get_document_with_workspace_member(user, document_id, document_repository) do
+    document = document_repository.get_by_id(document_id)
 
     with {:document, %{} = document} <- {:document, document},
          {:ok, _workspace} <- Workspaces.verify_membership(user, document.workspace_id),
@@ -92,8 +102,13 @@ defmodule Jarga.Documents.Application.UseCases.DeleteDocument do
   end
 
   # Delete document and send notification AFTER transaction commits
-  defp delete_document_and_notify(document, notifier) do
-    result = DocumentRepository.delete_in_transaction(document)
+  defp delete_document_and_notify(document, deps) do
+    %{
+      document_repository: document_repository,
+      notifier: notifier
+    } = deps
+
+    result = document_repository.delete_in_transaction(document)
 
     case result do
       {:ok, deleted_document} ->

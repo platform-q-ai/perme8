@@ -1,7 +1,13 @@
 defmodule Alkali.Infrastructure.Renderers.TemplateRenderer do
   @moduledoc """
   Template renderer using EEx.
+
+  All functions accept an optional `opts` keyword list with:
+  - `:file_system` - Module implementing file operations (defaults to File)
   """
+
+  # Default file system module for dependency injection
+  defp default_file_system, do: File
 
   @doc """
   Renders a template with given assigns.
@@ -15,10 +21,15 @@ defmodule Alkali.Infrastructure.Renderers.TemplateRenderer do
 
   @doc """
   Renders a template from a file.
+
+  ## Options
+  - `:file_system` - Module for file operations (default: File)
   """
-  @spec render_from_file(String.t(), map(), keyword()) :: String.t()
+  @spec render_from_file(String.t(), map(), keyword()) :: String.t() | {:error, String.t()}
   def render_from_file(template_path, assigns, opts \\ []) do
-    case File.read(template_path) do
+    file_system = Keyword.get(opts, :file_system, default_file_system())
+
+    case file_system.read(template_path) do
       {:ok, template} -> render(template, assigns, opts)
       {:error, reason} -> {:error, "Failed to read template: #{inspect(reason)}"}
     end

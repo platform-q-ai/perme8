@@ -12,6 +12,8 @@ defmodule Jarga.Projects.Infrastructure.Repositories.ProjectRepository do
   - No business rules - just data retrieval and persistence
   """
 
+  @behaviour Jarga.Projects.Application.Behaviours.ProjectRepositoryBehaviour
+
   import Ecto.Query, warn: false
 
   alias Jarga.Repo
@@ -45,6 +47,7 @@ defmodule Jarga.Projects.Infrastructure.Repositories.ProjectRepository do
 
   Takes domain entity attributes and returns a domain entity.
   """
+  @impl true
   def insert(attrs, repo \\ Repo) do
     %ProjectSchema{}
     |> ProjectSchema.changeset(attrs)
@@ -60,6 +63,7 @@ defmodule Jarga.Projects.Infrastructure.Repositories.ProjectRepository do
 
   Takes a schema struct (from database) and attributes, returns domain entity.
   """
+  @impl true
   def update(project_schema, attrs, repo \\ Repo) do
     project_schema
     |> ProjectSchema.changeset(attrs)
@@ -75,6 +79,7 @@ defmodule Jarga.Projects.Infrastructure.Repositories.ProjectRepository do
 
   Takes a schema struct (from database), returns domain entity.
   """
+  @impl true
   def delete(project_schema, repo \\ Repo) do
     project_schema
     |> repo.delete()
@@ -96,6 +101,7 @@ defmodule Jarga.Projects.Infrastructure.Repositories.ProjectRepository do
       false
 
   """
+  @impl true
   def slug_exists_in_workspace?(slug, workspace_id, excluding_id \\ nil, repo \\ Repo) do
     query =
       from(p in ProjectSchema,

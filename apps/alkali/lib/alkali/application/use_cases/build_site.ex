@@ -8,10 +8,12 @@ defmodule Alkali.Application.UseCases.BuildSite do
   """
 
   alias Alkali.Application.UseCases.GenerateRssFeed
-  alias Alkali.Infrastructure.BuildCache
-  alias Alkali.Infrastructure.FileSystem
-  alias Alkali.Infrastructure.LayoutResolver
-  alias Alkali.Infrastructure.Renderers.CollectionRenderer
+
+  # Infrastructure module defaults - resolved at runtime to avoid boundary violations
+  defp default_build_cache, do: Alkali.Infrastructure.BuildCache
+  defp default_config_loader_mod, do: Alkali.Infrastructure.ConfigLoader
+  defp default_file_system, do: Alkali.Infrastructure.FileSystem
+  defp default_layout_resolver, do: Alkali.Infrastructure.LayoutResolver
 
   @doc """
   Orchestrates the complete build process for a static site.
@@ -44,15 +46,17 @@ defmodule Alkali.Application.UseCases.BuildSite do
   """
   @spec execute(String.t(), keyword()) :: {:ok, map()} | {:error, String.t()}
   def execute(site_path, opts \\ []) do
-    config_loader = Keyword.get(opts, :config_loader, &default_config_loader/1)
+    config_loader = Keyword.get(opts, :config_loader, &default_config_loader_fn/1)
     draft = Keyword.get(opts, :draft, false)
     verbose = Keyword.get(opts, :verbose, false)
     incremental = Keyword.get(opts, :incremental, true)
-    file_system = Keyword.get(opts, :file_system, Alkali.Infrastructure.FileSystem)
+    file_system = Keyword.get(opts, :file_system, default_file_system())
+    build_cache = Keyword.get(opts, :build_cache, default_build_cache())
 
     # Step 0: Load build cache for incremental builds
-    cache = load_build_cache(site_path, incremental, verbose)
+    cache = load_build_cache(site_path, incremental, verbose, build_cache)
     opts = Keyword.put(opts, :file_system, file_system)
+    opts = Keyword.put(opts, :build_cache, build_cache)
 
     # Step 1: Load config
     config = load_config(site_path, config_loader, verbose)
@@ -65,7 +69,7 @@ defmodule Alkali.Application.UseCases.BuildSite do
 
     # Step 2b: Filter pages for incremental build
     {pages_to_build, pages_skipped} =
-      filter_for_incremental_build(pages, cache, config, verbose, file_system)
+      filter_for_incremental_build(pages, cache, config, verbose, file_system, build_cache)
 
     # Step 3: Generate collections
     collections_result = generate_collections(pages, opts, verbose)
@@ -101,7 +105,8 @@ defmodule Alkali.Application.UseCases.BuildSite do
     assets_written = write_assets(assets_result.assets, config, opts, verbose)
 
     # Step 7: Update cache for incremental builds
-    if incremental, do: update_build_cache(cache, pages, config, site_path, file_system)
+    if incremental,
+      do: update_build_cache(cache, pages, config, site_path, file_system, build_cache)
 
     # Build summary
     summary = %{
@@ -138,24 +143,24 @@ defmodule Alkali.Application.UseCases.BuildSite do
 
   # Private Functions
 
-  defp load_build_cache(site_path, true, verbose) do
+  defp load_build_cache(site_path, true, verbose, build_cache) do
     if verbose, do: IO.puts("Loading build cache...")
-    BuildCache.load(site_path)
+    build_cache.load(site_path)
   end
 
-  defp load_build_cache(_site_path, false, _verbose), do: %{}
+  defp load_build_cache(_site_path, false, _verbose, _build_cache), do: %{}
 
-  defp filter_for_incremental_build(pages, cache, config, verbose, file_system)
+  defp filter_for_incremental_build(pages, cache, config, verbose, file_system, build_cache)
        when map_size(cache) > 0 do
-    filter_changed_pages(pages, cache, config, verbose, file_system)
+    filter_changed_pages(pages, cache, config, verbose, file_system, build_cache)
   end
 
-  defp filter_for_incremental_build(pages, _cache, _config, _verbose, _file_system),
+  defp filter_for_incremental_build(pages, _cache, _config, _verbose, _file_system, _build_cache),
     do: {pages, []}
 
   defp generate_rss(pages, config, opts, verbose) do
     rss_file_writer = Keyword.get(opts, :file_writer, &default_file_writer/2)
-    file_system = Keyword.get(opts, :file_system, Alkali.Infrastructure.FileSystem)
+    file_system = Keyword.get(opts, :file_system, default_file_system())
 
     rss_mkdir =
       if Keyword.has_key?(opts, :file_writer), do: fn _ -> :ok end, else: &file_system.mkdir_p!/1
@@ -163,7 +168,7 @@ defmodule Alkali.Application.UseCases.BuildSite do
     generate_rss_feed(pages, config, rss_file_writer, rss_mkdir, opts, verbose)
   end
 
-  defp update_build_cache(cache, pages, config, site_path, file_system) do
+  defp update_build_cache(cache, pages, config, site_path, file_system, build_cache) do
     content_file_paths =
       pages
       |> Enum.map(&Map.get(&1, :file_path))
@@ -172,8 +177,8 @@ defmodule Alkali.Application.UseCases.BuildSite do
     layout_file_paths = collect_layout_file_paths(config, file_system)
 
     all_file_paths = content_file_paths ++ layout_file_paths
-    updated_cache = BuildCache.update_cache(cache, all_file_paths)
-    BuildCache.save(site_path, updated_cache)
+    updated_cache = build_cache.update_cache(cache, all_file_paths)
+    build_cache.save(site_path, updated_cache)
   end
 
   defp collect_layout_file_paths(config, file_system) do
@@ -236,16 +241,16 @@ defmodule Alkali.Application.UseCases.BuildSite do
     end
   end
 
-  defp filter_changed_pages(pages, cache, config, verbose, file_system) do
+  defp filter_changed_pages(pages, cache, config, verbose, file_system, build_cache) do
     if verbose, do: IO.puts("Checking for changed files...")
 
     absolute_layouts_path = get_absolute_layouts_path(config)
 
-    if layout_files_changed?(absolute_layouts_path, cache, verbose, file_system) do
+    if layout_files_changed?(absolute_layouts_path, cache, verbose, file_system, build_cache) do
       if verbose, do: IO.puts("  Layout files changed - rebuilding all pages")
       {pages, []}
     else
-      split_pages_by_change_status(pages, cache, verbose, file_system)
+      split_pages_by_change_status(pages, cache, verbose, file_system, build_cache)
     end
   end
 
@@ -261,19 +266,19 @@ defmodule Alkali.Application.UseCases.BuildSite do
     end
   end
 
-  defp layout_files_changed?(absolute_layouts_path, cache, verbose, file_system) do
+  defp layout_files_changed?(absolute_layouts_path, cache, verbose, file_system, build_cache) do
     if file_system.exists?(absolute_layouts_path) do
       layout_files =
         file_system.wildcard(Path.join(absolute_layouts_path, "**/*.{html,heex,eex}"))
 
-      Enum.any?(layout_files, &layout_file_changed?(&1, cache, verbose))
+      Enum.any?(layout_files, &layout_file_changed?(&1, cache, verbose, build_cache))
     else
       false
     end
   end
 
-  defp layout_file_changed?(layout_file, cache, verbose) do
-    changed = BuildCache.file_changed?(layout_file, cache)
+  defp layout_file_changed?(layout_file, cache, verbose, build_cache) do
+    changed = build_cache.file_changed?(layout_file, cache)
 
     if verbose && changed do
       IO.puts("  Layout file changed: #{Path.relative_to_cwd(layout_file)}")
@@ -282,9 +287,9 @@ defmodule Alkali.Application.UseCases.BuildSite do
     changed
   end
 
-  defp split_pages_by_change_status(pages, cache, verbose, file_system) do
+  defp split_pages_by_change_status(pages, cache, verbose, file_system, build_cache) do
     {changed, skipped} =
-      Enum.split_with(pages, &page_changed?(&1, cache, file_system))
+      Enum.split_with(pages, &page_changed?(&1, cache, file_system, build_cache))
 
     if verbose do
       IO.puts("  Changed: #{length(changed)} files")
@@ -294,11 +299,11 @@ defmodule Alkali.Application.UseCases.BuildSite do
     {changed, skipped}
   end
 
-  defp page_changed?(page, cache, file_system) do
+  defp page_changed?(page, cache, file_system, build_cache) do
     file_path = Map.get(page, :file_path)
 
     if file_path && file_system.exists?(file_path) do
-      BuildCache.file_changed?(file_path, cache)
+      build_cache.file_changed?(file_path, cache)
     else
       true
     end
@@ -427,7 +432,7 @@ defmodule Alkali.Application.UseCases.BuildSite do
     if verbose, do: IO.puts("Processing assets...")
 
     assets_processor = Keyword.get(opts, :assets_processor, &default_assets_processor/2)
-    file_system = Keyword.get(opts, :file_system, Alkali.Infrastructure.FileSystem)
+    file_system = Keyword.get(opts, :file_system, default_file_system())
 
     # Use site_path from config if available, otherwise use "."
     site_path = Map.get(config, :site_path, ".")
@@ -494,13 +499,25 @@ defmodule Alkali.Application.UseCases.BuildSite do
         output_path
       end
 
+    layout_resolver_mod = Keyword.get(opts, :layout_resolver_mod, default_layout_resolver())
+
     %{
       template_renderer: Keyword.get(opts, :template_renderer, &default_template_renderer/3),
-      layout_resolver: Keyword.get(opts, :layout_resolver, &LayoutResolver.resolve_layout/3),
+      layout_resolver:
+        Keyword.get(
+          opts,
+          :layout_resolver,
+          &layout_resolver_mod.resolve_layout/3
+        ),
       render_with_layout:
-        Keyword.get(opts, :render_with_layout, &LayoutResolver.render_with_layout/4),
+        Keyword.get(
+          opts,
+          :render_with_layout,
+          &layout_resolver_mod.render_with_layout/4
+        ),
       file_writer: Keyword.get(opts, :file_writer, &default_file_writer/2),
-      file_system: Keyword.get(opts, :file_system, Alkali.Infrastructure.FileSystem),
+      file_system: Keyword.get(opts, :file_system, default_file_system()),
+      layout_resolver_mod: layout_resolver_mod,
       absolute_output_path: absolute_output_path,
       config: config,
       collections: collections,
@@ -592,7 +609,8 @@ defmodule Alkali.Application.UseCases.BuildSite do
       mappings: mappings,
       opts: opts,
       file_writer: Keyword.get(opts, :file_writer, &default_file_writer/2),
-      file_system: Keyword.get(opts, :file_system, Alkali.Infrastructure.FileSystem),
+      file_system: Keyword.get(opts, :file_system, default_file_system()),
+      layout_resolver_mod: Keyword.get(opts, :layout_resolver_mod, default_layout_resolver()),
       absolute_output_path: absolute_output_path,
       posts_per_page: Keyword.get(opts, :posts_per_page, nil),
       paginate_collections: Keyword.get(opts, :paginate_collections, [:posts])
@@ -625,7 +643,15 @@ defmodule Alkali.Application.UseCases.BuildSite do
     ctx.file_system.mkdir_p!(output_dir)
 
     html =
-      render_collection_page(collection, ctx.config, ctx.mappings, ctx.opts, nil, ctx.file_system)
+      render_collection_page(
+        collection,
+        ctx.config,
+        ctx.mappings,
+        ctx.opts,
+        nil,
+        ctx.file_system,
+        ctx.layout_resolver_mod
+      )
 
     case ctx.file_writer.(output_file, html) do
       :ok -> increment_collection_counter(acc, collection.type)
@@ -684,7 +710,8 @@ defmodule Alkali.Application.UseCases.BuildSite do
         ctx.mappings,
         ctx.opts,
         page.pagination,
-        ctx.file_system
+        ctx.file_system,
+        ctx.layout_resolver_mod
       )
 
     case ctx.file_writer.(output_file, html) do
@@ -723,10 +750,18 @@ defmodule Alkali.Application.UseCases.BuildSite do
     %{acc | total: acc.total + 1}
   end
 
-  defp render_collection_page(collection, config, mappings, opts, pagination, file_system) do
+  defp render_collection_page(
+         collection,
+         config,
+         mappings,
+         opts,
+         pagination,
+         file_system,
+         layout_resolver_mod
+       ) do
     # Delegate HTML generation to infrastructure renderer
     collection_renderer =
-      Keyword.get(opts, :collection_renderer, CollectionRenderer)
+      Keyword.get(opts, :collection_renderer, Alkali.Infrastructure.Renderers.CollectionRenderer)
 
     {title, content} = collection_renderer.render_collection_content(collection, pagination, opts)
 
@@ -734,7 +769,15 @@ defmodule Alkali.Application.UseCases.BuildSite do
 
     page = %{title: title, content: content, url: url_path, layout: "collection"}
 
-    render_collection_with_layout(page, content, collection, config, mappings, file_system)
+    render_collection_with_layout(
+      page,
+      content,
+      collection,
+      config,
+      mappings,
+      file_system,
+      layout_resolver_mod
+    )
   end
 
   defp collection_url_path(collection) do
@@ -746,13 +789,26 @@ defmodule Alkali.Application.UseCases.BuildSite do
     end
   end
 
-  defp render_collection_with_layout(page, content, collection, config, mappings, file_system) do
+  defp render_collection_with_layout(
+         page,
+         content,
+         collection,
+         config,
+         mappings,
+         file_system,
+         layout_resolver_mod
+       ) do
     layout_path = find_collection_layout(collection, config, file_system)
 
     if layout_path do
       render_opts = [asset_mappings: mappings]
 
-      case LayoutResolver.render_with_layout(page, layout_path, config, render_opts) do
+      case layout_resolver_mod.render_with_layout(
+             page,
+             layout_path,
+             config,
+             render_opts
+           ) do
         {:ok, html} -> html
         {:error, _} -> content
       end
@@ -812,9 +868,8 @@ defmodule Alkali.Application.UseCases.BuildSite do
 
   # Default implementations
 
-  defp default_config_loader(site_path) do
-    alias Alkali.Infrastructure.ConfigLoader
-    ConfigLoader.load(site_path)
+  defp default_config_loader_fn(site_path) do
+    default_config_loader_mod().load(site_path)
   end
 
   defp default_content_parser(path, opts) do
@@ -837,10 +892,10 @@ defmodule Alkali.Application.UseCases.BuildSite do
   end
 
   defp default_file_writer(path, content) do
-    FileSystem.write(path, content)
+    default_file_system().write(path, content)
   end
 
   defp default_asset_writer(path, content) do
-    FileSystem.write_with_path(path, content)
+    default_file_system().write_with_path(path, content)
   end
 end

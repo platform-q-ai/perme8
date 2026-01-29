@@ -28,11 +28,18 @@ defmodule Jarga.Agents do
   """
 
   # Core context - cannot depend on JargaWeb (interface layer)
-  # Exports: ONLY domain entities (Agent)
-  # All use cases and infrastructure modules are PRIVATE - accessed only via public API functions below
+  # Delegates to layer boundaries for Clean Architecture enforcement
   use Boundary,
     top_level?: true,
-    deps: [Jarga.Accounts, Jarga.Workspaces, Jarga.Projects, Jarga.Repo],
+    deps: [
+      Jarga.Agents.Domain,
+      Jarga.Agents.Application,
+      Jarga.Agents.Infrastructure,
+      Jarga.Accounts,
+      Jarga.Workspaces,
+      Jarga.Projects,
+      Jarga.Repo
+    ],
     exports: [
       {Domain.Entities.Agent, []}
     ]

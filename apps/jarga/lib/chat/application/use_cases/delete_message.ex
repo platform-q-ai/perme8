@@ -14,8 +14,8 @@ defmodule Jarga.Chat.Application.UseCases.DeleteMessage do
       {:error, :not_found}
   """
 
-  alias Jarga.Chat.Infrastructure.Repositories.SessionRepository
-  alias Jarga.Chat.Infrastructure.Repositories.MessageRepository
+  @default_session_repository Jarga.Chat.Infrastructure.Repositories.SessionRepository
+  @default_message_repository Jarga.Chat.Infrastructure.Repositories.MessageRepository
 
   @doc """
   Deletes a message by ID, verifying the user owns the session.
@@ -23,14 +23,20 @@ defmodule Jarga.Chat.Application.UseCases.DeleteMessage do
   ## Parameters
     - message_id: ID of the message to delete
     - user_id: ID of the user requesting deletion
+    - opts: Keyword list of options
+      - :session_repository - Repository module for session operations (default: SessionRepository)
+      - :message_repository - Repository module for message operations (default: MessageRepository)
 
   Returns `{:ok, message}` if successful, or `{:error, :not_found}` if not found
   or user doesn't own the session.
   """
-  def execute(message_id, user_id) do
-    case SessionRepository.get_message_by_id_and_user(message_id, user_id) do
+  def execute(message_id, user_id, opts \\ []) do
+    session_repository = Keyword.get(opts, :session_repository, @default_session_repository)
+    message_repository = Keyword.get(opts, :message_repository, @default_message_repository)
+
+    case session_repository.get_message_by_id_and_user(message_id, user_id) do
       nil -> {:error, :not_found}
-      message -> MessageRepository.delete_message(message)
+      message -> message_repository.delete_message(message)
     end
   end
 end

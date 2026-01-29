@@ -86,7 +86,16 @@
         ".credo/checks/boundary_package_installed.ex",
         ".credo/checks/architectural_layers_defined.ex",
         ".credo/checks/boundary_enforcement_configured.ex",
-        ".credo/checks/clean_architecture_boundary_rules.ex"
+        ".credo/checks/clean_architecture_boundary_rules.ex",
+        # Infrastructure aliasing check
+        ".credo/checks/no_infrastructure_alias_in_application.ex",
+        # Additional Clean Architecture enforcement checks
+        ".credo/checks/infrastructure_uses_file_behaviour.ex",
+        ".credo/checks/missing_infrastructure_behaviour.ex",
+        ".credo/checks/use_case_consistent_injection.ex",
+        # Layer boundary content verification
+        ".credo/checks/layer_boundary_deps_correct.ex",
+        ".credo/checks/public_api_boundary_correct.ex"
       ],
       #
       # If you want to enforce a style guide and need a more traditional linting
@@ -289,6 +298,14 @@
           {Credo.Check.Custom.Architecture.NoInfrastructureSchemaInWeb, []},
           # Detect Application.get_env in use cases (should use dependency injection)
           {Credo.Check.Custom.Architecture.NoApplicationConfigInUseCases, []},
+          # Detect infrastructure module aliasing in application layer (DIP violation)
+          {Credo.Check.Custom.Architecture.NoInfrastructureAliasInApplication, []},
+          # Detect direct File calls in infrastructure (should use injectable deps)
+          {Credo.Check.Custom.Architecture.InfrastructureUsesFileBehaviour, []},
+          # Detect infrastructure modules missing behaviour implementations
+          {Credo.Check.Custom.Architecture.MissingInfrastructureBehaviour, []},
+          # Detect inconsistent dependency injection in use cases
+          {Credo.Check.Custom.Architecture.UseCaseConsistentInjection, []},
 
           #
           ## Boundary Library Enforcement
@@ -299,6 +316,16 @@
           # Verifies that boundary `deps` follow Clean Architecture rules
           # (Domain has no deps, Application only depends on Domain, etc.)
           {CredoChecks.CleanArchitecture.BoundaryRules, []},
+          # Verifies layer boundary files have correct deps configuration
+          {CredoChecks.CleanArchitecture.LayerBoundaryDepsCorrect,
+           [
+             excluded_apps: ["jarga_tools"]
+           ]},
+          # Verifies public API module has correct boundary config
+          {CredoChecks.CleanArchitecture.PublicApiBoundaryCorrect,
+           [
+             excluded_apps: ["jarga_tools"]
+           ]},
 
           #
           ## Custom Testing Checks (TDD Enforcement)

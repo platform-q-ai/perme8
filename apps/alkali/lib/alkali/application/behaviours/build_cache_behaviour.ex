@@ -34,23 +34,32 @@ defmodule Alkali.Application.Behaviours.BuildCacheBehaviour do
 
   Returns a map of file paths to their last modification info `{mtime, size}`.
   Returns an empty map if the cache doesn't exist or is invalid.
+
+  ## Options
+  - `:file_system` - Module for file operations (default: File)
   """
-  @callback load(String.t()) :: cache()
+  @callback load(String.t(), keyword()) :: cache()
 
   @doc """
   Saves the build cache to disk.
 
   Returns `:ok` on success or `{:error, term}` on failure.
+
+  ## Options
+  - `:file_system` - Module for file operations (default: File)
   """
-  @callback save(String.t(), cache()) :: :ok | {:error, term()}
+  @callback save(String.t(), cache(), keyword()) :: :ok | {:error, term()}
 
   @doc """
   Gets the modification time and size of a file.
 
   Returns a tuple of `{mtime, size}` for change detection,
   or `nil` if the file doesn't exist.
+
+  ## Options
+  - `:file_system` - Module for file operations (default: File)
   """
-  @callback get_file_info(String.t()) :: file_info() | nil
+  @callback get_file_info(String.t(), keyword()) :: file_info() | nil
 
   @doc """
   Checks if a file has been modified since the last build.
@@ -59,13 +68,19 @@ defmodule Alkali.Application.Behaviours.BuildCacheBehaviour do
   within the same second.
 
   Returns `true` if the file has changed or is new, `false` otherwise.
+
+  ## Options
+  - `:file_system` - Module for file operations (default: File)
   """
-  @callback file_changed?(String.t(), cache()) :: boolean()
+  @callback file_changed?(String.t(), cache(), keyword()) :: boolean()
 
   @doc """
   Updates the cache with current file info (mtime and size).
 
   Returns the updated cache map.
+
+  ## Options
+  - `:file_system` - Module for file operations (default: File)
   """
-  @callback update_cache(cache(), list(String.t())) :: cache()
+  @callback update_cache(cache(), list(String.t()), keyword()) :: cache()
 end

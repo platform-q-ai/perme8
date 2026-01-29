@@ -10,7 +10,6 @@ defmodule Alkali.Application.UseCases.GenerateRssFeed do
   """
 
   alias Alkali.Domain.Entities.Page
-  alias Alkali.Infrastructure.Renderers.RssRenderer
 
   @doc """
   Generates an RSS feed from a list of pages.
@@ -53,7 +52,7 @@ defmodule Alkali.Application.UseCases.GenerateRssFeed do
     feed_description = Keyword.get(opts, :feed_description, "Latest posts")
     feed_url = Keyword.get(opts, :feed_url, "#{site_url}/feed.xml")
     max_items = Keyword.get(opts, :max_items, 20)
-    rss_renderer = Keyword.get(opts, :rss_renderer, RssRenderer)
+    rss_renderer = Keyword.get(opts, :rss_renderer, Alkali.Infrastructure.Renderers.RssRenderer)
 
     # Filter to only posts with dates (posts typically have /posts/ in their URL)
     # and exclude drafts

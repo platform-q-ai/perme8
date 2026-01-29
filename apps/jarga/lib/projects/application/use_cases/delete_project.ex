@@ -20,10 +20,12 @@ defmodule Jarga.Projects.Application.UseCases.DeleteProject do
   @behaviour Jarga.Projects.Application.UseCases.UseCase
 
   alias Jarga.Accounts.Domain.Entities.User
-  alias Jarga.Projects.Infrastructure.Repositories.{AuthorizationRepository, ProjectRepository}
-  alias Jarga.Projects.Infrastructure.Notifiers.EmailAndPubSubNotifier
   alias Jarga.Workspaces
   alias Jarga.Workspaces.Application.Policies.PermissionsPolicy
+
+  @default_project_repository Jarga.Projects.Infrastructure.Repositories.ProjectRepository
+  @default_authorization_repository Jarga.Projects.Infrastructure.Repositories.AuthorizationRepository
+  @default_notifier Jarga.Projects.Infrastructure.Notifiers.EmailAndPubSubNotifier
 
   @doc """
   Executes the delete project use case.
@@ -51,12 +53,18 @@ defmodule Jarga.Projects.Application.UseCases.DeleteProject do
       project_id: project_id
     } = params
 
-    notifier = Keyword.get(opts, :notifier, EmailAndPubSubNotifier)
+    project_repository = Keyword.get(opts, :project_repository, @default_project_repository)
+
+    authorization_repository =
+      Keyword.get(opts, :authorization_repository, @default_authorization_repository)
+
+    notifier = Keyword.get(opts, :notifier, @default_notifier)
 
     with {:ok, member} <- get_workspace_member(actor, workspace_id),
-         {:ok, project} <- verify_project_access(actor, workspace_id, project_id),
+         {:ok, project} <-
+           verify_project_access(actor, workspace_id, project_id, authorization_repository),
          :ok <- authorize_delete_project(member.role, project, actor.id),
-         {:ok, deleted_project} <- delete_project(project) do
+         {:ok, deleted_project} <- delete_project(project, project_repository) do
       notifier.notify_project_deleted(deleted_project, workspace_id)
       {:ok, deleted_project}
     end
@@ -68,8 +76,8 @@ defmodule Jarga.Projects.Application.UseCases.DeleteProject do
   end
 
   # Verify actor has access to the project
-  defp verify_project_access(%User{} = user, workspace_id, project_id) do
-    AuthorizationRepository.verify_project_access(user, workspace_id, project_id)
+  defp verify_project_access(%User{} = user, workspace_id, project_id, authorization_repository) do
+    authorization_repository.verify_project_access(user, workspace_id, project_id)
   end
 
   # Authorize project deletion based on role and ownership
@@ -84,7 +92,7 @@ defmodule Jarga.Projects.Application.UseCases.DeleteProject do
   end
 
   # Delete the project
-  defp delete_project(project_schema) do
-    ProjectRepository.delete(project_schema)
+  defp delete_project(project_schema, project_repository) do
+    project_repository.delete(project_schema)
   end
 end

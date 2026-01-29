@@ -20,8 +20,9 @@ defmodule Jarga.Workspaces.Application.UseCases.RemoveMember do
   alias Jarga.Workspaces.Domain.Entities.WorkspaceMember
   alias Jarga.Workspaces.Domain.Policies.MembershipPolicy
   alias Jarga.Workspaces.Application.Policies.MembershipPolicy
-  alias Jarga.Workspaces.Infrastructure.Repositories.MembershipRepository
-  alias Jarga.Workspaces.Infrastructure.Notifiers.EmailAndPubSubNotifier
+
+  @default_membership_repository Jarga.Workspaces.Infrastructure.Repositories.MembershipRepository
+  @default_notifier Jarga.Workspaces.Infrastructure.Notifiers.EmailAndPubSubNotifier
 
   @doc """
   Executes the remove member use case.
@@ -49,22 +50,25 @@ defmodule Jarga.Workspaces.Application.UseCases.RemoveMember do
       member_email: member_email
     } = params
 
-    notifier = Keyword.get(opts, :notifier, EmailAndPubSubNotifier)
+    membership_repository =
+      Keyword.get(opts, :membership_repository, @default_membership_repository)
 
-    with {:ok, workspace} <- verify_actor_membership(actor, workspace_id),
-         {:ok, member} <- find_member(workspace_id, member_email),
+    notifier = Keyword.get(opts, :notifier, @default_notifier)
+
+    with {:ok, workspace} <- verify_actor_membership(actor, workspace_id, membership_repository),
+         {:ok, member} <- find_member(workspace_id, member_email, membership_repository),
          :ok <- validate_can_remove(member),
-         {:ok, deleted_member} <- delete_member(member) do
+         {:ok, deleted_member} <- delete_member(member, membership_repository) do
       notify_user_if_joined(deleted_member, workspace, notifier)
       {:ok, deleted_member}
     end
   end
 
   # Use infrastructure repository: verify actor is a member
-  defp verify_actor_membership(actor, workspace_id) do
-    case MembershipRepository.get_workspace_for_user(actor, workspace_id) do
+  defp verify_actor_membership(actor, workspace_id, membership_repository) do
+    case membership_repository.get_workspace_for_user(actor, workspace_id) do
       nil ->
-        if MembershipRepository.workspace_exists?(workspace_id) do
+        if membership_repository.workspace_exists?(workspace_id) do
           {:error, :unauthorized}
         else
           {:error, :workspace_not_found}
@@ -76,8 +80,8 @@ defmodule Jarga.Workspaces.Application.UseCases.RemoveMember do
   end
 
   # Use infrastructure repository: find member by email
-  defp find_member(workspace_id, email) do
-    case MembershipRepository.find_member_by_email(workspace_id, email) do
+  defp find_member(workspace_id, email, membership_repository) do
+    case membership_repository.find_member_by_email(workspace_id, email) do
       nil -> {:error, :member_not_found}
       member -> {:ok, member}
     end
@@ -92,8 +96,8 @@ defmodule Jarga.Workspaces.Application.UseCases.RemoveMember do
     end
   end
 
-  defp delete_member(member) do
-    MembershipRepository.delete_member(member)
+  defp delete_member(member, membership_repository) do
+    membership_repository.delete_member(member)
   end
 
   # Notify user if they had already joined (not just a pending invitation)

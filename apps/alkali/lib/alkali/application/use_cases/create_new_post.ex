@@ -4,7 +4,9 @@ defmodule Alkali.Application.UseCases.CreateNewPost do
   """
 
   alias Alkali.Domain.Policies.SlugPolicy
-  alias Alkali.Infrastructure.FileSystem
+
+  # Infrastructure module default - resolved at runtime to avoid boundary violations
+  defp default_file_system_mod, do: Alkali.Infrastructure.FileSystem
 
   @doc """
   Creates a new blog post file.
@@ -26,8 +28,8 @@ defmodule Alkali.Application.UseCases.CreateNewPost do
     site_path = Keyword.get(opts, :site_path, ".")
     date = Keyword.get(opts, :date, Date.utc_today())
     file_writer = Keyword.get(opts, :file_writer, &default_file_writer/2)
-    file_system = Keyword.get(opts, :file_system, Alkali.Infrastructure.FileSystem)
-    file_checker = Keyword.get(opts, :file_checker, &file_system.exists?/1)
+    file_system_mod = Keyword.get(opts, :file_system, default_file_system_mod())
+    file_checker = Keyword.get(opts, :file_checker, &file_system_mod.exists?/1)
 
     # Generate slug and filename
     slug = SlugPolicy.generate_slug(title)
@@ -36,7 +38,7 @@ defmodule Alkali.Application.UseCases.CreateNewPost do
 
     # Find unique filename
     posts_dir = Path.join([site_path, "content", "posts"])
-    file_path = find_unique_path(posts_dir, base_filename, file_checker, file_system)
+    file_path = find_unique_path(posts_dir, base_filename, file_checker, file_system_mod)
 
     # Generate frontmatter template
     content = generate_post_template(title, date)
@@ -162,6 +164,6 @@ defmodule Alkali.Application.UseCases.CreateNewPost do
   # Default implementations
 
   defp default_file_writer(path, content) do
-    FileSystem.write_with_path(path, content)
+    default_file_system_mod().write_with_path(path, content)
   end
 end

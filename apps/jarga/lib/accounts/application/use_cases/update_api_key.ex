@@ -1,10 +1,21 @@
 defmodule Jarga.Accounts.Application.UseCases.UpdateApiKey do
   @moduledoc """
   Use case for updating API keys.
+
+  ## Dependency Injection
+
+  This use case accepts the following dependencies via opts:
+  - `:repo` - Ecto.Repo module (default: Jarga.Repo)
+  - `:api_key_repo` - ApiKeyRepository module (default: Infrastructure.Repositories.ApiKeyRepository)
+  - `:workspaces` - Workspaces context for validation (default: Jarga.Workspaces)
   """
 
   alias Jarga.Accounts.Domain.Policies.ApiKeyPolicy
-  alias Jarga.Accounts.Infrastructure.Repositories.ApiKeyRepository
+
+  # Default implementations - can be overridden via opts for testing
+  @default_repo Jarga.Repo
+  @default_api_key_repo Jarga.Accounts.Infrastructure.Repositories.ApiKeyRepository
+  @default_workspaces Jarga.Workspaces
 
   @doc """
   Executes the update API key use case.
@@ -15,8 +26,9 @@ defmodule Jarga.Accounts.Application.UseCases.UpdateApiKey do
     - `api_key_id` - The API key ID to update
     - `attrs` - Map with fields to update (name, description, workspace_access)
     - `opts` - Options:
-      - `repo` - Ecto.Repo (defaults to Jarga.Repo)
-      - `workspaces` - Workspaces context for validation
+      - `:repo` - Ecto.Repo (defaults to Jarga.Repo)
+      - `:api_key_repo` - ApiKeyRepository module (default: Infrastructure.Repositories.ApiKeyRepository)
+      - `:workspaces` - Workspaces context for validation (default: Jarga.Workspaces)
 
   ## Returns
 
@@ -28,15 +40,16 @@ defmodule Jarga.Accounts.Application.UseCases.UpdateApiKey do
 
   """
   def execute(user_id, api_key_id, attrs, opts \\ []) do
-    repo = Keyword.get(opts, :repo, Jarga.Repo)
-    workspaces = Keyword.get(opts, :workspaces, Jarga.Workspaces)
+    repo = Keyword.get(opts, :repo, @default_repo)
+    api_key_repo = Keyword.get(opts, :api_key_repo, @default_api_key_repo)
+    workspaces = Keyword.get(opts, :workspaces, @default_workspaces)
     workspace_access = Map.get(attrs, :workspace_access)
 
-    with {:ok, api_key} <- ApiKeyRepository.get_by_id(repo, api_key_id),
+    with {:ok, api_key} <- api_key_repo.get_by_id(repo, api_key_id),
          :ok <- authorize_management(api_key, user_id),
          :ok <- validate_workspace_access(workspaces, user_id, workspace_access) do
       update_attrs = Map.take(attrs, [:name, :description, :workspace_access])
-      ApiKeyRepository.update(repo, api_key.id, update_attrs)
+      api_key_repo.update(repo, api_key.id, update_attrs)
     else
       {:error, :not_found} -> {:error, :not_found}
       {:error, :forbidden} -> {:error, :forbidden}

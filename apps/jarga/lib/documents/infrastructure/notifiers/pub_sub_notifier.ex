@@ -6,7 +6,7 @@ defmodule Jarga.Documents.Infrastructure.Notifiers.PubSubNotifier do
   and to the document channel itself.
   """
 
-  @behaviour Jarga.Documents.Application.Services.NotificationService
+  @behaviour Jarga.Documents.Application.Behaviours.NotificationServiceBehaviour
 
   alias Jarga.Documents.Domain.Entities.Document
 

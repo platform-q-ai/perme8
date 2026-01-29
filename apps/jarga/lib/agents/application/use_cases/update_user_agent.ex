@@ -5,9 +5,9 @@ defmodule Jarga.Agents.Application.UseCases.UpdateUserAgent do
   Only the agent owner can update their agent.
   """
 
-  alias Jarga.Agents.Infrastructure.Repositories.AgentRepository
-  alias Jarga.Agents.Infrastructure.Repositories.WorkspaceAgentRepository
-  alias Jarga.Agents.Infrastructure.Notifiers.PubSubNotifier
+  @default_agent_repo Jarga.Agents.Infrastructure.Repositories.AgentRepository
+  @default_workspace_agent_repo Jarga.Agents.Infrastructure.Repositories.WorkspaceAgentRepository
+  @default_notifier Jarga.Agents.Infrastructure.Notifiers.PubSubNotifier
 
   @doc """
   Updates an agent if the user is the owner.
@@ -16,25 +16,33 @@ defmodule Jarga.Agents.Application.UseCases.UpdateUserAgent do
   - `agent_id` - ID of the agent
   - `user_id` - ID of the current user
   - `attrs` - Map of attributes to update
+  - `opts` - Keyword list with:
+    - `:agent_repo` - Repository module for agents (default: AgentRepository)
+    - `:workspace_agent_repo` - Repository for workspace-agent associations (default: WorkspaceAgentRepository)
+    - `:notifier` - Notifier module for PubSub events (default: PubSubNotifier)
 
   ## Returns
   - `{:ok, agent}` - Successfully updated agent
   - `{:error, :not_found}` - Agent not found or user not owner
   - `{:error, changeset}` - Validation error
   """
-  def execute(agent_id, user_id, attrs) do
-    case AgentRepository.get_agent_for_user(user_id, agent_id) do
+  def execute(agent_id, user_id, attrs, opts \\ []) do
+    agent_repo = Keyword.get(opts, :agent_repo, @default_agent_repo)
+    workspace_agent_repo = Keyword.get(opts, :workspace_agent_repo, @default_workspace_agent_repo)
+    notifier = Keyword.get(opts, :notifier, @default_notifier)
+
+    case agent_repo.get_agent_for_user(user_id, agent_id) do
       nil ->
         {:error, :not_found}
 
       agent ->
-        case AgentRepository.update_agent(agent, attrs) do
+        case agent_repo.update_agent(agent, attrs) do
           {:ok, updated_agent} ->
             # Get all workspaces this agent is in
-            workspace_ids = WorkspaceAgentRepository.get_agent_workspace_ids(agent_id)
+            workspace_ids = workspace_agent_repo.get_agent_workspace_ids(agent_id)
 
             # Notify all affected workspaces and user
-            PubSubNotifier.notify_agent_updated(updated_agent, workspace_ids)
+            notifier.notify_agent_updated(updated_agent, workspace_ids)
 
             {:ok, updated_agent}
 

@@ -5,7 +5,17 @@ defmodule Jarga.AccountsFixtures do
   """
 
   # Test fixture module - top-level boundary for test data creation
-  use Boundary, top_level?: true, deps: [Jarga.Accounts, Jarga.Repo], exports: []
+  # Needs access to context + all layer boundaries for fixture creation
+  use Boundary,
+    top_level?: true,
+    deps: [
+      Jarga.Accounts,
+      Jarga.Accounts.Domain,
+      Jarga.Accounts.Application,
+      Jarga.Accounts.Infrastructure,
+      Jarga.Repo
+    ],
+    exports: []
 
   import Ecto.Query
 

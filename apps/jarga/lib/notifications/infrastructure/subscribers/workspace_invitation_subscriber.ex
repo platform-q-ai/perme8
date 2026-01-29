@@ -10,10 +10,13 @@ defmodule Jarga.Notifications.Infrastructure.Subscribers.WorkspaceInvitationSubs
   use GenServer
   require Logger
 
-  alias Jarga.Notifications
+  @default_create_notification_use_case Jarga.Notifications.Application.UseCases.CreateWorkspaceInvitationNotification
 
-  def start_link(_opts) do
-    GenServer.start_link(__MODULE__, %{}, name: __MODULE__)
+  def start_link(opts \\ []) do
+    use_case =
+      Keyword.get(opts, :create_notification_use_case, @default_create_notification_use_case)
+
+    GenServer.start_link(__MODULE__, %{use_case: use_case}, name: __MODULE__)
   end
 
   @impl true
@@ -24,9 +27,9 @@ defmodule Jarga.Notifications.Infrastructure.Subscribers.WorkspaceInvitationSubs
   end
 
   @impl true
-  def handle_info({:workspace_invitation_created, params}, state) do
+  def handle_info({:workspace_invitation_created, params}, %{use_case: use_case} = state) do
     # Create notification when a workspace invitation event is received
-    case Notifications.create_workspace_invitation_notification(params) do
+    case use_case.execute(params) do
       {:ok, _notification} ->
         Logger.debug("Created notification for workspace invitation: #{params.workspace_id}")
 

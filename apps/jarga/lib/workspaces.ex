@@ -9,10 +9,21 @@ defmodule Jarga.Workspaces do
   """
 
   # Core context - cannot depend on JargaWeb (interface layer)
-  # Exports: Main context module, shared types (Workspace, WorkspaceMember), schemas for queries and test fixtures, and PermissionsPolicy for use by other contexts
+  # Depends on layer boundaries for Clean Architecture enforcement
+  # Exports: Domain entities, schemas, and PermissionsPolicy for use by other contexts
   use Boundary,
     top_level?: true,
-    deps: [Jarga.Accounts, Jarga.Repo, Jarga.Mailer],
+    deps: [
+      # Cross-context dependencies (context + domain layer for entity access)
+      Jarga.Accounts,
+      Jarga.Accounts.Domain,
+      # Same-context layer dependencies
+      Jarga.Workspaces.Domain,
+      Jarga.Workspaces.Application,
+      Jarga.Workspaces.Infrastructure,
+      Jarga.Repo,
+      Jarga.Mailer
+    ],
     exports: [
       {Domain.Entities.Workspace, []},
       {Domain.Entities.WorkspaceMember, []},

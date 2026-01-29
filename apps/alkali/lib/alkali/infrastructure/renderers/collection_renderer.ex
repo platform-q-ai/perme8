@@ -12,6 +12,8 @@ defmodule Alkali.Infrastructure.Renderers.CollectionRenderer do
   containing presentation details.
   """
 
+  @behaviour Alkali.Application.Behaviours.CollectionRendererBehaviour
+
   @doc """
   Renders a single post item as HTML.
 
@@ -113,6 +115,7 @@ defmodule Alkali.Infrastructure.Renderers.CollectionRenderer do
 
   A tuple of `{title, content}` where title is the page title and content is the HTML.
   """
+  @impl true
   @spec render_collection_content(map(), map() | nil, keyword()) :: {String.t(), String.t()}
   def render_collection_content(collection, pagination, opts \\ []) do
     posts_html = render_posts_list(collection.pages, opts)

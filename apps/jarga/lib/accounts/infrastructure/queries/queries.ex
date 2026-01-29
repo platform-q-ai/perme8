@@ -24,6 +24,8 @@ defmodule Jarga.Accounts.Infrastructure.Queries.Queries do
 
   """
 
+  @behaviour Jarga.Accounts.Application.Behaviours.QueriesBehaviour
+
   import Ecto.Query, warn: false
 
   alias Jarga.Accounts.Infrastructure.Schemas.UserTokenSchema
@@ -75,6 +77,7 @@ defmodule Jarga.Accounts.Infrastructure.Queries.Queries do
       [%UserToken{}, ...]
 
   """
+  @impl true
   def tokens_for_user_and_context(user_id, context) do
     from(t in tokens_base(),
       where: t.user_id == ^user_id and t.context == ^context
@@ -109,6 +112,7 @@ defmodule Jarga.Accounts.Infrastructure.Queries.Queries do
       [%UserToken{}, ...]
 
   """
+  @impl true
   def tokens_by_ids(token_ids) when is_list(token_ids) do
     from(t in tokens_base(),
       where: t.id in ^token_ids
@@ -180,6 +184,7 @@ defmodule Jarga.Accounts.Infrastructure.Queries.Queries do
       :error
 
   """
+  @impl true
   def verify_magic_link_token_query(token) do
     case TokenGenerator.decode_token(token) do
       {:ok, decoded_token} when byte_size(decoded_token) == 32 ->
@@ -220,6 +225,7 @@ defmodule Jarga.Accounts.Infrastructure.Queries.Queries do
       :error
 
   """
+  @impl true
   def verify_change_email_token_query(token, "change:" <> _ = context) do
     case TokenGenerator.decode_token(token) do
       {:ok, decoded_token} when byte_size(decoded_token) == 32 ->

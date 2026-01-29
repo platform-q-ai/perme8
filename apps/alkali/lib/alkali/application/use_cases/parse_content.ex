@@ -5,7 +5,11 @@ defmodule Alkali.Application.UseCases.ParseContent do
 
   alias Alkali.Domain.Entities.Page
   alias Alkali.Domain.Policies.{SlugPolicy, UrlPolicy, FrontmatterPolicy}
-  alias Alkali.Infrastructure.FileSystem
+
+  # Infrastructure module defaults - resolved at runtime to avoid boundary violations
+  defp default_file_system_mod, do: Alkali.Infrastructure.FileSystem
+  defp default_frontmatter_parser_mod, do: Alkali.Infrastructure.Parsers.FrontmatterParser
+  defp default_markdown_parser_mod, do: Alkali.Infrastructure.Parsers.MarkdownParser
 
   @doc """
   Parses content files and generates Page entities.
@@ -152,16 +156,14 @@ defmodule Alkali.Application.UseCases.ParseContent do
   # Default implementations
 
   defp default_content_loader(path) do
-    FileSystem.load_markdown_files(path)
+    default_file_system_mod().load_markdown_files(path)
   end
 
   defp default_frontmatter_parser(content) do
-    alias Alkali.Infrastructure.Parsers.FrontmatterParser
-    FrontmatterParser.parse(content)
+    default_frontmatter_parser_mod().parse(content)
   end
 
   defp default_markdown_parser(markdown) do
-    alias Alkali.Infrastructure.Parsers.MarkdownParser
-    MarkdownParser.parse(markdown)
+    default_markdown_parser_mod().parse(markdown)
   end
 end

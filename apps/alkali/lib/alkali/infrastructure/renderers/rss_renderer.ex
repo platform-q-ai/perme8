@@ -12,6 +12,8 @@ defmodule Alkali.Infrastructure.Renderers.RssRenderer do
   containing presentation details.
   """
 
+  @behaviour Alkali.Application.Behaviours.RssRendererBehaviour
+
   @doc """
   Renders a complete RSS 2.0 feed as XML.
 
@@ -33,6 +35,7 @@ defmodule Alkali.Infrastructure.Renderers.RssRenderer do
       iex> RssRenderer.render_feed("My Blog", "Latest posts", "https://example.com", "https://example.com/feed.xml", pages)
       "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\"?>..."
   """
+  @impl true
   @spec render_feed(String.t(), String.t(), String.t(), String.t(), list(map()), keyword()) ::
           String.t()
   def render_feed(feed_title, feed_description, site_url, feed_url, items, _opts \\ []) do

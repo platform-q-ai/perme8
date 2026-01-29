@@ -5,6 +5,8 @@ defmodule Jarga.Agents.Infrastructure.Repositories.WorkspaceAgentRepository do
   Handles the many-to-many relationship between agents and workspaces.
   """
 
+  @behaviour Jarga.Agents.Application.Behaviours.WorkspaceAgentRepositoryBehaviour
+
   import Ecto.Query, warn: false
 
   alias Jarga.Repo
@@ -24,6 +26,7 @@ defmodule Jarga.Agents.Infrastructure.Repositories.WorkspaceAgentRepository do
       iex> add_to_workspace(workspace_id, already_added_agent_id)
       {:error, %Ecto.Changeset{}}
   """
+  @impl true
   @spec add_to_workspace(Ecto.UUID.t(), Ecto.UUID.t()) ::
           {:ok, WorkspaceAgentJoinSchema.t()} | {:error, Ecto.Changeset.t()}
   def add_to_workspace(workspace_id, agent_id) do
@@ -45,6 +48,7 @@ defmodule Jarga.Agents.Infrastructure.Repositories.WorkspaceAgentRepository do
       iex> remove_from_workspace(workspace_id, agent_id)
       :ok
   """
+  @impl true
   @spec remove_from_workspace(Ecto.UUID.t(), Ecto.UUID.t()) :: :ok
   def remove_from_workspace(workspace_id, agent_id) do
     WorkspaceAgentJoinSchema
@@ -69,6 +73,7 @@ defmodule Jarga.Agents.Infrastructure.Repositories.WorkspaceAgentRepository do
         other_agents: [%Agent{}, ...]
       }
   """
+  @impl true
   @spec list_workspace_agents(Ecto.UUID.t(), Ecto.UUID.t()) :: %{
           my_agents: [AgentSchema.t()],
           other_agents: [AgentSchema.t()]
@@ -110,6 +115,7 @@ defmodule Jarga.Agents.Infrastructure.Repositories.WorkspaceAgentRepository do
       iex> agent_in_workspace?(workspace_id, not_in_workspace_agent_id)
       false
   """
+  @impl true
   @spec agent_in_workspace?(Ecto.UUID.t(), Ecto.UUID.t()) :: boolean()
   def agent_in_workspace?(workspace_id, agent_id) do
     WorkspaceAgentJoinSchema
@@ -125,6 +131,7 @@ defmodule Jarga.Agents.Infrastructure.Repositories.WorkspaceAgentRepository do
       iex> get_agent_workspace_ids(agent_id)
       ["workspace-id-1", "workspace-id-2"]
   """
+  @impl true
   @spec get_agent_workspace_ids(Ecto.UUID.t()) :: [Ecto.UUID.t()]
   def get_agent_workspace_ids(agent_id) do
     WorkspaceAgentJoinSchema
@@ -144,6 +151,7 @@ defmodule Jarga.Agents.Infrastructure.Repositories.WorkspaceAgentRepository do
       iex> sync_agent_workspaces(agent_id, [workspace_id_1, workspace_id_2], [workspace_id_3])
       {:ok, :synced}
   """
+  @impl true
   @spec sync_agent_workspaces(Ecto.UUID.t(), MapSet.t(), MapSet.t()) ::
           {:ok, :synced} | {:error, any()}
   def sync_agent_workspaces(agent_id, workspace_ids_to_add, workspace_ids_to_remove) do

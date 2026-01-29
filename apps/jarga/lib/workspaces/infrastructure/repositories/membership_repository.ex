@@ -12,6 +12,8 @@ defmodule Jarga.Workspaces.Infrastructure.Repositories.MembershipRepository do
   - No business rules - just data retrieval
   """
 
+  @behaviour Jarga.Workspaces.Application.Behaviours.MembershipRepositoryBehaviour
+
   import Ecto.Query, warn: false
 
   alias Jarga.Repo
@@ -34,6 +36,7 @@ defmodule Jarga.Workspaces.Infrastructure.Repositories.MembershipRepository do
       nil
 
   """
+  @impl true
   def get_workspace_for_user(%User{} = user, workspace_id, repo \\ Repo) do
     case Queries.for_user_by_id(user, workspace_id) |> repo.one() do
       nil -> nil
@@ -105,6 +108,7 @@ defmodule Jarga.Workspaces.Infrastructure.Repositories.MembershipRepository do
       false
 
   """
+  @impl true
   def workspace_exists?(workspace_id, repo \\ Repo) do
     case Queries.exists?(workspace_id) |> repo.one() do
       count when count > 0 -> true
@@ -143,6 +147,7 @@ defmodule Jarga.Workspaces.Infrastructure.Repositories.MembershipRepository do
       nil
 
   """
+  @impl true
   def find_member_by_email(workspace_id, email, repo \\ Repo) do
     case Queries.find_member_by_email(workspace_id, email) |> repo.one() do
       nil -> nil
@@ -340,6 +345,7 @@ defmodule Jarga.Workspaces.Infrastructure.Repositories.MembershipRepository do
       {:error, %Ecto.Changeset{}}
 
   """
+  @impl true
   def update_member(%WorkspaceMember{} = member, attrs, repo \\ Repo) do
     member
     |> WorkspaceMemberSchema.to_schema()
@@ -363,6 +369,7 @@ defmodule Jarga.Workspaces.Infrastructure.Repositories.MembershipRepository do
       {:error, %Ecto.Changeset{}}
 
   """
+  @impl true
   def delete_member(%WorkspaceMember{} = member, repo \\ Repo) do
     member
     |> WorkspaceMemberSchema.to_schema()
@@ -378,6 +385,7 @@ defmodule Jarga.Workspaces.Infrastructure.Repositories.MembershipRepository do
   This allows use cases to run database operations in a transaction
   without directly depending on Repo.
   """
+  @impl true
   def transact(fun) when is_function(fun, 0) do
     Repo.transact(fun)
   end

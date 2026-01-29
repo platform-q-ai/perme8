@@ -146,7 +146,7 @@ defmodule Jarga.InfrastructureLayer do
       # Documents
       Jarga.Documents.Infrastructure.Notifiers.PubSubNotifier,
       # Notifications
-      Jarga.Notifications.Infrastructure.Notifiers.PubsubNotifier,
+      Jarga.Notifications.Infrastructure.Notifiers.PubSubNotifier,
       # Projects
       Jarga.Projects.Infrastructure.Notifiers.EmailAndPubSubNotifier,
       # Workspaces

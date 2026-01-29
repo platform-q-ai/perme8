@@ -58,6 +58,13 @@ defmodule Jarga.Accounts.Application do
       UseCases.GetProjectWithDocumentsViaApi,
       UseCases.UseCase,
       Services.PasswordService,
-      Services.ApiKeyTokenService
+      Services.ApiKeyTokenService,
+      # Behaviours (interfaces for Infrastructure to implement)
+      Behaviours.ApiKeyRepositoryBehaviour,
+      Behaviours.QueriesBehaviour,
+      Behaviours.UserNotifierBehaviour,
+      Behaviours.UserRepositoryBehaviour,
+      Behaviours.UserSchemaBehaviour,
+      Behaviours.UserTokenRepositoryBehaviour
     ]
 end

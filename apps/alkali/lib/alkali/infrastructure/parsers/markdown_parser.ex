@@ -3,12 +3,16 @@ defmodule Alkali.Infrastructure.Parsers.MarkdownParser do
   Markdown parser with basic HTML conversion.
   """
 
+  @behaviour Alkali.Application.Behaviours.MarkdownParserBehaviour
+
   @doc """
   Parses markdown to HTML with GFM extensions.
   """
+  @impl true
   @spec parse(String.t()) :: String.t()
   def parse(""), do: ""
 
+  @impl true
   def parse(markdown) do
     blocks = String.split(markdown, "\n\n", trim: true)
 

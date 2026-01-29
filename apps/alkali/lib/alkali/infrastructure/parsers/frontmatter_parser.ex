@@ -3,9 +3,12 @@ defmodule Alkali.Infrastructure.Parsers.FrontmatterParser do
   Frontmatter parser for extracting YAML metadata from markdown files.
   """
 
+  @behaviour Alkali.Application.Behaviours.FrontmatterParserBehaviour
+
   @doc """
   Extracts frontmatter YAML and content from a markdown file.
   """
+  @impl true
   @spec parse(String.t()) :: {:ok, {map(), String.t()}} | {:error, String.t()}
   def parse("---\n" <> rest) do
     case String.split(rest, "\n---\n", parts: 2) do
@@ -25,10 +28,12 @@ defmodule Alkali.Infrastructure.Parsers.FrontmatterParser do
     end
   end
 
+  @impl true
   def parse("---\n") do
     {:ok, {%{}, ""}}
   end
 
+  @impl true
   def parse(content) do
     {:ok, {%{}, content}}
   end

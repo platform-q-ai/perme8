@@ -25,19 +25,23 @@ defmodule Jarga.Chat.Application.UseCases.LoadSession do
       {:error, :not_found}
   """
 
-  alias Jarga.Chat.Infrastructure.Repositories.SessionRepository
+  @default_session_repository Jarga.Chat.Infrastructure.Repositories.SessionRepository
 
   @doc """
   Loads a chat session with all its data.
 
   ## Parameters
     - session_id: The ID of the session to load
+    - opts: Keyword list of options
+      - :session_repository - Repository module for session operations (default: SessionRepository)
 
   Returns `{:ok, session}` with preloaded messages and relationships,
   or `{:error, :not_found}` if the session doesn't exist.
   """
-  def execute(session_id) do
-    case SessionRepository.get_session_by_id(session_id) do
+  def execute(session_id, opts \\ []) do
+    session_repository = Keyword.get(opts, :session_repository, @default_session_repository)
+
+    case session_repository.get_session_by_id(session_id) do
       nil -> {:error, :not_found}
       session -> {:ok, session}
     end

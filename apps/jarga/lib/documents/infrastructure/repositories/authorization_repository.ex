@@ -8,6 +8,8 @@ defmodule Jarga.Documents.Infrastructure.Repositories.AuthorizationRepository do
   For pure authorization business rules, see the domain policy modules.
   """
 
+  @behaviour Jarga.Documents.Application.Behaviours.AuthorizationRepositoryBehaviour
+
   alias Jarga.Repo
   alias Jarga.Accounts.Domain.Entities.User
   alias Jarga.Workspaces
@@ -53,6 +55,7 @@ defmodule Jarga.Documents.Infrastructure.Repositories.AuthorizationRepository do
 
   Delegates to Projects context to maintain proper boundary separation.
   """
+  @impl true
   def verify_project_in_workspace(workspace_id, project_id) do
     Jarga.Projects.verify_project_in_workspace(workspace_id, project_id)
   end

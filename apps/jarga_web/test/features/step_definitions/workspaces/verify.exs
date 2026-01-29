@@ -37,34 +37,27 @@ defmodule Workspaces.VerifySteps do
   end
 
   step "I should not see {string} in the workspace list", %{args: [workspace_name]} = context do
-    # Re-render the view to get the latest HTML state after deletion
-    view = context[:view]
-
-    html =
-      if view do
-        Phoenix.LiveViewTest.render(view)
-      else
-        context[:last_html]
-      end
-
-    # Get the specific workspace that was being tested (from context)
-    # This is more reliable than checking by name since users may have multiple
-    # workspaces with the same name due to test isolation issues
-    workspace = context[:workspace]
-
-    if workspace do
-      # Check for the specific workspace by its slug in href
-      workspace_slug = workspace.slug
-
-      refute html =~ ~s(href="/app/workspaces/#{workspace_slug}"),
-             "Expected NOT to see workspace with slug '#{workspace_slug}' in workspace list"
-    else
-      # Fallback to original behavior if no workspace in context
-      name_escaped = Phoenix.HTML.html_escape(workspace_name) |> Phoenix.HTML.safe_to_string()
-      refute html =~ name_escaped, "Expected NOT to see '#{workspace_name}' in workspace list"
-    end
-
+    html = get_current_html(context)
+    assert_workspace_not_visible(html, workspace_name, context)
     {:ok, Map.put(context, :last_html, html)}
+  end
+
+  defp get_current_html(%{view: view}), do: Phoenix.LiveViewTest.render(view)
+  defp get_current_html(%{last_html: html}), do: html
+  defp get_current_html(_), do: ""
+
+  defp assert_workspace_not_visible(html, _workspace_name, %{workspace: workspace}) do
+    # Check for the specific workspace by its slug in href
+    workspace_slug = workspace.slug
+
+    refute html =~ ~s(href="/app/workspaces/#{workspace_slug}"),
+           "Expected NOT to see workspace with slug '#{workspace_slug}' in workspace list"
+  end
+
+  defp assert_workspace_not_visible(html, workspace_name, _context) do
+    # Fallback to checking by name when no workspace in context
+    name_escaped = Phoenix.HTML.html_escape(workspace_name) |> Phoenix.HTML.safe_to_string()
+    refute html =~ name_escaped, "Expected NOT to see '#{workspace_name}' in workspace list"
   end
 
   # ============================================================================

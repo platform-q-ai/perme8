@@ -6,6 +6,8 @@ defmodule Alkali.Infrastructure.CryptoService do
   keeping these concerns isolated from the domain layer.
   """
 
+  @behaviour Alkali.Application.Behaviours.CryptoServiceBehaviour
+
   @doc """
   Calculates SHA256 fingerprint from content.
 
@@ -16,6 +18,7 @@ defmodule Alkali.Infrastructure.CryptoService do
       iex> CryptoService.sha256_fingerprint("body { margin: 0; }")
       "a1b2c3d4..."
   """
+  @impl true
   @spec sha256_fingerprint(binary()) :: String.t()
   def sha256_fingerprint(content) do
     :crypto.hash(:sha256, content)

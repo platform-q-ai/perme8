@@ -1,4 +1,4 @@
-defmodule Jarga.Documents.Application.Services.ComponentLoader do
+defmodule Jarga.Documents.Infrastructure.Services.ComponentLoader do
   @moduledoc """
   Service for loading polymorphic document components.
 

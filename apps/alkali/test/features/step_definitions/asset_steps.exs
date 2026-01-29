@@ -152,19 +152,17 @@ defmodule Alkali.AssetSteps do
     # Check that the minified CSS file doesn't contain comments
     minified_file = context[:minified_css_file] || context[:minified_js_file]
 
-    if minified_file do
-      content = File.read!(minified_file)
+    assert minified_file, "No minified file found in context"
 
-      # Check for CSS comments /* */
-      refute content =~ ~r/\/\*.*\*\//,
-             "Expected minified file to not contain CSS comments"
+    content = File.read!(minified_file)
 
-      # Check for JS comments //
-      refute content =~ ~r/\/\/.*/,
-             "Expected minified file to not contain JS comments"
-    else
-      flunk("No minified file found in context")
-    end
+    # Check for CSS comments /* */
+    refute content =~ ~r/\/\*.*\*\//,
+           "Expected minified file to not contain CSS comments"
+
+    # Check for JS comments //
+    refute content =~ ~r/\/\/.*/,
+           "Expected minified file to not contain JS comments"
 
     {:ok, context}
   end
@@ -173,14 +171,12 @@ defmodule Alkali.AssetSteps do
     original_size = context[:original_css_size]
     minified_file = context[:minified_css_file]
 
-    if minified_file && File.exists?(minified_file) do
-      minified_size = File.stat!(minified_file).size
+    assert minified_file && File.exists?(minified_file), "Minified file not found"
 
-      assert minified_size < original_size,
-             "Expected minified file (#{minified_size} bytes) to be smaller than original (#{original_size} bytes)"
-    else
-      flunk("Minified file not found")
-    end
+    minified_size = File.stat!(minified_file).size
+
+    assert minified_size < original_size,
+           "Expected minified file (#{minified_size} bytes) to be smaller than original (#{original_size} bytes)"
 
     {:ok, context}
   end
@@ -253,14 +249,12 @@ defmodule Alkali.AssetSteps do
     copied_file = context[:copied_file_path]
     original_data = context[:original_image_data]
 
-    if copied_file && File.exists?(copied_file) do
-      copied_data = File.read!(copied_file)
+    assert copied_file && File.exists?(copied_file), "Copied file not found"
 
-      assert copied_data == original_data,
-             "Expected copied file to be identical to original"
-    else
-      flunk("Copied file not found")
-    end
+    copied_data = File.read!(copied_file)
+
+    assert copied_data == original_data,
+           "Expected copied file to be identical to original"
 
     {:ok, context}
   end

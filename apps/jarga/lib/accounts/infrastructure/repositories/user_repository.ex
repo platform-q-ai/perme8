@@ -19,6 +19,8 @@ defmodule Jarga.Accounts.Infrastructure.Repositories.UserRepository do
 
   """
 
+  @behaviour Jarga.Accounts.Application.Behaviours.UserRepositoryBehaviour
+
   import Ecto.Query, only: [from: 2]
 
   alias Jarga.Accounts.Domain.Entities.User
@@ -192,6 +194,7 @@ defmodule Jarga.Accounts.Infrastructure.Repositories.UserRepository do
       {:ok, %User{}}
 
   """
+  @impl true
   def update_changeset(%Ecto.Changeset{} = changeset, repo \\ Repo) do
     case repo.update(changeset) do
       {:ok, schema} -> {:ok, User.from_schema(schema)}
@@ -218,6 +221,7 @@ defmodule Jarga.Accounts.Infrastructure.Repositories.UserRepository do
       {:ok, %User{}}
 
   """
+  @impl true
   def insert_changeset(%Ecto.Changeset{} = changeset, repo \\ Repo) do
     case repo.insert(changeset) do
       {:ok, schema} -> {:ok, User.from_schema(schema)}

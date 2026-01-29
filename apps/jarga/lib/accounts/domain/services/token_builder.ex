@@ -12,14 +12,16 @@ defmodule Jarga.Accounts.Domain.Services.TokenBuilder do
   - Building hashed email tokens with proper context
   - Defining token structure according to business rules
 
-  ## Infrastructure Delegation
+  ## Dependency Injection
 
-  All cryptographic operations (random generation, hashing, encoding) are
-  delegated to TokenGenerator service in the infrastructure layer.
+  Cryptographic operations are injected via opts to maintain domain purity:
+  - `:token_generator` - Module implementing token generation (default: TokenGenerator)
+  - `:user_token_schema` - Schema module for token structs (default: UserTokenSchema)
   """
 
-  alias Jarga.Accounts.Infrastructure.Schemas.UserTokenSchema
-  alias Jarga.Accounts.Infrastructure.Services.TokenGenerator
+  # Default implementations - can be overridden via opts
+  @default_token_generator Jarga.Accounts.Infrastructure.Services.TokenGenerator
+  @default_user_token_schema Jarga.Accounts.Infrastructure.Schemas.UserTokenSchema
 
   @doc """
   Builds a session token for the given user.
@@ -48,17 +50,20 @@ defmodule Jarga.Accounts.Domain.Services.TokenBuilder do
       "session"
   """
   def build_session_token(user, opts \\ []) do
-    token = TokenGenerator.generate_random_token()
+    token_generator = Keyword.get(opts, :token_generator, @default_token_generator)
+    user_token_schema = Keyword.get(opts, :user_token_schema, @default_user_token_schema)
+
+    token = token_generator.generate_random_token()
     current_time = Keyword.get(opts, :current_time, DateTime.utc_now(:second))
     dt = user.authenticated_at || current_time
 
     {token,
-     %UserTokenSchema{
+     struct(user_token_schema, %{
        token: token,
        context: "session",
        user_id: user.id,
        authenticated_at: dt
-     }}
+     })}
   end
 
   @doc """
@@ -88,22 +93,25 @@ defmodule Jarga.Accounts.Domain.Services.TokenBuilder do
       iex> user_token.sent_to
       user.email
   """
-  def build_email_token(user, context) do
-    build_hashed_token(user, context, user.email)
+  def build_email_token(user, context, opts \\ []) do
+    build_hashed_token(user, context, user.email, opts)
   end
 
   # Private helper for building hashed tokens
-  defp build_hashed_token(user, context, sent_to) do
-    token = TokenGenerator.generate_random_token()
-    hashed_token = TokenGenerator.hash_token(token)
-    encoded_token = TokenGenerator.encode_token(token)
+  defp build_hashed_token(user, context, sent_to, opts) do
+    token_generator = Keyword.get(opts, :token_generator, @default_token_generator)
+    user_token_schema = Keyword.get(opts, :user_token_schema, @default_user_token_schema)
+
+    token = token_generator.generate_random_token()
+    hashed_token = token_generator.hash_token(token)
+    encoded_token = token_generator.encode_token(token)
 
     {encoded_token,
-     %UserTokenSchema{
+     struct(user_token_schema, %{
        token: hashed_token,
        context: context,
        sent_to: sent_to,
        user_id: user.id
-     }}
+     })}
   end
 end

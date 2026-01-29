@@ -8,7 +8,8 @@ defmodule Alkali.Application.UseCases.CleanOutput do
   Dependencies are injected via the `opts` keyword list.
   """
 
-  alias Alkali.Infrastructure.FileSystem
+  # Infrastructure module default - resolved at runtime to avoid boundary violations
+  defp default_file_system_mod, do: Alkali.Infrastructure.FileSystem
 
   @doc """
   Executes the clean output use case.
@@ -34,7 +35,7 @@ defmodule Alkali.Application.UseCases.CleanOutput do
   end
 
   def execute(output_path, opts) when is_binary(output_path) and is_list(opts) do
-    file_system = Keyword.get(opts, :file_system, &default_file_system/1)
+    file_system = Keyword.get(opts, :file_system, &default_file_system_fn/1)
 
     case file_system.({:rm_rf, output_path}) do
       :ok -> :ok
@@ -43,7 +44,7 @@ defmodule Alkali.Application.UseCases.CleanOutput do
   end
 
   # Default implementation delegating to infrastructure
-  defp default_file_system({:rm_rf, path}) do
-    FileSystem.rm_rf(path)
+  defp default_file_system_fn({:rm_rf, path}) do
+    default_file_system_mod().rm_rf(path)
   end
 end
