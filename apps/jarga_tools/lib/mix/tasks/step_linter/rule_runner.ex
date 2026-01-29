@@ -5,7 +5,6 @@ defmodule Mix.Tasks.StepLinter.RuleRunner do
   This module manages the collection of available rules and executes
   them against parsed step definitions.
   """
-  use Boundary, top_level?: true
 
   alias Mix.Tasks.StepLinter.Rules.{
     FileTooLong,

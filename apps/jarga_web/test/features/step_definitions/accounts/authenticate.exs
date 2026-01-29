@@ -200,7 +200,7 @@ defmodule Accounts.AuthenticateSteps do
   step "I check if the user is in sudo mode with a {int} minute limit",
        %{args: [minutes]} = context do
     user = context[:user]
-    result = Accounts.sudo_mode?(user, -minutes)
+    result = Accounts.sudo_mode?(user, minutes: -minutes)
     {:ok, Map.put(context, :sudo_mode_result, result)}
   end
 end

@@ -44,36 +44,9 @@ defmodule Alkali.Domain.Entities.AssetTest do
     end
   end
 
-  describe "calculate_fingerprint/1" do
-    test "generates SHA256 fingerprint from content" do
-      content = "body { margin: 0; }"
-
-      fingerprint = Asset.calculate_fingerprint(content)
-
-      assert is_binary(fingerprint)
-      assert String.length(fingerprint) == 64
-      # SHA256 produces a 64-character hex string
-    end
-
-    test "generates consistent fingerprints for same content" do
-      content = "console.log('hello');"
-
-      fingerprint1 = Asset.calculate_fingerprint(content)
-      fingerprint2 = Asset.calculate_fingerprint(content)
-
-      assert fingerprint1 == fingerprint2
-    end
-
-    test "generates different fingerprints for different content" do
-      content1 = "body { margin: 0; }"
-      content2 = "body { padding: 0; }"
-
-      fingerprint1 = Asset.calculate_fingerprint(content1)
-      fingerprint2 = Asset.calculate_fingerprint(content2)
-
-      assert fingerprint1 != fingerprint2
-    end
-  end
+  # NOTE: calculate_fingerprint/1 was moved to Alkali.Infrastructure.CryptoService
+  # to follow Clean Architecture - domain entities should not depend on infrastructure.
+  # See CryptoService.sha256_fingerprint/1 for fingerprint generation.
 
   describe "with_fingerprint/2" do
     test "adds fingerprint to asset" do

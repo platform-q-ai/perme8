@@ -164,6 +164,45 @@ defmodule Alkali.Infrastructure.FileSystem do
   end
 
   @doc """
+  Checks if a path is a regular file.
+
+  ## Examples
+
+      iex> FileSystem.regular?("path/to/file.txt")
+      true
+  """
+  @spec regular?(Path.t()) :: boolean()
+  def regular?(path) do
+    File.regular?(path)
+  end
+
+  @doc """
+  Lists files in a directory.
+
+  ## Examples
+
+      iex> FileSystem.ls("path/to/dir")
+      {:ok, ["file1.txt", "file2.txt"]}
+  """
+  @spec ls(Path.t()) :: {:ok, [Path.t()]} | {:error, File.posix()}
+  def ls(path) do
+    File.ls(path)
+  end
+
+  @doc """
+  Creates a directory and all parents, raising on error.
+
+  ## Examples
+
+      iex> FileSystem.mkdir_p!("path/to/dir")
+      :ok
+  """
+  @spec mkdir_p!(Path.t()) :: :ok
+  def mkdir_p!(path) do
+    File.mkdir_p!(path)
+  end
+
+  @doc """
   Loads markdown content files from a directory.
 
   Returns a list of tuples containing file path, content, and modification time.

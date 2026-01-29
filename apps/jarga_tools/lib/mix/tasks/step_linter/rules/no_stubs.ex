@@ -76,7 +76,6 @@ defmodule Mix.Tasks.StepLinter.Rules.NoStubs do
   - Steps that call helper functions with meaningful names
   - Steps marked with `# stub:ok` comment (explicit acknowledgment)
   """
-  use Boundary, top_level?: true
 
   @behaviour Mix.Tasks.StepLinter.Rule
 

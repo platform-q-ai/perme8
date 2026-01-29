@@ -168,4 +168,24 @@ defmodule Jarga.Accounts.Infrastructure.Repositories.ApiKeyRepository do
 
     repo.exists?(query)
   end
+
+  @doc """
+  Deletes all API keys for a user.
+
+  ## Parameters
+
+    - `repo` - Ecto.Repo
+    - `user_id` - User ID whose API keys should be deleted
+
+  ## Returns
+
+    `{count, nil}` where count is the number of deleted records
+  """
+  def delete_by_user_id(repo, user_id) do
+    query =
+      ApiKeyQueries.base()
+      |> ApiKeyQueries.by_user_id(user_id)
+
+    repo.delete_all(query)
+  end
 end

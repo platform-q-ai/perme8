@@ -16,6 +16,7 @@ defmodule AgentQuerySteps do
   import Jarga.AgentsFixtures
   import Jarga.WorkspacesFixtures
 
+  alias Jarga.Accounts
   alias Jarga.Agents
   alias Jarga.Agents.Infrastructure.Repositories.WorkspaceAgentRepository
 
@@ -152,7 +153,14 @@ defmodule AgentQuerySteps do
 
   step "user {string} has shared agent {string}", %{args: [user_name, agent_name]} = context do
     slug = user_name |> String.downcase() |> String.replace(~r/[^a-z0-9]+/, "-")
-    other_user = user_fixture(%{email: "#{slug}@example.com", first_name: user_name})
+    email = "#{slug}@example.com"
+
+    other_user =
+      case Accounts.get_user_by_email(email) do
+        nil -> user_fixture(%{email: email, first_name: user_name})
+        existing_user -> existing_user
+      end
+
     agent = agent_fixture(other_user, %{name: agent_name, visibility: "SHARED"})
 
     agents = Map.get(context, :agents, %{})

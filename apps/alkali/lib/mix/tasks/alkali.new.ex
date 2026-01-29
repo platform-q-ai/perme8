@@ -25,8 +25,6 @@ defmodule Mix.Tasks.Alkali.New do
 
   use Mix.Task
 
-  alias Alkali.Application.UseCases.ScaffoldNewSite
-
   @impl true
   def run(args) do
     {options, positional_args, _} =
@@ -39,7 +37,7 @@ defmodule Mix.Tasks.Alkali.New do
       [name] ->
         base_path = Keyword.get(options, :path, ".")
 
-        case ScaffoldNewSite.execute(name, target_path: base_path) do
+        case Alkali.new_site(name, target_path: base_path) do
           {:ok, summary} ->
             Mix.shell().info([:green, "✓ ", :reset, "Successfully created #{name}!"])
             Mix.shell().info("")

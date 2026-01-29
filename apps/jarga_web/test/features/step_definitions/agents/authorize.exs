@@ -16,6 +16,7 @@ defmodule AgentAuthorizeSteps do
   import Jarga.WorkspacesFixtures
   import Jarga.AgentsFixtures
 
+  alias Jarga.Accounts
   alias Jarga.Agents
   alias Jarga.Agents.Infrastructure.Repositories.WorkspaceAgentRepository
 
@@ -26,10 +27,7 @@ defmodule AgentAuthorizeSteps do
   step "{string} is a member of workspace {string}", %{args: [user_name, ws_name]} = context do
     user =
       get_in(context, [:users, user_name]) ||
-        user_fixture(%{
-          email:
-            "#{user_name |> String.downcase() |> String.replace(~r/[^a-z0-9]+/, "-")}@example.com"
-        })
+        get_or_create_user_by_name(user_name)
 
     workspace = get_in(context, [:workspaces, ws_name]) || context[:workspace]
 
@@ -77,12 +75,7 @@ defmodule AgentAuthorizeSteps do
   end
 
   defp get_or_create_workspace_member_impl(context, user_name, workspace, nil) do
-    new_user =
-      user_fixture(%{
-        email:
-          "#{user_name |> String.downcase() |> String.replace(~r/[^a-z0-9]+/, "-")}@example.com",
-        first_name: user_name
-      })
+    new_user = get_or_create_user_by_name(user_name)
 
     add_workspace_member_fixture(workspace.id, new_user, :member)
 
@@ -169,14 +162,19 @@ defmodule AgentAuthorizeSteps do
   end
 
   defp create_workspace_member(name, workspace) do
-    other =
-      user_fixture(%{
-        email: "#{String.downcase(name)}@example.com",
-        first_name: name
-      })
+    other = get_or_create_user_by_name(name)
 
     add_workspace_member_fixture(workspace.id, other, :member)
     other
+  end
+
+  defp get_or_create_user_by_name(name) do
+    email = "#{name |> String.downcase() |> String.replace(~r/[^a-z0-9]+/, "-")}@example.com"
+
+    case Accounts.get_user_by_email(email) do
+      nil -> user_fixture(%{email: email, first_name: name})
+      existing_user -> existing_user
+    end
   end
 
   # ============================================================================

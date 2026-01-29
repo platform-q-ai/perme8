@@ -9,14 +9,14 @@ defmodule Jarga.Accounts.Domain.Policies.AuthenticationPolicyTest do
       authenticated_at = DateTime.utc_now() |> DateTime.add(-10, :minute)
       user = %User{authenticated_at: authenticated_at}
 
-      assert AuthenticationPolicy.sudo_mode?(user, -20)
+      assert AuthenticationPolicy.sudo_mode?(user, minutes: -20)
     end
 
     test "returns false when authenticated beyond time limit" do
       authenticated_at = DateTime.utc_now() |> DateTime.add(-30, :minute)
       user = %User{authenticated_at: authenticated_at}
 
-      refute AuthenticationPolicy.sudo_mode?(user, -20)
+      refute AuthenticationPolicy.sudo_mode?(user, minutes: -20)
     end
 
     test "returns false when user has no authenticated_at" do
@@ -40,8 +40,8 @@ defmodule Jarga.Accounts.Domain.Policies.AuthenticationPolicyTest do
       authenticated_at = DateTime.utc_now() |> DateTime.add(-5, :minute)
       user = %User{authenticated_at: authenticated_at}
 
-      assert AuthenticationPolicy.sudo_mode?(user, -10)
-      refute AuthenticationPolicy.sudo_mode?(user, -3)
+      assert AuthenticationPolicy.sudo_mode?(user, minutes: -10)
+      refute AuthenticationPolicy.sudo_mode?(user, minutes: -3)
     end
   end
 end

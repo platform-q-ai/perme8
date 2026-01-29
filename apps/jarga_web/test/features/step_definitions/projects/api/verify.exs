@@ -11,6 +11,8 @@ defmodule Projects.Api.VerifySteps do
   use Cucumber.StepDefinition
   use JargaWeb.ConnCase, async: false
 
+  import Ecto.Query, warn: false
+
   alias Jarga.Projects
 
   # ============================================================================

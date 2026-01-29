@@ -4,6 +4,7 @@ defmodule Alkali.Application.UseCases.CreateNewPost do
   """
 
   alias Alkali.Domain.Policies.SlugPolicy
+  alias Alkali.Infrastructure.FileSystem
 
   @doc """
   Creates a new blog post file.
@@ -25,7 +26,8 @@ defmodule Alkali.Application.UseCases.CreateNewPost do
     site_path = Keyword.get(opts, :site_path, ".")
     date = Keyword.get(opts, :date, Date.utc_today())
     file_writer = Keyword.get(opts, :file_writer, &default_file_writer/2)
-    file_checker = Keyword.get(opts, :file_checker, &File.exists?/1)
+    file_system = Keyword.get(opts, :file_system, Alkali.Infrastructure.FileSystem)
+    file_checker = Keyword.get(opts, :file_checker, &file_system.exists?/1)
 
     # Generate slug and filename
     slug = SlugPolicy.generate_slug(title)
@@ -34,7 +36,7 @@ defmodule Alkali.Application.UseCases.CreateNewPost do
 
     # Find unique filename
     posts_dir = Path.join([site_path, "content", "posts"])
-    file_path = find_unique_path(posts_dir, base_filename, file_checker)
+    file_path = find_unique_path(posts_dir, base_filename, file_checker, file_system)
 
     # Generate frontmatter template
     content = generate_post_template(title, date)
@@ -48,7 +50,7 @@ defmodule Alkali.Application.UseCases.CreateNewPost do
 
   # Private Functions
 
-  defp find_unique_path(dir, filename, file_checker) do
+  defp find_unique_path(dir, filename, file_checker, file_system) do
     # Extract title slug from filename (remove date prefix and extension)
     ext = Path.extname(filename)
     base = Path.basename(filename, ext)
@@ -56,7 +58,7 @@ defmodule Alkali.Application.UseCases.CreateNewPost do
 
     # Check if any file with this title slug exists (with any date)
     # We need to check systematically for numbered variants
-    suffix = find_available_suffix(dir, base, ext, title_slug, file_checker)
+    suffix = find_available_suffix(dir, base, ext, title_slug, file_checker, file_system)
 
     if suffix == 1 do
       # No conflicts, use base filename
@@ -68,7 +70,7 @@ defmodule Alkali.Application.UseCases.CreateNewPost do
     end
   end
 
-  defp find_available_suffix(dir, base, ext, slug, file_checker, n \\ 1) do
+  defp find_available_suffix(dir, base, ext, slug, file_checker, file_system, n \\ 1) do
     # Build the filename to check
     # For n=1, check YYYY-MM-DD-slug.md (no suffix)
     # For n>1, check YYYY-MM-DD-slug-N.md
@@ -87,11 +89,11 @@ defmodule Alkali.Application.UseCases.CreateNewPost do
       cond do
         # Check if exact path exists
         file_checker.(test_path) ->
-          find_available_suffix(dir, base, ext, slug, file_checker, 2)
+          find_available_suffix(dir, base, ext, slug, file_checker, file_system, 2)
 
         # Check if any file matching slug pattern exists
-        check_slug_pattern_exists(dir, slug, ext, file_checker) ->
-          find_available_suffix(dir, base, ext, slug, file_checker, 2)
+        check_slug_pattern_exists(dir, slug, ext, file_checker, file_system) ->
+          find_available_suffix(dir, base, ext, slug, file_checker, file_system, 2)
 
         true ->
           # No conflicts
@@ -99,16 +101,16 @@ defmodule Alkali.Application.UseCases.CreateNewPost do
       end
     else
       if file_checker.(test_path) do
-        find_available_suffix(dir, base, ext, slug, file_checker, n + 1)
+        find_available_suffix(dir, base, ext, slug, file_checker, file_system, n + 1)
       else
         n
       end
     end
   end
 
-  defp check_slug_pattern_exists(dir, slug, ext, file_checker) do
+  defp check_slug_pattern_exists(dir, slug, ext, file_checker, file_system) do
     check_with_mock_dates(dir, slug, ext, file_checker) or
-      check_filesystem_for_slug(dir, slug, ext)
+      check_filesystem_for_slug(dir, slug, ext, file_system)
   end
 
   defp check_with_mock_dates(dir, slug, ext, file_checker) do
@@ -128,10 +130,10 @@ defmodule Alkali.Application.UseCases.CreateNewPost do
     end)
   end
 
-  defp check_filesystem_for_slug(dir, slug, ext) do
+  defp check_filesystem_for_slug(dir, slug, ext, file_system) do
     # Strategy 2: Check real filesystem (for production use)
-    with true <- File.dir?(dir),
-         {:ok, files} <- File.ls(dir) do
+    with true <- file_system.dir?(dir),
+         {:ok, files} <- file_system.ls(dir) do
       pattern = ~r/^\d{4}-\d{2}-\d{2}-#{Regex.escape(slug)}#{Regex.escape(ext)}$/
       Enum.any?(files, &Regex.match?(pattern, &1))
     else
@@ -160,6 +162,6 @@ defmodule Alkali.Application.UseCases.CreateNewPost do
   # Default implementations
 
   defp default_file_writer(path, content) do
-    Alkali.Infrastructure.FileSystem.write_with_path(path, content)
+    FileSystem.write_with_path(path, content)
   end
 end

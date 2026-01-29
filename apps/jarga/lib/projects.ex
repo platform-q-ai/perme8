@@ -22,7 +22,43 @@ defmodule Jarga.Projects do
   alias Jarga.Repo
   alias Jarga.Accounts.Domain.Entities.User
   alias Jarga.Projects.Infrastructure.Queries.Queries
+  alias Jarga.Projects.Infrastructure.Schemas.ProjectSchema
   alias Jarga.Projects.Application.UseCases.{CreateProject, DeleteProject, UpdateProject}
+
+  @doc """
+  Returns a changeset for creating a new project.
+
+  This provides a form-ready changeset for the web layer without
+  exposing the underlying infrastructure schema directly.
+
+  ## Examples
+
+      iex> new_project_changeset()
+      %Ecto.Changeset{}
+
+      iex> new_project_changeset(%{name: "My Project"})
+      %Ecto.Changeset{}
+
+  """
+  def new_project_changeset(attrs \\ %{}) do
+    ProjectSchema.changeset(%ProjectSchema{}, attrs)
+  end
+
+  @doc """
+  Returns a changeset for editing an existing project.
+
+  ## Examples
+
+      iex> change_project(project)
+      %Ecto.Changeset{}
+
+      iex> change_project(project, %{name: "Updated Name"})
+      %Ecto.Changeset{}
+
+  """
+  def change_project(%ProjectSchema{} = project, attrs \\ %{}) do
+    ProjectSchema.changeset(project, attrs)
+  end
 
   @doc """
   Returns the list of projects for a given workspace.

@@ -95,7 +95,6 @@ defmodule Mix.Tasks.StepLinter.Rules.FileTooLong do
   5. **Aim for 150-450 lines per file**
   6. **Run tests after each split** to verify nothing broke
   """
-  use Boundary, top_level?: true
 
   @behaviour Mix.Tasks.StepLinter.Rule
 

@@ -92,7 +92,7 @@ defmodule Jarga.Workspaces.WorkspaceNotifierTest do
   describe "deliver_invitation_to_existing_user/4" do
     test "sends invitation email to existing user" do
       inviter = user_fixture(%{first_name: "Alice", last_name: "Johnson"})
-      existing_user = user_fixture(%{first_name: "Bob", email: "bob@example.com"})
+      existing_user = user_fixture(%{first_name: "Bob"})
       workspace = workspace_fixture(inviter, %{name: "Collaboration Space"})
       workspace_url = "http://example.com/workspaces/123"
 
@@ -104,7 +104,7 @@ defmodule Jarga.Workspaces.WorkspaceNotifierTest do
                  workspace_url
                )
 
-      assert email.to == [{"", "bob@example.com"}]
+      assert email.to == [{"", existing_user.email}]
       assert email.from == {"Jarga", "contact@example.com"}
       assert email.subject == "You've been invited to Collaboration Space"
       assert email.text_body =~ "Hi Bob"

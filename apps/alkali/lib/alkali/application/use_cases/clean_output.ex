@@ -8,6 +8,8 @@ defmodule Alkali.Application.UseCases.CleanOutput do
   Dependencies are injected via the `opts` keyword list.
   """
 
+  alias Alkali.Infrastructure.FileSystem
+
   @doc """
   Executes the clean output use case.
 
@@ -42,6 +44,6 @@ defmodule Alkali.Application.UseCases.CleanOutput do
 
   # Default implementation delegating to infrastructure
   defp default_file_system({:rm_rf, path}) do
-    Alkali.Infrastructure.FileSystem.rm_rf(path)
+    FileSystem.rm_rf(path)
   end
 end

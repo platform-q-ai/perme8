@@ -20,6 +20,7 @@ defmodule AgentSetupSteps do
   import Jarga.DocumentsFixtures
 
   alias Ecto.Adapters.SQL.Sandbox
+  alias Jarga.Accounts
 
   # ============================================================================
   # BACKGROUND SETUP STEPS (Sandbox checkout)
@@ -305,7 +306,12 @@ defmodule AgentSetupSteps do
 
   step "another user is {string}", %{args: [name]} = context do
     email = "#{String.downcase(name)}@example.com"
-    other_user = user_fixture(%{email: email, first_name: name})
+
+    other_user =
+      case Accounts.get_user_by_email(email) do
+        nil -> user_fixture(%{email: email, first_name: name})
+        existing_user -> existing_user
+      end
 
     users = Map.get(context, :users, %{})
 

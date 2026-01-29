@@ -6,8 +6,6 @@ defmodule Jarga.Agents.Domain.Entities.WorkspaceAgentJoin do
   For database operations, use Jarga.Agents.Infrastructure.Schemas.WorkspaceAgentJoinSchema.
   """
 
-  alias Jarga.Agents.Infrastructure.Schemas.WorkspaceAgentJoinSchema
-
   @type t :: %__MODULE__{
           id: String.t() | nil,
           workspace_id: String.t(),
@@ -25,12 +23,6 @@ defmodule Jarga.Agents.Domain.Entities.WorkspaceAgentJoin do
   ]
 
   @doc """
-  Creates a changeset for workspace_agent join record.
-  Delegates to WorkspaceAgentJoinSchema for Ecto operations.
-  """
-  defdelegate changeset(workspace_agent_join, attrs), to: WorkspaceAgentJoinSchema
-
-  @doc """
   Creates a new WorkspaceAgentJoin domain entity.
 
   ## Examples
@@ -43,20 +35,20 @@ defmodule Jarga.Agents.Domain.Entities.WorkspaceAgentJoin do
   end
 
   @doc """
-  Converts an Ecto schema to a domain entity.
+  Converts an Ecto schema (or any map/struct with matching fields) to a domain entity.
 
   ## Examples
 
-      iex> from_schema(%WorkspaceAgentJoinSchema{...})
-      %WorkspaceAgentJoin{...}
+      iex> from_schema(%{id: "123", workspace_id: "ws-1", agent_id: "ag-1"})
+      %WorkspaceAgentJoin{id: "123", workspace_id: "ws-1", agent_id: "ag-1"}
   """
-  def from_schema(%{__struct__: _} = schema) do
+  def from_schema(schema) do
     %__MODULE__{
-      id: schema.id,
-      workspace_id: schema.workspace_id,
-      agent_id: schema.agent_id,
-      inserted_at: schema.inserted_at,
-      updated_at: schema.updated_at
+      id: Map.get(schema, :id),
+      workspace_id: Map.get(schema, :workspace_id),
+      agent_id: Map.get(schema, :agent_id),
+      inserted_at: Map.get(schema, :inserted_at),
+      updated_at: Map.get(schema, :updated_at)
     }
   end
 end

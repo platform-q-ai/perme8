@@ -5,7 +5,6 @@ defmodule Mix.Tasks.StepLinter.Parser do
   This module reads Elixir source files and extracts step macro calls,
   returning structured data about each step definition.
   """
-  use Boundary, top_level?: true
 
   @doc """
   Parses a step definition file and returns a list of step definitions.

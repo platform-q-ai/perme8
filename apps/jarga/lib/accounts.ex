@@ -150,12 +150,17 @@ defmodule Jarga.Accounts do
   Checks whether the user is in sudo mode.
 
   The user is in sudo mode when the last authentication was done no further
-  than 20 minutes ago. The limit can be given as second argument in minutes.
+  than 20 minutes ago. The limit can be customized via options.
+
+  ## Options
+
+    - `:minutes` - Time limit in minutes (default: -20, meaning 20 minutes ago)
+    - `:current_time` - Current DateTime for comparison (default: DateTime.utc_now())
 
   Delegates to `AuthenticationPolicy.sudo_mode?/2`.
   """
-  def sudo_mode?(user, minutes \\ -20) do
-    AuthenticationPolicy.sudo_mode?(user, minutes)
+  def sudo_mode?(user, opts \\ []) do
+    AuthenticationPolicy.sudo_mode?(user, opts)
   end
 
   @doc """

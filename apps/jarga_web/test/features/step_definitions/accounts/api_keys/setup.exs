@@ -14,6 +14,7 @@ defmodule Accounts.ApiKeys.SetupSteps do
 
   alias Jarga.Accounts
   alias Jarga.Accounts.ApiKeys.Helpers
+  alias Jarga.Accounts.Infrastructure.Repositories.ApiKeyRepository
 
   # ============================================================================
   # WORKSPACE SETUP STEPS
@@ -28,14 +29,17 @@ defmodule Accounts.ApiKeys.SetupSteps do
     workspaces =
       Enum.reduce(table_data, %{}, fn row, acc ->
         name = row["Name"]
-        slug = row["Slug"]
+        requested_slug = row["Slug"]
         owner_email = row["Owner"]
 
         owner = Map.get(users, owner_email) || raise "Owner #{owner_email} not found in users"
 
-        workspace = workspace_fixture(owner, %{name: name, slug: slug})
+        workspace = workspace_fixture(owner, %{name: name, slug: requested_slug})
 
-        Map.put(acc, slug, workspace)
+        # Store by REQUESTED slug (from feature file) so step definitions can look up
+        # by the feature file's slug. This works because each scenario runs in its
+        # own sandbox transaction, so slug conflicts only happen within the same scenario.
+        Map.put(acc, requested_slug, workspace)
       end)
 
     # Return context directly for data table steps
@@ -51,6 +55,9 @@ defmodule Accounts.ApiKeys.SetupSteps do
   step "I have the following API keys:", context do
     user = context[:current_user]
     table_data = context.datatable.maps
+
+    # Delete all existing API keys for this user to ensure clean state
+    delete_all_api_keys_for_user(user.id)
 
     api_keys =
       Enum.map(table_data, fn row ->
@@ -71,6 +78,11 @@ defmodule Accounts.ApiKeys.SetupSteps do
 
     # Return context directly for data table steps
     Map.put(context, :api_keys, api_keys)
+  end
+
+  # Delete all API keys for a user (test cleanup helper)
+  defp delete_all_api_keys_for_user(user_id) do
+    ApiKeyRepository.delete_by_user_id(Jarga.Repo, user_id)
   end
 
   step "I have an API key named {string}", %{args: [name]} = context do

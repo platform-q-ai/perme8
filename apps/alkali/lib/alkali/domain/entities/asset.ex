@@ -30,23 +30,6 @@ defmodule Alkali.Domain.Entities.Asset do
   end
 
   @doc """
-  Calculates SHA256 fingerprint from content.
-
-  Returns a 64-character hexadecimal string.
-
-  Delegates to the infrastructure layer for cryptographic operations.
-
-  ## Examples
-
-      iex> Asset.calculate_fingerprint("body { margin: 0; }")
-      "a1b2c3d4..."
-  """
-  @spec calculate_fingerprint(binary()) :: String.t()
-  def calculate_fingerprint(content) do
-    Alkali.Infrastructure.CryptoService.sha256_fingerprint(content)
-  end
-
-  @doc """
   Adds fingerprint to asset and updates output path.
 
   Inserts fingerprint before file extension in output path.

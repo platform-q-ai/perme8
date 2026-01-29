@@ -19,6 +19,22 @@ defmodule Jarga.Workspaces.Api.Helpers do
   end
 
   @doc """
+  Builds a connection with sandbox metadata header for API tests.
+
+  This is critical for API tests using Phoenix.ConnTest - without the sandbox
+  metadata header, the API endpoint runs in a different DB connection and
+  can't see data created in the test process.
+  """
+  def build_conn_with_sandbox do
+    # Get sandbox metadata for the test process
+    metadata = Phoenix.Ecto.SQL.Sandbox.metadata_for(Jarga.Repo, self())
+    encoded_metadata = Phoenix.Ecto.SQL.Sandbox.encode_metadata(metadata)
+
+    Phoenix.ConnTest.build_conn()
+    |> Plug.Conn.put_req_header("user-agent", encoded_metadata)
+  end
+
+  @doc """
   Parses workspace access from comma-separated string.
   """
   def parse_workspace_access(nil), do: []

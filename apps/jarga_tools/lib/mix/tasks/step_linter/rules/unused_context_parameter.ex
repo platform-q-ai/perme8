@@ -38,7 +38,6 @@ defmodule Mix.Tasks.StepLinter.Rules.UnusedContextParameter do
   end
   ```
   """
-  use Boundary, top_level?: true
 
   @behaviour Mix.Tasks.StepLinter.Rule
 

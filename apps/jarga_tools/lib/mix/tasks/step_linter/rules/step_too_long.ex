@@ -48,7 +48,6 @@ defmodule Mix.Tasks.StepLinter.Rules.StepTooLong do
 
   Default maximum lines: 25
   """
-  use Boundary, top_level?: true
 
   @behaviour Mix.Tasks.StepLinter.Rule
 

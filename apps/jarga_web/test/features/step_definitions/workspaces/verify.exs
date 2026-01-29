@@ -37,10 +37,34 @@ defmodule Workspaces.VerifySteps do
   end
 
   step "I should not see {string} in the workspace list", %{args: [workspace_name]} = context do
-    html = context[:last_html]
-    name_escaped = Phoenix.HTML.html_escape(workspace_name) |> Phoenix.HTML.safe_to_string()
-    refute html =~ name_escaped, "Expected NOT to see '#{workspace_name}' in workspace list"
-    {:ok, context}
+    # Re-render the view to get the latest HTML state after deletion
+    view = context[:view]
+
+    html =
+      if view do
+        Phoenix.LiveViewTest.render(view)
+      else
+        context[:last_html]
+      end
+
+    # Get the specific workspace that was being tested (from context)
+    # This is more reliable than checking by name since users may have multiple
+    # workspaces with the same name due to test isolation issues
+    workspace = context[:workspace]
+
+    if workspace do
+      # Check for the specific workspace by its slug in href
+      workspace_slug = workspace.slug
+
+      refute html =~ ~s(href="/app/workspaces/#{workspace_slug}"),
+             "Expected NOT to see workspace with slug '#{workspace_slug}' in workspace list"
+    else
+      # Fallback to original behavior if no workspace in context
+      name_escaped = Phoenix.HTML.html_escape(workspace_name) |> Phoenix.HTML.safe_to_string()
+      refute html =~ name_escaped, "Expected NOT to see '#{workspace_name}' in workspace list"
+    end
+
+    {:ok, Map.put(context, :last_html, html)}
   end
 
   # ============================================================================

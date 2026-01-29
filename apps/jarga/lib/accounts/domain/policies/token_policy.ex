@@ -47,6 +47,7 @@ defmodule Jarga.Accounts.Domain.Policies.TokenPolicy do
   ## Parameters
 
     - timestamp: DateTime when the token was created
+    - current_time: Current DateTime for comparison (default: DateTime.utc_now())
 
   ## Returns
 
@@ -54,17 +55,19 @@ defmodule Jarga.Accounts.Domain.Policies.TokenPolicy do
 
   ## Examples
 
-      iex> old = DateTime.utc_now() |> DateTime.add(-15, :day)
-      iex> TokenPolicy.session_token_expired?(old)
+      iex> now = ~U[2024-01-15 12:00:00Z]
+      iex> old = ~U[2024-01-01 12:00:00Z]
+      iex> TokenPolicy.session_token_expired?(old, now)
       true
 
-      iex> recent = DateTime.utc_now() |> DateTime.add(-5, :day)
-      iex> TokenPolicy.session_token_expired?(recent)
+      iex> now = ~U[2024-01-15 12:00:00Z]
+      iex> recent = ~U[2024-01-10 12:00:00Z]
+      iex> TokenPolicy.session_token_expired?(recent, now)
       false
 
   """
-  def session_token_expired?(timestamp) do
-    cutoff = DateTime.utc_now() |> DateTime.add(-@session_validity_in_days, :day)
+  def session_token_expired?(timestamp, current_time \\ DateTime.utc_now()) do
+    cutoff = DateTime.add(current_time, -@session_validity_in_days, :day)
     DateTime.compare(timestamp, cutoff) == :lt
   end
 
@@ -74,6 +77,7 @@ defmodule Jarga.Accounts.Domain.Policies.TokenPolicy do
   ## Parameters
 
     - timestamp: DateTime when the token was created
+    - current_time: Current DateTime for comparison (default: DateTime.utc_now())
 
   ## Returns
 
@@ -81,17 +85,19 @@ defmodule Jarga.Accounts.Domain.Policies.TokenPolicy do
 
   ## Examples
 
-      iex> old = DateTime.utc_now() |> DateTime.add(-20, :minute)
-      iex> TokenPolicy.magic_link_token_expired?(old)
+      iex> now = ~U[2024-01-15 12:00:00Z]
+      iex> old = ~U[2024-01-15 11:30:00Z]
+      iex> TokenPolicy.magic_link_token_expired?(old, now)
       true
 
-      iex> recent = DateTime.utc_now() |> DateTime.add(-10, :minute)
-      iex> TokenPolicy.magic_link_token_expired?(recent)
+      iex> now = ~U[2024-01-15 12:00:00Z]
+      iex> recent = ~U[2024-01-15 11:50:00Z]
+      iex> TokenPolicy.magic_link_token_expired?(recent, now)
       false
 
   """
-  def magic_link_token_expired?(timestamp) do
-    cutoff = DateTime.utc_now() |> DateTime.add(-@magic_link_validity_in_minutes, :minute)
+  def magic_link_token_expired?(timestamp, current_time \\ DateTime.utc_now()) do
+    cutoff = DateTime.add(current_time, -@magic_link_validity_in_minutes, :minute)
     DateTime.compare(timestamp, cutoff) == :lt
   end
 
@@ -101,6 +107,7 @@ defmodule Jarga.Accounts.Domain.Policies.TokenPolicy do
   ## Parameters
 
     - timestamp: DateTime when the token was created
+    - current_time: Current DateTime for comparison (default: DateTime.utc_now())
 
   ## Returns
 
@@ -108,17 +115,19 @@ defmodule Jarga.Accounts.Domain.Policies.TokenPolicy do
 
   ## Examples
 
-      iex> old = DateTime.utc_now() |> DateTime.add(-8, :day)
-      iex> TokenPolicy.change_email_token_expired?(old)
+      iex> now = ~U[2024-01-15 12:00:00Z]
+      iex> old = ~U[2024-01-07 12:00:00Z]
+      iex> TokenPolicy.change_email_token_expired?(old, now)
       true
 
-      iex> recent = DateTime.utc_now() |> DateTime.add(-3, :day)
-      iex> TokenPolicy.change_email_token_expired?(recent)
+      iex> now = ~U[2024-01-15 12:00:00Z]
+      iex> recent = ~U[2024-01-12 12:00:00Z]
+      iex> TokenPolicy.change_email_token_expired?(recent, now)
       false
 
   """
-  def change_email_token_expired?(timestamp) do
-    cutoff = DateTime.utc_now() |> DateTime.add(-@change_email_validity_in_days, :day)
+  def change_email_token_expired?(timestamp, current_time \\ DateTime.utc_now()) do
+    cutoff = DateTime.add(current_time, -@change_email_validity_in_days, :day)
     DateTime.compare(timestamp, cutoff) == :lt
   end
 end

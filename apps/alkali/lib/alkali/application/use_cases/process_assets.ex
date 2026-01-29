@@ -5,6 +5,8 @@ defmodule Alkali.Application.UseCases.ProcessAssets do
   """
 
   alias Alkali.Domain.Entities.Asset
+  alias Alkali.Infrastructure.CryptoService
+  alias Alkali.Infrastructure.FileSystem
 
   @doc """
   Processes a list of assets by minifying, fingerprinting, and tracking mappings.
@@ -12,6 +14,7 @@ defmodule Alkali.Application.UseCases.ProcessAssets do
   ## Options
 
   - `:file_reader` - Function to read file contents (for testing)
+  - `:crypto_service` - Module for cryptographic operations (for testing)
 
   ## Returns
 
@@ -22,10 +25,11 @@ defmodule Alkali.Application.UseCases.ProcessAssets do
           {:ok, %{assets: list(Asset.t()), mappings: map()}} | {:error, String.t()}
   def execute(assets, opts \\ []) do
     file_reader = Keyword.get(opts, :file_reader, &default_file_reader/1)
+    crypto_service = Keyword.get(opts, :crypto_service, CryptoService)
 
     results =
       Enum.map(assets, fn asset_map ->
-        process_single_asset(asset_map, file_reader)
+        process_single_asset(asset_map, file_reader, crypto_service)
       end)
 
     # Check for errors
@@ -73,7 +77,7 @@ defmodule Alkali.Application.UseCases.ProcessAssets do
     "/" <> String.replace_prefix(output_path, "_site/", "")
   end
 
-  defp process_single_asset(asset_map, file_reader) do
+  defp process_single_asset(asset_map, file_reader, crypto_service) do
     original_path = asset_map.original_path
     output_path = asset_map.output_path
     type = asset_map.type
@@ -95,8 +99,8 @@ defmodule Alkali.Application.UseCases.ProcessAssets do
           # Minify content for CSS/JS
           minified_content = minify_content(content, type)
 
-          # Generate fingerprint
-          fingerprint = Asset.calculate_fingerprint(minified_content)
+          # Generate fingerprint using injected crypto service
+          fingerprint = crypto_service.sha256_fingerprint(minified_content)
 
           # Create Asset entity with fingerprint and content
           asset =
@@ -139,6 +143,6 @@ defmodule Alkali.Application.UseCases.ProcessAssets do
   # Default implementation delegating to infrastructure
 
   defp default_file_reader(path) do
-    Alkali.Infrastructure.FileSystem.read(path)
+    FileSystem.read(path)
   end
 end

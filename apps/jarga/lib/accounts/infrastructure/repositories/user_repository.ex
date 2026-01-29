@@ -159,7 +159,13 @@ defmodule Jarga.Accounts.Infrastructure.Repositories.UserRepository do
 
   def update(%UserSchema{} = user_schema, attrs, repo) when is_map(attrs) do
     case user_schema
-         |> Ecto.Changeset.cast(attrs, [:first_name, :last_name, :email, :hashed_password])
+         |> Ecto.Changeset.cast(attrs, [
+           :first_name,
+           :last_name,
+           :email,
+           :hashed_password,
+           :confirmed_at
+         ])
          |> Ecto.Changeset.validate_required([:email])
          |> repo.update() do
       {:ok, schema} -> {:ok, User.from_schema(schema)}

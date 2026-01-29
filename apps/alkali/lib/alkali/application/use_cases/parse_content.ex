@@ -5,6 +5,7 @@ defmodule Alkali.Application.UseCases.ParseContent do
 
   alias Alkali.Domain.Entities.Page
   alias Alkali.Domain.Policies.{SlugPolicy, UrlPolicy, FrontmatterPolicy}
+  alias Alkali.Infrastructure.FileSystem
 
   @doc """
   Parses content files and generates Page entities.
@@ -151,7 +152,7 @@ defmodule Alkali.Application.UseCases.ParseContent do
   # Default implementations
 
   defp default_content_loader(path) do
-    Alkali.Infrastructure.FileSystem.load_markdown_files(path)
+    FileSystem.load_markdown_files(path)
   end
 
   defp default_frontmatter_parser(content) do

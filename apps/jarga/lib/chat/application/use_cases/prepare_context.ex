@@ -18,8 +18,15 @@ defmodule Jarga.Chat.Application.UseCases.PrepareContext do
       {:ok, %{current_workspace: "ACME", ...}}
   """
 
+  @default_max_content_chars 3000
+
   @doc """
   Extracts chat context from LiveView assigns.
+
+  ## Parameters
+    - assigns: LiveView assigns map
+    - opts: Keyword list of options
+      - `:max_content_chars` - Maximum characters for document content (default: 3000)
 
   Returns `{:ok, context}` where context is a map containing:
   - `current_user` - User email
@@ -29,13 +36,15 @@ defmodule Jarga.Chat.Application.UseCases.PrepareContext do
   - `document_content` - Document markdown content (truncated)
   - `document_info` - Document metadata for citations (%{document_title, document_url})
   """
-  def execute(assigns) do
+  def execute(assigns, opts \\ []) do
+    max_chars = Keyword.get(opts, :max_content_chars, @default_max_content_chars)
+
     context = %{
       current_user: get_nested(assigns, [:current_user, :email]),
       current_workspace: get_nested(assigns, [:current_workspace, :name]),
       current_project: get_nested(assigns, [:current_project, :name]),
       document_title: assigns[:document_title],
-      document_content: extract_document_content(assigns),
+      document_content: extract_document_content(assigns, max_chars),
       document_info: extract_document_info(assigns)
     }
 
@@ -135,13 +144,11 @@ defmodule Jarga.Chat.Application.UseCases.PrepareContext do
 
   # Private functions
 
-  defp extract_document_content(assigns) do
+  defp extract_document_content(assigns, max_chars) do
     # Check if we have a note (document content)
     # note_content is now plain text markdown
     case get_nested(assigns, [:note, :note_content]) do
       content when is_binary(content) and content != "" ->
-        # Get max chars from config, defaulting to 3000
-        max_chars = Application.get_env(:jarga, :chat_context)[:max_content_chars] || 3000
         String.slice(content, 0, max_chars)
 
       _ ->

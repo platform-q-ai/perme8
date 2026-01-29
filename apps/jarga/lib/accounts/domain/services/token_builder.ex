@@ -30,6 +30,8 @@ defmodule Jarga.Accounts.Domain.Services.TokenBuilder do
   ## Parameters
 
   - `user` - User struct with id and optional authenticated_at
+  - `opts` - Keyword list of options
+    - `:current_time` - DateTime to use if user has no authenticated_at (default: DateTime.utc_now())
 
   ## Returns
 
@@ -45,9 +47,10 @@ defmodule Jarga.Accounts.Domain.Services.TokenBuilder do
       iex> user_token.context
       "session"
   """
-  def build_session_token(user) do
+  def build_session_token(user, opts \\ []) do
     token = TokenGenerator.generate_random_token()
-    dt = user.authenticated_at || DateTime.utc_now(:second)
+    current_time = Keyword.get(opts, :current_time, DateTime.utc_now(:second))
+    dt = user.authenticated_at || current_time
 
     {token,
      %UserTokenSchema{

@@ -31,8 +31,6 @@ defmodule Mix.Tasks.Alkali.New.Post do
 
   use Mix.Task
 
-  alias Alkali.Application.UseCases.CreateNewPost
-
   @impl true
   def run(args) do
     {options, positional_args, _} =
@@ -46,8 +44,8 @@ defmodule Mix.Tasks.Alkali.New.Post do
         # Get site path from --path option or use current directory
         site_path = Keyword.get(options, :path, ".")
 
-        # Delegate to use case with site_path
-        case CreateNewPost.execute(title, site_path: site_path) do
+        # Delegate to public API
+        case Alkali.new_post(title, site_path: site_path) do
           {:ok, %{file_path: file_path}} ->
             Mix.shell().info([
               :green,
@@ -63,7 +61,7 @@ defmodule Mix.Tasks.Alkali.New.Post do
 
       [title, site_path] ->
         # Support positional site_path argument
-        case CreateNewPost.execute(title, site_path: site_path) do
+        case Alkali.new_post(title, site_path: site_path) do
           {:ok, %{file_path: file_path}} ->
             Mix.shell().info([
               :green,

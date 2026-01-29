@@ -92,7 +92,6 @@ defmodule Mix.Tasks.StepLinter.Rules.NoBranching do
 
   This rule focuses on context-dependent branching that changes step behavior.
   """
-  use Boundary, top_level?: true
 
   @behaviour Mix.Tasks.StepLinter.Rule
 

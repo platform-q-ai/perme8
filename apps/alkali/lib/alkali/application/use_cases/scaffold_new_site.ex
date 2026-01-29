@@ -6,6 +6,8 @@ defmodule Alkali.Application.UseCases.ScaffoldNewSite do
   needed to start a new static site.
   """
 
+  alias Alkali.Infrastructure.FileSystem
+
   @doc """
   Creates a new static site with directory structure and example files.
 
@@ -31,10 +33,11 @@ defmodule Alkali.Application.UseCases.ScaffoldNewSite do
     target_path = Keyword.get(opts, :target_path, ".")
     dir_creator = Keyword.get(opts, :dir_creator, &default_dir_creator/1)
     file_writer = Keyword.get(opts, :file_writer, &default_file_writer/2)
+    file_system = Keyword.get(opts, :file_system, Alkali.Infrastructure.FileSystem)
 
     site_root = Path.join(target_path, site_name)
 
-    if File.exists?(site_root) do
+    if file_system.exists?(site_root) do
       {:error, "Directory '#{site_name}' already exists"}
     else
       do_scaffold(site_root, site_name, opts, dir_creator, file_writer)
@@ -1542,10 +1545,10 @@ defmodule Alkali.Application.UseCases.ScaffoldNewSite do
   # Default implementations delegating to infrastructure
 
   defp default_dir_creator(path) do
-    Alkali.Infrastructure.FileSystem.mkdir_p_with_path(path)
+    FileSystem.mkdir_p_with_path(path)
   end
 
   defp default_file_writer(path, content) do
-    Alkali.Infrastructure.FileSystem.write_with_path(path, content)
+    FileSystem.write_with_path(path, content)
   end
 end
