@@ -1,4 +1,4 @@
-defmodule Jarga.Credo.Check.Architecture.NoDirectRepoInUseCases do
+defmodule Credo.Check.Custom.Architecture.NoDirectRepoInUseCases do
   @moduledoc """
   Ensures use cases don't directly use Repo - they should delegate to repositories.
 

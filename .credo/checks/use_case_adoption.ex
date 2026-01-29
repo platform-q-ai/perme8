@@ -1,4 +1,4 @@
-defmodule Jarga.Credo.Check.Architecture.UseCaseAdoption do
+defmodule Credo.Check.Custom.Architecture.UseCaseAdoption do
   @moduledoc """
   Detects complex orchestration logic in context modules that should be extracted to use cases.
 

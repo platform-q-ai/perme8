@@ -1,4 +1,4 @@
-defmodule Jarga.Credo.Check.Testing.DomainTestPurity do
+defmodule Credo.Check.Custom.Testing.DomainTestPurity do
   @moduledoc """
   Detects domain tests that incorrectly use DataCase instead of pure ExUnit.Case.
 

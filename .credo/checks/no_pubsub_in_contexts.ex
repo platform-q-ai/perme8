@@ -1,4 +1,4 @@
-defmodule Jarga.Credo.Check.Architecture.NoPubSubInContexts do
+defmodule Credo.Check.Custom.Architecture.NoPubSubInContexts do
   @moduledoc """
   Detects direct PubSub broadcasting in context modules.
 

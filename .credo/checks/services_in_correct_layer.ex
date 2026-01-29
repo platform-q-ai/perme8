@@ -1,4 +1,4 @@
-defmodule Jarga.Credo.Check.Architecture.ServicesInCorrectLayer do
+defmodule Credo.Check.Custom.Architecture.ServicesInCorrectLayer do
   @moduledoc """
   Ensures service modules are in the correct layer based on their responsibility.
 
@@ -30,7 +30,7 @@ defmodule Jarga.Credo.Check.Architecture.ServicesInCorrectLayer do
 
   ## Configuration
 
-      {Jarga.Credo.Check.Architecture.ServicesInCorrectLayer, []}
+      {Credo.Check.Custom.Architecture.ServicesInCorrectLayer, []}
 
   """
 

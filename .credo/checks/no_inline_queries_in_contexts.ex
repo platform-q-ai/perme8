@@ -1,4 +1,4 @@
-defmodule Jarga.Credo.Check.Architecture.NoInlineQueriesInContexts do
+defmodule Credo.Check.Custom.Architecture.NoInlineQueriesInContexts do
   @moduledoc """
   Detects inline Ecto queries in context modules that should be extracted to Query objects.
 

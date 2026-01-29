@@ -1,4 +1,4 @@
-defmodule Jarga.Credo.Check.Architecture.EntitiesInDomainLayer do
+defmodule Credo.Check.Custom.Architecture.EntitiesInDomainLayer do
   @moduledoc """
   Ensures all Ecto schemas (domain entities) are located in `domain/entities/` subdirectory.
 
@@ -24,7 +24,7 @@ defmodule Jarga.Credo.Check.Architecture.EntitiesInDomainLayer do
 
   ## Configuration
 
-      {Jarga.Credo.Check.Architecture.EntitiesInDomainLayer, []}
+      {Credo.Check.Custom.Architecture.EntitiesInDomainLayer, []}
 
   """
 

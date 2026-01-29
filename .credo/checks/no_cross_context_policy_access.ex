@@ -1,4 +1,4 @@
-defmodule Jarga.Credo.Check.Architecture.NoCrossContextPolicyAccess do
+defmodule Credo.Check.Custom.Architecture.NoCrossContextPolicyAccess do
   @moduledoc """
   Detects direct access to Policy modules across context boundaries.
 

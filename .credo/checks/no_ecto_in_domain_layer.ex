@@ -1,4 +1,4 @@
-defmodule Jarga.Credo.Check.Architecture.NoEctoInDomainLayer do
+defmodule Credo.Check.Custom.Architecture.NoEctoInDomainLayer do
   @moduledoc """
   Ensures domain layer modules don't depend on Ecto (infrastructure concern).
 

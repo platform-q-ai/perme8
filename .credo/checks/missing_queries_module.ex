@@ -1,4 +1,4 @@
-defmodule Jarga.Credo.Check.Architecture.MissingQueriesModule do
+defmodule Credo.Check.Custom.Architecture.MissingQueriesModule do
   @moduledoc """
   Detects context modules that are missing a corresponding Queries module.
 

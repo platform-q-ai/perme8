@@ -1,4 +1,4 @@
-defmodule Jarga.Credo.Check.Architecture.NoIoInDomainServices do
+defmodule Credo.Check.Custom.Architecture.NoIoInDomainServices do
   @moduledoc """
   Ensures domain services contain only pure business logic with no I/O operations.
 

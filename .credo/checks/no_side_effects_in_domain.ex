@@ -1,4 +1,4 @@
-defmodule Jarga.Credo.Check.Architecture.NoSideEffectsInDomain do
+defmodule Credo.Check.Custom.Architecture.NoSideEffectsInDomain do
   @moduledoc """
   Detects side effects in domain entities (password hashing, crypto operations).
 

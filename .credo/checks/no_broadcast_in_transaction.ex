@@ -1,4 +1,4 @@
-defmodule Jarga.Credo.Check.Architecture.NoBroadcastInTransaction do
+defmodule Credo.Check.Custom.Architecture.NoBroadcastInTransaction do
   @moduledoc """
   Detects PubSub broadcasts inside database transaction blocks.
 

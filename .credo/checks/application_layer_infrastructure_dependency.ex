@@ -1,4 +1,4 @@
-defmodule Jarga.Credo.Check.Architecture.ApplicationLayerInfrastructureDependency do
+defmodule Credo.Check.Custom.Architecture.ApplicationLayerInfrastructureDependency do
   @moduledoc """
   Detects infrastructure concerns (I/O operations) in the application layer.
 

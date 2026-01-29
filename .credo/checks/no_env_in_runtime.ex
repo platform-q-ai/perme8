@@ -1,4 +1,4 @@
-defmodule Jarga.Credo.Check.Architecture.NoEnvInRuntime do
+defmodule Credo.Check.Custom.Architecture.NoEnvInRuntime do
   @moduledoc """
   Detects runtime System.get_env calls that should use Application config.
 

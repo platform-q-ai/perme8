@@ -1,4 +1,4 @@
-defmodule Jarga.Credo.Check.Architecture.UseCasesInApplicationLayer do
+defmodule Credo.Check.Custom.Architecture.UseCasesInApplicationLayer do
   @moduledoc """
   Ensures all use case modules are located in `application/use_cases/` subdirectory.
 
@@ -24,7 +24,7 @@ defmodule Jarga.Credo.Check.Architecture.UseCasesInApplicationLayer do
 
   ## Configuration
 
-      {Jarga.Credo.Check.Architecture.UseCasesInApplicationLayer, []}
+      {Credo.Check.Custom.Architecture.UseCasesInApplicationLayer, []}
 
   """
 

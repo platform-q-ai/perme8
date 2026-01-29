@@ -1,4 +1,4 @@
-defmodule Jarga.Credo.Check.Architecture.NoDirectQueriesInUseCases do
+defmodule Credo.Check.Custom.Architecture.NoDirectQueriesInUseCases do
   @moduledoc """
   Detects direct Ecto queries in UseCase modules.
 
