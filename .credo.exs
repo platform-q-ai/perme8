@@ -84,7 +84,9 @@
         ".credo/checks/no_application_config_in_use_cases.ex",
         # Boundary library enforcement checks
         ".credo/checks/boundary_package_installed.ex",
-        ".credo/checks/architectural_layers_defined.ex"
+        ".credo/checks/architectural_layers_defined.ex",
+        ".credo/checks/boundary_enforcement_configured.ex",
+        ".credo/checks/clean_architecture_boundary_rules.ex"
       ],
       #
       # If you want to enforce a style guide and need a more traditional linting
@@ -291,10 +293,12 @@
           #
           ## Boundary Library Enforcement
           #
-          # Ensure boundary package is installed for compile-time architecture enforcement
-          {CredoChecks.CleanArchitecture.BoundaryPackageInstalled, []},
-          # Ensure architectural layer definition files exist (domain.ex, application_layer.ex, etc.)
-          {CredoChecks.CleanArchitecture.ArchitecturalLayersDefined, []},
+          # Comprehensive check: verifies boundary package, compiler, and usage
+          # This replaces separate checks for package installation and layer files
+          {CredoChecks.CleanArchitecture.BoundaryEnforcementConfigured, []},
+          # Verifies that boundary `deps` follow Clean Architecture rules
+          # (Domain has no deps, Application only depends on Domain, etc.)
+          {CredoChecks.CleanArchitecture.BoundaryRules, []},
 
           #
           ## Custom Testing Checks (TDD Enforcement)

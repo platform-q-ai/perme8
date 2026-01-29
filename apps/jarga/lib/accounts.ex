@@ -37,21 +37,34 @@ defmodule Jarga.Accounts do
   """
 
   # Core context - cannot depend on JargaWeb (interface layer)
-  # Exports: Main context module and shared types (User, Scope, ApiKey)
-  # Internal modules (UserToken, UserNotifier) remain private
   # Note: Does NOT depend on Jarga.Workspaces to avoid dependency cycle.
   # Use cases in this context use dependency injection for cross-context calls.
+  #
+  # This context boundary contains three layer boundaries:
+  # - Jarga.Accounts.Domain (deps: [])
+  # - Jarga.Accounts.Application (deps: [Domain])
+  # - Jarga.Accounts.Infrastructure (deps: [Domain, Application, Repo, Mailer])
   use Boundary,
     top_level?: true,
-    deps: [Jarga.Repo, Jarga.Mailer],
+    deps: [
+      # Layer boundaries
+      Jarga.Accounts.Domain,
+      Jarga.Accounts.Application,
+      Jarga.Accounts.Infrastructure,
+      # Shared infrastructure (needed for direct Repo access in facade)
+      Jarga.Repo
+    ],
     exports: [
+      # Re-export from Domain layer
       {Domain.Entities.User, []},
       {Domain.Entities.ApiKey, []},
       {Domain.Scope, []},
-      {Application.Services.PasswordService, []},
-      {Application.Services.ApiKeyTokenService, []},
       {Domain.Services.TokenBuilder, []},
       {Domain.Policies.WorkspaceAccessPolicy, []},
+      # Re-export from Application layer
+      {Application.Services.PasswordService, []},
+      {Application.Services.ApiKeyTokenService, []},
+      # Re-export from Infrastructure layer (for external access)
       {Infrastructure.Schemas.UserSchema, []},
       {Infrastructure.Schemas.UserTokenSchema, []},
       {Infrastructure.Schemas.ApiKeySchema, []}

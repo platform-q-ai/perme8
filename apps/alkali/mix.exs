@@ -7,6 +7,7 @@ defmodule Alkali.MixProject do
       version: "0.1.0",
       elixir: "~> 1.19",
       start_permanent: Mix.env() == :prod,
+      compilers: [:boundary] ++ Mix.compilers(),
       deps: deps(),
       test_pattern: "*_test.exs",
       # Exclude .feature files from test pattern (Cucumber handles these)

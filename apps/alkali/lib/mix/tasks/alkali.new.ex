@@ -24,6 +24,7 @@ defmodule Mix.Tasks.Alkali.New do
   """
 
   use Mix.Task
+  use Boundary, top_level?: true, deps: [Alkali]
 
   @impl true
   def run(args) do

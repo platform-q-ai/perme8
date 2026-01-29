@@ -27,15 +27,8 @@ defmodule Alkali.Domain do
   - External libraries
   """
 
-  use Boundary,
-    deps: [],
-    exports: [
-      Entities.Asset,
-      Entities.Collection,
-      Entities.Page,
-      Entities.Site,
-      Policies.FrontmatterPolicy,
-      Policies.SlugPolicy,
-      Policies.UrlPolicy
-    ]
+  # Domain boundary is enforced by Alkali top-level boundary
+  # Dependency rules:
+  # - Domain has NO external dependencies
+  # - Domain is depended upon by Application and Infrastructure layers
 end
