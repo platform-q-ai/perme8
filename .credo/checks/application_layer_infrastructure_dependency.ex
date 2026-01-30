@@ -29,7 +29,7 @@ defmodule Credo.Check.Custom.Architecture.ApplicationLayerInfrastructureDependen
 
       # lib/jarga/agents/infrastructure/services/llm_client.ex
       defmodule Jarga.Agents.Infrastructure.Services.LlmClient do
-        @behaviour Jarga.Agents.Infrastructure.Services.Behaviours.LlmClientBehaviour
+        @behaviour Jarga.Agents.Application.Behaviours.LlmClientBehaviour
 
         def query(prompt) do
           HTTPoison.post(  # ✅ OK - Infrastructure layer

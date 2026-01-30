@@ -34,6 +34,7 @@ defmodule Perme8.MixProject do
         "deps.unlock --unused",
         "format --check-formatted",
         "credo --strict",
+        "check.behaviours",
         "step_linter",
         "assets.build",
         fn _ ->
