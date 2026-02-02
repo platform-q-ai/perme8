@@ -41,14 +41,21 @@ jobs:
           elixir-version: "1.18.1"
           otp-version: "27.2"
 
-      - name: Restore dependencies cache
+      - name: Restore deps cache
         uses: actions/cache@v4
         with:
-          path: |
-            deps
-            _build
-          key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
-          restore-keys: ${{ runner.os }}-mix-
+          path: deps
+          key: ${{ runner.os }}-deps-${{ hashFiles('**/mix.lock') }}
+          restore-keys: ${{ runner.os }}-deps-
+
+      - name: Restore build cache
+        uses: actions/cache@v4
+        with:
+          path: _build
+          key: ${{ runner.os }}-build-${{ hashFiles('**/mix.lock') }}-${{ hashFiles('apps/**/lib/**/*.ex', 'apps/**/mix.exs') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ hashFiles('**/mix.lock') }}-
+            ${{ runner.os }}-build-
 
       - name: Install dependencies
         run: mix deps.get
@@ -112,14 +119,21 @@ jobs:
           elixir-version: "1.18.1"
           otp-version: "27.2"
 
-      - name: Restore dependencies cache
+      - name: Restore deps cache
         uses: actions/cache@v4
         with:
-          path: |
-            deps
-            _build
-          key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
-          restore-keys: ${{ runner.os }}-mix-
+          path: deps
+          key: ${{ runner.os }}-deps-${{ hashFiles('**/mix.lock') }}
+          restore-keys: ${{ runner.os }}-deps-
+
+      - name: Restore build cache
+        uses: actions/cache@v4
+        with:
+          path: _build
+          key: ${{ runner.os }}-build-${{ hashFiles('**/mix.lock') }}-${{ hashFiles('apps/**/lib/**/*.ex', 'apps/**/mix.exs') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ hashFiles('**/mix.lock') }}-
+            ${{ runner.os }}-build-
 
       - name: Install dependencies
         run: mix deps.get
