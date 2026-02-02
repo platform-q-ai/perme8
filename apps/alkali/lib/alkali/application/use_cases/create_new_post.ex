@@ -15,8 +15,9 @@ defmodule Alkali.Application.UseCases.CreateNewPost do
 
   - `:site_path` - Site root directory (defaults to current directory)
   - `:date` - Post date (defaults to today)
-  - `:file_writer` - Function for writing files (for testing)
-  - `:file_checker` - Function to check if file exists (for testing)
+  - `:file_system` - Module implementing file operations (defaults to Infrastructure.FileSystem)
+  - `:file_writer` - Function for writing files
+  - `:file_checker` - Function to check if file exists
 
   ## Returns
 
@@ -110,30 +111,8 @@ defmodule Alkali.Application.UseCases.CreateNewPost do
     end
   end
 
-  defp check_slug_pattern_exists(dir, slug, ext, file_checker, file_system) do
-    check_with_mock_dates(dir, slug, ext, file_checker) or
-      check_filesystem_for_slug(dir, slug, ext, file_system)
-  end
-
-  defp check_with_mock_dates(dir, slug, ext, file_checker) do
-    # Strategy 1: Try checking with file_checker (for testing with mocks)
-    dates = [
-      Date.utc_today(),
-      Date.add(Date.utc_today(), -1),
-      Date.add(Date.utc_today(), -7),
-      Date.add(Date.utc_today(), -30),
-      Date.add(Date.utc_today(), -365)
-    ]
-
-    Enum.any?(dates, fn date ->
-      date_str = Date.to_iso8601(date)
-      test_path = Path.join(dir, "#{date_str}-#{slug}#{ext}")
-      file_checker.(test_path)
-    end)
-  end
-
-  defp check_filesystem_for_slug(dir, slug, ext, file_system) do
-    # Strategy 2: Check real filesystem (for production use)
+  defp check_slug_pattern_exists(dir, slug, ext, _file_checker, file_system) do
+    # Check if any file with this slug pattern exists in the directory
     with true <- file_system.dir?(dir),
          {:ok, files} <- file_system.ls(dir) do
       pattern = ~r/^\d{4}-\d{2}-\d{2}-#{Regex.escape(slug)}#{Regex.escape(ext)}$/
