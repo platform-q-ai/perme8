@@ -2,6 +2,8 @@ defmodule Jarga.Accounts.Infrastructure.Repositories.ApiKeyRepository do
   @moduledoc """
   Repository for API key data access.
 
+  Implements `Jarga.Accounts.Application.Behaviours.ApiKeyRepositoryBehaviour`.
+
   This is a thin wrapper around Ecto.Repo for API key operations.
   Uses ApiKeyQueries for query construction and returns domain entities.
 
@@ -18,6 +20,8 @@ defmodule Jarga.Accounts.Infrastructure.Repositories.ApiKeyRepository do
 
   """
 
+  @behaviour Jarga.Accounts.Application.Behaviours.ApiKeyRepositoryBehaviour
+
   alias Jarga.Accounts.Infrastructure.Schemas.ApiKeySchema
   alias Jarga.Accounts.Infrastructure.Queries.ApiKeyQueries
 
@@ -31,14 +35,19 @@ defmodule Jarga.Accounts.Infrastructure.Repositories.ApiKeyRepository do
 
   ## Returns
 
-    `{:ok, schema}` on success
+    `{:ok, ApiKey.t()}` on success (domain entity)
     `{:error, changeset}` on validation error
 
   """
+  @impl true
   def insert(repo, attrs) do
     %ApiKeySchema{}
     |> ApiKeySchema.changeset(attrs)
     |> repo.insert()
+    |> case do
+      {:ok, schema} -> {:ok, ApiKeySchema.to_entity(schema)}
+      {:error, changeset} -> {:error, changeset}
+    end
   end
 
   @doc """
@@ -64,6 +73,7 @@ defmodule Jarga.Accounts.Infrastructure.Repositories.ApiKeyRepository do
     - `{:error, changeset}` on validation error
 
   """
+  @impl true
   def update(repo, api_key_id, attrs) when is_binary(api_key_id) do
     case repo.get(ApiKeySchema, api_key_id) do
       nil ->
@@ -96,6 +106,7 @@ defmodule Jarga.Accounts.Infrastructure.Repositories.ApiKeyRepository do
     `{:ok, ApiKey.t()}` on success
     `{:error, :not_found}` if not found
   """
+  @impl true
   def get_by_id(repo, id) do
     query = ApiKeyQueries.base() |> ApiKeyQueries.by_id(id)
 
@@ -118,6 +129,7 @@ defmodule Jarga.Accounts.Infrastructure.Repositories.ApiKeyRepository do
     `{:ok, ApiKey.t()}` on success
     `{:error, :not_found}` if not found
   """
+  @impl true
   def get_by_hashed_token(repo, hashed_token) do
     query = ApiKeyQueries.base() |> ApiKeyQueries.by_hashed_token(hashed_token)
 
@@ -139,6 +151,7 @@ defmodule Jarga.Accounts.Infrastructure.Repositories.ApiKeyRepository do
 
     `{:ok, [ApiKey.t()]}` - List of API keys
   """
+  @impl true
   def list_by_user_id(repo, user_id) do
     query =
       ApiKeyQueries.base()
@@ -160,6 +173,7 @@ defmodule Jarga.Accounts.Infrastructure.Repositories.ApiKeyRepository do
 
     `true` if exists, `false` otherwise
   """
+  @impl true
   def exists_by_id_and_hashed_token?(repo, id, hashed_token) do
     query =
       ApiKeyQueries.base()
@@ -167,5 +181,26 @@ defmodule Jarga.Accounts.Infrastructure.Repositories.ApiKeyRepository do
       |> ApiKeyQueries.by_hashed_token(hashed_token)
 
     repo.exists?(query)
+  end
+
+  @doc """
+  Deletes all API keys for a user.
+
+  ## Parameters
+
+    - `repo` - Ecto.Repo
+    - `user_id` - User ID whose API keys should be deleted
+
+  ## Returns
+
+    `{count, nil}` where count is the number of deleted records
+  """
+  @impl true
+  def delete_by_user_id(repo, user_id) do
+    query =
+      ApiKeyQueries.base()
+      |> ApiKeyQueries.by_user_id(user_id)
+
+    repo.delete_all(query)
   end
 end

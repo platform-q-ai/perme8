@@ -8,6 +8,8 @@ defmodule Jarga.Projects.Infrastructure.Repositories.AuthorizationRepository do
   For pure authorization business rules, see the domain policy modules.
   """
 
+  @behaviour Jarga.Projects.Application.Behaviours.AuthorizationRepositoryBehaviour
+
   alias Jarga.Accounts.Domain.Entities.User
   alias Jarga.Projects.Infrastructure.Queries.Queries
   alias Jarga.Workspaces
@@ -41,6 +43,7 @@ defmodule Jarga.Projects.Infrastructure.Repositories.AuthorizationRepository do
       {:error, :project_not_found}
 
   """
+  @impl true
   def verify_project_access(%User{} = user, workspace_id, project_id, repo \\ Repo) do
     case Queries.for_user_by_id(user, workspace_id, project_id) |> repo.one() do
       nil ->

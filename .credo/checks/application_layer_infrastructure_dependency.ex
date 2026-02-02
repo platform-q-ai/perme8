@@ -1,4 +1,4 @@
-defmodule Jarga.Credo.Check.Architecture.ApplicationLayerInfrastructureDependency do
+defmodule Credo.Check.Custom.Architecture.ApplicationLayerInfrastructureDependency do
   @moduledoc """
   Detects infrastructure concerns (I/O operations) in the application layer.
 
@@ -29,7 +29,7 @@ defmodule Jarga.Credo.Check.Architecture.ApplicationLayerInfrastructureDependenc
 
       # lib/jarga/agents/infrastructure/services/llm_client.ex
       defmodule Jarga.Agents.Infrastructure.Services.LlmClient do
-        @behaviour Jarga.Agents.Infrastructure.Services.Behaviours.LlmClientBehaviour
+        @behaviour Jarga.Agents.Application.Behaviours.LlmClientBehaviour
 
         def query(prompt) do
           HTTPoison.post(  # ✅ OK - Infrastructure layer

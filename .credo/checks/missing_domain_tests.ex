@@ -1,4 +1,4 @@
-defmodule Jarga.Credo.Check.Testing.MissingDomainTests do
+defmodule Credo.Check.Custom.Testing.MissingDomainTests do
   @moduledoc """
   Detects domain modules (policies, services) that are missing test coverage.
 

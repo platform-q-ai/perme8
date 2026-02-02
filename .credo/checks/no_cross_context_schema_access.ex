@@ -1,4 +1,4 @@
-defmodule Jarga.Credo.Check.Architecture.NoCrossContextSchemaAccess do
+defmodule Credo.Check.Custom.Architecture.NoCrossContextSchemaAccess do
   @moduledoc """
   Detects direct access to Schema modules across context boundaries.
 

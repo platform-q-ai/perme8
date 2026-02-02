@@ -8,6 +8,9 @@ defmodule Jarga.Agents.Infrastructure.Schemas.AgentSchema do
 
   Located in infrastructure layer as it's an Ecto-specific implementation detail.
   """
+
+  @behaviour Jarga.Agents.Application.Behaviours.AgentSchemaBehaviour
+
   use Ecto.Schema
   import Ecto.Changeset
 
@@ -65,6 +68,7 @@ defmodule Jarga.Agents.Infrastructure.Schemas.AgentSchema do
   - visibility (default: PRIVATE, values: PRIVATE | SHARED)
   - enabled (default: true)
   """
+  @impl true
   def changeset(agent, attrs) do
     agent
     |> cast(attrs, [

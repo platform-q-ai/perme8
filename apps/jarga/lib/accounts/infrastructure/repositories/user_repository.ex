@@ -19,6 +19,8 @@ defmodule Jarga.Accounts.Infrastructure.Repositories.UserRepository do
 
   """
 
+  @behaviour Jarga.Accounts.Application.Behaviours.UserRepositoryBehaviour
+
   import Ecto.Query, only: [from: 2]
 
   alias Jarga.Accounts.Domain.Entities.User
@@ -159,7 +161,13 @@ defmodule Jarga.Accounts.Infrastructure.Repositories.UserRepository do
 
   def update(%UserSchema{} = user_schema, attrs, repo) when is_map(attrs) do
     case user_schema
-         |> Ecto.Changeset.cast(attrs, [:first_name, :last_name, :email, :hashed_password])
+         |> Ecto.Changeset.cast(attrs, [
+           :first_name,
+           :last_name,
+           :email,
+           :hashed_password,
+           :confirmed_at
+         ])
          |> Ecto.Changeset.validate_required([:email])
          |> repo.update() do
       {:ok, schema} -> {:ok, User.from_schema(schema)}
@@ -186,6 +194,7 @@ defmodule Jarga.Accounts.Infrastructure.Repositories.UserRepository do
       {:ok, %User{}}
 
   """
+  @impl true
   def update_changeset(%Ecto.Changeset{} = changeset, repo \\ Repo) do
     case repo.update(changeset) do
       {:ok, schema} -> {:ok, User.from_schema(schema)}
@@ -212,6 +221,7 @@ defmodule Jarga.Accounts.Infrastructure.Repositories.UserRepository do
       {:ok, %User{}}
 
   """
+  @impl true
   def insert_changeset(%Ecto.Changeset{} = changeset, repo \\ Repo) do
     case repo.insert(changeset) do
       {:ok, schema} -> {:ok, User.from_schema(schema)}

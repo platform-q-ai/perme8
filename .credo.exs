@@ -29,7 +29,8 @@
           "apps/*/lib/",
           "apps/*/src/",
           "apps/*/test/",
-          "apps/*/web/"
+          "apps/*/web/",
+          "apps/*/mix.exs"
         ],
         excluded: [~r"/_build/", ~r"/deps/", ~r"/node_modules/"]
       },
@@ -72,7 +73,29 @@
         ".credo/checks/no_ecto_in_domain_layer.ex",
         ".credo/checks/no_direct_repo_in_use_cases.ex",
         ".credo/checks/application_layer_infrastructure_dependency.ex",
-        ".credo/checks/no_io_in_domain_services.ex"
+        ".credo/checks/no_io_in_domain_services.ex",
+        # Clean Architecture layer boundary checks
+        ".credo/checks/no_infrastructure_in_domain_entities.ex",
+        ".credo/checks/no_direct_file_operations_in_use_cases.ex",
+        ".credo/checks/interface_layer_uses_public_api.ex",
+        # Domain purity and testability checks
+        ".credo/checks/no_datetime_now_in_domain.ex",
+        ".credo/checks/no_infrastructure_schema_in_web.ex",
+        ".credo/checks/no_application_config_in_use_cases.ex",
+        # Boundary library enforcement checks
+        ".credo/checks/boundary_package_installed.ex",
+        ".credo/checks/architectural_layers_defined.ex",
+        ".credo/checks/boundary_enforcement_configured.ex",
+        ".credo/checks/clean_architecture_boundary_rules.ex",
+        # Infrastructure aliasing check
+        ".credo/checks/no_infrastructure_alias_in_application.ex",
+        # Additional Clean Architecture enforcement checks
+        ".credo/checks/infrastructure_uses_file_behaviour.ex",
+        ".credo/checks/missing_infrastructure_behaviour.ex",
+        ".credo/checks/use_case_consistent_injection.ex",
+        # Layer boundary content verification
+        ".credo/checks/layer_boundary_deps_correct.ex",
+        ".credo/checks/public_api_boundary_correct.ex"
       ],
       #
       # If you want to enforce a style guide and need a more traditional linting
@@ -197,30 +220,30 @@
           # These checks enforce Clean Architecture, SOLID principles, and TDD practices
           # as defined in CLAUDE.md
           #
-          {Jarga.Credo.Check.Architecture.NoDirectRepoInWeb, []},
-          {Jarga.Credo.Check.Architecture.NoBusinessLogicInLiveView, []},
-          {Jarga.Credo.Check.Architecture.NoPubSubInContexts, []},
-          {Jarga.Credo.Check.Architecture.NoBroadcastInTransaction, []},
-          {Jarga.Credo.Check.Architecture.NoDatabaseQueriesInLiveViews, []},
+          {Credo.Check.Custom.Architecture.NoDirectRepoInWeb, []},
+          {Credo.Check.Custom.Architecture.NoBusinessLogicInLiveView, []},
+          {Credo.Check.Custom.Architecture.NoPubSubInContexts, []},
+          {Credo.Check.Custom.Architecture.NoBroadcastInTransaction, []},
+          {Credo.Check.Custom.Architecture.NoDatabaseQueriesInLiveViews, []},
           # Detect infrastructure (DB queries) in domain Policy modules
-          {Jarga.Credo.Check.Architecture.NoInfrastructureInPolicies, []},
+          {Credo.Check.Custom.Architecture.NoInfrastructureInPolicies, []},
           # Detect business logic in Ecto schemas (SRP violation)
-          {Jarga.Credo.Check.Architecture.NoBusinessLogicInSchemas, []},
+          {Credo.Check.Custom.Architecture.NoBusinessLogicInSchemas, []},
           # Detect direct Ecto queries in UseCase modules
-          {Jarga.Credo.Check.Architecture.NoDirectQueriesInUseCases, []},
+          {Credo.Check.Custom.Architecture.NoDirectQueriesInUseCases, []},
           # Detect complex orchestration logic that should be extracted to use cases
-          {Jarga.Credo.Check.Architecture.UseCaseAdoption, [with_clause_threshold: 3]},
+          {Credo.Check.Custom.Architecture.UseCaseAdoption, [with_clause_threshold: 3]},
           # Detect inline Ecto queries in contexts instead of Query objects
-          {Jarga.Credo.Check.Architecture.NoInlineQueriesInContexts, []},
+          {Credo.Check.Custom.Architecture.NoInlineQueriesInContexts, []},
           # Detect direct Repo access in Service modules
-          {Jarga.Credo.Check.Architecture.NoRepoInServices, []},
+          {Credo.Check.Custom.Architecture.NoRepoInServices, []},
           # Detect cross-context Policy access (should use context public API)
-          {Jarga.Credo.Check.Architecture.NoCrossContextPolicyAccess, []},
+          {Credo.Check.Custom.Architecture.NoCrossContextPolicyAccess, []},
           # Detect cross-context Schema access (should use context public API)
-          {Jarga.Credo.Check.Architecture.NoCrossContextSchemaAccess, []},
+          {Credo.Check.Custom.Architecture.NoCrossContextSchemaAccess, []},
           # Detect contexts missing Queries modules (pattern consistency)
           # Disabled: Queries modules are optional based on context needs
-          # {Jarga.Credo.Check.Architecture.MissingQueriesModule, []},
+          # {Credo.Check.Custom.Architecture.MissingQueriesModule, []},
 
           #
           ## Clean Code Principle Checks
@@ -228,11 +251,11 @@
           # These checks enforce clean code principles identified in code reviews
           #
           # Detect Repo or database dependencies in domain entities (DIP violation)
-          {Jarga.Credo.Check.Architecture.NoRepoInDomain, []},
+          {Credo.Check.Custom.Architecture.NoRepoInDomain, []},
           # Detect side effects (crypto, I/O) in domain entities (SRP violation)
-          {Jarga.Credo.Check.Architecture.NoSideEffectsInDomain, []},
+          {Credo.Check.Custom.Architecture.NoSideEffectsInDomain, []},
           # Detect runtime env variable access that should use Application config
-          {Jarga.Credo.Check.Architecture.NoEnvInRuntime, []},
+          {Credo.Check.Custom.Architecture.NoEnvInRuntime, []},
 
           #
           ## Folder Structure Enforcement
@@ -240,15 +263,15 @@
           # Detect entities (Ecto schemas) not in domain/entities/ subdirectory
           # DISABLED: Conflicts with Clean Architecture refactoring where Ecto schemas
           # are intentionally in infrastructure/schemas/, not domain/entities/
-          # {Jarga.Credo.Check.Architecture.EntitiesInDomainLayer, []},
+          # {Credo.Check.Custom.Architecture.EntitiesInDomainLayer, []},
           # Detect use cases not in application/use_cases/ subdirectory
-          {Jarga.Credo.Check.Architecture.UseCasesInApplicationLayer, []},
+          {Credo.Check.Custom.Architecture.UseCasesInApplicationLayer, []},
           # Detect policies not in application/policies/ subdirectory
-          {Jarga.Credo.Check.Architecture.PoliciesInApplicationLayer, []},
+          {Credo.Check.Custom.Architecture.PoliciesInApplicationLayer, []},
           # Detect services/notifiers in wrong layers
-          {Jarga.Credo.Check.Architecture.ServicesInCorrectLayer, []},
+          {Credo.Check.Custom.Architecture.ServicesInCorrectLayer, []},
           # Detect infrastructure files not properly organized
-          {Jarga.Credo.Check.Architecture.InfrastructureOrganization, []},
+          {Credo.Check.Custom.Architecture.InfrastructureOrganization, []},
 
           #
           ## Refactoring Enforcement (Agents Context Violations)
@@ -256,13 +279,53 @@
           # These checks catch violations from the Agents Context Refactoring Proposal
           #
           # Detect Ecto dependencies in domain layer (domain entities should be pure structs)
-          {Jarga.Credo.Check.Architecture.NoEctoInDomainLayer, []},
+          {Credo.Check.Custom.Architecture.NoEctoInDomainLayer, []},
           # Detect direct Repo usage in use cases (should delegate to repositories)
-          {Jarga.Credo.Check.Architecture.NoDirectRepoInUseCases, []},
+          {Credo.Check.Custom.Architecture.NoDirectRepoInUseCases, []},
           # Detect I/O operations in application layer (should be in infrastructure)
-          {Jarga.Credo.Check.Architecture.ApplicationLayerInfrastructureDependency, []},
+          {Credo.Check.Custom.Architecture.ApplicationLayerInfrastructureDependency, []},
           # Detect I/O operations in domain services (should be pure functions)
-          {Jarga.Credo.Check.Architecture.NoIoInDomainServices, []},
+          {Credo.Check.Custom.Architecture.NoIoInDomainServices, []},
+          # Detect infrastructure calls in domain entities (dependency rule violation)
+          {Credo.Check.Custom.Architecture.NoInfrastructureInDomainEntities, []},
+          # Detect direct File operations in use cases (should use injectable deps)
+          {Credo.Check.Custom.Architecture.NoDirectFileOperationsInUseCases, []},
+          # Detect Mix tasks bypassing public API (interface layer violation)
+          {Credo.Check.Custom.Architecture.InterfaceLayerUsesPublicApi, []},
+          # Detect non-deterministic DateTime calls in domain layer
+          {Credo.Check.Custom.Architecture.NoDateTimeNowInDomain, []},
+          # Detect infrastructure schema access from web layer
+          {Credo.Check.Custom.Architecture.NoInfrastructureSchemaInWeb, []},
+          # Detect Application.get_env in use cases (should use dependency injection)
+          {Credo.Check.Custom.Architecture.NoApplicationConfigInUseCases, []},
+          # Detect infrastructure module aliasing in application layer (DIP violation)
+          {Credo.Check.Custom.Architecture.NoInfrastructureAliasInApplication, []},
+          # Detect direct File calls in infrastructure (should use injectable deps)
+          {Credo.Check.Custom.Architecture.InfrastructureUsesFileBehaviour, []},
+          # Detect infrastructure modules missing behaviour implementations
+          {Credo.Check.Custom.Architecture.MissingInfrastructureBehaviour, []},
+          # Detect inconsistent dependency injection in use cases
+          {Credo.Check.Custom.Architecture.UseCaseConsistentInjection, []},
+
+          #
+          ## Boundary Library Enforcement
+          #
+          # Comprehensive check: verifies boundary package, compiler, and usage
+          # This replaces separate checks for package installation and layer files
+          {CredoChecks.CleanArchitecture.BoundaryEnforcementConfigured, []},
+          # Verifies that boundary `deps` follow Clean Architecture rules
+          # (Domain has no deps, Application only depends on Domain, etc.)
+          {CredoChecks.CleanArchitecture.BoundaryRules, []},
+          # Verifies layer boundary files have correct deps configuration
+          {CredoChecks.CleanArchitecture.LayerBoundaryDepsCorrect,
+           [
+             excluded_apps: ["jarga_tools"]
+           ]},
+          # Verifies public API module has correct boundary config
+          {CredoChecks.CleanArchitecture.PublicApiBoundaryCorrect,
+           [
+             excluded_apps: ["jarga_tools"]
+           ]},
 
           #
           ## Custom Testing Checks (TDD Enforcement)
@@ -270,9 +333,9 @@
           # These checks enforce TDD practices and test pyramid structure
           #
           # Detect missing tests for domain modules (policies, services)
-          {Jarga.Credo.Check.Testing.MissingDomainTests, []},
+          {Credo.Check.Custom.Testing.MissingDomainTests, []},
           # Detect domain tests incorrectly using DataCase instead of ExUnit.Case
-          {Jarga.Credo.Check.Testing.DomainTestPurity, []}
+          {Credo.Check.Custom.Testing.DomainTestPurity, []}
         ],
         disabled: [
           #

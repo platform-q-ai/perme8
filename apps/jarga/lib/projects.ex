@@ -9,11 +9,21 @@ defmodule Jarga.Projects do
   """
 
   # Core context - cannot depend on JargaWeb (interface layer)
-  # Exports: Main context module, domain entity (Project), and infrastructure schema (ProjectSchema)
-  # Internal modules (Queries, Policies, other infrastructure) remain private
+  # Depends on layer boundaries for Clean Architecture enforcement
+  # Exports: Domain entity (Project) and infrastructure schema (ProjectSchema)
   use Boundary,
     top_level?: true,
-    deps: [Jarga.Accounts, Jarga.Workspaces, Jarga.Repo],
+    deps: [
+      # Cross-context dependencies (context + domain layer for entity access)
+      Jarga.Accounts,
+      Jarga.Accounts.Domain,
+      Jarga.Workspaces,
+      # Same-context layer dependencies
+      Jarga.Projects.Domain,
+      Jarga.Projects.Application,
+      Jarga.Projects.Infrastructure,
+      Jarga.Repo
+    ],
     exports: [
       {Domain.Entities.Project, []},
       {Infrastructure.Schemas.ProjectSchema, []}
@@ -22,7 +32,43 @@ defmodule Jarga.Projects do
   alias Jarga.Repo
   alias Jarga.Accounts.Domain.Entities.User
   alias Jarga.Projects.Infrastructure.Queries.Queries
+  alias Jarga.Projects.Infrastructure.Schemas.ProjectSchema
   alias Jarga.Projects.Application.UseCases.{CreateProject, DeleteProject, UpdateProject}
+
+  @doc """
+  Returns a changeset for creating a new project.
+
+  This provides a form-ready changeset for the web layer without
+  exposing the underlying infrastructure schema directly.
+
+  ## Examples
+
+      iex> new_project_changeset()
+      %Ecto.Changeset{}
+
+      iex> new_project_changeset(%{name: "My Project"})
+      %Ecto.Changeset{}
+
+  """
+  def new_project_changeset(attrs \\ %{}) do
+    ProjectSchema.changeset(%ProjectSchema{}, attrs)
+  end
+
+  @doc """
+  Returns a changeset for editing an existing project.
+
+  ## Examples
+
+      iex> change_project(project)
+      %Ecto.Changeset{}
+
+      iex> change_project(project, %{name: "Updated Name"})
+      %Ecto.Changeset{}
+
+  """
+  def change_project(%ProjectSchema{} = project, attrs \\ %{}) do
+    ProjectSchema.changeset(project, attrs)
+  end
 
   @doc """
   Returns the list of projects for a given workspace.

@@ -18,7 +18,7 @@ defmodule Jarga.Chat.Application.UseCases.DeleteSession do
       {:error, :not_found}
   """
 
-  alias Jarga.Chat.Infrastructure.Repositories.SessionRepository
+  @default_session_repository Jarga.Chat.Infrastructure.Repositories.SessionRepository
 
   @doc """
   Deletes a chat session.
@@ -26,19 +26,23 @@ defmodule Jarga.Chat.Application.UseCases.DeleteSession do
   ## Parameters
     - session_id: ID of the session to delete
     - user_id: ID of the user (for authorization)
+    - opts: Keyword list of options
+      - :session_repository - Repository module for session operations (default: SessionRepository)
 
   Returns `{:ok, deleted_session}` if successful,
   or `{:error, :not_found}` if session doesn't exist or user doesn't own it.
 
   Messages are automatically deleted via database cascade.
   """
-  def execute(session_id, user_id) do
-    case SessionRepository.get_session_by_id_and_user(session_id, user_id) do
+  def execute(session_id, user_id, opts \\ []) do
+    session_repository = Keyword.get(opts, :session_repository, @default_session_repository)
+
+    case session_repository.get_session_by_id_and_user(session_id, user_id) do
       nil ->
         {:error, :not_found}
 
       session ->
-        SessionRepository.delete_session(session)
+        session_repository.delete_session(session)
     end
   end
 end

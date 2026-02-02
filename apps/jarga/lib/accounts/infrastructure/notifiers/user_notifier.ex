@@ -3,6 +3,8 @@ defmodule Jarga.Accounts.Infrastructure.Notifiers.UserNotifier do
   Delivers email notifications for user account actions.
   """
 
+  @behaviour Jarga.Accounts.Application.Behaviours.UserNotifierBehaviour
+
   import Swoosh.Email
 
   alias Jarga.Mailer
@@ -56,6 +58,7 @@ defmodule Jarga.Accounts.Infrastructure.Notifiers.UserNotifier do
     * `:from_name` - Name to send from (default: configured or "Jarga")
 
   """
+  @impl true
   def deliver_update_email_instructions(user, url, opts \\ []) do
     deliver(
       user.email,
@@ -87,6 +90,7 @@ defmodule Jarga.Accounts.Infrastructure.Notifiers.UserNotifier do
     * `:from_name` - Name to send from (default: configured or "Jarga")
 
   """
+  @impl true
   def deliver_login_instructions(user, url, opts \\ []) do
     case user do
       %User{confirmed_at: nil} -> deliver_confirmation_instructions(user, url, opts)

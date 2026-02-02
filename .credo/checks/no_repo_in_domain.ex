@@ -1,4 +1,4 @@
-defmodule Jarga.Credo.Check.Architecture.NoRepoInDomain do
+defmodule Credo.Check.Custom.Architecture.NoRepoInDomain do
   @moduledoc """
   Detects Repo or database dependencies in domain layer.
 

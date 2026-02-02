@@ -6,11 +6,11 @@ defmodule Jarga.Agents.Application.UseCases.SyncAgentWorkspaces do
   to workspaces they belong to.
   """
 
-  alias Jarga.Accounts
-  alias Jarga.Workspaces
-  alias Jarga.Agents.Infrastructure.Repositories.AgentRepository
-  alias Jarga.Agents.Infrastructure.Repositories.WorkspaceAgentRepository
-  alias Jarga.Agents.Infrastructure.Notifiers.PubSubNotifier
+  @default_agent_repo Jarga.Agents.Infrastructure.Repositories.AgentRepository
+  @default_workspace_agent_repo Jarga.Agents.Infrastructure.Repositories.WorkspaceAgentRepository
+  @default_notifier Jarga.Agents.Infrastructure.Notifiers.PubSubNotifier
+  @default_accounts Jarga.Accounts
+  @default_workspaces Jarga.Workspaces
 
   @doc """
   Synchronizes workspace associations for an agent.
@@ -19,6 +19,12 @@ defmodule Jarga.Agents.Application.UseCases.SyncAgentWorkspaces do
   - `agent_id` - ID of the agent
   - `user_id` - ID of the current user (must be agent owner)
   - `workspace_ids` - List of workspace IDs to associate with the agent
+  - `opts` - Keyword list with:
+    - `:agent_repo` - Repository module for agents (default: AgentRepository)
+    - `:workspace_agent_repo` - Repository for workspace-agent associations (default: WorkspaceAgentRepository)
+    - `:notifier` - Notifier module for PubSub events (default: PubSubNotifier)
+    - `:accounts` - Accounts context module (default: Jarga.Accounts)
+    - `:workspaces` - Workspaces context module (default: Jarga.Workspaces)
 
   ## Returns
   - `:ok` - Successfully synchronized
@@ -29,21 +35,35 @@ defmodule Jarga.Agents.Application.UseCases.SyncAgentWorkspaces do
   - Removes agent from workspaces no longer in the list
   - All operations performed atomically in a transaction
   """
-  def execute(agent_id, user_id, workspace_ids) do
+  def execute(agent_id, user_id, workspace_ids, opts \\ []) do
+    agent_repo = Keyword.get(opts, :agent_repo, @default_agent_repo)
+    workspace_agent_repo = Keyword.get(opts, :workspace_agent_repo, @default_workspace_agent_repo)
+    notifier = Keyword.get(opts, :notifier, @default_notifier)
+    accounts = Keyword.get(opts, :accounts, @default_accounts)
+    workspaces = Keyword.get(opts, :workspaces, @default_workspaces)
+
     # Verify agent exists and belongs to user
-    case AgentRepository.get_agent_for_user(user_id, agent_id) do
+    case agent_repo.get_agent_for_user(user_id, agent_id) do
       nil ->
         {:error, :not_found}
 
       agent ->
         # Calculate workspace changes
-        changes = calculate_workspace_changes(agent_id, user_id, workspace_ids)
+        changes =
+          calculate_workspace_changes(
+            agent_id,
+            user_id,
+            workspace_ids,
+            workspace_agent_repo,
+            accounts,
+            workspaces
+          )
 
         # Apply changes atomically
-        apply_workspace_changes(agent_id, changes)
+        apply_workspace_changes(agent_id, changes, workspace_agent_repo)
 
         # Notify all affected workspaces
-        PubSubNotifier.notify_workspace_associations_changed(
+        notifier.notify_workspace_associations_changed(
           agent,
           MapSet.to_list(changes.to_add),
           MapSet.to_list(changes.to_remove)
@@ -54,8 +74,15 @@ defmodule Jarga.Agents.Application.UseCases.SyncAgentWorkspaces do
   end
 
   # Calculate what workspaces to add and remove
-  defp calculate_workspace_changes(agent_id, user_id, workspace_ids) do
-    current_workspace_ids = WorkspaceAgentRepository.get_agent_workspace_ids(agent_id)
+  defp calculate_workspace_changes(
+         agent_id,
+         user_id,
+         workspace_ids,
+         workspace_agent_repo,
+         accounts,
+         workspaces
+       ) do
+    current_workspace_ids = workspace_agent_repo.get_agent_workspace_ids(agent_id)
     desired_workspace_ids = workspace_ids |> List.wrap() |> MapSet.new()
     current_workspace_ids_set = MapSet.new(current_workspace_ids)
 
@@ -63,8 +90,8 @@ defmodule Jarga.Agents.Application.UseCases.SyncAgentWorkspaces do
     to_remove = MapSet.difference(current_workspace_ids_set, desired_workspace_ids)
 
     # Get user's workspaces to validate membership
-    user = Accounts.get_user!(user_id)
-    user_workspaces = Workspaces.list_workspaces_for_user(user)
+    user = accounts.get_user!(user_id)
+    user_workspaces = workspaces.list_workspaces_for_user(user)
     user_workspace_ids = MapSet.new(Enum.map(user_workspaces, & &1.id))
 
     # Filter to_add to only include workspaces user belongs to
@@ -74,7 +101,11 @@ defmodule Jarga.Agents.Application.UseCases.SyncAgentWorkspaces do
   end
 
   # Apply workspace changes in a transaction
-  defp apply_workspace_changes(agent_id, %{to_add: to_add, to_remove: to_remove}) do
-    WorkspaceAgentRepository.sync_agent_workspaces(agent_id, to_add, to_remove)
+  defp apply_workspace_changes(
+         agent_id,
+         %{to_add: to_add, to_remove: to_remove},
+         workspace_agent_repo
+       ) do
+    workspace_agent_repo.sync_agent_workspaces(agent_id, to_add, to_remove)
   end
 end

@@ -9,6 +9,13 @@ defmodule Jarga.Accounts.Application.UseCases.DeliverLoginInstructions do
   - Email contains a URL with the encoded token for magic link login
   - Uses UserNotifier to deliver the email
 
+  ## Dependency Injection
+
+  This use case accepts the following dependencies via opts:
+  - `:repo` - Ecto.Repo module (default: Jarga.Repo)
+  - `:user_token_repo` - UserTokenRepository module (default: Infrastructure.Repositories.UserTokenRepository)
+  - `:notifier` - Notifier function (default: UserNotifier.deliver_login_instructions/2)
+
   ## Responsibilities
 
   - Build email token with context "login"
@@ -20,8 +27,11 @@ defmodule Jarga.Accounts.Application.UseCases.DeliverLoginInstructions do
   @behaviour Jarga.Accounts.Application.UseCases.UseCase
 
   alias Jarga.Accounts.Domain.Services.TokenBuilder
-  alias Jarga.Accounts.Infrastructure.Notifiers.UserNotifier
-  alias Jarga.Accounts.Infrastructure.Repositories.UserTokenRepository
+
+  # Default implementations - can be overridden via opts for testing
+  @default_repo Jarga.Repo
+  @default_user_token_repo Jarga.Accounts.Infrastructure.Repositories.UserTokenRepository
+  @default_notifier Jarga.Accounts.Infrastructure.Notifiers.UserNotifier
 
   @doc """
   Executes the deliver login instructions use case.
@@ -34,6 +44,7 @@ defmodule Jarga.Accounts.Application.UseCases.DeliverLoginInstructions do
 
   - `opts` - Keyword list of options:
     - `:repo` - Repository module (default: Jarga.Repo)
+    - `:user_token_repo` - UserTokenRepository module (default: Infrastructure.Repositories.UserTokenRepository)
     - `:notifier` - Notifier function (default: UserNotifier.deliver_login_instructions/2)
 
   ## Returns
@@ -44,14 +55,17 @@ defmodule Jarga.Accounts.Application.UseCases.DeliverLoginInstructions do
   def execute(params, opts \\ []) do
     %{user: user, url_fun: url_fun} = params
 
-    repo = Keyword.get(opts, :repo, Jarga.Repo)
-    notifier = Keyword.get(opts, :notifier, &UserNotifier.deliver_login_instructions/2)
+    repo = Keyword.get(opts, :repo, @default_repo)
+    user_token_repo = Keyword.get(opts, :user_token_repo, @default_user_token_repo)
+    notifier_module = Keyword.get(opts, :notifier_module, @default_notifier)
+
+    notifier = Keyword.get(opts, :notifier, &notifier_module.deliver_login_instructions/2)
 
     # Build email token with context "login"
     {encoded_token, user_token} = TokenBuilder.build_email_token(user, "login")
 
     # Persist token in database
-    UserTokenRepository.insert!(user_token, repo)
+    user_token_repo.insert!(user_token, repo)
 
     # Generate login URL
     url = url_fun.(encoded_token)

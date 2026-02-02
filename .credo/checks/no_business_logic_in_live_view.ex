@@ -1,4 +1,4 @@
-defmodule Jarga.Credo.Check.Architecture.NoBusinessLogicInLiveView do
+defmodule Credo.Check.Custom.Architecture.NoBusinessLogicInLiveView do
   @moduledoc """
   Detects business logic patterns in LiveView modules.
 

@@ -22,7 +22,7 @@ import "phoenix_html";
 // Establish Phoenix Socket and LiveView configuration.
 import { Socket } from "phoenix";
 import { LiveSocket } from "phoenix_live_view";
-import topbar from "../vendor/topbar";
+import topbar from "../vendor/topbar.cjs";
 import Hooks from "./hooks";
 import { registerScrollToBottomHandler } from "./event-handlers/scroll-to-bottom";
 import { registerFocusEditorHandler } from "./event-handlers/focus-editor";

@@ -18,8 +18,10 @@ defmodule JargaWeb do
   """
 
   # Interface layer - can depend on Core contexts but not vice versa
+  # Also depends on specific layer boundaries for domain entities and application policies
   use Boundary,
     deps: [
+      # Context facades
       Jarga,
       Jarga.Accounts,
       Jarga.Workspaces,
@@ -29,8 +31,12 @@ defmodule JargaWeb do
       Jarga.Agents,
       Jarga.Chat,
       Jarga.Notifications,
+      # Shared infrastructure
       Jarga.Repo,
-      Jarga.Mailer
+      Jarga.Mailer,
+      # Layer boundaries for domain entities and policies used in web layer
+      Jarga.Accounts.Domain,
+      Jarga.Workspaces.Application
     ],
     exports: [Endpoint, Telemetry]
 

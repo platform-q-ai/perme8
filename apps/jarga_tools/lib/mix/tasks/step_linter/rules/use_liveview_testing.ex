@@ -110,7 +110,6 @@ defmodule Mix.Tasks.StepLinter.Rules.UseLiveviewTesting do
 
   "Given" steps are more lenient as they often set up test data.
   """
-  use Boundary, top_level?: true
 
   @behaviour Mix.Tasks.StepLinter.Rule
 

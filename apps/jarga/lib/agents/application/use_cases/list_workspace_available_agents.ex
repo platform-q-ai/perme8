@@ -7,7 +7,7 @@ defmodule Jarga.Agents.Application.UseCases.ListWorkspaceAvailableAgents do
   - other_agents: Other users' SHARED agents in the workspace
   """
 
-  alias Jarga.Agents.Infrastructure.Repositories.WorkspaceAgentRepository
+  @default_workspace_agent_repo Jarga.Agents.Infrastructure.Repositories.WorkspaceAgentRepository
 
   @doc """
   Lists all agents available in a workspace for the current user.
@@ -15,11 +15,14 @@ defmodule Jarga.Agents.Application.UseCases.ListWorkspaceAvailableAgents do
   ## Parameters
   - `workspace_id` - ID of the workspace
   - `user_id` - ID of the current user
+  - `opts` - Keyword list with:
+    - `:workspace_agent_repo` - Repository for workspace-agent associations (default: WorkspaceAgentRepository)
 
   ## Returns
   - Map with `:my_agents` and `:other_agents` lists
   """
-  def execute(workspace_id, user_id) do
-    WorkspaceAgentRepository.list_workspace_agents(workspace_id, user_id)
+  def execute(workspace_id, user_id, opts \\ []) do
+    workspace_agent_repo = Keyword.get(opts, :workspace_agent_repo, @default_workspace_agent_repo)
+    workspace_agent_repo.list_workspace_agents(workspace_id, user_id)
   end
 end

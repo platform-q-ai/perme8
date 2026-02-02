@@ -16,8 +16,6 @@ defmodule Jarga.Accounts.Domain.Entities.UserToken do
   - `inserted_at` - When token was created
   """
 
-  alias Jarga.Accounts.Infrastructure.Schemas.UserTokenSchema
-
   @type t :: %__MODULE__{
           id: String.t() | nil,
           token: binary() | nil,
@@ -39,21 +37,29 @@ defmodule Jarga.Accounts.Domain.Entities.UserToken do
   ]
 
   @doc """
-  Converts a UserTokenSchema (Ecto schema) to a UserToken (domain entity).
+  Converts an Ecto schema (or any map/struct with matching fields) to a UserToken domain entity.
 
-  Returns nil if schema is nil.
+  Returns nil if input is nil.
+
+  ## Examples
+
+      iex> from_schema(%{id: "123", token: <<1,2,3>>, context: "session", ...})
+      %UserToken{id: "123", token: <<1,2,3>>, context: "session", ...}
+
+      iex> from_schema(nil)
+      nil
   """
   def from_schema(nil), do: nil
 
-  def from_schema(%UserTokenSchema{} = schema) do
+  def from_schema(schema) do
     %__MODULE__{
-      id: schema.id,
-      token: schema.token,
-      context: schema.context,
-      sent_to: schema.sent_to,
-      authenticated_at: schema.authenticated_at,
-      user_id: schema.user_id,
-      inserted_at: schema.inserted_at
+      id: Map.get(schema, :id),
+      token: Map.get(schema, :token),
+      context: Map.get(schema, :context),
+      sent_to: Map.get(schema, :sent_to),
+      authenticated_at: Map.get(schema, :authenticated_at),
+      user_id: Map.get(schema, :user_id),
+      inserted_at: Map.get(schema, :inserted_at)
     }
   end
 end

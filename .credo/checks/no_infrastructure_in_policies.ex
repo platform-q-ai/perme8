@@ -1,4 +1,4 @@
-defmodule Jarga.Credo.Check.Architecture.NoInfrastructureInPolicies do
+defmodule Credo.Check.Custom.Architecture.NoInfrastructureInPolicies do
   @moduledoc """
   Detects infrastructure dependencies in Policy modules.
 

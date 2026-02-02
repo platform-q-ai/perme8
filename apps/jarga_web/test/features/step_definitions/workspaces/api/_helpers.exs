@@ -6,7 +6,6 @@ defmodule Jarga.Workspaces.Api.Helpers do
   alias Ecto.Adapters.SQL.Sandbox
   alias Jarga.Accounts.Application.Services.ApiKeyTokenService
   alias Jarga.Accounts.Infrastructure.Repositories.ApiKeyRepository
-  alias Jarga.Accounts.Infrastructure.Schemas.ApiKeySchema
 
   def ensure_sandbox_checkout do
     case Sandbox.checkout(Jarga.Repo) do
@@ -16,6 +15,22 @@ defmodule Jarga.Workspaces.Api.Helpers do
       {:already, _owner} ->
         :ok
     end
+  end
+
+  @doc """
+  Builds a connection with sandbox metadata header for API tests.
+
+  This is critical for API tests using Phoenix.ConnTest - without the sandbox
+  metadata header, the API endpoint runs in a different DB connection and
+  can't see data created in the test process.
+  """
+  def build_conn_with_sandbox do
+    # Get sandbox metadata for the test process
+    metadata = Phoenix.Ecto.SQL.Sandbox.metadata_for(Jarga.Repo, self())
+    encoded_metadata = Phoenix.Ecto.SQL.Sandbox.encode_metadata(metadata)
+
+    Phoenix.ConnTest.build_conn()
+    |> Plug.Conn.put_req_header("user-agent", encoded_metadata)
   end
 
   @doc """
@@ -47,13 +62,13 @@ defmodule Jarga.Workspaces.Api.Helpers do
       is_active: Map.get(attrs, :is_active, true)
     }
 
-    {:ok, schema} =
+    {:ok, api_key} =
       ApiKeyRepository.insert(
         Jarga.Repo,
         api_key_attrs
       )
 
-    api_key = ApiKeySchema.to_entity(schema)
+    # ApiKeyRepository.insert now returns entity directly
     {api_key, plain_token}
   end
 

@@ -1,4 +1,4 @@
-defmodule Jarga.Agents.Infrastructure.Services.Behaviours.LlmClientBehaviour do
+defmodule Jarga.Agents.Application.Behaviours.LlmClientBehaviour do
   @moduledoc """
   Behaviour for LLM client implementations.
 

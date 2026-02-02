@@ -109,7 +109,7 @@ defmodule Jarga.AccountsTest do
       # minute override
       refute Accounts.sudo_mode?(
                %User{authenticated_at: DateTime.add(now, -11, :minute)},
-               -10
+               minutes: -10
              )
 
       # not authenticated

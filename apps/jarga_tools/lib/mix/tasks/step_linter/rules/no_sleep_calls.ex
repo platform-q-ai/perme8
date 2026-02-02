@@ -35,7 +35,6 @@ defmodule Mix.Tasks.StepLinter.Rules.NoSleepCalls do
   wait_until(fn -> condition_met?() end, timeout: 2000, interval: 100)
   ```
   """
-  use Boundary, top_level?: true
 
   @behaviour Mix.Tasks.StepLinter.Rule
 

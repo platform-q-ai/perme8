@@ -23,9 +23,15 @@ defmodule Jarga.TestUsers do
   """
 
   # Test utility module - top-level boundary
+  # Needs access to context + layer boundaries for test user management
   use Boundary,
     top_level?: true,
-    deps: [Jarga.Repo, Jarga.Accounts],
+    deps: [
+      Jarga.Repo,
+      Jarga.Accounts,
+      Jarga.Accounts.Domain,
+      Jarga.Accounts.Infrastructure
+    ],
     exports: []
 
   alias Jarga.Accounts
@@ -63,9 +69,10 @@ defmodule Jarga.TestUsers do
   def test_users, do: @test_users
 
   @doc """
-  Ensures all test users exist in the database.
+  Ensures all test users exist in the database with correct passwords.
 
-  This function is idempotent - it will only create users that don't already exist.
+  This function is idempotent - it will create users that don't exist and
+  reset passwords for users that do exist to ensure they match the expected values.
   Should be called once in test_helper.exs or in test setup.
 
   ## Examples
@@ -78,7 +85,7 @@ defmodule Jarga.TestUsers do
     Enum.each(@test_users, fn {key, attrs} ->
       case Repo.get_by(UserSchema, email: attrs.email) do
         nil -> create_test_user(key, attrs)
-        _user -> :ok
+        existing_user -> ensure_password_correct(existing_user, attrs)
       end
     end)
   end
@@ -153,6 +160,23 @@ defmodule Jarga.TestUsers do
   end
 
   ## Private Functions
+
+  # Ensure the user's password matches the expected test password
+  defp ensure_password_correct(user_schema, attrs) do
+    # Verify if current password matches expected password
+    if Bcrypt.verify_pass(attrs.password, user_schema.hashed_password) do
+      :ok
+    else
+      # Password doesn't match - update it
+      hashed = Bcrypt.hash_pwd_salt(attrs.password)
+
+      user_schema
+      |> Ecto.Changeset.change(%{hashed_password: hashed})
+      |> Repo.update!()
+
+      :ok
+    end
+  end
 
   defp create_test_user(_key, attrs) do
     {:ok, user} =

@@ -13,6 +13,7 @@ defmodule CommonSteps do
   import Jarga.WorkspacesFixtures
 
   alias Ecto.Adapters.SQL.Sandbox
+  alias Jarga.Accounts
 
   # ============================================================================
   # WORKSPACE SETUP STEPS
@@ -21,7 +22,7 @@ defmodule CommonSteps do
   step "a workspace exists with name {string} and slug {string}",
        %{args: [name, slug]} = context do
     ensure_sandbox_checkout(context)
-    owner = user_fixture(%{email: "#{slug}_owner@example.com"})
+    owner = get_or_create_user_for_workspace(slug)
     workspace = workspace_fixture(owner, %{name: name, slug: slug})
 
     store_workspace_in_context(context, workspace, owner, slug)
@@ -85,10 +86,22 @@ defmodule CommonSteps do
        %{args: [email, role, workspace_slug]} = context do
     workspace = get_workspace_by_slug(context, workspace_slug)
     users = Map.get(context, :users, %{})
-    user = Map.get(users, email) || user_fixture(%{email: email})
+    user = Map.get(users, email) || get_or_create_user(email)
 
     ensure_workspace_membership(workspace, user, role)
     {:ok, Map.put(context, :users, Map.put(users, email, user))}
+  end
+
+  defp get_or_create_user(email) do
+    case Accounts.get_user_by_email(email) do
+      nil -> user_fixture(%{email: email})
+      existing_user -> existing_user
+    end
+  end
+
+  defp get_or_create_user_for_workspace(slug) do
+    email = "#{slug}_owner@example.com"
+    get_or_create_user(email)
   end
 
   defp get_workspace_by_slug(context, workspace_slug) do

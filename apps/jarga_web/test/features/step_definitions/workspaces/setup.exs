@@ -12,12 +12,16 @@ defmodule Workspaces.SetupSteps do
   import Jarga.WorkspacesFixtures
 
   alias Ecto.Adapters.SQL.Sandbox
+  alias Jarga.Accounts
 
   # ============================================================================
   # DATA TABLE STEPS
   # ============================================================================
 
   step "the following users exist:", context do
+    # Ensure sandbox is in shared mode for API tests
+    ensure_shared_sandbox_mode()
+
     # Access data table using dot notation
     table_data = context.datatable.maps
     workspace = context[:workspace]
@@ -33,10 +37,30 @@ defmodule Workspaces.SetupSteps do
     Map.put(context, :users, users)
   end
 
+  defp ensure_shared_sandbox_mode do
+    case Sandbox.checkout(Jarga.Repo) do
+      :ok ->
+        Sandbox.mode(Jarga.Repo, {:shared, self()})
+
+      {:already, _owner} ->
+        # Already checked out, but ensure shared mode is set
+        Sandbox.mode(Jarga.Repo, {:shared, self()})
+    end
+  end
+
   defp create_user_from_row(row) do
-    attrs = %{email: row["Email"]}
-    attrs = maybe_add_name(attrs, row["Name"])
-    user_fixture(attrs)
+    email = row["Email"]
+
+    # Check if user already exists (for idempotent tests)
+    case Accounts.get_user_by_email(email) do
+      nil ->
+        attrs = %{email: email}
+        attrs = maybe_add_name(attrs, row["Name"])
+        user_fixture(attrs)
+
+      existing_user ->
+        existing_user
+    end
   end
 
   defp maybe_add_name(attrs, nil), do: attrs

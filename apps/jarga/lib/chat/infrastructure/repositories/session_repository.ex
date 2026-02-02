@@ -16,6 +16,8 @@ defmodule Jarga.Chat.Infrastructure.Repositories.SessionRepository do
   - Provide clear separation from business logic
   """
 
+  @behaviour Jarga.Chat.Application.Behaviours.SessionRepositoryBehaviour
+
   alias Jarga.Repo
   alias Jarga.Chat.Infrastructure.Queries.Queries
 
@@ -72,6 +74,7 @@ defmodule Jarga.Chat.Infrastructure.Repositories.SessionRepository do
 
   Returns the message struct or nil if not found or unauthorized.
   """
+  @impl true
   def get_message_by_id_and_user(message_id, user_id, repo \\ Repo) do
     message_id
     |> Queries.message_by_id_and_user(user_id)
@@ -90,6 +93,7 @@ defmodule Jarga.Chat.Infrastructure.Repositories.SessionRepository do
 
   Returns `{:ok, session}` if successful, or `{:error, changeset}` if validation fails.
   """
+  @impl true
   def create_session(attrs, repo \\ Repo) do
     alias Jarga.Chat.Infrastructure.Schemas.SessionSchema
 

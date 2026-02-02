@@ -1,4 +1,4 @@
-defmodule Jarga.Credo.Check.Architecture.NoRepoInServices do
+defmodule Credo.Check.Custom.Architecture.NoRepoInServices do
   @moduledoc """
   Detects direct Repo access in Service modules.
 

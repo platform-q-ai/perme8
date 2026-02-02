@@ -1,4 +1,4 @@
-defmodule Jarga.Credo.Check.Architecture.NoDirectRepoInWeb do
+defmodule Credo.Check.Custom.Architecture.NoDirectRepoInWeb do
   @moduledoc """
   Prevents direct use of Repo in the Web layer (JargaWeb).
 

@@ -19,9 +19,11 @@ defmodule Jarga.Workspaces.Application.UseCases.CreateNotificationsForPendingInv
   @behaviour Jarga.Workspaces.Application.UseCases.UseCase
 
   alias Jarga.Accounts.Domain.Entities.User
-  alias Jarga.Workspaces
-  alias Jarga.Workspaces.Infrastructure.Repositories.MembershipRepository
-  alias Jarga.Workspaces.Infrastructure.Notifiers.PubSubNotifier
+
+  @default_membership_repository Jarga.Workspaces.Infrastructure.Repositories.MembershipRepository
+  @default_pubsub_notifier Jarga.Workspaces.Infrastructure.Notifiers.PubSubNotifier
+  @default_queries Jarga.Workspaces.Infrastructure.Queries.Queries
+  @default_repo Jarga.Repo
 
   @doc """
   Executes the create notifications for pending invitations use case.
@@ -33,6 +35,8 @@ defmodule Jarga.Workspaces.Application.UseCases.CreateNotificationsForPendingInv
 
   - `opts` - Keyword list of options:
     - `:pubsub_notifier` - Optional PubSub notifier module (default: PubSubNotifier)
+    - `:queries` - Optional queries module (default: Queries)
+    - `:repo` - Optional Ecto repo (default: Jarga.Repo)
 
   ## Returns
 
@@ -41,13 +45,21 @@ defmodule Jarga.Workspaces.Application.UseCases.CreateNotificationsForPendingInv
   """
   @impl true
   def execute(params, opts \\ []) do
-    pubsub_notifier = Keyword.get(opts, :pubsub_notifier, PubSubNotifier)
+    membership_repository =
+      Keyword.get(opts, :membership_repository, @default_membership_repository)
+
+    pubsub_notifier = Keyword.get(opts, :pubsub_notifier, @default_pubsub_notifier)
+    queries = Keyword.get(opts, :queries, @default_queries)
+    repo = Keyword.get(opts, :repo, @default_repo)
     %{user: %User{} = user} = params
 
     result =
-      MembershipRepository.transact(fn ->
+      membership_repository.transact(fn ->
         # Find all pending invitations for this user's email (case-insensitive)
-        pending_invitations = Workspaces.list_pending_invitations_with_details(user.email)
+        pending_invitations =
+          queries.find_pending_invitations_by_email(user.email)
+          |> queries.with_workspace_and_inviter()
+          |> repo.all()
 
         {:ok, pending_invitations}
       end)

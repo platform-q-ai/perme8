@@ -1,4 +1,4 @@
-defmodule Jarga.Credo.Check.Architecture.NoBusinessLogicInSchemas do
+defmodule Credo.Check.Custom.Architecture.NoBusinessLogicInSchemas do
   @moduledoc """
   Detects business logic in Ecto schema modules.
 

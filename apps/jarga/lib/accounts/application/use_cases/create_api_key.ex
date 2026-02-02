@@ -1,11 +1,26 @@
 defmodule Jarga.Accounts.Application.UseCases.CreateApiKey do
   @moduledoc """
   Use case for creating API keys.
+
+  ## Dependency Injection
+
+  This use case accepts the following dependencies via opts:
+  - `:repo` - Ecto.Repo module (default: Jarga.Repo)
+  - `:workspaces` - Workspaces context module (default: Jarga.Workspaces)
+  - `:api_key_repo` - ApiKeyRepository module (default: Infrastructure.Repositories.ApiKeyRepository)
+
+  ## Example
+
+      CreateApiKey.execute(user_id, attrs, [
+        repo: Jarga.Repo,
+        api_key_repo: MyMockRepository
+      ])
   """
 
-  alias Jarga.Accounts.Infrastructure.Repositories.ApiKeyRepository
-  alias Jarga.Accounts.Infrastructure.Schemas.ApiKeySchema
   alias Jarga.Accounts.Application.Services.ApiKeyTokenService
+
+  # Default repository - can be overridden via opts for testing
+  @default_api_key_repo Jarga.Accounts.Infrastructure.Repositories.ApiKeyRepository
 
   @doc """
   Executes the create API key use case.
@@ -13,13 +28,14 @@ defmodule Jarga.Accounts.Application.UseCases.CreateApiKey do
   def execute(user_id, attrs, opts \\ []) do
     repo = Keyword.get(opts, :repo, Jarga.Repo)
     workspaces = Keyword.get(opts, :workspaces, Jarga.Workspaces)
+    api_key_repo = Keyword.get(opts, :api_key_repo, @default_api_key_repo)
 
     workspace_access = Map.get(attrs, :workspace_access, [])
 
     with {:ok, validated_access} <-
            validate_workspace_access(workspaces, user_id, workspace_access),
          api_key_attrs <- build_api_key_attrs(user_id, attrs, validated_access),
-         {:ok, result} <- create_api_key_in_transaction(repo, api_key_attrs) do
+         {:ok, result} <- create_api_key_in_transaction(repo, api_key_repo, api_key_attrs) do
       {:ok, result}
     else
       {:error, :workspace_access} -> {:error, :forbidden}
@@ -43,11 +59,11 @@ defmodule Jarga.Accounts.Application.UseCases.CreateApiKey do
     {api_key_attrs, plain_token}
   end
 
-  defp create_api_key_in_transaction(repo, {api_key_attrs, plain_token}) do
+  defp create_api_key_in_transaction(repo, api_key_repo, {api_key_attrs, plain_token}) do
     repo.transaction(fn ->
-      case ApiKeyRepository.insert(repo, api_key_attrs) do
-        {:ok, schema} ->
-          api_key = ApiKeySchema.to_entity(schema)
+      # Repository now returns domain entity directly
+      case api_key_repo.insert(repo, api_key_attrs) do
+        {:ok, api_key} ->
           {api_key, plain_token}
 
         {:error, changeset} ->

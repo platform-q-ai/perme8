@@ -37,21 +37,34 @@ defmodule Jarga.Accounts do
   """
 
   # Core context - cannot depend on JargaWeb (interface layer)
-  # Exports: Main context module and shared types (User, Scope, ApiKey)
-  # Internal modules (UserToken, UserNotifier) remain private
   # Note: Does NOT depend on Jarga.Workspaces to avoid dependency cycle.
   # Use cases in this context use dependency injection for cross-context calls.
+  #
+  # This context boundary contains three layer boundaries:
+  # - Jarga.Accounts.Domain (deps: [])
+  # - Jarga.Accounts.Application (deps: [Domain])
+  # - Jarga.Accounts.Infrastructure (deps: [Domain, Application, Repo, Mailer])
   use Boundary,
     top_level?: true,
-    deps: [Jarga.Repo, Jarga.Mailer],
+    deps: [
+      # Layer boundaries
+      Jarga.Accounts.Domain,
+      Jarga.Accounts.Application,
+      Jarga.Accounts.Infrastructure,
+      # Shared infrastructure (needed for direct Repo access in facade)
+      Jarga.Repo
+    ],
     exports: [
+      # Re-export from Domain layer
       {Domain.Entities.User, []},
       {Domain.Entities.ApiKey, []},
       {Domain.Scope, []},
-      {Application.Services.PasswordService, []},
-      {Application.Services.ApiKeyTokenService, []},
       {Domain.Services.TokenBuilder, []},
       {Domain.Policies.WorkspaceAccessPolicy, []},
+      # Re-export from Application layer
+      {Application.Services.PasswordService, []},
+      {Application.Services.ApiKeyTokenService, []},
+      # Re-export from Infrastructure layer (for external access)
       {Infrastructure.Schemas.UserSchema, []},
       {Infrastructure.Schemas.UserTokenSchema, []},
       {Infrastructure.Schemas.ApiKeySchema, []}
@@ -150,12 +163,17 @@ defmodule Jarga.Accounts do
   Checks whether the user is in sudo mode.
 
   The user is in sudo mode when the last authentication was done no further
-  than 20 minutes ago. The limit can be given as second argument in minutes.
+  than 20 minutes ago. The limit can be customized via options.
+
+  ## Options
+
+    - `:minutes` - Time limit in minutes (default: -20, meaning 20 minutes ago)
+    - `:current_time` - Current DateTime for comparison (default: DateTime.utc_now())
 
   Delegates to `AuthenticationPolicy.sudo_mode?/2`.
   """
-  def sudo_mode?(user, minutes \\ -20) do
-    AuthenticationPolicy.sudo_mode?(user, minutes)
+  def sudo_mode?(user, opts \\ []) do
+    AuthenticationPolicy.sudo_mode?(user, opts)
   end
 
   @doc """

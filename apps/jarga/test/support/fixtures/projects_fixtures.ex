@@ -5,10 +5,15 @@ defmodule Jarga.ProjectsFixtures do
   """
 
   # Test fixture module - top-level boundary for test data creation
-  # Deps include Repo for direct database access in fixture functions
+  # Needs access to context + layer boundaries for fixture creation
   use Boundary,
     top_level?: true,
-    deps: [Jarga.Projects, Jarga.Repo],
+    deps: [
+      Jarga.Projects,
+      Jarga.Projects.Domain,
+      Jarga.Projects.Infrastructure,
+      Jarga.Repo
+    ],
     exports: []
 
   alias Jarga.Projects

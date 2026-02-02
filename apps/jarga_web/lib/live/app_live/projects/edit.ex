@@ -8,7 +8,6 @@ defmodule JargaWeb.AppLive.Projects.Edit do
   import JargaWeb.ChatLive.MessageHandlers
 
   alias Jarga.{Workspaces, Projects}
-  alias Jarga.Projects.Infrastructure.Schemas.ProjectSchema
   alias JargaWeb.Layouts
 
   @impl true
@@ -82,7 +81,7 @@ defmodule JargaWeb.AppLive.Projects.Edit do
     # This will raise if user is not a member
     workspace = Workspaces.get_workspace_by_slug!(user, workspace_slug)
     project = Projects.get_project_by_slug!(user, workspace.id, project_slug)
-    changeset = ProjectSchema.changeset(project, %{})
+    changeset = Projects.change_project(project)
 
     {:ok,
      socket

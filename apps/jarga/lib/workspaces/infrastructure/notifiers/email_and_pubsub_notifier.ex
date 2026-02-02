@@ -8,7 +8,7 @@ defmodule Jarga.Workspaces.Infrastructure.Notifiers.EmailAndPubSubNotifier do
   - Uses configurable URL builders for links in emails
   """
 
-  @behaviour Jarga.Workspaces.Application.Services.NotificationService
+  @behaviour Jarga.Workspaces.Application.Behaviours.NotificationServiceBehaviour
 
   alias Jarga.Accounts.Domain.Entities.User
   alias Jarga.Workspaces.Domain.Entities.Workspace

@@ -11,6 +11,14 @@ defmodule Jarga.Accounts.Application.UseCases.RegisterUser do
   - User is created with status :active and date_created timestamp
   - User is not automatically confirmed (confirmed_at is nil)
 
+  ## Dependency Injection
+
+  This use case accepts the following dependencies via opts:
+  - `:repo` - Ecto.Repo module (default: Jarga.Repo)
+  - `:user_schema` - UserSchema module (default: Infrastructure.Schemas.UserSchema)
+  - `:user_repo` - UserRepository module (default: Infrastructure.Repositories.UserRepository)
+  - `:password_service` - Password service module (default: PasswordService)
+
   ## Responsibilities
 
   - Validate registration attributes
@@ -23,9 +31,12 @@ defmodule Jarga.Accounts.Application.UseCases.RegisterUser do
 
   import Ecto.Changeset, only: [get_change: 2, put_change: 3, delete_change: 2]
 
-  alias Jarga.Accounts.Infrastructure.Schemas.UserSchema
   alias Jarga.Accounts.Application.Services.PasswordService
-  alias Jarga.Accounts.Infrastructure.Repositories.UserRepository
+
+  # Default implementations - can be overridden via opts for testing
+  @default_repo Jarga.Repo
+  @default_user_schema Jarga.Accounts.Infrastructure.Schemas.UserSchema
+  @default_user_repo Jarga.Accounts.Infrastructure.Repositories.UserRepository
 
   @doc """
   Executes the register user use case.
@@ -37,6 +48,8 @@ defmodule Jarga.Accounts.Application.UseCases.RegisterUser do
 
   - `opts` - Keyword list of options:
     - `:repo` - Repository module (default: Jarga.Repo)
+    - `:user_schema` - UserSchema module (default: Infrastructure.Schemas.UserSchema)
+    - `:user_repo` - UserRepository module (default: Infrastructure.Repositories.UserRepository)
     - `:password_service` - Password service module (default: PasswordService)
 
   ## Returns
@@ -48,11 +61,13 @@ defmodule Jarga.Accounts.Application.UseCases.RegisterUser do
   def execute(params, opts \\ []) do
     %{attrs: attrs} = params
 
-    repo = Keyword.get(opts, :repo, Jarga.Repo)
+    repo = Keyword.get(opts, :repo, @default_repo)
+    user_schema = Keyword.get(opts, :user_schema, @default_user_schema)
+    user_repo = Keyword.get(opts, :user_repo, @default_user_repo)
     password_service = Keyword.get(opts, :password_service, PasswordService)
 
     # Validate attributes
-    changeset = UserSchema.registration_changeset(%UserSchema{}, attrs)
+    changeset = user_schema.registration_changeset(struct(user_schema), attrs)
 
     # If changeset is valid and has a password, hash it
     changeset_with_hashed_password =
@@ -68,6 +83,6 @@ defmodule Jarga.Accounts.Application.UseCases.RegisterUser do
       end
 
     # Insert user
-    UserRepository.insert_changeset(changeset_with_hashed_password, repo)
+    user_repo.insert_changeset(changeset_with_hashed_password, repo)
   end
 end

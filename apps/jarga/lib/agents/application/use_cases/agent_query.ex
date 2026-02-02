@@ -43,7 +43,7 @@ defmodule Jarga.Agents.Application.UseCases.AgentQuery do
       end
   """
 
-  alias Jarga.Agents.Infrastructure.Services.LlmClient
+  @default_llm_client Jarga.Agents.Infrastructure.Services.LlmClient
 
   @max_content_chars 3000
 
@@ -63,13 +63,16 @@ defmodule Jarga.Agents.Application.UseCases.AgentQuery do
     {:ok, pid} - Streaming process PID
     {:error, reason} - Error reason
   """
-  def execute(params, caller_pid) do
+  def execute(params, caller_pid, opts \\ []) do
     question = Map.fetch!(params, :question)
     assigns = Map.fetch!(params, :assigns)
     agent = Map.get(params, :agent)
     node_id = Map.get(params, :node_id)
-    # Allow dependency injection via params, fall back to config, then default
-    llm_client = Map.get(params, :llm_client) || get_llm_client() || LlmClient
+    # Allow dependency injection via opts OR params for flexibility
+    llm_client =
+      Keyword.get(opts, :llm_client) ||
+        Map.get(params, :llm_client) ||
+        @default_llm_client
 
     # Extract document context
     context = extract_context(assigns)
@@ -322,9 +325,4 @@ defmodule Jarga.Agents.Application.UseCases.AgentQuery do
 
   defp get_agent_temperature(nil), do: nil
   defp get_agent_temperature(agent), do: Map.get(agent, :temperature)
-
-  # Get LLM client from config (allows test environment to override)
-  defp get_llm_client do
-    Application.get_env(:jarga, :llm_client)
-  end
 end

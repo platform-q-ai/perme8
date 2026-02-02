@@ -6,9 +6,9 @@ defmodule Jarga.Agents.Application.UseCases.DeleteUserAgent do
   Cascade deletes all workspace_agents entries via database constraint.
   """
 
-  alias Jarga.Agents.Infrastructure.Repositories.AgentRepository
-  alias Jarga.Agents.Infrastructure.Repositories.WorkspaceAgentRepository
-  alias Jarga.Agents.Infrastructure.Notifiers.PubSubNotifier
+  @default_agent_repo Jarga.Agents.Infrastructure.Repositories.AgentRepository
+  @default_workspace_agent_repo Jarga.Agents.Infrastructure.Repositories.WorkspaceAgentRepository
+  @default_notifier Jarga.Agents.Infrastructure.Notifiers.PubSubNotifier
 
   @doc """
   Deletes an agent if the user is the owner.
@@ -16,25 +16,33 @@ defmodule Jarga.Agents.Application.UseCases.DeleteUserAgent do
   ## Parameters
   - `agent_id` - ID of the agent
   - `user_id` - ID of the current user
+  - `opts` - Keyword list with:
+    - `:agent_repo` - Repository module for agents (default: AgentRepository)
+    - `:workspace_agent_repo` - Repository for workspace-agent associations (default: WorkspaceAgentRepository)
+    - `:notifier` - Notifier module for PubSub events (default: PubSubNotifier)
 
   ## Returns
   - `{:ok, agent}` - Successfully deleted agent
   - `{:error, :not_found}` - Agent not found or user not owner
   - `{:error, :forbidden}` - User is not the owner
   """
-  def execute(agent_id, user_id) do
-    case AgentRepository.get_agent_for_user(user_id, agent_id) do
+  def execute(agent_id, user_id, opts \\ []) do
+    agent_repo = Keyword.get(opts, :agent_repo, @default_agent_repo)
+    workspace_agent_repo = Keyword.get(opts, :workspace_agent_repo, @default_workspace_agent_repo)
+    notifier = Keyword.get(opts, :notifier, @default_notifier)
+
+    case agent_repo.get_agent_for_user(user_id, agent_id) do
       nil ->
         {:error, :not_found}
 
       agent ->
         # Get all workspaces this agent is in before deletion
-        workspace_ids = WorkspaceAgentRepository.get_agent_workspace_ids(agent_id)
+        workspace_ids = workspace_agent_repo.get_agent_workspace_ids(agent_id)
 
-        case AgentRepository.delete_agent(agent) do
+        case agent_repo.delete_agent(agent) do
           {:ok, deleted_agent} ->
             # Notify all affected workspaces that the agent was deleted
-            PubSubNotifier.notify_agent_deleted(deleted_agent, workspace_ids)
+            notifier.notify_agent_deleted(deleted_agent, workspace_ids)
 
             {:ok, deleted_agent}
 

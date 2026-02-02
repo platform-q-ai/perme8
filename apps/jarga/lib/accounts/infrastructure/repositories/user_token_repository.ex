@@ -6,6 +6,8 @@ defmodule Jarga.Accounts.Infrastructure.Repositories.UserTokenRepository do
   Returns domain UserToken entities, not schemas.
   """
 
+  @behaviour Jarga.Accounts.Application.Behaviours.UserTokenRepositoryBehaviour
+
   alias Jarga.Accounts.Infrastructure.Schemas.UserTokenSchema
   alias Jarga.Repo
 
@@ -43,6 +45,7 @@ defmodule Jarga.Accounts.Infrastructure.Repositories.UserTokenRepository do
       nil
 
   """
+  @impl true
   def get_one(query, repo \\ Repo) do
     repo.one(query)
     |> UserTokenSchema.to_entity()
@@ -62,6 +65,7 @@ defmodule Jarga.Accounts.Infrastructure.Repositories.UserTokenRepository do
       []
 
   """
+  @impl true
   def all_by_user_id(user_id, repo \\ Repo) do
     repo.all_by(UserTokenSchema, user_id: user_id)
     |> Enum.map(&UserTokenSchema.to_entity/1)
@@ -79,6 +83,7 @@ defmodule Jarga.Accounts.Infrastructure.Repositories.UserTokenRepository do
       %UserToken{}
 
   """
+  @impl true
   def delete!(token, repo \\ Repo) do
     schema = UserTokenSchema.from_entity(token)
     deleted_schema = repo.delete!(schema)
@@ -96,6 +101,7 @@ defmodule Jarga.Accounts.Infrastructure.Repositories.UserTokenRepository do
       {2, nil}
 
   """
+  @impl true
   def delete_all(query, repo \\ Repo) do
     repo.delete_all(query)
   end
@@ -114,6 +120,7 @@ defmodule Jarga.Accounts.Infrastructure.Repositories.UserTokenRepository do
       %UserToken{}
 
   """
+  @impl true
   def insert!(token, repo \\ Repo) do
     schema = UserTokenSchema.from_entity(token)
 

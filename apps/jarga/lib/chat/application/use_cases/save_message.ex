@@ -20,7 +20,7 @@ defmodule Jarga.Chat.Application.UseCases.SaveMessage do
       {:ok, %ChatMessage{}}
   """
 
-  alias Jarga.Chat.Infrastructure.Repositories.MessageRepository
+  @default_message_repository Jarga.Chat.Infrastructure.Repositories.MessageRepository
 
   @doc """
   Saves a new message to a chat session.
@@ -31,10 +31,13 @@ defmodule Jarga.Chat.Application.UseCases.SaveMessage do
       - role: (required) Either "user" or "assistant"
       - content: (required) Message content
       - context_chunks: (optional) Array of document chunk IDs used as context
+    - opts: Keyword list of options
+      - :message_repository - Repository module for message operations (default: MessageRepository)
 
   Returns `{:ok, message}` if successful, or `{:error, changeset}` if validation fails.
   """
-  def execute(attrs) do
-    MessageRepository.create_message(attrs)
+  def execute(attrs, opts \\ []) do
+    message_repository = Keyword.get(opts, :message_repository, @default_message_repository)
+    message_repository.create_message(attrs)
   end
 end

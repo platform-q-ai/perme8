@@ -3,7 +3,7 @@ defmodule Jarga.Documents.Infrastructure.Schemas.DocumentComponentSchemaTest do
 
   alias Jarga.Documents.Infrastructure.Schemas.DocumentComponentSchema
   alias Jarga.Documents.Domain.Entities.DocumentComponent
-  alias Jarga.Documents.Application.Services.ComponentLoader
+  alias Jarga.Documents.Infrastructure.Services.ComponentLoader
   alias Jarga.{Documents, Notes}
 
   import Jarga.AccountsFixtures

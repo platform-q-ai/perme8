@@ -1,8 +1,8 @@
-defmodule Jarga.Documents.Application.Services.ComponentLoaderTest do
+defmodule Jarga.Documents.Infrastructure.Services.ComponentLoaderTest do
   use Jarga.DataCase, async: true
 
   alias Jarga.Documents.Domain.Entities.DocumentComponent
-  alias Jarga.Documents.Application.Services.ComponentLoader
+  alias Jarga.Documents.Infrastructure.Services.ComponentLoader
   alias Jarga.Notes
 
   import Jarga.AccountsFixtures

@@ -9,7 +9,6 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
   import JargaWeb.ChatLive.MessageHandlers
 
   alias Jarga.{Workspaces, Projects, Documents, Agents}
-  alias Jarga.Projects.Infrastructure.Schemas.ProjectSchema
   alias JargaWeb.Layouts
 
   @impl true
@@ -630,7 +629,7 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
          |> assign(:document_form, to_form(%{"title" => ""}))
          |> assign(
            :project_form,
-           to_form(ProjectSchema.changeset(%ProjectSchema{}, %{}), as: :project)
+           to_form(Projects.new_project_changeset(), as: :project)
          )
          |> assign(:invite_form, to_form(%{"email" => "", "role" => "member"}))}
 
@@ -741,7 +740,7 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
     {:noreply,
      socket
      |> assign(:show_project_modal, false)
-     |> assign(:project_form, to_form(ProjectSchema.changeset(%ProjectSchema{}, %{})))}
+     |> assign(:project_form, to_form(Projects.new_project_changeset()))}
   end
 
   @impl true
@@ -760,7 +759,7 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
          |> assign(:show_project_modal, false)
          |> assign(
            :project_form,
-           to_form(ProjectSchema.changeset(%ProjectSchema{}, %{}), as: :project)
+           to_form(Projects.new_project_changeset(), as: :project)
          )
          |> put_flash(:info, "Project created successfully")}
 

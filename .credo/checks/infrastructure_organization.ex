@@ -1,4 +1,4 @@
-defmodule Jarga.Credo.Check.Architecture.InfrastructureOrganization do
+defmodule Credo.Check.Custom.Architecture.InfrastructureOrganization do
   @moduledoc """
   Ensures infrastructure layer files are organized into proper subdirectories.
 
@@ -35,7 +35,7 @@ defmodule Jarga.Credo.Check.Architecture.InfrastructureOrganization do
 
   ## Configuration
 
-      {Jarga.Credo.Check.Architecture.InfrastructureOrganization, []}
+      {Credo.Check.Custom.Architecture.InfrastructureOrganization, []}
 
   """
 

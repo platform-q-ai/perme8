@@ -30,7 +30,9 @@ defmodule Jarga.Accounts.Domain.Policies.AuthenticationPolicy do
   ## Parameters
 
     - user: The user struct (may be nil)
-    - minutes: Time limit in minutes (default: -20, meaning 20 minutes ago)
+    - opts: Keyword list of options
+      - `:minutes` - Time limit in minutes (default: -20, meaning 20 minutes ago)
+      - `:current_time` - Current DateTime for comparison (default: DateTime.utc_now())
 
   ## Returns
 
@@ -38,21 +40,25 @@ defmodule Jarga.Accounts.Domain.Policies.AuthenticationPolicy do
 
   ## Examples
 
-      iex> user = %User{authenticated_at: DateTime.utc_now()}
-      iex> AuthenticationPolicy.sudo_mode?(user)
+      iex> now = ~U[2024-01-15 12:00:00Z]
+      iex> user = %User{authenticated_at: ~U[2024-01-15 11:50:00Z]}
+      iex> AuthenticationPolicy.sudo_mode?(user, current_time: now)
       true
 
-      iex> old_auth = DateTime.utc_now() |> DateTime.add(-30, :minute)
-      iex> user = %User{authenticated_at: old_auth}
-      iex> AuthenticationPolicy.sudo_mode?(user)
+      iex> now = ~U[2024-01-15 12:00:00Z]
+      iex> user = %User{authenticated_at: ~U[2024-01-15 11:30:00Z]}
+      iex> AuthenticationPolicy.sudo_mode?(user, current_time: now)
       false
 
   """
-  def sudo_mode?(user, minutes \\ @default_sudo_mode_minutes)
+  def sudo_mode?(user, opts \\ [])
 
-  def sudo_mode?(%User{authenticated_at: ts}, minutes) when is_struct(ts, DateTime) do
-    DateTime.after?(ts, DateTime.utc_now() |> DateTime.add(minutes, :minute))
+  def sudo_mode?(%User{authenticated_at: ts}, opts) when is_struct(ts, DateTime) do
+    minutes = Keyword.get(opts, :minutes, @default_sudo_mode_minutes)
+    current_time = Keyword.get(opts, :current_time, DateTime.utc_now())
+    cutoff = DateTime.add(current_time, minutes, :minute)
+    DateTime.after?(ts, cutoff)
   end
 
-  def sudo_mode?(_user, _minutes), do: false
+  def sudo_mode?(_user, _opts), do: false
 end

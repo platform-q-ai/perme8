@@ -6,6 +6,8 @@ defmodule Jarga.Accounts.Infrastructure.Schemas.UserSchema do
   For the pure domain entity, see Jarga.Accounts.Domain.Entities.User.
   """
 
+  @behaviour Jarga.Accounts.Application.Behaviours.UserSchemaBehaviour
+
   use Ecto.Schema
   import Ecto.Changeset
 
@@ -70,6 +72,7 @@ defmodule Jarga.Accounts.Infrastructure.Schemas.UserSchema do
       uniqueness of the email, useful when displaying live validations.
       Defaults to `true`.
   """
+  @impl true
   def email_changeset(user_or_schema, attrs, opts \\ [])
 
   def email_changeset(%User{} = user, attrs, opts) do
@@ -129,6 +132,7 @@ defmodule Jarga.Accounts.Infrastructure.Schemas.UserSchema do
       
   Note: Password hashing is handled by the infrastructure layer, not in this changeset.
   """
+  @impl true
   def registration_changeset(user_or_schema, attrs, opts \\ [])
 
   def registration_changeset(%User{} = user, attrs, opts) do
@@ -157,6 +161,7 @@ defmodule Jarga.Accounts.Infrastructure.Schemas.UserSchema do
 
   Note: Password hashing is handled by the infrastructure layer, not in this changeset.
   """
+  @impl true
   def password_changeset(user_or_schema, attrs, opts \\ [])
 
   def password_changeset(%User{} = user, attrs, opts) do
@@ -195,6 +200,7 @@ defmodule Jarga.Accounts.Infrastructure.Schemas.UserSchema do
   Confirms the account by setting `confirmed_at`.
   Accepts either a schema struct or a domain entity (which will be converted).
   """
+  @impl true
   def confirm_changeset(user_or_schema)
 
   def confirm_changeset(%User{} = user) do

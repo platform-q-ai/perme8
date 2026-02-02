@@ -35,7 +35,7 @@ defmodule Jarga.Accounts.Infrastructure.Repositories.ApiKeyRepositoryTest do
         })
 
       assert {:ok, updated} =
-               ApiKeyRepository.update(Jarga.Repo, api_key, %{name: "Updated Name"})
+               ApiKeyRepository.update(Jarga.Repo, api_key.id, %{name: "Updated Name"})
 
       assert updated.name == "Updated Name"
       assert updated.id == api_key.id

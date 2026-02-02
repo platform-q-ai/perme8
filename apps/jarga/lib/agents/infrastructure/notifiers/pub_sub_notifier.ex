@@ -10,6 +10,8 @@ defmodule Jarga.Agents.Infrastructure.Notifiers.PubSubNotifier do
   This ensures all users see accurate agent lists in real-time.
   """
 
+  @behaviour Jarga.Agents.Application.Behaviours.PubSubNotifierBehaviour
+
   @doc """
   Notifies all affected workspaces when an agent is updated.
 
@@ -17,6 +19,7 @@ defmodule Jarga.Agents.Infrastructure.Notifiers.PubSubNotifier do
   - All workspaces the agent is currently in
   - User's personal agent topic (for non-workspace pages)
   """
+  @impl true
   def notify_agent_updated(%{id: _, user_id: _} = agent, workspace_ids)
       when is_list(workspace_ids) do
     # Broadcast to all workspaces that have this agent
@@ -46,6 +49,7 @@ defmodule Jarga.Agents.Infrastructure.Notifiers.PubSubNotifier do
   - Workspaces the agent was added to (so they add it to UI)
   - User's personal agent topic
   """
+  @impl true
   def notify_workspace_associations_changed(agent, added_workspace_ids, removed_workspace_ids) do
     # Notify workspaces agent was removed from
     Enum.each(removed_workspace_ids, fn workspace_id ->
@@ -80,6 +84,7 @@ defmodule Jarga.Agents.Infrastructure.Notifiers.PubSubNotifier do
 
   Broadcasts to all workspaces that had this agent so they can remove it.
   """
+  @impl true
   def notify_agent_deleted(agent, workspace_ids) do
     # Notify all workspaces that had this agent
     Enum.each(workspace_ids, fn workspace_id ->

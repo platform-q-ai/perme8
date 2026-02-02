@@ -26,6 +26,7 @@ defmodule Mix.Tasks.StepLinter do
   Create a new module implementing the `Mix.Tasks.StepLinter.Rule` behaviour
   in `lib/mix/tasks/step_linter/rules/`. See `NoBranching` for an example.
   """
+  use Boundary, top_level?: true
   use Mix.Task
 
   alias Mix.Tasks.StepLinter.{Parser, Reporter, RuleRunner}
@@ -71,21 +72,40 @@ defmodule Mix.Tasks.StepLinter do
 
   defp gather_files(paths) do
     paths
-    |> Enum.flat_map(fn path ->
-      cond do
-        File.dir?(path) ->
-          # Match all .exs files recursively (both *_steps.exs and *.exs in subdirectories)
-          Path.wildcard(Path.join(path, "**/*.exs"))
-
-        File.exists?(path) ->
-          [path]
-
-        true ->
-          Mix.shell().error("Path not found: #{path}")
-          []
-      end
-    end)
+    |> Enum.flat_map(&expand_path/1)
     |> Enum.uniq()
+  end
+
+  defp expand_path(path) do
+    cond do
+      # Handle glob patterns (contain * or ?)
+      String.contains?(path, ["*", "?"]) ->
+        expand_glob_pattern(path)
+
+      File.dir?(path) ->
+        # Match all .exs files recursively
+        Path.wildcard(Path.join(path, "**/*.exs"))
+
+      File.exists?(path) ->
+        [path]
+
+      true ->
+        Mix.shell().error("Path not found: #{path}")
+        []
+    end
+  end
+
+  defp expand_glob_pattern(pattern) do
+    pattern
+    |> Path.wildcard()
+    |> Enum.flat_map(&files_in_directory/1)
+  end
+
+  defp files_in_directory(dir) do
+    case File.dir?(dir) do
+      true -> Path.wildcard(Path.join(dir, "**/*.exs"))
+      false -> []
+    end
   end
 
   defp lint_file(file, selected_rule) do

@@ -5,9 +5,17 @@ defmodule Jarga.WorkspacesFixtures do
   """
 
   # Test fixture module - top-level boundary for test data creation
+  # Needs access to context + layer boundaries for fixture creation
   use Boundary,
     top_level?: true,
-    deps: [Jarga.Workspaces, Jarga.Accounts, Jarga.Notifications, Jarga.Repo],
+    deps: [
+      Jarga.Workspaces,
+      Jarga.Workspaces.Domain,
+      Jarga.Workspaces.Infrastructure,
+      Jarga.Accounts,
+      Jarga.Notifications,
+      Jarga.Repo
+    ],
     exports: []
 
   alias Jarga.Workspaces

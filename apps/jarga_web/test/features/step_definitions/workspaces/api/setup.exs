@@ -69,7 +69,18 @@ defmodule Workspaces.Api.SetupSteps do
   step "I have an API key {string} with access to {string}",
        %{args: [key_name, workspace_access_str]} = context do
     user = context[:current_user]
-    workspace_access = Helpers.parse_workspace_access(workspace_access_str)
+    workspaces = context[:workspaces] || %{}
+
+    # Parse workspace slugs from feature file and translate to actual slugs
+    workspace_access =
+      workspace_access_str
+      |> Helpers.parse_workspace_access()
+      |> Enum.map(fn feature_slug ->
+        case Map.get(workspaces, feature_slug) do
+          %{slug: actual_slug} -> actual_slug
+          nil -> feature_slug
+        end
+      end)
 
     {api_key, plain_token} =
       Helpers.create_api_key_fixture(user.id, %{

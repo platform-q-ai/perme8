@@ -5,13 +5,13 @@ Feature: User Registration
 
   Scenario: User registers with valid credentials
     When I register with the following details:
-      | Field       | Value                 |
-      | email       | alice@example.com     |
-      | password    | SecurePassword123!    |
-      | first_name  | Alice                 |
-      | last_name   | Smith                 |
+      | Field       | Value                      |
+      | email       | new-alice@example.com      |
+      | password    | SecurePassword123!         |
+      | first_name  | Alice                      |
+      | last_name   | Smith                      |
     Then the registration should be successful
-    And the user should have email "alice@example.com"
+    And the user should have email "new-alice@example.com"
     And the user should have first name "Alice"
     And the user should have last name "Smith"
     And the user should have status "active"

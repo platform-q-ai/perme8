@@ -6,6 +6,8 @@ defmodule Jarga.Notifications.Infrastructure.Notifiers.PubSubNotifier do
   and other notification events.
   """
 
+  @behaviour Jarga.Notifications.Application.Behaviours.PubSubNotifierBehaviour
+
   @doc """
   Broadcasts a workspace invitation created event.
 
@@ -16,6 +18,7 @@ defmodule Jarga.Notifications.Infrastructure.Notifiers.PubSubNotifier do
   - `invited_by_name` - The name of the person who sent the invitation
   - `role` - The role they were invited as
   """
+  @impl true
   def broadcast_invitation_created(user_id, workspace_id, workspace_name, invited_by_name, role) do
     Phoenix.PubSub.broadcast(
       Jarga.PubSub,
@@ -40,6 +43,7 @@ defmodule Jarga.Notifications.Infrastructure.Notifiers.PubSubNotifier do
   - `user_id` - The ID of the user who joined
   - `workspace_id` - The ID of the workspace they joined
   """
+  @impl true
   def broadcast_workspace_joined(user_id, workspace_id) do
     Phoenix.PubSub.broadcast(
       Jarga.PubSub,
@@ -63,6 +67,7 @@ defmodule Jarga.Notifications.Infrastructure.Notifiers.PubSubNotifier do
   - `user_id` - The ID of the user who declined
   - `workspace_id` - The ID of the workspace invitation they declined
   """
+  @impl true
   def broadcast_invitation_declined(user_id, workspace_id) do
     Phoenix.PubSub.broadcast(
       Jarga.PubSub,
@@ -80,6 +85,7 @@ defmodule Jarga.Notifications.Infrastructure.Notifiers.PubSubNotifier do
   - `user_id` - The ID of the user receiving the notification
   - `notification` - The notification struct
   """
+  @impl true
   def broadcast_new_notification(user_id, notification) do
     Phoenix.PubSub.broadcast(
       Jarga.PubSub,

@@ -4,7 +4,6 @@ defmodule Mix.Tasks.StepLinter.Reporter do
 
   Supports multiple output formats for integration with different tools.
   """
-  use Boundary, top_level?: true
 
   @doc """
   Reports issues in the specified format.

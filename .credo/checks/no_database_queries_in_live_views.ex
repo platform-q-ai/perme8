@@ -1,4 +1,4 @@
-defmodule Jarga.Credo.Check.Architecture.NoDatabaseQueriesInLiveViews do
+defmodule Credo.Check.Custom.Architecture.NoDatabaseQueriesInLiveViews do
   @moduledoc """
   Detects direct database queries in LiveView modules.
 

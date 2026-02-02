@@ -5,6 +5,8 @@ defmodule Jarga.Documents.Infrastructure.Schemas.DocumentComponentSchema do
   the join table between documents and their components (notes, tasks, sheets, etc.).
   """
 
+  @behaviour Jarga.Documents.Application.Behaviours.DocumentComponentSchemaBehaviour
+
   use Ecto.Schema
   import Ecto.Changeset
 
@@ -28,6 +30,7 @@ defmodule Jarga.Documents.Infrastructure.Schemas.DocumentComponentSchema do
   Changeset for creating and updating document components.
   Accepts either a schema struct or a domain entity (which will be converted).
   """
+  @impl true
   def changeset(document_component, attrs) do
     schema = to_schema(document_component)
 

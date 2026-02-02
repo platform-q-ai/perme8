@@ -5,6 +5,8 @@ defmodule Jarga.Agents.Infrastructure.Repositories.AgentRepository do
   Provides CRUD operations for agents owned by users.
   """
 
+  @behaviour Jarga.Agents.Application.Behaviours.AgentRepositoryBehaviour
+
   import Ecto.Query, warn: false
 
   alias Jarga.Repo
@@ -23,6 +25,7 @@ defmodule Jarga.Agents.Infrastructure.Repositories.AgentRepository do
       iex> get("non-existent-id")
       nil
   """
+  @impl true
   @spec get(Ecto.UUID.t()) :: AgentSchema.t() | nil
   def get(agent_id) do
     Repo.get(AgentSchema, agent_id)
@@ -41,6 +44,7 @@ defmodule Jarga.Agents.Infrastructure.Repositories.AgentRepository do
       iex> get_agent_for_user(user_id, other_users_agent_id)
       nil
   """
+  @impl true
   @spec get_agent_for_user(Ecto.UUID.t(), Ecto.UUID.t()) :: AgentSchema.t() | nil
   def get_agent_for_user(user_id, agent_id) do
     AgentSchema
@@ -59,6 +63,7 @@ defmodule Jarga.Agents.Infrastructure.Repositories.AgentRepository do
       iex> list_agents_for_user(user_with_no_agents_id)
       []
   """
+  @impl true
   @spec list_agents_for_user(Ecto.UUID.t(), keyword()) :: [AgentSchema.t()]
   def list_agents_for_user(user_id, _opts \\ []) do
     AgentSchema
@@ -78,6 +83,7 @@ defmodule Jarga.Agents.Infrastructure.Repositories.AgentRepository do
       iex> create_agent(%{name: "Invalid"})
       {:error, %Ecto.Changeset{}}
   """
+  @impl true
   @spec create_agent(map()) :: {:ok, AgentSchema.t()} | {:error, Ecto.Changeset.t()}
   def create_agent(attrs) do
     %AgentSchema{}
@@ -96,6 +102,7 @@ defmodule Jarga.Agents.Infrastructure.Repositories.AgentRepository do
       iex> update_agent(agent, %{visibility: "INVALID"})
       {:error, %Ecto.Changeset{}}
   """
+  @impl true
   @spec update_agent(AgentSchema.t(), map()) ::
           {:ok, AgentSchema.t()} | {:error, Ecto.Changeset.t()}
   def update_agent(%AgentSchema{} = agent, attrs) do
@@ -123,6 +130,7 @@ defmodule Jarga.Agents.Infrastructure.Repositories.AgentRepository do
       iex> delete_agent(agent)
       {:ok, %Agent{}}
   """
+  @impl true
   @spec delete_agent(AgentSchema.t()) :: {:ok, AgentSchema.t()} | {:error, Ecto.Changeset.t()}
   def delete_agent(%AgentSchema{} = agent) do
     Repo.delete(agent)
@@ -142,6 +150,7 @@ defmodule Jarga.Agents.Infrastructure.Repositories.AgentRepository do
       iex> list_viewable_agents(user_id)
       [%Agent{}, ...]
   """
+  @impl true
   @spec list_viewable_agents(Ecto.UUID.t()) :: [AgentSchema.t()]
   def list_viewable_agents(user_id) do
     AgentSchema

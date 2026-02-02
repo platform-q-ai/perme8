@@ -1,4 +1,4 @@
-defmodule Jarga.Credo.Check.Architecture.PoliciesInApplicationLayer do
+defmodule Credo.Check.Custom.Architecture.PoliciesInApplicationLayer do
   @moduledoc """
   Ensures all policy modules are located in `application/policies/` subdirectory.
 
@@ -22,7 +22,7 @@ defmodule Jarga.Credo.Check.Architecture.PoliciesInApplicationLayer do
 
   ## Configuration
 
-      {Jarga.Credo.Check.Architecture.PoliciesInApplicationLayer, []}
+      {Credo.Check.Custom.Architecture.PoliciesInApplicationLayer, []}
 
   """
 

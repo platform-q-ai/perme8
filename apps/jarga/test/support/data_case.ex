@@ -15,10 +15,15 @@ defmodule Jarga.DataCase do
   """
 
   # Test support module - top-level boundary for test infrastructure
-  # Needs access to Jarga.Notifications for integration test setup
+  # Needs access to Jarga.Notifications + Infrastructure for integration test setup
   use Boundary,
     top_level?: true,
-    deps: [Jarga.Repo, Jarga.Notifications, Jarga.Test.SandboxHelper],
+    deps: [
+      Jarga.Repo,
+      Jarga.Notifications,
+      Jarga.Notifications.Infrastructure,
+      Jarga.Test.SandboxHelper
+    ],
     exports: []
 
   use ExUnit.CaseTemplate

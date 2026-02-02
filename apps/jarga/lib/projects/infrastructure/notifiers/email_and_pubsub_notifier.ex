@@ -5,7 +5,7 @@ defmodule Jarga.Projects.Infrastructure.Notifiers.EmailAndPubSubNotifier do
   Uses Phoenix PubSub to broadcast real-time notifications to workspace members.
   """
 
-  @behaviour Jarga.Projects.Application.Services.NotificationService
+  @behaviour Jarga.Projects.Application.Behaviours.NotificationServiceBehaviour
 
   alias Jarga.Projects.Domain.Entities.Project
 

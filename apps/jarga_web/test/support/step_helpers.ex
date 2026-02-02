@@ -30,6 +30,36 @@ defmodule Jarga.Test.StepHelpers do
   # Required for using Phoenix.LiveViewTest macros
   require Phoenix.LiveViewTest
 
+  # Alias for Phoenix sandbox metadata
+  alias Phoenix.Ecto.SQL.Sandbox, as: PhoenixSandbox
+
+  # ============================================================================
+  # API CONNECTION HELPERS
+  # ============================================================================
+
+  @doc """
+  Builds a connection with sandbox metadata header for API tests.
+
+  This is critical for API tests using Phoenix.ConnTest - without the sandbox
+  metadata header, the API endpoint runs in a different DB connection and
+  can't see data created in the test process.
+
+  ## Example
+
+      conn = build_conn_with_sandbox()
+      conn = put_req_header(conn, "authorization", "Bearer \#{token}")
+      conn = post(conn, "/api/endpoint", body)
+
+  """
+  def build_conn_with_sandbox do
+    # Get sandbox metadata for the test process
+    metadata = PhoenixSandbox.metadata_for(Jarga.Repo, self())
+    encoded_metadata = PhoenixSandbox.encode_metadata(metadata)
+
+    Phoenix.ConnTest.build_conn()
+    |> Plug.Conn.put_req_header("user-agent", encoded_metadata)
+  end
+
   # ============================================================================
   # CONTEXT EXTRACTION HELPERS
   # ============================================================================

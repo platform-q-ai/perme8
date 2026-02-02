@@ -22,14 +22,17 @@ defmodule Jarga.Documents.Application.UseCases.CreateDocument do
 
   alias Ecto.Multi
   alias Jarga.Accounts.Domain.Entities.User
-  alias Jarga.Documents.Infrastructure.Schemas.{DocumentSchema, DocumentComponentSchema}
-  alias Jarga.Documents.Notes.Infrastructure.Repositories.NoteRepository
   alias Jarga.Documents.Domain.SlugGenerator
-  alias Jarga.Documents.Infrastructure.Repositories.AuthorizationRepository
-  alias Jarga.Documents.Infrastructure.Repositories.DocumentRepository
-  alias Jarga.Documents.Infrastructure.Notifiers.PubSubNotifier
   alias Jarga.Workspaces
   alias Jarga.Workspaces.Application.Policies.PermissionsPolicy
+
+  # Default Infrastructure implementations (injected via opts for testing)
+  @default_document_schema Jarga.Documents.Infrastructure.Schemas.DocumentSchema
+  @default_document_component_schema Jarga.Documents.Infrastructure.Schemas.DocumentComponentSchema
+  @default_note_repository Jarga.Documents.Notes.Infrastructure.Repositories.NoteRepository
+  @default_authorization_repository Jarga.Documents.Infrastructure.Repositories.AuthorizationRepository
+  @default_document_repository Jarga.Documents.Infrastructure.Repositories.DocumentRepository
+  @default_notifier Jarga.Documents.Infrastructure.Notifiers.PubSubNotifier
 
   @doc """
   Executes the create document use case.
@@ -57,13 +60,37 @@ defmodule Jarga.Documents.Application.UseCases.CreateDocument do
       attrs: attrs
     } = params
 
-    notifier = Keyword.get(opts, :notifier, PubSubNotifier)
+    # Extract dependencies from opts
+    document_schema = Keyword.get(opts, :document_schema, @default_document_schema)
+
+    document_component_schema =
+      Keyword.get(opts, :document_component_schema, @default_document_component_schema)
+
+    note_repository = Keyword.get(opts, :note_repository, @default_note_repository)
+
+    authorization_repository =
+      Keyword.get(opts, :authorization_repository, @default_authorization_repository)
+
+    document_repository = Keyword.get(opts, :document_repository, @default_document_repository)
+    notifier = Keyword.get(opts, :notifier, @default_notifier)
+
+    deps = %{
+      document_schema: document_schema,
+      document_component_schema: document_component_schema,
+      note_repository: note_repository,
+      document_repository: document_repository,
+      notifier: notifier
+    }
 
     with {:ok, member} <- get_workspace_member(actor, workspace_id),
          :ok <- authorize_create_document(member.role),
          :ok <-
-           verify_project_in_workspace(workspace_id, Map.get(attrs, :project_id)) do
-      create_document_with_note_and_notify(actor, workspace_id, attrs, notifier)
+           verify_project_in_workspace(
+             authorization_repository,
+             workspace_id,
+             Map.get(attrs, :project_id)
+           ) do
+      create_document_with_note_and_notify(actor, workspace_id, attrs, deps)
     end
   end
 
@@ -82,13 +109,21 @@ defmodule Jarga.Documents.Application.UseCases.CreateDocument do
   end
 
   # Verify project belongs to workspace
-  defp verify_project_in_workspace(workspace_id, project_id) do
-    AuthorizationRepository.verify_project_in_workspace(workspace_id, project_id)
+  defp verify_project_in_workspace(authorization_repository, workspace_id, project_id) do
+    authorization_repository.verify_project_in_workspace(workspace_id, project_id)
   end
 
   # Create the document, note, and document_component in a transaction
   # Send notification AFTER transaction commits
-  defp create_document_with_note_and_notify(%User{} = user, workspace_id, attrs, notifier) do
+  defp create_document_with_note_and_notify(%User{} = user, workspace_id, attrs, deps) do
+    %{
+      document_schema: document_schema,
+      document_component_schema: document_component_schema,
+      note_repository: note_repository,
+      document_repository: document_repository,
+      notifier: notifier
+    } = deps
+
     multi =
       Multi.new()
       |> Multi.run(:note, fn _repo, _changes ->
@@ -99,7 +134,7 @@ defmodule Jarga.Documents.Application.UseCases.CreateDocument do
           project_id: Map.get(attrs, :project_id)
         }
 
-        NoteRepository.create(note_attrs)
+        note_repository.create(note_attrs)
       end)
       |> Multi.run(:document, fn _repo, _changes ->
         # Generate slug in use case (business logic)
@@ -111,7 +146,7 @@ defmodule Jarga.Documents.Application.UseCases.CreateDocument do
             SlugGenerator.generate(
               title,
               workspace_id,
-              &DocumentRepository.slug_exists_in_workspace?/3
+              &document_repository.slug_exists_in_workspace?/3
             )
           else
             # If no title provided, slug will be nil and validation will fail
@@ -126,23 +161,23 @@ defmodule Jarga.Documents.Application.UseCases.CreateDocument do
             slug: slug
           })
 
-        %DocumentSchema{}
-        |> DocumentSchema.changeset(attrs_with_user)
-        |> DocumentRepository.insert()
+        struct(document_schema)
+        |> document_schema.changeset(attrs_with_user)
+        |> document_repository.insert()
       end)
       |> Multi.run(:document_component, fn _repo, %{document: document, note: note} ->
-        %DocumentComponentSchema{}
-        |> DocumentComponentSchema.changeset(%{
+        struct(document_component_schema)
+        |> document_component_schema.changeset(%{
           document_id: document.id,
           component_type: "note",
           component_id: note.id,
           position: 0
         })
-        |> DocumentRepository.insert_component()
+        |> document_repository.insert_component()
       end)
 
     # Execute transaction through repository
-    result = DocumentRepository.transaction(multi)
+    result = document_repository.transaction(multi)
 
     case result do
       {:ok, %{document: document}} ->

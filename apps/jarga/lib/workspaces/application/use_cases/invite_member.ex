@@ -25,8 +25,9 @@ defmodule Jarga.Workspaces.Application.UseCases.InviteMember do
   alias Jarga.Accounts
   alias Jarga.Workspaces.Application.Policies.MembershipPolicy
   alias Jarga.Workspaces.Application.Policies.PermissionsPolicy
-  alias Jarga.Workspaces.Infrastructure.Repositories.MembershipRepository
-  alias Jarga.Workspaces.Infrastructure.Notifiers.PubSubNotifier
+
+  @default_membership_repository Jarga.Workspaces.Infrastructure.Repositories.MembershipRepository
+  @default_pubsub_notifier Jarga.Workspaces.Infrastructure.Notifiers.PubSubNotifier
 
   @doc """
   Executes the invite member use case.
@@ -58,17 +59,31 @@ defmodule Jarga.Workspaces.Application.UseCases.InviteMember do
       role: role
     } = params
 
+    membership_repository =
+      Keyword.get(opts, :membership_repository, @default_membership_repository)
+
     notifier = Keyword.get(opts, :notifier)
-    pubsub_notifier = Keyword.get(opts, :pubsub_notifier, PubSubNotifier)
+    pubsub_notifier = Keyword.get(opts, :pubsub_notifier, @default_pubsub_notifier)
 
     with :ok <- validate_role(role),
-         {:ok, workspace} <- verify_inviter_membership(inviter, workspace_id),
-         {:ok, inviter_member} <- get_inviter_member(inviter, workspace_id),
+         {:ok, workspace} <-
+           verify_inviter_membership(inviter, workspace_id, membership_repository),
+         {:ok, inviter_member} <-
+           get_inviter_member(inviter, workspace_id, membership_repository),
          :ok <- check_inviter_permission(inviter_member),
-         :ok <- check_not_already_member(workspace_id, email),
+         :ok <- check_not_already_member(workspace_id, email, membership_repository),
          user <- find_user_by_email_case_insensitive(email) do
       # Always create pending invitation (requires acceptance via notification)
-      create_pending_invitation(workspace, email, role, inviter, user, notifier, pubsub_notifier)
+      create_pending_invitation(
+        workspace,
+        email,
+        role,
+        inviter,
+        user,
+        notifier,
+        pubsub_notifier,
+        membership_repository
+      )
     end
   end
 
@@ -82,11 +97,11 @@ defmodule Jarga.Workspaces.Application.UseCases.InviteMember do
   end
 
   # Use infrastructure repository: verify inviter is a member
-  defp verify_inviter_membership(inviter, workspace_id) do
-    case MembershipRepository.get_workspace_for_user(inviter, workspace_id) do
+  defp verify_inviter_membership(inviter, workspace_id, membership_repository) do
+    case membership_repository.get_workspace_for_user(inviter, workspace_id) do
       nil ->
         # Check if workspace exists to provide meaningful error
-        if MembershipRepository.workspace_exists?(workspace_id) do
+        if membership_repository.workspace_exists?(workspace_id) do
           {:error, :unauthorized}
         else
           {:error, :workspace_not_found}
@@ -98,8 +113,8 @@ defmodule Jarga.Workspaces.Application.UseCases.InviteMember do
   end
 
   # Get inviter's membership record
-  defp get_inviter_member(inviter, workspace_id) do
-    case MembershipRepository.get_member(inviter, workspace_id) do
+  defp get_inviter_member(inviter, workspace_id, membership_repository) do
+    case membership_repository.get_member(inviter, workspace_id) do
       nil -> {:error, :unauthorized}
       member -> {:ok, member}
     end
@@ -115,8 +130,8 @@ defmodule Jarga.Workspaces.Application.UseCases.InviteMember do
   end
 
   # Use infrastructure repository: check if email is already a member
-  defp check_not_already_member(workspace_id, email) do
-    if MembershipRepository.email_is_member?(workspace_id, email) do
+  defp check_not_already_member(workspace_id, email, membership_repository) do
+    if membership_repository.email_is_member?(workspace_id, email) do
       {:error, :already_member}
     else
       :ok
@@ -128,9 +143,18 @@ defmodule Jarga.Workspaces.Application.UseCases.InviteMember do
     Accounts.get_user_by_email_case_insensitive(email)
   end
 
-  defp create_pending_invitation(workspace, email, role, inviter, user, notifier, pubsub_notifier) do
+  defp create_pending_invitation(
+         workspace,
+         email,
+         role,
+         inviter,
+         user,
+         notifier,
+         pubsub_notifier,
+         membership_repository
+       ) do
     result =
-      MembershipRepository.transact(fn ->
+      membership_repository.transact(fn ->
         # Create workspace_member record (pending invitation)
         attrs = %{
           workspace_id: workspace.id,
@@ -142,7 +166,7 @@ defmodule Jarga.Workspaces.Application.UseCases.InviteMember do
           joined_at: nil
         }
 
-        case create_workspace_member(attrs) do
+        case create_workspace_member(attrs, membership_repository) do
           {:ok, invitation} ->
             # Send email notifications if notifier is provided
             send_email_notification(notifier, user, email, workspace, inviter)
@@ -165,8 +189,8 @@ defmodule Jarga.Workspaces.Application.UseCases.InviteMember do
     end
   end
 
-  defp create_workspace_member(attrs) do
-    MembershipRepository.create_member(attrs)
+  defp create_workspace_member(attrs, membership_repository) do
+    membership_repository.create_member(attrs)
   end
 
   defp maybe_create_notification(nil, _workspace, _role, _inviter, _pubsub_notifier),

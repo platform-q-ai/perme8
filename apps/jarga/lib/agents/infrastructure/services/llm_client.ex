@@ -8,7 +8,7 @@ defmodule Jarga.Agents.Infrastructure.Services.LlmClient do
   This is in the Infrastructure layer because it performs I/O operations (HTTP calls).
   """
 
-  @behaviour Jarga.Agents.Infrastructure.Services.Behaviours.LlmClientBehaviour
+  @behaviour Jarga.Agents.Application.Behaviours.LlmClientBehaviour
 
   require Logger
 
@@ -70,6 +70,7 @@ defmodule Jarga.Agents.Infrastructure.Services.LlmClient do
       ...> end
 
   """
+  @impl true
   @spec chat_stream(list(map()), pid(), keyword()) :: {:ok, pid()} | {:error, String.t()}
   def chat_stream(messages, caller_pid, opts \\ []) do
     model = Keyword.get(opts, :model, config(:chat_model, @default_model))

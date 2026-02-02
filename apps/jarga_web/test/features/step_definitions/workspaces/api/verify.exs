@@ -53,16 +53,25 @@ defmodule Workspaces.Api.VerifySteps do
   step "the response should include workspace {string} with slug",
        %{args: [workspace_slug]} = context do
     body = Jason.decode!(context[:response_body])
-    workspaces = body["data"] || []
+    workspaces_list = body["data"] || []
 
-    workspace = Enum.find(workspaces, fn w -> w["slug"] == workspace_slug end)
+    # Translate the expected slug from feature file to actual workspace slug
+    context_workspaces = context[:workspaces] || %{}
+
+    expected_actual_slug =
+      case Map.get(context_workspaces, workspace_slug) do
+        %{slug: actual} -> actual
+        nil -> workspace_slug
+      end
+
+    workspace = Enum.find(workspaces_list, fn w -> w["slug"] == expected_actual_slug end)
 
     assert workspace != nil,
-           "Expected to find workspace '#{workspace_slug}' in response, but it was not found. " <>
-             "Available workspaces: #{inspect(Enum.map(workspaces, & &1["slug"]))}"
+           "Expected to find workspace '#{expected_actual_slug}' in response, but it was not found. " <>
+             "Available workspaces: #{inspect(Enum.map(workspaces_list, & &1["slug"]))}"
 
-    assert workspace["slug"] == workspace_slug,
-           "Expected workspace to have slug '#{workspace_slug}'"
+    assert workspace["slug"] == expected_actual_slug,
+           "Expected workspace to have slug '#{expected_actual_slug}'"
 
     {:ok, context}
   end
@@ -70,12 +79,21 @@ defmodule Workspaces.Api.VerifySteps do
   step "the response should not include workspace {string}",
        %{args: [workspace_slug]} = context do
     body = Jason.decode!(context[:response_body])
-    workspaces = body["data"] || []
+    workspaces_list = body["data"] || []
 
-    workspace = Enum.find(workspaces, fn w -> w["slug"] == workspace_slug end)
+    # Translate the expected slug from feature file to actual workspace slug
+    context_workspaces = context[:workspaces] || %{}
+
+    expected_actual_slug =
+      case Map.get(context_workspaces, workspace_slug) do
+        %{slug: actual} -> actual
+        nil -> workspace_slug
+      end
+
+    workspace = Enum.find(workspaces_list, fn w -> w["slug"] == expected_actual_slug end)
 
     assert workspace == nil,
-           "Expected NOT to find workspace '#{workspace_slug}' in response, but it was found"
+           "Expected NOT to find workspace '#{expected_actual_slug}' in response, but it was found"
 
     {:ok, context}
   end
@@ -91,8 +109,17 @@ defmodule Workspaces.Api.VerifySteps do
 
     assert workspace != nil, "Expected workspace data in response, but got nil"
 
-    assert workspace["slug"] == workspace_slug,
-           "Expected workspace slug '#{workspace_slug}', but got '#{workspace["slug"]}'"
+    # Translate the expected slug from feature file to actual workspace slug
+    workspaces = context[:workspaces] || %{}
+
+    expected_actual_slug =
+      case Map.get(workspaces, workspace_slug) do
+        %{slug: actual} -> actual
+        nil -> workspace_slug
+      end
+
+    assert workspace["slug"] == expected_actual_slug,
+           "Expected workspace slug '#{expected_actual_slug}', but got '#{workspace["slug"]}'"
 
     {:ok, Map.put(context, :response_workspace, workspace)}
   end
@@ -107,8 +134,17 @@ defmodule Workspaces.Api.VerifySteps do
     # Check for workspace_slug first (project API), then slug (workspace API)
     actual_slug = data["workspace_slug"] || data["slug"]
 
-    assert actual_slug == expected_slug,
-           "Expected workspace slug '#{expected_slug}', but got '#{actual_slug}'"
+    # Translate the expected slug from feature file to actual workspace slug
+    workspaces = context[:workspaces] || %{}
+
+    expected_actual_slug =
+      case Map.get(workspaces, expected_slug) do
+        %{slug: actual} -> actual
+        nil -> expected_slug
+      end
+
+    assert actual_slug == expected_actual_slug,
+           "Expected workspace slug '#{expected_actual_slug}', but got '#{actual_slug}'"
 
     {:ok, context}
   end
