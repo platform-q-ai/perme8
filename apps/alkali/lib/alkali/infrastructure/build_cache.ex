@@ -13,7 +13,7 @@ defmodule Alkali.Infrastructure.BuildCache do
 
   @behaviour Alkali.Application.Behaviours.BuildCacheBehaviour
 
-  @cache_file ".alkali_cache.json"
+  @cache_file ".alkali_cache"
 
   # Default file system module for dependency injection
   defp default_file_system, do: File
@@ -34,18 +34,17 @@ defmodule Alkali.Infrastructure.BuildCache do
 
     with true <- file_system.exists?(cache_path),
          {:ok, content} <- file_system.read(cache_path),
-         {:ok, json_cache} <- Jason.decode(content) do
-      parse_cache_entries(json_cache)
+         {:ok, cache} <- safe_binary_to_term(content) do
+      cache
     else
       _ -> %{}
     end
   end
 
-  defp parse_cache_entries(json_cache) do
-    Map.new(json_cache, fn
-      {path, [mtime, size]} -> {path, {mtime, size}}
-      {path, mtime} when is_integer(mtime) -> {path, {mtime, 0}}
-    end)
+  defp safe_binary_to_term(binary) do
+    {:ok, :erlang.binary_to_term(binary, [:safe])}
+  rescue
+    ArgumentError -> {:error, :invalid_term}
   end
 
   @doc """
@@ -60,16 +59,8 @@ defmodule Alkali.Infrastructure.BuildCache do
     file_system = Keyword.get(opts, :file_system, default_file_system())
     cache_path = Path.join(site_path, @cache_file)
 
-    # Convert tuples to lists for JSON encoding
-    json_cache =
-      Map.new(cache, fn {path, {mtime, size}} ->
-        {path, [mtime, size]}
-      end)
-
-    case Jason.encode(json_cache, pretty: true) do
-      {:ok, json} -> file_system.write(cache_path, json)
-      {:error, reason} -> {:error, reason}
-    end
+    binary = :erlang.term_to_binary(cache)
+    file_system.write(cache_path, binary)
   end
 
   @doc """
