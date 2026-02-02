@@ -24,6 +24,15 @@ defmodule Alkali.Domain do
   - Other contexts
   """
 
+  # Force compilation order - these modules must compile before this boundary
+  require Alkali.Domain.Entities.Asset
+  require Alkali.Domain.Entities.Collection
+  require Alkali.Domain.Entities.Page
+  require Alkali.Domain.Entities.Site
+  require Alkali.Domain.Policies.FrontmatterPolicy
+  require Alkali.Domain.Policies.SlugPolicy
+  require Alkali.Domain.Policies.UrlPolicy
+
   use Boundary,
     top_level?: true,
     deps: [],

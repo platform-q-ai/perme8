@@ -30,7 +30,7 @@ defmodule Perme8.MixProject do
         "phx.digest"
       ],
       precommit: [
-        "compile --warning-as-errors",
+        "compile --warnings-as-errors",
         "deps.unlock --unused",
         "format --check-formatted",
         "credo --strict",

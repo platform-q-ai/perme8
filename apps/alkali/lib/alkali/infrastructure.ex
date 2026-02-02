@@ -29,6 +29,18 @@ defmodule Alkali.Infrastructure do
   It can use external libraries (File, IO, YAML, Markdown, etc.)
   """
 
+  # Force compilation order - these modules must compile before this boundary
+  require Alkali.Infrastructure.Parsers.FrontmatterParser
+  require Alkali.Infrastructure.Parsers.MarkdownParser
+  require Alkali.Infrastructure.Renderers.CollectionRenderer
+  require Alkali.Infrastructure.Renderers.RssRenderer
+  require Alkali.Infrastructure.Renderers.TemplateRenderer
+  require Alkali.Infrastructure.BuildCache
+  require Alkali.Infrastructure.ConfigLoader
+  require Alkali.Infrastructure.CryptoService
+  require Alkali.Infrastructure.FileSystem
+  require Alkali.Infrastructure.LayoutResolver
+
   use Boundary,
     top_level?: true,
     deps: [

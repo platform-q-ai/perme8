@@ -37,6 +37,26 @@ defmodule Alkali.Application do
   - Other contexts directly (use dependency injection)
   """
 
+  # Force compilation order - these modules must compile before this boundary
+  require Alkali.Application.Behaviours.BuildCacheBehaviour
+  require Alkali.Application.Behaviours.ConfigLoaderBehaviour
+  require Alkali.Application.Behaviours.FileSystemBehaviour
+  require Alkali.Application.Behaviours.LayoutResolverBehaviour
+  require Alkali.Application.Behaviours.CryptoServiceBehaviour
+  require Alkali.Application.Behaviours.FrontmatterParserBehaviour
+  require Alkali.Application.Behaviours.MarkdownParserBehaviour
+  require Alkali.Application.Behaviours.CollectionRendererBehaviour
+  require Alkali.Application.Behaviours.RssRendererBehaviour
+  require Alkali.Application.Helpers.Paginate
+  require Alkali.Application.UseCases.BuildSite
+  require Alkali.Application.UseCases.CleanOutput
+  require Alkali.Application.UseCases.CreateNewPost
+  require Alkali.Application.UseCases.GenerateCollections
+  require Alkali.Application.UseCases.GenerateRssFeed
+  require Alkali.Application.UseCases.ParseContent
+  require Alkali.Application.UseCases.ProcessAssets
+  require Alkali.Application.UseCases.ScaffoldNewSite
+
   use Boundary,
     top_level?: true,
     deps: [Alkali.Domain],
