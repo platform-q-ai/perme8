@@ -68,7 +68,8 @@ defmodule Jarga.Workspaces.Application.UseCases.InviteMember do
     with :ok <- validate_role(role),
          {:ok, workspace} <-
            verify_inviter_membership(inviter, workspace_id, membership_repository),
-         {:ok, inviter_member} <- get_inviter_member(inviter, workspace_id, membership_repository),
+         {:ok, inviter_member} <-
+           get_inviter_member(inviter, workspace_id, membership_repository),
          :ok <- check_inviter_permission(inviter_member),
          :ok <- check_not_already_member(workspace_id, email, membership_repository),
          user <- find_user_by_email_case_insensitive(email) do
