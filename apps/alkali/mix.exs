@@ -4,7 +4,7 @@ defmodule Alkali.MixProject do
   def project do
     [
       app: :alkali,
-      version: "0.1.0",
+      version: "0.2.2",
       elixir: "~> 1.19",
       start_permanent: Mix.env() == :prod,
       compilers: [:boundary] ++ Mix.compilers(),
@@ -24,7 +24,7 @@ defmodule Alkali.MixProject do
       homepage_url: "https://github.com/platform-q-ai/perme8/tree/main/apps/alkali",
       docs: [
         main: "Alkali",
-        extras: ["README.md"]
+        extras: ["README.md", "LICENSE"]
       ]
     ]
   end
@@ -65,9 +65,6 @@ defmodule Alkali.MixProject do
 
       # Environment configuration
       {:dotenvy, "~> 0.8.0", only: [:dev, :test]},
-
-      # JSON encoding/decoding for build cache
-      {:jason, "~> 1.4"},
 
       # Documentation
       {:ex_doc, "~> 0.31", only: :dev, runtime: false},

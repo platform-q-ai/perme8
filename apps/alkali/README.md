@@ -7,20 +7,32 @@ A fast, modern static site generator built with Elixir. Perfect for blogs, docum
 - **Markdown Content** - Write your content in Markdown with YAML frontmatter
 - **EEx Templates** - Powerful templating with Elixir's built-in EEx
 - **Collections** - Automatic tag and category pages
+- **RSS Feeds** - Automatic RSS/Atom feed generation
 - **Asset Pipeline** - Automatic minification and fingerprinting for CSS/JS
 - **Incremental Builds** - Only rebuild changed files for lightning-fast builds
 - **Clean Architecture** - Well-tested, maintainable codebase following SOLID principles
+- **Zero Dependencies at Runtime** - Works as a standalone Mix archive
 
 ## Quick Start
 
 ### Installation
+
+#### Global Installation (Recommended for CLI usage)
+
+Install alkali globally as a Mix archive to use the `mix alkali.*` commands anywhere:
+
+```bash
+mix archive.install hex alkali
+```
+
+#### As a Dependency
 
 Add `alkali` to your `mix.exs` dependencies:
 
 ```elixir
 def deps do
   [
-    {:alkali, "~> 0.1.0"}
+    {:alkali, "~> 0.2.2"}
   ]
 end
 ```
@@ -128,7 +140,7 @@ vim content/posts/2024-01-15-hello-world.md
 mix alkali.build
 
 # Clear cache and force full rebuild if needed
-rm .alkali_cache.json
+rm .alkali_cache
 mix alkali.build
 ```
 
@@ -331,10 +343,10 @@ mix alkali.build
 # => Rebuilt 1 file (1 changed, 9 skipped)
 ```
 
-The build cache is stored in `.alkali_cache.json`. Delete this file to force a full rebuild:
+The build cache is stored in `.alkali_cache`. Delete this file to force a full rebuild:
 
 ```bash
-rm .alkali_cache.json
+rm .alkali_cache
 mix alkali.build
 ```
 
@@ -407,6 +419,33 @@ config :alkali,
     description: "A blog about Elixir and web development"
   }
 ```
+
+### RSS Feed Configuration
+
+RSS feeds are automatically generated when `site_url` is configured. The feed is written to `_site/feed.xml`.
+
+Available configuration options in `config/alkali.exs`:
+
+```elixir
+config :alkali,
+  site: %{
+    # Required for RSS
+    url: "https://myblog.com",
+
+    # Optional RSS settings
+    title: "My Blog",           # Feed title (default: "Blog")
+    description: "Latest posts" # Feed description
+  },
+  rss: %{
+    max_items: 20               # Maximum items in feed (default: 20)
+  }
+```
+
+The RSS feed includes:
+
+- All published posts (non-draft) with dates
+- Posts sorted by date (newest first)
+- Full post content in the feed
 
 ## Deployment
 
@@ -548,30 +587,72 @@ IO.puts "Hello, World!"
 
 ## Architecture
 
-Alkali follows Clean Architecture principles:
+Alkali follows Clean Architecture principles with strict boundary enforcement:
 
 ```
-Domain Layer (Entities)
-  ├── Page - Represents a content page
-  ├── Collection - Represents a group of pages
-  └── Asset - Represents a static asset file
-
-Application Layer (Use Cases)
-  ├── ParseContent - Parses Markdown files
-  ├── GenerateCollections - Creates tag/category pages
-  ├── ProcessAssets - Minifies and fingerprints assets
-  └── BuildSite - Orchestrates the entire build
-
-Infrastructure Layer
-  ├── LayoutResolver - Resolves and renders layouts
-  ├── BuildCache - Manages incremental build cache
-  └── FileSystem - File I/O operations
-
-Interface Layer (Mix Tasks)
-  ├── mix alkali.new - Site generator
-  ├── mix alkali.build - Build command
-  └── mix alkali.post - Post generator
+lib/alkali/
+├── domain/                    # Domain Layer - Pure business logic
+│   ├── entities/
+│   │   ├── asset.ex           # Static asset (CSS, JS, images)
+│   │   ├── collection.ex      # Group of pages (tags, categories)
+│   │   ├── page.ex            # Content page with frontmatter
+│   │   └── site.ex            # Site configuration entity
+│   └── policies/
+│       ├── frontmatter_policy.ex  # Validates frontmatter fields
+│       ├── slug_policy.ex         # URL slug generation rules
+│       └── url_policy.ex          # URL path generation rules
+│
+├── application/               # Application Layer - Use cases & orchestration
+│   ├── behaviours/            # Dependency injection contracts
+│   │   ├── build_cache_behaviour.ex
+│   │   ├── collection_renderer_behaviour.ex
+│   │   ├── config_loader_behaviour.ex
+│   │   ├── crypto_service_behaviour.ex
+│   │   ├── file_system_behaviour.ex
+│   │   ├── frontmatter_parser_behaviour.ex
+│   │   ├── layout_resolver_behaviour.ex
+│   │   ├── markdown_parser_behaviour.ex
+│   │   └── rss_renderer_behaviour.ex
+│   ├── helpers/
+│   │   └── paginate.ex        # Pagination helper
+│   └── use_cases/
+│       ├── build_site.ex      # Orchestrates full site build
+│       ├── clean_output.ex    # Removes output directory
+│       ├── create_new_post.ex # Creates new blog post
+│       ├── generate_collections.ex  # Creates tag/category pages
+│       ├── generate_rss_feed.ex     # Creates RSS/Atom feed
+│       ├── parse_content.ex   # Parses Markdown with frontmatter
+│       ├── process_assets.ex  # Minifies & fingerprints assets
+│       └── scaffold_new_site.ex     # Creates new site structure
+│
+├── infrastructure/            # Infrastructure Layer - External concerns
+│   ├── parsers/
+│   │   ├── frontmatter_parser.ex  # YAML frontmatter parsing
+│   │   └── markdown_parser.ex     # Markdown to HTML conversion
+│   ├── renderers/
+│   │   ├── collection_renderer.ex # Renders collection pages
+│   │   ├── rss_renderer.ex        # Renders RSS feed XML
+│   │   └── template_renderer.ex   # EEx template rendering
+│   ├── build_cache.ex         # Incremental build cache
+│   ├── config_loader.ex       # Site configuration loading
+│   ├── crypto_service.ex      # Hash generation for fingerprinting
+│   ├── file_system.ex         # File I/O abstraction
+│   └── layout_resolver.ex     # Layout template resolution
+│
+└── mix/tasks/                 # Interface Layer - CLI commands
+    ├── alkali.build.ex        # mix alkali.build
+    ├── alkali.clean.ex        # mix alkali.clean
+    ├── alkali.new.ex          # mix alkali.new
+    ├── alkali.new.post.ex     # mix alkali.new.post
+    └── alkali.post.ex         # mix alkali.post
 ```
+
+### Design Principles
+
+- **Dependency Inversion**: Use cases depend on behaviours, not concrete implementations
+- **Testability**: All infrastructure can be mocked via behaviour injection
+- **Boundary Enforcement**: Uses `boundary` library to prevent layer violations
+- **Single Responsibility**: Each module has one clear purpose
 
 ## Development
 
@@ -630,14 +711,30 @@ Inspired by:
 
 ## Changelog
 
+### v0.2.2
+
+- Fixed ExDoc warning about LICENSE file not found
+- Updated documentation references to correct cache file name
+
+### v0.2.1
+
+- Removed Jason dependency for global archive compatibility
+- Build cache now uses Erlang term format (`.alkali_cache`)
+- Can now install and run as a global Mix archive
+
+### v0.2.0
+
+- Added RSS feed generation
+- Improved error messages for frontmatter validation
+- Added Site entity for configuration management
+
 ### v0.1.0
 
 **Initial Release**
 
-- ✅ Markdown content parsing with YAML frontmatter
-- ✅ EEx template rendering with layouts
-- ✅ Automatic tag and category collections
-- ✅ CSS/JS minification and fingerprinting
-- ✅ Incremental builds with file change detection
-- ✅ Mix tasks for building and content creation
-- ✅ 156/156 tests passing (100% coverage)
+- Markdown content parsing with YAML frontmatter
+- EEx template rendering with layouts
+- Automatic tag and category collections
+- CSS/JS minification and fingerprinting
+- Incremental builds with file change detection
+- Mix tasks for building and content creation

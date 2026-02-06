@@ -306,11 +306,11 @@ defmodule Alkali.Application.UseCases.BuildSiteTest do
       {:ok, _summary} = BuildSite.execute(test_dir, incremental: true)
 
       # Check that cache includes layout files
-      cache_file = Path.join(test_dir, ".alkali_cache.json")
+      cache_file = Path.join(test_dir, ".alkali_cache")
       assert File.exists?(cache_file)
 
       {:ok, cache_content} = File.read(cache_file)
-      {:ok, cache} = Jason.decode(cache_content)
+      cache = :erlang.binary_to_term(cache_content, [:safe])
 
       # Layout file should be in cache
       assert Map.has_key?(cache, test_layout)
