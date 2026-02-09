@@ -1,29 +1,12 @@
-defmodule Jarga.Accounts.Domain.Entities.User do
+defmodule Identity.Domain.Entities.User do
   @moduledoc """
-  DEPRECATED: Use `Identity.Domain.Entities.User` instead.
+  Pure domain entity for user accounts.
 
-  This module is a thin wrapper that delegates to the Identity app.
-  It exists for backward compatibility during migration.
+  This is a value object representing a user in the business domain.
+  It contains no infrastructure dependencies (no Ecto, no database concerns).
+
+  For database persistence, see Identity.Infrastructure.Schemas.UserSchema.
   """
-
-  # Delegate the struct to Identity.Domain.Entities.User
-  # This allows existing code to continue using Jarga.Accounts.Domain.Entities.User
-  defstruct [
-    :id,
-    :first_name,
-    :last_name,
-    :email,
-    :password,
-    :hashed_password,
-    :role,
-    :status,
-    :avatar_url,
-    :confirmed_at,
-    :authenticated_at,
-    :last_login,
-    :date_created,
-    preferences: %{}
-  ]
 
   @type t :: %__MODULE__{
           id: String.t() | nil,
@@ -41,6 +24,23 @@ defmodule Jarga.Accounts.Domain.Entities.User do
           date_created: NaiveDateTime.t() | nil,
           preferences: map()
         }
+
+  defstruct [
+    :id,
+    :first_name,
+    :last_name,
+    :email,
+    :password,
+    :hashed_password,
+    :role,
+    :status,
+    :avatar_url,
+    :confirmed_at,
+    :authenticated_at,
+    :last_login,
+    :date_created,
+    preferences: %{}
+  ]
 
   @doc """
   Creates a new User domain entity from attributes.
@@ -89,7 +89,7 @@ defmodule Jarga.Accounts.Domain.Entities.User do
 end
 
 # Implement Inspect protocol to redact sensitive fields
-defimpl Inspect, for: Jarga.Accounts.Domain.Entities.User do
+defimpl Inspect, for: Identity.Domain.Entities.User do
   import Inspect.Algebra
 
   def inspect(user, opts) do
@@ -106,6 +106,6 @@ defimpl Inspect, for: Jarga.Accounts.Domain.Entities.User do
         _hashed -> "**redacted**"
       end)
 
-    concat(["#Jarga.Accounts.Domain.Entities.User<", to_doc(user_map, opts), ">"])
+    concat(["#Identity.Domain.Entities.User<", to_doc(user_map, opts), ">"])
   end
 end

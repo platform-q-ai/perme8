@@ -23,6 +23,18 @@ config :jarga_web, JargaWeb.Endpoint,
   secret_key_base: "k/DpMQ7vB/8OirPNBlAhucs6RCPp5ZRK09Is1Sd7Jb+YThz21IeYYYpueAbJYNEd",
   server: true
 
+# ============================================================================
+# Identity App Test Configuration
+# ============================================================================
+
+config :identity, IdentityWeb.Endpoint,
+  http: [ip: {127, 0, 0, 1}, port: 4003],
+  secret_key_base: "test_identity_secret_key_base_at_least_64_bytes_long_for_security",
+  server: true
+
+# In test we don't send emails
+config :identity, Identity.Mailer, adapter: Swoosh.Adapters.Test
+
 # In test we don't send emails
 config :jarga, Jarga.Mailer, adapter: Swoosh.Adapters.Test
 
