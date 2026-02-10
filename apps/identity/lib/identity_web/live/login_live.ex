@@ -93,6 +93,12 @@ defmodule IdentityWeb.LoginLive do
             Log in only this time
           </.button>
         </.form>
+
+        <p class="text-center text-sm text-gray-600">
+          <.link navigate={~p"/users/reset-password"} class="font-semibold text-brand hover:underline">
+            Forgot your password?
+          </.link>
+        </p>
       </div>
     </Layouts.app>
     """

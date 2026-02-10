@@ -23,6 +23,7 @@ defmodule Identity.Domain.Policies.TokenPolicy do
   @session_validity_in_days 14
   @magic_link_validity_in_minutes 15
   @change_email_validity_in_days 7
+  @reset_password_validity_in_hours 1
 
   @doc """
   Returns the validity period for session tokens in days.
@@ -40,6 +41,13 @@ defmodule Identity.Domain.Policies.TokenPolicy do
   Returns the validity period for change email tokens in days.
   """
   def change_email_validity_days, do: @change_email_validity_in_days
+
+  @doc """
+  Returns the validity period for password reset tokens in hours.
+
+  Note: This is intentionally short (1 hour) for security reasons.
+  """
+  def reset_password_validity_hours, do: @reset_password_validity_in_hours
 
   @doc """
   Checks if a session token is expired based on its timestamp.

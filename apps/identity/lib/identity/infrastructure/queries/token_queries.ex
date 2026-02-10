@@ -242,4 +242,45 @@ defmodule Identity.Infrastructure.Queries.TokenQueries do
         :error
     end
   end
+
+  @doc """
+  Verifies a password reset token and returns a query to fetch the user.
+
+  Returns `{:ok, query}` where the query will return the `User`.
+  Returns `:error` if the token format is invalid.
+
+  The token must be:
+  - Properly encoded and decoded
+  - Valid within #{TokenPolicy.reset_password_validity_hours()} hour(s)
+  - Have context "reset_password"
+  - Match the user's current email
+
+  ## Examples
+
+      iex> {:ok, query} = verify_reset_password_token_query(encoded_token)
+      iex> user = Repo.one(query)
+
+      iex> verify_reset_password_token_query("invalid")
+      :error
+
+  """
+  def verify_reset_password_token_query(token) do
+    case TokenGenerator.decode_token(token) do
+      {:ok, decoded_token} when byte_size(decoded_token) == 32 ->
+        hashed_token = TokenGenerator.hash_token(decoded_token)
+
+        query =
+          from(token in tokens_by_token_and_context(hashed_token, "reset_password"),
+            join: user in assoc(token, :user),
+            where: token.inserted_at > ago(^TokenPolicy.reset_password_validity_hours(), "hour"),
+            where: token.sent_to == user.email,
+            select: user
+          )
+
+        {:ok, query}
+
+      _ ->
+        :error
+    end
+  end
 end

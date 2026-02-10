@@ -70,7 +70,10 @@ defmodule Identity.Accounts.LiveViewAuthenticateSteps do
 
   step "I should see a link to login", context do
     html = context[:html]
-    assert html =~ "Log in" or html =~ "Sign in" or html =~ "Already have an account"
+
+    assert html =~ "Log in" or html =~ "log in" or html =~ "Sign in" or
+             html =~ "Already have an account"
+
     {:ok, context}
   end
 

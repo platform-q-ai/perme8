@@ -46,6 +46,8 @@ defmodule IdentityWeb.Router do
       live "/users/register", RegistrationLive, :new
       live "/users/log-in", LoginLive, :new
       live "/users/log-in/:token", ConfirmationLive, :new
+      live "/users/reset-password", ForgotPasswordLive, :new
+      live "/users/reset-password/:token", ResetPasswordLive, :new
     end
   end
 

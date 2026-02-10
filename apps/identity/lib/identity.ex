@@ -311,6 +311,80 @@ defmodule Identity do
   end
 
   @doc """
+  Delivers password reset instructions to the user.
+
+  Generates a reset password token and sends an email with a link to reset
+  the password. The token is valid for 1 hour.
+
+  ## Parameters
+
+    - `user` - User struct with id and email
+    - `reset_password_url_fun` - Function that takes a token and returns a URL
+
+  ## Returns
+
+    `{:ok, email}` on success
+
+  ## Examples
+
+      iex> deliver_reset_password_instructions(user, &"/users/reset-password/\#{&1}")
+      {:ok, %Swoosh.Email{}}
+
+  """
+  def deliver_reset_password_instructions(%{id: _, email: _} = user, reset_password_url_fun)
+      when is_function(reset_password_url_fun, 1) do
+    UseCases.DeliverResetPasswordInstructions.execute(%{
+      user: user,
+      url_fun: reset_password_url_fun
+    })
+  end
+
+  @doc """
+  Gets the user by reset password token.
+
+  Returns `nil` if the token is invalid or expired.
+
+  ## Parameters
+
+    - `token` - The URL-encoded reset password token
+
+  ## Returns
+
+    User struct or nil
+
+  """
+  def get_user_by_reset_password_token(token) do
+    with {:ok, query} <- TokenQueries.verify_reset_password_token_query(token),
+         user_schema when not is_nil(user_schema) <- Repo.one(query) do
+      User.from_schema(user_schema)
+    else
+      _ -> nil
+    end
+  end
+
+  @doc """
+  Resets the user password using a reset token.
+
+  This verifies the token, updates the password, and deletes all tokens
+  for the user (invalidating all sessions).
+
+  ## Parameters
+
+    - `token` - The reset password token
+    - `attrs` - Map with :password and :password_confirmation
+
+  ## Returns
+
+    - `{:ok, user}` on success
+    - `{:error, :invalid_token}` if token is invalid/expired
+    - `{:error, changeset}` if password validation fails
+
+  """
+  def reset_user_password(token, attrs) do
+    UseCases.ResetUserPassword.execute(%{token: token, attrs: attrs})
+  end
+
+  @doc """
   Deletes the session token.
   """
   def delete_user_session_token(token) do

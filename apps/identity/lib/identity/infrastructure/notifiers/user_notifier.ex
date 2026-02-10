@@ -141,4 +141,38 @@ defmodule Identity.Infrastructure.Notifiers.UserNotifier do
       Keyword.put(opts, :disable_tracking, true)
     )
   end
+
+  @doc """
+  Deliver instructions to reset password.
+
+  ## Options
+
+    * `:from_email` - Email address to send from (default: configured or "noreply@jarga.app")
+    * `:from_name` - Name to send from (default: configured or "Jarga")
+
+  """
+  @impl true
+  def deliver_reset_password_instructions(user, url, opts \\ []) do
+    deliver(
+      user.email,
+      "Reset password instructions",
+      """
+
+      ==============================
+
+      Hi #{user.email},
+
+      You can reset your password by visiting the URL below:
+
+      #{url}
+
+      This link will expire in 1 hour.
+
+      If you didn't request this password reset, please ignore this.
+
+      ==============================
+      """,
+      Keyword.put(opts, :disable_tracking, true)
+    )
+  end
 end
