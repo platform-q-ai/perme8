@@ -18,6 +18,7 @@ defmodule Jarga.Notes do
       Jarga.Documents.Notes.Infrastructure,
       # Cross-context dependencies
       Identity,
+      Identity.Repo,
       Jarga.Accounts,
       Jarga.Workspaces,
       Jarga.Projects,

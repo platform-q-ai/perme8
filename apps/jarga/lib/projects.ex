@@ -16,6 +16,7 @@ defmodule Jarga.Projects do
     deps: [
       # Cross-context dependencies
       Identity,
+      Identity.Repo,
       Jarga.Accounts,
       Jarga.Workspaces,
       # Same-context layer dependencies

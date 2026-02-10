@@ -15,6 +15,12 @@ defmodule IdentityWeb.ConnCase do
   this option is not recommended for other databases.
   """
 
+  # Test support module - top-level boundary for web testing infrastructure
+  use Boundary,
+    top_level?: true,
+    deps: [IdentityWeb, Identity, Identity.Repo, Identity.AccountsFixtures],
+    exports: []
+
   use ExUnit.CaseTemplate
 
   alias Ecto.Adapters.SQL.Sandbox

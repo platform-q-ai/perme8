@@ -23,9 +23,7 @@ defmodule Jarga.Workspaces.Infrastructure.Schemas.WorkspaceMemberSchema do
     belongs_to(:workspace, Jarga.Workspaces.Infrastructure.Schemas.WorkspaceSchema)
     belongs_to(:user, Identity.Infrastructure.Schemas.UserSchema)
 
-    belongs_to(:inviter, Identity.Infrastructure.Schemas.UserSchema,
-      foreign_key: :invited_by
-    )
+    belongs_to(:inviter, Identity.Infrastructure.Schemas.UserSchema, foreign_key: :invited_by)
 
     timestamps(type: :utc_datetime)
   end

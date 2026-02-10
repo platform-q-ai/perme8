@@ -15,6 +15,7 @@ defmodule Jarga.Documents do
     deps: [
       # Cross-context dependencies
       Identity,
+      Identity.Repo,
       Jarga.Accounts,
       Jarga.Workspaces,
       Jarga.Projects,

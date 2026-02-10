@@ -18,6 +18,7 @@ defmodule Jarga.Agents.Infrastructure do
       Jarga.Repo,
       # Cross-context dependencies
       Identity,
+      Identity.Repo,
       Jarga.Accounts,
       Jarga.Workspaces,
       Jarga.Workspaces.Infrastructure

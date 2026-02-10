@@ -16,6 +16,7 @@ defmodule Jarga.Workspaces do
     deps: [
       # Cross-context dependencies
       Identity,
+      Identity.Repo,
       Jarga.Accounts,
       # Same-context layer dependencies
       Jarga.Workspaces.Domain,
