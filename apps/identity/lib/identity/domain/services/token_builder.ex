@@ -21,8 +21,8 @@ defmodule Identity.Domain.Services.TokenBuilder do
 
   # Default implementations - will be updated to Identity modules in Phase 4
   # For now, they point to Jarga modules for backward compatibility during migration
-  @default_token_generator Jarga.Accounts.Infrastructure.Services.TokenGenerator
-  @default_user_token_schema Jarga.Accounts.Infrastructure.Schemas.UserTokenSchema
+  @default_token_generator Identity.Infrastructure.Services.TokenGenerator
+  @default_user_token_schema Identity.Infrastructure.Schemas.UserTokenSchema
 
   @doc """
   Builds a session token for the given user.

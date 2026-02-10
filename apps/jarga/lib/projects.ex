@@ -29,8 +29,8 @@ defmodule Jarga.Projects do
       {Infrastructure.Schemas.ProjectSchema, []}
     ]
 
-  alias Jarga.Repo
-  alias Jarga.Accounts.Domain.Entities.User
+  alias Identity.Repo, as: Repo
+  alias Identity.Domain.Entities.User
   alias Jarga.Projects.Infrastructure.Queries.Queries
   alias Jarga.Projects.Infrastructure.Schemas.ProjectSchema
   alias Jarga.Projects.Application.UseCases.{CreateProject, DeleteProject, UpdateProject}

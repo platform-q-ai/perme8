@@ -26,7 +26,10 @@ defmodule Jarga.Accounts.Infrastructure.Repositories.UserRepository do
   alias Jarga.Accounts.Domain.Entities.User
   alias Jarga.Accounts.Infrastructure.Schemas.UserSchema
   alias Jarga.Accounts.Infrastructure.Queries.Queries
-  alias Jarga.Repo
+
+  # Users are now managed by Identity.Repo, not Jarga.Repo
+  # This repository is deprecated and will be removed in Phase 6
+  @default_repo Identity.Repo
 
   @doc """
   Gets a user by ID.
@@ -36,7 +39,7 @@ defmodule Jarga.Accounts.Infrastructure.Repositories.UserRepository do
   ## Parameters
 
     - id: The user ID to look up
-    - repo: Optional repo for dependency injection (defaults to Jarga.Repo)
+    - repo: Optional repo for dependency injection (defaults to Identity.Repo)
 
   ## Examples
 
@@ -47,7 +50,7 @@ defmodule Jarga.Accounts.Infrastructure.Repositories.UserRepository do
       nil
 
   """
-  def get_by_id(id, repo \\ Repo) do
+  def get_by_id(id, repo \\ @default_repo) do
     case repo.get(UserSchema, id) do
       nil -> nil
       schema -> User.from_schema(schema)
@@ -62,7 +65,7 @@ defmodule Jarga.Accounts.Infrastructure.Repositories.UserRepository do
   ## Parameters
 
     - email: The email address to look up
-    - repo: Optional repo for dependency injection (defaults to Jarga.Repo)
+    - repo: Optional repo for dependency injection (defaults to Identity.Repo)
 
   ## Examples
 
@@ -73,7 +76,7 @@ defmodule Jarga.Accounts.Infrastructure.Repositories.UserRepository do
       %User{}
 
   """
-  def get_by_email(email, repo \\ Repo) when is_binary(email) do
+  def get_by_email(email, repo \\ @default_repo) when is_binary(email) do
     case Queries.by_email_case_insensitive(email) |> repo.one() do
       nil -> nil
       schema -> User.from_schema(schema)
@@ -88,7 +91,7 @@ defmodule Jarga.Accounts.Infrastructure.Repositories.UserRepository do
   ## Parameters
 
     - id: The user ID to check
-    - repo: Optional repo for dependency injection (defaults to Jarga.Repo)
+    - repo: Optional repo for dependency injection (defaults to Identity.Repo)
 
   ## Examples
 
@@ -99,7 +102,7 @@ defmodule Jarga.Accounts.Infrastructure.Repositories.UserRepository do
       false
 
   """
-  def exists?(id, repo \\ Repo) do
+  def exists?(id, repo \\ @default_repo) do
     repo.exists?(from(u in UserSchema, where: u.id == ^id))
   end
 
@@ -111,7 +114,7 @@ defmodule Jarga.Accounts.Infrastructure.Repositories.UserRepository do
   ## Parameters
 
     - attrs: Map of user attributes
-    - repo: Optional repo for dependency injection (defaults to Jarga.Repo)
+    - repo: Optional repo for dependency injection (defaults to Identity.Repo)
 
   ## Examples
 
@@ -122,7 +125,7 @@ defmodule Jarga.Accounts.Infrastructure.Repositories.UserRepository do
       {:error, %Ecto.Changeset{}}
 
   """
-  def insert(attrs, repo \\ Repo) when is_map(attrs) do
+  def insert(attrs, repo \\ @default_repo) when is_map(attrs) do
     case %UserSchema{}
          |> UserSchema.registration_changeset(attrs)
          |> repo.insert() do
@@ -140,7 +143,7 @@ defmodule Jarga.Accounts.Infrastructure.Repositories.UserRepository do
 
     - user: The user struct to update
     - attrs: Map of attributes to update
-    - repo: Optional repo for dependency injection (defaults to Jarga.Repo)
+    - repo: Optional repo for dependency injection (defaults to Identity.Repo)
 
   ## Examples
 
@@ -151,12 +154,35 @@ defmodule Jarga.Accounts.Infrastructure.Repositories.UserRepository do
       {:error, %Ecto.Changeset{}}
 
   """
-  def update(user_or_schema, attrs, repo \\ Repo)
+  def update(user_or_schema, attrs, repo \\ @default_repo)
 
   def update(%User{} = user, attrs, repo) when is_map(attrs) do
     user
     |> UserSchema.to_schema()
     |> update(attrs, repo)
+  end
+
+  # Accept Identity.Domain.Entities.User and convert to Jarga user for processing
+  def update(%Identity.Domain.Entities.User{} = identity_user, attrs, repo) when is_map(attrs) do
+    # Convert Identity user to Jarga user, then delegate to the User clause
+    jarga_user = %User{
+      id: identity_user.id,
+      first_name: identity_user.first_name,
+      last_name: identity_user.last_name,
+      email: identity_user.email,
+      password: identity_user.password,
+      hashed_password: identity_user.hashed_password,
+      role: identity_user.role,
+      status: identity_user.status,
+      avatar_url: identity_user.avatar_url,
+      confirmed_at: identity_user.confirmed_at,
+      authenticated_at: identity_user.authenticated_at,
+      last_login: identity_user.last_login,
+      date_created: identity_user.date_created,
+      preferences: identity_user.preferences || %{}
+    }
+
+    update(jarga_user, attrs, repo)
   end
 
   def update(%UserSchema{} = user_schema, attrs, repo) when is_map(attrs) do
@@ -185,7 +211,7 @@ defmodule Jarga.Accounts.Infrastructure.Repositories.UserRepository do
   ## Parameters
 
     - changeset: The changeset to apply
-    - repo: Optional repo for dependency injection (defaults to Jarga.Repo)
+    - repo: Optional repo for dependency injection (defaults to Identity.Repo)
 
   ## Examples
 
@@ -195,7 +221,7 @@ defmodule Jarga.Accounts.Infrastructure.Repositories.UserRepository do
 
   """
   @impl true
-  def update_changeset(%Ecto.Changeset{} = changeset, repo \\ Repo) do
+  def update_changeset(%Ecto.Changeset{} = changeset, repo \\ @default_repo) do
     case repo.update(changeset) do
       {:ok, schema} -> {:ok, User.from_schema(schema)}
       {:error, changeset} -> {:error, changeset}
@@ -212,7 +238,7 @@ defmodule Jarga.Accounts.Infrastructure.Repositories.UserRepository do
   ## Parameters
 
     - changeset: The changeset to insert
-    - repo: Optional repo for dependency injection (defaults to Jarga.Repo)
+    - repo: Optional repo for dependency injection (defaults to Identity.Repo)
 
   ## Examples
 
@@ -222,7 +248,7 @@ defmodule Jarga.Accounts.Infrastructure.Repositories.UserRepository do
 
   """
   @impl true
-  def insert_changeset(%Ecto.Changeset{} = changeset, repo \\ Repo) do
+  def insert_changeset(%Ecto.Changeset{} = changeset, repo \\ @default_repo) do
     case repo.insert(changeset) do
       {:ok, schema} -> {:ok, User.from_schema(schema)}
       {:error, changeset} -> {:error, changeset}

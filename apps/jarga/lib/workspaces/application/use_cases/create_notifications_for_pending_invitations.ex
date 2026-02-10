@@ -21,7 +21,7 @@ defmodule Jarga.Workspaces.Application.UseCases.CreateNotificationsForPendingInv
   @default_membership_repository Jarga.Workspaces.Infrastructure.Repositories.MembershipRepository
   @default_pubsub_notifier Jarga.Workspaces.Infrastructure.Notifiers.PubSubNotifier
   @default_queries Jarga.Workspaces.Infrastructure.Queries.Queries
-  @default_repo Jarga.Repo
+  @default_repo Identity.Repo
 
   @doc """
   Executes the create notifications for pending invitations use case.
@@ -50,7 +50,6 @@ defmodule Jarga.Workspaces.Application.UseCases.CreateNotificationsForPendingInv
     queries = Keyword.get(opts, :queries, @default_queries)
     repo = Keyword.get(opts, :repo, @default_repo)
 
-    # Accept any user-like struct (either Jarga.Accounts.Domain.Entities.User or Identity.Domain.Entities.User)
     %{user: %{id: _, email: _} = user} = params
 
     result =

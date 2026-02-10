@@ -5,14 +5,14 @@ defmodule Identity.Application.UseCases.CreateApiKey do
   ## Dependency Injection
 
   This use case accepts the following dependencies via opts:
-  - `:repo` - Ecto.Repo module (default: Jarga.Repo)
+  - `:repo` - Ecto.Repo module (default: Identity.Repo)
   - `:workspaces` - Workspaces context module (default: Jarga.Workspaces)
   - `:api_key_repo` - ApiKeyRepository module (default: Infrastructure.Repositories.ApiKeyRepository)
 
   ## Example
 
       CreateApiKey.execute(user_id, attrs, [
-        repo: Jarga.Repo,
+        repo: Identity.Repo,
         api_key_repo: MyMockRepository
       ])
   """
@@ -20,13 +20,13 @@ defmodule Identity.Application.UseCases.CreateApiKey do
   alias Identity.Application.Services.ApiKeyTokenService
 
   # Default repository - can be overridden via opts for testing
-  @default_api_key_repo Jarga.Accounts.Infrastructure.Repositories.ApiKeyRepository
+  @default_api_key_repo Identity.Infrastructure.Repositories.ApiKeyRepository
 
   @doc """
   Executes the create API key use case.
   """
   def execute(user_id, attrs, opts \\ []) do
-    repo = Keyword.get(opts, :repo, Jarga.Repo)
+    repo = Keyword.get(opts, :repo, Identity.Repo)
     workspaces = Keyword.get(opts, :workspaces, Jarga.Workspaces)
     api_key_repo = Keyword.get(opts, :api_key_repo, @default_api_key_repo)
 

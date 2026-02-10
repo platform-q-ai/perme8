@@ -6,7 +6,7 @@ defmodule Jarga.Documents.Notes.Infrastructure.Repositories.NoteRepository do
   This keeps infrastructure concerns separated from application logic.
   """
 
-  alias Jarga.Repo
+  alias Identity.Repo, as: Repo
   alias Jarga.Documents.Notes.Infrastructure.Schemas.NoteSchema
 
   @doc """

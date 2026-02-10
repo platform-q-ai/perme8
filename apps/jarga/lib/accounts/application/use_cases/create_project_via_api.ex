@@ -19,7 +19,7 @@ defmodule Jarga.Accounts.Application.UseCases.CreateProjectViaApi do
   provides the context functions.
   """
 
-  alias Jarga.Accounts.Domain.Policies.WorkspaceAccessPolicy
+  alias Identity.Domain.Policies.WorkspaceAccessPolicy
 
   @doc """
   Executes the create project via API use case.

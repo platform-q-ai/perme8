@@ -35,8 +35,20 @@ defmodule IdentityWeb.ConnCase do
   end
 
   setup tags do
-    pid = Sandbox.start_owner!(Jarga.Repo, shared: not tags[:async])
-    on_exit(fn -> Sandbox.stop_owner(pid) end)
+    # Checkout both repos - Identity.Repo for identity data,
+    # Jarga.Repo for any cross-app test data that might be needed
+    :ok = Sandbox.checkout(Identity.Repo)
+    :ok = Sandbox.checkout(Jarga.Repo)
+
+    unless tags[:async] do
+      Sandbox.mode(Identity.Repo, {:shared, self()})
+      Sandbox.mode(Jarga.Repo, {:shared, self()})
+    end
+
+    on_exit(fn ->
+      Sandbox.checkin(Identity.Repo)
+      Sandbox.checkin(Jarga.Repo)
+    end)
 
     {:ok, conn: Phoenix.ConnTest.build_conn()}
   end
@@ -50,7 +62,7 @@ defmodule IdentityWeb.ConnCase do
   test context.
   """
   def register_and_log_in_user(%{conn: conn} = context) do
-    user = Jarga.AccountsFixtures.user_fixture()
+    user = Identity.AccountsFixtures.user_fixture()
     scope = Scope.for_user(user)
 
     opts =
@@ -79,6 +91,6 @@ defmodule IdentityWeb.ConnCase do
   defp maybe_set_token_authenticated_at(_token, nil), do: nil
 
   defp maybe_set_token_authenticated_at(token, authenticated_at) do
-    Jarga.AccountsFixtures.override_token_authenticated_at(token, authenticated_at)
+    Identity.AccountsFixtures.override_token_authenticated_at(token, authenticated_at)
   end
 end

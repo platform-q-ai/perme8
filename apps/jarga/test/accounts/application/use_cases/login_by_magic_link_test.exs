@@ -105,8 +105,9 @@ defmodule Jarga.Accounts.Application.UseCases.LoginByMagicLinkTest do
       {token, user_token} = TokenBuilder.build_email_token(user, "login")
       Repo.insert!(user_token)
 
+      # Use Identity.Repo to ensure consistent transaction visibility
       assert {:ok, {_user, _tokens}} =
-               LoginByMagicLink.execute(%{token: token}, repo: Jarga.Repo)
+               LoginByMagicLink.execute(%{token: token}, repo: Identity.Repo)
     end
   end
 end

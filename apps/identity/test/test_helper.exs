@@ -9,4 +9,4 @@ Cucumber.compile_features!()
 # All browser tests (both Cucumber features and ExUnit tests) use @javascript tag
 ExUnit.start(exclude: [:evaluation, :javascript, :wip], capture_log: true)
 
-Ecto.Adapters.SQL.Sandbox.mode(Jarga.Repo, :manual)
+Ecto.Adapters.SQL.Sandbox.mode(Identity.Repo, :manual)

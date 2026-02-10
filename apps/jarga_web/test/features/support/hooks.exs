@@ -19,14 +19,16 @@ defmodule CucumberHooks do
   # This runs AFTER Background steps, so Background steps need their own sandbox setup
   before_scenario context do
     # Check if sandbox is already checked out (from Background setup)
-    # If not, check it out now
-    case Sandbox.checkout(Jarga.Repo) do
-      :ok ->
-        # Always use shared mode for Cucumber tests
-        Sandbox.mode(Jarga.Repo, {:shared, self()})
+    # If not, check it out now for both repos
+    for repo <- [Jarga.Repo, Identity.Repo] do
+      case Sandbox.checkout(repo) do
+        :ok ->
+          # Always use shared mode for Cucumber tests
+          Sandbox.mode(repo, {:shared, self()})
 
-      {:already, _owner} ->
-        :ok
+        {:already, _owner} ->
+          :ok
+      end
     end
 
     {:ok, context}

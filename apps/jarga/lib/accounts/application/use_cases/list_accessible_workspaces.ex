@@ -17,7 +17,7 @@ defmodule Jarga.Accounts.Application.UseCases.ListAccessibleWorkspaces do
   provides the workspace fetching function.
   """
 
-  alias Jarga.Accounts.Domain.Policies.WorkspaceAccessPolicy
+  alias Identity.Domain.Policies.WorkspaceAccessPolicy
 
   @doc """
   Executes the list accessible workspaces use case.

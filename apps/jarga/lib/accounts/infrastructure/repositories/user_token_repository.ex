@@ -9,7 +9,7 @@ defmodule Jarga.Accounts.Infrastructure.Repositories.UserTokenRepository do
   @behaviour Jarga.Accounts.Application.Behaviours.UserTokenRepositoryBehaviour
 
   alias Jarga.Accounts.Infrastructure.Schemas.UserTokenSchema
-  alias Jarga.Repo
+  alias Identity.Repo, as: Repo
 
   import Ecto.Query
 

@@ -1,8 +1,8 @@
 defmodule Jarga.Accounts.UserTest do
   use Jarga.DataCase, async: true
 
-  alias Jarga.Accounts.Domain.Entities.User
-  alias Jarga.Accounts.Infrastructure.Schemas.UserSchema
+  alias Identity.Domain.Entities.User
+  alias Identity.Infrastructure.Schemas.UserSchema
 
   import Jarga.AccountsFixtures
 

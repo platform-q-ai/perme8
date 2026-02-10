@@ -32,8 +32,8 @@ defmodule Identity.CommonSteps do
 
   defp ensure_sandbox_checkout(context) do
     if context[:workspace] == nil do
-      case Sandbox.checkout(Jarga.Repo) do
-        :ok -> Sandbox.mode(Jarga.Repo, {:shared, self()})
+      case Sandbox.checkout(Identity.Repo) do
+        :ok -> Sandbox.mode(Identity.Repo, {:shared, self()})
         {:already, _owner} -> :ok
       end
     end

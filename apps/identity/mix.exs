@@ -33,7 +33,8 @@ defmodule Identity.MixProject do
             {:phoenix_live_view, :relaxed},
             {:phoenix_html, :relaxed},
             {:phoenix_ecto, :relaxed},
-            {:jarga, :relaxed}
+            {:ecto, :relaxed},
+            {:ecto_sql, :relaxed}
           ]
         ]
       ],
@@ -66,8 +67,10 @@ defmodule Identity.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
-      # Umbrella dependencies
-      {:jarga, in_umbrella: true},
+      # Database
+      {:phoenix_ecto, "~> 4.6"},
+      {:ecto_sql, "~> 3.12"},
+      {:postgrex, ">= 0.0.0"},
 
       # Phoenix
       {:phoenix, "~> 1.8.3"},

@@ -87,6 +87,13 @@ defmodule Identity.Infrastructure.Schemas.UserSchema do
     |> validate_email(opts)
   end
 
+  # Fallback for any struct with user-like fields
+  def email_changeset(user_struct, attrs, opts) when is_struct(user_struct) do
+    user_struct
+    |> struct_to_schema()
+    |> email_changeset(attrs, opts)
+  end
+
   defp validate_email(changeset, opts) do
     changeset =
       changeset
@@ -151,6 +158,13 @@ defmodule Identity.Infrastructure.Schemas.UserSchema do
     |> validate_password_format(opts)
   end
 
+  # Fallback for any struct with user-like fields
+  def registration_changeset(user_struct, attrs, opts) when is_struct(user_struct) do
+    user_struct
+    |> struct_to_schema()
+    |> registration_changeset(attrs, opts)
+  end
+
   @doc """
   A user changeset for changing the password.
 
@@ -176,6 +190,34 @@ defmodule Identity.Infrastructure.Schemas.UserSchema do
     |> validate_required([:password])
     |> validate_confirmation(:password, message: "does not match password")
     |> validate_password_format(opts)
+  end
+
+  # Fallback for any struct with user-like fields (e.g., Jarga.Accounts.Domain.Entities.User)
+  # This enables compatibility during migration period
+  def password_changeset(user_struct, attrs, opts) when is_struct(user_struct) do
+    user_struct
+    |> struct_to_schema()
+    |> password_changeset(attrs, opts)
+  end
+
+  # Converts any user-like struct to a UserSchema
+  defp struct_to_schema(user_struct) do
+    %__MODULE__{
+      id: Map.get(user_struct, :id),
+      first_name: Map.get(user_struct, :first_name),
+      last_name: Map.get(user_struct, :last_name),
+      email: Map.get(user_struct, :email),
+      password: Map.get(user_struct, :password),
+      hashed_password: Map.get(user_struct, :hashed_password),
+      role: Map.get(user_struct, :role),
+      status: Map.get(user_struct, :status),
+      avatar_url: Map.get(user_struct, :avatar_url),
+      confirmed_at: Map.get(user_struct, :confirmed_at),
+      authenticated_at: Map.get(user_struct, :authenticated_at),
+      last_login: Map.get(user_struct, :last_login),
+      date_created: Map.get(user_struct, :date_created),
+      preferences: Map.get(user_struct, :preferences, %{})
+    }
   end
 
   # Password format validation only - NO hashing
@@ -215,5 +257,12 @@ defmodule Identity.Infrastructure.Schemas.UserSchema do
     schema
     |> change()
     |> force_change(:confirmed_at, now)
+  end
+
+  # Fallback for any struct with user-like fields
+  def confirm_changeset(user_struct) when is_struct(user_struct) do
+    user_struct
+    |> struct_to_schema()
+    |> confirm_changeset()
   end
 end

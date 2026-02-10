@@ -8,7 +8,6 @@ defmodule Jarga.Accounts.Infrastructure.Notifiers.UserNotifier do
   import Swoosh.Email
 
   alias Jarga.Mailer
-  alias Jarga.Accounts.Domain.Entities.User
 
   # Delivers the email using the application mailer.
   # Configuration can be injected via opts or falls back to Application config or defaults
@@ -92,9 +91,12 @@ defmodule Jarga.Accounts.Infrastructure.Notifiers.UserNotifier do
   """
   @impl true
   def deliver_login_instructions(user, url, opts \\ []) do
-    case user do
-      %User{confirmed_at: nil} -> deliver_confirmation_instructions(user, url, opts)
-      _ -> deliver_magic_link_instructions(user, url, opts)
+    # Check confirmed_at field regardless of User struct type
+    # This supports both Identity.Domain.Entities.User and Jarga.Accounts.Domain.Entities.User
+    if user.confirmed_at == nil do
+      deliver_confirmation_instructions(user, url, opts)
+    else
+      deliver_magic_link_instructions(user, url, opts)
     end
   end
 

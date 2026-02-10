@@ -12,7 +12,7 @@ defmodule Jarga.Accounts.Application.UseCases.CreateApiKey do
   ## Example
 
       CreateApiKey.execute(user_id, attrs, [
-        repo: Jarga.Repo,
+        repo: Identity.Repo,
         api_key_repo: MyMockRepository
       ])
   """
@@ -26,7 +26,7 @@ defmodule Jarga.Accounts.Application.UseCases.CreateApiKey do
   Executes the create API key use case.
   """
   def execute(user_id, attrs, opts \\ []) do
-    repo = Keyword.get(opts, :repo, Jarga.Repo)
+    repo = Keyword.get(opts, :repo, Identity.Repo)
     workspaces = Keyword.get(opts, :workspaces, Jarga.Workspaces)
     api_key_repo = Keyword.get(opts, :api_key_repo, @default_api_key_repo)
 

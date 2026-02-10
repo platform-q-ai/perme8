@@ -8,7 +8,8 @@ defmodule Jarga.Chat.Application.UseCases.SaveMessageTest do
 
   alias Jarga.Chat.Application.UseCases.SaveMessage
   alias Jarga.Chat.Infrastructure.Schemas.MessageSchema
-  alias Jarga.Repo
+  # Use Identity.Repo for all operations to ensure consistent transaction visibility
+  alias Identity.Repo, as: Repo
 
   describe "execute/1" do
     test "saves a user message" do

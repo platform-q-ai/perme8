@@ -15,7 +15,7 @@ defmodule Jarga.Accounts.Application.Behaviours.ApiKeyRepositoryBehaviour do
 
       def execute(user_id, attrs, opts \\\\ []) do
         api_key_repo = Keyword.get(opts, :api_key_repo, default_api_key_repo())
-        repo = Keyword.get(opts, :repo, Jarga.Repo)
+        repo = Keyword.get(opts, :repo, Identity.Repo)
 
         case api_key_repo.insert(repo, attrs) do
           {:ok, api_key} -> ...

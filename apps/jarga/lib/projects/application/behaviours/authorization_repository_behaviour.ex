@@ -3,7 +3,7 @@ defmodule Jarga.Projects.Application.Behaviours.AuthorizationRepositoryBehaviour
   Behaviour defining the project authorization repository contract.
   """
 
-  alias Jarga.Accounts.Domain.Entities.User
+  alias Identity.Domain.Entities.User
 
   @callback verify_project_access(User.t(), Ecto.UUID.t(), Ecto.UUID.t(), module()) ::
               {:ok, struct()} | {:error, atom()}

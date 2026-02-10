@@ -20,9 +20,9 @@ defmodule Identity.Accounts.ApiKeys.Helpers do
   # ============================================================================
 
   def ensure_sandbox_checkout do
-    case Sandbox.checkout(Jarga.Repo) do
+    case Sandbox.checkout(Identity.Repo) do
       :ok ->
-        Sandbox.mode(Jarga.Repo, {:shared, self()})
+        Sandbox.mode(Identity.Repo, {:shared, self()})
 
       {:already, _owner} ->
         :ok

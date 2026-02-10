@@ -16,7 +16,8 @@ defmodule Identity.Accounts.VerifyTokensSteps do
     user = context[:user]
 
     # Verify no login tokens exist for this user
-    tokens = UserTokenRepository.all_by_user_id(user.id)
+    # Use Identity.Repo to ensure visibility of data in the same transaction
+    tokens = UserTokenRepository.all_by_user_id(user.id, Identity.Repo)
     login_tokens = Enum.filter(tokens, &(&1.context == "login"))
 
     assert Enum.empty?(login_tokens)
@@ -35,7 +36,8 @@ defmodule Identity.Accounts.VerifyTokensSteps do
     user = context[:user]
 
     # Verify ALL tokens are deleted for this user
-    tokens = UserTokenRepository.all_by_user_id(user.id)
+    # Use Identity.Repo to ensure visibility of data in the same transaction
+    tokens = UserTokenRepository.all_by_user_id(user.id, Identity.Repo)
     assert Enum.empty?(tokens)
     {:ok, context}
   end
@@ -44,7 +46,8 @@ defmodule Identity.Accounts.VerifyTokensSteps do
     user = context[:user]
 
     # Verify no login tokens exist
-    tokens = UserTokenRepository.all_by_user_id(user.id)
+    # Use Identity.Repo to ensure visibility of data in the same transaction
+    tokens = UserTokenRepository.all_by_user_id(user.id, Identity.Repo)
     login_tokens = Enum.filter(tokens, &(&1.context == "login"))
 
     assert Enum.empty?(login_tokens)
@@ -57,7 +60,8 @@ defmodule Identity.Accounts.VerifyTokensSteps do
     assert Enum.empty?(expired_tokens)
 
     # Verify no login tokens remain
-    tokens = UserTokenRepository.all_by_user_id(user.id)
+    # Use Identity.Repo to ensure visibility of data in the same transaction
+    tokens = UserTokenRepository.all_by_user_id(user.id, Identity.Repo)
     login_tokens = Enum.filter(tokens, &(&1.context == "login"))
 
     assert Enum.empty?(login_tokens)
@@ -98,14 +102,15 @@ defmodule Identity.Accounts.VerifyTokensSteps do
     user = context[:user]
 
     # Verify token exists in database
-    tokens = UserTokenRepository.all_by_user_id(user.id)
+    # Use Identity.Repo to ensure visibility of data in the same transaction
+    tokens = UserTokenRepository.all_by_user_id(user.id, Identity.Repo)
     assert tokens != []
     {:ok, context}
   end
 
   step "the token context should be {string}", %{args: [expected_context]} = context do
     user = context[:user]
-    tokens = UserTokenRepository.all_by_user_id(user.id)
+    tokens = UserTokenRepository.all_by_user_id(user.id, Identity.Repo)
     assert Enum.any?(tokens, &(&1.context == expected_context))
     {:ok, context}
   end
@@ -124,7 +129,7 @@ defmodule Identity.Accounts.VerifyTokensSteps do
   step "the token should be removed from the database", context do
     user = context[:user]
 
-    tokens = UserTokenRepository.all_by_user_id(user.id)
+    tokens = UserTokenRepository.all_by_user_id(user.id, Identity.Repo)
     session_tokens = Enum.filter(tokens, &(&1.context == "session"))
 
     assert Enum.empty?(session_tokens)
@@ -144,7 +149,7 @@ defmodule Identity.Accounts.VerifyTokensSteps do
   step "no tokens should be deleted", context do
     user = context[:user]
 
-    tokens = UserTokenRepository.all_by_user_id(user.id)
+    tokens = UserTokenRepository.all_by_user_id(user.id, Identity.Repo)
 
     # Token count should remain the same
     assert length(tokens) == context[:token_count_before]
@@ -158,7 +163,7 @@ defmodule Identity.Accounts.VerifyTokensSteps do
   step "a login token should be generated with context {string}", %{args: [_ctx]} = context do
     user = context[:user]
 
-    token_record = UserTokenRepository.get_by_user_id_and_context(user.id, "login")
+    token_record = UserTokenRepository.get_by_user_id_and_context(user.id, "login", Identity.Repo)
 
     assert token_record != nil
     {:ok, context}
@@ -168,7 +173,8 @@ defmodule Identity.Accounts.VerifyTokensSteps do
        %{args: [expected_context]} = context do
     user = context[:user]
 
-    token_record = UserTokenRepository.get_by_user_id_and_context(user.id, expected_context)
+    token_record =
+      UserTokenRepository.get_by_user_id_and_context(user.id, expected_context, Identity.Repo)
 
     assert token_record != nil
     {:ok, context}

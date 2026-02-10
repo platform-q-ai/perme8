@@ -84,7 +84,7 @@ defmodule Identity.Accounts.ApiKeys.SetupSteps do
 
   # Delete all API keys for a user (test cleanup helper)
   defp delete_all_api_keys_for_user(user_id) do
-    ApiKeyRepository.delete_by_user_id(Jarga.Repo, user_id)
+    ApiKeyRepository.delete_by_user_id(Identity.Repo, user_id)
   end
 
   step "I have an API key named {string}", %{args: [name]} = context do

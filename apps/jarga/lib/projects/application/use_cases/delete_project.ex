@@ -19,7 +19,7 @@ defmodule Jarga.Projects.Application.UseCases.DeleteProject do
 
   @behaviour Jarga.Projects.Application.UseCases.UseCase
 
-  alias Jarga.Accounts.Domain.Entities.User
+  alias Identity.Domain.Entities.User
   alias Jarga.Workspaces
   alias Jarga.Workspaces.Application.Policies.PermissionsPolicy
 

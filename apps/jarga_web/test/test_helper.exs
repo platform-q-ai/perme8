@@ -10,5 +10,6 @@ Cucumber.compile_features!()
 ExUnit.start(exclude: [:evaluation, :javascript, :wip], capture_log: true)
 
 Ecto.Adapters.SQL.Sandbox.mode(Jarga.Repo, :manual)
+Ecto.Adapters.SQL.Sandbox.mode(Identity.Repo, :manual)
 
 # Mocks are defined in apps/jarga/test/test_helper.exs to avoid redefinition warnings

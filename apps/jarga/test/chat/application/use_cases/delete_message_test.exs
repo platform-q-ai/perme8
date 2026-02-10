@@ -9,7 +9,8 @@ defmodule Jarga.Chat.Application.UseCases.DeleteMessageTest do
   alias Jarga.Chat.Application.UseCases.DeleteMessage
   alias Jarga.Chat.Application.UseCases.SaveMessage
   alias Jarga.Chat.Infrastructure.Schemas.MessageSchema
-  alias Jarga.Repo
+  # Use Identity.Repo for all operations to ensure consistent transaction visibility
+  alias Identity.Repo, as: Repo
 
   describe "execute/2" do
     test "deletes a message owned by the user" do

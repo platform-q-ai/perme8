@@ -27,7 +27,7 @@ defmodule Identity.Application.UseCases.LoginByMagicLink do
   ## Dependency Injection
 
   This use case accepts the following dependencies via opts:
-  - `:repo` - Ecto.Repo module (default: Jarga.Repo)
+  - `:repo` - Ecto.Repo module (default: Identity.Repo)
   - `:queries` - Queries module (default: Infrastructure.Queries.Queries)
   - `:user_schema` - UserSchema module (default: Infrastructure.Schemas.UserSchema)
   - `:user_repo` - UserRepository module (default: Infrastructure.Repositories.UserRepository)
@@ -48,11 +48,11 @@ defmodule Identity.Application.UseCases.LoginByMagicLink do
   alias Identity.Domain.Entities.User
 
   # Default implementations - can be overridden via opts for testing
-  @default_repo Jarga.Repo
-  @default_queries Jarga.Accounts.Infrastructure.Queries.Queries
-  @default_user_schema Jarga.Accounts.Infrastructure.Schemas.UserSchema
-  @default_user_repo Jarga.Accounts.Infrastructure.Repositories.UserRepository
-  @default_user_token_repo Jarga.Accounts.Infrastructure.Repositories.UserTokenRepository
+  @default_repo Identity.Repo
+  @default_queries Identity.Infrastructure.Queries.TokenQueries
+  @default_user_schema Identity.Infrastructure.Schemas.UserSchema
+  @default_user_repo Identity.Infrastructure.Repositories.UserRepository
+  @default_user_token_repo Identity.Infrastructure.Repositories.UserTokenRepository
 
   @doc """
   Executes the login by magic link use case.
@@ -63,7 +63,7 @@ defmodule Identity.Application.UseCases.LoginByMagicLink do
     - `:token` - The magic link token (string)
 
   - `opts` - Keyword list of options:
-    - `:repo` - Repository module (default: Jarga.Repo)
+    - `:repo` - Repository module (default: Identity.Repo)
     - `:queries` - Queries module (default: Infrastructure.Queries.Queries)
     - `:user_schema` - UserSchema module (default: Infrastructure.Schemas.UserSchema)
     - `:user_repo` - UserRepository module (default: Infrastructure.Repositories.UserRepository)

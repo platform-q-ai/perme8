@@ -5,7 +5,7 @@ defmodule Identity.Application.UseCases.UpdateApiKey do
   ## Dependency Injection
 
   This use case accepts the following dependencies via opts:
-  - `:repo` - Ecto.Repo module (default: Jarga.Repo)
+  - `:repo` - Ecto.Repo module (default: Identity.Repo)
   - `:api_key_repo` - ApiKeyRepository module (default: Infrastructure.Repositories.ApiKeyRepository)
   - `:workspaces` - Workspaces context for validation (default: Jarga.Workspaces)
   """
@@ -13,8 +13,8 @@ defmodule Identity.Application.UseCases.UpdateApiKey do
   alias Identity.Domain.Policies.ApiKeyPolicy
 
   # Default implementations - can be overridden via opts for testing
-  @default_repo Jarga.Repo
-  @default_api_key_repo Jarga.Accounts.Infrastructure.Repositories.ApiKeyRepository
+  @default_repo Identity.Repo
+  @default_api_key_repo Identity.Infrastructure.Repositories.ApiKeyRepository
   @default_workspaces Jarga.Workspaces
 
   @doc """
@@ -26,7 +26,7 @@ defmodule Identity.Application.UseCases.UpdateApiKey do
     - `api_key_id` - The API key ID to update
     - `attrs` - Map with fields to update (name, description, workspace_access)
     - `opts` - Options:
-      - `:repo` - Ecto.Repo (defaults to Jarga.Repo)
+      - `:repo` - Ecto.Repo (defaults to Identity.Repo)
       - `:api_key_repo` - ApiKeyRepository module (default: Infrastructure.Repositories.ApiKeyRepository)
       - `:workspaces` - Workspaces context for validation (default: Jarga.Workspaces)
 

@@ -37,7 +37,8 @@ defmodule Jarga.TestUsers do
   alias Jarga.Accounts
   alias Jarga.Accounts.Domain.Entities.User
   alias Jarga.Accounts.Infrastructure.Schemas.UserSchema
-  alias Jarga.Repo
+  # Use Identity.Repo for all operations to ensure consistent transaction visibility
+  alias Identity.Repo, as: Repo
 
   @test_users %{
     alice: %{

@@ -23,9 +23,9 @@ defmodule Identity.Accounts.SetupSteps do
 
   step "a user exists with email {string}", %{args: [email]} = context do
     # Ensure sandbox is checked out
-    case Sandbox.checkout(Jarga.Repo) do
+    case Sandbox.checkout(Identity.Repo) do
       :ok ->
-        Sandbox.mode(Jarga.Repo, {:shared, self()})
+        Sandbox.mode(Identity.Repo, {:shared, self()})
 
       {:already, _owner} ->
         :ok
@@ -36,7 +36,15 @@ defmodule Identity.Accounts.SetupSteps do
   end
 
   step "a confirmed user exists with email {string}", %{args: [email]} = context do
-    # Ensure sandbox is checked out
+    # Ensure sandbox is checked out for both repos
+    case Sandbox.checkout(Identity.Repo) do
+      :ok ->
+        Sandbox.mode(Identity.Repo, {:shared, self()})
+
+      {:already, _owner} ->
+        :ok
+    end
+
     case Sandbox.checkout(Jarga.Repo) do
       :ok ->
         Sandbox.mode(Jarga.Repo, {:shared, self()})
@@ -52,9 +60,9 @@ defmodule Identity.Accounts.SetupSteps do
   step "a confirmed user exists with email {string} and password {string}",
        %{args: [email, password]} = context do
     # Ensure sandbox is checked out
-    case Sandbox.checkout(Jarga.Repo) do
+    case Sandbox.checkout(Identity.Repo) do
       :ok ->
-        Sandbox.mode(Jarga.Repo, {:shared, self()})
+        Sandbox.mode(Identity.Repo, {:shared, self()})
 
       {:already, _owner} ->
         :ok
@@ -66,9 +74,9 @@ defmodule Identity.Accounts.SetupSteps do
 
   step "an unconfirmed user exists with email {string}", %{args: [email]} = context do
     # Ensure sandbox is checked out
-    case Sandbox.checkout(Jarga.Repo) do
+    case Sandbox.checkout(Identity.Repo) do
       :ok ->
-        Sandbox.mode(Jarga.Repo, {:shared, self()})
+        Sandbox.mode(Identity.Repo, {:shared, self()})
 
       {:already, _owner} ->
         :ok
@@ -81,9 +89,9 @@ defmodule Identity.Accounts.SetupSteps do
   step "an unconfirmed user exists with email {string} and password {string}",
        %{args: [email, password]} = context do
     # Ensure sandbox is checked out
-    case Sandbox.checkout(Jarga.Repo) do
+    case Sandbox.checkout(Identity.Repo) do
       :ok ->
-        Sandbox.mode(Jarga.Repo, {:shared, self()})
+        Sandbox.mode(Identity.Repo, {:shared, self()})
 
       {:already, _owner} ->
         :ok
@@ -178,9 +186,9 @@ defmodule Identity.Accounts.SetupSteps do
 
   step "the following users exist:", context do
     # Ensure sandbox is checked out
-    case Sandbox.checkout(Jarga.Repo) do
+    case Sandbox.checkout(Identity.Repo) do
       :ok ->
-        Sandbox.mode(Jarga.Repo, {:shared, self()})
+        Sandbox.mode(Identity.Repo, {:shared, self()})
 
       {:already, _owner} ->
         :ok

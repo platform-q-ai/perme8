@@ -84,6 +84,7 @@ config :phoenix, :json_library, Jason
 # ============================================================================
 
 config :identity,
+  ecto_repos: [Identity.Repo],
   generators: [timestamp_type: :utc_datetime, binary_id: true]
 
 # Identity endpoint configuration

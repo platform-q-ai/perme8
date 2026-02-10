@@ -6,7 +6,7 @@ defmodule Jarga.Documents.Infrastructure.Queries.DocumentQueries do
 
   import Ecto.Query
   alias Jarga.Documents.Infrastructure.Schemas.DocumentSchema
-  alias Jarga.Accounts.Domain.Entities.User
+  alias Identity.Domain.Entities.User
   alias Jarga.Workspaces.Infrastructure.Schemas.WorkspaceMemberSchema
 
   @doc """
@@ -20,7 +20,9 @@ defmodule Jarga.Documents.Infrastructure.Queries.DocumentQueries do
   Filter documents by user.
   Only returns documents owned by the user.
   """
-  def for_user(query, %User{id: user_id}) do
+  def for_user(query, %User{} = user) do
+    user_id = user.id
+
     from([document: d] in query,
       where: d.user_id == ^user_id
     )
@@ -32,7 +34,9 @@ defmodule Jarga.Documents.Infrastructure.Queries.DocumentQueries do
   - Owned by the user, OR
   - Public documents in workspaces where the user is a member
   """
-  def viewable_by_user(query, %User{id: user_id}) do
+  def viewable_by_user(query, %User{} = user) do
+    user_id = user.id
+
     from([document: d] in query,
       left_join: wm in WorkspaceMemberSchema,
       on: wm.workspace_id == d.workspace_id and wm.user_id == ^user_id,

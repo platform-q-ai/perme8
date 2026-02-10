@@ -14,7 +14,7 @@ defmodule Identity.Application.UseCases.RegisterUser do
   ## Dependency Injection
 
   This use case accepts the following dependencies via opts:
-  - `:repo` - Ecto.Repo module (default: Jarga.Repo)
+  - `:repo` - Ecto.Repo module (default: Identity.Repo)
   - `:user_schema` - UserSchema module (default: Infrastructure.Schemas.UserSchema)
   - `:user_repo` - UserRepository module (default: Infrastructure.Repositories.UserRepository)
   - `:password_service` - Password service module (default: PasswordService)
@@ -34,9 +34,9 @@ defmodule Identity.Application.UseCases.RegisterUser do
   alias Identity.Application.Services.PasswordService
 
   # Default implementations - can be overridden via opts for testing
-  @default_repo Jarga.Repo
-  @default_user_schema Jarga.Accounts.Infrastructure.Schemas.UserSchema
-  @default_user_repo Jarga.Accounts.Infrastructure.Repositories.UserRepository
+  @default_repo Identity.Repo
+  @default_user_schema Identity.Infrastructure.Schemas.UserSchema
+  @default_user_repo Identity.Infrastructure.Repositories.UserRepository
 
   @doc """
   Executes the register user use case.
@@ -47,7 +47,7 @@ defmodule Identity.Application.UseCases.RegisterUser do
     - `:attrs` - User registration attributes (email, password, first_name, last_name)
 
   - `opts` - Keyword list of options:
-    - `:repo` - Repository module (default: Jarga.Repo)
+    - `:repo` - Repository module (default: Identity.Repo)
     - `:user_schema` - UserSchema module (default: Infrastructure.Schemas.UserSchema)
     - `:user_repo` - UserRepository module (default: Infrastructure.Repositories.UserRepository)
     - `:password_service` - Password service module (default: PasswordService)

@@ -5,15 +5,15 @@ defmodule Identity.Application.UseCases.RevokeApiKey do
   ## Dependency Injection
 
   This use case accepts the following dependencies via opts:
-  - `:repo` - Ecto.Repo module (default: Jarga.Repo)
+  - `:repo` - Ecto.Repo module (default: Identity.Repo)
   - `:api_key_repo` - ApiKeyRepository module (default: Infrastructure.Repositories.ApiKeyRepository)
   """
 
   alias Identity.Domain.Policies.ApiKeyPolicy
 
   # Default implementations - can be overridden via opts for testing
-  @default_repo Jarga.Repo
-  @default_api_key_repo Jarga.Accounts.Infrastructure.Repositories.ApiKeyRepository
+  @default_repo Identity.Repo
+  @default_api_key_repo Identity.Infrastructure.Repositories.ApiKeyRepository
 
   @doc """
   Executes the revoke API key use case.
@@ -23,7 +23,7 @@ defmodule Identity.Application.UseCases.RevokeApiKey do
     - `user_id` - The user ID performing the revoke
     - `api_key_id` - The API key ID to revoke
     - `opts` - Options:
-      - `:repo` - Ecto.Repo (defaults to Jarga.Repo)
+      - `:repo` - Ecto.Repo (defaults to Identity.Repo)
       - `:api_key_repo` - ApiKeyRepository module (default: Infrastructure.Repositories.ApiKeyRepository)
 
   ## Returns

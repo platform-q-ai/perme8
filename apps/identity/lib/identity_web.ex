@@ -25,7 +25,7 @@ defmodule IdentityWeb do
       # Cross-context dependencies (for workspace listing in API keys UI)
       Jarga.Workspaces,
       # Shared infrastructure
-      Jarga.Repo
+      Identity.Repo
     ],
     exports: [Endpoint, Telemetry, Plugs.UserAuth, Plugs.ApiAuthPlug]
 

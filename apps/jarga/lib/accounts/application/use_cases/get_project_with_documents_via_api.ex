@@ -21,7 +21,7 @@ defmodule Jarga.Accounts.Application.UseCases.GetProjectWithDocumentsViaApi do
   provides the context functions.
   """
 
-  alias Jarga.Accounts.Domain.Policies.WorkspaceAccessPolicy
+  alias Identity.Domain.Policies.WorkspaceAccessPolicy
 
   @doc """
   Executes the get project with documents via API use case.

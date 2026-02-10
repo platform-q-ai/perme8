@@ -26,7 +26,7 @@ defmodule Identity.Infrastructure.Repositories.UserRepository do
   alias Identity.Domain.Entities.User
   alias Identity.Infrastructure.Schemas.UserSchema
   alias Identity.Infrastructure.Queries.TokenQueries
-  alias Jarga.Repo
+  alias Identity.Repo
 
   @doc """
   Gets a user by ID.
@@ -36,7 +36,7 @@ defmodule Identity.Infrastructure.Repositories.UserRepository do
   ## Parameters
 
     - id: The user ID to look up
-    - repo: Optional repo for dependency injection (defaults to Jarga.Repo)
+    - repo: Optional repo for dependency injection (defaults to Identity.Repo)
 
   ## Examples
 
@@ -62,7 +62,7 @@ defmodule Identity.Infrastructure.Repositories.UserRepository do
   ## Parameters
 
     - email: The email address to look up
-    - repo: Optional repo for dependency injection (defaults to Jarga.Repo)
+    - repo: Optional repo for dependency injection (defaults to Identity.Repo)
 
   ## Examples
 
@@ -88,7 +88,7 @@ defmodule Identity.Infrastructure.Repositories.UserRepository do
   ## Parameters
 
     - id: The user ID to check
-    - repo: Optional repo for dependency injection (defaults to Jarga.Repo)
+    - repo: Optional repo for dependency injection (defaults to Identity.Repo)
 
   ## Examples
 
@@ -111,7 +111,7 @@ defmodule Identity.Infrastructure.Repositories.UserRepository do
   ## Parameters
 
     - attrs: Map of user attributes
-    - repo: Optional repo for dependency injection (defaults to Jarga.Repo)
+    - repo: Optional repo for dependency injection (defaults to Identity.Repo)
 
   ## Examples
 
@@ -140,7 +140,7 @@ defmodule Identity.Infrastructure.Repositories.UserRepository do
 
     - user: The user struct to update
     - attrs: Map of attributes to update
-    - repo: Optional repo for dependency injection (defaults to Jarga.Repo)
+    - repo: Optional repo for dependency injection (defaults to Identity.Repo)
 
   ## Examples
 
@@ -185,7 +185,7 @@ defmodule Identity.Infrastructure.Repositories.UserRepository do
   ## Parameters
 
     - changeset: The changeset to apply
-    - repo: Optional repo for dependency injection (defaults to Jarga.Repo)
+    - repo: Optional repo for dependency injection (defaults to Identity.Repo)
 
   ## Examples
 
@@ -212,7 +212,7 @@ defmodule Identity.Infrastructure.Repositories.UserRepository do
   ## Parameters
 
     - changeset: The changeset to insert
-    - repo: Optional repo for dependency injection (defaults to Jarga.Repo)
+    - repo: Optional repo for dependency injection (defaults to Identity.Repo)
 
   ## Examples
 

@@ -9,7 +9,7 @@ defmodule Identity.Infrastructure.Repositories.UserTokenRepository do
   @behaviour Identity.Application.Behaviours.UserTokenRepositoryBehaviour
 
   alias Identity.Infrastructure.Schemas.UserTokenSchema
-  alias Jarga.Repo
+  alias Identity.Repo
 
   import Ecto.Query
 
@@ -124,7 +124,7 @@ defmodule Identity.Infrastructure.Repositories.UserTokenRepository do
   def insert!(token, repo \\ Repo) do
     schema = UserTokenSchema.from_entity(token)
 
-    # Support both module repos (Jarga.Repo) and map-based mock repos
+    # Support both module repos (Identity.Repo) and map-based mock repos
     inserted_schema =
       if is_atom(repo) do
         repo.insert!(schema)

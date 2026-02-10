@@ -21,7 +21,7 @@ defmodule Jarga.Documents.Application.UseCases.CreateDocument do
   @behaviour Jarga.Documents.Application.UseCases.UseCase
 
   alias Ecto.Multi
-  alias Jarga.Accounts.Domain.Entities.User
+  alias Identity.Domain.Entities.User
   alias Jarga.Documents.Domain.SlugGenerator
   alias Jarga.Workspaces
   alias Jarga.Workspaces.Application.Policies.PermissionsPolicy

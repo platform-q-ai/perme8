@@ -33,7 +33,9 @@ defmodule Jarga.DataCase do
 
   using do
     quote do
-      alias Jarga.Repo
+      # Use Identity.Repo as the default Repo in tests
+      # This ensures all database operations happen in the same transaction
+      alias Identity.Repo, as: Repo
 
       import Ecto
       import Ecto.Changeset
@@ -52,10 +54,34 @@ defmodule Jarga.DataCase do
 
   If the test is tagged with @integration, it will enable PubSub subscribers
   and start the WorkspaceInvitationSubscriber for real-time notifications.
+
+  IMPORTANT: Both Jarga.Repo and Identity.Repo point to the same PostgreSQL database.
+  We checkout Jarga.Repo first, then allow Identity.Repo to use the same connection.
+  This ensures foreign key constraints work across repos.
   """
   def setup_sandbox(tags) do
-    pid = Sandbox.start_owner!(Jarga.Repo, shared: not tags[:async])
-    on_exit(fn -> Sandbox.stop_owner(pid) end)
+    # Checkout Jarga.Repo first
+    :ok = Sandbox.checkout(Jarga.Repo)
+    # Checkout Identity.Repo second
+    :ok = Sandbox.checkout(Identity.Repo)
+
+    # CRITICAL: Allow both repos to share data by allowing cross-process access
+    # Since both repos connect to the same database, we need to allow them
+    # to see each other's uncommitted data for foreign key constraints to work.
+    # The trick is to use the same owner (self()) for both repos.
+    Sandbox.allow(Jarga.Repo, self(), self())
+    Sandbox.allow(Identity.Repo, self(), self())
+
+    unless tags[:async] do
+      # In non-async mode, share the connection with any spawned processes
+      Sandbox.mode(Jarga.Repo, {:shared, self()})
+      Sandbox.mode(Identity.Repo, {:shared, self()})
+    end
+
+    on_exit(fn ->
+      Sandbox.checkin(Jarga.Repo)
+      Sandbox.checkin(Identity.Repo)
+    end)
 
     # Enable PubSub subscribers for integration tests
     if tags[:integration] do

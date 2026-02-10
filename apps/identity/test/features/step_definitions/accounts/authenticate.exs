@@ -39,12 +39,16 @@ defmodule Identity.Accounts.AuthenticateSteps do
 
     case result do
       {:ok, {user, expired_tokens}} ->
-        Map.put(context, :user, user)
-        |> Map.put(:expired_tokens, expired_tokens)
-        |> Map.put(:login_result, :ok)
+        updated_context =
+          context
+          |> Map.put(:user, user)
+          |> Map.put(:expired_tokens, expired_tokens)
+          |> Map.put(:login_result, :ok)
+
+        {:ok, updated_context}
 
       {:error, reason} ->
-        Map.put(context, :login_result, {:error, reason})
+        {:ok, Map.put(context, :login_result, {:error, reason})}
     end
   end
 
@@ -53,10 +57,10 @@ defmodule Identity.Accounts.AuthenticateSteps do
 
     case result do
       {:error, reason} ->
-        Map.put(context, :login_result, {:error, reason})
+        {:ok, Map.put(context, :login_result, {:error, reason})}
 
       {:ok, _} ->
-        Map.put(context, :login_result, :ok)
+        {:ok, Map.put(context, :login_result, :ok)}
     end
   end
 
@@ -66,10 +70,10 @@ defmodule Identity.Accounts.AuthenticateSteps do
 
     case result do
       {:error, reason} ->
-        Map.put(context, :login_result, {:error, reason})
+        {:ok, Map.put(context, :login_result, {:error, reason})}
 
       {:ok, _} ->
-        Map.put(context, :login_result, :ok)
+        {:ok, Map.put(context, :login_result, :ok)}
     end
   end
 

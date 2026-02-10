@@ -11,7 +11,7 @@ defmodule Jarga.Accounts.Application.UseCases.ListApiKeys do
   """
 
   # Default implementations - can be overridden via opts for testing
-  @default_repo Jarga.Repo
+  @default_repo Identity.Repo
   @default_api_key_repo Jarga.Accounts.Infrastructure.Repositories.ApiKeyRepository
 
   @doc """

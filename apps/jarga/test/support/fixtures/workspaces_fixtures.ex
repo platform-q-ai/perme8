@@ -56,7 +56,8 @@ defmodule Jarga.WorkspacesFixtures do
       invited_at: now,
       joined_at: now
     })
-    |> Jarga.Repo.insert!()
+    # Use Identity.Repo to ensure consistent transaction visibility with user/workspace data
+    |> Identity.Repo.insert!()
     |> WorkspaceMember.from_schema()
   end
 

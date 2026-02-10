@@ -38,7 +38,7 @@ defmodule Jarga.Accounts.Application.UseCases.UpdateUserPassword do
   alias Jarga.Accounts.Application.Services.PasswordService
 
   # Default implementations - can be overridden via opts for testing
-  @default_repo Jarga.Repo
+  @default_repo Identity.Repo
   @default_queries Jarga.Accounts.Infrastructure.Queries.Queries
   @default_user_schema Jarga.Accounts.Infrastructure.Schemas.UserSchema
   @default_user_repo Jarga.Accounts.Infrastructure.Repositories.UserRepository

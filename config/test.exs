@@ -10,10 +10,18 @@ config :jarga, :document_save_debounce_ms, 1
 config :bcrypt_elixir, :log_rounds, 1
 
 # Configure your database
+database_url =
+  System.get_env("DATABASE_URL") ||
+    "postgres://postgres:postgres@localhost:5433/jarga_test#{System.get_env("MIX_TEST_PARTITION")}"
+
 config :jarga, Jarga.Repo,
-  url:
-    System.get_env("DATABASE_URL") ||
-      "postgres://postgres:postgres@localhost:5433/jarga_test#{System.get_env("MIX_TEST_PARTITION")}",
+  url: database_url,
+  pool: Ecto.Adapters.SQL.Sandbox,
+  pool_size: 20
+
+# Identity uses the same database as Jarga
+config :identity, Identity.Repo,
+  url: database_url,
   pool: Ecto.Adapters.SQL.Sandbox,
   pool_size: 20
 

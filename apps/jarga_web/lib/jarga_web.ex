@@ -34,8 +34,9 @@ defmodule JargaWeb do
       # Shared infrastructure
       Jarga.Repo,
       Jarga.Mailer,
-      # Layer boundaries for domain entities and policies used in web layer
-      Jarga.Accounts.Domain,
+      # Identity for domain entities and scope
+      Identity,
+      # Layer boundaries for policies used in web layer
       Jarga.Workspaces.Application
     ],
     exports: [Endpoint, Telemetry]

@@ -2,7 +2,7 @@ defmodule JargaWeb.UserLive.Registration do
   use JargaWeb, :live_view
 
   alias Jarga.Accounts
-  alias Jarga.Accounts.Domain.Entities.User
+  alias Identity.Domain.Entities.User
 
   @impl true
   def render(assigns) do

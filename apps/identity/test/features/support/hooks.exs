@@ -17,16 +17,25 @@ defmodule Identity.CucumberHooks do
 
   # Global before hook - runs for all scenarios AFTER ExUnit setup
   # This runs AFTER Background steps, so Background steps need their own sandbox setup
+  # Note: We checkout both repos because identity tests use Jarga.AccountsFixtures
+  # which still references Jarga.Repo. This is a temporary measure until fixtures
+  # are migrated to Identity.Fixtures.
   before_scenario context do
-    # Check if sandbox is already checked out (from Background setup)
-    # If not, check it out now
-    case Sandbox.checkout(Jarga.Repo) do
-      :ok ->
-        # Always use shared mode for Cucumber tests
-        Sandbox.mode(Jarga.Repo, {:shared, self()})
+    # Use shared mode sandbox for Cucumber tests
+    # This allows all processes to share the same database connection/transaction
+    for repo <- [Identity.Repo, Jarga.Repo] do
+      case Sandbox.checkout(repo) do
+        :ok ->
+          Sandbox.mode(repo, {:shared, self()})
 
-      {:already, _owner} ->
-        :ok
+        {:already, :owner} ->
+          # Already checked out by this process, that's fine
+          :ok
+
+        {:already, owner_pid} ->
+          # Checked out by another process, allow this process to use it
+          Sandbox.allow(repo, owner_pid, self())
+      end
     end
 
     {:ok, context}

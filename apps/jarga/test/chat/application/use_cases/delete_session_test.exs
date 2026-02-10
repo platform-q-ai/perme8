@@ -8,7 +8,8 @@ defmodule Jarga.Chat.Application.UseCases.DeleteSessionTest do
   import Jarga.ChatFixtures
 
   alias Jarga.Chat.Application.UseCases.DeleteSession
-  alias Jarga.Repo
+  # Use Identity.Repo for all operations to ensure consistent transaction visibility
+  alias Identity.Repo, as: Repo
 
   describe "execute/2" do
     test "deletes a session and its messages" do

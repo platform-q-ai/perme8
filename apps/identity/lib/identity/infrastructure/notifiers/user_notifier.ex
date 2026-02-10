@@ -7,7 +7,7 @@ defmodule Identity.Infrastructure.Notifiers.UserNotifier do
 
   import Swoosh.Email
 
-  alias Jarga.Mailer
+  alias Identity.Mailer
   alias Identity.Domain.Entities.User
 
   # Delivers the email using the application mailer.

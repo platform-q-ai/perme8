@@ -8,9 +8,18 @@ defmodule Jarga.Workspaces.Api.Helpers do
   alias Jarga.Accounts.Infrastructure.Repositories.ApiKeyRepository
 
   def ensure_sandbox_checkout do
+    # Checkout both repos for dual-repo setup
     case Sandbox.checkout(Jarga.Repo) do
       :ok ->
         Sandbox.mode(Jarga.Repo, {:shared, self()})
+
+      {:already, _owner} ->
+        :ok
+    end
+
+    case Sandbox.checkout(Identity.Repo) do
+      :ok ->
+        Sandbox.mode(Identity.Repo, {:shared, self()})
 
       {:already, _owner} ->
         :ok
@@ -23,11 +32,17 @@ defmodule Jarga.Workspaces.Api.Helpers do
   This is critical for API tests using Phoenix.ConnTest - without the sandbox
   metadata header, the API endpoint runs in a different DB connection and
   can't see data created in the test process.
+
+  Includes metadata for both Jarga.Repo and Identity.Repo for dual-repo setup.
   """
   def build_conn_with_sandbox do
-    # Get sandbox metadata for the test process
-    metadata = Phoenix.Ecto.SQL.Sandbox.metadata_for(Jarga.Repo, self())
-    encoded_metadata = Phoenix.Ecto.SQL.Sandbox.encode_metadata(metadata)
+    # Get sandbox metadata for both repos
+    jarga_metadata = Phoenix.Ecto.SQL.Sandbox.metadata_for(Jarga.Repo, self())
+    identity_metadata = Phoenix.Ecto.SQL.Sandbox.metadata_for(Identity.Repo, self())
+
+    # Combine metadata for both repos
+    combined_metadata = Map.merge(jarga_metadata, identity_metadata)
+    encoded_metadata = Phoenix.Ecto.SQL.Sandbox.encode_metadata(combined_metadata)
 
     Phoenix.ConnTest.build_conn()
     |> Plug.Conn.put_req_header("user-agent", encoded_metadata)
@@ -64,7 +79,7 @@ defmodule Jarga.Workspaces.Api.Helpers do
 
     {:ok, api_key} =
       ApiKeyRepository.insert(
-        Jarga.Repo,
+        Identity.Repo,
         api_key_attrs
       )
 

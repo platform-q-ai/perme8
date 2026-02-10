@@ -16,7 +16,7 @@ defmodule Jarga.Accounts.Application.UseCases.UpdateUserEmail do
   - `:user_schema` - UserSchema module (default: Infrastructure.Schemas.UserSchema)
   - `:user_repo` - UserRepository module (default: Infrastructure.Repositories.UserRepository)
   - `:user_token_repo` - UserTokenRepository module (default: Infrastructure.Repositories.UserTokenRepository)
-  - `:transaction_fn` - Function to execute transaction (default: &Jarga.Repo.unwrap_transaction/1)
+  - `:transaction_fn` - Function to execute transaction (default: &Identity.Repo.unwrap_transaction/1)
 
   ## Responsibilities
 
@@ -29,7 +29,7 @@ defmodule Jarga.Accounts.Application.UseCases.UpdateUserEmail do
   @behaviour Jarga.Accounts.Application.UseCases.UseCase
 
   # Default implementations - can be overridden via opts for testing
-  @default_repo Jarga.Repo
+  @default_repo Identity.Repo
   @default_queries Jarga.Accounts.Infrastructure.Queries.Queries
   @default_user_schema Jarga.Accounts.Infrastructure.Schemas.UserSchema
   @default_user_repo Jarga.Accounts.Infrastructure.Repositories.UserRepository
@@ -49,7 +49,7 @@ defmodule Jarga.Accounts.Application.UseCases.UpdateUserEmail do
     - `:user_schema` - UserSchema module (default: Infrastructure.Schemas.UserSchema)
     - `:user_repo` - UserRepository module (default: Infrastructure.Repositories.UserRepository)
     - `:user_token_repo` - UserTokenRepository module (default: Infrastructure.Repositories.UserTokenRepository)
-    - `:transaction_fn` - Function to execute transaction (default: &Jarga.Repo.unwrap_transaction/1)
+    - `:transaction_fn` - Function to execute transaction (default: &Identity.Repo.unwrap_transaction/1)
 
   ## Returns
 

@@ -19,6 +19,8 @@ defmodule Identity.OTPApp do
   @impl true
   def start(_type, _args) do
     children = [
+      # Start the Ecto repository
+      Identity.Repo,
       IdentityWeb.Telemetry,
       # Start to serve requests, typically the last entry
       IdentityWeb.Endpoint

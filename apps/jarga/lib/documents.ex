@@ -32,8 +32,8 @@ defmodule Jarga.Documents do
       {Notes, []}
     ]
 
-  alias Jarga.Repo
-  alias Jarga.Accounts.Domain.Entities.User
+  alias Identity.Repo, as: Repo
+  alias Identity.Domain.Entities.User
   alias Jarga.Documents.Notes.Infrastructure.Repositories.NoteRepository
   alias Jarga.Documents.Domain.Entities.Document
   alias Jarga.Documents.Infrastructure.Queries.DocumentQueries

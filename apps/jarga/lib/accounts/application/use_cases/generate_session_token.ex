@@ -28,7 +28,7 @@ defmodule Jarga.Accounts.Application.UseCases.GenerateSessionToken do
   alias Jarga.Accounts.Domain.Services.TokenBuilder
 
   # Default implementations - can be overridden via opts for testing
-  @default_repo Jarga.Repo
+  @default_repo Identity.Repo
   @default_user_token_repo Jarga.Accounts.Infrastructure.Repositories.UserTokenRepository
 
   @doc """

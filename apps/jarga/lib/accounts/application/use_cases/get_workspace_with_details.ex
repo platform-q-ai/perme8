@@ -22,7 +22,7 @@ defmodule Jarga.Accounts.Application.UseCases.GetWorkspaceWithDetails do
   provides the context functions.
   """
 
-  alias Jarga.Accounts.Domain.Policies.WorkspaceAccessPolicy
+  alias Identity.Domain.Policies.WorkspaceAccessPolicy
 
   @doc """
   Executes the get workspace with details use case.

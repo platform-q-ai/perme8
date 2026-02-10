@@ -15,12 +15,18 @@ defmodule Jarga.Accounts.Domain.Scope do
 
   defstruct user: nil
 
+  # Accept both Identity and Jarga user types since accounts module delegates to Identity
+  @user_types [Identity.Domain.Entities.User, User]
+
+  defguardp is_user(term)
+            when is_struct(term) and :erlang.map_get(:__struct__, term) in @user_types
+
   @doc """
   Creates a scope for the given user.
 
   Returns nil if no user is given.
   """
-  def for_user(%User{} = user) do
+  def for_user(user) when is_user(user) do
     %__MODULE__{user: user}
   end
 

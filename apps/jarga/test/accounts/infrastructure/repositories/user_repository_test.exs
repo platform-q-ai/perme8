@@ -24,7 +24,8 @@ defmodule Jarga.Accounts.Infrastructure.Repositories.UserRepositoryTest do
     test "accepts custom repo" do
       user = user_fixture()
 
-      assert %User{} = result = UserRepository.get_by_id(user.id, Repo)
+      # Users are now managed by Identity.Repo, so we test with that
+      assert %User{} = result = UserRepository.get_by_id(user.id, Identity.Repo)
       assert result.id == user.id
     end
   end
@@ -52,7 +53,8 @@ defmodule Jarga.Accounts.Infrastructure.Repositories.UserRepositoryTest do
     test "accepts custom repo" do
       user = user_fixture()
 
-      assert %User{} = result = UserRepository.get_by_email(user.email, Repo)
+      # Users are now managed by Identity.Repo, so we test with that
+      assert %User{} = result = UserRepository.get_by_email(user.email, Identity.Repo)
       assert result.id == user.id
     end
   end
@@ -73,7 +75,8 @@ defmodule Jarga.Accounts.Infrastructure.Repositories.UserRepositoryTest do
     test "accepts custom repo" do
       user = user_fixture()
 
-      assert UserRepository.exists?(user.id, Repo)
+      # Users are now managed by Identity.Repo, so we test with that
+      assert UserRepository.exists?(user.id, Identity.Repo)
     end
   end
 
@@ -110,7 +113,8 @@ defmodule Jarga.Accounts.Infrastructure.Repositories.UserRepositoryTest do
         status: "active"
       }
 
-      assert {:ok, user} = UserRepository.insert(attrs, Repo)
+      # Users are now managed by Identity.Repo, so we test with that
+      assert {:ok, user} = UserRepository.insert(attrs, Identity.Repo)
       assert user.email == "new@example.com"
     end
   end
@@ -137,7 +141,8 @@ defmodule Jarga.Accounts.Infrastructure.Repositories.UserRepositoryTest do
       user = user_fixture()
       attrs = %{first_name: "Updated"}
 
-      assert {:ok, updated_user} = UserRepository.update(user, attrs, Repo)
+      # Users are now managed by Identity.Repo, so we test with that
+      assert {:ok, updated_user} = UserRepository.update(user, attrs, Identity.Repo)
       assert updated_user.first_name == "Updated"
     end
   end

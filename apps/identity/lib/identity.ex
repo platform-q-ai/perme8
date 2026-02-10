@@ -44,8 +44,8 @@ defmodule Identity do
     top_level?: true,
     deps: [
       # Shared infrastructure
-      Jarga.Repo,
-      Jarga.Mailer,
+      Identity.Repo,
+      Identity.Mailer,
       # Cross-context dependencies (for workspace access validation in API keys)
       Jarga.Workspaces
     ],
@@ -59,11 +59,19 @@ defmodule Identity do
       Domain.Policies.ApiKeyPolicy,
       Domain.Policies.WorkspaceAccessPolicy,
       Domain.Services.TokenBuilder,
-      Domain.Scope
+      Domain.Scope,
+      # Infrastructure schemas exported for test fixtures and cross-app integration
+      # These are needed by Jarga.AccountsFixtures for creating test data
+      Infrastructure.Schemas.UserSchema,
+      Infrastructure.Schemas.UserTokenSchema,
+      Infrastructure.Schemas.ApiKeySchema,
+      # Application services exported for test fixtures
+      Application.Services.PasswordService,
+      Application.Services.ApiKeyTokenService
     ]
 
   import Ecto.Query, warn: false
-  alias Jarga.Repo
+  alias Identity.Repo
 
   alias Identity.Domain.Entities.User
   alias Identity.Domain.Policies.AuthenticationPolicy

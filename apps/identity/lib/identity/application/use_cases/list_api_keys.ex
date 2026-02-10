@@ -5,14 +5,14 @@ defmodule Identity.Application.UseCases.ListApiKeys do
   ## Dependency Injection
 
   This use case accepts the following dependencies via opts:
-  - `:repo` - Ecto.Repo module (default: Jarga.Repo)
+  - `:repo` - Ecto.Repo module (default: Identity.Repo)
   - `:api_key_repo` - ApiKeyRepository module (default: Infrastructure.Repositories.ApiKeyRepository)
   - `:is_active` - Filter by active status (true/false/nil for all)
   """
 
   # Default implementations - can be overridden via opts for testing
-  @default_repo Jarga.Repo
-  @default_api_key_repo Jarga.Accounts.Infrastructure.Repositories.ApiKeyRepository
+  @default_repo Identity.Repo
+  @default_api_key_repo Identity.Infrastructure.Repositories.ApiKeyRepository
 
   @doc """
   Executes the list API keys use case.
@@ -21,7 +21,7 @@ defmodule Identity.Application.UseCases.ListApiKeys do
 
     - `user_id` - The user ID to list API keys for
     - `opts` - Options:
-      - `:repo` - Ecto.Repo (defaults to Jarga.Repo)
+      - `:repo` - Ecto.Repo (defaults to Identity.Repo)
       - `:api_key_repo` - ApiKeyRepository module (default: Infrastructure.Repositories.ApiKeyRepository)
       - `:is_active` - Filter by active status (true/false/nil for all)
 

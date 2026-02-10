@@ -12,7 +12,7 @@ defmodule Identity.Application.UseCases.DeliverLoginInstructions do
   ## Dependency Injection
 
   This use case accepts the following dependencies via opts:
-  - `:repo` - Ecto.Repo module (default: Jarga.Repo)
+  - `:repo` - Ecto.Repo module (default: Identity.Repo)
   - `:user_token_repo` - UserTokenRepository module (default: Infrastructure.Repositories.UserTokenRepository)
   - `:notifier` - Notifier function (default: UserNotifier.deliver_login_instructions/2)
 
@@ -29,9 +29,9 @@ defmodule Identity.Application.UseCases.DeliverLoginInstructions do
   alias Identity.Domain.Services.TokenBuilder
 
   # Default implementations - can be overridden via opts for testing
-  @default_repo Jarga.Repo
-  @default_user_token_repo Jarga.Accounts.Infrastructure.Repositories.UserTokenRepository
-  @default_notifier Jarga.Accounts.Infrastructure.Notifiers.UserNotifier
+  @default_repo Identity.Repo
+  @default_user_token_repo Identity.Infrastructure.Repositories.UserTokenRepository
+  @default_notifier Identity.Infrastructure.Notifiers.UserNotifier
 
   @doc """
   Executes the deliver login instructions use case.
@@ -43,7 +43,7 @@ defmodule Identity.Application.UseCases.DeliverLoginInstructions do
     - `:url_fun` - Function that takes encoded token and returns magic link URL
 
   - `opts` - Keyword list of options:
-    - `:repo` - Repository module (default: Jarga.Repo)
+    - `:repo` - Repository module (default: Identity.Repo)
     - `:user_token_repo` - UserTokenRepository module (default: Infrastructure.Repositories.UserTokenRepository)
     - `:notifier` - Notifier function (default: UserNotifier.deliver_login_instructions/2)
 

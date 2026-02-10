@@ -25,8 +25,8 @@ defmodule Jarga.Notes do
     ],
     exports: []
 
-  alias Jarga.Repo
-  alias Jarga.Accounts.Domain.Entities.User
+  alias Identity.Repo, as: Repo
+  alias Identity.Domain.Entities.User
   alias Jarga.Documents.Notes.Infrastructure.Schemas.NoteSchema
   alias Jarga.Documents.Notes.Infrastructure.Queries.Queries
   alias Jarga.Documents.Notes.Infrastructure.Repositories.AuthorizationRepository

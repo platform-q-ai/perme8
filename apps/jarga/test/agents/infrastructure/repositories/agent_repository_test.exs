@@ -4,7 +4,8 @@ defmodule Jarga.Agents.Infrastructure.AgentRepositoryTest do
   alias Jarga.Agents.Infrastructure.Repositories.AgentRepository
   alias Jarga.Agents.Infrastructure.Schemas.AgentSchema
   alias Jarga.Agents.Infrastructure.Schemas.WorkspaceAgentJoinSchema
-  alias Jarga.Repo
+  # Use Identity.Repo for all operations to ensure consistent transaction visibility
+  alias Identity.Repo, as: Repo
 
   import Jarga.AccountsFixtures
   import Jarga.WorkspacesFixtures

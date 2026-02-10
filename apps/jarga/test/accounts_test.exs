@@ -4,6 +4,8 @@ defmodule Jarga.AccountsTest do
   alias Jarga.Accounts
 
   import Jarga.AccountsFixtures
+  # Jarga.Accounts delegates to Identity, which returns Identity.Domain.Entities.User
+  alias Identity.Domain.Entities.User, as: IdentityUser
   alias Jarga.Accounts.Domain.Entities.User
   alias Jarga.Accounts.Infrastructure.Schemas.UserTokenSchema
   alias Jarga.Accounts.Infrastructure.Schemas.UserSchema
@@ -15,7 +17,8 @@ defmodule Jarga.AccountsTest do
 
     test "returns the user if the email exists" do
       %{id: id} = user = user_fixture()
-      assert %User{id: ^id} = Accounts.get_user_by_email(user.email)
+      # Accounts.get_user_by_email delegates to Identity and returns Identity user
+      assert %IdentityUser{id: ^id} = Accounts.get_user_by_email(user.email)
     end
   end
 
@@ -32,7 +35,8 @@ defmodule Jarga.AccountsTest do
     test "returns the user if the email and password are valid" do
       %{id: id} = user = user_fixture() |> set_password()
 
-      assert %User{id: ^id} =
+      # Accounts.get_user_by_email_and_password delegates to Identity and returns Identity user
+      assert %IdentityUser{id: ^id} =
                Accounts.get_user_by_email_and_password(user.email, valid_user_password())
     end
   end
@@ -46,7 +50,8 @@ defmodule Jarga.AccountsTest do
 
     test "returns the user with the given id" do
       %{id: id} = user = user_fixture()
-      assert %User{id: ^id} = Accounts.get_user!(user.id)
+      # Accounts.get_user! delegates to Identity and returns Identity user
+      assert %IdentityUser{id: ^id} = Accounts.get_user!(user.id)
     end
   end
 
@@ -102,24 +107,26 @@ defmodule Jarga.AccountsTest do
     test "validates the authenticated_at time" do
       now = DateTime.utc_now()
 
-      assert Accounts.sudo_mode?(%User{authenticated_at: DateTime.utc_now()})
-      assert Accounts.sudo_mode?(%User{authenticated_at: DateTime.add(now, -19, :minute)})
-      refute Accounts.sudo_mode?(%User{authenticated_at: DateTime.add(now, -21, :minute)})
+      # Identity.sudo_mode? expects Identity.Domain.Entities.User structs
+      assert Accounts.sudo_mode?(%IdentityUser{authenticated_at: DateTime.utc_now()})
+      assert Accounts.sudo_mode?(%IdentityUser{authenticated_at: DateTime.add(now, -19, :minute)})
+      refute Accounts.sudo_mode?(%IdentityUser{authenticated_at: DateTime.add(now, -21, :minute)})
 
       # minute override
       refute Accounts.sudo_mode?(
-               %User{authenticated_at: DateTime.add(now, -11, :minute)},
+               %IdentityUser{authenticated_at: DateTime.add(now, -11, :minute)},
                minutes: -10
              )
 
       # not authenticated
-      refute Accounts.sudo_mode?(%User{})
+      refute Accounts.sudo_mode?(%IdentityUser{})
     end
   end
 
   describe "change_user_email/3" do
     test "returns a user changeset" do
-      assert %Ecto.Changeset{} = changeset = Accounts.change_user_email(%User{})
+      # Identity.change_user_email expects Identity.Domain.Entities.User structs
+      assert %Ecto.Changeset{} = changeset = Accounts.change_user_email(%IdentityUser{})
       assert changeset.required == [:email]
     end
   end
@@ -194,14 +201,16 @@ defmodule Jarga.AccountsTest do
 
   describe "change_user_password/3" do
     test "returns a user changeset" do
-      assert %Ecto.Changeset{} = changeset = Accounts.change_user_password(%User{})
+      # Identity.change_user_password expects Identity.Domain.Entities.User structs
+      assert %Ecto.Changeset{} = changeset = Accounts.change_user_password(%IdentityUser{})
       assert changeset.required == [:password]
     end
 
     test "allows fields to be set" do
+      # Identity.change_user_password expects Identity.Domain.Entities.User structs
       changeset =
         Accounts.change_user_password(
-          %User{},
+          %IdentityUser{},
           %{
             "password" => "new valid password"
           },
@@ -363,7 +372,9 @@ defmodule Jarga.AccountsTest do
       user = user_fixture()
       assert user.confirmed_at
       {encoded_token, _hashed_token} = generate_user_magic_link_token(user)
-      assert {:ok, {^user, []}} = Accounts.login_user_by_magic_link(encoded_token)
+      # login_user_by_magic_link returns Identity user, so compare by id
+      assert {:ok, {returned_user, []}} = Accounts.login_user_by_magic_link(encoded_token)
+      assert returned_user.id == user.id
       # one time use only
       assert {:error, :not_found} = Accounts.login_user_by_magic_link(encoded_token)
     end

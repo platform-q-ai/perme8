@@ -13,7 +13,7 @@ defmodule Identity.Application.UseCases.GenerateSessionToken do
   ## Dependency Injection
 
   This use case accepts the following dependencies via opts:
-  - `:repo` - Ecto.Repo module (default: Jarga.Repo)
+  - `:repo` - Ecto.Repo module (default: Identity.Repo)
   - `:user_token_repo` - UserTokenRepository module (default: Infrastructure.Repositories.UserTokenRepository)
 
   ## Responsibilities
@@ -28,8 +28,8 @@ defmodule Identity.Application.UseCases.GenerateSessionToken do
   alias Identity.Domain.Services.TokenBuilder
 
   # Default implementations - can be overridden via opts for testing
-  @default_repo Jarga.Repo
-  @default_user_token_repo Jarga.Accounts.Infrastructure.Repositories.UserTokenRepository
+  @default_repo Identity.Repo
+  @default_user_token_repo Identity.Infrastructure.Repositories.UserTokenRepository
 
   @doc """
   Executes the generate session token use case.
@@ -40,7 +40,7 @@ defmodule Identity.Application.UseCases.GenerateSessionToken do
     - `:user` - The user to generate a session token for
 
   - `opts` - Keyword list of options:
-    - `:repo` - Repository module (default: Jarga.Repo)
+    - `:repo` - Repository module (default: Identity.Repo)
     - `:user_token_repo` - UserTokenRepository module (default: Infrastructure.Repositories.UserTokenRepository)
 
   ## Returns

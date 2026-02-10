@@ -6,7 +6,8 @@ defmodule Jarga.Notifications.Infrastructure.WorkspaceInvitationSubscriberTest d
   alias Ecto.Adapters.SQL.Sandbox
   alias Jarga.Notifications
   alias Jarga.Notifications.Infrastructure.Subscribers.WorkspaceInvitationSubscriber
-  alias Jarga.Repo
+  # Use Identity.Repo for all operations to ensure consistent transaction visibility
+  alias Identity.Repo, as: Repo
 
   describe "WorkspaceInvitationSubscriber" do
     test "creates notification when workspace_invitation_created event is received" do

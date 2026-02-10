@@ -8,7 +8,7 @@ defmodule Jarga.Projects.Infrastructure.Queries.Queries do
 
   import Ecto.Query, warn: false
 
-  alias Jarga.Accounts.Domain.Entities.User
+  alias Identity.Domain.Entities.User
   alias Jarga.Projects.Infrastructure.Schemas.ProjectSchema
   alias Jarga.Workspaces.Infrastructure.Schemas.{WorkspaceSchema, WorkspaceMemberSchema}
 
