@@ -16,16 +16,17 @@ defmodule Identity.Domain.Scope do
   growing application requirements.
   """
 
-  alias Identity.Domain.Entities.User
-
   defstruct user: nil
 
   @doc """
   Creates a scope for the given user.
 
+  Accepts any user struct (Identity.Domain.Entities.User or Jarga.Accounts.Domain.Entities.User)
+  as long as it has an `id` field.
+
   Returns nil if no user is given.
   """
-  def for_user(%User{} = user) do
+  def for_user(%{id: _} = user) do
     %__MODULE__{user: user}
   end
 

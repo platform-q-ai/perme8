@@ -18,8 +18,6 @@ defmodule Jarga.Workspaces.Application.UseCases.CreateNotificationsForPendingInv
 
   @behaviour Jarga.Workspaces.Application.UseCases.UseCase
 
-  alias Jarga.Accounts.Domain.Entities.User
-
   @default_membership_repository Jarga.Workspaces.Infrastructure.Repositories.MembershipRepository
   @default_pubsub_notifier Jarga.Workspaces.Infrastructure.Notifiers.PubSubNotifier
   @default_queries Jarga.Workspaces.Infrastructure.Queries.Queries
@@ -51,7 +49,9 @@ defmodule Jarga.Workspaces.Application.UseCases.CreateNotificationsForPendingInv
     pubsub_notifier = Keyword.get(opts, :pubsub_notifier, @default_pubsub_notifier)
     queries = Keyword.get(opts, :queries, @default_queries)
     repo = Keyword.get(opts, :repo, @default_repo)
-    %{user: %User{} = user} = params
+
+    # Accept any user-like struct (either Jarga.Accounts.Domain.Entities.User or Identity.Domain.Entities.User)
+    %{user: %{id: _, email: _} = user} = params
 
     result =
       membership_repository.transact(fn ->

@@ -1,4 +1,4 @@
-defmodule Jarga.Accounts.ApiKeys.Helpers do
+defmodule Identity.Accounts.ApiKeys.Helpers do
   @moduledoc """
   Shared helper functions for API Key step definitions.
 
@@ -6,6 +6,8 @@ defmodule Jarga.Accounts.ApiKeys.Helpers do
   - LiveView interactions (clicking buttons, submitting forms)
   - Token extraction from HTML responses
   - API key lookup and context management
+
+  NOTE: Uses Jarga.Accounts for domain operations to ensure consistent entity types.
   """
 
   import Phoenix.LiveViewTest

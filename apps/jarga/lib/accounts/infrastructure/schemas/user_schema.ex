@@ -60,6 +60,26 @@ defmodule Jarga.Accounts.Infrastructure.Schemas.UserSchema do
     }
   end
 
+  # Accept any struct with user-like fields (e.g., Identity.Domain.Entities.User)
+  def to_schema(%{id: id, email: email} = user) do
+    %__MODULE__{
+      id: id,
+      first_name: Map.get(user, :first_name),
+      last_name: Map.get(user, :last_name),
+      email: email,
+      password: Map.get(user, :password),
+      hashed_password: Map.get(user, :hashed_password),
+      role: Map.get(user, :role),
+      status: Map.get(user, :status),
+      avatar_url: Map.get(user, :avatar_url),
+      confirmed_at: Map.get(user, :confirmed_at),
+      authenticated_at: Map.get(user, :authenticated_at),
+      last_login: Map.get(user, :last_login),
+      date_created: Map.get(user, :date_created),
+      preferences: Map.get(user, :preferences, %{})
+    }
+  end
+
   @doc """
   A user changeset for registering or changing the email.
 
@@ -82,6 +102,19 @@ defmodule Jarga.Accounts.Infrastructure.Schemas.UserSchema do
   end
 
   def email_changeset(%__MODULE__{} = schema, attrs, opts) do
+    schema
+    |> cast(attrs, [:email])
+    |> validate_email(opts)
+  end
+
+  # Accept any struct with user-like fields (e.g., Identity.Domain.Entities.User)
+  def email_changeset(%{id: _, email: _} = user, attrs, opts) do
+    user
+    |> to_schema()
+    |> do_email_changeset(attrs, opts)
+  end
+
+  defp do_email_changeset(%__MODULE__{} = schema, attrs, opts) do
     schema
     |> cast(attrs, [:email])
     |> validate_email(opts)
@@ -171,6 +204,21 @@ defmodule Jarga.Accounts.Infrastructure.Schemas.UserSchema do
   end
 
   def password_changeset(%__MODULE__{} = schema, attrs, opts) do
+    schema
+    |> cast(attrs, [:password])
+    |> validate_required([:password])
+    |> validate_confirmation(:password, message: "does not match password")
+    |> validate_password_format(opts)
+  end
+
+  # Accept any struct with user-like fields (e.g., Identity.Domain.Entities.User)
+  def password_changeset(%{id: _, email: _} = user, attrs, opts) do
+    user
+    |> to_schema()
+    |> do_password_changeset(attrs, opts)
+  end
+
+  defp do_password_changeset(%__MODULE__{} = schema, attrs, opts) do
     schema
     |> cast(attrs, [:password])
     |> validate_required([:password])

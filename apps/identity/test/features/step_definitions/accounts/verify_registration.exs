@@ -1,10 +1,10 @@
-defmodule Accounts.VerifyRegistrationSteps do
+defmodule Identity.Accounts.VerifyRegistrationSteps do
   @moduledoc """
   Step definitions for user registration verification and assertions.
   """
 
   use Cucumber.StepDefinition
-  use JargaWeb.ConnCase, async: false
+  use IdentityWeb.ConnCase, async: false
 
   alias Jarga.Accounts.Infrastructure.Repositories.UserRepository
 

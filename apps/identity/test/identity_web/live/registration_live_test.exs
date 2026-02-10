@@ -1,5 +1,5 @@
-defmodule JargaWeb.UserLive.RegistrationTest do
-  use JargaWeb.ConnCase, async: true
+defmodule IdentityWeb.RegistrationLiveTest do
+  use IdentityWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
   import Jarga.AccountsFixtures

@@ -1,7 +1,7 @@
-defmodule JargaWeb.Plugs.ApiAuthPlugTest do
-  use JargaWeb.ConnCase, async: true
+defmodule IdentityWeb.Plugs.ApiAuthPlugTest do
+  use IdentityWeb.ConnCase, async: true
 
-  alias JargaWeb.Plugs.ApiAuthPlug
+  alias IdentityWeb.Plugs.ApiAuthPlug
   alias Plug.Conn
 
   import Jarga.AccountsFixtures
@@ -13,7 +13,7 @@ defmodule JargaWeb.Plugs.ApiAuthPlugTest do
 
     # Create an active API key
     {:ok, {api_key, plain_token}} =
-      Jarga.Accounts.create_api_key(user.id, %{
+      Identity.create_api_key(user.id, %{
         name: "Test API Key",
         workspace_access: [workspace.slug]
       })
@@ -96,7 +96,7 @@ defmodule JargaWeb.Plugs.ApiAuthPlugTest do
       plain_token: plain_token
     } do
       # Revoke the API key
-      {:ok, _revoked_key} = Jarga.Accounts.revoke_api_key(user.id, api_key.id)
+      {:ok, _revoked_key} = Identity.revoke_api_key(user.id, api_key.id)
 
       conn =
         build_conn()

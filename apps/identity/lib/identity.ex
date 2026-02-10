@@ -36,6 +36,32 @@ defmodule Identity do
   - `WorkspaceAccessPolicy` - Workspace access validation for API keys
   """
 
+  # Top-level boundary for identity context
+  # The Identity app is self-contained with its own domain, application,
+  # and infrastructure layers, but we don't enforce strict internal
+  # layer boundaries to keep configuration simple.
+  use Boundary,
+    top_level?: true,
+    deps: [
+      # Shared infrastructure
+      Jarga.Repo,
+      Jarga.Mailer,
+      # Cross-context dependencies (for workspace access validation in API keys)
+      Jarga.Workspaces
+    ],
+    exports: [
+      # Domain entities and policies that other apps may need
+      Domain.Entities.User,
+      Domain.Entities.ApiKey,
+      Domain.Entities.UserToken,
+      Domain.Policies.AuthenticationPolicy,
+      Domain.Policies.TokenPolicy,
+      Domain.Policies.ApiKeyPolicy,
+      Domain.Policies.WorkspaceAccessPolicy,
+      Domain.Services.TokenBuilder,
+      Domain.Scope
+    ]
+
   import Ecto.Query, warn: false
   alias Jarga.Repo
 
@@ -251,7 +277,11 @@ defmodule Identity do
   Delegates to `UseCases.DeliverUserUpdateEmailInstructions` which generates
   a change email token and sends verification email.
   """
-  def deliver_user_update_email_instructions(%User{} = user, current_email, update_email_url_fun)
+  def deliver_user_update_email_instructions(
+        %{id: _, email: _} = user,
+        current_email,
+        update_email_url_fun
+      )
       when is_function(update_email_url_fun, 1) do
     UseCases.DeliverUserUpdateEmailInstructions.execute(%{
       user: user,
@@ -266,7 +296,7 @@ defmodule Identity do
   Delegates to `UseCases.DeliverLoginInstructions` which generates
   a login token and sends magic link email.
   """
-  def deliver_login_instructions(%User{} = user, magic_link_url_fun)
+  def deliver_login_instructions(%{id: _, email: _} = user, magic_link_url_fun)
       when is_function(magic_link_url_fun, 1) do
     UseCases.DeliverLoginInstructions.execute(%{
       user: user,

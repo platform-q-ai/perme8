@@ -31,12 +31,12 @@ defmodule Jarga.Workspaces.Infrastructure.Queries.Queries do
       [%Workspace{}, ...]
 
   """
-  def for_user(query \\ base(), %User{} = user) do
+  def for_user(query \\ base(), %{id: user_id}) do
     from(w in query,
       join: wm in WorkspaceMemberSchema,
       as: :member,
       on: wm.workspace_id == w.id,
-      where: wm.user_id == ^user.id
+      where: wm.user_id == ^user_id
     )
   end
 
@@ -99,7 +99,7 @@ defmodule Jarga.Workspaces.Infrastructure.Queries.Queries do
       %Workspace{}
 
   """
-  def for_user_by_id(%User{} = user, workspace_id) do
+  def for_user_by_id(%{id: _} = user, workspace_id) do
     base()
     |> for_user(user)
     |> where([w], w.id == ^workspace_id)
@@ -116,7 +116,7 @@ defmodule Jarga.Workspaces.Infrastructure.Queries.Queries do
       %Workspace{}
 
   """
-  def for_user_by_slug(%User{} = user, slug) do
+  def for_user_by_slug(%{id: _} = user, slug) do
     base()
     |> for_user(user)
     |> where([w], w.slug == ^slug)
@@ -134,7 +134,7 @@ defmodule Jarga.Workspaces.Infrastructure.Queries.Queries do
       %Workspace{workspace_members: [%WorkspaceMember{}]}
 
   """
-  def for_user_by_slug_with_member(%User{} = user, slug) do
+  def for_user_by_slug_with_member(%{id: _} = user, slug) do
     base()
     |> for_user(user)
     |> with_current_member()

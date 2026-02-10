@@ -1,10 +1,10 @@
-defmodule Accounts.VerifyPasswordEmailSteps do
+defmodule Identity.Accounts.VerifyPasswordEmailSteps do
   @moduledoc """
   Step definitions for password update, email update, and email delivery assertions.
   """
 
   use Cucumber.StepDefinition
-  use JargaWeb.ConnCase, async: false
+  use IdentityWeb.ConnCase, async: false
 
   import Swoosh.TestAssertions
 

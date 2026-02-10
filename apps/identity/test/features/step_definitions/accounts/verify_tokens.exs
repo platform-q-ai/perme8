@@ -1,10 +1,10 @@
-defmodule Accounts.VerifyTokensSteps do
+defmodule Identity.Accounts.VerifyTokensSteps do
   @moduledoc """
   Step definitions for token verification and assertions.
   """
 
   use Cucumber.StepDefinition
-  use JargaWeb.ConnCase, async: false
+  use IdentityWeb.ConnCase, async: false
 
   alias Jarga.Accounts.Infrastructure.Repositories.{UserRepository, UserTokenRepository}
 

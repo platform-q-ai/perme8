@@ -1,13 +1,20 @@
-defmodule Identity.Application do
+defmodule Identity.OTPApp do
   @moduledoc """
   OTP Application for the Identity bounded context.
 
   The Identity app provides user management, authentication, authorization,
   and API key functionality. It has its own endpoint (IdentityWeb.Endpoint)
   that serves authentication routes directly.
+
+  Note: Named `Identity.OTPApp` instead of `Identity.Application` to avoid
+  namespace collision with `Identity.Application.*` use cases and behaviours.
   """
 
   use Application
+
+  # OTP Application supervisor - needs access to both Identity and IdentityWeb
+  # Top-level boundary to be sibling to Identity and IdentityWeb
+  use Boundary, top_level?: true, deps: [Identity, IdentityWeb], exports: []
 
   @impl true
   def start(_type, _args) do

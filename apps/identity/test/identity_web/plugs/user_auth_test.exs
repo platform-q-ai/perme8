@@ -1,10 +1,10 @@
-defmodule JargaWeb.UserAuthTest do
-  use JargaWeb.ConnCase, async: true
+defmodule IdentityWeb.Plugs.UserAuthTest do
+  use IdentityWeb.ConnCase, async: true
 
   alias Phoenix.LiveView
-  alias Jarga.Accounts
-  alias Jarga.Accounts.Domain.Scope
-  alias JargaWeb.UserAuth
+  alias Identity
+  alias Identity.Domain.Scope
+  alias IdentityWeb.Plugs.UserAuth
 
   import Jarga.AccountsFixtures
 
@@ -14,7 +14,7 @@ defmodule JargaWeb.UserAuthTest do
   setup %{conn: conn} do
     conn =
       conn
-      |> Map.replace!(:secret_key_base, JargaWeb.Endpoint.config(:secret_key_base))
+      |> Map.replace!(:secret_key_base, IdentityWeb.Endpoint.config(:secret_key_base))
       |> init_test_session(%{})
 
     %{user: %{user_fixture() | authenticated_at: DateTime.utc_now(:second)}, conn: conn}
@@ -26,7 +26,7 @@ defmodule JargaWeb.UserAuthTest do
       assert token = get_session(conn, :user_token)
       assert get_session(conn, :live_socket_id) == "users_sessions:#{Base.url_encode64(token)}"
       assert redirected_to(conn) == ~p"/"
-      assert Accounts.get_user_by_session_token(token)
+      assert Identity.get_user_by_session_token(token)
     end
 
     test "clears everything previously stored in the session", %{conn: conn, user: user} do
@@ -91,7 +91,7 @@ defmodule JargaWeb.UserAuthTest do
       conn =
         conn
         |> recycle()
-        |> Map.replace!(:secret_key_base, JargaWeb.Endpoint.config(:secret_key_base))
+        |> Map.replace!(:secret_key_base, IdentityWeb.Endpoint.config(:secret_key_base))
         |> fetch_cookies()
         |> init_test_session(%{user_remember_me: true})
 
@@ -108,7 +108,7 @@ defmodule JargaWeb.UserAuthTest do
 
   describe "logout_user/1" do
     test "erases session and cookies", %{conn: conn, user: user} do
-      user_token = Accounts.generate_user_session_token(user)
+      user_token = Identity.generate_user_session_token(user)
 
       conn =
         conn
@@ -121,12 +121,12 @@ defmodule JargaWeb.UserAuthTest do
       refute conn.cookies[@remember_me_cookie]
       assert %{max_age: 0} = conn.resp_cookies[@remember_me_cookie]
       assert redirected_to(conn) == ~p"/"
-      refute Accounts.get_user_by_session_token(user_token)
+      refute Identity.get_user_by_session_token(user_token)
     end
 
     test "broadcasts to the given live_socket_id", %{conn: conn} do
       live_socket_id = "users_sessions:abcdef-token"
-      JargaWeb.Endpoint.subscribe(live_socket_id)
+      IdentityWeb.Endpoint.subscribe(live_socket_id)
 
       conn
       |> put_session(:live_socket_id, live_socket_id)
@@ -145,7 +145,7 @@ defmodule JargaWeb.UserAuthTest do
 
   describe "fetch_current_scope_for_user/2" do
     test "authenticates user from session", %{conn: conn, user: user} do
-      user_token = Accounts.generate_user_session_token(user)
+      user_token = Identity.generate_user_session_token(user)
 
       conn =
         conn |> put_session(:user_token, user_token) |> UserAuth.fetch_current_scope_for_user([])
@@ -177,7 +177,7 @@ defmodule JargaWeb.UserAuthTest do
     end
 
     test "does not authenticate if data is missing", %{conn: conn, user: user} do
-      _ = Accounts.generate_user_session_token(user)
+      _ = Identity.generate_user_session_token(user)
       conn = UserAuth.fetch_current_scope_for_user(conn, [])
       refute get_session(conn, :user_token)
       refute conn.assigns.current_scope
@@ -191,7 +191,7 @@ defmodule JargaWeb.UserAuthTest do
       %{value: signed_token} = logged_in_conn.resp_cookies[@remember_me_cookie]
 
       offset_user_token(token, -10, :day)
-      {user, _} = Accounts.get_user_by_session_token(token)
+      {user, _} = Identity.get_user_by_session_token(token)
 
       conn =
         conn
@@ -216,7 +216,7 @@ defmodule JargaWeb.UserAuthTest do
     end
 
     test "assigns current_scope based on a valid user_token", %{conn: conn, user: user} do
-      user_token = Accounts.generate_user_session_token(user)
+      user_token = Identity.generate_user_session_token(user)
       session = conn |> put_session(:user_token, user_token) |> get_session()
 
       {:cont, updated_socket} =
@@ -247,7 +247,7 @@ defmodule JargaWeb.UserAuthTest do
 
   describe "on_mount :require_authenticated" do
     test "authenticates current_scope based on a valid user_token", %{conn: conn, user: user} do
-      user_token = Accounts.generate_user_session_token(user)
+      user_token = Identity.generate_user_session_token(user)
       session = conn |> put_session(:user_token, user_token) |> get_session()
 
       {:cont, updated_socket} =
@@ -261,7 +261,7 @@ defmodule JargaWeb.UserAuthTest do
       session = conn |> put_session(:user_token, user_token) |> get_session()
 
       socket = %LiveView.Socket{
-        endpoint: JargaWeb.Endpoint,
+        endpoint: IdentityWeb.Endpoint,
         assigns: %{__changed__: %{}, flash: %{}}
       }
 
@@ -273,7 +273,7 @@ defmodule JargaWeb.UserAuthTest do
       session = conn |> get_session()
 
       socket = %LiveView.Socket{
-        endpoint: JargaWeb.Endpoint,
+        endpoint: IdentityWeb.Endpoint,
         assigns: %{__changed__: %{}, flash: %{}}
       }
 
@@ -284,11 +284,11 @@ defmodule JargaWeb.UserAuthTest do
 
   describe "on_mount :require_sudo_mode" do
     test "allows users that have authenticated in the last 10 minutes", %{conn: conn, user: user} do
-      user_token = Accounts.generate_user_session_token(user)
+      user_token = Identity.generate_user_session_token(user)
       session = conn |> put_session(:user_token, user_token) |> get_session()
 
       socket = %LiveView.Socket{
-        endpoint: JargaWeb.Endpoint,
+        endpoint: IdentityWeb.Endpoint,
         assigns: %{__changed__: %{}, flash: %{}}
       }
 
@@ -299,13 +299,13 @@ defmodule JargaWeb.UserAuthTest do
     test "redirects when authentication is too old", %{conn: conn, user: user} do
       eleven_minutes_ago = DateTime.utc_now(:second) |> DateTime.add(-11, :minute)
       user = %{user | authenticated_at: eleven_minutes_ago}
-      user_token = Accounts.generate_user_session_token(user)
-      {user, token_inserted_at} = Accounts.get_user_by_session_token(user_token)
+      user_token = Identity.generate_user_session_token(user)
+      {user, token_inserted_at} = Identity.get_user_by_session_token(user_token)
       assert DateTime.compare(token_inserted_at, user.authenticated_at) == :gt
       session = conn |> put_session(:user_token, user_token) |> get_session()
 
       socket = %LiveView.Socket{
-        endpoint: JargaWeb.Endpoint,
+        endpoint: IdentityWeb.Endpoint,
         assigns: %{__changed__: %{}, flash: %{}}
       }
 
@@ -371,7 +371,7 @@ defmodule JargaWeb.UserAuthTest do
       tokens = [%{token: "token1"}, %{token: "token2"}]
 
       for %{token: token} <- tokens do
-        JargaWeb.Endpoint.subscribe("users_sessions:#{Base.url_encode64(token)}")
+        IdentityWeb.Endpoint.subscribe("users_sessions:#{Base.url_encode64(token)}")
       end
 
       UserAuth.disconnect_sessions(tokens)

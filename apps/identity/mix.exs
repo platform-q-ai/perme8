@@ -14,8 +14,30 @@ defmodule Identity.MixProject do
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       deps: deps(),
-      compilers: [:phoenix_live_view] ++ Mix.compilers(),
-      listeners: [Phoenix.CodeReloader]
+      compilers: [:boundary, :phoenix_live_view] ++ Mix.compilers(),
+      boundary: boundary(),
+      listeners: [Phoenix.CodeReloader],
+      # Exclude .exs files from test pattern (Cucumber handles feature steps)
+      test_pattern: "*_test.exs"
+    ]
+  end
+
+  # Boundary configuration for enforcing architectural layers
+  defp boundary do
+    [
+      externals_mode: :relaxed,
+      default: [
+        check: [
+          apps: [
+            {:phoenix, :relaxed},
+            {:phoenix_live_view, :relaxed},
+            {:phoenix_html, :relaxed},
+            {:phoenix_ecto, :relaxed},
+            {:jarga, :relaxed}
+          ]
+        ]
+      ],
+      ignore: [~r/\.Test\./]
     ]
   end
 
@@ -24,7 +46,7 @@ defmodule Identity.MixProject do
   # Type `mix help compile.app` for more information.
   def application do
     [
-      mod: {Identity.Application, []},
+      mod: {Identity.OTPApp, []},
       extra_applications: [:logger, :runtime_tools]
     ]
   end
@@ -72,7 +94,14 @@ defmodule Identity.MixProject do
       {:gettext, "~> 0.26"},
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.2.0"},
-      {:bandit, "~> 1.5"}
+      {:bandit, "~> 1.5"},
+
+      # Testing
+      {:wallaby, "~> 0.30", runtime: false, only: :test},
+      {:cucumber, "~> 0.4.2", only: :test},
+
+      # Architecture
+      {:boundary, "~> 0.10", runtime: false}
     ]
   end
 

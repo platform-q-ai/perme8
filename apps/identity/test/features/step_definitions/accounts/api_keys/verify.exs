@@ -1,18 +1,20 @@
-defmodule Accounts.ApiKeys.VerifySteps do
+defmodule Identity.Accounts.ApiKeys.VerifySteps do
   @moduledoc """
   Verification step definitions for API Key Management feature tests.
 
   These steps assert expected outcomes of API key operations.
+
+  NOTE: Uses Jarga.Accounts for domain operations to ensure consistent entity types.
   """
 
   use Cucumber.StepDefinition
-  use JargaWeb.ConnCase, async: false
+  use IdentityWeb.ConnCase, async: false
 
   import Phoenix.ConnTest
   import Phoenix.LiveViewTest
 
   alias Jarga.Accounts
-  alias Jarga.Accounts.ApiKeys.Helpers
+  alias Identity.Accounts.ApiKeys.Helpers
 
   # ============================================================================
   # CREATION VERIFICATION STEPS

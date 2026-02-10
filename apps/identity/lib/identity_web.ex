@@ -17,6 +17,18 @@ defmodule IdentityWeb do
   those modules here.
   """
 
+  # Interface layer - can depend on Identity context but not vice versa
+  use Boundary,
+    deps: [
+      # Identity context (includes domain entities and policies)
+      Identity,
+      # Cross-context dependencies (for workspace listing in API keys UI)
+      Jarga.Workspaces,
+      # Shared infrastructure
+      Jarga.Repo
+    ],
+    exports: [Endpoint, Telemetry, Plugs.UserAuth, Plugs.ApiAuthPlug]
+
   def static_paths, do: ~w(assets fonts images favicon.ico robots.txt)
 
   def router do

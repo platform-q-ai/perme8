@@ -63,7 +63,7 @@ defmodule Jarga.Workspaces do
       [%Workspace{}, ...]
 
   """
-  def list_workspaces_for_user(%User{} = user) do
+  def list_workspaces_for_user(%{id: _} = user) do
     Queries.base()
     |> Queries.for_user(user)
     |> Queries.active()
@@ -698,6 +698,11 @@ defmodule Jarga.Workspaces do
 
   """
   def create_notifications_for_pending_invitations(%User{} = user) do
+    CreateNotificationsForPendingInvitations.execute(%{user: user})
+  end
+
+  # Accept any user-like struct (e.g., Identity.Domain.Entities.User)
+  def create_notifications_for_pending_invitations(%{id: _, email: _} = user) do
     CreateNotificationsForPendingInvitations.execute(%{user: user})
   end
 

@@ -1,15 +1,15 @@
-defmodule Accounts.ApiKeys.UpdateSteps do
+defmodule Identity.Accounts.ApiKeys.UpdateSteps do
   @moduledoc """
   Step definitions for API Key update and revocation operations.
   """
 
   use Cucumber.StepDefinition
-  use JargaWeb.ConnCase, async: false
+  use IdentityWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
   import Jarga.Test.StepHelpers
 
-  alias Jarga.Accounts.ApiKeys.Helpers
+  alias Identity.Accounts.ApiKeys.Helpers
 
   # ============================================================================
   # API KEY REVOCATION STEPS

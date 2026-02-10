@@ -1,10 +1,12 @@
-defmodule Accounts.CreateSteps do
+defmodule Identity.Accounts.CreateSteps do
   @moduledoc """
   Step definitions for user registration scenarios.
+
+  NOTE: Uses Jarga.Accounts for domain operations to ensure consistent entity types.
   """
 
   use Cucumber.StepDefinition
-  use JargaWeb.ConnCase, async: false
+  use IdentityWeb.ConnCase, async: false
 
   import Jarga.AccountsFixtures
 

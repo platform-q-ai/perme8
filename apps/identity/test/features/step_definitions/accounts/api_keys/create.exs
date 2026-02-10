@@ -1,15 +1,15 @@
-defmodule Accounts.ApiKeys.CreateSteps do
+defmodule Identity.Accounts.ApiKeys.CreateSteps do
   @moduledoc """
   Step definitions for API Key creation operations.
   """
 
   use Cucumber.StepDefinition
-  use JargaWeb.ConnCase, async: false
+  use IdentityWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
   import Jarga.Test.StepHelpers
 
-  alias Jarga.Accounts.ApiKeys.Helpers
+  alias Identity.Accounts.ApiKeys.Helpers
 
   # ============================================================================
   # API KEY CREATION STEPS

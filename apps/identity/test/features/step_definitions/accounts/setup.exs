@@ -1,10 +1,15 @@
-defmodule Accounts.SetupSteps do
+defmodule Identity.Accounts.SetupSteps do
   @moduledoc """
   Step definitions for user account test setup and fixtures.
+
+  NOTE: These step definitions use Jarga.Accounts instead of Identity to ensure
+  consistent domain entity types. The Identity facade returns Identity.Domain.Entities.User,
+  but the infrastructure repositories expect Jarga.Accounts.Domain.Entities.User.
+  Using Jarga.Accounts ensures all functions receive the correct entity type.
   """
 
   use Cucumber.StepDefinition
-  use JargaWeb.ConnCase, async: false
+  use IdentityWeb.ConnCase, async: false
 
   import Jarga.AccountsFixtures
 
@@ -165,5 +170,69 @@ defmodule Accounts.SetupSteps do
 
     {:ok, updated_user} = UserRepository.update(user, %{hashed_password: hashed_password})
     updated_user
+  end
+
+  # ============================================================================
+  # MULTIPLE USERS SETUP (for Background sections)
+  # ============================================================================
+
+  step "the following users exist:", context do
+    # Ensure sandbox is checked out
+    case Sandbox.checkout(Jarga.Repo) do
+      :ok ->
+        Sandbox.mode(Jarga.Repo, {:shared, self()})
+
+      {:already, _owner} ->
+        :ok
+    end
+
+    table_data = context.datatable.maps
+
+    users =
+      Enum.reduce(table_data, %{}, fn row, acc ->
+        email = row["Email"]
+        name = row["Name"]
+        [first_name, last_name] = String.split(name, " ", parts: 2)
+
+        user = get_or_create_user_with_name(email, first_name, last_name)
+        Map.put(acc, email, user)
+      end)
+
+    # Return context directly for data table steps
+    Map.put(context, :users, users)
+  end
+
+  defp get_or_create_user_with_name(email, first_name, last_name) do
+    case Accounts.get_user_by_email(email) do
+      nil ->
+        user_fixture(%{email: email, first_name: first_name, last_name: last_name})
+
+      existing_user ->
+        existing_user
+    end
+  end
+
+  # ============================================================================
+  # WORKSPACE MEMBERSHIP SETUP
+  # ============================================================================
+
+  step "{string} is a member of workspace {string}", %{args: [email, workspace_slug]} = context do
+    users = context[:users] || %{}
+    workspaces = context[:workspaces] || %{}
+
+    user = Map.get(users, email) || raise "User #{email} not found in users"
+
+    workspace =
+      Map.get(workspaces, workspace_slug) || raise "Workspace #{workspace_slug} not found"
+
+    # Add user as member if not already
+    alias Jarga.Workspaces.Infrastructure.Repositories.MembershipRepository
+
+    unless MembershipRepository.member?(user.id, workspace.id) do
+      import Jarga.WorkspacesFixtures
+      add_workspace_member_fixture(workspace.id, user, :member)
+    end
+
+    {:ok, context}
   end
 end

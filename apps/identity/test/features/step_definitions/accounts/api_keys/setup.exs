@@ -1,19 +1,21 @@
-defmodule Accounts.ApiKeys.SetupSteps do
+defmodule Identity.Accounts.ApiKeys.SetupSteps do
   @moduledoc """
   Setup step definitions for API Key Management feature tests.
 
   These steps create test fixtures (workspaces, API keys) for scenarios.
+
+  NOTE: Uses Jarga.Accounts for domain operations to ensure consistent entity types.
   """
 
   use Cucumber.StepDefinition
-  use JargaWeb.ConnCase, async: false
+  use IdentityWeb.ConnCase, async: false
 
   import Phoenix.ConnTest
   import Phoenix.LiveViewTest
   import Jarga.WorkspacesFixtures
 
   alias Jarga.Accounts
-  alias Jarga.Accounts.ApiKeys.Helpers
+  alias Identity.Accounts.ApiKeys.Helpers
   alias Jarga.Accounts.Infrastructure.Repositories.ApiKeyRepository
 
   # ============================================================================

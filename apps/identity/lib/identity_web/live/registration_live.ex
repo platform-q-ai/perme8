@@ -3,6 +3,7 @@ defmodule IdentityWeb.RegistrationLive do
 
   alias Identity
   alias Identity.Domain.Entities.User
+  alias IdentityWeb.Plugs.UserAuth
 
   @impl true
   def render(assigns) do
@@ -65,7 +66,7 @@ defmodule IdentityWeb.RegistrationLive do
   @impl true
   def mount(_params, _session, %{assigns: %{current_scope: %{user: user}}} = socket)
       when not is_nil(user) do
-    {:ok, redirect(socket, to: IdentityWeb.Plugs.UserAuth.signed_in_path(socket))}
+    {:ok, redirect(socket, to: UserAuth.signed_in_path(socket))}
   end
 
   def mount(_params, _session, socket) do

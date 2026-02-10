@@ -1,10 +1,12 @@
-defmodule Accounts.UpdateSteps do
+defmodule Identity.Accounts.UpdateSteps do
   @moduledoc """
   Step definitions for user account update scenarios (password, email).
+
+  NOTE: Uses Jarga.Accounts for domain operations to ensure consistent entity types.
   """
 
   use Cucumber.StepDefinition
-  use JargaWeb.ConnCase, async: false
+  use IdentityWeb.ConnCase, async: false
 
   import Jarga.AccountsFixtures
 

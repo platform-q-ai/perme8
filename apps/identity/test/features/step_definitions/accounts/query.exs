@@ -1,10 +1,12 @@
-defmodule Accounts.QuerySteps do
+defmodule Identity.Accounts.QuerySteps do
   @moduledoc """
   Step definitions for user lookup and query scenarios.
+
+  NOTE: Uses Jarga.Accounts for domain operations to ensure consistent entity types.
   """
 
   use Cucumber.StepDefinition
-  use JargaWeb.ConnCase, async: false
+  use IdentityWeb.ConnCase, async: false
 
   alias Jarga.Accounts
   alias Jarga.Accounts.Domain.Entities.User

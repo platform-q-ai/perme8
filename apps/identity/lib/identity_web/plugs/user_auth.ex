@@ -12,7 +12,6 @@ defmodule IdentityWeb.Plugs.UserAuth do
   import Phoenix.Controller
 
   alias Identity.Domain.Scope
-  alias Identity.Domain.Entities.User
 
   # Configurable redirect paths - these point to JargaWeb routes
   @logged_out_redirect_path "/"
@@ -269,7 +268,13 @@ defmodule IdentityWeb.Plugs.UserAuth do
 
   @doc "Returns the path to redirect to after log in."
   # the user was already logged in, redirect to app
-  def signed_in_path(%Plug.Conn{assigns: %{current_scope: %Scope{user: %User{}}}}) do
+  def signed_in_path(%Plug.Conn{assigns: %{current_scope: %Scope{user: user}}})
+      when not is_nil(user) do
+    @signed_in_redirect_path
+  end
+
+  # Also accept any user-like struct directly in the scope
+  def signed_in_path(%Plug.Conn{assigns: %{current_scope: %{user: %{id: _}}}}) do
     @signed_in_redirect_path
   end
 

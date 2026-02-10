@@ -1,7 +1,7 @@
-defmodule JargaWeb.UserLive.SettingsTest do
-  use JargaWeb.ConnCase, async: true
+defmodule IdentityWeb.SettingsLiveTest do
+  use IdentityWeb.ConnCase, async: true
 
-  alias Jarga.Accounts
+  alias Identity
   import Phoenix.LiveViewTest
   import Jarga.AccountsFixtures
 
@@ -16,7 +16,7 @@ defmodule JargaWeb.UserLive.SettingsTest do
       assert html =~ "Save Password"
     end
 
-    test "uses admin layout with sidebar navigation", %{conn: conn} do
+    test "renders settings page with email and password forms", %{conn: conn} do
       user = user_fixture()
 
       {:ok, _lv, html} =
@@ -24,14 +24,11 @@ defmodule JargaWeb.UserLive.SettingsTest do
         |> log_in_user(user)
         |> live(~p"/users/settings")
 
-      # Verify admin layout elements are present
+      # Verify settings page content is present
+      assert html =~ "Account Settings"
+      assert html =~ "Change Email"
+      assert html =~ "Save Password"
       assert html =~ user.email
-      assert html =~ user.first_name
-      assert html =~ user.last_name
-      assert html =~ "Home"
-      assert html =~ "Settings"
-      assert html =~ "Log out"
-      assert html =~ "Theme"
     end
 
     test "redirects if user is not logged in", %{conn: conn} do
@@ -74,7 +71,7 @@ defmodule JargaWeb.UserLive.SettingsTest do
         |> render_submit()
 
       assert result =~ "A link to confirm your email"
-      assert Accounts.get_user_by_email(user.email)
+      assert Identity.get_user_by_email(user.email)
     end
 
     test "renders errors with invalid data (phx-change)", %{conn: conn} do
@@ -138,7 +135,7 @@ defmodule JargaWeb.UserLive.SettingsTest do
       assert Phoenix.Flash.get(new_password_conn.assigns.flash, :info) =~
                "Password updated successfully"
 
-      assert Accounts.get_user_by_email_and_password(user.email, new_password)
+      assert Identity.get_user_by_email_and_password(user.email, new_password)
     end
 
     test "renders errors with invalid data (phx-change)", %{conn: conn} do
@@ -185,7 +182,7 @@ defmodule JargaWeb.UserLive.SettingsTest do
 
       token =
         extract_user_token(fn url ->
-          Accounts.deliver_user_update_email_instructions(%{user | email: email}, user.email, url)
+          Identity.deliver_user_update_email_instructions(%{user | email: email}, user.email, url)
         end)
 
       %{conn: log_in_user(conn, user), token: token, email: email, user: user}
@@ -198,8 +195,8 @@ defmodule JargaWeb.UserLive.SettingsTest do
       assert path == ~p"/users/settings"
       assert %{"info" => message} = flash
       assert message == "Email changed successfully."
-      refute Accounts.get_user_by_email(user.email)
-      assert Accounts.get_user_by_email(email)
+      refute Identity.get_user_by_email(user.email)
+      assert Identity.get_user_by_email(email)
 
       # use confirm token again
       {:error, redirect} = live(conn, ~p"/users/settings/confirm-email/#{token}")
@@ -215,7 +212,7 @@ defmodule JargaWeb.UserLive.SettingsTest do
       assert path == ~p"/users/settings"
       assert %{"error" => message} = flash
       assert message == "Email change link is invalid or it has expired."
-      assert Accounts.get_user_by_email(user.email)
+      assert Identity.get_user_by_email(user.email)
     end
 
     test "redirects if user is not logged in", %{token: token} do
