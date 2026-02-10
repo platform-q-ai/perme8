@@ -135,12 +135,7 @@ defmodule IdentityWeb.SettingsLive do
     %{"user" => user_params} = params
     user = current_user(socket)
 
-    unless Identity.sudo_mode?(user) do
-      {:noreply,
-       socket
-       |> put_flash(:error, "Session expired. Please reauthenticate.")
-       |> push_navigate(to: ~p"/users/log-in")}
-    else
+    if Identity.sudo_mode?(user) do
       case Identity.change_user_email(user, user_params) do
         %{valid?: true} = changeset ->
           # Apply changeset and convert UserSchema to domain User
@@ -159,6 +154,11 @@ defmodule IdentityWeb.SettingsLive do
         changeset ->
           {:noreply, assign(socket, :email_form, to_form(changeset, as: "user", action: :insert))}
       end
+    else
+      {:noreply,
+       socket
+       |> put_flash(:error, "Session expired. Please reauthenticate.")
+       |> push_navigate(to: ~p"/users/log-in")}
     end
   end
 
@@ -178,12 +178,7 @@ defmodule IdentityWeb.SettingsLive do
     %{"user" => user_params} = params
     user = current_user(socket)
 
-    unless Identity.sudo_mode?(user) do
-      {:noreply,
-       socket
-       |> put_flash(:error, "Session expired. Please reauthenticate.")
-       |> push_navigate(to: ~p"/users/log-in")}
-    else
+    if Identity.sudo_mode?(user) do
       case Identity.change_user_password(user, user_params) do
         %{valid?: true} = changeset ->
           {:noreply, assign(socket, trigger_submit: true, password_form: to_form(changeset))}
@@ -192,6 +187,11 @@ defmodule IdentityWeb.SettingsLive do
           {:noreply,
            assign(socket, password_form: to_form(changeset, as: "user", action: :insert))}
       end
+    else
+      {:noreply,
+       socket
+       |> put_flash(:error, "Session expired. Please reauthenticate.")
+       |> push_navigate(to: ~p"/users/log-in")}
     end
   end
 

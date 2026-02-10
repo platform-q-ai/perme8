@@ -63,12 +63,7 @@ defmodule IdentityWeb.SessionController do
   def update_password(conn, %{"user" => user_params} = params) do
     user = conn.assigns.current_scope.user
 
-    unless Identity.sudo_mode?(user) do
-      conn
-      |> put_flash(:error, "Session expired. Please reauthenticate.")
-      |> redirect(to: ~p"/users/log-in")
-      |> halt()
-    else
+    if Identity.sudo_mode?(user) do
       {:ok, {_user, expired_tokens}} = Identity.update_user_password(user, user_params)
 
       # disconnect all existing LiveViews with old sessions
@@ -77,6 +72,11 @@ defmodule IdentityWeb.SessionController do
       conn
       |> put_session(:user_return_to, ~p"/users/settings")
       |> create(params, "Password updated successfully!")
+    else
+      conn
+      |> put_flash(:error, "Session expired. Please reauthenticate.")
+      |> redirect(to: ~p"/users/log-in")
+      |> halt()
     end
   end
 
