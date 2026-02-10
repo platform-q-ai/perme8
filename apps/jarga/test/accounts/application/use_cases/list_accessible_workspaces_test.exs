@@ -2,7 +2,7 @@ defmodule Jarga.Accounts.Application.UseCases.ListAccessibleWorkspacesTest do
   use Jarga.DataCase, async: true
 
   alias Jarga.Accounts.Application.UseCases.ListAccessibleWorkspaces
-  alias Jarga.Accounts.Domain.Entities.ApiKey
+  alias Identity.Domain.Entities.ApiKey
   alias Jarga.Workspaces
   alias Jarga.Workspaces.Domain.Entities.Workspace
 

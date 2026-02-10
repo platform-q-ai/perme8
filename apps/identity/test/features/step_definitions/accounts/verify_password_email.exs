@@ -8,7 +8,7 @@ defmodule Identity.Accounts.VerifyPasswordEmailSteps do
 
   import Swoosh.TestAssertions
 
-  alias Jarga.Accounts.Infrastructure.Repositories.{UserRepository, UserTokenRepository}
+  alias Identity.Infrastructure.Repositories.{UserRepository, UserTokenRepository}
 
   # ============================================================================
   # PASSWORD UPDATE ASSERTIONS

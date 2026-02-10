@@ -38,19 +38,7 @@ defmodule Jarga.Accounts do
       # Workspace API use cases that remain in Jarga
       Jarga.Accounts.Application
     ],
-    exports: [
-      # Re-export Identity types for backward compatibility
-      {Domain.Entities.User, []},
-      {Domain.Entities.ApiKey, []},
-      {Domain.Scope, []},
-      {Domain.Services.TokenBuilder, []},
-      {Domain.Policies.WorkspaceAccessPolicy, []},
-      {Application.Services.PasswordService, []},
-      {Application.Services.ApiKeyTokenService, []},
-      {Infrastructure.Schemas.UserSchema, []},
-      {Infrastructure.Schemas.UserTokenSchema, []},
-      {Infrastructure.Schemas.ApiKeySchema, []}
-    ]
+    exports: []
 
   alias Jarga.Accounts.Application.UseCases
 

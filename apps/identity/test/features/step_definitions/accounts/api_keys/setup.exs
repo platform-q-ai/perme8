@@ -16,7 +16,7 @@ defmodule Identity.Accounts.ApiKeys.SetupSteps do
 
   alias Jarga.Accounts
   alias Identity.Accounts.ApiKeys.Helpers
-  alias Jarga.Accounts.Infrastructure.Repositories.ApiKeyRepository
+  alias Identity.Infrastructure.Repositories.ApiKeyRepository
 
   # ============================================================================
   # WORKSPACE SETUP STEPS

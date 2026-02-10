@@ -21,9 +21,9 @@ defmodule Jarga.Workspaces.Infrastructure.Schemas.WorkspaceMemberSchema do
     field(:joined_at, :utc_datetime)
 
     belongs_to(:workspace, Jarga.Workspaces.Infrastructure.Schemas.WorkspaceSchema)
-    belongs_to(:user, Jarga.Accounts.Infrastructure.Schemas.UserSchema)
+    belongs_to(:user, Identity.Infrastructure.Schemas.UserSchema)
 
-    belongs_to(:inviter, Jarga.Accounts.Infrastructure.Schemas.UserSchema,
+    belongs_to(:inviter, Identity.Infrastructure.Schemas.UserSchema,
       foreign_key: :invited_by
     )
 

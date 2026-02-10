@@ -23,20 +23,19 @@ defmodule Jarga.TestUsers do
   """
 
   # Test utility module - top-level boundary
-  # Needs access to context + layer boundaries for test user management
+  # Needs access to Identity for user management
   use Boundary,
     top_level?: true,
     deps: [
       Jarga.Repo,
-      Jarga.Accounts,
-      Jarga.Accounts.Domain,
-      Jarga.Accounts.Infrastructure
+      Identity,
+      Jarga.Accounts
     ],
     exports: []
 
   alias Jarga.Accounts
-  alias Jarga.Accounts.Domain.Entities.User
-  alias Jarga.Accounts.Infrastructure.Schemas.UserSchema
+  alias Identity.Domain.Entities.User
+  alias Identity.Infrastructure.Schemas.UserSchema
   # Use Identity.Repo for all operations to ensure consistent transaction visibility
   alias Identity.Repo, as: Repo
 

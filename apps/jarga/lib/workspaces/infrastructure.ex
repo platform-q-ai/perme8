@@ -37,10 +37,10 @@ defmodule Jarga.Workspaces.Infrastructure do
       Jarga.Workspaces.Application,
       Jarga.Repo,
       Jarga.Mailer,
-      # Cross-context dependencies (context + domain/infrastructure layer for entity access)
-      Jarga.Accounts,
-      Jarga.Accounts.Domain,
-      Jarga.Accounts.Infrastructure
+      # Cross-context dependencies
+      Identity,
+      Identity.Repo,
+      Jarga.Accounts
     ],
     exports: [
       Schemas.WorkspaceSchema,

@@ -2,13 +2,14 @@ defmodule Jarga.AccountsTest do
   use Jarga.DataCase
 
   alias Jarga.Accounts
+  # Use Identity.Repo for user-related queries since user data is in Identity
+  alias Identity.Repo
 
   import Jarga.AccountsFixtures
   # Jarga.Accounts delegates to Identity, which returns Identity.Domain.Entities.User
-  alias Identity.Domain.Entities.User, as: IdentityUser
-  alias Jarga.Accounts.Domain.Entities.User
-  alias Jarga.Accounts.Infrastructure.Schemas.UserTokenSchema
-  alias Jarga.Accounts.Infrastructure.Schemas.UserSchema
+  alias Identity.Domain.Entities.User
+  alias Identity.Infrastructure.Schemas.UserTokenSchema
+  alias Identity.Infrastructure.Schemas.UserSchema
 
   describe "get_user_by_email/1" do
     test "does not return the user if the email does not exist" do
@@ -18,7 +19,7 @@ defmodule Jarga.AccountsTest do
     test "returns the user if the email exists" do
       %{id: id} = user = user_fixture()
       # Accounts.get_user_by_email delegates to Identity and returns Identity user
-      assert %IdentityUser{id: ^id} = Accounts.get_user_by_email(user.email)
+      assert %User{id: ^id} = Accounts.get_user_by_email(user.email)
     end
   end
 
@@ -36,7 +37,7 @@ defmodule Jarga.AccountsTest do
       %{id: id} = user = user_fixture() |> set_password()
 
       # Accounts.get_user_by_email_and_password delegates to Identity and returns Identity user
-      assert %IdentityUser{id: ^id} =
+      assert %User{id: ^id} =
                Accounts.get_user_by_email_and_password(user.email, valid_user_password())
     end
   end
@@ -51,7 +52,7 @@ defmodule Jarga.AccountsTest do
     test "returns the user with the given id" do
       %{id: id} = user = user_fixture()
       # Accounts.get_user! delegates to Identity and returns Identity user
-      assert %IdentityUser{id: ^id} = Accounts.get_user!(user.id)
+      assert %User{id: ^id} = Accounts.get_user!(user.id)
     end
   end
 
@@ -108,25 +109,25 @@ defmodule Jarga.AccountsTest do
       now = DateTime.utc_now()
 
       # Identity.sudo_mode? expects Identity.Domain.Entities.User structs
-      assert Accounts.sudo_mode?(%IdentityUser{authenticated_at: DateTime.utc_now()})
-      assert Accounts.sudo_mode?(%IdentityUser{authenticated_at: DateTime.add(now, -19, :minute)})
-      refute Accounts.sudo_mode?(%IdentityUser{authenticated_at: DateTime.add(now, -21, :minute)})
+      assert Accounts.sudo_mode?(%User{authenticated_at: DateTime.utc_now()})
+      assert Accounts.sudo_mode?(%User{authenticated_at: DateTime.add(now, -19, :minute)})
+      refute Accounts.sudo_mode?(%User{authenticated_at: DateTime.add(now, -21, :minute)})
 
       # minute override
       refute Accounts.sudo_mode?(
-               %IdentityUser{authenticated_at: DateTime.add(now, -11, :minute)},
+               %User{authenticated_at: DateTime.add(now, -11, :minute)},
                minutes: -10
              )
 
       # not authenticated
-      refute Accounts.sudo_mode?(%IdentityUser{})
+      refute Accounts.sudo_mode?(%User{})
     end
   end
 
   describe "change_user_email/3" do
     test "returns a user changeset" do
       # Identity.change_user_email expects Identity.Domain.Entities.User structs
-      assert %Ecto.Changeset{} = changeset = Accounts.change_user_email(%IdentityUser{})
+      assert %Ecto.Changeset{} = changeset = Accounts.change_user_email(%User{})
       assert changeset.required == [:email]
     end
   end
@@ -202,7 +203,7 @@ defmodule Jarga.AccountsTest do
   describe "change_user_password/3" do
     test "returns a user changeset" do
       # Identity.change_user_password expects Identity.Domain.Entities.User structs
-      assert %Ecto.Changeset{} = changeset = Accounts.change_user_password(%IdentityUser{})
+      assert %Ecto.Changeset{} = changeset = Accounts.change_user_password(%User{})
       assert changeset.required == [:password]
     end
 
@@ -210,7 +211,7 @@ defmodule Jarga.AccountsTest do
       # Identity.change_user_password expects Identity.Domain.Entities.User structs
       changeset =
         Accounts.change_user_password(
-          %IdentityUser{},
+          %User{},
           %{
             "password" => "new valid password"
           },

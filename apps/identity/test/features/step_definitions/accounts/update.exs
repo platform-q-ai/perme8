@@ -11,7 +11,7 @@ defmodule Identity.Accounts.UpdateSteps do
   import Jarga.AccountsFixtures
 
   alias Jarga.Accounts
-  alias Jarga.Accounts.Infrastructure.Repositories.UserTokenRepository
+  alias Identity.Infrastructure.Repositories.UserTokenRepository
 
   # ============================================================================
   # PASSWORD UPDATES

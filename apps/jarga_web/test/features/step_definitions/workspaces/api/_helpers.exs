@@ -4,8 +4,8 @@ defmodule Jarga.Workspaces.Api.Helpers do
   """
 
   alias Ecto.Adapters.SQL.Sandbox
-  alias Jarga.Accounts.Application.Services.ApiKeyTokenService
-  alias Jarga.Accounts.Infrastructure.Repositories.ApiKeyRepository
+  alias Identity.Application.Services.ApiKeyTokenService
+  alias Identity.Infrastructure.Repositories.ApiKeyRepository
 
   def ensure_sandbox_checkout do
     # Checkout both repos for dual-repo setup

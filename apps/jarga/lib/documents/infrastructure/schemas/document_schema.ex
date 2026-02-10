@@ -18,7 +18,7 @@ defmodule Jarga.Documents.Infrastructure.Schemas.DocumentSchema do
     field(:is_public, :boolean, default: false)
     field(:is_pinned, :boolean, default: false)
 
-    belongs_to(:user, Jarga.Accounts.Infrastructure.Schemas.UserSchema)
+    belongs_to(:user, Identity.Infrastructure.Schemas.UserSchema)
 
     belongs_to(:workspace, Jarga.Workspaces.Infrastructure.Schemas.WorkspaceSchema,
       type: Ecto.UUID
@@ -26,7 +26,7 @@ defmodule Jarga.Documents.Infrastructure.Schemas.DocumentSchema do
 
     belongs_to(:project, Jarga.Projects.Infrastructure.Schemas.ProjectSchema, type: Ecto.UUID)
 
-    belongs_to(:created_by_user, Jarga.Accounts.Infrastructure.Schemas.UserSchema,
+    belongs_to(:created_by_user, Identity.Infrastructure.Schemas.UserSchema,
       foreign_key: :created_by
     )
 

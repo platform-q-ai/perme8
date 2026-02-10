@@ -30,9 +30,9 @@ defmodule Jarga.Notifications.Infrastructure do
     deps: [
       Jarga.Notifications.Application,
       Jarga.Repo,
-      # Cross-context dependencies (context + infrastructure layer for schema access)
-      Jarga.Accounts,
-      Jarga.Accounts.Infrastructure
+      # Cross-context dependencies
+      Identity,
+      Jarga.Accounts
     ],
     exports: [
       Schemas.NotificationSchema,

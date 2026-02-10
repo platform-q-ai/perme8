@@ -12,7 +12,7 @@ defmodule Shared.UserSetupSteps do
   import Jarga.AccountsFixtures
 
   alias Jarga.Accounts
-  alias Jarga.Accounts.Infrastructure.Repositories.UserRepository
+  alias Identity.Infrastructure.Repositories.UserRepository
   alias Ecto.Adapters.SQL.Sandbox
 
   # ============================================================================
@@ -75,7 +75,7 @@ defmodule Shared.UserSetupSteps do
   end
 
   defp ensure_password_set(%{hashed_password: nil} = user) do
-    alias Jarga.Accounts.Application.Services.PasswordService
+    alias Identity.Application.Services.PasswordService
     hashed_password = PasswordService.hash_password("password123!")
     {:ok, updated_user} = UserRepository.update(user, %{hashed_password: hashed_password})
     updated_user
@@ -128,7 +128,7 @@ defmodule Shared.UserSetupSteps do
   end
 
   defp set_password_for_user(user, password) do
-    alias Jarga.Accounts.Application.Services.PasswordService
+    alias Identity.Application.Services.PasswordService
     hashed_password = PasswordService.hash_password(password)
     {:ok, updated_user} = UserRepository.update(user, %{hashed_password: hashed_password})
     updated_user

@@ -6,7 +6,7 @@ defmodule Identity.Accounts.VerifyRegistrationSteps do
   use Cucumber.StepDefinition
   use IdentityWeb.ConnCase, async: false
 
-  alias Jarga.Accounts.Infrastructure.Repositories.UserRepository
+  alias Identity.Infrastructure.Repositories.UserRepository
 
   # ============================================================================
   # REGISTRATION ASSERTIONS

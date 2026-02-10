@@ -2,7 +2,7 @@ defmodule Jarga.Accounts.Application.UseCases.GetWorkspaceWithDetailsTest do
   use Jarga.DataCase, async: true
 
   alias Jarga.Accounts.Application.UseCases.GetWorkspaceWithDetails
-  alias Jarga.Accounts.Domain.Entities.ApiKey
+  alias Identity.Domain.Entities.ApiKey
   alias Jarga.Workspaces
   alias Jarga.Documents
   alias Jarga.Projects

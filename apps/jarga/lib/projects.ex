@@ -14,9 +14,9 @@ defmodule Jarga.Projects do
   use Boundary,
     top_level?: true,
     deps: [
-      # Cross-context dependencies (context + domain layer for entity access)
+      # Cross-context dependencies
+      Identity,
       Jarga.Accounts,
-      Jarga.Accounts.Domain,
       Jarga.Workspaces,
       # Same-context layer dependencies
       Jarga.Projects.Domain,

@@ -16,9 +16,9 @@ defmodule Jarga.Notes do
     deps: [
       Jarga.Documents,
       Jarga.Documents.Notes.Infrastructure,
-      # Cross-context dependencies (context + domain layer for entity access)
+      # Cross-context dependencies
+      Identity,
       Jarga.Accounts,
-      Jarga.Accounts.Domain,
       Jarga.Workspaces,
       Jarga.Projects,
       Jarga.Repo

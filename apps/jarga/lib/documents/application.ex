@@ -31,9 +31,9 @@ defmodule Jarga.Documents.Application do
     top_level?: true,
     deps: [
       Jarga.Documents.Domain,
-      # Cross-context dependencies (context + domain/application layer for access)
+      # Cross-context dependencies
+      Identity,
       Jarga.Accounts,
-      Jarga.Accounts.Domain,
       Jarga.Workspaces,
       Jarga.Workspaces.Application,
       Jarga.Agents

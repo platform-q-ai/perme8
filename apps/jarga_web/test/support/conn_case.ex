@@ -16,13 +16,13 @@ defmodule JargaWeb.ConnCase do
   """
 
   # Test support module - top-level boundary for web testing infrastructure
-  # Needs access to Jarga.Accounts.Domain for Scope
+  # Needs access to Identity for Scope
   use Boundary,
     top_level?: true,
     deps: [
       JargaWeb,
+      Identity,
       Jarga.Accounts,
-      Jarga.Accounts.Domain,
       Jarga.DataCase,
       Jarga.AccountsFixtures
     ],
@@ -30,7 +30,7 @@ defmodule JargaWeb.ConnCase do
 
   use ExUnit.CaseTemplate
 
-  alias Jarga.Accounts.Domain.Scope
+  alias Identity.Domain.Scope
 
   using do
     quote do

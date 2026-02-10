@@ -27,9 +27,9 @@ defmodule Jarga.Projects.Application do
     top_level?: true,
     deps: [
       Jarga.Projects.Domain,
-      # Cross-context dependencies (context + domain/application layer for entity/policy access)
+      # Cross-context dependencies
+      Identity,
       Jarga.Accounts,
-      Jarga.Accounts.Domain,
       Jarga.Workspaces,
       Jarga.Workspaces.Application
     ],

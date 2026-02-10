@@ -14,7 +14,7 @@ defmodule Identity.Accounts.SetupSteps do
   import Jarga.AccountsFixtures
 
   alias Jarga.Accounts
-  alias Jarga.Accounts.Infrastructure.Repositories.UserRepository
+  alias Identity.Infrastructure.Repositories.UserRepository
   alias Ecto.Adapters.SQL.Sandbox
 
   # ============================================================================
@@ -172,7 +172,7 @@ defmodule Identity.Accounts.SetupSteps do
 
   # Set a specific password for a user
   defp set_password_for_user(user, password) do
-    alias Jarga.Accounts.Application.Services.PasswordService
+    alias Identity.Application.Services.PasswordService
 
     hashed_password = PasswordService.hash_password(password)
 

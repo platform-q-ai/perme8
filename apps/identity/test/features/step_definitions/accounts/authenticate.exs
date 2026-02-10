@@ -11,7 +11,7 @@ defmodule Identity.Accounts.AuthenticateSteps do
   import Jarga.AccountsFixtures
 
   alias Jarga.Accounts
-  alias Jarga.Accounts.Infrastructure.Repositories.UserTokenRepository
+  alias Identity.Infrastructure.Repositories.UserTokenRepository
 
   # ============================================================================
   # MAGIC LINK TOKENS

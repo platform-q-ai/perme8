@@ -9,7 +9,7 @@ defmodule Identity.Accounts.QuerySteps do
   use IdentityWeb.ConnCase, async: false
 
   alias Jarga.Accounts
-  alias Jarga.Accounts.Domain.Entities.User
+  alias Identity.Domain.Entities.User
 
   # ============================================================================
   # USER LOOKUP
