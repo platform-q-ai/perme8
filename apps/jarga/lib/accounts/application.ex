@@ -26,7 +26,7 @@ defmodule Jarga.Accounts.Application do
 
   use Boundary,
     top_level?: true,
-    deps: [Identity],
+    deps: [Identity, Jarga.Accounts.Domain],
     exports: [
       UseCases.ListAccessibleWorkspaces,
       UseCases.GetWorkspaceWithDetails,

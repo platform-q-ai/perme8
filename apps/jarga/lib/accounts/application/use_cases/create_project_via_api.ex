@@ -19,7 +19,7 @@ defmodule Jarga.Accounts.Application.UseCases.CreateProjectViaApi do
   provides the context functions.
   """
 
-  alias Identity.Domain.Policies.WorkspaceAccessPolicy
+  alias Jarga.Accounts.Domain.ApiKeyScope
 
   @doc """
   Executes the create project via API use case.
@@ -59,8 +59,8 @@ defmodule Jarga.Accounts.Application.UseCases.CreateProjectViaApi do
     do: {:error, :forbidden}
 
   def execute(user, api_key, workspace_slug, attrs, opts) do
-    # First check if API key has access to this workspace
-    if WorkspaceAccessPolicy.has_workspace_access?(api_key, workspace_slug) do
+    # First check if workspace is within the API key's scope
+    if ApiKeyScope.includes?(api_key, workspace_slug) do
       get_workspace_fn = Keyword.fetch!(opts, :get_workspace_and_member_by_slug)
       create_project_fn = Keyword.fetch!(opts, :create_project)
 

@@ -21,7 +21,7 @@ defmodule Jarga.Accounts.Application.UseCases.GetProjectWithDocumentsViaApi do
   provides the context functions.
   """
 
-  alias Identity.Domain.Policies.WorkspaceAccessPolicy
+  alias Jarga.Accounts.Domain.ApiKeyScope
 
   @doc """
   Executes the get project with documents via API use case.
@@ -72,7 +72,7 @@ defmodule Jarga.Accounts.Application.UseCases.GetProjectWithDocumentsViaApi do
   end
 
   defp verify_api_key_access(api_key, workspace_slug) do
-    if WorkspaceAccessPolicy.has_workspace_access?(api_key, workspace_slug) do
+    if ApiKeyScope.includes?(api_key, workspace_slug) do
       :ok
     else
       {:error, :forbidden}

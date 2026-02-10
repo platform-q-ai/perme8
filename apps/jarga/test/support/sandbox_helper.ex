@@ -67,21 +67,19 @@ defmodule Jarga.Test.SandboxHelper do
   """
   def allow_process_with_children(supervisor_pid) when is_pid(supervisor_pid) do
     # Allow the supervisor itself on all repos
-    Enum.each(@repos, fn repo ->
-      Sandbox.allow(repo, self(), supervisor_pid)
-    end)
+    allow_process(supervisor_pid)
 
     # Allow all child processes on all repos
-    children = Supervisor.which_children(supervisor_pid)
-
-    Enum.each(children, fn {_id, child_pid, _type, _modules} ->
-      if is_pid(child_pid) do
-        Enum.each(@repos, fn repo ->
-          Sandbox.allow(repo, self(), child_pid)
-        end)
-      end
-    end)
+    supervisor_pid
+    |> Supervisor.which_children()
+    |> Enum.each(&allow_child_process/1)
   end
+
+  defp allow_child_process({_id, child_pid, _type, _modules}) when is_pid(child_pid) do
+    allow_process(child_pid)
+  end
+
+  defp allow_child_process(_), do: :ok
 
   @doc """
   Setup sandbox for the current test process in shared mode.

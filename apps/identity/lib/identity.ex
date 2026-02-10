@@ -33,7 +33,6 @@ defmodule Identity do
   - `AuthenticationPolicy` - Authentication business rules (sudo mode)
   - `TokenPolicy` - Token expiration and validity rules
   - `ApiKeyPolicy` - API key ownership and management permissions
-  - `WorkspaceAccessPolicy` - Workspace access validation for API keys
   """
 
   # Top-level boundary for identity context
@@ -43,11 +42,11 @@ defmodule Identity do
   use Boundary,
     top_level?: true,
     deps: [
+      # Application layer (use cases, services)
+      Identity.ApplicationLayer,
       # Shared infrastructure
       Identity.Repo,
-      Identity.Mailer,
-      # Cross-context dependencies (for workspace access validation in API keys)
-      Jarga.Workspaces
+      Identity.Mailer
     ],
     exports: [
       # Domain entities and policies that other apps may need
@@ -57,7 +56,6 @@ defmodule Identity do
       Domain.Policies.AuthenticationPolicy,
       Domain.Policies.TokenPolicy,
       Domain.Policies.ApiKeyPolicy,
-      Domain.Policies.WorkspaceAccessPolicy,
       Domain.Services.TokenBuilder,
       Domain.Scope,
       # Infrastructure schemas exported for test fixtures and cross-app integration
