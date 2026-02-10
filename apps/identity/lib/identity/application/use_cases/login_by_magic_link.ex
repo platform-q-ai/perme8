@@ -106,7 +106,7 @@ defmodule Identity.Application.UseCases.LoginByMagicLink do
 
   # Case 3: Unconfirmed user with password - confirm and delete only the magic link token
   defp handle_magic_link_result(
-         {%{confirmed_at: nil, hashed_password: hash} = user, token},
+         {%{confirmed_at: nil, hashed_password: hash} = user_schema_record, token},
          deps
        )
        when not is_nil(hash) do
@@ -119,7 +119,7 @@ defmodule Identity.Application.UseCases.LoginByMagicLink do
 
     # For password-based registration, we confirm the user when they click the magic link
     # This is safe because they have proven ownership of the email
-    case user_repo.update_changeset(user_schema.confirm_changeset(user), repo) do
+    case user_repo.update_changeset(user_schema.confirm_changeset(user_schema_record), repo) do
       {:ok, confirmed_user} ->
         # Delete only the magic link token after confirmation
         user_token_repo.delete!(token, repo)
@@ -132,7 +132,7 @@ defmodule Identity.Application.UseCases.LoginByMagicLink do
 
   # Case 2: Unconfirmed user without password - confirm and delete ALL tokens
   defp handle_magic_link_result(
-         {%{confirmed_at: nil} = user, _token},
+         {%{confirmed_at: nil} = user_schema_record, _token},
          deps
        ) do
     %{
@@ -145,16 +145,16 @@ defmodule Identity.Application.UseCases.LoginByMagicLink do
     } = deps
 
     transaction_fn.(fn ->
-      with {:ok, user} <-
-             user_repo.update_changeset(user_schema.confirm_changeset(user), repo) do
-        tokens_to_expire = user_token_repo.all_by_user_id(user.id, repo)
+      with {:ok, confirmed_user} <-
+             user_repo.update_changeset(user_schema.confirm_changeset(user_schema_record), repo) do
+        tokens_to_expire = user_token_repo.all_by_user_id(confirmed_user.id, repo)
 
         user_token_repo.delete_all(
           queries.tokens_by_ids(Enum.map(tokens_to_expire, & &1.id)),
           repo
         )
 
-        {:ok, {user, tokens_to_expire}}
+        {:ok, {confirmed_user, tokens_to_expire}}
       end
     end)
   end

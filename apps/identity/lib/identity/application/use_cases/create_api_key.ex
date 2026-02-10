@@ -6,7 +6,7 @@ defmodule Identity.Application.UseCases.CreateApiKey do
 
   This use case accepts the following dependencies via opts:
   - `:repo` - Ecto.Repo module (default: Identity.Repo)
-  - `:workspaces` - Workspaces context module (default: Jarga.Workspaces)
+  - `:workspaces` - Workspaces context module (default: Jarga.Workspaces if available at runtime, nil otherwise)
   - `:api_key_repo` - ApiKeyRepository module (default: Infrastructure.Repositories.ApiKeyRepository)
 
   ## Example
@@ -27,7 +27,7 @@ defmodule Identity.Application.UseCases.CreateApiKey do
   """
   def execute(user_id, attrs, opts \\ []) do
     repo = Keyword.get(opts, :repo, Identity.Repo)
-    workspaces = Keyword.get(opts, :workspaces, Jarga.Workspaces)
+    workspaces = Keyword.get_lazy(opts, :workspaces, &default_workspaces/0)
     api_key_repo = Keyword.get(opts, :api_key_repo, @default_api_key_repo)
 
     workspace_access = Map.get(attrs, :workspace_access, [])
@@ -85,11 +85,25 @@ defmodule Identity.Application.UseCases.CreateApiKey do
     end
   end
 
+  defp check_membership(nil, _user_id, workspace_slug) do
+    # No workspaces module available - skip validation
+    {:ok, workspace_slug}
+  end
+
   defp check_membership(workspaces, user_id, workspace_slug) do
     if workspaces.member_by_slug?(user_id, workspace_slug) do
       {:ok, workspace_slug}
     else
       {:error, workspace_slug}
+    end
+  end
+
+  # Returns the workspaces module at runtime if available, avoiding compile-time coupling
+  defp default_workspaces do
+    if Code.ensure_loaded?(Jarga.Workspaces) do
+      Jarga.Workspaces
+    else
+      nil
     end
   end
 end

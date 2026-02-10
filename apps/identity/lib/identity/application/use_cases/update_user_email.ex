@@ -74,10 +74,11 @@ defmodule Identity.Application.UseCases.UpdateUserEmail do
 
     transaction_fn.(fn ->
       with {:ok, query} <- queries.verify_change_email_token_query(token, context),
-           user_token when not is_nil(user_token) <- user_token_repo.get_one(query),
+           user_token when not is_nil(user_token) <- user_token_repo.get_one(query, repo),
            {:ok, user} <-
              user_repo.update_changeset(
-               user_schema.email_changeset(user, %{email: user_token.sent_to})
+               user_schema.email_changeset(user, %{email: user_token.sent_to}),
+               repo
              ),
            {_count, _result} <-
              user_token_repo.delete_all(queries.tokens_for_user_and_context(user.id, context)) do

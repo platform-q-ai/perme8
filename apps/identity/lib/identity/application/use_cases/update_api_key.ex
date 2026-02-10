@@ -7,7 +7,7 @@ defmodule Identity.Application.UseCases.UpdateApiKey do
   This use case accepts the following dependencies via opts:
   - `:repo` - Ecto.Repo module (default: Identity.Repo)
   - `:api_key_repo` - ApiKeyRepository module (default: Infrastructure.Repositories.ApiKeyRepository)
-  - `:workspaces` - Workspaces context for validation (default: Jarga.Workspaces)
+  - `:workspaces` - Workspaces context for validation (default: Jarga.Workspaces if available at runtime, nil otherwise)
   """
 
   alias Identity.Domain.Policies.ApiKeyPolicy
@@ -15,7 +15,6 @@ defmodule Identity.Application.UseCases.UpdateApiKey do
   # Default implementations - can be overridden via opts for testing
   @default_repo Identity.Repo
   @default_api_key_repo Identity.Infrastructure.Repositories.ApiKeyRepository
-  @default_workspaces Jarga.Workspaces
 
   @doc """
   Executes the update API key use case.
@@ -42,7 +41,7 @@ defmodule Identity.Application.UseCases.UpdateApiKey do
   def execute(user_id, api_key_id, attrs, opts \\ []) do
     repo = Keyword.get(opts, :repo, @default_repo)
     api_key_repo = Keyword.get(opts, :api_key_repo, @default_api_key_repo)
-    workspaces = Keyword.get(opts, :workspaces, @default_workspaces)
+    workspaces = Keyword.get_lazy(opts, :workspaces, &default_workspaces/0)
     workspace_access = Map.get(attrs, :workspace_access)
 
     with {:ok, api_key} <- api_key_repo.get_by_id(repo, api_key_id),
@@ -68,6 +67,8 @@ defmodule Identity.Application.UseCases.UpdateApiKey do
 
   defp validate_workspace_access(_workspaces, _user_id, nil), do: :ok
   defp validate_workspace_access(_workspaces, _user_id, []), do: :ok
+  # Skip validation if no workspaces module is available
+  defp validate_workspace_access(nil, _user_id, _workspace_access), do: :ok
 
   defp validate_workspace_access(workspaces, user_id, workspace_access) do
     results = Enum.map(workspace_access, &check_membership(workspaces, user_id, &1))
@@ -81,6 +82,15 @@ defmodule Identity.Application.UseCases.UpdateApiKey do
       {:ok, workspace_slug}
     else
       {:error, workspace_slug}
+    end
+  end
+
+  # Returns the workspaces module at runtime if available, avoiding compile-time coupling
+  defp default_workspaces do
+    if Code.ensure_loaded?(Jarga.Workspaces) do
+      Jarga.Workspaces
+    else
+      nil
     end
   end
 end

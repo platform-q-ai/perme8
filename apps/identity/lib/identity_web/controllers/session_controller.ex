@@ -62,15 +62,22 @@ defmodule IdentityWeb.SessionController do
 
   def update_password(conn, %{"user" => user_params} = params) do
     user = conn.assigns.current_scope.user
-    true = Identity.sudo_mode?(user)
-    {:ok, {_user, expired_tokens}} = Identity.update_user_password(user, user_params)
 
-    # disconnect all existing LiveViews with old sessions
-    UserAuth.disconnect_sessions(expired_tokens)
+    unless Identity.sudo_mode?(user) do
+      conn
+      |> put_flash(:error, "Session expired. Please reauthenticate.")
+      |> redirect(to: ~p"/users/log-in")
+      |> halt()
+    else
+      {:ok, {_user, expired_tokens}} = Identity.update_user_password(user, user_params)
 
-    conn
-    |> put_session(:user_return_to, ~p"/users/settings")
-    |> create(params, "Password updated successfully!")
+      # disconnect all existing LiveViews with old sessions
+      UserAuth.disconnect_sessions(expired_tokens)
+
+      conn
+      |> put_session(:user_return_to, ~p"/users/settings")
+      |> create(params, "Password updated successfully!")
+    end
   end
 
   def delete(conn, _params) do

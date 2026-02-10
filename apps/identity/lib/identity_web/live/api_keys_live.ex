@@ -593,7 +593,14 @@ defmodule IdentityWeb.ApiKeysLive do
   # Handle filter keys
   @impl true
   def handle_event("filter_active", %{"show" => filter}, socket) do
-    active_filter = String.to_atom(filter)
+    active_filter =
+      case filter do
+        "all" -> :all
+        "active" -> :active
+        "inactive" -> :inactive
+        _ -> :all
+      end
+
     filtered_keys = filter_keys_by_status(socket.assigns.all_keys, active_filter)
 
     socket =
