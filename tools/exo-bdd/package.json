@@ -1,0 +1,37 @@
+{
+  "name": "exo-bdd",
+  "version": "0.1.0",
+  "description": "BDD testing framework with Clean Architecture - HTTP, Browser, CLI, Graph, and Security testing via Cucumber step definitions",
+  "module": "src/index.ts",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "exo-bdd": "./src/cli/index.ts"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./steps": "./src/interface/steps/index.ts",
+    "./hooks": "./src/interface/hooks/index.ts"
+  },
+  "scripts": {
+    "test": "bun test",
+    "test:cucumber": "cucumber-js",
+    "test:integration": "bun test integration/",
+    "test:project": "bun run integration/run-project.ts",
+    "init": "bun run src/cli/index.ts init",
+    "run:test": "bun run src/cli/index.ts run"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/jsonpath": "^0.2.4"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@cucumber/cucumber": "^12.6.0",
+    "@playwright/test": "^1.58.2",
+    "jsonpath": "^1.2.1",
+    "neo4j-driver": "^6.0.1"
+  }
+}

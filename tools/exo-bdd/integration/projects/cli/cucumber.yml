@@ -1,0 +1,7 @@
+default:
+  paths:
+    - integration/projects/cli/features/**/*.feature
+  import:
+    - integration/projects/cli/support/setup.ts
+  format:
+    - summary
