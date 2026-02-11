@@ -1,9 +1,11 @@
 defmodule Mix.Tasks.ExoTestTest do
   use ExUnit.Case, async: true
 
+  alias Mix.Tasks.ExoTest
+
   describe "build_cmd_args/2" do
     test "builds base command args without tag" do
-      args = Mix.Tasks.ExoTest.build_cmd_args("/abs/path/config.ts", nil)
+      args = ExoTest.build_cmd_args("/abs/path/config.ts", nil)
 
       assert args == [
                "run",
@@ -15,7 +17,7 @@ defmodule Mix.Tasks.ExoTestTest do
     end
 
     test "appends --tags when tag is provided" do
-      args = Mix.Tasks.ExoTest.build_cmd_args("/abs/path/config.ts", "@smoke")
+      args = ExoTest.build_cmd_args("/abs/path/config.ts", "@smoke")
 
       assert args == [
                "run",
@@ -29,7 +31,7 @@ defmodule Mix.Tasks.ExoTestTest do
     end
 
     test "uses the absolute config path" do
-      args = Mix.Tasks.ExoTest.build_cmd_args("/home/user/project/config.ts", nil)
+      args = ExoTest.build_cmd_args("/home/user/project/config.ts", nil)
 
       assert Enum.at(args, 4) == "/home/user/project/config.ts"
     end
@@ -38,7 +40,7 @@ defmodule Mix.Tasks.ExoTestTest do
   describe "run/1 argument parsing" do
     test "raises when --config is missing" do
       assert_raise Mix.Error, ~r/Missing required --config option/, fn ->
-        Mix.Tasks.ExoTest.run([])
+        ExoTest.run([])
       end
     end
   end
