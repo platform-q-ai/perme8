@@ -27,14 +27,8 @@ jobs:
             exo_bdd:
               - 'tools/exo-bdd/**'
             umbrella:
-              - 'apps/**'
-              - 'config/**'
-              - 'mix.exs'
-              - 'mix.lock'
-              - '.tool-versions'
-              - '.formatter.exs'
-              - '.credo.exs'
-              - '.github/**'
+              - '**'
+              - '!tools/exo-bdd/**'
 
   exo-bdd:
     name: exo-bdd tests

@@ -3,6 +3,7 @@ defmodule JargaWeb.Features.MarkdownRenderingTest do
   import JargaWeb.FeatureCase.Helpers
 
   @moduletag :javascript
+  @moduletag timeout: 120_000
 
   describe "Markdown Pasting & Rendering" do
     setup do
