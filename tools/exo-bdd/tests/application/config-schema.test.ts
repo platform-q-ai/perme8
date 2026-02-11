@@ -128,4 +128,27 @@ describe('ConfigSchema type validation', () => {
     expect(config.zapUrl).toBe('http://localhost:8080')
     expect(config.zapApiKey).toBeUndefined()
   })
+
+  test('ExoBddConfig with features as a string', () => {
+    const config: ExoBddConfig = {
+      features: './features/**/*.feature',
+      adapters: {},
+    }
+    expect(config.features).toBe('./features/**/*.feature')
+  })
+
+  test('ExoBddConfig with features as an array', () => {
+    const config: ExoBddConfig = {
+      features: ['./features/**/*.feature', './extra/**/*.feature'],
+      adapters: {},
+    }
+    expect(config.features).toEqual(['./features/**/*.feature', './extra/**/*.feature'])
+  })
+
+  test('ExoBddConfig with features omitted (optional)', () => {
+    const config: ExoBddConfig = {
+      adapters: {},
+    }
+    expect(config.features).toBeUndefined()
+  })
 })

@@ -1,4 +1,6 @@
 export interface ExoBddConfig {
+  /** Glob or path(s) to feature files. Used by the CLI runner to locate .feature files. */
+  features?: string | string[]
   adapters: {
     http?: HttpAdapterConfig
     browser?: BrowserAdapterConfig
