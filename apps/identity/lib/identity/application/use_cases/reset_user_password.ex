@@ -37,11 +37,10 @@ defmodule Identity.Application.UseCases.ResetUserPassword do
   import Ecto.Changeset, only: [get_change: 2, put_change: 3, delete_change: 2]
 
   alias Identity.Application.Services.PasswordService
-  alias Identity.Infrastructure.Queries.TokenQueries
 
   # Default implementations - can be overridden via opts for testing
   @default_repo Identity.Repo
-  @default_queries TokenQueries
+  @default_queries Identity.Infrastructure.Queries.TokenQueries
   @default_user_schema Identity.Infrastructure.Schemas.UserSchema
   @default_user_repo Identity.Infrastructure.Repositories.UserRepository
   @default_user_token_repo Identity.Infrastructure.Repositories.UserTokenRepository
