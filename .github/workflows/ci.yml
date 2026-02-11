@@ -12,8 +12,58 @@ env:
   PAGE_SAVE_DEBOUNCE_MS: 1
 
 jobs:
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      exo_bdd: ${{ steps.filter.outputs.exo_bdd }}
+      umbrella: ${{ steps.filter.outputs.umbrella }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            exo_bdd:
+              - 'tools/exo-bdd/**'
+            umbrella:
+              - 'apps/**'
+              - 'config/**'
+              - 'priv/**'
+              - 'lib/**'
+              - 'test/**'
+              - 'mix.exs'
+              - 'mix.lock'
+              - '.tool-versions'
+              - '.formatter.exs'
+              - '.github/**'
+
+  exo-bdd:
+    name: exo-bdd tests
+    needs: changes
+    if: needs.changes.outputs.exo_bdd == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install
+        working-directory: tools/exo-bdd
+
+      - name: Run unit tests
+        run: bun test
+        working-directory: tools/exo-bdd
+
+      - name: Run integration tests
+        run: bun test integration/
+        working-directory: tools/exo-bdd
+
   test:
     name: Build and test
+    needs: changes
+    if: needs.changes.outputs.umbrella == 'true'
     runs-on: ubuntu-latest
 
     services:
@@ -90,6 +140,8 @@ jobs:
 
   javascript:
     name: JavaScript Tests
+    needs: changes
+    if: needs.changes.outputs.umbrella == 'true'
     runs-on: ubuntu-latest
 
     services:
@@ -203,13 +255,15 @@ jobs:
   deploy:
     name: Deploy to Render
     runs-on: ubuntu-latest
-    needs: [test, javascript]
-    # Only deploy on push to main (not on PRs)
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [changes, test, javascript, exo-bdd]
+    if: |
+      always() &&
+      github.event_name == 'push' && github.ref == 'refs/heads/main' &&
+      !contains(needs.*.result, 'failure') &&
+      !contains(needs.*.result, 'cancelled')
 
     steps:
       - name: Deploy
-        # Only run this step if the branch is main
         env:
           deploy_url: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
         run: |
