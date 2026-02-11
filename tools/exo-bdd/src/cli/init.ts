@@ -1,5 +1,5 @@
 import { resolve, join } from 'node:path'
-import { mkdirSync, existsSync } from 'node:fs'
+import { mkdirSync, existsSync, writeFileSync } from 'node:fs'
 import { generateConfigContent, configFileName } from './templates/config.ts'
 
 export interface InitOptions {
@@ -45,7 +45,7 @@ export async function runInit(options: InitOptions): Promise<{ configPath: strin
 
   // Write config file
   const content = generateConfigContent(options.name)
-  await Bun.write(configPath, content)
+  writeFileSync(configPath, content, 'utf-8')
 
   // Create features directory
   if (!existsSync(featuresDir)) {
