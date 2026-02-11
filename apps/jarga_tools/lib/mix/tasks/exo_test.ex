@@ -32,8 +32,9 @@ defmodule Mix.Tasks.ExoTest do
 
     config_path = Keyword.get(opts, :config) || raise_missing_config()
 
-    abs_config = Path.expand(config_path)
-    exo_bdd_root = Path.join(File.cwd!(), "tools/exo-bdd")
+    umbrella_root = umbrella_root()
+    abs_config = Path.expand(config_path, umbrella_root)
+    exo_bdd_root = Path.join(umbrella_root, "tools/exo-bdd")
 
     cmd_args = build_cmd_args(abs_config, Keyword.get(opts, :tag))
 
@@ -57,6 +58,14 @@ defmodule Mix.Tasks.ExoTest do
       nil -> base
       tag_value -> base ++ ["--tags", tag_value]
     end
+  end
+
+  defp umbrella_root do
+    # In an umbrella, build_path is "../../_build" relative to the app.
+    # Resolving it and going one level up gives us the umbrella root.
+    Mix.Project.config()[:build_path]
+    |> Path.expand()
+    |> Path.dirname()
   end
 
   defp raise_missing_config do
