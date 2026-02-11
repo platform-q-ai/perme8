@@ -5,6 +5,9 @@
   "module": "src/index.ts",
   "type": "module",
   "private": true,
+  "bin": {
+    "exo-bdd": "./src/cli/index.ts"
+  },
   "exports": {
     ".": "./src/index.ts",
     "./steps": "./src/interface/steps/index.ts",
@@ -14,7 +17,9 @@
     "test": "bun test",
     "test:cucumber": "cucumber-js",
     "test:integration": "bun test integration/",
-    "test:project": "bun run integration/run-project.ts"
+    "test:project": "bun run integration/run-project.ts",
+    "init": "bun run src/cli/index.ts init",
+    "run:test": "bun run src/cli/index.ts run"
   },
   "devDependencies": {
     "@types/bun": "latest",
