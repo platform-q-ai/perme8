@@ -29,13 +29,11 @@ jobs:
             umbrella:
               - 'apps/**'
               - 'config/**'
-              - 'priv/**'
-              - 'lib/**'
-              - 'test/**'
               - 'mix.exs'
               - 'mix.lock'
               - '.tool-versions'
               - '.formatter.exs'
+              - '.credo.exs'
               - '.github/**'
 
   exo-bdd:
@@ -53,7 +51,7 @@ jobs:
         working-directory: tools/exo-bdd
 
       - name: Run unit tests
-        run: bun test
+        run: bun test tests/
         working-directory: tools/exo-bdd
 
       - name: Run integration tests
