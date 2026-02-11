@@ -3,9 +3,6 @@ defmodule JargaWeb.Features.MarkdownRenderingTest do
   import JargaWeb.FeatureCase.Helpers
 
   @moduletag :javascript
-  # Skipped: these tests pass locally but consistently timeout in GitHub Actions
-  # due to slow open_document setup exceeding the 60s ExUnit timeout.
-  @moduletag :skip
 
   describe "Markdown Pasting & Rendering" do
     setup do
