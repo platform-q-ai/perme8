@@ -1,7 +1,5 @@
 # AGENTS.md
 
-This file provides guidance to OpenCode when working with Elixir and Phoenix code in this repository.
-
 ## 🏗️ Project Structure: Elixir Phoenix Umbrella
 
 **This is an Elixir Phoenix umbrella project.** Before starting any development work, you **MUST** read `docs/umbrella_apps.md` first to understand:
@@ -19,6 +17,7 @@ This file provides guidance to OpenCode when working with Elixir and Phoenix cod
 **This project uses specialized subagents to maintain code quality, architectural integrity, and TDD discipline.**
 
 For complete workflow documentation, see:
+
 - **Orchestrated Development Workflow**: `docs/instructions/orchestrated-workflow.md`
 - **BDD Implementation Workflow**: `docs/instructions/bdd-workflow.md`
 - **Quality Assurance Phases**: `docs/instructions/quality-assurance.md`
@@ -48,7 +47,7 @@ For detailed documentation on architecture, BDD, TDD practices, and implementati
 - `.opencode/agent/test-validator.md` - Test quality validation
 - `.opencode/agent/code-reviewer.md` - Code review process
 
-## Key Principles:
+## Key Principles
 
 - ✅ **Tests first** - Always write tests before implementation
 - ✅ **Boundary enforcement** - Use `mix boundary` to catch violations
