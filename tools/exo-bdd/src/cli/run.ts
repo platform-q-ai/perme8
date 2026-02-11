@@ -101,11 +101,13 @@ Before(async function (this: TestWorld) {
 })
 
 After(async function (this: TestWorld, scenario) {
-  if (scenario.result?.status === Status.FAILED && this.browser) {
-    const screenshot = await this.browser.screenshot()
-    this.attach(screenshot, 'image/png')
+  if (this.hasBrowser) {
+    if (scenario.result?.status === Status.FAILED) {
+      const screenshot = await this.browser.screenshot()
+      this.attach(screenshot, 'image/png')
+    }
+    await this.browser.clearContext()
   }
-  await this.browser?.clearContext()
 })
 
 AfterAll(async function () {

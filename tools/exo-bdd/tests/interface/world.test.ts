@@ -119,4 +119,26 @@ describe('TestWorld', () => {
     expect(world.graph).toBe(mockGraph)
     expect(world.security).toBe(mockSecurity)
   })
+
+  test('hasAdapter checks return false when adapters not set', () => {
+    expect(world.hasBrowser).toBe(false)
+    expect(world.hasHttp).toBe(false)
+    expect(world.hasCli).toBe(false)
+    expect(world.hasGraph).toBe(false)
+    expect(world.hasSecurity).toBe(false)
+  })
+
+  test('hasAdapter checks return true when adapters are set', () => {
+    world.http = { get: mock(() => {}) } as any
+    world.browser = { goto: mock(() => {}) } as any
+    world.cli = { run: mock(() => {}) } as any
+    world.graph = { query: mock(() => {}) } as any
+    world.security = { activeScan: mock(() => {}) } as any
+
+    expect(world.hasBrowser).toBe(true)
+    expect(world.hasHttp).toBe(true)
+    expect(world.hasCli).toBe(true)
+    expect(world.hasGraph).toBe(true)
+    expect(world.hasSecurity).toBe(true)
+  })
 })

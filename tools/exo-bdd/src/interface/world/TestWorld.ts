@@ -52,6 +52,13 @@ export class TestWorld extends World {
     this._security = value
   }
 
+  // Adapter presence checks (safe for hooks -- no throw)
+  get hasBrowser(): boolean { return this._browser !== undefined }
+  get hasHttp(): boolean { return this._http !== undefined }
+  get hasCli(): boolean { return this._cli !== undefined }
+  get hasGraph(): boolean { return this._graph !== undefined }
+  get hasSecurity(): boolean { return this._security !== undefined }
+
   // Shared state
   variables: Map<string, unknown> = new Map()
 
