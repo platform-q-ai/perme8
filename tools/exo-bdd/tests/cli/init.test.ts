@@ -1,7 +1,7 @@
 import { test, expect, describe, beforeEach, afterEach } from 'bun:test'
 import { resolve, join } from 'node:path'
 import { existsSync, rmSync, readFileSync } from 'node:fs'
-import { parseInitArgs, runInit } from '../../src/cli/init.ts'
+import { parseInitArgs, runInit, validateProjectName } from '../../src/cli/init.ts'
 import { configFileName } from '../../src/cli/templates/config.ts'
 
 const tmpDir = resolve(import.meta.dir, '../../.tmp-test-init')
@@ -36,6 +36,39 @@ describe('parseInitArgs', () => {
 
   test('throws when --name has no value', () => {
     expect(() => parseInitArgs(['--name'])).toThrow('Missing required argument: --name')
+  })
+
+  test('rejects names with path traversal', () => {
+    expect(() => parseInitArgs(['--name', '../../etc/passwd'])).toThrow('Invalid project name')
+  })
+
+  test('rejects names with slashes', () => {
+    expect(() => parseInitArgs(['--name', 'foo/bar'])).toThrow('Invalid project name')
+  })
+
+  test('rejects names starting with a dot', () => {
+    expect(() => parseInitArgs(['--name', '.hidden'])).toThrow('Invalid project name')
+  })
+})
+
+describe('validateProjectName', () => {
+  test('accepts valid names', () => {
+    expect(() => validateProjectName('jarga-web')).not.toThrow()
+    expect(() => validateProjectName('my_project')).not.toThrow()
+    expect(() => validateProjectName('app2')).not.toThrow()
+    expect(() => validateProjectName('Project.Name')).not.toThrow()
+  })
+
+  test('rejects path traversal', () => {
+    expect(() => validateProjectName('../../etc')).toThrow('Invalid project name')
+  })
+
+  test('rejects slashes', () => {
+    expect(() => validateProjectName('foo/bar')).toThrow('Invalid project name')
+  })
+
+  test('rejects empty-like names', () => {
+    expect(() => validateProjectName('-starts-with-dash')).toThrow('Invalid project name')
   })
 })
 

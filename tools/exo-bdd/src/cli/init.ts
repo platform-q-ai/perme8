@@ -24,7 +24,24 @@ export function parseInitArgs(args: string[]): InitOptions {
     throw new Error('Missing required argument: --name <project-name>')
   }
 
+  validateProjectName(name)
+
   return { name, dir }
+}
+
+const PROJECT_NAME_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]*$/
+
+export function validateProjectName(name: string): void {
+  if (!PROJECT_NAME_PATTERN.test(name)) {
+    throw new Error(
+      `Invalid project name: "${name}". ` +
+      `Names must start with a letter or digit and contain only letters, digits, hyphens, underscores, or dots.`
+    )
+  }
+
+  if (name.includes('..')) {
+    throw new Error(`Invalid project name: "${name}". Names must not contain ".."`)
+  }
 }
 
 export async function runInit(options: InitOptions): Promise<{ configPath: string; featuresDir: string }> {
