@@ -15,8 +15,8 @@ MIX_ENV=prod mix compile
 MIX_ENV=prod mix assets.build
 MIX_ENV=prod mix assets.deploy
 
-# Generate release wrapper scripts
-MIX_ENV=prod mix phx.gen.release
+# Generate release wrapper scripts (must run inside the web app for umbrella projects)
+cd apps/jarga_web && MIX_ENV=prod mix phx.gen.release && cd ../..
 
 # Create the release
 MIX_ENV=prod mix release --overwrite
