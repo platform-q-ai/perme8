@@ -16,9 +16,10 @@ defmodule Jarga.Agents.Infrastructure do
       Jarga.Agents.Domain,
       Jarga.Agents.Application,
       Jarga.Repo,
-      # Cross-context dependencies (context + infrastructure layer for schema access)
+      # Cross-context dependencies
+      Identity,
+      Identity.Repo,
       Jarga.Accounts,
-      Jarga.Accounts.Infrastructure,
       Jarga.Workspaces,
       Jarga.Workspaces.Infrastructure
     ],

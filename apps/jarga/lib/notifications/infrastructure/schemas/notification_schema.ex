@@ -26,7 +26,7 @@ defmodule Jarga.Notifications.Infrastructure.Schemas.NotificationSchema do
         }
 
   schema "notifications" do
-    belongs_to(:user, Jarga.Accounts.Infrastructure.Schemas.UserSchema)
+    belongs_to(:user, Identity.Infrastructure.Schemas.UserSchema)
 
     field(:type, :string)
     field(:title, :string)

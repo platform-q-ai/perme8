@@ -41,6 +41,12 @@ config :jarga, Jarga.Repo,
   show_sensitive_data_on_connection_error: true,
   pool_size: 10
 
+# Identity uses the same database as Jarga
+config :identity, Identity.Repo,
+  url: database_url,
+  show_sensitive_data_on_connection_error: true,
+  pool_size: 10
+
 # For development, we disable any cache and enable
 # debugging and code reloading.
 config :jarga_web, JargaWeb.Endpoint,
@@ -69,6 +75,30 @@ config :jarga_web, JargaWeb.Endpoint,
 
 # Enable dev routes for dashboard and mailbox
 config :jarga_web, dev_routes: true
+
+# ============================================================================
+# Identity App Development Configuration
+# ============================================================================
+
+config :identity, IdentityWeb.Endpoint,
+  http: [ip: {127, 0, 0, 1}, port: 4001],
+  check_origin: false,
+  code_reloader: true,
+  debug_errors: true,
+  secret_key_base: "dev_identity_secret_key_base_at_least_64_bytes_long_for_security",
+  watchers: []
+
+config :identity, IdentityWeb.Endpoint,
+  live_reload: [
+    web_console_logger: true,
+    patterns: [
+      ~r"priv/gettext/.*(po)$",
+      ~r"lib/identity_web/(controllers|live|components)/.*(ex|heex)$"
+    ]
+  ]
+
+# Enable dev routes for identity dashboard and mailbox
+config :identity, dev_routes: true
 
 # Do not include metadata nor timestamps in development logs
 config :logger, :default_formatter, format: "[$level] $message\n"

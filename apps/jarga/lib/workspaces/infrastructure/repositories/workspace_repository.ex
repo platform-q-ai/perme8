@@ -8,7 +8,7 @@ defmodule Jarga.Workspaces.Infrastructure.Repositories.WorkspaceRepository do
 
   alias Jarga.Workspaces.Domain.Entities.Workspace
   alias Jarga.Workspaces.Infrastructure.Schemas.WorkspaceSchema
-  alias Jarga.Repo
+  alias Identity.Repo, as: Repo
 
   @doc """
   Gets a workspace by ID.

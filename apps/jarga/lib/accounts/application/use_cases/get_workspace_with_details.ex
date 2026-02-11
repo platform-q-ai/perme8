@@ -22,7 +22,7 @@ defmodule Jarga.Accounts.Application.UseCases.GetWorkspaceWithDetails do
   provides the context functions.
   """
 
-  alias Jarga.Accounts.Domain.Policies.WorkspaceAccessPolicy
+  alias Jarga.Accounts.Domain.ApiKeyScope
 
   @doc """
   Executes the get workspace with details use case.
@@ -75,8 +75,8 @@ defmodule Jarga.Accounts.Application.UseCases.GetWorkspaceWithDetails do
   def execute(_user, %{workspace_access: []}, _workspace_slug, _opts), do: {:error, :forbidden}
 
   def execute(user, api_key, workspace_slug, opts) do
-    # First check if API key has access to this workspace
-    if WorkspaceAccessPolicy.has_workspace_access?(api_key, workspace_slug) do
+    # First check if workspace is within the API key's scope
+    if ApiKeyScope.includes?(api_key, workspace_slug) do
       # Get the functions from opts - these MUST be provided by caller
       get_workspace_fn = Keyword.fetch!(opts, :get_workspace_by_slug)
       list_documents_fn = Keyword.fetch!(opts, :list_documents_for_workspace)

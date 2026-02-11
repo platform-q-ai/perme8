@@ -7,7 +7,9 @@ defmodule Jarga.Notifications.Infrastructure.Repositories.NotificationRepository
 
   import Ecto.Query
   alias Jarga.Notifications.Infrastructure.Schemas.NotificationSchema
-  alias Jarga.Repo
+  # All database operations use Identity.Repo to ensure consistent visibility
+  # of user data (users table is managed by Identity.Repo)
+  alias Identity.Repo, as: Repo
 
   @doc """
   Creates a notification.

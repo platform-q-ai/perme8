@@ -93,6 +93,10 @@ defmodule Jarga.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
+      # Umbrella dependencies
+      {:identity, in_umbrella: true},
+
+      # Database
       {:phoenix_ecto, "~> 4.6"},
       {:ecto_sql, "~> 3.12"},
       {:postgrex, ">= 0.0.0"},

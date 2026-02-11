@@ -14,7 +14,7 @@ defmodule Jarga.Agents.Infrastructure.Schemas.AgentSchema do
   use Ecto.Schema
   import Ecto.Changeset
 
-  alias Jarga.Accounts.Infrastructure.Schemas.UserSchema
+  alias Identity.Infrastructure.Schemas.UserSchema
 
   @type t :: %__MODULE__{
           id: Ecto.UUID.t(),

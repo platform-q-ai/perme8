@@ -6,7 +6,7 @@ defmodule Jarga.Documents.Notes.Infrastructure.Queries.Queries do
 
   import Ecto.Query
   alias Jarga.Documents.Notes.Infrastructure.Schemas.NoteSchema
-  alias Jarga.Accounts.Domain.Entities.User
+  alias Identity.Domain.Entities.User
 
   @doc """
   Base query for notes.

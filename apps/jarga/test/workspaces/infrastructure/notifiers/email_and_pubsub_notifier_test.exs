@@ -2,7 +2,7 @@ defmodule Jarga.Workspaces.Services.EmailAndPubSubNotifierTest do
   use ExUnit.Case, async: true
 
   alias Jarga.Workspaces.Infrastructure.Notifiers.EmailAndPubSubNotifier
-  alias Jarga.Accounts.Domain.Entities.User
+  alias Identity.Domain.Entities.User
 
   describe "notify_existing_user/3" do
     test "returns :ok for valid inputs" do
@@ -43,7 +43,7 @@ defmodule Jarga.Workspaces.Services.EmailAndPubSubNotifierTest do
         slug: "test-workspace"
       }
 
-      inviter = %Jarga.Accounts.Domain.Entities.User{
+      inviter = %User{
         id: "inviter-789",
         email: "inviter@example.com",
         first_name: "Jane",
@@ -62,7 +62,7 @@ defmodule Jarga.Workspaces.Services.EmailAndPubSubNotifierTest do
         slug: "test-workspace"
       }
 
-      inviter = %Jarga.Accounts.Domain.Entities.User{
+      inviter = %User{
         id: "inviter-789",
         email: "inviter@example.com",
         first_name: "Jane",
@@ -83,7 +83,7 @@ defmodule Jarga.Workspaces.Services.EmailAndPubSubNotifierTest do
 
   describe "notify_user_removed/2" do
     test "returns :ok for valid inputs" do
-      user = %Jarga.Accounts.Domain.Entities.User{
+      user = %User{
         id: "user-123",
         email: "user@example.com",
         first_name: "John",

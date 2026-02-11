@@ -6,7 +6,8 @@ defmodule Jarga.AgentsTest do
 
   alias Jarga.Agents
   alias Jarga.Agents.Infrastructure.Schemas.{AgentSchema, WorkspaceAgentJoinSchema}
-  alias Jarga.Repo
+  # Use Identity.Repo for all operations to ensure consistent transaction visibility
+  alias Identity.Repo, as: Repo
 
   describe "list_user_agents/1" do
     test "lists all agents owned by user" do

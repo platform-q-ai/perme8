@@ -9,7 +9,7 @@ defmodule Jarga.Agents.Infrastructure.Repositories.WorkspaceAgentRepository do
 
   import Ecto.Query, warn: false
 
-  alias Jarga.Repo
+  alias Identity.Repo, as: Repo
   alias Jarga.Agents.Infrastructure.Schemas.AgentSchema
   alias Jarga.Agents.Infrastructure.Schemas.WorkspaceAgentJoinSchema
 

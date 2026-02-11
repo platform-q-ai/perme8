@@ -7,14 +7,12 @@
 # all use the same configuration file. If you want different
 # configurations or dependencies per app, it is best to
 # move said applications out of the umbrella.
-# This file is responsible for configuring your application
-# and its dependencies with the aid of the Config module.
-#
-# This configuration file is loaded before any dependency and
-# is restricted to this project.
 
-# General application configuration
 import Config
+
+# ============================================================================
+# Jarga App Configuration
+# ============================================================================
 
 config :jarga, :scopes,
   user: [
@@ -81,16 +79,35 @@ config :logger, :default_formatter,
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 
+# ============================================================================
+# Identity App Configuration
+# ============================================================================
+
+config :identity,
+  ecto_repos: [Identity.Repo],
+  generators: [timestamp_type: :utc_datetime, binary_id: true]
+
+# Identity endpoint configuration
+config :identity, IdentityWeb.Endpoint,
+  url: [host: "localhost"],
+  adapter: Bandit.PhoenixAdapter,
+  render_errors: [
+    formats: [html: IdentityWeb.ErrorHTML, json: IdentityWeb.ErrorJSON],
+    layout: false
+  ],
+  pubsub_server: Jarga.PubSub,
+  live_view: [signing_salt: "identity_lv_salt"]
+
+# Shared session configuration - must match jarga_web for session sharing
+config :identity, :session_options,
+  store: :cookie,
+  key: "_jarga_key",
+  signing_salt: "shared_session_salt",
+  same_site: "Lax"
+
+# Identity mailer configuration
+config :identity, Identity.Mailer, adapter: Swoosh.Adapters.Local
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"
-
-# Sample configuration:
-#
-#     config :logger, :default_handler,
-#       level: :info
-#
-#     config :logger, :default_formatter,
-#       format: "$date $time [$level] $metadata$message\n",
-#       metadata: [:user_id]
-#

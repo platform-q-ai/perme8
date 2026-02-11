@@ -10,10 +10,18 @@ config :jarga, :document_save_debounce_ms, 1
 config :bcrypt_elixir, :log_rounds, 1
 
 # Configure your database
+database_url =
+  System.get_env("DATABASE_URL") ||
+    "postgres://postgres:postgres@localhost:5433/jarga_test#{System.get_env("MIX_TEST_PARTITION")}"
+
 config :jarga, Jarga.Repo,
-  url:
-    System.get_env("DATABASE_URL") ||
-      "postgres://postgres:postgres@localhost:5433/jarga_test#{System.get_env("MIX_TEST_PARTITION")}",
+  url: database_url,
+  pool: Ecto.Adapters.SQL.Sandbox,
+  pool_size: 20
+
+# Identity uses the same database as Jarga
+config :identity, Identity.Repo,
+  url: database_url,
   pool: Ecto.Adapters.SQL.Sandbox,
   pool_size: 20
 
@@ -22,6 +30,18 @@ config :jarga_web, JargaWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4002],
   secret_key_base: "k/DpMQ7vB/8OirPNBlAhucs6RCPp5ZRK09Is1Sd7Jb+YThz21IeYYYpueAbJYNEd",
   server: true
+
+# ============================================================================
+# Identity App Test Configuration
+# ============================================================================
+
+config :identity, IdentityWeb.Endpoint,
+  http: [ip: {127, 0, 0, 1}, port: 4003],
+  secret_key_base: "test_identity_secret_key_base_at_least_64_bytes_long_for_security",
+  server: true
+
+# In test we don't send emails
+config :identity, Identity.Mailer, adapter: Swoosh.Adapters.Test
 
 # In test we don't send emails
 config :jarga, Jarga.Mailer, adapter: Swoosh.Adapters.Test

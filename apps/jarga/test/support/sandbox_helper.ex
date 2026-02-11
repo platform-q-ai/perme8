@@ -6,12 +6,16 @@ defmodule Jarga.Test.SandboxHelper do
   have proper database access during JavaScript and integration tests.
 
   This module lives in test/support and is only compiled during tests.
+
+  Supports both Jarga.Repo and Identity.Repo for the umbrella app setup.
   """
 
   # Test support module - top-level boundary for sandbox management
-  use Boundary, top_level?: true, deps: [Jarga.Repo], exports: []
+  use Boundary, top_level?: true, deps: [Jarga.Repo, Identity.Repo], exports: []
 
   alias Ecto.Adapters.SQL.Sandbox
+
+  @repos [Jarga.Repo, Identity.Repo]
 
   @doc """
   Allow a process to access the Ecto Sandbox.
@@ -31,7 +35,9 @@ defmodule Jarga.Test.SandboxHelper do
 
   """
   def allow_process(pid) when is_pid(pid) do
-    Sandbox.allow(Jarga.Repo, self(), pid)
+    Enum.each(@repos, fn repo ->
+      Sandbox.allow(repo, self(), pid)
+    end)
   end
 
   @doc """
@@ -60,18 +66,20 @@ defmodule Jarga.Test.SandboxHelper do
       SandboxHelper.allow_process_with_children(supervisor_pid)
   """
   def allow_process_with_children(supervisor_pid) when is_pid(supervisor_pid) do
-    # Allow the supervisor itself
-    Sandbox.allow(Jarga.Repo, self(), supervisor_pid)
+    # Allow the supervisor itself on all repos
+    allow_process(supervisor_pid)
 
-    # Allow all child processes
-    children = Supervisor.which_children(supervisor_pid)
-
-    Enum.each(children, fn {_id, child_pid, _type, _modules} ->
-      if is_pid(child_pid) do
-        Sandbox.allow(Jarga.Repo, self(), child_pid)
-      end
-    end)
+    # Allow all child processes on all repos
+    supervisor_pid
+    |> Supervisor.which_children()
+    |> Enum.each(&allow_child_process/1)
   end
+
+  defp allow_child_process({_id, child_pid, _type, _modules}) when is_pid(child_pid) do
+    allow_process(child_pid)
+  end
+
+  defp allow_child_process(_), do: :ok
 
   @doc """
   Setup sandbox for the current test process in shared mode.
@@ -80,10 +88,12 @@ defmodule Jarga.Test.SandboxHelper do
   Call this in test setup blocks.
   """
   def setup_test_sandbox do
-    :ok = Sandbox.checkout(Jarga.Repo)
-    # Use shared mode to allow child processes to access the connection
-    # This allows any process spawned by the test process to share the connection
-    Sandbox.mode(Jarga.Repo, {:shared, self()})
+    Enum.each(@repos, fn repo ->
+      :ok = Sandbox.checkout(repo)
+      # Use shared mode to allow child processes to access the connection
+      # This allows any process spawned by the test process to share the connection
+      Sandbox.mode(repo, {:shared, self()})
+    end)
   end
 
   @doc """
@@ -108,13 +118,15 @@ defmodule Jarga.Test.SandboxHelper do
     processes = Process.list()
 
     Enum.each(processes, fn pid ->
-      try do
-        # Try to allow each process - will fail silently if already allowed
-        Sandbox.allow(Jarga.Repo, self(), pid)
-      rescue
-        # Ignore errors (process may not exist or may not need sandbox access)
-        _ -> :ok
-      end
+      Enum.each(@repos, fn repo ->
+        try do
+          # Try to allow each process - will fail silently if already allowed
+          Sandbox.allow(repo, self(), pid)
+        rescue
+          # Ignore errors (process may not exist or may not need sandbox access)
+          _ -> :ok
+        end
+      end)
     end)
   end
 end

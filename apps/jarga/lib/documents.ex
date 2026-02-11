@@ -13,9 +13,10 @@ defmodule Jarga.Documents do
   use Boundary,
     top_level?: true,
     deps: [
-      # Cross-context dependencies (context + domain layer for entity access)
+      # Cross-context dependencies
+      Identity,
+      Identity.Repo,
       Jarga.Accounts,
-      Jarga.Accounts.Domain,
       Jarga.Workspaces,
       Jarga.Projects,
       Jarga.Agents,
@@ -32,8 +33,8 @@ defmodule Jarga.Documents do
       {Notes, []}
     ]
 
-  alias Jarga.Repo
-  alias Jarga.Accounts.Domain.Entities.User
+  alias Identity.Repo, as: Repo
+  alias Identity.Domain.Entities.User
   alias Jarga.Documents.Notes.Infrastructure.Repositories.NoteRepository
   alias Jarga.Documents.Domain.Entities.Document
   alias Jarga.Documents.Infrastructure.Queries.DocumentQueries

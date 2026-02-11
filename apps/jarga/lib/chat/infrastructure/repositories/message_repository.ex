@@ -11,7 +11,7 @@ defmodule Jarga.Chat.Infrastructure.Repositories.MessageRepository do
 
   @behaviour Jarga.Chat.Application.Behaviours.MessageRepositoryBehaviour
 
-  alias Jarga.Repo
+  alias Identity.Repo, as: Repo
   alias Jarga.Chat.Infrastructure.Schemas.MessageSchema
 
   @doc """

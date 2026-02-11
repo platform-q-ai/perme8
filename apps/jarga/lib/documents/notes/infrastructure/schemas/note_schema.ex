@@ -14,7 +14,7 @@ defmodule Jarga.Documents.Notes.Infrastructure.Schemas.NoteSchema do
     field(:note_content, :string)
     field(:yjs_state, :binary)
 
-    belongs_to(:user, Jarga.Accounts.Infrastructure.Schemas.UserSchema)
+    belongs_to(:user, Identity.Infrastructure.Schemas.UserSchema)
 
     belongs_to(:workspace, Jarga.Workspaces.Infrastructure.Schemas.WorkspaceSchema,
       type: Ecto.UUID

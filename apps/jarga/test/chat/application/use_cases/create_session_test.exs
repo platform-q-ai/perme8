@@ -10,7 +10,8 @@ defmodule Jarga.Chat.Application.UseCases.CreateSessionTest do
 
   alias Jarga.Chat.Application.UseCases.CreateSession
   alias Jarga.Chat.Infrastructure.Schemas.SessionSchema
-  alias Jarga.Repo
+  # Use Identity.Repo for all operations to ensure consistent transaction visibility
+  alias Identity.Repo, as: Repo
 
   describe "execute/1" do
     test "creates a session with user_id" do

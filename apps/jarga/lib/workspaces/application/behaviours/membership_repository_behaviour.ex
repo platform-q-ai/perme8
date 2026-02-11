@@ -3,7 +3,7 @@ defmodule Jarga.Workspaces.Application.Behaviours.MembershipRepositoryBehaviour 
   Behaviour defining the workspace membership repository contract.
   """
 
-  alias Jarga.Accounts.Domain.Entities.User
+  alias Identity.Domain.Entities.User
   alias Jarga.Workspaces.Domain.Entities.{Workspace, WorkspaceMember}
 
   @callback get_workspace_for_user(User.t(), Ecto.UUID.t()) :: Workspace.t() | nil

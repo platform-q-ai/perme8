@@ -2,69 +2,35 @@ defmodule Jarga.Accounts.Application do
   @moduledoc """
   Application layer boundary for the Accounts context.
 
-  Contains orchestration logic that coordinates domain and infrastructure:
+  Contains cross-domain use cases that coordinate between Identity and other Jarga contexts.
 
-  ## Use Cases
-  - `UseCases.RegisterUser` - User registration flow
-  - `UseCases.LoginByMagicLink` - Magic link authentication
-  - `UseCases.GenerateSessionToken` - Session token generation
-  - `UseCases.UpdateUserPassword` - Password update flow
-  - `UseCases.UpdateUserEmail` - Email change flow
-  - `UseCases.DeliverLoginInstructions` - Send magic link email
-  - `UseCases.DeliverUserUpdateEmailInstructions` - Send email verification
-  - `UseCases.CreateApiKey` - API key creation
-  - `UseCases.ListApiKeys` - List user's API keys
-  - `UseCases.UpdateApiKey` - Update API key properties
-  - `UseCases.RevokeApiKey` - Deactivate API key
-  - `UseCases.VerifyApiKey` - Verify API key token
-  - `UseCases.ListAccessibleWorkspaces` - List workspaces for API key
-  - `UseCases.GetWorkspaceWithDetails` - Get workspace details via API
-  - `UseCases.CreateProjectViaApi` - Create project via API
-  - `UseCases.GetProjectWithDocumentsViaApi` - Get project with documents
+  ## Cross-Domain Use Cases
 
-  ## Services
-  - `Services.PasswordService` - Password hashing and verification
-  - `Services.ApiKeyTokenService` - API key token operations
+  These use cases remain in Jarga.Accounts because they cross domain boundaries
+  into workspaces and projects:
+
+  - `UseCases.ListAccessibleWorkspaces` - List workspaces accessible via API key
+  - `UseCases.GetWorkspaceWithDetails` - Get workspace with documents and projects
+  - `UseCases.CreateProjectViaApi` - Create project via API key
+  - `UseCases.GetProjectWithDocumentsViaApi` - Get project with documents via API
 
   ## Dependency Rule
 
-  The Application layer may only depend on:
-  - Domain layer (same context)
+  The Application layer depends on:
+  - Identity (for user and API key entities and policies)
 
-  It cannot import:
-  - Infrastructure layer (repos, schemas, notifiers)
-  - Other contexts directly (use dependency injection)
+  Note: Core identity operations (user registration, authentication, session management,
+  API key CRUD) have been moved to the Identity app. This layer only contains use cases
+  that need to coordinate between Identity and other Jarga contexts (Workspaces, Projects).
   """
 
   use Boundary,
     top_level?: true,
-    deps: [Jarga.Accounts.Domain],
+    deps: [Identity, Jarga.Accounts.Domain],
     exports: [
-      UseCases.RegisterUser,
-      UseCases.LoginByMagicLink,
-      UseCases.GenerateSessionToken,
-      UseCases.UpdateUserPassword,
-      UseCases.UpdateUserEmail,
-      UseCases.DeliverLoginInstructions,
-      UseCases.DeliverUserUpdateEmailInstructions,
-      UseCases.CreateApiKey,
-      UseCases.ListApiKeys,
-      UseCases.UpdateApiKey,
-      UseCases.RevokeApiKey,
-      UseCases.VerifyApiKey,
       UseCases.ListAccessibleWorkspaces,
       UseCases.GetWorkspaceWithDetails,
       UseCases.CreateProjectViaApi,
-      UseCases.GetProjectWithDocumentsViaApi,
-      UseCases.UseCase,
-      Services.PasswordService,
-      Services.ApiKeyTokenService,
-      # Behaviours (interfaces for Infrastructure to implement)
-      Behaviours.ApiKeyRepositoryBehaviour,
-      Behaviours.QueriesBehaviour,
-      Behaviours.UserNotifierBehaviour,
-      Behaviours.UserRepositoryBehaviour,
-      Behaviours.UserSchemaBehaviour,
-      Behaviours.UserTokenRepositoryBehaviour
+      UseCases.GetProjectWithDocumentsViaApi
     ]
 end

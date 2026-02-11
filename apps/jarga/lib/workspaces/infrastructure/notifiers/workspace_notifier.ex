@@ -5,9 +5,9 @@ defmodule Jarga.Workspaces.Infrastructure.Notifiers.WorkspaceNotifier do
 
   import Swoosh.Email
 
+  alias Identity.Domain.Entities.User
   alias Jarga.Mailer
   alias Jarga.Workspaces.Domain.Entities.Workspace
-  alias Jarga.Accounts.Domain.Entities.User
 
   # Delivers the email using the application mailer.
   defp deliver(recipient, subject, body) do

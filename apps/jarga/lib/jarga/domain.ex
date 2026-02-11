@@ -3,11 +3,14 @@ defmodule Jarga.Domain do
   Domain layer namespace for the Jarga application.
 
   Jarga uses a **Bounded Context** architecture where each context
-  (Accounts, Agents, Chat, Documents, Notifications, Projects, Workspaces)
+  (Agents, Chat, Documents, Notifications, Projects, Workspaces)
   has its own domain, application, and infrastructure layers.
 
+  Note: User identity and authentication is handled by the separate `Identity` app.
+  See `Identity.Domain` for user entities and policies.
+
   This module provides documentation and introspection for all domain layer
-  modules across contexts.
+  modules across Jarga contexts.
 
   ## Domain Layer Principles
 
@@ -23,10 +26,13 @@ defmodule Jarga.Domain do
 
   Each context has its own domain layer:
 
-  ### Accounts (`Jarga.Accounts.Domain`)
+  ### Identity (separate app - `Identity.Domain`)
   - Entities: User, ApiKey, UserToken
-  - Policies: AuthenticationPolicy, TokenPolicy, ApiKeyPolicy, WorkspaceAccessPolicy
+  - Policies: AuthenticationPolicy, TokenPolicy, ApiKeyPolicy
   - Services: TokenBuilder
+
+  ### Accounts (`Jarga.Accounts.Domain`)
+  - ApiKeyScope: Interprets API key access scopes in the context of workspaces
 
   ### Agents (`Jarga.Agents.Domain`)
   - Entities: Agent, WorkspaceAgentJoin
@@ -66,20 +72,18 @@ defmodule Jarga.Domain do
     exports: []
 
   @doc """
-  Lists all known domain entity modules across all contexts.
+  Lists all known domain entity modules across all Jarga contexts.
+
+  Note: User entities are in the Identity app. See `Identity.Domain.Entities.User`.
 
   ## Examples
 
       iex> Jarga.Domain.entities()
-      [Jarga.Accounts.Domain.Entities.User, ...]
+      [Jarga.Agents.Domain.Entities.Agent, ...]
   """
   @spec entities() :: [module()]
   def entities do
     [
-      # Accounts
-      Jarga.Accounts.Domain.Entities.User,
-      Jarga.Accounts.Domain.Entities.ApiKey,
-      Jarga.Accounts.Domain.Entities.UserToken,
       # Agents
       Jarga.Agents.Domain.Entities.Agent,
       Jarga.Agents.Domain.Entities.WorkspaceAgentJoin,
@@ -99,39 +103,34 @@ defmodule Jarga.Domain do
   end
 
   @doc """
-  Lists all known domain policy modules across all contexts.
+  Lists all known domain policy modules across all Jarga contexts.
+
+  Note: Authentication policies are in the Identity app.
 
   ## Examples
 
       iex> Jarga.Domain.policies()
-      [Jarga.Accounts.Domain.Policies.AuthenticationPolicy, ...]
+      [Jarga.Documents.Domain.Policies.DocumentAccessPolicy, ...]
   """
   @spec policies() :: [module()]
   def policies do
     [
-      # Accounts
-      Jarga.Accounts.Domain.Policies.AuthenticationPolicy,
-      Jarga.Accounts.Domain.Policies.TokenPolicy,
-      Jarga.Accounts.Domain.Policies.ApiKeyPolicy,
-      Jarga.Accounts.Domain.Policies.WorkspaceAccessPolicy,
       # Documents
       Jarga.Documents.Domain.Policies.DocumentAccessPolicy
     ]
   end
 
   @doc """
-  Lists all known domain service modules across all contexts.
+  Lists all known domain service modules across all Jarga contexts.
 
   ## Examples
 
       iex> Jarga.Domain.services()
-      [Jarga.Accounts.Domain.Services.TokenBuilder, ...]
+      [Jarga.Agents.Domain.AgentCloner, ...]
   """
   @spec services() :: [module()]
   def services do
     [
-      # Accounts
-      Jarga.Accounts.Domain.Services.TokenBuilder,
       # Agents
       Jarga.Agents.Domain.AgentCloner,
       # Documents
@@ -147,31 +146,19 @@ defmodule Jarga.Domain do
   @doc """
   Returns a map of all domain modules grouped by context.
 
+  Note: Identity context (users, auth) is in a separate app.
+
   ## Examples
 
       iex> Jarga.Domain.by_context()
       %{
-        accounts: %{entities: [...], policies: [...], services: [...]},
+        agents: %{entities: [...], policies: [...], services: [...]},
         ...
       }
   """
   @spec by_context() :: map()
   def by_context do
     %{
-      accounts: %{
-        entities: [
-          Jarga.Accounts.Domain.Entities.User,
-          Jarga.Accounts.Domain.Entities.ApiKey,
-          Jarga.Accounts.Domain.Entities.UserToken
-        ],
-        policies: [
-          Jarga.Accounts.Domain.Policies.AuthenticationPolicy,
-          Jarga.Accounts.Domain.Policies.TokenPolicy,
-          Jarga.Accounts.Domain.Policies.ApiKeyPolicy,
-          Jarga.Accounts.Domain.Policies.WorkspaceAccessPolicy
-        ],
-        services: [Jarga.Accounts.Domain.Services.TokenBuilder]
-      },
       agents: %{
         entities: [
           Jarga.Agents.Domain.Entities.Agent,

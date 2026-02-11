@@ -6,8 +6,11 @@ defmodule Jarga.InfrastructureLayer do
   has its own infrastructure layer with repositories, schemas, queries,
   and external service integrations.
 
+  Note: User/account infrastructure is in the separate `Identity` app.
+  See `Identity.Infrastructure` for user schemas, repositories, etc.
+
   This module provides documentation and introspection for all infrastructure
-  layer modules across contexts.
+  layer modules across Jarga contexts.
 
   ## Infrastructure Layer Principles
 
@@ -29,20 +32,18 @@ defmodule Jarga.InfrastructureLayer do
   """
 
   @doc """
-  Lists all known repository modules across all contexts.
+  Lists all known repository modules across all Jarga contexts.
+
+  Note: User repositories are in the Identity app.
 
   ## Examples
 
       iex> Jarga.InfrastructureLayer.repositories()
-      [Jarga.Accounts.Infrastructure.Repositories.UserRepository, ...]
+      [Jarga.Agents.Infrastructure.Repositories.AgentRepository, ...]
   """
   @spec repositories() :: [module()]
   def repositories do
     [
-      # Accounts
-      Jarga.Accounts.Infrastructure.Repositories.UserRepository,
-      Jarga.Accounts.Infrastructure.Repositories.UserTokenRepository,
-      Jarga.Accounts.Infrastructure.Repositories.ApiKeyRepository,
       # Agents
       Jarga.Agents.Infrastructure.Repositories.AgentRepository,
       Jarga.Agents.Infrastructure.Repositories.WorkspaceAgentRepository,
@@ -66,20 +67,18 @@ defmodule Jarga.InfrastructureLayer do
   end
 
   @doc """
-  Lists all known schema modules across all contexts.
+  Lists all known schema modules across all Jarga contexts.
+
+  Note: User schemas are in the Identity app (`Identity.Infrastructure.Schemas.UserSchema`).
 
   ## Examples
 
       iex> Jarga.InfrastructureLayer.schemas()
-      [Jarga.Accounts.Infrastructure.Schemas.UserSchema, ...]
+      [Jarga.Agents.Infrastructure.Schemas.AgentSchema, ...]
   """
   @spec schemas() :: [module()]
   def schemas do
     [
-      # Accounts
-      Jarga.Accounts.Infrastructure.Schemas.UserSchema,
-      Jarga.Accounts.Infrastructure.Schemas.UserTokenSchema,
-      Jarga.Accounts.Infrastructure.Schemas.ApiKeySchema,
       # Agents
       Jarga.Agents.Infrastructure.Schemas.AgentSchema,
       Jarga.Agents.Infrastructure.Schemas.WorkspaceAgentJoinSchema,
@@ -101,19 +100,16 @@ defmodule Jarga.InfrastructureLayer do
   end
 
   @doc """
-  Lists all known query modules across all contexts.
+  Lists all known query modules across all Jarga contexts.
 
   ## Examples
 
       iex> Jarga.InfrastructureLayer.queries()
-      [Jarga.Accounts.Infrastructure.Queries.Queries, ...]
+      [Jarga.Agents.Infrastructure.Queries.AgentQueries, ...]
   """
   @spec queries() :: [module()]
   def queries do
     [
-      # Accounts
-      Jarga.Accounts.Infrastructure.Queries.Queries,
-      Jarga.Accounts.Infrastructure.Queries.ApiKeyQueries,
       # Agents
       Jarga.Agents.Infrastructure.Queries.AgentQueries,
       # Chat
@@ -129,18 +125,18 @@ defmodule Jarga.InfrastructureLayer do
   end
 
   @doc """
-  Lists all known notifier modules across all contexts.
+  Lists all known notifier modules across all Jarga contexts.
+
+  Note: User notifiers are in the Identity app.
 
   ## Examples
 
       iex> Jarga.InfrastructureLayer.notifiers()
-      [Jarga.Accounts.Infrastructure.Notifiers.UserNotifier, ...]
+      [Jarga.Agents.Infrastructure.Notifiers.PubSubNotifier, ...]
   """
   @spec notifiers() :: [module()]
   def notifiers do
     [
-      # Accounts
-      Jarga.Accounts.Infrastructure.Notifiers.UserNotifier,
       # Agents
       Jarga.Agents.Infrastructure.Notifiers.PubSubNotifier,
       # Documents
@@ -157,7 +153,7 @@ defmodule Jarga.InfrastructureLayer do
   end
 
   @doc """
-  Lists all known external service modules across all contexts.
+  Lists all known external service modules across all Jarga contexts.
 
   ## Examples
 
@@ -167,8 +163,6 @@ defmodule Jarga.InfrastructureLayer do
   @spec external_services() :: [module()]
   def external_services do
     [
-      # Accounts
-      Jarga.Accounts.Infrastructure.Services.TokenGenerator,
       # Agents
       Jarga.Agents.Infrastructure.Services.LlmClient
     ]
@@ -180,7 +174,7 @@ defmodule Jarga.InfrastructureLayer do
   ## Examples
 
       iex> Jarga.InfrastructureLayer.summary()
-      %{repositories: 16, schemas: 14, queries: 8, notifiers: 8, services: 2, total: 48}
+      %{repositories: 13, schemas: 11, queries: 6, notifiers: 7, services: 1, total: 38}
   """
   @spec summary() :: map()
   def summary do

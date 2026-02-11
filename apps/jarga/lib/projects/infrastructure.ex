@@ -33,10 +33,9 @@ defmodule Jarga.Projects.Infrastructure do
       Jarga.Projects.Domain,
       Jarga.Projects.Application,
       Jarga.Repo,
-      # Cross-context dependencies (context + domain/infrastructure layer for entity access)
+      # Cross-context dependencies
+      Identity,
       Jarga.Accounts,
-      Jarga.Accounts.Domain,
-      Jarga.Accounts.Infrastructure,
       Jarga.Workspaces,
       Jarga.Workspaces.Infrastructure
     ],

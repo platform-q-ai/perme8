@@ -14,9 +14,10 @@ defmodule Jarga.Workspaces do
   use Boundary,
     top_level?: true,
     deps: [
-      # Cross-context dependencies (context + domain layer for entity access)
+      # Cross-context dependencies
+      Identity,
+      Identity.Repo,
       Jarga.Accounts,
-      Jarga.Accounts.Domain,
       # Same-context layer dependencies
       Jarga.Workspaces.Domain,
       Jarga.Workspaces.Application,
@@ -34,8 +35,8 @@ defmodule Jarga.Workspaces do
 
   import Ecto.Query, warn: false
 
-  alias Jarga.Repo
-  alias Jarga.Accounts.Domain.Entities.User
+  alias Identity.Repo, as: Repo
+  alias Identity.Domain.Entities.User
   alias Jarga.Workspaces.Domain.Entities.{Workspace, WorkspaceMember}
   alias Jarga.Workspaces.Infrastructure.Schemas.{WorkspaceSchema, WorkspaceMemberSchema}
   alias Jarga.Workspaces.Infrastructure.Queries.Queries
@@ -63,7 +64,7 @@ defmodule Jarga.Workspaces do
       [%Workspace{}, ...]
 
   """
-  def list_workspaces_for_user(%User{} = user) do
+  def list_workspaces_for_user(%{id: _} = user) do
     Queries.base()
     |> Queries.for_user(user)
     |> Queries.active()
@@ -86,6 +87,11 @@ defmodule Jarga.Workspaces do
       {:error, %Ecto.Changeset{}}
 
   """
+  # Use Identity.Repo for workspace creation because workspace_members has FK
+  # to users table. In test sandbox mode, the user created by Identity.Repo
+  # must be visible when inserting the owner as a workspace member.
+  # Both workspace and workspace_member are created in the same transaction
+  # to ensure atomicity.
   def create_workspace(%User{} = user, attrs) do
     Repo.transact(fn ->
       with {:ok, workspace} <- create_workspace_record(attrs),

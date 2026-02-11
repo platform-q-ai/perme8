@@ -17,7 +17,7 @@ defmodule Jarga.Accounts.Application.UseCases.ListAccessibleWorkspaces do
   provides the workspace fetching function.
   """
 
-  alias Jarga.Accounts.Domain.Policies.WorkspaceAccessPolicy
+  alias Jarga.Accounts.Domain.ApiKeyScope
 
   @doc """
   Executes the list accessible workspaces use case.
@@ -58,9 +58,8 @@ defmodule Jarga.Accounts.Application.UseCases.ListAccessibleWorkspaces do
     # Get all workspaces the user has access to
     all_user_workspaces = list_workspaces_fn.(user)
 
-    # Filter to only those the API key is allowed to access
-    accessible_workspaces =
-      WorkspaceAccessPolicy.list_accessible_workspaces(api_key, all_user_workspaces)
+    # Filter to only those within the API key's scope
+    accessible_workspaces = ApiKeyScope.filter_workspaces(api_key, all_user_workspaces)
 
     {:ok, accessible_workspaces}
   end

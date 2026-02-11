@@ -9,8 +9,8 @@ defmodule JargaWeb.UserAuth do
   import Phoenix.Controller
 
   alias Jarga.Accounts
-  alias Jarga.Accounts.Domain.Scope
-  alias Jarga.Accounts.Domain.Entities.User
+  alias Identity.Domain.Scope
+  alias Identity.Domain.Entities.User
 
   # Make the remember me cookie valid for 14 days. This should match
   # the session validity setting in UserToken.

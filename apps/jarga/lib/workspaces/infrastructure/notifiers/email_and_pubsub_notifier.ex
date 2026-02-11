@@ -10,7 +10,7 @@ defmodule Jarga.Workspaces.Infrastructure.Notifiers.EmailAndPubSubNotifier do
 
   @behaviour Jarga.Workspaces.Application.Behaviours.NotificationServiceBehaviour
 
-  alias Jarga.Accounts.Domain.Entities.User
+  alias Identity.Domain.Entities.User
   alias Jarga.Workspaces.Domain.Entities.Workspace
   alias Jarga.Workspaces.Infrastructure.Notifiers.WorkspaceNotifier
 

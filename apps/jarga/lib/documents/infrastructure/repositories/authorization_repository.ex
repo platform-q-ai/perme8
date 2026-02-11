@@ -10,8 +10,8 @@ defmodule Jarga.Documents.Infrastructure.Repositories.AuthorizationRepository do
 
   @behaviour Jarga.Documents.Application.Behaviours.AuthorizationRepositoryBehaviour
 
-  alias Jarga.Repo
-  alias Jarga.Accounts.Domain.Entities.User
+  alias Identity.Repo, as: Repo
+  alias Identity.Domain.Entities.User
   alias Jarga.Workspaces
   alias Jarga.Documents.Infrastructure.Schemas.DocumentSchema
   alias Jarga.Documents.Infrastructure.Queries.DocumentQueries

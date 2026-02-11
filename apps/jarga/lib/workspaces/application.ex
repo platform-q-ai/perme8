@@ -32,9 +32,9 @@ defmodule Jarga.Workspaces.Application do
     top_level?: true,
     deps: [
       Jarga.Workspaces.Domain,
-      # Cross-context dependencies (context + domain layer for entity access)
-      Jarga.Accounts,
-      Jarga.Accounts.Domain
+      # Cross-context dependencies
+      Identity,
+      Jarga.Accounts
     ],
     exports: [
       UseCases.InviteMember,

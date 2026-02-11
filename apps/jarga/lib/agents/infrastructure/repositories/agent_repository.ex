@@ -9,7 +9,9 @@ defmodule Jarga.Agents.Infrastructure.Repositories.AgentRepository do
 
   import Ecto.Query, warn: false
 
-  alias Jarga.Repo
+  # All database operations use Identity.Repo to ensure consistent visibility
+  # of user data (users table is managed by Identity.Repo)
+  alias Identity.Repo, as: Repo
   alias Jarga.Agents.Infrastructure.Schemas.AgentSchema
 
   @doc """

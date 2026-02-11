@@ -14,9 +14,10 @@ defmodule Jarga.Projects do
   use Boundary,
     top_level?: true,
     deps: [
-      # Cross-context dependencies (context + domain layer for entity access)
+      # Cross-context dependencies
+      Identity,
+      Identity.Repo,
       Jarga.Accounts,
-      Jarga.Accounts.Domain,
       Jarga.Workspaces,
       # Same-context layer dependencies
       Jarga.Projects.Domain,
@@ -29,8 +30,8 @@ defmodule Jarga.Projects do
       {Infrastructure.Schemas.ProjectSchema, []}
     ]
 
-  alias Jarga.Repo
-  alias Jarga.Accounts.Domain.Entities.User
+  alias Identity.Repo, as: Repo
+  alias Identity.Domain.Entities.User
   alias Jarga.Projects.Infrastructure.Queries.Queries
   alias Jarga.Projects.Infrastructure.Schemas.ProjectSchema
   alias Jarga.Projects.Application.UseCases.{CreateProject, DeleteProject, UpdateProject}

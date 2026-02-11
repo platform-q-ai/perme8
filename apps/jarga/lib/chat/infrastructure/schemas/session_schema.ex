@@ -18,7 +18,7 @@ defmodule Jarga.Chat.Infrastructure.Schemas.SessionSchema do
   schema "chat_sessions" do
     field(:title, :string)
 
-    belongs_to(:user, Jarga.Accounts.Infrastructure.Schemas.UserSchema)
+    belongs_to(:user, Identity.Infrastructure.Schemas.UserSchema)
     belongs_to(:workspace, Jarga.Workspaces.Infrastructure.Schemas.WorkspaceSchema)
     belongs_to(:project, Jarga.Projects.Infrastructure.Schemas.ProjectSchema)
 

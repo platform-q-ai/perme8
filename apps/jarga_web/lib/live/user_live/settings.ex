@@ -6,7 +6,7 @@ defmodule JargaWeb.UserLive.Settings do
   on_mount {JargaWeb.UserAuth, :require_sudo_mode}
 
   alias Jarga.Accounts
-  alias Jarga.Accounts.Domain.Entities.User
+  alias Identity.Domain.Entities.User
 
   @impl true
   def render(assigns) do

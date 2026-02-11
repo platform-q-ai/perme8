@@ -16,8 +16,10 @@ defmodule Jarga.Workspaces.Infrastructure.Repositories.MembershipRepository do
 
   import Ecto.Query, warn: false
 
-  alias Jarga.Repo
-  alias Jarga.Accounts.Domain.Entities.User
+  # All database operations use Identity.Repo to ensure consistent visibility
+  # of user data (users table is managed by Identity.Repo)
+  alias Identity.Repo, as: Repo
+  alias Identity.Domain.Entities.User
   alias Jarga.Workspaces.Infrastructure.Queries.Queries
   alias Jarga.Workspaces.Domain.Entities.{Workspace, WorkspaceMember}
   alias Jarga.Workspaces.Infrastructure.Schemas.{WorkspaceSchema, WorkspaceMemberSchema}

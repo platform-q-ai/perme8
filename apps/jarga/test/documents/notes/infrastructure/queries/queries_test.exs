@@ -2,7 +2,8 @@ defmodule Jarga.Documents.Notes.QueriesTest do
   use Jarga.DataCase, async: true
 
   alias Jarga.Documents.Notes.Infrastructure.Queries.Queries
-  alias Jarga.Repo
+  # Use Identity.Repo for all operations to ensure consistent transaction visibility
+  alias Identity.Repo, as: Repo
 
   import Jarga.AccountsFixtures
   import Jarga.WorkspacesFixtures

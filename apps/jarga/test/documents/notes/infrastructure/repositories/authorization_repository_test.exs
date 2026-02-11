@@ -4,7 +4,8 @@ defmodule Jarga.Documents.Notes.Infrastructure.AuthorizationRepositoryTest do
   alias Jarga.Documents.Notes.Infrastructure.Repositories.AuthorizationRepository
   alias Jarga.Documents
   alias Jarga.Documents.Infrastructure.Schemas.DocumentComponentSchema
-  alias Jarga.Repo
+  # Use Identity.Repo for all operations to ensure consistent transaction visibility
+  alias Identity.Repo, as: Repo
 
   import Jarga.AccountsFixtures
   import Jarga.WorkspacesFixtures

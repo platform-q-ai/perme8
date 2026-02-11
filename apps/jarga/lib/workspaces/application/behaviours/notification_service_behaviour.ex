@@ -6,7 +6,7 @@ defmodule Jarga.Workspaces.Application.Behaviours.NotificationServiceBehaviour d
   This allows for dependency injection and easier testing with mock implementations.
   """
 
-  alias Jarga.Accounts.Domain.Entities.User
+  alias Identity.Domain.Entities.User
   alias Jarga.Workspaces.Domain.Entities.Workspace
 
   @doc """
