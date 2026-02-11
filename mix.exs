@@ -8,7 +8,23 @@ defmodule Perme8.MixProject do
       start_permanent: Mix.env() == :prod,
       listeners: [Phoenix.CodeReloader],
       deps: deps(),
-      aliases: aliases()
+      aliases: aliases(),
+      releases: releases()
+    ]
+  end
+
+  defp releases do
+    [
+      perme8: [
+        applications: [
+          alkali: :permanent,
+          identity: :permanent,
+          jarga: :permanent,
+          jarga_tools: :permanent,
+          jarga_web: :permanent
+        ],
+        overlay: "rel/overlays"
+      ]
     ]
   end
 
