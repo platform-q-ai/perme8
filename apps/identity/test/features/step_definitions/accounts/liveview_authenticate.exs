@@ -257,14 +257,8 @@ defmodule Identity.Accounts.LiveViewAuthenticateSteps do
   end
 
   step "I should see an email validation error", context do
-    # Login page doesn't have real-time validation, so we skip this for login page
-    # This step is only applicable to registration page
     html = context[:html]
-
-    if is_binary(html) do
-      assert html =~ "must have the @ sign" or html =~ "invalid" or html =~ "format"
-    end
-
+    assert html =~ "must have the @ sign" or html =~ "invalid" or html =~ "format"
     {:ok, context}
   end
 
