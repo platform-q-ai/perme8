@@ -93,6 +93,8 @@ defmodule JargaWeb.MixProject do
       setup: ["deps.get", "assets.setup", "assets.build"],
       "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
       "assets.build": ["tailwind jarga", "esbuild jarga"],
+      # Note: the root mix.exs overrides phx.digest with explicit paths for umbrella support.
+      # This bare version works when run directly from apps/jarga_web/.
       "assets.deploy": [
         "tailwind jarga --minify",
         "esbuild jarga --minify",

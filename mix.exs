@@ -27,7 +27,7 @@ defmodule Perme8.MixProject do
         "tailwind jarga --minify",
         "assets.copy_fonts",
         "esbuild jarga --minify",
-        "phx.digest"
+        "phx.digest apps/jarga_web/priv/static -o apps/jarga_web/priv/static"
       ],
       precommit: [
         "compile --warnings-as-errors",
