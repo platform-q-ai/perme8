@@ -36,6 +36,16 @@ config :jarga, :chat_context,
   max_content_chars: 3000,
   max_messages_history: 20
 
+# Configures the JargaApi endpoint (JSON API)
+config :jarga_api, JargaApi.Endpoint,
+  url: [host: "localhost"],
+  adapter: Bandit.PhoenixAdapter,
+  render_errors: [
+    formats: [json: JargaApi.ErrorJSON],
+    layout: false
+  ],
+  pubsub_server: Jarga.PubSub
+
 # Configures the endpoint
 config :jarga_web, JargaWeb.Endpoint,
   url: [host: "localhost"],

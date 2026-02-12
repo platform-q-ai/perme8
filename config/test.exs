@@ -31,6 +31,12 @@ config :jarga_web, JargaWeb.Endpoint,
   secret_key_base: "k/DpMQ7vB/8OirPNBlAhucs6RCPp5ZRK09Is1Sd7Jb+YThz21IeYYYpueAbJYNEd",
   server: true
 
+# JargaApi test configuration (JSON API on port 4005)
+config :jarga_api, JargaApi.Endpoint,
+  http: [ip: {127, 0, 0, 1}, port: 4005],
+  secret_key_base: "jarga_api_test_secret_key_base_at_least_64_bytes_long_for_security",
+  server: true
+
 # ============================================================================
 # Identity App Test Configuration
 # ============================================================================
@@ -98,3 +104,10 @@ config :jarga_web, :cucumber,
     "apps/jarga_web/test/features/**/*.feature"
   ],
   steps: ["apps/jarga_web/test/features/step_definitions/**/*.exs"]
+
+# Configure Cucumber for JargaApi BDD feature testing
+config :jarga_api, :cucumber,
+  features: [
+    "apps/jarga_api/test/features/**/*.feature"
+  ],
+  steps: ["apps/jarga_api/test/features/step_definitions/**/*.exs"]

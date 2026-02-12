@@ -47,6 +47,15 @@ config :identity, Identity.Repo,
   show_sensitive_data_on_connection_error: true,
   pool_size: 10
 
+# JargaApi dev configuration (JSON API on port 4004)
+config :jarga_api, JargaApi.Endpoint,
+  http: [ip: {127, 0, 0, 1}, port: 4004],
+  check_origin: false,
+  code_reloader: true,
+  debug_errors: true,
+  secret_key_base: "jarga_api_dev_secret_key_base_at_least_64_bytes_long_for_security",
+  watchers: []
+
 # For development, we disable any cache and enable
 # debugging and code reloading.
 config :jarga_web, JargaWeb.Endpoint,
