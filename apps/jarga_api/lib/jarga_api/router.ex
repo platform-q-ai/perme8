@@ -1,6 +1,7 @@
 defmodule JargaApi.Router do
   use JargaApi, :router
 
+  # Unauthenticated API pipeline for public endpoints (e.g., health check, OpenAPI spec)
   pipeline :api do
     plug(:accepts, ["json"])
   end
