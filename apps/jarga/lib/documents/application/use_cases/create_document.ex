@@ -131,7 +131,8 @@ defmodule Jarga.Documents.Application.UseCases.CreateDocument do
           id: Ecto.UUID.generate(),
           user_id: user.id,
           workspace_id: workspace_id,
-          project_id: Map.get(attrs, :project_id)
+          project_id: Map.get(attrs, :project_id),
+          note_content: Map.get(attrs, :content) || Map.get(attrs, "content")
         }
 
         note_repository.create(note_attrs)
