@@ -25,8 +25,11 @@ defmodule Projects.Api.ActionSteps do
     # Get JSON body from docstring
     body = context.docstring
 
-    # Translate workspace slug in path to actual slug from context
-    actual_path = translate_workspace_slug_in_path(path, context)
+    # Translate workspace slug and other known slugs in path to actual slugs from context
+    actual_path =
+      path
+      |> translate_workspace_slug_in_path(context)
+      |> translate_known_slugs(context)
 
     # Build a conn with sandbox metadata header for proper DB connection sharing
     conn =
@@ -75,5 +78,17 @@ defmodule Projects.Api.ActionSteps do
         # Path doesn't match workspace pattern
         path
     end
+  end
+
+  # Translate any known slugs (documents, etc.) from feature-file slugs to actual DB slugs.
+  # Uses the slug_translations map stored in context by setup steps.
+  defp translate_known_slugs(path, context) do
+    slug_translations = context[:slug_translations] || %{}
+
+    Enum.reduce(slug_translations, path, fn {feature_slug, actual_slug}, acc ->
+      # Only translate when the feature slug appears as a path segment
+      # (preceded by "/" and followed by "/" or end of string)
+      String.replace(acc, "/" <> feature_slug, "/" <> actual_slug)
+    end)
   end
 end
