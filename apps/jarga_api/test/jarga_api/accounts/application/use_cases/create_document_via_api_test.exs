@@ -44,7 +44,7 @@ defmodule JargaApi.Accounts.Application.UseCases.CreateDocumentViaApiTest do
       end
 
       create_document_fn = fn ^user, "workspace-id", attrs ->
-        assert attrs["title"] == "My Doc"
+        assert attrs[:title] == "My Doc"
         {:ok, expected_document}
       end
 
@@ -74,8 +74,8 @@ defmodule JargaApi.Accounts.Application.UseCases.CreateDocumentViaApiTest do
       end
 
       create_document_fn = fn ^user, "workspace-id", attrs ->
-        assert attrs["title"] == "Project Doc"
-        assert attrs["project_id"] == "project-id"
+        assert attrs[:title] == "Project Doc"
+        assert attrs[:project_id] == "project-id"
         {:ok, expected_document}
       end
 
@@ -103,8 +103,8 @@ defmodule JargaApi.Accounts.Application.UseCases.CreateDocumentViaApiTest do
       get_workspace_fn = fn _user, _slug -> {:ok, workspace, member} end
 
       create_document_fn = fn _user, _workspace_id, attrs ->
-        assert attrs["is_public"] == true
-        refute Map.has_key?(attrs, "visibility")
+        assert attrs[:is_public] == true
+        refute Map.has_key?(attrs, :visibility)
         {:ok, expected_document}
       end
 
@@ -131,7 +131,7 @@ defmodule JargaApi.Accounts.Application.UseCases.CreateDocumentViaApiTest do
       get_workspace_fn = fn _user, _slug -> {:ok, workspace, member} end
 
       create_document_fn = fn _user, _workspace_id, attrs ->
-        assert attrs["is_public"] == false
+        assert attrs[:is_public] == false
         {:ok, expected_document}
       end
 
@@ -284,7 +284,7 @@ defmodule JargaApi.Accounts.Application.UseCases.CreateDocumentViaApiTest do
       get_workspace_fn = fn _user, _slug -> {:ok, workspace, member} end
 
       create_document_fn = fn _user, _workspace_id, attrs ->
-        assert attrs["content"] == "Hello world"
+        assert attrs[:content] == "Hello world"
         {:ok, expected_document}
       end
 
