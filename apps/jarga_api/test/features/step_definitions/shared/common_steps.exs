@@ -20,11 +20,7 @@ defmodule JargaApi.CommonSteps do
   # ============================================================================
 
   step "I am logged in as {string}", %{args: [email]} = context do
-    user = get_in(context, [:users, email])
-
-    unless user do
-      raise "User #{email} not found in context[:users]. Make sure 'the following users exist:' step ran first."
-    end
+    user = require_user!(context, email)
 
     # For API tests, we just set the current_user in context.
     # API auth uses Bearer tokens, not session cookies.
@@ -39,18 +35,8 @@ defmodule JargaApi.CommonSteps do
   # ============================================================================
 
   step "{string} is a member of workspace {string}", %{args: [email, workspace_slug]} = context do
-    user = get_in(context, [:users, email])
-
-    unless user do
-      raise "User #{email} not found in context[:users]"
-    end
-
-    workspaces = context[:workspaces] || %{}
-    workspace = Map.get(workspaces, workspace_slug)
-
-    unless workspace do
-      raise "Workspace #{workspace_slug} not found in context[:workspaces]"
-    end
+    user = require_user!(context, email)
+    workspace = require_workspace!(context, workspace_slug)
 
     # Add as member, ignoring if already a member (e.g., as owner)
     try do
@@ -85,6 +71,18 @@ defmodule JargaApi.CommonSteps do
   # ============================================================================
   # HELPERS
   # ============================================================================
+
+  defp require_user!(context, email) do
+    get_in(context, [:users, email]) ||
+      raise "User #{email} not found in context[:users]. Make sure 'the following users exist:' step ran first."
+  end
+
+  defp require_workspace!(context, workspace_slug) do
+    workspaces = context[:workspaces] || %{}
+
+    Map.get(workspaces, workspace_slug) ||
+      raise "Workspace #{workspace_slug} not found in context[:workspaces]"
+  end
 
   defp ensure_sandbox_checkout do
     case Sandbox.checkout(Jarga.Repo) do
