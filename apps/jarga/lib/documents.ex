@@ -94,7 +94,8 @@ defmodule Jarga.Documents do
 
   """
   def get_document_by_slug(%User{} = user, workspace_id, slug) do
-    schema =
+    # First try to find the document with user visibility filtering
+    viewable_schema =
       DocumentQueries.base()
       |> DocumentQueries.by_slug(slug)
       |> DocumentQueries.for_workspace(workspace_id)
@@ -102,9 +103,24 @@ defmodule Jarga.Documents do
       |> DocumentQueries.with_components()
       |> Repo.one()
 
-    case schema do
-      nil -> {:error, :document_not_found}
-      schema -> {:ok, Document.from_schema(schema)}
+    case viewable_schema do
+      nil ->
+        # Document not viewable - check if it exists at all (without user filtering)
+        exists? =
+          DocumentQueries.base()
+          |> DocumentQueries.by_slug(slug)
+          |> DocumentQueries.for_workspace(workspace_id)
+          |> Repo.exists?()
+
+        if exists? do
+          # Document exists but user can't view it (private doc owned by someone else)
+          {:error, :forbidden}
+        else
+          {:error, :document_not_found}
+        end
+
+      schema ->
+        {:ok, Document.from_schema(schema)}
     end
   end
 
