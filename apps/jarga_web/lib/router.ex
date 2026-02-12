@@ -13,31 +13,10 @@ defmodule JargaWeb.Router do
     plug(:fetch_current_scope_for_user)
   end
 
-  pipeline :api do
-    plug(:accepts, ["json"])
-  end
-
-  pipeline :api_authenticated do
-    plug(:accepts, ["json"])
-    plug(JargaWeb.Plugs.ApiAuthPlug)
-  end
-
   scope "/", JargaWeb do
     pipe_through(:browser)
 
     get("/", PageController, :home)
-  end
-
-  # API routes with API key authentication
-  scope "/api", JargaWeb do
-    pipe_through(:api_authenticated)
-
-    get("/workspaces", WorkspaceApiController, :index)
-    get("/workspaces/:slug", WorkspaceApiController, :show)
-
-    # Project endpoints
-    post("/workspaces/:workspace_slug/projects", ProjectApiController, :create)
-    get("/workspaces/:workspace_slug/projects/:slug", ProjectApiController, :show)
   end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development

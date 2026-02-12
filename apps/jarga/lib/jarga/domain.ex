@@ -31,9 +31,6 @@ defmodule Jarga.Domain do
   - Policies: AuthenticationPolicy, TokenPolicy, ApiKeyPolicy
   - Services: TokenBuilder
 
-  ### Accounts (`Jarga.Accounts.Domain`)
-  - ApiKeyScope: Interprets API key access scopes in the context of workspaces
-
   ### Agents (`Jarga.Agents.Domain`)
   - Entities: Agent, WorkspaceAgentJoin
   - Services: AgentCloner
