@@ -185,12 +185,14 @@ if config_env() == :prod do
     secret_key_base: secret_key_base,
     check_origin: check_origins
 
-  # JargaApi (JSON API) - separate port for independent scaling
+  # JargaApi (JSON API) - separate port/host for independent scaling
+  jarga_api_host = System.get_env("JARGA_API_HOST") || jarga_host
+
   jarga_api_port =
     String.to_integer(System.get_env("JARGA_API_PORT") || "4004")
 
   config :jarga_api, JargaApi.Endpoint,
-    url: [host: jarga_host, port: 443, scheme: "https"],
+    url: [host: jarga_api_host, port: 443, scheme: "https"],
     http: [
       ip: {0, 0, 0, 0, 0, 0, 0, 0},
       port: jarga_api_port
