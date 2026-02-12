@@ -81,7 +81,11 @@ defmodule JargaApi.Accounts.Application.UseCases.CreateDocumentViaApi do
     with :ok <- verify_api_key_access(api_key, workspace_slug),
          {:ok, workspace, _member} <- fetch_workspace(user, workspace_slug, opts),
          {:ok, attrs} <- maybe_fetch_project(user, workspace.id, attrs, opts) do
-      attrs = translate_visibility(attrs)
+      attrs =
+        attrs
+        |> translate_visibility()
+        |> atomize_keys()
+
       create_document(user, workspace.id, attrs, opts)
     end
   end
@@ -132,6 +136,13 @@ defmodule JargaApi.Accounts.Application.UseCases.CreateDocumentViaApi do
       end
 
     Map.put(attrs, "is_public", is_public)
+  end
+
+  defp atomize_keys(attrs) do
+    Map.new(attrs, fn
+      {key, value} when is_binary(key) -> {String.to_existing_atom(key), value}
+      {key, value} when is_atom(key) -> {key, value}
+    end)
   end
 
   defp create_document(user, workspace_id, attrs, opts) do

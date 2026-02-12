@@ -19,5 +19,14 @@ defmodule JargaApi.Router do
 
     post("/workspaces/:workspace_slug/projects", ProjectApiController, :create)
     get("/workspaces/:workspace_slug/projects/:slug", ProjectApiController, :show)
+
+    post("/workspaces/:workspace_slug/documents", DocumentApiController, :create)
+    get("/workspaces/:workspace_slug/documents/:slug", DocumentApiController, :show)
+
+    post(
+      "/workspaces/:workspace_slug/projects/:project_slug/documents",
+      DocumentApiController,
+      :create
+    )
   end
 end

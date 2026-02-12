@@ -80,8 +80,9 @@ defmodule JargaApi.Accounts.Application.UseCases.GetDocumentViaApi do
          {:ok, document} <- fetch_document(user, workspace.id, document_slug, opts) do
       note = fetch_note(document, opts)
       project_slug = maybe_fetch_project_slug(user, workspace.id, document, opts)
+      owner_email = resolve_owner_email(user, document, opts)
 
-      {:ok, build_result(document, note, workspace_slug, project_slug)}
+      {:ok, build_result(document, note, workspace_slug, project_slug, owner_email)}
     end
   end
 
@@ -119,13 +120,31 @@ defmodule JargaApi.Accounts.Application.UseCases.GetDocumentViaApi do
     end
   end
 
-  defp build_result(document, note, workspace_slug, project_slug) do
+  defp resolve_owner_email(user, document, opts) do
+    if document.created_by == user.id do
+      user.email
+    else
+      case Keyword.get(opts, :get_user) do
+        nil ->
+          # Fallback to user ID if no get_user function provided
+          document.created_by
+
+        get_user_fn ->
+          case get_user_fn.(document.created_by) do
+            nil -> document.created_by
+            owner -> owner.email
+          end
+      end
+    end
+  end
+
+  defp build_result(document, note, workspace_slug, project_slug, owner_email) do
     %{
       title: document.title,
       slug: document.slug,
       content: note.note_content,
       visibility: if(document.is_public, do: "public", else: "private"),
-      owner: document.created_by,
+      owner: owner_email,
       workspace_slug: workspace_slug,
       project_slug: project_slug
     }
