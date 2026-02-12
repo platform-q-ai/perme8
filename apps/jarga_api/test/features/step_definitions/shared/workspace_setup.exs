@@ -13,12 +13,14 @@ defmodule JargaApi.Shared.WorkspaceSetupSteps do
 
   import Jarga.WorkspacesFixtures
 
+  alias JargaApi.Test.Helpers
+
   # ============================================================================
   # WORKSPACE SETUP STEPS
   # ============================================================================
 
   step "the following workspaces exist:", context do
-    JargaApi.Test.Helpers.ensure_sandbox_checkout()
+    Helpers.ensure_sandbox_checkout()
 
     table_data = context.datatable.maps
     users = context[:users] || %{}

@@ -14,13 +14,14 @@ defmodule JargaApi.Shared.UserSetupSteps do
   import Jarga.AccountsFixtures
 
   alias Jarga.Accounts
+  alias JargaApi.Test.Helpers
 
   # ============================================================================
   # USER SETUP - Data Table step for Background sections
   # ============================================================================
 
   step "the following users exist:", context do
-    JargaApi.Test.Helpers.ensure_sandbox_checkout()
+    Helpers.ensure_sandbox_checkout()
 
     table_data = context.datatable.maps
 
@@ -64,20 +65,20 @@ defmodule JargaApi.Shared.UserSetupSteps do
   # ============================================================================
 
   step "a user exists with email {string}", %{args: [email]} = context do
-    JargaApi.Test.Helpers.ensure_sandbox_checkout()
+    Helpers.ensure_sandbox_checkout()
     user = get_or_create_user(email)
     {:ok, Map.put(context, :user, user)}
   end
 
   step "a confirmed user exists with email {string}", %{args: [email]} = context do
-    JargaApi.Test.Helpers.ensure_sandbox_checkout()
+    Helpers.ensure_sandbox_checkout()
     user = get_or_create_user(email)
     {:ok, Map.put(context, :user, user)}
   end
 
   step "a confirmed user exists with email {string} and password {string}",
        %{args: [email, password]} = context do
-    JargaApi.Test.Helpers.ensure_sandbox_checkout()
+    Helpers.ensure_sandbox_checkout()
     user = get_or_create_user_with_password(email, password)
     {:ok, Map.put(context, :user, user) |> Map.put(:password, password)}
   end
