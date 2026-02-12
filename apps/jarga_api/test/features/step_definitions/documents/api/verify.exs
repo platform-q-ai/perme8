@@ -81,29 +81,15 @@ defmodule Documents.Api.VerifySteps do
 
     assert data != nil, "Expected response data, but got nil. Response: #{inspect(body)}"
 
-    # For POST responses, the owner field may be the user_id (UUID) or email
-    # depending on the JSON view. For GET responses, it should be the email.
-    # The DocumentApiJSON.created/1 sets owner to document.created_by (user_id).
-    # We check both cases: if owner matches email directly, or resolve via context.
     actual_owner = data["owner"]
+    user = get_in(context, [:users, expected_owner_email])
+    acceptable_values = build_acceptable_owner_values(expected_owner_email, user)
 
-    if actual_owner == expected_owner_email do
-      # Direct match (GET responses resolve to email)
-      {:ok, context}
-    else
-      # For POST responses, owner might be user_id. Look up the user from context.
-      user = get_in(context, [:users, expected_owner_email])
+    assert actual_owner in acceptable_values,
+           "Expected document to be owned by '#{expected_owner_email}', " <>
+             "but got owner '#{actual_owner}'"
 
-      if user && actual_owner == user.id do
-        # Owner is the user_id, which matches the expected user
-        {:ok, context}
-      else
-        flunk(
-          "Expected document to be owned by '#{expected_owner_email}', " <>
-            "but got owner '#{actual_owner}'"
-        )
-      end
-    end
+    {:ok, context}
   end
 
   step "the document should exist in workspace {string}",
@@ -139,15 +125,7 @@ defmodule Documents.Api.VerifySteps do
     assert data != nil, "Expected response data, but got nil"
 
     # Look up the project from context to get its slug
-    project = get_in(context, [:projects, expected_project_name])
-
-    expected_project_slug =
-      if project do
-        project.slug
-      else
-        # Fallback: derive slug from project name
-        expected_project_name |> String.downcase() |> String.replace(~r/\s+/, "-")
-      end
+    expected_project_slug = resolve_project_slug(context, expected_project_name)
 
     assert data["project_slug"] == expected_project_slug,
            "Expected document to exist in project '#{expected_project_slug}', " <>
@@ -175,28 +153,36 @@ defmodule Documents.Api.VerifySteps do
 
   step "the document {string} should not exist", %{args: [document_title]} = context do
     # Check that the document was NOT created in any workspace
-    workspaces =
-      Map.values(context[:workspaces] || %{}) ++
-        Map.values(context[:additional_workspaces] || %{})
+    user = context[:current_user]
+    workspaces = Map.values(context[:workspaces] || %{})
 
-    # Use workspace owners to query since Documents requires a user for access control
-    found =
-      Enum.any?(workspaces, fn workspace ->
-        # Get an owner/user who can see documents in this workspace
-        user =
-          get_in(context, [:workspace_owners, workspace.slug]) ||
-            context[:current_user]
-
-        if user do
-          documents = Documents.list_documents_for_workspace(user, workspace.id)
-          Enum.any?(documents, fn d -> d.title == document_title end)
-        else
-          false
-        end
-      end)
+    found = document_exists_in_workspaces?(user, workspaces, document_title)
 
     refute found, "Expected document '#{document_title}' to NOT exist, but it was found"
 
     {:ok, context}
+  end
+
+  # ============================================================================
+  # HELPERS
+  # ============================================================================
+
+  defp build_acceptable_owner_values(email, nil), do: [email]
+  defp build_acceptable_owner_values(email, user), do: [email, user.id]
+
+  defp resolve_project_slug(context, project_name) do
+    case get_in(context, [:projects, project_name]) do
+      %{slug: slug} -> slug
+      nil -> project_name |> String.downcase() |> String.replace(~r/\s+/, "-")
+    end
+  end
+
+  defp document_exists_in_workspaces?(nil, _workspaces, _title), do: false
+
+  defp document_exists_in_workspaces?(user, workspaces, title) do
+    Enum.any?(workspaces, fn workspace ->
+      documents = Documents.list_documents_for_workspace(user, workspace.id)
+      Enum.any?(documents, fn d -> d.title == title end)
+    end)
   end
 end
