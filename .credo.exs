@@ -324,6 +324,10 @@
           # Verifies public API module has correct boundary config
           {CredoChecks.CleanArchitecture.PublicApiBoundaryCorrect,
            [
+             # jarga_tools: utility app with no domain layers
+             # jarga_api: interface app that depends on multiple Jarga contexts
+             #   (Workspaces, Projects, Documents) and Identity directly, not a
+             #   single ApplicationLayer — this is by design for interface apps
              excluded_apps: ["jarga_tools", "jarga_api"]
            ]},
 
