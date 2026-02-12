@@ -20,12 +20,11 @@ defmodule Jarga.Accounts do
   have been extracted to the `jarga_api` app under `JargaApi.Accounts`.
   """
 
-  # Boundary configuration - depends on Identity for core operations
+  # Boundary configuration - pure delegation facade to Identity
   use Boundary,
     top_level?: true,
     deps: [
-      Identity,
-      Jarga.Repo
+      Identity
     ],
     exports: []
 
