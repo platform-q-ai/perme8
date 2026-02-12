@@ -3,9 +3,12 @@ defmodule JargaApi.Test.Helpers do
   Shared helper functions for API step definitions.
   """
 
+  use Boundary,
+    top_level?: true,
+    deps: [Jarga.AccountsFixtures, Identity],
+    exports: []
+
   alias Ecto.Adapters.SQL.Sandbox
-  alias Identity.Application.Services.ApiKeyTokenService
-  alias Identity.Infrastructure.Repositories.ApiKeyRepository
 
   def ensure_sandbox_checkout do
     # Checkout both repos for dual-repo setup
@@ -61,30 +64,12 @@ defmodule JargaApi.Test.Helpers do
   end
 
   @doc """
-  Creates an API key directly in the database with a plain token.
+  Creates an API key fixture without workspace membership validation.
+  Delegates to `Jarga.AccountsFixtures.api_key_fixture_without_validation/2`.
   Returns {api_key_entity, plain_token}.
   """
   def create_api_key_fixture(user_id, attrs) do
-    plain_token = attrs[:token] || ApiKeyTokenService.generate_token()
-    hashed_token = ApiKeyTokenService.hash_token(plain_token)
-
-    api_key_attrs = %{
-      name: attrs[:name] || "Test API Key",
-      description: attrs[:description],
-      hashed_token: hashed_token,
-      user_id: user_id,
-      workspace_access: attrs[:workspace_access] || [],
-      is_active: Map.get(attrs, :is_active, true)
-    }
-
-    {:ok, api_key} =
-      ApiKeyRepository.insert(
-        Identity.Repo,
-        api_key_attrs
-      )
-
-    # ApiKeyRepository.insert now returns entity directly
-    {api_key, plain_token}
+    Jarga.AccountsFixtures.api_key_fixture_without_validation(user_id, attrs)
   end
 
   @doc """
