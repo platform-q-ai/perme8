@@ -14,14 +14,13 @@ defmodule JargaApi.Shared.UserSetupSteps do
   import Jarga.AccountsFixtures
 
   alias Jarga.Accounts
-  alias Ecto.Adapters.SQL.Sandbox
 
   # ============================================================================
   # USER SETUP - Data Table step for Background sections
   # ============================================================================
 
   step "the following users exist:", context do
-    ensure_sandbox_checkout()
+    JargaApi.Test.Helpers.ensure_sandbox_checkout()
 
     table_data = context.datatable.maps
 
@@ -65,20 +64,20 @@ defmodule JargaApi.Shared.UserSetupSteps do
   # ============================================================================
 
   step "a user exists with email {string}", %{args: [email]} = context do
-    ensure_sandbox_checkout()
+    JargaApi.Test.Helpers.ensure_sandbox_checkout()
     user = get_or_create_user(email)
     {:ok, Map.put(context, :user, user)}
   end
 
   step "a confirmed user exists with email {string}", %{args: [email]} = context do
-    ensure_sandbox_checkout()
+    JargaApi.Test.Helpers.ensure_sandbox_checkout()
     user = get_or_create_user(email)
     {:ok, Map.put(context, :user, user)}
   end
 
   step "a confirmed user exists with email {string} and password {string}",
        %{args: [email, password]} = context do
-    ensure_sandbox_checkout()
+    JargaApi.Test.Helpers.ensure_sandbox_checkout()
     user = get_or_create_user_with_password(email, password)
     {:ok, Map.put(context, :user, user) |> Map.put(:password, password)}
   end
@@ -86,18 +85,6 @@ defmodule JargaApi.Shared.UserSetupSteps do
   # ============================================================================
   # HELPERS
   # ============================================================================
-
-  defp ensure_sandbox_checkout do
-    case Sandbox.checkout(Jarga.Repo) do
-      :ok -> Sandbox.mode(Jarga.Repo, {:shared, self()})
-      {:already, _owner} -> :ok
-    end
-
-    case Sandbox.checkout(Identity.Repo) do
-      :ok -> Sandbox.mode(Identity.Repo, {:shared, self()})
-      {:already, _owner} -> :ok
-    end
-  end
 
   defp get_or_create_user(email) do
     case Accounts.get_user_by_email(email) do

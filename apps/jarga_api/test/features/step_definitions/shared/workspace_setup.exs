@@ -13,14 +13,12 @@ defmodule JargaApi.Shared.WorkspaceSetupSteps do
 
   import Jarga.WorkspacesFixtures
 
-  alias Ecto.Adapters.SQL.Sandbox
-
   # ============================================================================
   # WORKSPACE SETUP STEPS
   # ============================================================================
 
   step "the following workspaces exist:", context do
-    ensure_sandbox_checkout()
+    JargaApi.Test.Helpers.ensure_sandbox_checkout()
 
     table_data = context.datatable.maps
     users = context[:users] || %{}
@@ -50,18 +48,6 @@ defmodule JargaApi.Shared.WorkspaceSetupSteps do
   # ============================================================================
   # HELPERS
   # ============================================================================
-
-  defp ensure_sandbox_checkout do
-    case Sandbox.checkout(Jarga.Repo) do
-      :ok -> Sandbox.mode(Jarga.Repo, {:shared, self()})
-      {:already, _owner} -> :ok
-    end
-
-    case Sandbox.checkout(Identity.Repo) do
-      :ok -> Sandbox.mode(Identity.Repo, {:shared, self()})
-      {:already, _owner} -> :ok
-    end
-  end
 
   defp build_workspace_owners(table_data, users) do
     Enum.reduce(table_data, %{}, fn row, acc ->
