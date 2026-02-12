@@ -47,28 +47,15 @@ defmodule Jarga.ApplicationLayer do
   ## Examples
 
       iex> Jarga.ApplicationLayer.use_cases()
-      [Jarga.Accounts.Application.UseCases.RegisterUser, ...]
+      [Jarga.Agents.Application.UseCases.CreateUserAgent, ...]
   """
   @spec use_cases() :: [module()]
   def use_cases do
     [
-      # Accounts
-      Jarga.Accounts.Application.UseCases.RegisterUser,
-      Jarga.Accounts.Application.UseCases.LoginByMagicLink,
-      Jarga.Accounts.Application.UseCases.GenerateSessionToken,
-      Jarga.Accounts.Application.UseCases.DeliverLoginInstructions,
-      Jarga.Accounts.Application.UseCases.DeliverUserUpdateEmailInstructions,
-      Jarga.Accounts.Application.UseCases.UpdateUserPassword,
-      Jarga.Accounts.Application.UseCases.UpdateUserEmail,
-      Jarga.Accounts.Application.UseCases.CreateApiKey,
-      Jarga.Accounts.Application.UseCases.ListApiKeys,
-      Jarga.Accounts.Application.UseCases.UpdateApiKey,
-      Jarga.Accounts.Application.UseCases.RevokeApiKey,
-      Jarga.Accounts.Application.UseCases.VerifyApiKey,
-      Jarga.Accounts.Application.UseCases.ListAccessibleWorkspaces,
-      Jarga.Accounts.Application.UseCases.GetWorkspaceWithDetails,
-      Jarga.Accounts.Application.UseCases.CreateProjectViaApi,
-      Jarga.Accounts.Application.UseCases.GetProjectWithDocumentsViaApi,
+      # Note: Account use cases (registration, authentication, session, API keys)
+      # have been moved to the Identity app. API-specific use cases have been
+      # moved to the JargaApi app.
+      #
       # Agents
       Jarga.Agents.Application.UseCases.CreateUserAgent,
       Jarga.Agents.Application.UseCases.UpdateUserAgent,
@@ -146,14 +133,14 @@ defmodule Jarga.ApplicationLayer do
   ## Examples
 
       iex> Jarga.ApplicationLayer.services()
-      [Jarga.Accounts.Application.Services.PasswordService, ...]
+      [Jarga.Documents.Application.Services.NotificationService, ...]
   """
   @spec services() :: [module()]
   def services do
     [
-      # Accounts
-      Jarga.Accounts.Application.Services.PasswordService,
-      Jarga.Accounts.Application.Services.ApiKeyTokenService,
+      # Note: Account services (PasswordService, ApiKeyTokenService) have been
+      # moved to the Identity app.
+      #
       # Documents
       Jarga.Documents.Application.Services.NotificationService,
       # Projects
