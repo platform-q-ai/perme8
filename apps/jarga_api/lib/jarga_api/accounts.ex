@@ -3,8 +3,7 @@ defmodule JargaApi.Accounts do
   Facade for API-specific account operations.
 
   This module provides the API-specific use cases that cross domain boundaries
-  into workspaces, projects, and documents. It also delegates API key verification
-  and user lookup to the `Identity` app.
+  into workspaces, projects, and documents.
 
   ## API Operations
 
@@ -12,29 +11,16 @@ defmodule JargaApi.Accounts do
   - `get_workspace_with_details/4` - Get workspace with documents and projects
   - `create_project_via_api/5` - Create project via API key
   - `get_project_with_documents_via_api/5` - Get project with documents via API key
-
-  ## Identity Delegations
-
-  - `verify_api_key/1` - Verify an API key token
-  - `get_user/1` - Get a user by ID
   """
 
   use Boundary,
     top_level?: true,
     deps: [
-      Identity,
       JargaApi.Accounts.Application
     ],
     exports: []
 
   alias JargaApi.Accounts.Application.UseCases
-
-  # =============================================================================
-  # DELEGATED TO IDENTITY
-  # =============================================================================
-
-  defdelegate verify_api_key(plain_token), to: Identity
-  defdelegate get_user(id), to: Identity
 
   # =============================================================================
   # API OPERATIONS - Cross-domain use cases
