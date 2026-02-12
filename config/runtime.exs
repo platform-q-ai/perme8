@@ -121,6 +121,7 @@ end
 # script that automatically sets the env var above.
 if System.get_env("PHX_SERVER") do
   config :jarga_web, JargaWeb.Endpoint, server: true
+  config :jarga_api, JargaApi.Endpoint, server: true
 end
 
 if config_env() == :prod do
@@ -183,6 +184,18 @@ if config_env() == :prod do
     ],
     secret_key_base: secret_key_base,
     check_origin: check_origins
+
+  # JargaApi (JSON API) - separate port for independent scaling
+  jarga_api_port =
+    String.to_integer(System.get_env("JARGA_API_PORT") || "4004")
+
+  config :jarga_api, JargaApi.Endpoint,
+    url: [host: jarga_host, port: 443, scheme: "https"],
+    http: [
+      ip: {0, 0, 0, 0, 0, 0, 0, 0},
+      port: jarga_api_port
+    ],
+    secret_key_base: secret_key_base
 
   # Mailer Config
   sendgrid_api_key = System.get_env("SENDGRID_API_KEY")

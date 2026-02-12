@@ -20,6 +20,7 @@ defmodule Perme8.MixProject do
           alkali: :permanent,
           identity: :permanent,
           jarga: :permanent,
+          jarga_api: :permanent,
           jarga_tools: :permanent,
           jarga_web: :permanent
         ],
