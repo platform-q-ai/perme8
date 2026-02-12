@@ -4,6 +4,7 @@ defmodule Jarga.Documents.UseCases.CreateDocumentTest do
 
   alias Jarga.Documents.Application.UseCases.CreateDocument
   alias Jarga.Documents.Infrastructure.Schemas.DocumentSchema
+  alias Jarga.Documents.Notes.Infrastructure.Schemas.NoteSchema
 
   import Jarga.AccountsFixtures
   import Jarga.WorkspacesFixtures
@@ -110,6 +111,57 @@ defmodule Jarga.Documents.UseCases.CreateDocumentTest do
       component = hd(document_schema.document_components)
       assert component.component_type == "note"
       assert component.position == 0
+    end
+
+    test "creates document with content stored as note_content" do
+      owner = user_fixture()
+      workspace = workspace_fixture(owner)
+
+      params = %{
+        actor: owner,
+        workspace_id: workspace.id,
+        attrs: %{
+          title: "Document with Content",
+          content: "Some initial content"
+        }
+      }
+
+      assert {:ok, document} = CreateDocument.execute(params)
+
+      # Fetch the document's note via document_components
+      document_schema =
+        DocumentSchema
+        |> Repo.get(document.id)
+        |> Repo.preload(:document_components)
+
+      component = hd(document_schema.document_components)
+      note = Repo.get(NoteSchema, component.component_id)
+
+      assert note.note_content == "Some initial content"
+    end
+
+    test "creates document without content results in nil note_content" do
+      owner = user_fixture()
+      workspace = workspace_fixture(owner)
+
+      params = %{
+        actor: owner,
+        workspace_id: workspace.id,
+        attrs: %{title: "Document without Content"}
+      }
+
+      assert {:ok, document} = CreateDocument.execute(params)
+
+      # Fetch the document's note via document_components
+      document_schema =
+        DocumentSchema
+        |> Repo.get(document.id)
+        |> Repo.preload(:document_components)
+
+      component = hd(document_schema.document_components)
+      note = Repo.get(NoteSchema, component.component_id)
+
+      assert note.note_content == nil
     end
 
     test "generates unique slug when duplicate titles exist" do
