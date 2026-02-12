@@ -13,6 +13,8 @@ defmodule JargaApi.CommonSteps do
   import Jarga.AccountsFixtures
   import Jarga.WorkspacesFixtures
 
+  alias JargaApi.Test.Helpers
+
   # ============================================================================
   # AUTHENTICATION STEPS
   # ============================================================================
@@ -52,7 +54,7 @@ defmodule JargaApi.CommonSteps do
   # ============================================================================
 
   step "a workspace {string} exists", %{args: [name]} = context do
-    JargaApi.Test.Helpers.ensure_sandbox_checkout()
+    Helpers.ensure_sandbox_checkout()
 
     slug = name |> String.downcase() |> String.replace(~r/\s+/, "-")
     owner = user_fixture(%{email: "#{slug}_owner@example.com"})
