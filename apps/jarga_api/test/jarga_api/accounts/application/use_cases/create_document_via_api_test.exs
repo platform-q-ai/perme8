@@ -301,4 +301,76 @@ defmodule JargaApi.Accounts.Application.UseCases.CreateDocumentViaApiTest do
       assert {:ok, ^expected_document} = result
     end
   end
+
+  describe "execute/5 - attribute sanitization" do
+    test "filters out unknown keys not in the whitelist" do
+      user = mock_user()
+      api_key = build_api_key()
+      workspace = mock_workspace()
+      member = mock_member()
+      expected_document = %{id: "doc-id", title: "Safe Doc", slug: "safe-doc"}
+
+      get_workspace_fn = fn _user, _slug -> {:ok, workspace, member} end
+
+      create_document_fn = fn _user, _workspace_id, attrs ->
+        # Whitelisted keys should be present
+        assert attrs[:title] == "Safe Doc"
+        # Unknown keys should be filtered out
+        refute Map.has_key?(attrs, :admin)
+        refute Map.has_key?(attrs, :role)
+        refute Map.has_key?(attrs, "unknown_field")
+        {:ok, expected_document}
+      end
+
+      result =
+        CreateDocumentViaApi.execute(
+          user,
+          api_key,
+          "my-workspace",
+          %{
+            "title" => "Safe Doc",
+            "admin" => true,
+            "role" => "superuser",
+            "unknown_field" => "sneaky"
+          },
+          get_workspace_and_member_by_slug: get_workspace_fn,
+          create_document: create_document_fn
+        )
+
+      assert {:ok, ^expected_document} = result
+    end
+
+    test "does not crash on keys that are not existing atoms" do
+      user = mock_user()
+      api_key = build_api_key()
+      workspace = mock_workspace()
+      member = mock_member()
+      expected_document = %{id: "doc-id", title: "No Crash", slug: "no-crash"}
+
+      get_workspace_fn = fn _user, _slug -> {:ok, workspace, member} end
+
+      create_document_fn = fn _user, _workspace_id, attrs ->
+        assert attrs[:title] == "No Crash"
+        {:ok, expected_document}
+      end
+
+      # These string keys have never been used as atoms, so String.to_existing_atom
+      # would crash. The whitelist approach should handle them safely.
+      result =
+        CreateDocumentViaApi.execute(
+          user,
+          api_key,
+          "my-workspace",
+          %{
+            "title" => "No Crash",
+            "xyzzy_never_an_atom_before_12345" => "value",
+            "another_nonexistent_atom_key_98765" => "value"
+          },
+          get_workspace_and_member_by_slug: get_workspace_fn,
+          create_document: create_document_fn
+        )
+
+      assert {:ok, ^expected_document} = result
+    end
+  end
 end

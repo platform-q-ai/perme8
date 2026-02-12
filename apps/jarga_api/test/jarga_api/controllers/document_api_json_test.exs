@@ -64,19 +64,20 @@ defmodule JargaApi.DocumentApiJSONTest do
   end
 
   describe "created/1" do
-    test "renders created document with title, slug, visibility, owner, workspace_slug" do
+    test "renders created document with title, slug, visibility, owner (email), workspace_slug" do
       document = %{
         title: "New Doc",
         slug: "new-doc",
         is_public: false,
-        created_by: "creator@example.com"
+        created_by: "some-user-uuid"
       }
 
       rendered =
         DocumentApiJSON.created(%{
           document: document,
           workspace_slug: "my-workspace",
-          project_slug: nil
+          project_slug: nil,
+          owner_email: "creator@example.com"
         })
 
       assert rendered == %{
@@ -95,14 +96,15 @@ defmodule JargaApi.DocumentApiJSONTest do
         title: "Public Doc",
         slug: "public-doc",
         is_public: true,
-        created_by: "creator@example.com"
+        created_by: "some-user-uuid"
       }
 
       rendered =
         DocumentApiJSON.created(%{
           document: document,
           workspace_slug: "my-workspace",
-          project_slug: nil
+          project_slug: nil,
+          owner_email: "creator@example.com"
         })
 
       assert rendered[:data][:visibility] == "public"
@@ -113,14 +115,15 @@ defmodule JargaApi.DocumentApiJSONTest do
         title: "Project Doc",
         slug: "project-doc",
         is_public: false,
-        created_by: "creator@example.com"
+        created_by: "some-user-uuid"
       }
 
       rendered =
         DocumentApiJSON.created(%{
           document: document,
           workspace_slug: "my-workspace",
-          project_slug: "my-project"
+          project_slug: "my-project",
+          owner_email: "creator@example.com"
         })
 
       assert rendered[:data][:project_slug] == "my-project"
@@ -131,17 +134,39 @@ defmodule JargaApi.DocumentApiJSONTest do
         title: "Workspace Doc",
         slug: "workspace-doc",
         is_public: false,
-        created_by: "creator@example.com"
+        created_by: "some-user-uuid"
       }
 
       rendered =
         DocumentApiJSON.created(%{
           document: document,
           workspace_slug: "my-workspace",
-          project_slug: nil
+          project_slug: nil,
+          owner_email: "creator@example.com"
         })
 
       refute Map.has_key?(rendered[:data], :project_slug)
+    end
+
+    test "uses owner_email instead of document.created_by (UUID) for owner field" do
+      document = %{
+        title: "Doc",
+        slug: "doc",
+        is_public: false,
+        created_by: "a1b2c3d4-uuid-not-email"
+      }
+
+      rendered =
+        DocumentApiJSON.created(%{
+          document: document,
+          workspace_slug: "ws",
+          project_slug: nil,
+          owner_email: "actual@email.com"
+        })
+
+      # owner should be the email, not the UUID
+      assert rendered[:data][:owner] == "actual@email.com"
+      refute rendered[:data][:owner] == "a1b2c3d4-uuid-not-email"
     end
   end
 

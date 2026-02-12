@@ -33,6 +33,11 @@ defmodule JargaApi.Accounts.Application.UseCases.CreateDocumentViaApi do
 
   alias JargaApi.Accounts.Domain.ApiKeyScope
 
+  # Whitelist of allowed document attributes.
+  # Only these keys are forwarded to the domain context, preventing
+  # unexpected or malicious keys from reaching the changeset layer.
+  @allowed_attrs ~w(title content is_public project_id)a
+
   @doc """
   Executes the create document via API use case.
 
@@ -84,7 +89,7 @@ defmodule JargaApi.Accounts.Application.UseCases.CreateDocumentViaApi do
       attrs =
         attrs
         |> translate_visibility()
-        |> atomize_keys()
+        |> sanitize_attrs()
 
       create_document(user, workspace.id, attrs, opts)
     end
@@ -138,11 +143,27 @@ defmodule JargaApi.Accounts.Application.UseCases.CreateDocumentViaApi do
     Map.put(attrs, "is_public", is_public)
   end
 
-  defp atomize_keys(attrs) do
-    Map.new(attrs, fn
-      {key, value} when is_binary(key) -> {String.to_existing_atom(key), value}
-      {key, value} when is_atom(key) -> {key, value}
+  # Converts string-keyed attrs to atom-keyed using a whitelist approach.
+  # Only keys in @allowed_attrs are included, preventing ArgumentError from
+  # String.to_existing_atom/1 on unexpected keys and filtering out any
+  # attributes that shouldn't reach the domain layer.
+  defp sanitize_attrs(attrs) do
+    Enum.reduce(@allowed_attrs, %{}, fn key, acc ->
+      case fetch_attr(attrs, key) do
+        {:ok, value} -> Map.put(acc, key, value)
+        :error -> acc
+      end
     end)
+  end
+
+  # Fetches an attribute by its atom key, trying the string-keyed version first.
+  defp fetch_attr(attrs, key) do
+    str_key = Atom.to_string(key)
+
+    case Map.fetch(attrs, str_key) do
+      {:ok, _value} = result -> result
+      :error -> Map.fetch(attrs, key)
+    end
   end
 
   defp create_document(user, workspace_id, attrs, opts) do

@@ -26,7 +26,7 @@ defmodule Workspaces.Api.ActionSteps do
     actual_path =
       path
       |> translate_workspace_slug_in_path(context)
-      |> translate_known_slugs(context)
+      |> Helpers.translate_known_slugs(context)
 
     # Build a conn with sandbox metadata header for proper DB connection sharing
     conn =
@@ -74,17 +74,5 @@ defmodule Workspaces.Api.ActionSteps do
         # Path doesn't match workspace pattern
         path
     end
-  end
-
-  # Translate any known slugs (documents, etc.) from feature-file slugs to actual DB slugs.
-  # Uses the slug_translations map stored in context by setup steps.
-  defp translate_known_slugs(path, context) do
-    slug_translations = context[:slug_translations] || %{}
-
-    Enum.reduce(slug_translations, path, fn {feature_slug, actual_slug}, acc ->
-      # Only translate when the feature slug appears as a path segment
-      # (preceded by "/" and followed by "/" or end of string)
-      String.replace(acc, "/" <> feature_slug, "/" <> actual_slug)
-    end)
   end
 end
