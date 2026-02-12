@@ -11,6 +11,8 @@ defmodule JargaApi.Accounts do
   - `get_workspace_with_details/4` - Get workspace with documents and projects
   - `create_project_via_api/5` - Create project via API key
   - `get_project_with_documents_via_api/5` - Get project with documents via API key
+  - `create_document_via_api/5` - Create document via API key
+  - `get_document_via_api/5` - Get document via API key
   """
 
   use Boundary,
@@ -70,5 +72,26 @@ defmodule JargaApi.Accounts do
       project_slug,
       opts
     )
+  end
+
+  @doc """
+  Creates a document in a workspace via API key.
+
+  The API key must have access to the workspace and the user must have
+  permission to create documents in that workspace. Optionally creates
+  the document inside a project if project_slug is provided in attrs.
+  """
+  def create_document_via_api(user, api_key, workspace_slug, attrs, opts) do
+    UseCases.CreateDocumentViaApi.execute(user, api_key, workspace_slug, attrs, opts)
+  end
+
+  @doc """
+  Gets a document via API key.
+
+  Retrieves document details including note content. The API key
+  acts as its owner, so document visibility rules apply.
+  """
+  def get_document_via_api(user, api_key, workspace_slug, document_slug, opts) do
+    UseCases.GetDocumentViaApi.execute(user, api_key, workspace_slug, document_slug, opts)
   end
 end

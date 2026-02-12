@@ -11,6 +11,8 @@ defmodule JargaApi.Accounts.Application do
   - `UseCases.GetWorkspaceWithDetails` - Get workspace with documents and projects
   - `UseCases.CreateProjectViaApi` - Create project via API key
   - `UseCases.GetProjectWithDocumentsViaApi` - Get project with documents via API
+  - `UseCases.CreateDocumentViaApi` - Create document via API key
+  - `UseCases.GetDocumentViaApi` - Get document via API key
 
   ## Dependency Rule
 
@@ -26,6 +28,8 @@ defmodule JargaApi.Accounts.Application do
       UseCases.ListAccessibleWorkspaces,
       UseCases.GetWorkspaceWithDetails,
       UseCases.CreateProjectViaApi,
-      UseCases.GetProjectWithDocumentsViaApi
+      UseCases.GetProjectWithDocumentsViaApi,
+      UseCases.CreateDocumentViaApi,
+      UseCases.GetDocumentViaApi
     ]
 end
