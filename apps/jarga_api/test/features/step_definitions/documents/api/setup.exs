@@ -79,6 +79,23 @@ defmodule Documents.Api.SetupSteps do
     {:ok, store_document(context, feature_slug, document)}
   end
 
+  step "workspace {string} has a public document {string} with slug {string} owned by {string}",
+       %{args: [workspace_slug, title, feature_slug, owner_email]} = context do
+    workspace = Helpers.get_workspace_by_slug(context, workspace_slug)
+
+    unless workspace do
+      raise "Workspace #{workspace_slug} not found in context"
+    end
+
+    owner =
+      get_in(context, [:users, owner_email]) ||
+        raise "User #{owner_email} not found in context[:users]"
+
+    document = document_fixture(owner, workspace, nil, %{title: title, is_public: true})
+
+    {:ok, store_document(context, feature_slug, document)}
+  end
+
   step "{string} has a private document {string} with slug {string} in workspace {string}",
        %{args: [owner_email, title, feature_slug, workspace_slug]} = context do
     workspace = Helpers.get_workspace_by_slug(context, workspace_slug)

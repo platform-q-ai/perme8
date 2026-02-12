@@ -1,4 +1,3 @@
-@wip
 Feature: Document API Access
   As a developer
   I want to create and retrieve documents via REST API using API keys
@@ -91,11 +90,11 @@ Feature: Document API Access
     And the response should include document "Private Spec"
     And the document "Private Spec" should have visibility "private"
 
-  Scenario: API key with viewer role cannot create document
+  Scenario: API key with guest role cannot create document
     Given I am logged in as "alice@example.com"
-    And "alice@example.com" has "viewer" role in workspace "product-team"
-    And I have an API key "viewer-key" with access to "product-team"
-    When I make a POST request to "/api/workspaces/product-team/documents" with API key "viewer-key" and body:
+    And "alice@example.com" has "guest" role in workspace "product-team"
+    And I have an API key "guest-key" with access to "product-team"
+    When I make a POST request to "/api/workspaces/product-team/documents" with API key "guest-key" and body:
       """
       {
         "title": "Should Fail",
@@ -120,20 +119,21 @@ Feature: Document API Access
     And the document "Owner Created Doc" should be owned by "alice@example.com"
     And the document "Owner Created Doc" should have visibility "private"
 
-  Scenario: API key with editor permissions can create documents
+  Scenario: API key with member permissions can create documents
     Given I am logged in as "alice@example.com"
-    And "alice@example.com" has "editor" role in workspace "product-team"
-    And I have an API key "editor-key" with access to "product-team"
-    When I make a POST request to "/api/workspaces/product-team/documents" with API key "editor-key" and body:
+    And "alice@example.com" has "member" role in workspace "product-team"
+    And I have an API key "member-key" with access to "product-team"
+    When I make a POST request to "/api/workspaces/product-team/documents" with API key "member-key" and body:
       """
       {
-        "title": "Editor Created Doc",
-        "content": "Created by editor"
+        "title": "Member Created Doc",
+        "content": "Created by member"
       }
       """
     Then the response status should be 201
-    And the document "Editor Created Doc" should be owned by "alice@example.com"
-    And the document "Editor Created Doc" should have visibility "private"
+    And the response should include document "Member Created Doc"
+    And the document "Member Created Doc" should be owned by "alice@example.com"
+    And the document "Member Created Doc" should have visibility "private"
 
   # Document POST Endpoint - Create documents inside projects
   Scenario: User creates document inside a project via API key defaults to private
@@ -208,7 +208,7 @@ Feature: Document API Access
     Given I am logged in as "alice@example.com"
     And I have an API key "read-key" with access to "product-team"
     And "bob@example.com" is a member of workspace "product-team"
-    And workspace "product-team" has a document "Shared Doc" with slug "shared-doc" owned by "bob@example.com"
+    And workspace "product-team" has a public document "Shared Doc" with slug "shared-doc" owned by "bob@example.com"
     When I make a GET request to "/api/workspaces/product-team/documents/shared-doc" with API key "read-key"
     Then the response status should be 200
     And the response should include document "Shared Doc"
