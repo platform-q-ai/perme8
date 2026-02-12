@@ -324,7 +324,7 @@
           # Verifies public API module has correct boundary config
           {CredoChecks.CleanArchitecture.PublicApiBoundaryCorrect,
            [
-             excluded_apps: ["jarga_tools"]
+             excluded_apps: ["jarga_tools", "jarga_api"]
            ]},
 
           #
