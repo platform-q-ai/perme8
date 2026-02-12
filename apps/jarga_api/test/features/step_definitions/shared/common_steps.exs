@@ -13,8 +13,6 @@ defmodule JargaApi.CommonSteps do
   import Jarga.AccountsFixtures
   import Jarga.WorkspacesFixtures
 
-  alias Ecto.Adapters.SQL.Sandbox
-
   # ============================================================================
   # AUTHENTICATION STEPS
   # ============================================================================
@@ -54,7 +52,7 @@ defmodule JargaApi.CommonSteps do
   # ============================================================================
 
   step "a workspace {string} exists", %{args: [name]} = context do
-    ensure_sandbox_checkout()
+    JargaApi.Test.Helpers.ensure_sandbox_checkout()
 
     slug = name |> String.downcase() |> String.replace(~r/\s+/, "-")
     owner = user_fixture(%{email: "#{slug}_owner@example.com"})
@@ -82,17 +80,5 @@ defmodule JargaApi.CommonSteps do
 
     Map.get(workspaces, workspace_slug) ||
       raise "Workspace #{workspace_slug} not found in context[:workspaces]"
-  end
-
-  defp ensure_sandbox_checkout do
-    case Sandbox.checkout(Jarga.Repo) do
-      :ok -> Sandbox.mode(Jarga.Repo, {:shared, self()})
-      {:already, _owner} -> :ok
-    end
-
-    case Sandbox.checkout(Identity.Repo) do
-      :ok -> Sandbox.mode(Identity.Repo, {:shared, self()})
-      {:already, _owner} -> :ok
-    end
   end
 end
