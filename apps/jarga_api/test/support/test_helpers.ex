@@ -80,4 +80,28 @@ defmodule JargaApi.Test.Helpers do
       Map.get(context[:additional_workspaces] || %{}, slug) ||
       if(context[:workspace] && context[:workspace].slug == slug, do: context[:workspace])
   end
+
+  @doc """
+  Translates any known slugs (documents, projects, etc.) from feature-file slugs
+  to actual DB slugs in a URL path.
+
+  Uses the `slug_translations` map stored in context by setup steps. Each entry
+  maps a feature-file slug to its actual database slug.
+
+  ## Example
+
+      context = %{slug_translations: %{"my-doc" => "my-doc-abc123"}}
+      translate_known_slugs("/api/workspaces/ws/documents/my-doc", context)
+      #=> "/api/workspaces/ws/documents/my-doc-abc123"
+
+  """
+  def translate_known_slugs(path, context) do
+    slug_translations = context[:slug_translations] || %{}
+
+    Enum.reduce(slug_translations, path, fn {feature_slug, actual_slug}, acc ->
+      # Only translate when the feature slug appears as a path segment
+      # (preceded by "/" and followed by "/" or end of string)
+      String.replace(acc, "/" <> feature_slug, "/" <> actual_slug)
+    end)
+  end
 end

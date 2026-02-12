@@ -70,7 +70,8 @@ defmodule JargaApi.DocumentApiController do
         |> render(:created,
           document: document,
           workspace_slug: workspace_slug,
-          project_slug: project_slug
+          project_slug: project_slug,
+          owner_email: user.email
         )
 
       {:error, %Ecto.Changeset{} = changeset} ->

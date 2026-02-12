@@ -20,12 +20,17 @@ defmodule JargaApi.DocumentApiJSON do
   Takes the domain document struct and workspace/project context.
   Translates is_public to visibility string.
   """
-  def created(%{document: document, workspace_slug: workspace_slug, project_slug: project_slug}) do
+  def created(%{
+        document: document,
+        workspace_slug: workspace_slug,
+        project_slug: project_slug,
+        owner_email: owner_email
+      }) do
     data = %{
       title: document.title,
       slug: document.slug,
       visibility: if(document.is_public, do: "public", else: "private"),
-      owner: document.created_by,
+      owner: owner_email,
       workspace_slug: workspace_slug
     }
 

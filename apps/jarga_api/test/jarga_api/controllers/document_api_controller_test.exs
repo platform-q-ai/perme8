@@ -30,9 +30,10 @@ defmodule JargaApi.DocumentApiControllerTest do
   end
 
   describe "POST /api/workspaces/:workspace_slug/documents" do
-    test "successful creation returns 201 with JSON containing title, slug, visibility, workspace_slug",
+    test "successful creation returns 201 with JSON containing title, slug, visibility, workspace_slug, owner email",
          %{
            conn: conn,
+           user: user,
            plain_token: plain_token,
            workspace: workspace
          } do
@@ -51,6 +52,8 @@ defmodule JargaApi.DocumentApiControllerTest do
       assert is_binary(response["data"]["slug"])
       assert response["data"]["visibility"] == "public"
       assert response["data"]["workspace_slug"] == workspace.slug
+      # owner should be the user's email, not UUID (consistent with GET responses)
+      assert response["data"]["owner"] == user.email
     end
 
     test "validation error (missing title) returns 422", %{

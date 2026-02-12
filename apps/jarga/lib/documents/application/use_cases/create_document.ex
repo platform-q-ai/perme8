@@ -127,6 +127,11 @@ defmodule Jarga.Documents.Application.UseCases.CreateDocument do
     multi =
       Multi.new()
       |> Multi.run(:note, fn _repo, _changes ->
+        # Content passthrough: when creating a document via the API, the caller
+        # may include a `content` attribute. We forward it as `note_content` to
+        # the note repository so the note is created with initial content.
+        # When no content is provided (e.g. UI-created documents), note_content
+        # is nil and the note starts empty — this preserves backward compatibility.
         note_attrs = %{
           id: Ecto.UUID.generate(),
           user_id: user.id,
