@@ -185,6 +185,7 @@ describe('Lifecycle hooks', () => {
     const mockAttach = mock(() => {})
     const worldContext = {
       browser: mockAdapters.browser,
+      hasBrowser: true,
       attach: mockAttach,
     }
 
@@ -200,6 +201,7 @@ describe('Lifecycle hooks', () => {
     const mockAttach = mock(() => {})
     const worldContext = {
       browser: undefined as any,
+      hasBrowser: false,
       attach: mockAttach,
     }
 
@@ -214,6 +216,7 @@ describe('Lifecycle hooks', () => {
     const mockAttach = mock(() => {})
     const worldContext = {
       browser: mockAdapters.browser,
+      hasBrowser: true,
       attach: mockAttach,
     }
 
@@ -228,6 +231,7 @@ describe('Lifecycle hooks', () => {
   test('After clears browser context', async () => {
     const worldContext = {
       browser: mockAdapters.browser,
+      hasBrowser: true,
       attach: mock(() => {}),
     }
 
