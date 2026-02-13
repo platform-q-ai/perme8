@@ -1,20 +1,23 @@
 defmodule JargaApi.Router do
   use JargaApi, :router
 
-  # Unauthenticated API pipeline for public endpoints (e.g., health check, OpenAPI spec)
-  pipeline :api do
+  # Shared base pipeline for all API routes — sets content type and security headers.
+  # Applied before :api or :api_authenticated so new pipelines inherit these automatically.
+  pipeline :api_base do
     plug(:accepts, ["json"])
     plug(JargaApi.Plugs.SecurityHeadersPlug)
   end
 
+  # Unauthenticated API pipeline for public endpoints (e.g., health check, OpenAPI spec)
+  pipeline :api do
+  end
+
   pipeline :api_authenticated do
-    plug(:accepts, ["json"])
-    plug(JargaApi.Plugs.SecurityHeadersPlug)
     plug(JargaApi.Plugs.ApiAuthPlug)
   end
 
   scope "/api", JargaApi do
-    pipe_through(:api_authenticated)
+    pipe_through([:api_base, :api_authenticated])
 
     get("/workspaces", WorkspaceApiController, :index)
     get("/workspaces/:slug", WorkspaceApiController, :show)
