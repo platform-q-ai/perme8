@@ -5,7 +5,7 @@ Feature: Document API Security Baseline
   So that document data, API keys, and workspace isolation are protected against attack
 
   Background:
-    Given I set variable "baseUrl" to "http://localhost:4000"
+    # baseUrl is auto-injected from exo-bdd config (http.baseURL)
     Given I set variable "docCreateEndpoint" to "${baseUrl}/api/workspaces/product-team/documents"
     Given I set variable "docShowEndpoint" to "${baseUrl}/api/workspaces/product-team/documents/product-spec"
     Given I set variable "projectDocEndpoint" to "${baseUrl}/api/workspaces/product-team/projects/q1-launch/documents"

@@ -61,11 +61,18 @@ defmodule Mix.Tasks.ExoTest do
   end
 
   defp umbrella_root do
-    # In an umbrella, build_path is "../../_build" relative to the app.
-    # Resolving it and going one level up gives us the umbrella root.
-    Mix.Project.config()[:build_path]
-    |> Path.expand()
-    |> Path.dirname()
+    case Mix.Project.config()[:build_path] do
+      nil ->
+        # Running from umbrella root -- cwd is the root
+        File.cwd!()
+
+      build_path ->
+        # In an umbrella child app, build_path is "../../_build" relative to the app.
+        # Resolving it and going one level up gives us the umbrella root.
+        build_path
+        |> Path.expand()
+        |> Path.dirname()
+    end
   end
 
   defp raise_missing_config do
