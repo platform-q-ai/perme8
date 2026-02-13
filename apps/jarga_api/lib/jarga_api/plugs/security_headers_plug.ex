@@ -8,6 +8,7 @@ defmodule JargaApi.Plugs.SecurityHeadersPlug do
     - `referrer-policy: strict-origin-when-cross-origin` — controls Referer header leakage
     - `content-security-policy: default-src 'none'` — restrictive CSP for JSON APIs
     - `strict-transport-security: max-age=31536000; includeSubDomains` — enforces HTTPS
+    - `permissions-policy: camera=(), microphone=(), geolocation=()` — restricts browser features
   """
 
   import Plug.Conn
@@ -21,5 +22,6 @@ defmodule JargaApi.Plugs.SecurityHeadersPlug do
     |> put_resp_header("referrer-policy", "strict-origin-when-cross-origin")
     |> put_resp_header("content-security-policy", "default-src 'none'")
     |> put_resp_header("strict-transport-security", "max-age=31536000; includeSubDomains")
+    |> put_resp_header("permissions-policy", "camera=(), microphone=(), geolocation=()")
   end
 end
