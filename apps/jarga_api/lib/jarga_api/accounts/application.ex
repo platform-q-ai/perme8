@@ -23,13 +23,14 @@ defmodule JargaApi.Accounts.Application do
 
   use Boundary,
     top_level?: true,
-    deps: [Identity, JargaApi.Accounts.Domain],
+    deps: [Identity, JargaApi.Accounts.Domain, Jarga.Documents.Notes.Domain],
     exports: [
       UseCases.ListAccessibleWorkspaces,
       UseCases.GetWorkspaceWithDetails,
       UseCases.CreateProjectViaApi,
       UseCases.GetProjectWithDocumentsViaApi,
       UseCases.CreateDocumentViaApi,
-      UseCases.GetDocumentViaApi
+      UseCases.GetDocumentViaApi,
+      UseCases.UpdateDocumentViaApi
     ]
 end

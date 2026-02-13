@@ -20,6 +20,7 @@ defmodule Jarga.Documents.Notes.Domain do
     top_level?: true,
     deps: [],
     exports: [
-      Entities.Note
+      Entities.Note,
+      ContentHash
     ]
 end
