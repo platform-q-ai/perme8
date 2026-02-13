@@ -113,15 +113,19 @@ export class ServerManager {
         const response = await fetch(url, {
           signal: AbortSignal.timeout(2000),
         })
+        // Any HTTP response (including 4xx) means the server is up and listening.
+        // Auth-protected health check paths (e.g., API behind bearer tokens) will
+        // return 401/403, but the server is still healthy.
         if (response.ok) {
           console.log(`[exo-bdd] Server ${config.name} is healthy (status ${response.status})`)
           return
         }
         if (response.status >= 400 && response.status < 500) {
-          console.warn(
-            `[exo-bdd] Warning: ${config.name} health check returned ${response.status} — ` +
-            `verify healthCheckPath "${healthPath}" is a valid route`
+          console.log(
+            `[exo-bdd] Server ${config.name} is reachable (status ${response.status}) — ` +
+            `treating as healthy (auth-protected endpoint)`
           )
+          return
         }
       } catch {
         // Server not ready yet -- connection refused or timeout

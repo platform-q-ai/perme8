@@ -87,4 +87,27 @@ export interface SecurityAdapterConfig {
   pollDelayMs?: number
   /** Maximum time in ms to wait for a scan to complete. Defaults to 300000 (5 minutes). */
   scanTimeout?: number
+  /**
+   * Docker configuration for auto-managing a ZAP container.
+   * When provided, the runner will check if ZAP is reachable at `zapUrl`.
+   * If not, it starts a Docker container automatically and stops it after tests complete.
+   */
+  docker?: ZapDockerConfig
+}
+
+export interface ZapDockerConfig {
+  /** Docker image to use. Defaults to "ghcr.io/zaproxy/zaproxy:stable". */
+  image?: string
+  /** Container name. Defaults to "exo-bdd-zap". */
+  name?: string
+  /** Port to expose ZAP on. Extracted from `zapUrl` if not provided. */
+  port?: number
+  /**
+   * Network mode for the container (e.g. "host", "bridge").
+   * Use "host" when ZAP needs to reach servers on localhost.
+   * Defaults to "host".
+   */
+  network?: string
+  /** Maximum time in ms to wait for ZAP to become ready. Defaults to 60000. */
+  startTimeout?: number
 }

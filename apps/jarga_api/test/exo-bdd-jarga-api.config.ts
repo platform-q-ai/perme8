@@ -38,6 +38,11 @@ export default defineConfig({
     },
     security: {
       zapUrl: 'http://localhost:8080',
+      docker: {
+        image: 'ghcr.io/zaproxy/zaproxy:stable',
+        name: 'exo-bdd-zap',
+        network: 'host',
+      },
     },
   },
 })
