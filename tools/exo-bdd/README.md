@@ -31,6 +31,42 @@ export default defineConfig({
 })
 ```
 
+A more complete example with server management, variables, and timeout:
+
+```ts
+import { defineConfig } from 'exo-bdd'
+
+export default defineConfig({
+  features: './features/**/*.feature',
+
+  // Start/stop a server around the test run
+  servers: [
+    {
+      name: 'my-api',
+      command: 'mix phx.server',
+      port: 4005,
+      healthCheckPath: '/api/health',
+      seed: 'mix run priv/repo/seeds.exs',
+      env: { MIX_ENV: 'test' },
+    },
+  ],
+
+  // Pre-seed variables available as ${name} in feature steps
+  variables: {
+    'api-token': 'tok_abc123',
+    'admin-token': 'tok_admin456',
+  },
+
+  // Global Cucumber step timeout (ms). Increase for slow scans.
+  timeout: 300_000,
+
+  adapters: {
+    http: { baseURL: 'http://localhost:4005' },
+    security: { zapUrl: 'http://localhost:8080' },
+  },
+})
+```
+
 ### 3. Write features
 
 Create `.feature` files in the `features/` directory using standard Gherkin syntax. Exo-BDD provides built-in step definitions for all adapter domains -- no custom step code needed for common operations.
@@ -72,6 +108,9 @@ The `ExoBddConfig` interface:
 ```ts
 interface ExoBddConfig {
   features?: string | string[]    // Glob(s) to .feature files
+  servers?: ServerConfig[]        // Servers to manage around the test run
+  variables?: Record<string, string> // Variables pre-seeded into every scenario
+  timeout?: number                // Global Cucumber step timeout (ms)
   adapters: {
     http?: HttpAdapterConfig      // HTTP API testing (Playwright)
     browser?: BrowserAdapterConfig // Browser UI testing (Playwright)
@@ -80,6 +119,46 @@ interface ExoBddConfig {
     security?: SecurityAdapterConfig // Security scanning (OWASP ZAP)
   }
 }
+
+interface ServerConfig {
+  name: string            // Display name for logs
+  command: string         // Shell command to start the server
+  port: number            // Port to health-check against
+  workingDir?: string     // CWD for the command (relative to config file)
+  env?: Record<string, string> // Environment variables
+  seed?: string           // Command to run after server is healthy (e.g. DB seeds)
+  healthCheckPath?: string // URL path to poll (default: "/")
+  startTimeout?: number   // Max wait for healthy (ms, default: 30000)
+}
+```
+
+### Servers
+
+The `servers` array lets exo-bdd manage the full server lifecycle:
+
+1. Starts each server via its `command`
+2. Polls `http://localhost:{port}{healthCheckPath}` until a response arrives (any status)
+3. Runs the `seed` command (if provided) -- useful for loading test fixtures
+4. Runs all Cucumber scenarios
+5. Stops each server on completion (or on error)
+
+### Variables
+
+Config-level `variables` are injected into every scenario's `TestWorld` before steps run. Use them to pass API keys, tokens, or environment-specific values without hardcoding them in feature files:
+
+```gherkin
+# In your .feature file -- reference config variables with ${name}
+When I set header "Authorization" to "Bearer ${api-token}"
+```
+
+Variables set in the config are merged with any set via `Given I set variable` steps. Step-level variables take precedence.
+
+### Timeout
+
+The `timeout` field sets the default Cucumber step timeout in milliseconds. The Cucumber default is 5000ms, which is too short for operations like OWASP ZAP active scans. Set it higher when using the security adapter:
+
+```ts
+timeout: 300_000 // 5 minutes -- needed for active security scans
 ```
 
 ### Adapter Options
@@ -91,6 +170,15 @@ interface ExoBddConfig {
 | `cli` | (none) | `workingDir`, `env`, `timeout`, `shell` |
 | `graph` | `uri`, `username`, `password` | `database` |
 | `security` | `zapUrl` | `zapApiKey`, `pollDelayMs`, `scanTimeout` |
+
+### Top-level Options
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `features` | `string \| string[]` | Glob(s) to `.feature` files |
+| `servers` | `ServerConfig[]` | Servers to start/stop around the test run |
+| `variables` | `Record<string, string>` | Variables injected into every scenario as `${name}` |
+| `timeout` | `number` | Default Cucumber step timeout in ms (default: 5000) |
 
 ## Available Step Definitions
 
