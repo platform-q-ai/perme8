@@ -13,6 +13,7 @@ defmodule JargaApi.Accounts do
   - `get_project_with_documents_via_api/5` - Get project with documents via API key
   - `create_document_via_api/5` - Create document via API key
   - `get_document_via_api/5` - Get document via API key
+  - `update_document_via_api/6` - Update document via API key
   """
 
   use Boundary,
@@ -93,5 +94,24 @@ defmodule JargaApi.Accounts do
   """
   def get_document_via_api(user, api_key, workspace_slug, document_slug, opts) do
     UseCases.GetDocumentViaApi.execute(user, api_key, workspace_slug, document_slug, opts)
+  end
+
+  @doc """
+  Updates a document via API key.
+
+  The API key must have access to the workspace and the user must have
+  permission to edit the document. Supports partial updates of title,
+  visibility, and content. Content updates require a content_hash for
+  optimistic concurrency control.
+  """
+  def update_document_via_api(user, api_key, workspace_slug, document_slug, attrs, opts) do
+    UseCases.UpdateDocumentViaApi.execute(
+      user,
+      api_key,
+      workspace_slug,
+      document_slug,
+      attrs,
+      opts
+    )
   end
 end
