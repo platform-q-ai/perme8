@@ -57,7 +57,11 @@ deterministic_tokens = %{
 
 IO.puts("[exo-seeds] Cleaning previous seed data...")
 
-# Truncate in dependency order (children first, then parents)
+# Truncate in dependency order (children first, then parents).
+# NOTE: Identity.Repo and Jarga.Repo share the same underlying Postgres database,
+# so we can truncate all tables through a single repo connection. If the repos are
+# ever split into separate databases, these statements must be routed to the
+# correct repo for each table.
 Ecto.Adapters.SQL.query!(Identity.Repo, "TRUNCATE api_keys CASCADE", [])
 Ecto.Adapters.SQL.query!(Identity.Repo, "TRUNCATE document_components CASCADE", [])
 Ecto.Adapters.SQL.query!(Identity.Repo, "TRUNCATE documents CASCADE", [])
