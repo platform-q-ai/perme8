@@ -123,24 +123,28 @@ defmodule JargaApi.Accounts.Application.UseCases.UpdateDocumentViaApi do
   # Validates content_hash when content is being updated.
   # Returns {:ok, nil} if no content update, {:ok, content} if hash matches,
   # or an error tuple if hash is missing/mismatched.
+  defp validate_content_hash(_document, attrs, _opts) when not is_map_key(attrs, "content") do
+    {:ok, nil}
+  end
+
+  defp validate_content_hash(_document, %{"content_hash" => nil}, _opts) do
+    {:error, :content_hash_required}
+  end
+
+  defp validate_content_hash(_document, attrs, _opts)
+       when not is_map_key(attrs, "content_hash") do
+    {:error, :content_hash_required}
+  end
+
   defp validate_content_hash(document, attrs, opts) do
-    if Map.has_key?(attrs, "content") do
-      case Map.get(attrs, "content_hash") do
-        nil ->
-          {:error, :content_hash_required}
+    note = fetch_note(document, opts)
+    current_hash = ContentHash.compute(note.note_content)
+    provided_hash = Map.get(attrs, "content_hash")
 
-        provided_hash ->
-          note = fetch_note(document, opts)
-          current_hash = ContentHash.compute(note.note_content)
-
-          if provided_hash == current_hash do
-            {:ok, Map.get(attrs, "content")}
-          else
-            {:error, :content_conflict, %{content: note.note_content, content_hash: current_hash}}
-          end
-      end
+    if provided_hash == current_hash do
+      {:ok, Map.get(attrs, "content")}
     else
-      {:ok, nil}
+      {:error, :content_conflict, %{content: note.note_content, content_hash: current_hash}}
     end
   end
 
