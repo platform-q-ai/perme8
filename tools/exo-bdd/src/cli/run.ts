@@ -98,9 +98,10 @@ export function generateSetupContent(configAbsPath: string, exoBddRoot: string, 
   // Inject user-defined variables from config
   if (config?.variables) {
     for (const [name, value] of Object.entries(config.variables)) {
-      // Escape single quotes in values to prevent injection
+      // Escape single quotes in both name and value to prevent injection
+      const escapedName = name.replace(/'/g, "\\'")
       const escaped = value.replace(/'/g, "\\'")
-      injections.push(`  this.setVariable('${name}', '${escaped}')`)
+      injections.push(`  this.setVariable('${escapedName}', '${escaped}')`)
     }
   }
 
