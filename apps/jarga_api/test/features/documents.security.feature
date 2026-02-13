@@ -237,3 +237,154 @@ Feature: Document API Security Baseline
     And I should see the alert details
     When I save the security report to "reports/document-api-security-audit.html"
     And I save the security report as JSON to "reports/document-api-security-audit.json"
+
+  # ===========================================================================
+  # PATCH /api/workspaces/:workspace_slug/documents/:slug -- Document Updates
+  # ===========================================================================
+  #
+  # The PATCH endpoint accepts user-controlled JSON body fields (title, content,
+  # visibility, content_hash) and slug parameters in the URL path. These are all
+  # potential injection vectors. The content_hash field (SHA-256 hex) and slug
+  # parameters are especially interesting for injection attacks. Optimistic
+  # concurrency control via content_hash introduces additional error responses
+  # (409, 422) that should not leak sensitive information.
+  # ===========================================================================
+
+  # ---------------------------------------------------------------------------
+  # Attack Surface Discovery -- Document Update Endpoint (PATCH)
+  # Maps to: All PATCH scenarios -- discovering the update endpoint surface
+  # ---------------------------------------------------------------------------
+
+  Scenario: Spider discovers document update API attack surface
+    Given a new ZAP session
+    Given I set variable "docUpdateEndpoint" to "${baseUrl}/api/workspaces/product-team/documents/product-spec"
+    When I spider "${docUpdateEndpoint}"
+    Then the spider should find at least 1 URLs
+
+  # ---------------------------------------------------------------------------
+  # Passive Vulnerability Scanning -- Document Update Endpoint (PATCH)
+  # Maps to: Update title, visibility, content, title+content together
+  # Checks: Information leakage, insecure headers, cookie issues in responses
+  # ---------------------------------------------------------------------------
+
+  Scenario: Passive scan on document update endpoint finds no high-risk issues
+    Given a new ZAP session
+    Given I set variable "docUpdateEndpoint" to "${baseUrl}/api/workspaces/product-team/documents/product-spec"
+    When I spider "${docUpdateEndpoint}"
+    And I run a passive scan on "${docUpdateEndpoint}"
+    Then no high risk alerts should be found
+    And no medium or higher risk alerts should be found
+    And I should see the alert details
+
+  # ---------------------------------------------------------------------------
+  # Active Vulnerability Scanning -- SQL Injection on Update Endpoint
+  # Maps to: Update content with correct/stale content_hash, update title,
+  #          update visibility, update non-existent document
+  # Covers: Slug params in URL path (:workspace_slug, :slug) and JSON body
+  #         fields (title, content, visibility, content_hash) are all tested
+  #         for SQL injection payloads
+  # ---------------------------------------------------------------------------
+
+  Scenario: No SQL Injection on document update endpoint
+    Given a new ZAP session
+    Given I set variable "docUpdateEndpoint" to "${baseUrl}/api/workspaces/product-team/documents/product-spec"
+    When I spider "${docUpdateEndpoint}"
+    And I run an active scan on "${docUpdateEndpoint}"
+    Then there should be no alerts of type "SQL Injection"
+
+  # ---------------------------------------------------------------------------
+  # Active Vulnerability Scanning -- Cross-Site Scripting (XSS) on Update
+  # Maps to: Update title, update content -- both fields are stored and later
+  #          retrieved via GET, creating a stored XSS risk if not sanitized
+  # Covers: Title and content fields in PATCH request body
+  # ---------------------------------------------------------------------------
+
+  Scenario: No Cross-Site Scripting on document update endpoint
+    Given a new ZAP session
+    Given I set variable "docUpdateEndpoint" to "${baseUrl}/api/workspaces/product-team/documents/product-spec"
+    When I spider "${docUpdateEndpoint}"
+    And I run an active scan on "${docUpdateEndpoint}"
+    Then there should be no alerts of type "Cross Site Scripting (Reflected)"
+    And there should be no alerts of type "Cross Site Scripting (Persistent)"
+
+  # ---------------------------------------------------------------------------
+  # Active Vulnerability Scanning -- Path Traversal on Update Endpoint
+  # Maps to: Update non-existent document, cannot update another user's doc
+  # Covers: Slug parameters (:workspace_slug, :slug) in the URL path --
+  #         attackers may attempt ../../etc/passwd style traversal via slugs
+  # ---------------------------------------------------------------------------
+
+  Scenario: No path traversal on document update endpoint
+    Given a new ZAP session
+    Given I set variable "docUpdateEndpoint" to "${baseUrl}/api/workspaces/product-team/documents/product-spec"
+    When I spider "${docUpdateEndpoint}"
+    And I run an active scan on "${docUpdateEndpoint}"
+    Then there should be no alerts of type "Path Traversal"
+
+  # ---------------------------------------------------------------------------
+  # Active Vulnerability Scanning -- Command Injection on Update Endpoint
+  # Maps to: Update content, update title -- content_hash (SHA-256 string)
+  #          could be crafted as a shell command if improperly handled
+  # Covers: All JSON body fields (title, content, visibility, content_hash)
+  # ---------------------------------------------------------------------------
+
+  Scenario: No remote code execution on document update endpoint
+    Given a new ZAP session
+    Given I set variable "docUpdateEndpoint" to "${baseUrl}/api/workspaces/product-team/documents/product-spec"
+    When I spider "${docUpdateEndpoint}"
+    And I run an active scan on "${docUpdateEndpoint}"
+    Then there should be no alerts of type "Remote OS Command Injection"
+
+  # ---------------------------------------------------------------------------
+  # Baseline Scan -- Document Update Endpoint
+  # Maps to: Overall PATCH endpoint health (spider + passive combined)
+  # ---------------------------------------------------------------------------
+
+  Scenario: Baseline scan on document update endpoint passes
+    Given a new ZAP session
+    Given I set variable "docUpdateEndpoint" to "${baseUrl}/api/workspaces/product-team/documents/product-spec"
+    When I run a baseline scan on "${docUpdateEndpoint}"
+    Then no high risk alerts should be found
+    And alerts should not exceed risk level "Medium"
+
+  # ---------------------------------------------------------------------------
+  # Comprehensive Active Scan -- Document Update Endpoint
+  # Maps to: All PATCH scenarios combined -- deep active scan with full
+  #          assertion coverage for the update endpoint
+  # ---------------------------------------------------------------------------
+
+  Scenario: Comprehensive active scan on document update endpoint finds no high-risk vulnerabilities
+    Given a new ZAP session
+    Given I set variable "docUpdateEndpoint" to "${baseUrl}/api/workspaces/product-team/documents/product-spec"
+    When I spider "${docUpdateEndpoint}"
+    And I run an active scan on "${docUpdateEndpoint}"
+    Then no high risk alerts should be found
+    And there should be no alerts of type "SQL Injection"
+    And there should be no alerts of type "Cross Site Scripting (Reflected)"
+    And there should be no alerts of type "Cross Site Scripting (Persistent)"
+    And there should be no alerts of type "Path Traversal"
+    And there should be no alerts of type "Remote OS Command Injection"
+    And I store the alerts as "updateEndpointAlerts"
+    And I should see the alert details
+
+  # ---------------------------------------------------------------------------
+  # Security Reporting -- Document Update Endpoint Audit
+  # Maps to: Compliance requirement -- dedicated audit report for PATCH endpoint
+  # Includes: Spider, passive scan, active scan, all assertions, report output
+  # ---------------------------------------------------------------------------
+
+  Scenario: Generate security audit report for document update API
+    Given a new ZAP session
+    Given I set variable "docUpdateEndpoint" to "${baseUrl}/api/workspaces/product-team/documents/product-spec"
+    When I spider "${docUpdateEndpoint}"
+    And I run a passive scan on "${docUpdateEndpoint}"
+    And I run an active scan on "${docUpdateEndpoint}"
+    Then no high risk alerts should be found
+    And there should be no alerts of type "SQL Injection"
+    And there should be no alerts of type "Cross Site Scripting (Reflected)"
+    And there should be no alerts of type "Cross Site Scripting (Persistent)"
+    And there should be no alerts of type "Path Traversal"
+    And there should be no alerts of type "Remote OS Command Injection"
+    And I should see the alert details
+    When I save the security report to "reports/document-update-api-security-audit.html"
+    And I save the security report as JSON to "reports/document-update-api-security-audit.json"
