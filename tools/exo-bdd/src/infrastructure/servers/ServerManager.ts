@@ -113,9 +113,15 @@ export class ServerManager {
         const response = await fetch(url, {
           signal: AbortSignal.timeout(2000),
         })
-        if (response.ok || response.status < 500) {
+        if (response.ok) {
           console.log(`[exo-bdd] Server ${config.name} is healthy (status ${response.status})`)
           return
+        }
+        if (response.status >= 400 && response.status < 500) {
+          console.warn(
+            `[exo-bdd] Warning: ${config.name} health check returned ${response.status} — ` +
+            `verify healthCheckPath "${healthPath}" is a valid route`
+          )
         }
       } catch {
         // Server not ready yet -- connection refused or timeout
