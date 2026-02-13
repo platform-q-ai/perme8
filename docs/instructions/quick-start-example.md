@@ -3,7 +3,7 @@
 ```
 User: "Add user profile avatar upload"
 
-Main agent: "I'll orchestrate this feature through our BDD workflow:
+Main agent: "I'll orchestrate this feature:
 
 Planning Phases:
 
@@ -20,7 +20,6 @@ BDD Implementation:
 (All agents read TodoList.md and check off items as they complete them)
 
   Step 1: Create Feature File (RED)
-    [Delegates to fullstack-bdd]
     Output:
     - test/features/user_avatar_upload.feature created
     - Step definitions created
@@ -40,15 +39,7 @@ BDD Implementation:
     Output: "All pre-commit checks passing. Full test suite green. Ready for Step 3."
 
   Step 3: Feature Tests Pass (GREEN)
-    [Delegates to fullstack-bdd]
     Output: All feature scenarios pass - full-stack integration verified
-
-Quality Assurance Phases:
-(All QA agents also use TodoList.md for their checklists)
-
-  QA Phase 1: Check architectural compliance...
-    [Delegates to code-reviewer]
-    Output: "Code review complete. TodoList.md updated to ✓"
 
 Feature complete with full-stack verification!"
 ```

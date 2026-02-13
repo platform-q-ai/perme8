@@ -10,14 +10,12 @@ Planning Phases:
   Planning Phase 2 (Optional): architect → Plan implementation
 
 BDD Implementation:
-  Step 1: fullstack-bdd → Create .feature file from PRD (RED)
+  Step 1: Create .feature file from PRD (RED)
   Step 2: Implement via TDD (RED, GREEN)
     - phoenix-tdd → Backend implementation (domain, application, infrastructure, interface)
     - typescript-tdd → Frontend implementation (domain, application, infrastructure, presentation)
-  Step 3: fullstack-bdd → Feature tests pass (GREEN)
+  Step 3: Feature tests pass (GREEN)
 
-Quality Assurance Phases:
-  QA Phase 1: code-reviewer → Review implementation
 ```
 
 ## Key Points:
@@ -56,11 +54,10 @@ Feature: [Feature Name]
 - User asks: "Write specs for user login"
   → Main Agent creates: `test/features/user_login.feature`
 
-This maintains consistency with BDD workflow and creates executable specifications from the start.
+This creates executable specifications from the start.
 
 ## Critical Rules
 
-1. **NEVER skip code-reviewer** - Catches boundary violations
 3. **ALWAYS run in sequence** - Each phase depends on previous
 4. **NEVER write implementation before tests** - Non-negotiable
 5. **Feature file first** - Write .feature before implementation
