@@ -17,8 +17,7 @@ BDD Implementation:
   Step 3: fullstack-bdd → Feature tests pass (GREEN)
 
 Quality Assurance Phases:
-  QA Phase 1: test-validator → Validate all tests
-  QA Phase 2: code-reviewer → Review implementation
+  QA Phase 1: code-reviewer → Review implementation
 ```
 
 ## Key Points:
@@ -61,8 +60,7 @@ This maintains consistency with BDD workflow and creates executable specificatio
 
 ## Critical Rules
 
-1. **NEVER skip test-validator** - Ensures TDD was followed
-2. **NEVER skip code-reviewer** - Catches boundary violations
+1. **NEVER skip code-reviewer** - Catches boundary violations
 3. **ALWAYS run in sequence** - Each phase depends on previous
 4. **NEVER write implementation before tests** - Non-negotiable
 5. **Feature file first** - Write .feature before implementation

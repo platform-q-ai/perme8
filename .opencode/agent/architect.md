@@ -775,15 +775,7 @@ The TodoList.md file must contain ALL implementation checkboxes from your detail
 
 ## Quality Assurance
 
-### QA Phase 1: Test Validation ⏸
-
-**Assigned to**: test-validator agent
-
-- [ ] TDD process validated across all layers
-- [ ] Test quality verified
-- [ ] Test speed validated
-
-### QA Phase 2: Code Review ⏸
+### QA Phase 1: Code Review ⏸
 
 **Assigned to**: code-reviewer agent
 
@@ -791,7 +783,7 @@ The TodoList.md file must contain ALL implementation checkboxes from your detail
 - [ ] Clean Architecture compliance
 - [ ] Security review passed
 
-### QA Phase 3: Documentation Sync ⏸
+### QA Phase 2: Documentation Sync ⏸
 
 **Assigned to**: doc-sync agent
 

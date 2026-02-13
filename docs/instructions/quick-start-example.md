@@ -46,11 +46,7 @@ BDD Implementation:
 Quality Assurance Phases:
 (All QA agents also use TodoList.md for their checklists)
 
-  QA Phase 1: Verify TDD process across all layers...
-    [Delegates to test-validator]
-    Output: "Test validation complete. TodoList.md updated to ✓"
-
-  QA Phase 2: Check architectural compliance...
+  QA Phase 1: Check architectural compliance...
     [Delegates to code-reviewer]
     Output: "Code review complete. TodoList.md updated to ✓"
 

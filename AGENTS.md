@@ -21,7 +21,6 @@ For complete workflow documentation, see:
 - **Orchestrated Development Workflow**: `docs/instructions/orchestrated-workflow.md`
 - **BDD Implementation Workflow**: `docs/instructions/bdd-workflow.md`
 - **Quality Assurance Phases**: `docs/instructions/quality-assurance.md`
-- **Self-Learning Loop**: `docs/instructions/self-learning-loop.md`
 - **Subagent Coordination**: `docs/instructions/subagent-coordination.md`
 - **Subagent Reference**: `docs/instructions/subagent-reference.md`
 - **Quick Start Example**: `docs/instructions/quick-start-example.md`
@@ -44,7 +43,6 @@ For detailed documentation on architecture, BDD, TDD practices, and implementati
 - `.opencode/agent/phoenix-tdd.md` - Phoenix and LiveView TDD implementation
 - `.opencode/agent/typescript-tdd.md` - TypeScript TDD implementation
 - `.opencode/agent/fullstack-bdd.md` - Full-stack BDD testing with Cucumber
-- `.opencode/agent/test-validator.md` - Test quality validation
 - `.opencode/agent/code-reviewer.md` - Code review process
 
 ## Key Principles

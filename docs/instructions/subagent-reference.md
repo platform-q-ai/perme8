@@ -7,7 +7,6 @@
 - **phoenix-tdd** - Phoenix backend and LiveView implementation with TDD
 - **typescript-tdd** - TypeScript implementation with TDD (hooks, clients, standalone code)
 - **fullstack-bdd** - Full-stack BDD testing with Cucumber (feature files and step definitions)
-- **test-validator** - Test quality and TDD process validation
 - **code-reviewer** - Architectural and security review
 
 ## MCP Tools Integration
@@ -33,7 +32,6 @@ All subagents have access to **Context7 MCP tools** for up-to-date library docum
 1. **architect** - Research library capabilities before planning
 2. **phoenix-tdd** - Check Phoenix/Elixir testing patterns and API usage
 3. **typescript-tdd** - Verify TypeScript patterns and Vitest usage
-4. **test-validator** - Validate against official testing guidelines
 5. **code-reviewer** - Verify security practices and API usage
 
 ### Example Usage:
