@@ -17,6 +17,8 @@ export default defineConfig({
       startTimeout: 30000,
     },
   ],
+  // Active ZAP scans can take minutes; raise Cucumber step timeout accordingly.
+  timeout: 300_000,
   // Map feature-file variable names to deterministic API key tokens.
   // These must match the plaintext tokens in apps/jarga/priv/repo/exo_seeds.exs.
   variables: {
@@ -31,8 +33,8 @@ export default defineConfig({
     http: {
       baseURL: 'http://localhost:4005',
     },
-    // security: {
-    //   zapUrl: 'http://localhost:8080',
-    // },
+    security: {
+      zapUrl: 'http://localhost:8080',
+    },
   },
 })

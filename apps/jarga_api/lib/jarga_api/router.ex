@@ -4,10 +4,12 @@ defmodule JargaApi.Router do
   # Unauthenticated API pipeline for public endpoints (e.g., health check, OpenAPI spec)
   pipeline :api do
     plug(:accepts, ["json"])
+    plug(JargaApi.Plugs.SecurityHeadersPlug)
   end
 
   pipeline :api_authenticated do
     plug(:accepts, ["json"])
+    plug(JargaApi.Plugs.SecurityHeadersPlug)
     plug(JargaApi.Plugs.ApiAuthPlug)
   end
 
