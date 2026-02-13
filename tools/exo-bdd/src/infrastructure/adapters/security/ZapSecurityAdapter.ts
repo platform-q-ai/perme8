@@ -1,3 +1,5 @@
+import { writeFile, mkdir } from 'node:fs/promises'
+import { dirname } from 'node:path'
 import type { SecurityPort } from '../../../application/ports/index.ts'
 import type { SecurityAdapterConfig } from '../../../application/config/index.ts'
 import type {
@@ -31,6 +33,11 @@ export class ZapSecurityAdapter implements SecurityPort {
 
     if (!response.ok) {
       throw new Error(`ZAP API request failed: ${response.status} ${response.statusText}`)
+    }
+
+    // ZAP /OTHER/ endpoints return raw content (HTML, XML, etc.), not JSON
+    if (endpoint.startsWith('/OTHER/')) {
+      return (await response.text()) as T
     }
 
     return (await response.json()) as T
@@ -260,17 +267,21 @@ export class ZapSecurityAdapter implements SecurityPort {
   }
 
   async generateHtmlReport(outputPath: string): Promise<void> {
-    const report = await this.zapRequest<ArrayBuffer>('/OTHER/core/other/htmlreport/')
-    const reportHtml =
-      report instanceof ArrayBuffer
-        ? new TextDecoder().decode(report)
-        : String(report)
-    await Bun.write(outputPath, reportHtml)
+    const reportHtml = await this.zapRequest<string>('/OTHER/core/other/htmlreport/')
+    await mkdir(dirname(outputPath), { recursive: true })
+    await writeFile(outputPath, reportHtml, 'utf-8')
   }
 
   async generateJsonReport(outputPath: string): Promise<void> {
-    const report = await this.zapRequest<unknown>('/OTHER/core/other/jsonreport/')
-    await Bun.write(outputPath, JSON.stringify(report, null, 2))
+    const reportText = await this.zapRequest<string>('/OTHER/core/other/jsonreport/')
+    await mkdir(dirname(outputPath), { recursive: true })
+    // Pretty-print if it's valid JSON, otherwise write as-is
+    try {
+      const parsed = JSON.parse(reportText)
+      await writeFile(outputPath, JSON.stringify(parsed, null, 2), 'utf-8')
+    } catch {
+      await writeFile(outputPath, reportText, 'utf-8')
+    }
   }
 
   async newSession(): Promise<void> {

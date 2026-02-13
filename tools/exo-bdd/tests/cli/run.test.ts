@@ -277,4 +277,28 @@ describe('generateSetupContent', () => {
 
     expect(content).toContain("this.setVariable('msg', 'it\\'s a test')")
   })
+
+  test('emits setDefaultTimeout when timeout is configured', () => {
+    const content = generateSetupContent('/project/bdd/config.ts', '/tools/exo-bdd', {
+      adapters: {},
+      timeout: 300000,
+    })
+
+    expect(content).toContain('setDefaultTimeout(300000)')
+    expect(content).toContain('import { BeforeAll, AfterAll, Before, After, setWorldConstructor, setDefaultTimeout, Status }')
+  })
+
+  test('does not emit setDefaultTimeout when timeout is not configured', () => {
+    const content = generateSetupContent('/project/bdd/config.ts', '/tools/exo-bdd', {
+      adapters: {},
+    })
+
+    expect(content).not.toContain('setDefaultTimeout(')
+  })
+
+  test('always imports setDefaultTimeout (available if needed)', () => {
+    const content = generateSetupContent('/project/bdd/config.ts', '/tools/exo-bdd')
+
+    expect(content).toContain('setDefaultTimeout')
+  })
 })

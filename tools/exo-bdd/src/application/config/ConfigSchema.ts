@@ -9,6 +9,12 @@ export interface ExoBddConfig {
    * Useful for injecting API keys, tokens, or environment-specific values.
    */
   variables?: Record<string, string>
+  /**
+   * Default Cucumber step timeout in milliseconds.
+   * Defaults to Cucumber's built-in 5000ms. Set higher for security scans
+   * (e.g., 300000 for active ZAP scanning).
+   */
+  timeout?: number
   adapters: {
     http?: HttpAdapterConfig
     browser?: BrowserAdapterConfig
