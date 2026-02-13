@@ -4,15 +4,6 @@
 
 Elixir Phoenix umbrella project. **MUST** read `docs/umbrella_apps.md` before any development work.
 
-## Workflow
-
-Specialized subagents maintain code quality, architectural integrity, and TDD discipline:
-
-- `docs/instructions/orchestrated-workflow.md`
-- `docs/instructions/subagent-coordination.md`
-- `docs/instructions/subagent-reference.md`
-- `docs/instructions/quick-start-example.md`
-
 ## Reference Docs
 
 - `docs/prompts/architect/FEATURE_TESTING_GUIDE.md`
@@ -22,10 +13,19 @@ Specialized subagents maintain code quality, architectural integrity, and TDD di
 
 ## Subagents
 
-- `.opencode/agent/prd.md`
-- `.opencode/agent/architect.md`
-- `.opencode/agent/phoenix-tdd.md`
-- `.opencode/agent/typescript-tdd.md`
+- `.opencode/agent/prd.md` -- requirements gathering and PRD creation
+- `.opencode/agent/architect.md` -- TDD implementation plans from PRDs
+- `.opencode/agent/phoenix-tdd.md` -- Phoenix backend/LiveView implementation via TDD
+- `.opencode/agent/typescript-tdd.md` -- TypeScript implementation via TDD
+
+## Skills
+
+- **Build Feature** -- full lifecycle: PRD → Architect → Execute Plan → PR. Use for new features from scratch.
+- **Execute Plan** -- implements an existing architectural plan end-to-end with commits, PR, CI, review.
+- **Commit and PR** -- git workflow: branch, incremental commits, pre-commit checks, push, PR creation, CI monitoring.
+- **PR Reviewer** -- automated code review with inline comments on a GitHub PR.
+- **Address PR Comments** -- reads and resolves review comments with fix commits.
+- **BDD Feature Translator** -- generates domain-specific feature files (browser, HTTP, security) from a PRD.
 
 ## Principles
 

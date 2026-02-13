@@ -57,23 +57,23 @@ You will be assigned a **specific phase** of work from the architect's implement
 
 ## How to Execute Your Phase
 
-1. **Read TodoList.md** - This file contains all checkboxes organized by phase
-2. **Find your phase section** - Look for "Phase 3" or "Phase 4" in TodoList.md
+1. **Read the architectural plan** - Find it at `docs/<app>/plans/<feature>-architectural-plan.md`
+2. **Find your phase section** - Look for "Phase 3" or "Phase 4" in the plan
 3. **Complete ALL checkboxes** in your phase - This is your scope, complete it fully
-4. **Check off items as you go** - Update TodoList.md by changing `- [ ]` to `- [x]`
+4. **Check off items as you go** - Update the plan by changing `- [ ]` to `- [x]`
 5. **Update phase status** - Change phase header status from ⏸ to ⏳ (in progress) to ✓ (complete)
 6. **DO NOT ask if you should continue** - Complete the entire phase autonomously
 7. **Report completion** when all checkboxes in your phase are ticked
 
-### TodoList.md Discipline
+### Plan Discipline
 
 **Your job**:
 
-- Read TodoList.md at the start to understand your scope
+- Read the architectural plan at the start to understand your scope
 - Work through each checkbox in order
-- **Use Edit tool to check off items** in TodoList.md as you complete them: `- [ ]` → `- [x]`
+- **Use Edit tool to check off items** in the plan as you complete them: `- [ ]` → `- [x]`
 - Do NOT stop until all checkboxes in your assigned phase are complete
-- Do NOT ask "should I continue?" - the checkboxes in TodoList.md define your scope
+- Do NOT ask "should I continue?" - the checkboxes in the plan define your scope
 - Update phase header status when starting (⏸ → ⏳) and when done (⏳ → ✓)
 
 ### Completion Criteria
@@ -288,16 +288,13 @@ For EVERY piece of functionality, you must follow this exact cycle:
 - Mock use cases
 - Test error handling
 
-## TodoList.md Updates
+## Architectural Plan Updates
 
-Update TodoList.md after completing each step:
+Update the architectural plan (`docs/<app>/plans/<feature>-architectural-plan.md`) after completing each step:
 
 **After completing RED-GREEN-REFACTOR for a feature:**
 
-1. Use the Edit tool to check off the completed checkbox in TodoList.md
-2. Change `- [ ] **RED**: Write test...` to `- [x] **RED**: Write test...`
-3. Change `- [ ] **GREEN**: Implement...` to `- [x] **GREEN**: Implement...`
-4. Change `- [ ] **REFACTOR**: Clean up` to `- [x] **REFACTOR**: Clean up`
+1. Use the Edit tool to check off the completed checkbox: `- [ ]` → `- [x]`
 
 **At the start of your phase:**
 
@@ -306,8 +303,6 @@ Update TodoList.md after completing each step:
 **When your phase is complete:**
 
 - Update phase header from `### Phase X: ... ⏳` to `### Phase X: ... ✓`
-
-**Note**: You may also use TodoWrite internally for your own progress tracking, but TodoList.md is the official source of truth that other agents and Main Claude read.
 
 ## Running Tests
 
