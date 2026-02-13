@@ -161,4 +161,120 @@ describe('generateSetupContent', () => {
 
     expect(content).toContain('this.hasBrowser')
   })
+
+  test('injects baseUrl variable when http adapter has baseURL', () => {
+    const content = generateSetupContent('/project/bdd/config.ts', '/tools/exo-bdd', {
+      adapters: {
+        http: { baseURL: 'http://localhost:4005/api' },
+      },
+    })
+
+    expect(content).toContain("this.setVariable('baseUrl', 'http://localhost:4005/api')")
+  })
+
+  test('injects browserBaseUrl variable when browser adapter has baseURL', () => {
+    const content = generateSetupContent('/project/bdd/config.ts', '/tools/exo-bdd', {
+      adapters: {
+        http: { baseURL: 'http://localhost:4005' },
+        browser: { baseURL: 'http://localhost:4002' },
+      },
+    })
+
+    expect(content).toContain("this.setVariable('baseUrl', 'http://localhost:4005')")
+    expect(content).toContain("this.setVariable('browserBaseUrl', 'http://localhost:4002')")
+  })
+
+  test('uses browser baseURL as baseUrl when no http adapter configured', () => {
+    const content = generateSetupContent('/project/bdd/config.ts', '/tools/exo-bdd', {
+      adapters: {
+        browser: { baseURL: 'http://localhost:4002' },
+      },
+    })
+
+    expect(content).toContain("this.setVariable('baseUrl', 'http://localhost:4002')")
+    expect(content).toContain("this.setVariable('browserBaseUrl', 'http://localhost:4002')")
+  })
+
+  test('does not inject baseUrl when no http or browser adapter configured', () => {
+    const content = generateSetupContent('/project/bdd/config.ts', '/tools/exo-bdd', {
+      adapters: {
+        cli: { workingDir: '/tmp' },
+      },
+    })
+
+    expect(content).not.toContain("setVariable('baseUrl'")
+    expect(content).not.toContain("setVariable('browserBaseUrl'")
+  })
+
+  test('does not inject baseUrl when config is not provided', () => {
+    const content = generateSetupContent('/project/bdd/config.ts', '/tools/exo-bdd')
+
+    expect(content).not.toContain("setVariable('baseUrl'")
+  })
+
+  test('marks injections with comment', () => {
+    const content = generateSetupContent('/project/bdd/config.ts', '/tools/exo-bdd', {
+      adapters: {
+        http: { baseURL: 'http://localhost:4005' },
+      },
+    })
+
+    expect(content).toContain('Auto-injected from config')
+  })
+
+  test('injects user-defined variables from config', () => {
+    const content = generateSetupContent('/project/bdd/config.ts', '/tools/exo-bdd', {
+      adapters: {},
+      variables: {
+        'api-token': 'secret-token-123',
+        'workspace-slug': 'my-workspace',
+      },
+    })
+
+    expect(content).toContain("this.setVariable('api-token', 'secret-token-123')")
+    expect(content).toContain("this.setVariable('workspace-slug', 'my-workspace')")
+  })
+
+  test('injects variables alongside baseUrl', () => {
+    const content = generateSetupContent('/project/bdd/config.ts', '/tools/exo-bdd', {
+      adapters: {
+        http: { baseURL: 'http://localhost:4005' },
+      },
+      variables: {
+        'my-token': 'tok_abc',
+      },
+    })
+
+    expect(content).toContain("this.setVariable('baseUrl', 'http://localhost:4005')")
+    expect(content).toContain("this.setVariable('my-token', 'tok_abc')")
+  })
+
+  test('does not inject variables when variables is empty', () => {
+    const content = generateSetupContent('/project/bdd/config.ts', '/tools/exo-bdd', {
+      adapters: {},
+      variables: {},
+    })
+
+    // No injection comment should appear since no variables and no adapters
+    expect(content).not.toContain('Auto-injected')
+  })
+
+  test('does not inject variables when variables is undefined', () => {
+    const content = generateSetupContent('/project/bdd/config.ts', '/tools/exo-bdd', {
+      adapters: {},
+    })
+
+    expect(content).not.toContain('Auto-injected')
+  })
+
+  test('escapes single quotes in variable values', () => {
+    const content = generateSetupContent('/project/bdd/config.ts', '/tools/exo-bdd', {
+      adapters: {},
+      variables: {
+        'msg': "it's a test",
+      },
+    })
+
+    expect(content).toContain("this.setVariable('msg', 'it\\'s a test')")
+  })
 })

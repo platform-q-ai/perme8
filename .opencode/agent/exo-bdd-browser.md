@@ -38,7 +38,11 @@ Your output feature files must ONLY use the built-in step definitions listed bel
 
 ## Output Format
 
-Produce a `.feature` file in Gherkin syntax. Tag it with `@browser`. Example:
+Produce a `.feature` file in Gherkin syntax. Tag it with `@browser`.
+
+**IMPORTANT: Do NOT set `baseUrl` in the feature file.** The `baseUrl` variable is automatically injected from the `browser.baseURL` (or `http.baseURL`) in the exo-bdd config file. Use `${baseUrl}` to reference it in navigation steps.
+
+Example:
 
 ```gherkin
 @browser
@@ -46,9 +50,6 @@ Feature: User Login via Browser
   As a user
   I want to log in through the browser
   So that I can access my dashboard
-
-  Background:
-    Given I set variable "baseUrl" to "http://localhost:4000"
 
   Scenario: Successful login
     Given I am on "${baseUrl}/login"
@@ -186,6 +187,7 @@ When converting a generic feature to browser-specific:
 
 ## Important Notes
 
+- **`baseUrl` is auto-injected** from the exo-bdd config's `browser.baseURL` (or `http.baseURL` as fallback). Do NOT define it in the feature file. Use `${baseUrl}` in navigation steps.
 - All string parameters support `${variableName}` interpolation for dynamic values
 - Selectors can be CSS selectors, `[data-testid="..."]`, or Playwright-compatible text selectors
 - The `I click the {string} button` step wraps the text in `button:has-text("...")` automatically

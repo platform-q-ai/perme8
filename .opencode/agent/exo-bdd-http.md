@@ -40,7 +40,11 @@ Your output feature files must ONLY use the built-in step definitions listed bel
 
 ## Output Format
 
-Produce a `.feature` file in Gherkin syntax. Tag it with `@http`. Example:
+Produce a `.feature` file in Gherkin syntax. Tag it with `@http`.
+
+**IMPORTANT: Do NOT set `baseUrl` in the feature file.** The `baseUrl` variable is automatically injected from the `http.baseURL` in the exo-bdd config file. The HTTP adapter also resolves relative paths against the config's `baseURL`, so you can use relative paths directly (e.g. `/users` instead of `${baseUrl}/users`).
+
+Example:
 
 ```gherkin
 @http
@@ -50,13 +54,12 @@ Feature: User API
   So that I can integrate with the platform programmatically
 
   Background:
-    Given I set variable "baseUrl" to "http://localhost:4000/api"
-    And I set header "Content-Type" to "application/json"
+    Given I set header "Content-Type" to "application/json"
     And I set header "Accept" to "application/json"
 
   Scenario: Create a new user
     Given I set bearer token to "valid-admin-token"
-    When I POST to "${baseUrl}/users" with body:
+    When I POST to "/users" with body:
       """
       {"name": "Alice", "email": "alice@example.com"}
       """
@@ -67,7 +70,7 @@ Feature: User API
 
   Scenario: Fetch the created user
     Given I set bearer token to "valid-admin-token"
-    When I GET "${baseUrl}/users/${userId}"
+    When I GET "/users/${userId}"
     Then the response status should be 200
     And the response body path "$.email" should equal "alice@example.com"
 ```
@@ -207,6 +210,8 @@ When converting a generic feature to HTTP-specific:
 
 ## Important Notes
 
+- **`baseUrl` is auto-injected** from the exo-bdd config's `http.baseURL`. Do NOT define it in the feature file.
+- The HTTP adapter resolves relative paths against `baseURL`, so prefer relative paths (e.g. `/api/users`) over `${baseUrl}/api/users`.
 - All string parameters support `${variableName}` interpolation for dynamic values
 - Headers set with `I set header` are applied to the NEXT request only (reset after each request)
 - Bearer tokens and basic auth are set via the `Authorization` header

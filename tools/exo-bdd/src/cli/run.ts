@@ -1,6 +1,8 @@
 import { resolve, dirname, join } from 'node:path'
 import { mkdirSync, existsSync, rmSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
+import type { ExoBddConfig } from '../application/config/index.ts'
+import { ServerManager } from '../infrastructure/servers/index.ts'
 
 export interface RunOptions {
   config: string
@@ -67,13 +69,44 @@ export function buildCucumberArgs(options: {
 /**
  * Generates a temporary support/setup.ts file that wires the TestWorld,
  * loads config, creates adapters, and attaches them to the world.
+ *
+ * When adapter configs include a baseURL, it is automatically injected as a
+ * variable so feature files can reference `${baseUrl}` without hardcoding it.
  */
-export function generateSetupContent(configAbsPath: string, exoBddRoot: string): string {
+export function generateSetupContent(configAbsPath: string, exoBddRoot: string, config?: ExoBddConfig): string {
   // Use file:// URLs for imports to ensure cross-platform compatibility
   const configUrl = pathToFileURL(configAbsPath).href
   const appConfigUrl = pathToFileURL(resolve(exoBddRoot, 'src/application/config/index.ts')).href
   const factoryUrl = pathToFileURL(resolve(exoBddRoot, 'src/infrastructure/factories/index.ts')).href
   const worldUrl = pathToFileURL(resolve(exoBddRoot, 'src/interface/world/index.ts')).href
+
+  // Build variable injection lines
+  const injections: string[] = []
+
+  // Inject baseUrl from adapter configs
+  if (config?.adapters.http?.baseURL) {
+    injections.push(`  this.setVariable('baseUrl', '${config.adapters.http.baseURL}')`)
+  }
+  if (config?.adapters.browser?.baseURL) {
+    injections.push(`  this.setVariable('browserBaseUrl', '${config.adapters.browser.baseURL}')`)
+    // If no http baseUrl, use browser baseUrl as the primary baseUrl
+    if (!config?.adapters.http?.baseURL) {
+      injections.push(`  this.setVariable('baseUrl', '${config.adapters.browser.baseURL}')`)
+    }
+  }
+
+  // Inject user-defined variables from config
+  if (config?.variables) {
+    for (const [name, value] of Object.entries(config.variables)) {
+      // Escape single quotes in values to prevent injection
+      const escaped = value.replace(/'/g, "\\'")
+      injections.push(`  this.setVariable('${name}', '${escaped}')`)
+    }
+  }
+
+  const injectLines = injections.length > 0
+    ? `\n  // Auto-injected from config\n${injections.join('\n')}\n`
+    : ''
 
   return `import { BeforeAll, AfterAll, Before, After, setWorldConstructor, Status } from '@cucumber/cucumber'
 import { loadConfig } from '${appConfigUrl}'
@@ -98,7 +131,7 @@ Before(async function (this: TestWorld) {
   if (adapters.graph) this.graph = adapters.graph
   if (adapters.security) this.security = adapters.security
   this.reset()
-})
+${injectLines}})
 
 After(async function (this: TestWorld, scenario) {
   if (this.hasBrowser) {
@@ -119,6 +152,13 @@ AfterAll(async function () {
 /**
  * Runs BDD tests using cucumber-js with the given config.
  * Returns the exit code from cucumber-js.
+ *
+ * Lifecycle:
+ * 1. Load config
+ * 2. Start configured servers (if any) and wait for health checks
+ * 3. Run seed commands (if any)
+ * 4. Run Cucumber tests
+ * 5. Stop servers
  */
 export async function runTests(options: RunOptions): Promise<number> {
   const configAbsPath = resolve(options.config)
@@ -131,17 +171,28 @@ export async function runTests(options: RunOptions): Promise<number> {
   const configDir = dirname(configAbsPath)
   const exoBddRoot = getExoBddRoot()
 
-  // Load config to read features
-  let features: string | string[] = './features/**/*.feature'
+  // Load config to read features and servers
+  let config: ExoBddConfig
   try {
     const configModule = await import(pathToFileURL(configAbsPath).href)
-    const config = configModule.default
-    if (config.features) {
-      features = config.features
-    }
+    config = configModule.default as ExoBddConfig
   } catch (error) {
     console.error(`Failed to load config: ${error instanceof Error ? error.message : String(error)}`)
     return 1
+  }
+
+  const features = config.features ?? './features/**/*.feature'
+
+  // Start servers if configured
+  const serverManager = new ServerManager()
+  if (config.servers && config.servers.length > 0) {
+    try {
+      await serverManager.startAll(config.servers, configDir)
+    } catch (error) {
+      console.error(`[exo-bdd] Failed to start servers: ${error instanceof Error ? error.message : String(error)}`)
+      await serverManager.stopAll()
+      return 1
+    }
   }
 
   // Generate temporary setup file
@@ -150,7 +201,7 @@ export async function runTests(options: RunOptions): Promise<number> {
     mkdirSync(tmpDir, { recursive: true })
   }
   const setupPath = join(tmpDir, 'setup.ts')
-  const setupContent = generateSetupContent(configAbsPath, exoBddRoot)
+  const setupContent = generateSetupContent(configAbsPath, exoBddRoot, config)
   await Bun.write(setupPath, setupContent)
 
   // Build steps import path
@@ -181,6 +232,11 @@ export async function runTests(options: RunOptions): Promise<number> {
     const exitCode = await proc.exited
     return exitCode
   } finally {
+    // Stop servers
+    if (config.servers && config.servers.length > 0) {
+      await serverManager.stopAll()
+    }
+
     // Clean up temp directory
     try {
       rmSync(tmpDir, { recursive: true })

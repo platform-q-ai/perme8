@@ -1,5 +1,6 @@
 export type {
   ExoBddConfig,
+  ServerConfig,
   HttpAdapterConfig,
   BrowserAdapterConfig,
   CliAdapterConfig,

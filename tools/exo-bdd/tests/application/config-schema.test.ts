@@ -1,6 +1,7 @@
 import { test, expect, describe } from 'bun:test'
 import type {
   ExoBddConfig,
+  ServerConfig,
   HttpAdapterConfig,
   BrowserAdapterConfig,
   CliAdapterConfig,
@@ -150,5 +151,106 @@ describe('ConfigSchema type validation', () => {
       adapters: {},
     }
     expect(config.features).toBeUndefined()
+  })
+
+  test('ServerConfig with required fields only', () => {
+    const server: ServerConfig = {
+      name: 'my-app',
+      command: 'mix phx.server',
+      port: 4000,
+    }
+    expect(server.name).toBe('my-app')
+    expect(server.command).toBe('mix phx.server')
+    expect(server.port).toBe(4000)
+    expect(server.workingDir).toBeUndefined()
+    expect(server.env).toBeUndefined()
+    expect(server.seed).toBeUndefined()
+    expect(server.healthCheckPath).toBeUndefined()
+    expect(server.startTimeout).toBeUndefined()
+  })
+
+  test('ServerConfig with all options', () => {
+    const server: ServerConfig = {
+      name: 'jarga-api',
+      command: 'mix phx.server',
+      port: 4005,
+      workingDir: '../../',
+      env: { MIX_ENV: 'test' },
+      seed: 'mix run priv/repo/exo_seeds.exs',
+      healthCheckPath: '/api/health',
+      startTimeout: 60000,
+    }
+    expect(server.name).toBe('jarga-api')
+    expect(server.port).toBe(4005)
+    expect(server.workingDir).toBe('../../')
+    expect(server.env?.MIX_ENV).toBe('test')
+    expect(server.seed).toBe('mix run priv/repo/exo_seeds.exs')
+    expect(server.healthCheckPath).toBe('/api/health')
+    expect(server.startTimeout).toBe(60000)
+  })
+
+  test('ExoBddConfig with servers configured', () => {
+    const config: ExoBddConfig = {
+      servers: [
+        {
+          name: 'api',
+          command: 'mix phx.server',
+          port: 4005,
+          seed: 'mix run priv/repo/seeds.exs',
+        },
+        {
+          name: 'web',
+          command: 'mix phx.server',
+          port: 4002,
+        },
+      ],
+      adapters: {
+        http: { baseURL: 'http://localhost:4005' },
+      },
+    }
+    expect(config.servers).toHaveLength(2)
+    expect(config.servers![0].name).toBe('api')
+    expect(config.servers![0].seed).toBe('mix run priv/repo/seeds.exs')
+    expect(config.servers![1].name).toBe('web')
+  })
+
+  test('ExoBddConfig with servers omitted (optional)', () => {
+    const config: ExoBddConfig = {
+      adapters: {},
+    }
+    expect(config.servers).toBeUndefined()
+  })
+
+  test('ExoBddConfig with variables configured', () => {
+    const config: ExoBddConfig = {
+      adapters: {
+        http: { baseURL: 'http://localhost:4005' },
+      },
+      variables: {
+        'api-token': 'secret-123',
+        'workspace-slug': 'my-workspace',
+        'another-key': 'value-456',
+      },
+    }
+    expect(config.variables).toBeDefined()
+    expect(Object.keys(config.variables!)).toHaveLength(3)
+    expect(config.variables!['api-token']).toBe('secret-123')
+    expect(config.variables!['workspace-slug']).toBe('my-workspace')
+  })
+
+  test('ExoBddConfig with variables omitted (optional)', () => {
+    const config: ExoBddConfig = {
+      adapters: {},
+    }
+    expect(config.variables).toBeUndefined()
+  })
+
+  test('ExoBddConfig with empty variables', () => {
+    const config: ExoBddConfig = {
+      adapters: {},
+      variables: {},
+    }
+    expect(config.variables).toBeDefined()
+    expect(Object.keys(config.variables!)).toHaveLength(0)
   })
 })
