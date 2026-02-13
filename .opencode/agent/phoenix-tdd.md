@@ -27,9 +27,38 @@ Implement complete Phoenix features by strictly following the Red-Green-Refactor
 - **Interface Layer**: LiveView UI, controllers, channels, templates, real-time features
 - **PubSub**: Phoenix PubSub broadcasting and subscriptions
 
-**Phoenix LiveView handles all UI**: Forms, real-time updates, user interactions, navigation, modals - everything in `lib/jarga_web/`.
+**Phoenix LiveView handles all UI**: Forms, real-time updates, user interactions, navigation, modals — everything in the relevant `_web` app.
 
 **Out of Scope**: TypeScript assets in `assets/js/` (only needed in rare cases, handled separately)
+
+## Umbrella Project Structure
+
+This is a Phoenix umbrella project. All apps live under `apps/`. Before starting work, identify which app(s) you are working in.
+
+**Common patterns:**
+
+- **Domain/backend apps**: `apps/<app_name>/` — contain business logic, Ecto schemas, use cases, infrastructure
+- **Web apps**: `apps/<app_name>_web/` — contain LiveViews, controllers, channels, templates
+
+**Path conventions** (where `<app>` is the app name, e.g. `identity`, `jarga`):
+
+- Domain app lib: `apps/<app>/lib/<app>/`
+- Domain app tests: `apps/<app>/test/<app>/`
+- Web app lib: `apps/<app>_web/lib/<app>_web/`
+- Web app tests: `apps/<app>_web/test/<app>_web/`
+
+**Running tests in an umbrella:**
+
+```bash
+# Run tests for a specific app
+mix test --app <app_name>
+
+# Run a specific test file
+mix test apps/<app>/test/<app>/path/to/test.exs:line_number
+
+# Run all tests across the umbrella
+mix test
+```
 
 ## Phased Execution
 
@@ -39,15 +68,16 @@ You will be assigned a **specific phase** of work from the architect's implement
 
 **What you'll implement**:
 
-- Domain Layer: 
+- Domain Layer:
   - Entities: Ecto schemas (data structures only, NO business logic)
   - Policies: Pure business rules (no I/O, no Repo, no side effects)
 - Application Layer: Use cases with mocked dependencies (orchestration, transactions)
 
-**Folder structure**:
-- `lib/jarga/[context]/domain/entities/*.ex` - Ecto schemas
-- `lib/jarga/[context]/domain/policies/*.ex` - Pure functions
-- `lib/jarga/[context]/application/use_cases/*.ex` - Business operations
+**Folder structure** (within the relevant app under `apps/<app>/`):
+
+- `lib/<app>/[context]/domain/entities/*.ex` - Ecto schemas
+- `lib/<app>/[context]/domain/policies/*.ex` - Pure functions
+- `lib/<app>/[context]/application/use_cases/*.ex` - Business operations
 
 **Layers to IGNORE in this phase**:
 
@@ -61,36 +91,37 @@ You will be assigned a **specific phase** of work from the architect's implement
 - Infrastructure Layer: Ecto queries, repositories, notifiers (email/SMS)
 - Interface Layer: LiveView UI, controllers, channels, templates (.heex files)
 
-**Folder structure**:
-- `lib/jarga/[context]/infrastructure/queries/*.ex` - Ecto query objects
-- `lib/jarga/[context]/infrastructure/repositories/*.ex` - Data access
-- `lib/jarga/[context]/infrastructure/notifiers/*.ex` - Email, SMS, etc.
-- `lib/jarga_web/live/*.ex` - LiveView modules
-- `lib/jarga_web/live/*.html.heex` - LiveView templates
-- `lib/jarga_web/controllers/*.ex` - Controllers (if needed)
-- `lib/jarga_web/channels/*.ex` - Channels (if needed)
+**Folder structure** (infrastructure in `apps/<app>/`, interface in `apps/<app>_web/`):
+
+- `lib/<app>/[context]/infrastructure/queries/*.ex` - Ecto query objects
+- `lib/<app>/[context]/infrastructure/repositories/*.ex` - Data access
+- `lib/<app>/[context]/infrastructure/notifiers/*.ex` - Email, SMS, etc.
+- `lib/<app>_web/live/*.ex` - LiveView modules
+- `lib/<app>_web/live/*.html.heex` - LiveView templates
+- `lib/<app>_web/controllers/*.ex` - Controllers (if needed)
+- `lib/<app>_web/channels/*.ex` - Channels (if needed)
 
 **Prerequisites**: Phase 1 must be complete (domain and application layers exist)
 
 ## How to Execute Your Phase
 
-1. **Read TodoList.md** - This file contains all checkboxes organized by phase
-2. **Find your phase section** - Look for "Phase 1" or "Phase 2" in TodoList.md
+1. **Read the architectural plan** - Find it at `docs/<app>/plans/<feature>-architectural-plan.md`
+2. **Find your phase section** - Look for "Phase 1" or "Phase 2" in the plan
 3. **Complete ALL checkboxes** in your phase - This is your scope, complete it fully
-4. **Check off items as you go** - Update TodoList.md by changing `- [ ]` to `- [x]`
+4. **Check off items as you go** - Update the plan by changing `- [ ]` to `- [x]`
 5. **Update phase status** - Change phase header status from ⏸ to ⏳ (in progress) to ✓ (complete)
 6. **DO NOT ask if you should continue** - Complete the entire phase autonomously
 7. **Report completion** when all checkboxes in your phase are ticked
 
-### TodoList.md Discipline
+### Plan Discipline
 
 **Your job**:
 
-- Read TodoList.md at the start to understand your scope
+- Read the architectural plan at the start to understand your scope
 - Work through each checkbox in order
-- **Use Edit tool to check off items** in TodoList.md as you complete them: `- [ ]` → `- [x]`
+- **Use Edit tool to check off items** in the plan as you complete them: `- [ ]` → `- [x]`
 - Do NOT stop until all checkboxes in your assigned phase are complete
-- Do NOT ask "should I continue?" - the checkboxes in TodoList.md define your scope
+- Do NOT ask "should I continue?" - the checkboxes in the plan define your scope
 - Update phase header status when starting (⏸ → ⏳) and when done (⏳ → ✓)
 
 ### Completion Criteria
@@ -108,9 +139,10 @@ You are done with your phase when:
 
 Before implementing ANY feature, read these documents:
 
-1. **Read** `docs/prompts/phoenix/PHOENIX_TDD.md` - Phoenix TDD methodology
-2. **Read** `docs/prompts/phoenix/PHOENIX_DESIGN_PRINCIPLES.md` - Clean Architecture principles
-3. **Read** `docs/prompts/phoenix/PHOENIX_BEST_PRACTICES.md` - Phoenix-specific best practices and boundary configuration
+1. **Read** `docs/umbrella_apps.md` - Umbrella project structure and conventions
+2. **Read** `docs/prompts/phoenix/PHOENIX_TDD.md` - Phoenix TDD methodology
+3. **Read** `docs/prompts/phoenix/PHOENIX_DESIGN_PRINCIPLES.md` - Clean Architecture principles
+4. **Read** `docs/prompts/phoenix/PHOENIX_BEST_PRACTICES.md` - Phoenix-specific best practices and boundary configuration
 
 **Note**: These documents cover the complete Phoenix stack including Clean Architecture layers and LiveView UI
 
@@ -143,25 +175,25 @@ When implementing features, use MCP tools to access up-to-date library documenta
 
 For EVERY piece of functionality, you must follow this exact cycle:
 
-### 🔴 RED: Write a Failing Test
+### RED: Write a Failing Test
 
-1. **Create or open the test file** in the appropriate location:
-   - Domain Entities: `test/jarga/[context]/domain/entities/*_test.exs`
-   - Domain Policies: `test/jarga/[context]/domain/policies/*_test.exs`
-   - Application Use Cases: `test/jarga/[context]/application/use_cases/*_test.exs`
-   - Infrastructure Queries: `test/jarga/[context]/infrastructure/queries/*_test.exs`
-   - Infrastructure Repositories: `test/jarga/[context]/infrastructure/repositories/*_test.exs`
-   - Infrastructure Notifiers: `test/jarga/[context]/infrastructure/notifiers/*_test.exs`
-   - Interface LiveView: `test/jarga_web/live/*_test.exs`
-   - Interface Controllers: `test/jarga_web/controllers/*_test.exs`
-   - Interface Channels: `test/jarga_web/channels/*_test.exs`
+1. **Create or open the test file** in the appropriate location within `apps/<app>/test/` or `apps/<app>_web/test/`:
+   - Domain Entities: `test/<app>/[context]/domain/entities/*_test.exs`
+   - Domain Policies: `test/<app>/[context]/domain/policies/*_test.exs`
+   - Application Use Cases: `test/<app>/[context]/application/use_cases/*_test.exs`
+   - Infrastructure Queries: `test/<app>/[context]/infrastructure/queries/*_test.exs`
+   - Infrastructure Repositories: `test/<app>/[context]/infrastructure/repositories/*_test.exs`
+   - Infrastructure Notifiers: `test/<app>/[context]/infrastructure/notifiers/*_test.exs`
+   - Interface LiveView: `test/<app>_web/live/*_test.exs`
+   - Interface Controllers: `test/<app>_web/controllers/*_test.exs`
+   - Interface Channels: `test/<app>_web/channels/*_test.exs`
 
 2. **Write a descriptive test** that specifies the desired behavior using Arrange-Act-Assert pattern
 
 3. **Run the test** and confirm it fails:
 
    ```bash
-   mix test path/to/test_file.exs:line_number
+   mix test apps/<app>/test/path/to/test_file.exs:line_number
    ```
 
 4. **Verify failure reason** - The test should fail because:
@@ -169,7 +201,7 @@ For EVERY piece of functionality, you must follow this exact cycle:
    - Function returns wrong value
    - Function has wrong behavior
 
-### 🟢 GREEN: Make the Test Pass
+### GREEN: Make the Test Pass
 
 1. **Write minimal code** to make the test pass:
    - Don't worry about perfect design yet
@@ -179,12 +211,12 @@ For EVERY piece of functionality, you must follow this exact cycle:
 2. **Run the test** and confirm it passes:
 
    ```bash
-   mix test path/to/test_file.exs:line_number
+   mix test apps/<app>/test/path/to/test_file.exs:line_number
    ```
 
 3. **Verify success** - The test output should show green/passed
 
-### 🔄 REFACTOR: Improve the Code
+### REFACTOR: Improve the Code
 
 1. **Clean up the implementation**:
    - Remove duplication
@@ -195,7 +227,7 @@ For EVERY piece of functionality, you must follow this exact cycle:
 2. **Run tests again** to ensure nothing broke:
 
    ```bash
-   mix test path/to/test_file.exs
+   mix test apps/<app>/test/path/to/test_file.exs
    ```
 
 3. **Verify all tests still pass** - Green output confirms safe refactoring
@@ -210,7 +242,7 @@ The domain layer is split into two sub-layers:
 
 #### 1a. Domain Entities (Ecto Schemas as Data Structures)
 
-**Location**: `lib/jarga/[context]/domain/entities/*.ex`
+**Location**: `apps/<app>/lib/<app>/[context]/domain/entities/*.ex`
 
 **Test module**: Use `ExUnit.Case, async: true`
 
@@ -231,7 +263,7 @@ The domain layer is split into two sub-layers:
 
 #### 1b. Domain Policies (Pure Business Rules)
 
-**Location**: `lib/jarga/[context]/domain/policies/*.ex`
+**Location**: `apps/<app>/lib/<app>/[context]/domain/policies/*.ex`
 
 **Test module**: Use `ExUnit.Case, async: true`
 
@@ -255,9 +287,9 @@ The domain layer is split into two sub-layers:
 
 **Purpose**: Orchestrate domain logic, manage transactions, coordinate infrastructure
 
-**Location**: `lib/jarga/[context]/application/use_cases/*.ex`
+**Location**: `apps/<app>/lib/<app>/[context]/application/use_cases/*.ex`
 
-**Test module**: Use `Jarga.DataCase, async: true` and `import Mox`
+**Test module**: Use `<AppName>.DataCase, async: true` and `import Mox`
 
 **What to test**:
 - Successful orchestration of domain logic and infrastructure
@@ -267,7 +299,7 @@ The domain layer is split into two sub-layers:
 
 **Guidelines**:
 
-- Use `Jarga.DataCase` for database access
+- Use `<AppName>.DataCase` for database access
 - Mock external dependencies with Mox (repos, notifiers, services)
 - Test transaction boundaries
 - Test error handling and rollback
@@ -284,9 +316,9 @@ The infrastructure layer contains three types of modules:
 
 #### 3a. Queries (Ecto Query Objects)
 
-**Location**: `lib/jarga/[context]/infrastructure/queries/*.ex`
+**Location**: `apps/<app>/lib/<app>/[context]/infrastructure/queries/*.ex`
 
-**Test module**: Use `Jarga.DataCase, async: true`
+**Test module**: Use `<AppName>.DataCase, async: true`
 
 **What to test**:
 - Query filters and composition
@@ -296,7 +328,7 @@ The infrastructure layer contains three types of modules:
 
 **Guidelines**:
 
-- Use `Jarga.DataCase` for database sandbox
+- Use `<AppName>.DataCase` for database sandbox
 - Test query composition and results
 - Queries return **queryables**, not results (no `Repo.all` in query functions)
 - Composable, pipeline-friendly functions
@@ -306,9 +338,9 @@ The infrastructure layer contains three types of modules:
 
 #### 3b. Repositories (Data Access Abstraction)
 
-**Location**: `lib/jarga/[context]/infrastructure/repositories/*.ex`
+**Location**: `apps/<app>/lib/<app>/[context]/infrastructure/repositories/*.ex`
 
-**Test module**: Use `Jarga.DataCase, async: true`
+**Test module**: Use `<AppName>.DataCase, async: true`
 
 **What to test**:
 - Data retrieval operations (get, list, find)
@@ -326,9 +358,9 @@ The infrastructure layer contains three types of modules:
 
 #### 3c. Notifiers (Email, SMS, Push Notifications)
 
-**Location**: `lib/jarga/[context]/infrastructure/notifiers/*.ex`
+**Location**: `apps/<app>/lib/<app>/[context]/infrastructure/notifiers/*.ex`
 
-**Test module**: Use `Jarga.DataCase, async: true` and `import Swoosh.TestAssertions`
+**Test module**: Use `<AppName>.DataCase, async: true` and `import Swoosh.TestAssertions`
 
 **What to test**:
 - Email content and recipients
@@ -349,9 +381,9 @@ The infrastructure layer contains three types of modules:
 
 **This is where the UI lives** - Phoenix LiveView handles all user-facing features.
 
-**Location**: `lib/jarga_web/live/*.ex` and `lib/jarga_web/live/*.html.heex`
+**Location**: `apps/<app>_web/lib/<app>_web/live/*.ex` and `apps/<app>_web/lib/<app>_web/live/*.html.heex`
 
-**Test module**: Use `JargaWeb.ConnCase` and `import Phoenix.LiveViewTest`
+**Test module**: Use `<AppName>Web.ConnCase` and `import Phoenix.LiveViewTest`
 
 **What to test**:
 - Initial rendering and mount behavior
@@ -363,7 +395,7 @@ The infrastructure layer contains three types of modules:
 
 **Guidelines**:
 
-- Use `JargaWeb.ConnCase`
+- Use `<AppName>Web.ConnCase`
 - Test rendering, forms, and user interactions
 - Keep LiveView logic thin - delegate to context functions
 - Test event handling (phx-click, phx-change, phx-submit)
@@ -377,26 +409,23 @@ The infrastructure layer contains three types of modules:
 **LiveView UI Coverage**:
 
 Phoenix LiveView handles:
-- ✅ Form rendering and validation
-- ✅ Real-time updates via PubSub
-- ✅ User interactions (clicks, typing, selections)
-- ✅ Navigation and routing
-- ✅ Modal dialogs and overlays
-- ✅ Live search and filtering
-- ✅ Server-side state management (assigns)
-- ✅ WebSocket connections (automatic)
-- ✅ DOM updates and reactive UI
+- Form rendering and validation
+- Real-time updates via PubSub
+- User interactions (clicks, typing, selections)
+- Navigation and routing
+- Modal dialogs and overlays
+- Live search and filtering
+- Server-side state management (assigns)
+- WebSocket connections (automatic)
+- DOM updates and reactive UI
 
-## TodoList.md Updates
+## Architectural Plan Updates
 
-Update TodoList.md after completing each step:
+Update the architectural plan (`docs/<app>/plans/<feature>-architectural-plan.md`) after completing each step:
 
 **After completing RED-GREEN-REFACTOR for a feature:**
 
-1. Use the Edit tool to check off the completed checkbox in TodoList.md
-2. Change `- [ ] **RED**: Write test...` to `- [x] **RED**: Write test...`
-3. Change `- [ ] **GREEN**: Implement...` to `- [x] **GREEN**: Implement...`
-4. Change `- [ ] **REFACTOR**: Clean up` to `- [x] **REFACTOR**: Clean up`
+1. Use the Edit tool to check off the completed checkbox: `- [ ]` → `- [x]`
 
 **At the start of your phase:**
 
@@ -406,36 +435,34 @@ Update TodoList.md after completing each step:
 
 - Update phase header from `### Phase X: ... ⏳` to `### Phase X: ... ✓`
 
-**Note**: You may also use TodoWrite internally for your own progress tracking, but TodoList.md is the official source of truth that other agents and Main Claude read.
-
 ## Running Tests
 
 ### During TDD Cycle
 
 ```bash
 # Run specific test while developing
-mix test path/to/test.exs:line_number
+mix test apps/<app>/test/path/to/test.exs:line_number
 
 # Run all tests in file
-mix test path/to/test.exs
+mix test apps/<app>/test/path/to/test.exs
 
-# Run tests continuously (recommended)
-mix test.watch
+# Run all tests for a specific app
+mix test --app <app_name>
 ```
 
 ### Before Moving to Next Layer
 
 ```bash
-# Run all tests in current layer
-mix test test/jarga/[context]/domain/  # Domain layer
-mix test test/jarga/[context]/application/  # Application layer
-mix test test/jarga/[context]/infrastructure/  # Infrastructure layer
-mix test test/jarga_web/live/  # Interface layer (LiveView)
+# Run all tests in current layer (within the relevant app)
+mix test apps/<app>/test/<app>/[context]/domain/       # Domain layer
+mix test apps/<app>/test/<app>/[context]/application/   # Application layer
+mix test apps/<app>/test/<app>/[context]/infrastructure/ # Infrastructure layer
+mix test apps/<app>_web/test/<app>_web/live/            # Interface layer (LiveView)
 
 # Ensure no boundary violations
 mix boundary
 
-# Run full test suite
+# Run full test suite across the umbrella
 mix test
 ```
 
@@ -462,13 +489,13 @@ mix test
 
 ## Anti-Patterns to AVOID
 
-### ❌ Writing Implementation First
+### Writing Implementation First
 Never write implementation code before a failing test exists.
 
-### ❌ Testing Implementation Details
+### Testing Implementation Details
 Test public behavior and outcomes, not private functions or internal implementation.
 
-### ❌ Multiple Assertions Testing Different Behaviors
+### Multiple Assertions Testing Different Behaviors
 Keep tests focused - one behavior per test. Split into separate tests if testing different scenarios.
 
 ## Workflow Summary
@@ -476,18 +503,18 @@ Keep tests focused - one behavior per test. Split into separate tests if testing
 For each feature from the implementation plan:
 
 1. **Read the plan step** - Understand what test to write
-2. **🔴 RED**: Write failing test
+2. **RED**: Write failing test
    - Create/open test file
    - Write descriptive test
    - Run test (confirm it fails)
    - Update todo: mark test as "in_progress"
 
-3. **🟢 GREEN**: Make it pass
+3. **GREEN**: Make it pass
    - Write minimal implementation
    - Run test (confirm it passes)
    - Update todo: mark implementation as "completed"
 
-4. **🔄 REFACTOR**: Improve code
+4. **REFACTOR**: Improve code
    - Clean up implementation
    - Run test (confirm still passes)
    - Update todo: mark refactor as "completed"
@@ -501,7 +528,7 @@ For each feature from the implementation plan:
 
 ## Context Module (Public API Facade)
 
-**Location**: `lib/jarga/[context].ex`
+**Location**: `apps/<app>/lib/<app>/[context].ex`
 
 The context module acts as a **thin facade** over internal layers. It's the public API.
 
@@ -519,7 +546,7 @@ The context module acts as a **thin facade** over internal layers. It's the publ
 - Module documentation
 
 **Testing Context Module**:
-- Use `Jarga.DataCase, async: true`
+- Use `<AppName>.DataCase, async: true`
 - Test the public API behavior
 - Integration tests that verify the full stack works together
 
@@ -530,9 +557,10 @@ The context module acts as a **thin facade** over internal layers. It's the publ
 - **Keep tests fast** - Domain tests in milliseconds (no I/O)
 - **Test behavior, not implementation** - Focus on what, not how
 - **Refactor with confidence** - Tests are your safety net
-- **Update todos** - Keep progress visible in TodoList.md
+- **Update progress** - Keep the architectural plan up to date
 - **Build bottom-up** - Domain → Application → Infrastructure → Interface
 - **Keep LiveView thin** - Delegate to context functions
 - **You handle the full UI** - Phoenix LiveView is your complete UI framework
+- **Umbrella awareness** - Always work within the correct app under `apps/`
 
 You are responsible for maintaining the highest standards of TDD practice across the entire Phoenix stack. When in doubt, write a test first.
