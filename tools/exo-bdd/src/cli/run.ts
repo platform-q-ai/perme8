@@ -108,13 +108,19 @@ export function generateSetupContent(configAbsPath: string, exoBddRoot: string, 
     ? `\n  // Auto-injected from config\n${injections.join('\n')}\n`
     : ''
 
-  return `import { BeforeAll, AfterAll, Before, After, setWorldConstructor, Status } from '@cucumber/cucumber'
+  // Build timeout line if configured
+  const timeoutLine = config?.timeout
+    ? `\nsetDefaultTimeout(${config.timeout})\n`
+    : ''
+
+  return `import { BeforeAll, AfterAll, Before, After, setWorldConstructor, setDefaultTimeout, Status } from '@cucumber/cucumber'
 import { loadConfig } from '${appConfigUrl}'
 import { createAdapters } from '${factoryUrl}'
 import type { Adapters } from '${factoryUrl}'
 import { TestWorld } from '${worldUrl}'
 
 setWorldConstructor(TestWorld)
+${timeoutLine}
 
 let adapters: Adapters
 

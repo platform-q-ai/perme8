@@ -1,6 +1,7 @@
-import { test, expect, describe, beforeEach, spyOn, type Mock } from 'bun:test'
+import { test, expect, describe, beforeEach, spyOn, mock, type Mock } from 'bun:test'
 import type { SecurityAdapterConfig } from '../../src/application/config/index.ts'
 import { ZapSecurityAdapter } from '../../src/infrastructure/adapters/security/ZapSecurityAdapter.ts'
+import * as fsPromises from 'node:fs/promises'
 
 // --- Mock state ---
 let fetchSpy: ReturnType<typeof spyOn<typeof globalThis, 'fetch'>>
@@ -8,8 +9,8 @@ let fetchCallLog: { url: string; init?: RequestInit }[] = []
 let fetchResponses: Array<{ ok: boolean; status: number; statusText: string; body: unknown; headers?: Record<string, string> }> = []
 let fetchCallIndex = 0
 
-// Tracks Bun.write calls
-let bunWriteCalls: { path: string; data: unknown }[] = []
+// Tracks writeFile calls
+let writeFileCalls: { path: string; data: unknown }[] = []
 
 function pushResponse(body: unknown, opts?: { ok?: boolean; status?: number; statusText?: string; headers?: Record<string, string> }) {
   fetchResponses.push({
@@ -49,7 +50,7 @@ describe('ZapSecurityAdapter', () => {
     fetchCallLog = []
     fetchResponses = []
     fetchCallIndex = 0
-    bunWriteCalls = []
+    writeFileCalls = []
 
     fetchSpy = spyOn(globalThis, 'fetch').mockImplementation((async (input: string | URL | Request, init?: RequestInit) => {
       const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
@@ -60,11 +61,11 @@ describe('ZapSecurityAdapter', () => {
       return makeMockResponse(entry)
     }) as typeof fetch)
 
-    // Mock Bun.write
-    spyOn(Bun, 'write').mockImplementation(async (path: any, data: any) => {
-      bunWriteCalls.push({ path: String(path), data })
-      return 0
+    // Mock node:fs/promises writeFile and mkdir
+    spyOn(fsPromises, 'writeFile').mockImplementation(async (path: any, data: any) => {
+      writeFileCalls.push({ path: String(path), data })
     }) as any
+    spyOn(fsPromises, 'mkdir').mockImplementation(async () => undefined) as any
   })
 
   // 1
@@ -382,9 +383,10 @@ describe('ZapSecurityAdapter', () => {
     // Verify the ZAP API was called
     expect(fetchCallLog[0]!.url).toContain('/OTHER/core/other/htmlreport/')
 
-    // Verify Bun.write was called
-    expect(bunWriteCalls).toHaveLength(1)
-    expect(bunWriteCalls[0]!.path).toBe('/tmp/report.html')
+    // Verify writeFile was called
+    expect(writeFileCalls).toHaveLength(1)
+    expect(writeFileCalls[0]!.path).toBe('/tmp/report.html')
+    expect(writeFileCalls[0]!.data).toBe(reportHtml)
   })
 
   // 18
