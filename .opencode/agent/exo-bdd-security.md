@@ -41,7 +41,11 @@ Your output feature files must ONLY use the built-in step definitions listed bel
 
 ## Output Format
 
-Produce a `.feature` file in Gherkin syntax. Tag it with `@security`. Example:
+Produce a `.feature` file in Gherkin syntax. Tag it with `@security`.
+
+**IMPORTANT: Do NOT set `baseUrl` or `targetUrl` in the feature file.** The `baseUrl` variable is automatically injected from the exo-bdd config file (from `http.baseURL` or `browser.baseURL`). Use `${baseUrl}` to reference it in scan target URLs.
+
+Example:
 
 ```gherkin
 @security
@@ -51,17 +55,16 @@ Feature: Application Security Baseline
   So that user data is protected
 
   Background:
-    Given I set variable "targetUrl" to "http://localhost:4000"
-    And a new ZAP session
+    Given a new ZAP session
 
   Scenario: Baseline scan finds no high-risk vulnerabilities
-    When I spider "${targetUrl}"
-    And I run a passive scan on "${targetUrl}"
+    When I spider "${baseUrl}"
+    And I run a passive scan on "${baseUrl}"
     Then no high risk alerts should be found
     And alerts should not exceed risk level "Medium"
 
   Scenario: Security headers are properly configured
-    When I check "${targetUrl}" for security headers
+    When I check "${baseUrl}" for security headers
     Then Content-Security-Policy should be present
     And Strict-Transport-Security should be present
     And X-Frame-Options should be set to "DENY"
@@ -235,6 +238,7 @@ Scenario: SSL certificate is properly configured
 
 ## Important Notes
 
+- **`baseUrl` is auto-injected** from the exo-bdd config's `http.baseURL` or `browser.baseURL`. Do NOT define it in the feature file. Use `${baseUrl}` to reference the target URL.
 - All string parameters support `${variableName}` interpolation for dynamic values
 - **Always start with `Given a new ZAP session`** to clear state from previous scans
 - **Spider before scanning** -- passive/active scans only analyze pages ZAP has seen; spidering discovers them

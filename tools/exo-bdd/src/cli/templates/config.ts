@@ -6,6 +6,18 @@ export function generateConfigContent(projectName: string): string {
 
 export default defineConfig({
   features: './features/**/*.feature',
+  // servers: [
+  //   {
+  //     name: 'my-app',
+  //     command: 'mix phx.server',
+  //     port: 4000,
+  //     workingDir: '../../',
+  //     env: { MIX_ENV: 'test' },
+  //     seed: 'mix run priv/repo/seeds.exs',
+  //     healthCheckPath: '/api/health',
+  //     startTimeout: 30000,
+  //   },
+  // ],
   adapters: {
     // http: {
     //   baseURL: 'http://localhost:4000',
