@@ -208,7 +208,6 @@ defmodule JargaApi.DocumentApiControllerTest do
 
     test "200 - successfully update content with correct content_hash", %{
       conn: conn,
-      user: user,
       plain_token: plain_token,
       workspace: workspace,
       document: document

@@ -255,3 +255,129 @@ Feature: Document API Access
     When I make a GET request to "/api/workspaces/product-team/documents/product-spec" with API key "invalid-key-12345"
     Then the response status should be 401
     And the response should include error "Invalid or revoked API key"
+
+  # Document GET Endpoint - Verify content_hash in response
+  Scenario: GET document response includes content_hash
+    Given I am logged in as "alice@example.com"
+    And I have an API key "read-key" with access to "product-team"
+    And workspace "product-team" has a document "Hash Doc" with slug "hash-doc" and content "Test content for hashing"
+    When I make a GET request to "/api/workspaces/product-team/documents/hash-doc" with API key "read-key"
+    Then the response status should be 200
+    And the response should include document "Hash Doc"
+    And the response should include a content_hash
+
+  # Document PATCH Endpoint - Update documents
+  Scenario: Update a document title via API
+    Given I am logged in as "alice@example.com"
+    And I have an API key "edit-key" with access to "product-team"
+    And workspace "product-team" has a document "Original Title" with slug "original-title" and content "Some content"
+    When I make a PATCH request to "/api/workspaces/product-team/documents/original-title" with API key "edit-key" and body:
+      """
+      {
+        "title": "Updated Title"
+      }
+      """
+    Then the response status should be 200
+    And the response should include document "Updated Title"
+    And the response should include a content_hash
+
+  Scenario: Update document visibility via API
+    Given I am logged in as "alice@example.com"
+    And I have an API key "edit-key" with access to "product-team"
+    And workspace "product-team" has a document "Vis Doc" with slug "vis-doc" and content "Content"
+    When I make a PATCH request to "/api/workspaces/product-team/documents/vis-doc" with API key "edit-key" and body:
+      """
+      {
+        "visibility": "public"
+      }
+      """
+    Then the response status should be 200
+    And the document "Vis Doc" should have visibility "public"
+
+  Scenario: Update document content via API with correct content_hash
+    Given I am logged in as "alice@example.com"
+    And I have an API key "edit-key" with access to "product-team"
+    And workspace "product-team" has a document "Content Doc" with slug "content-doc" and content "Old content"
+    When I make a GET request to "/api/workspaces/product-team/documents/content-doc" with API key "edit-key"
+    Then the response status should be 200
+    And I store the content_hash from the response
+    When I make a PATCH request to "/api/workspaces/product-team/documents/content-doc" with API key "edit-key" using stored content_hash and body:
+      """
+      {
+        "content": "New content via API"
+      }
+      """
+    Then the response status should be 200
+    And the response should include content "New content via API"
+    And the response should include a content_hash
+
+  Scenario: Update document title and content together via API
+    Given I am logged in as "alice@example.com"
+    And I have an API key "edit-key" with access to "product-team"
+    And workspace "product-team" has a document "Multi Update" with slug "multi-update" and content "Original"
+    When I make a GET request to "/api/workspaces/product-team/documents/multi-update" with API key "edit-key"
+    Then the response status should be 200
+    And I store the content_hash from the response
+    When I make a PATCH request to "/api/workspaces/product-team/documents/multi-update" with API key "edit-key" using stored content_hash and body:
+      """
+      {
+        "title": "New Multi Title",
+        "content": "New multi content"
+      }
+      """
+    Then the response status should be 200
+    And the response should include document "New Multi Title"
+    And the response should include content "New multi content"
+
+  Scenario: Update document content with stale content_hash returns conflict with current state
+    Given I am logged in as "alice@example.com"
+    And I have an API key "edit-key" with access to "product-team"
+    And workspace "product-team" has a document "Conflict Doc" with slug "conflict-doc" and content "Server content"
+    When I make a PATCH request to "/api/workspaces/product-team/documents/conflict-doc" with API key "edit-key" and body:
+      """
+      {
+        "content": "My changes",
+        "content_hash": "0000000000000000000000000000000000000000000000000000000000000000"
+      }
+      """
+    Then the response status should be 409
+    And the response should include a content conflict error
+
+  Scenario: Update document content without content_hash returns 422
+    Given I am logged in as "alice@example.com"
+    And I have an API key "edit-key" with access to "product-team"
+    And workspace "product-team" has a document "No Hash Doc" with slug "no-hash-doc" and content "Content"
+    When I make a PATCH request to "/api/workspaces/product-team/documents/no-hash-doc" with API key "edit-key" and body:
+      """
+      {
+        "content": "New content without hash"
+      }
+      """
+    Then the response status should be 422
+    And the response should include error "content_hash is required when updating content"
+
+  Scenario: Cannot update another user's private document via API
+    Given I am logged in as "alice@example.com"
+    And I have an API key "edit-key" with access to "product-team"
+    And "bob@example.com" is a member of workspace "product-team"
+    And "bob@example.com" has a private document "Bob's Secret" with slug "bobs-secret" in workspace "product-team"
+    When I make a PATCH request to "/api/workspaces/product-team/documents/bobs-secret" with API key "edit-key" and body:
+      """
+      {
+        "title": "Hacked Title"
+      }
+      """
+    Then the response status should be 403
+    And the response should include error "Insufficient permissions"
+
+  Scenario: Update non-existent document returns 404
+    Given I am logged in as "alice@example.com"
+    And I have an API key "edit-key" with access to "product-team"
+    When I make a PATCH request to "/api/workspaces/product-team/documents/non-existent-doc" with API key "edit-key" and body:
+      """
+      {
+        "title": "Ghost Doc"
+      }
+      """
+    Then the response status should be 404
+    And the response should include error "Document not found"

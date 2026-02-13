@@ -148,6 +148,42 @@ defmodule Documents.Api.VerifySteps do
   end
 
   # ============================================================================
+  # CONTENT HASH VERIFICATION
+  # ============================================================================
+
+  step "the response should include a content_hash", context do
+    body = Jason.decode!(context[:response_body])
+    data = body["data"]
+
+    assert data != nil, "Expected response data, but got nil"
+
+    assert is_binary(data["content_hash"]),
+           "Expected content_hash to be a string, got: #{inspect(data["content_hash"])}"
+
+    assert String.length(data["content_hash"]) == 64,
+           "Expected content_hash to be 64 chars (SHA-256 hex), got length: #{String.length(data["content_hash"] || "")}"
+
+    {:ok, context}
+  end
+
+  step "the response should include a content conflict error", context do
+    body = Jason.decode!(context[:response_body])
+
+    assert body["error"] == "content_conflict",
+           "Expected error 'content_conflict', got '#{body["error"]}'"
+
+    assert is_binary(body["message"]),
+           "Expected conflict message to be a string"
+
+    assert body["data"] != nil, "Expected conflict data to be present"
+
+    assert Map.has_key?(body["data"], "content_hash"),
+           "Expected conflict data to include content_hash"
+
+    {:ok, context}
+  end
+
+  # ============================================================================
   # DOCUMENT EXISTENCE VERIFICATION (DB checks)
   # ============================================================================
 
