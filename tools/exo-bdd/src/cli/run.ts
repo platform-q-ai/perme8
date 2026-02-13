@@ -2,7 +2,7 @@ import { resolve, dirname, join } from 'node:path'
 import { mkdirSync, existsSync, rmSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
 import type { ExoBddConfig } from '../application/config/index.ts'
-import { ServerManager } from '../infrastructure/servers/index.ts'
+import { ServerManager, DockerManager } from '../infrastructure/servers/index.ts'
 
 export interface RunOptions {
   config: string
@@ -190,6 +190,21 @@ export async function runTests(options: RunOptions): Promise<number> {
 
   const features = config.features ?? './features/**/*.feature'
 
+  // Start Docker containers (e.g. ZAP for security testing) if configured
+  const dockerManager = new DockerManager()
+  if (config.adapters.security?.docker) {
+    try {
+      await dockerManager.ensureZap(
+        config.adapters.security.zapUrl,
+        config.adapters.security.docker,
+      )
+    } catch (error) {
+      console.error(`[exo-bdd] Failed to start ZAP container: ${error instanceof Error ? error.message : String(error)}`)
+      await dockerManager.stopAll()
+      return 1
+    }
+  }
+
   // Start servers if configured
   const serverManager = new ServerManager()
   if (config.servers && config.servers.length > 0) {
@@ -198,6 +213,7 @@ export async function runTests(options: RunOptions): Promise<number> {
     } catch (error) {
       console.error(`[exo-bdd] Failed to start servers: ${error instanceof Error ? error.message : String(error)}`)
       await serverManager.stopAll()
+      await dockerManager.stopAll()
       return 1
     }
   }
@@ -243,6 +259,9 @@ export async function runTests(options: RunOptions): Promise<number> {
     if (config.servers && config.servers.length > 0) {
       await serverManager.stopAll()
     }
+
+    // Stop Docker containers that we started
+    await dockerManager.stopAll()
 
     // Clean up temp directory
     try {
