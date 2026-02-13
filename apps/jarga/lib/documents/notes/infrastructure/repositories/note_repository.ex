@@ -42,4 +42,21 @@ defmodule Jarga.Documents.Notes.Infrastructure.Repositories.NoteRepository do
     |> NoteSchema.changeset(attrs)
     |> Repo.insert()
   end
+
+  @doc """
+  Updates an existing note.
+
+  ## Examples
+
+      iex> update(%NoteSchema{}, %{note_content: "updated content"})
+      {:ok, %NoteSchema{}}
+
+      iex> update(%NoteSchema{}, %{})
+      {:ok, %NoteSchema{}}
+  """
+  def update(%NoteSchema{} = note, attrs) do
+    note
+    |> NoteSchema.changeset(attrs)
+    |> Repo.update()
+  end
 end
