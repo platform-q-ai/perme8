@@ -172,9 +172,6 @@ defmodule JargaApi.Accounts.Application.UseCases.UpdateDocumentViaApiTest do
       note = mock_note(%{note_content: "original content"})
       current_hash = ContentHash.compute("original content")
 
-      title_updated = false
-      content_updated = false
-
       opts =
         base_opts(
           get_document_note: fn _doc -> note end,
@@ -264,7 +261,6 @@ defmodule JargaApi.Accounts.Application.UseCases.UpdateDocumentViaApiTest do
       user = mock_user()
       api_key = build_api_key()
       note = mock_note(%{note_content: "original content"})
-      current_hash = ContentHash.compute("original content")
 
       opts = base_opts(get_document_note: fn _doc -> note end)
 
