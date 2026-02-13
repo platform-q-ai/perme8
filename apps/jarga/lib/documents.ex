@@ -322,6 +322,26 @@ defmodule Jarga.Documents do
   end
 
   @doc """
+  Updates a document's note content.
+
+  Fetches the note component from the document and updates it with the given attrs.
+  This is a convenience function that combines note fetching and updating.
+
+  ## Examples
+
+      iex> update_document_note(document, %{note_content: "new content"})
+      {:ok, %NoteSchema{}}
+
+      iex> update_document_note(document, %{note_content: nil})
+      {:ok, %NoteSchema{}}
+
+  """
+  def update_document_note(%Document{} = document, attrs) do
+    note = get_document_note(document)
+    NoteRepository.update(note, attrs)
+  end
+
+  @doc """
   Executes an agent query command within document context.
 
   Parses `@j agent_name Question` syntax, looks up agent by name,
