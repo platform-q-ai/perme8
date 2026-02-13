@@ -16,6 +16,7 @@ defmodule JargaApi do
       Jarga.Workspaces,
       Jarga.Projects,
       Jarga.Documents,
+      Jarga.Documents.Notes.Domain,
       Identity,
       JargaApi.Accounts
     ],

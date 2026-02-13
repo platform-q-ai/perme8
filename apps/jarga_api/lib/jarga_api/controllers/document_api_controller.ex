@@ -14,6 +14,7 @@ defmodule JargaApi.DocumentApiController do
     * `POST /api/workspaces/:workspace_slug/documents` - Create a document
     * `POST /api/workspaces/:workspace_slug/projects/:project_slug/documents` - Create a document in a project
     * `GET /api/workspaces/:workspace_slug/documents/:slug` - Get document details
+    * `PATCH /api/workspaces/:workspace_slug/documents/:slug` - Update a document
 
   """
 
@@ -126,6 +127,90 @@ defmodule JargaApi.DocumentApiController do
         conn
         |> put_status(:ok)
         |> render(:show, document: result)
+
+      {:error, :workspace_not_found} ->
+        conn
+        |> put_status(:not_found)
+        |> render(:error, message: "Workspace not found")
+
+      {:error, :document_not_found} ->
+        conn
+        |> put_status(:not_found)
+        |> render(:error, message: "Document not found")
+
+      {:error, reason} when reason in [:forbidden, :unauthorized] ->
+        conn
+        |> put_status(:forbidden)
+        |> render(:error, message: "Insufficient permissions")
+    end
+  end
+
+  @doc """
+  Updates a document by slug.
+
+  The API key must have access to the workspace, and the user must have
+  permission to edit the document.
+
+  ## Request Body
+
+    * `title` - Optional. New title for the document
+    * `content` - Optional. New content for the document's note (requires `content_hash`)
+    * `content_hash` - Required when `content` is provided. Hash of content the client based changes on.
+    * `visibility` - Optional. "public" or "private"
+
+  ## Responses
+
+    * 200 - Document updated successfully
+    * 401 - Invalid or revoked API key
+    * 403 - API key lacks workspace access or user lacks permission
+    * 404 - Document or workspace not found
+    * 409 - Content conflict (stale `content_hash`)
+    * 422 - Validation error or content_hash missing
+
+  """
+  def update(conn, %{"workspace_slug" => workspace_slug, "slug" => document_slug} = params) do
+    user = conn.assigns.current_user
+    api_key = conn.assigns.api_key
+
+    attrs = Map.take(params, ["title", "content", "content_hash", "visibility"])
+
+    opts = [
+      get_workspace_and_member_by_slug: &Workspaces.get_workspace_and_member_by_slug/2,
+      get_document_by_slug: &Documents.get_document_by_slug/3,
+      get_document_note: &Documents.get_document_note/1,
+      update_document: &Documents.update_document/3,
+      update_document_note: &Documents.update_document_note/2,
+      get_project: &Projects.get_project/3,
+      get_user: &Identity.get_user/1
+    ]
+
+    case Accounts.update_document_via_api(
+           user,
+           api_key,
+           workspace_slug,
+           document_slug,
+           attrs,
+           opts
+         ) do
+      {:ok, result} ->
+        conn
+        |> put_status(:ok)
+        |> render(:updated, document: result)
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        conn
+        |> put_status(:unprocessable_entity)
+        |> render(:validation_error, changeset: changeset)
+
+      {:error, :content_hash_required} ->
+        conn
+        |> put_status(:unprocessable_entity)
+        |> render(:error, message: "content_hash is required when updating content")
+
+      {:error, :content_conflict, conflict_data} ->
+        conn
+        |> put_status(:conflict)
+        |> render(:content_conflict, conflict_data: conflict_data)
 
       {:error, :workspace_not_found} ->
         conn
