@@ -12,6 +12,9 @@ export default defineConfig({
       port: 4005,
       workingDir: '../../../',
       env: { MIX_ENV: 'test' },
+      // --no-start avoids booting Phoenix endpoints (ports already bound by the running server).
+      // The seed script starts its own Ecto repo connections to the same Postgres database,
+      // which is safe because Postgres handles concurrent connections from multiple OS processes.
       seed: 'mix run --no-start apps/jarga/priv/repo/exo_seeds.exs',
       healthCheckPath: '/api/workspaces',
       startTimeout: 30000,
