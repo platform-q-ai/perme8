@@ -22,6 +22,20 @@ defmodule JargaApi.Accounts.Application.UseCases.UpdateDocumentViaApi do
   If the hashes don't match, a conflict error is returned with the current content
   and its hash so the client can re-base.
 
+  ## Error Tuples
+
+  Most errors follow the standard `{:error, reason}` pattern. The content conflict
+  error uses a 3-element tuple `{:error, :content_conflict, conflict_data}` to
+  include the current server content for client re-basing. The controller handles
+  this shape explicitly.
+
+  ## No Transaction Boundary
+
+  The document metadata update and note content update are separate operations.
+  This is acceptable because they are independent resources, and partial failure
+  can be retried by the client. If stronger guarantees are needed later, these
+  can be wrapped in an `Ecto.Multi`.
+
   ## Dependency Injection
 
   The use case uses dependency injection for cross-context operations:
@@ -59,7 +73,7 @@ defmodule JargaApi.Accounts.Application.UseCases.UpdateDocumentViaApi do
     - `{:ok, result_map}` on success with updated document data
     - `{:error, :forbidden}` when API key lacks workspace access
     - `{:error, :content_hash_required}` when content provided without hash
-    - `{:error, :content_conflict, conflict_data}` when hash mismatch
+    - `{:error, :content_conflict, conflict_data}` when hash mismatch (3-element error tuple)
     - `{:error, :workspace_not_found | :document_not_found | :unauthorized}`
     - `{:error, changeset}` when validation fails
   """
@@ -85,11 +99,10 @@ defmodule JargaApi.Accounts.Application.UseCases.UpdateDocumentViaApi do
     with :ok <- verify_api_key_access(api_key, workspace_slug),
          {:ok, workspace, _member} <- fetch_workspace(user, workspace_slug, opts),
          {:ok, document} <- fetch_document(user, workspace.id, document_slug, opts),
-         {:ok, content_update} <- validate_content_hash(document, attrs, opts),
-         {:ok, _doc_result} <- maybe_update_document_metadata(user, document, attrs, opts),
-         {:ok, _note_result} <- maybe_update_note_content(document, content_update, opts) do
-      note = fetch_note(document, opts)
-      build_success_result(document, note, attrs, workspace_slug, user, opts)
+         {:ok, content_update, note} <- validate_content_hash(document, attrs, opts),
+         {:ok, updated_doc} <- maybe_update_document_metadata(user, document, attrs, opts),
+         {:ok, updated_note} <- maybe_update_note_content(document, content_update, note, opts) do
+      build_success_result(updated_doc, updated_note, workspace_slug, user, opts)
     end
   end
 
@@ -121,10 +134,11 @@ defmodule JargaApi.Accounts.Application.UseCases.UpdateDocumentViaApi do
   end
 
   # Validates content_hash when content is being updated.
-  # Returns {:ok, nil} if no content update, {:ok, content} if hash matches,
-  # or an error tuple if hash is missing/mismatched.
-  defp validate_content_hash(_document, attrs, _opts) when not is_map_key(attrs, "content") do
-    {:ok, nil}
+  # Returns {:ok, nil, note} if no content update (note fetched for response building),
+  # {:ok, content, note} if hash matches, or an error tuple if hash is missing/mismatched.
+  defp validate_content_hash(document, attrs, opts) when not is_map_key(attrs, "content") do
+    note = fetch_note(document, opts)
+    {:ok, nil, note}
   end
 
   defp validate_content_hash(_document, %{"content_hash" => nil}, _opts) do
@@ -142,7 +156,7 @@ defmodule JargaApi.Accounts.Application.UseCases.UpdateDocumentViaApi do
     provided_hash = Map.get(attrs, "content_hash")
 
     if provided_hash == current_hash do
-      {:ok, Map.get(attrs, "content")}
+      {:ok, Map.get(attrs, "content"), note}
     else
       {:error, :content_conflict, %{content: note.note_content, content_hash: current_hash}}
     end
@@ -162,11 +176,16 @@ defmodule JargaApi.Accounts.Application.UseCases.UpdateDocumentViaApi do
     end
   end
 
-  defp maybe_update_note_content(_document, nil, _opts), do: {:ok, nil}
+  # When no content update is needed, return the existing note as-is.
+  defp maybe_update_note_content(_document, nil, note, _opts), do: {:ok, note}
 
-  defp maybe_update_note_content(document, content, opts) do
+  defp maybe_update_note_content(document, content, _note, opts) do
     update_note_fn = Keyword.fetch!(opts, :update_document_note)
-    update_note_fn.(document, %{note_content: content})
+
+    case update_note_fn.(document, %{note_content: content}) do
+      {:ok, updated_note} -> {:ok, updated_note}
+      {:error, _} = error -> error
+    end
   end
 
   # Only translate visibility when explicitly provided in attrs.
@@ -203,29 +222,24 @@ defmodule JargaApi.Accounts.Application.UseCases.UpdateDocumentViaApi do
   defp maybe_put({:ok, value}, acc, key), do: Map.put(acc, key, value)
   defp maybe_put(:error, acc, _key), do: acc
 
-  defp build_success_result(document, note, attrs, workspace_slug, user, opts) do
-    updated_title = Map.get(attrs, "title", document.title)
-
-    updated_visibility =
-      case Map.get(attrs, "visibility") do
-        "public" -> "public"
-        "private" -> "private"
-        _ -> if(document.is_public, do: "public", else: "private")
-      end
-
+  # Builds the success response from the actual persisted results.
+  # Uses the updated document (from domain update) and note (from note update or validation)
+  # rather than deriving values from raw attrs, ensuring the response reflects what's persisted.
+  defp build_success_result(updated_doc, note, workspace_slug, user, opts) do
     content = note.note_content
     content_hash = ContentHash.compute(content)
 
-    project_slug = maybe_fetch_project_slug(user, document, opts)
-    owner_email = resolve_owner_email(user, document, opts)
+    visibility = if(updated_doc.is_public, do: "public", else: "private")
+    project_slug = maybe_fetch_project_slug(user, updated_doc, opts)
+    owner_email = resolve_owner_email(user, updated_doc, opts)
 
     {:ok,
      %{
-       title: updated_title,
-       slug: document.slug,
+       title: updated_doc.title,
+       slug: updated_doc.slug,
        content: content,
        content_hash: content_hash,
-       visibility: updated_visibility,
+       visibility: visibility,
        owner: owner_email,
        workspace_slug: workspace_slug,
        project_slug: project_slug
