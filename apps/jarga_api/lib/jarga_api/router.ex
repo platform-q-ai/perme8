@@ -27,6 +27,7 @@ defmodule JargaApi.Router do
 
     post("/workspaces/:workspace_slug/documents", DocumentApiController, :create)
     get("/workspaces/:workspace_slug/documents/:slug", DocumentApiController, :show)
+    patch("/workspaces/:workspace_slug/documents/:slug", DocumentApiController, :update)
 
     post(
       "/workspaces/:workspace_slug/projects/:project_slug/documents",
