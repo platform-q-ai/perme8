@@ -50,12 +50,25 @@ defmodule Mix.Tasks.ExoTest do
 
       Mix.shell().info([:cyan, "Running exo-bdd tests with config: #{config_path}\n"])
 
-      case System.cmd("bun", cmd_args, cd: exo_bdd_root, into: IO.stream(:stdio, :line)) do
-        {_, 0} ->
-          Mix.shell().info([:green, "\nExo-BDD tests passed.\n"])
+      try do
+        case System.cmd("bun", cmd_args, cd: exo_bdd_root, into: IO.stream(:stdio, :line)) do
+          {_, 0} ->
+            Mix.shell().info([:green, "\nExo-BDD tests passed.\n"])
 
-        {_, code} ->
-          Mix.raise("exo-bdd tests failed with exit code #{code}")
+          {_, code} ->
+            Mix.raise("exo-bdd tests failed with exit code #{code}")
+        end
+      rescue
+        e in ErlangError ->
+          case e.original do
+            :enoent ->
+              Mix.raise(
+                "bun is not installed or not in PATH. Install it with: curl -fsSL https://bun.sh/install | bash"
+              )
+
+            _ ->
+              reraise e, __STACKTRACE__
+          end
       end
     end)
 
