@@ -568,6 +568,34 @@ defmodule EntityRelationshipManager.Infrastructure.Repositories.GraphRepository 
     end
   end
 
+  # ── Batch operations ────────────────────────────────────────────────
+
+  @impl true
+  def batch_get_entities(workspace_id, entity_ids, opts \\ []) do
+    cypher = """
+    UNWIND $ids AS entity_id
+    MATCH (n:Entity {_workspace_id: $_workspace_id, id: entity_id})
+    WHERE n.deleted_at IS NULL
+    RETURN n.id AS id, n.type AS type, n.properties AS properties,
+           n.created_at AS created_at, n.updated_at AS updated_at
+    """
+
+    params = %{_workspace_id: workspace_id, ids: entity_ids}
+
+    case Neo4jAdapter.execute(cypher, params, opts) do
+      {:ok, %{records: records}} ->
+        entities_map =
+          records
+          |> Enum.map(&record_to_entity(&1, workspace_id))
+          |> Map.new(fn entity -> {entity.id, entity} end)
+
+        {:ok, entities_map}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
   # ── Health ──────────────────────────────────────────────────────────
 
   @impl true

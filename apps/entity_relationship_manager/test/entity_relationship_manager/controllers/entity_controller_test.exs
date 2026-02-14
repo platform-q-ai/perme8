@@ -200,7 +200,10 @@ defmodule EntityRelationshipManager.EntityControllerTest do
       |> expect(:get_schema, fn _wid -> {:ok, schema} end)
 
       EntityRelationshipManager.Mocks.GraphRepositoryMock
-      |> expect(:get_entity, fn _wid, _id -> {:ok, entity} end)
+      |> expect(:batch_get_entities, fn _wid, ids ->
+        entities_map = Map.new(ids, fn id -> {id, entity} end)
+        {:ok, entities_map}
+      end)
       |> expect(:bulk_update_entities, fn _wid, _updates -> {:ok, [entity]} end)
 
       conn =
