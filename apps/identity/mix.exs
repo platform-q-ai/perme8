@@ -17,7 +17,6 @@ defmodule Identity.MixProject do
       compilers: [:boundary, :phoenix_live_view] ++ Mix.compilers(),
       boundary: boundary(),
       listeners: [Phoenix.CodeReloader],
-      # Exclude .exs files from test pattern (Cucumber handles feature steps)
       test_pattern: "*_test.exs"
     ]
   end
@@ -104,7 +103,6 @@ defmodule Identity.MixProject do
 
       # Testing
       {:wallaby, "~> 0.30", runtime: false, only: :test},
-      {:cucumber, "~> 0.4.2", only: :test},
 
       # Architecture
       {:boundary, "~> 0.10", runtime: false}
