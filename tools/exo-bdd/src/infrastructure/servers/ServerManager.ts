@@ -68,7 +68,10 @@ export class ServerManager {
     console.log(`[exo-bdd]   command: ${config.command}`)
     console.log(`[exo-bdd]   cwd: ${cwd}`)
 
-    const proc = Bun.spawn(['sh', '-c', config.command], {
+    // Use `exec` so sh replaces itself with the actual command.
+    // Without exec, kill() only hits the sh wrapper and the child
+    // (e.g. BEAM for mix phx.server) survives, hanging CI runners.
+    const proc = Bun.spawn(['sh', '-c', `exec ${config.command}`], {
       cwd,
       env: { ...process.env, ...config.env },
       stdout: 'inherit',
