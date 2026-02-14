@@ -244,7 +244,7 @@ jobs:
           path: tmp/screenshots/
           retention-days: 7
 
-  360-tests:
+  exo-bdd-360:
     name: 360 tests
     needs: [changes, test]
     if: needs.changes.outputs.umbrella == 'true' || needs.changes.outputs.exo_bdd == 'true'
