@@ -48,7 +48,9 @@ deterministic_tokens = %{
   "valid-guest-key-product-team" =>
     "exo_test_guest_key_product_team_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
   "valid-member-key-product-team" =>
-    "exo_test_member_key_product_team_aaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    "exo_test_member_key_product_team_aaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "valid-multi-workspace-key" => "exo_test_multi_workspace_key_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "valid-no-access-key" => "exo_test_no_access_key_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 }
 
 # ---------------------------------------------------------------------------
@@ -300,6 +302,22 @@ IO.puts("[exo-seeds] Created guest user and added as guest of #{product_team.slu
     name: "Guest Key (product-team)",
     workspace_access: [product_team.slug],
     token: deterministic_tokens["valid-guest-key-product-team"]
+  })
+
+# API key for alice with access to BOTH product-team AND engineering (multi-workspace)
+{_key, _} =
+  create_api_key.(alice.id, %{
+    name: "Multi-Workspace Key",
+    workspace_access: [product_team.slug, engineering.slug],
+    token: deterministic_tokens["valid-multi-workspace-key"]
+  })
+
+# API key for alice with NO workspace access (empty list)
+{_key, _} =
+  create_api_key.(alice.id, %{
+    name: "No Access Key",
+    workspace_access: [],
+    token: deterministic_tokens["valid-no-access-key"]
   })
 
 IO.puts("[exo-seeds] Created API keys with deterministic tokens")

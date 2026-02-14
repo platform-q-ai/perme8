@@ -17,7 +17,6 @@ defmodule JargaApi.MixProject do
       compilers: [:boundary] ++ Mix.compilers(),
       boundary: boundary(),
       listeners: [Phoenix.CodeReloader],
-      # Exclude .exs files from test pattern (Cucumber handles feature steps)
       test_pattern: "*_test.exs"
     ]
   end
@@ -58,8 +57,7 @@ defmodule JargaApi.MixProject do
       {:identity, in_umbrella: true},
       {:jason, "~> 1.2"},
       {:bandit, "~> 1.5"},
-      {:boundary, "~> 0.10", runtime: false},
-      {:cucumber, "~> 0.4.2", only: :test}
+      {:boundary, "~> 0.10", runtime: false}
     ]
   end
 

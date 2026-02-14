@@ -104,10 +104,3 @@ config :jarga_web, :cucumber,
     "apps/jarga_web/test/features/**/*.feature"
   ],
   steps: ["apps/jarga_web/test/features/step_definitions/**/*.exs"]
-
-# Configure Cucumber for JargaApi BDD feature testing
-config :jarga_api, :cucumber,
-  features: [
-    "apps/jarga_api/test/features/**/*.feature"
-  ],
-  steps: ["apps/jarga_api/test/features/step_definitions/**/*.exs"]
