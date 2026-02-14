@@ -25,7 +25,20 @@ defmodule EntityRelationshipManager do
       Jarga.Repo
     ],
     exports: [
-      Endpoint
+      Endpoint,
+      {Domain.Entities.SchemaDefinition, []},
+      {Domain.Entities.EntityTypeDefinition, []},
+      {Domain.Entities.EdgeTypeDefinition, []},
+      {Domain.Entities.PropertyDefinition, []},
+      {Domain.Entities.Entity, []},
+      {Domain.Entities.Edge, []},
+      {Domain.Policies.SchemaValidationPolicy, []},
+      {Domain.Policies.InputSanitizationPolicy, []},
+      {Domain.Policies.TraversalPolicy, []},
+      {Domain.Policies.AuthorizationPolicy, []},
+      {Domain.Services.PropertyValidator, []},
+      {Application.Behaviours.SchemaRepositoryBehaviour, []},
+      {Application.Behaviours.GraphRepositoryBehaviour, []}
     ]
 
   def router do
