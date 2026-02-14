@@ -187,8 +187,15 @@ defmodule EntityRelationshipManager.Domain.Services.PropertyValidator do
           ]
         end
 
-      {:error, _} ->
-        errors
+      {:error, _reason} ->
+        [
+          %{
+            field: name,
+            message: "has invalid regex pattern: #{pattern}",
+            constraint: :invalid_pattern
+          }
+          | errors
+        ]
     end
   end
 
