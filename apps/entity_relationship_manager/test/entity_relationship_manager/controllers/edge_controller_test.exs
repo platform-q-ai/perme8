@@ -15,8 +15,6 @@ defmodule EntityRelationshipManager.EdgeControllerTest do
       |> expect(:get_schema, fn _wid -> {:ok, schema} end)
 
       EntityRelationshipManager.Mocks.GraphRepositoryMock
-      |> expect(:get_entity, fn _wid, _sid -> {:ok, source} end)
-      |> expect(:get_entity, fn _wid, _tid -> {:ok, target} end)
       |> expect(:create_edge, fn _wid, "WORKS_AT", _s, _t, _p -> {:ok, edge} end)
 
       conn =
@@ -44,7 +42,7 @@ defmodule EntityRelationshipManager.EdgeControllerTest do
       assert json_response(conn, 403)
     end
 
-    test "returns 422 when source entity not found", %{conn: conn} do
+    test "returns 422 when endpoints not found", %{conn: conn} do
       {conn, ws_id} = authenticated_conn(conn)
       schema = UseCaseFixtures.schema_definition(%{workspace_id: ws_id})
 
@@ -52,7 +50,7 @@ defmodule EntityRelationshipManager.EdgeControllerTest do
       |> expect(:get_schema, fn _wid -> {:ok, schema} end)
 
       EntityRelationshipManager.Mocks.GraphRepositoryMock
-      |> expect(:get_entity, fn _wid, _sid -> {:error, :not_found} end)
+      |> expect(:create_edge, fn _wid, _type, _s, _t, _p -> {:error, :endpoints_not_found} end)
 
       conn =
         post(conn, "/api/v1/workspaces/#{ws_id}/edges", %{
