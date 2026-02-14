@@ -6,7 +6,10 @@ defmodule Mix.Tasks.ExoTest do
 
   ## Usage
 
-      # Run with a config file
+      # Auto-discover and run all exo-bdd configs under apps/
+      mix exo_test
+
+      # Run with a specific config file
       mix exo_test --config apps/jarga_web/test/bdd/exo-bdd-jarga-web.config.ts
 
       # Run with tag filter
@@ -14,7 +17,7 @@ defmodule Mix.Tasks.ExoTest do
 
   ## Options
 
-    * `--config` / `-c` - Path to the exo-bdd config file (required)
+    * `--config` / `-c` - Path to the exo-bdd config file (optional; discovers all configs under apps/ if omitted)
     * `--tag` / `-t` - Cucumber tag expression to filter scenarios
 
   The config path is resolved relative to the umbrella root.
@@ -30,24 +33,33 @@ defmodule Mix.Tasks.ExoTest do
   def run(args) do
     {opts, _rest, _} = OptionParser.parse(args, switches: @switches, aliases: @aliases)
 
-    config_path = Keyword.get(opts, :config) || raise_missing_config()
-
     umbrella_root = umbrella_root()
-    abs_config = Path.expand(config_path, umbrella_root)
+    tag = Keyword.get(opts, :tag)
+
+    config_paths =
+      case Keyword.get(opts, :config) do
+        nil -> discover_configs(umbrella_root)
+        path -> [path]
+      end
+
     exo_bdd_root = Path.join(umbrella_root, "tools/exo-bdd")
 
-    cmd_args = build_cmd_args(abs_config, Keyword.get(opts, :tag))
+    Enum.each(config_paths, fn config_path ->
+      abs_config = Path.expand(config_path, umbrella_root)
+      cmd_args = build_cmd_args(abs_config, tag)
 
-    Mix.shell().info([:cyan, "Running exo-bdd tests with config: #{config_path}\n"])
+      Mix.shell().info([:cyan, "Running exo-bdd tests with config: #{config_path}\n"])
 
-    case System.cmd("bun", cmd_args, cd: exo_bdd_root, into: IO.stream(:stdio, :line)) do
-      {_, 0} ->
-        Mix.shell().info([:green, "\nExo-BDD tests passed.\n"])
-        :ok
+      case System.cmd("bun", cmd_args, cd: exo_bdd_root, into: IO.stream(:stdio, :line)) do
+        {_, 0} ->
+          Mix.shell().info([:green, "\nExo-BDD tests passed.\n"])
 
-      {_, code} ->
-        Mix.raise("exo-bdd tests failed with exit code #{code}")
-    end
+        {_, code} ->
+          Mix.raise("exo-bdd tests failed with exit code #{code}")
+      end
+    end)
+
+    :ok
   end
 
   @doc false
@@ -58,6 +70,32 @@ defmodule Mix.Tasks.ExoTest do
       nil -> base
       tag_value -> base ++ ["--tags", tag_value]
     end
+  end
+
+  defp discover_configs(umbrella_root) do
+    apps_dir = Path.join(umbrella_root, "apps")
+
+    configs =
+      Path.wildcard(Path.join(apps_dir, "**/exo-bdd*.config.ts"))
+      |> Enum.map(&Path.relative_to(&1, umbrella_root))
+      |> Enum.sort()
+
+    if configs == [] do
+      Mix.raise("""
+      No exo-bdd config files found under apps/.
+
+      Either provide a config explicitly:
+
+          mix exo_test --config <path-to-config>
+
+      Or create a config file matching the pattern apps/**/exo-bdd*.config.ts
+      """)
+    end
+
+    Mix.shell().info([:cyan, "Discovered #{length(configs)} exo-bdd config(s):\n"])
+    Enum.each(configs, &Mix.shell().info([:cyan, "  - #{&1}\n"]))
+
+    configs
   end
 
   defp umbrella_root do
@@ -73,15 +111,5 @@ defmodule Mix.Tasks.ExoTest do
         |> Path.expand()
         |> Path.dirname()
     end
-  end
-
-  defp raise_missing_config do
-    Mix.raise("""
-    Missing required --config option.
-
-    Usage: mix exo_test --config <path-to-config>
-
-    Example: mix exo_test --config apps/jarga_web/test/bdd/exo-bdd-jarga-web.config.ts
-    """)
   end
 end
