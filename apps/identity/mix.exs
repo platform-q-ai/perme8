@@ -93,6 +93,9 @@ defmodule Identity.MixProject do
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
 
+      # Slug generation
+      {:slugy, "~> 4.1"},
+
       # Utilities
       {:gettext, "~> 0.26"},
       {:jason, "~> 1.2"},
