@@ -33,15 +33,29 @@ defmodule Mix.Tasks.ExoTest do
   def run(args) do
     {opts, _rest, _} = OptionParser.parse(args, switches: @switches, aliases: @aliases)
 
-    umbrella_root = umbrella_root()
-    tag = Keyword.get(opts, :tag)
+    if bun_available?() do
+      umbrella_root = umbrella_root()
+      tag = Keyword.get(opts, :tag)
 
-    config_paths =
-      case Keyword.get(opts, :config) do
-        nil -> discover_configs(umbrella_root)
-        path -> [path]
-      end
+      config_paths =
+        case Keyword.get(opts, :config) do
+          nil -> discover_configs(umbrella_root)
+          path -> [path]
+        end
 
+      run_configs(config_paths, umbrella_root, tag)
+    else
+      Mix.shell().info([
+        :yellow,
+        "Skipping exo-bdd tests: bun is not installed. ",
+        "Install bun (https://bun.sh) to run BDD tests.\n"
+      ])
+
+      :ok
+    end
+  end
+
+  defp run_configs(config_paths, umbrella_root, tag) do
     exo_bdd_root = Path.join(umbrella_root, "tools/exo-bdd")
 
     Enum.each(config_paths, fn config_path ->
@@ -49,30 +63,39 @@ defmodule Mix.Tasks.ExoTest do
       cmd_args = build_cmd_args(abs_config, tag)
 
       Mix.shell().info([:cyan, "Running exo-bdd tests with config: #{config_path}\n"])
-
-      try do
-        case System.cmd("bun", cmd_args, cd: exo_bdd_root, into: IO.stream(:stdio, :line)) do
-          {_, 0} ->
-            Mix.shell().info([:green, "\nExo-BDD tests passed.\n"])
-
-          {_, code} ->
-            Mix.raise("exo-bdd tests failed with exit code #{code}")
-        end
-      rescue
-        e in ErlangError ->
-          case e.original do
-            :enoent ->
-              Mix.raise(
-                "bun is not installed or not in PATH. Install it with: curl -fsSL https://bun.sh/install | bash"
-              )
-
-            _ ->
-              reraise e, __STACKTRACE__
-          end
-      end
+      run_bun(cmd_args, exo_bdd_root)
     end)
 
     :ok
+  end
+
+  defp run_bun(cmd_args, exo_bdd_root) do
+    try do
+      case System.cmd("bun", cmd_args, cd: exo_bdd_root, into: IO.stream(:stdio, :line)) do
+        {_, 0} ->
+          Mix.shell().info([:green, "\nExo-BDD tests passed.\n"])
+
+        {_, code} ->
+          Mix.raise("exo-bdd tests failed with exit code #{code}")
+      end
+    rescue
+      e in ErlangError ->
+        handle_erlang_error(e, __STACKTRACE__)
+    end
+  end
+
+  defp handle_erlang_error(%ErlangError{original: :enoent}, _stacktrace) do
+    Mix.raise(
+      "bun is not installed or not in PATH. Install it with: curl -fsSL https://bun.sh/install | bash"
+    )
+  end
+
+  defp handle_erlang_error(e, stacktrace) do
+    reraise e, stacktrace
+  end
+
+  defp bun_available? do
+    System.find_executable("bun") != nil
   end
 
   @doc false
