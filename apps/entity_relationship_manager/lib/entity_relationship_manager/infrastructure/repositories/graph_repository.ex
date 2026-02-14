@@ -549,8 +549,10 @@ defmodule EntityRelationshipManager.Infrastructure.Repositories.GraphRepository 
     UNWIND $ids AS entity_id
     MATCH (n:Entity {_workspace_id: $_workspace_id, id: entity_id})
     WHERE n.deleted_at IS NULL
-    SET n.deleted_at = $now, n.updated_at = $now
-    WITH count(n) AS deleted_count
+    OPTIONAL MATCH (n)-[r]-()
+    WHERE r.deleted_at IS NULL
+    SET n.deleted_at = $now, n.updated_at = $now, r.deleted_at = $now
+    WITH count(DISTINCT n) AS deleted_count
     RETURN deleted_count
     """
 
