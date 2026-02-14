@@ -54,9 +54,38 @@ defmodule EntityRelationshipManager.Domain.Entities.PropertyDefinition do
       name: Map.get(map, "name"),
       type: parse_type(Map.get(map, "type")),
       required: Map.get(map, "required", false),
-      constraints: Map.get(map, "constraints", %{})
+      constraints: normalize_constraints(Map.get(map, "constraints", %{}))
     }
   end
+
+  @valid_constraint_keys %{
+    "min" => :min,
+    "max" => :max,
+    "min_length" => :min_length,
+    "max_length" => :max_length,
+    "pattern" => :pattern,
+    "enum" => :enum
+  }
+
+  defp normalize_constraints(constraints) when is_map(constraints) do
+    constraints
+    |> Enum.flat_map(fn
+      {k, v} when is_binary(k) ->
+        case Map.fetch(@valid_constraint_keys, k) do
+          {:ok, atom_key} -> [{atom_key, v}]
+          :error -> []
+        end
+
+      {k, v} when is_atom(k) ->
+        [{k, v}]
+
+      _ ->
+        []
+    end)
+    |> Map.new()
+  end
+
+  defp normalize_constraints(_), do: %{}
 
   @doc """
   Returns the list of valid property types.

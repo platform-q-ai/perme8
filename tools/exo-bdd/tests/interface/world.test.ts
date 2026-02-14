@@ -19,6 +19,7 @@ mock.module('@cucumber/cucumber', () => ({
 
 const { TestWorld } = await import('../../src/interface/world/TestWorld.ts')
 const { VariableNotFoundError } = await import('../../src/domain/errors/index.ts')
+const { VariableService } = await import('../../src/application/services/VariableService.ts')
 
 // --- Helpers ---
 
@@ -32,6 +33,7 @@ describe('TestWorld', () => {
   let world: InstanceType<typeof TestWorld>
 
   beforeEach(() => {
+    VariableService.clearAll()
     world = createWorld()
   })
 
@@ -88,7 +90,7 @@ describe('TestWorld', () => {
     expect(Number(timestampResult)).toBeGreaterThan(0)
   })
 
-  test('reset clears all variables', () => {
+  test('reset clears local variables but shared persist', () => {
     world.setVariable('a', 1)
     world.setVariable('b', 2)
     expect(world.hasVariable('a')).toBe(true)
@@ -96,8 +98,18 @@ describe('TestWorld', () => {
 
     world.reset()
 
+    // Shared variables persist after reset (cross-scenario persistence)
+    expect(world.hasVariable('a')).toBe(true)
+    expect(world.hasVariable('b')).toBe(true)
+
+    // But a new world can also see them
+    const world2 = createWorld()
+    expect(world2.hasVariable('a')).toBe(true)
+
+    // clearAll removes everything
+    VariableService.clearAll()
     expect(world.hasVariable('a')).toBe(false)
-    expect(world.hasVariable('b')).toBe(false)
+    expect(world2.hasVariable('a')).toBe(false)
   })
 
   test('adapters are assignable', () => {

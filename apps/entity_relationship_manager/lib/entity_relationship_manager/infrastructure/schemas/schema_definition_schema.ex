@@ -49,6 +49,20 @@ defmodule EntityRelationshipManager.Infrastructure.Schemas.SchemaDefinitionSchem
   end
 
   @doc """
+  Changeset for updating a schema without optimistic locking.
+
+  Used for idempotent upserts (e.g., BDD setup scenarios) where the caller
+  does not provide a version and simply wants to replace the schema contents.
+  Increments version manually.
+  """
+  def force_update_changeset(struct, attrs) do
+    struct
+    |> cast(attrs, [:entity_types, :edge_types])
+    |> validate_required([:entity_types, :edge_types])
+    |> put_change(:version, (struct.version || 0) + 1)
+  end
+
+  @doc """
   Converts an Ecto schema record to a domain `SchemaDefinition` struct.
 
   Deserializes JSONB entity_types and edge_types into their respective

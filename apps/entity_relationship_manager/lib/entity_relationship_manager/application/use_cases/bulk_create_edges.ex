@@ -9,24 +9,14 @@ defmodule EntityRelationshipManager.Application.UseCases.BulkCreateEdges do
 
   alias EntityRelationshipManager.Domain.Entities.Edge
 
+  alias EntityRelationshipManager.Application.RepoConfig
+
   alias EntityRelationshipManager.Domain.Policies.{
     SchemaValidationPolicy,
     InputSanitizationPolicy
   }
 
   @max_batch_size 1000
-
-  @schema_repo Application.compile_env(
-                 :entity_relationship_manager,
-                 :schema_repository,
-                 EntityRelationshipManager.Infrastructure.Repositories.SchemaRepository
-               )
-
-  @graph_repo Application.compile_env(
-                :entity_relationship_manager,
-                :graph_repository,
-                EntityRelationshipManager.Infrastructure.Repositories.GraphRepository
-              )
 
   @doc """
   Bulk-creates edges in the workspace graph.
@@ -41,8 +31,8 @@ defmodule EntityRelationshipManager.Application.UseCases.BulkCreateEdges do
   - `mode` - `:atomic` (default) or `:partial`
   """
   def execute(workspace_id, edges_attrs, opts \\ []) do
-    schema_repo = Keyword.get(opts, :schema_repo, @schema_repo)
-    graph_repo = Keyword.get(opts, :graph_repo, @graph_repo)
+    schema_repo = Keyword.get(opts, :schema_repo, RepoConfig.schema_repo())
+    graph_repo = Keyword.get(opts, :graph_repo, RepoConfig.graph_repo())
     mode = Keyword.get(opts, :mode, :atomic)
 
     with :ok <- validate_batch_size(edges_attrs),
@@ -104,7 +94,20 @@ defmodule EntityRelationshipManager.Application.UseCases.BulkCreateEdges do
   end
 
   defp handle_atomic(graph_repo, workspace_id, valid, _errors) do
-    graph_repo.bulk_create_edges(workspace_id, valid)
+    case graph_repo.bulk_create_edges(workspace_id, valid) do
+      # Repo returned a partial result with entity-existence errors — reject all in atomic mode
+      {:ok, %{created: _created, errors: repo_errors}} when repo_errors != [] ->
+        {:error, {:validation_errors, repo_errors}}
+
+      {:ok, %{created: created, errors: _}} ->
+        {:ok, created}
+
+      {:ok, created} when is_list(created) ->
+        {:ok, created}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
   end
 
   defp handle_partial(_graph_repo, _workspace_id, [], errors) do
@@ -113,8 +116,15 @@ defmodule EntityRelationshipManager.Application.UseCases.BulkCreateEdges do
 
   defp handle_partial(graph_repo, workspace_id, valid, errors) do
     case graph_repo.bulk_create_edges(workspace_id, valid) do
-      {:ok, created} -> {:ok, %{created: created, errors: errors}}
-      {:error, reason} -> {:error, reason}
+      # Repo returned partial result with entity-existence errors — merge with validation errors
+      {:ok, %{created: created, errors: repo_errors}} ->
+        {:ok, %{created: created, errors: errors ++ repo_errors}}
+
+      {:ok, created} when is_list(created) ->
+        {:ok, %{created: created, errors: errors}}
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 end

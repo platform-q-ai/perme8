@@ -9,24 +9,14 @@ defmodule EntityRelationshipManager.Application.UseCases.BulkCreateEntities do
 
   alias EntityRelationshipManager.Domain.Entities.Entity
 
+  alias EntityRelationshipManager.Application.RepoConfig
+
   alias EntityRelationshipManager.Domain.Policies.{
     SchemaValidationPolicy,
     InputSanitizationPolicy
   }
 
   @max_batch_size 1000
-
-  @schema_repo Application.compile_env(
-                 :entity_relationship_manager,
-                 :schema_repository,
-                 EntityRelationshipManager.Infrastructure.Repositories.SchemaRepository
-               )
-
-  @graph_repo Application.compile_env(
-                :entity_relationship_manager,
-                :graph_repository,
-                EntityRelationshipManager.Infrastructure.Repositories.GraphRepository
-              )
 
   @doc """
   Bulk-creates entities in the workspace graph.
@@ -38,8 +28,8 @@ defmodule EntityRelationshipManager.Application.UseCases.BulkCreateEntities do
   In partial mode, returns `{:ok, %{created: [entity], errors: [error]}}`.
   """
   def execute(workspace_id, entities_attrs, opts \\ []) do
-    schema_repo = Keyword.get(opts, :schema_repo, @schema_repo)
-    graph_repo = Keyword.get(opts, :graph_repo, @graph_repo)
+    schema_repo = Keyword.get(opts, :schema_repo, RepoConfig.schema_repo())
+    graph_repo = Keyword.get(opts, :graph_repo, RepoConfig.graph_repo())
     mode = Keyword.get(opts, :mode, :atomic)
 
     with :ok <- validate_batch_size(entities_attrs),

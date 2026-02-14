@@ -7,15 +7,10 @@ defmodule EntityRelationshipManager.Application.UseCases.BulkDeleteEntities do
   Maximum batch size: 1000 items.
   """
 
+  alias EntityRelationshipManager.Application.RepoConfig
   alias EntityRelationshipManager.Domain.Policies.InputSanitizationPolicy
 
   @max_batch_size 1000
-
-  @graph_repo Application.compile_env(
-                :entity_relationship_manager,
-                :graph_repository,
-                EntityRelationshipManager.Infrastructure.Repositories.GraphRepository
-              )
 
   @doc """
   Bulk soft-deletes entities by their IDs.
@@ -27,7 +22,7 @@ defmodule EntityRelationshipManager.Application.UseCases.BulkDeleteEntities do
   In partial mode, returns `{:ok, %{deleted_count: integer, errors: [error]}}`.
   """
   def execute(workspace_id, entity_ids, opts \\ []) do
-    graph_repo = Keyword.get(opts, :graph_repo, @graph_repo)
+    graph_repo = Keyword.get(opts, :graph_repo, RepoConfig.graph_repo())
     mode = Keyword.get(opts, :mode, :atomic)
 
     with :ok <- validate_batch_size(entity_ids) do
@@ -76,8 +71,21 @@ defmodule EntityRelationshipManager.Application.UseCases.BulkDeleteEntities do
 
   defp handle_partial(graph_repo, workspace_id, valid, errors) do
     case graph_repo.bulk_soft_delete_entities(workspace_id, valid) do
-      {:ok, count} -> {:ok, %{deleted_count: count, errors: errors}}
-      {:error, reason} -> {:error, reason}
+      {:ok, count} ->
+        # Track not-found IDs as errors (count < submitted means some were missing)
+        not_found_count = length(valid) - count
+
+        not_found_errors =
+          if not_found_count > 0 do
+            List.duplicate(%{reason: :not_found}, not_found_count)
+          else
+            []
+          end
+
+        {:ok, %{deleted_count: count, errors: errors ++ not_found_errors}}
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 end

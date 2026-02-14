@@ -6,13 +6,8 @@ defmodule EntityRelationshipManager.Application.UseCases.FindPaths do
   before delegating to the graph repository.
   """
 
+  alias EntityRelationshipManager.Application.RepoConfig
   alias EntityRelationshipManager.Domain.Policies.{InputSanitizationPolicy, TraversalPolicy}
-
-  @graph_repo Application.compile_env(
-                :entity_relationship_manager,
-                :graph_repository,
-                EntityRelationshipManager.Infrastructure.Repositories.GraphRepository
-              )
 
   @doc """
   Finds paths between source and target entities.
@@ -23,7 +18,7 @@ defmodule EntityRelationshipManager.Application.UseCases.FindPaths do
   Returns `{:ok, [path]}` where each path is a list of entities.
   """
   def execute(workspace_id, source_id, target_id, opts \\ []) do
-    graph_repo = Keyword.get(opts, :graph_repo, @graph_repo)
+    graph_repo = Keyword.get(opts, :graph_repo, RepoConfig.graph_repo())
     max_depth = Keyword.get(opts, :max_depth, TraversalPolicy.default_depth())
 
     with :ok <- InputSanitizationPolicy.validate_uuid(source_id),

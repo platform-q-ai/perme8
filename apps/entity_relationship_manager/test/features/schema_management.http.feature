@@ -14,8 +14,8 @@ Feature: Schema Management API
 
   Scenario: Admin defines a workspace schema with entity and edge types
     # Assumes: admin-token belongs to a user with owner/admin role in workspace ws-001
-    Given I set bearer token to "${admin-token-ws-001}"
-    When I PUT to "/api/v1/workspaces/${workspace-id-001}/schema" with body:
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I PUT to "/api/v1/workspaces/${workspace-id-product-team}/schema" with body:
       """
       {
         "entity_types": [
@@ -67,35 +67,35 @@ Feature: Schema Management API
 
   Scenario: Admin retrieves the current workspace schema
     # Assumes: workspace ws-001 already has a schema defined
-    Given I set bearer token to "${admin-token-ws-001}"
-    When I GET "/api/v1/workspaces/${workspace-id-001}/schema"
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I GET "/api/v1/workspaces/${workspace-id-product-team}/schema"
     Then the response status should be 200
     And the response body should be valid JSON
     And the response body path "$.data.entity_types" should exist
     And the response body path "$.data.edge_types" should exist
     And the response body path "$.data.version" should exist
-    And the response body path "$.data.workspace_id" should equal "${workspace-id-001}"
+    And the response body path "$.data.workspace_id" should equal "${workspace-id-product-team}"
 
   Scenario: Member can read the workspace schema
     # Assumes: member-token belongs to a user with member role in workspace ws-001
-    Given I set bearer token to "${member-token-ws-001}"
-    When I GET "/api/v1/workspaces/${workspace-id-001}/schema"
+    Given I set bearer token to "${valid-member-key-product-team}"
+    When I GET "/api/v1/workspaces/${workspace-id-product-team}/schema"
     Then the response status should be 200
     And the response body should be valid JSON
     And the response body path "$.data.entity_types" should exist
 
   Scenario: Guest can read the workspace schema
     # Assumes: guest-token belongs to a user with guest role in workspace ws-001
-    Given I set bearer token to "${guest-token-ws-001}"
-    When I GET "/api/v1/workspaces/${workspace-id-001}/schema"
+    Given I set bearer token to "${valid-guest-key-product-team}"
+    When I GET "/api/v1/workspaces/${workspace-id-product-team}/schema"
     Then the response status should be 200
     And the response body should be valid JSON
     And the response body path "$.data.entity_types" should exist
 
   Scenario: Reading schema for workspace with no schema returns 404
     # Assumes: workspace ws-empty has no schema defined
-    Given I set bearer token to "${admin-token-ws-empty}"
-    When I GET "/api/v1/workspaces/${workspace-id-empty}/schema"
+    Given I set bearer token to "${valid-key-engineering-only}"
+    When I GET "/api/v1/workspaces/${workspace-id-engineering}/schema"
     Then the response status should be 404
     And the response body should be valid JSON
     And the response body path "$.error" should equal "schema_not_found"
@@ -106,13 +106,13 @@ Feature: Schema Management API
 
   Scenario: Admin adds a new entity type to an existing schema
     # Assumes: workspace ws-001 has a schema with Person and Company entity types
-    Given I set bearer token to "${admin-token-ws-001}"
-    When I GET "/api/v1/workspaces/${workspace-id-001}/schema"
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I GET "/api/v1/workspaces/${workspace-id-product-team}/schema"
     Then the response status should be 200
     And I store response body path "$.data.version" as "currentVersion"
     # Now update the schema with an additional entity type
-    Given I set bearer token to "${admin-token-ws-001}"
-    When I PUT to "/api/v1/workspaces/${workspace-id-001}/schema" with body:
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I PUT to "/api/v1/workspaces/${workspace-id-product-team}/schema" with body:
       """
       {
         "version": ${currentVersion},
@@ -156,8 +156,8 @@ Feature: Schema Management API
 
   Scenario: Schema update with stale version causes conflict
     # Assumes: workspace ws-001 has a schema at version > 1
-    Given I set bearer token to "${admin-token-ws-001}"
-    When I PUT to "/api/v1/workspaces/${workspace-id-001}/schema" with body:
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I PUT to "/api/v1/workspaces/${workspace-id-product-team}/schema" with body:
       """
       {
         "version": 0,
@@ -177,8 +177,8 @@ Feature: Schema Management API
   # ---------------------------------------------------------------------------
 
   Scenario: Schema with invalid property type is rejected
-    Given I set bearer token to "${admin-token-ws-001}"
-    When I PUT to "/api/v1/workspaces/${workspace-id-001}/schema" with body:
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I PUT to "/api/v1/workspaces/${workspace-id-product-team}/schema" with body:
       """
       {
         "entity_types": [
@@ -195,11 +195,11 @@ Feature: Schema Management API
     Then the response status should be 422
     And the response body should be valid JSON
     And the response body path "$.errors" should exist
-    And the response body path "$.errors[0].field" should contain "type"
+    And the response body path "$.errors[0].message" should contain "type"
 
   Scenario: Schema with duplicate entity type names is rejected
-    Given I set bearer token to "${admin-token-ws-001}"
-    When I PUT to "/api/v1/workspaces/${workspace-id-001}/schema" with body:
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I PUT to "/api/v1/workspaces/${workspace-id-product-team}/schema" with body:
       """
       {
         "entity_types": [
@@ -214,8 +214,8 @@ Feature: Schema Management API
     And the response body path "$.errors[0].message" should contain "duplicate"
 
   Scenario: Schema with empty entity type name is rejected
-    Given I set bearer token to "${admin-token-ws-001}"
-    When I PUT to "/api/v1/workspaces/${workspace-id-001}/schema" with body:
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I PUT to "/api/v1/workspaces/${workspace-id-product-team}/schema" with body:
       """
       {
         "entity_types": [
@@ -229,8 +229,8 @@ Feature: Schema Management API
     And the response body path "$.errors" should exist
 
   Scenario: Schema with invalid entity type name characters is rejected
-    Given I set bearer token to "${admin-token-ws-001}"
-    When I PUT to "/api/v1/workspaces/${workspace-id-001}/schema" with body:
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I PUT to "/api/v1/workspaces/${workspace-id-product-team}/schema" with body:
       """
       {
         "entity_types": [
@@ -244,8 +244,8 @@ Feature: Schema Management API
     And the response body path "$.errors[0].message" should contain "name"
 
   Scenario: Schema with missing required fields is rejected
-    Given I set bearer token to "${admin-token-ws-001}"
-    When I PUT to "/api/v1/workspaces/${workspace-id-001}/schema" with body:
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I PUT to "/api/v1/workspaces/${workspace-id-product-team}/schema" with body:
       """
       {
         "entity_types": []
@@ -260,8 +260,8 @@ Feature: Schema Management API
   # ---------------------------------------------------------------------------
 
   Scenario: Member cannot update workspace schema
-    Given I set bearer token to "${member-token-ws-001}"
-    When I PUT to "/api/v1/workspaces/${workspace-id-001}/schema" with body:
+    Given I set bearer token to "${valid-member-key-product-team}"
+    When I PUT to "/api/v1/workspaces/${workspace-id-product-team}/schema" with body:
       """
       {
         "entity_types": [
@@ -275,8 +275,8 @@ Feature: Schema Management API
     And the response body path "$.error" should equal "forbidden"
 
   Scenario: Guest cannot update workspace schema
-    Given I set bearer token to "${guest-token-ws-001}"
-    When I PUT to "/api/v1/workspaces/${workspace-id-001}/schema" with body:
+    Given I set bearer token to "${valid-guest-key-product-team}"
+    When I PUT to "/api/v1/workspaces/${workspace-id-product-team}/schema" with body:
       """
       {
         "entity_types": [
@@ -294,8 +294,8 @@ Feature: Schema Management API
   # ---------------------------------------------------------------------------
 
   Scenario: Schema with valid property constraints is accepted
-    Given I set bearer token to "${admin-token-ws-001}"
-    When I PUT to "/api/v1/workspaces/${workspace-id-001}/schema" with body:
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I PUT to "/api/v1/workspaces/${workspace-id-product-team}/schema" with body:
       """
       {
         "entity_types": [

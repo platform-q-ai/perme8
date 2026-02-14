@@ -18,6 +18,7 @@ defmodule EntityRelationshipManager.Infrastructure do
     exports: [
       {Repositories.SchemaRepository, []},
       {Repositories.GraphRepository, []},
+      {Repositories.InMemoryGraphRepository, []},
       {Adapters.Neo4jAdapter, []},
       {Adapters.Neo4jDefaultAdapter, []},
       {Schemas.SchemaDefinitionSchema, []}

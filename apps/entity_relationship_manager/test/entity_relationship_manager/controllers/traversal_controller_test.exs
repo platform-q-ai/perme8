@@ -51,16 +51,16 @@ defmodule EntityRelationshipManager.TraversalControllerTest do
   describe "paths/2" do
     test "returns paths between two entities", %{conn: conn} do
       {conn, ws_id} = authenticated_conn(conn)
-      source_id = UseCaseFixtures.valid_uuid()
-      target_id = UseCaseFixtures.valid_uuid2()
+      source = UseCaseFixtures.entity(%{workspace_id: ws_id})
+      target = UseCaseFixtures.entity(%{id: UseCaseFixtures.valid_uuid2(), workspace_id: ws_id})
 
       EntityRelationshipManager.Mocks.GraphRepositoryMock
       |> expect(:find_paths, fn _wid, _sid, _tid, _opts ->
-        {:ok, [[source_id, target_id]]}
+        {:ok, [%{nodes: [source, target], edges: []}]}
       end)
 
       conn =
-        get(conn, "/api/v1/workspaces/#{ws_id}/entities/#{source_id}/paths/#{target_id}")
+        get(conn, "/api/v1/workspaces/#{ws_id}/entities/#{source.id}/paths/#{target.id}")
 
       assert %{"data" => paths} = json_response(conn, 200)
       assert length(paths) == 1
@@ -101,16 +101,16 @@ defmodule EntityRelationshipManager.TraversalControllerTest do
 
       conn = get(conn, "/api/v1/workspaces/#{ws_id}/traverse?start_id=#{start_id}")
 
-      assert %{"data" => data} = json_response(conn, 200)
-      assert length(data) == 1
+      assert %{"data" => %{"nodes" => nodes}} = json_response(conn, 200)
+      assert length(nodes) == 1
     end
 
-    test "returns 400 when start_id is missing", %{conn: conn} do
+    test "returns 422 when start_id is missing", %{conn: conn} do
       {conn, ws_id} = authenticated_conn(conn)
 
       conn = get(conn, "/api/v1/workspaces/#{ws_id}/traverse")
 
-      assert %{"errors" => %{"detail" => "start_id is required"}} = json_response(conn, 400)
+      assert %{"error" => "missing_start_id"} = json_response(conn, 422)
     end
 
     test "accepts direction and max_depth parameters", %{conn: conn} do

@@ -8,22 +8,12 @@ defmodule EntityRelationshipManager.Application.UseCases.CreateEdge do
 
   alias EntityRelationshipManager.Domain.Entities.Edge
 
+  alias EntityRelationshipManager.Application.RepoConfig
+
   alias EntityRelationshipManager.Domain.Policies.{
     SchemaValidationPolicy,
     InputSanitizationPolicy
   }
-
-  @schema_repo Application.compile_env(
-                 :entity_relationship_manager,
-                 :schema_repository,
-                 EntityRelationshipManager.Infrastructure.Repositories.SchemaRepository
-               )
-
-  @graph_repo Application.compile_env(
-                :entity_relationship_manager,
-                :graph_repository,
-                EntityRelationshipManager.Infrastructure.Repositories.GraphRepository
-              )
 
   @doc """
   Creates an edge in the workspace graph.
@@ -37,8 +27,8 @@ defmodule EntityRelationshipManager.Application.UseCases.CreateEdge do
   Returns `{:ok, edge}` on success, `{:error, reason}` on failure.
   """
   def execute(workspace_id, attrs, opts \\ []) do
-    schema_repo = Keyword.get(opts, :schema_repo, @schema_repo)
-    graph_repo = Keyword.get(opts, :graph_repo, @graph_repo)
+    schema_repo = Keyword.get(opts, :schema_repo, RepoConfig.schema_repo())
+    graph_repo = Keyword.get(opts, :graph_repo, RepoConfig.graph_repo())
 
     type = Map.get(attrs, :type)
     source_id = Map.get(attrs, :source_id)

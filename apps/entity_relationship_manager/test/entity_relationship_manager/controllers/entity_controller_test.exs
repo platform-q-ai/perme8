@@ -49,7 +49,7 @@ defmodule EntityRelationshipManager.EntityControllerTest do
           "properties" => %{"name" => "Alice"}
         })
 
-      assert json_response(conn, 404)
+      assert %{"error" => "no_schema_configured"} = json_response(conn, 422)
     end
   end
 
@@ -98,7 +98,7 @@ defmodule EntityRelationshipManager.EntityControllerTest do
       entity = UseCaseFixtures.entity(%{workspace_id: ws_id})
 
       EntityRelationshipManager.Mocks.GraphRepositoryMock
-      |> expect(:get_entity, fn _wid, _id -> {:ok, entity} end)
+      |> expect(:get_entity, fn _wid, _id, _opts -> {:ok, entity} end)
 
       conn = get(conn, "/api/v1/workspaces/#{ws_id}/entities/#{entity.id}")
 
@@ -111,7 +111,7 @@ defmodule EntityRelationshipManager.EntityControllerTest do
       entity_id = UseCaseFixtures.valid_uuid()
 
       EntityRelationshipManager.Mocks.GraphRepositoryMock
-      |> expect(:get_entity, fn _wid, _id -> {:error, :not_found} end)
+      |> expect(:get_entity, fn _wid, _id, _opts -> {:error, :not_found} end)
 
       conn = get(conn, "/api/v1/workspaces/#{ws_id}/entities/#{entity_id}")
 
@@ -129,7 +129,7 @@ defmodule EntityRelationshipManager.EntityControllerTest do
       |> expect(:get_schema, fn _wid -> {:ok, schema} end)
 
       EntityRelationshipManager.Mocks.GraphRepositoryMock
-      |> expect(:get_entity, fn _wid, _id -> {:ok, entity} end)
+      |> expect(:get_entity, fn _wid, _id, _opts -> {:ok, entity} end)
       |> expect(:update_entity, fn _wid, _id, _props -> {:ok, entity} end)
 
       conn =
@@ -163,7 +163,7 @@ defmodule EntityRelationshipManager.EntityControllerTest do
 
       conn = delete(conn, "/api/v1/workspaces/#{ws_id}/entities/#{entity.id}")
 
-      assert %{"data" => _data, "meta" => %{"deleted_edge_count" => 2}} =
+      assert %{"data" => _data, "meta" => %{"edges_deleted" => 2}} =
                json_response(conn, 200)
     end
   end

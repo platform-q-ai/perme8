@@ -7,14 +7,27 @@ defmodule EntityRelationshipManager.Views.EdgeJSON do
     %{data: edge_data(edge)}
   end
 
+  def render("index.json", %{edges: edges, meta: meta}) do
+    %{data: Enum.map(edges, &edge_data/1), meta: meta}
+  end
+
   def render("index.json", %{edges: edges}) do
-    %{data: Enum.map(edges, &edge_data/1)}
+    %{data: Enum.map(edges, &edge_data/1), meta: %{total: length(edges)}}
+  end
+
+  def render("bulk.json", %{edges: edges, errors: errors, meta: meta}) do
+    %{
+      data: Enum.map(edges, &edge_data/1),
+      errors: errors,
+      meta: meta
+    }
   end
 
   def render("bulk.json", %{edges: edges, errors: errors}) do
     %{
       data: Enum.map(edges, &edge_data/1),
-      errors: errors
+      errors: errors,
+      meta: %{total: length(edges)}
     }
   end
 

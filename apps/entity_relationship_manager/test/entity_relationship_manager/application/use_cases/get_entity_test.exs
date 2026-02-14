@@ -15,7 +15,7 @@ defmodule EntityRelationshipManager.Application.UseCases.GetEntityTest do
       expected = entity()
 
       GraphRepositoryMock
-      |> expect(:get_entity, fn ws_id, entity_id ->
+      |> expect(:get_entity, fn ws_id, entity_id, _opts ->
         assert ws_id == workspace_id()
         assert entity_id == valid_uuid()
         {:ok, expected}
@@ -27,7 +27,7 @@ defmodule EntityRelationshipManager.Application.UseCases.GetEntityTest do
 
     test "returns error when entity not found" do
       GraphRepositoryMock
-      |> expect(:get_entity, fn _ws_id, _entity_id -> {:error, :not_found} end)
+      |> expect(:get_entity, fn _ws_id, _entity_id, _opts -> {:error, :not_found} end)
 
       assert {:error, :not_found} =
                GetEntity.execute(workspace_id(), valid_uuid(), graph_repo: GraphRepositoryMock)

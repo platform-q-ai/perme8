@@ -186,7 +186,9 @@ Then<TestWorld>('the response should have content-type {string}', function (ct: 
 Then<TestWorld>('the response body should equal:', function (d: string) { assertBodyEquals(this, d) })
 Then<TestWorld>('the response body should contain {string}', function (s: string) { assertBodyContains(this, s) })
 Then<TestWorld>('the response body should match schema {string}', async function (s: string) { await assertBodyMatchesSchema(this, s) })
-Then<TestWorld>('the response body path {string} should equal {float}', function (p: string, v: number) { assertBodyPathEqualsFloat(this, p, v) })
+// NOTE: {float} registration removed — it conflicts with {int} for integer values.
+// Float comparison is handled by assertBodyPathEqualsInt which uses toBe() for exact numeric match.
+// For actual decimal assertions, use the {string} variant with a string value.
 Then<TestWorld>('the response body path {string} should be true', function (p: string) { assertBodyPathIsTrue(this, p) })
 Then<TestWorld>('the response body path {string} should be false', function (p: string) { assertBodyPathIsFalse(this, p) })
 Then<TestWorld>('the response body path {string} should be null', function (p: string) { assertBodyPathIsNull(this, p) })

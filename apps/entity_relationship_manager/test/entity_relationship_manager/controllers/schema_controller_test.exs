@@ -86,14 +86,16 @@ defmodule EntityRelationshipManager.SchemaControllerTest do
     test "returns 422 for validation errors", %{conn: conn} do
       {conn, ws_id} = authenticated_conn(conn, role: :admin)
 
-      EntityRelationshipManager.Mocks.SchemaRepositoryMock
-      |> expect(:upsert_schema, fn _wid, _attrs -> {:error, :validation_failed} end)
-
+      # Empty schema (no entity_types and no edge_types) is rejected by
+      # validate_schema_structure before upsert_schema is ever called
       body = %{"entity_types" => [], "edge_types" => []}
 
       conn = put(conn, "/api/v1/workspaces/#{ws_id}/schema", body)
 
-      assert json_response(conn, 422)
+      response = json_response(conn, 422)
+      assert %{"error" => "validation_errors", "errors" => errors} = response
+      assert is_list(errors)
+      assert length(errors) > 0
     end
   end
 end

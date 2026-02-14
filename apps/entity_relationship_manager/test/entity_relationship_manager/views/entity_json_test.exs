@@ -54,7 +54,7 @@ defmodule EntityRelationshipManager.Views.EntityJSONTest do
                  updated_at: entity.updated_at,
                  deleted_at: entity.deleted_at
                },
-               meta: %{deleted_edge_count: 3}
+               meta: %{edges_deleted: 3}
              }
     end
   end
@@ -86,7 +86,8 @@ defmodule EntityRelationshipManager.Views.EntityJSONTest do
 
       assert result == %{
                data: %{deleted_count: 5},
-               errors: []
+               errors: [],
+               meta: %{deleted: 5}
              }
     end
   end
