@@ -142,6 +142,15 @@ Feature: Workspace API Access
     And the response body should be valid JSON
     And the response body path "$.error" should equal "Insufficient permissions"
 
+  Scenario: Authorized API key gets 404 for workspace slug that does not exist in DB
+    # The API key's workspace_access includes "ghost-workspace", so authorization
+    # passes, but the workspace doesn't exist in the database -- true 404 path
+    Given I set bearer token to "${valid-phantom-workspace-key}"
+    When I GET "/api/workspaces/ghost-workspace"
+    Then the response status should be 404
+    And the response body should be valid JSON
+    And the response body path "$.error" should equal "Workspace not found"
+
   Scenario: Guest role API key can access workspace
     # Assumes: guest@example.com has "guest" role in product-team
     # Assumes: API key "${valid-guest-key-product-team}" is owned by guest@example.com
