@@ -6,7 +6,7 @@ Migrate workspace and membership modules from `Jarga.Workspaces` to `Identity`, 
 
 This is a code reorganization — no database tables are renamed, no data migrates, and all existing functionality is preserved.
 
-## Status: ⏳ In Progress
+## Status: ✓ Complete
 
 ## UI Strategy
 
@@ -623,7 +623,7 @@ Convert `Jarga.Workspaces` to thin delegation facade. Remove old layer boundary 
 
 ---
 
-## Phase 5: Propagation (Update Call Sites) ⏸
+## Phase 5: Propagation (Update Call Sites) ✓
 
 Update cross-context references: permission policy aliases, boundary deps. This phase ensures clean architecture with no stale references.
 
@@ -633,8 +633,8 @@ The following files currently alias `Jarga.Workspaces.Application.Policies.Permi
 - Project/document use cases → `Jarga.Domain.Policies.DomainPermissionsPolicy`
 - Workspace-related checks → `Identity.Domain.Policies.WorkspacePermissionsPolicy` (via `Identity` public API)
 
-- [ ] **RED**: Verify existing authorization tests pass after alias updates
-- [ ] **GREEN**: Modify the following files:
+- [x] **RED**: Verify existing authorization tests pass after alias updates
+- [x] **GREEN**: Modify the following files:
   - `apps/jarga/lib/projects/application/use_cases/create_project.ex`
     - Change: `alias Jarga.Workspaces.Application.Policies.PermissionsPolicy` → `alias Jarga.Domain.Policies.DomainPermissionsPolicy, as: PermissionsPolicy`
   - `apps/jarga/lib/projects/application/use_cases/delete_project.ex`
@@ -648,12 +648,12 @@ The following files currently alias `Jarga.Workspaces.Application.Policies.Permi
   - `apps/jarga_web/lib/live/permissions_helper.ex`
     - Change: `alias Jarga.Workspaces.Application.Policies.PermissionsPolicy` → Need to decide: either import both policies or keep a unified helper that delegates
     - Recommendation: Update to alias `Jarga.Domain.Policies.DomainPermissionsPolicy` for project/document checks, and call `Identity.Domain.Policies.WorkspacePermissionsPolicy` for workspace checks (both via exports)
-- [ ] **REFACTOR**: Run all project/document authorization tests to verify
+- [x] **REFACTOR**: Run all project/document authorization tests to verify
 
 ### 5.2 Update Boundary Dependencies in Jarga Contexts
 
-- [ ] **RED**: `mix compile --warnings-as-errors` catches any missing deps
-- [ ] **GREEN**: Modify the following boundary declarations:
+- [x] **RED**: `mix compile --warnings-as-errors` catches any missing deps
+- [x] **GREEN**: Modify the following boundary declarations:
   - `apps/jarga/lib/projects.ex` — Update `deps` to include `Identity` (instead of `Jarga.Workspaces` layers)
   - `apps/jarga/lib/documents.ex` — Update `deps` similarly
   - `apps/jarga/lib/notes.ex` — Update `deps` if it references workspace layers
@@ -662,34 +662,35 @@ The following files currently alias `Jarga.Workspaces.Application.Policies.Permi
   - `apps/jarga_web/lib/jarga_web.ex` — Update `deps` to replace `Jarga.Workspaces` layers with `Identity`
   - `apps/jarga_api/lib/jarga_api.ex` — Update `deps` if it references workspace layers
   - Remove `Jarga.Workspaces.Domain`, `Jarga.Workspaces.Application`, `Jarga.Workspaces.Infrastructure` from all `deps` lists (these no longer exist)
-- [ ] **REFACTOR**: Run `mix compile --warnings-as-errors` to confirm zero violations
+- [x] **REFACTOR**: Run `mix compile --warnings-as-errors` to confirm zero violations
 
 ### 5.3 Update jarga_web PermissionsHelper
 
-- [ ] **RED**: Verify LiveView permission checks still render correctly
-- [ ] **GREEN**: Modify `apps/jarga_web/lib/live/permissions_helper.ex`
+- [x] **RED**: Verify LiveView permission checks still render correctly
+- [x] **GREEN**: Modify `apps/jarga_web/lib/live/permissions_helper.ex`
   - For workspace permissions: call `Identity.Domain.Policies.WorkspacePermissionsPolicy.can?/3`
   - For domain permissions: call `Jarga.Domain.Policies.DomainPermissionsPolicy.can?/3`
   - Maintain the same public API so LiveViews don't need changes
-- [ ] **REFACTOR**: Run LiveView tests to verify UI permission gates work
+- [x] **REFACTOR**: Run LiveView tests to verify UI permission gates work
 
 ### 5.4 Migration File Ownership (Optional/Documentation)
 
-- [ ] **GREEN**: Document that workspace-related migration files should be owned by `apps/identity/priv/repo/migrations/`
+- [x] **GREEN**: Document that workspace-related migration files should be owned by `apps/identity/priv/repo/migrations/`
   - Identify which migrations in `apps/jarga/priv/repo/migrations/` create the `workspaces` and `workspace_members` tables
   - Copy (not move, to avoid breaking existing deployments) these migration files to `apps/identity/priv/repo/migrations/`
   - Add a note in the migration files indicating they were moved from Jarga
   - This is a documentation/ownership concern — `mix ecto.migrate` works regardless of which app owns the migration files since both repos point to the same database
+  - **Note**: Skipped copying migration files — `apps/identity/priv/repo/migrations/` does not exist and both repos share the same database. The workspace tables are created in `apps/jarga/priv/repo/migrations/20251103145700_create_initial_schema.exs` and modified in `20251104172610_add_slugs_to_workspaces_and_projects.exs`. Moving them is not required for functionality.
 
 ### Phase 5 Validation (Final)
 
-- [ ] `mix compile --warnings-as-errors` passes with zero boundary violations across all 6 apps
-- [ ] `mix test` passes across all apps at umbrella root (zero regressions)
-- [ ] `mix precommit` passes
-- [ ] `mix boundary` reports clean dependency graph
-- [ ] All permission policy references point to correct split policies
-- [ ] `Identity` has zero dependencies on `Jarga` for workspace operations
-- [ ] `Jarga.Workspaces` is pure delegation facade (matching `Jarga.Accounts` pattern)
+- [x] `mix compile --warnings-as-errors` passes with zero boundary violations across all 6 apps
+- [x] `mix test` passes across all apps at umbrella root (zero regressions)
+- [x] `mix precommit` passes
+- [x] `mix boundary` reports clean dependency graph (boundary is a compiler — verified via `mix compile --warnings-as-errors`)
+- [x] All permission policy references point to correct split policies
+- [x] `Identity` has zero dependencies on `Jarga` for workspace operations
+- [x] `Jarga.Workspaces` is pure delegation facade (matching `Jarga.Accounts` pattern)
 
 ---
 
@@ -697,9 +698,9 @@ The following files currently alias `Jarga.Workspaces.Application.Policies.Permi
 
 After all phases complete:
 
-- [ ] `mix precommit` passes (compilation, formatting, Credo, tests, boundary)
-- [ ] `mix boundary` shows clean architecture
-- [ ] `mix test --cover` shows no drop in test coverage
+- [x] `mix precommit` passes (compilation, formatting, Credo, tests, boundary)
+- [x] `mix boundary` shows clean architecture (verified via `mix compile --warnings-as-errors`)
+- [x] `mix test --cover` shows no drop in test coverage
 
 ---
 
