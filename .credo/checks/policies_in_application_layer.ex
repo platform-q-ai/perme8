@@ -62,11 +62,15 @@ defmodule Credo.Check.Custom.Architecture.PoliciesInApplicationLayer do
       not String.contains?(file_path, "jarga_web")
   end
 
-  # Verify policy is in application/policies/ subdirectory
+  # Verify policy is in application/policies/ or domain/policies/ subdirectory
   defp check_policy_location(file_path, issue_meta) do
     cond do
       # ✅ Correct location: application/policies/
       String.match?(file_path, ~r|/application/policies/[^/]+\.ex$|) ->
+        []
+
+      # ✅ Correct location: domain/policies/ (pure business rules, no I/O)
+      String.match?(file_path, ~r|/domain/policies/[^/]+\.ex$|) ->
         []
 
       # ❌ VIOLATION: Policy at wrong location (e.g., lib/jarga/agents/policies/)
