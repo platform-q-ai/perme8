@@ -21,7 +21,6 @@ defmodule EntityRelationshipManager do
   use Boundary,
     top_level?: true,
     deps: [
-      EntityRelationshipManager.ApplicationLayer,
       Identity,
       Jarga.Workspaces,
       Jarga.Repo
@@ -33,14 +32,7 @@ defmodule EntityRelationshipManager do
       {Domain.Entities.EdgeTypeDefinition, []},
       {Domain.Entities.PropertyDefinition, []},
       {Domain.Entities.Entity, []},
-      {Domain.Entities.Edge, []},
-      {Domain.Policies.SchemaValidationPolicy, []},
-      {Domain.Policies.InputSanitizationPolicy, []},
-      {Domain.Policies.TraversalPolicy, []},
-      {Domain.Policies.AuthorizationPolicy, []},
-      {Domain.Services.PropertyValidator, []},
-      {Application.Behaviours.SchemaRepositoryBehaviour, []},
-      {Application.Behaviours.GraphRepositoryBehaviour, []}
+      {Domain.Entities.Edge, []}
     ]
 
   def router do

@@ -41,7 +41,9 @@ defmodule EntityRelationshipManager.ApplicationLayer do
   - MAY define behaviours for infrastructure implementations
   """
 
-  use Boundary, top_level?: true, deps: [], exports: []
+  # Note: Boundary enforcement for the application layer is on
+  # EntityRelationshipManager.Application (the OTP application module).
+  # This module is for documentation and introspection only.
 
   @doc """
   Lists all use case modules in the ERM application.
