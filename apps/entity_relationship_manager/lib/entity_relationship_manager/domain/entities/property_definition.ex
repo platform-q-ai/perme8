@@ -67,7 +67,8 @@ defmodule EntityRelationshipManager.Domain.Entities.PropertyDefinition do
   defp parse_type(nil), do: nil
 
   defp parse_type(type) when is_binary(type) do
-    String.to_existing_atom(type)
+    atom = String.to_atom(type)
+    if atom in @valid_types, do: atom, else: nil
   end
 
   defp parse_type(type) when is_atom(type), do: type
