@@ -49,12 +49,7 @@ defmodule EntityRelationshipManager.TraversalController do
     workspace_id = conn.assigns.workspace_id
     start_id = params["start_id"]
 
-    unless start_id do
-      conn
-      |> put_status(:bad_request)
-      |> json(%{error: "bad_request", message: "start_id is required"})
-      |> halt()
-    else
+    if start_id do
       opts =
         [start_id: start_id]
         |> maybe_put_opt(:direction, params["direction"])
@@ -71,6 +66,11 @@ defmodule EntityRelationshipManager.TraversalController do
         {:error, reason} ->
           handle_error(conn, reason)
       end
+    else
+      conn
+      |> put_status(:bad_request)
+      |> json(%{error: "bad_request", message: "start_id is required"})
+      |> halt()
     end
   end
 

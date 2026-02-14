@@ -84,7 +84,7 @@ defmodule EntityRelationshipManager.Domain.Policies.InputSanitizationPolicyTest 
     end
 
     test "rejects non-string" do
-      assert {:error, _} = InputSanitizationPolicy.validate_uuid(12345)
+      assert {:error, _} = InputSanitizationPolicy.validate_uuid(12_345)
     end
   end
 end

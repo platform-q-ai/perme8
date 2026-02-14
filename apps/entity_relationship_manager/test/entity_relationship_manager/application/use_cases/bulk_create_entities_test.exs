@@ -59,7 +59,7 @@ defmodule EntityRelationshipManager.Application.UseCases.BulkCreateEntitiesTest 
                )
 
       assert is_list(errors)
-      assert length(errors) > 0
+      assert errors != []
     end
 
     test "returns error when schema not found" do

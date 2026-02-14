@@ -19,6 +19,7 @@ defmodule EntityRelationshipManager do
   """
 
   use Boundary,
+    top_level?: true,
     deps: [
       Identity,
       Jarga.Workspaces,
