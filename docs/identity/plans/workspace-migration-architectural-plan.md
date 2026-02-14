@@ -488,18 +488,18 @@ Move use cases, behaviours, and services from `Jarga.Workspaces.Application` to 
 
 ---
 
-## Phase 4: Facade & Cleanup ⏸
+## Phase 4: Facade & Cleanup ✓
 
 Convert `Jarga.Workspaces` to thin delegation facade. Remove old layer boundary modules. Update fixtures.
 
 ### 4.1 Convert Jarga.Workspaces to Thin Facade
 
-- [ ] **RED**: Write test `apps/jarga/test/workspaces_test.exs` (update to test delegation)
+- [x] **RED**: Write test `apps/jarga/test/workspaces_test.exs` (update to test delegation)
   - Tests: `Jarga.Workspaces.list_workspaces_for_user/1` delegates to `Identity.list_workspaces_for_user/1`
   - Tests: `Jarga.Workspaces.create_workspace/2` delegates to `Identity.create_workspace/2`
   - Tests: Every existing public function still works via delegation
   - Tests: Return types are identical (domain entities from Identity)
-- [ ] **GREEN**: Rewrite `apps/jarga/lib/workspaces.ex`
+- [x] **GREEN**: Rewrite `apps/jarga/lib/workspaces.ex`
   - Replace all implementation with `defdelegate` to `Identity` (following `Jarga.Accounts` pattern)
   - Update boundary declaration:
     ```elixir
@@ -534,12 +534,12 @@ Convert `Jarga.Workspaces` to thin delegation facade. Remove old layer boundary 
     - `change_member_role/4`
     - `remove_member/3`
     - `change_workspace/0` and `change_workspace/1` or `change_workspace/2`
-- [ ] **REFACTOR**: Verify facade is < 100 lines (pure delegation, no logic)
+- [x] **REFACTOR**: Verify facade is < 100 lines (pure delegation, no logic)
 
 ### 4.2 Remove Old Jarga Workspace Layer Boundaries
 
-- [ ] **RED**: Verify `mix compile` passes after removing old boundary modules
-- [ ] **GREEN**: Delete the following files from `apps/jarga/`:
+- [x] **RED**: Verify `mix compile` passes after removing old boundary modules
+- [x] **GREEN**: Delete the following files from `apps/jarga/`:
   - `lib/workspaces/domain.ex` (boundary module)
   - `lib/workspaces/application.ex` (boundary module)
   - `lib/workspaces/infrastructure.ex` (boundary module)
@@ -566,35 +566,35 @@ Convert `Jarga.Workspaces` to thin delegation facade. Remove old layer boundary 
   - `lib/workspaces/infrastructure/notifiers/email_and_pubsub_notifier.ex`
   - `lib/workspaces/infrastructure/notifiers/pubsub_notifier.ex`
   - `lib/workspaces/infrastructure/notifiers/workspace_notifier.ex`
-- [ ] **REFACTOR**: Remove empty directories after file deletion
+- [x] **REFACTOR**: Remove empty directories after file deletion
 
 ### 4.3 Update Jarga Layer Documentation Modules
 
-- [ ] **RED**: Verify `mix compile` after updates
-- [ ] **GREEN**: Modify the following files:
+- [x] **RED**: Verify `mix compile` after updates
+- [x] **GREEN**: Modify the following files:
   - `apps/jarga/lib/jarga/infrastructure_layer.ex` — Remove `Jarga.Workspaces.Infrastructure.Schemas.WorkspaceSchema` and `WorkspaceMemberSchema` references
   - `apps/jarga/lib/jarga/application_layer.ex` — Remove `Jarga.Workspaces.Application.Policies.PermissionsPolicy` and other workspace references
   - `apps/jarga/lib/jarga/domain.ex` — Remove any workspace domain references (if present)
-- [ ] **REFACTOR**: Verify documentation modules compile cleanly
+- [x] **REFACTOR**: Verify documentation modules compile cleanly
 
 ### 4.4 Update Test Fixtures
 
-- [ ] **RED**: Verify all existing tests that use `Jarga.WorkspacesFixtures` still pass
-- [ ] **GREEN**: Create `apps/identity/test/support/fixtures/workspaces_fixtures.ex`
+- [x] **RED**: Verify all existing tests that use `Jarga.WorkspacesFixtures` still pass
+- [x] **GREEN**: Create `apps/identity/test/support/fixtures/workspaces_fixtures.ex`
   - Module: `Identity.WorkspacesFixtures`
   - Implement `workspace_fixture/2`, `add_workspace_member_fixture/3`, `invite_and_accept_member/4`
   - These call `Identity.*` directly (not `Jarga.Workspaces`)
-- [ ] **GREEN**: Modify `apps/jarga/test/support/fixtures/workspaces_fixtures.ex`
+- [x] **GREEN**: Modify `apps/jarga/test/support/fixtures/workspaces_fixtures.ex`
   - Update `Jarga.WorkspacesFixtures` to delegate to `Identity.WorkspacesFixtures` or call `Identity` directly
   - Update boundary deps to `[Identity]`
   - Remove direct schema/entity references — use `Identity` public API
   - For `add_workspace_member_fixture/3`: Can call `Identity.Infrastructure.Schemas.WorkspaceMemberSchema` directly (it's exported)
-- [ ] **REFACTOR**: Run full Jarga test suite to verify no fixture breakage
+- [x] **REFACTOR**: Run full Jarga test suite to verify no fixture breakage
 
 ### 4.5 Move Workspace Tests to Identity
 
-- [ ] **RED**: Verify new test paths exist and run
-- [ ] **GREEN**: Move the following test files from `apps/jarga/test/` to `apps/identity/test/`:
+- [x] **RED**: Verify new test paths exist and run
+- [x] **GREEN**: Move the following test files from `apps/jarga/test/` to `apps/identity/test/`:
   - `workspaces/domain/entities/workspace_test.exs` → `identity/domain/entities/workspace_test.exs`
   - `workspaces/domain/entities/workspace_member_test.exs` → `identity/domain/entities/workspace_member_test.exs`
   - `workspaces/domain/slug_generator_test.exs` → `identity/domain/services/slug_generator_test.exs`
@@ -610,16 +610,16 @@ Convert `Jarga.Workspaces` to thin delegation facade. Remove old layer boundary 
   - `workspaces/infrastructure/notifiers/workspace_notifier_test.exs` → `identity/infrastructure/notifiers/workspace_notifier_test.exs`
   - `workspaces_test.exs` → Keep minimal facade delegation test in Jarga
   - Note: If new tests were written in earlier phases, these moved tests may be replaced/merged. Prefer the new tests written in earlier phases as they use correct Identity module paths.
-- [ ] **REFACTOR**: Update all module references in moved test files to `Identity.*` paths
+- [x] **REFACTOR**: Update all module references in moved test files to `Identity.*` paths
 
 ### Phase 4 Validation
 
-- [ ] `Jarga.Workspaces` facade is pure delegation (< 100 lines)
-- [ ] All old Jarga workspace source files are deleted
-- [ ] All workspace tests are in `apps/identity/test/`
-- [ ] `Jarga.WorkspacesFixtures` still works for all Jarga tests that depend on it
-- [ ] `mix compile --warnings-as-errors` passes
-- [ ] `mix test` passes across all apps at umbrella root
+- [x] `Jarga.Workspaces` facade is pure delegation (< 100 lines)
+- [x] All old Jarga workspace source files are deleted
+- [x] All workspace tests are in `apps/identity/test/`
+- [x] `Jarga.WorkspacesFixtures` still works for all Jarga tests that depend on it
+- [x] `mix compile --warnings-as-errors` passes
+- [x] `mix test` passes across all apps at umbrella root
 
 ---
 

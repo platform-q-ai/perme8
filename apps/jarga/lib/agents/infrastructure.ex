@@ -20,8 +20,7 @@ defmodule Jarga.Agents.Infrastructure do
       Identity,
       Identity.Repo,
       Jarga.Accounts,
-      Jarga.Workspaces,
-      Jarga.Workspaces.Infrastructure
+      Jarga.Workspaces
     ],
     exports: [
       # Schemas

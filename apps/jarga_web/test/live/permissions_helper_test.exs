@@ -2,7 +2,7 @@ defmodule JargaWeb.Live.PermissionsHelperTest do
   use ExUnit.Case, async: true
 
   alias JargaWeb.Live.PermissionsHelper
-  alias Jarga.Workspaces.Domain.Entities.WorkspaceMember
+  alias Identity.Domain.Entities.WorkspaceMember
 
   describe "can_edit_workspace?/1" do
     test "returns true for admin member" do

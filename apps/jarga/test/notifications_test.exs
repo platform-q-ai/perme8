@@ -143,7 +143,7 @@ defmodule Jarga.NotificationsTest do
       assert not is_nil(updated_notification.action_taken_at)
 
       # Verify workspace member was deleted
-      refute Jarga.Repo.get_by(Jarga.Workspaces.Infrastructure.Schemas.WorkspaceMemberSchema,
+      refute Jarga.Repo.get_by(Identity.Infrastructure.Schemas.WorkspaceMemberSchema,
                workspace_id: workspace.id,
                user_id: invited_user.id
              )
