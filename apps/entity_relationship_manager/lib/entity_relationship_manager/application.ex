@@ -3,7 +3,12 @@ defmodule EntityRelationshipManager.Application do
 
   use Application
 
-  use Boundary, deps: [EntityRelationshipManager], exports: []
+  use Boundary,
+    deps: [EntityRelationshipManager],
+    exports: [
+      {Behaviours.SchemaRepositoryBehaviour, []},
+      {Behaviours.GraphRepositoryBehaviour, []}
+    ]
 
   @impl true
   def start(_type, _args) do
