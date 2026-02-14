@@ -33,6 +33,7 @@ export default defineConfig({
     'valid-member-key-product-team': 'exo_test_member_key_product_team_aaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
     'valid-multi-workspace-key': 'exo_test_multi_workspace_key_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
     'valid-no-access-key': 'exo_test_no_access_key_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+    'valid-phantom-workspace-key': 'exo_test_phantom_workspace_key_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
   },
   adapters: {
     http: {
