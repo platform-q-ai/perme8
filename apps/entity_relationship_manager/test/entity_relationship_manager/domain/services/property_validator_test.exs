@@ -248,7 +248,7 @@ defmodule EntityRelationshipManager.Domain.Services.PropertyValidatorTest do
 
     test "rejects non-string value for datetime" do
       definitions = [datetime_prop("created")]
-      properties = %{"created" => 12345}
+      properties = %{"created" => 12_345}
 
       assert {:error, errors} = PropertyValidator.validate_properties(properties, definitions)
       assert Enum.any?(errors, &(&1.field == "created" && &1.constraint == :type))

@@ -34,9 +34,8 @@ defmodule EntityRelationshipManager.Application.UseCases.ListEdges do
 
   defp validate_filters(filters) do
     with :ok <- validate_type(filters),
-         :ok <- validate_limit(filters),
-         :ok <- validate_offset(filters) do
-      :ok
+         :ok <- validate_limit(filters) do
+      validate_offset(filters)
     end
   end
 
