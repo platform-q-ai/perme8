@@ -30,8 +30,8 @@ defmodule Jarga.Projects.Application do
       # Cross-context dependencies
       Identity,
       Jarga.Accounts,
-      Jarga.Workspaces,
-      Jarga.Workspaces.Application
+      Jarga.Domain,
+      Jarga.Workspaces
     ],
     exports: [
       UseCases.CreateProject,

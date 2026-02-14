@@ -28,8 +28,8 @@ Application.ensure_all_started(:bcrypt_elixir)
 alias Identity.Application.Services.{ApiKeyTokenService, PasswordService}
 alias Identity.Infrastructure.Schemas.{ApiKeySchema, UserSchema}
 alias Jarga.Workspaces
-alias Jarga.Workspaces.Infrastructure.Schemas.{WorkspaceMemberSchema}
-alias Jarga.Workspaces.Domain.Entities.WorkspaceMember
+alias Identity.Infrastructure.Schemas.WorkspaceMemberSchema
+alias Identity.Domain.Entities.WorkspaceMember
 alias Jarga.Projects
 alias Jarga.Documents
 

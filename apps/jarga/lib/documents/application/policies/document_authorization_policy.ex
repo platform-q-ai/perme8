@@ -12,7 +12,7 @@ defmodule Jarga.Documents.Application.Policies.DocumentAuthorizationPolicy do
   - Has knowledge of workspace roles and permissions
   """
 
-  alias Jarga.Workspaces.Application.Policies.PermissionsPolicy
+  alias Jarga.Domain.Policies.DomainPermissionsPolicy, as: PermissionsPolicy
   alias Jarga.Documents.Domain.Entities.Document
 
   @doc """

@@ -21,7 +21,7 @@ defmodule Jarga.Projects.Application.UseCases.DeleteProject do
 
   alias Identity.Domain.Entities.User
   alias Jarga.Workspaces
-  alias Jarga.Workspaces.Application.Policies.PermissionsPolicy
+  alias Jarga.Domain.Policies.DomainPermissionsPolicy, as: PermissionsPolicy
 
   @default_project_repository Jarga.Projects.Infrastructure.Repositories.ProjectRepository
   @default_authorization_repository Jarga.Projects.Infrastructure.Repositories.AuthorizationRepository

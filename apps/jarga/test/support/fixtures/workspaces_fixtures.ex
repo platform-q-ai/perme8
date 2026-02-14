@@ -1,26 +1,25 @@
 defmodule Jarga.WorkspacesFixtures do
   @moduledoc """
-  This module defines test helpers for creating
-  entities via the `Jarga.Workspaces` context.
+  Test helpers for creating workspace entities via the `Identity` context.
+
+  This module delegates to Identity for all workspace-related fixture creation.
+  Direct usage of `Identity.WorkspacesFixtures` is preferred for new code.
   """
 
-  # Test fixture module - top-level boundary for test data creation
-  # Needs access to context + layer boundaries for fixture creation
+  # Test fixture module - pure delegation facade to Identity
   use Boundary,
     top_level?: true,
     deps: [
+      Identity,
+      Identity.Repo,
       Jarga.Workspaces,
-      Jarga.Workspaces.Domain,
-      Jarga.Workspaces.Infrastructure,
       Jarga.Accounts,
-      Jarga.Notifications,
-      Jarga.Repo
+      Jarga.Notifications
     ],
     exports: []
 
-  alias Jarga.Workspaces
-  alias Jarga.Workspaces.Domain.Entities.WorkspaceMember
-  alias Jarga.Workspaces.Infrastructure.Schemas.WorkspaceMemberSchema
+  alias Identity.Infrastructure.Schemas.WorkspaceMemberSchema
+  alias Identity.Domain.Entities.WorkspaceMember
   alias Jarga.Notifications
 
   def valid_workspace_attributes(attrs \\ %{}) do
@@ -33,7 +32,7 @@ defmodule Jarga.WorkspacesFixtures do
 
   def workspace_fixture(user, attrs \\ %{}) do
     attrs = valid_workspace_attributes(attrs)
-    {:ok, workspace} = Workspaces.create_workspace(user, attrs)
+    {:ok, workspace} = Identity.create_workspace(user, attrs)
     workspace
   end
 
@@ -72,14 +71,14 @@ defmodule Jarga.WorkspacesFixtures do
   def invite_and_accept_member(inviter, workspace_id, user_email, role) do
     # Invite the member (creates pending invitation)
     {:ok, {:invitation_sent, _invitation}} =
-      Workspaces.invite_member(inviter, workspace_id, user_email, role)
+      Identity.invite_member(inviter, workspace_id, user_email, role)
 
     # Find the user by email
-    user = Jarga.Accounts.get_user_by_email_case_insensitive(user_email)
+    user = Identity.get_user_by_email_case_insensitive(user_email)
 
     if user do
       # Get the workspace using the context API with the inviter (who has access)
-      workspace = Workspaces.get_workspace!(inviter, workspace_id)
+      workspace = Identity.get_workspace!(inviter, workspace_id)
 
       # Create a notification manually for the test (bypassing the async PubSub subscriber)
       {:ok, notification} =

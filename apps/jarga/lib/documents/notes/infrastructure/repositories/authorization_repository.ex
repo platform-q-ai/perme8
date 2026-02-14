@@ -15,7 +15,7 @@ defmodule Jarga.Documents.Notes.Infrastructure.Repositories.AuthorizationReposit
   alias Jarga.Documents.Notes.Infrastructure.Queries.Queries
   alias Jarga.Documents.Infrastructure.Schemas.DocumentComponentSchema
   alias Jarga.Documents.Infrastructure.Schemas.DocumentSchema
-  alias Jarga.Workspaces.Infrastructure.Schemas.WorkspaceMemberSchema
+  alias Identity.Infrastructure.Schemas.WorkspaceMemberSchema
   import Ecto.Query
 
   @doc """

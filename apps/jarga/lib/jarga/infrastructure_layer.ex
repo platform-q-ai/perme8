@@ -59,10 +59,8 @@ defmodule Jarga.InfrastructureLayer do
       Jarga.Notifications.Infrastructure.Repositories.NotificationRepository,
       # Projects
       Jarga.Projects.Infrastructure.Repositories.ProjectRepository,
-      Jarga.Projects.Infrastructure.Repositories.AuthorizationRepository,
-      # Workspaces
-      Jarga.Workspaces.Infrastructure.Repositories.WorkspaceRepository,
-      Jarga.Workspaces.Infrastructure.Repositories.MembershipRepository
+      Jarga.Projects.Infrastructure.Repositories.AuthorizationRepository
+      # Workspaces — migrated to Identity app
     ]
   end
 
@@ -92,10 +90,8 @@ defmodule Jarga.InfrastructureLayer do
       # Notifications
       Jarga.Notifications.Infrastructure.Schemas.NotificationSchema,
       # Projects
-      Jarga.Projects.Infrastructure.Schemas.ProjectSchema,
-      # Workspaces
-      Jarga.Workspaces.Infrastructure.Schemas.WorkspaceSchema,
-      Jarga.Workspaces.Infrastructure.Schemas.WorkspaceMemberSchema
+      Jarga.Projects.Infrastructure.Schemas.ProjectSchema
+      # Workspaces — migrated to Identity app
     ]
   end
 
@@ -118,9 +114,8 @@ defmodule Jarga.InfrastructureLayer do
       Jarga.Documents.Infrastructure.Queries.DocumentQueries,
       Jarga.Documents.Notes.Infrastructure.Queries.Queries,
       # Projects
-      Jarga.Projects.Infrastructure.Queries.Queries,
-      # Workspaces
-      Jarga.Workspaces.Infrastructure.Queries.Queries
+      Jarga.Projects.Infrastructure.Queries.Queries
+      # Workspaces — migrated to Identity app
     ]
   end
 
@@ -144,11 +139,8 @@ defmodule Jarga.InfrastructureLayer do
       # Notifications
       Jarga.Notifications.Infrastructure.Notifiers.PubSubNotifier,
       # Projects
-      Jarga.Projects.Infrastructure.Notifiers.EmailAndPubSubNotifier,
-      # Workspaces
-      Jarga.Workspaces.Infrastructure.Notifiers.WorkspaceNotifier,
-      Jarga.Workspaces.Infrastructure.Notifiers.EmailAndPubSubNotifier,
-      Jarga.Workspaces.Infrastructure.Notifiers.PubSubNotifier
+      Jarga.Projects.Infrastructure.Notifiers.EmailAndPubSubNotifier
+      # Workspaces — migrated to Identity app
     ]
   end
 

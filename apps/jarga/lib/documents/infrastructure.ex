@@ -43,7 +43,6 @@ defmodule Jarga.Documents.Infrastructure do
       Identity.Repo,
       Jarga.Accounts,
       Jarga.Workspaces,
-      Jarga.Workspaces.Infrastructure,
       Jarga.Projects,
       Jarga.Projects.Infrastructure
     ],
