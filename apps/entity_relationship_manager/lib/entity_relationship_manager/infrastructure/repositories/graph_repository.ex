@@ -323,7 +323,7 @@ defmodule EntityRelationshipManager.Infrastructure.Repositories.GraphRepository 
 
   @impl true
   def get_neighbors(workspace_id, entity_id, opts \\ []) do
-    direction = Keyword.get(opts, :direction, :both)
+    direction = Keyword.get(opts, :direction, "both")
     edge_type = Keyword.get(opts, :edge_type)
 
     {match_pattern, edge_filter} = build_neighbor_pattern(direction, edge_type)
@@ -337,7 +337,9 @@ defmodule EntityRelationshipManager.Infrastructure.Repositories.GraphRepository 
            neighbor.created_at AS created_at, neighbor.updated_at AS updated_at
     """
 
-    params = %{_workspace_id: workspace_id, id: entity_id}
+    params =
+      %{_workspace_id: workspace_id, id: entity_id}
+      |> maybe_put_edge_type_param(edge_type)
 
     case Neo4jAdapter.execute(cypher, params, opts) do
       {:ok, %{records: records}} ->
@@ -611,19 +613,25 @@ defmodule EntityRelationshipManager.Infrastructure.Repositories.GraphRepository 
 
   defp build_edge_type_filter(_), do: {"", %{}}
 
-  defp build_neighbor_pattern(:outgoing, _edge_type) do
-    {"MATCH (start)-[r:EDGE]->(neighbor:Entity)", ""}
+  defp build_neighbor_pattern("out", edge_type) do
+    {"MATCH (start)-[r:EDGE]->(neighbor:Entity)", edge_type_filter(edge_type)}
   end
 
-  defp build_neighbor_pattern(:incoming, _edge_type) do
-    {"MATCH (start)<-[r:EDGE]-(neighbor:Entity)", ""}
+  defp build_neighbor_pattern("in", edge_type) do
+    {"MATCH (start)<-[r:EDGE]-(neighbor:Entity)", edge_type_filter(edge_type)}
   end
 
-  defp build_neighbor_pattern(:both, _edge_type) do
-    {"MATCH (start)-[r:EDGE]-(neighbor:Entity)", ""}
+  defp build_neighbor_pattern("both", edge_type) do
+    {"MATCH (start)-[r:EDGE]-(neighbor:Entity)", edge_type_filter(edge_type)}
   end
 
-  defp build_neighbor_pattern(_, _edge_type) do
-    {"MATCH (start)-[r:EDGE]-(neighbor:Entity)", ""}
+  defp build_neighbor_pattern(_, edge_type) do
+    {"MATCH (start)-[r:EDGE]-(neighbor:Entity)", edge_type_filter(edge_type)}
   end
+
+  defp edge_type_filter(nil), do: ""
+  defp edge_type_filter(_edge_type), do: "AND r.type = $edge_type"
+
+  defp maybe_put_edge_type_param(params, nil), do: params
+  defp maybe_put_edge_type_param(params, edge_type), do: Map.put(params, :edge_type, edge_type)
 end
