@@ -115,6 +115,13 @@ jobs:
           cd apps/jarga_web/assets
           npm ci
 
+      - name: Set up Bun (for exo-bdd tests)
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install exo-bdd dependencies
+        run: bun install
+        working-directory: tools/exo-bdd
+
       - name: Create test database
         run: MIX_ENV=test mix ecto.create
         env:
