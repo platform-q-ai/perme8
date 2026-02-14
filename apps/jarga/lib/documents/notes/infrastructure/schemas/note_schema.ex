@@ -16,9 +16,7 @@ defmodule Jarga.Documents.Notes.Infrastructure.Schemas.NoteSchema do
 
     belongs_to(:user, Identity.Infrastructure.Schemas.UserSchema)
 
-    belongs_to(:workspace, Jarga.Workspaces.Infrastructure.Schemas.WorkspaceSchema,
-      type: Ecto.UUID
-    )
+    belongs_to(:workspace, Identity.Infrastructure.Schemas.WorkspaceSchema, type: Ecto.UUID)
 
     belongs_to(:project, Jarga.Projects.Infrastructure.Schemas.ProjectSchema, type: Ecto.UUID)
 
