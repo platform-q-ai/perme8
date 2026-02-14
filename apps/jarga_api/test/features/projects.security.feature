@@ -180,8 +180,8 @@ Feature: Project API Security Baseline
     And Content-Security-Policy should be present
     And Strict-Transport-Security should be present
 
-  Scenario: Project list endpoint returns proper security headers
-    When I check "${projectCreateEndpoint}" for security headers
+  Scenario: Cross-workspace project endpoint returns proper security headers
+    When I check "${crossWorkspaceEndpoint}" for security headers
     Then the security headers should include "X-Content-Type-Options"
     And the security headers should include "X-Frame-Options"
     And the security headers should include "Referrer-Policy"
