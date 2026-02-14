@@ -244,10 +244,90 @@ jobs:
           path: tmp/screenshots/
           retention-days: 7
 
+  360-tests:
+    name: 360 tests
+    needs: [changes, test]
+    if: needs.changes.outputs.umbrella == 'true' || needs.changes.outputs.exo_bdd == 'true'
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: jarga_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          version-file: .tool-versions
+          version-type: strict
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Restore deps cache
+        uses: actions/cache@v4
+        with:
+          path: deps
+          key: ${{ runner.os }}-deps-${{ hashFiles('.tool-versions', '**/mix.lock') }}
+          restore-keys: ${{ runner.os }}-deps-
+
+      - name: Restore build cache
+        uses: actions/cache@v4
+        with:
+          path: _build
+          key: ${{ runner.os }}-build-${{ hashFiles('.tool-versions', '**/mix.lock') }}-${{ hashFiles('apps/**/lib/**/*.ex', 'apps/**/mix.exs') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ hashFiles('.tool-versions', '**/mix.lock') }}-
+            ${{ runner.os }}-build-
+
+      - name: Install Elixir dependencies
+        run: mix deps.get
+
+      - name: Compile
+        run: mix compile
+
+      - name: Install exo-bdd dependencies
+        run: bun install
+        working-directory: tools/exo-bdd
+
+      - name: Create test database
+        run: MIX_ENV=test mix ecto.create
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jarga_test
+
+      - name: Run database migrations
+        run: MIX_ENV=test mix ecto.migrate
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jarga_test
+
+      - name: Run 360 tests (jarga_api HTTP)
+        run: mix exo_test --config apps/jarga_api/test/exo-bdd-jarga-api.config.ts --tag @http
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jarga_test
+
+      - name: Run 360 tests (jarga_api security)
+        run: mix exo_test --config apps/jarga_api/test/exo-bdd-jarga-api.config.ts --tag @security
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jarga_test
+
   deploy:
     name: Deploy to Render
     runs-on: ubuntu-latest
-    needs: [changes, test, javascript, exo-bdd]
+    needs: [changes, test, javascript, exo-bdd, 360-tests]
     if: |
       always() &&
       github.event_name == 'push' && github.ref == 'refs/heads/main' &&
