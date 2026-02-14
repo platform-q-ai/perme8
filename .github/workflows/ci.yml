@@ -248,6 +248,7 @@ jobs:
     name: 360 tests
     needs: [changes, test]
     if: needs.changes.outputs.umbrella == 'true' || needs.changes.outputs.exo_bdd == 'true'
+    timeout-minutes: 30
     runs-on: ubuntu-latest
 
     services:
