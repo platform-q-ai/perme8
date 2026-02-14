@@ -319,7 +319,11 @@
           # Verifies layer boundary files have correct deps configuration
           {CredoChecks.CleanArchitecture.LayerBoundaryDepsCorrect,
            [
-             excluded_apps: ["jarga_tools"]
+             # jarga_tools: utility app with no domain layers
+             # entity_relationship_manager: OTP Application module conflicts with
+             #   Application layer naming — uses Domain/Infrastructure sub-boundaries
+             #   with top-level boundary governing the application layer directly
+             excluded_apps: ["jarga_tools", "entity_relationship_manager"]
            ]},
           # Verifies public API module has correct boundary config
           {CredoChecks.CleanArchitecture.PublicApiBoundaryCorrect,
@@ -328,7 +332,10 @@
              # jarga_api: interface app that depends on multiple Jarga contexts
              #   (Workspaces, Projects, Documents) and Identity directly, not a
              #   single ApplicationLayer — this is by design for interface apps
-             excluded_apps: ["jarga_tools", "jarga_api"]
+             # entity_relationship_manager: OTP Application module uses the
+             #   Application namespace, preventing a separate ApplicationLayer
+             #   boundary — application logic is governed by the top-level boundary
+             excluded_apps: ["jarga_tools", "jarga_api", "entity_relationship_manager"]
            ]},
 
           #

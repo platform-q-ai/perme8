@@ -91,23 +91,22 @@ defmodule EntityRelationshipManager.Application.UseCases.BulkUpdateEntities do
       {:ok, entities_map} ->
         {valid, property_errors} =
           uuid_valid
-          |> Enum.reduce({[], []}, fn {update, index}, {valid_acc, error_acc} ->
-            id = Map.get(update, :id)
-            properties = Map.get(update, :properties, %{})
-
-            case validate_single_update(entities_map, schema, id, properties) do
-              :ok ->
-                {[update | valid_acc], error_acc}
-
-              {:error, reason} ->
-                {valid_acc, [%{index: index, id: id, reason: reason} | error_acc]}
-            end
-          end)
+          |> Enum.reduce({[], []}, &reduce_update(&1, &2, entities_map, schema))
 
         {Enum.reverse(valid), Enum.reverse(uuid_errors ++ property_errors)}
 
       {:error, reason} ->
         {[], [%{index: 0, id: nil, reason: reason}]}
+    end
+  end
+
+  defp reduce_update({update, index}, {valid_acc, error_acc}, entities_map, schema) do
+    id = Map.get(update, :id)
+    properties = Map.get(update, :properties, %{})
+
+    case validate_single_update(entities_map, schema, id, properties) do
+      :ok -> {[update | valid_acc], error_acc}
+      {:error, reason} -> {valid_acc, [%{index: index, id: id, reason: reason} | error_acc]}
     end
   end
 

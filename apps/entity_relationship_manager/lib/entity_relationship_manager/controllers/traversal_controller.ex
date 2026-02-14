@@ -57,40 +57,42 @@ defmodule EntityRelationshipManager.TraversalController do
     end
   end
 
-  def traverse(conn, params) do
+  def traverse(conn, %{"start_id" => start_id} = params) do
     workspace_id = conn.assigns.workspace_id
-    start_id = params["start_id"]
 
-    if start_id do
-      opt_fields = [
-        {:direction, :string, "direction"},
-        {:max_depth, :integer, "max_depth"},
-        {:limit, :integer, "limit"}
-      ]
+    opt_fields = [
+      {:direction, :string, "direction"},
+      {:max_depth, :integer, "max_depth"},
+      {:limit, :integer, "limit"}
+    ]
 
-      case ControllerHelpers.build_opts(conn, params, opt_fields) do
-        {:ok, opts} ->
-          opts = Keyword.put(opts, :start_id, start_id)
+    case ControllerHelpers.build_opts(conn, params, opt_fields) do
+      {:ok, opts} ->
+        opts = Keyword.put(opts, :start_id, start_id)
+        do_traverse(conn, workspace_id, opts)
 
-          case EntityRelationshipManager.traverse(workspace_id, opts) do
-            {:ok, entities} ->
-              conn
-              |> put_status(:ok)
-              |> put_view(EntityRelationshipManager.Views.TraversalJSON)
-              |> render("traverse.json", entities: entities)
+      {:error, conn} ->
+        conn
+    end
+  end
 
-            {:error, reason} ->
-              handle_error(conn, reason)
-          end
+  def traverse(conn, _params) do
+    conn
+    |> put_status(:bad_request)
+    |> json(%{errors: %{detail: "start_id is required"}})
+    |> halt()
+  end
 
-        {:error, conn} ->
-          conn
-      end
-    else
-      conn
-      |> put_status(:bad_request)
-      |> json(%{error: "bad_request", message: "start_id is required"})
-      |> halt()
+  defp do_traverse(conn, workspace_id, opts) do
+    case EntityRelationshipManager.traverse(workspace_id, opts) do
+      {:ok, entities} ->
+        conn
+        |> put_status(:ok)
+        |> put_view(EntityRelationshipManager.Views.TraversalJSON)
+        |> render("traverse.json", entities: entities)
+
+      {:error, reason} ->
+        handle_error(conn, reason)
     end
   end
 

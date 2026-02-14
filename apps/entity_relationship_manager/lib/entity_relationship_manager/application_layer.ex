@@ -1,12 +1,6 @@
 defmodule EntityRelationshipManager.ApplicationLayer do
   @moduledoc """
-  Application layer namespace for the Entity Relationship Manager.
-
-  The ERM app uses Clean Architecture with domain, application,
-  and infrastructure layers. This module provides documentation and
-  introspection for the application layer.
-
-  ## Application Layer Principles
+  Application layer boundary for the Entity Relationship Manager.
 
   The application layer orchestrates business operations by:
 
@@ -14,23 +8,6 @@ defmodule EntityRelationshipManager.ApplicationLayer do
   - Defining use cases (single-responsibility operations)
   - Depending on abstractions (behaviours) for infrastructure
   - Supporting dependency injection for testability
-
-  ## Use Case Pattern
-
-  All use cases follow a consistent pattern with DI via opts:
-
-  ```elixir
-  defmodule EntityRelationshipManager.Application.UseCases.CreateEntity do
-    def execute(workspace_id, attrs, opts \\\\ []) do
-      schema_repo = Keyword.get(opts, :schema_repo, @schema_repo)
-      graph_repo = Keyword.get(opts, :graph_repo, @graph_repo)
-      # 1. Fetch schema
-      # 2. Validate against schema
-      # 3. Persist via repository
-      # 4. Return {:ok, entity} or {:error, reason}
-    end
-  end
-  ```
 
   ## Dependency Rules
 
@@ -41,9 +18,10 @@ defmodule EntityRelationshipManager.ApplicationLayer do
   - MAY define behaviours for infrastructure implementations
   """
 
-  # Note: Boundary enforcement for the application layer is on
-  # EntityRelationshipManager.Application (the OTP application module).
-  # This module is for documentation and introspection only.
+  # Note: The application layer boundary is enforced on
+  # EntityRelationshipManager.Application (OTP application module)
+  # which governs the Application.UseCases.* and Application.Behaviours.* namespaces.
+  # This module serves as documentation and introspection for the layer.
 
   @doc """
   Lists all use case modules in the ERM application.
