@@ -21,6 +21,7 @@ defmodule EntityRelationshipManager do
   use Boundary,
     top_level?: true,
     deps: [
+      EntityRelationshipManager.ApplicationLayer,
       Identity,
       Jarga.Workspaces,
       Jarga.Repo
