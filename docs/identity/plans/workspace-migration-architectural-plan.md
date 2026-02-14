@@ -142,44 +142,44 @@ Split the current `Jarga.Workspaces.Application.Policies.PermissionsPolicy` into
 
 ---
 
-## Phase 2: Infrastructure Layer Migration ⏸
+## Phase 2: Infrastructure Layer Migration ✓
 
 Move schemas, repositories, queries, and notifiers from `Jarga.Workspaces.Infrastructure` to `Identity.Infrastructure`. Update cross-context schema references.
 
 ### 2.1 WorkspaceSchema
 
-- [ ] **RED**: Write test `apps/identity/test/identity/infrastructure/schemas/workspace_schema_test.exs`
+- [x] **RED**: Write test `apps/identity/test/identity/infrastructure/schemas/workspace_schema_test.exs`
   - Tests: `changeset/2` validates required fields (`:name`, `:slug`)
   - Tests: `changeset/2` validates name minimum length
   - Tests: `changeset/2` enforces slug uniqueness constraint
   - Tests: `to_schema/1` converts domain entity to schema struct
   - Tests: `to_schema/1` returns schema unchanged if already a schema
-- [ ] **GREEN**: Create `apps/identity/lib/identity/infrastructure/schemas/workspace_schema.ex`
+- [x] **GREEN**: Create `apps/identity/lib/identity/infrastructure/schemas/workspace_schema.ex`
   - Move from `apps/jarga/lib/workspaces/infrastructure/schemas/workspace_schema.ex`
   - Rename module to `Identity.Infrastructure.Schemas.WorkspaceSchema`
   - Update `alias` for domain entity to `Identity.Domain.Entities.Workspace`
   - Update `has_many` association to reference `Identity.Infrastructure.Schemas.WorkspaceMemberSchema`
-- [ ] **REFACTOR**: Verify changeset behavior is identical
+- [x] **REFACTOR**: Verify changeset behavior is identical
 
 ### 2.2 WorkspaceMemberSchema
 
-- [ ] **RED**: Write test `apps/identity/test/identity/infrastructure/schemas/workspace_member_schema_test.exs`
+- [x] **RED**: Write test `apps/identity/test/identity/infrastructure/schemas/workspace_member_schema_test.exs`
   - Tests: `changeset/2` validates required fields (`:workspace_id`, `:email`, `:role`)
   - Tests: `changeset/2` enforces foreign key constraints
   - Tests: `changeset/2` enforces unique constraint on `[:workspace_id, :email]`
   - Tests: `accept_invitation_changeset/2` validates required `:user_id` and `:joined_at`
   - Tests: `to_schema/1` converts domain entity to schema struct
-- [ ] **GREEN**: Create `apps/identity/lib/identity/infrastructure/schemas/workspace_member_schema.ex`
+- [x] **GREEN**: Create `apps/identity/lib/identity/infrastructure/schemas/workspace_member_schema.ex`
   - Move from `apps/jarga/lib/workspaces/infrastructure/schemas/workspace_member_schema.ex`
   - Rename module to `Identity.Infrastructure.Schemas.WorkspaceMemberSchema`
   - Update `alias` for domain entity to `Identity.Domain.Entities.WorkspaceMember`
   - Update `belongs_to(:workspace)` to reference `Identity.Infrastructure.Schemas.WorkspaceSchema`
   - `belongs_to(:user)` and `belongs_to(:inviter)` already reference `Identity.Infrastructure.Schemas.UserSchema` — no change needed
-- [ ] **REFACTOR**: Verify all changeset validations are preserved
+- [x] **REFACTOR**: Verify all changeset validations are preserved
 
 ### 2.3 WorkspaceQueries
 
-- [ ] **RED**: Write test `apps/identity/test/identity/infrastructure/queries/workspace_queries_test.exs`
+- [x] **RED**: Write test `apps/identity/test/identity/infrastructure/queries/workspace_queries_test.exs`
   - Tests: `base/0` returns WorkspaceSchema queryable
   - Tests: `for_user/2` filters by user membership join
   - Tests: `for_user_by_id/2` finds workspace by ID where user is member
@@ -194,16 +194,16 @@ Move schemas, repositories, queries, and notifiers from `Jarga.Workspaces.Infras
   - Tests: `find_pending_invitation/2` finds unaccepted invitation
   - Tests: `find_pending_invitations_by_email/1` finds all pending for email
   - Tests: `with_workspace_and_inviter/1` preloads associations
-- [ ] **GREEN**: Create `apps/identity/lib/identity/infrastructure/queries/workspace_queries.ex`
+- [x] **GREEN**: Create `apps/identity/lib/identity/infrastructure/queries/workspace_queries.ex`
   - Move from `apps/jarga/lib/workspaces/infrastructure/queries/queries.ex`
   - Rename module to `Identity.Infrastructure.Queries.WorkspaceQueries`
   - Update all schema aliases to `Identity.Infrastructure.Schemas.*`
   - Update `User` alias to `Identity.Domain.Entities.User`
-- [ ] **REFACTOR**: Verify query behavior is identical by comparing results
+- [x] **REFACTOR**: Verify query behavior is identical by comparing results
 
 ### 2.4 MembershipRepository
 
-- [ ] **RED**: Write test `apps/identity/test/identity/infrastructure/repositories/membership_repository_test.exs`
+- [x] **RED**: Write test `apps/identity/test/identity/infrastructure/repositories/membership_repository_test.exs`
   - Tests: `get_workspace_for_user/2` returns workspace when user is member, nil otherwise
   - Tests: `get_workspace_for_user_by_slug/2` returns workspace by slug
   - Tests: `get_workspace_and_member_by_slug/2` returns `{workspace, member}` tuple
@@ -219,70 +219,70 @@ Move schemas, repositories, queries, and notifiers from `Jarga.Workspaces.Infras
   - Tests: `member?/2` checks membership by IDs
   - Tests: `member_by_slug?/2` checks membership by user ID + workspace slug
   - Tests: `transact/1` wraps operations in transaction
-- [ ] **GREEN**: Create `apps/identity/lib/identity/infrastructure/repositories/membership_repository.ex`
+- [x] **GREEN**: Create `apps/identity/lib/identity/infrastructure/repositories/membership_repository.ex`
   - Move from `apps/jarga/lib/workspaces/infrastructure/repositories/membership_repository.ex`
   - Rename module to `Identity.Infrastructure.Repositories.MembershipRepository`
   - Update all aliases to `Identity.*` paths
   - Update behaviour reference to `Identity.Application.Behaviours.MembershipRepositoryBehaviour`
   - Already uses `Identity.Repo` — no Repo change needed
-- [ ] **REFACTOR**: Verify all repository operations return correct domain entities
+- [x] **REFACTOR**: Verify all repository operations return correct domain entities
 
 ### 2.5 WorkspaceRepository
 
-- [ ] **RED**: Write test `apps/identity/test/identity/infrastructure/repositories/workspace_repository_test.exs`
+- [x] **RED**: Write test `apps/identity/test/identity/infrastructure/repositories/workspace_repository_test.exs`
   - Tests: `get_by_id/1` returns workspace entity or nil
   - Tests: `insert/1` creates workspace from attrs
   - Tests: `update/2` updates workspace fields
   - Tests: `insert_changeset/1` inserts from changeset
-- [ ] **GREEN**: Create `apps/identity/lib/identity/infrastructure/repositories/workspace_repository.ex`
+- [x] **GREEN**: Create `apps/identity/lib/identity/infrastructure/repositories/workspace_repository.ex`
   - Move from `apps/jarga/lib/workspaces/infrastructure/repositories/workspace_repository.ex`
   - Rename module to `Identity.Infrastructure.Repositories.WorkspaceRepository`
   - Update all aliases to `Identity.*` paths
-- [ ] **REFACTOR**: Verify repository returns domain entities consistently
+- [x] **REFACTOR**: Verify repository returns domain entities consistently
 
 ### 2.6 WorkspaceNotifier (Email)
 
-- [ ] **RED**: Write test `apps/identity/test/identity/infrastructure/notifiers/workspace_notifier_test.exs`
+- [x] **RED**: Write test `apps/identity/test/identity/infrastructure/notifiers/workspace_notifier_test.exs`
   - Tests: `deliver_invitation_to_new_user/4` sends email with correct subject/body
   - Tests: `deliver_invitation_to_existing_user/4` sends email with user name and workspace URL
-- [ ] **GREEN**: Create `apps/identity/lib/identity/infrastructure/notifiers/workspace_notifier.ex`
+- [x] **GREEN**: Create `apps/identity/lib/identity/infrastructure/notifiers/workspace_notifier.ex`
   - Move from `apps/jarga/lib/workspaces/infrastructure/notifiers/workspace_notifier.ex`
   - Rename module to `Identity.Infrastructure.Notifiers.WorkspaceNotifier`
   - Update aliases to `Identity.Domain.Entities.*`
   - Change `Jarga.Mailer` to `Identity.Mailer`
-- [ ] **REFACTOR**: Verify email content is identical
+- [x] **REFACTOR**: Verify email content is identical
 
 ### 2.7 EmailAndPubSubNotifier
 
-- [ ] **RED**: Write test `apps/identity/test/identity/infrastructure/notifiers/email_and_pubsub_notifier_test.exs`
+- [x] **RED**: Write test `apps/identity/test/identity/infrastructure/notifiers/email_and_pubsub_notifier_test.exs`
   - Tests: `notify_existing_user/3` sends email + broadcasts PubSub
   - Tests: `notify_new_user/3` sends invitation email
   - Tests: `notify_user_removed/2` broadcasts PubSub removal event
   - Tests: `notify_workspace_updated/1` broadcasts PubSub update event
-- [ ] **GREEN**: Create `apps/identity/lib/identity/infrastructure/notifiers/email_and_pubsub_notifier.ex`
+- [x] **GREEN**: Create `apps/identity/lib/identity/infrastructure/notifiers/email_and_pubsub_notifier.ex`
   - Move from `apps/jarga/lib/workspaces/infrastructure/notifiers/email_and_pubsub_notifier.ex`
   - Rename module to `Identity.Infrastructure.Notifiers.EmailAndPubSubNotifier`
   - Update aliases to `Identity.*` paths
   - Update `WorkspaceNotifier` alias to `Identity.Infrastructure.Notifiers.WorkspaceNotifier`
   - Update behaviour reference to `Identity.Application.Behaviours.NotificationServiceBehaviour`
-- [ ] **REFACTOR**: Verify PubSub topics are unchanged (`"workspace:#{id}"`, `"user:#{id}"`)
+- [x] **REFACTOR**: Verify PubSub topics are unchanged (`"workspace:#{id}"`, `"user:#{id}"`)
 
 ### 2.8 PubSubNotifier
 
-- [ ] **RED**: Write test `apps/identity/test/identity/infrastructure/notifiers/pubsub_notifier_test.exs`
+- [x] **RED**: Write test `apps/identity/test/identity/infrastructure/notifiers/pubsub_notifier_test.exs`
   - Tests: `broadcast_invitation_created/5` broadcasts to `"workspace_invitations"` topic
-- [ ] **GREEN**: Create `apps/identity/lib/identity/infrastructure/notifiers/pubsub_notifier.ex`
+- [x] **GREEN**: Create `apps/identity/lib/identity/infrastructure/notifiers/pubsub_notifier.ex`
   - Move from `apps/jarga/lib/workspaces/infrastructure/notifiers/pubsub_notifier.ex`
   - Rename module to `Identity.Infrastructure.Notifiers.PubSubNotifier`
   - Update behaviour reference to `Identity.Application.Behaviours.PubSubNotifierBehaviour`
-- [ ] **REFACTOR**: Verify PubSub topic string is unchanged
+- [x] **REFACTOR**: Verify PubSub topic string is unchanged
 
 ### 2.9 Update Jarga Schema References (belongs_to)
 
 Update all Jarga schemas that reference `Jarga.Workspaces.Infrastructure.Schemas.WorkspaceSchema` to reference `Identity.Infrastructure.Schemas.WorkspaceSchema`.
 
-- [ ] **RED**: Verify existing schema tests still pass after alias change (run existing test suites)
-- [ ] **GREEN**: Modify the following files:
+- [x] **RED**: Verify existing schema tests still pass after alias change (run existing test suites)
+- [x] **GREEN**: Modify the following files:
   - `apps/jarga/lib/projects/infrastructure/schemas/project_schema.ex`
     - Change: `belongs_to(:workspace, Jarga.Workspaces.Infrastructure.Schemas.WorkspaceSchema)` → `belongs_to(:workspace, Identity.Infrastructure.Schemas.WorkspaceSchema)`
   - `apps/jarga/lib/documents/infrastructure/schemas/document_schema.ex`
@@ -293,14 +293,14 @@ Update all Jarga schemas that reference `Jarga.Workspaces.Infrastructure.Schemas
     - Change: `belongs_to(:workspace, Jarga.Workspaces.Infrastructure.Schemas.WorkspaceSchema)` → `belongs_to(:workspace, Identity.Infrastructure.Schemas.WorkspaceSchema)`
   - `apps/jarga/lib/agents/infrastructure/schemas/workspace_agent_join_schema.ex`
     - Update alias: `Jarga.Workspaces.Infrastructure.Schemas.WorkspaceSchema` → `Identity.Infrastructure.Schemas.WorkspaceSchema`
-- [ ] **REFACTOR**: Verify all association queries still load correctly
+- [x] **REFACTOR**: Verify all association queries still load correctly
 
 ### Phase 2 Validation
 
-- [ ] All new Identity infrastructure tests pass (`mix test apps/identity/test/identity/infrastructure/`)
-- [ ] All existing Jarga schema tests pass (associations still work)
-- [ ] `mix compile --warnings-as-errors` passes
-- [ ] No boundary violations
+- [x] All new Identity infrastructure tests pass (`mix test apps/identity/test/identity/infrastructure/`)
+- [x] All existing Jarga schema tests pass (associations still work)
+- [x] `mix compile --warnings-as-errors` passes
+- [x] No boundary violations
 
 ---
 
