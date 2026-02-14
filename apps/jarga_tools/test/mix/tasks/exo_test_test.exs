@@ -37,10 +37,21 @@ defmodule Mix.Tasks.ExoTestTest do
     end
   end
 
-  describe "run/1 argument parsing" do
-    test "raises when --config points to a non-existent file" do
-      assert_raise Mix.Error, fn ->
-        ExoTest.run(["--config", "/tmp/does-not-exist-exo-bdd.config.ts"])
+  describe "run/1" do
+    @tag :tmp_dir
+    test "raises when --config points to a non-existent file and bun is available", %{
+      tmp_dir: _
+    } do
+      if System.find_executable("bun") do
+        assert_raise Mix.Error, fn ->
+          ExoTest.run(["--config", "/tmp/does-not-exist-exo-bdd.config.ts"])
+        end
+      end
+    end
+
+    test "gracefully skips when bun is not available" do
+      unless System.find_executable("bun") do
+        assert ExoTest.run([]) == :ok
       end
     end
   end

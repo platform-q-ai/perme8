@@ -70,18 +70,16 @@ defmodule Mix.Tasks.ExoTest do
   end
 
   defp run_bun(cmd_args, exo_bdd_root) do
-    try do
-      case System.cmd("bun", cmd_args, cd: exo_bdd_root, into: IO.stream(:stdio, :line)) do
-        {_, 0} ->
-          Mix.shell().info([:green, "\nExo-BDD tests passed.\n"])
+    case System.cmd("bun", cmd_args, cd: exo_bdd_root, into: IO.stream(:stdio, :line)) do
+      {_, 0} ->
+        Mix.shell().info([:green, "\nExo-BDD tests passed.\n"])
 
-        {_, code} ->
-          Mix.raise("exo-bdd tests failed with exit code #{code}")
-      end
-    rescue
-      e in ErlangError ->
-        handle_erlang_error(e, __STACKTRACE__)
+      {_, code} ->
+        Mix.raise("exo-bdd tests failed with exit code #{code}")
     end
+  rescue
+    e in ErlangError ->
+      handle_erlang_error(e, __STACKTRACE__)
   end
 
   defp handle_erlang_error(%ErlangError{original: :enoent}, _stacktrace) do
