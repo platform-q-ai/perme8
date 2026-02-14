@@ -3,6 +3,7 @@ defmodule EntityRelationshipManager.Router do
 
   pipeline :api_base do
     plug(:accepts, ["json"])
+    plug(EntityRelationshipManager.Plugs.SecurityHeadersPlug)
   end
 
   pipeline :api_authenticated do
