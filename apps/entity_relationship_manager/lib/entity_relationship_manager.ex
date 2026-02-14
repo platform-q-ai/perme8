@@ -32,7 +32,10 @@ defmodule EntityRelationshipManager do
       {Domain.Entities.EdgeTypeDefinition, []},
       {Domain.Entities.PropertyDefinition, []},
       {Domain.Entities.Entity, []},
-      {Domain.Entities.Edge, []}
+      {Domain.Entities.Edge, []},
+      # Exported for Infrastructure layer to implement
+      {Application.Behaviours.SchemaRepositoryBehaviour, []},
+      {Application.Behaviours.GraphRepositoryBehaviour, []}
     ]
 
   def router do

@@ -3,32 +3,6 @@ defmodule EntityRelationshipManager.Application do
 
   use Application
 
-  use Boundary,
-    deps: [EntityRelationshipManager, EntityRelationshipManager.Domain],
-    exports: [
-      {Behaviours.SchemaRepositoryBehaviour, []},
-      {Behaviours.GraphRepositoryBehaviour, []},
-      {UseCases.GetSchema, []},
-      {UseCases.UpsertSchema, []},
-      {UseCases.CreateEntity, []},
-      {UseCases.GetEntity, []},
-      {UseCases.ListEntities, []},
-      {UseCases.UpdateEntity, []},
-      {UseCases.DeleteEntity, []},
-      {UseCases.CreateEdge, []},
-      {UseCases.GetEdge, []},
-      {UseCases.ListEdges, []},
-      {UseCases.UpdateEdge, []},
-      {UseCases.DeleteEdge, []},
-      {UseCases.GetNeighbors, []},
-      {UseCases.FindPaths, []},
-      {UseCases.Traverse, []},
-      {UseCases.BulkCreateEntities, []},
-      {UseCases.BulkUpdateEntities, []},
-      {UseCases.BulkDeleteEntities, []},
-      {UseCases.BulkCreateEdges, []}
-    ]
-
   @impl true
   def start(_type, _args) do
     children = [

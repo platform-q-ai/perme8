@@ -11,8 +11,8 @@ defmodule EntityRelationshipManager.Infrastructure do
 
   use Boundary,
     deps: [
+      EntityRelationshipManager,
       EntityRelationshipManager.Domain,
-      EntityRelationshipManager.Application,
       Jarga.Repo
     ],
     exports: [

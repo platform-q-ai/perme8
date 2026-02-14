@@ -110,7 +110,7 @@ defmodule EntityRelationshipManager.TraversalControllerTest do
 
       conn = get(conn, "/api/v1/workspaces/#{ws_id}/traverse")
 
-      assert %{"error" => "bad_request"} = json_response(conn, 400)
+      assert %{"errors" => %{"detail" => "start_id is required"}} = json_response(conn, 400)
     end
 
     test "accepts direction and max_depth parameters", %{conn: conn} do
