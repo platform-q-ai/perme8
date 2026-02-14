@@ -8,10 +8,13 @@ defmodule Identity.Infrastructure.Notifiers.EmailAndPubSubNotifier do
   - Uses configurable URL builders for links in emails
   """
 
+  @behaviour Identity.Application.Behaviours.NotificationServiceBehaviour
+
   alias Identity.Domain.Entities.User
   alias Identity.Domain.Entities.Workspace
   alias Identity.Infrastructure.Notifiers.WorkspaceNotifier
 
+  @impl true
   def notify_existing_user(%User{} = user, %Workspace{} = workspace, %User{} = inviter) do
     # Send email notification
     workspace_url = build_workspace_url(workspace.id)
@@ -27,6 +30,7 @@ defmodule Identity.Infrastructure.Notifiers.EmailAndPubSubNotifier do
     :ok
   end
 
+  @impl true
   def notify_new_user(email, %Workspace{} = workspace, %User{} = inviter) do
     # Send invitation email
     signup_url = build_signup_url()
@@ -35,6 +39,7 @@ defmodule Identity.Infrastructure.Notifiers.EmailAndPubSubNotifier do
     :ok
   end
 
+  @impl true
   def notify_user_removed(%User{} = user, %Workspace{} = workspace) do
     # Broadcast in-app notification via PubSub
     Phoenix.PubSub.broadcast(
@@ -46,6 +51,7 @@ defmodule Identity.Infrastructure.Notifiers.EmailAndPubSubNotifier do
     :ok
   end
 
+  @impl true
   def notify_workspace_updated(%Workspace{} = workspace) do
     # Broadcast in-app notification via PubSub to all workspace members
     Phoenix.PubSub.broadcast(

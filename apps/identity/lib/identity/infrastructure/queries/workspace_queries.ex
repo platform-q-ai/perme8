@@ -6,6 +6,8 @@ defmodule Identity.Infrastructure.Queries.WorkspaceQueries do
   Query Object pattern from the infrastructure layer.
   """
 
+  @behaviour Identity.Application.Behaviours.WorkspaceQueriesBehaviour
+
   import Ecto.Query, warn: false
 
   alias Identity.Domain.Entities.User
@@ -158,6 +160,7 @@ defmodule Identity.Infrastructure.Queries.WorkspaceQueries do
   Returns a query for workspace member records that have no user_id set,
   haven't been joined yet, and match the given email address.
   """
+  @impl true
   def find_pending_invitations_by_email(email) do
     from(wm in WorkspaceMemberSchema,
       where: is_nil(wm.user_id),
@@ -169,6 +172,7 @@ defmodule Identity.Infrastructure.Queries.WorkspaceQueries do
   @doc """
   Preloads workspace and inviter associations on a query.
   """
+  @impl true
   def with_workspace_and_inviter(query) do
     from(wm in query,
       preload: [:workspace, :inviter]
