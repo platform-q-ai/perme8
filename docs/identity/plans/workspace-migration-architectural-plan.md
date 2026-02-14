@@ -304,23 +304,23 @@ Update all Jarga schemas that reference `Jarga.Workspaces.Infrastructure.Schemas
 
 ---
 
-## Phase 3: Application Layer Migration ⏸
+## Phase 3: Application Layer Migration ✓
 
 Move use cases, behaviours, and services from `Jarga.Workspaces.Application` to `Identity.Application`.
 
 ### 3.1 UseCase Behaviour
 
-- [ ] **RED**: Verify Identity already has a `UseCase` behaviour (check `apps/identity/lib/identity/application/use_cases/use_case.ex`)
+- [x] **RED**: Verify Identity already has a `UseCase` behaviour (check `apps/identity/lib/identity/application/use_cases/use_case.ex`)
   - If exists with same `execute/2` callback: reuse it
   - If not: write test for the behaviour contract
-- [ ] **GREEN**: Either reuse existing `Identity.Application.UseCases.UseCase` or create new
+- [x] **GREEN**: Either reuse existing `Identity.Application.UseCases.UseCase` or create new
   - The workspace use cases will reference `Identity.Application.UseCases.UseCase` as their behaviour
-- [ ] **REFACTOR**: Ensure consistent interface across all Identity use cases
+- [x] **REFACTOR**: Ensure consistent interface across all Identity use cases
 
 ### 3.2 Behaviours
 
-- [ ] **RED**: Write minimal tests verifying behaviour modules compile correctly
-- [ ] **GREEN**: Create the following behaviour modules:
+- [x] **RED**: Write minimal tests verifying behaviour modules compile correctly
+- [x] **GREEN**: Create the following behaviour modules:
   - `apps/identity/lib/identity/application/behaviours/membership_repository_behaviour.ex`
     - Module: `Identity.Application.Behaviours.MembershipRepositoryBehaviour`
     - Move from `apps/jarga/lib/workspaces/application/behaviours/membership_repository_behaviour.ex`
@@ -335,21 +335,21 @@ Move use cases, behaviours, and services from `Jarga.Workspaces.Application` to 
   - `apps/identity/lib/identity/application/behaviours/workspace_queries_behaviour.ex`
     - Module: `Identity.Application.Behaviours.WorkspaceQueriesBehaviour`
     - Move from `apps/jarga/lib/workspaces/application/behaviours/queries_behaviour.ex`
-- [ ] **REFACTOR**: Verify all behaviours are referenced correctly by their implementations
+- [x] **REFACTOR**: Verify all behaviours are referenced correctly by their implementations
 
 ### 3.3 NotificationService (Application Service)
 
-- [ ] **RED**: Write test `apps/identity/test/identity/application/services/notification_service_test.exs`
+- [x] **RED**: Write test `apps/identity/test/identity/application/services/notification_service_test.exs`
   - Tests: Verify the behaviour module defines correct callbacks
-- [ ] **GREEN**: Create `apps/identity/lib/identity/application/services/notification_service.ex`
+- [x] **GREEN**: Create `apps/identity/lib/identity/application/services/notification_service.ex`
   - Move from `apps/jarga/lib/workspaces/application/services/notification_service.ex`
   - Rename module to `Identity.Application.Services.NotificationService`
   - Update entity references to `Identity.Domain.Entities.*`
-- [ ] **REFACTOR**: Verify callback signatures match implementations
+- [x] **REFACTOR**: Verify callback signatures match implementations
 
 ### 3.4 InviteMember Use Case
 
-- [ ] **RED**: Write test `apps/identity/test/identity/application/use_cases/invite_member_test.exs`
+- [x] **RED**: Write test `apps/identity/test/identity/application/use_cases/invite_member_test.exs`
   - Tests: Happy path — invite existing user creates pending invitation
   - Tests: Happy path — invite non-existing user creates pending invitation with nil user_id
   - Tests: Error — invalid role (:owner) returns `{:error, :invalid_role}`
@@ -359,61 +359,61 @@ Move use cases, behaviours, and services from `Jarga.Workspaces.Application` to 
   - Tests: Error — inviter lacks permission (guest role) returns `{:error, :forbidden}`
   - Tests: Verify notification is sent (mock notifier)
   - Mocks: `MembershipRepository` via dependency injection
-- [ ] **GREEN**: Create `apps/identity/lib/identity/application/use_cases/invite_member.ex`
+- [x] **GREEN**: Create `apps/identity/lib/identity/application/use_cases/invite_member.ex`
   - Move from `apps/jarga/lib/workspaces/application/use_cases/invite_member.ex`
   - Rename module to `Identity.Application.UseCases.InviteMember`
   - Key change: Replace `Jarga.Accounts.get_user_by_email_case_insensitive` with `Identity.get_user_by_email_case_insensitive` (same app, no cross-dependency)
   - Update all internal aliases to `Identity.*` paths
   - Update default module attributes to `Identity.Infrastructure.*`
   - Update behaviour to `Identity.Application.UseCases.UseCase`
-- [ ] **REFACTOR**: Verify the cross-app dependency on `Jarga.Accounts` is eliminated
+- [x] **REFACTOR**: Verify the cross-app dependency on `Jarga.Accounts` is eliminated
 
 ### 3.5 ChangeMemberRole Use Case
 
-- [ ] **RED**: Write test `apps/identity/test/identity/application/use_cases/change_member_role_test.exs`
+- [x] **RED**: Write test `apps/identity/test/identity/application/use_cases/change_member_role_test.exs`
   - Tests: Happy path — change member's role successfully
   - Tests: Error — invalid role (:owner) returns `{:error, :invalid_role}`
   - Tests: Error — cannot change owner's role returns `{:error, :cannot_change_owner_role}`
   - Tests: Error — member not found returns `{:error, :member_not_found}`
   - Tests: Error — actor not a member returns `{:error, :unauthorized}`
   - Mocks: `MembershipRepository` via dependency injection
-- [ ] **GREEN**: Create `apps/identity/lib/identity/application/use_cases/change_member_role.ex`
+- [x] **GREEN**: Create `apps/identity/lib/identity/application/use_cases/change_member_role.ex`
   - Move from `apps/jarga/lib/workspaces/application/use_cases/change_member_role.ex`
   - Rename module to `Identity.Application.UseCases.ChangeMemberRole`
   - Update all aliases to `Identity.*` paths
-- [ ] **REFACTOR**: Verify policy interactions are preserved
+- [x] **REFACTOR**: Verify policy interactions are preserved
 
 ### 3.6 RemoveMember Use Case
 
-- [ ] **RED**: Write test `apps/identity/test/identity/application/use_cases/remove_member_test.exs`
+- [x] **RED**: Write test `apps/identity/test/identity/application/use_cases/remove_member_test.exs`
   - Tests: Happy path — remove member successfully
   - Tests: Error — cannot remove owner returns `{:error, :cannot_remove_owner}`
   - Tests: Error — member not found returns `{:error, :member_not_found}`
   - Tests: Error — actor not a member returns `{:error, :unauthorized}`
   - Tests: Notification sent to removed user if they had joined
   - Mocks: `MembershipRepository`, `Notifier` via dependency injection
-- [ ] **GREEN**: Create `apps/identity/lib/identity/application/use_cases/remove_member.ex`
+- [x] **GREEN**: Create `apps/identity/lib/identity/application/use_cases/remove_member.ex`
   - Move from `apps/jarga/lib/workspaces/application/use_cases/remove_member.ex`
   - Rename module to `Identity.Application.UseCases.RemoveMember`
   - Key change: Replace `Jarga.Accounts.get_user!` with `Identity.get_user!` (same app)
   - Update all aliases to `Identity.*` paths
-- [ ] **REFACTOR**: Verify notification flow works with no cross-app dependency
+- [x] **REFACTOR**: Verify notification flow works with no cross-app dependency
 
 ### 3.7 CreateNotificationsForPendingInvitations Use Case
 
-- [ ] **RED**: Write test `apps/identity/test/identity/application/use_cases/create_notifications_for_pending_invitations_test.exs`
+- [x] **RED**: Write test `apps/identity/test/identity/application/use_cases/create_notifications_for_pending_invitations_test.exs`
   - Tests: Happy path — finds pending invitations and broadcasts PubSub events
   - Tests: No pending invitations returns `{:ok, []}`
   - Mocks: `MembershipRepository`, `PubSubNotifier`, `Queries`, `Repo`
-- [ ] **GREEN**: Create `apps/identity/lib/identity/application/use_cases/create_notifications_for_pending_invitations.ex`
+- [x] **GREEN**: Create `apps/identity/lib/identity/application/use_cases/create_notifications_for_pending_invitations.ex`
   - Move from `apps/jarga/lib/workspaces/application/use_cases/create_notifications_for_pending_invitations.ex`
   - Rename module to `Identity.Application.UseCases.CreateNotificationsForPendingInvitations`
   - Update all default module attributes to `Identity.Infrastructure.*`
-- [ ] **REFACTOR**: Verify PubSub broadcast happens after transaction
+- [x] **REFACTOR**: Verify PubSub broadcast happens after transaction
 
 ### 3.8 Update Identity Public API (Facade)
 
-- [ ] **RED**: Write test `apps/identity/test/identity_test.exs` (add workspace sections)
+- [x] **RED**: Write test `apps/identity/test/identity/workspace_facade_test.exs` (workspace sections)
   - Tests: `Identity.list_workspaces_for_user/1` returns workspace list
   - Tests: `Identity.create_workspace/2` creates workspace with owner member
   - Tests: `Identity.get_workspace/2` returns workspace or error
@@ -438,16 +438,16 @@ Move use cases, behaviours, and services from `Jarga.Workspaces.Application` to 
   - Tests: `Identity.remove_member/3` removes member
   - Tests: `Identity.change_workspace/0` returns changeset for new workspace
   - Tests: `Identity.change_workspace/2` returns changeset for edit
-- [ ] **GREEN**: Modify `apps/identity/lib/identity.ex`
+- [x] **GREEN**: Modify `apps/identity/lib/identity.ex`
   - Add all workspace public API functions (copy from `Jarga.Workspaces`, update aliases)
   - Import workspace-related modules from Identity namespace
   - Each function either delegates to a use case or performs a simple query via Repo
-- [ ] **REFACTOR**: Verify every public function in `Jarga.Workspaces` has a corresponding function in `Identity`
+- [x] **REFACTOR**: Verify every public function in `Jarga.Workspaces` has a corresponding function in `Identity`
 
 ### 3.9 Update Identity Boundary Exports
 
-- [ ] **RED**: Verify `mix compile --warnings-as-errors` passes after export updates
-- [ ] **GREEN**: Modify `apps/identity/lib/identity.ex` boundary declaration
+- [x] **RED**: Verify `mix compile --warnings-as-errors` passes after export updates
+- [x] **GREEN**: Modify `apps/identity/lib/identity.ex` boundary declaration
   - Add to `exports`:
     - `Domain.Entities.Workspace`
     - `Domain.Entities.WorkspaceMember`
@@ -458,12 +458,12 @@ Move use cases, behaviours, and services from `Jarga.Workspaces.Application` to 
     - `Infrastructure.Schemas.WorkspaceMemberSchema`
     - `Application.Policies.MembershipPolicy` (if kept in Application)
   - Add to `deps` if needed (should already have `Identity.ApplicationLayer`, `Identity.Repo`, `Identity.Mailer`)
-- [ ] **REFACTOR**: Run `mix compile --warnings-as-errors` to verify
+- [x] **REFACTOR**: Run `mix compile --warnings-as-errors` to verify
 
 ### 3.10 Update Identity.ApplicationLayer
 
-- [ ] **RED**: Verify `Identity.ApplicationLayer.use_cases/0` includes workspace use cases
-- [ ] **GREEN**: Modify `apps/identity/lib/identity/application_layer.ex`
+- [x] **RED**: Verify `Identity.ApplicationLayer.use_cases/0` includes workspace use cases
+- [x] **GREEN**: Modify `apps/identity/lib/identity/application_layer.ex`
   - Add workspace use cases to `use_cases/0`:
     - `Identity.Application.UseCases.InviteMember`
     - `Identity.Application.UseCases.ChangeMemberRole`
@@ -476,15 +476,15 @@ Move use cases, behaviours, and services from `Jarga.Workspaces.Application` to 
     - `Identity.Application.Behaviours.NotificationServiceBehaviour`
     - `Identity.Application.Behaviours.PubSubNotifierBehaviour`
     - `Identity.Application.Behaviours.WorkspaceQueriesBehaviour`
-- [ ] **REFACTOR**: Verify summary counts are updated
+- [x] **REFACTOR**: Verify summary counts are updated
 
 ### Phase 3 Validation
 
-- [ ] All new Identity application tests pass
-- [ ] All Identity workspace public API tests pass
-- [ ] `mix compile --warnings-as-errors` passes
-- [ ] No boundary violations
-- [ ] Identity has zero runtime dependencies on `Jarga.Accounts` for workspace operations
+- [x] All new Identity application tests pass
+- [x] All Identity workspace public API tests pass
+- [x] `mix compile --warnings-as-errors` passes
+- [x] No boundary violations
+- [x] Identity has zero runtime dependencies on `Jarga.Accounts` for workspace operations
 
 ---
 
