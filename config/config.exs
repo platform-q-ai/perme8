@@ -36,6 +36,16 @@ config :jarga, :chat_context,
   max_content_chars: 3000,
   max_messages_history: 20
 
+# Configures the Entity Relationship Manager endpoint (Graph API)
+config :entity_relationship_manager, EntityRelationshipManager.Endpoint,
+  url: [host: "localhost"],
+  adapter: Bandit.PhoenixAdapter,
+  render_errors: [
+    formats: [json: EntityRelationshipManager.Views.ErrorJSON],
+    layout: false
+  ],
+  pubsub_server: Jarga.PubSub
+
 # Configures the JargaApi endpoint (JSON API)
 config :jarga_api, JargaApi.Endpoint,
   url: [host: "localhost"],
