@@ -31,21 +31,27 @@ defmodule EntityRelationshipManager.EntityController do
   def index(conn, params) do
     workspace_id = conn.assigns.workspace_id
 
-    filters =
-      %{}
-      |> maybe_put(:type, params["type"])
-      |> maybe_put_int(:limit, params["limit"])
-      |> maybe_put_int(:offset, params["offset"])
+    filter_fields = [
+      {:type, :string, "type"},
+      {:limit, :integer, "limit"},
+      {:offset, :integer, "offset"}
+    ]
 
-    case EntityRelationshipManager.list_entities(workspace_id, filters) do
-      {:ok, entities} ->
+    case EntityRelationshipManager.ControllerHelpers.build_filters(conn, params, filter_fields) do
+      {:ok, filters} ->
+        case EntityRelationshipManager.list_entities(workspace_id, filters) do
+          {:ok, entities} ->
+            conn
+            |> put_status(:ok)
+            |> put_view(EntityRelationshipManager.Views.EntityJSON)
+            |> render("index.json", entities: entities)
+
+          {:error, reason} ->
+            handle_error(conn, reason)
+        end
+
+      {:error, conn} ->
         conn
-        |> put_status(:ok)
-        |> put_view(EntityRelationshipManager.Views.EntityJSON)
-        |> render("index.json", entities: entities)
-
-      {:error, reason} ->
-        handle_error(conn, reason)
     end
   end
 
@@ -195,22 +201,6 @@ defmodule EntityRelationshipManager.EntityController do
         properties: u["properties"] || %{}
       }
     end)
-  end
-
-  defp maybe_put(map, _key, nil), do: map
-  defp maybe_put(map, key, value), do: Map.put(map, key, value)
-
-  defp maybe_put_int(map, _key, nil), do: map
-
-  defp maybe_put_int(map, key, value) when is_binary(value) do
-    case Integer.parse(value) do
-      {int, ""} -> Map.put(map, key, int)
-      _ -> map
-    end
-  end
-
-  defp maybe_put_int(map, key, value) when is_integer(value) do
-    Map.put(map, key, value)
   end
 
   defp handle_error(conn, :schema_not_found) do
