@@ -69,39 +69,60 @@ defmodule EntityRelationshipManager.Application.UseCases.BulkUpdateEntities do
   end
 
   defp validate_updates(graph_repo, workspace_id, schema, updates) do
-    updates
-    |> Enum.with_index()
-    |> Enum.reduce({[], []}, fn {update, index}, {valid_acc, error_acc} ->
-      id = Map.get(update, :id)
-      properties = Map.get(update, :properties, %{})
+    # Validate all UUIDs first
+    {uuid_valid, uuid_errors} =
+      updates
+      |> Enum.with_index()
+      |> Enum.reduce({[], []}, fn {update, index}, {valid_acc, error_acc} ->
+        id = Map.get(update, :id)
 
-      case validate_single_update(graph_repo, workspace_id, schema, id, properties) do
-        :ok ->
-          {[update | valid_acc], error_acc}
+        case InputSanitizationPolicy.validate_uuid(id) do
+          :ok -> {[{update, index} | valid_acc], error_acc}
+          {:error, reason} -> {valid_acc, [%{index: index, id: id, reason: reason} | error_acc]}
+        end
+      end)
 
-        {:error, reason} ->
-          {valid_acc, [%{index: index, id: id, reason: reason} | error_acc]}
-      end
-    end)
-    |> then(fn {valid, errors} -> {Enum.reverse(valid), Enum.reverse(errors)} end)
-  end
+    uuid_valid = Enum.reverse(uuid_valid)
 
-  defp validate_single_update(graph_repo, workspace_id, schema, id, properties) do
-    with :ok <- InputSanitizationPolicy.validate_uuid(id),
-         {:ok, existing} <- fetch_entity(graph_repo, workspace_id, id) do
-      entity = Entity.new(%{type: existing.type, properties: properties})
+    # Batch-fetch all entities in a single query
+    entity_ids = Enum.map(uuid_valid, fn {update, _index} -> Map.get(update, :id) end)
 
-      case SchemaValidationPolicy.validate_entity_against_schema(entity, schema, existing.type) do
-        :ok -> :ok
-        {:error, reason} -> {:error, reason}
-      end
+    case graph_repo.batch_get_entities(workspace_id, entity_ids) do
+      {:ok, entities_map} ->
+        {valid, property_errors} =
+          uuid_valid
+          |> Enum.reduce({[], []}, fn {update, index}, {valid_acc, error_acc} ->
+            id = Map.get(update, :id)
+            properties = Map.get(update, :properties, %{})
+
+            case validate_single_update(entities_map, schema, id, properties) do
+              :ok ->
+                {[update | valid_acc], error_acc}
+
+              {:error, reason} ->
+                {valid_acc, [%{index: index, id: id, reason: reason} | error_acc]}
+            end
+          end)
+
+        {Enum.reverse(valid), Enum.reverse(uuid_errors ++ property_errors)}
+
+      {:error, reason} ->
+        {[], [%{index: 0, id: nil, reason: reason}]}
     end
   end
 
-  defp fetch_entity(graph_repo, workspace_id, id) do
-    case graph_repo.get_entity(workspace_id, id) do
-      {:ok, entity} -> {:ok, entity}
-      {:error, :not_found} -> {:error, :not_found}
+  defp validate_single_update(entities_map, schema, id, properties) do
+    case Map.fetch(entities_map, id) do
+      {:ok, existing} ->
+        entity = Entity.new(%{type: existing.type, properties: properties})
+
+        case SchemaValidationPolicy.validate_entity_against_schema(entity, schema, existing.type) do
+          :ok -> :ok
+          {:error, reason} -> {:error, reason}
+        end
+
+      :error ->
+        {:error, :not_found}
     end
   end
 

@@ -79,6 +79,9 @@ defmodule EntityRelationshipManager.Application.Behaviours.GraphRepositoryBehavi
   @callback bulk_soft_delete_entities(workspace_id :: String.t(), entity_ids :: [String.t()]) ::
               {:ok, integer()} | {:error, term()}
 
+  @callback batch_get_entities(workspace_id :: String.t(), entity_ids :: [String.t()]) ::
+              {:ok, %{String.t() => Entity.t()}} | {:error, term()}
+
   # Health
   @callback health_check() :: :ok | {:error, term()}
 end

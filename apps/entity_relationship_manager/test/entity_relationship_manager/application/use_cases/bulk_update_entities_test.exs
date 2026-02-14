@@ -28,11 +28,13 @@ defmodule EntityRelationshipManager.Application.UseCases.BulkUpdateEntitiesTest 
       |> expect(:get_schema, fn _ws_id -> {:ok, schema} end)
 
       GraphRepositoryMock
-      |> expect(:get_entity, fn _ws_id, id ->
-        {:ok, entity(%{id: id})}
-      end)
-      |> expect(:get_entity, fn _ws_id, id ->
-        {:ok, entity(%{id: id})}
+      |> expect(:batch_get_entities, fn _ws_id, ids ->
+        entities_map =
+          ids
+          |> Enum.map(fn id -> {id, entity(%{id: id})} end)
+          |> Map.new()
+
+        {:ok, entities_map}
       end)
       |> expect(:bulk_update_entities, fn _ws_id, validated_updates ->
         assert length(validated_updates) == 2
@@ -60,8 +62,14 @@ defmodule EntityRelationshipManager.Application.UseCases.BulkUpdateEntitiesTest 
       |> expect(:get_schema, fn _ws_id -> {:ok, schema} end)
 
       GraphRepositoryMock
-      |> expect(:get_entity, fn _ws_id, id -> {:ok, entity(%{id: id})} end)
-      |> expect(:get_entity, fn _ws_id, id -> {:ok, entity(%{id: id})} end)
+      |> expect(:batch_get_entities, fn _ws_id, ids ->
+        entities_map =
+          ids
+          |> Enum.map(fn id -> {id, entity(%{id: id})} end)
+          |> Map.new()
+
+        {:ok, entities_map}
+      end)
 
       assert {:error, {:validation_errors, _}} =
                BulkUpdateEntities.execute(workspace_id(), updates,
@@ -78,7 +86,7 @@ defmodule EntityRelationshipManager.Application.UseCases.BulkUpdateEntitiesTest 
       |> expect(:get_schema, fn _ws_id -> {:ok, schema} end)
 
       GraphRepositoryMock
-      |> expect(:get_entity, fn _ws_id, _id -> {:error, :not_found} end)
+      |> expect(:batch_get_entities, fn _ws_id, _ids -> {:ok, %{}} end)
 
       assert {:error, {:validation_errors, errors}} =
                BulkUpdateEntities.execute(
@@ -109,8 +117,14 @@ defmodule EntityRelationshipManager.Application.UseCases.BulkUpdateEntitiesTest 
       |> expect(:get_schema, fn _ws_id -> {:ok, schema} end)
 
       GraphRepositoryMock
-      |> expect(:get_entity, fn _ws_id, id -> {:ok, entity(%{id: id})} end)
-      |> expect(:get_entity, fn _ws_id, id -> {:ok, entity(%{id: id})} end)
+      |> expect(:batch_get_entities, fn _ws_id, ids ->
+        entities_map =
+          ids
+          |> Enum.map(fn id -> {id, entity(%{id: id})} end)
+          |> Map.new()
+
+        {:ok, entities_map}
+      end)
       |> expect(:bulk_update_entities, fn _ws_id, valid_updates ->
         assert length(valid_updates) == 1
         {:ok, updated}
