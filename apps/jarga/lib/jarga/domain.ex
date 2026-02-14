@@ -47,9 +47,9 @@ defmodule Jarga.Domain do
   - Entities: Project
   - Services: SlugGenerator
 
-  ### Workspaces (`Jarga.Workspaces.Domain`)
-  - Entities: Workspace, WorkspaceMember
-  - Services: SlugGenerator
+  ### Workspaces (migrated to `Identity.Domain`)
+  - Entities: Workspace, WorkspaceMember → `Identity.Domain.Entities`
+  - Services: SlugGenerator → `Identity.Domain.Services`
 
   ## Dependency Rules
 
@@ -66,7 +66,9 @@ defmodule Jarga.Domain do
   use Boundary,
     top_level?: true,
     deps: [],
-    exports: []
+    exports: [
+      Policies.DomainPermissionsPolicy
+    ]
 
   @doc """
   Lists all known domain entity modules across all Jarga contexts.
@@ -92,10 +94,8 @@ defmodule Jarga.Domain do
       Jarga.Documents.Domain.Entities.DocumentComponent,
       Jarga.Documents.Notes.Domain.Entities.Note,
       # Projects
-      Jarga.Projects.Domain.Entities.Project,
-      # Workspaces
-      Jarga.Workspaces.Domain.Entities.Workspace,
-      Jarga.Workspaces.Domain.Entities.WorkspaceMember
+      Jarga.Projects.Domain.Entities.Project
+      # Workspaces — migrated to Identity app
     ]
   end
 
@@ -134,9 +134,8 @@ defmodule Jarga.Domain do
       Jarga.Documents.Domain.SlugGenerator,
       Jarga.Documents.Domain.AgentQueryParser,
       # Projects
-      Jarga.Projects.Domain.SlugGenerator,
-      # Workspaces
-      Jarga.Workspaces.Domain.SlugGenerator
+      Jarga.Projects.Domain.SlugGenerator
+      # Workspaces — migrated to Identity app
     ]
   end
 
@@ -188,15 +187,9 @@ defmodule Jarga.Domain do
         entities: [Jarga.Projects.Domain.Entities.Project],
         policies: [],
         services: [Jarga.Projects.Domain.SlugGenerator]
-      },
-      workspaces: %{
-        entities: [
-          Jarga.Workspaces.Domain.Entities.Workspace,
-          Jarga.Workspaces.Domain.Entities.WorkspaceMember
-        ],
-        policies: [],
-        services: [Jarga.Workspaces.Domain.SlugGenerator]
       }
+      # Workspaces — migrated to Identity app
+      # See Identity.Domain for workspace entities and services
     }
   end
 end

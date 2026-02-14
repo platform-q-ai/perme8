@@ -27,8 +27,9 @@ Application.ensure_all_started(:bcrypt_elixir)
 
 alias Identity.Application.Services.{ApiKeyTokenService, PasswordService}
 alias Identity.Infrastructure.Schemas.{ApiKeySchema, UserSchema}
-alias Jarga.Workspaces.Infrastructure.Schemas.{WorkspaceMemberSchema}
-alias Jarga.Workspaces.Domain.Entities.WorkspaceMember
+alias Jarga.Workspaces
+alias Identity.Infrastructure.Schemas.WorkspaceMemberSchema
+alias Identity.Domain.Entities.WorkspaceMember
 alias Jarga.Projects
 alias Jarga.Documents
 
@@ -178,8 +179,8 @@ IO.puts("[exo-seeds] Created users: alice@example.com, bob@example.com")
 create_workspace_with_id = fn user, attrs, deterministic_id ->
   # Insert workspace with a pre-set UUID so feature files can reference it.
   # Ecto respects a pre-populated :id field over autogenerate.
-  alias Jarga.Workspaces.Infrastructure.Schemas.{WorkspaceSchema, WorkspaceMemberSchema}
-  alias Jarga.Workspaces.Domain.Entities.Workspace
+  alias Identity.Infrastructure.Schemas.{WorkspaceSchema, WorkspaceMemberSchema}
+  alias Identity.Domain.Entities.Workspace
 
   now = DateTime.utc_now() |> DateTime.truncate(:second)
 

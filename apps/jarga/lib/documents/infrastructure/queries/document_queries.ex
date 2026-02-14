@@ -7,7 +7,7 @@ defmodule Jarga.Documents.Infrastructure.Queries.DocumentQueries do
   import Ecto.Query
   alias Jarga.Documents.Infrastructure.Schemas.DocumentSchema
   alias Identity.Domain.Entities.User
-  alias Jarga.Workspaces.Infrastructure.Schemas.WorkspaceMemberSchema
+  alias Identity.Infrastructure.Schemas.WorkspaceMemberSchema
 
   @doc """
   Base query for documents.

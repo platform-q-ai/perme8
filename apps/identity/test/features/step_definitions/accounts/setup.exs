@@ -234,7 +234,7 @@ defmodule Identity.Accounts.SetupSteps do
       Map.get(workspaces, workspace_slug) || raise "Workspace #{workspace_slug} not found"
 
     # Add user as member if not already
-    alias Jarga.Workspaces.Infrastructure.Repositories.MembershipRepository
+    alias Identity.Infrastructure.Repositories.MembershipRepository
 
     unless MembershipRepository.member?(user.id, workspace.id) do
       import Jarga.WorkspacesFixtures

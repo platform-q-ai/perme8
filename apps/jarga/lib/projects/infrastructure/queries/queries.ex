@@ -10,7 +10,7 @@ defmodule Jarga.Projects.Infrastructure.Queries.Queries do
 
   alias Identity.Domain.Entities.User
   alias Jarga.Projects.Infrastructure.Schemas.ProjectSchema
-  alias Jarga.Workspaces.Infrastructure.Schemas.{WorkspaceSchema, WorkspaceMemberSchema}
+  alias Identity.Infrastructure.Schemas.{WorkspaceSchema, WorkspaceMemberSchema}
 
   @doc """
   Base query for projects.

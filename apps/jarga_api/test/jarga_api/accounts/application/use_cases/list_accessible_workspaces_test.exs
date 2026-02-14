@@ -4,7 +4,7 @@ defmodule JargaApi.Accounts.Application.UseCases.ListAccessibleWorkspacesTest do
   alias JargaApi.Accounts.Application.UseCases.ListAccessibleWorkspaces
   alias Identity.Domain.Entities.ApiKey
   alias Jarga.Workspaces
-  alias Jarga.Workspaces.Domain.Entities.Workspace
+  alias Identity.Domain.Entities.Workspace
 
   import Jarga.AccountsFixtures
   import Jarga.WorkspacesFixtures

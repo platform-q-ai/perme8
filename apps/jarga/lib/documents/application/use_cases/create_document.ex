@@ -24,7 +24,7 @@ defmodule Jarga.Documents.Application.UseCases.CreateDocument do
   alias Identity.Domain.Entities.User
   alias Jarga.Documents.Domain.SlugGenerator
   alias Jarga.Workspaces
-  alias Jarga.Workspaces.Application.Policies.PermissionsPolicy
+  alias Jarga.Domain.Policies.DomainPermissionsPolicy, as: PermissionsPolicy
 
   # Default Infrastructure implementations (injected via opts for testing)
   @default_document_schema Jarga.Documents.Infrastructure.Schemas.DocumentSchema

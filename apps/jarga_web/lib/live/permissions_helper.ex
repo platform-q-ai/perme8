@@ -4,9 +4,15 @@ defmodule JargaWeb.Live.PermissionsHelper do
 
   This module provides convenient permission checking functions that can be used
   in LiveView templates to conditionally show/hide UI elements based on user permissions.
+
+  ## Permission Sources
+
+  - **Workspace-level** (edit/delete workspace, invite member): `Identity.Domain.Policies.WorkspacePermissionsPolicy`
+  - **Project/document-level** (CRUD on projects, documents): `Jarga.Domain.Policies.DomainPermissionsPolicy`
   """
 
-  alias Jarga.Workspaces.Application.Policies.PermissionsPolicy
+  alias Identity.Domain.Policies.WorkspacePermissionsPolicy
+  alias Jarga.Domain.Policies.DomainPermissionsPolicy
 
   @doc """
   Checks if a workspace member can edit the workspace.
@@ -18,7 +24,7 @@ defmodule JargaWeb.Live.PermissionsHelper do
       <% end %>
   """
   def can_edit_workspace?(member) do
-    PermissionsPolicy.can?(member.role, :edit_workspace)
+    WorkspacePermissionsPolicy.can?(member.role, :edit_workspace)
   end
 
   @doc """
@@ -31,7 +37,7 @@ defmodule JargaWeb.Live.PermissionsHelper do
       <% end %>
   """
   def can_delete_workspace?(member) do
-    PermissionsPolicy.can?(member.role, :delete_workspace)
+    WorkspacePermissionsPolicy.can?(member.role, :delete_workspace)
   end
 
   @doc """
@@ -44,7 +50,7 @@ defmodule JargaWeb.Live.PermissionsHelper do
       <% end %>
   """
   def can_create_project?(member) do
-    PermissionsPolicy.can?(member.role, :create_project)
+    DomainPermissionsPolicy.can?(member.role, :create_project)
   end
 
   @doc """
@@ -58,7 +64,7 @@ defmodule JargaWeb.Live.PermissionsHelper do
   """
   def can_edit_project?(member, project, current_user) do
     owns_project = project.user_id == current_user.id
-    PermissionsPolicy.can?(member.role, :edit_project, owns_resource: owns_project)
+    DomainPermissionsPolicy.can?(member.role, :edit_project, owns_resource: owns_project)
   end
 
   @doc """
@@ -72,7 +78,7 @@ defmodule JargaWeb.Live.PermissionsHelper do
   """
   def can_delete_project?(member, project, current_user) do
     owns_project = project.user_id == current_user.id
-    PermissionsPolicy.can?(member.role, :delete_project, owns_resource: owns_project)
+    DomainPermissionsPolicy.can?(member.role, :delete_project, owns_resource: owns_project)
   end
 
   @doc """
@@ -85,7 +91,7 @@ defmodule JargaWeb.Live.PermissionsHelper do
       <% end %>
   """
   def can_create_document?(member) do
-    PermissionsPolicy.can?(member.role, :create_document)
+    DomainPermissionsPolicy.can?(member.role, :create_document)
   end
 
   @doc """
@@ -100,7 +106,7 @@ defmodule JargaWeb.Live.PermissionsHelper do
   def can_edit_document?(member, document, current_user) do
     owns_document = document.user_id == current_user.id
 
-    PermissionsPolicy.can?(member.role, :edit_document,
+    DomainPermissionsPolicy.can?(member.role, :edit_document,
       owns_resource: owns_document,
       is_public: document.is_public
     )
@@ -119,9 +125,9 @@ defmodule JargaWeb.Live.PermissionsHelper do
     owns_document = document.user_id == current_user.id
 
     if owns_document do
-      PermissionsPolicy.can?(member.role, :delete_document, owns_resource: true)
+      DomainPermissionsPolicy.can?(member.role, :delete_document, owns_resource: true)
     else
-      PermissionsPolicy.can?(member.role, :delete_document,
+      DomainPermissionsPolicy.can?(member.role, :delete_document,
         owns_resource: false,
         is_public: document.is_public
       )
@@ -140,7 +146,7 @@ defmodule JargaWeb.Live.PermissionsHelper do
   def can_pin_document?(member, document, current_user) do
     owns_document = document.user_id == current_user.id
 
-    PermissionsPolicy.can?(member.role, :pin_document,
+    DomainPermissionsPolicy.can?(member.role, :pin_document,
       owns_resource: owns_document,
       is_public: document.is_public
     )
