@@ -110,17 +110,10 @@ jobs:
         with:
           node-version-file: .tool-versions
 
-      - name: Set up Bun
-        uses: oven-sh/setup-bun@v2
-
       - name: Install JavaScript dependencies
         run: |
           cd apps/jarga_web/assets
           npm ci
-
-      - name: Install exo-bdd dependencies
-        run: bun install
-        working-directory: tools/exo-bdd
 
       - name: Create test database
         run: MIX_ENV=test mix ecto.create
@@ -253,7 +246,7 @@ jobs:
 
   exo-bdd-360:
     name: 360 tests
-    needs: [changes, test]
+    needs: [changes]
     if: needs.changes.outputs.umbrella == 'true' || needs.changes.outputs.exo_bdd == 'true'
     timeout-minutes: 30
     runs-on: ubuntu-latest

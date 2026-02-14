@@ -62,7 +62,6 @@ defmodule Perme8.MixProject do
             raise "npm test failed"
           end
         end,
-        "exo_test",
         "test"
       ]
     ]
