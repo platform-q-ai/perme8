@@ -12,7 +12,7 @@ defmodule EntityRelationshipManager.Infrastructure.Repositories.SchemaRepository
 
   alias EntityRelationshipManager.Infrastructure.Schemas.SchemaDefinitionSchema
 
-  @repo Application.compile_env(:entity_relationship_manager, :ecto_repo, Jarga.Repo)
+  defp repo, do: Application.get_env(:entity_relationship_manager, :ecto_repo, Jarga.Repo)
 
   @impl true
   def get_schema(workspace_id) do
@@ -21,7 +21,7 @@ defmodule EntityRelationshipManager.Infrastructure.Repositories.SchemaRepository
         where: s.workspace_id == ^workspace_id
       )
 
-    case @repo.one(query) do
+    case repo().one(query) do
       nil -> {:error, :not_found}
       schema -> {:ok, SchemaDefinitionSchema.to_entity(schema)}
     end
@@ -41,7 +41,7 @@ defmodule EntityRelationshipManager.Infrastructure.Repositories.SchemaRepository
         where: s.workspace_id == ^workspace_id
       )
 
-    @repo.one(query)
+    repo().one(query)
   end
 
   defp create_schema(workspace_id, attrs) do
@@ -49,14 +49,22 @@ defmodule EntityRelationshipManager.Infrastructure.Repositories.SchemaRepository
 
     %SchemaDefinitionSchema{}
     |> SchemaDefinitionSchema.create_changeset(create_attrs)
-    |> @repo.insert()
+    |> repo().insert()
     |> handle_result()
   end
 
   defp update_schema(existing, attrs) do
-    existing
-    |> SchemaDefinitionSchema.update_changeset(attrs)
-    |> @repo.update()
+    # When version is nil (e.g., setup/idempotent upsert), skip optimistic locking
+    # by using a force changeset that just sets the fields without version check
+    changeset =
+      if is_nil(attrs[:version]) do
+        SchemaDefinitionSchema.force_update_changeset(existing, attrs)
+      else
+        SchemaDefinitionSchema.update_changeset(existing, attrs)
+      end
+
+    changeset
+    |> repo().update()
     |> handle_result()
   end
 

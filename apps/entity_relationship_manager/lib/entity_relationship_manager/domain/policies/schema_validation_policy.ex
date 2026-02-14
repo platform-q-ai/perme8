@@ -33,6 +33,7 @@ defmodule EntityRelationshipManager.Domain.Policies.SchemaValidationPolicy do
   def validate_schema_structure(%SchemaDefinition{} = schema) do
     errors =
       []
+      |> validate_not_empty(schema)
       |> validate_duplicate_entity_types(schema.entity_types)
       |> validate_duplicate_edge_types(schema.edge_types)
       |> validate_type_names("entity", schema.entity_types)
@@ -88,6 +89,12 @@ defmodule EntityRelationshipManager.Domain.Policies.SchemaValidationPolicy do
   end
 
   # Private helpers
+
+  defp validate_not_empty(errors, %SchemaDefinition{entity_types: [], edge_types: []}) do
+    ["schema must define at least one entity type or edge type" | errors]
+  end
+
+  defp validate_not_empty(errors, _schema), do: errors
 
   defp validate_duplicate_entity_types(errors, entity_types) do
     duplicates = find_duplicate_names(entity_types)

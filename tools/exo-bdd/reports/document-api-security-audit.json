@@ -1,0 +1,140 @@
+{
+  "@programName": "ZAP",
+  "@version": "2.17.0",
+  "@generated": "Sat, 14 Feb 2026 20:36:36",
+  "created": "2026-02-14T20:36:36.967379030Z",
+  "insights": [
+    {
+      "level": "Low",
+      "reason": "Exceeded High",
+      "site": "http://localhost:4005",
+      "key": "insight.code.4xx",
+      "description": "Percentage of responses with status code 4xx",
+      "statistic": "100"
+    },
+    {
+      "level": "Info",
+      "reason": "Informational",
+      "site": "http://localhost:4005",
+      "key": "insight.endpoint.ctype.application/json",
+      "description": "Percentage of endpoints with content type application/json",
+      "statistic": "100"
+    },
+    {
+      "level": "Info",
+      "reason": "Informational",
+      "site": "http://localhost:4005",
+      "key": "insight.endpoint.method.GET",
+      "description": "Percentage of endpoints with method GET",
+      "statistic": "55"
+    },
+    {
+      "level": "Info",
+      "reason": "Informational",
+      "site": "http://localhost:4005",
+      "key": "insight.endpoint.method.POST",
+      "description": "Percentage of endpoints with method POST",
+      "statistic": "44"
+    },
+    {
+      "level": "Info",
+      "reason": "Informational",
+      "site": "http://localhost:4005",
+      "key": "insight.endpoint.total",
+      "description": "Count of total endpoints",
+      "statistic": "9"
+    },
+    {
+      "level": "Info",
+      "reason": "Informational",
+      "site": "https://localhost:4005",
+      "key": "insight.endpoint.method.GET",
+      "description": "Percentage of endpoints with method GET",
+      "statistic": "33"
+    },
+    {
+      "level": "Info",
+      "reason": "Informational",
+      "site": "https://localhost:4005",
+      "key": "insight.endpoint.method.POST",
+      "description": "Percentage of endpoints with method POST",
+      "statistic": "66"
+    },
+    {
+      "level": "Info",
+      "reason": "Informational",
+      "site": "https://localhost:4005",
+      "key": "insight.endpoint.total",
+      "description": "Count of total endpoints",
+      "statistic": "3"
+    }
+  ],
+  "site": [
+    {
+      "@name": "https://localhost:4005",
+      "@host": "localhost",
+      "@port": "4005",
+      "@ssl": "true",
+      "alerts": []
+    },
+    {
+      "@name": "http://localhost:4005",
+      "@host": "localhost",
+      "@port": "4005",
+      "@ssl": "false",
+      "alerts": [
+        {
+          "pluginid": "10106",
+          "alertRef": "10106",
+          "alert": "HTTP Only Site",
+          "name": "HTTP Only Site",
+          "riskcode": "2",
+          "confidence": "2",
+          "riskdesc": "Medium (Medium)",
+          "desc": "<p>The site is only served under HTTP and not HTTPS.</p>",
+          "instances": [
+            {
+              "id": "1",
+              "uri": "http://localhost:4005/api/workspaces/product-team/documents/product-spec",
+              "nodeName": "https://localhost:4005/api/workspaces/product-team/documents/product-spec",
+              "method": "GET",
+              "param": "",
+              "attack": "",
+              "evidence": "",
+              "otherinfo": "Failed to connect.\nZAP attempted to connect via: https://localhost:4005/api/workspaces/product-team/documents/product-spec"
+            },
+            {
+              "id": "0",
+              "uri": "http://localhost:4005/api/workspaces/product-team/documents",
+              "nodeName": "https://localhost:4005/api/workspaces/product-team/documents ()({query})",
+              "method": "POST",
+              "param": "",
+              "attack": "",
+              "evidence": "",
+              "otherinfo": "Failed to connect.\nZAP attempted to connect via: https://localhost:4005/api/workspaces/product-team/documents"
+            },
+            {
+              "id": "2",
+              "uri": "http://localhost:4005/api/workspaces/product-team/projects/q1-launch/documents",
+              "nodeName": "https://localhost:4005/api/workspaces/product-team/projects/q1-launch/documents ()({query})",
+              "method": "POST",
+              "param": "",
+              "attack": "",
+              "evidence": "",
+              "otherinfo": "Failed to connect.\nZAP attempted to connect via: https://localhost:4005/api/workspaces/product-team/projects/q1-launch/documents"
+            }
+          ],
+          "count": "3",
+          "systemic": false,
+          "solution": "<p>Configure your web or application server to use SSL (https).</p>",
+          "otherinfo": "<p>Failed to connect.</p><p>ZAP attempted to connect via: https://localhost:4005/api/workspaces/product-team/documents/product-spec</p>",
+          "reference": "<p>https://cheatsheetseries.owasp.org/cheatsheets/Transport_Layer_Protection_Cheat_Sheet.html</p><p>https://letsencrypt.org/</p>",
+          "cweid": "311",
+          "wascid": "4",
+          "sourceid": "898"
+        }
+      ]
+    }
+  ],
+  "sequences": []
+}

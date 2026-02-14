@@ -1,9 +1,13 @@
-import { test, expect, describe } from 'bun:test'
+import { test, expect, describe, beforeEach } from 'bun:test'
 import { VariableService } from '../../src/application/services/VariableService.ts'
 import { InterpolationService } from '../../src/application/services/InterpolationService.ts'
 import { VariableNotFoundError } from '../../src/domain/errors/index.ts'
 
 describe('VariableService', () => {
+  // Clear shared static state between tests to ensure isolation
+  beforeEach(() => {
+    VariableService.clearAll()
+  })
   test('set and get a variable', () => {
     const service = new VariableService()
     service.set('name', 'test')
@@ -32,13 +36,26 @@ describe('VariableService', () => {
     expect(service.has('missing')).toBe(false)
   })
 
-  test('clear removes all variables', () => {
+  test('clear removes local variables but shared persist', () => {
     const service = new VariableService()
     service.set('a', 1)
     service.set('b', 2)
     service.clear()
-    expect(service.has('a')).toBe(false)
-    expect(service.has('b')).toBe(false)
+    // After clear(), shared variables still accessible via has()
+    expect(service.has('a')).toBe(true)
+    expect(service.has('b')).toBe(true)
+  })
+
+  test('clearAll removes shared variables across instances', () => {
+    const service1 = new VariableService()
+    service1.set('x', 1)
+    const service2 = new VariableService()
+    // service2 can see service1's variable via shared store
+    expect(service2.has('x')).toBe(true)
+    expect(service2.get<number>('x')).toBe(1)
+    // clearAll removes everything
+    VariableService.clearAll()
+    expect(service2.has('x')).toBe(false)
   })
 
   test('set overwrites existing variable', () => {
@@ -67,12 +84,15 @@ describe('VariableService', () => {
     expect(service.get('undef')).toBeUndefined()
   })
 
-  test('has returns true after set, false after clear', () => {
+  test('has returns true after set, persists after clear, gone after clearAll', () => {
     const service = new VariableService()
     expect(service.has('lifecycle')).toBe(false)
     service.set('lifecycle', 'value')
     expect(service.has('lifecycle')).toBe(true)
     service.clear()
+    // Still accessible via shared store after local clear
+    expect(service.has('lifecycle')).toBe(true)
+    VariableService.clearAll()
     expect(service.has('lifecycle')).toBe(false)
   })
 })

@@ -15,6 +15,12 @@ export interface ExoBddConfig {
    * (e.g., 300000 for active ZAP scanning).
    */
   timeout?: number
+  /**
+   * Cucumber tag expression to filter scenarios.
+   * Examples: "not @neo4j", "@smoke", "@api and not @slow"
+   * Passed directly to cucumber-js as --tags.
+   */
+  tags?: string
   adapters: {
     http?: HttpAdapterConfig
     browser?: BrowserAdapterConfig

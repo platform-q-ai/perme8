@@ -8,14 +8,54 @@ Feature: Entity CRUD API
     Given I set header "Content-Type" to "application/json"
     And I set header "Accept" to "application/json"
 
+  # ===========================================================================
+  # Setup: ensure schema exists for this feature file
+  # Variables do NOT persist across feature files, so we set up our own schema.
+  # ===========================================================================
+
+  Scenario: Setup - ensure schema exists
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I PUT to "/api/v1/workspaces/${workspace-id-product-team}/schema" with body:
+      """
+      {
+        "entity_types": [
+          {
+            "name": "Person",
+            "properties": [
+              {"name": "full_name", "type": "string", "required": true, "constraints": {"min_length": 1, "max_length": 255}},
+              {"name": "email", "type": "string", "required": false, "constraints": {"pattern": "^[^@]+@[^@]+$"}},
+              {"name": "age", "type": "integer", "required": false, "constraints": {"min": 0, "max": 200}}
+            ]
+          },
+          {
+            "name": "Company",
+            "properties": [
+              {"name": "name", "type": "string", "required": true, "constraints": {"min_length": 1, "max_length": 255}},
+              {"name": "founded_year", "type": "integer", "required": false, "constraints": {"min": 1800, "max": 2100}}
+            ]
+          }
+        ],
+        "edge_types": [
+          {
+            "name": "EMPLOYS",
+            "properties": [
+              {"name": "since", "type": "datetime", "required": false},
+              {"name": "role", "type": "string", "required": false, "constraints": {"enum": ["full-time", "part-time", "contractor"]}}
+            ]
+          },
+          {"name": "KNOWS", "properties": []}
+        ]
+      }
+      """
+    Then the response should be successful
+
   # ---------------------------------------------------------------------------
   # POST /api/v1/workspaces/:workspace_id/entities — Create entity
   # ---------------------------------------------------------------------------
 
   Scenario: Create a Person entity with valid properties
-    # Assumes: workspace ws-001 has a schema with Person entity type
-    Given I set bearer token to "${admin-token-ws-001}"
-    When I POST to "/api/v1/workspaces/${workspace-id-001}/entities" with body:
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I POST to "/api/v1/workspaces/${workspace-id-product-team}/entities" with body:
       """
       {
         "type": "Person",
@@ -33,15 +73,15 @@ Feature: Entity CRUD API
     And the response body path "$.data.properties.full_name" should equal "Alice Smith"
     And the response body path "$.data.properties.email" should equal "alice@example.com"
     And the response body path "$.data.properties.age" should equal 30
-    And the response body path "$.data.workspace_id" should equal "${workspace-id-001}"
+    And the response body path "$.data.workspace_id" should equal "${workspace-id-product-team}"
     And the response body path "$.data.created_at" should exist
     And the response body path "$.data.updated_at" should exist
     And the response body path "$.data.deleted_at" should be null
     And I store response body path "$.data.id" as "personId"
 
   Scenario: Create a Company entity with only required properties
-    Given I set bearer token to "${admin-token-ws-001}"
-    When I POST to "/api/v1/workspaces/${workspace-id-001}/entities" with body:
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I POST to "/api/v1/workspaces/${workspace-id-product-team}/entities" with body:
       """
       {
         "type": "Company",
@@ -58,8 +98,8 @@ Feature: Entity CRUD API
     And I store response body path "$.data.id" as "companyId"
 
   Scenario: Member can create entities
-    Given I set bearer token to "${member-token-ws-001}"
-    When I POST to "/api/v1/workspaces/${workspace-id-001}/entities" with body:
+    Given I set bearer token to "${valid-member-key-product-team}"
+    When I POST to "/api/v1/workspaces/${workspace-id-product-team}/entities" with body:
       """
       {
         "type": "Person",
@@ -71,14 +111,15 @@ Feature: Entity CRUD API
     Then the response status should be 201
     And the response body path "$.data.type" should equal "Person"
     And the response body path "$.data.properties.full_name" should equal "Bob Johnson"
+    And I store response body path "$.data.id" as "personId2"
 
   # ---------------------------------------------------------------------------
   # POST — Validation errors
   # ---------------------------------------------------------------------------
 
   Scenario: Creating entity with missing required property returns 422
-    Given I set bearer token to "${admin-token-ws-001}"
-    When I POST to "/api/v1/workspaces/${workspace-id-001}/entities" with body:
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I POST to "/api/v1/workspaces/${workspace-id-product-team}/entities" with body:
       """
       {
         "type": "Person",
@@ -94,8 +135,8 @@ Feature: Entity CRUD API
     And the response body path "$.errors[0].message" should contain "required"
 
   Scenario: Creating entity with property violating min constraint returns 422
-    Given I set bearer token to "${admin-token-ws-001}"
-    When I POST to "/api/v1/workspaces/${workspace-id-001}/entities" with body:
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I POST to "/api/v1/workspaces/${workspace-id-product-team}/entities" with body:
       """
       {
         "type": "Person",
@@ -108,12 +149,12 @@ Feature: Entity CRUD API
     Then the response status should be 422
     And the response body should be valid JSON
     And the response body path "$.errors[0].field" should equal "age"
-    And the response body path "$.errors[0].message" should contain "must be >= 0"
+    And the response body path "$.errors[0].message" should contain "must be at least"
     And the response body path "$.errors[0].constraint" should equal "min"
 
   Scenario: Creating entity with property violating max constraint returns 422
-    Given I set bearer token to "${admin-token-ws-001}"
-    When I POST to "/api/v1/workspaces/${workspace-id-001}/entities" with body:
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I POST to "/api/v1/workspaces/${workspace-id-product-team}/entities" with body:
       """
       {
         "type": "Person",
@@ -129,8 +170,8 @@ Feature: Entity CRUD API
     And the response body path "$.errors[0].constraint" should equal "max"
 
   Scenario: Creating entity with property violating pattern constraint returns 422
-    Given I set bearer token to "${admin-token-ws-001}"
-    When I POST to "/api/v1/workspaces/${workspace-id-001}/entities" with body:
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I POST to "/api/v1/workspaces/${workspace-id-product-team}/entities" with body:
       """
       {
         "type": "Person",
@@ -146,8 +187,8 @@ Feature: Entity CRUD API
     And the response body path "$.errors[0].constraint" should equal "pattern"
 
   Scenario: Creating entity with unconfigured type returns 422
-    Given I set bearer token to "${admin-token-ws-001}"
-    When I POST to "/api/v1/workspaces/${workspace-id-001}/entities" with body:
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I POST to "/api/v1/workspaces/${workspace-id-product-team}/entities" with body:
       """
       {
         "type": "UnknownType",
@@ -162,8 +203,8 @@ Feature: Entity CRUD API
 
   Scenario: Creating entity in workspace with no schema returns 422
     # Assumes: workspace ws-empty has no schema defined
-    Given I set bearer token to "${admin-token-ws-empty}"
-    When I POST to "/api/v1/workspaces/${workspace-id-empty}/entities" with body:
+    Given I set bearer token to "${valid-key-engineering-only}"
+    When I POST to "/api/v1/workspaces/${workspace-id-engineering}/entities" with body:
       """
       {
         "type": "Person",
@@ -182,26 +223,26 @@ Feature: Entity CRUD API
 
   Scenario: Get entity by ID
     # Assumes: entity personId was created in a previous test run or fixture
-    Given I set bearer token to "${admin-token-ws-001}"
-    When I GET "/api/v1/workspaces/${workspace-id-001}/entities/${personId}"
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I GET "/api/v1/workspaces/${workspace-id-product-team}/entities/${personId}"
     Then the response status should be 200
     And the response body should be valid JSON
     And the response body path "$.data.id" should equal "${personId}"
     And the response body path "$.data.type" should equal "Person"
     And the response body path "$.data.properties.full_name" should exist
-    And the response body path "$.data.workspace_id" should equal "${workspace-id-001}"
+    And the response body path "$.data.workspace_id" should equal "${workspace-id-product-team}"
 
   Scenario: Get non-existent entity returns 404
-    Given I set bearer token to "${admin-token-ws-001}"
-    When I GET "/api/v1/workspaces/${workspace-id-001}/entities/00000000-0000-0000-0000-000000000000"
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I GET "/api/v1/workspaces/${workspace-id-product-team}/entities/00000000-0000-0000-0000-000000000000"
     Then the response status should be 404
     And the response body should be valid JSON
     And the response body path "$.error" should equal "not_found"
 
   Scenario: Get entity from another workspace returns 404
     # Assumes: entity personId belongs to workspace ws-001, not ws-002
-    Given I set bearer token to "${admin-token-ws-002}"
-    When I GET "/api/v1/workspaces/${workspace-id-002}/entities/${personId}"
+    Given I set bearer token to "${valid-key-engineering-only}"
+    When I GET "/api/v1/workspaces/${workspace-id-engineering}/entities/${personId}"
     Then the response status should be 404
     And the response body should be valid JSON
     And the response body path "$.error" should equal "not_found"
@@ -211,8 +252,8 @@ Feature: Entity CRUD API
   # ---------------------------------------------------------------------------
 
   Scenario: List all entities in a workspace
-    Given I set bearer token to "${admin-token-ws-001}"
-    When I GET "/api/v1/workspaces/${workspace-id-001}/entities"
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I GET "/api/v1/workspaces/${workspace-id-product-team}/entities"
     Then the response status should be 200
     And the response body should be valid JSON
     And the response body path "$.data" should exist
@@ -221,35 +262,35 @@ Feature: Entity CRUD API
     And the response body path "$.meta.offset" should exist
 
   Scenario: List entities filtered by type
-    Given I set bearer token to "${admin-token-ws-001}"
+    Given I set bearer token to "${valid-doc-key-product-team}"
     And I set query param "type" to "Person"
-    When I GET "/api/v1/workspaces/${workspace-id-001}/entities"
+    When I GET "/api/v1/workspaces/${workspace-id-product-team}/entities"
     Then the response status should be 200
     And the response body should be valid JSON
     And the response body path "$.data[0].type" should equal "Person"
 
   Scenario: List entities with pagination
-    Given I set bearer token to "${admin-token-ws-001}"
+    Given I set bearer token to "${valid-doc-key-product-team}"
     And I set the following query params:
       | limit  | 2 |
       | offset | 0 |
-    When I GET "/api/v1/workspaces/${workspace-id-001}/entities"
+    When I GET "/api/v1/workspaces/${workspace-id-product-team}/entities"
     Then the response status should be 200
     And the response body should be valid JSON
     And the response body path "$.meta.limit" should equal 2
     And the response body path "$.meta.offset" should equal 0
 
   Scenario: Soft-deleted entities are excluded from listings by default
-    Given I set bearer token to "${admin-token-ws-001}"
-    When I GET "/api/v1/workspaces/${workspace-id-001}/entities"
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I GET "/api/v1/workspaces/${workspace-id-product-team}/entities"
     Then the response status should be 200
     And the response body should be valid JSON
     # All returned entities should have null deleted_at
 
   Scenario: Include soft-deleted entities with query param
-    Given I set bearer token to "${admin-token-ws-001}"
+    Given I set bearer token to "${valid-doc-key-product-team}"
     And I set query param "include_deleted" to "true"
-    When I GET "/api/v1/workspaces/${workspace-id-001}/entities"
+    When I GET "/api/v1/workspaces/${workspace-id-product-team}/entities"
     Then the response status should be 200
     And the response body should be valid JSON
     And the response body path "$.data" should exist
@@ -259,8 +300,8 @@ Feature: Entity CRUD API
   # ---------------------------------------------------------------------------
 
   Scenario: Update entity properties
-    Given I set bearer token to "${admin-token-ws-001}"
-    When I PUT to "/api/v1/workspaces/${workspace-id-001}/entities/${personId}" with body:
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I PUT to "/api/v1/workspaces/${workspace-id-product-team}/entities/${personId}" with body:
       """
       {
         "properties": {
@@ -278,8 +319,8 @@ Feature: Entity CRUD API
     And the response body path "$.data.updated_at" should exist
 
   Scenario: Updating entity with invalid properties returns 422
-    Given I set bearer token to "${admin-token-ws-001}"
-    When I PUT to "/api/v1/workspaces/${workspace-id-001}/entities/${personId}" with body:
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I PUT to "/api/v1/workspaces/${workspace-id-product-team}/entities/${personId}" with body:
       """
       {
         "properties": {
@@ -293,8 +334,8 @@ Feature: Entity CRUD API
     And the response body path "$.errors" should exist
 
   Scenario: Updating non-existent entity returns 404
-    Given I set bearer token to "${admin-token-ws-001}"
-    When I PUT to "/api/v1/workspaces/${workspace-id-001}/entities/00000000-0000-0000-0000-000000000000" with body:
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I PUT to "/api/v1/workspaces/${workspace-id-product-team}/entities/00000000-0000-0000-0000-000000000000" with body:
       """
       {
         "properties": {"full_name": "Ghost"}
@@ -309,8 +350,8 @@ Feature: Entity CRUD API
 
   Scenario: Soft-delete an entity
     # First, create an entity to delete
-    Given I set bearer token to "${admin-token-ws-001}"
-    When I POST to "/api/v1/workspaces/${workspace-id-001}/entities" with body:
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I POST to "/api/v1/workspaces/${workspace-id-product-team}/entities" with body:
       """
       {
         "type": "Person",
@@ -322,23 +363,23 @@ Feature: Entity CRUD API
     Then the response status should be 201
     And I store response body path "$.data.id" as "deleteTargetId"
     # Now soft-delete it
-    Given I set bearer token to "${admin-token-ws-001}"
-    When I DELETE "/api/v1/workspaces/${workspace-id-001}/entities/${deleteTargetId}"
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I DELETE "/api/v1/workspaces/${workspace-id-product-team}/entities/${deleteTargetId}"
     Then the response status should be 200
     And the response body should be valid JSON
     And the response body path "$.data.id" should equal "${deleteTargetId}"
     And the response body path "$.data.deleted_at" should exist
 
   Scenario: Soft-deleted entity is excluded from normal GET
-    Given I set bearer token to "${admin-token-ws-001}"
-    When I GET "/api/v1/workspaces/${workspace-id-001}/entities/${deleteTargetId}"
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I GET "/api/v1/workspaces/${workspace-id-product-team}/entities/${deleteTargetId}"
     Then the response status should be 404
     And the response body path "$.error" should equal "not_found"
 
   Scenario: Soft-deleted entity is visible with include_deleted param
-    Given I set bearer token to "${admin-token-ws-001}"
+    Given I set bearer token to "${valid-doc-key-product-team}"
     And I set query param "include_deleted" to "true"
-    When I GET "/api/v1/workspaces/${workspace-id-001}/entities/${deleteTargetId}"
+    When I GET "/api/v1/workspaces/${workspace-id-product-team}/entities/${deleteTargetId}"
     Then the response status should be 200
     And the response body should be valid JSON
     And the response body path "$.data.id" should equal "${deleteTargetId}"
@@ -347,8 +388,8 @@ Feature: Entity CRUD API
   Scenario: Deleting an entity cascades soft-delete to its edges
     # Assumes: entity has edges attached
     # First create two entities and an edge
-    Given I set bearer token to "${admin-token-ws-001}"
-    When I POST to "/api/v1/workspaces/${workspace-id-001}/entities" with body:
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I POST to "/api/v1/workspaces/${workspace-id-product-team}/entities" with body:
       """
       {
         "type": "Person",
@@ -357,8 +398,8 @@ Feature: Entity CRUD API
       """
     Then the response status should be 201
     And I store response body path "$.data.id" as "cascadeSourceId"
-    Given I set bearer token to "${admin-token-ws-001}"
-    When I POST to "/api/v1/workspaces/${workspace-id-001}/entities" with body:
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I POST to "/api/v1/workspaces/${workspace-id-product-team}/entities" with body:
       """
       {
         "type": "Company",
@@ -367,8 +408,8 @@ Feature: Entity CRUD API
       """
     Then the response status should be 201
     And I store response body path "$.data.id" as "cascadeTargetId"
-    Given I set bearer token to "${admin-token-ws-001}"
-    When I POST to "/api/v1/workspaces/${workspace-id-001}/edges" with body:
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I POST to "/api/v1/workspaces/${workspace-id-product-team}/edges" with body:
       """
       {
         "type": "EMPLOYS",
@@ -380,15 +421,15 @@ Feature: Entity CRUD API
     Then the response status should be 201
     And I store response body path "$.data.id" as "cascadeEdgeId"
     # Now delete the source entity
-    Given I set bearer token to "${admin-token-ws-001}"
-    When I DELETE "/api/v1/workspaces/${workspace-id-001}/entities/${cascadeSourceId}"
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I DELETE "/api/v1/workspaces/${workspace-id-product-team}/entities/${cascadeSourceId}"
     Then the response status should be 200
     And the response body path "$.data.deleted_at" should exist
     And the response body path "$.meta.edges_deleted" should exist
 
   Scenario: Deleting non-existent entity returns 404
-    Given I set bearer token to "${admin-token-ws-001}"
-    When I DELETE "/api/v1/workspaces/${workspace-id-001}/entities/00000000-0000-0000-0000-000000000000"
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I DELETE "/api/v1/workspaces/${workspace-id-product-team}/entities/00000000-0000-0000-0000-000000000000"
     Then the response status should be 404
     And the response body path "$.error" should equal "not_found"
 
@@ -397,13 +438,13 @@ Feature: Entity CRUD API
   # ---------------------------------------------------------------------------
 
   Scenario: Guest can read entities
-    Given I set bearer token to "${guest-token-ws-001}"
-    When I GET "/api/v1/workspaces/${workspace-id-001}/entities"
+    Given I set bearer token to "${valid-guest-key-product-team}"
+    When I GET "/api/v1/workspaces/${workspace-id-product-team}/entities"
     Then the response status should be 200
 
   Scenario: Guest cannot create entities
-    Given I set bearer token to "${guest-token-ws-001}"
-    When I POST to "/api/v1/workspaces/${workspace-id-001}/entities" with body:
+    Given I set bearer token to "${valid-guest-key-product-team}"
+    When I POST to "/api/v1/workspaces/${workspace-id-product-team}/entities" with body:
       """
       {
         "type": "Person",
@@ -414,8 +455,8 @@ Feature: Entity CRUD API
     And the response body path "$.error" should equal "forbidden"
 
   Scenario: Guest cannot update entities
-    Given I set bearer token to "${guest-token-ws-001}"
-    When I PUT to "/api/v1/workspaces/${workspace-id-001}/entities/${personId}" with body:
+    Given I set bearer token to "${valid-guest-key-product-team}"
+    When I PUT to "/api/v1/workspaces/${workspace-id-product-team}/entities/${personId}" with body:
       """
       {
         "properties": {"full_name": "Guest Hack"}
@@ -425,7 +466,7 @@ Feature: Entity CRUD API
     And the response body path "$.error" should equal "forbidden"
 
   Scenario: Guest cannot delete entities
-    Given I set bearer token to "${guest-token-ws-001}"
-    When I DELETE "/api/v1/workspaces/${workspace-id-001}/entities/${personId}"
+    Given I set bearer token to "${valid-guest-key-product-team}"
+    When I DELETE "/api/v1/workspaces/${workspace-id-product-team}/entities/${personId}"
     Then the response status should be 403
     And the response body path "$.error" should equal "forbidden"

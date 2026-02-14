@@ -8,15 +8,90 @@ Feature: Edge/Relationship CRUD API
     Given I set header "Content-Type" to "application/json"
     And I set header "Accept" to "application/json"
 
+  # ===========================================================================
+  # Setup: create the entities needed by this feature file
+  # Variables do NOT persist across feature files, so we must create our own.
+  # ===========================================================================
+
+  Scenario: Setup - ensure schema exists
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I PUT to "/api/v1/workspaces/${workspace-id-product-team}/schema" with body:
+      """
+      {
+        "entity_types": [
+          {
+            "name": "Person",
+            "properties": [
+              {"name": "full_name", "type": "string", "required": true, "constraints": {"min_length": 1, "max_length": 255}},
+              {"name": "email", "type": "string", "required": false, "constraints": {"pattern": "^[^@]+@[^@]+$"}},
+              {"name": "age", "type": "integer", "required": false, "constraints": {"min": 0, "max": 200}}
+            ]
+          },
+          {
+            "name": "Company",
+            "properties": [
+              {"name": "name", "type": "string", "required": true, "constraints": {"min_length": 1, "max_length": 255}},
+              {"name": "founded_year", "type": "integer", "required": false, "constraints": {"min": 1800, "max": 2100}}
+            ]
+          }
+        ],
+        "edge_types": [
+          {
+            "name": "EMPLOYS",
+            "properties": [
+              {"name": "since", "type": "datetime", "required": false},
+              {"name": "role", "type": "string", "required": false, "constraints": {"enum": ["full-time", "part-time", "contractor"]}}
+            ]
+          },
+          {"name": "KNOWS", "properties": []}
+        ]
+      }
+      """
+    Then the response should be successful
+
+  Scenario: Setup - create Person entity (personId)
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I POST to "/api/v1/workspaces/${workspace-id-product-team}/entities" with body:
+      """
+      {
+        "type": "Person",
+        "properties": {"full_name": "Edge Test Alice", "email": "edge.alice@example.com"}
+      }
+      """
+    Then the response status should be 201
+    And I store response body path "$.data.id" as "personId"
+
+  Scenario: Setup - create second Person entity (personId2)
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I POST to "/api/v1/workspaces/${workspace-id-product-team}/entities" with body:
+      """
+      {
+        "type": "Person",
+        "properties": {"full_name": "Edge Test Bob"}
+      }
+      """
+    Then the response status should be 201
+    And I store response body path "$.data.id" as "personId2"
+
+  Scenario: Setup - create Company entity (companyId)
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I POST to "/api/v1/workspaces/${workspace-id-product-team}/entities" with body:
+      """
+      {
+        "type": "Company",
+        "properties": {"name": "Edge Test Corp"}
+      }
+      """
+    Then the response status should be 201
+    And I store response body path "$.data.id" as "companyId"
+
   # ---------------------------------------------------------------------------
   # POST /api/v1/workspaces/:workspace_id/edges — Create edge
   # ---------------------------------------------------------------------------
 
   Scenario: Create an EMPLOYS edge between Company and Person
-    # Assumes: workspace ws-001 has schema with EMPLOYS edge type,
-    #          and entities companyId (Company) and personId (Person) exist
-    Given I set bearer token to "${admin-token-ws-001}"
-    When I POST to "/api/v1/workspaces/${workspace-id-001}/edges" with body:
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I POST to "/api/v1/workspaces/${workspace-id-product-team}/edges" with body:
       """
       {
         "type": "EMPLOYS",
@@ -42,8 +117,8 @@ Feature: Edge/Relationship CRUD API
 
   Scenario: Create a KNOWS edge with no properties
     # Assumes: two Person entities exist — personId and personId2
-    Given I set bearer token to "${admin-token-ws-001}"
-    When I POST to "/api/v1/workspaces/${workspace-id-001}/edges" with body:
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I POST to "/api/v1/workspaces/${workspace-id-product-team}/edges" with body:
       """
       {
         "type": "KNOWS",
@@ -60,8 +135,8 @@ Feature: Edge/Relationship CRUD API
     And I store response body path "$.data.id" as "knowsEdgeId"
 
   Scenario: Member can create edges
-    Given I set bearer token to "${member-token-ws-001}"
-    When I POST to "/api/v1/workspaces/${workspace-id-001}/edges" with body:
+    Given I set bearer token to "${valid-member-key-product-team}"
+    When I POST to "/api/v1/workspaces/${workspace-id-product-team}/edges" with body:
       """
       {
         "type": "KNOWS",
@@ -78,8 +153,8 @@ Feature: Edge/Relationship CRUD API
   # ---------------------------------------------------------------------------
 
   Scenario: Creating edge with unconfigured type returns 422
-    Given I set bearer token to "${admin-token-ws-001}"
-    When I POST to "/api/v1/workspaces/${workspace-id-001}/edges" with body:
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I POST to "/api/v1/workspaces/${workspace-id-product-team}/edges" with body:
       """
       {
         "type": "INVALID_EDGE",
@@ -93,8 +168,8 @@ Feature: Edge/Relationship CRUD API
     And the response body path "$.errors[0].message" should contain "INVALID_EDGE"
 
   Scenario: Creating edge with non-existent source entity returns 422
-    Given I set bearer token to "${admin-token-ws-001}"
-    When I POST to "/api/v1/workspaces/${workspace-id-001}/edges" with body:
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I POST to "/api/v1/workspaces/${workspace-id-product-team}/edges" with body:
       """
       {
         "type": "KNOWS",
@@ -105,11 +180,11 @@ Feature: Edge/Relationship CRUD API
       """
     Then the response status should be 422
     And the response body should be valid JSON
-    And the response body path "$.errors[0].message" should contain "source"
+    And the response body path "$.errors[0].message" should contain "Source"
 
   Scenario: Creating edge with non-existent target entity returns 422
-    Given I set bearer token to "${admin-token-ws-001}"
-    When I POST to "/api/v1/workspaces/${workspace-id-001}/edges" with body:
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I POST to "/api/v1/workspaces/${workspace-id-product-team}/edges" with body:
       """
       {
         "type": "KNOWS",
@@ -120,11 +195,11 @@ Feature: Edge/Relationship CRUD API
       """
     Then the response status should be 422
     And the response body should be valid JSON
-    And the response body path "$.errors[0].message" should contain "target"
+    And the response body path "$.errors[0].message" should contain "Target"
 
   Scenario: Creating edge with invalid enum property value returns 422
-    Given I set bearer token to "${admin-token-ws-001}"
-    When I POST to "/api/v1/workspaces/${workspace-id-001}/edges" with body:
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I POST to "/api/v1/workspaces/${workspace-id-product-team}/edges" with body:
       """
       {
         "type": "EMPLOYS",
@@ -141,8 +216,8 @@ Feature: Edge/Relationship CRUD API
     And the response body path "$.errors[0].constraint" should equal "enum"
 
   Scenario: Creating edge with missing required fields returns 422
-    Given I set bearer token to "${admin-token-ws-001}"
-    When I POST to "/api/v1/workspaces/${workspace-id-001}/edges" with body:
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I POST to "/api/v1/workspaces/${workspace-id-product-team}/edges" with body:
       """
       {
         "type": "KNOWS"
@@ -157,8 +232,8 @@ Feature: Edge/Relationship CRUD API
   # ---------------------------------------------------------------------------
 
   Scenario: Get edge by ID
-    Given I set bearer token to "${admin-token-ws-001}"
-    When I GET "/api/v1/workspaces/${workspace-id-001}/edges/${employsEdgeId}"
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I GET "/api/v1/workspaces/${workspace-id-product-team}/edges/${employsEdgeId}"
     Then the response status should be 200
     And the response body should be valid JSON
     And the response body path "$.data.id" should equal "${employsEdgeId}"
@@ -167,8 +242,8 @@ Feature: Edge/Relationship CRUD API
     And the response body path "$.data.target_id" should exist
 
   Scenario: Get non-existent edge returns 404
-    Given I set bearer token to "${admin-token-ws-001}"
-    When I GET "/api/v1/workspaces/${workspace-id-001}/edges/00000000-0000-0000-0000-000000000000"
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I GET "/api/v1/workspaces/${workspace-id-product-team}/edges/00000000-0000-0000-0000-000000000000"
     Then the response status should be 404
     And the response body path "$.error" should equal "not_found"
 
@@ -177,41 +252,41 @@ Feature: Edge/Relationship CRUD API
   # ---------------------------------------------------------------------------
 
   Scenario: List all edges in a workspace
-    Given I set bearer token to "${admin-token-ws-001}"
-    When I GET "/api/v1/workspaces/${workspace-id-001}/edges"
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I GET "/api/v1/workspaces/${workspace-id-product-team}/edges"
     Then the response status should be 200
     And the response body should be valid JSON
     And the response body path "$.data" should exist
     And the response body path "$.meta.total" should exist
 
   Scenario: List edges filtered by type
-    Given I set bearer token to "${admin-token-ws-001}"
+    Given I set bearer token to "${valid-doc-key-product-team}"
     And I set query param "type" to "EMPLOYS"
-    When I GET "/api/v1/workspaces/${workspace-id-001}/edges"
+    When I GET "/api/v1/workspaces/${workspace-id-product-team}/edges"
     Then the response status should be 200
     And the response body should be valid JSON
     And the response body path "$.data[0].type" should equal "EMPLOYS"
 
   Scenario: List edges with pagination
-    Given I set bearer token to "${admin-token-ws-001}"
+    Given I set bearer token to "${valid-doc-key-product-team}"
     And I set the following query params:
       | limit  | 5 |
       | offset | 0 |
-    When I GET "/api/v1/workspaces/${workspace-id-001}/edges"
+    When I GET "/api/v1/workspaces/${workspace-id-product-team}/edges"
     Then the response status should be 200
     And the response body path "$.meta.limit" should equal 5
     And the response body path "$.meta.offset" should equal 0
 
   Scenario: Soft-deleted edges are excluded from listing by default
-    Given I set bearer token to "${admin-token-ws-001}"
-    When I GET "/api/v1/workspaces/${workspace-id-001}/edges"
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I GET "/api/v1/workspaces/${workspace-id-product-team}/edges"
     Then the response status should be 200
     And the response body should be valid JSON
 
   Scenario: Include soft-deleted edges with query param
-    Given I set bearer token to "${admin-token-ws-001}"
+    Given I set bearer token to "${valid-doc-key-product-team}"
     And I set query param "include_deleted" to "true"
-    When I GET "/api/v1/workspaces/${workspace-id-001}/edges"
+    When I GET "/api/v1/workspaces/${workspace-id-product-team}/edges"
     Then the response status should be 200
     And the response body should be valid JSON
 
@@ -220,8 +295,8 @@ Feature: Edge/Relationship CRUD API
   # ---------------------------------------------------------------------------
 
   Scenario: Update edge properties
-    Given I set bearer token to "${admin-token-ws-001}"
-    When I PUT to "/api/v1/workspaces/${workspace-id-001}/edges/${employsEdgeId}" with body:
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I PUT to "/api/v1/workspaces/${workspace-id-product-team}/edges/${employsEdgeId}" with body:
       """
       {
         "properties": {
@@ -236,8 +311,8 @@ Feature: Edge/Relationship CRUD API
     And the response body path "$.data.updated_at" should exist
 
   Scenario: Updating edge with invalid property returns 422
-    Given I set bearer token to "${admin-token-ws-001}"
-    When I PUT to "/api/v1/workspaces/${workspace-id-001}/edges/${employsEdgeId}" with body:
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I PUT to "/api/v1/workspaces/${workspace-id-product-team}/edges/${employsEdgeId}" with body:
       """
       {
         "properties": {
@@ -250,8 +325,8 @@ Feature: Edge/Relationship CRUD API
     And the response body path "$.errors[0].constraint" should equal "enum"
 
   Scenario: Updating non-existent edge returns 404
-    Given I set bearer token to "${admin-token-ws-001}"
-    When I PUT to "/api/v1/workspaces/${workspace-id-001}/edges/00000000-0000-0000-0000-000000000000" with body:
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I PUT to "/api/v1/workspaces/${workspace-id-product-team}/edges/00000000-0000-0000-0000-000000000000" with body:
       """
       {
         "properties": {"role": "full-time"}
@@ -266,8 +341,8 @@ Feature: Edge/Relationship CRUD API
 
   Scenario: Soft-delete an edge
     # First create an edge to delete
-    Given I set bearer token to "${admin-token-ws-001}"
-    When I POST to "/api/v1/workspaces/${workspace-id-001}/edges" with body:
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I POST to "/api/v1/workspaces/${workspace-id-product-team}/edges" with body:
       """
       {
         "type": "KNOWS",
@@ -279,22 +354,22 @@ Feature: Edge/Relationship CRUD API
     Then the response status should be 201
     And I store response body path "$.data.id" as "deleteEdgeId"
     # Soft-delete it
-    Given I set bearer token to "${admin-token-ws-001}"
-    When I DELETE "/api/v1/workspaces/${workspace-id-001}/edges/${deleteEdgeId}"
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I DELETE "/api/v1/workspaces/${workspace-id-product-team}/edges/${deleteEdgeId}"
     Then the response status should be 200
     And the response body should be valid JSON
     And the response body path "$.data.id" should equal "${deleteEdgeId}"
     And the response body path "$.data.deleted_at" should exist
 
   Scenario: Soft-deleted edge is excluded from normal GET
-    Given I set bearer token to "${admin-token-ws-001}"
-    When I GET "/api/v1/workspaces/${workspace-id-001}/edges/${deleteEdgeId}"
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I GET "/api/v1/workspaces/${workspace-id-product-team}/edges/${deleteEdgeId}"
     Then the response status should be 404
     And the response body path "$.error" should equal "not_found"
 
   Scenario: Deleting non-existent edge returns 404
-    Given I set bearer token to "${admin-token-ws-001}"
-    When I DELETE "/api/v1/workspaces/${workspace-id-001}/edges/00000000-0000-0000-0000-000000000000"
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I DELETE "/api/v1/workspaces/${workspace-id-product-team}/edges/00000000-0000-0000-0000-000000000000"
     Then the response status should be 404
     And the response body path "$.error" should equal "not_found"
 
@@ -303,13 +378,13 @@ Feature: Edge/Relationship CRUD API
   # ---------------------------------------------------------------------------
 
   Scenario: Guest can read edges
-    Given I set bearer token to "${guest-token-ws-001}"
-    When I GET "/api/v1/workspaces/${workspace-id-001}/edges"
+    Given I set bearer token to "${valid-guest-key-product-team}"
+    When I GET "/api/v1/workspaces/${workspace-id-product-team}/edges"
     Then the response status should be 200
 
   Scenario: Guest cannot create edges
-    Given I set bearer token to "${guest-token-ws-001}"
-    When I POST to "/api/v1/workspaces/${workspace-id-001}/edges" with body:
+    Given I set bearer token to "${valid-guest-key-product-team}"
+    When I POST to "/api/v1/workspaces/${workspace-id-product-team}/edges" with body:
       """
       {
         "type": "KNOWS",
@@ -322,8 +397,8 @@ Feature: Edge/Relationship CRUD API
     And the response body path "$.error" should equal "forbidden"
 
   Scenario: Guest cannot update edges
-    Given I set bearer token to "${guest-token-ws-001}"
-    When I PUT to "/api/v1/workspaces/${workspace-id-001}/edges/${employsEdgeId}" with body:
+    Given I set bearer token to "${valid-guest-key-product-team}"
+    When I PUT to "/api/v1/workspaces/${workspace-id-product-team}/edges/${employsEdgeId}" with body:
       """
       {
         "properties": {"role": "contractor"}
@@ -333,8 +408,8 @@ Feature: Edge/Relationship CRUD API
     And the response body path "$.error" should equal "forbidden"
 
   Scenario: Guest cannot delete edges
-    Given I set bearer token to "${guest-token-ws-001}"
-    When I DELETE "/api/v1/workspaces/${workspace-id-001}/edges/${employsEdgeId}"
+    Given I set bearer token to "${valid-guest-key-product-team}"
+    When I DELETE "/api/v1/workspaces/${workspace-id-product-team}/edges/${employsEdgeId}"
     Then the response status should be 403
     And the response body path "$.error" should equal "forbidden"
 
@@ -343,7 +418,7 @@ Feature: Edge/Relationship CRUD API
   # ---------------------------------------------------------------------------
 
   Scenario: Cannot access edge from another workspace
-    Given I set bearer token to "${admin-token-ws-002}"
-    When I GET "/api/v1/workspaces/${workspace-id-002}/edges/${employsEdgeId}"
+    Given I set bearer token to "${valid-key-engineering-only}"
+    When I GET "/api/v1/workspaces/${workspace-id-engineering}/edges/${employsEdgeId}"
     Then the response status should be 404
     And the response body path "$.error" should equal "not_found"

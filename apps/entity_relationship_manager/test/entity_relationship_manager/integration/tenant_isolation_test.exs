@@ -75,7 +75,7 @@ defmodule EntityRelationshipManager.Integration.TenantIsolationTest do
 
       # Entity exists in workspace A but we query workspace B
       EntityRelationshipManager.Mocks.GraphRepositoryMock
-      |> expect(:get_entity, fn wid, eid ->
+      |> expect(:get_entity, fn wid, eid, _opts ->
         assert wid == ws_b
         assert eid == entity_a_id
         # The repository scopes by workspace — entity not found
@@ -99,7 +99,7 @@ defmodule EntityRelationshipManager.Integration.TenantIsolationTest do
       |> expect(:get_schema, fn _wid -> {:ok, schema_b} end)
 
       EntityRelationshipManager.Mocks.GraphRepositoryMock
-      |> expect(:get_entity, fn wid, eid ->
+      |> expect(:get_entity, fn wid, eid, _opts ->
         assert wid == ws_b
         assert eid == entity_a_id
         {:error, :not_found}
@@ -358,7 +358,7 @@ defmodule EntityRelationshipManager.Integration.TenantIsolationTest do
 
       # Attempting to access workspace A's entity via workspace B's API
       EntityRelationshipManager.Mocks.GraphRepositoryMock
-      |> expect(:get_entity, fn wid, _eid ->
+      |> expect(:get_entity, fn wid, _eid, _opts ->
         # Repository is always scoped by workspace_id
         assert wid == ws_b
         {:error, :not_found}

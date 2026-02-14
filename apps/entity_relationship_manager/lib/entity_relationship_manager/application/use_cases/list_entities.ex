@@ -6,13 +6,8 @@ defmodule EntityRelationshipManager.Application.UseCases.ListEntities do
   to the graph repository.
   """
 
+  alias EntityRelationshipManager.Application.RepoConfig
   alias EntityRelationshipManager.Domain.Policies.{InputSanitizationPolicy, TraversalPolicy}
-
-  @graph_repo Application.compile_env(
-                :entity_relationship_manager,
-                :graph_repository,
-                EntityRelationshipManager.Infrastructure.Repositories.GraphRepository
-              )
 
   @doc """
   Lists entities in a workspace with optional filters.
@@ -25,7 +20,7 @@ defmodule EntityRelationshipManager.Application.UseCases.ListEntities do
   Returns `{:ok, [entity]}` on success.
   """
   def execute(workspace_id, filters, opts \\ []) do
-    graph_repo = Keyword.get(opts, :graph_repo, @graph_repo)
+    graph_repo = Keyword.get(opts, :graph_repo, RepoConfig.graph_repo())
 
     with :ok <- validate_filters(filters) do
       graph_repo.list_entities(workspace_id, filters)

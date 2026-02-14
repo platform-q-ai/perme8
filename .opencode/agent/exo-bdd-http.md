@@ -129,6 +129,10 @@ When I POST to {string} with body:                     # Send POST request with 
   """
   {"key": "value"}
   """
+When I POST raw to {string} with body:                 # Send POST with raw string body (no JSON parsing)
+  """
+  {this is not valid json}
+  """
 When I PUT to {string} with body:                      # Send PUT request with JSON body
   """
   {"key": "value"}
@@ -160,8 +164,7 @@ Then the response should be a server error             # Assert status 500-599
 
 # Body Path Assertions (JSONPath)
 Then the response body path {string} should equal {string}     # Assert path equals string
-Then the response body path {string} should equal {int}        # Assert path equals integer
-Then the response body path {string} should equal {float}      # Assert path equals float
+Then the response body path {string} should equal {int}        # Assert path equals integer (also handles floats)
 Then the response body path {string} should exist              # Assert path exists
 Then the response body path {string} should not exist          # Assert path does not exist
 Then the response body path {string} should contain {string}   # Assert path contains substring

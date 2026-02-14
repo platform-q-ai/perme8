@@ -26,7 +26,7 @@ mock.module('@playwright/test', () => ({
 
 // Dynamic imports after mocks so Cucumber registrations run harmlessly
 const { setHeader, setHeaders, setBearerToken, setBasicAuth, setQueryParam, setQueryParams } = await import('../../../src/interface/steps/http/request-building.steps.ts')
-const { httpGet, httpPost, httpPostWithBody, httpPutWithBody, httpPatchWithBody, httpDelete } = await import('../../../src/interface/steps/http/http-methods.steps.ts')
+const { httpGet, httpPost, httpPostWithBody, httpPostWithRawBody, httpPutWithBody, httpPatchWithBody, httpDelete } = await import('../../../src/interface/steps/http/http-methods.steps.ts')
 const { assertStatusIs, assertBodyPathEqualsString, assertBodyPathEqualsInt, assertBodyPathExists, assertBodyPathNotExists, assertBodyPathContains, assertBodyPathMatches, assertBodyPathHasItems, assertBodyIsValidJson, assertHeaderEquals, assertHeaderContains, assertResponseTimeLessThan, storeBodyPath, storeHeader, storeStatus } = await import('../../../src/interface/steps/http/response-assertions.steps.ts')
 
 /**
@@ -271,6 +271,24 @@ describe('HTTP Method Steps', () => {
       await httpPostWithBody(world, '/api/users', '{"name": "${userName}"}')
 
       expect(world.http.post).toHaveBeenCalledWith('/api/users', { name: 'Alice' })
+    })
+  })
+
+  // ─── I POST raw to {string} with body: ───────────────────────────────
+
+  describe('I POST raw to {string} with body:', () => {
+    test('calls http.post with raw string body (no JSON parsing)', async () => {
+      await httpPostWithRawBody(world, '/api/users', '{this is not valid json}')
+
+      expect(world.http.post).toHaveBeenCalledWith('/api/users', '{this is not valid json}')
+    })
+
+    test('interpolates variables in the raw body', async () => {
+      world.setVariable('wsId', 'abc-123')
+
+      await httpPostWithRawBody(world, '/api/workspaces/${wsId}/data', '{invalid: "${wsId}"}')
+
+      expect(world.http.post).toHaveBeenCalledWith('/api/workspaces/abc-123/data', '{invalid: "abc-123"}')
     })
   })
 

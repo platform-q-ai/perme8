@@ -19,8 +19,7 @@ defmodule EntityRelationshipManager.SchemaController do
       {:error, :not_found} ->
         conn
         |> put_status(:not_found)
-        |> put_view(EntityRelationshipManager.Views.ErrorJSON)
-        |> render("404.json")
+        |> json(%{error: "schema_not_found", message: "No schema defined for this workspace"})
     end
   end
 
@@ -44,8 +43,8 @@ defmodule EntityRelationshipManager.SchemaController do
         conn
         |> put_status(:conflict)
         |> json(%{
-          error: "conflict",
-          message: "Schema has been modified; please reload and retry"
+          error: "version_conflict",
+          message: "Schema has been modified by a concurrent update; please reload and retry"
         })
 
       {:error, %Ecto.Changeset{} = changeset} ->
@@ -55,9 +54,15 @@ defmodule EntityRelationshipManager.SchemaController do
         |> render("422.json", changeset: changeset)
 
       {:error, errors} when is_list(errors) ->
+        structured_errors =
+          Enum.map(errors, fn
+            error when is_binary(error) -> %{message: error}
+            %{} = error -> error
+          end)
+
         conn
         |> put_status(:unprocessable_entity)
-        |> json(%{error: "validation_errors", errors: errors})
+        |> json(%{error: "validation_errors", errors: structured_errors})
 
       {:error, _reason} ->
         conn

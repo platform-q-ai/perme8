@@ -2,6 +2,7 @@ import { BeforeAll, AfterAll, Before, After, setWorldConstructor, Status } from 
 import { loadConfig } from '../../application/config/index.ts'
 import { createAdapters, type Adapters } from '../../infrastructure/factories/index.ts'
 import { TestWorld } from '../world/index.ts'
+import { VariableService } from '../../application/services/VariableService.ts'
 
 setWorldConstructor(TestWorld)
 
@@ -35,5 +36,6 @@ After(async function (this: TestWorld, scenario) {
 })
 
 AfterAll(async function () {
+  VariableService.clearAll()
   await adapters?.dispose()
 })

@@ -20,7 +20,7 @@ defmodule EntityRelationshipManager.Application.UseCases.UpdateEntityTest do
       |> expect(:get_schema, fn _ws_id -> {:ok, schema} end)
 
       GraphRepositoryMock
-      |> expect(:get_entity, fn _ws_id, _id -> {:ok, existing} end)
+      |> expect(:get_entity, fn _ws_id, _id, _opts -> {:ok, existing} end)
       |> expect(:update_entity, fn ws_id, entity_id, properties ->
         assert ws_id == workspace_id()
         assert entity_id == valid_uuid()
@@ -45,7 +45,7 @@ defmodule EntityRelationshipManager.Application.UseCases.UpdateEntityTest do
       |> expect(:get_schema, fn _ws_id -> {:ok, schema} end)
 
       GraphRepositoryMock
-      |> expect(:get_entity, fn _ws_id, _id -> {:error, :not_found} end)
+      |> expect(:get_entity, fn _ws_id, _id, _opts -> {:error, :not_found} end)
 
       assert {:error, :not_found} =
                UpdateEntity.execute(
@@ -79,7 +79,7 @@ defmodule EntityRelationshipManager.Application.UseCases.UpdateEntityTest do
       |> expect(:get_schema, fn _ws_id -> {:ok, schema} end)
 
       GraphRepositoryMock
-      |> expect(:get_entity, fn _ws_id, _id -> {:ok, existing} end)
+      |> expect(:get_entity, fn _ws_id, _id, _opts -> {:ok, existing} end)
 
       # "name" is required but we're providing a non-string value
       assert {:error, errors} =

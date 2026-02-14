@@ -492,7 +492,6 @@ Then the response body should match schema {string}
 # JSONPath Assertions
 Then the response body path {string} should equal {string}
 Then the response body path {string} should equal {int}
-Then the response body path {string} should equal {float}
 Then the response body path {string} should be true
 Then the response body path {string} should be false
 Then the response body path {string} should be null
@@ -1479,6 +1478,7 @@ npx cucumber-js --format junit:reports/junit.xml
 | `When I GET {string}` | Send GET request |
 | `When I POST to {string}` | Send POST without body |
 | `When I POST to {string} with body:` | Send POST with JSON body |
+| `When I POST raw to {string} with body:` | Send POST with raw string body (no JSON parsing) |
 | `When I PUT to {string} with body:` | Send PUT with JSON body |
 | `When I PATCH to {string} with body:` | Send PATCH with JSON body |
 | `When I DELETE {string}` | Send DELETE request |

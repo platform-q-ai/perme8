@@ -35,9 +35,13 @@ config :jarga_web, JargaWeb.Endpoint,
 config :entity_relationship_manager, EntityRelationshipManager.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4006],
   secret_key_base: "erm_test_secret_key_base_at_least_64_bytes_long_for_security_purposes",
-  server: false
+  server: true
 
-# Use Mox mocks for ERM repositories in tests
+# ERM repository configuration.
+# Unit tests (ExUnit) use Mox mocks by default.
+# Integration/BDD tests set ERM_REAL_REPOS=true in the server env,
+# which triggers the Application module to swap in real implementations
+# at startup (SchemaRepository + InMemoryGraphRepository).
 config :entity_relationship_manager,
   schema_repository: EntityRelationshipManager.Mocks.SchemaRepositoryMock,
   graph_repository: EntityRelationshipManager.Mocks.GraphRepositoryMock

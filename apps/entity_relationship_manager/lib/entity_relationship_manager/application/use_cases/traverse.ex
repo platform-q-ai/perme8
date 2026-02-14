@@ -6,13 +6,8 @@ defmodule EntityRelationshipManager.Application.UseCases.Traverse do
   delegating to the graph repository.
   """
 
+  alias EntityRelationshipManager.Application.RepoConfig
   alias EntityRelationshipManager.Domain.Policies.{InputSanitizationPolicy, TraversalPolicy}
-
-  @graph_repo Application.compile_env(
-                :entity_relationship_manager,
-                :graph_repository,
-                EntityRelationshipManager.Infrastructure.Repositories.GraphRepository
-              )
 
   @doc """
   Traverses the graph from the starting entity.
@@ -25,7 +20,7 @@ defmodule EntityRelationshipManager.Application.UseCases.Traverse do
   Returns `{:ok, [entity]}` on success.
   """
   def execute(workspace_id, start_id, opts \\ []) do
-    graph_repo = Keyword.get(opts, :graph_repo, @graph_repo)
+    graph_repo = Keyword.get(opts, :graph_repo, RepoConfig.graph_repo())
     max_depth = Keyword.get(opts, :max_depth, TraversalPolicy.default_depth())
     direction = Keyword.get(opts, :direction, "both")
 

@@ -6,13 +6,8 @@ defmodule EntityRelationshipManager.Application.UseCases.GetNeighbors do
   and InputSanitizationPolicy before delegating to the graph repository.
   """
 
+  alias EntityRelationshipManager.Application.RepoConfig
   alias EntityRelationshipManager.Domain.Policies.{InputSanitizationPolicy, TraversalPolicy}
-
-  @graph_repo Application.compile_env(
-                :entity_relationship_manager,
-                :graph_repository,
-                EntityRelationshipManager.Infrastructure.Repositories.GraphRepository
-              )
 
   @doc """
   Gets neighboring entities of the given entity.
@@ -25,7 +20,7 @@ defmodule EntityRelationshipManager.Application.UseCases.GetNeighbors do
   Returns `{:ok, [entity]}` on success.
   """
   def execute(workspace_id, entity_id, opts \\ []) do
-    graph_repo = Keyword.get(opts, :graph_repo, @graph_repo)
+    graph_repo = Keyword.get(opts, :graph_repo, RepoConfig.graph_repo())
     direction = Keyword.get(opts, :direction, "both")
 
     with :ok <- InputSanitizationPolicy.validate_uuid(entity_id),

@@ -27,11 +27,20 @@ Application.ensure_all_started(:bcrypt_elixir)
 
 alias Identity.Application.Services.{ApiKeyTokenService, PasswordService}
 alias Identity.Infrastructure.Schemas.{ApiKeySchema, UserSchema}
-alias Jarga.Workspaces
 alias Jarga.Workspaces.Infrastructure.Schemas.{WorkspaceMemberSchema}
 alias Jarga.Workspaces.Domain.Entities.WorkspaceMember
 alias Jarga.Projects
 alias Jarga.Documents
+
+# ---------------------------------------------------------------------------
+# Deterministic workspace UUIDs for exo-bdd tests.
+# These allow feature files (especially ERM which uses UUID-based routing)
+# to reference workspace IDs as config variables.
+# ---------------------------------------------------------------------------
+deterministic_workspace_ids = %{
+  "product-team" => "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeee01",
+  "engineering" => "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeee02"
+}
 
 # ---------------------------------------------------------------------------
 # Deterministic API key tokens for exo-bdd tests.
@@ -163,19 +172,71 @@ IO.puts("[exo-seeds] Created users: alice@example.com, bob@example.com")
 # 2. Create workspaces
 # ---------------------------------------------------------------------------
 
+# Use deterministic UUIDs so feature files can reference workspace IDs as
+# config variables (especially important for ERM which uses UUID-based routing).
+# We call create_workspace_with_id/3 which sets the ID before insert.
+create_workspace_with_id = fn user, attrs, deterministic_id ->
+  # Insert workspace with a pre-set UUID so feature files can reference it.
+  # Ecto respects a pre-populated :id field over autogenerate.
+  alias Jarga.Workspaces.Infrastructure.Schemas.{WorkspaceSchema, WorkspaceMemberSchema}
+  alias Jarga.Workspaces.Domain.Entities.Workspace
+
+  now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+  {:ok, result} =
+    Jarga.Repo.transaction(fn ->
+      {:ok, ws_schema} =
+        %WorkspaceSchema{id: deterministic_id}
+        |> WorkspaceSchema.changeset(%{
+          name: attrs[:name],
+          slug: attrs[:slug],
+          description: attrs[:description],
+          color: attrs[:color],
+          is_archived: false
+        })
+        |> Jarga.Repo.insert()
+
+      {:ok, _member_schema} =
+        %WorkspaceMemberSchema{}
+        |> WorkspaceMemberSchema.changeset(%{
+          workspace_id: ws_schema.id,
+          user_id: user.id,
+          email: user.email,
+          role: :owner,
+          invited_at: now,
+          joined_at: now
+        })
+        |> Jarga.Repo.insert()
+
+      Workspace.from_schema(ws_schema)
+    end)
+
+  {:ok, result}
+end
+
 {:ok, product_team} =
-  Workspaces.create_workspace(alice, %{
-    name: "Product Team",
-    description: "Product team workspace",
-    color: "#4A90E2"
-  })
+  create_workspace_with_id.(
+    alice,
+    %{
+      name: "Product Team",
+      slug: "product-team",
+      description: "Product team workspace",
+      color: "#4A90E2"
+    },
+    deterministic_workspace_ids["product-team"]
+  )
 
 {:ok, engineering} =
-  Workspaces.create_workspace(alice, %{
-    name: "Engineering",
-    description: "Engineering workspace",
-    color: "#10B981"
-  })
+  create_workspace_with_id.(
+    alice,
+    %{
+      name: "Engineering",
+      slug: "engineering",
+      description: "Engineering workspace",
+      color: "#10B981"
+    },
+    deterministic_workspace_ids["engineering"]
+  )
 
 IO.puts("[exo-seeds] Created workspaces: #{product_team.slug}, #{engineering.slug}")
 

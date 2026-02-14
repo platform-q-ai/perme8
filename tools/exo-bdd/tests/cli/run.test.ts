@@ -110,6 +110,40 @@ describe('buildCucumberArgs', () => {
     const tagsIdx = args.indexOf('--tags')
     expect(tagsIdx).toBeGreaterThan(lastImportIdx)
   })
+
+  test('includes --tags from config tags option', () => {
+    const args = buildCucumberArgs({
+      ...baseOptions,
+      features: './features/**/*.feature',
+      tags: 'not @neo4j',
+    })
+
+    const tagsIdx = args.indexOf('--tags')
+    expect(tagsIdx).toBeGreaterThanOrEqual(0)
+    expect(args[tagsIdx + 1]).toBe('not @neo4j')
+  })
+
+  test('config tags come before passthrough args', () => {
+    const args = buildCucumberArgs({
+      ...baseOptions,
+      features: './features/**/*.feature',
+      tags: 'not @neo4j',
+      passthrough: ['--format', 'progress'],
+    })
+
+    const tagsIdx = args.indexOf('--tags')
+    const formatIdx = args.indexOf('--format')
+    expect(tagsIdx).toBeLessThan(formatIdx)
+  })
+
+  test('omits --tags when tags is undefined', () => {
+    const args = buildCucumberArgs({
+      ...baseOptions,
+      features: './features/**/*.feature',
+    })
+
+    expect(args).not.toContain('--tags')
+  })
 })
 
 describe('generateSetupContent', () => {

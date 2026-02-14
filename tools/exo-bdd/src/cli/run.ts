@@ -47,8 +47,9 @@ export function buildCucumberArgs(options: {
   setupPath: string
   stepsImport: string
   passthrough: string[]
+  tags?: string
 }): string[] {
-  const { features, configDir, setupPath, stepsImport, passthrough } = options
+  const { features, configDir, setupPath, stepsImport, passthrough, tags } = options
 
   // Resolve feature paths relative to the config file directory
   const featurePaths = Array.isArray(features) ? features : [features]
@@ -60,8 +61,14 @@ export function buildCucumberArgs(options: {
     setupPath,
     '--import',
     stepsImport,
-    ...passthrough,
   ]
+
+  // Add tag expression if configured
+  if (tags) {
+    args.push('--tags', tags)
+  }
+
+  args.push(...passthrough)
 
   return args
 }
@@ -114,11 +121,15 @@ export function generateSetupContent(configAbsPath: string, exoBddRoot: string, 
     ? `\nsetDefaultTimeout(${config.timeout})\n`
     : ''
 
+  // Resolve VariableService URL for shared variable cleanup
+  const variableServiceUrl = new URL('../../src/application/services/VariableService.ts', import.meta.url).href
+
   return `import { BeforeAll, AfterAll, Before, After, setWorldConstructor, setDefaultTimeout, Status } from '@cucumber/cucumber'
 import { loadConfig } from '${appConfigUrl}'
 import { createAdapters } from '${factoryUrl}'
 import type { Adapters } from '${factoryUrl}'
 import { TestWorld } from '${worldUrl}'
+import { VariableService } from '${variableServiceUrl}'
 
 setWorldConstructor(TestWorld)
 ${timeoutLine}
@@ -151,6 +162,7 @@ After(async function (this: TestWorld, scenario) {
 })
 
 AfterAll(async function () {
+  VariableService.clearAll()
   await adapters?.dispose()
 })
 `
@@ -237,6 +249,7 @@ export async function runTests(options: RunOptions): Promise<number> {
     setupPath,
     stepsImport,
     passthrough: options.passthrough,
+    tags: config.tags,
   })
 
   const cucumberBin = resolve(exoBddRoot, 'node_modules/.bin/cucumber-js')

@@ -88,7 +88,7 @@ defmodule EntityRelationshipManagerTest do
       entity_id = entity.id
 
       EntityRelationshipManager.Mocks.GraphRepositoryMock
-      |> expect(:get_entity, fn wid, eid ->
+      |> expect(:get_entity, fn wid, eid, _opts ->
         assert wid == ws_id
         assert eid == entity_id
         {:ok, entity}
@@ -129,7 +129,7 @@ defmodule EntityRelationshipManagerTest do
       |> expect(:get_schema, fn _wid -> {:ok, schema} end)
 
       EntityRelationshipManager.Mocks.GraphRepositoryMock
-      |> expect(:get_entity, fn _wid, _eid -> {:ok, entity} end)
+      |> expect(:get_entity, fn _wid, _eid, _opts -> {:ok, entity} end)
       |> expect(:update_entity, fn wid, eid, props ->
         assert wid == ws_id
         assert eid == entity_id

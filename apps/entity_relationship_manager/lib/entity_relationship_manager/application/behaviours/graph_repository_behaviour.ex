@@ -13,7 +13,7 @@ defmodule EntityRelationshipManager.Application.Behaviours.GraphRepositoryBehavi
   @callback create_entity(workspace_id :: String.t(), type :: String.t(), properties :: map()) ::
               {:ok, Entity.t()} | {:error, term()}
 
-  @callback get_entity(workspace_id :: String.t(), entity_id :: String.t()) ::
+  @callback get_entity(workspace_id :: String.t(), entity_id :: String.t(), opts :: keyword()) ::
               {:ok, Entity.t()} | {:error, :not_found}
 
   @callback list_entities(workspace_id :: String.t(), filters :: map()) ::

@@ -7,28 +7,58 @@ defmodule EntityRelationshipManager.Views.EntityJSON do
     %{data: entity_data(entity)}
   end
 
+  def render("index.json", %{entities: entities, meta: meta}) do
+    %{data: Enum.map(entities, &entity_data/1), meta: meta}
+  end
+
   def render("index.json", %{entities: entities}) do
-    %{data: Enum.map(entities, &entity_data/1)}
+    %{data: Enum.map(entities, &entity_data/1), meta: %{total: length(entities)}}
   end
 
   def render("delete.json", %{entity: entity, deleted_edge_count: count}) do
     %{
       data: entity_data(entity),
-      meta: %{deleted_edge_count: count}
+      meta: %{edges_deleted: count}
+    }
+  end
+
+  def render("bulk_create.json", %{entities: entities, errors: errors, meta: meta}) do
+    %{
+      data: Enum.map(entities, &entity_data/1),
+      errors: errors,
+      meta: meta
+    }
+  end
+
+  def render("bulk.json", %{entities: entities, errors: errors, meta: meta}) do
+    %{
+      data: Enum.map(entities, &entity_data/1),
+      errors: errors,
+      meta: meta
     }
   end
 
   def render("bulk.json", %{entities: entities, errors: errors}) do
     %{
       data: Enum.map(entities, &entity_data/1),
-      errors: errors
+      errors: errors,
+      meta: %{total: length(entities)}
+    }
+  end
+
+  def render("bulk_delete.json", %{deleted_count: count, errors: errors, meta: meta}) do
+    %{
+      data: %{deleted_count: count},
+      errors: errors,
+      meta: meta
     }
   end
 
   def render("bulk_delete.json", %{deleted_count: count, errors: errors}) do
     %{
       data: %{deleted_count: count},
-      errors: errors
+      errors: errors,
+      meta: %{deleted: count}
     }
   end
 

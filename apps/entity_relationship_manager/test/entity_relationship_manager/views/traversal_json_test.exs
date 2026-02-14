@@ -17,22 +17,28 @@ defmodule EntityRelationshipManager.Views.TraversalJSONTest do
 
   describe "render/2 paths.json" do
     test "renders paths between entities" do
-      paths = [["id-1", "id-2", "id-3"], ["id-1", "id-4", "id-3"]]
+      entity1 = UseCaseFixtures.entity()
+      entity2 = UseCaseFixtures.entity(%{id: UseCaseFixtures.valid_uuid2()})
+      paths = [%{nodes: [entity1, entity2], edges: []}]
 
       result = TraversalJSON.render("paths.json", %{paths: paths})
 
-      assert result == %{data: paths}
+      assert %{data: [path]} = result
+      assert length(path.nodes) == 2
+      assert length(path.edges) == 0
     end
   end
 
   describe "render/2 traverse.json" do
     test "renders traversal result entities" do
       entity = UseCaseFixtures.entity()
+      meta = %{depth: 1}
 
-      result = TraversalJSON.render("traverse.json", %{entities: [entity]})
+      result = TraversalJSON.render("traverse.json", %{entities: [entity], meta: meta})
 
-      assert %{data: [data]} = result
-      assert data.id == entity.id
+      assert %{data: %{nodes: nodes, edges: _}, meta: ^meta} = result
+      assert length(nodes) == 1
+      assert Enum.at(nodes, 0).id == entity.id
     end
   end
 end

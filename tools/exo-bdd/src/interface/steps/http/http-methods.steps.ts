@@ -20,6 +20,10 @@ export async function httpPostWithBody(ctx: HttpMethodsContext, path: string, do
   await ctx.http.post(ctx.interpolate(path), body)
 }
 
+export async function httpPostWithRawBody(ctx: HttpMethodsContext, path: string, docString: string) {
+  await ctx.http.post(ctx.interpolate(path), ctx.interpolate(docString))
+}
+
 export async function httpPutWithBody(ctx: HttpMethodsContext, path: string, docString: string) {
   const body = JSON.parse(ctx.interpolate(docString))
   await ctx.http.put(ctx.interpolate(path), body)
@@ -55,6 +59,10 @@ When<TestWorld>('I POST to {string}', async function (path: string) {
 
 When<TestWorld>('I POST to {string} with body:', async function (path: string, docString: string) {
   await httpPostWithBody(this, path, docString)
+})
+
+When<TestWorld>('I POST raw to {string} with body:', async function (path: string, docString: string) {
+  await httpPostWithRawBody(this, path, docString)
 })
 
 When<TestWorld>('I PUT to {string} with body:', async function (path: string, docString: string) {

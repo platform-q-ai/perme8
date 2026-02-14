@@ -11,11 +11,37 @@ defmodule EntityRelationshipManager.Endpoint do
   plug(Plug.RequestId)
   plug(Plug.Telemetry, event_prefix: [:phoenix, :endpoint])
 
-  plug(Plug.Parsers,
-    parsers: [:urlencoded, :multipart, :json],
-    pass: ["*/*"],
-    json_decoder: Phoenix.json_library()
-  )
-
+  plug(:parse_body)
   plug(EntityRelationshipManager.Router)
+
+  defp parse_body(conn, _opts) do
+    Plug.Parsers.call(
+      conn,
+      Plug.Parsers.init(
+        parsers: [:urlencoded, :multipart, :json],
+        json_decoder: Phoenix.json_library()
+      )
+    )
+  rescue
+    Plug.Parsers.ParseError ->
+      conn
+      |> put_resp_content_type("application/json")
+      |> send_resp(
+        400,
+        Jason.encode!(%{error: "bad_request", message: "Invalid JSON in request body"})
+      )
+      |> halt()
+
+    Plug.Parsers.UnsupportedMediaTypeError ->
+      conn
+      |> put_resp_content_type("application/json")
+      |> send_resp(
+        415,
+        Jason.encode!(%{
+          error: "unsupported_content_type",
+          message: "Content-Type must be application/json"
+        })
+      )
+      |> halt()
+  end
 end

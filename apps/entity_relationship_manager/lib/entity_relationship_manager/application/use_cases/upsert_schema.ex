@@ -12,13 +12,8 @@ defmodule EntityRelationshipManager.Application.UseCases.UpsertSchema do
     EdgeTypeDefinition
   }
 
+  alias EntityRelationshipManager.Application.RepoConfig
   alias EntityRelationshipManager.Domain.Policies.SchemaValidationPolicy
-
-  @schema_repo Application.compile_env(
-                 :entity_relationship_manager,
-                 :schema_repository,
-                 EntityRelationshipManager.Infrastructure.Repositories.SchemaRepository
-               )
 
   @doc """
   Validates and upserts a schema definition for a workspace.
@@ -31,7 +26,7 @@ defmodule EntityRelationshipManager.Application.UseCases.UpsertSchema do
   Returns `{:ok, schema}` on success, `{:error, errors}` on validation failure.
   """
   def execute(workspace_id, attrs, opts \\ []) do
-    schema_repo = Keyword.get(opts, :schema_repo, @schema_repo)
+    schema_repo = Keyword.get(opts, :schema_repo, RepoConfig.schema_repo())
 
     schema_def = build_schema_definition(workspace_id, attrs)
 

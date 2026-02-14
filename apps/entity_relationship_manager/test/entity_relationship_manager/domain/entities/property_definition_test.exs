@@ -54,7 +54,7 @@ defmodule EntityRelationshipManager.Domain.Entities.PropertyDefinitionTest do
       assert prop.name == "email"
       assert prop.type == :string
       assert prop.required == true
-      assert prop.constraints == %{"max_length" => 255}
+      assert prop.constraints == %{max_length: 255}
     end
 
     test "defaults required to false when not present in map" do
