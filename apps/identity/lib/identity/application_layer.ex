@@ -63,7 +63,12 @@ defmodule Identity.ApplicationLayer do
       Identity.Application.UseCases.ListApiKeys,
       Identity.Application.UseCases.UpdateApiKey,
       Identity.Application.UseCases.RevokeApiKey,
-      Identity.Application.UseCases.VerifyApiKey
+      Identity.Application.UseCases.VerifyApiKey,
+      # Workspace use cases
+      Identity.Application.UseCases.InviteMember,
+      Identity.Application.UseCases.ChangeMemberRole,
+      Identity.Application.UseCases.RemoveMember,
+      Identity.Application.UseCases.CreateNotificationsForPendingInvitations
     ]
   end
 
@@ -79,7 +84,9 @@ defmodule Identity.ApplicationLayer do
   def services do
     [
       Identity.Application.Services.PasswordService,
-      Identity.Application.Services.ApiKeyTokenService
+      Identity.Application.Services.ApiKeyTokenService,
+      # Workspace services
+      Identity.Application.Services.NotificationService
     ]
   end
 
@@ -100,7 +107,12 @@ defmodule Identity.ApplicationLayer do
       Identity.Application.Behaviours.UserNotifierBehaviour,
       Identity.Application.Behaviours.ApiKeyRepositoryBehaviour,
       Identity.Application.Behaviours.TokenGeneratorBehaviour,
-      Identity.Application.Behaviours.QueriesBehaviour
+      Identity.Application.Behaviours.QueriesBehaviour,
+      # Workspace behaviours
+      Identity.Application.Behaviours.MembershipRepositoryBehaviour,
+      Identity.Application.Behaviours.NotificationServiceBehaviour,
+      Identity.Application.Behaviours.PubSubNotifierBehaviour,
+      Identity.Application.Behaviours.WorkspaceQueriesBehaviour
     ]
   end
 
@@ -109,8 +121,8 @@ defmodule Identity.ApplicationLayer do
 
   ## Examples
 
-      iex> Identity.ApplicationLayer.summary()
-      %{use_cases: 12, services: 2, behaviours: 7, total: 21}
+       iex> Identity.ApplicationLayer.summary()
+       %{use_cases: 16, services: 3, behaviours: 11, total: 30}
   """
   @spec summary() :: map()
   def summary do

@@ -53,16 +53,23 @@ defmodule Identity do
       Domain.Entities.User,
       Domain.Entities.ApiKey,
       Domain.Entities.UserToken,
+      Domain.Entities.Workspace,
+      Domain.Entities.WorkspaceMember,
       Domain.Policies.AuthenticationPolicy,
       Domain.Policies.TokenPolicy,
       Domain.Policies.ApiKeyPolicy,
+      Domain.Policies.MembershipPolicy,
+      Domain.Policies.WorkspacePermissionsPolicy,
       Domain.Services.TokenBuilder,
+      Domain.Services.SlugGenerator,
       Domain.Scope,
       # Infrastructure schemas exported for test fixtures and cross-app integration
       # These are needed by Jarga.AccountsFixtures for creating test data
       Infrastructure.Schemas.UserSchema,
       Infrastructure.Schemas.UserTokenSchema,
       Infrastructure.Schemas.ApiKeySchema,
+      Infrastructure.Schemas.WorkspaceSchema,
+      Infrastructure.Schemas.WorkspaceMemberSchema,
       # Application services exported for test fixtures
       Application.Services.PasswordService,
       Application.Services.ApiKeyTokenService
@@ -539,5 +546,468 @@ defmodule Identity do
   """
   def verify_api_key(plain_token) when is_binary(plain_token) do
     UseCases.VerifyApiKey.execute(plain_token)
+  end
+
+  ## Workspaces
+
+  alias Identity.Domain.Entities.{Workspace, WorkspaceMember}
+  alias Identity.Infrastructure.Schemas.{WorkspaceSchema, WorkspaceMemberSchema}
+  alias Identity.Infrastructure.Queries.WorkspaceQueries
+  alias Identity.Domain.Services.SlugGenerator
+  alias Identity.Infrastructure.Repositories.MembershipRepository
+  alias Identity.Domain.Policies.WorkspacePermissionsPolicy
+
+  alias Identity.Infrastructure.Notifiers.EmailAndPubSubNotifier
+
+  @doc """
+  Returns the list of workspaces for a given user.
+
+  Only returns non-archived workspaces where the user is a member.
+  """
+  def list_workspaces_for_user(%{id: _} = user) do
+    WorkspaceQueries.base()
+    |> WorkspaceQueries.for_user(user)
+    |> WorkspaceQueries.active()
+    |> WorkspaceQueries.ordered()
+    |> Repo.all()
+    |> Enum.map(&Workspace.from_schema/1)
+  end
+
+  @doc """
+  Creates a workspace for a user.
+
+  Automatically adds the creating user as an owner of the workspace.
+  """
+  def create_workspace(%User{} = user, attrs) do
+    Repo.transact(fn ->
+      with {:ok, workspace} <- create_workspace_record(attrs),
+           {:ok, _member} <- add_member_as_owner(workspace, user) do
+        {:ok, workspace}
+      end
+    end)
+  end
+
+  defp create_workspace_record(attrs) do
+    # Generate slug in context before passing to changeset (business logic)
+    # Only generate slug if name is present
+    name = attrs["name"] || attrs[:name]
+
+    attrs_with_slug =
+      attrs
+      |> Map.new(fn {k, v} -> {to_string(k), v} end)
+      |> then(fn normalized_attrs ->
+        if name do
+          slug = SlugGenerator.generate(name, &MembershipRepository.slug_exists?/2)
+          Map.put(normalized_attrs, "slug", slug)
+        else
+          normalized_attrs
+        end
+      end)
+
+    %WorkspaceSchema{}
+    |> WorkspaceSchema.changeset(attrs_with_slug)
+    |> Repo.insert()
+    |> case do
+      {:ok, schema} -> {:ok, Workspace.from_schema(schema)}
+      {:error, changeset} -> {:error, changeset}
+    end
+  end
+
+  defp add_member_as_owner(workspace, user) do
+    now = DateTime.utc_now()
+
+    %WorkspaceMemberSchema{}
+    |> WorkspaceMemberSchema.changeset(%{
+      workspace_id: workspace.id,
+      user_id: user.id,
+      email: user.email,
+      role: :owner,
+      invited_at: now,
+      joined_at: now
+    })
+    |> Repo.insert()
+    |> case do
+      {:ok, schema} -> {:ok, WorkspaceMember.from_schema(schema)}
+      {:error, changeset} -> {:error, changeset}
+    end
+  end
+
+  @doc """
+  Gets a single workspace for a user.
+
+  Returns `{:ok, workspace}` if the user is a member, or an error tuple otherwise.
+  """
+  def get_workspace(%User{} = user, id) do
+    case MembershipRepository.get_workspace_for_user(user, id) do
+      nil ->
+        if MembershipRepository.workspace_exists?(id) do
+          {:error, :unauthorized}
+        else
+          {:error, :workspace_not_found}
+        end
+
+      workspace ->
+        {:ok, workspace}
+    end
+  end
+
+  @doc """
+  Gets a single workspace for a user.
+
+  Raises `Ecto.NoResultsError` if the Workspace does not exist or
+  if the user is not a member of the workspace.
+  """
+  def get_workspace!(%User{} = user, id) do
+    WorkspaceQueries.for_user_by_id(user, id)
+    |> Repo.one!()
+    |> Workspace.from_schema()
+  end
+
+  @doc """
+  Gets a single workspace by slug for a user.
+
+  Returns `{:ok, workspace}` if the user is a member, or an error tuple otherwise.
+  """
+  def get_workspace_by_slug(%User{} = user, slug) do
+    case MembershipRepository.get_workspace_for_user_by_slug(user, slug) do
+      nil ->
+        {:error, :workspace_not_found}
+
+      workspace ->
+        {:ok, workspace}
+    end
+  end
+
+  @doc """
+  Gets a workspace by slug with the current user's member record.
+
+  Returns `{:ok, workspace, member}` if the user is a member, or
+  `{:error, :workspace_not_found}` otherwise.
+  """
+  def get_workspace_and_member_by_slug(%User{} = user, slug) do
+    case MembershipRepository.get_workspace_and_member_by_slug(user, slug) do
+      nil ->
+        {:error, :workspace_not_found}
+
+      {workspace, member} ->
+        {:ok, workspace, member}
+    end
+  end
+
+  @doc """
+  Gets a single workspace by slug for a user.
+
+  Raises `Ecto.NoResultsError` if the Workspace does not exist or
+  if the user is not a member of the workspace.
+  """
+  def get_workspace_by_slug!(%User{} = user, slug) do
+    WorkspaceQueries.for_user_by_slug(user, slug)
+    |> Repo.one!()
+    |> Workspace.from_schema()
+  end
+
+  @doc """
+  Updates a workspace for a user.
+
+  The user must be a member of the workspace with permission to edit it.
+  Only admins and owners can edit workspaces.
+  """
+  def update_workspace(%User{} = user, workspace_id, attrs, opts \\ []) do
+    # Get notifier from opts or use default
+    notifier = Keyword.get(opts, :notifier, EmailAndPubSubNotifier)
+
+    with {:ok, member} <- get_member(user, workspace_id),
+         :ok <- authorize_edit_workspace(member.role) do
+      case get_workspace(user, workspace_id) do
+        {:ok, workspace} ->
+          result =
+            workspace
+            |> WorkspaceSchema.to_schema()
+            |> WorkspaceSchema.changeset(attrs)
+            |> Repo.update()
+
+          # Notify workspace members via injected notifier
+          case result do
+            {:ok, schema} ->
+              updated_workspace = Workspace.from_schema(schema)
+              notifier.notify_workspace_updated(updated_workspace)
+              {:ok, updated_workspace}
+
+            error ->
+              error
+          end
+
+        {:error, reason} ->
+          {:error, reason}
+      end
+    end
+  end
+
+  defp authorize_edit_workspace(role) do
+    if WorkspacePermissionsPolicy.can?(role, :edit_workspace) do
+      :ok
+    else
+      {:error, :forbidden}
+    end
+  end
+
+  @doc """
+  Deletes a workspace for a user.
+
+  The user must be the owner of the workspace to delete it.
+  Only owners can delete workspaces.
+  """
+  def delete_workspace(%User{} = user, workspace_id) do
+    with {:ok, member} <- get_member(user, workspace_id),
+         :ok <- authorize_delete_workspace(member.role) do
+      case get_workspace(user, workspace_id) do
+        {:ok, workspace} ->
+          workspace
+          |> WorkspaceSchema.to_schema()
+          |> Repo.delete()
+          |> case do
+            {:ok, schema} -> {:ok, Workspace.from_schema(schema)}
+            {:error, changeset} -> {:error, changeset}
+          end
+
+        {:error, reason} ->
+          {:error, reason}
+      end
+    end
+  end
+
+  defp authorize_delete_workspace(role) do
+    if WorkspacePermissionsPolicy.can?(role, :delete_workspace) do
+      :ok
+    else
+      {:error, :forbidden}
+    end
+  end
+
+  @doc """
+  Verifies that a user is a member of a workspace.
+
+  This is a public API for other contexts to verify workspace membership.
+  """
+  def verify_membership(%User{} = user, workspace_id) do
+    get_workspace(user, workspace_id)
+  end
+
+  @doc """
+  Checks if a user is a member of a workspace by workspace ID.
+  """
+  def member?(user_id, workspace_id) do
+    MembershipRepository.member?(user_id, workspace_id)
+  end
+
+  @doc """
+  Checks if a user is a member of a workspace by workspace slug.
+  """
+  def member_by_slug?(user_id, workspace_slug) do
+    MembershipRepository.member_by_slug?(user_id, workspace_slug)
+  end
+
+  @doc """
+  Gets a user's workspace member record.
+
+  Returns `{:ok, workspace_member}` or `{:error, reason}`.
+  """
+  def get_member(%User{} = user, workspace_id) do
+    case MembershipRepository.get_member(user, workspace_id) do
+      nil ->
+        if MembershipRepository.workspace_exists?(workspace_id) do
+          {:error, :unauthorized}
+        else
+          {:error, :workspace_not_found}
+        end
+
+      member ->
+        {:ok, member}
+    end
+  end
+
+  @doc """
+  Invites a user to join a workspace via email.
+
+  The inviter must be a member of the workspace. Only admin, member, and guest
+  roles are allowed (owner role is reserved for workspace creators).
+  """
+  def invite_member(%User{} = inviter, workspace_id, email, role, opts \\ []) do
+    # Get notifier from opts or use default
+    notifier = Keyword.get(opts, :notifier, EmailAndPubSubNotifier)
+
+    params = %{
+      inviter: inviter,
+      workspace_id: workspace_id,
+      email: email,
+      role: role
+    }
+
+    # Delegate to use case
+    UseCases.InviteMember.execute(params, notifier: notifier)
+  end
+
+  @doc """
+  Lists all members of a workspace.
+  """
+  def list_members(workspace_id) do
+    MembershipRepository.list_members(workspace_id)
+  end
+
+  @doc """
+  Accepts all pending workspace invitations for a user.
+
+  When a user signs up with an email that has pending workspace invitations,
+  this function converts those pending invitations into active memberships.
+  """
+  def accept_pending_invitations(%User{} = user) do
+    Repo.transact(fn ->
+      # Find all pending invitations for this user's email (case-insensitive)
+      pending_invitations =
+        WorkspaceQueries.find_pending_invitations_by_email(user.email)
+        |> Repo.all()
+
+      # Update each invitation to accept it
+      now = DateTime.utc_now()
+
+      accepted =
+        Enum.map(pending_invitations, fn invitation ->
+          invitation
+          |> WorkspaceMemberSchema.changeset(%{
+            user_id: user.id,
+            joined_at: now
+          })
+          |> Repo.update!()
+          |> WorkspaceMember.from_schema()
+        end)
+
+      {:ok, accepted}
+    end)
+  end
+
+  @doc """
+  Accepts a specific workspace invitation for a user.
+
+  Finds a pending invitation (not yet joined) for the given workspace and user,
+  and marks it as accepted by setting the user_id and joined_at timestamp.
+  """
+  def accept_invitation_by_workspace(workspace_id, user_id) do
+    Repo.transact(fn ->
+      case find_pending_invitation_record(workspace_id, user_id) do
+        {:error, reason} -> {:error, reason}
+        {:ok, workspace_member} -> accept_invitation_record(workspace_member, user_id)
+      end
+    end)
+  end
+
+  defp find_pending_invitation_record(workspace_id, user_id) do
+    case WorkspaceQueries.find_pending_invitation(workspace_id, user_id) |> Repo.one() do
+      nil -> {:error, :invitation_not_found}
+      workspace_member -> {:ok, workspace_member}
+    end
+  end
+
+  defp accept_invitation_record(workspace_member, user_id) do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    workspace_member
+    |> WorkspaceMemberSchema.accept_invitation_changeset(%{
+      user_id: user_id,
+      joined_at: now
+    })
+    |> Repo.update()
+    |> case do
+      {:ok, schema} -> {:ok, WorkspaceMember.from_schema(schema)}
+      {:error, changeset} -> {:error, changeset}
+    end
+  end
+
+  @doc """
+  Declines a specific workspace invitation for a user.
+
+  Finds and deletes a pending invitation for the given workspace and user.
+  """
+  def decline_invitation_by_workspace(workspace_id, user_id) do
+    # Find and delete the pending workspace_member record
+    case WorkspaceQueries.find_pending_invitation(workspace_id, user_id) |> Repo.one() do
+      nil ->
+        # Invitation not found is OK - might have been deleted already
+        :ok
+
+      workspace_member ->
+        case Repo.delete(workspace_member) do
+          {:ok, _} -> :ok
+          {:error, changeset} -> {:error, changeset}
+        end
+    end
+  end
+
+  @doc """
+  Lists all pending workspace invitations for a user's email.
+
+  Returns invitations with workspace and inviter associations preloaded.
+  """
+  def list_pending_invitations_with_details(email) do
+    WorkspaceQueries.find_pending_invitations_by_email(email)
+    |> WorkspaceQueries.with_workspace_and_inviter()
+    |> Repo.all()
+
+    # Return schemas directly to preserve workspace and inviter associations
+    # These are needed for notification creation
+  end
+
+  @doc """
+  Creates notifications for all pending workspace invitations for a user.
+  """
+  def create_notifications_for_pending_invitations(%User{} = user) do
+    UseCases.CreateNotificationsForPendingInvitations.execute(%{user: user})
+  end
+
+  @doc """
+  Changes a workspace member's role.
+
+  The actor must be a member of the workspace. Cannot change the owner's role,
+  and cannot assign the owner role.
+  """
+  def change_member_role(%User{} = actor, workspace_id, member_email, new_role) do
+    params = %{
+      actor: actor,
+      workspace_id: workspace_id,
+      member_email: member_email,
+      new_role: new_role
+    }
+
+    UseCases.ChangeMemberRole.execute(params)
+  end
+
+  @doc """
+  Removes a member from a workspace.
+
+  The actor must be a member of the workspace. Cannot remove the owner.
+  """
+  def remove_member(%User{} = actor, workspace_id, member_email) do
+    params = %{
+      actor: actor,
+      workspace_id: workspace_id,
+      member_email: member_email
+    }
+
+    UseCases.RemoveMember.execute(params)
+  end
+
+  @doc """
+  Creates a changeset for a new workspace (for form validation).
+  """
+  def change_workspace do
+    WorkspaceSchema.changeset(%WorkspaceSchema{}, %{})
+  end
+
+  @doc """
+  Creates a changeset for editing a workspace (for form validation).
+  """
+  def change_workspace(%Workspace{} = workspace, attrs \\ %{}) do
+    workspace
+    |> WorkspaceSchema.to_schema()
+    |> WorkspaceSchema.changeset(attrs)
   end
 end
