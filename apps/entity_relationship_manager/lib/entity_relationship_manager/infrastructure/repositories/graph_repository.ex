@@ -83,6 +83,7 @@ defmodule EntityRelationshipManager.Infrastructure.Repositories.GraphRepository 
   @impl true
   def list_entities(workspace_id, filters, opts \\ []) do
     {type_clause, type_params} = build_type_filter(filters)
+    {limit, offset} = pagination_params(filters)
 
     cypher = """
     MATCH (n:Entity {_workspace_id: $_workspace_id})
@@ -90,9 +91,12 @@ defmodule EntityRelationshipManager.Infrastructure.Repositories.GraphRepository 
     RETURN n.id AS id, n.type AS type, n.properties AS properties,
            n.created_at AS created_at, n.updated_at AS updated_at
     ORDER BY n.created_at DESC
+    SKIP $offset LIMIT $limit
     """
 
-    params = Map.merge(%{_workspace_id: workspace_id}, type_params)
+    params =
+      %{_workspace_id: workspace_id, limit: limit, offset: offset}
+      |> Map.merge(type_params)
 
     case Neo4jAdapter.execute(cypher, params, opts) do
       {:ok, %{records: records}} ->
@@ -238,6 +242,7 @@ defmodule EntityRelationshipManager.Infrastructure.Repositories.GraphRepository 
   @impl true
   def list_edges(workspace_id, filters, opts \\ []) do
     {type_clause, type_params} = build_edge_type_filter(filters)
+    {limit, offset} = pagination_params(filters)
 
     cypher = """
     MATCH (source)-[r:EDGE {_workspace_id: $_workspace_id}]->(target)
@@ -246,9 +251,12 @@ defmodule EntityRelationshipManager.Infrastructure.Repositories.GraphRepository 
            source.id AS source_id, target.id AS target_id,
            r.created_at AS created_at, r.updated_at AS updated_at
     ORDER BY r.created_at DESC
+    SKIP $offset LIMIT $limit
     """
 
-    params = Map.merge(%{_workspace_id: workspace_id}, type_params)
+    params =
+      %{_workspace_id: workspace_id, limit: limit, offset: offset}
+      |> Map.merge(type_params)
 
     case Neo4jAdapter.execute(cypher, params, opts) do
       {:ok, %{records: records}} ->
@@ -600,6 +608,12 @@ defmodule EntityRelationshipManager.Infrastructure.Repositories.GraphRepository 
   end
 
   defp parse_datetime(%DateTime{} = dt), do: dt
+
+  defp pagination_params(filters) do
+    limit = Map.get(filters, :limit, 100)
+    offset = Map.get(filters, :offset, 0)
+    {limit, offset}
+  end
 
   defp build_type_filter(%{type: type}) when is_binary(type) do
     {"AND n.type = $filter_type", %{filter_type: type}}
