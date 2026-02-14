@@ -122,6 +122,7 @@ end
 if System.get_env("PHX_SERVER") do
   config :jarga_web, JargaWeb.Endpoint, server: true
   config :jarga_api, JargaApi.Endpoint, server: true
+  config :entity_relationship_manager, EntityRelationshipManager.Endpoint, server: true
 end
 
 if config_env() == :prod do
@@ -196,6 +197,20 @@ if config_env() == :prod do
     http: [
       ip: {0, 0, 0, 0, 0, 0, 0, 0},
       port: jarga_api_port
+    ],
+    secret_key_base: secret_key_base
+
+  # Entity Relationship Manager (Graph API) - separate port/host
+  erm_host = System.get_env("ERM_HOST") || jarga_host
+
+  erm_port =
+    String.to_integer(System.get_env("ERM_PORT") || "4005")
+
+  config :entity_relationship_manager, EntityRelationshipManager.Endpoint,
+    url: [host: erm_host, port: 443, scheme: "https"],
+    http: [
+      ip: {0, 0, 0, 0, 0, 0, 0, 0},
+      port: erm_port
     ],
     secret_key_base: secret_key_base
 

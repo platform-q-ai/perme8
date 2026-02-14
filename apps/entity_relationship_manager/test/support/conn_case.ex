@@ -1,0 +1,36 @@
+defmodule EntityRelationshipManager.ConnCase do
+  @moduledoc """
+  This module defines the test case to be used by
+  tests that require setting up a connection for the ERM API.
+  """
+
+  use Boundary,
+    top_level?: true,
+    deps: [
+      EntityRelationshipManager,
+      Identity,
+      Jarga.Accounts,
+      Jarga.DataCase,
+      Jarga.AccountsFixtures
+    ],
+    exports: []
+
+  use ExUnit.CaseTemplate
+
+  using do
+    quote do
+      @endpoint EntityRelationshipManager.Endpoint
+
+      use EntityRelationshipManager, :verified_routes
+
+      import Plug.Conn
+      import Phoenix.ConnTest
+      import EntityRelationshipManager.ConnCase
+    end
+  end
+
+  setup tags do
+    Jarga.DataCase.setup_sandbox(tags)
+    {:ok, conn: Phoenix.ConnTest.build_conn()}
+  end
+end

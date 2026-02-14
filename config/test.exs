@@ -31,6 +31,12 @@ config :jarga_web, JargaWeb.Endpoint,
   secret_key_base: "k/DpMQ7vB/8OirPNBlAhucs6RCPp5ZRK09Is1Sd7Jb+YThz21IeYYYpueAbJYNEd",
   server: true
 
+# Entity Relationship Manager test configuration (Graph API on port 4006)
+config :entity_relationship_manager, EntityRelationshipManager.Endpoint,
+  http: [ip: {127, 0, 0, 1}, port: 4006],
+  secret_key_base: "erm_test_secret_key_base_at_least_64_bytes_long_for_security_purposes",
+  server: false
+
 # JargaApi test configuration (JSON API on port 4005)
 config :jarga_api, JargaApi.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4005],
