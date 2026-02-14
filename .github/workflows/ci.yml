@@ -315,13 +315,8 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jarga_test
 
-      - name: Run 360 tests (jarga_api HTTP)
-        run: mix exo_test --config apps/jarga_api/test/exo-bdd-jarga-api.config.ts --tag @http
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jarga_test
-
-      - name: Run 360 tests (jarga_api security)
-        run: mix exo_test --config apps/jarga_api/test/exo-bdd-jarga-api.config.ts --tag @security
+      - name: Run 360 tests (all apps)
+        run: mix exo_test
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jarga_test
 
