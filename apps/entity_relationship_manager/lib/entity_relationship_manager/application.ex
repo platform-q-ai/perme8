@@ -4,7 +4,7 @@ defmodule EntityRelationshipManager.Application do
   use Application
 
   use Boundary,
-    deps: [EntityRelationshipManager],
+    deps: [EntityRelationshipManager, EntityRelationshipManager.Domain],
     exports: [
       {Behaviours.SchemaRepositoryBehaviour, []},
       {Behaviours.GraphRepositoryBehaviour, []},
