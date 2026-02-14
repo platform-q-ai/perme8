@@ -59,7 +59,7 @@ defmodule EntityRelationshipManager.EdgeControllerTest do
           "target_id" => UseCaseFixtures.valid_uuid2()
         })
 
-      assert %{"error" => _} = json_response(conn, 422)
+      assert %{"errors" => _} = json_response(conn, 422)
     end
   end
 
