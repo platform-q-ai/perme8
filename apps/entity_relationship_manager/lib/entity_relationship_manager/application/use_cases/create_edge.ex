@@ -46,10 +46,10 @@ defmodule EntityRelationshipManager.Application.UseCases.CreateEdge do
     properties = Map.get(attrs, :properties, %{})
 
     with :ok <- InputSanitizationPolicy.validate_type_name(type),
+         :ok <- InputSanitizationPolicy.validate_uuid(source_id),
+         :ok <- InputSanitizationPolicy.validate_uuid(target_id),
          {:ok, schema} <- fetch_schema(schema_repo, workspace_id),
-         :ok <- validate_edge(schema, type, properties),
-         :ok <- verify_source_exists(graph_repo, workspace_id, source_id),
-         :ok <- verify_target_exists(graph_repo, workspace_id, target_id) do
+         :ok <- validate_edge(schema, type, properties) do
       graph_repo.create_edge(workspace_id, type, source_id, target_id, properties)
     end
   end
@@ -64,19 +64,5 @@ defmodule EntityRelationshipManager.Application.UseCases.CreateEdge do
   defp validate_edge(schema, type, properties) do
     edge = Edge.new(%{type: type, properties: properties})
     SchemaValidationPolicy.validate_edge_against_schema(edge, schema, type)
-  end
-
-  defp verify_source_exists(graph_repo, workspace_id, source_id) do
-    case graph_repo.get_entity(workspace_id, source_id) do
-      {:ok, _} -> :ok
-      {:error, :not_found} -> {:error, :source_not_found}
-    end
-  end
-
-  defp verify_target_exists(graph_repo, workspace_id, target_id) do
-    case graph_repo.get_entity(workspace_id, target_id) do
-      {:ok, _} -> :ok
-      {:error, :not_found} -> {:error, :target_not_found}
-    end
   end
 end

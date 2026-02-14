@@ -19,12 +19,6 @@ defmodule EntityRelationshipManager.Application.UseCases.CreateEdgeTest do
       |> expect(:get_schema, fn _ws_id -> {:ok, schema} end)
 
       GraphRepositoryMock
-      |> expect(:get_entity, fn _ws_id, id ->
-        {:ok, entity(%{id: id})}
-      end)
-      |> expect(:get_entity, fn _ws_id, id ->
-        {:ok, entity(%{id: id, type: "Company"})}
-      end)
       |> expect(:create_edge, fn ws_id, type, source_id, target_id, properties ->
         assert ws_id == workspace_id()
         assert type == "WORKS_AT"
@@ -105,16 +99,18 @@ defmodule EntityRelationshipManager.Application.UseCases.CreateEdgeTest do
       assert is_binary(msg)
     end
 
-    test "returns error when source entity not found" do
+    test "returns error when endpoints not found (handled by Cypher)" do
       schema = schema_definition()
 
       SchemaRepositoryMock
       |> expect(:get_schema, fn _ws_id -> {:ok, schema} end)
 
       GraphRepositoryMock
-      |> expect(:get_entity, fn _ws_id, _id -> {:error, :not_found} end)
+      |> expect(:create_edge, fn _ws_id, _type, _sid, _tid, _props ->
+        {:error, :endpoints_not_found}
+      end)
 
-      assert {:error, :source_not_found} =
+      assert {:error, :endpoints_not_found} =
                CreateEdge.execute(
                  workspace_id(),
                  %{
@@ -128,23 +124,29 @@ defmodule EntityRelationshipManager.Application.UseCases.CreateEdgeTest do
                )
     end
 
-    test "returns error when target entity not found" do
-      schema = schema_definition()
+    test "returns error for invalid source_id UUID" do
+      assert {:error, _msg} =
+               CreateEdge.execute(
+                 workspace_id(),
+                 %{
+                   type: "WORKS_AT",
+                   source_id: "not-a-uuid",
+                   target_id: valid_uuid2(),
+                   properties: %{}
+                 },
+                 schema_repo: SchemaRepositoryMock,
+                 graph_repo: GraphRepositoryMock
+               )
+    end
 
-      SchemaRepositoryMock
-      |> expect(:get_schema, fn _ws_id -> {:ok, schema} end)
-
-      GraphRepositoryMock
-      |> expect(:get_entity, fn _ws_id, _id -> {:ok, entity()} end)
-      |> expect(:get_entity, fn _ws_id, _id -> {:error, :not_found} end)
-
-      assert {:error, :target_not_found} =
+    test "returns error for invalid target_id UUID" do
+      assert {:error, _msg} =
                CreateEdge.execute(
                  workspace_id(),
                  %{
                    type: "WORKS_AT",
                    source_id: valid_uuid(),
-                   target_id: valid_uuid2(),
+                   target_id: "not-a-uuid",
                    properties: %{}
                  },
                  schema_repo: SchemaRepositoryMock,

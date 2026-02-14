@@ -178,8 +178,6 @@ defmodule EntityRelationshipManagerTest do
       |> expect(:get_schema, fn _wid -> {:ok, schema} end)
 
       EntityRelationshipManager.Mocks.GraphRepositoryMock
-      |> expect(:get_entity, fn _wid, _sid -> {:ok, source} end)
-      |> expect(:get_entity, fn _wid, _tid -> {:ok, target} end)
       |> expect(:create_edge, fn _wid, "WORKS_AT", _s, _t, _p -> {:ok, edge} end)
 
       attrs = %{
