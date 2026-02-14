@@ -40,6 +40,25 @@ defmodule EntityRelationshipManager.SchemaController do
         |> put_view(EntityRelationshipManager.Views.SchemaJSON)
         |> render("show.json", schema: schema)
 
+      {:error, :stale} ->
+        conn
+        |> put_status(:conflict)
+        |> json(%{
+          error: "conflict",
+          message: "Schema has been modified; please reload and retry"
+        })
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        conn
+        |> put_status(:unprocessable_entity)
+        |> put_view(EntityRelationshipManager.Views.ErrorJSON)
+        |> render("422.json", changeset: changeset)
+
+      {:error, errors} when is_list(errors) ->
+        conn
+        |> put_status(:unprocessable_entity)
+        |> json(%{error: "validation_errors", errors: errors})
+
       {:error, _reason} ->
         conn
         |> put_status(:unprocessable_entity)
