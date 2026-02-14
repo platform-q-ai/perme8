@@ -37,6 +37,11 @@ config :entity_relationship_manager, EntityRelationshipManager.Endpoint,
   secret_key_base: "erm_test_secret_key_base_at_least_64_bytes_long_for_security_purposes",
   server: false
 
+# Use Mox mocks for ERM repositories in tests
+config :entity_relationship_manager,
+  schema_repository: EntityRelationshipManager.Mocks.SchemaRepositoryMock,
+  graph_repository: EntityRelationshipManager.Mocks.GraphRepositoryMock
+
 # JargaApi test configuration (JSON API on port 4005)
 config :jarga_api, JargaApi.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4005],

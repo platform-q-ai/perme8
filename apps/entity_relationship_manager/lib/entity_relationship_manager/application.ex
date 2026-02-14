@@ -7,7 +7,26 @@ defmodule EntityRelationshipManager.Application do
     deps: [EntityRelationshipManager],
     exports: [
       {Behaviours.SchemaRepositoryBehaviour, []},
-      {Behaviours.GraphRepositoryBehaviour, []}
+      {Behaviours.GraphRepositoryBehaviour, []},
+      {UseCases.GetSchema, []},
+      {UseCases.UpsertSchema, []},
+      {UseCases.CreateEntity, []},
+      {UseCases.GetEntity, []},
+      {UseCases.ListEntities, []},
+      {UseCases.UpdateEntity, []},
+      {UseCases.DeleteEntity, []},
+      {UseCases.CreateEdge, []},
+      {UseCases.GetEdge, []},
+      {UseCases.ListEdges, []},
+      {UseCases.UpdateEdge, []},
+      {UseCases.DeleteEdge, []},
+      {UseCases.GetNeighbors, []},
+      {UseCases.FindPaths, []},
+      {UseCases.Traverse, []},
+      {UseCases.BulkCreateEntities, []},
+      {UseCases.BulkUpdateEntities, []},
+      {UseCases.BulkDeleteEntities, []},
+      {UseCases.BulkCreateEdges, []}
     ]
 
   @impl true

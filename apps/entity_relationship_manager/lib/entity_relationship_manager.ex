@@ -69,6 +69,118 @@ defmodule EntityRelationshipManager do
     end
   end
 
+  # ---------------------------------------------------------------------------
+  # Public Facade — thin delegation to use cases
+  # ---------------------------------------------------------------------------
+
+  alias EntityRelationshipManager.Application.UseCases
+
+  # Schema
+
+  @doc "Retrieves the schema definition for a workspace."
+  def get_schema(workspace_id, opts \\ []) do
+    UseCases.GetSchema.execute(workspace_id, opts)
+  end
+
+  @doc "Creates or updates a workspace's schema definition."
+  def upsert_schema(workspace_id, attrs, opts \\ []) do
+    UseCases.UpsertSchema.execute(workspace_id, attrs, opts)
+  end
+
+  # Entity CRUD
+
+  @doc "Creates an entity in the workspace graph."
+  def create_entity(workspace_id, attrs, opts \\ []) do
+    UseCases.CreateEntity.execute(workspace_id, attrs, opts)
+  end
+
+  @doc "Retrieves an entity by ID."
+  def get_entity(workspace_id, entity_id, opts \\ []) do
+    UseCases.GetEntity.execute(workspace_id, entity_id, opts)
+  end
+
+  @doc "Lists entities with optional filters."
+  def list_entities(workspace_id, filters \\ %{}, opts \\ []) do
+    UseCases.ListEntities.execute(workspace_id, filters, opts)
+  end
+
+  @doc "Updates an entity's properties."
+  def update_entity(workspace_id, entity_id, attrs, opts \\ []) do
+    UseCases.UpdateEntity.execute(workspace_id, entity_id, attrs, opts)
+  end
+
+  @doc "Soft-deletes an entity by ID."
+  def delete_entity(workspace_id, entity_id, opts \\ []) do
+    UseCases.DeleteEntity.execute(workspace_id, entity_id, opts)
+  end
+
+  # Edge CRUD
+
+  @doc "Creates an edge (relationship) in the workspace graph."
+  def create_edge(workspace_id, attrs, opts \\ []) do
+    UseCases.CreateEdge.execute(workspace_id, attrs, opts)
+  end
+
+  @doc "Retrieves an edge by ID."
+  def get_edge(workspace_id, edge_id, opts \\ []) do
+    UseCases.GetEdge.execute(workspace_id, edge_id, opts)
+  end
+
+  @doc "Lists edges with optional filters."
+  def list_edges(workspace_id, filters \\ %{}, opts \\ []) do
+    UseCases.ListEdges.execute(workspace_id, filters, opts)
+  end
+
+  @doc "Updates an edge's properties."
+  def update_edge(workspace_id, edge_id, attrs, opts \\ []) do
+    UseCases.UpdateEdge.execute(workspace_id, edge_id, attrs, opts)
+  end
+
+  @doc "Soft-deletes an edge by ID."
+  def delete_edge(workspace_id, edge_id, opts \\ []) do
+    UseCases.DeleteEdge.execute(workspace_id, edge_id, opts)
+  end
+
+  # Traversal
+
+  @doc "Gets neighboring entities of the given entity."
+  def get_neighbors(workspace_id, entity_id, opts \\ []) do
+    UseCases.GetNeighbors.execute(workspace_id, entity_id, opts)
+  end
+
+  @doc "Finds paths between source and target entities."
+  def find_paths(workspace_id, source_id, target_id, opts \\ []) do
+    UseCases.FindPaths.execute(workspace_id, source_id, target_id, opts)
+  end
+
+  @doc "Traverses the graph from a starting entity."
+  def traverse(workspace_id, opts \\ []) do
+    {start_id, opts} = Keyword.pop!(opts, :start_id)
+    UseCases.Traverse.execute(workspace_id, start_id, opts)
+  end
+
+  # Bulk
+
+  @doc "Bulk-creates entities in the workspace graph."
+  def bulk_create_entities(workspace_id, entities, opts \\ []) do
+    UseCases.BulkCreateEntities.execute(workspace_id, entities, opts)
+  end
+
+  @doc "Bulk-updates entities in the workspace graph."
+  def bulk_update_entities(workspace_id, updates, opts \\ []) do
+    UseCases.BulkUpdateEntities.execute(workspace_id, updates, opts)
+  end
+
+  @doc "Bulk soft-deletes entities by their IDs."
+  def bulk_delete_entities(workspace_id, entity_ids, opts \\ []) do
+    UseCases.BulkDeleteEntities.execute(workspace_id, entity_ids, opts)
+  end
+
+  @doc "Bulk-creates edges in the workspace graph."
+  def bulk_create_edges(workspace_id, edges, opts \\ []) do
+    UseCases.BulkCreateEdges.execute(workspace_id, edges, opts)
+  end
+
   @doc """
   When used, dispatch to the appropriate controller/router/etc.
   """
