@@ -361,6 +361,7 @@ defmodule EntityRelationshipManager.Infrastructure.Repositories.GraphRepository 
   @impl true
   def find_paths(workspace_id, source_id, target_id, opts \\ []) do
     max_depth = Keyword.get(opts, :max_depth, 5)
+    validate_max_depth!(max_depth)
 
     cypher = """
     MATCH (source:Entity {_workspace_id: $_workspace_id, id: $source_id}),
@@ -390,22 +391,26 @@ defmodule EntityRelationshipManager.Infrastructure.Repositories.GraphRepository 
   @impl true
   def traverse(workspace_id, start_id, opts \\ []) do
     max_depth = Keyword.get(opts, :max_depth, 3)
+    validate_max_depth!(max_depth)
+    limit = Keyword.get(opts, :limit, 1000)
 
     cypher = """
     MATCH (start:Entity {_workspace_id: $_workspace_id, id: $id})
     CALL {
       WITH start
-      MATCH (start)-[*0..#{max_depth}]-(connected:Entity)
+      MATCH path = (start)-[*0..#{max_depth}]-(connected:Entity)
       WHERE connected.deleted_at IS NULL
         AND connected._workspace_id = $_workspace_id
+        AND ALL(rel IN relationships(path) WHERE rel.deleted_at IS NULL)
       RETURN DISTINCT connected
     }
     RETURN connected.id AS id, connected.type AS type,
            connected.properties AS properties,
            connected.created_at AS created_at, connected.updated_at AS updated_at
+    LIMIT $limit
     """
 
-    params = %{_workspace_id: workspace_id, id: start_id}
+    params = %{_workspace_id: workspace_id, id: start_id, limit: limit}
 
     case Neo4jAdapter.execute(cypher, params, opts) do
       {:ok, %{records: records}} ->
@@ -608,6 +613,12 @@ defmodule EntityRelationshipManager.Infrastructure.Repositories.GraphRepository 
   end
 
   defp parse_datetime(%DateTime{} = dt), do: dt
+
+  defp validate_max_depth!(depth) when is_integer(depth) and depth >= 1 and depth <= 10, do: :ok
+
+  defp validate_max_depth!(depth) do
+    raise ArgumentError, "max_depth must be an integer between 1 and 10, got: #{inspect(depth)}"
+  end
 
   defp pagination_params(filters) do
     limit = Map.get(filters, :limit, 100)
