@@ -38,9 +38,9 @@ defmodule Mix.Tasks.ExoTestTest do
   end
 
   describe "run/1 argument parsing" do
-    test "raises when --config is missing" do
-      assert_raise Mix.Error, ~r/Missing required --config option/, fn ->
-        ExoTest.run([])
+    test "raises when --config points to a non-existent file" do
+      assert_raise Mix.Error, ~r/exo-bdd tests failed/, fn ->
+        ExoTest.run(["--config", "/tmp/does-not-exist-exo-bdd.config.ts"])
       end
     end
   end
