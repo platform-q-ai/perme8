@@ -12,6 +12,8 @@ defmodule Identity.Infrastructure.Repositories.MembershipRepository do
   - No business rules - just data retrieval
   """
 
+  @behaviour Identity.Application.Behaviours.MembershipRepositoryBehaviour
+
   import Ecto.Query, warn: false
 
   alias Identity.Repo
