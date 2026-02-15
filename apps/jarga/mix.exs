@@ -17,7 +17,6 @@ defmodule Jarga.MixProject do
       compilers: [:boundary, :phoenix_live_view] ++ Mix.compilers(),
       boundary: boundary(),
       listeners: [Phoenix.CodeReloader],
-      test_pattern: "*_test.exs",
       test_coverage: [
         tool: ExCoveralls
       ]
