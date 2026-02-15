@@ -1,10 +1,7 @@
 import { defineConfig } from '../../../tools/exo-bdd/src/index.ts'
 
 export default defineConfig({
-  features: [
-    './features/**/*.http.feature',
-    './features/**/*.security.feature',
-  ],
+  features: ['./features/**/*.feature'],
   servers: [
     {
       name: 'jarga-api',
