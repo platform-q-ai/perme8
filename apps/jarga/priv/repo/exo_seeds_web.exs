@@ -220,7 +220,7 @@ IO.puts("[exo-seeds-web] Added workspace memberships (bob=admin, charlie=member,
     color: "#F59E0B"
   })
 
-{:ok, _mobile_app} =
+{:ok, mobile_app} =
   Projects.create_project(alice, product_team.id, %{
     name: "Mobile App",
     description: "Mobile application project",
@@ -262,8 +262,97 @@ IO.puts("[exo-seeds-web] Created projects: q1-launch, mobile-app")
     is_public: true
   })
 
+# Documents referenced by documents/crud.browser.feature
+{:ok, _draft_roadmap} =
+  Documents.create_document(alice, product_team.id, %{
+    title: "Draft Roadmap",
+    content: "Draft product roadmap for upcoming quarter",
+    is_public: false
+  })
+
+{:ok, _private_doc} =
+  Documents.create_document(alice, product_team.id, %{
+    title: "Private Doc",
+    content: "Alice's private document for visibility tests",
+    is_public: false
+  })
+
+{:ok, _public_doc} =
+  Documents.create_document(alice, product_team.id, %{
+    title: "Public Doc",
+    content: "A public document for visibility and access tests",
+    is_public: true
+  })
+
+{:ok, _valid_title} =
+  Documents.create_document(alice, product_team.id, %{
+    title: "Valid Title",
+    content: "Document used for empty-title validation test",
+    is_public: false
+  })
+
+{:ok, _important_doc} =
+  Documents.create_document(alice, product_team.id, %{
+    title: "Important Doc",
+    content: "An unpinned document for pinning tests",
+    is_public: false
+  })
+
+{:ok, _pinned_doc} =
+  Documents.create_document(alice, product_team.id, %{
+    title: "Pinned Doc",
+    content: "A pinned document for unpinning tests",
+    is_public: false
+  })
+
+{:ok, _old_doc} =
+  Documents.create_document(alice, product_team.id, %{
+    title: "Old Doc",
+    content: "An old document for deletion tests",
+    is_public: false
+  })
+
+# Documents referenced by documents/access.browser.feature
+{:ok, _private_notes} =
+  Documents.create_document(alice, product_team.id, %{
+    title: "Private Notes",
+    content: "Alice's private notes",
+    is_public: false
+  })
+
+{:ok, _alices_private_notes} =
+  Documents.create_document(alice, product_team.id, %{
+    title: "Alices Private Notes",
+    content: "Alice's private notes for access control tests",
+    is_public: false
+  })
+
+{:ok, _team_guidelines} =
+  Documents.create_document(alice, product_team.id, %{
+    title: "Team Guidelines",
+    content: "Guidelines for the product team",
+    is_public: true
+  })
+
+{:ok, _private_roadmap} =
+  Documents.create_document(alice, product_team.id, %{
+    title: "Private Roadmap",
+    content: "Private roadmap document",
+    is_public: false
+  })
+
+{:ok, _specs} =
+  Documents.create_document(alice, product_team.id, %{
+    title: "Specs",
+    content: "Mobile app specifications",
+    project_id: mobile_app.id,
+    is_public: true
+  })
+
 IO.puts(
-  "[exo-seeds-web] Created documents: product-spec, shared-doc, bobs-private-doc, launch-plan"
+  "[exo-seeds-web] Created documents: product-spec, shared-doc, bobs-private-doc, launch-plan, " <>
+    "draft-roadmap, private-doc, public-doc, valid-title, important-doc, pinned-doc, old-doc, " <>
+    "private-notes, alices-private-notes, team-guidelines, private-roadmap, specs"
 )
 
 # ---------------------------------------------------------------------------
