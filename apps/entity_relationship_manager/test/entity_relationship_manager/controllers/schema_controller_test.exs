@@ -95,7 +95,7 @@ defmodule EntityRelationshipManager.SchemaControllerTest do
       response = json_response(conn, 422)
       assert %{"error" => "validation_errors", "errors" => errors} = response
       assert is_list(errors)
-      assert length(errors) > 0
+      assert errors != []
     end
   end
 end

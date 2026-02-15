@@ -13,40 +13,45 @@ defmodule EntityRelationshipManager.TraversalController do
   def neighbors(conn, %{"id" => entity_id} = params) do
     workspace_id = conn.assigns.workspace_id
 
-    with :ok <- validate_direction(params["direction"]) do
-      opt_fields = [
-        {:direction, :string, "direction"},
-        {:entity_type, :string, "entity_type"},
-        {:edge_type, :string, "edge_type"},
-        {:limit, :integer, "limit"},
-        {:offset, :integer, "offset"}
-      ]
-
-      case ControllerHelpers.build_opts(conn, params, opt_fields) do
-        {:ok, opts} ->
-          case EntityRelationshipManager.get_neighbors(workspace_id, entity_id, opts) do
-            {:ok, entities} ->
-              limit = Keyword.get(opts, :limit, 100)
-              offset = Keyword.get(opts, :offset, 0)
-              meta = %{total: length(entities), limit: limit, offset: offset}
-
-              conn
-              |> put_status(:ok)
-              |> put_view(EntityRelationshipManager.Views.TraversalJSON)
-              |> render("neighbors.json", entities: entities, meta: meta)
-
-            {:error, reason} ->
-              handle_error(conn, reason)
-          end
-
-        {:error, conn} ->
-          conn
-      end
-    else
+    case validate_direction(params["direction"]) do
       {:error, message} ->
         conn
         |> put_status(:unprocessable_entity)
         |> json(%{error: "invalid_direction", message: message})
+
+      :ok ->
+        do_neighbors(conn, workspace_id, entity_id, params)
+    end
+  end
+
+  defp do_neighbors(conn, workspace_id, entity_id, params) do
+    opt_fields = [
+      {:direction, :string, "direction"},
+      {:entity_type, :string, "entity_type"},
+      {:edge_type, :string, "edge_type"},
+      {:limit, :integer, "limit"},
+      {:offset, :integer, "offset"}
+    ]
+
+    case ControllerHelpers.build_opts(conn, params, opt_fields) do
+      {:ok, opts} ->
+        case EntityRelationshipManager.get_neighbors(workspace_id, entity_id, opts) do
+          {:ok, entities} ->
+            limit = Keyword.get(opts, :limit, 100)
+            offset = Keyword.get(opts, :offset, 0)
+            meta = %{total: length(entities), limit: limit, offset: offset}
+
+            conn
+            |> put_status(:ok)
+            |> put_view(EntityRelationshipManager.Views.TraversalJSON)
+            |> render("neighbors.json", entities: entities, meta: meta)
+
+          {:error, reason} ->
+            handle_error(conn, reason)
+        end
+
+      {:error, conn} ->
+        conn
     end
   end
 

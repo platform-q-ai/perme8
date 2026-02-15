@@ -24,8 +24,8 @@ defmodule EntityRelationshipManager.Views.TraversalJSONTest do
       result = TraversalJSON.render("paths.json", %{paths: paths})
 
       assert %{data: [path]} = result
-      assert length(path.nodes) == 2
-      assert length(path.edges) == 0
+      assert [_n1, _n2] = path.nodes
+      assert path.edges == []
     end
   end
 

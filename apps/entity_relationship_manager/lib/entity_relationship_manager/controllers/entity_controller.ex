@@ -39,33 +39,37 @@ defmodule EntityRelationshipManager.EntityController do
 
     case EntityRelationshipManager.ControllerHelpers.build_filters(conn, params, filter_fields) do
       {:ok, filters} ->
-        case validate_pagination(filters) do
-          :ok ->
-            case EntityRelationshipManager.list_entities(workspace_id, filters) do
-              {:ok, entities} ->
-                meta = %{
-                  total: length(entities),
-                  limit: Map.get(filters, :limit, 100),
-                  offset: Map.get(filters, :offset, 0)
-                }
-
-                conn
-                |> put_status(:ok)
-                |> put_view(EntityRelationshipManager.Views.EntityJSON)
-                |> render("index.json", entities: entities, meta: meta)
-
-              {:error, reason} ->
-                handle_error(conn, reason)
-            end
-
-          {:error, message} ->
-            conn
-            |> put_status(:unprocessable_entity)
-            |> json(%{error: "invalid_limit", message: message})
-        end
+        do_list_entities(conn, workspace_id, filters)
 
       {:error, conn} ->
         conn
+    end
+  end
+
+  defp do_list_entities(conn, workspace_id, filters) do
+    case validate_pagination(filters) do
+      {:error, message} ->
+        conn
+        |> put_status(:unprocessable_entity)
+        |> json(%{error: "invalid_limit", message: message})
+
+      :ok ->
+        case EntityRelationshipManager.list_entities(workspace_id, filters) do
+          {:ok, entities} ->
+            meta = %{
+              total: length(entities),
+              limit: Map.get(filters, :limit, 100),
+              offset: Map.get(filters, :offset, 0)
+            }
+
+            conn
+            |> put_status(:ok)
+            |> put_view(EntityRelationshipManager.Views.EntityJSON)
+            |> render("index.json", entities: entities, meta: meta)
+
+          {:error, reason} ->
+            handle_error(conn, reason)
+        end
     end
   end
 
@@ -219,35 +223,27 @@ defmodule EntityRelationshipManager.EntityController do
   def bulk_delete(conn, params) do
     workspace_id = conn.assigns.workspace_id
     entity_ids = params["ids"] || params["entity_ids"] || []
-    mode = parse_mode(params["mode"])
-    opts = [mode: mode]
+    opts = [mode: parse_mode(params["mode"])]
 
+    conn
+    |> do_bulk_delete(workspace_id, entity_ids, opts)
+  end
+
+  defp do_bulk_delete(conn, workspace_id, entity_ids, opts) do
     case EntityRelationshipManager.bulk_delete_entities(workspace_id, entity_ids, opts) do
       {:ok, count} when is_integer(count) ->
-        meta = %{deleted: count}
-
-        conn
-        |> put_status(:ok)
-        |> put_view(EntityRelationshipManager.Views.EntityJSON)
-        |> render("bulk_delete.json", deleted_count: count, errors: [], meta: meta)
+        render_bulk_delete(conn, :ok, count, [])
 
       {:ok, %{deleted_count: count, errors: errors}} ->
-        formatted_errors = format_bulk_errors(errors)
-        meta = %{deleted: count, failed: length(errors)}
         status = if errors != [] and count > 0, do: 207, else: :ok
-
-        conn
-        |> put_status(status)
-        |> put_view(EntityRelationshipManager.Views.EntityJSON)
-        |> render("bulk_delete.json", deleted_count: count, errors: formatted_errors, meta: meta)
+        render_bulk_delete(conn, status, count, errors)
 
       {:error, {:validation_errors, errors}} ->
         formatted_errors = format_bulk_errors(errors)
-        meta = %{deleted: 0}
 
         conn
         |> put_status(:unprocessable_entity)
-        |> json(%{error: "validation_errors", errors: formatted_errors, meta: meta})
+        |> json(%{error: "validation_errors", errors: formatted_errors, meta: %{deleted: 0}})
 
       {:error, :empty_batch} ->
         conn
@@ -257,6 +253,16 @@ defmodule EntityRelationshipManager.EntityController do
       {:error, reason} ->
         handle_error(conn, reason)
     end
+  end
+
+  defp render_bulk_delete(conn, status, count, errors) do
+    formatted_errors = format_bulk_errors(errors)
+    meta = %{deleted: count, failed: length(errors)}
+
+    conn
+    |> put_status(status)
+    |> put_view(EntityRelationshipManager.Views.EntityJSON)
+    |> render("bulk_delete.json", deleted_count: count, errors: formatted_errors, meta: meta)
   end
 
   defp normalize_bulk_entities(entities) do

@@ -292,10 +292,10 @@ defmodule EntityRelationshipManager.Integration.TenantIsolationTest do
       resp_conn =
         get(conn_b, ~p"/api/v1/workspaces/#{ws_b}/traverse?start_id=#{start_id}")
 
-      assert %{"data" => traversed} = json_response(resp_conn, 200)
-      assert length(traversed) == 1
+      assert %{"data" => %{"nodes" => nodes}} = json_response(resp_conn, 200)
+      assert length(nodes) == 1
       # All returned entities belong to workspace B
-      assert hd(traversed)["workspace_id"] == ws_b
+      assert hd(nodes)["workspace_id"] == ws_b
     end
   end
 
@@ -345,7 +345,7 @@ defmodule EntityRelationshipManager.Integration.TenantIsolationTest do
           "properties" => %{"name" => "Should not work"}
         })
 
-      assert json_response(resp_conn, 404)
+      assert %{"error" => "no_schema_configured"} = json_response(resp_conn, 422)
     end
   end
 
