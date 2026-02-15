@@ -78,7 +78,10 @@ defmodule JargaWeb.MixProject do
       {:agents, in_umbrella: true},
       {:jason, "~> 1.2"},
       {:bandit, "~> 1.5"},
-      {:boundary, "~> 0.10", runtime: false}
+      {:boundary, "~> 0.10", runtime: false},
+      # Wallaby browser tests (ExUnit-based, separate from exo-bdd features)
+      {:wallaby, "~> 0.30", runtime: false, only: :test},
+      {:lazy_html, ">= 0.1.0", only: :test}
     ]
   end
 
