@@ -33,6 +33,18 @@ export function assertNoMediumOrHigherAlerts(context: AssertionContext): void {
   expect(mediumOrHigher).toHaveLength(0)
 }
 
+export function assertNoMediumOrHigherAlertsExcluding(
+  context: AssertionContext,
+  excludePattern: string,
+): void {
+  const allAlerts = context.security.alerts
+  const pattern = context.interpolate(excludePattern)
+  const mediumOrHigher = allAlerts.filter(
+    (a) => RiskLevel.isAtLeast(a.risk, 'Medium') && !a.name.includes(pattern),
+  )
+  expect(mediumOrHigher).toHaveLength(0)
+}
+
 export function assertNoCriticalVulnerabilities(context: AssertionContext): void {
   const alerts = context.security.getAlertsByRisk('High')
   expect(alerts).toHaveLength(0)
@@ -125,6 +137,13 @@ Then<TestWorld>('no high risk alerts should be found', function () {
 Then<TestWorld>('no medium or higher risk alerts should be found', function () {
   assertNoMediumOrHigherAlerts(this)
 })
+
+Then<TestWorld>(
+  'no medium or higher risk alerts should be found excluding {string}',
+  function (excludePattern: string) {
+    assertNoMediumOrHigherAlertsExcluding(this, excludePattern)
+  },
+)
 
 Then<TestWorld>('there should be no critical vulnerabilities', function () {
   assertNoCriticalVulnerabilities(this)
