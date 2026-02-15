@@ -19,6 +19,7 @@ defmodule Identity.Application.UseCases.RemoveMember do
 
   alias Identity.Domain.Entities.WorkspaceMember
   alias Identity.Domain.Policies.MembershipPolicy
+  alias Identity.Domain.Policies.WorkspacePermissionsPolicy
 
   @default_membership_repository Identity.Infrastructure.Repositories.MembershipRepository
   @default_notifier Identity.Infrastructure.Notifiers.EmailAndPubSubNotifier
@@ -55,6 +56,8 @@ defmodule Identity.Application.UseCases.RemoveMember do
     notifier = Keyword.get(opts, :notifier, @default_notifier)
 
     with {:ok, workspace} <- verify_actor_membership(actor, workspace_id, membership_repository),
+         {:ok, actor_member} <- get_actor_member(actor, workspace_id, membership_repository),
+         :ok <- check_actor_permission(actor_member),
          {:ok, member} <- find_member(workspace_id, member_email, membership_repository),
          :ok <- validate_can_remove(member),
          {:ok, deleted_member} <- delete_member(member, membership_repository) do
@@ -75,6 +78,23 @@ defmodule Identity.Application.UseCases.RemoveMember do
 
       workspace ->
         {:ok, workspace}
+    end
+  end
+
+  # Get actor's membership record to check their role
+  defp get_actor_member(actor, workspace_id, membership_repository) do
+    case membership_repository.get_member(actor, workspace_id) do
+      nil -> {:error, :unauthorized}
+      member -> {:ok, member}
+    end
+  end
+
+  # Check if actor has permission to remove members
+  defp check_actor_permission(actor_member) do
+    if WorkspacePermissionsPolicy.can?(actor_member.role, :remove_member) do
+      :ok
+    else
+      {:error, :forbidden}
     end
   end
 

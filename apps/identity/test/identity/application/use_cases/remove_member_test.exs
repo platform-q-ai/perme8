@@ -141,6 +141,62 @@ defmodule Identity.Application.UseCases.RemoveMemberTest do
       assert {:error, :cannot_remove_owner} = RemoveMember.execute(params, [])
     end
 
+    test "returns error when actor is a member but lacks permission" do
+      owner = user_fixture()
+      workspace = workspace_fixture(owner)
+      member = user_fixture()
+      guest = user_fixture()
+
+      _member_m = add_workspace_member_fixture(workspace.id, member, :member)
+      _guest_m = add_workspace_member_fixture(workspace.id, guest, :guest)
+
+      # Guest cannot remove members
+      params = %{
+        actor: guest,
+        workspace_id: workspace.id,
+        member_email: member.email
+      }
+
+      assert {:error, :forbidden} = RemoveMember.execute(params, notifier: MockNotifier)
+    end
+
+    test "returns error when actor is a regular member (not admin/owner)" do
+      owner = user_fixture()
+      workspace = workspace_fixture(owner)
+      member1 = user_fixture()
+      member2 = user_fixture()
+
+      _m1 = add_workspace_member_fixture(workspace.id, member1, :member)
+      _m2 = add_workspace_member_fixture(workspace.id, member2, :member)
+
+      params = %{
+        actor: member1,
+        workspace_id: workspace.id,
+        member_email: member2.email
+      }
+
+      assert {:error, :forbidden} = RemoveMember.execute(params, notifier: MockNotifier)
+    end
+
+    test "allows admin to remove member" do
+      owner = user_fixture()
+      workspace = workspace_fixture(owner)
+      admin = user_fixture()
+      member = user_fixture()
+
+      _admin_m = add_workspace_member_fixture(workspace.id, admin, :admin)
+      _member_m = add_workspace_member_fixture(workspace.id, member, :member)
+
+      params = %{
+        actor: admin,
+        workspace_id: workspace.id,
+        member_email: member.email
+      }
+
+      assert {:ok, deleted} = RemoveMember.execute(params, notifier: MockNotifier)
+      assert deleted.user_id == member.id
+    end
+
     test "returns error when actor is not a member" do
       owner = user_fixture()
       workspace = workspace_fixture(owner)

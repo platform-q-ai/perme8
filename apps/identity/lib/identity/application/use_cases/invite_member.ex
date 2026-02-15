@@ -44,7 +44,6 @@ defmodule Identity.Application.UseCases.InviteMember do
 
   ## Returns
 
-  - `{:ok, {:member_added, member}}` - Existing user added successfully
   - `{:ok, {:invitation_sent, invitation}}` - Pending invitation created
   - `{:error, reason}` - Operation failed
   """

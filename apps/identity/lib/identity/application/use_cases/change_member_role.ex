@@ -21,6 +21,7 @@ defmodule Identity.Application.UseCases.ChangeMemberRole do
 
   alias Identity.Domain.Entities.WorkspaceMember
   alias Identity.Domain.Policies.MembershipPolicy
+  alias Identity.Domain.Policies.WorkspacePermissionsPolicy
 
   @default_membership_repository Identity.Infrastructure.Repositories.MembershipRepository
 
@@ -56,6 +57,8 @@ defmodule Identity.Application.UseCases.ChangeMemberRole do
 
     with :ok <- validate_role(new_role),
          {:ok, _workspace} <- verify_actor_membership(actor, workspace_id, membership_repository),
+         {:ok, actor_member} <- get_actor_member(actor, workspace_id, membership_repository),
+         :ok <- check_actor_permission(actor_member),
          {:ok, member} <- find_member(workspace_id, member_email, membership_repository),
          :ok <- validate_can_change_role(member) do
       update_member_role(member, new_role, membership_repository)
@@ -83,6 +86,23 @@ defmodule Identity.Application.UseCases.ChangeMemberRole do
 
       workspace ->
         {:ok, workspace}
+    end
+  end
+
+  # Get actor's membership record to check their role
+  defp get_actor_member(actor, workspace_id, membership_repository) do
+    case membership_repository.get_member(actor, workspace_id) do
+      nil -> {:error, :unauthorized}
+      member -> {:ok, member}
+    end
+  end
+
+  # Check if actor has permission to change member roles
+  defp check_actor_permission(actor_member) do
+    if WorkspacePermissionsPolicy.can?(actor_member.role, :change_member_role) do
+      :ok
+    else
+      {:error, :forbidden}
     end
   end
 

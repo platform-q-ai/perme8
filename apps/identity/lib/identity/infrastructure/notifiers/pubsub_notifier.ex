@@ -7,6 +7,8 @@ defmodule Identity.Infrastructure.Notifiers.PubSubNotifier do
 
   @behaviour Identity.Application.Behaviours.PubSubNotifierBehaviour
 
+  @pubsub Application.compile_env(:identity, :pubsub_module, Jarga.PubSub)
+
   @doc """
   Broadcasts a workspace invitation created event.
 
@@ -20,7 +22,7 @@ defmodule Identity.Infrastructure.Notifiers.PubSubNotifier do
   @impl true
   def broadcast_invitation_created(user_id, workspace_id, workspace_name, invited_by_name, role) do
     Phoenix.PubSub.broadcast(
-      Jarga.PubSub,
+      @pubsub,
       "workspace_invitations",
       {:workspace_invitation_created,
        %{

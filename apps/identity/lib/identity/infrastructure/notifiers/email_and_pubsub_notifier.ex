@@ -14,6 +14,8 @@ defmodule Identity.Infrastructure.Notifiers.EmailAndPubSubNotifier do
   alias Identity.Domain.Entities.Workspace
   alias Identity.Infrastructure.Notifiers.WorkspaceNotifier
 
+  @pubsub Application.compile_env(:identity, :pubsub_module, Jarga.PubSub)
+
   @impl true
   def notify_existing_user(%User{} = user, %Workspace{} = workspace, %User{} = inviter) do
     # Send email notification
@@ -22,7 +24,7 @@ defmodule Identity.Infrastructure.Notifiers.EmailAndPubSubNotifier do
 
     # Broadcast in-app notification via PubSub
     Phoenix.PubSub.broadcast(
-      Jarga.PubSub,
+      @pubsub,
       "user:#{user.id}",
       {:workspace_invitation, workspace.id, workspace.name, inviter.first_name}
     )
@@ -43,7 +45,7 @@ defmodule Identity.Infrastructure.Notifiers.EmailAndPubSubNotifier do
   def notify_user_removed(%User{} = user, %Workspace{} = workspace) do
     # Broadcast in-app notification via PubSub
     Phoenix.PubSub.broadcast(
-      Jarga.PubSub,
+      @pubsub,
       "user:#{user.id}",
       {:workspace_removed, workspace.id}
     )
@@ -55,7 +57,7 @@ defmodule Identity.Infrastructure.Notifiers.EmailAndPubSubNotifier do
   def notify_workspace_updated(%Workspace{} = workspace) do
     # Broadcast in-app notification via PubSub to all workspace members
     Phoenix.PubSub.broadcast(
-      Jarga.PubSub,
+      @pubsub,
       "workspace:#{workspace.id}",
       {:workspace_updated, workspace.id, workspace.name}
     )
@@ -63,14 +65,20 @@ defmodule Identity.Infrastructure.Notifiers.EmailAndPubSubNotifier do
     :ok
   end
 
-  # URL builders - can be overridden via application config
+  # URL builders - configured via identity app config, falls back to jarga config
   defp build_workspace_url(workspace_id) do
-    base_url = Application.get_env(:jarga, :base_url, "http://localhost:4000")
+    base_url =
+      Application.get_env(:identity, :base_url) ||
+        Application.get_env(:jarga, :base_url, "http://localhost:4000")
+
     "#{base_url}/app/workspaces/#{workspace_id}"
   end
 
   defp build_signup_url do
-    base_url = Application.get_env(:jarga, :base_url, "http://localhost:4000")
+    base_url =
+      Application.get_env(:identity, :base_url) ||
+        Application.get_env(:jarga, :base_url, "http://localhost:4000")
+
     "#{base_url}/users/register"
   end
 end
