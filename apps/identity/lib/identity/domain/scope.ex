@@ -16,13 +16,13 @@ defmodule Identity.Domain.Scope do
   growing application requirements.
   """
 
-  defstruct user: nil
+  defstruct user: nil, workspace: nil
 
   @doc """
   Creates a scope for the given user.
 
   Accepts any user struct (Identity.Domain.Entities.User or Jarga.Accounts.Domain.Entities.User)
-  as long as it has an `id` field.
+  as long as it has an `id` field. The workspace defaults to nil.
 
   Returns nil if no user is given.
   """
@@ -31,4 +31,13 @@ defmodule Identity.Domain.Scope do
   end
 
   def for_user(nil), do: nil
+
+  @doc """
+  Creates a scope for the given user and workspace.
+
+  Sets both the user and workspace context, useful for workspace-scoped operations.
+  """
+  def for_user_and_workspace(%{id: _} = user, %{id: _} = workspace) do
+    %__MODULE__{user: user, workspace: workspace}
+  end
 end

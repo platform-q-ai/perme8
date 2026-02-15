@@ -112,7 +112,7 @@ defmodule CommonSteps do
     end
   end
 
-  alias Jarga.Workspaces.Infrastructure.Repositories.MembershipRepository
+  alias Identity.Infrastructure.Repositories.MembershipRepository
 
   defp ensure_workspace_membership(workspace, user, role) do
     role_atom = String.to_existing_atom(role)

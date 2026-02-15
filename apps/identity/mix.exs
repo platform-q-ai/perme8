@@ -17,7 +17,6 @@ defmodule Identity.MixProject do
       compilers: [:boundary, :phoenix_live_view] ++ Mix.compilers(),
       boundary: boundary(),
       listeners: [Phoenix.CodeReloader],
-      # Exclude .exs files from test pattern (Cucumber handles feature steps)
       test_pattern: "*_test.exs"
     ]
   end
@@ -93,6 +92,9 @@ defmodule Identity.MixProject do
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
 
+      # Slug generation
+      {:slugy, "~> 4.1"},
+
       # Utilities
       {:gettext, "~> 0.26"},
       {:jason, "~> 1.2"},
@@ -101,7 +103,6 @@ defmodule Identity.MixProject do
 
       # Testing
       {:wallaby, "~> 0.30", runtime: false, only: :test},
-      {:cucumber, "~> 0.4.2", only: :test},
 
       # Architecture
       {:boundary, "~> 0.10", runtime: false}

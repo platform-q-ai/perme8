@@ -36,8 +36,8 @@ defmodule JargaWeb do
       Jarga.Mailer,
       # Identity for domain entities and scope
       Identity,
-      # Layer boundaries for policies used in web layer
-      Jarga.Workspaces.Application
+      # Domain policies for permissions
+      Jarga.Domain
     ],
     exports: [Endpoint, Telemetry]
 

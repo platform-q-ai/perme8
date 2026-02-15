@@ -160,7 +160,11 @@ export class PlaywrightBrowserAdapter implements BrowserPort {
   // Context management
   async clearContext(): Promise<void> {
     await this.context.clearCookies()
-    await this.guardPage().evaluate(() => localStorage.clear())
+    try {
+      await this.guardPage().evaluate(() => localStorage.clear())
+    } catch {
+      // localStorage may not be accessible on about:blank or error pages
+    }
   }
 
   // Lifecycle

@@ -32,11 +32,9 @@ Given<TestWorld>('I am on {string}', async function (path: string) {
   await navigateTo(this, path)
 })
 
+// Registered only as Given to avoid ambiguous step matches (Cucumber ignores Given/When distinction).
+// Use "Given I navigate to" or "Given I am on" for navigation in any keyword context.
 Given<TestWorld>('I navigate to {string}', async function (path: string) {
-  await navigateTo(this, path)
-})
-
-When<TestWorld>('I navigate to {string}', async function (path: string) {
   await navigateTo(this, path)
 })
 

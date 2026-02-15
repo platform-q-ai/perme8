@@ -94,12 +94,8 @@ defmodule Jarga.ApplicationLayer do
       # Projects
       Jarga.Projects.Application.UseCases.CreateProject,
       Jarga.Projects.Application.UseCases.UpdateProject,
-      Jarga.Projects.Application.UseCases.DeleteProject,
-      # Workspaces
-      Jarga.Workspaces.Application.UseCases.InviteMember,
-      Jarga.Workspaces.Application.UseCases.RemoveMember,
-      Jarga.Workspaces.Application.UseCases.ChangeMemberRole,
-      Jarga.Workspaces.Application.UseCases.CreateNotificationsForPendingInvitations
+      Jarga.Projects.Application.UseCases.DeleteProject
+      # Workspaces — migrated to Identity app
     ]
   end
 
@@ -120,10 +116,8 @@ defmodule Jarga.ApplicationLayer do
       Jarga.Agents.Application.Policies.AgentPolicy,
       Jarga.Agents.Application.Policies.VisibilityPolicy,
       # Documents
-      Jarga.Documents.Application.Policies.DocumentAuthorizationPolicy,
-      # Workspaces
-      Jarga.Workspaces.Application.Policies.MembershipPolicy,
-      Jarga.Workspaces.Application.Policies.PermissionsPolicy
+      Jarga.Documents.Application.Policies.DocumentAuthorizationPolicy
+      # Workspaces — migrated to Identity app
     ]
   end
 
@@ -144,9 +138,8 @@ defmodule Jarga.ApplicationLayer do
       # Documents
       Jarga.Documents.Application.Services.NotificationService,
       # Projects
-      Jarga.Projects.Application.Services.NotificationService,
-      # Workspaces
-      Jarga.Workspaces.Application.Services.NotificationService
+      Jarga.Projects.Application.Services.NotificationService
+      # Workspaces — migrated to Identity app
     ]
   end
 

@@ -27,7 +27,7 @@ defmodule Jarga.Projects.Infrastructure.Schemas.ProjectSchema do
     field(:is_archived, :boolean, default: false)
 
     belongs_to(:user, Identity.Infrastructure.Schemas.UserSchema)
-    belongs_to(:workspace, Jarga.Workspaces.Infrastructure.Schemas.WorkspaceSchema)
+    belongs_to(:workspace, Identity.Infrastructure.Schemas.WorkspaceSchema)
 
     timestamps(type: :utc_datetime)
   end

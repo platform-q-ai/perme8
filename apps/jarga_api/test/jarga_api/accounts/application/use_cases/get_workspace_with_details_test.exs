@@ -6,7 +6,7 @@ defmodule JargaApi.Accounts.Application.UseCases.GetWorkspaceWithDetailsTest do
   alias Jarga.Workspaces
   alias Jarga.Documents
   alias Jarga.Projects
-  alias Jarga.Workspaces.Domain.Entities.Workspace
+  alias Identity.Domain.Entities.Workspace
 
   import Jarga.AccountsFixtures
   import Jarga.WorkspacesFixtures

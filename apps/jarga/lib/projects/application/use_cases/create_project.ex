@@ -21,7 +21,7 @@ defmodule Jarga.Projects.Application.UseCases.CreateProject do
   alias Identity.Domain.Entities.User
   alias Jarga.Projects.Domain.SlugGenerator
   alias Jarga.Workspaces
-  alias Jarga.Workspaces.Application.Policies.PermissionsPolicy
+  alias Jarga.Domain.Policies.DomainPermissionsPolicy, as: PermissionsPolicy
 
   @default_project_repository Jarga.Projects.Infrastructure.Repositories.ProjectRepository
   @default_notifier Jarga.Projects.Infrastructure.Notifiers.EmailAndPubSubNotifier

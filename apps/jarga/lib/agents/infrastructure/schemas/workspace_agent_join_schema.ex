@@ -11,7 +11,7 @@ defmodule Jarga.Agents.Infrastructure.Schemas.WorkspaceAgentJoinSchema do
   import Ecto.Changeset
 
   alias Jarga.Agents.Infrastructure.Schemas.AgentSchema
-  alias Jarga.Workspaces.Infrastructure.Schemas.WorkspaceSchema
+  alias Identity.Infrastructure.Schemas.WorkspaceSchema
 
   @type t :: %__MODULE__{
           id: Ecto.UUID.t(),
