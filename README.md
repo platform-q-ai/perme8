@@ -111,7 +111,7 @@ mix boundary
 
 ### BDD Testing
 
-The project uses Cucumber/Gherkin for behaviour-driven testing, with a TypeScript-based exo-bdd framework supporting multiple adapters:
+The project uses Gherkin for behaviour-driven testing, with a TypeScript-based exo-bdd framework supporting multiple adapters:
 
 - **HTTP** -- REST API testing via Playwright
 - **Browser** -- UI testing via Playwright
