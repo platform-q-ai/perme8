@@ -340,8 +340,8 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jarga_test
 
-      - name: Run 360 tests (auto-discover all configs, exclude security)
-        run: mix exo_test --tag "not @security"
+      - name: Run 360 tests (auto-discover all configs)
+        run: mix exo_test
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jarga_test
 

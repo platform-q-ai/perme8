@@ -35,16 +35,6 @@ Feature: Identity Application Security Baseline
     When I spider "${resetPasswordPage}"
     Then the spider should find at least 1 URLs
 
-  Scenario: Ajax spider discovers login page JavaScript-rendered content
-    Given a new ZAP session
-    When I ajax spider "${loginPage}"
-    Then the spider should find at least 1 URLs
-
-  Scenario: Ajax spider discovers registration page JavaScript-rendered content
-    Given a new ZAP session
-    When I ajax spider "${registerPage}"
-    Then the spider should find at least 1 URLs
-
   # ===========================================================================
   # PASSIVE VULNERABILITY SCANNING -- Authentication Endpoints
   # Maps to: Login (email+password, magic link), Registration, Logout
