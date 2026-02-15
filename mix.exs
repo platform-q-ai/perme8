@@ -21,7 +21,6 @@ defmodule Perme8.MixProject do
           identity: :permanent,
           jarga: :permanent,
           jarga_api: :permanent,
-          perme8_tools: :permanent,
           jarga_web: :permanent
         ],
         overlay: "rel/overlays"
