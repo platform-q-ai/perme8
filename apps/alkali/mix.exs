@@ -9,8 +9,6 @@ defmodule Alkali.MixProject do
       start_permanent: Mix.env() == :prod,
       compilers: [:boundary] ++ Mix.compilers(),
       deps: deps(),
-      test_pattern: "*_test.exs",
-      # Exclude .feature files from test pattern (Cucumber handles these)
       test_paths: ["test"],
       elixirc_paths: elixirc_paths(Mix.env()),
 
@@ -57,12 +55,6 @@ defmodule Alkali.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      # BDD testing
-      {:cucumber, "~> 0.4.2", only: :test},
-
-      # HTML parsing for tests
-      {:floki, "~> 0.36.0", only: :test},
-
       # Environment configuration
       {:dotenvy, "~> 0.8.0", only: [:dev, :test]},
 
