@@ -75,6 +75,42 @@ defmodule Identity.Domain.Policies.WorkspacePermissionsPolicyTest do
     end
   end
 
+  describe ":change_member_role" do
+    test "guest cannot change member role" do
+      refute WorkspacePermissionsPolicy.can?(:guest, :change_member_role)
+    end
+
+    test "member cannot change member role" do
+      refute WorkspacePermissionsPolicy.can?(:member, :change_member_role)
+    end
+
+    test "admin can change member role" do
+      assert WorkspacePermissionsPolicy.can?(:admin, :change_member_role)
+    end
+
+    test "owner can change member role" do
+      assert WorkspacePermissionsPolicy.can?(:owner, :change_member_role)
+    end
+  end
+
+  describe ":remove_member" do
+    test "guest cannot remove member" do
+      refute WorkspacePermissionsPolicy.can?(:guest, :remove_member)
+    end
+
+    test "member cannot remove member" do
+      refute WorkspacePermissionsPolicy.can?(:member, :remove_member)
+    end
+
+    test "admin can remove member" do
+      assert WorkspacePermissionsPolicy.can?(:admin, :remove_member)
+    end
+
+    test "owner can remove member" do
+      assert WorkspacePermissionsPolicy.can?(:owner, :remove_member)
+    end
+  end
+
   describe "default deny" do
     test "returns false for unknown actions" do
       refute WorkspacePermissionsPolicy.can?(:owner, :unknown_action)

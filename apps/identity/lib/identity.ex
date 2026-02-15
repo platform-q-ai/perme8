@@ -849,6 +849,11 @@ defmodule Identity do
 
   @doc """
   Lists all members of a workspace.
+
+  Note: This function does not verify that the caller is a member of the workspace.
+  Callers are responsible for ensuring the user has access to the workspace before
+  calling this function. Consider adding a `list_members/2` variant that accepts
+  the caller user and verifies membership.
   """
   def list_members(workspace_id) do
     MembershipRepository.list_members(workspace_id)

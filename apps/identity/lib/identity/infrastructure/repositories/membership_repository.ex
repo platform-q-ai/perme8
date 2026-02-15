@@ -96,12 +96,19 @@ defmodule Identity.Infrastructure.Repositories.MembershipRepository do
 
   @doc """
   Checks if an email is already a member of a workspace.
+
+  Uses an exists query to avoid loading full associations.
   """
   def email_is_member?(workspace_id, email, repo \\ Repo) do
-    case find_member_by_email(workspace_id, email, repo) do
-      nil -> false
-      _member -> true
-    end
+    import Ecto.Query, only: [from: 2]
+
+    query =
+      from(wm in Identity.Infrastructure.Schemas.WorkspaceMemberSchema,
+        where: wm.workspace_id == ^workspace_id,
+        where: fragment("LOWER(?)", wm.email) == ^String.downcase(email)
+      )
+
+    repo.exists?(query)
   end
 
   @doc """

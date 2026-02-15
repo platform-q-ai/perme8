@@ -144,13 +144,20 @@ defmodule Identity.Infrastructure.Queries.WorkspaceQueries do
   Finds a pending invitation by workspace and user.
 
   Returns a query for a workspace member record that hasn't been accepted yet
-  (joined_at is nil) and matches either the user_id or has no user_id set.
+  (joined_at is nil). Matches invitations where:
+  - The user_id matches directly, OR
+  - The user_id is nil (invited by email) AND the email matches the user's email
+
+  This ensures the query returns at most one result even when multiple
+  pending invitations with nil user_id exist in the same workspace.
   """
   def find_pending_invitation(workspace_id, user_id) do
     from(wm in WorkspaceMemberSchema,
+      join: u in Identity.Infrastructure.Schemas.UserSchema,
+      on: u.id == ^user_id,
       where: wm.workspace_id == ^workspace_id,
       where: is_nil(wm.joined_at),
-      where: wm.user_id == ^user_id or is_nil(wm.user_id)
+      where: wm.user_id == ^user_id or (is_nil(wm.user_id) and wm.email == u.email)
     )
   end
 

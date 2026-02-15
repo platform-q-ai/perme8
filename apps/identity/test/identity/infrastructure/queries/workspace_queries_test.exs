@@ -223,6 +223,45 @@ defmodule Identity.Infrastructure.Queries.WorkspaceQueriesTest do
       assert result != nil
       assert result.email == "invited@example.com"
     end
+
+    test "returns only the matching invitation when multiple pending invitations exist" do
+      owner = user_fixture()
+      workspace = workspace_fixture(owner)
+
+      # Create a user first, then create invitations using their email
+      alice = user_fixture()
+      bob = user_fixture()
+
+      # Create two pending invitations with nil user_id (invited by email)
+      _inv1 = pending_invitation_fixture(workspace.id, alice.email, :member)
+      _inv2 = pending_invitation_fixture(workspace.id, bob.email, :admin)
+
+      # Should find only Alice's invitation, not Bob's
+      result =
+        WorkspaceQueries.find_pending_invitation(workspace.id, alice.id)
+        |> Repo.one()
+
+      assert result != nil
+      assert result.email == alice.email
+    end
+
+    test "returns nil when user has no pending invitation" do
+      owner = user_fixture()
+      workspace = workspace_fixture(owner)
+
+      # Create a pending invitation for someone else
+      other = user_fixture()
+      _inv = pending_invitation_fixture(workspace.id, other.email, :member)
+
+      # User with a different email
+      user = user_fixture()
+
+      result =
+        WorkspaceQueries.find_pending_invitation(workspace.id, user.id)
+        |> Repo.one()
+
+      assert result == nil
+    end
   end
 
   describe "find_pending_invitations_by_email/1" do

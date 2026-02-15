@@ -811,19 +811,15 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
   def handle_event("invite_member", %{"email" => email, "role" => role}, socket) do
     user = socket.assigns.current_scope.user
     workspace_id = socket.assigns.workspace.id
-    role_atom = String.to_existing_atom(role)
+
+    role_atom =
+      try do
+        String.to_existing_atom(role)
+      rescue
+        ArgumentError -> :invalid
+      end
 
     case Workspaces.invite_member(user, workspace_id, email, role_atom) do
-      {:ok, {:member_added, _member}} ->
-        # Reload members
-        members = Workspaces.list_members(workspace_id)
-
-        {:noreply,
-         socket
-         |> assign(:members, members)
-         |> assign(:invite_form, to_form(%{"email" => "", "role" => "member"}))
-         |> put_flash(:info, "Member added successfully and notified via email")}
-
       {:ok, {:invitation_sent, _invitation}} ->
         # Reload members (to show pending invitation)
         members = Workspaces.list_members(workspace_id)
