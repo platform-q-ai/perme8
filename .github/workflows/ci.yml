@@ -26,9 +26,14 @@ jobs:
           filters: |
             exo_bdd:
               - 'tools/exo-bdd/**'
+              - '!tools/exo-bdd/**/*.md'
             umbrella:
               - '**'
               - '!tools/exo-bdd/**'
+              - '!**/*.md'
+              - '!docs/**'
+              - '!LICENSE*'
+              - '!.Claude/**'
 
   exo-bdd:
     name: exo-bdd tests
