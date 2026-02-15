@@ -16,8 +16,8 @@ Feature: Document CRUD Operations
 
   Scenario: Owner creates a document in workspace
     Given I am on "${baseUrl}/users/log-in"
-    When I fill "#login_form_password_email" with "alice@example.com"
-    And I fill "#login_form_password_password" with "password123"
+    When I fill "#login_form_password_email" with "${ownerEmail}"
+    And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button
     And I wait for the page to load
     And I navigate to "${baseUrl}/app/workspaces/product-team"
@@ -32,8 +32,8 @@ Feature: Document CRUD Operations
 
   Scenario: Admin creates a document in workspace
     Given I am on "${baseUrl}/users/log-in"
-    When I fill "#login_form_password_email" with "bob@example.com"
-    And I fill "#login_form_password_password" with "password123"
+    When I fill "#login_form_password_email" with "${adminEmail}"
+    And I fill "#login_form_password_password" with "${adminPassword}"
     And I click the "Log in and stay logged in" button
     And I wait for the page to load
     And I navigate to "${baseUrl}/app/workspaces/product-team"
@@ -48,8 +48,8 @@ Feature: Document CRUD Operations
 
   Scenario: Member creates a document in workspace
     Given I am on "${baseUrl}/users/log-in"
-    When I fill "#login_form_password_email" with "charlie@example.com"
-    And I fill "#login_form_password_password" with "password123"
+    When I fill "#login_form_password_email" with "${memberEmail}"
+    And I fill "#login_form_password_password" with "${memberPassword}"
     And I click the "Log in and stay logged in" button
     And I wait for the page to load
     And I navigate to "${baseUrl}/app/workspaces/product-team"
@@ -64,8 +64,8 @@ Feature: Document CRUD Operations
 
   Scenario: Guest cannot create documents
     Given I am on "${baseUrl}/users/log-in"
-    When I fill "#login_form_password_email" with "diana@example.com"
-    And I fill "#login_form_password_password" with "password123"
+    When I fill "#login_form_password_email" with "${guestEmail}"
+    And I fill "#login_form_password_password" with "${guestPassword}"
     And I click the "Log in and stay logged in" button
     And I wait for the page to load
     And I navigate to "${baseUrl}/app/workspaces/product-team"
@@ -74,8 +74,8 @@ Feature: Document CRUD Operations
 
   Scenario: Document slug handles special characters
     Given I am on "${baseUrl}/users/log-in"
-    When I fill "#login_form_password_email" with "alice@example.com"
-    And I fill "#login_form_password_password" with "password123"
+    When I fill "#login_form_password_email" with "${ownerEmail}"
+    And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button
     And I wait for the page to load
     And I navigate to "${baseUrl}/app/workspaces/product-team"
@@ -93,8 +93,8 @@ Feature: Document CRUD Operations
   Scenario: Owner updates their own document title
     # Precondition: alice owns a document "Draft Roadmap" in product-team (seeded)
     Given I am on "${baseUrl}/users/log-in"
-    When I fill "#login_form_password_email" with "alice@example.com"
-    And I fill "#login_form_password_password" with "password123"
+    When I fill "#login_form_password_email" with "${ownerEmail}"
+    And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button
     And I wait for the page to load
     And I navigate to "${baseUrl}/app/workspaces/product-team/documents/draft-roadmap"
@@ -110,8 +110,8 @@ Feature: Document CRUD Operations
   Scenario: Owner changes document visibility to public
     # Precondition: alice owns a private document (seeded)
     Given I am on "${baseUrl}/users/log-in"
-    When I fill "#login_form_password_email" with "alice@example.com"
-    And I fill "#login_form_password_password" with "password123"
+    When I fill "#login_form_password_email" with "${ownerEmail}"
+    And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button
     And I wait for the page to load
     And I navigate to "${baseUrl}/app/workspaces/product-team/documents/private-doc"
@@ -124,8 +124,8 @@ Feature: Document CRUD Operations
   Scenario: Owner changes document visibility to private
     # Precondition: alice owns a public document (seeded)
     Given I am on "${baseUrl}/users/log-in"
-    When I fill "#login_form_password_email" with "alice@example.com"
-    And I fill "#login_form_password_password" with "password123"
+    When I fill "#login_form_password_email" with "${ownerEmail}"
+    And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button
     And I wait for the page to load
     And I navigate to "${baseUrl}/app/workspaces/product-team/documents/public-doc"
@@ -138,8 +138,8 @@ Feature: Document CRUD Operations
   Scenario: Guest cannot edit any documents
     # Precondition: a public document exists (seeded)
     Given I am on "${baseUrl}/users/log-in"
-    When I fill "#login_form_password_email" with "diana@example.com"
-    And I fill "#login_form_password_password" with "password123"
+    When I fill "#login_form_password_email" with "${guestEmail}"
+    And I fill "#login_form_password_password" with "${guestPassword}"
     And I click the "Log in and stay logged in" button
     And I wait for the page to load
     And I navigate to "${baseUrl}/app/workspaces/product-team/documents/public-doc"
@@ -150,8 +150,8 @@ Feature: Document CRUD Operations
   Scenario: Update document with empty title
     # Precondition: alice owns a document "Valid Title" (seeded)
     Given I am on "${baseUrl}/users/log-in"
-    When I fill "#login_form_password_email" with "alice@example.com"
-    And I fill "#login_form_password_password" with "password123"
+    When I fill "#login_form_password_email" with "${ownerEmail}"
+    And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button
     And I wait for the page to load
     And I navigate to "${baseUrl}/app/workspaces/product-team/documents/valid-title"
@@ -169,8 +169,8 @@ Feature: Document CRUD Operations
   Scenario: Owner pins their own document
     # Precondition: alice owns an unpinned document (seeded)
     Given I am on "${baseUrl}/users/log-in"
-    When I fill "#login_form_password_email" with "alice@example.com"
-    And I fill "#login_form_password_password" with "password123"
+    When I fill "#login_form_password_email" with "${ownerEmail}"
+    And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button
     And I wait for the page to load
     And I navigate to "${baseUrl}/app/workspaces/product-team/documents/important-doc"
@@ -183,8 +183,8 @@ Feature: Document CRUD Operations
   Scenario: Owner unpins their own document
     # Precondition: alice owns a pinned document (seeded)
     Given I am on "${baseUrl}/users/log-in"
-    When I fill "#login_form_password_email" with "alice@example.com"
-    And I fill "#login_form_password_password" with "password123"
+    When I fill "#login_form_password_email" with "${ownerEmail}"
+    And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button
     And I wait for the page to load
     And I navigate to "${baseUrl}/app/workspaces/product-team/documents/pinned-doc"
@@ -197,8 +197,8 @@ Feature: Document CRUD Operations
   Scenario: Guest cannot pin any documents
     # Precondition: a public document exists (seeded)
     Given I am on "${baseUrl}/users/log-in"
-    When I fill "#login_form_password_email" with "diana@example.com"
-    And I fill "#login_form_password_password" with "password123"
+    When I fill "#login_form_password_email" with "${guestEmail}"
+    And I fill "#login_form_password_password" with "${guestPassword}"
     And I click the "Log in and stay logged in" button
     And I wait for the page to load
     And I navigate to "${baseUrl}/app/workspaces/product-team/documents/public-doc"
@@ -210,8 +210,8 @@ Feature: Document CRUD Operations
   Scenario: Owner deletes their own document
     # Precondition: alice owns a document "Old Doc" (seeded)
     Given I am on "${baseUrl}/users/log-in"
-    When I fill "#login_form_password_email" with "alice@example.com"
-    And I fill "#login_form_password_password" with "password123"
+    When I fill "#login_form_password_email" with "${ownerEmail}"
+    And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button
     And I wait for the page to load
     And I navigate to "${baseUrl}/app/workspaces/product-team/documents/old-doc"
@@ -226,8 +226,8 @@ Feature: Document CRUD Operations
   Scenario: Guest cannot delete any documents
     # Precondition: a public document exists (seeded)
     Given I am on "${baseUrl}/users/log-in"
-    When I fill "#login_form_password_email" with "diana@example.com"
-    And I fill "#login_form_password_password" with "password123"
+    When I fill "#login_form_password_email" with "${guestEmail}"
+    And I fill "#login_form_password_password" with "${guestPassword}"
     And I click the "Log in and stay logged in" button
     And I wait for the page to load
     And I navigate to "${baseUrl}/app/workspaces/product-team/documents/public-doc"
