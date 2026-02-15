@@ -349,6 +349,30 @@ describe('Security Steps', () => {
       assertNoMediumOrHigherAlertsExcluding(world, 'CSP:')
     })
 
+    // ── Test 13d: 'no medium or higher excluding' supports comma-separated patterns
+    test('no medium or higher excluding supports comma-separated patterns', () => {
+      world.security.alerts = [
+        makeAlert({ risk: 'Medium', name: 'CSP: script-src unsafe-inline' }),
+        makeAlert({ risk: 'Medium', name: 'Absence of Anti-CSRF Tokens' }),
+        makeAlert({ risk: 'Low', name: 'Cookie Without Secure Flag' }),
+      ]
+
+      assertNoMediumOrHigherAlertsExcluding(world, 'CSP:, Absence of Anti-CSRF')
+    })
+
+    // ── Test 13e: comma-separated fails when non-excluded alert remains
+    test('no medium or higher excluding with comma-separated fails when non-excluded remains', () => {
+      world.security.alerts = [
+        makeAlert({ risk: 'Medium', name: 'CSP: script-src unsafe-inline' }),
+        makeAlert({ risk: 'Medium', name: 'Absence of Anti-CSRF Tokens' }),
+        makeAlert({ risk: 'Medium', name: 'Missing Anti-clickjacking Header' }),
+      ]
+
+      expect(() => {
+        assertNoMediumOrHigherAlertsExcluding(world, 'CSP:, Absence of Anti-CSRF')
+      }).toThrow()
+    })
+
     // ── Test 14: 'there should be N alerts' passes for exact match ─────────
     test('there should be N alerts passes for exact count', () => {
       world.security.alertCount = 3

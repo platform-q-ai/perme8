@@ -35,12 +35,14 @@ export function assertNoMediumOrHigherAlerts(context: AssertionContext): void {
 
 export function assertNoMediumOrHigherAlertsExcluding(
   context: AssertionContext,
-  excludePattern: string,
+  excludePatterns: string,
 ): void {
   const allAlerts = context.security.alerts
-  const pattern = context.interpolate(excludePattern)
+  const patterns = context.interpolate(excludePatterns).split(',').map((p) => p.trim())
   const mediumOrHigher = allAlerts.filter(
-    (a) => RiskLevel.isAtLeast(a.risk, 'Medium') && !a.name.includes(pattern),
+    (a) =>
+      RiskLevel.isAtLeast(a.risk, 'Medium') &&
+      !patterns.some((pattern) => a.name.includes(pattern)),
   )
   expect(mediumOrHigher).toHaveLength(0)
 }
