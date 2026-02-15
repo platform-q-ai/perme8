@@ -277,10 +277,14 @@ describe('HTTP Method Steps', () => {
   // ─── I POST raw to {string} with body: ───────────────────────────────
 
   describe('I POST raw to {string} with body:', () => {
-    test('calls http.post with raw string body (no JSON parsing)', async () => {
+    test('calls http.post with raw Buffer body (no JSON parsing)', async () => {
       await httpPostWithRawBody(world, '/api/users', '{this is not valid json}')
 
-      expect(world.http.post).toHaveBeenCalledWith('/api/users', '{this is not valid json}')
+      expect(world.http.setHeader).toHaveBeenCalledWith('Content-Type', 'application/json')
+      const call = (world.http.post as any).mock.calls[0]
+      expect(call[0]).toBe('/api/users')
+      expect(Buffer.isBuffer(call[1])).toBe(true)
+      expect(call[1].toString('utf-8')).toBe('{this is not valid json}')
     })
 
     test('interpolates variables in the raw body', async () => {
@@ -288,7 +292,10 @@ describe('HTTP Method Steps', () => {
 
       await httpPostWithRawBody(world, '/api/workspaces/${wsId}/data', '{invalid: "${wsId}"}')
 
-      expect(world.http.post).toHaveBeenCalledWith('/api/workspaces/abc-123/data', '{invalid: "abc-123"}')
+      const call = (world.http.post as any).mock.calls[0]
+      expect(call[0]).toBe('/api/workspaces/abc-123/data')
+      expect(Buffer.isBuffer(call[1])).toBe(true)
+      expect(call[1].toString('utf-8')).toBe('{invalid: "abc-123"}')
     })
   })
 

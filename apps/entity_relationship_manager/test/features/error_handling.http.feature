@@ -65,10 +65,7 @@ Feature: Error Handling and Validation API
   # Invalid JSON and malformed requests
   # ===========================================================================
 
-  @raw-http
   Scenario: Request with invalid JSON body returns 400
-    # NOTE: Tagged @raw-http because Playwright HTTP adapter may encode string
-    # bodies differently than curl. Verified via curl that server returns 400.
     Given I set bearer token to "${valid-doc-key-product-team}"
     When I POST raw to "/api/v1/workspaces/${workspace-id-product-team}/entities" with body:
       """

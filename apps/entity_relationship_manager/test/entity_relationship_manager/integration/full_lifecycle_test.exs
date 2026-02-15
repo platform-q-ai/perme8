@@ -251,14 +251,6 @@ defmodule EntityRelationshipManager.Integration.FullLifecycleTest do
       |> expect(:get_schema, fn _wid -> {:ok, schema} end)
 
       EntityRelationshipManager.Mocks.GraphRepositoryMock
-      |> expect(:get_entity, fn _wid, id ->
-        assert id == company_id
-        {:ok, company}
-      end)
-      |> expect(:get_entity, fn _wid, id ->
-        assert id == person_id
-        {:ok, person}
-      end)
       |> expect(:create_edge, fn wid, "EMPLOYS", src, tgt, props ->
         assert wid == ws_id
         assert src == company_id
@@ -306,7 +298,7 @@ defmodule EntityRelationshipManager.Integration.FullLifecycleTest do
         assert wid == ws_id
         assert sid == person_id
         assert tid == company_id
-        {:ok, [[person_id, company_id]]}
+        {:ok, [%{nodes: [person, company], edges: []}]}
       end)
 
       resp_conn =
@@ -314,7 +306,10 @@ defmodule EntityRelationshipManager.Integration.FullLifecycleTest do
 
       assert %{"data" => paths} = json_response(resp_conn, 200)
       assert length(paths) == 1
-      assert hd(paths) == [person_id, company_id]
+      path = hd(paths)
+      path_ids = Enum.map(path["nodes"], & &1["id"])
+      assert person_id in path_ids
+      assert company_id in path_ids
 
       # ---------------------------------------------------------------
       # Step 7: Update Person properties
@@ -323,7 +318,7 @@ defmodule EntityRelationshipManager.Integration.FullLifecycleTest do
       |> expect(:get_schema, fn _wid -> {:ok, schema} end)
 
       EntityRelationshipManager.Mocks.GraphRepositoryMock
-      |> expect(:get_entity, fn _wid, id ->
+      |> expect(:get_entity, fn _wid, id, _opts ->
         assert id == person_id
         {:ok, person}
       end)
@@ -360,7 +355,7 @@ defmodule EntityRelationshipManager.Integration.FullLifecycleTest do
       assert %{"data" => del_data, "meta" => meta} = json_response(resp_conn, 200)
       assert del_data["id"] == person_id
       assert del_data["deleted_at"] != nil
-      assert meta["deleted_edge_count"] == 1
+      assert meta["edges_deleted"] == 1
 
       # ---------------------------------------------------------------
       # Step 9: List entities — verify Company still present
@@ -406,7 +401,9 @@ defmodule EntityRelationshipManager.Integration.FullLifecycleTest do
       |> expect(:get_schema, fn _wid -> {:ok, schema} end)
 
       EntityRelationshipManager.Mocks.GraphRepositoryMock
-      |> expect(:get_entity, fn _wid, _id -> {:error, :not_found} end)
+      |> expect(:create_edge, fn _wid, _type, _src, _tgt, _props ->
+        {:error, :source_not_found}
+      end)
 
       resp_conn =
         post(conn, ~p"/api/v1/workspaces/#{ws_id}/edges", %{
@@ -431,7 +428,7 @@ defmodule EntityRelationshipManager.Integration.FullLifecycleTest do
           "properties" => %{"name" => "Alice"}
         })
 
-      assert json_response(resp_conn, 404)
+      assert json_response(resp_conn, 422)
     end
 
     test "edges require valid source and target entities", %{conn: conn} do
@@ -444,8 +441,9 @@ defmodule EntityRelationshipManager.Integration.FullLifecycleTest do
       |> expect(:get_schema, fn _wid -> {:ok, schema} end)
 
       EntityRelationshipManager.Mocks.GraphRepositoryMock
-      |> expect(:get_entity, fn _wid, _sid -> {:ok, source} end)
-      |> expect(:get_entity, fn _wid, _tid -> {:error, :not_found} end)
+      |> expect(:create_edge, fn _wid, _type, _src, _tgt, _props ->
+        {:error, :target_not_found}
+      end)
 
       resp_conn =
         post(conn, ~p"/api/v1/workspaces/#{ws_id}/edges", %{
@@ -637,9 +635,9 @@ defmodule EntityRelationshipManager.Integration.FullLifecycleTest do
           ~p"/api/v1/workspaces/#{ws_id}/traverse?start_id=#{start_id}&direction=out&max_depth=2"
         )
 
-      assert %{"data" => traversed} = json_response(resp_conn, 200)
-      assert length(traversed) == 3
-      ids = Enum.map(traversed, & &1["id"])
+      assert %{"data" => %{"nodes" => nodes, "edges" => _edges}} = json_response(resp_conn, 200)
+      assert length(nodes) == 3
+      ids = Enum.map(nodes, & &1["id"])
       assert start_id in ids
       assert hop1_id in ids
       assert hop2_id in ids

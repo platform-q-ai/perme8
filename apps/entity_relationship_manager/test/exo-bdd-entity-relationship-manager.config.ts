@@ -18,7 +18,7 @@ export default defineConfig({
     },
   ],
   timeout: 300_000,
-  tags: 'not @neo4j and not @raw-http',
+  tags: 'not @neo4j',
   // Map feature-file variable names to values from the seed data.
   // Tokens must match the plaintext tokens in apps/jarga/priv/repo/exo_seeds.exs.
   // Workspace IDs must match the deterministic UUIDs defined in that seed file.
