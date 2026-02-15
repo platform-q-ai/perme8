@@ -18,7 +18,7 @@ Perme8 follows **Clean Architecture** principles throughout, with compile-time b
          (browser)  (REST API)       (graph API)
 
          alkali (standalone static site generator)
-         jarga_tools (development tooling)
+          perme8_tools (development tooling)
 ```
 
 ## Umbrella Apps
@@ -31,7 +31,7 @@ Perme8 follows **Clean Architecture** principles throughout, with compile-time b
 | [`jarga_api`](apps/jarga_api/) | JSON REST API for external integrations | -- |
 | [`entity_relationship_manager`](apps/entity_relationship_manager/) | Schema-driven graph data layer backed by Neo4j and PostgreSQL | 4005 |
 | [`alkali`](apps/alkali/) | Static site generator (standalone, publishable to Hex) | -- |
-| [`jarga_tools`](apps/jarga_tools/) | Development-time Mix tasks and linters | -- |
+| [`perme8_tools`](apps/perme8_tools/) | Development-time Mix tasks and linters | -- |
 
 ## Prerequisites
 

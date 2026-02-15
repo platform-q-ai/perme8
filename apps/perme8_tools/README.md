@@ -1,4 +1,4 @@
-# JargaTools
+# Perme8Tools
 
 Development-time Mix tasks and code quality utilities for the Perme8 platform. Provides linting, validation, and scaffolding tools used during development and in the pre-commit workflow.
 
