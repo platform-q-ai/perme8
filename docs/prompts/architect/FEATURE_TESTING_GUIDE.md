@@ -101,8 +101,7 @@ end
 **Pattern Matching**:
 
 - `{string}` - Matches quoted strings: `"hello"`
-- `{int}` - Matches integers: `42`
-- `{float}` - Matches floats: `3.14`
+- `{int}` - Matches integers: `42` (also used for numeric assertions including floats)
 - `{word}` - Matches single word: `admin`
 
 **Context Parameter**:

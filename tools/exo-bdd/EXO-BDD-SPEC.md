@@ -1286,8 +1286,7 @@ Then<TestWorld>(
 | Parameter | Matches | Example |
 |-----------|---------|---------|
 | `{string}` | Quoted string | `"hello"` or `'hello'` |
-| `{int}` | Integer | `42`, `-7` |
-| `{float}` | Decimal number | `3.14`, `-0.5` |
+| `{int}` | Integer (also used for numeric assertions) | `42`, `-7` |
 | `{word}` | Single word (no spaces) | `GET`, `admin` |
 | `{}` | Any text (anonymous) | Anything |
 
