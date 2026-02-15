@@ -54,7 +54,7 @@ Jarga (core domain) + Identity (authentication)
 |--------|-------------|
 | `DocumentSaveDebouncer` | GenServer that debounces document saves to avoid excessive writes |
 | `PermissionsHelper` | Helper functions for checking user permissions in templates |
-| `AllowEctoSandbox` | Test hook for Ecto sandbox in Wallaby browser tests |
+| `AllowEctoSandbox` | Test hook for Ecto sandbox in browser tests |
 | `NotificationLive.OnMount` | Mount hook for loading notifications on page load |
 
 ## Assets
@@ -81,7 +81,7 @@ mix assets.copy_fonts
 - Phoenix, Phoenix LiveView, Phoenix LiveDashboard -- web framework
 - esbuild, tailwind -- asset compilation
 - Heroicons -- icon components
-- Wallaby, Cucumber -- browser-based BDD testing
+- exo-bdd -- browser-based BDD testing (Gherkin features via Playwright)
 - Boundary -- compile-time boundary enforcement
 
 ## Running
@@ -99,9 +99,9 @@ Visit [`localhost:4000`](http://localhost:4000) in your browser.
 ## Testing
 
 ```bash
-# Run jarga_web tests
+# Run jarga_web unit tests
 mix test apps/jarga_web/test
 
-# Run browser-based BDD feature tests
-mix test apps/jarga_web/test --include feature
+# Run browser-based BDD feature tests (exo-bdd)
+mix exo_test --app jarga_web
 ```
