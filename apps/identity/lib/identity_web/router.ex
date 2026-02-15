@@ -21,14 +21,7 @@ defmodule IdentityWeb.Router do
     plug :put_root_layout, html: {IdentityWeb.Layouts, :root}
     plug :protect_from_forgery
 
-    plug :put_secure_browser_headers, %{
-      "content-security-policy" =>
-        "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' wss:",
-      "strict-transport-security" => "max-age=31536000; includeSubDomains",
-      "x-frame-options" => "DENY",
-      "referrer-policy" => "strict-origin-when-cross-origin",
-      "permissions-policy" => "camera=(), microphone=(), geolocation=()"
-    }
+    plug :put_secure_browser_headers
 
     plug :fetch_current_scope_for_user
   end
