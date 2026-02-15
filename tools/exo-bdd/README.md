@@ -236,28 +236,42 @@ bun run tools/exo-bdd/src/cli/index.ts init --name <project-name> [--dir <target
 ### `run` -- Execute BDD tests
 
 ```bash
-bun run tools/exo-bdd/src/cli/index.ts run --config <path-to-config> [cucumber-js args...]
+bun run tools/exo-bdd/src/cli/index.ts run --config <path-to-config> [--tags <expression>]
 ```
 
 | Flag | Alias | Description |
 |------|-------|-------------|
 | `--config` | `-c` | Path to `exo-bdd-*.config.ts` file (required) |
+| `--tags` | `-t` | Cucumber tag expression (ANDed with config-level `tags`) |
 
-Additional arguments are passed through to cucumber-js (e.g., `--tags`, `--format`).
+Additional arguments are passed through to cucumber-js (e.g., `--format`).
 
 ## Mix Integration
 
 The `mix exo_test` task wraps the CLI runner for Elixir projects:
 
 ```bash
+# Auto-discover and run all exo-bdd configs
+mix exo_test
+
+# Filter by app name (substring match)
+mix exo_test --name entity
+
+# Filter scenarios by tag (ANDed with config-level tags)
+mix exo_test --tag "not @security"
+
+# Combine: run only ERM HTTP tests
+mix exo_test --name entity --tag "not @security"
+
+# Run a specific config file
 mix exo_test --config apps/jarga_web/test/bdd/exo-bdd-jarga-web.config.ts
-mix exo_test -c apps/jarga_web/test/bdd/exo-bdd-jarga-web.config.ts -t @smoke
 ```
 
 | Flag | Alias | Description |
 |------|-------|-------------|
-| `--config` | `-c` | Path to config file (required) |
-| `--tag` | `-t` | Cucumber tag expression |
+| `--config` | `-c` | Path to config file (auto-discovers if omitted) |
+| `--tag` | `-t` | Cucumber tag expression (ANDed with config-level `tags`) |
+| `--name` | `-n` | Substring filter for auto-discovered config names |
 
 ## Development
 
