@@ -27,6 +27,8 @@ export default defineConfig({
     guestPassword: 'hello world!',
     nonMemberEmail: 'eve@example.com',
     nonMemberPassword: 'hello world!',
+    // Agent names (must match exo_seeds_web.exs)
+    agentName: 'Code Helper',
     // Workspace slugs
     productTeamSlug: 'product-team',
     engineeringSlug: 'engineering',
