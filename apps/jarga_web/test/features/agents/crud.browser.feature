@@ -4,14 +4,14 @@ Feature: Agent CRUD Operations
   I want to create, update, and delete AI agents
   So that I can customize my AI assistant experiences
 
-  # Seed data: A test user with email "test@example.com" and password "Password123!"
-  # must exist. Some scenarios require pre-existing agents (seeded or created in prior steps).
+  # Seed data: Uses alice@example.com (owner) from exo_seeds_web.exs.
+  # Some scenarios require pre-existing agents (seeded or created in prior steps).
 
   Background:
     Given I am on "${baseUrl}/users/log-in"
-    When I fill "[data-testid='email']" with "test@example.com"
-    And I fill "[data-testid='password']" with "Password123!"
-    And I click the "Log in" button
+    When I fill "#login_form_password_email" with "${ownerEmail}"
+    And I fill "#login_form_password_password" with "${ownerPassword}"
+    And I click the "Log in and stay logged in" button
     And I wait for the page to load
 
   # Agent Creation
