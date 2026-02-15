@@ -18,7 +18,7 @@ Perme8 follows **Clean Architecture** principles throughout, with compile-time b
          (browser)  (REST API)       (graph API)
 
          alkali (standalone static site generator)
-          perme8_tools (development tooling)
+         perme8_tools (development tooling)
 ```
 
 ## Umbrella Apps
