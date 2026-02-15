@@ -100,6 +100,65 @@ defmodule Identity.Application.UseCases.ChangeMemberRoleTest do
       assert {:error, :cannot_change_owner_role} = ChangeMemberRole.execute(params, [])
     end
 
+    test "returns error when actor is a member but lacks permission" do
+      owner = user_fixture()
+      workspace = workspace_fixture(owner)
+      member = user_fixture()
+      guest = user_fixture()
+
+      _member = add_workspace_member_fixture(workspace.id, member, :member)
+      _guest = add_workspace_member_fixture(workspace.id, guest, :guest)
+
+      # Guest cannot change roles
+      params = %{
+        actor: guest,
+        workspace_id: workspace.id,
+        member_email: member.email,
+        new_role: :admin
+      }
+
+      assert {:error, :forbidden} = ChangeMemberRole.execute(params, [])
+    end
+
+    test "returns error when actor is a regular member (not admin/owner)" do
+      owner = user_fixture()
+      workspace = workspace_fixture(owner)
+      member1 = user_fixture()
+      member2 = user_fixture()
+
+      _m1 = add_workspace_member_fixture(workspace.id, member1, :member)
+      _m2 = add_workspace_member_fixture(workspace.id, member2, :member)
+
+      params = %{
+        actor: member1,
+        workspace_id: workspace.id,
+        member_email: member2.email,
+        new_role: :admin
+      }
+
+      assert {:error, :forbidden} = ChangeMemberRole.execute(params, [])
+    end
+
+    test "allows admin to change member role" do
+      owner = user_fixture()
+      workspace = workspace_fixture(owner)
+      admin = user_fixture()
+      member = user_fixture()
+
+      _admin_m = add_workspace_member_fixture(workspace.id, admin, :admin)
+      _member_m = add_workspace_member_fixture(workspace.id, member, :member)
+
+      params = %{
+        actor: admin,
+        workspace_id: workspace.id,
+        member_email: member.email,
+        new_role: :guest
+      }
+
+      assert {:ok, updated} = ChangeMemberRole.execute(params, [])
+      assert updated.role == :guest
+    end
+
     test "returns error when actor is not a member" do
       owner = user_fixture()
       workspace = workspace_fixture(owner)

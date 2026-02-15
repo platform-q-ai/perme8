@@ -7,15 +7,16 @@ defmodule Identity.Domain.Policies.WorkspacePermissionsPolicy do
 
   Extracted from the original `Jarga.Workspaces.Application.Policies.PermissionsPolicy`,
   covering only workspace-level permissions:
-  - `:view_workspace`, `:edit_workspace`, `:delete_workspace`, `:invite_member`
+  - `:view_workspace`, `:edit_workspace`, `:delete_workspace`
+  - `:invite_member`, `:change_member_role`, `:remove_member`
 
   Project and document permissions are handled by `Jarga.Domain.Policies.DomainPermissionsPolicy`.
 
   ## Role Hierarchy
   - **Guest**: Can only view workspace
   - **Member**: Can only view workspace
-  - **Admin**: Can view, edit workspace, and invite members
-  - **Owner**: Full workspace control (view, edit, delete, invite)
+  - **Admin**: Can view, edit workspace, invite/change role/remove members
+  - **Owner**: Full workspace control (view, edit, delete, invite, change role, remove)
   """
 
   @type role :: :guest | :member | :admin | :owner
@@ -51,6 +52,14 @@ defmodule Identity.Domain.Policies.WorkspacePermissionsPolicy do
 
   # Member management permissions
   def can?(role, :invite_member, _context)
+      when role in [:admin, :owner],
+      do: true
+
+  def can?(role, :change_member_role, _context)
+      when role in [:admin, :owner],
+      do: true
+
+  def can?(role, :remove_member, _context)
       when role in [:admin, :owner],
       do: true
 
