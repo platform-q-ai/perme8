@@ -6,17 +6,21 @@ import { ServerManager, DockerManager } from '../infrastructure/servers/index.ts
 
 export interface RunOptions {
   config: string
+  tags?: string
   passthrough: string[]
 }
 
 export function parseRunArgs(args: string[]): RunOptions {
   let config: string | undefined
+  let tags: string | undefined
   const passthrough: string[] = []
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]
     if (arg === '--config' || arg === '-c') {
       config = args[++i]
+    } else if (arg === '--tags' || arg === '-t') {
+      tags = args[++i]
     } else {
       passthrough.push(arg!)
     }
@@ -26,7 +30,18 @@ export function parseRunArgs(args: string[]): RunOptions {
     throw new Error('Missing required argument: --config <path>')
   }
 
-  return { config, passthrough }
+  return { config, tags, passthrough }
+}
+
+/**
+ * Merges config-level tags with CLI-provided tags using AND semantics.
+ * Returns undefined if neither is provided.
+ */
+export function mergeTags(configTags?: string, cliTags?: string): string | undefined {
+  if (!configTags && !cliTags) return undefined
+  if (!configTags) return cliTags
+  if (!cliTags) return configTags
+  return `(${configTags}) and (${cliTags})`
 }
 
 /**
@@ -242,6 +257,9 @@ export async function runTests(options: RunOptions): Promise<number> {
   // Build steps import path
   const stepsImport = resolve(exoBddRoot, 'src/interface/steps/index.ts')
 
+  // Merge config-level tags with CLI-provided tags
+  const effectiveTags = mergeTags(config.tags, options.tags)
+
   // Build cucumber-js args
   const cucumberArgs = buildCucumberArgs({
     features,
@@ -249,7 +267,7 @@ export async function runTests(options: RunOptions): Promise<number> {
     setupPath,
     stepsImport,
     passthrough: options.passthrough,
-    tags: config.tags,
+    tags: effectiveTags,
   })
 
   const cucumberBin = resolve(exoBddRoot, 'node_modules/.bin/cucumber-js')

@@ -12,13 +12,22 @@ defmodule Mix.Tasks.ExoTest do
       # Run with a specific config file
       mix exo_test --config apps/jarga_web/test/bdd/exo-bdd-jarga-web.config.ts
 
-      # Run with tag filter
-      mix exo_test --config apps/jarga_web/test/bdd/exo-bdd-jarga-web.config.ts --tag @smoke
+      # Run with tag filter (merged with config-level tags via AND)
+      mix exo_test --tag "@smoke"
+      mix exo_test -t "not @security"
+
+      # Filter which config(s) to run by name (substring match)
+      mix exo_test --name entity
+      mix exo_test -n jarga-api
+
+      # Combine: run only ERM HTTP tests
+      mix exo_test --name entity --tag "not @security"
 
   ## Options
 
     * `--config` / `-c` - Path to the exo-bdd config file (optional; discovers all configs under apps/ if omitted)
-    * `--tag` / `-t` - Cucumber tag expression to filter scenarios
+    * `--tag` / `-t` - Cucumber tag expression to filter scenarios (ANDed with config-level tags)
+    * `--name` / `-n` - Substring filter for auto-discovered config names
 
   The config path is resolved relative to the umbrella root.
   """
@@ -26,8 +35,8 @@ defmodule Mix.Tasks.ExoTest do
   use Mix.Task
   use Boundary, top_level?: true
 
-  @switches [config: :string, tag: :string]
-  @aliases [c: :config, t: :tag]
+  @switches [config: :string, tag: :string, name: :string]
+  @aliases [c: :config, t: :tag, n: :name]
 
   @impl Mix.Task
   def run(args) do
@@ -36,12 +45,34 @@ defmodule Mix.Tasks.ExoTest do
     if bun_available?() do
       umbrella_root = umbrella_root()
       tag = Keyword.get(opts, :tag)
+      name = Keyword.get(opts, :name)
 
       config_paths =
         case Keyword.get(opts, :config) do
-          nil -> discover_configs(umbrella_root)
-          path -> [path]
+          nil ->
+            configs = discover_configs(umbrella_root)
+            filtered = filter_configs(configs, name)
+
+            if name && length(filtered) < length(configs) do
+              Mix.shell().info([
+                :cyan,
+                "Filtered to #{length(filtered)} config(s) matching \"#{name}\"\n"
+              ])
+            end
+
+            filtered
+
+          path ->
+            [path]
         end
+
+      if config_paths == [] do
+        Mix.raise("No exo-bdd configs matched --name #{inspect(name)}")
+      end
+
+      if tag do
+        Mix.shell().info([:cyan, "CLI tag filter: #{tag}\n"])
+      end
 
       run_configs(config_paths, umbrella_root, tag)
     else
@@ -104,6 +135,17 @@ defmodule Mix.Tasks.ExoTest do
       nil -> base
       tag_value -> base ++ ["--tags", tag_value]
     end
+  end
+
+  @doc """
+  Filters discovered config paths by a substring match (case-insensitive).
+  Returns all configs when name is nil.
+  """
+  def filter_configs(configs, nil), do: configs
+
+  def filter_configs(configs, name) do
+    downcased = String.downcase(name)
+    Enum.filter(configs, &String.contains?(String.downcase(&1), downcased))
   end
 
   defp discover_configs(umbrella_root) do

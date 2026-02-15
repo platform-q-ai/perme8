@@ -1,6 +1,6 @@
 import { test, expect, describe } from 'bun:test'
 import { resolve } from 'node:path'
-import { parseRunArgs, buildCucumberArgs, generateSetupContent } from '../../src/cli/run.ts'
+import { parseRunArgs, buildCucumberArgs, generateSetupContent, mergeTags } from '../../src/cli/run.ts'
 
 describe('parseRunArgs', () => {
   test('parses --config flag', () => {
@@ -14,10 +14,23 @@ describe('parseRunArgs', () => {
     expect(opts.config).toBe('config.ts')
   })
 
-  test('captures passthrough args', () => {
+  test('parses --tags flag', () => {
+    const opts = parseRunArgs(['--config', 'config.ts', '--tags', '@smoke'])
+    expect(opts.config).toBe('config.ts')
+    expect(opts.tags).toBe('@smoke')
+    expect(opts.passthrough).toEqual([])
+  })
+
+  test('parses -t shorthand for tags', () => {
+    const opts = parseRunArgs(['-c', 'config.ts', '-t', 'not @slow'])
+    expect(opts.tags).toBe('not @slow')
+  })
+
+  test('captures other passthrough args but extracts --tags', () => {
     const opts = parseRunArgs(['--config', 'config.ts', '--tags', '@smoke', '--format', 'progress'])
     expect(opts.config).toBe('config.ts')
-    expect(opts.passthrough).toEqual(['--tags', '@smoke', '--format', 'progress'])
+    expect(opts.tags).toBe('@smoke')
+    expect(opts.passthrough).toEqual(['--format', 'progress'])
   })
 
   test('throws when --config is missing', () => {
@@ -28,10 +41,38 @@ describe('parseRunArgs', () => {
     expect(() => parseRunArgs(['--config'])).toThrow('Missing required argument: --config')
   })
 
-  test('passthrough args before --config are captured', () => {
-    const opts = parseRunArgs(['--tags', '@wip', '--config', 'config.ts'])
+  test('tags is undefined when not provided', () => {
+    const opts = parseRunArgs(['--config', 'config.ts'])
+    expect(opts.tags).toBeUndefined()
+  })
+
+  test('passthrough args exclude parsed flags', () => {
+    const opts = parseRunArgs(['--format', 'progress', '--config', 'config.ts', '--tags', '@api'])
     expect(opts.config).toBe('config.ts')
-    expect(opts.passthrough).toEqual(['--tags', '@wip'])
+    expect(opts.tags).toBe('@api')
+    expect(opts.passthrough).toEqual(['--format', 'progress'])
+  })
+})
+
+describe('mergeTags', () => {
+  test('returns undefined when both are undefined', () => {
+    expect(mergeTags(undefined, undefined)).toBeUndefined()
+  })
+
+  test('returns config tags when CLI tags is undefined', () => {
+    expect(mergeTags('not @neo4j', undefined)).toBe('not @neo4j')
+  })
+
+  test('returns CLI tags when config tags is undefined', () => {
+    expect(mergeTags(undefined, '@smoke')).toBe('@smoke')
+  })
+
+  test('ANDs config and CLI tags with parentheses', () => {
+    expect(mergeTags('not @neo4j', '@smoke')).toBe('(not @neo4j) and (@smoke)')
+  })
+
+  test('handles complex tag expressions', () => {
+    expect(mergeTags('not @neo4j and not @slow', 'not @security')).toBe('(not @neo4j and not @slow) and (not @security)')
   })
 })
 
@@ -90,11 +131,9 @@ describe('buildCucumberArgs', () => {
     const args = buildCucumberArgs({
       ...baseOptions,
       features: './features/**/*.feature',
-      passthrough: ['--tags', '@smoke', '--format', 'progress'],
+      passthrough: ['--format', 'progress'],
     })
 
-    expect(args).toContain('--tags')
-    expect(args).toContain('@smoke')
     expect(args).toContain('--format')
     expect(args).toContain('progress')
   })
@@ -103,12 +142,12 @@ describe('buildCucumberArgs', () => {
     const args = buildCucumberArgs({
       ...baseOptions,
       features: './features/**/*.feature',
-      passthrough: ['--tags', '@smoke'],
+      passthrough: ['--format', 'progress'],
     })
 
     const lastImportIdx = args.lastIndexOf('--import')
-    const tagsIdx = args.indexOf('--tags')
-    expect(tagsIdx).toBeGreaterThan(lastImportIdx)
+    const formatIdx = args.indexOf('--format')
+    expect(formatIdx).toBeGreaterThan(lastImportIdx)
   })
 
   test('includes --tags from config tags option', () => {
