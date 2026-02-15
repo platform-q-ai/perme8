@@ -137,122 +137,6 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jarga_test
 
-  javascript:
-    name: JavaScript Tests
-    needs: changes
-    if: needs.changes.outputs.umbrella == 'true'
-    runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: jarga_test
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Elixir
-        uses: erlef/setup-beam@v1
-        with:
-          version-file: .tool-versions
-          version-type: strict
-
-      - name: Restore deps cache
-        uses: actions/cache@v4
-        with:
-          path: deps
-          key: ${{ runner.os }}-deps-${{ hashFiles('.tool-versions', '**/mix.lock') }}
-          restore-keys: ${{ runner.os }}-deps-
-
-      - name: Restore build cache
-        uses: actions/cache@v4
-        with:
-          path: _build
-          key: ${{ runner.os }}-build-${{ hashFiles('.tool-versions', '**/mix.lock') }}-${{ hashFiles('apps/**/lib/**/*.ex', 'apps/**/mix.exs') }}
-          restore-keys: |
-            ${{ runner.os }}-build-${{ hashFiles('.tool-versions', '**/mix.lock') }}-
-            ${{ runner.os }}-build-
-
-      - name: Install dependencies
-        run: mix deps.get
-
-      - name: Compile dependencies
-        run: mix deps.compile
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: .tool-versions
-
-      - name: Install JavaScript dependencies
-        run: |
-          cd apps/jarga_web/assets
-          npm ci
-          cd ../../identity/assets
-          npm ci
-
-      - name: Install Chrome and ChromeDriver
-        run: |
-          # Install Chrome
-          wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
-          sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
-          sudo apt-get update
-          sudo apt-get install -y google-chrome-stable
-
-          # Install ChromeDriver
-          CHROME_VERSION=$(google-chrome --version | awk '{print $3}' | cut -d '.' -f 1)
-          CHROMEDRIVER_VERSION=$(curl -s "https://googlechromelabs.github.io/chrome-for-testing/LATEST_RELEASE_$CHROME_VERSION")
-          wget -q "https://storage.googleapis.com/chrome-for-testing-public/$CHROMEDRIVER_VERSION/linux64/chromedriver-linux64.zip"
-          unzip -q chromedriver-linux64.zip
-          sudo mv chromedriver-linux64/chromedriver /usr/local/bin/
-          sudo chmod +x /usr/local/bin/chromedriver
-
-          # Verify installation
-          google-chrome --version
-          chromedriver --version
-
-      - name: Build assets
-        run: mix assets.build
-
-      - name: Create test database
-        run: MIX_ENV=test mix ecto.create
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jarga_test
-
-      - name: Run database migrations
-        run: MIX_ENV=test mix ecto.migrate
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jarga_test
-
-      - name: Run JavaScript tests (with retry)
-        uses: nick-fields/retry@v3
-        with:
-          timeout_minutes: 15
-          max_attempts: 2
-          retry_on: error
-          command: mix test --only javascript
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jarga_test
-
-      - name: Upload screenshots on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: screenshots
-          path: tmp/screenshots/
-          retention-days: 7
-
   exo-bdd-360:
     name: 360 tests
     needs: [changes]
@@ -323,12 +207,16 @@ jobs:
         run: npm ci
         working-directory: apps/identity/assets
 
+      - name: Install jarga_web JavaScript dependencies
+        run: npm ci
+        working-directory: apps/jarga_web/assets
+
       - name: Install Playwright browsers
         run: bunx playwright install --with-deps chromium
         working-directory: tools/exo-bdd
 
-      - name: Build identity assets
-        run: mix tailwind identity && mix esbuild identity
+      - name: Build all assets
+        run: mix assets.build
 
       - name: Create test database
         run: MIX_ENV=test mix ecto.create
@@ -348,7 +236,7 @@ jobs:
   deploy:
     name: Deploy to Render
     runs-on: ubuntu-latest
-    needs: [changes, test, javascript, exo-bdd, exo-bdd-360]
+    needs: [changes, test, exo-bdd, exo-bdd-360]
     if: |
       always() &&
       github.event_name == 'push' && github.ref == 'refs/heads/main' &&
