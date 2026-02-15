@@ -21,7 +21,10 @@ export async function httpPostWithBody(ctx: HttpMethodsContext, path: string, do
 }
 
 export async function httpPostWithRawBody(ctx: HttpMethodsContext, path: string, docString: string) {
-  await ctx.http.post(ctx.interpolate(path), ctx.interpolate(docString))
+  ctx.http.setHeader('Content-Type', 'application/json')
+  // Send as Buffer to prevent Playwright from encoding/escaping the string
+  const rawBytes = Buffer.from(ctx.interpolate(docString), 'utf-8')
+  await ctx.http.post(ctx.interpolate(path), rawBytes)
 }
 
 export async function httpPutWithBody(ctx: HttpMethodsContext, path: string, docString: string) {
