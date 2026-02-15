@@ -17,7 +17,6 @@ defmodule Jarga.MixProject do
       compilers: [:boundary, :phoenix_live_view] ++ Mix.compilers(),
       boundary: boundary(),
       listeners: [Phoenix.CodeReloader],
-      # Exclude .feature files from test pattern (Cucumber handles these)
       test_pattern: "*_test.exs",
       test_coverage: [
         tool: ExCoveralls
@@ -49,7 +48,7 @@ defmodule Jarga.MixProject do
   end
 
   # Specifies which paths to compile per environment.
-  # Note: test/features/step_definitions is loaded by Cucumber, not elixirc
+
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
 
