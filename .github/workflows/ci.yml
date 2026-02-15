@@ -119,6 +119,8 @@ jobs:
         run: |
           cd apps/jarga_web/assets
           npm ci
+          cd ../../identity/assets
+          npm ci
 
       - name: Create test database
         run: MIX_ENV=test mix ecto.create
@@ -196,6 +198,8 @@ jobs:
       - name: Install JavaScript dependencies
         run: |
           cd apps/jarga_web/assets
+          npm ci
+          cd ../../identity/assets
           npm ci
 
       - name: Install Chrome and ChromeDriver
@@ -306,9 +310,25 @@ jobs:
       - name: Compile dependencies
         run: mix deps.compile
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .tool-versions
+
       - name: Install exo-bdd dependencies
         run: bun install
         working-directory: tools/exo-bdd
+
+      - name: Install identity JavaScript dependencies
+        run: npm ci
+        working-directory: apps/identity/assets
+
+      - name: Install Playwright browsers
+        run: bunx playwright install --with-deps chromium
+        working-directory: tools/exo-bdd
+
+      - name: Build identity assets
+        run: mix tailwind identity && mix esbuild identity
 
       - name: Create test database
         run: MIX_ENV=test mix ecto.create
@@ -322,6 +342,16 @@ jobs:
 
       - name: Run 360 tests (all apps)
         run: mix exo_test
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jarga_test
+
+      - name: Run 360 tests (identity browser)
+        run: mix exo_test --config apps/identity/test/exo-bdd-identity.config.ts --tag @browser
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jarga_test
+
+      - name: Run 360 tests (identity security)
+        run: mix exo_test --config apps/identity/test/exo-bdd-identity.config.ts --tag @security
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jarga_test
 

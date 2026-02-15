@@ -39,12 +39,21 @@ defmodule Perme8.MixProject do
     [
       setup: ["deps.get"],
       "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
-      "assets.build": ["tailwind jarga", "assets.copy_fonts", "esbuild jarga"],
+      "assets.build": [
+        "tailwind jarga",
+        "assets.copy_fonts",
+        "esbuild jarga",
+        "tailwind identity",
+        "esbuild identity"
+      ],
       "assets.deploy": [
         "tailwind jarga --minify",
         "assets.copy_fonts",
         "esbuild jarga --minify",
-        "phx.digest apps/jarga_web/priv/static -o apps/jarga_web/priv/static"
+        "phx.digest apps/jarga_web/priv/static -o apps/jarga_web/priv/static",
+        "tailwind identity --minify",
+        "esbuild identity --minify",
+        "phx.digest apps/identity/priv/static -o apps/identity/priv/static"
       ],
       precommit: [
         "compile --warnings-as-errors",

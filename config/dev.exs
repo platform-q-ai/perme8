@@ -104,12 +104,16 @@ config :identity, IdentityWeb.Endpoint,
   code_reloader: true,
   debug_errors: true,
   secret_key_base: "dev_identity_secret_key_base_at_least_64_bytes_long_for_security",
-  watchers: []
+  watchers: [
+    esbuild: {Esbuild, :install_and_run, [:identity, ~w(--sourcemap=inline --watch)]},
+    tailwind: {Tailwind, :install_and_run, [:identity, ~w(--watch)]}
+  ]
 
 config :identity, IdentityWeb.Endpoint,
   live_reload: [
     web_console_logger: true,
     patterns: [
+      ~r"priv/static/(?!uploads/).*(js|css|png|jpeg|jpg|gif|svg)$",
       ~r"priv/gettext/.*(po)$",
       ~r"lib/identity_web/(controllers|live|components)/.*(ex|heex)$"
     ]
