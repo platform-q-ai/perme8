@@ -5,17 +5,17 @@ Feature: Create New Blog Post
   So that I don't have to remember required fields
 
   Background:
-    Given I set working directory to "test_site"
-    When I run "mkdir -p content/posts"
+    Given I set variable "site" to "${testTmpDir}/test_site"
+    When I run "rm -rf ${testTmpDir} && mkdir -p ${site}/content/posts"
     Then the command should succeed
 
   Scenario: Create new post with title
-    When I run "mix alkali.new.post 'Getting Started with Elixir'"
+    When I run "mix alkali.new.post 'Getting Started with Elixir' ${site}"
     Then the command should succeed
     And stdout should contain "getting-started-with-elixir.md"
-    When I run "test -f content/posts/2024-01-15-getting-started-with-elixir.md && echo exists"
+    When I run "find ${site}/content/posts -name '*getting-started-with-elixir.md' | head -1 | xargs test -f && echo exists"
     Then stdout should contain "exists"
-    When I run "cat content/posts/2024-01-15-getting-started-with-elixir.md"
+    When I run "cat ${site}/content/posts/*getting-started-with-elixir.md"
     Then the command should succeed
     And stdout should contain "title"
     And stdout should contain "Getting Started with Elixir"
@@ -26,31 +26,37 @@ Feature: Create New Blog Post
     And stdout should match "date"
 
   Scenario: Create new post with title and site path
-    When I run "mix alkali.new.post 'Another Post' test_site"
+    When I run "mkdir -p ${site}/nested_site/content/posts"
     Then the command should succeed
-    When I run "test -f test_site/content/posts/2024-01-15-another-post.md && echo exists"
+    When I run "mix alkali.new.post 'Another Post' ${site}/nested_site"
+    Then the command should succeed
+    When I run "find ${site}/nested_site/content/posts -name '*another-post.md' | head -1 | xargs test -f && echo exists"
     Then stdout should contain "exists"
-    When I run "cat test_site/content/posts/2024-01-15-another-post.md"
+    When I run "cat ${site}/nested_site/content/posts/*another-post.md"
     Then the command should succeed
     And stdout should contain "title"
     And stdout should contain "Another Post"
 
   Scenario: Create new post with --path option
-    When I run "mix alkali.new.post 'Option Post' --path test_site"
+    When I run "mkdir -p ${site}/path_site/content/posts"
     Then the command should succeed
-    When I run "test -f test_site/content/posts/2024-01-15-option-post.md && echo exists"
+    When I run "mix alkali.new.post 'Option Post' --path ${site}/path_site"
+    Then the command should succeed
+    When I run "find ${site}/path_site/content/posts -name '*option-post.md' | head -1 | xargs test -f && echo exists"
     Then stdout should contain "exists"
-    When I run "cat test_site/content/posts/2024-01-15-option-post.md"
+    When I run "cat ${site}/path_site/content/posts/*option-post.md"
     Then the command should succeed
     And stdout should contain "title"
     And stdout should contain "Option Post"
 
   Scenario: Short task command with site path
-    When I run "mix alkali.post 'Short Post' test_site"
+    When I run "mkdir -p ${site}/short_site/content/posts"
     Then the command should succeed
-    When I run "test -f test_site/content/posts/2024-01-15-short-post.md && echo exists"
+    When I run "mix alkali.post 'Short Post' ${site}/short_site"
+    Then the command should succeed
+    When I run "find ${site}/short_site/content/posts -name '*short-post.md' | head -1 | xargs test -f && echo exists"
     Then stdout should contain "exists"
-    When I run "cat test_site/content/posts/2024-01-15-short-post.md"
+    When I run "cat ${site}/short_site/content/posts/*short-post.md"
     Then the command should succeed
     And stdout should contain "title"
     And stdout should contain "Short Post"
