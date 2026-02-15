@@ -43,38 +43,7 @@ defmodule Mix.Tasks.ExoTest do
     {opts, _rest, _} = OptionParser.parse(args, switches: @switches, aliases: @aliases)
 
     if bun_available?() do
-      umbrella_root = umbrella_root()
-      tag = Keyword.get(opts, :tag)
-      name = Keyword.get(opts, :name)
-
-      config_paths =
-        case Keyword.get(opts, :config) do
-          nil ->
-            configs = discover_configs(umbrella_root)
-            filtered = filter_configs(configs, name)
-
-            if name && length(filtered) < length(configs) do
-              Mix.shell().info([
-                :cyan,
-                "Filtered to #{length(filtered)} config(s) matching \"#{name}\"\n"
-              ])
-            end
-
-            filtered
-
-          path ->
-            [path]
-        end
-
-      if config_paths == [] do
-        Mix.raise("No exo-bdd configs matched --name #{inspect(name)}")
-      end
-
-      if tag do
-        Mix.shell().info([:cyan, "CLI tag filter: #{tag}\n"])
-      end
-
-      run_configs(config_paths, umbrella_root, tag)
+      do_run(opts)
     else
       Mix.shell().info([
         :yellow,
@@ -83,6 +52,42 @@ defmodule Mix.Tasks.ExoTest do
       ])
 
       :ok
+    end
+  end
+
+  defp do_run(opts) do
+    umbrella_root = umbrella_root()
+    tag = Keyword.get(opts, :tag)
+    name = Keyword.get(opts, :name)
+    config_paths = resolve_config_paths(opts, umbrella_root, name)
+
+    if config_paths == [] do
+      Mix.raise("No exo-bdd configs matched --name #{inspect(name)}")
+    end
+
+    if tag, do: Mix.shell().info([:cyan, "CLI tag filter: #{tag}\n"])
+    run_configs(config_paths, umbrella_root, tag)
+  end
+
+  defp resolve_config_paths(opts, umbrella_root, name) do
+    case Keyword.get(opts, :config) do
+      nil ->
+        configs = discover_configs(umbrella_root)
+        filtered = filter_configs(configs, name)
+        log_filter_info(filtered, configs, name)
+        filtered
+
+      path ->
+        [path]
+    end
+  end
+
+  defp log_filter_info(filtered, configs, name) do
+    if name && length(filtered) < length(configs) do
+      Mix.shell().info([
+        :cyan,
+        "Filtered to #{length(filtered)} config(s) matching \"#{name}\"\n"
+      ])
     end
   end
 

@@ -224,6 +224,11 @@ if config_env() == :prod do
   end
 end
 
+# ERM real repos flag — set by exo-bdd integration tests via ERM_REAL_REPOS=true
+if System.get_env("ERM_REAL_REPOS") == "true" do
+  config :entity_relationship_manager, :real_repos, true
+end
+
 # Load .env file in development and test environments
 if config_env() in [:dev, :test] do
   env_files =

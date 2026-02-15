@@ -242,7 +242,6 @@ defmodule EntityRelationshipManager.Infrastructure.Repositories.InMemoryGraphRep
     direction = Keyword.get(opts, :direction, "both")
     edge_type = Keyword.get(opts, :edge_type)
 
-    # Verify entity exists
     case get_entity(workspace_id, entity_id) do
       {:error, :not_found} ->
         {:error, :not_found}
@@ -255,33 +254,10 @@ defmodule EntityRelationshipManager.Infrastructure.Repositories.InMemoryGraphRep
 
         neighbor_ids =
           edges
-          |> Enum.flat_map(fn edge ->
-            case direction do
-              "out" ->
-                if edge.source_id == entity_id, do: [edge.target_id], else: []
-
-              "in" ->
-                if edge.target_id == entity_id, do: [edge.source_id], else: []
-
-              _ ->
-                cond do
-                  edge.source_id == entity_id -> [edge.target_id]
-                  edge.target_id == entity_id -> [edge.source_id]
-                  true -> []
-                end
-            end
-          end)
+          |> Enum.flat_map(&neighbor_ids_for_edge(&1, entity_id, direction))
           |> Enum.uniq()
 
-        neighbors =
-          neighbor_ids
-          |> Enum.flat_map(fn nid ->
-            case get_entity(workspace_id, nid) do
-              {:ok, entity} -> [entity]
-              _ -> []
-            end
-          end)
-
+        neighbors = resolve_entities(workspace_id, neighbor_ids)
         {:ok, neighbors}
     end
   end
@@ -320,27 +296,8 @@ defmodule EntityRelationshipManager.Infrastructure.Repositories.InMemoryGraphRep
           |> Enum.filter(&is_nil(&1.deleted_at))
 
         visited = bfs_traverse(start_id, edges, max_depth)
-
-        entities =
-          visited
-          |> Enum.flat_map(fn nid ->
-            case get_entity(workspace_id, nid) do
-              {:ok, entity} -> [entity]
-              _ -> []
-            end
-          end)
-
-        # Include the start entity if not already present
-        entity_ids = MapSet.new(Enum.map(entities, & &1.id))
-
-        entities =
-          if MapSet.member?(entity_ids, start_entity.id) do
-            entities
-          else
-            [start_entity | entities]
-          end
-
-        {:ok, entities}
+        entities = resolve_entities(workspace_id, visited)
+        {:ok, ensure_start_entity(entities, start_entity)}
     end
   end
 
@@ -527,6 +484,47 @@ defmodule EntityRelationshipManager.Infrastructure.Repositories.InMemoryGraphRep
   defp maybe_filter_edge_type(edges, nil), do: edges
   defp maybe_filter_edge_type(edges, type), do: Enum.filter(edges, &(&1.type == type))
 
+  defp neighbor_ids_for_edge(edge, entity_id, "out") do
+    if edge.source_id == entity_id, do: [edge.target_id], else: []
+  end
+
+  defp neighbor_ids_for_edge(edge, entity_id, "in") do
+    if edge.target_id == entity_id, do: [edge.source_id], else: []
+  end
+
+  defp neighbor_ids_for_edge(edge, entity_id, _direction) do
+    cond do
+      edge.source_id == entity_id -> [edge.target_id]
+      edge.target_id == entity_id -> [edge.source_id]
+      true -> []
+    end
+  end
+
+  defp resolve_entities(workspace_id, ids) do
+    Enum.flat_map(ids, fn id ->
+      case get_entity(workspace_id, id) do
+        {:ok, entity} -> [entity]
+        _ -> []
+      end
+    end)
+  end
+
+  defp ensure_start_entity(entities, start_entity) do
+    entity_ids = MapSet.new(entities, & &1.id)
+
+    if MapSet.member?(entity_ids, start_entity.id) do
+      entities
+    else
+      [start_entity | entities]
+    end
+  end
+
+  defp unvisited_neighbors(current_id, edges, visited) do
+    edges
+    |> Enum.flat_map(&neighbor_ids_for_edge(&1, current_id, "both"))
+    |> Enum.reject(&MapSet.member?(visited, &1))
+  end
+
   defp cascade_delete_edges(workspace_id, entity_id, now) do
     all_edges(workspace_id)
     |> Enum.filter(fn edge ->
@@ -558,42 +556,48 @@ defmodule EntityRelationshipManager.Infrastructure.Repositories.InMemoryGraphRep
         found_paths
 
       {{:value, {current_id, path}}, rest_queue} ->
-        if current_id == target_id and length(path) > 1 do
-          # Found a path — collect it and continue
-          path_data = %{
-            "nodes" => path,
-            "edges" => path_edges(path, edges)
-          }
-
-          do_bfs_paths(rest_queue, target_id, edges, max_depth, MapSet.new(), [
-            path_data | found_paths
-          ])
-        else
-          if length(path) - 1 >= max_depth do
-            do_bfs_paths(rest_queue, target_id, edges, max_depth, MapSet.new(), found_paths)
-          else
-            neighbors =
-              edges
-              |> Enum.flat_map(fn edge ->
-                cond do
-                  edge.source_id == current_id and edge.target_id not in path ->
-                    [{edge.target_id, path ++ [edge.target_id]}]
-
-                  edge.target_id == current_id and edge.source_id not in path ->
-                    [{edge.source_id, path ++ [edge.source_id]}]
-
-                  true ->
-                    []
-                end
-              end)
-
-            new_queue =
-              Enum.reduce(neighbors, rest_queue, fn item, q -> :queue.in(item, q) end)
-
-            do_bfs_paths(new_queue, target_id, edges, max_depth, MapSet.new(), found_paths)
-          end
-        end
+        process_bfs_path_node(
+          rest_queue,
+          current_id,
+          path,
+          target_id,
+          edges,
+          max_depth,
+          found_paths
+        )
     end
+  end
+
+  defp process_bfs_path_node(queue, target_id, path, target_id, edges, max_depth, found_paths)
+       when length(path) > 1 do
+    path_data = %{"nodes" => path, "edges" => path_edges(path, edges)}
+    do_bfs_paths(queue, target_id, edges, max_depth, MapSet.new(), [path_data | found_paths])
+  end
+
+  defp process_bfs_path_node(queue, _current_id, path, target_id, edges, max_depth, found_paths)
+       when length(path) - 1 >= max_depth do
+    do_bfs_paths(queue, target_id, edges, max_depth, MapSet.new(), found_paths)
+  end
+
+  defp process_bfs_path_node(queue, current_id, path, target_id, edges, max_depth, found_paths) do
+    neighbors = expand_path_neighbors(current_id, path, edges)
+    new_queue = Enum.reduce(neighbors, queue, fn item, q -> :queue.in(item, q) end)
+    do_bfs_paths(new_queue, target_id, edges, max_depth, MapSet.new(), found_paths)
+  end
+
+  defp expand_path_neighbors(current_id, path, edges) do
+    Enum.flat_map(edges, fn edge ->
+      cond do
+        edge.source_id == current_id and edge.target_id not in path ->
+          [{edge.target_id, path ++ [edge.target_id]}]
+
+        edge.target_id == current_id and edge.source_id not in path ->
+          [{edge.source_id, path ++ [edge.source_id]}]
+
+        true ->
+          []
+      end
+    end)
   end
 
   defp path_edges(path, edges) do
@@ -623,30 +627,19 @@ defmodule EntityRelationshipManager.Infrastructure.Repositories.InMemoryGraphRep
       {:empty, _} ->
         MapSet.to_list(visited)
 
+      {{:value, {_current_id, depth}}, rest_queue} when depth >= max_depth ->
+        do_bfs_traverse(rest_queue, edges, max_depth, visited)
+
       {{:value, {current_id, depth}}, rest_queue} ->
-        if depth >= max_depth do
-          do_bfs_traverse(rest_queue, edges, max_depth, visited)
-        else
-          neighbor_ids =
-            edges
-            |> Enum.flat_map(fn edge ->
-              cond do
-                edge.source_id == current_id -> [edge.target_id]
-                edge.target_id == current_id -> [edge.source_id]
-                true -> []
-              end
-            end)
-            |> Enum.reject(&MapSet.member?(visited, &1))
+        neighbor_ids = unvisited_neighbors(current_id, edges, visited)
+        new_visited = Enum.reduce(neighbor_ids, visited, &MapSet.put(&2, &1))
 
-          new_visited = Enum.reduce(neighbor_ids, visited, &MapSet.put(&2, &1))
+        new_queue =
+          Enum.reduce(neighbor_ids, rest_queue, fn nid, q ->
+            :queue.in({nid, depth + 1}, q)
+          end)
 
-          new_queue =
-            Enum.reduce(neighbor_ids, rest_queue, fn nid, q ->
-              :queue.in({nid, depth + 1}, q)
-            end)
-
-          do_bfs_traverse(new_queue, edges, max_depth, new_visited)
-        end
+        do_bfs_traverse(new_queue, edges, max_depth, new_visited)
     end
   end
 end

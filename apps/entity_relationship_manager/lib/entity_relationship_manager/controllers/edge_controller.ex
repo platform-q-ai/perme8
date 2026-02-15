@@ -139,44 +139,42 @@ defmodule EntityRelationshipManager.EdgeController do
       end)
 
     mode = parse_mode(params["mode"])
-    opts = [mode: mode]
+    do_bulk_create_edges(conn, workspace_id, edges, mode)
+  end
 
-    case EntityRelationshipManager.bulk_create_edges(workspace_id, edges, opts) do
+  defp do_bulk_create_edges(conn, workspace_id, edges, mode) do
+    case EntityRelationshipManager.bulk_create_edges(workspace_id, edges, mode: mode) do
       {:ok, created} when is_list(created) ->
-        meta = %{created: length(created)}
-
-        conn
-        |> put_status(:created)
-        |> put_view(EntityRelationshipManager.Views.EdgeJSON)
-        |> render("bulk.json", edges: created, errors: [], meta: meta)
+        render_bulk_edges(conn, :created, created, [])
 
       {:ok, %{created: created, errors: errors}} ->
-        formatted_errors = format_bulk_errors(errors)
-        meta = %{created: length(created), failed: length(errors)}
-
-        status =
-          cond do
-            errors == [] -> :created
-            created == [] -> :unprocessable_entity
-            true -> 207
-          end
-
-        conn
-        |> put_status(status)
-        |> put_view(EntityRelationshipManager.Views.EdgeJSON)
-        |> render("bulk.json", edges: created, errors: formatted_errors, meta: meta)
+        status = bulk_create_status(created, errors)
+        render_bulk_edges(conn, status, created, errors)
 
       {:error, {:validation_errors, errors}} when mode == :atomic ->
         formatted_errors = format_bulk_errors(errors)
-        meta = %{created: 0}
 
         conn
         |> put_status(:unprocessable_entity)
-        |> json(%{error: "validation_errors", errors: formatted_errors, meta: meta})
+        |> json(%{error: "validation_errors", errors: formatted_errors, meta: %{created: 0}})
 
       {:error, reason} ->
         handle_error(conn, reason)
     end
+  end
+
+  defp bulk_create_status([], _errors), do: :unprocessable_entity
+  defp bulk_create_status(_created, []), do: :created
+  defp bulk_create_status(_created, _errors), do: 207
+
+  defp render_bulk_edges(conn, status, created, errors) do
+    formatted_errors = format_bulk_errors(errors)
+    meta = %{created: length(created), failed: length(errors)}
+
+    conn
+    |> put_status(status)
+    |> put_view(EntityRelationshipManager.Views.EdgeJSON)
+    |> render("bulk.json", edges: created, errors: formatted_errors, meta: meta)
   end
 
   defp handle_error(conn, :schema_not_found) do

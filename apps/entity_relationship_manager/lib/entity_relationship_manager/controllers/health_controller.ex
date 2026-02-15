@@ -16,15 +16,11 @@ defmodule EntityRelationshipManager.HealthController do
   defp check_graph_status do
     graph_repo = Application.get_env(:entity_relationship_manager, :graph_repository)
 
-    cond do
-      # InMemoryGraphRepository is always "connected"
-      graph_repo ==
-          EntityRelationshipManager.Infrastructure.Repositories.InMemoryGraphRepository ->
-        "connected"
-
-      # For real Neo4j, check connectivity
-      true ->
-        "connected"
+    if graph_repo ==
+         EntityRelationshipManager.Infrastructure.Repositories.InMemoryGraphRepository do
+      "connected"
+    else
+      "connected"
     end
   end
 end
