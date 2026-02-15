@@ -16,9 +16,7 @@ defmodule JargaWeb.MixProject do
       deps: deps(),
       compilers: [:boundary, :phoenix_live_view] ++ Mix.compilers(),
       boundary: boundary(),
-      listeners: [Phoenix.CodeReloader],
-      # Exclude .exs files from test pattern (Cucumber handles feature steps)
-      test_pattern: "*_test.exs"
+      listeners: [Phoenix.CodeReloader]
     ]
   end
 
@@ -80,9 +78,6 @@ defmodule JargaWeb.MixProject do
       {:agents, in_umbrella: true},
       {:jason, "~> 1.2"},
       {:bandit, "~> 1.5"},
-      {:wallaby, "~> 0.30", runtime: false, only: :test},
-      {:cucumber, "~> 0.4.2", only: :test},
-      {:lazy_html, ">= 0.1.0", only: :test},
       {:boundary, "~> 0.10", runtime: false}
     ]
   end
