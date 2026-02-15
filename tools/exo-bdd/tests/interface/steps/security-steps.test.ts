@@ -45,6 +45,7 @@ const {
 const {
   assertNoHighRiskAlerts,
   assertNoMediumOrHigherAlerts,
+  assertNoMediumOrHigherAlertsExcluding,
   assertAlertCount,
   assertAlertsLessThan,
   assertSecurityHeaderPresent,
@@ -312,6 +313,40 @@ describe('Security Steps', () => {
       expect(() => {
         assertNoMediumOrHigherAlerts(world)
       }).toThrow()
+    })
+
+    // ── Test 13a: 'no medium or higher excluding' passes when all medium alerts match exclusion
+    test('no medium or higher excluding passes when excluded pattern matches all medium alerts', () => {
+      world.security.alerts = [
+        makeAlert({ risk: 'Medium', name: 'CSP: script-src unsafe-inline' }),
+        makeAlert({ risk: 'Medium', name: 'CSP: style-src unsafe-inline' }),
+        makeAlert({ risk: 'Low', name: 'Cookie Without Secure Flag' }),
+      ]
+
+      assertNoMediumOrHigherAlertsExcluding(world, 'CSP:')
+    })
+
+    // ── Test 13b: 'no medium or higher excluding' fails when non-excluded medium alerts remain
+    test('no medium or higher excluding fails when non-excluded medium alerts remain', () => {
+      world.security.alerts = [
+        makeAlert({ risk: 'Medium', name: 'CSP: script-src unsafe-inline' }),
+        makeAlert({ risk: 'Medium', name: 'Missing Anti-clickjacking Header' }),
+        makeAlert({ risk: 'Low', name: 'Cookie Without Secure Flag' }),
+      ]
+
+      expect(() => {
+        assertNoMediumOrHigherAlertsExcluding(world, 'CSP:')
+      }).toThrow()
+    })
+
+    // ── Test 13c: 'no medium or higher excluding' passes when no medium alerts at all
+    test('no medium or higher excluding passes when no medium alerts exist', () => {
+      world.security.alerts = [
+        makeAlert({ risk: 'Low', name: 'Something Low' }),
+        makeAlert({ risk: 'Informational', name: 'Info Alert' }),
+      ]
+
+      assertNoMediumOrHigherAlertsExcluding(world, 'CSP:')
     })
 
     // ── Test 14: 'there should be N alerts' passes for exact match ─────────
