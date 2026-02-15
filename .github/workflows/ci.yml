@@ -335,18 +335,8 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jarga_test
 
-      - name: Run 360 tests (all apps)
+      - name: Run 360 tests (auto-discover all configs)
         run: mix exo_test
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jarga_test
-
-      - name: Run 360 tests (identity browser)
-        run: mix exo_test --config apps/identity/test/exo-bdd-identity.config.ts --tag @browser
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jarga_test
-
-      - name: Run 360 tests (identity security)
-        run: mix exo_test --config apps/identity/test/exo-bdd-identity.config.ts --tag @security
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jarga_test
 
