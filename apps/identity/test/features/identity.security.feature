@@ -5,8 +5,7 @@ Feature: Identity Application Security Baseline
   So that user credentials, sessions, password reset tokens, and API keys are protected against attack
 
   Background:
-    # baseUrl is auto-injected from exo-bdd config (http.baseURL or browser.baseURL)
-    # The Identity app runs on port 4001
+    # baseUrl is auto-injected from exo-bdd config (security adapter uses http.baseURL)
     Given I set variable "loginPage" to "${baseUrl}/users/log-in"
     Given I set variable "registerPage" to "${baseUrl}/users/register"
     Given I set variable "resetPasswordPage" to "${baseUrl}/users/reset-password"
