@@ -115,8 +115,9 @@ export function assertBodyContains(ctx: ResponseAssertionsContext, expectedSubst
 }
 
 export async function assertBodyMatchesSchema(ctx: ResponseAssertionsContext, schemaPath: string) {
-  const schemaFile = Bun.file(ctx.interpolate(schemaPath))
-  const schema = await schemaFile.json()
+  const { readFileSync } = await import('node:fs')
+  const schemaContent = readFileSync(ctx.interpolate(schemaPath), 'utf-8')
+  const schema = JSON.parse(schemaContent)
   const body = ctx.http.body as Record<string, unknown>
   if (schema.required) {
     for (const prop of schema.required as string[]) {

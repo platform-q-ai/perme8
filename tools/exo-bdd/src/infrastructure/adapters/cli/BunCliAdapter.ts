@@ -1,6 +1,58 @@
+import { spawn } from 'node:child_process'
 import type { CliPort } from '../../../application/ports/index.ts'
 import type { CliAdapterConfig } from '../../../application/config/index.ts'
 import type { CommandResult } from '../../../domain/entities/index.ts'
+
+/**
+ * Executes a shell command via Node's child_process.spawn and collects output.
+ * Works under both Bun and Node runtimes.
+ */
+function execShell(
+  command: string,
+  options: { cwd: string; env: Record<string, string>; stdin?: string; timeout?: number },
+): Promise<CommandResult> {
+  return new Promise((resolve) => {
+    const startTime = Date.now()
+    const proc = spawn('sh', ['-c', command], {
+      cwd: options.cwd,
+      env: { ...process.env, ...options.env },
+      stdio: ['pipe', 'pipe', 'pipe'],
+      timeout: options.timeout,
+    })
+
+    const stdoutChunks: Buffer[] = []
+    const stderrChunks: Buffer[] = []
+
+    proc.stdout.on('data', (chunk: Buffer) => stdoutChunks.push(chunk))
+    proc.stderr.on('data', (chunk: Buffer) => stderrChunks.push(chunk))
+
+    if (options.stdin != null) {
+      proc.stdin.write(options.stdin)
+      proc.stdin.end()
+    } else {
+      proc.stdin.end()
+    }
+
+    proc.on('close', (code, signal) => {
+      const exitCode = signal === 'SIGTERM' ? 124 : (code ?? 1)
+      resolve({
+        stdout: Buffer.concat(stdoutChunks).toString(),
+        stderr: Buffer.concat(stderrChunks).toString(),
+        exitCode,
+        duration: Date.now() - startTime,
+      })
+    })
+
+    proc.on('error', (err) => {
+      resolve({
+        stdout: Buffer.concat(stdoutChunks).toString(),
+        stderr: err.message,
+        exitCode: 1,
+        duration: Date.now() - startTime,
+      })
+    })
+  })
+}
 
 export class BunCliAdapter implements CliPort {
   private env: Record<string, string> = {}
@@ -47,108 +99,38 @@ export class BunCliAdapter implements CliPort {
       return this.runWithTimeout(command, timeoutMs)
     }
 
-    const startTime = Date.now()
-
-    const proc = Bun.spawn(['sh', '-c', command], {
+    this._result = await execShell(command, {
       cwd: this.workingDir,
-      env: { ...process.env, ...this.env },
-      stdout: 'pipe',
-      stderr: 'pipe',
+      env: this.env,
     })
-
-    const [stdout, stderr] = await Promise.all([
-      new Response(proc.stdout).text(),
-      new Response(proc.stderr).text(),
-    ])
-
-    const exitCode = await proc.exited
-
-    this._result = {
-      stdout,
-      stderr,
-      exitCode,
-      duration: Date.now() - startTime,
-    }
 
     return this._result
   }
 
   async runWithStdin(command: string, stdin: string): Promise<CommandResult> {
-    const startTime = Date.now()
-
-    const proc = Bun.spawn(['sh', '-c', command], {
+    this._result = await execShell(command, {
       cwd: this.workingDir,
-      env: { ...process.env, ...this.env },
-      stdin: 'pipe',
-      stdout: 'pipe',
-      stderr: 'pipe',
+      env: this.env,
+      stdin,
     })
-
-    proc.stdin.write(stdin)
-    proc.stdin.end()
-
-    const [stdout, stderr] = await Promise.all([
-      new Response(proc.stdout).text(),
-      new Response(proc.stderr).text(),
-    ])
-
-    const exitCode = await proc.exited
-
-    this._result = {
-      stdout,
-      stderr,
-      exitCode,
-      duration: Date.now() - startTime,
-    }
 
     return this._result
   }
 
   async runWithTimeout(command: string, timeoutMs: number): Promise<CommandResult> {
-    const startTime = Date.now()
-
-    const proc = Bun.spawn(['sh', '-c', command], {
+    const result = await execShell(command, {
       cwd: this.workingDir,
-      env: { ...process.env, ...this.env },
-      stdout: 'pipe',
-      stderr: 'pipe',
+      env: this.env,
+      timeout: timeoutMs,
     })
 
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => {
-        proc.kill()
-        reject(new Error(`Command timed out after ${timeoutMs}ms`))
-      }, timeoutMs)
-    })
-
-    try {
-      const [stdout, stderr] = await Promise.race([
-        Promise.all([
-          new Response(proc.stdout).text(),
-          new Response(proc.stderr).text(),
-        ]),
-        timeoutPromise,
-      ]) as [string, string]
-
-      const exitCode = await proc.exited
-
-      this._result = {
-        stdout,
-        stderr,
-        exitCode,
-        duration: Date.now() - startTime,
-      }
-
-      return this._result
-    } catch (error) {
-      this._result = {
-        stdout: '',
-        stderr: error instanceof Error ? error.message : 'Command timed out',
-        exitCode: 124,
-        duration: Date.now() - startTime,
-      }
-      return this._result
+    // If the process was killed by timeout, normalize the result
+    if (result.exitCode === 124) {
+      result.stderr = result.stderr || `Command timed out after ${timeoutMs}ms`
     }
+
+    this._result = result
+    return this._result
   }
 
   get result(): CommandResult {
