@@ -17,8 +17,8 @@ Feature: Document Access Control
   Scenario: Owner views their own private document
     # Precondition: alice owns a private document "Private Notes" (seeded)
     Given I am on "${baseUrl}/users/log-in"
-    When I fill "#login_form_password_email" with "alice@example.com"
-    And I fill "#login_form_password_password" with "password123"
+    When I fill "#login_form_password_email" with "${ownerEmail}"
+    And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button
     And I wait for the page to load
     And I navigate to "${baseUrl}/app/workspaces/product-team/documents/private-notes"
@@ -30,8 +30,8 @@ Feature: Document Access Control
   Scenario: Member cannot view another user's private document
     # Precondition: alice owns a private document "Alice's Private Notes" (seeded)
     Given I am on "${baseUrl}/users/log-in"
-    When I fill "#login_form_password_email" with "charlie@example.com"
-    And I fill "#login_form_password_password" with "password123"
+    When I fill "#login_form_password_email" with "${memberEmail}"
+    And I fill "#login_form_password_password" with "${memberPassword}"
     And I click the "Log in and stay logged in" button
     And I wait for the page to load
     And I navigate to "${baseUrl}/app/workspaces/product-team/documents/alices-private-notes"
@@ -42,8 +42,8 @@ Feature: Document Access Control
   Scenario: Admin cannot view another user's private document
     # Precondition: alice owns a private document "Alice's Private Notes" (seeded)
     Given I am on "${baseUrl}/users/log-in"
-    When I fill "#login_form_password_email" with "bob@example.com"
-    And I fill "#login_form_password_password" with "password123"
+    When I fill "#login_form_password_email" with "${adminEmail}"
+    And I fill "#login_form_password_password" with "${adminPassword}"
     And I click the "Log in and stay logged in" button
     And I wait for the page to load
     And I navigate to "${baseUrl}/app/workspaces/product-team/documents/alices-private-notes"
@@ -54,8 +54,8 @@ Feature: Document Access Control
   Scenario: Member views public document created by another user
     # Precondition: alice owns a public document "Team Guidelines" (seeded)
     Given I am on "${baseUrl}/users/log-in"
-    When I fill "#login_form_password_email" with "charlie@example.com"
-    And I fill "#login_form_password_password" with "password123"
+    When I fill "#login_form_password_email" with "${memberEmail}"
+    And I fill "#login_form_password_password" with "${memberPassword}"
     And I click the "Log in and stay logged in" button
     And I wait for the page to load
     And I navigate to "${baseUrl}/app/workspaces/product-team/documents/team-guidelines"
@@ -67,8 +67,8 @@ Feature: Document Access Control
   Scenario: Guest views public document in read-only mode
     # Precondition: alice owns a public document "Team Guidelines" (seeded)
     Given I am on "${baseUrl}/users/log-in"
-    When I fill "#login_form_password_email" with "diana@example.com"
-    And I fill "#login_form_password_password" with "password123"
+    When I fill "#login_form_password_email" with "${guestEmail}"
+    And I fill "#login_form_password_password" with "${guestPassword}"
     And I click the "Log in and stay logged in" button
     And I wait for the page to load
     And I navigate to "${baseUrl}/app/workspaces/product-team/documents/team-guidelines"
@@ -80,8 +80,8 @@ Feature: Document Access Control
   Scenario: Guest cannot view private documents
     # Precondition: alice owns a private document "Private Roadmap" (seeded)
     Given I am on "${baseUrl}/users/log-in"
-    When I fill "#login_form_password_email" with "diana@example.com"
-    And I fill "#login_form_password_password" with "password123"
+    When I fill "#login_form_password_email" with "${guestEmail}"
+    And I fill "#login_form_password_password" with "${guestPassword}"
     And I click the "Log in and stay logged in" button
     And I wait for the page to load
     And I navigate to "${baseUrl}/app/workspaces/product-team/documents/private-roadmap"
@@ -91,8 +91,8 @@ Feature: Document Access Control
 
   Scenario: Non-member cannot view any documents
     Given I am on "${baseUrl}/users/log-in"
-    When I fill "#login_form_password_email" with "eve@example.com"
-    And I fill "#login_form_password_password" with "password123"
+    When I fill "#login_form_password_email" with "${nonMemberEmail}"
+    And I fill "#login_form_password_password" with "${nonMemberPassword}"
     And I click the "Log in and stay logged in" button
     And I wait for the page to load
     And I navigate to "${baseUrl}/app/workspaces/product-team/documents/team-guidelines"
@@ -105,8 +105,8 @@ Feature: Document Access Control
   Scenario: Breadcrumb navigation in document view
     # Precondition: alice owns a document "Specs" in project "Mobile App" (seeded)
     Given I am on "${baseUrl}/users/log-in"
-    When I fill "#login_form_password_email" with "alice@example.com"
-    And I fill "#login_form_password_password" with "password123"
+    When I fill "#login_form_password_email" with "${ownerEmail}"
+    And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button
     And I wait for the page to load
     And I navigate to "${baseUrl}/app/workspaces/product-team/documents/specs"
