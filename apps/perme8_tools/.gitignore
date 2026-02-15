@@ -20,5 +20,5 @@ erl_crash.dump
 *.ez
 
 # Ignore package tarball (built via "mix hex.build").
-jarga_tools-*.tar
+perme8_tools-*.tar
 

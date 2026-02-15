@@ -1,9 +1,9 @@
-defmodule JargaTools.MixProject do
+defmodule Perme8Tools.MixProject do
   use Mix.Project
 
   def project do
     [
-      app: :jarga_tools,
+      app: :perme8_tools,
       version: "0.1.0",
       build_path: "../../_build",
       config_path: "../../config/config.exs",
@@ -21,7 +21,7 @@ defmodule JargaTools.MixProject do
   def application do
     [
       extra_applications: [:logger],
-      mod: {JargaTools.Application, []}
+      mod: {Perme8Tools.Application, []}
     ]
   end
 
