@@ -164,6 +164,43 @@ defmodule AgentsTest do
       assert cloned.visibility == "PRIVATE"
     end
 
+    test "non-owner can clone shared agent with workspace context" do
+      owner = user_fixture()
+      cloner = user_fixture()
+      workspace = workspace_fixture(owner)
+
+      add_workspace_member_fixture(workspace.id, cloner, :member)
+
+      {:ok, original} =
+        Agents.create_user_agent(%{
+          user_id: owner.id,
+          name: "Shared Agent",
+          visibility: "SHARED"
+        })
+
+      Agents.sync_agent_workspaces(original.id, owner.id, [workspace.id])
+
+      assert {:ok, cloned} =
+               Agents.clone_shared_agent(original.id, cloner.id, workspace_id: workspace.id)
+
+      assert cloned.user_id == cloner.id
+      assert cloned.name == "Shared Agent (Copy)"
+    end
+
+    test "non-owner cannot clone shared agent without workspace context" do
+      owner = user_fixture()
+      cloner = user_fixture()
+
+      {:ok, original} =
+        Agents.create_user_agent(%{
+          user_id: owner.id,
+          name: "Shared Agent",
+          visibility: "SHARED"
+        })
+
+      assert {:error, :forbidden} = Agents.clone_shared_agent(original.id, cloner.id)
+    end
+
     test "returns not_found error when agent does not exist" do
       user = user_fixture()
       non_existent_id = Ecto.UUID.generate()
@@ -197,6 +234,24 @@ defmodule AgentsTest do
 
       assert result.my_agents == []
       assert result.other_agents == []
+    end
+
+    test "includes both private and shared user agents in my_agents" do
+      user = user_fixture()
+      workspace = workspace_fixture(user)
+
+      {:ok, private_agent} =
+        Agents.create_user_agent(%{user_id: user.id, name: "Private", visibility: "PRIVATE"})
+
+      {:ok, shared_agent} =
+        Agents.create_user_agent(%{user_id: user.id, name: "Shared", visibility: "SHARED"})
+
+      add_agent_to_workspace(private_agent.id, workspace.id)
+      add_agent_to_workspace(shared_agent.id, workspace.id)
+
+      result = Agents.list_workspace_available_agents(workspace.id, user.id)
+
+      assert length(result.my_agents) == 2
     end
   end
 
@@ -275,6 +330,21 @@ defmodule AgentsTest do
       agents = Agents.get_workspace_agents_list(workspace.id, user.id)
 
       assert agents == []
+    end
+
+    test "returns all agents when enabled_only is false" do
+      user = user_fixture()
+      workspace = workspace_fixture(user)
+
+      {:ok, enabled} = Agents.create_user_agent(%{user_id: user.id, name: "E", enabled: true})
+      {:ok, disabled} = Agents.create_user_agent(%{user_id: user.id, name: "D", enabled: false})
+
+      add_agent_to_workspace(enabled.id, workspace.id)
+      add_agent_to_workspace(disabled.id, workspace.id)
+
+      agents = Agents.get_workspace_agents_list(workspace.id, user.id, enabled_only: false)
+
+      assert length(agents) == 2
     end
   end
 
