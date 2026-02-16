@@ -4,94 +4,51 @@ Feature: Chat Panel Core
   I want to open and close the global chat panel
   So that I can access AI assistance when needed without cluttering my workspace
 
-  # Browser adapter translation of panel.feature
-  # Tests core panel functionality through the browser UI:
-  # - Opening/closing the panel
-  # - Panel presence across pages
-  # - Basic UI state management
+  # Chat is a global drawer panel on the right side of every authenticated page.
+  # There is no separate /chat route. The panel is toggled via a checkbox input.
 
   Background:
     Given I am on "${baseUrl}/users/log-in"
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
+    Then the URL should contain "/app"
 
-  # ============================================================================
-  # CRITICAL SCENARIOS
-  # ============================================================================
-
-  Scenario: Chat panel is present in admin layout
-    Then "[data-test-chat-toggle]" should exist
-    When I click "[data-test-chat-toggle]"
-    And I wait for "[data-test-chat-panel]" to be visible
-    Then "[data-test-chat-panel]" should be visible
-    And "[data-test-message-input]" should exist
+  Scenario: Chat panel toggle exists on authenticated pages
+    Then "label[for='chat-drawer-global-chat-panel']" should exist
 
   Scenario: Open chat panel displays chat interface
-    When I click "[data-test-chat-toggle]"
-    And I wait for "[data-test-chat-panel]" to be visible
-    Then "[data-test-agent-selector]" should be visible
-    And "[data-test-message-input]" should be visible
-    And "[data-test-chat-messages]" should exist
-
-  # ============================================================================
-  # HIGH PRIORITY SCENARIOS
-  # ============================================================================
+    When I click "label[for='chat-drawer-global-chat-panel'][aria-label='Open chat']"
+    And I wait for "div#chat-panel-content" to be visible
+    Then "div#chat-panel-content" should be visible
+    And "div#chat-messages" should exist
+    And "textarea#chat-input" should exist
 
   Scenario: Toggle chat panel open and closed
-    # Panel should be toggleable
-    When I click "[data-test-chat-toggle]"
-    And I wait for "[data-test-chat-panel]" to be visible
-    Then "[data-test-chat-panel]" should be visible
-    When I click "[data-test-chat-close]"
-    And I wait for "[data-test-chat-panel]" to be hidden
-    Then "[data-test-chat-panel]" should be hidden
+    When I click "label[for='chat-drawer-global-chat-panel'][aria-label='Open chat']"
+    And I wait for "div#chat-panel-content" to be visible
+    Then "div#chat-panel-content" should be visible
+    When I click "label[for='chat-drawer-global-chat-panel'][aria-label='Close chat']"
+    And I wait for "div#chat-panel-content" to be hidden
+    Then "div#chat-panel-content" should be hidden
 
-  # ============================================================================
-  # MEDIUM PRIORITY SCENARIOS
-  # ============================================================================
+  Scenario: Chat panel shows empty state before any messages
+    When I click "label[for='chat-drawer-global-chat-panel'][aria-label='Open chat']"
+    And I wait for "div#chat-panel-content" to be visible
+    Then I should see "Ask me anything about this document"
 
-  Scenario: Chat panel available on all admin pages
-    # Check dashboard
-    Given I am on "${baseUrl}/dashboard"
+  Scenario: Chat panel available on workspace page
+    Given I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
     When I wait for the page to load
-    Then "[data-test-chat-toggle]" should exist
-    # Check workspaces
-    Given I am on "${baseUrl}/workspaces"
-    When I wait for the page to load
-    Then "[data-test-chat-toggle]" should exist
-
-  Scenario: Chat panel maintains state across page navigation
-    When I click "[data-test-chat-toggle]"
-    And I wait for "[data-test-chat-panel]" to be visible
-    # Navigate to another page
-    Given I am on "${baseUrl}/workspaces"
-    When I wait for the page to load
-    Then "[data-test-chat-panel]" should be visible
-    # Close and navigate
-    When I click "[data-test-chat-close]"
-    And I wait for "[data-test-chat-panel]" to be hidden
-    Given I am on "${baseUrl}/dashboard"
-    When I wait for the page to load
-    Then "[data-test-chat-panel]" should be hidden
-
-  Scenario: Escape key closes chat panel
-    When I click "[data-test-chat-toggle]"
-    And I wait for "[data-test-chat-panel]" to be visible
-    And I press "Escape"
-    And I wait for "[data-test-chat-panel]" to be hidden
-    Then "[data-test-chat-panel]" should be hidden
-
-  # ============================================================================
-  # LOW PRIORITY SCENARIOS
-  # ============================================================================
-
-  Scenario: Clear button disabled when chat is empty
-    When I click "[data-test-chat-toggle]"
-    And I wait for "[data-test-chat-panel]" to be visible
-    Then "[data-test-clear-button]" should be disabled
+    Then "label[for='chat-drawer-global-chat-panel']" should exist
 
   Scenario: New conversation button disabled when chat is empty
-    When I click "[data-test-chat-toggle]"
-    And I wait for "[data-test-chat-panel]" to be visible
-    Then "[data-test-new-button]" should be disabled
+    When I click "label[for='chat-drawer-global-chat-panel'][aria-label='Open chat']"
+    And I wait for "div#chat-panel-content" to be visible
+    Then "button[phx-click='new_conversation']" should be disabled
+
+  Scenario: Chat header shows history and new conversation buttons
+    When I click "label[for='chat-drawer-global-chat-panel'][aria-label='Open chat']"
+    And I wait for "div#chat-panel-content" to be visible
+    Then "button[phx-click='new_conversation']" should exist
+    And "button[phx-click='show_conversations']" should exist

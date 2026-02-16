@@ -11,19 +11,28 @@ Feature: Document CRUD Operations
   #   charlie@example.com - member of workspace "product-team"
   #   diana@example.com   - guest of workspace "product-team"
   #   eve@example.com     - not a member of workspace "product-team"
+  #
+  # Seeded documents used in this file:
+  #   "Draft Roadmap"  - private, owned by alice (slug: draft-roadmap)
+  #   "Private Doc"    - private, owned by alice (slug: private-doc)
+  #   "Public Doc"     - public, owned by alice (slug: public-doc)
+  #   "Valid Title"    - private, owned by alice (slug: valid-title)
+  #   "Important Doc"  - private, owned by alice (slug: important-doc)
+  #   "Pinned Doc"     - private, owned by alice (slug: pinned-doc)
+  #   "Old Doc"        - private, owned by alice (slug: old-doc)
 
-  # Document Creation
+  # ── Document Creation ─────────────────────────────────────────────
 
   Scenario: Owner creates a document in workspace
     Given I am on "${baseUrl}/users/log-in"
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
-    And I navigate to "${baseUrl}/app/workspaces/product-team"
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
     And I wait for the page to load
     And I click the "New Document" button
     And I wait for ".modal-open" to be visible
-    And I fill "[name='title']" with "Product Roadmap"
+    And I fill "#document-form_title" with "Product Roadmap"
     And I click the "Create Document" button
     And I wait for the page to load
     Then the URL should contain "/documents/product-roadmap"
@@ -34,11 +43,11 @@ Feature: Document CRUD Operations
     When I fill "#login_form_password_email" with "${adminEmail}"
     And I fill "#login_form_password_password" with "${adminPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
-    And I navigate to "${baseUrl}/app/workspaces/product-team"
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
     And I wait for the page to load
     And I click the "New Document" button
     And I wait for ".modal-open" to be visible
-    And I fill "[name='title']" with "Architecture Doc"
+    And I fill "#document-form_title" with "Architecture Doc"
     And I click the "Create Document" button
     And I wait for the page to load
     Then the URL should contain "/documents/"
@@ -49,11 +58,11 @@ Feature: Document CRUD Operations
     When I fill "#login_form_password_email" with "${memberEmail}"
     And I fill "#login_form_password_password" with "${memberPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
-    And I navigate to "${baseUrl}/app/workspaces/product-team"
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
     And I wait for the page to load
     And I click the "New Document" button
     And I wait for ".modal-open" to be visible
-    And I fill "[name='title']" with "Meeting Notes"
+    And I fill "#document-form_title" with "Meeting Notes"
     And I click the "Create Document" button
     And I wait for the page to load
     Then the URL should contain "/documents/"
@@ -64,7 +73,7 @@ Feature: Document CRUD Operations
     When I fill "#login_form_password_email" with "${guestEmail}"
     And I fill "#login_form_password_password" with "${guestPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
-    And I navigate to "${baseUrl}/app/workspaces/product-team"
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
     And I wait for the page to load
     Then I should not see "New Document"
 
@@ -73,25 +82,25 @@ Feature: Document CRUD Operations
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
-    And I navigate to "${baseUrl}/app/workspaces/product-team"
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
     And I wait for the page to load
     And I click the "New Document" button
     And I wait for ".modal-open" to be visible
-    And I fill "[name='title']" with "Product & Services (2024)"
+    And I fill "#document-form_title" with "Product & Services (2024)"
     And I click the "Create Document" button
     And I wait for the page to load
     Then the URL should contain "/documents/"
     And I should see "Product & Services (2024)"
 
-  # Document Updates
+  # ── Document Title Editing ────────────────────────────────────────
 
-  Scenario: Owner updates their own document title
-    # Precondition: alice owns a document "Draft Roadmap" in product-team (seeded)
+  Scenario: Owner updates document title
+    # Precondition: alice owns "Draft Roadmap" (seeded, slug: draft-roadmap)
     Given I am on "${baseUrl}/users/log-in"
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
-    And I navigate to "${baseUrl}/app/workspaces/product-team/documents/draft-roadmap"
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/draft-roadmap"
     And I wait for the page to load
     And I click "h1"
     And I wait for "#document-title-input" to be visible
@@ -101,50 +110,13 @@ Feature: Document CRUD Operations
     And I wait for network idle
     Then I should see "Product Roadmap Q1"
 
-  Scenario: Owner changes document visibility to public
-    # Precondition: alice owns a private document (seeded)
+  Scenario: Empty title is rejected and original title preserved
+    # Precondition: alice owns "Valid Title" (seeded, slug: valid-title)
     Given I am on "${baseUrl}/users/log-in"
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
-    And I navigate to "${baseUrl}/app/workspaces/product-team/documents/private-doc"
-    And I wait for the page to load
-    And I click ".kebab-menu button"
-    And I click the "Make Public" button
-    And I wait for network idle
-    Then I should see "Document is now shared with workspace members"
-
-  Scenario: Owner changes document visibility to private
-    # Precondition: alice owns a public document (seeded)
-    Given I am on "${baseUrl}/users/log-in"
-    When I fill "#login_form_password_email" with "${ownerEmail}"
-    And I fill "#login_form_password_password" with "${ownerPassword}"
-    And I click the "Log in and stay logged in" button and wait for navigation
-    And I navigate to "${baseUrl}/app/workspaces/product-team/documents/public-doc"
-    And I wait for the page to load
-    And I click ".kebab-menu button"
-    And I click the "Make Private" button
-    And I wait for network idle
-    Then I should see "Document is now private"
-
-  Scenario: Guest cannot edit any documents
-    # Precondition: a public document exists (seeded)
-    Given I am on "${baseUrl}/users/log-in"
-    When I fill "#login_form_password_email" with "${guestEmail}"
-    And I fill "#login_form_password_password" with "${guestPassword}"
-    And I click the "Log in and stay logged in" button and wait for navigation
-    And I navigate to "${baseUrl}/app/workspaces/product-team/documents/public-doc"
-    And I wait for the page to load
-    Then I should see "read-only mode"
-    And ".kebab-menu" should not exist
-
-  Scenario: Update document with empty title
-    # Precondition: alice owns a document "Valid Title" (seeded)
-    Given I am on "${baseUrl}/users/log-in"
-    When I fill "#login_form_password_email" with "${ownerEmail}"
-    And I fill "#login_form_password_password" with "${ownerPassword}"
-    And I click the "Log in and stay logged in" button and wait for navigation
-    And I navigate to "${baseUrl}/app/workspaces/product-team/documents/valid-title"
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/valid-title"
     And I wait for the page to load
     And I click "h1"
     And I wait for "#document-title-input" to be visible
@@ -154,68 +126,115 @@ Feature: Document CRUD Operations
     And I wait for network idle
     Then I should see "Valid Title"
 
-  # Document Pinning
+  # ── Document Visibility ───────────────────────────────────────────
 
-  Scenario: Owner pins their own document
-    # Precondition: alice owns an unpinned document (seeded)
+  Scenario: Owner makes a private document public
+    # Precondition: alice owns private "Private Doc" (seeded, slug: private-doc)
     Given I am on "${baseUrl}/users/log-in"
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
-    And I navigate to "${baseUrl}/app/workspaces/product-team/documents/important-doc"
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/private-doc"
     And I wait for the page to load
-    And I click ".kebab-menu button"
+    And I click ".dropdown button[aria-label='Actions menu']"
+    And I wait for 1 seconds
+    And I click the "Make Public" button
+    And I wait for network idle
+    Then I should see "Document is now shared with workspace members"
+
+  Scenario: Owner makes a public document private
+    # Precondition: alice owns public "Public Doc" (seeded, slug: public-doc)
+    Given I am on "${baseUrl}/users/log-in"
+    When I fill "#login_form_password_email" with "${ownerEmail}"
+    And I fill "#login_form_password_password" with "${ownerPassword}"
+    And I click the "Log in and stay logged in" button and wait for navigation
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/public-doc"
+    And I wait for the page to load
+    And I click ".dropdown button[aria-label='Actions menu']"
+    And I wait for 1 seconds
+    And I click the "Make Private" button
+    And I wait for network idle
+    Then I should see "Document is now private"
+
+  Scenario: Guest cannot access kebab menu
+    # Precondition: "Public Doc" is a public document (seeded)
+    Given I am on "${baseUrl}/users/log-in"
+    When I fill "#login_form_password_email" with "${guestEmail}"
+    And I fill "#login_form_password_password" with "${guestPassword}"
+    And I click the "Log in and stay logged in" button and wait for navigation
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/public-doc"
+    And I wait for the page to load
+    Then I should see "read-only mode"
+    And ".dropdown button[aria-label='Actions menu']" should not exist
+
+  # ── Document Pinning ──────────────────────────────────────────────
+
+  Scenario: Owner pins a document
+    # Precondition: alice owns unpinned "Important Doc" (seeded, slug: important-doc)
+    Given I am on "${baseUrl}/users/log-in"
+    When I fill "#login_form_password_email" with "${ownerEmail}"
+    And I fill "#login_form_password_password" with "${ownerPassword}"
+    And I click the "Log in and stay logged in" button and wait for navigation
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/important-doc"
+    And I wait for the page to load
+    And I click ".dropdown button[aria-label='Actions menu']"
+    And I wait for 1 seconds
     And I click the "Pin Document" button
     And I wait for network idle
     Then I should see "Document pinned"
 
-  Scenario: Owner unpins their own document
-    # Precondition: alice owns a pinned document (seeded)
+  Scenario: Owner unpins a document
+    # Precondition: alice owns pinned "Pinned Doc" (seeded, slug: pinned-doc)
     Given I am on "${baseUrl}/users/log-in"
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
-    And I navigate to "${baseUrl}/app/workspaces/product-team/documents/pinned-doc"
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/pinned-doc"
     And I wait for the page to load
-    And I click ".kebab-menu button"
+    And I click ".dropdown button[aria-label='Actions menu']"
+    And I wait for 1 seconds
     And I click the "Unpin Document" button
     And I wait for network idle
     Then I should see "Document unpinned"
 
-  Scenario: Guest cannot pin any documents
-    # Precondition: a public document exists (seeded)
+  Scenario: Guest cannot pin documents
+    # Precondition: "Public Doc" is a public document (seeded)
     Given I am on "${baseUrl}/users/log-in"
     When I fill "#login_form_password_email" with "${guestEmail}"
     And I fill "#login_form_password_password" with "${guestPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
-    And I navigate to "${baseUrl}/app/workspaces/product-team/documents/public-doc"
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/public-doc"
     And I wait for the page to load
-    Then ".kebab-menu" should not exist
+    Then ".dropdown button[aria-label='Actions menu']" should not exist
 
-  # Document Deletion
+  # ── Document Deletion ─────────────────────────────────────────────
 
-  Scenario: Owner deletes their own document
-    # Precondition: alice owns a document "Old Doc" (seeded)
+  @wip
+  Scenario: Owner deletes a document
+    # Precondition: alice owns "Old Doc" (seeded, slug: old-doc)
+    # @wip: Delete Document uses data-confirm which triggers a native browser dialog.
+    # Native dialogs cannot be handled with the available browser steps.
     Given I am on "${baseUrl}/users/log-in"
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
-    And I navigate to "${baseUrl}/app/workspaces/product-team/documents/old-doc"
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/old-doc"
     And I wait for the page to load
-    And I click ".kebab-menu button"
+    And I click ".dropdown button[aria-label='Actions menu']"
+    And I wait for 1 seconds
     And I click the "Delete Document" button
     And I wait for the page to load
-    Then the URL should contain "/app/workspaces/product-team"
+    Then the URL should contain "/app/workspaces/${productTeamSlug}"
     And I should see "Document deleted"
     And I should not see "Old Doc"
 
-  Scenario: Guest cannot delete any documents
-    # Precondition: a public document exists (seeded)
+  Scenario: Guest cannot delete documents
+    # Precondition: "Public Doc" is a public document (seeded)
     Given I am on "${baseUrl}/users/log-in"
     When I fill "#login_form_password_email" with "${guestEmail}"
     And I fill "#login_form_password_password" with "${guestPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
-    And I navigate to "${baseUrl}/app/workspaces/product-team/documents/public-doc"
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/public-doc"
     And I wait for the page to load
-    Then ".kebab-menu" should not exist
+    Then ".dropdown button[aria-label='Actions menu']" should not exist
     And I should not see "Delete Document"

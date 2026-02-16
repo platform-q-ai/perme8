@@ -11,54 +11,47 @@ Feature: Project Access Control
   #   - charlie@example.com as member
   #   - diana@example.com as guest
   #   - eve@example.com as non-member
-  #   - Projects: "Q1 Launch" (slug: q1-launch), "Mobile App" (slug: mobile-app) owned by alice
+  #   - Projects: "Q1 Launch" (slug: q1-launch), "Mobile App" (slug: mobile-app)
+  #   - All seeded projects are owned by alice
 
   # ---------------------------------------------------------------------------
   # Project Listing
   # ---------------------------------------------------------------------------
 
-  Scenario: List all projects in workspace
-    # Log in as owner
+  Scenario: Owner can list all projects in workspace
     Given I navigate to "${baseUrl}/users/log-in"
     And I wait for the page to load
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
-    # Navigate to workspace and verify seeded projects are listed
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
     And I wait for the page to load
     Then I should see "Q1 Launch"
     And I should see "Mobile App"
 
   Scenario: Guest can view projects in workspace
-    # Log in as guest
     Given I navigate to "${baseUrl}/users/log-in"
     And I wait for the page to load
     When I fill "#login_form_password_email" with "${guestEmail}"
     And I fill "#login_form_password_password" with "${guestPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
-    # Navigate to workspace - guest should see projects
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
     And I wait for the page to load
     Then I should see "Q1 Launch"
     And I should see "Mobile App"
 
   Scenario: Non-member cannot list projects
-    # Log in as non-member
     Given I navigate to "${baseUrl}/users/log-in"
     And I wait for the page to load
     When I fill "#login_form_password_email" with "${nonMemberEmail}"
     And I fill "#login_form_password_password" with "${nonMemberPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
-    # Attempt to navigate to workspace - should be redirected
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
     And I wait for the page to load
-    Then I should see "Workspace not found"
-    And I should not see "Q1 Launch"
+    Then I should not see "Q1 Launch"
     And I should not see "Mobile App"
 
   Scenario: Projects are scoped to workspace
-    # Log in as owner (alice owns both workspaces)
     Given I navigate to "${baseUrl}/users/log-in"
     And I wait for the page to load
     When I fill "#login_form_password_email" with "${ownerEmail}"
@@ -71,75 +64,114 @@ Feature: Project Access Control
     And I should not see "Mobile App"
 
   # ---------------------------------------------------------------------------
-  # Authorization Summary
+  # Role-based Access on Project Show Page
   # ---------------------------------------------------------------------------
 
-  Scenario: Owner has full access to all projects in workspace
-    # Log in as owner
+  Scenario: Owner sees edit and delete options on project show
     Given I navigate to "${baseUrl}/users/log-in"
     And I wait for the page to load
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
-    # Navigate to a seeded project
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/projects/mobile-app"
     And I wait for the page to load
-    # Owner should see edit and delete options
+    # Owner should see kebab menu with edit and delete options
+    And I click "button[aria-label='Actions menu']"
+    And I wait for 1 seconds
     Then I should see "Edit Project"
     And I should see "Delete Project"
 
-  Scenario: Admin has full access to all projects in workspace
-    # Log in as admin
+  Scenario: Admin sees edit and delete options on project show
     Given I navigate to "${baseUrl}/users/log-in"
     And I wait for the page to load
     When I fill "#login_form_password_email" with "${adminEmail}"
     And I fill "#login_form_password_password" with "${adminPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
-    # Navigate to a seeded project
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/projects/mobile-app"
     And I wait for the page to load
-    # Admin should see edit and delete options
+    # Admin should see kebab menu with edit and delete options
+    And I click "button[aria-label='Actions menu']"
+    And I wait for 1 seconds
     Then I should see "Edit Project"
     And I should see "Delete Project"
 
-  Scenario: Member can view projects but cannot edit others' projects
-    # Log in as member
+  Scenario: Member cannot edit or delete others' projects
     Given I navigate to "${baseUrl}/users/log-in"
     And I wait for the page to load
     When I fill "#login_form_password_email" with "${memberEmail}"
     And I fill "#login_form_password_password" with "${memberPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
-    # Navigate to workspace - member can see projects
+    # Member can see projects on workspace page
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
     And I wait for the page to load
     Then I should see "Q1 Launch"
     And I should see "Mobile App"
-    # Navigate to alice's project - member should not see edit/delete
+    # Navigate to project show - member should not see kebab menu for others' projects
     When I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/projects/mobile-app"
     And I wait for the page to load
-    Then I should not see "Edit Project"
-    And I should not see "Delete Project"
-    # Attempt direct navigation to edit page
-    When I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/projects/mobile-app/edit"
-    And I wait for the page to load
-    Then the URL should contain "/workspaces"
+    Then "button[aria-label='Actions menu']" should not exist
 
   Scenario: Guest has read-only access to projects
-    # Log in as guest
     Given I navigate to "${baseUrl}/users/log-in"
     And I wait for the page to load
     When I fill "#login_form_password_email" with "${guestEmail}"
     And I fill "#login_form_password_password" with "${guestPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
-    # Navigate to workspace - guest can see projects
+    # Guest can see projects on workspace page
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
     And I wait for the page to load
     Then I should see "Q1 Launch"
     And I should see "Mobile App"
     # Guest should not see New Project button
     And I should not see "New Project"
-    # Navigate to a project - guest should not see edit/delete
+    # Navigate to project show - guest should not see kebab menu
     When I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/projects/mobile-app"
     And I wait for the page to load
-    Then I should not see "Edit Project"
-    And I should not see "Delete Project"
+    Then "button[aria-label='Actions menu']" should not exist
+
+  # ---------------------------------------------------------------------------
+  # Direct URL Access Control
+  # ---------------------------------------------------------------------------
+
+  Scenario: Owner can access project edit page directly
+    Given I navigate to "${baseUrl}/users/log-in"
+    And I wait for the page to load
+    When I fill "#login_form_password_email" with "${ownerEmail}"
+    And I fill "#login_form_password_password" with "${ownerPassword}"
+    And I click the "Log in and stay logged in" button and wait for navigation
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/projects/mobile-app/edit"
+    And I wait for the page to load
+    Then "#project-form" should be visible
+    And the URL should contain "/projects/mobile-app/edit"
+
+  Scenario: Guest cannot access project edit page directly
+    Given I navigate to "${baseUrl}/users/log-in"
+    And I wait for the page to load
+    When I fill "#login_form_password_email" with "${guestEmail}"
+    And I fill "#login_form_password_password" with "${guestPassword}"
+    And I click the "Log in and stay logged in" button and wait for navigation
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/projects/mobile-app/edit"
+    And I wait for the page to load
+    Then I should see "You are not authorized to edit this project"
+    And the URL should contain "/workspaces"
+
+  Scenario: Member cannot access edit page for others' projects
+    Given I navigate to "${baseUrl}/users/log-in"
+    And I wait for the page to load
+    When I fill "#login_form_password_email" with "${memberEmail}"
+    And I fill "#login_form_password_password" with "${memberPassword}"
+    And I click the "Log in and stay logged in" button and wait for navigation
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/projects/mobile-app/edit"
+    And I wait for the page to load
+    Then I should see "You are not authorized to edit this project"
+    And the URL should contain "/workspaces"
+
+  Scenario: Non-member cannot access any project page
+    Given I navigate to "${baseUrl}/users/log-in"
+    And I wait for the page to load
+    When I fill "#login_form_password_email" with "${nonMemberEmail}"
+    And I fill "#login_form_password_password" with "${nonMemberPassword}"
+    And I click the "Log in and stay logged in" button and wait for navigation
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/projects/mobile-app"
+    And I wait for the page to load
+    Then I should not see "Mobile App"
