@@ -45,6 +45,12 @@ cd tools/exo-bdd && bun run src/cli/index.ts run \
 
 **LiveView critical pattern**: Always add `I wait for network idle` after navigating to a LiveView page before interacting with `phx-*` elements. See `tools/exo-bdd/README.md` "Phoenix LiveView Tips".
 
+**Asset rebuild required**: Tests run in `MIX_ENV=test` which has no asset watchers. After changing CSS/JS files, run `cd apps/jarga_web && mix assets.build` before running browser tests, otherwise the server serves stale assets.
+
+**Failure artifacts**: When tests fail, screenshots and HTML are saved to `tools/exo-bdd/test-failures/`. Always check these before debugging -- they show exactly what the browser rendered.
+
+**DaisyUI drawer selectors**: The chat panel has two `.navbar` elements (topbar + panel header). Use `.drawer-content > .navbar label[for='...']` to target the topbar toggle, not `.navbar label[for='...']` which matches both. See `tools/exo-bdd/README.md` "Troubleshooting" for more.
+
 ## Principles
 
 - Tests first -- always write tests before implementation
