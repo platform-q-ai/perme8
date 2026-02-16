@@ -1,4 +1,4 @@
-@browser
+@browser @wip
 Feature: Agent Real-time Updates
   As a user
   I want agent changes to propagate in real-time

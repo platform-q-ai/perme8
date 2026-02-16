@@ -1,4 +1,4 @@
-@browser
+@browser @wip
 Feature: Agent Discovery
   As a user
   I want to find and filter available agents

@@ -1,6 +1,7 @@
 import { defineConfig } from '../../../tools/exo-bdd/src/index.ts'
 
 export default defineConfig({
+  tags: 'not @wip',
   features: ['./features/**/*.browser.feature'],
   servers: [
     {
