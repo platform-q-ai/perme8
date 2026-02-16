@@ -102,29 +102,40 @@ defmodule JargaWeb.AppLive.Projects.EditTest do
              |> has_element?()
     end
 
-    test "raises when workspace doesn't exist", %{conn: conn} do
-      assert_raise Ecto.NoResultsError, fn ->
-        live(conn, ~p"/app/workspaces/nonexistent/projects/test/edit")
-      end
+    test "redirects when workspace doesn't exist", %{conn: conn} do
+      assert {:error, {:redirect, %{to: "/app/workspaces", flash: %{"error" => _}}}} =
+               live(conn, ~p"/app/workspaces/nonexistent/projects/test/edit")
     end
 
-    test "raises when project doesn't exist", %{conn: conn, workspace: workspace} do
-      assert_raise Ecto.NoResultsError, fn ->
-        live(conn, ~p"/app/workspaces/#{workspace.slug}/projects/nonexistent/edit")
-      end
+    test "redirects when project doesn't exist", %{conn: conn, workspace: workspace} do
+      assert {:error, {:redirect, %{to: "/app/workspaces", flash: %{"error" => _}}}} =
+               live(conn, ~p"/app/workspaces/#{workspace.slug}/projects/nonexistent/edit")
     end
 
-    test "raises when user is not a member of workspace", %{conn: conn} do
+    test "redirects when user is not a member of workspace", %{conn: conn} do
       other_user = user_fixture()
       other_workspace = workspace_fixture(other_user)
       other_project = project_fixture(other_user, other_workspace)
 
-      assert_raise Ecto.NoResultsError, fn ->
-        live(
-          conn,
-          ~p"/app/workspaces/#{other_workspace.slug}/projects/#{other_project.slug}/edit"
-        )
-      end
+      assert {:error, {:redirect, %{to: "/app/workspaces", flash: %{"error" => _}}}} =
+               live(
+                 conn,
+                 ~p"/app/workspaces/#{other_workspace.slug}/projects/#{other_project.slug}/edit"
+               )
+    end
+
+    test "redirects guest who cannot edit projects", %{workspace: workspace, project: project} do
+      guest = user_fixture()
+      add_workspace_member_fixture(workspace.id, guest, :guest)
+      guest_conn = build_conn() |> log_in_user(guest)
+
+      assert {:error,
+              {:redirect,
+               %{to: "/app/workspaces", flash: %{"error" => "You are not authorized" <> _}}}} =
+               live(
+                 guest_conn,
+                 ~p"/app/workspaces/#{workspace.slug}/projects/#{project.slug}/edit"
+               )
     end
   end
 end
