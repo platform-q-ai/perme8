@@ -78,8 +78,7 @@ describe('ChatPanelHook', () => {
   })
 
   describe('mounted', () => {
-    test('sets panel open on desktop by default (>= 1024px)', () => {
-      // Mock desktop viewport
+    test('sets panel closed by default on desktop (no saved state)', () => {
       Object.defineProperty(window, 'innerWidth', {
         writable: true,
         configurable: true,
@@ -88,11 +87,10 @@ describe('ChatPanelHook', () => {
 
       hook.mounted()
 
-      expect(mockCheckbox.checked).toBe(true)
+      expect(mockCheckbox.checked).toBe(false)
     })
 
-    test('sets panel closed on mobile by default (< 1024px)', () => {
-      // Mock mobile viewport
+    test('sets panel closed by default on mobile (no saved state)', () => {
       Object.defineProperty(window, 'innerWidth', {
         writable: true,
         configurable: true,
@@ -104,23 +102,11 @@ describe('ChatPanelHook', () => {
       expect(mockCheckbox.checked).toBe(false)
     })
 
-    test('hides toggle button when panel is open', () => {
+    test('shows toggle button when panel is closed (default)', () => {
       Object.defineProperty(window, 'innerWidth', {
         writable: true,
         configurable: true,
         value: 1024
-      })
-
-      hook.mounted()
-
-      expect(mockToggleButton.classList.contains('hidden')).toBe(true)
-    })
-
-    test('shows toggle button when panel is closed', () => {
-      Object.defineProperty(window, 'innerWidth', {
-        writable: true,
-        configurable: true,
-        value: 768
       })
 
       hook.mounted()
@@ -255,7 +241,7 @@ describe('ChatPanelHook', () => {
   })
 
   describe('responsive behavior on window resize', () => {
-    test('opens panel when resizing from mobile to desktop', () => {
+    test('does not auto-open panel when resizing from mobile to desktop', () => {
       // Start on mobile
       Object.defineProperty(window, 'innerWidth', {
         writable: true,
@@ -265,7 +251,7 @@ describe('ChatPanelHook', () => {
       hook.mounted()
       expect(mockCheckbox.checked).toBe(false)
 
-      // Resize to desktop
+      // Resize to desktop — should NOT auto-open
       Object.defineProperty(window, 'innerWidth', {
         writable: true,
         configurable: true,
@@ -273,20 +259,24 @@ describe('ChatPanelHook', () => {
       })
       window.dispatchEvent(new Event('resize'))
 
-      expect(mockCheckbox.checked).toBe(true)
+      expect(mockCheckbox.checked).toBe(false)
     })
 
-    test('closes panel when resizing from desktop to mobile', () => {
-      // Start on desktop
+    test('auto-closes open panel when resizing to mobile (no user interaction)', () => {
+      // Start on desktop, manually open via saved state
       Object.defineProperty(window, 'innerWidth', {
         writable: true,
         configurable: true,
         value: 1024
       })
+      mockStorage['chat-panel-open'] = 'true'
       hook.mounted()
+
+      // Clear userInteracted flag to simulate non-user state
+      ;(hook as any).userInteracted = false
       expect(mockCheckbox.checked).toBe(true)
 
-      // Resize to mobile
+      // Resize to mobile — should auto-close
       Object.defineProperty(window, 'innerWidth', {
         writable: true,
         configurable: true,
@@ -297,7 +287,7 @@ describe('ChatPanelHook', () => {
       expect(mockCheckbox.checked).toBe(false)
     })
 
-    test('does not auto-adjust after user manually toggles', () => {
+    test('does not auto-close after user manually toggles', () => {
       // Start on desktop
       Object.defineProperty(window, 'innerWidth', {
         writable: true,
@@ -305,13 +295,12 @@ describe('ChatPanelHook', () => {
         value: 1024
       })
       hook.mounted()
-      expect(mockCheckbox.checked).toBe(true)
 
-      // User manually closes
+      // User manually opens
       mockCheckbox.click()
-      expect(mockCheckbox.checked).toBe(false)
+      expect(mockCheckbox.checked).toBe(true)
 
-      // Resize to mobile (should NOT auto-adjust since user interacted)
+      // Resize to mobile — should NOT auto-close since user interacted
       Object.defineProperty(window, 'innerWidth', {
         writable: true,
         configurable: true,
@@ -319,8 +308,8 @@ describe('ChatPanelHook', () => {
       })
       window.dispatchEvent(new Event('resize'))
 
-      // Should still be closed (user preference preserved)
-      expect(mockCheckbox.checked).toBe(false)
+      // Should still be open (user preference preserved)
+      expect(mockCheckbox.checked).toBe(true)
     })
   })
 
@@ -415,7 +404,6 @@ describe('ChatPanelHook', () => {
     test('restores closed state from localStorage on mount', () => {
       mockStorage['chat-panel-open'] = 'false'
 
-      // Start on desktop where default would be open
       Object.defineProperty(window, 'innerWidth', {
         writable: true,
         configurable: true,
@@ -427,7 +415,7 @@ describe('ChatPanelHook', () => {
       expect(mockCheckbox.checked).toBe(false)
     })
 
-    test('uses responsive default when no localStorage state exists', () => {
+    test('defaults to closed when no localStorage state exists', () => {
       // No localStorage set (mockStorage is empty)
       Object.defineProperty(window, 'innerWidth', {
         writable: true,
@@ -437,7 +425,7 @@ describe('ChatPanelHook', () => {
 
       hook.mounted()
 
-      expect(mockCheckbox.checked).toBe(true) // Desktop default
+      expect(mockCheckbox.checked).toBe(false) // Always closed by default
     })
   })
 
