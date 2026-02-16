@@ -16,7 +16,7 @@ defmodule AgentVerifyPubSubSteps do
   use JargaWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
-  import Jarga.AgentsFixtures
+  import Agents.AgentsFixtures
   import Jarga.WorkspacesFixtures
   import Jarga.DocumentsFixtures
 

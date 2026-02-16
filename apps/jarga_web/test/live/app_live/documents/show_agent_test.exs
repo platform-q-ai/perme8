@@ -5,7 +5,7 @@ defmodule JargaWeb.AppLive.Documents.ShowAITest do
   import Jarga.AccountsFixtures
   import Jarga.WorkspacesFixtures
   import Jarga.DocumentsFixtures
-  import Jarga.AgentsFixtures
+  import Agents.AgentsFixtures
 
   setup do
     user = user_fixture()

@@ -17,9 +17,7 @@ defmodule Agents.Infrastructure do
       Agents.Application,
       # Cross-context dependencies
       Identity,
-      Identity.Repo,
-      Jarga.Accounts,
-      Jarga.Workspaces
+      Identity.Repo
     ],
     exports: [
       # Schemas

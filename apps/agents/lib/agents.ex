@@ -35,8 +35,6 @@ defmodule Agents do
       Agents.Domain,
       Agents.Application,
       Agents.Infrastructure,
-      Jarga.Accounts,
-      Jarga.Workspaces,
       Identity.Repo
     ],
     exports: [

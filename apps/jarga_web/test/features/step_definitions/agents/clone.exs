@@ -12,7 +12,7 @@ defmodule AgentCloneSteps do
   use JargaWeb.ConnCase, async: false
 
   import Jarga.AccountsFixtures
-  import Jarga.AgentsFixtures
+  import Agents.AgentsFixtures
 
   alias Agents
   alias Agents.Infrastructure.Repositories.WorkspaceAgentRepository

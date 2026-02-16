@@ -18,7 +18,7 @@ defmodule ChatSetupAgentsConfigSteps do
   import Phoenix.LiveViewTest
   require Jarga.Test.StepHelpers
   import Jarga.Test.StepHelpers
-  import Jarga.AgentsFixtures
+  import Agents.AgentsFixtures
 
   # ============================================================================
   # HELPER FUNCTIONS
@@ -85,7 +85,7 @@ defmodule ChatSetupAgentsConfigSteps do
         raise "No workspace. Set :workspace or :current_workspace in a prior step."
 
     agent =
-      Jarga.AgentsFixtures.agent_fixture(user, %{
+      Agents.AgentsFixtures.agent_fixture(user, %{
         name: agent_name,
         system_prompt: nil,
         enabled: true
@@ -109,7 +109,7 @@ defmodule ChatSetupAgentsConfigSteps do
         raise "No workspace. Set :workspace or :current_workspace in a prior step."
 
     agent =
-      Jarga.AgentsFixtures.agent_fixture(user, %{
+      Agents.AgentsFixtures.agent_fixture(user, %{
         name: agent_name,
         system_prompt: prompt,
         enabled: true
@@ -145,7 +145,7 @@ defmodule ChatSetupAgentsConfigSteps do
 
     agent =
       existing_agent ||
-        Jarga.AgentsFixtures.agent_fixture(user, %{name: agent_name, enabled: true})
+        Agents.AgentsFixtures.agent_fixture(user, %{name: agent_name, enabled: true})
 
     updated_agents = Map.put(existing_agents, agent_name, agent)
 
@@ -169,7 +169,7 @@ defmodule ChatSetupAgentsConfigSteps do
       Agents.sync_agent_workspaces(existing_agent.id, user.id, [])
     end)
 
-    agent = Jarga.AgentsFixtures.agent_fixture(user, %{name: agent_name, enabled: true})
+    agent = Agents.AgentsFixtures.agent_fixture(user, %{name: agent_name, enabled: true})
     :ok = Agents.sync_agent_workspaces(agent.id, user.id, [workspace.id])
 
     {:ok,
@@ -222,7 +222,7 @@ defmodule ChatSetupAgentsConfigSteps do
   defp get_or_create_agent(existing_agents, agent_name, user, workspace) do
     case Map.get(existing_agents, agent_name) do
       nil ->
-        agent = Jarga.AgentsFixtures.agent_fixture(user, %{name: agent_name, enabled: true})
+        agent = Agents.AgentsFixtures.agent_fixture(user, %{name: agent_name, enabled: true})
         :ok = Agents.sync_agent_workspaces(agent.id, user.id, [workspace.id])
         agent
 

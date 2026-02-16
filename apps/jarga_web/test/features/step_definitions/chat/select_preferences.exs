@@ -14,7 +14,7 @@ defmodule ChatSelectPreferencesSteps do
   import Phoenix.LiveViewTest
   require Jarga.Test.StepHelpers
   import Jarga.Test.StepHelpers
-  import Jarga.AgentsFixtures
+  import Agents.AgentsFixtures
 
   alias Agents
 
@@ -123,7 +123,7 @@ defmodule ChatSelectPreferencesSteps do
 
     agent =
       Map.get(existing_agents, agent_name) ||
-        Jarga.AgentsFixtures.agent_fixture(user, %{name: agent_name, enabled: true})
+        Agents.AgentsFixtures.agent_fixture(user, %{name: agent_name, enabled: true})
 
     :ok = Agents.sync_agent_workspaces(agent.id, user.id, [workspace.id])
     Jarga.Accounts.set_selected_agent_id(user.id, workspace.id, agent.id)

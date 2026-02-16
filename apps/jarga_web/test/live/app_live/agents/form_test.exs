@@ -3,7 +3,7 @@ defmodule JargaWeb.AppLive.Agents.FormTest do
 
   import Phoenix.LiveViewTest
   import Jarga.AccountsFixtures
-  import Jarga.AgentsFixtures
+  import Agents.AgentsFixtures
 
   describe "agent form read-only security guard" do
     setup %{conn: conn} do

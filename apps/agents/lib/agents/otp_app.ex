@@ -1,4 +1,7 @@
 defmodule Agents.OTPApp do
+  @moduledoc """
+  OTP Application for the Agents bounded context.
+  """
   use Application
 
   @impl true

@@ -13,7 +13,7 @@ defmodule AgentQuerySteps do
 
   import Phoenix.LiveViewTest
   import Jarga.AccountsFixtures
-  import Jarga.AgentsFixtures
+  import Agents.AgentsFixtures
   import Jarga.WorkspacesFixtures
 
   alias Jarga.Accounts
