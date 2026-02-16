@@ -1,0 +1,37 @@
+defmodule Agents.Application do
+  @moduledoc """
+  Application layer boundary for the Agents context.
+
+  Contains use cases and policies that orchestrate domain logic:
+  - Use cases: CRUD operations, queries, workspace management
+  - Policies: AgentPolicy, VisibilityPolicy
+  """
+
+  use Boundary,
+    top_level?: true,
+    deps: [Agents.Domain],
+    exports: [
+      # Use cases
+      UseCases.AddAgentToWorkspace,
+      UseCases.AgentQuery,
+      UseCases.CloneSharedAgent,
+      UseCases.CreateUserAgent,
+      UseCases.DeleteUserAgent,
+      UseCases.ListUserAgents,
+      UseCases.ListViewableAgents,
+      UseCases.ListWorkspaceAvailableAgents,
+      UseCases.RemoveAgentFromWorkspace,
+      UseCases.SyncAgentWorkspaces,
+      UseCases.UpdateUserAgent,
+      UseCases.ValidateAgentParams,
+      # Policies
+      Policies.AgentPolicy,
+      Policies.VisibilityPolicy,
+      # Behaviours (interfaces for Infrastructure to implement)
+      Behaviours.AgentRepositoryBehaviour,
+      Behaviours.AgentSchemaBehaviour,
+      Behaviours.LlmClientBehaviour,
+      Behaviours.PubSubNotifierBehaviour,
+      Behaviours.WorkspaceAgentRepositoryBehaviour
+    ]
+end
