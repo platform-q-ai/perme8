@@ -58,6 +58,7 @@ export class BunCliAdapter implements CliPort {
   private env: Record<string, string> = {}
   private workingDir: string
   private _result?: CommandResult
+  private _lastCommand?: string
 
   constructor(readonly config: CliAdapterConfig) {
     this.workingDir = config.workingDir ?? process.cwd()
@@ -94,6 +95,7 @@ export class BunCliAdapter implements CliPort {
   }
 
   async run(command: string): Promise<CommandResult> {
+    this._lastCommand = command
     const timeoutMs = this.config.timeout
     if (timeoutMs != null) {
       return this.runWithTimeout(command, timeoutMs)
@@ -108,6 +110,7 @@ export class BunCliAdapter implements CliPort {
   }
 
   async runWithStdin(command: string, stdin: string): Promise<CommandResult> {
+    this._lastCommand = command
     this._result = await execShell(command, {
       cwd: this.workingDir,
       env: this.env,
@@ -118,6 +121,7 @@ export class BunCliAdapter implements CliPort {
   }
 
   async runWithTimeout(command: string, timeoutMs: number): Promise<CommandResult> {
+    this._lastCommand = command
     const result = await execShell(command, {
       cwd: this.workingDir,
       env: this.env,
@@ -131,6 +135,10 @@ export class BunCliAdapter implements CliPort {
 
     this._result = result
     return this._result
+  }
+
+  get lastCommand(): string | undefined {
+    return this._lastCommand
   }
 
   get result(): CommandResult {

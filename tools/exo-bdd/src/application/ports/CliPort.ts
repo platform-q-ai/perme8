@@ -17,6 +17,7 @@ export interface CliPort {
   runWithTimeout(command: string, timeoutMs: number): Promise<CommandResult>
 
   // Result accessors (from last command)
+  readonly lastCommand: string | undefined
   readonly result: CommandResult
   readonly stdout: string
   readonly stderr: string

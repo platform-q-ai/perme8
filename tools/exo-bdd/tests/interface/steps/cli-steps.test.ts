@@ -8,8 +8,7 @@ mock.module('@cucumber/cucumber', () => ({
   Then: noop,
 }))
 
-// Mock @playwright/test so assertion handlers use bun:test's expect
-mock.module('@playwright/test', () => ({ expect }))
+// Note: assertions.steps.ts no longer depends on @playwright/test — uses plain Error throws
 
 import { VariableService } from '../../../src/application/services/VariableService.ts'
 import { InterpolationService } from '../../../src/application/services/InterpolationService.ts'
@@ -57,6 +56,8 @@ function createMockCli(state: MockCliState = { stdout: '', stderr: '', exitCode:
     duration: state.duration,
   }
 
+  let _lastCommand: string | undefined
+
   const cli = {
     config: {} as any,
 
@@ -67,11 +68,12 @@ function createMockCli(state: MockCliState = { stdout: '', stderr: '', exitCode:
     setWorkingDir: mock((_dir: string) => cli),
 
     // Execution
-    run: mock((_command: string) => Promise.resolve(result)),
-    runWithStdin: mock((_command: string, _stdin: string) => Promise.resolve(result)),
-    runWithTimeout: mock((_command: string, _timeoutMs: number) => Promise.resolve(result)),
+    run: mock((_command: string) => { _lastCommand = _command; return Promise.resolve(result) }),
+    runWithStdin: mock((_command: string, _stdin: string) => { _lastCommand = _command; return Promise.resolve(result) }),
+    runWithTimeout: mock((_command: string, _timeoutMs: number) => { _lastCommand = _command; return Promise.resolve(result) }),
 
     // Result accessors (read from mutable state)
+    get lastCommand() { return _lastCommand },
     get result() { return result },
     get stdout() { return state.stdout },
     get stderr() { return state.stderr },
