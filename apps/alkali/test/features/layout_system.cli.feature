@@ -14,12 +14,12 @@ Feature: Layout System with HEEx Templates
     # Create a post that explicitly declares layout: custom in frontmatter
     When I run "mkdir -p ${site}/content/posts"
     Then the command should succeed
-    When I run "printf '---\ntitle: \"My Post\"\nlayout: custom\n---\n\nThis is my post content.\n' > ${site}/content/posts/my-post.md"
+    When I run "printf '%b' '---\ntitle: \"My Post\"\nlayout: custom\n---\n\nThis is my post content.\n' > ${site}/content/posts/my-post.md"
     Then the command should succeed
     # Create the custom layout template
     When I run "mkdir -p ${site}/layouts"
     Then the command should succeed
-    When I run "printf '<!-- LAYOUT:custom -->\n<html><body><%= @content %></body></html>\n' > ${site}/layouts/custom.html.heex"
+    When I run "printf '%b' '<!-- LAYOUT:custom -->\n<html><body><%= @content %></body></html>\n' > ${site}/layouts/custom.html.heex"
     Then the command should succeed
     # Build the site
     When I run "mix alkali.build ${site}"
@@ -35,17 +35,17 @@ Feature: Layout System with HEEx Templates
     # Write a config that specifies default layouts
     When I run "mkdir -p ${site}/config"
     Then the command should succeed
-    When I run "printf 'import Config\nconfig :alkali,\n  site: %%{title: \"Test Site\", url: \"http://localhost\", author: \"Tester\"},\n  content_path: \"content\",\n  output_path: \"_site\",\n  layouts_path: \"layouts\"\n' > ${site}/config/alkali.exs"
+    When I run "printf '%b' 'import Config\nconfig :alkali,\n  site: %%{title: \"Test Site\", url: \"http://localhost\", author: \"Tester\"},\n  content_path: \"content\",\n  output_path: \"_site\",\n  layouts_path: \"layouts\"\n' > ${site}/config/alkali.exs"
     Then the command should succeed
     # Create the post layout (folder-based default for posts/ content)
     When I run "mkdir -p ${site}/layouts"
     Then the command should succeed
-    When I run "printf '<!-- LAYOUT:post -->\n<html><body><%= @content %></body></html>\n' > ${site}/layouts/post.html.heex"
+    When I run "printf '%b' '<!-- LAYOUT:post -->\n<html><body><%= @content %></body></html>\n' > ${site}/layouts/post.html.heex"
     Then the command should succeed
     # Create a post WITHOUT an explicit layout in frontmatter
     When I run "mkdir -p ${site}/content/posts"
     Then the command should succeed
-    When I run "printf '---\ntitle: \"My Post\"\n---\n\nFolder-based layout content.\n' > ${site}/content/posts/my-post.md"
+    When I run "printf '%b' '---\ntitle: \"My Post\"\n---\n\nFolder-based layout content.\n' > ${site}/content/posts/my-post.md"
     Then the command should succeed
     # Build the site
     When I run "mix alkali.build ${site}"
@@ -61,7 +61,7 @@ Feature: Layout System with HEEx Templates
     # Create a post referencing a layout that does not exist
     When I run "mkdir -p ${site}/content/posts"
     Then the command should succeed
-    When I run "printf '---\ntitle: \"My Post\"\nlayout: nonexistent\n---\n\nThis is my post content.\n' > ${site}/content/posts/my-post.md"
+    When I run "printf '%b' '---\ntitle: \"My Post\"\nlayout: nonexistent\n---\n\nThis is my post content.\n' > ${site}/content/posts/my-post.md"
     Then the command should succeed
     # Remove any default layouts so resolution fails entirely
     When I run "rm -rf ${site}/layouts"
@@ -75,15 +75,15 @@ Feature: Layout System with HEEx Templates
     # Create a post with layout: post
     When I run "mkdir -p ${site}/content/posts"
     Then the command should succeed
-    When I run "printf '---\ntitle: \"Test Post\"\nlayout: post\n---\n\nTest content.\n' > ${site}/content/posts/test-post.md"
+    When I run "printf '%b' '---\ntitle: \"Test Post\"\nlayout: post\n---\n\nTest content.\n' > ${site}/content/posts/test-post.md"
     Then the command should succeed
     # Create the post layout that includes a partial
     When I run "mkdir -p ${site}/layouts/partials"
     Then the command should succeed
-    When I run "printf '<%%= render_partial(\"_header.html.heex\", assigns) %%>\n<main><%%= @content %%></main>\n' > ${site}/layouts/post.html.heex"
+    When I run "printf '%b' '<%%= render_partial(\"_header.html.heex\", assigns) %%>\n<main><%%= @content %%></main>\n' > ${site}/layouts/post.html.heex"
     Then the command should succeed
     # Create the header partial
-    When I run "printf '<header><!-- PARTIAL:header -->Site Header</header>\n' > ${site}/layouts/partials/_header.html.heex"
+    When I run "printf '%b' '<header><!-- PARTIAL:header -->Site Header</header>\n' > ${site}/layouts/partials/_header.html.heex"
     Then the command should succeed
     # Build the site
     When I run "mix alkali.build ${site}"

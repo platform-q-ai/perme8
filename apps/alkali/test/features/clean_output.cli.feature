@@ -27,7 +27,7 @@ Feature: Clean Build Output
     # Create content so the build has something to render
     When I run "mkdir -p ${site}/content/posts"
     Then the command should succeed
-    When I run "printf '---\ntitle: Real Post\ndate: 2024-01-15\n---\nReal content.\n' > ${site}/content/posts/real-post.md"
+    When I run "printf '%b' '---\ntitle: Real Post\ndate: 2024-01-15\n---\nReal content.\n' > ${site}/content/posts/real-post.md"
     Then the command should succeed
 
     # Create an output directory with stale files from a previous build

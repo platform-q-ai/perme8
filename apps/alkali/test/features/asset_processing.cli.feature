@@ -26,9 +26,9 @@ Feature: Asset Pipeline with Minification and Fingerprinting
     # A minified CSS file with fingerprint hash should exist
     When I run "ls ${site}/_site/css/"
     Then the command should succeed
-    And stdout should match "app-.*\\.css"
+    And stdout should match "app-.*\.css"
     # Store the fingerprinted filename for further assertions
-    Then I store stdout matching "(app-.*\\.css)" as "cssFileName"
+    Then I store stdout matching "(app-.*\.css)" as "cssFileName"
     # The minified file should not contain comments
     When I run "cat ${site}/_site/css/app-*.css"
     Then the command should succeed
@@ -47,7 +47,7 @@ Feature: Asset Pipeline with Minification and Fingerprinting
     # A minified JS file with fingerprint hash should exist
     When I run "ls ${site}/_site/js/"
     Then the command should succeed
-    And stdout should match "app-.*\\.js"
+    And stdout should match "app-.*\.js"
     # The minified file should not contain comments
     When I run "cat ${site}/_site/js/app-*.js"
     Then the command should succeed
@@ -68,7 +68,7 @@ Feature: Asset Pipeline with Minification and Fingerprinting
     # The rendered HTML should reference the fingerprinted CSS path
     When I run "cat ${site}/_site/index.html"
     Then the command should succeed
-    And stdout should match "/css/app-[a-f0-9]+\\.css"
+    And stdout should match "/css/app-[a-f0-9]+\.css"
 
   Scenario: Copy static assets without processing
     # Create a binary asset (a small PNG-like file for testing)

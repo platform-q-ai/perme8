@@ -9,17 +9,17 @@ Feature: Build Static Site from Markdown
     When I run "rm -rf ${testTmpDir} && mkdir -p ${site}/content/posts && mkdir -p ${site}/_site"
     Then the command should succeed
     # Create site config
-    When I run "cat > ${site}/config.yml << 'CONF'\ntitle: My Blog\nurl: https://myblog.com\nauthor: John Doe\nCONF"
+    When I run "printf '%b' 'title: My Blog\nurl: https://myblog.com\nauthor: John Doe\n' > ${site}/config.yml"
     Then the command should succeed
 
   Scenario: Build simple blog with posts
     # Create published posts
-    When I run "cat > ${site}/content/posts/2024-01-15-first-post.md << 'EOF'\n---\ntitle: First Post\ndate: 2024-01-15\ntags:\n  - elixir\n  - blog\ncategory: tutorials\ndraft: false\n---\nFirst post content.\nEOF"
+    When I run "printf '%b' '---\ntitle: First Post\ndate: 2024-01-15\ntags:\n  - elixir\n  - blog\ncategory: tutorials\ndraft: false\n---\nFirst post content.\n' > ${site}/content/posts/2024-01-15-first-post.md"
     Then the command should succeed
-    When I run "cat > ${site}/content/posts/2024-01-16-second-post.md << 'EOF'\n---\ntitle: Second Post\ndate: 2024-01-16\ntags:\n  - elixir\ncategory: tutorials\ndraft: false\n---\nSecond post content.\nEOF"
+    When I run "printf '%b' '---\ntitle: Second Post\ndate: 2024-01-16\ntags:\n  - elixir\ncategory: tutorials\ndraft: false\n---\nSecond post content.\n' > ${site}/content/posts/2024-01-16-second-post.md"
     Then the command should succeed
     # Create draft post
-    When I run "cat > ${site}/content/posts/2024-01-17-draft-post.md << 'EOF'\n---\ntitle: Draft Post\ndate: 2024-01-17\ntags:\n  - elixir\ncategory: tutorials\ndraft: true\n---\nDraft post content.\nEOF"
+    When I run "printf '%b' '---\ntitle: Draft Post\ndate: 2024-01-17\ntags:\n  - elixir\ncategory: tutorials\ndraft: true\n---\nDraft post content.\n' > ${site}/content/posts/2024-01-17-draft-post.md"
     Then the command should succeed
     # Run the build
     When I run "mix alkali.build ${site}"
@@ -57,10 +57,10 @@ Feature: Build Static Site from Markdown
 
   Scenario: Build with drafts flag
     # Create published post
-    When I run "cat > ${site}/content/posts/2024-01-15-published.md << 'EOF'\n---\ntitle: Published\ndate: 2024-01-15\ndraft: false\n---\nPublished content.\nEOF"
+    When I run "printf '%b' '---\ntitle: Published\ndate: 2024-01-15\ndraft: false\n---\nPublished content.\n' > ${site}/content/posts/2024-01-15-published.md"
     Then the command should succeed
     # Create draft post
-    When I run "cat > ${site}/content/posts/2024-01-16-draft-post.md << 'EOF'\n---\ntitle: Draft Post\ndate: 2024-01-16\ndraft: true\n---\nDraft content.\nEOF"
+    When I run "printf '%b' '---\ntitle: Draft Post\ndate: 2024-01-16\ndraft: true\n---\nDraft content.\n' > ${site}/content/posts/2024-01-16-draft-post.md"
     Then the command should succeed
     # Run build with drafts flag
     When I run "mix alkali.build ${site} --drafts"
@@ -76,15 +76,15 @@ Feature: Build Static Site from Markdown
 
   Scenario: Incremental build - only changed files
     # Create initial posts
-    When I run "cat > ${site}/content/posts/2024-01-15-post-one.md << 'EOF'\n---\ntitle: Post One\ndate: 2024-01-15\n---\nPost one content.\nEOF"
+    When I run "printf '%b' '---\ntitle: Post One\ndate: 2024-01-15\n---\nPost one content.\n' > ${site}/content/posts/2024-01-15-post-one.md"
     Then the command should succeed
-    When I run "cat > ${site}/content/posts/2024-01-16-post-two.md << 'EOF'\n---\ntitle: Post Two\ndate: 2024-01-16\n---\nPost two content.\nEOF"
+    When I run "printf '%b' '---\ntitle: Post Two\ndate: 2024-01-16\n---\nPost two content.\n' > ${site}/content/posts/2024-01-16-post-two.md"
     Then the command should succeed
     # Run initial full build
     When I run "mix alkali.build ${site}"
     Then the command should succeed
     # Modify only one post (touch to update mtime, then rewrite content)
-    When I run "sleep 1 && cat > ${site}/content/posts/2024-01-15-post-one.md << 'EOF'\n---\ntitle: Post One\ndate: 2024-01-15\n---\nPost one UPDATED content.\nEOF"
+    When I run "sleep 1 && printf '%b' '---\ntitle: Post One\ndate: 2024-01-15\n---\nPost one UPDATED content.\n' > ${site}/content/posts/2024-01-15-post-one.md"
     Then the command should succeed
     # Run incremental build
     When I run "mix alkali.build ${site}"
