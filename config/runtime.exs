@@ -248,3 +248,11 @@ config :jarga, :openrouter,
   chat_model: System.get_env("CHAT_MODEL", "google/gemini-2.5-flash-lite"),
   site_url: System.get_env("OPENROUTER_SITE_URL", "https://jarga.app"),
   app_name: System.get_env("OPENROUTER_APP_NAME", "Jarga")
+
+# Configure OpenRouter for Agents app (extracted from Jarga)
+config :agents, :openrouter,
+  api_key: System.get_env("OPENROUTER_API_KEY"),
+  base_url: System.get_env("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"),
+  chat_model: System.get_env("CHAT_MODEL", "google/gemini-2.5-flash-lite"),
+  site_url: System.get_env("OPENROUTER_SITE_URL", "https://jarga.app"),
+  app_name: System.get_env("OPENROUTER_APP_NAME", "Jarga")

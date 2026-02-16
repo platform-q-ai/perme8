@@ -46,7 +46,7 @@ defmodule ChatSetupAgentsConfigSteps do
   defp sync_agent_to_workspace_if_exists(_agent, _user, nil), do: :ok
 
   defp sync_agent_to_workspace_if_exists(agent, user, workspace) do
-    :ok = Jarga.Agents.sync_agent_workspaces(agent.id, user.id, [workspace.id])
+    :ok = Agents.sync_agent_workspaces(agent.id, user.id, [workspace.id])
   end
 
   # ============================================================================
@@ -91,7 +91,7 @@ defmodule ChatSetupAgentsConfigSteps do
         enabled: true
       })
 
-    :ok = Jarga.Agents.sync_agent_workspaces(agent.id, user.id, [workspace.id])
+    :ok = Agents.sync_agent_workspaces(agent.id, user.id, [workspace.id])
 
     agents = context[:agents] || %{}
 
@@ -115,7 +115,7 @@ defmodule ChatSetupAgentsConfigSteps do
         enabled: true
       })
 
-    :ok = Jarga.Agents.sync_agent_workspaces(agent.id, user.id, [workspace.id])
+    :ok = Agents.sync_agent_workspaces(agent.id, user.id, [workspace.id])
 
     agents = context[:agents] || %{}
 
@@ -163,14 +163,14 @@ defmodule ChatSetupAgentsConfigSteps do
 
     # Remove any existing agents from the workspace
     existing_workspace_agents =
-      Jarga.Agents.get_workspace_agents_list(workspace.id, user.id)
+      Agents.get_workspace_agents_list(workspace.id, user.id)
 
     Enum.each(existing_workspace_agents, fn existing_agent ->
-      Jarga.Agents.sync_agent_workspaces(existing_agent.id, user.id, [])
+      Agents.sync_agent_workspaces(existing_agent.id, user.id, [])
     end)
 
     agent = Jarga.AgentsFixtures.agent_fixture(user, %{name: agent_name, enabled: true})
-    :ok = Jarga.Agents.sync_agent_workspaces(agent.id, user.id, [workspace.id])
+    :ok = Agents.sync_agent_workspaces(agent.id, user.id, [workspace.id])
 
     {:ok,
      context
@@ -223,7 +223,7 @@ defmodule ChatSetupAgentsConfigSteps do
     case Map.get(existing_agents, agent_name) do
       nil ->
         agent = Jarga.AgentsFixtures.agent_fixture(user, %{name: agent_name, enabled: true})
-        :ok = Jarga.Agents.sync_agent_workspaces(agent.id, user.id, [workspace.id])
+        :ok = Agents.sync_agent_workspaces(agent.id, user.id, [workspace.id])
         agent
 
       existing ->

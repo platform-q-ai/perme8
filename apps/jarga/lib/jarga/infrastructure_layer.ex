@@ -39,14 +39,14 @@ defmodule Jarga.InfrastructureLayer do
   ## Examples
 
       iex> Jarga.InfrastructureLayer.repositories()
-      [Jarga.Agents.Infrastructure.Repositories.AgentRepository, ...]
+      [Agents.Infrastructure.Repositories.AgentRepository, ...]
   """
   @spec repositories() :: [module()]
   def repositories do
     [
-      # Agents
-      Jarga.Agents.Infrastructure.Repositories.AgentRepository,
-      Jarga.Agents.Infrastructure.Repositories.WorkspaceAgentRepository,
+      # Agents (extracted to apps/agents/)
+      Agents.Infrastructure.Repositories.AgentRepository,
+      Agents.Infrastructure.Repositories.WorkspaceAgentRepository,
       # Chat
       Jarga.Chat.Infrastructure.Repositories.SessionRepository,
       Jarga.Chat.Infrastructure.Repositories.MessageRepository,
@@ -72,14 +72,14 @@ defmodule Jarga.InfrastructureLayer do
   ## Examples
 
       iex> Jarga.InfrastructureLayer.schemas()
-      [Jarga.Agents.Infrastructure.Schemas.AgentSchema, ...]
+      [Agents.Infrastructure.Schemas.AgentSchema, ...]
   """
   @spec schemas() :: [module()]
   def schemas do
     [
-      # Agents
-      Jarga.Agents.Infrastructure.Schemas.AgentSchema,
-      Jarga.Agents.Infrastructure.Schemas.WorkspaceAgentJoinSchema,
+      # Agents (extracted to apps/agents/)
+      Agents.Infrastructure.Schemas.AgentSchema,
+      Agents.Infrastructure.Schemas.WorkspaceAgentJoinSchema,
       # Chat
       Jarga.Chat.Infrastructure.Schemas.SessionSchema,
       Jarga.Chat.Infrastructure.Schemas.MessageSchema,
@@ -101,13 +101,13 @@ defmodule Jarga.InfrastructureLayer do
   ## Examples
 
       iex> Jarga.InfrastructureLayer.queries()
-      [Jarga.Agents.Infrastructure.Queries.AgentQueries, ...]
+      [Agents.Infrastructure.Queries.AgentQueries, ...]
   """
   @spec queries() :: [module()]
   def queries do
     [
-      # Agents
-      Jarga.Agents.Infrastructure.Queries.AgentQueries,
+      # Agents (extracted to apps/agents/)
+      Agents.Infrastructure.Queries.AgentQueries,
       # Chat
       Jarga.Chat.Infrastructure.Queries.Queries,
       # Documents
@@ -127,13 +127,13 @@ defmodule Jarga.InfrastructureLayer do
   ## Examples
 
       iex> Jarga.InfrastructureLayer.notifiers()
-      [Jarga.Agents.Infrastructure.Notifiers.PubSubNotifier, ...]
+      [Agents.Infrastructure.Notifiers.PubSubNotifier, ...]
   """
   @spec notifiers() :: [module()]
   def notifiers do
     [
-      # Agents
-      Jarga.Agents.Infrastructure.Notifiers.PubSubNotifier,
+      # Agents (extracted to apps/agents/)
+      Agents.Infrastructure.Notifiers.PubSubNotifier,
       # Documents
       Jarga.Documents.Infrastructure.Notifiers.PubSubNotifier,
       # Notifications
@@ -150,13 +150,13 @@ defmodule Jarga.InfrastructureLayer do
   ## Examples
 
       iex> Jarga.InfrastructureLayer.external_services()
-      [Jarga.Agents.Infrastructure.Services.LlmClient, ...]
+      [Agents.Infrastructure.Services.LlmClient, ...]
   """
   @spec external_services() :: [module()]
   def external_services do
     [
-      # Agents
-      Jarga.Agents.Infrastructure.Services.LlmClient
+      # Agents (extracted to apps/agents/)
+      Agents.Infrastructure.Services.LlmClient
     ]
   end
 

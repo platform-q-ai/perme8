@@ -78,6 +78,8 @@ defmodule Jarga.MixProject do
             # Database
             {:ecto, :relaxed},
             {:ecto_sql, :relaxed},
+            # Agents (extracted umbrella app)
+            {:agents, :relaxed},
             # Other - allow Mix for compile tasks
             {:mix, :relaxed}
           ]
@@ -95,6 +97,7 @@ defmodule Jarga.MixProject do
     [
       # Umbrella dependencies
       {:identity, in_umbrella: true},
+      {:agents, in_umbrella: true},
 
       # Database
       {:phoenix_ecto, "~> 4.6"},

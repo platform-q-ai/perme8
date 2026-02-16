@@ -371,7 +371,7 @@ defmodule JargaWeb.AppLive.Projects.Show do
     workspace_id = socket.assigns.workspace.id
     user = socket.assigns.current_scope.user
 
-    agents = Jarga.Agents.get_workspace_agents_list(workspace_id, user.id, enabled_only: true)
+    agents = Agents.get_workspace_agents_list(workspace_id, user.id, enabled_only: true)
 
     send_update(JargaWeb.ChatLive.Panel,
       id: "global-chat-panel",

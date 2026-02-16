@@ -19,8 +19,8 @@ defmodule Jarga.Test.StepHelpers do
   use Boundary,
     top_level?: true,
     deps: [
-      Jarga.Agents,
-      Jarga.AgentsFixtures,
+      Agents,
+      Agents.AgentsFixtures,
       Jarga.Chat,
       Jarga.ChatFixtures,
       Jarga.WorkspacesFixtures
@@ -197,7 +197,7 @@ defmodule Jarga.Test.StepHelpers do
 
         default_attrs = %{name: agent_name, enabled: true}
         agent = Jarga.AgentsFixtures.agent_fixture(user, Map.merge(default_attrs, attrs))
-        :ok = Jarga.Agents.sync_agent_workspaces(agent.id, user.id, [workspace.id])
+        :ok = Agents.sync_agent_workspaces(agent.id, user.id, [workspace.id])
 
         agents = get_agents(context)
         context = Map.put(context, :agents, Map.put(agents, agent_name, agent))

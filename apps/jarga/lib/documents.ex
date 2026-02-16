@@ -19,7 +19,7 @@ defmodule Jarga.Documents do
       Jarga.Accounts,
       Jarga.Workspaces,
       Jarga.Projects,
-      Jarga.Agents,
+      Agents,
       # Same-context layer dependencies
       Jarga.Documents.Domain,
       Jarga.Documents.Application,

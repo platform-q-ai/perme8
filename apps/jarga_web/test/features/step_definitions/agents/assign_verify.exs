@@ -16,7 +16,7 @@ defmodule AgentAssignVerifySteps do
   use Cucumber.StepDefinition
   use JargaWeb.ConnCase, async: false
 
-  alias Jarga.Agents
+  alias Agents
 
   # ============================================================================
   # ASSERTION STEPS
@@ -63,7 +63,7 @@ defmodule AgentAssignVerifySteps do
       |> Enum.reject(&(&1.user_id == owner.id))
 
     Enum.each(workspace_members, fn member ->
-      viewable = Jarga.Agents.list_viewable_agents(member.user_id)
+      viewable = Agents.list_viewable_agents(member.user_id)
       viewable_ids = Enum.map(viewable, & &1.id)
 
       refute agent.id in viewable_ids,
@@ -83,7 +83,7 @@ defmodule AgentAssignVerifySteps do
     workspace_members = Jarga.Workspaces.list_members(workspace.id)
 
     Enum.each(workspace_members, fn member ->
-      viewable = Jarga.Agents.list_viewable_agents(member.user_id)
+      viewable = Agents.list_viewable_agents(member.user_id)
       viewable_ids = Enum.map(viewable, & &1.id)
 
       assert agent.id in viewable_ids,

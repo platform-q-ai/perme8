@@ -7,7 +7,7 @@ defmodule JargaWeb.AppLive.Agents.Form do
 
   import JargaWeb.ChatLive.MessageHandlers
 
-  alias Jarga.Agents
+  alias Agents
   alias Jarga.Workspaces
   alias JargaWeb.Layouts
 

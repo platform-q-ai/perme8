@@ -14,8 +14,8 @@ defmodule AgentCloneSteps do
   import Jarga.AccountsFixtures
   import Jarga.AgentsFixtures
 
-  alias Jarga.Agents
-  alias Jarga.Agents.Infrastructure.Repositories.WorkspaceAgentRepository
+  alias Agents
+  alias Agents.Infrastructure.Repositories.WorkspaceAgentRepository
 
   # ============================================================================
   # CLONING ACTIONS

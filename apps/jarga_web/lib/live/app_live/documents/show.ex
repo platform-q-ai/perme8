@@ -7,7 +7,7 @@ defmodule JargaWeb.AppLive.Documents.Show do
 
   import JargaWeb.ChatLive.MessageHandlers
 
-  alias Jarga.{Documents, Notes, Workspaces, Projects, Agents}
+  alias Jarga.{Documents, Notes, Workspaces, Projects}
 
   @impl true
   def mount(
@@ -461,7 +461,7 @@ defmodule JargaWeb.AppLive.Documents.Show do
     workspace_id = socket.assigns.workspace.id
     user = socket.assigns.current_scope.user
 
-    agents = Jarga.Agents.get_workspace_agents_list(workspace_id, user.id, enabled_only: true)
+    agents = Agents.get_workspace_agents_list(workspace_id, user.id, enabled_only: true)
 
     send_update(JargaWeb.ChatLive.Panel,
       id: "global-chat-panel",

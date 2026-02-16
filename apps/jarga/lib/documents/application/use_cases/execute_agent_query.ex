@@ -21,7 +21,7 @@ defmodule Jarga.Documents.Application.UseCases.ExecuteAgentQuery do
   - Delegate to Agents.agent_query with agent-specific settings
   """
 
-  alias Jarga.Agents
+  alias Agents
   alias Jarga.Documents.Domain.AgentQueryParser
 
   @doc """

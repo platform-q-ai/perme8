@@ -20,7 +20,7 @@ defmodule AgentVerifyPubSubSteps do
   import Jarga.WorkspacesFixtures
   import Jarga.DocumentsFixtures
 
-  alias Jarga.Agents
+  alias Agents
 
   # ============================================================================
   # CHAT/SYSTEM PROMPT ASSERTIONS

@@ -47,7 +47,7 @@ defmodule Jarga.ApplicationLayer do
   ## Examples
 
       iex> Jarga.ApplicationLayer.use_cases()
-      [Jarga.Agents.Application.UseCases.CreateUserAgent, ...]
+      [Agents.Application.UseCases.CreateUserAgent, ...]
   """
   @spec use_cases() :: [module()]
   def use_cases do
@@ -56,19 +56,19 @@ defmodule Jarga.ApplicationLayer do
       # have been moved to the Identity app. API-specific use cases have been
       # moved to the JargaApi app.
       #
-      # Agents
-      Jarga.Agents.Application.UseCases.CreateUserAgent,
-      Jarga.Agents.Application.UseCases.UpdateUserAgent,
-      Jarga.Agents.Application.UseCases.DeleteUserAgent,
-      Jarga.Agents.Application.UseCases.ListUserAgents,
-      Jarga.Agents.Application.UseCases.ListViewableAgents,
-      Jarga.Agents.Application.UseCases.ListWorkspaceAvailableAgents,
-      Jarga.Agents.Application.UseCases.CloneSharedAgent,
-      Jarga.Agents.Application.UseCases.AddAgentToWorkspace,
-      Jarga.Agents.Application.UseCases.RemoveAgentFromWorkspace,
-      Jarga.Agents.Application.UseCases.SyncAgentWorkspaces,
-      Jarga.Agents.Application.UseCases.ValidateAgentParams,
-      Jarga.Agents.Application.UseCases.AgentQuery,
+      # Agents (extracted to apps/agents/)
+      Agents.Application.UseCases.CreateUserAgent,
+      Agents.Application.UseCases.UpdateUserAgent,
+      Agents.Application.UseCases.DeleteUserAgent,
+      Agents.Application.UseCases.ListUserAgents,
+      Agents.Application.UseCases.ListViewableAgents,
+      Agents.Application.UseCases.ListWorkspaceAvailableAgents,
+      Agents.Application.UseCases.CloneSharedAgent,
+      Agents.Application.UseCases.AddAgentToWorkspace,
+      Agents.Application.UseCases.RemoveAgentFromWorkspace,
+      Agents.Application.UseCases.SyncAgentWorkspaces,
+      Agents.Application.UseCases.ValidateAgentParams,
+      Agents.Application.UseCases.AgentQuery,
       # Chat
       Jarga.Chat.Application.UseCases.CreateSession,
       Jarga.Chat.Application.UseCases.LoadSession,
@@ -107,14 +107,14 @@ defmodule Jarga.ApplicationLayer do
   ## Examples
 
       iex> Jarga.ApplicationLayer.policies()
-      [Jarga.Agents.Application.Policies.AgentPolicy, ...]
+      [Agents.Application.Policies.AgentPolicy, ...]
   """
   @spec policies() :: [module()]
   def policies do
     [
-      # Agents
-      Jarga.Agents.Application.Policies.AgentPolicy,
-      Jarga.Agents.Application.Policies.VisibilityPolicy,
+      # Agents (extracted to apps/agents/)
+      Agents.Application.Policies.AgentPolicy,
+      Agents.Application.Policies.VisibilityPolicy,
       # Documents
       Jarga.Documents.Application.Policies.DocumentAuthorizationPolicy
       # Workspaces — migrated to Identity app

@@ -25,7 +25,7 @@ defmodule Jarga.Documents.Application.UseCases.ExecuteAgentQueryTest do
         })
 
       # Add agent to workspace
-      Jarga.Agents.sync_agent_workspaces(agent.id, user.id, [workspace.id])
+      Agents.sync_agent_workspaces(agent.id, user.id, [workspace.id])
 
       assigns = %{
         current_workspace: workspace,
@@ -91,7 +91,7 @@ defmodule Jarga.Documents.Application.UseCases.ExecuteAgentQueryTest do
           enabled: false
         })
 
-      Jarga.Agents.sync_agent_workspaces(disabled_agent.id, user.id, [workspace.id])
+      Agents.sync_agent_workspaces(disabled_agent.id, user.id, [workspace.id])
 
       params = %{
         command: "@j disabled-agent Can you help?",

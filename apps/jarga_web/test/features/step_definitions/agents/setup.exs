@@ -115,7 +115,7 @@ defmodule AgentSetupSteps do
   end
 
   defp select_first_available_agent(context, user, workspace) do
-    result = Jarga.Agents.list_workspace_available_agents(workspace.id, user.id)
+    result = Agents.list_workspace_available_agents(workspace.id, user.id)
     all_agents = (result.my_agents || []) ++ (result.other_agents || [])
 
     case List.first(all_agents) do

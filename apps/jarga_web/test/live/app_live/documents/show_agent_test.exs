@@ -66,7 +66,7 @@ defmodule JargaWeb.AppLive.Documents.ShowAITest do
         live(conn, ~p"/app/workspaces/#{workspace.slug}/documents/#{document.slug}")
 
       # Verify the Agents.agent_query function exists and is callable
-      assert function_exported?(Jarga.Agents, :agent_query, 2)
+      assert function_exported?(Agents, :agent_query, 2)
 
       assert Process.alive?(view.pid)
     end
@@ -410,7 +410,7 @@ defmodule JargaWeb.AppLive.Documents.ShowAITest do
   describe "Agents.cancel_agent_query/2" do
     test "function exists and is callable" do
       # Verify the cancel function exists
-      assert function_exported?(Jarga.Agents, :cancel_agent_query, 2)
+      assert function_exported?(Agents, :cancel_agent_query, 2)
 
       # Test with a dummy process
       test_pid =
@@ -423,7 +423,7 @@ defmodule JargaWeb.AppLive.Documents.ShowAITest do
         end)
 
       # Call the cancel function
-      assert :ok = Jarga.Agents.cancel_agent_query(test_pid, "test_node")
+      assert :ok = Agents.cancel_agent_query(test_pid, "test_node")
 
       # Give time for message to be received
       Process.sleep(10)
@@ -625,7 +625,7 @@ defmodule JargaWeb.AppLive.Documents.ShowAITest do
         })
 
       # Sync agent to workspace
-      :ok = Jarga.Agents.sync_agent_workspaces(agent.id, user.id, [workspace.id])
+      :ok = Agents.sync_agent_workspaces(agent.id, user.id, [workspace.id])
 
       %{agent: agent}
     end
@@ -708,7 +708,7 @@ defmodule JargaWeb.AppLive.Documents.ShowAITest do
     } do
       # Create disabled agent
       disabled_agent = agent_fixture(user, %{name: "disabled-prd", enabled: false})
-      :ok = Jarga.Agents.sync_agent_workspaces(disabled_agent.id, user.id, [workspace.id])
+      :ok = Agents.sync_agent_workspaces(disabled_agent.id, user.id, [workspace.id])
 
       conn = log_in_user(conn, user)
 

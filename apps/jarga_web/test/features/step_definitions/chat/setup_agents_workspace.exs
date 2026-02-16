@@ -46,8 +46,8 @@ defmodule ChatSetupAgentsWorkspaceSteps do
     agent1 = agent_fixture(user, %{name: agent1_name, enabled: true})
     agent2 = agent_fixture(user, %{name: agent2_name, enabled: true})
 
-    :ok = Jarga.Agents.sync_agent_workspaces(agent1.id, user.id, [workspace.id])
-    :ok = Jarga.Agents.sync_agent_workspaces(agent2.id, user.id, [workspace.id])
+    :ok = Agents.sync_agent_workspaces(agent1.id, user.id, [workspace.id])
+    :ok = Agents.sync_agent_workspaces(agent2.id, user.id, [workspace.id])
 
     existing_agents = get_agents(context)
 
@@ -86,7 +86,7 @@ defmodule ChatSetupAgentsWorkspaceSteps do
       Enum.reduce(rows, existing_agents, fn row, acc ->
         agent_name = Map.values(row) |> List.first()
         agent = agent_fixture(user, %{name: agent_name, enabled: true})
-        :ok = Jarga.Agents.sync_agent_workspaces(agent.id, user.id, [workspace.id])
+        :ok = Agents.sync_agent_workspaces(agent.id, user.id, [workspace.id])
         Map.put(acc, agent_name, agent)
       end)
 
@@ -107,7 +107,7 @@ defmodule ChatSetupAgentsWorkspaceSteps do
         workspace_fixture(user, %{name: ws_name, slug: Slugy.slugify(ws_name)})
 
     agent = agent_fixture(user, %{name: agent_name, enabled: true})
-    :ok = Jarga.Agents.sync_agent_workspaces(agent.id, user.id, [workspace.id])
+    :ok = Agents.sync_agent_workspaces(agent.id, user.id, [workspace.id])
 
     existing_agents = get_agents(context)
 
@@ -127,7 +127,7 @@ defmodule ChatSetupAgentsWorkspaceSteps do
         workspace_fixture(user, %{name: ws_name, slug: Slugy.slugify(ws_name)})
 
     agent = agent_fixture(user, %{name: agent_name, enabled: false})
-    :ok = Jarga.Agents.sync_agent_workspaces(agent.id, user.id, [workspace.id])
+    :ok = Agents.sync_agent_workspaces(agent.id, user.id, [workspace.id])
 
     existing_agents = get_agents(context)
 
@@ -145,7 +145,7 @@ defmodule ChatSetupAgentsWorkspaceSteps do
         workspace_fixture(user, %{name: "Test Workspace", slug: "test-workspace"})
 
     agent = agent_fixture(user, %{name: agent_name, enabled: true})
-    :ok = Jarga.Agents.sync_agent_workspaces(agent.id, user.id, [workspace.id])
+    :ok = Agents.sync_agent_workspaces(agent.id, user.id, [workspace.id])
 
     agents = context[:agents] || %{}
 
@@ -165,7 +165,7 @@ defmodule ChatSetupAgentsWorkspaceSteps do
         workspace_fixture(user, %{name: "Test Workspace", slug: "test-workspace"})
 
     agent = Jarga.AgentsFixtures.agent_fixture(user, %{name: agent_name, enabled: true})
-    :ok = Jarga.Agents.sync_agent_workspaces(agent.id, user.id, [workspace.id])
+    :ok = Agents.sync_agent_workspaces(agent.id, user.id, [workspace.id])
 
     agents = context[:agents] || %{}
 

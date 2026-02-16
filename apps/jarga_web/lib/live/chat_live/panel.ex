@@ -10,7 +10,7 @@ defmodule JargaWeb.ChatLive.Panel do
 
   import JargaWeb.ChatLive.Components.Message
 
-  alias Jarga.Agents
+  alias Agents
   alias Jarga.Chat
 
   @impl true

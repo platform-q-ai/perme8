@@ -7,7 +7,7 @@ defmodule JargaWeb.AppLive.Agents.Index do
 
   import JargaWeb.ChatLive.MessageHandlers
 
-  alias Jarga.Agents
+  alias Agents
   alias JargaWeb.Layouts
 
   @impl true
