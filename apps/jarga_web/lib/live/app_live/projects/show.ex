@@ -6,6 +6,7 @@ defmodule JargaWeb.AppLive.Projects.Show do
   use JargaWeb, :live_view
 
   import JargaWeb.ChatLive.MessageHandlers
+  import JargaWeb.Live.PermissionsHelper
 
   alias Jarga.{Workspaces, Projects, Documents}
   alias JargaWeb.Layouts
@@ -20,24 +21,28 @@ defmodule JargaWeb.AppLive.Projects.Show do
       project={@project}
     >
       <div class="space-y-8">
-        <div class="flex items-center justify-end">
-          <.kebab_menu>
-            <:item
-              icon="hero-pencil"
-              navigate={~p"/app/workspaces/#{@workspace.slug}/projects/#{@project.slug}/edit"}
-            >
-              Edit Project
-            </:item>
-            <:item
-              icon="hero-trash"
-              variant="error"
-              phx_click="delete_project"
-              data_confirm="Are you sure you want to delete this project?"
-            >
-              Delete Project
-            </:item>
-          </.kebab_menu>
-        </div>
+        <%= if can_edit_project?(@current_member, @project, @current_scope.user) || can_delete_project?(@current_member, @project, @current_scope.user) do %>
+          <div class="flex items-center justify-end">
+            <.kebab_menu>
+              <:item
+                :if={can_edit_project?(@current_member, @project, @current_scope.user)}
+                icon="hero-pencil"
+                navigate={~p"/app/workspaces/#{@workspace.slug}/projects/#{@project.slug}/edit"}
+              >
+                Edit Project
+              </:item>
+              <:item
+                :if={can_delete_project?(@current_member, @project, @current_scope.user)}
+                icon="hero-trash"
+                variant="error"
+                phx_click="delete_project"
+                data_confirm="Are you sure you want to delete this project?"
+              >
+                Delete Project
+              </:item>
+            </.kebab_menu>
+          </div>
+        <% end %>
 
         <%= if @project.description do %>
           <div class="card bg-base-200">
@@ -186,7 +191,8 @@ defmodule JargaWeb.AppLive.Projects.Show do
       ) do
     user = socket.assigns.current_scope.user
 
-    with {:ok, workspace} <- Workspaces.get_workspace_by_slug(user, workspace_slug),
+    with {:ok, workspace, current_member} <-
+           Workspaces.get_workspace_and_member_by_slug(user, workspace_slug),
          {:ok, project} <- get_project_by_slug(user, workspace.id, project_slug) do
       documents = Documents.list_documents_for_project(user, workspace.id, project.id)
 
@@ -198,6 +204,7 @@ defmodule JargaWeb.AppLive.Projects.Show do
       {:ok,
        socket
        |> assign(:workspace, workspace)
+       |> assign(:current_member, current_member)
        |> assign(:project, project)
        |> assign(:documents, documents)
        |> assign(:show_document_modal, false)

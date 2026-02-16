@@ -298,12 +298,15 @@ IO.puts("[exo-seeds-web] Created projects: q1-launch, mobile-app")
     is_public: false
   })
 
-{:ok, _pinned_doc} =
+{:ok, pinned_doc} =
   Documents.create_document(alice, product_team.id, %{
     title: "Pinned Doc",
     content: "A pinned document for unpinning tests",
     is_public: false
   })
+
+# Pin the document so it appears as pinned in listing tests
+{:ok, _} = Documents.update_document(alice, product_team.id, pinned_doc.id, %{is_pinned: true})
 
 {:ok, _old_doc} =
   Documents.create_document(alice, product_team.id, %{

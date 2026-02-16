@@ -6,6 +6,7 @@ defmodule JargaWeb.AppLive.Projects.Edit do
   use JargaWeb, :live_view
 
   import JargaWeb.ChatLive.MessageHandlers
+  import JargaWeb.Live.PermissionsHelper
 
   alias Jarga.{Workspaces, Projects}
   alias JargaWeb.Layouts
@@ -78,16 +79,30 @@ defmodule JargaWeb.AppLive.Projects.Edit do
       ) do
     user = socket.assigns.current_scope.user
 
-    # This will raise if user is not a member
-    workspace = Workspaces.get_workspace_by_slug!(user, workspace_slug)
-    project = Projects.get_project_by_slug!(user, workspace.id, project_slug)
-    changeset = Projects.change_project(project)
+    with {:ok, workspace, current_member} <-
+           Workspaces.get_workspace_and_member_by_slug(user, workspace_slug),
+         {:ok, project} <- Projects.get_project_by_slug(user, workspace.id, project_slug),
+         true <- can_edit_project?(current_member, project, user) do
+      changeset = Projects.change_project(project)
 
-    {:ok,
-     socket
-     |> assign(:workspace, workspace)
-     |> assign(:project, project)
-     |> assign(:form, to_form(changeset, as: :project))}
+      {:ok,
+       socket
+       |> assign(:workspace, workspace)
+       |> assign(:project, project)
+       |> assign(:form, to_form(changeset, as: :project))}
+    else
+      false ->
+        {:ok,
+         socket
+         |> put_flash(:error, "You are not authorized to edit this project")
+         |> redirect(to: ~p"/app/workspaces")}
+
+      {:error, _reason} ->
+        {:ok,
+         socket
+         |> put_flash(:error, "Project not found")
+         |> redirect(to: ~p"/app/workspaces")}
+    end
   end
 
   @impl true
