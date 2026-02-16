@@ -1,6 +1,6 @@
 import { test, expect, describe } from 'bun:test'
 import { resolve } from 'node:path'
-import { parseRunArgs, buildCucumberArgs, generateSetupContent, mergeTags } from '../../src/cli/run.ts'
+import { parseRunArgs, buildCucumberArgs, generateSetupContent, mergeTags, filterFeaturesByAdapter } from '../../src/cli/run.ts'
 
 describe('parseRunArgs', () => {
   test('parses --config flag', () => {
@@ -51,6 +51,80 @@ describe('parseRunArgs', () => {
     expect(opts.config).toBe('config.ts')
     expect(opts.tags).toBe('@api')
     expect(opts.passthrough).toEqual(['--format', 'progress'])
+  })
+
+  test('parses --adapter flag', () => {
+    const opts = parseRunArgs(['--config', 'config.ts', '--adapter', 'browser'])
+    expect(opts.adapter).toBe('browser')
+  })
+
+  test('parses -a shorthand for adapter', () => {
+    const opts = parseRunArgs(['-c', 'config.ts', '-a', 'security'])
+    expect(opts.adapter).toBe('security')
+  })
+
+  test('adapter is undefined when not provided', () => {
+    const opts = parseRunArgs(['--config', 'config.ts'])
+    expect(opts.adapter).toBeUndefined()
+  })
+
+  test('parses all flags together', () => {
+    const opts = parseRunArgs(['-c', 'config.ts', '-t', '@smoke', '-a', 'http', '--format', 'progress'])
+    expect(opts.config).toBe('config.ts')
+    expect(opts.tags).toBe('@smoke')
+    expect(opts.adapter).toBe('http')
+    expect(opts.passthrough).toEqual(['--format', 'progress'])
+  })
+})
+
+describe('filterFeaturesByAdapter', () => {
+  test('keeps globs that already match the adapter suffix', () => {
+    const result = filterFeaturesByAdapter('./features/**/*.browser.feature', 'browser')
+    expect(result).toEqual(['./features/**/*.browser.feature'])
+  })
+
+  test('rewrites generic globs to target the adapter', () => {
+    const result = filterFeaturesByAdapter('./features/**/*.feature', 'browser')
+    expect(result).toEqual(['./features/**/*.browser.feature'])
+  })
+
+  test('drops globs for a different adapter', () => {
+    const result = filterFeaturesByAdapter('./features/**/*.security.feature', 'browser')
+    expect(result).toEqual([])
+  })
+
+  test('handles array of mixed globs', () => {
+    const result = filterFeaturesByAdapter(
+      ['./features/**/*.browser.feature', './features/**/*.security.feature'],
+      'browser',
+    )
+    expect(result).toEqual(['./features/**/*.browser.feature'])
+  })
+
+  test('rewrites generic and keeps matching in mixed array', () => {
+    const result = filterFeaturesByAdapter(
+      ['./features/**/*.feature', './features/**/*.security.feature'],
+      'browser',
+    )
+    expect(result).toEqual(['./features/**/*.browser.feature'])
+  })
+
+  test('works with security adapter', () => {
+    const result = filterFeaturesByAdapter(
+      ['./features/**/*.browser.feature', './features/**/*.security.feature'],
+      'security',
+    )
+    expect(result).toEqual(['./features/**/*.security.feature'])
+  })
+
+  test('works with cli adapter', () => {
+    const result = filterFeaturesByAdapter('./features/**/*.feature', 'cli')
+    expect(result).toEqual(['./features/**/*.cli.feature'])
+  })
+
+  test('preserves non-feature patterns as-is', () => {
+    const result = filterFeaturesByAdapter('./some/path', 'browser')
+    expect(result).toEqual(['./some/path'])
   })
 })
 

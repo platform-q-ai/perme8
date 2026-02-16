@@ -7,12 +7,14 @@ import { ServerManager, DockerManager } from '../infrastructure/servers/index.ts
 export interface RunOptions {
   config: string
   tags?: string
+  adapter?: string
   passthrough: string[]
 }
 
 export function parseRunArgs(args: string[]): RunOptions {
   let config: string | undefined
   let tags: string | undefined
+  let adapter: string | undefined
   const passthrough: string[] = []
 
   for (let i = 0; i < args.length; i++) {
@@ -21,6 +23,8 @@ export function parseRunArgs(args: string[]): RunOptions {
       config = args[++i]
     } else if (arg === '--tags' || arg === '-t') {
       tags = args[++i]
+    } else if (arg === '--adapter' || arg === '-a') {
+      adapter = args[++i]
     } else {
       passthrough.push(arg!)
     }
@@ -30,7 +34,46 @@ export function parseRunArgs(args: string[]): RunOptions {
     throw new Error('Missing required argument: --config <path>')
   }
 
-  return { config, tags, passthrough }
+  return { config, tags, adapter, passthrough }
+}
+
+/**
+ * Filters feature glob patterns to only include files matching the given adapter suffix.
+ *
+ * For example, with adapter "browser":
+ *   "./features/**\/*.browser.feature" => kept
+ *   "./features/**\/*.security.feature" => removed
+ *   "./features/**\/*.feature" => rewritten to "./features/**\/*.browser.feature"
+ */
+export function filterFeaturesByAdapter(features: string | string[], adapter: string): string[] {
+  const patterns = Array.isArray(features) ? features : [features]
+  const suffix = `.${adapter}.feature`
+
+  const filtered: string[] = []
+  for (const pattern of patterns) {
+    if (pattern.endsWith(suffix)) {
+      // Already matches the adapter — keep as-is
+      filtered.push(pattern)
+    } else if (pattern.endsWith('.feature')) {
+      // Generic or different adapter glob — rewrite to target the requested adapter
+      // e.g. "./features/**/*.feature" => "./features/**/*.browser.feature"
+      // e.g. "./features/**/*.security.feature" => skip (different adapter)
+      const base = pattern.slice(0, -'.feature'.length)
+      // Check if the pattern already has an adapter suffix (e.g. ".security")
+      const lastDot = base.lastIndexOf('.')
+      const lastSlash = base.lastIndexOf('/')
+      if (lastDot > lastSlash && lastDot > 0) {
+        // Pattern has an explicit adapter suffix that doesn't match — skip it
+        continue
+      }
+      // Generic glob like "*.feature" — rewrite to "*.browser.feature"
+      filtered.push(`${base}${suffix}`)
+    } else {
+      filtered.push(pattern)
+    }
+  }
+
+  return filtered
 }
 
 /**
@@ -215,7 +258,10 @@ export async function runTests(options: RunOptions): Promise<number> {
     return 1
   }
 
-  const features = config.features ?? './features/**/*.feature'
+  const rawFeatures = config.features ?? './features/**/*.feature'
+  const features = options.adapter
+    ? filterFeaturesByAdapter(rawFeatures, options.adapter)
+    : rawFeatures
 
   // Start Docker containers (e.g. ZAP for security testing) if configured
   const dockerManager = new DockerManager()
