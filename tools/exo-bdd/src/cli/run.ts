@@ -188,16 +188,21 @@ import { createAdapters } from '${factoryUrl}'
 import type { Adapters } from '${factoryUrl}'
 import { TestWorld } from '${worldUrl}'
 import { VariableService } from '${variableServiceUrl}'
+import { mkdirSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 
 setWorldConstructor(TestWorld)
 ${timeoutLine}
 
 let adapters: Adapters
+const failureDir = join(process.cwd(), 'test-failures')
 
 BeforeAll(async function () {
   const configModule = await import('${configUrl}')
   const config = configModule.default
   adapters = await createAdapters(config)
+  // Ensure failure artifact directory exists (clean start each run)
+  mkdirSync(failureDir, { recursive: true })
 })
 
 Before(async function (this: TestWorld) {
@@ -212,8 +217,33 @@ ${injectLines}})
 After(async function (this: TestWorld, scenario) {
   if (this.hasBrowser) {
     if (scenario.result?.status === Status.FAILED) {
-      const screenshot = await this.browser.screenshot()
-      this.attach(screenshot, 'image/png')
+      // Build a filename-safe slug from the scenario name
+      const slug = (scenario.pickle.name || 'unknown')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '')
+        .slice(0, 80)
+
+      try {
+        // Save screenshot to disk
+        const screenshot = await this.browser.screenshot({ fullPage: true })
+        this.attach(screenshot, 'image/png')
+        const screenshotPath = join(failureDir, slug + '.png')
+        writeFileSync(screenshotPath, screenshot)
+
+        // Save page HTML to disk
+        const html = await this.browser.page.content()
+        const htmlPath = join(failureDir, slug + '.html')
+        writeFileSync(htmlPath, html, 'utf-8')
+
+        // Save current URL for context
+        const url = this.browser.url()
+        const metaPath = join(failureDir, slug + '.meta.txt')
+        writeFileSync(metaPath, 'URL: ' + url + '\\nScenario: ' + scenario.pickle.name + '\\n', 'utf-8')
+      } catch (artifactError) {
+        // Don't let artifact saving mask the real test failure
+        console.error('[exo-bdd] Failed to save failure artifacts:', artifactError)
+      }
     }
     await this.browser.clearContext()
   }

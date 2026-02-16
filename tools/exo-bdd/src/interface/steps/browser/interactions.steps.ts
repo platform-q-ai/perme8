@@ -16,6 +16,15 @@ export async function clickSelector(context: InteractionContext, selector: strin
   await context.browser.click(context.interpolate(selector))
 }
 
+export async function forceClickSelector(context: InteractionContext, selector: string): Promise<void> {
+  await context.browser.forceClick(context.interpolate(selector))
+}
+
+export async function jsClick(context: InteractionContext, selector: string): Promise<void> {
+  const interpolated = context.interpolate(selector)
+  await context.browser.page.locator(interpolated).first().evaluate((el: HTMLElement) => el.click())
+}
+
 export async function clickButton(context: InteractionContext, text: string): Promise<void> {
   await context.browser.click(`button:has-text("${context.interpolate(text)}")`)
 }
@@ -126,6 +135,14 @@ export async function takeElementScreenshot(context: InteractionContext, selecto
 // Clicking
 When<TestWorld>('I click {string}', async function (selector: string) {
   await clickSelector(this, selector)
+})
+
+When<TestWorld>('I force click {string}', async function (selector: string) {
+  await forceClickSelector(this, selector)
+})
+
+When<TestWorld>('I js click {string}', async function (selector: string) {
+  await jsClick(this, selector)
 })
 
 When<TestWorld>('I click the {string} button', async function (text: string) {
