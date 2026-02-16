@@ -335,7 +335,10 @@
              # entity_relationship_manager: OTP Application module uses the
              #   Application namespace, preventing a separate ApplicationLayer
              #   boundary — application logic is governed by the top-level boundary
-             excluded_apps: ["perme8_tools", "jarga_api", "entity_relationship_manager"]
+             # agents: facade delegates to both Application and Infrastructure
+             #   (LlmClient for chat/stream) — extracting a separate ApplicationLayer
+             #   boundary is planned but not yet done
+             excluded_apps: ["perme8_tools", "jarga_api", "entity_relationship_manager", "agents"]
            ]},
 
           #
