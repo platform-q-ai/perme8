@@ -19,8 +19,7 @@ Feature: Document Access Control
     Given I am on "${baseUrl}/users/log-in"
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for the page to load
+    And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/product-team/documents/private-notes"
     And I wait for the page to load
     Then I should see "Private Notes"
@@ -32,8 +31,7 @@ Feature: Document Access Control
     Given I am on "${baseUrl}/users/log-in"
     When I fill "#login_form_password_email" with "${memberEmail}"
     And I fill "#login_form_password_password" with "${memberPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for the page to load
+    And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/product-team/documents/alices-private-notes"
     And I wait for the page to load
     Then I should see "Document not found"
@@ -44,8 +42,7 @@ Feature: Document Access Control
     Given I am on "${baseUrl}/users/log-in"
     When I fill "#login_form_password_email" with "${adminEmail}"
     And I fill "#login_form_password_password" with "${adminPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for the page to load
+    And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/product-team/documents/alices-private-notes"
     And I wait for the page to load
     Then I should see "Document not found"
@@ -56,8 +53,7 @@ Feature: Document Access Control
     Given I am on "${baseUrl}/users/log-in"
     When I fill "#login_form_password_email" with "${memberEmail}"
     And I fill "#login_form_password_password" with "${memberPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for the page to load
+    And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/product-team/documents/team-guidelines"
     And I wait for the page to load
     Then I should see "Team Guidelines"
@@ -69,8 +65,7 @@ Feature: Document Access Control
     Given I am on "${baseUrl}/users/log-in"
     When I fill "#login_form_password_email" with "${guestEmail}"
     And I fill "#login_form_password_password" with "${guestPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for the page to load
+    And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/product-team/documents/team-guidelines"
     And I wait for the page to load
     Then I should see "Team Guidelines"
@@ -82,8 +77,7 @@ Feature: Document Access Control
     Given I am on "${baseUrl}/users/log-in"
     When I fill "#login_form_password_email" with "${guestEmail}"
     And I fill "#login_form_password_password" with "${guestPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for the page to load
+    And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/product-team/documents/private-roadmap"
     And I wait for the page to load
     Then I should see "Document not found"
@@ -93,8 +87,7 @@ Feature: Document Access Control
     Given I am on "${baseUrl}/users/log-in"
     When I fill "#login_form_password_email" with "${nonMemberEmail}"
     And I fill "#login_form_password_password" with "${nonMemberPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for the page to load
+    And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/product-team/documents/team-guidelines"
     And I wait for the page to load
     Then the URL should contain "/app/workspaces"
@@ -107,8 +100,7 @@ Feature: Document Access Control
     Given I am on "${baseUrl}/users/log-in"
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for the page to load
+    And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/product-team/documents/specs"
     And I wait for the page to load
     Then I should see "Product Team"

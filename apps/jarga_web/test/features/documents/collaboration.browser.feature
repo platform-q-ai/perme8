@@ -18,8 +18,7 @@ Feature: Document Collaboration
     Given I am on "${baseUrl}/users/log-in"
     When I fill "#login_form_password_email" with "alice@example.com"
     And I fill "#login_form_password_password" with "password123"
-    And I click the "Log in and stay logged in" button
-    And I wait for the page to load
+    And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/product-team/documents/collaborative-doc"
     And I wait for the page to load
     Then I should see "Collaborative Doc"
@@ -31,8 +30,7 @@ Feature: Document Collaboration
     Given I am on "${baseUrl}/users/log-in"
     When I fill "#login_form_password_email" with "alice@example.com"
     And I fill "#login_form_password_password" with "password123"
-    And I click the "Log in and stay logged in" button
-    And I wait for the page to load
+    And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/product-team/documents/my-notes"
     And I wait for the page to load
     Then "#editor-container" should be visible
@@ -47,8 +45,7 @@ Feature: Document Collaboration
     Given I am on "${baseUrl}/users/log-in"
     When I fill "#login_form_password_email" with "alice@example.com"
     And I fill "#login_form_password_password" with "password123"
-    And I click the "Log in and stay logged in" button
-    And I wait for the page to load
+    And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/product-team/documents/team-doc"
     And I wait for the page to load
     Then I should see "Team Doc"
@@ -65,8 +62,7 @@ Feature: Document Collaboration
     Given I am on "${baseUrl}/users/log-in"
     When I fill "#login_form_password_email" with "alice@example.com"
     And I fill "#login_form_password_password" with "password123"
-    And I click the "Log in and stay logged in" button
-    And I wait for the page to load
+    And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/product-team/documents/shared-doc"
     And I wait for the page to load
     And I click ".kebab-menu button"
@@ -79,8 +75,7 @@ Feature: Document Collaboration
     Given I am on "${baseUrl}/users/log-in"
     When I fill "#login_form_password_email" with "alice@example.com"
     And I fill "#login_form_password_password" with "password123"
-    And I click the "Log in and stay logged in" button
-    And I wait for the page to load
+    And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/product-team/documents/important-doc"
     And I wait for the page to load
     And I click ".kebab-menu button"

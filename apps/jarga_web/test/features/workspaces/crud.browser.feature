@@ -22,8 +22,7 @@ Feature: Workspace CRUD Operations
     And I wait for the page to load
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for network idle
+    And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to workspaces and create
     And I navigate to "${baseUrl}/workspaces"
     And I wait for the page to load
@@ -48,8 +47,7 @@ Feature: Workspace CRUD Operations
     And I wait for the page to load
     When I fill "#login_form_password_email" with "${adminEmail}"
     And I fill "#login_form_password_password" with "${adminPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for network idle
+    And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to workspace and edit
     And I navigate to "${baseUrl}/workspaces/${productTeamSlug}"
     And I wait for the page to load
@@ -71,8 +69,7 @@ Feature: Workspace CRUD Operations
     And I wait for the page to load
     When I fill "#login_form_password_email" with "${memberEmail}"
     And I fill "#login_form_password_password" with "${memberPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for network idle
+    And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to workspace - Edit button should not be visible
     And I navigate to "${baseUrl}/workspaces/${productTeamSlug}"
     And I wait for the page to load
@@ -88,8 +85,7 @@ Feature: Workspace CRUD Operations
     And I wait for the page to load
     When I fill "#login_form_password_email" with "${guestEmail}"
     And I fill "#login_form_password_password" with "${guestPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for network idle
+    And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to workspace - Edit button should not be visible
     And I navigate to "${baseUrl}/workspaces/${productTeamSlug}"
     And I wait for the page to load
@@ -109,8 +105,7 @@ Feature: Workspace CRUD Operations
     And I wait for the page to load
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for network idle
+    And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to workspace and delete
     And I navigate to "${baseUrl}/workspaces/${productTeamSlug}"
     And I wait for the page to load
@@ -128,8 +123,7 @@ Feature: Workspace CRUD Operations
     And I wait for the page to load
     When I fill "#login_form_password_email" with "${adminEmail}"
     And I fill "#login_form_password_password" with "${adminPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for network idle
+    And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to workspace - Delete button should not be visible
     And I navigate to "${baseUrl}/workspaces/${productTeamSlug}"
     And I wait for the page to load
@@ -145,8 +139,7 @@ Feature: Workspace CRUD Operations
     And I wait for the page to load
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for network idle
+    And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to new workspace form and submit empty name
     And I navigate to "${baseUrl}/workspaces"
     And I wait for the page to load

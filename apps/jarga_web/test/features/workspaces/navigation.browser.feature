@@ -23,8 +23,7 @@ Feature: Workspace Navigation
     And I wait for the page to load
     When I fill "#login_form_password_email" with "${memberEmail}"
     And I fill "#login_form_password_password" with "${memberPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for network idle
+    And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to workspace
     And I navigate to "${baseUrl}/workspaces/${productTeamSlug}"
     And I wait for the page to load
@@ -40,8 +39,7 @@ Feature: Workspace Navigation
     And I wait for the page to load
     When I fill "#login_form_password_email" with "${guestEmail}"
     And I fill "#login_form_password_password" with "${guestPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for network idle
+    And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to workspace
     And I navigate to "${baseUrl}/workspaces/${productTeamSlug}"
     And I wait for the page to load
@@ -56,8 +54,7 @@ Feature: Workspace Navigation
     And I wait for the page to load
     When I fill "#login_form_password_email" with "${memberEmail}"
     And I fill "#login_form_password_password" with "${memberPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for network idle
+    And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to workspace
     And I navigate to "${baseUrl}/workspaces/${productTeamSlug}"
     And I wait for the page to load
@@ -76,8 +73,7 @@ Feature: Workspace Navigation
     And I wait for the page to load
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for network idle
+    And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to workspaces list
     And I navigate to "${baseUrl}/workspaces"
     And I wait for the page to load
@@ -92,8 +88,7 @@ Feature: Workspace Navigation
     And I wait for the page to load
     When I fill "#login_form_password_email" with "${nonMemberEmail}"
     And I fill "#login_form_password_password" with "${nonMemberPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for network idle
+    And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to workspaces list
     And I navigate to "${baseUrl}/workspaces"
     And I wait for the page to load
@@ -107,8 +102,7 @@ Feature: Workspace Navigation
     And I wait for the page to load
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for network idle
+    And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to workspaces list
     And I navigate to "${baseUrl}/workspaces"
     And I wait for the page to load

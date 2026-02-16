@@ -22,8 +22,7 @@ Feature: Workspace Member Management
     And I wait for the page to load
     When I fill "#login_form_password_email" with "${adminEmail}"
     And I fill "#login_form_password_password" with "${adminPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for network idle
+    And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to workspace members
     And I navigate to "${baseUrl}/workspaces/${productTeamSlug}"
     And I wait for the page to load
@@ -43,8 +42,7 @@ Feature: Workspace Member Management
     And I wait for the page to load
     When I fill "#login_form_password_email" with "${memberEmail}"
     And I fill "#login_form_password_password" with "${memberPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for network idle
+    And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to workspace - Manage Members should not be visible
     And I navigate to "${baseUrl}/workspaces/${productTeamSlug}"
     And I wait for the page to load
@@ -64,8 +62,7 @@ Feature: Workspace Member Management
     And I wait for the page to load
     When I fill "#login_form_password_email" with "${adminEmail}"
     And I fill "#login_form_password_password" with "${adminPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for network idle
+    And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to workspace members
     And I navigate to "${baseUrl}/workspaces/${productTeamSlug}"
     And I wait for the page to load
@@ -82,8 +79,7 @@ Feature: Workspace Member Management
     And I wait for the page to load
     When I fill "#login_form_password_email" with "${adminEmail}"
     And I fill "#login_form_password_password" with "${adminPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for network idle
+    And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to workspace members
     And I navigate to "${baseUrl}/workspaces/${productTeamSlug}"
     And I wait for the page to load
@@ -103,8 +99,7 @@ Feature: Workspace Member Management
     And I wait for the page to load
     When I fill "#login_form_password_email" with "${adminEmail}"
     And I fill "#login_form_password_password" with "${adminPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for network idle
+    And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to workspace members
     And I navigate to "${baseUrl}/workspaces/${productTeamSlug}"
     And I wait for the page to load
@@ -122,8 +117,7 @@ Feature: Workspace Member Management
     And I wait for the page to load
     When I fill "#login_form_password_email" with "${adminEmail}"
     And I fill "#login_form_password_password" with "${adminPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for network idle
+    And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to workspace members
     And I navigate to "${baseUrl}/workspaces/${productTeamSlug}"
     And I wait for the page to load
@@ -142,8 +136,7 @@ Feature: Workspace Member Management
     And I wait for the page to load
     When I fill "#login_form_password_email" with "${nonMemberEmail}"
     And I fill "#login_form_password_password" with "${nonMemberPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for network idle
+    And I click the "Log in and stay logged in" button and wait for navigation
     # Attempt to navigate to workspace
     And I navigate to "${baseUrl}/workspaces/${productTeamSlug}"
     And I wait for the page to load

@@ -17,8 +17,7 @@ Feature: Chat Editor Integration
     Given I am on "${baseUrl}/users/log-in"
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for the page to load
+    And I click the "Log in and stay logged in" button and wait for navigation
 
   # ============================================================================
   # HIGH PRIORITY SCENARIOS

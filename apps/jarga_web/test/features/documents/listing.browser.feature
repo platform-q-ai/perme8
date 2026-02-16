@@ -22,8 +22,7 @@ Feature: Document Listing
     Given I am on "${baseUrl}/users/log-in"
     When I fill "#login_form_password_email" with "charlie@example.com"
     And I fill "#login_form_password_password" with "password123"
-    And I click the "Log in and stay logged in" button
-    And I wait for the page to load
+    And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/product-team"
     And I wait for the page to load
     Then I should see "Charlie's Private"
@@ -36,8 +35,7 @@ Feature: Document Listing
     Given I am on "${baseUrl}/users/log-in"
     When I fill "#login_form_password_email" with "alice@example.com"
     And I fill "#login_form_password_password" with "password123"
-    And I click the "Log in and stay logged in" button
-    And I wait for the page to load
+    And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/product-team"
     And I wait for the page to load
     Then I should see "Workspace Doc"
@@ -48,8 +46,7 @@ Feature: Document Listing
     Given I am on "${baseUrl}/users/log-in"
     When I fill "#login_form_password_email" with "alice@example.com"
     And I fill "#login_form_password_password" with "password123"
-    And I click the "Log in and stay logged in" button
-    And I wait for the page to load
+    And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/product-team/projects/mobile-app"
     And I wait for the page to load
     Then I should see "Mobile Specs"

@@ -23,8 +23,7 @@ Feature: Project CRUD Operations
     And I wait for the page to load
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for network idle
+    And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to workspace
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
     And I wait for the page to load
@@ -44,8 +43,7 @@ Feature: Project CRUD Operations
     And I wait for the page to load
     When I fill "#login_form_password_email" with "${adminEmail}"
     And I fill "#login_form_password_password" with "${adminPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for network idle
+    And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to workspace
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
     And I wait for the page to load
@@ -64,8 +62,7 @@ Feature: Project CRUD Operations
     And I wait for the page to load
     When I fill "#login_form_password_email" with "${memberEmail}"
     And I fill "#login_form_password_password" with "${memberPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for network idle
+    And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to workspace
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
     And I wait for the page to load
@@ -84,8 +81,7 @@ Feature: Project CRUD Operations
     And I wait for the page to load
     When I fill "#login_form_password_email" with "${guestEmail}"
     And I fill "#login_form_password_password" with "${guestPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for network idle
+    And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to workspace - New Project button should not be visible
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
     And I wait for the page to load
@@ -97,8 +93,7 @@ Feature: Project CRUD Operations
     And I wait for the page to load
     When I fill "#login_form_password_email" with "${nonMemberEmail}"
     And I fill "#login_form_password_password" with "${nonMemberPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for network idle
+    And I click the "Log in and stay logged in" button and wait for navigation
     # Attempt to navigate to workspace - should be redirected
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
     And I wait for the page to load
@@ -111,8 +106,7 @@ Feature: Project CRUD Operations
     And I wait for the page to load
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for network idle
+    And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to workspace
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
     And I wait for the page to load
@@ -133,8 +127,7 @@ Feature: Project CRUD Operations
     And I wait for the page to load
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for network idle
+    And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to workspace
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
     And I wait for the page to load
@@ -157,8 +150,7 @@ Feature: Project CRUD Operations
     And I wait for the page to load
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for network idle
+    And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to a seeded project and edit
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/projects/q1-launch/edit"
     And I wait for the page to load
@@ -175,8 +167,7 @@ Feature: Project CRUD Operations
     And I wait for the page to load
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for network idle
+    And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to project edit page
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/projects/mobile-app/edit"
     And I wait for the page to load
@@ -193,8 +184,7 @@ Feature: Project CRUD Operations
     And I wait for the page to load
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for network idle
+    And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to project edit page
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/projects/mobile-app/edit"
     And I wait for the page to load
@@ -210,8 +200,7 @@ Feature: Project CRUD Operations
     And I wait for the page to load
     When I fill "#login_form_password_email" with "${guestEmail}"
     And I fill "#login_form_password_password" with "${guestPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for network idle
+    And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to a seeded project - Edit button should not be accessible
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/projects/mobile-app"
     And I wait for the page to load
@@ -227,8 +216,7 @@ Feature: Project CRUD Operations
     And I wait for the page to load
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for network idle
+    And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to project edit page
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/projects/mobile-app/edit"
     And I wait for the page to load
@@ -248,8 +236,7 @@ Feature: Project CRUD Operations
     And I wait for the page to load
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for network idle
+    And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to a seeded project
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/projects/q1-launch"
     And I wait for the page to load
@@ -265,8 +252,7 @@ Feature: Project CRUD Operations
     And I wait for the page to load
     When I fill "#login_form_password_email" with "${guestEmail}"
     And I fill "#login_form_password_password" with "${guestPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for network idle
+    And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to a seeded project - Delete button should not be visible
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/projects/mobile-app"
     And I wait for the page to load
@@ -278,8 +264,7 @@ Feature: Project CRUD Operations
     And I wait for the page to load
     When I fill "#login_form_password_email" with "${nonMemberEmail}"
     And I fill "#login_form_password_password" with "${nonMemberPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for network idle
+    And I click the "Log in and stay logged in" button and wait for navigation
     # Attempt to navigate to workspace - should be redirected
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
     And I wait for the page to load
