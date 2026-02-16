@@ -52,6 +52,10 @@ export class PlaywrightBrowserAdapter implements BrowserPort {
     await this.guardPage().click(selector)
   }
 
+  async forceClick(selector: string): Promise<void> {
+    await this.guardPage().click(selector, { force: true })
+  }
+
   async doubleClick(selector: string): Promise<void> {
     await this.guardPage().dblclick(selector)
   }

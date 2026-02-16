@@ -48,6 +48,9 @@ npm-debug.log
 # exo-bdd generated reports (security scan artifacts)
 tools/exo-bdd/reports/
 
+# exo-bdd failure artifacts (screenshots, HTML, metadata)
+**/test-failures/
+
 # Planning and strategy docs (for development use only)
 docs/CHAT_WITH_DOCS_PLAN.md
 docs/CHAT_WITH_DOCS_PR_STRATEGY.md

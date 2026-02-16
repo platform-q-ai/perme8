@@ -22,6 +22,7 @@ export interface BrowserPort {
 
   // Interactions
   click(selector: string): Promise<void>
+  forceClick(selector: string): Promise<void>
   doubleClick(selector: string): Promise<void>
   fill(selector: string, value: string): Promise<void>
   clear(selector: string): Promise<void>
