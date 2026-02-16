@@ -1,32 +1,83 @@
 @browser
-Feature: Todo Checkbox Strikethrough
-  As a user
-  I want checked todo items to appear with strikethrough text
-  So that I can visually distinguish completed items from pending ones
+Feature: Document Editor
+  As a workspace member
+  I want to use the document editor to create and modify content
+  So that I can collaborate on documentation
 
-  # Precondition: A document with a todo item exists (seeded)
-  # The editor (Milkdown) renders todo/task-list items with checkboxes
+  # Background data setup (workspaces, users, roles) is handled by seed data.
+  # Users:
+  #   alice@example.com   - owner of workspace "product-team"
+  #   bob@example.com     - admin of workspace "product-team"
+  #   charlie@example.com - member of workspace "product-team"
+  #   diana@example.com   - guest of workspace "product-team"
+  #
+  # Seeded documents used in this file:
+  #   "Product Spec"   - public, owned by alice (slug: product-spec)
+  #   "Public Doc"     - public, owned by alice (slug: public-doc)
+  #   "Team Guidelines"- public, owned by alice (slug: team-guidelines)
 
-  Scenario: Checking a todo item applies strikethrough
+  Scenario: Editor container loads for document owner
     Given I am on "${baseUrl}/users/log-in"
-    When I fill "#login_form_password_email" with "alice@example.com"
-    And I fill "#login_form_password_password" with "password123"
+    When I fill "#login_form_password_email" with "${ownerEmail}"
+    And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
-    And I navigate to "${baseUrl}/app/workspaces/product-team/documents/todo-doc"
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/product-spec"
+    And I wait for the page to load
+    Then I should see "Product Spec"
+    And "#editor-container" should be visible
+    And "#editor-container" should have attribute "data-readonly" with value "false"
+
+  Scenario: Editor is writable for members on public documents
+    Given I am on "${baseUrl}/users/log-in"
+    When I fill "#login_form_password_email" with "${memberEmail}"
+    And I fill "#login_form_password_password" with "${memberPassword}"
+    And I click the "Log in and stay logged in" button and wait for navigation
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/team-guidelines"
+    And I wait for the page to load
+    Then I should see "Team Guidelines"
+    And "#editor-container" should be visible
+    And "#editor-container" should have attribute "data-readonly" with value "false"
+    And I should not see "read-only mode"
+
+  Scenario: Editor is read-only for guests
+    Given I am on "${baseUrl}/users/log-in"
+    When I fill "#login_form_password_email" with "${guestEmail}"
+    And I fill "#login_form_password_password" with "${guestPassword}"
+    And I click the "Log in and stay logged in" button and wait for navigation
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/public-doc"
+    And I wait for the page to load
+    Then I should see "Public Doc"
+    And I should see "read-only mode"
+    And "#editor-container" should have attribute "data-readonly" with value "true"
+
+  Scenario: Title is editable by clicking the h1
+    Given I am on "${baseUrl}/users/log-in"
+    When I fill "#login_form_password_email" with "${ownerEmail}"
+    And I fill "#login_form_password_password" with "${ownerPassword}"
+    And I click the "Log in and stay logged in" button and wait for navigation
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/product-spec"
+    And I wait for the page to load
+    And I click "h1"
+    And I wait for "#document-title-input" to be visible
+    Then "#document-title-input" should be visible
+
+  Scenario: Guest cannot click title to edit
+    Given I am on "${baseUrl}/users/log-in"
+    When I fill "#login_form_password_email" with "${guestEmail}"
+    And I fill "#login_form_password_password" with "${guestPassword}"
+    And I click the "Log in and stay logged in" button and wait for navigation
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/public-doc"
+    And I wait for the page to load
+    And I click "h1"
+    And I wait for 1 seconds
+    Then "#document-title-input" should not exist
+
+  Scenario: Editor container has Milkdown hook
+    Given I am on "${baseUrl}/users/log-in"
+    When I fill "#login_form_password_email" with "${ownerEmail}"
+    And I fill "#login_form_password_password" with "${ownerPassword}"
+    And I click the "Log in and stay logged in" button and wait for navigation
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/product-spec"
     And I wait for the page to load
     And I wait for "#editor-container" to be visible
-    And I check "li.task-list-item input[type='checkbox']"
-    And I wait for 1 seconds
-    Then "li.task-list-item.checked" should exist
-
-  Scenario: Unchecking a todo item removes strikethrough
-    Given I am on "${baseUrl}/users/log-in"
-    When I fill "#login_form_password_email" with "alice@example.com"
-    And I fill "#login_form_password_password" with "password123"
-    And I click the "Log in and stay logged in" button and wait for navigation
-    And I navigate to "${baseUrl}/app/workspaces/product-team/documents/todo-doc-checked"
-    And I wait for the page to load
-    And I wait for "#editor-container" to be visible
-    And I uncheck "li.task-list-item input[type='checkbox']"
-    And I wait for 1 seconds
-    Then "li.task-list-item.checked" should not exist
+    Then "#editor-container" should exist

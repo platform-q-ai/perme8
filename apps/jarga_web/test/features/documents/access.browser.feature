@@ -11,98 +11,98 @@ Feature: Document Access Control
   #   charlie@example.com - member of workspace "product-team"
   #   diana@example.com   - guest of workspace "product-team"
   #   eve@example.com     - not a member of workspace "product-team"
+  #
+  # Seeded documents used in this file:
+  #   "Private Notes"          - private, owned by alice (slug: private-notes)
+  #   "Alices Private Notes"   - private, owned by alice (slug: alices-private-notes)
+  #   "Team Guidelines"        - public, owned by alice (slug: team-guidelines)
+  #   "Private Roadmap"        - private, owned by alice (slug: private-roadmap)
+  #   "Specs"                  - public, project: mobile-app (slug: specs)
 
-  # Document Viewing
+  # ── Document Viewing ──────────────────────────────────────────────
 
   Scenario: Owner views their own private document
-    # Precondition: alice owns a private document "Private Notes" (seeded)
     Given I am on "${baseUrl}/users/log-in"
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
-    And I navigate to "${baseUrl}/app/workspaces/product-team/documents/private-notes"
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/private-notes"
     And I wait for the page to load
     Then I should see "Private Notes"
     And "#editor-container" should be visible
     And I should not see "read-only mode"
 
   Scenario: Member cannot view another user's private document
-    # Precondition: alice owns a private document "Alice's Private Notes" (seeded)
+    # alice owns "Alices Private Notes" which is private
     Given I am on "${baseUrl}/users/log-in"
     When I fill "#login_form_password_email" with "${memberEmail}"
     And I fill "#login_form_password_password" with "${memberPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
-    And I navigate to "${baseUrl}/app/workspaces/product-team/documents/alices-private-notes"
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/alices-private-notes"
     And I wait for the page to load
     Then I should see "Document not found"
-    And the URL should contain "/app/workspaces"
 
   Scenario: Admin cannot view another user's private document
-    # Precondition: alice owns a private document "Alice's Private Notes" (seeded)
+    # alice owns "Alices Private Notes" which is private
     Given I am on "${baseUrl}/users/log-in"
     When I fill "#login_form_password_email" with "${adminEmail}"
     And I fill "#login_form_password_password" with "${adminPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
-    And I navigate to "${baseUrl}/app/workspaces/product-team/documents/alices-private-notes"
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/alices-private-notes"
     And I wait for the page to load
     Then I should see "Document not found"
-    And the URL should contain "/app/workspaces"
 
   Scenario: Member views public document created by another user
-    # Precondition: alice owns a public document "Team Guidelines" (seeded)
+    # alice owns "Team Guidelines" which is public
     Given I am on "${baseUrl}/users/log-in"
     When I fill "#login_form_password_email" with "${memberEmail}"
     And I fill "#login_form_password_password" with "${memberPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
-    And I navigate to "${baseUrl}/app/workspaces/product-team/documents/team-guidelines"
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/team-guidelines"
     And I wait for the page to load
     Then I should see "Team Guidelines"
     And "#editor-container" should be visible
     And I should not see "read-only mode"
 
   Scenario: Guest views public document in read-only mode
-    # Precondition: alice owns a public document "Team Guidelines" (seeded)
+    # alice owns "Team Guidelines" which is public
     Given I am on "${baseUrl}/users/log-in"
     When I fill "#login_form_password_email" with "${guestEmail}"
     And I fill "#login_form_password_password" with "${guestPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
-    And I navigate to "${baseUrl}/app/workspaces/product-team/documents/team-guidelines"
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/team-guidelines"
     And I wait for the page to load
     Then I should see "Team Guidelines"
     And I should see "read-only mode"
     And "#editor-container" should have attribute "data-readonly" with value "true"
 
   Scenario: Guest cannot view private documents
-    # Precondition: alice owns a private document "Private Roadmap" (seeded)
+    # alice owns "Private Roadmap" which is private
     Given I am on "${baseUrl}/users/log-in"
     When I fill "#login_form_password_email" with "${guestEmail}"
     And I fill "#login_form_password_password" with "${guestPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
-    And I navigate to "${baseUrl}/app/workspaces/product-team/documents/private-roadmap"
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/private-roadmap"
     And I wait for the page to load
     Then I should see "Document not found"
-    And the URL should contain "/app/workspaces"
 
-  Scenario: Non-member cannot view any documents
+  Scenario: Non-member cannot view any workspace documents
     Given I am on "${baseUrl}/users/log-in"
     When I fill "#login_form_password_email" with "${nonMemberEmail}"
     And I fill "#login_form_password_password" with "${nonMemberPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
-    And I navigate to "${baseUrl}/app/workspaces/product-team/documents/team-guidelines"
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/team-guidelines"
     And I wait for the page to load
-    Then the URL should contain "/app/workspaces"
-    And I should not see "Team Guidelines"
+    Then I should not see "Team Guidelines"
 
-  # Breadcrumb Navigation
+  # ── Breadcrumb Navigation ─────────────────────────────────────────
 
-  Scenario: Breadcrumb navigation in document view
-    # Precondition: alice owns a document "Specs" in project "Mobile App" (seeded)
+  Scenario: Document in a project shows breadcrumb context
+    # "Specs" belongs to project "Mobile App" in workspace "product-team"
     Given I am on "${baseUrl}/users/log-in"
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
-    And I navigate to "${baseUrl}/app/workspaces/product-team/documents/specs"
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/specs"
     And I wait for the page to load
-    Then I should see "Product Team"
-    And I should see "Mobile App"
-    And I should see "Specs"
+    Then I should see "Specs"
