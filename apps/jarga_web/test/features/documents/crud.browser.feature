@@ -30,12 +30,12 @@ Feature: Document CRUD Operations
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
-    And I wait for the page to load
+    And I wait for network idle
     And I click the "New Document" button
     And I wait for ".modal-open" to be visible
     And I fill "#document-form_title" with "Product Roadmap"
     And I click the "Create Document" button
-    And I wait for the page to load
+    And I wait for network idle
     Then the URL should contain "/documents/product-roadmap"
     And I should see "Product Roadmap"
 
@@ -46,12 +46,12 @@ Feature: Document CRUD Operations
     And I fill "#login_form_password_password" with "${adminPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
-    And I wait for the page to load
+    And I wait for network idle
     And I click the "New Document" button
     And I wait for ".modal-open" to be visible
     And I fill "#document-form_title" with "Architecture Doc"
     And I click the "Create Document" button
-    And I wait for the page to load
+    And I wait for network idle
     Then the URL should contain "/documents/"
     And I should see "Architecture Doc"
 
@@ -62,12 +62,12 @@ Feature: Document CRUD Operations
     And I fill "#login_form_password_password" with "${memberPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
-    And I wait for the page to load
+    And I wait for network idle
     And I click the "New Document" button
     And I wait for ".modal-open" to be visible
     And I fill "#document-form_title" with "Meeting Notes"
     And I click the "Create Document" button
-    And I wait for the page to load
+    And I wait for network idle
     Then the URL should contain "/documents/"
     And I should see "Meeting Notes"
 
@@ -78,7 +78,7 @@ Feature: Document CRUD Operations
     And I fill "#login_form_password_password" with "${guestPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
-    And I wait for the page to load
+    And I wait for network idle
     Then I should not see "New Document"
 
   Scenario: Document slug handles special characters
@@ -88,12 +88,12 @@ Feature: Document CRUD Operations
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
-    And I wait for the page to load
+    And I wait for network idle
     And I click the "New Document" button
     And I wait for ".modal-open" to be visible
     And I fill "#document-form_title" with "Product & Services (2024)"
     And I click the "Create Document" button
-    And I wait for the page to load
+    And I wait for network idle
     Then the URL should contain "/documents/"
     And I should see "Product & Services (2024)"
 
@@ -107,7 +107,7 @@ Feature: Document CRUD Operations
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/draft-roadmap"
-    And I wait for the page to load
+    And I wait for network idle
     And I click "h1"
     And I wait for "#document-title-input" to be visible
     And I clear "#document-title-input"
@@ -124,7 +124,7 @@ Feature: Document CRUD Operations
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/valid-title"
-    And I wait for the page to load
+    And I wait for network idle
     And I click "h1"
     And I wait for "#document-title-input" to be visible
     And I clear "#document-title-input"
@@ -143,7 +143,7 @@ Feature: Document CRUD Operations
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/private-doc"
-    And I wait for the page to load
+    And I wait for network idle
     And I click ".dropdown button[aria-label='Actions menu']"
     And I wait for 1 seconds
     And I click the "Make Public" button
@@ -158,7 +158,7 @@ Feature: Document CRUD Operations
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/public-doc"
-    And I wait for the page to load
+    And I wait for network idle
     And I click ".dropdown button[aria-label='Actions menu']"
     And I wait for 1 seconds
     And I click the "Make Private" button
@@ -173,7 +173,7 @@ Feature: Document CRUD Operations
     And I fill "#login_form_password_password" with "${guestPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/public-doc"
-    And I wait for the page to load
+    And I wait for network idle
     Then I should see "read-only mode"
     And ".dropdown button[aria-label='Actions menu']" should not exist
 
@@ -187,7 +187,7 @@ Feature: Document CRUD Operations
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/important-doc"
-    And I wait for the page to load
+    And I wait for network idle
     And I click ".dropdown button[aria-label='Actions menu']"
     And I wait for 1 seconds
     And I click the "Pin Document" button
@@ -202,7 +202,7 @@ Feature: Document CRUD Operations
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/pinned-doc"
-    And I wait for the page to load
+    And I wait for network idle
     And I click ".dropdown button[aria-label='Actions menu']"
     And I wait for 1 seconds
     And I click the "Unpin Document" button
@@ -217,7 +217,7 @@ Feature: Document CRUD Operations
     And I fill "#login_form_password_password" with "${guestPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/public-doc"
-    And I wait for the page to load
+    And I wait for network idle
     Then ".dropdown button[aria-label='Actions menu']" should not exist
 
   # ── Document Deletion ─────────────────────────────────────────────
@@ -233,11 +233,11 @@ Feature: Document CRUD Operations
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/old-doc"
-    And I wait for the page to load
+    And I wait for network idle
     And I click ".dropdown button[aria-label='Actions menu']"
     And I wait for 1 seconds
     And I click the "Delete Document" button
-    And I wait for the page to load
+    And I wait for network idle
     Then the URL should contain "/app/workspaces/${productTeamSlug}"
     And I should see "Document deleted"
     And I should not see "Old Doc"
@@ -250,6 +250,6 @@ Feature: Document CRUD Operations
     And I fill "#login_form_password_password" with "${guestPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/public-doc"
-    And I wait for the page to load
+    And I wait for network idle
     Then ".dropdown button[aria-label='Actions menu']" should not exist
     And I should not see "Delete Document"

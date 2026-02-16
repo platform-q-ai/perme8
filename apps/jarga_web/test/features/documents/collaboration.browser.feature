@@ -25,7 +25,7 @@ Feature: Document Collaboration
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/product-spec"
-    And I wait for the page to load
+    And I wait for network idle
     Then I should see "Product Spec"
     And "#editor-container" should be visible
     And "#editor-container" should have attribute "data-readonly" with value "false"
@@ -37,7 +37,7 @@ Feature: Document Collaboration
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/shared-doc"
-    And I wait for the page to load
+    And I wait for network idle
     Then I should see "Shared Doc"
     When I click "h1"
     And I wait for "#document-title-input" to be visible
@@ -51,7 +51,7 @@ Feature: Document Collaboration
     And I fill "#login_form_password_password" with "${adminPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/shared-doc"
-    And I wait for the page to load
+    And I wait for network idle
     And I click ".dropdown button[aria-label='Actions menu']"
     And I wait for 1 seconds
     And I click the "Make Private" button
@@ -66,7 +66,7 @@ Feature: Document Collaboration
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/important-doc"
-    And I wait for the page to load
+    And I wait for network idle
     And I click ".dropdown button[aria-label='Actions menu']"
     And I wait for 1 seconds
     And I click the "Pin Document" button
@@ -74,7 +74,7 @@ Feature: Document Collaboration
     Then I should see "Document pinned"
     # Verify pin badge on workspace listing
     When I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
-    And I wait for the page to load
+    And I wait for network idle
     Then I should see "Pinned"
 
   # ── Multi-user collaboration (requires multiple browsers) ─────────
@@ -89,7 +89,7 @@ Feature: Document Collaboration
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/product-spec"
-    And I wait for the page to load
+    And I wait for network idle
     Then "#editor-container" should be visible
 
   @wip
@@ -101,5 +101,5 @@ Feature: Document Collaboration
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/product-spec"
-    And I wait for the page to load
+    And I wait for network idle
     Then "#editor-container" should be visible

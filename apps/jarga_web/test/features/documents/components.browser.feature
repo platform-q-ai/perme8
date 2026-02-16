@@ -22,12 +22,12 @@ Feature: Document Components
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
-    And I wait for the page to load
+    And I wait for network idle
     And I click the "New Document" button
     And I wait for ".modal-open" to be visible
     And I fill "#document-form_title" with "Components Test Doc"
     And I click the "Create Document" button
-    And I wait for the page to load
+    And I wait for network idle
     Then the URL should contain "/documents/"
     And I should see "Components Test Doc"
     And "#editor-container" should be visible
@@ -40,7 +40,7 @@ Feature: Document Components
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/product-spec"
-    And I wait for the page to load
+    And I wait for network idle
     Then "#editor-container" should be visible
     And "#editor-container" should have attribute "data-readonly" with value "false"
 
@@ -52,7 +52,7 @@ Feature: Document Components
     And I fill "#login_form_password_password" with "${guestPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/public-doc"
-    And I wait for the page to load
+    And I wait for network idle
     Then "#editor-container" should be visible
     And "#editor-container" should have attribute "data-readonly" with value "true"
     And I should see "read-only mode"

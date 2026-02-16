@@ -31,7 +31,7 @@ Feature: Document Listing
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
-    And I wait for the page to load
+    And I wait for network idle
     # alice should see her own private docs and all public docs
     Then I should see "Draft Roadmap"
     And I should see "Public Doc"
@@ -47,7 +47,7 @@ Feature: Document Listing
     And I fill "#login_form_password_password" with "${memberPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
-    And I wait for the page to load
+    And I wait for network idle
     # charlie should see public docs
     Then I should see "Public Doc"
     And I should see "Product Spec"
@@ -62,7 +62,7 @@ Feature: Document Listing
     And I fill "#login_form_password_password" with "${guestPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
-    And I wait for the page to load
+    And I wait for network idle
     Then I should see "Public Doc"
     And I should see "Product Spec"
     And I should not see "Draft Roadmap"
@@ -75,7 +75,7 @@ Feature: Document Listing
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
-    And I wait for the page to load
+    And I wait for network idle
     Then I should see "Pinned Doc"
     And I should see "Pinned"
 
@@ -86,7 +86,7 @@ Feature: Document Listing
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
-    And I wait for the page to load
+    And I wait for network idle
     And I click the "Product Spec" link and wait for navigation
     Then the URL should contain "/documents/product-spec"
     And I should see "Product Spec"
@@ -100,5 +100,5 @@ Feature: Document Listing
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/projects/mobile-app"
-    And I wait for the page to load
+    And I wait for network idle
     Then I should see "Specs"

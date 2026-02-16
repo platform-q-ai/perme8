@@ -25,7 +25,7 @@ Feature: Project Access Control
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
-    And I wait for the page to load
+    And I wait for network idle
     Then I should see "Q1 Launch"
     And I should see "Mobile App"
 
@@ -36,7 +36,7 @@ Feature: Project Access Control
     And I fill "#login_form_password_password" with "${guestPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
-    And I wait for the page to load
+    And I wait for network idle
     Then I should see "Q1 Launch"
     And I should see "Mobile App"
 
@@ -47,7 +47,7 @@ Feature: Project Access Control
     And I fill "#login_form_password_password" with "${nonMemberPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
-    And I wait for the page to load
+    And I wait for network idle
     Then I should not see "Q1 Launch"
     And I should not see "Mobile App"
 
@@ -59,7 +59,7 @@ Feature: Project Access Control
     And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to engineering workspace - should NOT see product-team projects
     And I navigate to "${baseUrl}/app/workspaces/${engineeringSlug}"
-    And I wait for the page to load
+    And I wait for network idle
     Then I should not see "Q1 Launch"
     And I should not see "Mobile App"
 
@@ -74,7 +74,7 @@ Feature: Project Access Control
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/projects/mobile-app"
-    And I wait for the page to load
+    And I wait for network idle
     # Owner should see kebab menu with edit and delete options
     And I click "button[aria-label='Actions menu']"
     And I wait for 1 seconds
@@ -88,7 +88,7 @@ Feature: Project Access Control
     And I fill "#login_form_password_password" with "${adminPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/projects/mobile-app"
-    And I wait for the page to load
+    And I wait for network idle
     # Admin should see kebab menu with edit and delete options
     And I click "button[aria-label='Actions menu']"
     And I wait for 1 seconds
@@ -103,12 +103,12 @@ Feature: Project Access Control
     And I click the "Log in and stay logged in" button and wait for navigation
     # Member can see projects on workspace page
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
-    And I wait for the page to load
+    And I wait for network idle
     Then I should see "Q1 Launch"
     And I should see "Mobile App"
     # Navigate to project show - member should not see kebab menu for others' projects
     When I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/projects/mobile-app"
-    And I wait for the page to load
+    And I wait for network idle
     Then "button[aria-label='Actions menu']" should not exist
 
   Scenario: Guest has read-only access to projects
@@ -119,14 +119,14 @@ Feature: Project Access Control
     And I click the "Log in and stay logged in" button and wait for navigation
     # Guest can see projects on workspace page
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
-    And I wait for the page to load
+    And I wait for network idle
     Then I should see "Q1 Launch"
     And I should see "Mobile App"
     # Guest should not see New Project button
     And I should not see "New Project"
     # Navigate to project show - guest should not see kebab menu
     When I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/projects/mobile-app"
-    And I wait for the page to load
+    And I wait for network idle
     Then "button[aria-label='Actions menu']" should not exist
 
   # ---------------------------------------------------------------------------
@@ -140,7 +140,7 @@ Feature: Project Access Control
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/projects/mobile-app/edit"
-    And I wait for the page to load
+    And I wait for network idle
     Then "#project-form" should be visible
     And the URL should contain "/projects/mobile-app/edit"
 
@@ -151,7 +151,7 @@ Feature: Project Access Control
     And I fill "#login_form_password_password" with "${guestPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/projects/mobile-app/edit"
-    And I wait for the page to load
+    And I wait for network idle
     Then I should see "You are not authorized to edit this project"
     And the URL should contain "/workspaces"
 
@@ -162,7 +162,7 @@ Feature: Project Access Control
     And I fill "#login_form_password_password" with "${memberPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/projects/mobile-app/edit"
-    And I wait for the page to load
+    And I wait for network idle
     Then I should see "You are not authorized to edit this project"
     And the URL should contain "/workspaces"
 
@@ -173,5 +173,5 @@ Feature: Project Access Control
     And I fill "#login_form_password_password" with "${nonMemberPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/projects/mobile-app"
-    And I wait for the page to load
+    And I wait for network idle
     Then I should not see "Mobile App"

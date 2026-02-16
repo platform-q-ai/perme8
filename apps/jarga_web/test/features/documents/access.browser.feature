@@ -28,7 +28,7 @@ Feature: Document Access Control
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/private-notes"
-    And I wait for the page to load
+    And I wait for network idle
     Then I should see "Private Notes"
     And "#editor-container" should be visible
     And I should not see "read-only mode"
@@ -41,7 +41,7 @@ Feature: Document Access Control
     And I fill "#login_form_password_password" with "${memberPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/alices-private-notes"
-    And I wait for the page to load
+    And I wait for network idle
     Then I should see "Document not found"
 
   Scenario: Admin cannot view another user's private document
@@ -52,7 +52,7 @@ Feature: Document Access Control
     And I fill "#login_form_password_password" with "${adminPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/alices-private-notes"
-    And I wait for the page to load
+    And I wait for network idle
     Then I should see "Document not found"
 
   Scenario: Member views public document created by another user
@@ -63,7 +63,7 @@ Feature: Document Access Control
     And I fill "#login_form_password_password" with "${memberPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/team-guidelines"
-    And I wait for the page to load
+    And I wait for network idle
     Then I should see "Team Guidelines"
     And "#editor-container" should be visible
     And I should not see "read-only mode"
@@ -76,7 +76,7 @@ Feature: Document Access Control
     And I fill "#login_form_password_password" with "${guestPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/team-guidelines"
-    And I wait for the page to load
+    And I wait for network idle
     Then I should see "Team Guidelines"
     And I should see "read-only mode"
     And "#editor-container" should have attribute "data-readonly" with value "true"
@@ -89,7 +89,7 @@ Feature: Document Access Control
     And I fill "#login_form_password_password" with "${guestPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/private-roadmap"
-    And I wait for the page to load
+    And I wait for network idle
     Then I should see "Document not found"
 
   Scenario: Non-member cannot view any workspace documents
@@ -99,7 +99,7 @@ Feature: Document Access Control
     And I fill "#login_form_password_password" with "${nonMemberPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/team-guidelines"
-    And I wait for the page to load
+    And I wait for network idle
     Then I should not see "Team Guidelines"
 
   # ── Breadcrumb Navigation ─────────────────────────────────────────
@@ -112,5 +112,5 @@ Feature: Document Access Control
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/specs"
-    And I wait for the page to load
+    And I wait for network idle
     Then I should see "Specs"

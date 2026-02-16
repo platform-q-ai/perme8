@@ -25,7 +25,7 @@ Feature: Project CRUD Operations
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
-    And I wait for the page to load
+    And I wait for network idle
     # Open new project modal
     And I click the "New Project" button
     And I wait for "#project-form" to be visible
@@ -43,7 +43,7 @@ Feature: Project CRUD Operations
     And I fill "#login_form_password_password" with "${adminPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
-    And I wait for the page to load
+    And I wait for network idle
     And I click the "New Project" button
     And I wait for "#project-form" to be visible
     And I fill "[name='project[name]']" with "Admin Project"
@@ -59,7 +59,7 @@ Feature: Project CRUD Operations
     And I fill "#login_form_password_password" with "${memberPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
-    And I wait for the page to load
+    And I wait for network idle
     And I click the "New Project" button
     And I wait for "#project-form" to be visible
     And I fill "[name='project[name]']" with "Member Project"
@@ -75,7 +75,7 @@ Feature: Project CRUD Operations
     And I fill "#login_form_password_password" with "${guestPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
-    And I wait for the page to load
+    And I wait for network idle
     Then I should not see "New Project"
 
   Scenario: Non-member cannot access workspace to create projects
@@ -85,7 +85,7 @@ Feature: Project CRUD Operations
     And I fill "#login_form_password_password" with "${nonMemberPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
-    And I wait for the page to load
+    And I wait for network idle
     Then I should not see "Q1 Launch"
     And I should not see "Mobile App"
 
@@ -96,7 +96,7 @@ Feature: Project CRUD Operations
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
-    And I wait for the page to load
+    And I wait for network idle
     And I click the "New Project" button
     And I wait for "#project-form" to be visible
     And I fill "[name='project[name]']" with "Web App"
@@ -114,7 +114,7 @@ Feature: Project CRUD Operations
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
-    And I wait for the page to load
+    And I wait for network idle
     And I click the "New Project" button
     And I wait for "#project-form" to be visible
     And I clear "[name='project[name]']"
@@ -130,7 +130,7 @@ Feature: Project CRUD Operations
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
-    And I wait for the page to load
+    And I wait for network idle
     And I click the "New Project" button
     And I wait for "#project-form" to be visible
     And I fill "[name='project[name]']" with "Should Not Be Created"
@@ -149,7 +149,7 @@ Feature: Project CRUD Operations
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/projects/q1-launch/edit"
-    And I wait for the page to load
+    And I wait for network idle
     And I wait for "#project-form" to be visible
     And I clear "[name='project[name]']"
     And I fill "[name='project[name]']" with "Q1 Launch Updated"
@@ -165,7 +165,7 @@ Feature: Project CRUD Operations
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/projects/mobile-app/edit"
-    And I wait for the page to load
+    And I wait for network idle
     And I wait for "#project-form" to be visible
     And I clear "[name='project[description]']"
     And I fill "[name='project[description]']" with "iOS and Android applications"
@@ -181,7 +181,7 @@ Feature: Project CRUD Operations
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/projects/mobile-app/edit"
-    And I wait for the page to load
+    And I wait for network idle
     And I wait for "#project-form" to be visible
     And I clear "[name='project[color]']"
     And I fill "[name='project[color]']" with "#10B981"
@@ -197,11 +197,11 @@ Feature: Project CRUD Operations
     And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to a seeded project - kebab menu should not be visible for guest
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/projects/mobile-app"
-    And I wait for the page to load
+    And I wait for network idle
     Then "button[aria-label='Actions menu']" should not exist
     # Attempt direct navigation to the edit page - should be denied
     When I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/projects/mobile-app/edit"
-    And I wait for the page to load
+    And I wait for network idle
     Then I should see "You are not authorized to edit this project"
     And the URL should contain "/workspaces"
 
@@ -212,7 +212,7 @@ Feature: Project CRUD Operations
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/projects/mobile-app/edit"
-    And I wait for the page to load
+    And I wait for network idle
     And I wait for "#project-form" to be visible
     And I clear "[name='project[name]']"
     And I click the "Update Project" button
@@ -234,7 +234,7 @@ Feature: Project CRUD Operations
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/projects/q1-launch"
-    And I wait for the page to load
+    And I wait for network idle
     # Delete uses data-confirm native dialog - cannot be automated
     And I click "button[aria-label='Actions menu']"
     And I wait for 1 seconds
@@ -250,7 +250,7 @@ Feature: Project CRUD Operations
     And I fill "#login_form_password_password" with "${guestPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/projects/mobile-app"
-    And I wait for the page to load
+    And I wait for network idle
     # Guest should not see the kebab menu at all
     Then "button[aria-label='Actions menu']" should not exist
 
@@ -261,6 +261,6 @@ Feature: Project CRUD Operations
     And I fill "#login_form_password_password" with "${nonMemberPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
-    And I wait for the page to load
+    And I wait for network idle
     Then I should not see "Q1 Launch"
     And I should not see "Mobile App"
