@@ -62,7 +62,11 @@ mix exo_test --config apps/jarga_web/test/exo-bdd-jarga-web.config.ts
 mix exo_test --tag "@smoke"
 mix exo_test -t "not @security"
 
-# Combine name and tag filters
+# Filter by adapter type (only run browser or security features)
+mix exo_test --name identity --adapter browser
+mix exo_test -n identity -a security
+
+# Combine name, tag, and adapter filters
 mix exo_test --name entity --tag "not @security"
 ```
 

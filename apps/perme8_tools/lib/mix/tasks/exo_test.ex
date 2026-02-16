@@ -21,6 +21,10 @@ defmodule Mix.Tasks.ExoTest do
       mix exo_test --name jarga          # substring: matches jarga-web AND jarga-api
       mix exo_test -n relationship        # substring: matches entity-relationship-manager
 
+      # Filter by adapter type (browser, http, cli, security, graph)
+      mix exo_test --name jarga-web --adapter browser
+      mix exo_test -n identity -a security
+
       # Combine: run only ERM HTTP tests
       mix exo_test --name entity --tag "not @security"
 
@@ -29,6 +33,7 @@ defmodule Mix.Tasks.ExoTest do
     * `--config` / `-c` - Path to the exo-bdd config file (optional; discovers all configs under apps/ if omitted)
     * `--tag` / `-t` - Cucumber tag expression to filter scenarios (ANDed with config-level tags)
     * `--name` / `-n` - Filter by config name stem (exact match preferred, then substring)
+    * `--adapter` / `-a` - Filter feature files by adapter type (e.g. browser, http, cli, security, graph)
 
   The config path is resolved relative to the umbrella root.
   """
@@ -36,8 +41,8 @@ defmodule Mix.Tasks.ExoTest do
   use Mix.Task
   use Boundary, top_level?: true
 
-  @switches [config: :string, tag: :string, name: :string]
-  @aliases [c: :config, t: :tag, n: :name]
+  @switches [config: :string, tag: :string, name: :string, adapter: :string]
+  @aliases [c: :config, t: :tag, n: :name, a: :adapter]
 
   @impl Mix.Task
   def run(args) do
@@ -60,6 +65,7 @@ defmodule Mix.Tasks.ExoTest do
     umbrella_root = umbrella_root()
     tag = Keyword.get(opts, :tag)
     name = Keyword.get(opts, :name)
+    adapter = Keyword.get(opts, :adapter)
     config_paths = resolve_config_paths(opts, umbrella_root, name)
 
     if config_paths == [] do
@@ -67,7 +73,8 @@ defmodule Mix.Tasks.ExoTest do
     end
 
     if tag, do: Mix.shell().info([:cyan, "CLI tag filter: #{tag}\n"])
-    run_configs(config_paths, umbrella_root, tag)
+    if adapter, do: Mix.shell().info([:cyan, "Adapter filter: #{adapter}\n"])
+    run_configs(config_paths, umbrella_root, tag, adapter)
   end
 
   defp resolve_config_paths(opts, umbrella_root, name) do
@@ -92,12 +99,12 @@ defmodule Mix.Tasks.ExoTest do
     end
   end
 
-  defp run_configs(config_paths, umbrella_root, tag) do
+  defp run_configs(config_paths, umbrella_root, tag, adapter) do
     exo_bdd_root = Path.join(umbrella_root, "tools/exo-bdd")
 
     Enum.each(config_paths, fn config_path ->
       abs_config = Path.expand(config_path, umbrella_root)
-      cmd_args = build_cmd_args(abs_config, tag)
+      cmd_args = build_cmd_args(abs_config, tag, adapter)
 
       Mix.shell().info([:cyan, "Running exo-bdd tests with config: #{config_path}\n"])
       run_bun(cmd_args, exo_bdd_root)
@@ -134,14 +141,16 @@ defmodule Mix.Tasks.ExoTest do
   end
 
   @doc false
-  def build_cmd_args(abs_config, tag) do
+  def build_cmd_args(abs_config, tag, adapter \\ nil) do
     base = ["run", "src/cli/index.ts", "run", "--config", abs_config]
 
-    case tag do
-      nil -> base
-      tag_value -> base ++ ["--tags", tag_value]
-    end
+    base
+    |> maybe_append("--tags", tag)
+    |> maybe_append("--adapter", adapter)
   end
+
+  defp maybe_append(args, _flag, nil), do: args
+  defp maybe_append(args, flag, value), do: args ++ [flag, value]
 
   @doc """
   Extracts the config name stem from a config path.

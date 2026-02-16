@@ -31,7 +31,7 @@ alias Identity.Infrastructure.Schemas.{UserSchema, WorkspaceSchema, WorkspaceMem
 alias Identity.Domain.Entities.{User, Workspace, WorkspaceMember}
 alias Jarga.Projects
 alias Jarga.Documents
-alias Jarga.Agents
+alias Agents
 
 # ---------------------------------------------------------------------------
 # Clean up any existing seed data (idempotent re-runs)
@@ -384,7 +384,7 @@ IO.puts(
   })
 
 # Add agent to workspace directly via repository (avoids full context dependencies in seed)
-alias Jarga.Agents.Infrastructure.Repositories.WorkspaceAgentRepository
+alias Agents.Infrastructure.Repositories.WorkspaceAgentRepository
 {:ok, _} = WorkspaceAgentRepository.add_to_workspace(product_team.id, code_helper.id)
 
 IO.puts("[exo-seeds-web] Created agents: code-helper, doc-writer")

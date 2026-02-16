@@ -44,9 +44,7 @@ defmodule IdentityWeb.SessionController do
   end
 
   # email + password login
-  defp create(conn, %{"user" => user_params}, info) do
-    %{"email" => email, "password" => password} = user_params
-
+  defp create(conn, %{"user" => %{"email" => email, "password" => password} = user_params}, info) do
     if user = Identity.get_user_by_email_and_password(email, password) do
       conn
       |> put_flash(:info, info)
@@ -58,6 +56,14 @@ defmodule IdentityWeb.SessionController do
       |> put_flash(:email, String.slice(email, 0, 160))
       |> redirect(to: ~p"/users/log-in")
     end
+  end
+
+  # Fallback when password is missing (e.g. magic link form submitted without JS)
+  defp create(conn, %{"user" => %{"email" => email}}, _info) do
+    conn
+    |> put_flash(:error, "Invalid email or password")
+    |> put_flash(:email, String.slice(email, 0, 160))
+    |> redirect(to: ~p"/users/log-in")
   end
 
   def update_password(conn, %{"user" => user_params} = params) do

@@ -236,13 +236,16 @@ bun run tools/exo-bdd/src/cli/index.ts init --name <project-name> [--dir <target
 ### `run` -- Execute BDD tests
 
 ```bash
-bun run tools/exo-bdd/src/cli/index.ts run --config <path-to-config> [--tags <expression>]
+bun run tools/exo-bdd/src/cli/index.ts run --config <path-to-config> [--tags <expression>] [--adapter <type>]
 ```
 
 | Flag | Alias | Description |
 |------|-------|-------------|
 | `--config` | `-c` | Path to `exo-bdd-*.config.ts` file (required) |
 | `--tags` | `-t` | Cucumber tag expression (ANDed with config-level `tags`) |
+| `--adapter` | `-a` | Filter feature files by adapter type (e.g. `browser`, `http`, `cli`, `security`, `graph`) |
+
+The `--adapter` flag narrows which feature files are executed based on their filename suffix. For example, `--adapter browser` runs only `*.browser.feature` files. Generic `*.feature` globs are rewritten to match the specified adapter, and globs for other adapters are excluded.
 
 Additional arguments are passed through to cucumber-js (e.g., `--format`).
 
@@ -260,6 +263,9 @@ mix exo_test --name entity
 # Filter scenarios by tag (ANDed with config-level tags)
 mix exo_test --tag "not @security"
 
+# Filter by adapter type (only run browser features)
+mix exo_test --name identity --adapter browser
+
 # Combine: run only ERM HTTP tests
 mix exo_test --name entity --tag "not @security"
 
@@ -272,6 +278,7 @@ mix exo_test --config apps/jarga_web/test/bdd/exo-bdd-jarga-web.config.ts
 | `--config` | `-c` | Path to config file (auto-discovers if omitted) |
 | `--tag` | `-t` | Cucumber tag expression (ANDed with config-level `tags`) |
 | `--name` | `-n` | Substring filter for auto-discovered config names |
+| `--adapter` | `-a` | Filter feature files by adapter type (`browser`, `http`, `cli`, `security`, `graph`) |
 
 ## Development
 
