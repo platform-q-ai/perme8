@@ -360,29 +360,32 @@ IO.puts(
 # ---------------------------------------------------------------------------
 
 {:ok, code_helper} =
-  Agents.create_agent(alice, %{
+  Agents.create_user_agent(%{
+    user_id: alice.id,
     name: "Code Helper",
     description: "Helps with code review and best practices",
     system_prompt: "You are an expert code reviewer. Help with code quality.",
     model: "gpt-4o",
     temperature: 0.7,
-    visibility: :shared,
-    is_enabled: true
+    visibility: "SHARED",
+    enabled: true
   })
 
 {:ok, _doc_writer} =
-  Agents.create_agent(alice, %{
+  Agents.create_user_agent(%{
+    user_id: alice.id,
     name: "Doc Writer",
     description: "Assists with documentation writing",
     system_prompt: "You are a technical writer. Help create clear documentation.",
     model: "gpt-4o",
     temperature: 0.5,
-    visibility: :shared,
-    is_enabled: true
+    visibility: "SHARED",
+    enabled: true
   })
 
-# Add agents to workspace
-Agents.add_agent_to_workspace(alice, code_helper.id, product_team.id)
+# Add agent to workspace directly via repository (avoids full context dependencies in seed)
+alias Jarga.Agents.Infrastructure.Repositories.WorkspaceAgentRepository
+{:ok, _} = WorkspaceAgentRepository.add_to_workspace(product_team.id, code_helper.id)
 
 IO.puts("[exo-seeds-web] Created agents: code-helper, doc-writer")
 
