@@ -239,15 +239,11 @@ jobs:
         run: bun install
         working-directory: tools/exo-bdd
 
-      - name: Install identity JavaScript dependencies
-        if: matrix.config_name == 'identity'
-        run: npm ci
-        working-directory: apps/identity/assets
-
-      - name: Install jarga_web JavaScript dependencies
-        if: matrix.config_name == 'jarga-web'
-        run: npm ci
-        working-directory: apps/jarga_web/assets
+      - name: Install JavaScript dependencies
+        if: matrix.needs_js_assets
+        run: |
+          cd apps/jarga_web/assets && npm ci
+          cd ../../identity/assets && npm ci
 
       - name: Install Playwright browsers
         if: matrix.needs_browser
