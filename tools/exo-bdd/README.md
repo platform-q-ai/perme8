@@ -155,11 +155,14 @@ Variables set in the config are merged with any set via `Given I set variable` s
 
 ### Timeout
 
-The `timeout` field sets the default Cucumber step timeout in milliseconds. The Cucumber default is 5000ms, which is too short for operations like OWASP ZAP active scans. Set it higher when using the security adapter:
+The `timeout` field sets the default Cucumber **per-step** timeout in milliseconds. If any single step exceeds this, the scenario is aborted.
 
 ```ts
+timeout: 10_000  // 10s -- good for browser/HTTP tests (Playwright assertions fail at 5s)
 timeout: 300_000 // 5 minutes -- needed for active security scans
 ```
+
+Keep this low for browser tests (10s) so failing scenarios abort quickly. Playwright's built-in assertion timeout (5s) catches missing elements; the Cucumber timeout is the outer guard.
 
 ### Adapter Options
 
@@ -191,10 +194,23 @@ timeout: 300_000 // 5 minutes -- needed for active security scans
 
 ### Browser Steps
 
-- `When I navigate to {string}` / `When I click on {string}`
-- `When I type {string} into {string}` / `When I select {string} from {string}`
-- `Then I should see {string}` / `Then the element {string} should be visible`
-- Screenshot, page title, URL assertions
+- **Navigation**: `I navigate to {string}`, `I am on {string}`, `I reload the page`, `I go back`, `I go forward`
+- **Clicking**: `I click {string}` (CSS selector), `I click the {string} button` / `link` (text match), `... and wait for navigation` variants
+- **Forms**: `I fill {string} with {string}`, `I type {string} into {string}`, `I select {string} from {string}`, `I clear {string}`, `I check/uncheck {string}`
+- **Waiting**: `I wait for {string} to be visible/hidden`, `I wait for {int} seconds`, `I wait for network idle`, `I wait for the page to load`
+- **Text assertions**: `I should see {string}`, `I should not see {string}`
+- **Element assertions**: `{string} should be visible/hidden`, `{string} should exist/not exist`, `{string} should be enabled/disabled`, `{string} should have text/value/class {string}`
+- **Page assertions**: `the URL should contain {string}`, `the page title should contain {string}`, `there should be {int} {string} elements`
+- **Storage**: `I store the text of {string} as {string}`, `I store the URL as {string}`
+- **Other**: `I take a screenshot`, `I hover over {string}`, `I press {string}`, `I upload {string} to {string}`
+
+#### Phoenix LiveView Tips
+
+LiveView pages use a websocket connection that initializes after the initial page load. Forms with `phx-submit` won't work until the socket connects.
+
+- **Always** add `I wait for network idle` after navigating to a LiveView page and before interacting with forms or `phx-*` elements.
+- LiveView `navigate` links (client-side patch) don't trigger a full page load. Use `I click the {string} link` + `I wait for network idle` instead of `I click the {string} link and wait for navigation`.
+- `I wait for the page to load` only waits for the initial HTTP load event, not the LiveView socket. Use `I wait for network idle` when you need the socket connected.
 
 ### CLI Steps
 
