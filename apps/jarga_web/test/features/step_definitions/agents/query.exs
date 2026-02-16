@@ -17,8 +17,8 @@ defmodule AgentQuerySteps do
   import Jarga.WorkspacesFixtures
 
   alias Jarga.Accounts
-  alias Jarga.Agents
-  alias Jarga.Agents.Infrastructure.Repositories.WorkspaceAgentRepository
+  alias Agents
+  alias Agents.Infrastructure.Repositories.WorkspaceAgentRepository
 
   # ============================================================================
   # SETUP STEPS (Data Tables)
@@ -47,7 +47,7 @@ defmodule AgentQuerySteps do
     user = context[:current_user]
     assert user, "User must be logged in"
 
-    user_agents = Jarga.Agents.list_user_agents(user.id)
+    user_agents = Agents.list_user_agents(user.id)
 
     assert Enum.empty?(user_agents),
            "Expected no agents for user, but found: #{length(user_agents)}"
@@ -320,11 +320,11 @@ defmodule AgentQuerySteps do
 
     assert alice, "Alice must be created in a prior step"
 
-    viewable_agents = Jarga.Agents.list_viewable_agents(user.id)
+    viewable_agents = Agents.list_viewable_agents(user.id)
     viewable_ids = Enum.map(viewable_agents, & &1.id)
 
     alice_private_agents =
-      Jarga.Agents.list_user_agents(alice.id)
+      Agents.list_user_agents(alice.id)
       |> Enum.filter(&(&1.visibility == :PRIVATE))
 
     Enum.each(alice_private_agents, fn agent ->
@@ -340,11 +340,11 @@ defmodule AgentQuerySteps do
 
     assert bob, "Bob must be created in a prior step"
 
-    viewable_agents = Jarga.Agents.list_viewable_agents(user.id)
+    viewable_agents = Agents.list_viewable_agents(user.id)
     viewable_ids = Enum.map(viewable_agents, & &1.id)
 
     bob_private_agents =
-      Jarga.Agents.list_user_agents(bob.id)
+      Agents.list_user_agents(bob.id)
       |> Enum.filter(&(&1.visibility == :PRIVATE))
 
     Enum.each(bob_private_agents, fn agent ->
@@ -421,7 +421,7 @@ defmodule AgentQuerySteps do
      |> Map.put(:agents, Map.put(agents, name, agent))}
   end
 
-  alias Jarga.Agents.Infrastructure.Repositories.AgentRepository
+  alias Agents.Infrastructure.Repositories.AgentRepository
 
   defp update_agent_timestamp(agent, timestamp) do
     AgentRepository.update_timestamp(agent.id, timestamp)

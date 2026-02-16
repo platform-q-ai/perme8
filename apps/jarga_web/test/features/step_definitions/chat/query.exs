@@ -242,7 +242,7 @@ defmodule ChatQuerySteps do
     if agent do
       # Update the agent's system prompt
       {:ok, updated_agent} =
-        Jarga.Agents.update_user_agent(agent.id, user.id, %{system_prompt: prompt})
+        Agents.update_user_agent(agent.id, user.id, %{system_prompt: prompt})
 
       # Update the agents map with the updated agent
       updated_agents = Map.put(agents, agent_name, updated_agent)

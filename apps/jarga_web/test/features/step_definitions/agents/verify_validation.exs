@@ -15,7 +15,7 @@ defmodule AgentVerifyValidationSteps do
   use Cucumber.StepDefinition
   use JargaWeb.ConnCase, async: false
 
-  alias Jarga.Agents
+  alias Agents
 
   # ============================================================================
   # VALIDATION ERROR ASSERTIONS

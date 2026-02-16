@@ -8,7 +8,4 @@ ExUnit.start(exclude: [:evaluation, :wip], capture_log: true)
 Ecto.Adapters.SQL.Sandbox.mode(Jarga.Repo, :manual)
 Ecto.Adapters.SQL.Sandbox.mode(Identity.Repo, :manual)
 
-# Define mocks for testing
-Mox.defmock(Jarga.Agents.Infrastructure.Services.LlmClientMock,
-  for: Jarga.Agents.Application.Behaviours.LlmClientBehaviour
-)
+# Agents mocks are defined in apps/agents/test/test_helper.exs

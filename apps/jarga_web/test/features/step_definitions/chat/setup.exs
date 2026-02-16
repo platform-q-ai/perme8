@@ -160,7 +160,7 @@ defmodule ChatSetupSteps do
       context[:default_agent] || context[:agent] ||
         agent_fixture(user, %{name: "Default Agent", enabled: true})
 
-    :ok = Jarga.Agents.sync_agent_workspaces(agent.id, user.id, [workspace.id])
+    :ok = Agents.sync_agent_workspaces(agent.id, user.id, [workspace.id])
 
     {:ok, view, html} = live(conn, ~p"/app/workspaces/#{workspace.slug}")
 
@@ -270,7 +270,7 @@ defmodule ChatSetupSteps do
       Map.get(existing_agents, agent_name) ||
         agent_fixture(user, %{name: agent_name, enabled: true})
 
-    :ok = Jarga.Agents.sync_agent_workspaces(agent.id, user.id, [workspace.id])
+    :ok = Agents.sync_agent_workspaces(agent.id, user.id, [workspace.id])
 
     conn = context[:conn]
     {:ok, view, html} = live(conn, ~p"/app/workspaces/#{workspace.slug}")

@@ -17,8 +17,8 @@ defmodule AgentAuthorizeSteps do
   import Jarga.AgentsFixtures
 
   alias Jarga.Accounts
-  alias Jarga.Agents
-  alias Jarga.Agents.Infrastructure.Repositories.WorkspaceAgentRepository
+  alias Agents
+  alias Agents.Infrastructure.Repositories.WorkspaceAgentRepository
 
   # ============================================================================
   # SETUP STEPS
@@ -55,7 +55,7 @@ defmodule AgentAuthorizeSteps do
 
     {user, context} = get_or_create_workspace_member(context, user_name, workspace)
 
-    viewable_agents = Jarga.Agents.list_viewable_agents(user.id)
+    viewable_agents = Agents.list_viewable_agents(user.id)
     viewable_ids = Enum.map(viewable_agents, & &1.id)
 
     assert agent.id in viewable_ids,
@@ -223,7 +223,7 @@ defmodule AgentAuthorizeSteps do
     other_user = user_fixture(%{email: "other-member@example.com"})
     add_workspace_member_fixture(workspace.id, other_user, :member)
 
-    result = Jarga.Agents.list_workspace_available_agents(workspace.id, other_user.id)
+    result = Agents.list_workspace_available_agents(workspace.id, other_user.id)
     all_agents = (result.my_agents || []) ++ (result.other_agents || [])
     agent_names = Enum.map(all_agents, & &1.name)
 
@@ -244,7 +244,7 @@ defmodule AgentAuthorizeSteps do
     assert agent != nil, "Agent '#{agent_name}' not found in context"
     assert workspace != nil, "No workspace found in context"
 
-    workspace_ids = Jarga.Agents.get_agent_workspace_ids(agent.id)
+    workspace_ids = Agents.get_agent_workspace_ids(agent.id)
 
     assert workspace.id in workspace_ids,
            "Agent '#{agent_name}' should be in workspace '#{workspace.name}'"

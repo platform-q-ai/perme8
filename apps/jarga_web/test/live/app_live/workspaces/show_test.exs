@@ -664,7 +664,7 @@ defmodule JargaWeb.AppLive.Workspaces.ShowTest do
           visibility: "SHARED"
         })
 
-      Jarga.Agents.sync_agent_workspaces(shared_agent.id, other_user.id, [workspace_b.id])
+      Agents.sync_agent_workspaces(shared_agent.id, other_user.id, [workspace_b.id])
 
       %{
         conn: log_in_user(conn, user),
@@ -697,7 +697,7 @@ defmodule JargaWeb.AppLive.Workspaces.ShowTest do
         })
 
       # Add shared agent to workspace_a
-      Jarga.Agents.sync_agent_workspaces(shared_agent.id, other_user.id, [workspace_a.id])
+      Agents.sync_agent_workspaces(shared_agent.id, other_user.id, [workspace_a.id])
 
       # User loads workspace A
       {:ok, lv, _html} = live(conn, ~p"/app/workspaces/#{workspace_a.slug}")
@@ -706,18 +706,18 @@ defmodule JargaWeb.AppLive.Workspaces.ShowTest do
       render_click(lv, "clone_agent", %{"agent-id" => shared_agent.id})
 
       # Verify the cloned agent is created and associated with workspace_a
-      cloned_agents = Jarga.Agents.list_user_agents(user.id)
+      cloned_agents = Agents.list_user_agents(user.id)
       cloned_agent = Enum.find(cloned_agents, &(&1.name == "Shared Agent (Copy)"))
       assert cloned_agent != nil
       assert cloned_agent.user_id == user.id
       assert cloned_agent.visibility == "PRIVATE"
 
       # Verify workspace association
-      workspace_ids = Jarga.Agents.get_agent_workspace_ids(cloned_agent.id)
+      workspace_ids = Agents.get_agent_workspace_ids(cloned_agent.id)
       assert workspace_a.id in workspace_ids
 
       # Verify cloned agent appears in workspace agent list
-      agents_result = Jarga.Agents.list_workspace_available_agents(workspace_a.id, user.id)
+      agents_result = Agents.list_workspace_available_agents(workspace_a.id, user.id)
       assert Enum.any?(agents_result.my_agents, &(&1.id == cloned_agent.id))
     end
 

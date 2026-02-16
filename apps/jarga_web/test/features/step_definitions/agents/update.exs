@@ -14,7 +14,7 @@ defmodule AgentUpdateSteps do
 
   import Phoenix.LiveViewTest
 
-  alias Jarga.Agents
+  alias Agents
 
   # ============================================================================
   # UI ACTION STEPS

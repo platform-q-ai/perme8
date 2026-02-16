@@ -178,7 +178,7 @@ defmodule JargaWeb.AppLive.Dashboard do
     user = socket.assigns.current_scope.user
 
     # Reload all user's agents (not workspace-scoped since we're on dashboard)
-    agents = Jarga.Agents.list_user_agents(user.id)
+    agents = Agents.list_user_agents(user.id)
 
     # Update the chat panel with fresh agent list
     send_update(JargaWeb.ChatLive.Panel,

@@ -16,7 +16,7 @@ defmodule ChatSelectPreferencesSteps do
   import Jarga.Test.StepHelpers
   import Jarga.AgentsFixtures
 
-  alias Jarga.Agents
+  alias Agents
 
   # ============================================================================
   # AGENT PREFERENCES STEPS

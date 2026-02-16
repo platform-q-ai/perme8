@@ -86,7 +86,7 @@ defmodule JargaWeb.AppLive.Agents.FormTest do
       |> render_submit()
 
       # Verify agent WAS modified
-      agents = Jarga.Agents.list_user_agents(user.id)
+      agents = Agents.list_user_agents(user.id)
       updated_agent = Enum.find(agents, &(&1.id == my_agent.id))
       assert updated_agent.name == "Updated Name"
       assert updated_agent.description == "Updated description"

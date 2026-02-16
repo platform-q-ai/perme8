@@ -50,7 +50,7 @@ defmodule Jarga.Chat do
       Jarga.Accounts,
       Jarga.Workspaces,
       Jarga.Projects,
-      Jarga.Agents,
+      Agents,
       Jarga.Repo
     ],
     exports: [

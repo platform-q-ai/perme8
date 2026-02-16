@@ -13,7 +13,7 @@ defmodule AgentDeleteSteps do
 
   import Phoenix.LiveViewTest
 
-  alias Jarga.Agents
+  alias Agents
 
   # ============================================================================
   # DELETION ACTIONS
@@ -125,7 +125,7 @@ defmodule AgentDeleteSteps do
 
   step "workspace members should receive notifications of the removal", context do
     deleted_agent = context[:deleted_agent]
-    workspace_ids = Jarga.Agents.get_agent_workspace_ids(deleted_agent.id)
+    workspace_ids = Agents.get_agent_workspace_ids(deleted_agent.id)
 
     Enum.each(workspace_ids, fn workspace_id ->
       Phoenix.PubSub.subscribe(Jarga.PubSub, "workspace:#{workspace_id}")

@@ -46,7 +46,7 @@ defmodule ChatSetupAgentsSteps do
     agents_with_names =
       Enum.map(agent_configs, fn {name, attrs} ->
         agent = agent_fixture(user, Map.merge(%{name: name, enabled: true}, attrs))
-        :ok = Jarga.Agents.sync_agent_workspaces(agent.id, user.id, [workspace.id])
+        :ok = Agents.sync_agent_workspaces(agent.id, user.id, [workspace.id])
         {name, agent}
       end)
 
@@ -77,7 +77,7 @@ defmodule ChatSetupAgentsSteps do
   defp sync_agent_to_workspace_if_exists(_agent, _user, nil), do: :ok
 
   defp sync_agent_to_workspace_if_exists(agent, user, workspace) do
-    :ok = Jarga.Agents.sync_agent_workspaces(agent.id, user.id, [workspace.id])
+    :ok = Agents.sync_agent_workspaces(agent.id, user.id, [workspace.id])
   end
 
   defp create_default_workspace(user) do
@@ -88,8 +88,8 @@ defmodule ChatSetupAgentsSteps do
     agent1 = agent_fixture(user, %{name: "Code Helper", enabled: true})
     agent2 = agent_fixture(user, %{name: "Doc Writer", enabled: true})
 
-    :ok = Jarga.Agents.sync_agent_workspaces(agent1.id, user.id, [workspace.id])
-    :ok = Jarga.Agents.sync_agent_workspaces(agent2.id, user.id, [workspace.id])
+    :ok = Agents.sync_agent_workspaces(agent1.id, user.id, [workspace.id])
+    :ok = Agents.sync_agent_workspaces(agent2.id, user.id, [workspace.id])
 
     {agent1, agent2}
   end
@@ -172,7 +172,7 @@ defmodule ChatSetupAgentsSteps do
       Map.get(existing_agents, agent_name) ||
         agent_fixture(user, %{name: agent_name, enabled: true})
 
-    :ok = Jarga.Agents.sync_agent_workspaces(agent.id, user.id, [workspace.id])
+    :ok = Agents.sync_agent_workspaces(agent.id, user.id, [workspace.id])
 
     {:ok,
      context

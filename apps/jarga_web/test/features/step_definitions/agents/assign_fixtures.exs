@@ -19,7 +19,7 @@ defmodule AgentAssignFixturesSteps do
   import Jarga.WorkspacesFixtures
   import Jarga.AgentsFixtures
 
-  alias Jarga.Agents.Infrastructure.Repositories.WorkspaceAgentRepository
+  alias Agents.Infrastructure.Repositories.WorkspaceAgentRepository
 
   # ============================================================================
   # HELPER FUNCTIONS

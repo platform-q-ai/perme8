@@ -13,7 +13,7 @@ defmodule AgentCreateSteps do
   import Phoenix.LiveViewTest
   import Jarga.AgentsFixtures
 
-  alias Jarga.Agents
+  alias Agents
 
   # ============================================================================
   # FORM FILLING STEPS

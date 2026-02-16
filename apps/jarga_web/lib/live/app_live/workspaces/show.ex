@@ -8,7 +8,7 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
   import JargaWeb.Live.PermissionsHelper
   import JargaWeb.ChatLive.MessageHandlers
 
-  alias Jarga.{Workspaces, Projects, Documents, Agents}
+  alias Jarga.{Workspaces, Projects, Documents}
   alias JargaWeb.Layouts
 
   @impl true
@@ -607,7 +607,7 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
         projects = Projects.list_projects_for_workspace(user, workspace.id)
 
         # Load agents available in this workspace
-        agents_result = Jarga.Agents.list_workspace_available_agents(workspace.id, user.id)
+        agents_result = Agents.list_workspace_available_agents(workspace.id, user.id)
 
         # Subscribe to workspace-specific PubSub topic for real-time updates
         if connected?(socket) do
@@ -1039,7 +1039,7 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
     user = socket.assigns.current_scope.user
 
     # Reload for chat panel (flat list with enabled only)
-    agents = Jarga.Agents.get_workspace_agents_list(workspace_id, user.id, enabled_only: true)
+    agents = Agents.get_workspace_agents_list(workspace_id, user.id, enabled_only: true)
 
     send_update(JargaWeb.ChatLive.Panel,
       id: "global-chat-panel",
@@ -1048,7 +1048,7 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
     )
 
     # Reload for workspace overview page (my_agents and other_agents)
-    agents_result = Jarga.Agents.list_workspace_available_agents(workspace_id, user.id)
+    agents_result = Agents.list_workspace_available_agents(workspace_id, user.id)
 
     {:noreply,
      socket

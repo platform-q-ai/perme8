@@ -37,7 +37,7 @@ defmodule JargaWeb.FeatureCase do
       alias Jarga.Workspaces
       alias Jarga.Projects
       alias Jarga.Documents
-      alias Jarga.Agents
+      alias Agents
 
       # Import fixtures for test data creation
       import Jarga.AccountsFixtures

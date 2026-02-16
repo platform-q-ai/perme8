@@ -7,7 +7,7 @@ defmodule JargaWeb.ChatLive.PanelTest do
   import Jarga.ProjectsFixtures
   import Jarga.DocumentsFixtures
 
-  alias Jarga.Agents
+  alias Agents
   alias Jarga.Chat
   alias JargaWeb.ChatLive.Components.Message
 

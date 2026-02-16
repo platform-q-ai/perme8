@@ -20,7 +20,7 @@ defmodule AgentAssignSteps do
   import Jarga.WorkspacesFixtures
   import Jarga.AgentsFixtures
 
-  alias Jarga.Agents
+  alias Agents
 
   # ============================================================================
   # HELPER FUNCTIONS

@@ -31,7 +31,7 @@ defmodule Jarga.Domain do
   - Policies: AuthenticationPolicy, TokenPolicy, ApiKeyPolicy
   - Services: TokenBuilder
 
-  ### Agents (`Jarga.Agents.Domain`)
+  ### Agents (`Agents.Domain`) — extracted to `apps/agents/`
   - Entities: Agent, WorkspaceAgentJoin
   - Services: AgentCloner
 
@@ -78,14 +78,14 @@ defmodule Jarga.Domain do
   ## Examples
 
       iex> Jarga.Domain.entities()
-      [Jarga.Agents.Domain.Entities.Agent, ...]
+      [Agents.Domain.Entities.Agent, ...]
   """
   @spec entities() :: [module()]
   def entities do
     [
-      # Agents
-      Jarga.Agents.Domain.Entities.Agent,
-      Jarga.Agents.Domain.Entities.WorkspaceAgentJoin,
+      # Agents (extracted to apps/agents/)
+      Agents.Domain.Entities.Agent,
+      Agents.Domain.Entities.WorkspaceAgentJoin,
       # Chat
       Jarga.Chat.Domain.Entities.Session,
       Jarga.Chat.Domain.Entities.Message,
@@ -123,13 +123,13 @@ defmodule Jarga.Domain do
   ## Examples
 
       iex> Jarga.Domain.services()
-      [Jarga.Agents.Domain.AgentCloner, ...]
+      [Agents.Domain.AgentCloner, ...]
   """
   @spec services() :: [module()]
   def services do
     [
-      # Agents
-      Jarga.Agents.Domain.AgentCloner,
+      # Agents (extracted to apps/agents/)
+      Agents.Domain.AgentCloner,
       # Documents
       Jarga.Documents.Domain.SlugGenerator,
       Jarga.Documents.Domain.AgentQueryParser,
@@ -157,11 +157,11 @@ defmodule Jarga.Domain do
     %{
       agents: %{
         entities: [
-          Jarga.Agents.Domain.Entities.Agent,
-          Jarga.Agents.Domain.Entities.WorkspaceAgentJoin
+          Agents.Domain.Entities.Agent,
+          Agents.Domain.Entities.WorkspaceAgentJoin
         ],
         policies: [],
-        services: [Jarga.Agents.Domain.AgentCloner]
+        services: [Agents.Domain.AgentCloner]
       },
       chat: %{
         entities: [

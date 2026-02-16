@@ -47,7 +47,8 @@ defmodule JargaWeb.MixProject do
             {:phoenix_live_view, :relaxed},
             {:phoenix_html, :relaxed},
             {:phoenix_ecto, :relaxed},
-            {:jarga, :relaxed}
+            {:jarga, :relaxed},
+            {:agents, :relaxed}
           ]
         ]
       ],
@@ -76,6 +77,7 @@ defmodule JargaWeb.MixProject do
        depth: 1},
       {:gettext, "~> 0.26"},
       {:jarga, in_umbrella: true},
+      {:agents, in_umbrella: true},
       {:jason, "~> 1.2"},
       {:bandit, "~> 1.5"},
       {:wallaby, "~> 0.30", runtime: false, only: :test},
