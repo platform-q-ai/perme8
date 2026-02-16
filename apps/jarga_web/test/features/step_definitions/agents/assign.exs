@@ -18,7 +18,7 @@ defmodule AgentAssignSteps do
 
   import Jarga.AccountsFixtures
   import Jarga.WorkspacesFixtures
-  import Jarga.AgentsFixtures
+  import Agents.AgentsFixtures
 
   alias Agents
 

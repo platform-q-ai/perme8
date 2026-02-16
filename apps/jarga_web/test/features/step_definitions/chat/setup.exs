@@ -21,7 +21,7 @@ defmodule ChatSetupSteps do
   require Jarga.Test.StepHelpers
   import Jarga.Test.StepHelpers
   import Jarga.WorkspacesFixtures
-  import Jarga.AgentsFixtures
+  import Agents.AgentsFixtures
   import Jarga.ChatFixtures
 
   # ============================================================================

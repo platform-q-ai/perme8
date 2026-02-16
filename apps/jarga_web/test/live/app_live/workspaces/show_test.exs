@@ -644,7 +644,7 @@ defmodule JargaWeb.AppLive.Workspaces.ShowTest do
   end
 
   describe "agent cloning security" do
-    import Jarga.AgentsFixtures
+    import Agents.AgentsFixtures
 
     setup %{conn: conn} do
       user = user_fixture()

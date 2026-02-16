@@ -14,7 +14,7 @@ defmodule AgentVerifySteps do
   use Cucumber.StepDefinition
   use JargaWeb.ConnCase, async: false
 
-  import Jarga.AgentsFixtures
+  import Agents.AgentsFixtures
 
   # ============================================================================
   # CREATION ASSERTIONS

@@ -18,7 +18,7 @@ defmodule ChatSetupAgentsWorkspaceSteps do
   require Jarga.Test.StepHelpers
   import Jarga.Test.StepHelpers
   import Jarga.WorkspacesFixtures
-  import Jarga.AgentsFixtures
+  import Agents.AgentsFixtures
 
   # ============================================================================
   # HELPER FUNCTIONS
@@ -164,7 +164,7 @@ defmodule ChatSetupAgentsWorkspaceSteps do
       context[:workspace] || context[:current_workspace] ||
         workspace_fixture(user, %{name: "Test Workspace", slug: "test-workspace"})
 
-    agent = Jarga.AgentsFixtures.agent_fixture(user, %{name: agent_name, enabled: true})
+    agent = Agents.AgentsFixtures.agent_fixture(user, %{name: agent_name, enabled: true})
     :ok = Agents.sync_agent_workspaces(agent.id, user.id, [workspace.id])
 
     agents = context[:agents] || %{}

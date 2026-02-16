@@ -44,7 +44,7 @@ defmodule JargaWeb.FeatureCase do
       import Jarga.WorkspacesFixtures
       import Jarga.ProjectsFixtures
       import Jarga.DocumentsFixtures
-      import Jarga.AgentsFixtures
+      import Agents.AgentsFixtures
     end
   end
 

@@ -196,7 +196,7 @@ defmodule Jarga.Test.StepHelpers do
         {workspace, context} = ensure_workspace(context)
 
         default_attrs = %{name: agent_name, enabled: true}
-        agent = Jarga.AgentsFixtures.agent_fixture(user, Map.merge(default_attrs, attrs))
+        agent = Agents.AgentsFixtures.agent_fixture(user, Map.merge(default_attrs, attrs))
         :ok = Agents.sync_agent_workspaces(agent.id, user.id, [workspace.id])
 
         agents = get_agents(context)

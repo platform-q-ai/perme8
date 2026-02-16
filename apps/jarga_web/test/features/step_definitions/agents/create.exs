@@ -11,7 +11,7 @@ defmodule AgentCreateSteps do
   use JargaWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
-  import Jarga.AgentsFixtures
+  import Agents.AgentsFixtures
 
   alias Agents
 
