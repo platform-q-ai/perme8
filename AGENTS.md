@@ -28,6 +28,23 @@ Elixir Phoenix umbrella project. **MUST** read `docs/umbrella_apps.md` before an
 - **BDD Feature Translator** -- generates domain-specific feature files (browser, HTTP, security) from a PRD.
 - **Update Project** -- creates/updates issues on the Perme8 GitHub Project board with all fields populated. Use `/update-project`.
 
+## Exo-BDD Browser Tests
+
+Run browser tests iteratively by tagging features/scenarios for fast feedback:
+
+```bash
+# Full suite
+mix exo_test --name jarga-web --adapter browser
+
+# Tag a feature or scenario with @smoke, then run only that
+# (via CLI runner -- supports --tags flag)
+cd tools/exo-bdd && bun run src/cli/index.ts run \
+  --config ../../apps/jarga_web/test/exo-bdd-jarga-web.config.ts \
+  --adapter browser --tags "@smoke"
+```
+
+**LiveView critical pattern**: Always add `I wait for network idle` after navigating to a LiveView page before interacting with `phx-*` elements. See `tools/exo-bdd/README.md` "Phoenix LiveView Tips".
+
 ## Principles
 
 - Tests first -- always write tests before implementation
