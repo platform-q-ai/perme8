@@ -138,11 +138,46 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jarga_test
 
   exo-bdd-360:
-    name: 360 tests
+    name: "360: ${{ matrix.name }}"
     needs: [changes]
     if: needs.changes.outputs.umbrella == 'true' || needs.changes.outputs.exo_bdd == 'true'
-    timeout-minutes: 30
+    timeout-minutes: ${{ matrix.timeout }}
     runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: alkali
+            config_name: alkali
+            needs_db: false
+            needs_browser: false
+            needs_js_assets: false
+            timeout: 5
+          - name: ERM
+            config_name: entity-relationship-manager
+            needs_db: true
+            needs_browser: false
+            needs_js_assets: false
+            timeout: 10
+          - name: identity
+            config_name: identity
+            needs_db: true
+            needs_browser: true
+            needs_js_assets: true
+            timeout: 15
+          - name: jarga-api
+            config_name: jarga-api
+            needs_db: true
+            needs_browser: false
+            needs_js_assets: false
+            timeout: 10
+          - name: jarga-web
+            config_name: jarga-web
+            needs_db: true
+            needs_browser: true
+            needs_js_assets: true
+            timeout: 15
 
     services:
       postgres:
@@ -195,6 +230,7 @@ jobs:
         run: mix deps.compile
 
       - name: Set up Node.js
+        if: matrix.needs_js_assets
         uses: actions/setup-node@v4
         with:
           node-version-file: .tool-versions
@@ -204,32 +240,38 @@ jobs:
         working-directory: tools/exo-bdd
 
       - name: Install identity JavaScript dependencies
+        if: matrix.config_name == 'identity'
         run: npm ci
         working-directory: apps/identity/assets
 
       - name: Install jarga_web JavaScript dependencies
+        if: matrix.config_name == 'jarga-web'
         run: npm ci
         working-directory: apps/jarga_web/assets
 
       - name: Install Playwright browsers
+        if: matrix.needs_browser
         run: bunx playwright install --with-deps chromium
         working-directory: tools/exo-bdd
 
-      - name: Build all assets
+      - name: Build assets
+        if: matrix.needs_js_assets
         run: mix assets.build
 
       - name: Create test database
+        if: matrix.needs_db
         run: MIX_ENV=test mix ecto.create
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jarga_test
 
       - name: Run database migrations
+        if: matrix.needs_db
         run: MIX_ENV=test mix ecto.migrate
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jarga_test
 
-      - name: Run 360 tests (auto-discover all configs)
-        run: mix exo_test
+      - name: Run exo-bdd tests
+        run: mix exo_test --name ${{ matrix.config_name }}
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jarga_test
 
