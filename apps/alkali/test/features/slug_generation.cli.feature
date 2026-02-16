@@ -10,7 +10,7 @@ Feature: Slug and URL Generation
     Then the command should succeed
 
   Scenario: Generate slug from filename
-    When I run "mkdir -p ${site}/content/posts && printf '---\ntitle: My First Blog Post\n---\nHello world\n' > '${site}/content/posts/My First Blog Post.md'"
+    When I run "mkdir -p ${site}/content/posts && printf '%b' '---\ntitle: My First Blog Post\n---\nHello world\n' > '${site}/content/posts/My First Blog Post.md'"
     Then the command should succeed
     When I run "mix alkali.build ${site}"
     Then the command should succeed
@@ -20,7 +20,7 @@ Feature: Slug and URL Generation
     And stdout should contain "my-first-blog-post.html"
 
   Scenario: Preserve folder hierarchy in URLs
-    When I run "mkdir -p ${site}/content/posts/2024/01 && printf '---\ntitle: My Post\n---\nContent here\n' > ${site}/content/posts/2024/01/my-post.md"
+    When I run "mkdir -p ${site}/content/posts/2024/01 && printf '%b' '---\ntitle: My Post\n---\nContent here\n' > ${site}/content/posts/2024/01/my-post.md"
     Then the command should succeed
     When I run "mix alkali.build ${site}"
     Then the command should succeed
@@ -30,7 +30,7 @@ Feature: Slug and URL Generation
     And stdout should contain "my-post.html"
 
   Scenario: Duplicate slugs cause build failure
-    When I run "mkdir -p ${site}/content/posts && printf '---\ntitle: My Post\ndate: 2024-01-15\n---\nFirst post\n' > ${site}/content/posts/2024-01-15-my-post.md && printf '---\ntitle: My Post\ndate: 2024-01-16\n---\nSecond post\n' > ${site}/content/posts/2024-01-16-my-post.md"
+    When I run "mkdir -p ${site}/content/posts && printf '%b' '---\ntitle: My Post\ndate: 2024-01-15\n---\nFirst post\n' > ${site}/content/posts/2024-01-15-my-post.md && printf '%b' '---\ntitle: My Post\ndate: 2024-01-16\n---\nSecond post\n' > ${site}/content/posts/2024-01-16-my-post.md"
     Then the command should succeed
     When I run "mix alkali.build ${site}"
     Then the command should fail
@@ -39,7 +39,7 @@ Feature: Slug and URL Generation
     And stderr should contain "2024-01-16-my-post.md"
 
   Scenario: Remove special characters from slugs
-    When I run "mkdir -p ${site}/content/posts && printf '---\ntitle: Post Part 1 Updated\n---\nContent\n' > '${site}/content/posts/Post: Part 1 (Updated!).md'"
+    When I run "mkdir -p ${site}/content/posts && printf '%b' '---\ntitle: Post Part 1 Updated\n---\nContent\n' > '${site}/content/posts/Post: Part 1 (Updated!).md'"
     Then the command should succeed
     When I run "mix alkali.build ${site}"
     Then the command should succeed
