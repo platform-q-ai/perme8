@@ -28,6 +28,20 @@ export async function clickElement(context: InteractionContext, selector: string
   await context.browser.click(context.interpolate(selector))
 }
 
+export async function clickButtonAndNavigate(context: InteractionContext, text: string): Promise<void> {
+  const page = context.browser.page
+  const navigationPromise = page.waitForNavigation()
+  await page.click(`button:has-text("${context.interpolate(text)}")`)
+  await navigationPromise
+}
+
+export async function clickLinkAndNavigate(context: InteractionContext, text: string): Promise<void> {
+  const page = context.browser.page
+  const navigationPromise = page.waitForNavigation()
+  await page.click(`a:has-text("${context.interpolate(text)}")`)
+  await navigationPromise
+}
+
 export async function doubleClickSelector(context: InteractionContext, selector: string): Promise<void> {
   await context.browser.doubleClick(context.interpolate(selector))
 }
@@ -124,6 +138,14 @@ When<TestWorld>('I click the {string} link', async function (text: string) {
 
 When<TestWorld>('I click the {string} element', async function (selector: string) {
   await clickElement(this, selector)
+})
+
+When<TestWorld>('I click the {string} button and wait for navigation', async function (text: string) {
+  await clickButtonAndNavigate(this, text)
+})
+
+When<TestWorld>('I click the {string} link and wait for navigation', async function (text: string) {
+  await clickLinkAndNavigate(this, text)
 })
 
 When<TestWorld>('I double-click {string}', async function (selector: string) {

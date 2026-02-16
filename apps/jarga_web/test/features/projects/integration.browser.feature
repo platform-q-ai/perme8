@@ -29,8 +29,7 @@ Feature: Project Integration
     And I wait for the page to load
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for network idle
+    And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to workspace and create a project
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
     And I wait for the page to load
@@ -49,8 +48,7 @@ Feature: Project Integration
     And I wait for the page to load
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for network idle
+    And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to project edit page and update name
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/projects/mobile-app/edit"
     And I wait for the page to load
@@ -68,8 +66,7 @@ Feature: Project Integration
     And I wait for the page to load
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for network idle
+    And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to a seeded project and delete it
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/projects/q1-launch"
     And I wait for the page to load
@@ -90,8 +87,7 @@ Feature: Project Integration
     And I wait for the page to load
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for network idle
+    And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to a seeded project
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/projects/mobile-app"
     And I wait for the page to load
@@ -109,8 +105,7 @@ Feature: Project Integration
     And I wait for the page to load
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for network idle
+    And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to the seeded project that has a document
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/projects/q1-launch"
     And I wait for the page to load

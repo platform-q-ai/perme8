@@ -18,8 +18,7 @@ Feature: Document CRUD Operations
     Given I am on "${baseUrl}/users/log-in"
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for the page to load
+    And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/product-team"
     And I wait for the page to load
     And I click the "New Document" button
@@ -34,8 +33,7 @@ Feature: Document CRUD Operations
     Given I am on "${baseUrl}/users/log-in"
     When I fill "#login_form_password_email" with "${adminEmail}"
     And I fill "#login_form_password_password" with "${adminPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for the page to load
+    And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/product-team"
     And I wait for the page to load
     And I click the "New Document" button
@@ -50,8 +48,7 @@ Feature: Document CRUD Operations
     Given I am on "${baseUrl}/users/log-in"
     When I fill "#login_form_password_email" with "${memberEmail}"
     And I fill "#login_form_password_password" with "${memberPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for the page to load
+    And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/product-team"
     And I wait for the page to load
     And I click the "New Document" button
@@ -66,8 +63,7 @@ Feature: Document CRUD Operations
     Given I am on "${baseUrl}/users/log-in"
     When I fill "#login_form_password_email" with "${guestEmail}"
     And I fill "#login_form_password_password" with "${guestPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for the page to load
+    And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/product-team"
     And I wait for the page to load
     Then I should not see "New Document"
@@ -76,8 +72,7 @@ Feature: Document CRUD Operations
     Given I am on "${baseUrl}/users/log-in"
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for the page to load
+    And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/product-team"
     And I wait for the page to load
     And I click the "New Document" button
@@ -95,8 +90,7 @@ Feature: Document CRUD Operations
     Given I am on "${baseUrl}/users/log-in"
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for the page to load
+    And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/product-team/documents/draft-roadmap"
     And I wait for the page to load
     And I click "h1"
@@ -112,8 +106,7 @@ Feature: Document CRUD Operations
     Given I am on "${baseUrl}/users/log-in"
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for the page to load
+    And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/product-team/documents/private-doc"
     And I wait for the page to load
     And I click ".kebab-menu button"
@@ -126,8 +119,7 @@ Feature: Document CRUD Operations
     Given I am on "${baseUrl}/users/log-in"
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for the page to load
+    And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/product-team/documents/public-doc"
     And I wait for the page to load
     And I click ".kebab-menu button"
@@ -140,8 +132,7 @@ Feature: Document CRUD Operations
     Given I am on "${baseUrl}/users/log-in"
     When I fill "#login_form_password_email" with "${guestEmail}"
     And I fill "#login_form_password_password" with "${guestPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for the page to load
+    And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/product-team/documents/public-doc"
     And I wait for the page to load
     Then I should see "read-only mode"
@@ -152,8 +143,7 @@ Feature: Document CRUD Operations
     Given I am on "${baseUrl}/users/log-in"
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for the page to load
+    And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/product-team/documents/valid-title"
     And I wait for the page to load
     And I click "h1"
@@ -171,8 +161,7 @@ Feature: Document CRUD Operations
     Given I am on "${baseUrl}/users/log-in"
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for the page to load
+    And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/product-team/documents/important-doc"
     And I wait for the page to load
     And I click ".kebab-menu button"
@@ -185,8 +174,7 @@ Feature: Document CRUD Operations
     Given I am on "${baseUrl}/users/log-in"
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for the page to load
+    And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/product-team/documents/pinned-doc"
     And I wait for the page to load
     And I click ".kebab-menu button"
@@ -199,8 +187,7 @@ Feature: Document CRUD Operations
     Given I am on "${baseUrl}/users/log-in"
     When I fill "#login_form_password_email" with "${guestEmail}"
     And I fill "#login_form_password_password" with "${guestPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for the page to load
+    And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/product-team/documents/public-doc"
     And I wait for the page to load
     Then ".kebab-menu" should not exist
@@ -212,8 +199,7 @@ Feature: Document CRUD Operations
     Given I am on "${baseUrl}/users/log-in"
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for the page to load
+    And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/product-team/documents/old-doc"
     And I wait for the page to load
     And I click ".kebab-menu button"
@@ -228,8 +214,7 @@ Feature: Document CRUD Operations
     Given I am on "${baseUrl}/users/log-in"
     When I fill "#login_form_password_email" with "${guestEmail}"
     And I fill "#login_form_password_password" with "${guestPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for the page to load
+    And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/product-team/documents/public-doc"
     And I wait for the page to load
     Then ".kebab-menu" should not exist
