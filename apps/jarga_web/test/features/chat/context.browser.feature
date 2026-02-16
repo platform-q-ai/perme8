@@ -15,28 +15,28 @@ Feature: Chat Context Integration
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
-    And I wait for the page to load
+    And I wait for network idle
 
   Scenario: Chat panel available on workspace page
     Given I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
-    When I wait for the page to load
-    When I click "label[for='chat-drawer-global-chat-panel'][aria-label='Open chat']"
+    And I wait for network idle
+    When I click ".drawer-content > .navbar label[for='chat-drawer-global-chat-panel']"
     And I wait for "div#chat-panel-content" to be visible
     Then "div#chat-panel-content" should be visible
     And "textarea#chat-input" should be visible
 
   Scenario: Chat panel shows empty state prompt
     Given I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
-    When I wait for the page to load
-    When I click "label[for='chat-drawer-global-chat-panel'][aria-label='Open chat']"
+    And I wait for network idle
+    When I click ".drawer-content > .navbar label[for='chat-drawer-global-chat-panel']"
     And I wait for "div#chat-panel-content" to be visible
     Then I should see "Ask me anything about this document"
 
   @wip
   Scenario: Send message with document context and receive response
     Given I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
-    When I wait for the page to load
-    When I click "label[for='chat-drawer-global-chat-panel'][aria-label='Open chat']"
+    And I wait for network idle
+    When I click ".drawer-content > .navbar label[for='chat-drawer-global-chat-panel']"
     And I wait for "div#chat-panel-content" to be visible
     And I select "${agentName}" from "select#agent-selector"
     And I fill "textarea#chat-input" with "Summarize this document"
@@ -47,8 +47,8 @@ Feature: Chat Context Integration
   @wip
   Scenario: Chat without document context works from general page
     Given I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
-    When I wait for the page to load
-    When I click "label[for='chat-drawer-global-chat-panel'][aria-label='Open chat']"
+    And I wait for network idle
+    When I click ".drawer-content > .navbar label[for='chat-drawer-global-chat-panel']"
     And I wait for "div#chat-panel-content" to be visible
     And I select "${agentName}" from "select#agent-selector"
     And I fill "textarea#chat-input" with "What is Clean Architecture?"
@@ -58,8 +58,8 @@ Feature: Chat Context Integration
 
   Scenario: Chat input enabled when agent is selected
     Given I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
-    When I wait for the page to load
-    When I click "label[for='chat-drawer-global-chat-panel'][aria-label='Open chat']"
+    And I wait for network idle
+    When I click ".drawer-content > .navbar label[for='chat-drawer-global-chat-panel']"
     And I wait for "div#chat-panel-content" to be visible
     And I select "${agentName}" from "select#agent-selector"
     Then "textarea#chat-input" should be enabled

@@ -14,19 +14,19 @@ Feature: Chat Editor Integration
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
-    And I wait for the page to load
+    And I wait for network idle
     Given I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
-    When I wait for the page to load
+    And I wait for network idle
 
   Scenario: Chat panel accessible from workspace page
-    When I click "label[for='chat-drawer-global-chat-panel'][aria-label='Open chat']"
+    When I click ".drawer-content > .navbar label[for='chat-drawer-global-chat-panel']"
     And I wait for "div#chat-panel-content" to be visible
     Then "div#chat-panel-content" should be visible
     And "textarea#chat-input" should be visible
     And "div#chat-messages" should exist
 
   Scenario: Can send message from chat panel on workspace page
-    When I click "label[for='chat-drawer-global-chat-panel'][aria-label='Open chat']"
+    When I click ".drawer-content > .navbar label[for='chat-drawer-global-chat-panel']"
     And I wait for "div#chat-panel-content" to be visible
     And I fill "textarea#chat-input" with "How do I write a test?"
     And I click the "Send" button
@@ -34,21 +34,21 @@ Feature: Chat Editor Integration
     Then I should see "How do I write a test?"
 
   Scenario: Chat panel can be closed while on workspace page
-    When I click "label[for='chat-drawer-global-chat-panel'][aria-label='Open chat']"
+    When I click ".drawer-content > .navbar label[for='chat-drawer-global-chat-panel']"
     And I wait for "div#chat-panel-content" to be visible
     Then "div#chat-panel-content" should be visible
-    When I click "label[for='chat-drawer-global-chat-panel'][aria-label='Close chat']"
+    When I click "#chat-panel-content label[aria-label='Close chat']"
     And I wait for "div#chat-panel-content" to be hidden
     Then "div#chat-panel-content" should be hidden
 
   Scenario: Agent selector available in chat panel on workspace page
-    When I click "label[for='chat-drawer-global-chat-panel'][aria-label='Open chat']"
+    When I click ".drawer-content > .navbar label[for='chat-drawer-global-chat-panel']"
     And I wait for "div#chat-panel-content" to be visible
     Then "select#agent-selector" should be visible
 
   @wip
   Scenario: Chat response appears while on workspace page
-    When I click "label[for='chat-drawer-global-chat-panel'][aria-label='Open chat']"
+    When I click ".drawer-content > .navbar label[for='chat-drawer-global-chat-panel']"
     And I wait for "div#chat-panel-content" to be visible
     And I select "${agentName}" from "select#agent-selector"
     And I fill "textarea#chat-input" with "What is a PRD?"
@@ -57,7 +57,7 @@ Feature: Chat Editor Integration
     Then "div.chat.chat-start" should be visible
 
   Scenario: Chat message form has correct structure
-    When I click "label[for='chat-drawer-global-chat-panel'][aria-label='Open chat']"
+    When I click ".drawer-content > .navbar label[for='chat-drawer-global-chat-panel']"
     And I wait for "div#chat-panel-content" to be visible
     Then "#chat-message-form" should exist
     And "#chat-message-form[phx-submit='send_message']" should exist

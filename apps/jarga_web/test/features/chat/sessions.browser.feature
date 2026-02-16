@@ -15,10 +15,10 @@ Feature: Chat Session Management
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
-    And I wait for the page to load
+    And I wait for network idle
     Given I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
-    When I wait for the page to load
-    When I click "label[for='chat-drawer-global-chat-panel'][aria-label='Open chat']"
+    And I wait for network idle
+    When I click ".drawer-content > .navbar label[for='chat-drawer-global-chat-panel']"
     And I wait for "div#chat-panel-content" to be visible
 
   Scenario: View conversation history

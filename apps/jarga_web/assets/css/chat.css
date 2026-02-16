@@ -8,6 +8,14 @@ html:has(.drawer-toggle:checked) {
   scrollbar-gutter: auto !important;
 }
 
+/* Only elevate the chat drawer's z-index when it is open. When closed, the
+   drawer-side (position:fixed; inset:0) is invisible with pointer-events:none
+   courtesy of DaisyUI, so it doesn't block user interaction. The z-40
+   elevation is only needed when the panel is actually shown. */
+.drawer.drawer-end:has(.drawer-toggle:checked) {
+  z-index: 40;
+}
+
 /* Desktop responsive behavior: Push main content when chat panel is open */
 /* Only apply on large screens (1024px and above) */
 @media (min-width: 1024px) {

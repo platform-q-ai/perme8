@@ -5,9 +5,9 @@
  * and window resize behavior. NO business logic - only UI state management.
  *
  * Responsibilities:
- * - Handle responsive panel state (desktop: open by default, mobile: closed)
+ * - Restore panel open/closed state from localStorage (default: closed)
  * - Handle keyboard shortcuts (Cmd/Ctrl+K to toggle, Escape to close)
- * - Handle window resize (adjust panel state on breakpoint crossing)
+ * - Handle window resize (close panel on mobile if user hasn't interacted)
  * - Update toggle button visibility based on panel state
  * - Focus input when panel opens
  *
@@ -22,9 +22,9 @@ import { ViewHook } from 'phoenix_live_view'
  * Phoenix hook for chat panel drawer state management
  *
  * Attaches to the chat panel checkbox element and manages:
- * - Responsive defaults (desktop open, mobile closed)
+ * - Persisted state via localStorage (default: closed)
  * - Keyboard shortcuts for accessibility
- * - Auto-adjustment on window resize
+ * - Auto-close on resize to mobile (if user hasn't interacted)
  * - Toggle button visibility
  * - Input focus on panel open
  *
@@ -70,13 +70,11 @@ export class ChatPanelHook extends ViewHook<HTMLInputElement> {
     this.toggleBtn = document.getElementById('chat-toggle-btn') as HTMLButtonElement | null
     this.userInteracted = false
 
-    // Restore state from localStorage, or use responsive default
+    // Restore state from localStorage, default to closed
     const savedState = localStorage.getItem(this.STORAGE_KEY)
     if (savedState !== null) {
       this.el.checked = savedState === 'true'
       this.userInteracted = true // Treat restored state as user preference
-    } else if (this.isDesktop()) {
-      this.el.checked = true
     } else {
       this.el.checked = false
     }
@@ -110,15 +108,12 @@ export class ChatPanelHook extends ViewHook<HTMLInputElement> {
     }
     this.el.addEventListener('click', this.handleClick)
 
-    // Handle window resize
+    // Handle window resize: auto-close when shrinking to mobile
     this.handleResize = () => {
-      // Only auto-adjust if user hasn't manually toggled
-      if (!this.userInteracted) {
-        const shouldBeOpen = this.isDesktop()
-        if (this.el.checked !== shouldBeOpen) {
-          this.el.checked = shouldBeOpen
-          this.updateButtonVisibility()
-        }
+      // Only auto-close if user hasn't manually toggled and panel is open
+      if (!this.userInteracted && this.el.checked && !this.isDesktop()) {
+        this.el.checked = false
+        this.updateButtonVisibility()
       }
     }
     window.addEventListener('resize', this.handleResize)
