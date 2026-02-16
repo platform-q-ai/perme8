@@ -306,7 +306,7 @@ IO.puts("[exo-seeds-web] Created projects: q1-launch, mobile-app")
   })
 
 # Pin the document so it appears as pinned in listing tests
-{:ok, _} = Documents.update_document(alice, product_team.id, pinned_doc.id, %{is_pinned: true})
+{:ok, _} = Documents.update_document(alice, pinned_doc.id, %{is_pinned: true})
 
 {:ok, _old_doc} =
   Documents.create_document(alice, product_team.id, %{

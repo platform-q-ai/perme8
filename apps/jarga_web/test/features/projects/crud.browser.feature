@@ -20,7 +20,7 @@ Feature: Project CRUD Operations
 
   Scenario: Owner creates a project in workspace
     Given I navigate to "${baseUrl}/users/log-in"
-    And I wait for the page to load
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -38,7 +38,7 @@ Feature: Project CRUD Operations
 
   Scenario: Admin creates a project in workspace
     Given I navigate to "${baseUrl}/users/log-in"
-    And I wait for the page to load
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${adminEmail}"
     And I fill "#login_form_password_password" with "${adminPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -54,7 +54,7 @@ Feature: Project CRUD Operations
 
   Scenario: Member creates a project in workspace
     Given I navigate to "${baseUrl}/users/log-in"
-    And I wait for the page to load
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${memberEmail}"
     And I fill "#login_form_password_password" with "${memberPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -70,7 +70,7 @@ Feature: Project CRUD Operations
 
   Scenario: Guest cannot create projects
     Given I navigate to "${baseUrl}/users/log-in"
-    And I wait for the page to load
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${guestEmail}"
     And I fill "#login_form_password_password" with "${guestPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -80,7 +80,7 @@ Feature: Project CRUD Operations
 
   Scenario: Non-member cannot access workspace to create projects
     Given I navigate to "${baseUrl}/users/log-in"
-    And I wait for the page to load
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${nonMemberEmail}"
     And I fill "#login_form_password_password" with "${nonMemberPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -91,7 +91,7 @@ Feature: Project CRUD Operations
 
   Scenario: Create project with full details
     Given I navigate to "${baseUrl}/users/log-in"
-    And I wait for the page to load
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -109,7 +109,7 @@ Feature: Project CRUD Operations
 
   Scenario: Create project with empty name shows validation error
     Given I navigate to "${baseUrl}/users/log-in"
-    And I wait for the page to load
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -125,7 +125,7 @@ Feature: Project CRUD Operations
 
   Scenario: Cancel project creation modal
     Given I navigate to "${baseUrl}/users/log-in"
-    And I wait for the page to load
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -144,7 +144,7 @@ Feature: Project CRUD Operations
 
   Scenario: Owner updates project name
     Given I navigate to "${baseUrl}/users/log-in"
-    And I wait for the page to load
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -160,7 +160,7 @@ Feature: Project CRUD Operations
 
   Scenario: Owner updates project description
     Given I navigate to "${baseUrl}/users/log-in"
-    And I wait for the page to load
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -176,7 +176,7 @@ Feature: Project CRUD Operations
 
   Scenario: Owner updates project color
     Given I navigate to "${baseUrl}/users/log-in"
-    And I wait for the page to load
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -191,7 +191,7 @@ Feature: Project CRUD Operations
 
   Scenario: Guest cannot update projects
     Given I navigate to "${baseUrl}/users/log-in"
-    And I wait for the page to load
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${guestEmail}"
     And I fill "#login_form_password_password" with "${guestPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -207,7 +207,7 @@ Feature: Project CRUD Operations
 
   Scenario: Update project with empty name shows validation error
     Given I navigate to "${baseUrl}/users/log-in"
-    And I wait for the page to load
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -229,7 +229,7 @@ Feature: Project CRUD Operations
   @wip
   Scenario: Owner deletes their own project
     Given I navigate to "${baseUrl}/users/log-in"
-    And I wait for the page to load
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -245,7 +245,7 @@ Feature: Project CRUD Operations
 
   Scenario: Guest cannot delete any projects
     Given I navigate to "${baseUrl}/users/log-in"
-    And I wait for the page to load
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${guestEmail}"
     And I fill "#login_form_password_password" with "${guestPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -256,7 +256,7 @@ Feature: Project CRUD Operations
 
   Scenario: Non-member cannot access workspace projects
     Given I navigate to "${baseUrl}/users/log-in"
-    And I wait for the page to load
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${nonMemberEmail}"
     And I fill "#login_form_password_password" with "${nonMemberPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation

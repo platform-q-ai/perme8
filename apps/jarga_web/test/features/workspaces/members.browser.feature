@@ -19,7 +19,7 @@ Feature: Workspace Member Management
   Scenario: Admin opens members modal from workspace show
     # Log in as admin
     Given I navigate to "${baseUrl}/users/log-in"
-    And I wait for the page to load
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${adminEmail}"
     And I fill "#login_form_password_password" with "${adminPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -41,7 +41,7 @@ Feature: Workspace Member Management
   Scenario: Admin invites new member via modal
     # Log in as admin
     Given I navigate to "${baseUrl}/users/log-in"
-    And I wait for the page to load
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${adminEmail}"
     And I fill "#login_form_password_password" with "${adminPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -62,7 +62,7 @@ Feature: Workspace Member Management
   Scenario: Member cannot see Manage Members option
     # Log in as member
     Given I navigate to "${baseUrl}/users/log-in"
-    And I wait for the page to load
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${memberEmail}"
     And I fill "#login_form_password_password" with "${memberPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -74,7 +74,7 @@ Feature: Workspace Member Management
   Scenario: Guest cannot see Manage Members option
     # Log in as guest
     Given I navigate to "${baseUrl}/users/log-in"
-    And I wait for the page to load
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${guestEmail}"
     And I fill "#login_form_password_password" with "${guestPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -90,7 +90,7 @@ Feature: Workspace Member Management
   Scenario: Admin changes member role
     # Log in as admin
     Given I navigate to "${baseUrl}/users/log-in"
-    And I wait for the page to load
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${adminEmail}"
     And I fill "#login_form_password_password" with "${adminPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -109,7 +109,7 @@ Feature: Workspace Member Management
   Scenario: Owner role is displayed as badge not select
     # Log in as admin
     Given I navigate to "${baseUrl}/users/log-in"
-    And I wait for the page to load
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${adminEmail}"
     And I fill "#login_form_password_password" with "${adminPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -134,7 +134,7 @@ Feature: Workspace Member Management
     # dialog which Playwright cannot interact with via standard BDD steps.
     # Log in as admin
     Given I navigate to "${baseUrl}/users/log-in"
-    And I wait for the page to load
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${adminEmail}"
     And I fill "#login_form_password_password" with "${adminPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -151,7 +151,7 @@ Feature: Workspace Member Management
   Scenario: Owner cannot be removed by admin
     # Log in as admin
     Given I navigate to "${baseUrl}/users/log-in"
-    And I wait for the page to load
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${adminEmail}"
     And I fill "#login_form_password_password" with "${adminPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -168,7 +168,7 @@ Feature: Workspace Member Management
   Scenario: Close members modal with Done button
     # Log in as admin
     Given I navigate to "${baseUrl}/users/log-in"
-    And I wait for the page to load
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${adminEmail}"
     And I fill "#login_form_password_password" with "${adminPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -191,7 +191,7 @@ Feature: Workspace Member Management
   Scenario: Non-member cannot access workspace
     # Log in as non-member
     Given I navigate to "${baseUrl}/users/log-in"
-    And I wait for the page to load
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${nonMemberEmail}"
     And I fill "#login_form_password_password" with "${nonMemberPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation

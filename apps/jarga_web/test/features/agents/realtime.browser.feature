@@ -15,6 +15,7 @@ Feature: Agent Real-time Updates
 
   Background:
     Given I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
     When I fill "[data-testid='email']" with "test@example.com"
     And I fill "[data-testid='password']" with "Password123!"
     And I click the "Log in" button
