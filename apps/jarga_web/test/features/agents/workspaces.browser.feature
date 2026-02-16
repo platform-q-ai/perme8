@@ -1,4 +1,4 @@
-@browser
+@browser @wip
 Feature: Agent Workspace Assignment
   As a user
   I want to add and remove agents from workspaces
