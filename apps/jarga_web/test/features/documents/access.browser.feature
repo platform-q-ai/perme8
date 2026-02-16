@@ -23,6 +23,7 @@ Feature: Document Access Control
 
   Scenario: Owner views their own private document
     Given I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -35,6 +36,7 @@ Feature: Document Access Control
   Scenario: Member cannot view another user's private document
     # alice owns "Alices Private Notes" which is private
     Given I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${memberEmail}"
     And I fill "#login_form_password_password" with "${memberPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -45,6 +47,7 @@ Feature: Document Access Control
   Scenario: Admin cannot view another user's private document
     # alice owns "Alices Private Notes" which is private
     Given I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${adminEmail}"
     And I fill "#login_form_password_password" with "${adminPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -55,6 +58,7 @@ Feature: Document Access Control
   Scenario: Member views public document created by another user
     # alice owns "Team Guidelines" which is public
     Given I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${memberEmail}"
     And I fill "#login_form_password_password" with "${memberPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -67,6 +71,7 @@ Feature: Document Access Control
   Scenario: Guest views public document in read-only mode
     # alice owns "Team Guidelines" which is public
     Given I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${guestEmail}"
     And I fill "#login_form_password_password" with "${guestPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -79,6 +84,7 @@ Feature: Document Access Control
   Scenario: Guest cannot view private documents
     # alice owns "Private Roadmap" which is private
     Given I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${guestEmail}"
     And I fill "#login_form_password_password" with "${guestPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -88,6 +94,7 @@ Feature: Document Access Control
 
   Scenario: Non-member cannot view any workspace documents
     Given I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${nonMemberEmail}"
     And I fill "#login_form_password_password" with "${nonMemberPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -100,6 +107,7 @@ Feature: Document Access Control
   Scenario: Document in a project shows breadcrumb context
     # "Specs" belongs to project "Mobile App" in workspace "product-team"
     Given I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation

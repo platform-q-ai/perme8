@@ -11,6 +11,7 @@ Feature: Chat Session Management
 
   Background:
     Given I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation

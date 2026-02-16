@@ -25,6 +25,7 @@ Feature: Document CRUD Operations
 
   Scenario: Owner creates a document in workspace
     Given I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -40,6 +41,7 @@ Feature: Document CRUD Operations
 
   Scenario: Admin creates a document in workspace
     Given I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${adminEmail}"
     And I fill "#login_form_password_password" with "${adminPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -55,6 +57,7 @@ Feature: Document CRUD Operations
 
   Scenario: Member creates a document in workspace
     Given I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${memberEmail}"
     And I fill "#login_form_password_password" with "${memberPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -70,6 +73,7 @@ Feature: Document CRUD Operations
 
   Scenario: Guest cannot create documents
     Given I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${guestEmail}"
     And I fill "#login_form_password_password" with "${guestPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -79,6 +83,7 @@ Feature: Document CRUD Operations
 
   Scenario: Document slug handles special characters
     Given I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -97,6 +102,7 @@ Feature: Document CRUD Operations
   Scenario: Owner updates document title
     # Precondition: alice owns "Draft Roadmap" (seeded, slug: draft-roadmap)
     Given I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -113,6 +119,7 @@ Feature: Document CRUD Operations
   Scenario: Empty title is rejected and original title preserved
     # Precondition: alice owns "Valid Title" (seeded, slug: valid-title)
     Given I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -131,6 +138,7 @@ Feature: Document CRUD Operations
   Scenario: Owner makes a private document public
     # Precondition: alice owns private "Private Doc" (seeded, slug: private-doc)
     Given I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -145,6 +153,7 @@ Feature: Document CRUD Operations
   Scenario: Owner makes a public document private
     # Precondition: alice owns public "Public Doc" (seeded, slug: public-doc)
     Given I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -159,6 +168,7 @@ Feature: Document CRUD Operations
   Scenario: Guest cannot access kebab menu
     # Precondition: "Public Doc" is a public document (seeded)
     Given I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${guestEmail}"
     And I fill "#login_form_password_password" with "${guestPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -172,6 +182,7 @@ Feature: Document CRUD Operations
   Scenario: Owner pins a document
     # Precondition: alice owns unpinned "Important Doc" (seeded, slug: important-doc)
     Given I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -186,6 +197,7 @@ Feature: Document CRUD Operations
   Scenario: Owner unpins a document
     # Precondition: alice owns pinned "Pinned Doc" (seeded, slug: pinned-doc)
     Given I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -200,6 +212,7 @@ Feature: Document CRUD Operations
   Scenario: Guest cannot pin documents
     # Precondition: "Public Doc" is a public document (seeded)
     Given I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${guestEmail}"
     And I fill "#login_form_password_password" with "${guestPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -215,6 +228,7 @@ Feature: Document CRUD Operations
     # @wip: Delete Document uses data-confirm which triggers a native browser dialog.
     # Native dialogs cannot be handled with the available browser steps.
     Given I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -231,6 +245,7 @@ Feature: Document CRUD Operations
   Scenario: Guest cannot delete documents
     # Precondition: "Public Doc" is a public document (seeded)
     Given I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${guestEmail}"
     And I fill "#login_form_password_password" with "${guestPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation

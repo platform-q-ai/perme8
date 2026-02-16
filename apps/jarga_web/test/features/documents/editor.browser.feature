@@ -18,6 +18,7 @@ Feature: Document Editor
 
   Scenario: Editor container loads for document owner
     Given I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -29,6 +30,7 @@ Feature: Document Editor
 
   Scenario: Editor is writable for members on public documents
     Given I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${memberEmail}"
     And I fill "#login_form_password_password" with "${memberPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -41,6 +43,7 @@ Feature: Document Editor
 
   Scenario: Editor is read-only for guests
     Given I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${guestEmail}"
     And I fill "#login_form_password_password" with "${guestPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -52,6 +55,7 @@ Feature: Document Editor
 
   Scenario: Title is editable by clicking the h1
     Given I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -63,6 +67,7 @@ Feature: Document Editor
 
   Scenario: Guest cannot click title to edit
     Given I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${guestEmail}"
     And I fill "#login_form_password_password" with "${guestPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -74,6 +79,7 @@ Feature: Document Editor
 
   Scenario: Editor container has Milkdown hook
     Given I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation

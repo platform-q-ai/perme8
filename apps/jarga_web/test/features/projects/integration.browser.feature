@@ -25,7 +25,7 @@ Feature: Project Integration
 
   Scenario: Project creation reflects in workspace view
     Given I navigate to "${baseUrl}/users/log-in"
-    And I wait for the page to load
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -41,7 +41,7 @@ Feature: Project Integration
 
   Scenario: Project update reflects after save
     Given I navigate to "${baseUrl}/users/log-in"
-    And I wait for the page to load
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -59,7 +59,7 @@ Feature: Project Integration
   Scenario: Project deletion reflects in workspace view
     # Delete uses data-confirm native dialog - cannot be automated
     Given I navigate to "${baseUrl}/users/log-in"
-    And I wait for the page to load
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -79,7 +79,7 @@ Feature: Project Integration
 
   Scenario: Breadcrumb navigation in project view
     Given I navigate to "${baseUrl}/users/log-in"
-    And I wait for the page to load
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -92,7 +92,7 @@ Feature: Project Integration
 
   Scenario: Navigate from project show to edit via kebab menu
     Given I navigate to "${baseUrl}/users/log-in"
-    And I wait for the page to load
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -111,7 +111,7 @@ Feature: Project Integration
 
   Scenario: Project shows associated documents
     Given I navigate to "${baseUrl}/users/log-in"
-    And I wait for the page to load
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -122,7 +122,7 @@ Feature: Project Integration
 
   Scenario: Project show page has New Document button
     Given I navigate to "${baseUrl}/users/log-in"
-    And I wait for the page to load
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -132,7 +132,7 @@ Feature: Project Integration
 
   Scenario: Project show page displays project details card
     Given I navigate to "${baseUrl}/users/log-in"
-    And I wait for the page to load
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation

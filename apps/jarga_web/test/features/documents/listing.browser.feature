@@ -26,6 +26,7 @@ Feature: Document Listing
 
   Scenario: Owner sees own private documents and all public documents
     Given I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -41,6 +42,7 @@ Feature: Document Listing
 
   Scenario: Member sees own private documents and public documents
     Given I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${memberEmail}"
     And I fill "#login_form_password_password" with "${memberPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -55,6 +57,7 @@ Feature: Document Listing
 
   Scenario: Guest sees only public documents
     Given I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${guestEmail}"
     And I fill "#login_form_password_password" with "${guestPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -67,6 +70,7 @@ Feature: Document Listing
 
   Scenario: Document listing shows pinned badge
     Given I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -77,6 +81,7 @@ Feature: Document Listing
 
   Scenario: Document listing links to document editor
     Given I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -90,6 +95,7 @@ Feature: Document Listing
   Scenario: Project page shows project documents
     # "Specs" is a document in the mobile-app project
     Given I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation

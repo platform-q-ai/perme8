@@ -17,6 +17,7 @@ Feature: Document Components
 
   Scenario: New document has editor container on creation
     Given I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -34,6 +35,7 @@ Feature: Document Components
   Scenario: Existing document shows editor with note component
     # Precondition: alice owns "Product Spec" with a note (seeded)
     Given I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -45,6 +47,7 @@ Feature: Document Components
   Scenario: Guest sees editor in read-only mode
     # Precondition: "Public Doc" is a public document (seeded)
     Given I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${guestEmail}"
     And I fill "#login_form_password_password" with "${guestPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation

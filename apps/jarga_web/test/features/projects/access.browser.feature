@@ -20,7 +20,7 @@ Feature: Project Access Control
 
   Scenario: Owner can list all projects in workspace
     Given I navigate to "${baseUrl}/users/log-in"
-    And I wait for the page to load
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -31,7 +31,7 @@ Feature: Project Access Control
 
   Scenario: Guest can view projects in workspace
     Given I navigate to "${baseUrl}/users/log-in"
-    And I wait for the page to load
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${guestEmail}"
     And I fill "#login_form_password_password" with "${guestPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -42,7 +42,7 @@ Feature: Project Access Control
 
   Scenario: Non-member cannot list projects
     Given I navigate to "${baseUrl}/users/log-in"
-    And I wait for the page to load
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${nonMemberEmail}"
     And I fill "#login_form_password_password" with "${nonMemberPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -53,7 +53,7 @@ Feature: Project Access Control
 
   Scenario: Projects are scoped to workspace
     Given I navigate to "${baseUrl}/users/log-in"
-    And I wait for the page to load
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -69,7 +69,7 @@ Feature: Project Access Control
 
   Scenario: Owner sees edit and delete options on project show
     Given I navigate to "${baseUrl}/users/log-in"
-    And I wait for the page to load
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -83,7 +83,7 @@ Feature: Project Access Control
 
   Scenario: Admin sees edit and delete options on project show
     Given I navigate to "${baseUrl}/users/log-in"
-    And I wait for the page to load
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${adminEmail}"
     And I fill "#login_form_password_password" with "${adminPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -97,7 +97,7 @@ Feature: Project Access Control
 
   Scenario: Member cannot edit or delete others' projects
     Given I navigate to "${baseUrl}/users/log-in"
-    And I wait for the page to load
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${memberEmail}"
     And I fill "#login_form_password_password" with "${memberPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -113,7 +113,7 @@ Feature: Project Access Control
 
   Scenario: Guest has read-only access to projects
     Given I navigate to "${baseUrl}/users/log-in"
-    And I wait for the page to load
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${guestEmail}"
     And I fill "#login_form_password_password" with "${guestPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -135,7 +135,7 @@ Feature: Project Access Control
 
   Scenario: Owner can access project edit page directly
     Given I navigate to "${baseUrl}/users/log-in"
-    And I wait for the page to load
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -146,7 +146,7 @@ Feature: Project Access Control
 
   Scenario: Guest cannot access project edit page directly
     Given I navigate to "${baseUrl}/users/log-in"
-    And I wait for the page to load
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${guestEmail}"
     And I fill "#login_form_password_password" with "${guestPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -157,7 +157,7 @@ Feature: Project Access Control
 
   Scenario: Member cannot access edit page for others' projects
     Given I navigate to "${baseUrl}/users/log-in"
-    And I wait for the page to load
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${memberEmail}"
     And I fill "#login_form_password_password" with "${memberPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -168,7 +168,7 @@ Feature: Project Access Control
 
   Scenario: Non-member cannot access any project page
     Given I navigate to "${baseUrl}/users/log-in"
-    And I wait for the page to load
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${nonMemberEmail}"
     And I fill "#login_form_password_password" with "${nonMemberPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation

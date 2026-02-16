@@ -20,6 +20,7 @@ Feature: Document Collaboration
 
   Scenario: User opens document with collaborative editor
     Given I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -31,6 +32,7 @@ Feature: Document Collaboration
 
   Scenario: Document title can be edited inline
     Given I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -44,6 +46,7 @@ Feature: Document Collaboration
   Scenario: Document visibility toggle works from editor
     # Precondition: bob owns public "Shared Doc" (seeded)
     Given I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${adminEmail}"
     And I fill "#login_form_password_password" with "${adminPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -58,6 +61,7 @@ Feature: Document Collaboration
   Scenario: Document pin toggle and listing badge
     # Precondition: alice owns unpinned "Important Doc" (seeded)
     Given I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -80,6 +84,7 @@ Feature: Document Collaboration
     # @wip: Real-time collaboration testing requires two simultaneous browser
     # sessions, which is not supported by the current single-browser test runner.
     Given I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
@@ -91,6 +96,7 @@ Feature: Document Collaboration
   Scenario: User sees presence indicators for other collaborators
     # @wip: Presence indicators require multiple simultaneous sessions.
     Given I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
