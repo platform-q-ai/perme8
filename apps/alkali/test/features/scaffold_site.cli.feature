@@ -34,8 +34,10 @@ Feature: Scaffold New Static Site
     # Verify files were created
     When I run "test -f ${testTmpDir}/my_blog/config/alkali.exs"
     Then the command should succeed
-    When I run "test -f ${testTmpDir}/my_blog/content/posts/2024-01-15-welcome.md"
+    # Welcome post uses today's date as prefix (YYYY-MM-DD-welcome.md)
+    When I run "ls ${testTmpDir}/my_blog/content/posts/"
     Then the command should succeed
+    And stdout should match "welcome.md"
     When I run "test -f ${testTmpDir}/my_blog/content/pages/about.md"
     Then the command should succeed
     When I run "test -f ${testTmpDir}/my_blog/layouts/default.html.heex"

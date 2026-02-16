@@ -14,57 +14,48 @@ Feature: Layout System with HEEx Templates
     # Create a post that explicitly declares layout: custom in frontmatter
     When I run "mkdir -p ${site}/content/posts"
     Then the command should succeed
-    When I run "printf '%b' '---\ntitle: \"My Post\"\nlayout: custom\n---\n\nThis is my post content.\n' > ${site}/content/posts/my-post.md"
+    When I run "printf '%b' '---\ntitle: My Post\nlayout: custom\n---\n\nThis is my post content.\n' > ${site}/content/posts/my-post.md"
     Then the command should succeed
     # Create the custom layout template
-    When I run "mkdir -p ${site}/layouts"
-    Then the command should succeed
     When I run "printf '%b' '<!-- LAYOUT:custom -->\n<html><body><%= @content %></body></html>\n' > ${site}/layouts/custom.html.heex"
     Then the command should succeed
     # Build the site
     When I run "mix alkali.build ${site}"
     Then the command should succeed
     And stdout should contain "Build completed successfully!"
-    # Verify the rendered output uses the custom layout
-    When I run "cat ${site}/_site/posts/my-post/index.html"
+    # Verify the rendered output uses the custom layout (flat .html output)
+    When I run "cat ${site}/_site/posts/my-post.html"
     Then the command should succeed
     And stdout should contain "LAYOUT:custom"
     And stdout should contain "This is my post content"
 
   Scenario: Apply folder-based default layout
-    # Write a config that specifies default layouts
-    When I run "mkdir -p ${site}/config"
-    Then the command should succeed
-    When I run "printf '%b' 'import Config\nconfig :alkali,\n  site: %%{title: \"Test Site\", url: \"http://localhost\", author: \"Tester\"},\n  content_path: \"content\",\n  output_path: \"_site\",\n  layouts_path: \"layouts\"\n' > ${site}/config/alkali.exs"
-    Then the command should succeed
-    # Create the post layout (folder-based default for posts/ content)
-    When I run "mkdir -p ${site}/layouts"
-    Then the command should succeed
+    # The scaffolded site already has layouts; overwrite post layout with marker
     When I run "printf '%b' '<!-- LAYOUT:post -->\n<html><body><%= @content %></body></html>\n' > ${site}/layouts/post.html.heex"
     Then the command should succeed
     # Create a post WITHOUT an explicit layout in frontmatter
     When I run "mkdir -p ${site}/content/posts"
     Then the command should succeed
-    When I run "printf '%b' '---\ntitle: \"My Post\"\n---\n\nFolder-based layout content.\n' > ${site}/content/posts/my-post.md"
+    When I run "printf '%b' '---\ntitle: My Post\n---\n\nFolder-based layout content.\n' > ${site}/content/posts/my-post.md"
     Then the command should succeed
     # Build the site
     When I run "mix alkali.build ${site}"
     Then the command should succeed
     And stdout should contain "Build completed successfully!"
     # Verify the rendered output uses the post layout (resolved from folder name)
-    When I run "cat ${site}/_site/posts/my-post/index.html"
+    When I run "cat ${site}/_site/posts/my-post.html"
     Then the command should succeed
     And stdout should contain "LAYOUT:post"
     And stdout should contain "Folder-based layout content"
 
   Scenario: Layout not found
+    # Remove all scaffolded content and layouts, start with only one post
+    When I run "rm -rf ${site}/content ${site}/layouts"
+    Then the command should succeed
+    When I run "mkdir -p ${site}/content/posts ${site}/layouts"
+    Then the command should succeed
     # Create a post referencing a layout that does not exist
-    When I run "mkdir -p ${site}/content/posts"
-    Then the command should succeed
-    When I run "printf '%b' '---\ntitle: \"My Post\"\nlayout: nonexistent\n---\n\nThis is my post content.\n' > ${site}/content/posts/my-post.md"
-    Then the command should succeed
-    # Remove any default layouts so resolution fails entirely
-    When I run "rm -rf ${site}/layouts"
+    When I run "printf '%b' '---\ntitle: My Post\nlayout: nonexistent\n---\n\nThis is my post content.\n' > ${site}/content/posts/my-post.md"
     Then the command should succeed
     # Build the site -- should fail because layout is missing
     When I run "mix alkali.build ${site}"
@@ -75,12 +66,12 @@ Feature: Layout System with HEEx Templates
     # Create a post with layout: post
     When I run "mkdir -p ${site}/content/posts"
     Then the command should succeed
-    When I run "printf '%b' '---\ntitle: \"Test Post\"\nlayout: post\n---\n\nTest content.\n' > ${site}/content/posts/test-post.md"
+    When I run "printf '%b' '---\ntitle: Test Post\nlayout: post\n---\n\nTest content.\n' > ${site}/content/posts/test-post.md"
     Then the command should succeed
     # Create the post layout that includes a partial
     When I run "mkdir -p ${site}/layouts/partials"
     Then the command should succeed
-    When I run "printf '%b' '<%%= render_partial(\"_header.html.heex\", assigns) %%>\n<main><%%= @content %%></main>\n' > ${site}/layouts/post.html.heex"
+    When I run "printf '%b' '<%= render_partial(\"_header.html.heex\", assigns) %>\n<main><%= @content %></main>\n' > ${site}/layouts/post.html.heex"
     Then the command should succeed
     # Create the header partial
     When I run "printf '%b' '<header><!-- PARTIAL:header -->Site Header</header>\n' > ${site}/layouts/partials/_header.html.heex"
@@ -90,7 +81,7 @@ Feature: Layout System with HEEx Templates
     Then the command should succeed
     And stdout should contain "Build completed successfully!"
     # Verify the rendered output includes the partial content
-    When I run "cat ${site}/_site/posts/test-post/index.html"
+    When I run "cat ${site}/_site/posts/test-post.html"
     Then the command should succeed
     And stdout should contain "PARTIAL:header"
     And stdout should contain "Site Header"
