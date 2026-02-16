@@ -26,6 +26,7 @@ Elixir Phoenix umbrella project. **MUST** read `docs/umbrella_apps.md` before an
 - **PR Reviewer** -- automated code review with inline comments on a GitHub PR.
 - **Address PR Comments** -- reads and resolves review comments with fix commits.
 - **BDD Feature Translator** -- generates domain-specific feature files (browser, HTTP, security) from a PRD.
+- **Update Project** -- creates/updates issues on the Perme8 GitHub Project board with all fields populated. Use `/update-project`.
 
 ## Principles
 
