@@ -15,7 +15,7 @@ export default defineConfig({
       startTimeout: 30000,
     },
   ],
-  timeout: 120_000,
+  timeout: 10_000,
   variables: {
     // Test user credentials (must match exo_seeds_web.exs)
     ownerEmail: 'alice@example.com',
