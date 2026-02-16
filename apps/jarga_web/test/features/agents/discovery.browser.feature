@@ -13,7 +13,7 @@ Feature: Agent Discovery
     When I fill "[data-testid='email']" with "test@example.com"
     And I fill "[data-testid='password']" with "Password123!"
     And I click the "Log in" button
-    And I wait for the page to load
+    And I wait for network idle
 
   # Viewing Agents in Workspace
 
@@ -21,7 +21,7 @@ Feature: Agent Discovery
     # Prerequisite: user is a member of workspace "Dev Team" with agents seeded:
     # "Team Assistant" (shared, Alice), "Code Reviewer" (shared, Bob), "My Helper" (private, me)
     When I navigate to "${baseUrl}/workspaces/dev-team/agents"
-    And I wait for the page to load
+    And I wait for network idle
     Then I should see "Team Assistant"
     And I should see "Code Reviewer"
     And I should see "My Helper"
@@ -32,14 +32,14 @@ Feature: Agent Discovery
     # are not shown in the workspace agent list.
     # Prerequisite: "Active Helper" (enabled) and "Disabled Bot" (disabled) both in "Dev Team"
     When I navigate to "${baseUrl}/workspaces/dev-team/agents"
-    And I wait for the page to load
+    And I wait for network idle
     Then I should see "Active Helper"
     And I should not see "Disabled Bot"
 
   Scenario: Filter agents by workspace membership
     # Prerequisite: user is a member of "Dev Team" (with "Dev Helper") and "QA Team" (with "QA Bot")
     When I navigate to "${baseUrl}/workspaces/dev-team/agents"
-    And I wait for the page to load
+    And I wait for network idle
     Then I should see "Dev Helper"
     And I should not see "QA Bot"
 
@@ -49,20 +49,20 @@ Feature: Agent Discovery
     # NOTE: Multi-user scenario. We can only verify from our own session that
     # private agents from other users are not visible.
     When I navigate to "${baseUrl}/agents"
-    And I wait for the page to load
+    And I wait for network idle
     Then I should not see "Secret Helper"
 
   Scenario: Shared agents are discoverable in workspaces
     # Prerequisite: "Public Helper" (shared) is added to workspace "Dev Team"
     When I navigate to "${baseUrl}/workspaces/dev-team/agents"
-    And I wait for the page to load
+    And I wait for network idle
     Then I should see "Public Helper"
 
   Scenario: Disabled agent is hidden from workspace members
     # Prerequisite: "Team Helper" is in workspace "Dev Team" and is disabled
     # NOTE: Multi-user visibility is tested server-side; here we verify our own view.
     When I navigate to "${baseUrl}/workspaces/dev-team/agents"
-    And I wait for the page to load
+    And I wait for network idle
     Then I should not see "Team Helper"
 
   # Viewable Agents List
@@ -71,7 +71,7 @@ Feature: Agent Discovery
     # Prerequisite: user has private agents "My Bot 1" and "My Bot 2";
     # other users have shared agents "Public Helper" and "Code Reviewer"
     When I navigate to "${baseUrl}/agents"
-    And I wait for the page to load
+    And I wait for network idle
     Then I should see "My Bot 1"
     And I should see "My Bot 2"
     And I should see "Public Helper"
@@ -81,7 +81,7 @@ Feature: Agent Discovery
     # Prerequisite: agents seeded with creation dates:
     # "Agent C" (1 day ago), "Agent B" (2 days ago), "Agent A" (3 days ago)
     When I navigate to "${baseUrl}/agents"
-    And I wait for the page to load
+    And I wait for network idle
     And I store the text of "[data-testid='agent-card']:nth-child(1) [data-testid='agent-name']" as "first"
     And I store the text of "[data-testid='agent-card']:nth-child(2) [data-testid='agent-name']" as "second"
     And I store the text of "[data-testid='agent-card']:nth-child(3) [data-testid='agent-name']" as "third"
@@ -96,7 +96,7 @@ Feature: Agent Discovery
     # in a browser test. We verify the agent can be selected and a message sent.
     # Prerequisite: agent "Math Tutor" with system prompt exists
     When I navigate to "${baseUrl}/chat"
-    And I wait for the page to load
+    And I wait for network idle
     And I click "[data-testid='agent-selector']"
     And I click "[data-testid='agent-option-Math Tutor']"
     And I fill "[data-testid='chat-input']" with "What is calculus?"
@@ -110,9 +110,9 @@ Feature: Agent Discovery
     # an agent selected while viewing a document.
     # Prerequisite: a document and agent "Analyzer" must exist
     When I navigate to "${baseUrl}/documents"
-    And I wait for the page to load
+    And I wait for network idle
     And I click "[data-testid='document-link']"
-    And I wait for the page to load
+    And I wait for network idle
     And I click "[data-testid='agent-selector']"
     And I click "[data-testid='agent-option-Analyzer']"
     And I fill "[data-testid='chat-input']" with "What are the requirements?"

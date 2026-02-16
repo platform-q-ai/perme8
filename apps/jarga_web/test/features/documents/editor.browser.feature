@@ -23,7 +23,7 @@ Feature: Document Editor
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/product-spec"
-    And I wait for the page to load
+    And I wait for network idle
     Then I should see "Product Spec"
     And "#editor-container" should be visible
     And "#editor-container" should have attribute "data-readonly" with value "false"
@@ -35,7 +35,7 @@ Feature: Document Editor
     And I fill "#login_form_password_password" with "${memberPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/team-guidelines"
-    And I wait for the page to load
+    And I wait for network idle
     Then I should see "Team Guidelines"
     And "#editor-container" should be visible
     And "#editor-container" should have attribute "data-readonly" with value "false"
@@ -48,7 +48,7 @@ Feature: Document Editor
     And I fill "#login_form_password_password" with "${guestPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/public-doc"
-    And I wait for the page to load
+    And I wait for network idle
     Then I should see "Public Doc"
     And I should see "read-only mode"
     And "#editor-container" should have attribute "data-readonly" with value "true"
@@ -60,7 +60,7 @@ Feature: Document Editor
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/product-spec"
-    And I wait for the page to load
+    And I wait for network idle
     And I click "h1"
     And I wait for "#document-title-input" to be visible
     Then "#document-title-input" should be visible
@@ -72,7 +72,7 @@ Feature: Document Editor
     And I fill "#login_form_password_password" with "${guestPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/public-doc"
-    And I wait for the page to load
+    And I wait for network idle
     And I click "h1"
     And I wait for 1 seconds
     Then "#document-title-input" should not exist
@@ -84,6 +84,6 @@ Feature: Document Editor
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/product-spec"
-    And I wait for the page to load
+    And I wait for network idle
     And I wait for "#editor-container" to be visible
     Then "#editor-container" should exist

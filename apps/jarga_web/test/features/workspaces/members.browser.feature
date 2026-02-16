@@ -25,7 +25,7 @@ Feature: Workspace Member Management
     And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to workspace and open kebab menu then members modal
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
-    And I wait for the page to load
+    And I wait for network idle
     And I click "button[aria-label='Actions menu']"
     And I wait for 1 seconds
     And I click the "Manage Members" button
@@ -47,7 +47,7 @@ Feature: Workspace Member Management
     And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to workspace and open kebab menu then members modal
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
-    And I wait for the page to load
+    And I wait for network idle
     And I click "button[aria-label='Actions menu']"
     And I wait for 1 seconds
     And I click the "Manage Members" button
@@ -68,7 +68,7 @@ Feature: Workspace Member Management
     And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to workspace - kebab menu should not exist for members
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
-    And I wait for the page to load
+    And I wait for network idle
     Then "button[aria-label='Actions menu']" should not exist
 
   Scenario: Guest cannot see Manage Members option
@@ -80,7 +80,7 @@ Feature: Workspace Member Management
     And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to workspace - kebab menu should not exist for guests
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
-    And I wait for the page to load
+    And I wait for network idle
     Then "button[aria-label='Actions menu']" should not exist
 
   # ---------------------------------------------------------------------------
@@ -96,7 +96,7 @@ Feature: Workspace Member Management
     And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to workspace and open kebab menu then members modal
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
-    And I wait for the page to load
+    And I wait for network idle
     And I click "button[aria-label='Actions menu']"
     And I wait for 1 seconds
     And I click the "Manage Members" button
@@ -115,7 +115,7 @@ Feature: Workspace Member Management
     And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to workspace and open kebab menu then members modal
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
-    And I wait for the page to load
+    And I wait for network idle
     And I click "button[aria-label='Actions menu']"
     And I wait for 1 seconds
     And I click the "Manage Members" button
@@ -140,7 +140,7 @@ Feature: Workspace Member Management
     And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to workspace and open kebab menu then members modal
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
-    And I wait for the page to load
+    And I wait for network idle
     And I click "button[aria-label='Actions menu']"
     And I wait for 1 seconds
     And I click the "Manage Members" button
@@ -157,7 +157,7 @@ Feature: Workspace Member Management
     And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to workspace and open kebab menu then members modal
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
-    And I wait for the page to load
+    And I wait for network idle
     And I click "button[aria-label='Actions menu']"
     And I wait for 1 seconds
     And I click the "Manage Members" button
@@ -174,7 +174,7 @@ Feature: Workspace Member Management
     And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to workspace and open kebab menu then members modal
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
-    And I wait for the page to load
+    And I wait for network idle
     And I click "button[aria-label='Actions menu']"
     And I wait for 1 seconds
     And I click the "Manage Members" button
@@ -197,6 +197,6 @@ Feature: Workspace Member Management
     And I click the "Log in and stay logged in" button and wait for navigation
     # Attempt to navigate to workspace
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
-    And I wait for the page to load
+    And I wait for network idle
     Then the URL should contain "/workspaces"
     And I should see "Workspace not found"

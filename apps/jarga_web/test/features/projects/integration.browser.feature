@@ -30,7 +30,7 @@ Feature: Project Integration
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
-    And I wait for the page to load
+    And I wait for network idle
     And I click the "New Project" button
     And I wait for "#project-form" to be visible
     And I fill "[name='project[name]']" with "Real-time Test Project"
@@ -46,7 +46,7 @@ Feature: Project Integration
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/projects/mobile-app/edit"
-    And I wait for the page to load
+    And I wait for network idle
     And I wait for "#project-form" to be visible
     And I clear "[name='project[name]']"
     And I fill "[name='project[name]']" with "Mobile Application"
@@ -64,7 +64,7 @@ Feature: Project Integration
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/projects/q1-launch"
-    And I wait for the page to load
+    And I wait for network idle
     And I click "button[aria-label='Actions menu']"
     And I wait for 1 seconds
     And I click the "Delete Project" button
@@ -84,7 +84,7 @@ Feature: Project Integration
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/projects/mobile-app"
-    And I wait for the page to load
+    And I wait for network idle
     Then I should see "Home"
     And I should see "Workspaces"
     And I should see "Product Team"
@@ -97,11 +97,11 @@ Feature: Project Integration
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/projects/mobile-app"
-    And I wait for the page to load
+    And I wait for network idle
     And I click "button[aria-label='Actions menu']"
     And I wait for 1 seconds
     And I click the "Edit Project" link and wait for navigation
-    And I wait for the page to load
+    And I wait for network idle
     Then "#project-form" should be visible
     And the URL should contain "/projects/mobile-app/edit"
 
@@ -116,7 +116,7 @@ Feature: Project Integration
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/projects/q1-launch"
-    And I wait for the page to load
+    And I wait for network idle
     Then I should see "Launch Plan"
     And I should see "Documents"
 
@@ -127,7 +127,7 @@ Feature: Project Integration
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/projects/q1-launch"
-    And I wait for the page to load
+    And I wait for network idle
     Then I should see "New Document"
 
   Scenario: Project show page displays project details card
@@ -137,5 +137,5 @@ Feature: Project Integration
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/projects/q1-launch"
-    And I wait for the page to load
+    And I wait for network idle
     Then I should see "Q1 Launch"

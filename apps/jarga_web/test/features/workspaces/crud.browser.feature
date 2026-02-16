@@ -25,14 +25,14 @@ Feature: Workspace CRUD Operations
     And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to workspaces and create
     And I navigate to "${baseUrl}/app/workspaces"
-    And I wait for the page to load
+    And I wait for network idle
     And I click the "New Workspace" link and wait for navigation
-    And I wait for the page to load
+    And I wait for network idle
     And I fill "[name='workspace[name]']" with "Marketing Team"
     And I fill "[name='workspace[description]']" with "Marketing campaigns"
     And I fill "[name='workspace[color]']" with "#FF6B6B"
     And I click the "Create Workspace" button and wait for navigation
-    And I wait for the page to load
+    And I wait for network idle
     Then I should see "Workspace created successfully"
     And I should see "Marketing Team"
     And the URL should contain "/app/workspaces"
@@ -50,14 +50,14 @@ Feature: Workspace CRUD Operations
     And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate directly to workspace edit page
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/edit"
-    And I wait for the page to load
+    And I wait for network idle
     And I clear "[name='workspace[name]']"
     And I fill "[name='workspace[name]']" with "Product Team Updated"
     And I clear "[name='workspace[description]']"
     And I fill "[name='workspace[description]']" with "Updated description"
     And I fill "[name='workspace[color]']" with "#4A90E2"
     And I click the "Update Workspace" button and wait for navigation
-    And I wait for the page to load
+    And I wait for network idle
     Then I should see "Workspace updated successfully"
     And I should see "Product Team Updated"
 
@@ -70,7 +70,7 @@ Feature: Workspace CRUD Operations
     And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to workspace - kebab menu should not show Edit option
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
-    And I wait for the page to load
+    And I wait for network idle
     # Members don't have kebab menu actions for edit
     Then "button[aria-label='Actions menu']" should not exist
 
@@ -83,7 +83,7 @@ Feature: Workspace CRUD Operations
     And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to workspace - kebab menu should not show Edit option
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
-    And I wait for the page to load
+    And I wait for network idle
     # Guests don't have kebab menu actions for edit
     Then "button[aria-label='Actions menu']" should not exist
 
@@ -103,7 +103,7 @@ Feature: Workspace CRUD Operations
     And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to workspace
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
-    And I wait for the page to load
+    And I wait for network idle
     Then I should see "Delete Workspace"
 
   Scenario: Admin cannot delete workspace
@@ -115,7 +115,7 @@ Feature: Workspace CRUD Operations
     And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to workspace and open kebab menu
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
-    And I wait for the page to load
+    And I wait for network idle
     And I click "button[aria-label='Actions menu']"
     And I wait for 1 seconds
     # Delete option should not be visible to admin (only owner can delete)
@@ -134,7 +134,7 @@ Feature: Workspace CRUD Operations
     And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to new workspace form and submit with empty name
     And I navigate to "${baseUrl}/app/workspaces/new"
-    And I wait for the page to load
+    And I wait for network idle
     And I clear "[name='workspace[name]']"
     And I fill "[name='workspace[description]']" with "Test"
     And I click the "Create Workspace" button

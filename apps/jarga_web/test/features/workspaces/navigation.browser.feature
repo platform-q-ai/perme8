@@ -24,10 +24,10 @@ Feature: Workspace Navigation
     When I fill "#login_form_password_email" with "${memberEmail}"
     And I fill "#login_form_password_password" with "${memberPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
-    And I wait for the page to load
+    And I wait for network idle
     # Navigate to workspace
     When I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
-    And I wait for the page to load
+    And I wait for network idle
     And I wait for network idle
     Then the URL should contain "/app/workspaces/product-team"
     And I should see "Product Team"
@@ -44,7 +44,7 @@ Feature: Workspace Navigation
     And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to workspace
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
-    And I wait for the page to load
+    And I wait for network idle
     Then I should see "Product Team"
     And I should not see "New Project"
     And I should not see "New Document"
@@ -59,7 +59,7 @@ Feature: Workspace Navigation
     And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to workspace
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
-    And I wait for the page to load
+    And I wait for network idle
     Then I should see "New Project"
     And I should see "New Document"
 
@@ -76,7 +76,7 @@ Feature: Workspace Navigation
     And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to workspaces list
     And I navigate to "${baseUrl}/app/workspaces"
-    And I wait for the page to load
+    And I wait for network idle
     Then I should see "Product Team"
     And I should see "Engineering"
     And "a[href='/app/workspaces/${productTeamSlug}']" should exist
@@ -91,7 +91,7 @@ Feature: Workspace Navigation
     And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to workspaces list and click a workspace
     And I navigate to "${baseUrl}/app/workspaces"
-    And I wait for the page to load
+    And I wait for network idle
     And I click the "Product Team" link
     And I wait for network idle
     Then the URL should contain "/app/workspaces/${productTeamSlug}"
@@ -107,7 +107,7 @@ Feature: Workspace Navigation
     And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to workspaces list
     And I navigate to "${baseUrl}/app/workspaces"
-    And I wait for the page to load
+    And I wait for network idle
     Then I should see "No workspaces yet"
     And I should see "Create your first workspace to get started"
 
@@ -120,6 +120,6 @@ Feature: Workspace Navigation
     And I click the "Log in and stay logged in" button and wait for navigation
     # Navigate to workspaces list
     And I navigate to "${baseUrl}/app/workspaces"
-    And I wait for the page to load
+    And I wait for network idle
     Then "a[href='/app/workspaces/new']" should exist
     And I should see "New Workspace"
