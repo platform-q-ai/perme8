@@ -16,9 +16,10 @@ defmodule Mix.Tasks.ExoTest do
       mix exo_test --tag "@smoke"
       mix exo_test -t "not @security"
 
-      # Filter which config(s) to run by name (substring match)
-      mix exo_test --name entity
-      mix exo_test -n jarga-api
+      # Filter which config(s) to run by name (exact match on config stem, then substring)
+      mix exo_test --name jarga-web      # exact: only exo-bdd-jarga-web.config.ts
+      mix exo_test --name jarga          # substring: matches jarga-web AND jarga-api
+      mix exo_test -n relationship        # substring: matches entity-relationship-manager
 
       # Combine: run only ERM HTTP tests
       mix exo_test --name entity --tag "not @security"
@@ -27,7 +28,7 @@ defmodule Mix.Tasks.ExoTest do
 
     * `--config` / `-c` - Path to the exo-bdd config file (optional; discovers all configs under apps/ if omitted)
     * `--tag` / `-t` - Cucumber tag expression to filter scenarios (ANDed with config-level tags)
-    * `--name` / `-n` - Substring filter for auto-discovered config names
+    * `--name` / `-n` - Filter by config name stem (exact match preferred, then substring)
 
   The config path is resolved relative to the umbrella root.
   """
@@ -143,14 +144,42 @@ defmodule Mix.Tasks.ExoTest do
   end
 
   @doc """
-  Filters discovered config paths by a substring match (case-insensitive).
+  Extracts the config name stem from a config path.
+
+  Given a path like `apps/jarga_web/test/exo-bdd-jarga-web.config.ts`,
+  returns `"jarga-web"`.
+  """
+  def config_name(path) do
+    path
+    |> Path.basename()
+    |> String.replace_prefix("exo-bdd-", "")
+    |> String.replace_suffix(".config.ts", "")
+    |> String.downcase()
+  end
+
+  @doc """
+  Filters discovered config paths by name matching (case-insensitive).
+
+  Matching strategy:
+  1. Exact match on the config name stem (e.g., `--name jarga-web` matches
+     only `exo-bdd-jarga-web.config.ts`)
+  2. If no exact match, falls back to substring match on the stem
+     (e.g., `--name jarga` matches both `jarga-web` and `jarga-api`)
+
   Returns all configs when name is nil.
   """
   def filter_configs(configs, nil), do: configs
 
   def filter_configs(configs, name) do
     downcased = String.downcase(name)
-    Enum.filter(configs, &String.contains?(String.downcase(&1), downcased))
+
+    exact = Enum.filter(configs, &(config_name(&1) == downcased))
+
+    if exact != [] do
+      exact
+    else
+      Enum.filter(configs, &String.contains?(config_name(&1), downcased))
+    end
   end
 
   defp discover_configs(umbrella_root) do

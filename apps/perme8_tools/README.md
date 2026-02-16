@@ -42,10 +42,28 @@ mix scaffold_boundaries
 
 ### `mix exo_test`
 
-Runs the TypeScript-based exo-bdd BDD test suite.
+Runs the TypeScript-based exo-bdd BDD test suite. Auto-discovers all `exo-bdd*.config.ts` files under `apps/`.
 
 ```bash
+# Run all discovered configs
 mix exo_test
+
+# Run a specific config by exact name (matches config stem from filename)
+mix exo_test --name jarga-web       # only exo-bdd-jarga-web.config.ts
+
+# Substring match when no exact match found
+mix exo_test --name jarga            # matches jarga-web AND jarga-api
+mix exo_test -n relationship         # matches entity-relationship-manager
+
+# Run a specific config file path
+mix exo_test --config apps/jarga_web/test/exo-bdd-jarga-web.config.ts
+
+# Filter by Cucumber tag expression (ANDed with config-level tags)
+mix exo_test --tag "@smoke"
+mix exo_test -t "not @security"
+
+# Combine name and tag filters
+mix exo_test --name entity --tag "not @security"
 ```
 
 ## Integration with Pre-commit
