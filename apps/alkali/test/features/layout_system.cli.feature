@@ -14,7 +14,7 @@ Feature: Layout System with HEEx Templates
     # Create a post that explicitly declares layout: custom in frontmatter
     When I run "mkdir -p ${site}/content/posts"
     Then the command should succeed
-    When I run "printf '%b' '---\ntitle: My Post\nlayout: custom\n---\n\nThis is my post content.\n' > ${site}/content/posts/my-post.md"
+    When I run "printf '%b' '---\ntitle: My Post\ndate: 2024-01-15\nlayout: custom\n---\n\nThis is my post content.\n' > ${site}/content/posts/my-post.md"
     Then the command should succeed
     # Create the custom layout template
     When I run "printf '%b' '<!-- LAYOUT:custom -->\n<html><body><%= @content %></body></html>\n' > ${site}/layouts/custom.html.heex"
@@ -36,7 +36,7 @@ Feature: Layout System with HEEx Templates
     # Create a post WITHOUT an explicit layout in frontmatter
     When I run "mkdir -p ${site}/content/posts"
     Then the command should succeed
-    When I run "printf '%b' '---\ntitle: My Post\n---\n\nFolder-based layout content.\n' > ${site}/content/posts/my-post.md"
+    When I run "printf '%b' '---\ntitle: My Post\ndate: 2024-01-15\n---\n\nFolder-based layout content.\n' > ${site}/content/posts/my-post.md"
     Then the command should succeed
     # Build the site
     When I run "mix alkali.build ${site}"
@@ -55,7 +55,7 @@ Feature: Layout System with HEEx Templates
     When I run "mkdir -p ${site}/content/posts ${site}/layouts"
     Then the command should succeed
     # Create a post referencing a layout that does not exist
-    When I run "printf '%b' '---\ntitle: My Post\nlayout: nonexistent\n---\n\nThis is my post content.\n' > ${site}/content/posts/my-post.md"
+    When I run "printf '%b' '---\ntitle: My Post\ndate: 2024-01-15\nlayout: nonexistent\n---\n\nThis is my post content.\n' > ${site}/content/posts/my-post.md"
     Then the command should succeed
     # Build the site -- should fail because layout is missing
     When I run "mix alkali.build ${site}"
@@ -66,7 +66,7 @@ Feature: Layout System with HEEx Templates
     # Create a post with layout: post
     When I run "mkdir -p ${site}/content/posts"
     Then the command should succeed
-    When I run "printf '%b' '---\ntitle: Test Post\nlayout: post\n---\n\nTest content.\n' > ${site}/content/posts/test-post.md"
+    When I run "printf '%b' '---\ntitle: Test Post\ndate: 2024-01-15\nlayout: post\n---\n\nTest content.\n' > ${site}/content/posts/test-post.md"
     Then the command should succeed
     # Create the post layout that includes a partial
     When I run "mkdir -p ${site}/layouts/partials"
