@@ -296,6 +296,84 @@ mix exo_test --config apps/jarga_web/test/bdd/exo-bdd-jarga-web.config.ts
 | `--name` | `-n` | Substring filter for auto-discovered config names |
 | `--adapter` | `-a` | Filter feature files by adapter type (`browser`, `http`, `cli`, `security`, `graph`) |
 
+## Failure Artifacts
+
+When a browser scenario fails, exo-bdd automatically saves artifacts to `test-failures/` (relative to the exo-bdd working directory):
+
+- `{scenario-slug}.png` -- full-page screenshot at point of failure
+- `{scenario-slug}.html` -- complete page HTML source
+- `{scenario-slug}.meta.txt` -- URL and scenario name
+
+These are invaluable for debugging -- **always check the screenshot and HTML** before guessing at what might be wrong. The HTML file can be opened in a browser to inspect the DOM structure, and is especially useful for identifying which elements Playwright is matching.
+
+The `test-failures/` directory is cleaned on each run but not deleted between runs, so old artifacts from a previous session persist until overwritten. It is gitignored.
+
+## Troubleshooting
+
+### Asset changes not taking effect in tests
+
+`mix phx.server` in `MIX_ENV=test` does **not** run asset watchers (esbuild/tailwind). It serves whatever is in `priv/static/assets/`. If you change CSS or JS files, you **must** rebuild before running tests:
+
+```bash
+cd apps/jarga_web && mix assets.build
+```
+
+Without this, the test server serves stale compiled assets and your CSS/JS changes will have no effect.
+
+### Playwright click timeouts on DaisyUI drawers
+
+DaisyUI's `.drawer-side` uses `position: fixed; inset: 0` covering the entire viewport. When the drawer is closed, DaisyUI hides it with `visibility: hidden` and `pointer-events: none`. While browsers correctly ignore it for user interaction, Playwright's actionability checks can see the fixed-position element in the stacking context and may refuse to click through it.
+
+**Solutions:**
+1. Ensure the drawer element is truly not covering the click target (check the screenshot artifact)
+2. Use `I force click {string}` to bypass Playwright's actionability checks
+3. Use `I js click {string}` to trigger `el.click()` via `evaluate()` for pure DOM-level clicks
+
+### Selectors matching multiple elements
+
+Playwright's `page.click(selector)` resolves the selector and picks the **first** matching element. If multiple elements match, it may pick a hidden one and report "Element is not visible". This is a common problem with DaisyUI drawers where the same `label[for=...]` appears in both the topbar and inside the drawer panel.
+
+**Debug approach:**
+1. Check the failure HTML artifact for the element you're trying to click
+2. Search for all elements matching your selector -- there may be duplicates
+3. Use a more specific selector to uniquely identify the target element
+
+**Example:**
+```gherkin
+# BAD: Matches label in topbar AND label inside chat panel header
+When I click ".navbar label[for='chat-drawer-global-chat-panel']"
+
+# GOOD: Scoped to the admin drawer-content's navbar only
+When I click ".drawer-content > .navbar label[for='chat-drawer-global-chat-panel']"
+```
+
+### JS hooks changing initial state
+
+Phoenix LiveView hooks (`phx-hook`) run JavaScript after the element mounts. These hooks can programmatically change element state (e.g., checking a checkbox, setting `display`, modifying classes) in ways that aren't visible in the server-rendered HTML template.
+
+**If an element's runtime state doesn't match the template:**
+1. Check the `phx-hook` attribute on the element
+2. Find the corresponding hook in `assets/js/` and read its `mounted()` method
+3. Check if it reads from `localStorage`, adjusts for viewport size, or otherwise mutates state
+
+**Example:** The `ChatPanel` hook reads `localStorage('chat-panel-open')` and was previously auto-opening the drawer on desktop viewports. This meant the panel was open even though the template rendered the checkbox as unchecked.
+
+### LiveView pages need network idle waits
+
+Every page in a LiveView app requires `I wait for network idle` after navigation before interacting with `phx-*` elements. The `I wait for the page to load` step only waits for the initial HTTP `load` event, not the LiveView websocket connection.
+
+```gherkin
+# CORRECT: Waits for websocket
+Given I navigate to "${baseUrl}/app/workspaces"
+And I wait for network idle
+When I fill "#search" with "test"
+
+# WRONG: Form may not work because socket isn't connected yet
+Given I navigate to "${baseUrl}/app/workspaces"
+And I wait for the page to load
+When I fill "#search" with "test"
+```
+
 ## Development
 
 ```bash
