@@ -1,20 +1,27 @@
 defmodule KnowledgeMcp.Application do
-  # See https://hexdocs.pm/elixir/Application.html
-  # for more information on OTP Applications
-  @moduledoc false
+  @moduledoc """
+  OTP Application for the Knowledge MCP server.
+
+  Starts the Hermes Server Registry and the MCP Server supervision tree,
+  configuring transport based on application environment.
+  """
 
   use Application
 
   @impl true
   def start(_type, _args) do
+    transport = Application.get_env(:knowledge_mcp, :mcp_transport, default_transport())
+
     children = [
-      # Starts a worker by calling: KnowledgeMcp.Worker.start_link(arg)
-      # {KnowledgeMcp.Worker, arg}
+      Hermes.Server.Registry,
+      {KnowledgeMcp.Infrastructure.Mcp.Server, transport: transport}
     ]
 
-    # See https://hexdocs.pm/elixir/Supervisor.html
-    # for other strategies and supported options
     opts = [strategy: :one_for_one, name: KnowledgeMcp.Supervisor]
     Supervisor.start_link(children, opts)
+  end
+
+  defp default_transport do
+    {:streamable_http, []}
   end
 end

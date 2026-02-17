@@ -63,6 +63,10 @@ config :jarga, Jarga.Mailer, adapter: Swoosh.Adapters.Test
 # Disable swoosh api client as it is only required for production adapters
 config :swoosh, :api_client, false
 
+# Knowledge MCP: Use streamable_http transport in tests with start: true
+# (no port is bound — the Plug handles HTTP routing separately)
+config :knowledge_mcp, :mcp_transport, {:streamable_http, start: true}
+
 # Print only warnings and errors during test
 config :logger, level: :warning
 

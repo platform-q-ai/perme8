@@ -6,6 +6,7 @@ defmodule KnowledgeMcp.Application.UseCases.GetKnowledgeEntry do
   them to domain types.
   """
 
+  alias KnowledgeMcp.Application.GatewayConfig
   alias KnowledgeMcp.Domain.Entities.{KnowledgeEntry, KnowledgeRelationship}
 
   @doc """
@@ -24,7 +25,7 @@ defmodule KnowledgeMcp.Application.UseCases.GetKnowledgeEntry do
           {:ok, %{entry: KnowledgeEntry.t(), relationships: [KnowledgeRelationship.t()]}}
           | {:error, :not_found}
   def execute(workspace_id, entity_id, opts \\ []) do
-    erm_gateway = Keyword.get(opts, :erm_gateway, default_erm_gateway())
+    erm_gateway = Keyword.get(opts, :erm_gateway, GatewayConfig.erm_gateway())
 
     with {:ok, entity} <- erm_gateway.get_entity(workspace_id, entity_id),
          {:ok, edges} <- erm_gateway.list_edges(workspace_id, %{entity_id: entity_id}) do
@@ -33,9 +34,5 @@ defmodule KnowledgeMcp.Application.UseCases.GetKnowledgeEntry do
 
       {:ok, %{entry: entry, relationships: relationships}}
     end
-  end
-
-  defp default_erm_gateway do
-    Application.get_env(:knowledge_mcp, :erm_gateway, KnowledgeMcp.Infrastructure.ErmGateway)
   end
 end

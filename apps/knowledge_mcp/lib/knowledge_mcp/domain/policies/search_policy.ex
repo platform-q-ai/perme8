@@ -26,31 +26,54 @@ defmodule KnowledgeMcp.Domain.Policies.SearchPolicy do
   """
   @spec validate_search_params(map()) :: {:ok, map()} | {:error, atom()}
   def validate_search_params(params) do
+    parsed = parse_search_fields(params)
+
+    with :ok <- validate_category_if_present(parsed),
+         :ok <- validate_has_criteria(parsed) do
+      {:ok, normalize_search_params(parsed)}
+    end
+  end
+
+  defp parse_search_fields(params) do
     query = Map.get(params, :query)
     tags = Map.get(params, :tags)
     category = Map.get(params, :category)
     limit = Map.get(params, :limit)
 
-    has_query = is_binary(query) and query != ""
-    has_tags = is_list(tags) and tags != []
-    has_category = is_binary(category) and category != ""
+    %{
+      query: query,
+      tags: tags,
+      category: category,
+      limit: limit,
+      has_query: is_binary(query) and query != "",
+      has_tags: is_list(tags) and tags != [],
+      has_category: is_binary(category) and category != ""
+    }
+  end
 
-    cond do
-      has_category and not KnowledgeValidationPolicy.valid_category?(category) ->
-        {:error, :invalid_category}
+  defp validate_category_if_present(%{has_category: true, category: category}) do
+    if KnowledgeValidationPolicy.valid_category?(category),
+      do: :ok,
+      else: {:error, :invalid_category}
+  end
 
-      not has_query and not has_tags and not has_category ->
-        {:error, :empty_search}
+  defp validate_category_if_present(_), do: :ok
 
-      true ->
-        {:ok,
-         %{
-           query: if(has_query, do: query, else: nil),
-           tags: if(has_tags, do: tags, else: []),
-           category: if(has_category, do: category, else: nil),
-           limit: clamp_limit(limit)
-         }}
-    end
+  defp validate_has_criteria(%{has_query: false, has_tags: false, has_category: false}) do
+    {:error, :empty_search}
+  end
+
+  defp validate_has_criteria(_), do: :ok
+
+  defp normalize_search_params(
+         %{has_query: has_query, has_tags: has_tags, has_category: has_category} = parsed
+       ) do
+    %{
+      query: if(has_query, do: parsed.query, else: nil),
+      tags: if(has_tags, do: parsed.tags, else: []),
+      category: if(has_category, do: parsed.category, else: nil),
+      limit: clamp_limit(parsed.limit)
+    }
   end
 
   @doc """

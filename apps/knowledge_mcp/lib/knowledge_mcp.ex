@@ -10,6 +10,7 @@ defmodule KnowledgeMcp do
   use Boundary,
     top_level?: true,
     deps: [
+      KnowledgeMcp.ApplicationLayer,
       EntityRelationshipManager,
       Identity
     ],

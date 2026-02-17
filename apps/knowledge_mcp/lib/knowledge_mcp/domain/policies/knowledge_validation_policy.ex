@@ -37,9 +37,8 @@ defmodule KnowledgeMcp.Domain.Policies.KnowledgeValidationPolicy do
   def validate_entry_attrs(attrs) do
     with :ok <- validate_title_present(attrs),
          :ok <- validate_title_length(attrs),
-         :ok <- validate_body_present(attrs),
-         :ok <- validate_category(attrs) do
-      :ok
+         :ok <- validate_body_present(attrs) do
+      validate_category(attrs)
     end
   end
 
@@ -50,9 +49,8 @@ defmodule KnowledgeMcp.Domain.Policies.KnowledgeValidationPolicy do
   """
   @spec validate_update_attrs(map()) :: :ok | {:error, atom()}
   def validate_update_attrs(attrs) do
-    with :ok <- validate_optional_title_length(attrs),
-         :ok <- validate_optional_category(attrs) do
-      :ok
+    with :ok <- validate_optional_title_length(attrs) do
+      validate_optional_category(attrs)
     end
   end
 

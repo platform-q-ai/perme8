@@ -6,6 +6,7 @@ defmodule KnowledgeMcp.Application.UseCases.SearchKnowledgeEntries do
   filtering and scoring, sorts by relevance, and returns truncated entries.
   """
 
+  alias KnowledgeMcp.Application.GatewayConfig
   alias KnowledgeMcp.Domain.Entities.KnowledgeEntry
   alias KnowledgeMcp.Domain.Policies.SearchPolicy
 
@@ -19,7 +20,7 @@ defmodule KnowledgeMcp.Application.UseCases.SearchKnowledgeEntries do
   @spec execute(String.t(), map(), keyword()) ::
           {:ok, [KnowledgeEntry.t()]} | {:error, atom()}
   def execute(workspace_id, search_params, opts \\ []) do
-    erm_gateway = Keyword.get(opts, :erm_gateway, default_erm_gateway())
+    erm_gateway = Keyword.get(opts, :erm_gateway, GatewayConfig.erm_gateway())
 
     with {:ok, validated_params} <- SearchPolicy.validate_search_params(search_params),
          {:ok, entities} <- erm_gateway.list_entities(workspace_id, %{type: "KnowledgeEntry"}) do
@@ -55,9 +56,5 @@ defmodule KnowledgeMcp.Application.UseCases.SearchKnowledgeEntries do
 
   defp truncate_body(entry) do
     %{entry | body: KnowledgeEntry.snippet(entry)}
-  end
-
-  defp default_erm_gateway do
-    Application.get_env(:knowledge_mcp, :erm_gateway, KnowledgeMcp.Infrastructure.ErmGateway)
   end
 end

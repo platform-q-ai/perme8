@@ -6,9 +6,10 @@ defmodule KnowledgeMcp.Application.UseCases.CreateKnowledgeEntry do
   and converts the result to a KnowledgeEntry domain entity.
   """
 
+  alias KnowledgeMcp.Application.GatewayConfig
+  alias KnowledgeMcp.Application.UseCases.BootstrapKnowledgeSchema
   alias KnowledgeMcp.Domain.Entities.KnowledgeEntry
   alias KnowledgeMcp.Domain.Policies.KnowledgeValidationPolicy
-  alias KnowledgeMcp.Application.UseCases.BootstrapKnowledgeSchema
 
   @doc """
   Creates a knowledge entry.
@@ -19,7 +20,7 @@ defmodule KnowledgeMcp.Application.UseCases.CreateKnowledgeEntry do
   """
   @spec execute(String.t(), map(), keyword()) :: {:ok, KnowledgeEntry.t()} | {:error, atom()}
   def execute(workspace_id, attrs, opts \\ []) do
-    erm_gateway = Keyword.get(opts, :erm_gateway, default_erm_gateway())
+    erm_gateway = Keyword.get(opts, :erm_gateway, GatewayConfig.erm_gateway())
 
     with :ok <- KnowledgeValidationPolicy.validate_entry_attrs(attrs),
          :ok <- validate_tags(attrs),
@@ -40,8 +41,4 @@ defmodule KnowledgeMcp.Application.UseCases.CreateKnowledgeEntry do
   end
 
   defp validate_tags(_), do: :ok
-
-  defp default_erm_gateway do
-    Application.get_env(:knowledge_mcp, :erm_gateway, KnowledgeMcp.Infrastructure.ErmGateway)
-  end
 end

@@ -22,9 +22,11 @@ defmodule KnowledgeMcp.Application.UseCases.BootstrapKnowledgeSchema do
     * `{:ok, schema}` if schema was created or updated
     * `{:error, reason}` on failure
   """
+  alias KnowledgeMcp.Application.GatewayConfig
+
   @spec execute(String.t(), keyword()) :: {:ok, term()} | {:error, term()}
   def execute(workspace_id, opts \\ []) do
-    erm_gateway = Keyword.get(opts, :erm_gateway, default_erm_gateway())
+    erm_gateway = Keyword.get(opts, :erm_gateway, GatewayConfig.erm_gateway())
 
     case erm_gateway.get_schema(workspace_id) do
       {:ok, schema} ->
@@ -87,9 +89,5 @@ defmodule KnowledgeMcp.Application.UseCases.BootstrapKnowledgeSchema do
     Enum.map(@edge_type_names, fn name ->
       %{name: name, properties: []}
     end)
-  end
-
-  defp default_erm_gateway do
-    Application.get_env(:knowledge_mcp, :erm_gateway, KnowledgeMcp.Infrastructure.ErmGateway)
   end
 end

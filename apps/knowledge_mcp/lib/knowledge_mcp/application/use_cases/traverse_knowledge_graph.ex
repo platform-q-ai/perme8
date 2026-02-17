@@ -6,6 +6,7 @@ defmodule KnowledgeMcp.Application.UseCases.TraverseKnowledgeGraph do
   exists, then calls ERM traverse with appropriate filters.
   """
 
+  alias KnowledgeMcp.Application.GatewayConfig
   alias KnowledgeMcp.Domain.Entities.KnowledgeEntry
   alias KnowledgeMcp.Domain.Policies.{KnowledgeValidationPolicy, SearchPolicy}
 
@@ -25,7 +26,7 @@ defmodule KnowledgeMcp.Application.UseCases.TraverseKnowledgeGraph do
   @spec execute(String.t(), map(), keyword()) ::
           {:ok, [KnowledgeEntry.t()]} | {:error, atom()}
   def execute(workspace_id, params, opts \\ []) do
-    erm_gateway = Keyword.get(opts, :erm_gateway, default_erm_gateway())
+    erm_gateway = Keyword.get(opts, :erm_gateway, GatewayConfig.erm_gateway())
     start_id = Map.fetch!(params, :start_id)
     relationship_type = Map.get(params, :relationship_type)
     depth = SearchPolicy.clamp_depth(Map.get(params, :depth))
@@ -58,8 +59,4 @@ defmodule KnowledgeMcp.Application.UseCases.TraverseKnowledgeGraph do
 
   defp maybe_add_edge_type(opts, nil), do: opts
   defp maybe_add_edge_type(opts, edge_type), do: Keyword.put(opts, :edge_type, edge_type)
-
-  defp default_erm_gateway do
-    Application.get_env(:knowledge_mcp, :erm_gateway, KnowledgeMcp.Infrastructure.ErmGateway)
-  end
 end

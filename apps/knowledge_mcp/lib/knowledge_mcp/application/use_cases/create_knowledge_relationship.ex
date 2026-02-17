@@ -6,9 +6,10 @@ defmodule KnowledgeMcp.Application.UseCases.CreateKnowledgeRelationship do
   both entries exist, bootstraps schema, and creates the ERM edge.
   """
 
+  alias KnowledgeMcp.Application.GatewayConfig
+  alias KnowledgeMcp.Application.UseCases.BootstrapKnowledgeSchema
   alias KnowledgeMcp.Domain.Entities.KnowledgeRelationship
   alias KnowledgeMcp.Domain.Policies.KnowledgeValidationPolicy
-  alias KnowledgeMcp.Application.UseCases.BootstrapKnowledgeSchema
 
   @doc """
   Creates a knowledge relationship.
@@ -26,7 +27,7 @@ defmodule KnowledgeMcp.Application.UseCases.CreateKnowledgeRelationship do
   @spec execute(String.t(), map(), keyword()) ::
           {:ok, KnowledgeRelationship.t()} | {:error, atom()}
   def execute(workspace_id, params, opts \\ []) do
-    erm_gateway = Keyword.get(opts, :erm_gateway, default_erm_gateway())
+    erm_gateway = Keyword.get(opts, :erm_gateway, GatewayConfig.erm_gateway())
     from_id = Map.fetch!(params, :from_id)
     to_id = Map.fetch!(params, :to_id)
     type = Map.fetch!(params, :type)
@@ -52,9 +53,5 @@ defmodule KnowledgeMcp.Application.UseCases.CreateKnowledgeRelationship do
     else
       {:error, :invalid_relationship_type}
     end
-  end
-
-  defp default_erm_gateway do
-    Application.get_env(:knowledge_mcp, :erm_gateway, KnowledgeMcp.Infrastructure.ErmGateway)
   end
 end

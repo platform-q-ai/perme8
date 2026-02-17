@@ -19,9 +19,11 @@ defmodule KnowledgeMcp.Application.UseCases.AuthenticateRequest do
     * `{:error, :unauthorized}` when token is invalid or inactive
     * `{:error, :no_workspace_access}` when API key has no workspace access
   """
+  alias KnowledgeMcp.Application.GatewayConfig
+
   @spec execute(String.t(), keyword()) :: {:ok, map()} | {:error, atom()}
   def execute(token, opts \\ []) do
-    identity_module = Keyword.get(opts, :identity_module, default_identity_module())
+    identity_module = Keyword.get(opts, :identity_module, GatewayConfig.identity_module())
 
     case identity_module.verify_api_key(token) do
       {:ok, api_key} ->
@@ -42,9 +44,5 @@ defmodule KnowledgeMcp.Application.UseCases.AuthenticateRequest do
 
   defp resolve_workspace(%{workspace_access: nil}) do
     {:error, :no_workspace_access}
-  end
-
-  defp default_identity_module do
-    Application.get_env(:knowledge_mcp, :identity_module, Identity)
   end
 end

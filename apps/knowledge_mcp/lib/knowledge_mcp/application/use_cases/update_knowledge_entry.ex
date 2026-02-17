@@ -6,6 +6,7 @@ defmodule KnowledgeMcp.Application.UseCases.UpdateKnowledgeEntry do
   and persists via ERM.
   """
 
+  alias KnowledgeMcp.Application.GatewayConfig
   alias KnowledgeMcp.Domain.Entities.KnowledgeEntry
   alias KnowledgeMcp.Domain.Policies.KnowledgeValidationPolicy
 
@@ -21,7 +22,7 @@ defmodule KnowledgeMcp.Application.UseCases.UpdateKnowledgeEntry do
   @spec execute(String.t(), String.t(), map(), keyword()) ::
           {:ok, KnowledgeEntry.t()} | {:error, atom()}
   def execute(workspace_id, entity_id, attrs, opts \\ []) do
-    erm_gateway = Keyword.get(opts, :erm_gateway, default_erm_gateway())
+    erm_gateway = Keyword.get(opts, :erm_gateway, GatewayConfig.erm_gateway())
 
     with :ok <- KnowledgeValidationPolicy.validate_update_attrs(attrs),
          {:ok, existing} <- erm_gateway.get_entity(workspace_id, entity_id) do
@@ -48,9 +49,5 @@ defmodule KnowledgeMcp.Application.UseCases.UpdateKnowledgeEntry do
     Enum.reduce(provided_keys, existing_props, fn key, acc ->
       Map.put(acc, key, Map.get(update_props, key))
     end)
-  end
-
-  defp default_erm_gateway do
-    Application.get_env(:knowledge_mcp, :erm_gateway, KnowledgeMcp.Infrastructure.ErmGateway)
   end
 end
