@@ -211,8 +211,6 @@ defmodule JargaWeb.AppLive.Agents.Form do
             type="number"
             label="Temperature"
             step="0.1"
-            min="0"
-            max="2"
             disabled={@read_only}
           />
           <.input

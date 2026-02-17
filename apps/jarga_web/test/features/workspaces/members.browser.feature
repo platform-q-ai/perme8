@@ -101,9 +101,9 @@ Feature: Workspace Member Management
     And I wait for 1 seconds
     And I click the "Manage Members" button
     And I wait for ".modal.modal-open" to be visible
-    # Change charlie's role to admin
+    # Change charlie's role to admin (member -> admin)
     And I select "admin" from "select[phx-value-email='${memberEmail}']"
-    And I wait for network idle
+    And I wait for 2 seconds
     Then I should see "Member role updated successfully"
 
   Scenario: Owner role is displayed as badge not select

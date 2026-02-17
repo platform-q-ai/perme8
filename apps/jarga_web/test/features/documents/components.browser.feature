@@ -26,8 +26,7 @@ Feature: Document Components
     And I click the "New Document" button
     And I wait for ".modal-open" to be visible
     And I fill "#document-form_title" with "Components Test Doc"
-    And I click the "Create Document" button
-    And I wait for network idle
+    And I click the "Create Document" button and wait for navigation
     Then the URL should contain "/documents/"
     And I should see "Components Test Doc"
     And "#editor-container" should be visible
@@ -45,13 +44,13 @@ Feature: Document Components
     And "#editor-container" should have attribute "data-readonly" with value "false"
 
   Scenario: Guest sees editor in read-only mode
-    # Precondition: "Public Doc" is a public document (seeded)
+    # Precondition: "Team Guidelines" is a public document (seeded, slug: team-guidelines)
     Given I am on "${baseUrl}/users/log-in"
     And I wait for network idle
     When I fill "#login_form_password_email" with "${guestEmail}"
     And I fill "#login_form_password_password" with "${guestPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
-    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/public-doc"
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/team-guidelines"
     And I wait for network idle
     Then "#editor-container" should be visible
     And "#editor-container" should have attribute "data-readonly" with value "true"

@@ -33,8 +33,8 @@ Feature: Document Listing
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
     And I wait for network idle
     # alice should see her own private docs and all public docs
-    Then I should see "Draft Roadmap"
-    And I should see "Public Doc"
+    Then I should see "Private Roadmap"
+    And I should see "Team Guidelines"
     And I should see "Product Spec"
     And I should see "Shared Doc"
     # alice should not see bob's private doc
@@ -49,10 +49,10 @@ Feature: Document Listing
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
     And I wait for network idle
     # charlie should see public docs
-    Then I should see "Public Doc"
+    Then I should see "Team Guidelines"
     And I should see "Product Spec"
     # charlie should not see alice's or bob's private docs
-    And I should not see "Draft Roadmap"
+    And I should not see "Private Roadmap"
     And I should not see "Bobs Private Doc"
 
   Scenario: Guest sees only public documents
@@ -63,10 +63,10 @@ Feature: Document Listing
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
     And I wait for network idle
-    Then I should see "Public Doc"
+    Then I should see "Team Guidelines"
     And I should see "Product Spec"
-    And I should not see "Draft Roadmap"
-    And I should not see "Private Doc"
+    And I should not see "Private Roadmap"
+    And I should not see "Private Notes"
 
   Scenario: Document listing shows pinned badge
     Given I am on "${baseUrl}/users/log-in"

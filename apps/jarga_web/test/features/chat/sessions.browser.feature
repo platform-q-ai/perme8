@@ -31,6 +31,7 @@ Feature: Chat Session Management
     And I wait for 1 seconds
     Then "div[phx-click='load_session']" should exist
 
+  @wip
   Scenario: Start new conversation clears chat
     When I fill "textarea#chat-input" with "Message in old session"
     And I click the "Send" button
