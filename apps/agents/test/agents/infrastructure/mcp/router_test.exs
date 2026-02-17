@@ -30,6 +30,21 @@ defmodule Agents.Infrastructure.Mcp.RouterTest do
     :ok
   end
 
+  describe "health endpoint" do
+    test "includes security headers on health response" do
+      conn =
+        :get
+        |> conn("/health")
+        |> Router.call(Router.init([]))
+
+      assert conn.status == 200
+      assert get_resp_header(conn, "x-content-type-options") == ["nosniff"]
+      assert get_resp_header(conn, "x-frame-options") == ["DENY"]
+      assert get_resp_header(conn, "referrer-policy") == ["strict-origin-when-cross-origin"]
+      assert get_resp_header(conn, "content-security-policy") == ["default-src 'none'"]
+    end
+  end
+
   describe "unauthenticated requests" do
     test "returns 401 when no Authorization header is present" do
       conn =
