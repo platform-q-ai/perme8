@@ -202,6 +202,7 @@ jobs:
           # All valid app/domain combos with their metadata
           ALL_COMBOS = [
               {"app": "agents",    "domain": "http",     "config_name": "agents",                      "timeout": 10},
+              {"app": "agents",    "domain": "security", "config_name": "agents",                      "timeout": 15},
               {"app": "alkali",    "domain": "cli",      "config_name": "alkali",                      "timeout": 5},
               {"app": "erm",       "domain": "http",     "config_name": "entity-relationship-manager", "timeout": 10},
               {"app": "erm",       "domain": "security", "config_name": "entity-relationship-manager", "timeout": 15},

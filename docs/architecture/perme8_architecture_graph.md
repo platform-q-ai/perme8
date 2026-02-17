@@ -1267,11 +1267,11 @@ Each section below lists every BDD feature and its scenarios for the given app. 
 
 **Envisioned capabilities:** Agent definitions and CRUD, LLM orchestration, agent query execution, Knowledge MCP tools (6 tools), skills management, API permission per key, OpenCode sessions in containers, agentic flow orchestration, bot network for agent-to-agent communication.
 
-**Current state:** Extracted as standalone app. Agent CRUD, cloning, LLM client, query execution, and Knowledge MCP (6 tools via JSON-RPC 2.0 on port 4007) are implemented with 297 unit tests and 26 exo-bdd HTTP scenarios.
+**Current state:** Extracted as standalone app. Agent CRUD, cloning, LLM client, query execution, and Knowledge MCP (6 tools via JSON-RPC 2.0 on port 4007) are implemented with 297 unit tests, 26 exo-bdd HTTP scenarios, and 18 exo-bdd security scenarios.
 
 **Remaining:** Skills management, OpenCode containers, agents API, bot network, flow orchestration.
 
-**3 feature files, 26 scenarios**
+**3 feature files, 42 scenarios**
 
 <details>
 <summary><strong>Knowledge MCP Tools -- HTTP API</strong> -- 26 scenarios</summary>
@@ -1306,6 +1306,32 @@ Each section below lists every BDD feature and its scenarios for the given app. 
 | 24 | Traverse with no connections returns empty result |
 | 25 | Traverse with invalid relationship type fails |
 | 26 | Traverse non-existent entry returns not found |
+
+</details>
+
+<details>
+<summary><strong>Knowledge MCP Endpoint Security Baseline</strong> -- 18 scenarios</summary>
+
+> As a security engineer, I want to verify the Knowledge MCP endpoint is free from common vulnerabilities so that knowledge data, API keys, workspace isolation, and the JSON-RPC interface are protected against attack.
+
+| # | Scenario |
+|---|---------|
+| 1 | Spider discovers MCP endpoint attack surface |
+| 2 | Spider discovers health endpoint attack surface |
+| 3 | Passive scan on MCP endpoint finds no high-risk issues |
+| 4 | Passive scan on health endpoint finds no high-risk issues |
+| 5 | No SQL Injection on MCP endpoint |
+| 6 | No SQL Injection on health endpoint |
+| 7 | No Cross-Site Scripting on MCP endpoint |
+| 8 | No Cross-Site Scripting on health endpoint |
+| 9 | No path traversal on MCP endpoint |
+| 10 | No remote code execution on MCP endpoint |
+| 11 | Comprehensive active scan on MCP endpoint finds no high-risk vulnerabilities |
+| 12 | Baseline scan on MCP endpoint passes |
+| 13 | Baseline scan on health endpoint passes |
+| 14 | Health endpoint returns proper security headers |
+| 15 | MCP endpoint returns proper security headers |
+| 16 | Generate security audit report for Knowledge MCP server |
 
 </details>
 
@@ -1575,7 +1601,7 @@ How each app serves (or will serve) the four platform principles:
 | **jarga** (core) | -- | -- | **70%** |
 | **jarga_web** | 22 | 244 | **75%** |
 | **jarga_api** | 6 | 100 | **80%** |
-| **agents** | 3 + UI in jarga_web | 26 + 54 (UI) | **35%** |
+| **agents** | 3 + UI in jarga_web | 42 + 54 (UI) | **35%** |
 | **chat** | -- (UI in jarga_web) | 90 (UI) | **10%** |
 | **notifications** | -- (UI in jarga_web) | -- | **10%** |
 | **components** | -- (UI in jarga_web) | 3 (UI) | **5%** |
@@ -1583,12 +1609,12 @@ How each app serves (or will serve) the four platform principles:
 | **exo-bdd** | 4 | 20 | **55%** |
 | **perme8_tools** | -- | -- | **70%** |
 | **alkali** | 8 | 27 | **90%** |
-| **TOTAL** | **52** | **647** | |
+| **TOTAL** | **52** | **663** | |
 
 ### Overall Platform Completion: ~50%
 
 The foundational services (identity, jarga core, ERM) are well-established with comprehensive BDD coverage. The major remaining work falls into three tracks:
 
 1. **Service extraction** -- Decompose jarga's bounded contexts (notifications, chat, agents, components) into standalone apps per the service evolution plan
-2. **Agents platform** -- Knowledge MCP tools are live (6 tools, 26 BDD scenarios). Remaining: agents API, OpenCode container sessions, skills management, and bot network for agent-to-agent communication
+2. **Agents platform** -- Knowledge MCP tools are live (6 tools, 26 HTTP + 16 security BDD scenarios). Remaining: agents API, OpenCode container sessions, skills management, and bot network for agent-to-agent communication
 3. **Testing infrastructure** -- Complete the exo-bdd migration, wire up domain-specific CI, build the feature inspection UI, and add the chaos monkey adapter
