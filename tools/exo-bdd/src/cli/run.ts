@@ -304,12 +304,14 @@ export async function runTests(options: RunOptions): Promise<number> {
     : rawFeatures
 
   // Start Docker containers (e.g. ZAP for security testing) if configured
+  // Only start ZAP when actually running security tests (--adapter security or no filter)
   const dockerManager = new DockerManager()
-  if (config.adapters.security?.docker) {
+  const needsZap = config.adapters.security?.docker && (!options.adapter || options.adapter === 'security')
+  if (needsZap) {
     try {
       await dockerManager.ensureZap(
-        config.adapters.security.zapUrl,
-        config.adapters.security.docker,
+        config.adapters.security!.zapUrl,
+        config.adapters.security!.docker!,
       )
     } catch (error) {
       console.error(`[exo-bdd] Failed to start ZAP container: ${error instanceof Error ? error.message : String(error)}`)
