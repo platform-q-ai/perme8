@@ -2,6 +2,56 @@
 
 Umbrella applications are a way to organize multiple Elixir applications within a single project structure. This is particularly useful for large projects where you want to maintain clear boundaries between different parts of the system while still being able to develop and deploy them together.
 
+## Perme8 Umbrella Apps
+
+| App | Type | Port (dev / test) | Description |
+|-----|------|-------------------|-------------|
+| `identity` | Phoenix (auth) | 4001 / 4003 | Users, authentication, workspaces, memberships, roles, API keys |
+| `jarga` | Ecto (domain) | -- | Projects, documents, notes, chat, notifications |
+| `agents` | Elixir + Bandit | -- / 4007 | Agent definitions, LLM orchestration, Knowledge MCP tools (6 tools via JSON-RPC) |
+| `jarga_web` | Phoenix (UI) | 4000 / 4002 | LiveView browser interface for all domain services |
+| `jarga_api` | Phoenix (API) | 4004 / 4005 | JSON REST API for external integrations |
+| `entity_relationship_manager` | Phoenix (API) | 4006 / -- | Schema-driven graph data layer (Neo4j + PostgreSQL) |
+| `alkali` | Elixir (standalone) | -- | Static site generator, publishable to Hex |
+| `perme8_tools` | Elixir (dev) | -- | Mix tasks, linters, scaffolding |
+
+### Dependency Graph
+
+```
+                    identity (standalone — depends on nothing)
+                    ^      ^
+                    |      |
+                  jarga   agents ──→ entity_relationship_manager
+                  ^  ^     ^
+                 /   |    /
+                /    |   /
+      jarga_web  jarga_api
+```
+
+**Rules:**
+- `identity` depends on nothing in the umbrella
+- `agents` depends on `identity` (auth/workspace context) and `entity_relationship_manager` (knowledge graph data)
+- `jarga` depends on `identity` and `agents`
+- `jarga_web` and `jarga_api` depend on `jarga` and `agents` (interface layers)
+- `alkali` and `perme8_tools` are independent
+
+### Boundary Enforcement
+
+All cross-app dependencies are enforced at compile time by the [`boundary`](https://hex.pm/packages/boundary) library. Each app is organized into layers:
+
+- **Domain** — pure business logic, entities, value objects, policies (no I/O)
+- **Application** — use cases, behaviours (ports), gateway interfaces
+- **Infrastructure** — repositories, schemas, external service adapters
+- **Interface** — controllers, LiveViews, plugs (in web/API apps only)
+
+Run `mix boundary` to check for violations.
+
+---
+
+## General Reference
+
+Below is a general reference for Elixir umbrella projects.
+
 ## Project Structure
 
 When you create an umbrella project (e.g., via `mix new my_project --umbrella`), the following structure is generated:

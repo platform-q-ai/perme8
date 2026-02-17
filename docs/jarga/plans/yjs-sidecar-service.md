@@ -413,7 +413,10 @@ yjs: node services/yjs-sidecar/dist/server.js
 | 4004 | JargaApi | dev |
 | 4005 | JargaApi | test |
 | **4006** | **Yjs Sidecar** | **dev** |
-| **4007** | **Yjs Sidecar** | **test** |
+| 4007 | Agents MCP | test (already allocated) |
+| **4008** | **Yjs Sidecar** | **test** |
+
+> **Note:** Port 4007 is now used by the Agents MCP endpoint in test mode. The Yjs sidecar test port has been moved to 4008.
 
 ---
 

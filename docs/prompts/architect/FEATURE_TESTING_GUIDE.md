@@ -52,9 +52,11 @@ Each app that has exo-bdd features has a config file at `apps/<app>/test/exo-bdd
 
 Test fixtures are provisioned by seed scripts referenced in each config's `server.seed` field:
 
-- `apps/jarga/priv/repo/exo_seeds.exs` — API/ERM test data (users, workspaces, projects, documents, API keys)
+- `apps/jarga/priv/repo/exo_seeds.exs` — API/ERM/agents test data (users, workspaces, projects, documents, API keys)
 - `apps/jarga/priv/repo/exo_seeds_web.exs` — Browser test data (additional users with roles, agents)
 - `apps/identity/priv/repo/exo_seeds.exs` — Identity/auth test data
+
+The agents MCP exo-bdd config also uses `apps/jarga/priv/repo/exo_seeds.exs` for its seed data (API keys and workspaces).
 
 Seed scripts run with `--no-start` against the already-running test server's database.
 
