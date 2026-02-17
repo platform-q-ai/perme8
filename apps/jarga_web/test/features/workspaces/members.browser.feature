@@ -102,8 +102,7 @@ Feature: Workspace Member Management
     And I click the "Manage Members" button
     And I wait for ".modal.modal-open" to be visible
     # Change charlie's role to admin (member -> admin)
-    And I select "admin" from "select[phx-value-email='${memberEmail}']"
-    And I wait for 2 seconds
+    And I select "admin" from "select[data-email='${memberEmail}']"
     Then I should see "Member role updated successfully"
 
   Scenario: Owner role is displayed as badge not select
@@ -121,7 +120,7 @@ Feature: Workspace Member Management
     And I click the "Manage Members" button
     And I wait for ".modal.modal-open" to be visible
     # Owner's role selector should not exist - shown as badge instead
-    Then "select[phx-value-email='${ownerEmail}']" should not exist
+    Then "select[data-email='${ownerEmail}']" should not exist
     And I should see "Owner"
 
   # ---------------------------------------------------------------------------

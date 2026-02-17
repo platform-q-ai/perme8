@@ -187,7 +187,6 @@ Feature: Document CRUD Operations
     And I click ".dropdown button[aria-label='Actions menu']"
     And I wait for 1 seconds
     And I click the "Pin Document" button
-    And I wait for 2 seconds
     Then I should see "Document pinned"
 
   Scenario: Owner unpins a document
@@ -202,7 +201,6 @@ Feature: Document CRUD Operations
     And I click ".dropdown button[aria-label='Actions menu']"
     And I wait for 1 seconds
     And I click the "Unpin Document" button
-    And I wait for network idle
     Then I should see "Document unpinned"
 
   Scenario: Guest cannot pin documents

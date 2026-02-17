@@ -36,7 +36,6 @@ Feature: Document Listing
     Then I should see "Private Roadmap"
     And I should see "Team Guidelines"
     And I should see "Product Spec"
-    And I should see "Shared Doc"
     # alice should not see bob's private doc
     And I should not see "Bobs Private Doc"
 

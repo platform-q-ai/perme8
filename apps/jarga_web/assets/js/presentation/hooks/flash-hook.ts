@@ -16,7 +16,7 @@
 import { ViewHook } from "phoenix_live_view";
 
 // Constants for timing and CSS classes
-const DEFAULT_AUTO_HIDE_TIMEOUT = 2000; // 2 seconds
+const DEFAULT_AUTO_HIDE_TIMEOUT = 5000; // 5 seconds
 const FADE_ANIMATION_DURATION = 300; // 300ms to match CSS animation
 const FADE_OUT_CLASS = "fade-out";
 const CLOSE_BUTTON_SELECTOR = ".flash-close";

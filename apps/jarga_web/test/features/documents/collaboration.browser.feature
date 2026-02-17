@@ -14,7 +14,7 @@ Feature: Document Collaboration
   # Seeded documents used in this file:
   #   "Shared Doc"     - public, by bob (slug: shared-doc)
   #   "Product Spec"   - public, by alice (slug: product-spec)
-  #   "Important Doc"  - private, by alice (slug: important-doc)
+  #   "Collab Pin Doc" - private, by alice (slug: collab-pin-doc)
 
   # ── Single-user collaborative features ────────────────────────────
 
@@ -59,18 +59,17 @@ Feature: Document Collaboration
     Then I should see "Document is now private"
 
   Scenario: Document pin toggle and listing badge
-    # Precondition: alice owns unpinned "Important Doc" (seeded)
+    # Precondition: alice owns unpinned "Collab Pin Doc" (seeded, slug: collab-pin-doc)
     Given I am on "${baseUrl}/users/log-in"
     And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
-    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/important-doc"
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/collab-pin-doc"
     And I wait for network idle
     And I click ".dropdown button[aria-label='Actions menu']"
     And I wait for 1 seconds
     And I click the "Pin Document" button
-    And I wait for network idle
     Then I should see "Document pinned"
     # Verify pin badge on workspace listing
     When I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"

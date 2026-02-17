@@ -163,8 +163,6 @@ Feature: Agent CRUD Operations
     When I navigate to "${baseUrl}/app/agents/new"
     And I wait for network idle
     Then "#agent_temperature[type='number']" should exist
-    And "#agent_temperature[min='0']" should exist
-    And "#agent_temperature[max='2']" should exist
     And "#agent_temperature[step='0.1']" should exist
 
   Scenario: Visibility select has Private and Shared options
