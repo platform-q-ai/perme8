@@ -2,7 +2,7 @@ import { defineConfig } from '../../../tools/exo-bdd/src/index.ts'
 
 export default defineConfig({
   tags: 'not @wip',
-  features: ['./features/**/*.browser.feature'],
+  features: ['./features/**/*.browser.feature', './features/**/*.security.feature'],
   servers: [
     {
       name: 'jarga-web',
@@ -16,7 +16,7 @@ export default defineConfig({
       startTimeout: 30000,
     },
   ],
-  timeout: 10_000,
+  timeout: 300_000,
   variables: {
     // Test user credentials (must match exo_seeds_web.exs)
     ownerEmail: 'alice@example.com',
@@ -43,6 +43,17 @@ export default defineConfig({
     browser: {
       baseURL: 'http://localhost:4002',
       headless: true,
+    },
+    http: {
+      baseURL: 'http://localhost:4002',
+    },
+    security: {
+      zapUrl: 'http://localhost:8080',
+      docker: {
+        image: 'ghcr.io/zaproxy/zaproxy:stable',
+        name: 'exo-bdd-zap-jarga-web',
+        network: 'host',
+      },
     },
   },
 })
