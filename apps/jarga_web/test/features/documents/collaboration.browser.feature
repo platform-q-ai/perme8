@@ -222,10 +222,9 @@ Feature: Document Collaboration
     Then "#editor-container" should be visible
     And ".ProseMirror" should contain text "Early content from Alice"
 
-  @wip
-  Scenario: User sees presence indicators for other collaborators
-    # Presence indicators (avatars, names) for connected users in the editor.
-    # @wip: Presence UI not yet implemented in the editor.
+  Scenario: User sees presence labels for other collaborators
+    # Remote cursor labels serve as presence indicators — each shows the user's name.
+    # When two users are in the same document, each sees the other's name label.
     Given I open browser session "alice"
     And I am on "${baseUrl}/users/log-in"
     And I wait for network idle
@@ -235,7 +234,10 @@ Feature: Document Collaboration
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/product-spec"
     And I wait for network idle
     Then "#editor-container" should be visible
-    # TODO: Assert presence indicator shows Alice
+    When I click ".ProseMirror"
+    And I press "Control+a"
+    And I press "Backspace"
+    # Bob joins the same document
     Given I open browser session "bob"
     And I am on "${baseUrl}/users/log-in"
     And I wait for network idle
@@ -244,4 +246,24 @@ Feature: Document Collaboration
     And I click the "Log in and stay logged in" button and wait for navigation
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/product-spec"
     And I wait for network idle
-    # TODO: Assert presence indicator shows both Alice and Bob
+    Then "#editor-container" should be visible
+    When I click ".ProseMirror"
+    And I press "End"
+    And I wait for 2 seconds
+    # Alice types to establish her cursor
+    When I switch to browser session "alice"
+    And I type "Alice is here" into ".ProseMirror"
+    And I wait for 2 seconds
+    # Bob types to establish his cursor
+    When I switch to browser session "bob"
+    And I press "End"
+    And I type " and Bob too" into ".ProseMirror"
+    And I wait for 3 seconds
+    # Bob sees Alice's presence label
+    Then ".remote-cursor[data-user-name='Alice T.']" should exist
+    And ".remote-cursor-label" should be visible
+    # Alice sees Bob's presence label
+    When I switch to browser session "alice"
+    And I wait for 3 seconds
+    Then ".remote-cursor[data-user-name='Bob T.']" should exist
+    And ".remote-cursor-label" should be visible

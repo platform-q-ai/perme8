@@ -6,26 +6,23 @@ Feature: Multiple Cursors in Collaborative Editor
 
   # Background data setup (workspaces, users, roles) is handled by seed data.
   # Users:
-  #   alice@example.com - owner of workspace "product-team"
-  #   bob@example.com   - admin of workspace "product-team"
+  #   alice@example.com - owner of workspace "product-team" (display: "Alice T.")
+  #   bob@example.com   - admin of workspace "product-team" (display: "Bob T.")
   #
   # Seeded documents used in this file:
   #   "Product Spec" - public, by alice (slug: product-spec)
   #
-  # @wip: All scenarios require two simultaneous browser sessions (Yjs awareness)
-  # and verifying ProseMirror decoration elements for remote cursors.
-  # The current exo-bdd single-browser runner cannot support multi-user tests.
+  # Remote cursor DOM structure (from awareness-plugin-factory.ts):
+  #   <span class="remote-cursor" data-user-name="Alice T." data-user-id="...">
+  #     <span class="remote-cursor-label" style="background-color: #hex">Alice T.</span>
+  #   </span>
   #
   # Migrated from: apps/jarga_web/test/wallaby/multiple_cursors_test.exs
 
-  @wip
   Scenario: User cursors are visible to other users
-    # Wallaby: "user cursors are visible to other users"
-    # Multi-user: Both users open the same document and click in the editor
-    # to initialize Yjs awareness. User A types text, updating their cursor
-    # position. User B should see User A's cursor decoration (label "Alice")
-    # in the ProseMirror editor.
-    Given I am on "${baseUrl}/users/log-in"
+    # Alice opens the document and types to establish cursor position
+    Given I open browser session "alice"
+    And I am on "${baseUrl}/users/log-in"
     And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
@@ -33,18 +30,39 @@ Feature: Multiple Cursors in Collaborative Editor
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/product-spec"
     And I wait for network idle
     Then "#editor-container" should be visible
-    # TODO (multi-browser): User A and User B both open the document
-    # TODO (multi-browser): Both click in editor to initialize awareness
-    # TODO (multi-browser): User A types "Hello from Alice"
-    # TODO (multi-browser): User B sees cursor decoration labeled "Alice"
+    When I click ".ProseMirror"
+    And I press "Control+a"
+    And I press "Backspace"
+    And I type "Hello from Alice" into ".ProseMirror"
+    And I wait for 2 seconds
+    # Bob opens the same document
+    Given I open browser session "bob"
+    And I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
+    When I fill "#login_form_password_email" with "${adminEmail}"
+    And I fill "#login_form_password_password" with "${adminPassword}"
+    And I click the "Log in and stay logged in" button and wait for navigation
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/product-spec"
+    And I wait for network idle
+    Then "#editor-container" should be visible
+    # Bob clicks and types to initialize his own awareness (triggers round-trip)
+    When I click ".ProseMirror"
+    And I press "End"
+    And I wait for 3 seconds
+    # Alice updates her cursor position so Bob gets a fresh awareness update
+    When I switch to browser session "alice"
+    And I click ".ProseMirror"
+    And I press "Home"
+    And I wait for 3 seconds
+    # Bob should see Alice's cursor label
+    When I switch to browser session "bob"
+    Then ".remote-cursor[data-user-name='Alice T.']" should exist
+    And ".remote-cursor-label" should be visible
 
-  @wip
   Scenario: Cursor positions update in real-time as users type
-    # Wallaby: "cursor positions update in real-time as users type"
-    # Multi-user: User A types on line 1, User B sees cursor.
-    # User A types on line 2 (cursor moves), User B still sees cursor
-    # at updated position.
-    Given I am on "${baseUrl}/users/log-in"
+    # Both users open the document
+    Given I open browser session "alice"
+    And I am on "${baseUrl}/users/log-in"
     And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
@@ -52,18 +70,46 @@ Feature: Multiple Cursors in Collaborative Editor
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/product-spec"
     And I wait for network idle
     Then "#editor-container" should be visible
-    # TODO (multi-browser): Both users open document and initialize awareness
-    # TODO (multi-browser): User A types "Line 1", User B sees cursor
-    # TODO (multi-browser): User A types newline + "Line 2" (cursor moves)
-    # TODO (multi-browser): User B still sees cursor (at new position)
+    When I click ".ProseMirror"
+    And I press "Control+a"
+    And I press "Backspace"
+    Given I open browser session "bob"
+    And I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
+    When I fill "#login_form_password_email" with "${adminEmail}"
+    And I fill "#login_form_password_password" with "${adminPassword}"
+    And I click the "Log in and stay logged in" button and wait for navigation
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/product-spec"
+    And I wait for network idle
+    Then "#editor-container" should be visible
+    When I click ".ProseMirror"
+    And I press "End"
+    And I wait for 2 seconds
+    # Alice types on line 1 and triggers awareness update
+    When I switch to browser session "alice"
+    And I click ".ProseMirror"
+    And I type "Line 1" into ".ProseMirror"
+    And I press "Home"
+    And I wait for 3 seconds
+    # Bob sees Alice's cursor
+    When I switch to browser session "bob"
+    Then ".remote-cursor[data-user-name='Alice T.']" should exist
+    # Alice moves cursor to line 2
+    When I switch to browser session "alice"
+    And I press "End"
+    And I press "Enter"
+    And I type "Line 2" into ".ProseMirror"
+    And I press "Home"
+    And I wait for 3 seconds
+    # Bob still sees Alice's cursor (now at updated position)
+    When I switch to browser session "bob"
+    Then ".remote-cursor[data-user-name='Alice T.']" should exist
+    And ".ProseMirror" should contain text "Line 2"
 
-  @wip
   Scenario: Cursor disappears when user disconnects
-    # Wallaby: "cursor disappears when user disconnects"
-    # Multi-user: Both users in document, User A types to establish cursor.
-    # User B sees User A's cursor. User A disconnects (close browser).
-    # User B should see the cursor disappear (Yjs awareness cleanup).
-    Given I am on "${baseUrl}/users/log-in"
+    # Both users open the document
+    Given I open browser session "alice"
+    And I am on "${baseUrl}/users/log-in"
     And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
@@ -71,18 +117,44 @@ Feature: Multiple Cursors in Collaborative Editor
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/product-spec"
     And I wait for network idle
     Then "#editor-container" should be visible
-    # TODO (multi-browser): Both users open document, User A types text
-    # TODO (multi-browser): User B sees User A's cursor labeled "Alice"
-    # TODO (multi-browser): User A disconnects (close session)
-    # TODO (multi-browser): User B no longer sees "Alice" cursor (awareness cleanup)
+    When I click ".ProseMirror"
+    And I press "Control+a"
+    And I press "Backspace"
+    Given I open browser session "bob"
+    And I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
+    When I fill "#login_form_password_email" with "${adminEmail}"
+    And I fill "#login_form_password_password" with "${adminPassword}"
+    And I click the "Log in and stay logged in" button and wait for navigation
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/product-spec"
+    And I wait for network idle
+    Then "#editor-container" should be visible
+    When I click ".ProseMirror"
+    And I press "End"
+    And I wait for 2 seconds
+    # Alice types to establish cursor and trigger awareness broadcast
+    When I switch to browser session "alice"
+    And I click ".ProseMirror"
+    And I type "Alice is here" into ".ProseMirror"
+    And I press "Home"
+    And I wait for 3 seconds
+    # Bob sees Alice's cursor
+    When I switch to browser session "bob"
+    Then ".remote-cursor[data-user-name='Alice T.']" should exist
+    # Alice navigates away (disconnects from the document)
+    When I switch to browser session "alice"
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
+    And I wait for network idle
+    # Bob should no longer see Alice's cursor after awareness cleanup.
+    # The awareness adapter broadcasts a removal when the client navigates away.
+    When I switch to browser session "bob"
+    And I wait for 5 seconds
+    Then ".remote-cursor[data-user-name='Alice T.']" should not exist
 
-  @wip
   Scenario: Multiple users see each other's cursors simultaneously
-    # Wallaby: "multiple users see each other's cursors simultaneously"
-    # Multi-user: Both users type in the same document. Each user should
-    # see the other's cursor decoration. User A sees "Bob" cursor,
-    # User B sees "Alice" cursor — both visible at the same time.
-    Given I am on "${baseUrl}/users/log-in"
+    # Both users open the document
+    Given I open browser session "alice"
+    And I am on "${baseUrl}/users/log-in"
     And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
@@ -90,8 +162,37 @@ Feature: Multiple Cursors in Collaborative Editor
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/product-spec"
     And I wait for network idle
     Then "#editor-container" should be visible
-    # TODO (multi-browser): Both users open document and initialize awareness
-    # TODO (multi-browser): User A types "Alice is typing"
-    # TODO (multi-browser): User B types "Bob is also typing"
-    # TODO (multi-browser): User A sees cursor labeled "Bob"
-    # TODO (multi-browser): User B sees cursor labeled "Alice"
+    When I click ".ProseMirror"
+    And I press "Control+a"
+    And I press "Backspace"
+    Given I open browser session "bob"
+    And I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
+    When I fill "#login_form_password_email" with "${adminEmail}"
+    And I fill "#login_form_password_password" with "${adminPassword}"
+    And I click the "Log in and stay logged in" button and wait for navigation
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/product-spec"
+    And I wait for network idle
+    Then "#editor-container" should be visible
+    When I click ".ProseMirror"
+    And I press "End"
+    And I wait for 2 seconds
+    # Alice types her content and moves cursor to trigger awareness
+    When I switch to browser session "alice"
+    And I type "Alice is typing" into ".ProseMirror"
+    And I press "Home"
+    And I wait for 2 seconds
+    # Bob types his content and moves cursor to trigger awareness
+    When I switch to browser session "bob"
+    And I press "End"
+    And I press "Enter"
+    And I type "Bob is also typing" into ".ProseMirror"
+    And I press "Home"
+    And I wait for 3 seconds
+    # Bob sees Alice's cursor
+    Then ".remote-cursor[data-user-name='Alice T.']" should exist
+    # Alice triggers awareness refresh by moving cursor, then checks for Bob
+    When I switch to browser session "alice"
+    And I press "End"
+    And I wait for 3 seconds
+    Then ".remote-cursor[data-user-name='Bob T.']" should exist

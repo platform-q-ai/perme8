@@ -369,6 +369,13 @@ export class MilkdownEditorHook extends ViewHook {
       }
     });
 
+    // Handle user disconnection — remove their cursor immediately
+    this.handleEvent("user_disconnected", ({ user_id }: { user_id: string }) => {
+      if (this.yjsAwarenessAdapter) {
+        this.yjsAwarenessAdapter.removeUserByUserId(user_id);
+      }
+    });
+
     // Handle insert-text events from chat
     this.handleEvent("insert-text", ({ content }: { content: string }) => {
       this.handleInsertText(content);
@@ -524,23 +531,29 @@ export class MilkdownEditorHook extends ViewHook {
    * This is critical for preventing memory leaks.
    */
   destroyed(): void {
-    // Clean up sync listeners
+    // Clean up document sync listener
     if (this.cleanupDocumentSync) {
       this.cleanupDocumentSync();
     }
+
+    // Destroy awareness adapter BEFORE cleaning up sync listener.
+    // This fires a removal event that HandleAwarenessSync broadcasts
+    // to other clients, so they know this user's cursor is gone.
+    if (this.yjsAwarenessAdapter) {
+      this.yjsAwarenessAdapter.destroy();
+    }
+
+    // Now clean up awareness sync (sets isCleanedUp flag)
     if (this.cleanupAwarenessSync) {
       this.cleanupAwarenessSync();
     }
 
-    // Destroy adapters in reverse order
+    // Destroy remaining adapters in reverse order
     if (this.collaborationAdapter) {
       this.collaborationAdapter.destroy();
     }
     if (this.milkdownAdapter) {
       this.milkdownAdapter.destroy();
-    }
-    if (this.yjsAwarenessAdapter) {
-      this.yjsAwarenessAdapter.destroy();
     }
     if (this.yjsDocumentAdapter) {
       this.yjsDocumentAdapter.destroy();

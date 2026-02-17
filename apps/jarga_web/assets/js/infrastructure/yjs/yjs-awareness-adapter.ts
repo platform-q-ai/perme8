@@ -14,7 +14,7 @@
  * @module infrastructure/yjs
  */
 
-import { Awareness, encodeAwarenessUpdate, applyAwarenessUpdate } from 'y-protocols/awareness'
+import { Awareness, encodeAwarenessUpdate, applyAwarenessUpdate, removeAwarenessStates } from 'y-protocols/awareness'
 import type { AwarenessAdapter, AwarenessChanges } from '../../application/interfaces/awareness-adapter.interface'
 
 /**
@@ -137,6 +137,32 @@ export class YjsAwarenessAdapter implements AwarenessAdapter {
   }
 
   /**
+   * Remove a remote user's awareness state by their application-level user ID.
+   *
+   * Finds the Yjs client ID(s) associated with the given userId field
+   * in awareness state and removes them. Used when the server notifies
+   * that a user has disconnected.
+   *
+   * @param userId - The application-level user ID (e.g., "user_ABC123")
+   */
+  removeUserByUserId(userId: string): void {
+    if (this.destroyed) return
+
+    const states = this.awareness.getStates()
+    const clientsToRemove: number[] = []
+
+    states.forEach((state: Record<string, any>, clientId: number) => {
+      if (state && state.userId === userId) {
+        clientsToRemove.push(clientId)
+      }
+    })
+
+    if (clientsToRemove.length > 0) {
+      removeAwarenessStates(this.awareness, clientsToRemove, 'server-disconnect')
+    }
+  }
+
+  /**
    * Clean up resources
    *
    * Removes all event listeners and marks adapter as destroyed.
@@ -144,6 +170,11 @@ export class YjsAwarenessAdapter implements AwarenessAdapter {
    */
   destroy(): void {
     if (this.destroyed) return
+
+    // Remove local awareness state BEFORE cleaning up listeners.
+    // This fires a change event with the local client in the 'removed' set,
+    // allowing HandleAwarenessSync to broadcast the removal to other clients.
+    removeAwarenessStates(this.awareness, [this.awareness.clientID], 'local')
 
     this.destroyed = true
 

@@ -289,6 +289,68 @@ describe('YjsAwarenessAdapter', () => {
     })
   })
 
+  describe('removeUserByUserId', () => {
+    test('removes awareness state for a remote user by userId', () => {
+      // Simulate a remote user's awareness state
+      const remoteDoc = new Y.Doc()
+      const remoteAwareness = new Awareness(remoteDoc)
+      remoteAwareness.setLocalState({ userId: 'user-remote', userName: 'Remote User' })
+
+      // Apply the remote user's state to our awareness
+      const update = encodeAwarenessUpdate(remoteAwareness, [remoteAwareness.clientID])
+      adapter.applyUpdate(update)
+
+      // Verify the remote user's state exists
+      const statesBefore = awareness.getStates()
+      let found = false
+      statesBefore.forEach((state) => {
+        if (state && (state as any).userId === 'user-remote') found = true
+      })
+      expect(found).toBe(true)
+
+      // Remove by userId
+      adapter.removeUserByUserId('user-remote')
+
+      // State should be gone
+      const statesAfter = awareness.getStates()
+      let foundAfter = false
+      statesAfter.forEach((state) => {
+        if (state && (state as any).userId === 'user-remote') foundAfter = true
+      })
+      expect(foundAfter).toBe(false)
+    })
+
+    test('does nothing for unknown userId', () => {
+      expect(() => adapter.removeUserByUserId('nonexistent')).not.toThrow()
+    })
+
+    test('does nothing after destroy', () => {
+      adapter.destroy()
+      // Should not throw even after destroy
+      expect(() => adapter.removeUserByUserId('user-1')).not.toThrow()
+    })
+
+    test('fires awareness change callback with removed clients', () => {
+      const callback = vi.fn()
+
+      // Add a remote user
+      const remoteDoc = new Y.Doc()
+      const remoteAwareness = new Awareness(remoteDoc)
+      remoteAwareness.setLocalState({ userId: 'user-remote', userName: 'Remote User' })
+      const update = encodeAwarenessUpdate(remoteAwareness, [remoteAwareness.clientID])
+      adapter.applyUpdate(update)
+
+      adapter.onAwarenessChange(callback)
+      callback.mockClear()
+
+      adapter.removeUserByUserId('user-remote')
+
+      expect(callback).toHaveBeenCalledTimes(1)
+      const changes = callback.mock.calls[0][0] as AwarenessChanges
+      expect(changes.removed).toContain(remoteAwareness.clientID)
+    })
+  })
+
   describe('destroy', () => {
     test('cleans up resources', () => {
       expect(() => adapter.destroy()).not.toThrow()
@@ -300,11 +362,14 @@ describe('YjsAwarenessAdapter', () => {
       adapter.onAwarenessChange(callback)
       adapter.destroy()
 
-      // Trigger awareness change after destroy
+      // Record call count after destroy (destroy itself may fire a removal event)
+      const callCountAfterDestroy = callback.mock.calls.length
+
+      // Trigger awareness change after destroy via raw awareness API
       awareness.setLocalState({ userId: 'user-1' })
 
-      // Callback should not be called after destroy
-      expect(callback).not.toHaveBeenCalled()
+      // No additional calls should happen after destroy
+      expect(callback).toHaveBeenCalledTimes(callCountAfterDestroy)
     })
 
     test('can be called multiple times safely', () => {
@@ -313,6 +378,36 @@ describe('YjsAwarenessAdapter', () => {
         adapter.destroy()
         adapter.destroy()
       }).not.toThrow()
+    })
+
+    test('removes local awareness state on destroy', () => {
+      // Set local state first
+      adapter.setLocalState({ userId: 'user-1', cursor: 42 })
+      const clientId = awareness.clientID
+
+      // Verify state exists before destroy
+      expect(awareness.getStates().get(clientId)).toBeDefined()
+
+      adapter.destroy()
+
+      // Local state should be null after destroy (removed)
+      expect(awareness.getLocalState()).toBeNull()
+    })
+
+    test('fires removal change event before cleaning up listeners', () => {
+      const callback = vi.fn()
+      adapter.setLocalState({ userId: 'user-1' })
+      adapter.onAwarenessChange(callback)
+
+      // Clear previous calls from setLocalState
+      callback.mockClear()
+
+      adapter.destroy()
+
+      // Callback should be called with the local client in the removed set
+      expect(callback).toHaveBeenCalledTimes(1)
+      const changes = callback.mock.calls[0][0] as AwarenessChanges
+      expect(changes.removed).toContain(awareness.clientID)
     })
 
     test('prevents setLocalState after destroy', () => {

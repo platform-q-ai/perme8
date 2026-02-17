@@ -354,6 +354,12 @@ defmodule JargaWeb.AppLive.Documents.Show do
   end
 
   @impl true
+  def handle_info({:user_disconnected, %{user_id: user_id}}, socket) do
+    # Another user left the document — notify client to remove their cursor
+    {:noreply, push_event(socket, "user_disconnected", %{user_id: user_id})}
+  end
+
+  @impl true
   def handle_info({:document_visibility_changed, document_id, is_public}, socket) do
     # Update document visibility in real-time when changed by another user
     if socket.assigns.document.id == document_id do
@@ -476,6 +482,26 @@ defmodule JargaWeb.AppLive.Documents.Show do
   def handle_info({:document_created, _document}, socket) do
     # Document created broadcasts - no action needed on document show page
     {:noreply, socket}
+  end
+
+  @impl true
+  def terminate(_reason, socket) do
+    # Notify other users that this user has disconnected.
+    # This allows clients to immediately remove the departed user's cursor
+    # instead of waiting for the Yjs awareness timeout (30s default).
+    if Map.has_key?(socket.assigns, :document) and Map.has_key?(socket.assigns, :user_id) do
+      document = socket.assigns.document
+      user_id = socket.assigns.user_id
+
+      Phoenix.PubSub.broadcast_from(
+        Jarga.PubSub,
+        self(),
+        "document:#{document.id}",
+        {:user_disconnected, %{user_id: user_id}}
+      )
+    end
+
+    :ok
   end
 
   defp generate_user_id do
