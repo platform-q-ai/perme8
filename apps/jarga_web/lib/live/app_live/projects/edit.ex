@@ -36,13 +36,12 @@ defmodule JargaWeb.AppLive.Projects.Edit do
           </:subtitle>
         </.header>
 
-        <.form for={@form} id="project-form" phx-submit="save" class="space-y-6">
+        <.form for={@form} id="project-form" phx-change="validate" phx-submit="save" class="space-y-6">
           <.input
             field={@form[:name]}
             type="text"
             label="Name"
             placeholder="My Project"
-            required
           />
 
           <.input
@@ -103,6 +102,15 @@ defmodule JargaWeb.AppLive.Projects.Edit do
          |> put_flash(:error, "Project not found")
          |> redirect(to: ~p"/app/workspaces")}
     end
+  end
+
+  @impl true
+  def handle_event("validate", %{"project" => params}, socket) do
+    changeset =
+      Projects.change_project(socket.assigns.project, params)
+      |> Map.put(:action, :validate)
+
+    {:noreply, assign(socket, form: to_form(changeset, as: :project))}
   end
 
   @impl true

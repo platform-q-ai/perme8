@@ -191,7 +191,7 @@ defmodule JargaWeb.AppLive.Agents.Form do
           phx-submit={if @read_only, do: nil, else: "save"}
           class="space-y-6"
         >
-          <.input field={@form[:name]} type="text" label="Name" required disabled={@read_only} />
+          <.input field={@form[:name]} type="text" label="Name" disabled={@read_only} />
           <.input
             field={@form[:description]}
             type="textarea"

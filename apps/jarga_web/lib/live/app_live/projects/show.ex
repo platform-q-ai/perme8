@@ -153,6 +153,7 @@ defmodule JargaWeb.AppLive.Projects.Show do
             <.form
               for={@document_form}
               id="document-form"
+              phx-change="validate_document"
               phx-submit="create_document"
               class="space-y-4"
             >
@@ -161,7 +162,6 @@ defmodule JargaWeb.AppLive.Projects.Show do
                 type="text"
                 label="Title"
                 placeholder="Document Title"
-                required
               />
 
               <div class="modal-action">
@@ -208,7 +208,7 @@ defmodule JargaWeb.AppLive.Projects.Show do
        |> assign(:project, project)
        |> assign(:documents, documents)
        |> assign(:show_document_modal, false)
-       |> assign(:document_form, to_form(%{"title" => ""}))}
+       |> assign(:document_form, to_form(%{"title" => ""}, as: "document-form"))}
     else
       {:error, _reason} ->
         {:ok,
@@ -216,6 +216,19 @@ defmodule JargaWeb.AppLive.Projects.Show do
          |> put_flash(:error, "Project not found")
          |> redirect(to: ~p"/app/workspaces")}
     end
+  end
+
+  @impl true
+  def handle_event("validate_document", %{"document-form" => params}, socket) do
+    errors =
+      if String.trim(params["title"] || "") == "" do
+        [title: {"can't be blank", [validation: :required]}]
+      else
+        []
+      end
+
+    form = to_form(params, as: "document-form", errors: errors)
+    {:noreply, assign(socket, :document_form, form)}
   end
 
   @impl true
@@ -228,11 +241,11 @@ defmodule JargaWeb.AppLive.Projects.Show do
     {:noreply,
      socket
      |> assign(:show_document_modal, false)
-     |> assign(:document_form, to_form(%{"title" => ""}))}
+     |> assign(:document_form, to_form(%{"title" => ""}, as: "document-form"))}
   end
 
   @impl true
-  def handle_event("create_document", %{"title" => title}, socket) do
+  def handle_event("create_document", %{"document-form" => %{"title" => title}}, socket) do
     user = socket.assigns.current_scope.user
     workspace_id = socket.assigns.workspace.id
     project_id = socket.assigns.project.id
@@ -246,14 +259,14 @@ defmodule JargaWeb.AppLive.Projects.Show do
          socket
          |> assign(:documents, documents)
          |> assign(:show_document_modal, false)
-         |> assign(:document_form, to_form(%{"title" => ""}))
+         |> assign(:document_form, to_form(%{"title" => ""}, as: "document-form"))
          |> put_flash(:info, "Document created successfully")
          |> push_navigate(
            to: ~p"/app/workspaces/#{socket.assigns.workspace.slug}/documents/#{document.slug}"
          )}
 
       {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, assign(socket, document_form: to_form(changeset))}
+        {:noreply, assign(socket, document_form: to_form(changeset, as: "document-form"))}
 
       {:error, _reason} ->
         {:noreply, put_flash(socket, :error, "Failed to create document")}
