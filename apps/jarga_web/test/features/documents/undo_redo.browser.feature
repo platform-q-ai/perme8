@@ -12,17 +12,17 @@ Feature: Undo/Redo in Collaborative Editor
   # Seeded documents used in this file:
   #   "Product Spec" - public, by alice (slug: product-spec)
   #
-  # @wip: Multi-user scenarios require two simultaneous browser sessions.
+  # Multi-browser scenarios use named sessions for independent browser contexts.
+  # Yjs UndoManager scopes undo/redo to the local user's operations.
   #
   # Migrated from: apps/jarga_web/test/wallaby/undo_redo_test.exs
 
-  @wip
   Scenario: Undo reverts only local user's changes
     # Wallaby: "undo reverts only local user's changes"
-    # Multi-user: User A types "Hello", User B types "World".
+    # User A types "Hello", User B types "World".
     # User A presses Ctrl+Z — "Hello" disappears but "World" remains.
-    # Yjs scoped undo only reverts the local user's operations.
-    Given I am on "${baseUrl}/users/log-in"
+    Given I open browser session "alice"
+    And I am on "${baseUrl}/users/log-in"
     And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
@@ -30,10 +30,42 @@ Feature: Undo/Redo in Collaborative Editor
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/product-spec"
     And I wait for network idle
     Then "#editor-container" should be visible
-    # TODO (multi-browser): User A types "Hello", User B types "World"
-    # TODO (multi-browser): User A presses Ctrl+Z
-    # TODO (multi-browser): User A's editor does NOT contain "Hello" but contains "World"
-    # TODO (multi-browser): User B's editor still contains "World"
+    When I click ".ProseMirror"
+    And I press "Control+a"
+    And I press "Backspace"
+    Given I open browser session "bob"
+    And I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
+    When I fill "#login_form_password_email" with "${adminEmail}"
+    And I fill "#login_form_password_password" with "${adminPassword}"
+    And I click the "Log in and stay logged in" button and wait for navigation
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/product-spec"
+    And I wait for network idle
+    Then "#editor-container" should be visible
+    # Alice types "Hello"
+    When I switch to browser session "alice"
+    And I click ".ProseMirror"
+    And I type "Hello" into ".ProseMirror"
+    And I wait for 2 seconds
+    # Bob types " World" on a new line
+    When I switch to browser session "bob"
+    And I click ".ProseMirror"
+    And I press "End"
+    And I press "Enter"
+    And I type "World" into ".ProseMirror"
+    And I wait for 2 seconds
+    # Verify both contributions exist
+    When I switch to browser session "alice"
+    Then ".ProseMirror" should contain text "Hello"
+    And ".ProseMirror" should contain text "World"
+    # Alice presses Ctrl+Z — only "Hello" should be undone
+    When I press "Control+z"
+    And I wait for 2 seconds
+    Then I should not see "Hello"
+    And ".ProseMirror" should contain text "World"
+    # Bob's editor should also show "World" without "Hello"
+    When I switch to browser session "bob"
+    Then ".ProseMirror" should contain text "World"
 
   Scenario: Redo re-applies local user's undone changes
     # Wallaby: "redo re-applies local user's undone changes"
@@ -56,14 +88,13 @@ Feature: Undo/Redo in Collaborative Editor
     When I press "Control+Shift+z"
     Then ".ProseMirror" should contain text "Hello"
 
-  @wip
   Scenario: Undo does not affect other users' undo stacks
     # Wallaby: "undo does not affect other users' undo stacks"
-    # Multi-user: User A types "A", User B types "B". Both see "A" and "B".
-    # User A undoes — "A" gone, "B" remains for both.
-    # User B undoes independently — "B" gone too.
-    # Each user's undo stack is independent (Yjs UndoManager).
-    Given I am on "${baseUrl}/users/log-in"
+    # User A types "A text", User B types "B text". Both see both.
+    # User A undoes — "A text" gone, "B text" remains for both.
+    # User B undoes independently — "B text" gone too.
+    Given I open browser session "alice"
+    And I am on "${baseUrl}/users/log-in"
     And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
@@ -71,19 +102,54 @@ Feature: Undo/Redo in Collaborative Editor
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/product-spec"
     And I wait for network idle
     Then "#editor-container" should be visible
-    # TODO (multi-browser): User A types "A", User B types "B"
-    # TODO (multi-browser): Both editors contain "A" and "B"
-    # TODO (multi-browser): User A presses Ctrl+Z — "A" gone, "B" remains (both users)
-    # TODO (multi-browser): User B presses Ctrl+Z — "B" gone (independent stack)
+    When I click ".ProseMirror"
+    And I press "Control+a"
+    And I press "Backspace"
+    Given I open browser session "bob"
+    And I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
+    When I fill "#login_form_password_email" with "${adminEmail}"
+    And I fill "#login_form_password_password" with "${adminPassword}"
+    And I click the "Log in and stay logged in" button and wait for navigation
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/product-spec"
+    And I wait for network idle
+    Then "#editor-container" should be visible
+    # Alice types "A text"
+    When I switch to browser session "alice"
+    And I click ".ProseMirror"
+    And I type "A text" into ".ProseMirror"
+    And I wait for 2 seconds
+    # Bob types "B text" on new line
+    When I switch to browser session "bob"
+    And I click ".ProseMirror"
+    And I press "End"
+    And I press "Enter"
+    And I type "B text" into ".ProseMirror"
+    And I wait for 2 seconds
+    # Both editors contain both
+    When I switch to browser session "alice"
+    Then ".ProseMirror" should contain text "A text"
+    And ".ProseMirror" should contain text "B text"
+    # Alice undoes — "A text" gone, "B text" remains
+    When I press "Control+z"
+    And I wait for 2 seconds
+    Then I should not see "A text"
+    And ".ProseMirror" should contain text "B text"
+    # Bob's view: "A text" gone, "B text" remains
+    When I switch to browser session "bob"
+    Then ".ProseMirror" should contain text "B text"
+    # Bob undoes independently — "B text" gone
+    When I press "Control+z"
+    And I wait for 2 seconds
+    Then I should not see "B text"
 
-  @wip
   Scenario: Undo works correctly after remote changes arrive
     # Wallaby: "undo works correctly after remote changes"
-    # Multi-user: User A types "Hello", syncs. User B types "World", syncs.
-    # User A types "!", syncs. User A undoes — their entire contribution
-    # ("Hello!") is removed, only "World" remains. Yjs batches rapid
-    # same-user operations into a single undo step.
-    Given I am on "${baseUrl}/users/log-in"
+    # User A types "Hello", syncs. User B types "World", syncs.
+    # User A types " Again", syncs. User A undoes — only their contributions
+    # are removed, "World" remains.
+    Given I open browser session "alice"
+    And I am on "${baseUrl}/users/log-in"
     And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
@@ -91,9 +157,39 @@ Feature: Undo/Redo in Collaborative Editor
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/product-spec"
     And I wait for network idle
     Then "#editor-container" should be visible
-    # TODO (multi-browser): User A types "Hello", wait for sync
-    # TODO (multi-browser): User B types "World", wait for sync
-    # TODO (multi-browser): User A types "!", wait for sync
-    # TODO (multi-browser): Both editors contain "Hello", "World", "!"
-    # TODO (multi-browser): User A presses Ctrl+Z
-    # TODO (multi-browser): Both editors: no "Hello", no "!", only "World" remains
+    When I click ".ProseMirror"
+    And I press "Control+a"
+    And I press "Backspace"
+    Given I open browser session "bob"
+    And I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
+    When I fill "#login_form_password_email" with "${adminEmail}"
+    And I fill "#login_form_password_password" with "${adminPassword}"
+    And I click the "Log in and stay logged in" button and wait for navigation
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/product-spec"
+    And I wait for network idle
+    Then "#editor-container" should be visible
+    # Alice types "Hello"
+    When I switch to browser session "alice"
+    And I click ".ProseMirror"
+    And I type "Hello" into ".ProseMirror"
+    And I wait for 2 seconds
+    # Bob types "World" on new line
+    When I switch to browser session "bob"
+    And I click ".ProseMirror"
+    And I press "End"
+    And I press "Enter"
+    And I type "World" into ".ProseMirror"
+    And I wait for 2 seconds
+    # Alice types " Again" after her "Hello"
+    When I switch to browser session "alice"
+    And I click ".ProseMirror"
+    And I press "Home"
+    And I press "End"
+    And I type " Again" into ".ProseMirror"
+    And I wait for 2 seconds
+    # Alice undoes — her contributions should be removed
+    When I press "Control+z"
+    And I wait for 2 seconds
+    Then I should not see "Again"
+    And ".ProseMirror" should contain text "World"

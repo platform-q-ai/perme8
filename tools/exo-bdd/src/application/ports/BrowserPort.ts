@@ -58,6 +58,12 @@ export interface BrowserPort {
   // Context management
   clearContext(): Promise<void>
 
+  // Session management (multi-browser)
+  createSession(name: string): Promise<void>
+  switchTo(name: string): void
+  readonly activeSessionName: string | null
+  readonly sessionNames: string[]
+
   // Lifecycle
   dispose(): Promise<void>
 }

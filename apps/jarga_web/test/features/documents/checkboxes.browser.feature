@@ -80,13 +80,12 @@ Feature: GFM Checkboxes in Editor
     When I click "li[data-item-type='task'] p"
     Then "li[data-item-type='task']" should have attribute "data-checked" with value "false"
 
-  @wip
   Scenario: Checkbox state syncs between users
     # Wallaby: "checkbox state syncs between users"
-    # Multi-user: User A creates a checkbox, User B sees it unchecked.
+    # User A creates a checkbox, User B sees it unchecked.
     # User A checks it; both users see it checked.
-    # Requires two simultaneous browser sessions.
-    Given I am on "${baseUrl}/users/log-in"
+    Given I open browser session "alice"
+    And I am on "${baseUrl}/users/log-in"
     And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
@@ -94,10 +93,32 @@ Feature: GFM Checkboxes in Editor
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/product-spec"
     And I wait for network idle
     Then "#editor-container" should be visible
-    # TODO (multi-browser): User A types "- [ ] Task item"
-    # TODO (multi-browser): User B sees li[data-item-type='task'][data-checked='false']
-    # TODO (multi-browser): User A clicks checkbox area
-    # TODO (multi-browser): Both users see data-checked='true'
+    When I click ".ProseMirror"
+    And I press "Control+a"
+    And I press "Backspace"
+    # Alice types a task list item
+    And I type "- [ ] Task item" into ".ProseMirror"
+    And I wait for 2 seconds
+    # Bob opens the same document
+    Given I open browser session "bob"
+    And I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
+    When I fill "#login_form_password_email" with "${adminEmail}"
+    And I fill "#login_form_password_password" with "${adminPassword}"
+    And I click the "Log in and stay logged in" button and wait for navigation
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/product-spec"
+    And I wait for network idle
+    Then "#editor-container" should be visible
+    # Bob should see the unchecked task
+    And "li[data-item-type='task']" should have attribute "data-checked" with value "false"
+    # Alice checks the checkbox
+    When I switch to browser session "alice"
+    And I click "li[data-item-type='task']" at position 5,5
+    And I wait for 2 seconds
+    # Both should see it checked
+    Then "li[data-item-type='task']" should have attribute "data-checked" with value "true"
+    When I switch to browser session "bob"
+    Then "li[data-item-type='task']" should have attribute "data-checked" with value "true"
 
   Scenario: Multiple checkboxes maintain independent state
     # Wallaby: "multiple checkboxes maintain independent state"

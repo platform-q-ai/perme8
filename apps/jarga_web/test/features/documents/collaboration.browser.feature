@@ -76,19 +76,19 @@ Feature: Document Collaboration
     And I wait for network idle
     Then I should see "Pinned"
 
-  # ── Multi-user collaboration (requires multiple browsers) ─────────
+  # ── Multi-user collaboration (multiple browser sessions) ──────────
   #
-  # @wip: All multi-user scenarios require two simultaneous browser sessions.
-  # The current exo-bdd single-browser runner cannot support this.
+  # Multi-browser scenarios use named sessions: "I open browser session {name}"
+  # creates a separate BrowserContext+Page with independent cookies/localStorage.
+  # "I switch to browser session {name}" changes which session receives commands.
   #
   # Migrated from: apps/jarga_web/test/wallaby/document_collaboration_test.exs
 
-  @wip
   Scenario: Two users can edit the same document simultaneously
     # Wallaby: "two users can edit the same document simultaneously"
-    # Multi-user: User A types "Hello", User B sees it. User B types " World",
-    # both sessions contain both "Hello" and "World".
-    Given I am on "${baseUrl}/users/log-in"
+    # Session "alice": owner logs in and opens document
+    Given I open browser session "alice"
+    And I am on "${baseUrl}/users/log-in"
     And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
@@ -96,18 +96,44 @@ Feature: Document Collaboration
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/product-spec"
     And I wait for network idle
     Then "#editor-container" should be visible
-    # TODO (multi-browser): User B opens same doc in second session
-    # TODO (multi-browser): User A types "Hello", User B sees it
-    # TODO (multi-browser): User B types " World"
-    # TODO (multi-browser): Both editors contain "Hello" and "World"
+    When I click ".ProseMirror"
+    And I press "Control+a"
+    And I press "Backspace"
+    # Session "bob": admin logs in and opens same document
+    Given I open browser session "bob"
+    And I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
+    When I fill "#login_form_password_email" with "${adminEmail}"
+    And I fill "#login_form_password_password" with "${adminPassword}"
+    And I click the "Log in and stay logged in" button and wait for navigation
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/product-spec"
+    And I wait for network idle
+    Then "#editor-container" should be visible
+    # Alice types "Hello"
+    When I switch to browser session "alice"
+    And I click ".ProseMirror"
+    And I type "Hello" into ".ProseMirror"
+    And I wait for 2 seconds
+    # Bob should see "Hello" via Yjs sync
+    When I switch to browser session "bob"
+    Then ".ProseMirror" should contain text "Hello"
+    # Bob types " World"
+    When I click ".ProseMirror"
+    And I press "End"
+    And I type " World" into ".ProseMirror"
+    And I wait for 2 seconds
+    # Both sessions should contain both contributions
+    Then ".ProseMirror" should contain text "Hello"
+    And ".ProseMirror" should contain text "World"
+    When I switch to browser session "alice"
+    Then ".ProseMirror" should contain text "Hello"
+    And ".ProseMirror" should contain text "World"
 
-  @wip
   Scenario: Concurrent edits converge to same state
     # Wallaby: "concurrent edits converge to same state"
-    # Multi-user: User A types "Alice's text" and User B types "Bob's text"
-    # at the same time. Yjs CRDT ensures both contributions are preserved
-    # in both sessions.
-    Given I am on "${baseUrl}/users/log-in"
+    # Both users type content; Yjs CRDT ensures both contributions are preserved.
+    Given I open browser session "alice"
+    And I am on "${baseUrl}/users/log-in"
     And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
@@ -115,8 +141,35 @@ Feature: Document Collaboration
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/product-spec"
     And I wait for network idle
     Then "#editor-container" should be visible
-    # TODO (multi-browser): Both users type concurrently
-    # TODO (multi-browser): Both editors contain both contributions (CRDT convergence)
+    When I click ".ProseMirror"
+    And I press "Control+a"
+    And I press "Backspace"
+    Given I open browser session "bob"
+    And I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
+    When I fill "#login_form_password_email" with "${adminEmail}"
+    And I fill "#login_form_password_password" with "${adminPassword}"
+    And I click the "Log in and stay logged in" button and wait for navigation
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/product-spec"
+    And I wait for network idle
+    Then "#editor-container" should be visible
+    # Alice types her content
+    When I switch to browser session "alice"
+    And I click ".ProseMirror"
+    And I type "Alice was here" into ".ProseMirror"
+    # Bob types his content (on same line or new paragraph)
+    When I switch to browser session "bob"
+    And I click ".ProseMirror"
+    And I press "End"
+    And I press "Enter"
+    And I type "Bob was here" into ".ProseMirror"
+    And I wait for 2 seconds
+    # Both sessions should contain both contributions (CRDT convergence)
+    Then ".ProseMirror" should contain text "Alice was here"
+    And ".ProseMirror" should contain text "Bob was here"
+    When I switch to browser session "alice"
+    Then ".ProseMirror" should contain text "Alice was here"
+    And ".ProseMirror" should contain text "Bob was here"
 
   Scenario: Document saves persist after page refresh
     # Wallaby: "document saves persist after page refresh"
@@ -139,12 +192,12 @@ Feature: Document Collaboration
     Then "#editor-container" should be visible
     And ".ProseMirror" should contain text "Persistent content after refresh"
 
-  @wip
   Scenario: Late-joining user receives full document state
     # Wallaby: "late-joining user receives full document state"
-    # Multi-user: User A opens document and types content. User B joins later
+    # User A opens document and types content. User B joins later
     # and should see everything User A typed (Yjs state sync on connect).
-    Given I am on "${baseUrl}/users/log-in"
+    Given I open browser session "alice"
+    And I am on "${baseUrl}/users/log-in"
     And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
@@ -152,15 +205,29 @@ Feature: Document Collaboration
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/product-spec"
     And I wait for network idle
     Then "#editor-container" should be visible
-    # TODO (multi-browser): User A types "Early content from Alice"
-    # TODO (multi-browser): User B opens document later
-    # TODO (multi-browser): User B's editor contains "Early content from Alice"
+    When I click ".ProseMirror"
+    And I press "Control+a"
+    And I press "Backspace"
+    And I type "Early content from Alice" into ".ProseMirror"
+    And I wait for 2 seconds
+    # Bob joins later — should receive full state via Yjs sync
+    Given I open browser session "bob"
+    And I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
+    When I fill "#login_form_password_email" with "${adminEmail}"
+    And I fill "#login_form_password_password" with "${adminPassword}"
+    And I click the "Log in and stay logged in" button and wait for navigation
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/product-spec"
+    And I wait for network idle
+    Then "#editor-container" should be visible
+    And ".ProseMirror" should contain text "Early content from Alice"
 
   @wip
   Scenario: User sees presence indicators for other collaborators
     # Presence indicators (avatars, names) for connected users in the editor.
-    # Requires multiple simultaneous sessions.
-    Given I am on "${baseUrl}/users/log-in"
+    # @wip: Presence UI not yet implemented in the editor.
+    Given I open browser session "alice"
+    And I am on "${baseUrl}/users/log-in"
     And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
@@ -168,5 +235,13 @@ Feature: Document Collaboration
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/product-spec"
     And I wait for network idle
     Then "#editor-container" should be visible
-    # TODO (multi-browser): Both users open document
-    # TODO (multi-browser): Presence indicator shows both users
+    # TODO: Assert presence indicator shows Alice
+    Given I open browser session "bob"
+    And I am on "${baseUrl}/users/log-in"
+    And I wait for network idle
+    When I fill "#login_form_password_email" with "${adminEmail}"
+    And I fill "#login_form_password_password" with "${adminPassword}"
+    And I click the "Log in and stay logged in" button and wait for navigation
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/product-spec"
+    And I wait for network idle
+    # TODO: Assert presence indicator shows both Alice and Bob
