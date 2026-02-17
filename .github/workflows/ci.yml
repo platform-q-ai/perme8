@@ -201,6 +201,7 @@ jobs:
 
           # All valid app/domain combos with their metadata
           ALL_COMBOS = [
+              {"app": "agents",    "domain": "http",     "config_name": "agents",                      "timeout": 10},
               {"app": "alkali",    "domain": "cli",      "config_name": "alkali",                      "timeout": 5},
               {"app": "erm",       "domain": "http",     "config_name": "entity-relationship-manager", "timeout": 10},
               {"app": "erm",       "domain": "security", "config_name": "entity-relationship-manager", "timeout": 15},
@@ -214,6 +215,7 @@ jobs:
           # Dependency tree: if a dependency changes, all dependents need testing
           # identity <- agents, jarga, jarga_api, erm (and transitively jarga_web)
           # agents <- jarga, jarga_web
+          # erm <- agents
           # jarga <- jarga_web, jarga_api, erm
           def apps_needing_tests():
               """Return set of app names (matrix-style) that need testing."""
@@ -224,9 +226,9 @@ jobs:
               if changed.get("CHANGED_ALKALI") == "true":
                   needs_test.add("alkali")
               if changed.get("CHANGED_IDENTITY") == "true":
-                  needs_test.update(["identity", "jarga-api", "erm", "jarga-web"])
+                  needs_test.update(["identity", "agents", "jarga-api", "erm", "jarga-web"])
               if changed.get("CHANGED_AGENTS") == "true":
-                  needs_test.update(["jarga-web"])
+                  needs_test.update(["agents", "jarga-web"])
               if changed.get("CHANGED_JARGA") == "true":
                   needs_test.update(["jarga-web", "jarga-api", "erm"])
               if changed.get("CHANGED_JARGA_API") == "true":
@@ -234,7 +236,7 @@ jobs:
               if changed.get("CHANGED_JARGA_WEB") == "true":
                   needs_test.add("jarga-web")
               if changed.get("CHANGED_ERM") == "true":
-                  needs_test.add("erm")
+                  needs_test.update(["erm", "agents"])
 
               return needs_test
 
