@@ -168,7 +168,14 @@ eve =
     last_name: "Tester"
   })
 
-IO.puts("[exo-seeds-web] Created users: alice, bob, charlie, diana, eve")
+frank =
+  create_confirmed_user.(%{
+    email: "frank@example.com",
+    first_name: "Frank",
+    last_name: "Tester"
+  })
+
+IO.puts("[exo-seeds-web] Created users: alice, bob, charlie, diana, eve, frank")
 
 # ---------------------------------------------------------------------------
 # 2. Create workspaces
@@ -196,7 +203,19 @@ IO.puts("[exo-seeds-web] Created users: alice, bob, charlie, diana, eve")
     }
   )
 
-IO.puts("[exo-seeds-web] Created workspaces: product-team, engineering")
+# Throwaway workspace for deletion test (workspaces/crud.browser.feature)
+{:ok, throwaway_ws} =
+  create_workspace_with_owner.(
+    alice,
+    %{
+      name: "Throwaway Workspace",
+      slug: "throwaway-workspace",
+      description: "Workspace created solely for deletion testing",
+      color: "#EF4444"
+    }
+  )
+
+IO.puts("[exo-seeds-web] Created workspaces: product-team, engineering, throwaway-workspace")
 
 # ---------------------------------------------------------------------------
 # 3. Add members to workspaces
@@ -205,9 +224,12 @@ IO.puts("[exo-seeds-web] Created workspaces: product-team, engineering")
 add_member_directly.(product_team.id, bob, :admin)
 add_member_directly.(product_team.id, charlie, :member)
 add_member_directly.(product_team.id, diana, :guest)
+add_member_directly.(product_team.id, frank, :member)
 # eve is NOT added — she is a non-member
 
-IO.puts("[exo-seeds-web] Added workspace memberships (bob=admin, charlie=member, diana=guest)")
+IO.puts(
+  "[exo-seeds-web] Added workspace memberships (bob=admin, charlie=member, diana=guest, frank=member)"
+)
 
 # ---------------------------------------------------------------------------
 # 4. Create projects
@@ -227,7 +249,15 @@ IO.puts("[exo-seeds-web] Added workspace memberships (bob=admin, charlie=member,
     color: "#3B82F6"
   })
 
-IO.puts("[exo-seeds-web] Created projects: q1-launch, mobile-app")
+# Throwaway project for deletion test (projects/crud.browser.feature)
+{:ok, _throwaway_project} =
+  Projects.create_project(alice, product_team.id, %{
+    name: "Throwaway Project",
+    description: "Project created solely for deletion testing",
+    color: "#EF4444"
+  })
+
+IO.puts("[exo-seeds-web] Created projects: q1-launch, mobile-app, throwaway-project")
 
 # ---------------------------------------------------------------------------
 # 5. Create documents

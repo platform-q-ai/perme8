@@ -88,6 +88,15 @@ export async function uploadFile(context: InteractionContext, filePath: string, 
   await context.browser.uploadFile(context.interpolate(selector), context.interpolate(filePath))
 }
 
+// Browser Dialogs (confirm/alert/prompt)
+export async function acceptNextDialog(context: InteractionContext): Promise<void> {
+  context.browser.page.once('dialog', (dialog) => dialog.accept())
+}
+
+export async function dismissNextDialog(context: InteractionContext): Promise<void> {
+  context.browser.page.once('dialog', (dialog) => dialog.dismiss())
+}
+
 // Hovering/Focus
 export async function hoverOver(context: InteractionContext, selector: string): Promise<void> {
   await context.browser.hover(context.interpolate(selector))
@@ -200,6 +209,15 @@ When<TestWorld>('I press {string}', async function (key: string) {
 
 When<TestWorld>('I upload {string} to {string}', async function (filePath: string, selector: string) {
   await uploadFile(this, filePath, selector)
+})
+
+// Browser Dialogs
+When<TestWorld>('I accept the next browser dialog', async function () {
+  await acceptNextDialog(this)
+})
+
+When<TestWorld>('I dismiss the next browser dialog', async function () {
+  await dismissNextDialog(this)
 })
 
 // Hovering/Focus
