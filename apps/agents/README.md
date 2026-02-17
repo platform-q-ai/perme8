@@ -66,6 +66,10 @@ mix test apps/agents/test
 bun run tools/exo-bdd/src/cli/index.ts run \
   --config apps/agents/test/exo-bdd-agents.config.ts --adapter http
 
+# Run exo-bdd security tests (16 scenarios, requires ZAP)
+bun run tools/exo-bdd/src/cli/index.ts run \
+  --config apps/agents/test/exo-bdd-agents.config.ts --adapter security
+
 # Run with tag filter
 bun run tools/exo-bdd/src/cli/index.ts run \
   --config apps/agents/test/exo-bdd-agents.config.ts \
@@ -81,6 +85,7 @@ bun run tools/exo-bdd/src/cli/index.ts run \
 | Application use cases | 120 | CRUD, bootstrap, create, search, traverse, relate, update, auth |
 | Infrastructure | 124 | MCP tools, auth plug, router, server, ERM gateway |
 | Exo-BDD HTTP | 26 scenarios | End-to-end MCP protocol tests |
+| Exo-BDD Security | 16 scenarios | ZAP security scans (SQLi, XSS, headers, baseline) |
 
 ## Configuration
 
