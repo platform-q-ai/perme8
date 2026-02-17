@@ -277,6 +277,43 @@ describe('AdapterFactory', () => {
     expect(mockHttpContext.dispose).toHaveBeenCalled()
   })
 
+  test('adapterFilter only creates the matching adapter', async () => {
+    const adapters = await createAdapters(fullConfig, { adapterFilter: 'security' })
+
+    expect(adapters.security).toBeDefined()
+    expect(adapters.http).toBeUndefined()
+    expect(adapters.browser).toBeUndefined()
+    expect(adapters.cli).toBeUndefined()
+    expect(adapters.graph).toBeUndefined()
+
+    // browser.initialize (chromium.launch) should NOT have been called
+    expect(mockLaunch).not.toHaveBeenCalled()
+
+    await adapters.dispose()
+  })
+
+  test('adapterFilter with no matching config adapter creates nothing', async () => {
+    // alkali-like config with only CLI
+    const adapters = await createAdapters(configWith('cli'), { adapterFilter: 'browser' })
+
+    expect(adapters.browser).toBeUndefined()
+    expect(adapters.cli).toBeUndefined()
+
+    await adapters.dispose()
+  })
+
+  test('no adapterFilter creates all configured adapters (backward compat)', async () => {
+    const adapters = await createAdapters(fullConfig)
+
+    expect(adapters.http).toBeDefined()
+    expect(adapters.browser).toBeDefined()
+    expect(adapters.cli).toBeDefined()
+    expect(adapters.graph).toBeDefined()
+    expect(adapters.security).toBeDefined()
+
+    await adapters.dispose()
+  })
+
   test('dispose calls all dispose in parallel', async () => {
     const disposeOrder: string[] = []
     let httpResolve!: () => void

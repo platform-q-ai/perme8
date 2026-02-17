@@ -448,4 +448,17 @@ describe('generateSetupContent', () => {
 
     expect(content).toContain('setDefaultTimeout')
   })
+
+  test('passes adapterFilter to createAdapters when provided', () => {
+    const content = generateSetupContent('/project/bdd/config.ts', '/tools/exo-bdd', undefined, 'security')
+
+    expect(content).toContain("createAdapters(config, { adapterFilter: 'security' })")
+  })
+
+  test('does not pass adapterFilter when not provided', () => {
+    const content = generateSetupContent('/project/bdd/config.ts', '/tools/exo-bdd')
+
+    expect(content).toContain('createAdapters(config)')
+    expect(content).not.toContain('adapterFilter')
+  })
 })

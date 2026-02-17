@@ -13,8 +13,18 @@ interface Disposable {
   dispose(): Promise<void>
 }
 
-export async function createAdapters(config: ExoBddConfig): Promise<Adapters> {
+export interface CreateAdaptersOptions {
+  /** When set, only the adapter matching this name is initialised. */
+  adapterFilter?: string
+}
+
+export async function createAdapters(
+  config: ExoBddConfig,
+  options?: CreateAdaptersOptions,
+): Promise<Adapters> {
   const created: Disposable[] = []
+  const filter = options?.adapterFilter
+  const shouldCreate = (name: string) => !filter || filter === name
 
   try {
     let http: PlaywrightHttpAdapter | undefined
@@ -23,30 +33,30 @@ export async function createAdapters(config: ExoBddConfig): Promise<Adapters> {
     let graph: Neo4jGraphAdapter | undefined
     let security: ZapSecurityAdapter | undefined
 
-    if (config.adapters.http) {
+    if (config.adapters.http && shouldCreate('http')) {
       http = new PlaywrightHttpAdapter(config.adapters.http)
       await http.initialize()
       created.push(http)
     }
 
-    if (config.adapters.browser) {
+    if (config.adapters.browser && shouldCreate('browser')) {
       browser = new PlaywrightBrowserAdapter(config.adapters.browser)
       await browser.initialize()
       created.push(browser)
     }
 
-    if (config.adapters.cli) {
+    if (config.adapters.cli && shouldCreate('cli')) {
       cli = new BunCliAdapter(config.adapters.cli)
       created.push(cli)
     }
 
-    if (config.adapters.graph) {
+    if (config.adapters.graph && shouldCreate('graph')) {
       graph = new Neo4jGraphAdapter(config.adapters.graph)
       await graph.connect()
       created.push(graph)
     }
 
-    if (config.adapters.security) {
+    if (config.adapters.security && shouldCreate('security')) {
       security = new ZapSecurityAdapter(config.adapters.security)
       created.push(security)
     }
