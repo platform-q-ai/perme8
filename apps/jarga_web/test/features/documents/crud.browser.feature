@@ -34,8 +34,7 @@ Feature: Document CRUD Operations
     And I click the "New Document" button
     And I wait for ".modal-open" to be visible
     And I fill "#document-form_title" with "Product Roadmap"
-    And I click the "Create Document" button
-    And I wait for network idle
+    And I click the "Create Document" button and wait for navigation
     Then the URL should contain "/documents/product-roadmap"
     And I should see "Product Roadmap"
 
@@ -50,8 +49,7 @@ Feature: Document CRUD Operations
     And I click the "New Document" button
     And I wait for ".modal-open" to be visible
     And I fill "#document-form_title" with "Architecture Doc"
-    And I click the "Create Document" button
-    And I wait for network idle
+    And I click the "Create Document" button and wait for navigation
     Then the URL should contain "/documents/"
     And I should see "Architecture Doc"
 
@@ -66,8 +64,7 @@ Feature: Document CRUD Operations
     And I click the "New Document" button
     And I wait for ".modal-open" to be visible
     And I fill "#document-form_title" with "Meeting Notes"
-    And I click the "Create Document" button
-    And I wait for network idle
+    And I click the "Create Document" button and wait for navigation
     Then the URL should contain "/documents/"
     And I should see "Meeting Notes"
 
@@ -92,8 +89,7 @@ Feature: Document CRUD Operations
     And I click the "New Document" button
     And I wait for ".modal-open" to be visible
     And I fill "#document-form_title" with "Product & Services (2024)"
-    And I click the "Create Document" button
-    And I wait for network idle
+    And I click the "Create Document" button and wait for navigation
     Then the URL should contain "/documents/"
     And I should see "Product & Services (2024)"
 
@@ -166,13 +162,13 @@ Feature: Document CRUD Operations
     Then I should see "Document is now private"
 
   Scenario: Guest cannot access kebab menu
-    # Precondition: "Public Doc" is a public document (seeded)
+    # Precondition: "Team Guidelines" is a public document (seeded, slug: team-guidelines)
     Given I am on "${baseUrl}/users/log-in"
     And I wait for network idle
     When I fill "#login_form_password_email" with "${guestEmail}"
     And I fill "#login_form_password_password" with "${guestPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
-    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/public-doc"
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/team-guidelines"
     And I wait for network idle
     Then I should see "read-only mode"
     And ".dropdown button[aria-label='Actions menu']" should not exist
@@ -191,7 +187,7 @@ Feature: Document CRUD Operations
     And I click ".dropdown button[aria-label='Actions menu']"
     And I wait for 1 seconds
     And I click the "Pin Document" button
-    And I wait for network idle
+    And I wait for 2 seconds
     Then I should see "Document pinned"
 
   Scenario: Owner unpins a document
@@ -210,13 +206,13 @@ Feature: Document CRUD Operations
     Then I should see "Document unpinned"
 
   Scenario: Guest cannot pin documents
-    # Precondition: "Public Doc" is a public document (seeded)
+    # Precondition: "Team Guidelines" is a public document (seeded, slug: team-guidelines)
     Given I am on "${baseUrl}/users/log-in"
     And I wait for network idle
     When I fill "#login_form_password_email" with "${guestEmail}"
     And I fill "#login_form_password_password" with "${guestPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
-    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/public-doc"
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/team-guidelines"
     And I wait for network idle
     Then ".dropdown button[aria-label='Actions menu']" should not exist
 
@@ -243,13 +239,13 @@ Feature: Document CRUD Operations
     And I should not see "Old Doc"
 
   Scenario: Guest cannot delete documents
-    # Precondition: "Public Doc" is a public document (seeded)
+    # Precondition: "Team Guidelines" is a public document (seeded, slug: team-guidelines)
     Given I am on "${baseUrl}/users/log-in"
     And I wait for network idle
     When I fill "#login_form_password_email" with "${guestEmail}"
     And I fill "#login_form_password_password" with "${guestPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
-    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/public-doc"
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/team-guidelines"
     And I wait for network idle
     Then ".dropdown button[aria-label='Actions menu']" should not exist
     And I should not see "Delete Document"

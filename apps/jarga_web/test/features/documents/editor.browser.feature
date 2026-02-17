@@ -47,9 +47,9 @@ Feature: Document Editor
     When I fill "#login_form_password_email" with "${guestEmail}"
     And I fill "#login_form_password_password" with "${guestPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
-    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/public-doc"
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/team-guidelines"
     And I wait for network idle
-    Then I should see "Public Doc"
+    Then I should see "Team Guidelines"
     And I should see "read-only mode"
     And "#editor-container" should have attribute "data-readonly" with value "true"
 
@@ -71,7 +71,7 @@ Feature: Document Editor
     When I fill "#login_form_password_email" with "${guestEmail}"
     And I fill "#login_form_password_password" with "${guestPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
-    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/public-doc"
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/team-guidelines"
     And I wait for network idle
     And I click "h1"
     And I wait for 1 seconds

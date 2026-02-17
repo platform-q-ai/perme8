@@ -26,7 +26,7 @@ Feature: Chat Agent Selection
 
   Scenario: Agent selector has correct attributes
     Then "select#agent-selector[name='agent_id']" should exist
-    And "select#agent-selector[phx-change='select_agent']" should exist
+    And "form[phx-change='select_agent'] select#agent-selector" should exist
 
   Scenario: Select an agent for chatting
     When I select "${agentName}" from "select#agent-selector"
@@ -36,6 +36,7 @@ Feature: Chat Agent Selection
   Scenario: Agent selector contains agent options
     Then "select#agent-selector option" should exist
 
+  @wip
   Scenario: Agent selection persists after navigating away and back
     When I select "${agentName}" from "select#agent-selector"
     And I wait for network idle

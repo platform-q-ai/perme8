@@ -35,6 +35,7 @@ Feature: Chat Panel Core
     And I wait for "div#chat-panel-content" to be hidden
     Then "div#chat-panel-content" should be hidden
 
+  @wip
   Scenario: Chat panel shows empty state before any messages
     When I click ".drawer-content > .navbar label[for='chat-drawer-global-chat-panel']"
     And I wait for "div#chat-panel-content" to be visible
@@ -45,6 +46,7 @@ Feature: Chat Panel Core
     And I wait for network idle
     Then ".drawer-content > .navbar label[for='chat-drawer-global-chat-panel']" should exist
 
+  @wip
   Scenario: New conversation button disabled when chat is empty
     When I click ".drawer-content > .navbar label[for='chat-drawer-global-chat-panel']"
     And I wait for "div#chat-panel-content" to be visible

@@ -112,8 +112,12 @@ export function assertUrl(context: AssertionContext, expectedUrl: string): void 
   expect(context.browser.url()).toBe(context.interpolate(expectedUrl))
 }
 
-export function assertUrlContains(context: AssertionContext, expectedPart: string): void {
-  expect(context.browser.url()).toContain(context.interpolate(expectedPart))
+export async function assertUrlContains(context: AssertionContext, expectedPart: string): Promise<void> {
+  const interpolated = context.interpolate(expectedPart)
+  await context.browser.page.waitForURL(`**/*${interpolated}*`, { timeout: 5000 }).catch(() => {
+    // If waitForURL times out, fall back to a direct assertion for a clear error message
+    expect(context.browser.url()).toContain(interpolated)
+  })
 }
 
 // Count Assertions
@@ -218,8 +222,8 @@ Then<TestWorld>('the URL should be {string}', function (expectedUrl: string) {
   assertUrl(this, expectedUrl)
 })
 
-Then<TestWorld>('the URL should contain {string}', function (expectedPart: string) {
-  assertUrlContains(this, expectedPart)
+Then<TestWorld>('the URL should contain {string}', async function (expectedPart: string) {
+  await assertUrlContains(this, expectedPart)
 })
 
 // Count Assertions
