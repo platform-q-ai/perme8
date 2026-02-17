@@ -32,31 +32,38 @@ jobs:
       - uses: dorny/paths-filter@v3
         id: filter
         with:
+          # Source extensions that affect compilation, tests, or runtime.
+          # Excludes .md, .gitignore, LICENSE and other non-code files.
           filters: |
             exo_bdd:
-              - 'tools/exo-bdd/**'
-              - '!tools/exo-bdd/**/*.md'
+              - 'tools/exo-bdd/**/*.{ts,js,json,yaml,yml}'
+              - 'tools/exo-bdd/**/bun.lockb'
             umbrella:
-              - '**'
-              - '!tools/exo-bdd/**'
-              - '!**/*.md'
-              - '!docs/**'
-              - '!LICENSE*'
-              - '!.Claude/**'
+              - 'apps/**/*.{ex,exs,heex}'
+              - 'apps/**/*.{ts,js,cjs,css,json}'
+              - 'apps/**/*.{feature,svg,png,ico,webmanifest,txt,po,pot,bat}'
+              - 'apps/**/rel/overlays/bin/*'
+              - 'config/**'
+              - 'mix.exs'
+              - 'mix.lock'
+              - '.formatter.exs'
+              - '.tool-versions'
             alkali:
-              - 'apps/alkali/**'
+              - 'apps/alkali/**/*.{ex,exs,heex,ts,js,cjs,css,json,feature}'
             identity:
-              - 'apps/identity/**'
+              - 'apps/identity/**/*.{ex,exs,heex,ts,js,cjs,css,json,feature,po,pot}'
             agents:
-              - 'apps/agents/**'
+              - 'apps/agents/**/*.{ex,exs,heex,ts,js,cjs,css,json,feature}'
             jarga:
-              - 'apps/jarga/**'
+              - 'apps/jarga/**/*.{ex,exs,heex,ts,js,cjs,css,json,bat}'
+              - 'apps/jarga/**/rel/overlays/bin/*'
             jarga_api:
-              - 'apps/jarga_api/**'
+              - 'apps/jarga_api/**/*.{ex,exs,heex,ts,js,cjs,css,json,feature}'
             jarga_web:
-              - 'apps/jarga_web/**'
+              - 'apps/jarga_web/**/*.{ex,exs,heex,ts,js,cjs,css,json,feature,po,pot}'
+              - 'apps/jarga_web/**/*.{svg,png,ico,webmanifest,txt}'
             erm:
-              - 'apps/entity_relationship_manager/**'
+              - 'apps/entity_relationship_manager/**/*.{ex,exs,heex,ts,js,cjs,css,json,feature}'
             shared:
               - 'config/**'
               - 'mix.exs'
