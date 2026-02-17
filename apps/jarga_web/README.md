@@ -82,7 +82,6 @@ mix assets.copy_fonts
 - esbuild, tailwind -- asset compilation
 - Heroicons -- icon components
 - exo-bdd -- browser-based BDD testing (Gherkin features via Playwright)
-- Wallaby -- ExUnit-based browser tests (editor interactions, collaboration)
 - Boundary -- compile-time boundary enforcement
 
 ## Running

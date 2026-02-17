@@ -25,17 +25,13 @@ config :identity, Identity.Repo,
   pool: Ecto.Adapters.SQL.Sandbox,
   pool_size: 20
 
-# Start server for Wallaby E2E tests
 config :jarga_web, JargaWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4002],
-  secret_key_base: "k/DpMQ7vB/8OirPNBlAhucs6RCPp5ZRK09Is1Sd7Jb+YThz21IeYYYpueAbJYNEd",
-  server: true
+  secret_key_base: "k/DpMQ7vB/8OirPNBlAhucs6RCPp5ZRK09Is1Sd7Jb+YThz21IeYYYpueAbJYNEd"
 
-# Entity Relationship Manager test configuration (Graph API on port 4006)
 config :entity_relationship_manager, EntityRelationshipManager.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4006],
-  secret_key_base: "erm_test_secret_key_base_at_least_64_bytes_long_for_security_purposes",
-  server: true
+  secret_key_base: "erm_test_secret_key_base_at_least_64_bytes_long_for_security_purposes"
 
 # ERM repository configuration.
 # Unit tests (ExUnit) use Mox mocks by default.
@@ -46,11 +42,9 @@ config :entity_relationship_manager,
   schema_repository: EntityRelationshipManager.Mocks.SchemaRepositoryMock,
   graph_repository: EntityRelationshipManager.Mocks.GraphRepositoryMock
 
-# JargaApi test configuration (JSON API on port 4005)
 config :jarga_api, JargaApi.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4005],
-  secret_key_base: "jarga_api_test_secret_key_base_at_least_64_bytes_long_for_security",
-  server: true
+  secret_key_base: "jarga_api_test_secret_key_base_at_least_64_bytes_long_for_security"
 
 # ============================================================================
 # Identity App Test Configuration
@@ -58,8 +52,7 @@ config :jarga_api, JargaApi.Endpoint,
 
 config :identity, IdentityWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4003],
-  secret_key_base: "test_identity_secret_key_base_at_least_64_bytes_long_for_security",
-  server: true
+  secret_key_base: "test_identity_secret_key_base_at_least_64_bytes_long_for_security"
 
 # In test we don't send emails
 config :identity, Identity.Mailer, adapter: Swoosh.Adapters.Test
@@ -80,42 +73,5 @@ config :phoenix, :plug_init_mode, :runtime
 config :phoenix_live_view,
   enable_expensive_runtime_checks: true
 
-# Configure Wallaby for E2E browser tests
-config :wallaby,
-  driver: Wallaby.Chrome,
-  otp_app: :jarga_web,
-  screenshot_on_failure: true,
-  screenshot_dir: "tmp/screenshots",
-  max_wait_time: 10_000,
-  chromedriver: [
-    headless: System.get_env("WALLABY_HEADED") != "true",
-    capabilities: %{
-      chromeOptions: %{
-        args: [
-          "--no-sandbox",
-          "--disable-dev-shm-usage",
-          "--disable-gpu",
-          "--window-size=1920,1080",
-          "--disable-extensions",
-          "--disable-setuid-sandbox",
-          "--disable-software-rasterizer",
-          "--disable-background-timer-throttling",
-          "--disable-backgrounding-occluded-windows",
-          "--disable-renderer-backgrounding"
-        ]
-      }
-    }
-  ]
-
-# Enable Ecto Sandbox for Wallaby tests
-config :jarga, :sandbox, Ecto.Adapters.SQL.Sandbox
-
 # Use mock LLM client for tests
 config :jarga, :llm_client, Jarga.Test.Support.MockLlmClient
-
-# Configure Cucumber for BDD feature testing
-config :jarga_web, :cucumber,
-  features: [
-    "apps/jarga_web/test/features/**/*.feature"
-  ],
-  steps: ["apps/jarga_web/test/features/step_definitions/**/*.exs"]

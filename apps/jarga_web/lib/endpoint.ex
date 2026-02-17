@@ -36,12 +36,6 @@ defmodule JargaWeb.Endpoint do
     plug(Phoenix.CodeReloader)
   end
 
-  # Enable Ecto Sandbox for Wallaby E2E tests
-  # This allows database transactions to be shared between test process and server
-  if Application.compile_env(:jarga, :sandbox, false) do
-    plug(Phoenix.Ecto.SQL.Sandbox)
-  end
-
   plug(Phoenix.LiveDashboard.RequestLogger,
     param_key: "request_logger",
     cookie_key: "request_logger"
