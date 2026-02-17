@@ -94,10 +94,8 @@ defmodule KnowledgeMcp.Domain.Entities.KnowledgeEntry do
   @spec snippet(t()) :: String.t()
   def snippet(%__MODULE__{body: nil}), do: ""
 
-  def snippet(%__MODULE__{body: body}) when byte_size(body) <= 200, do: body
-
-  def snippet(%__MODULE__{body: body}) do
-    String.slice(body, 0, 200) <> "..."
+  def snippet(%__MODULE__{body: body}) when is_binary(body) do
+    if String.length(body) <= 200, do: body, else: String.slice(body, 0, 200) <> "..."
   end
 
   defp decode_json_list(nil), do: []

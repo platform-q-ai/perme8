@@ -22,17 +22,21 @@ defmodule KnowledgeMcp.Application.UseCases.CreateKnowledgeEntry do
   def execute(workspace_id, attrs, opts \\ []) do
     erm_gateway = Keyword.get(opts, :erm_gateway, GatewayConfig.erm_gateway())
 
+    # TODO: Cache bootstrapped schema status per workspace (e.g., ETS with TTL)
+    # to avoid repeated get_schema round-trips on every create/relate call.
     with :ok <- KnowledgeValidationPolicy.validate_entry_attrs(attrs),
          :ok <- validate_tags(attrs),
-         {:ok, _} <- BootstrapKnowledgeSchema.execute(workspace_id, opts),
-         entry <- KnowledgeEntry.new(attrs),
-         properties <- KnowledgeEntry.to_erm_properties(entry),
-         {:ok, erm_entity} <-
-           erm_gateway.create_entity(workspace_id, %{
+         {:ok, _} <- BootstrapKnowledgeSchema.execute(workspace_id, opts) do
+      entry = KnowledgeEntry.new(attrs)
+      properties = KnowledgeEntry.to_erm_properties(entry)
+
+      case erm_gateway.create_entity(workspace_id, %{
              type: "KnowledgeEntry",
              properties: properties
            }) do
-      {:ok, KnowledgeEntry.from_erm_entity(erm_entity)}
+        {:ok, erm_entity} -> {:ok, KnowledgeEntry.from_erm_entity(erm_entity)}
+        {:error, _} = error -> error
+      end
     end
   end
 

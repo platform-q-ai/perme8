@@ -24,6 +24,9 @@ defmodule KnowledgeMcp.Application.UseCases.SearchKnowledgeEntries do
 
     with {:ok, validated_params} <- SearchPolicy.validate_search_params(search_params),
          {:ok, entities} <- erm_gateway.list_entities(workspace_id, %{type: "KnowledgeEntry"}) do
+      # TODO: Push keyword/tag/category filtering to ERM query layer
+      # when workspace knowledge bases exceed ~1000 entries. Currently
+      # this is an O(n) in-memory scan over all workspace entries.
       results =
         entities
         |> Enum.map(&KnowledgeEntry.from_erm_entity/1)

@@ -18,7 +18,7 @@ defmodule KnowledgeMcp.ApplicationLayer do
   - MAY define behaviours for infrastructure implementations
   """
 
-  use Boundary, top_level?: true, deps: [], exports: []
+  use Boundary, top_level?: true, exports: []
 
   @doc """
   Lists all use case modules in the Knowledge MCP application.

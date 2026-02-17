@@ -65,5 +65,5 @@ defmodule KnowledgeMcp.Infrastructure.Mcp.Tools.CreateTool do
   defp format_error(:title_too_long), do: "Title must be 255 characters or less."
   defp format_error(:too_many_tags), do: "Maximum of 20 tags allowed."
   defp format_error(:invalid_tag), do: "Tags must be non-empty strings."
-  defp format_error(reason), do: "Failed to create entry: #{reason}"
+  defp format_error(reason), do: "Failed to create entry: #{inspect(reason)}"
 end
