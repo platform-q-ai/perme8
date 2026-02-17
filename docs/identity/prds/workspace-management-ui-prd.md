@@ -196,7 +196,7 @@
 - [ ] Non-members redirected with "Workspace not found" flash
 - [ ] Pending invitations show "Pending" status badge
 - [ ] Active members show "Active" status badge with join date
-- [ ] All 21 existing BDD scenarios pass (7 CRUD + 8 members + 6 navigation)
+- [ ] All 24 existing BDD scenarios pass (7 CRUD + 10 members + 7 navigation)
 
 ## Codebase Context
 
@@ -217,8 +217,8 @@
 
 ### BDD Scenarios (already written, must pass)
 - `apps/jarga_web/test/features/workspaces/crud.browser.feature` — 7 scenarios covering create, edit (admin/member/guest), delete (owner/admin), validation
-- `apps/jarga_web/test/features/workspaces/members.browser.feature` — 8 scenarios covering modal open, invite, member/guest restrictions, role change, owner role display, member removal, owner protection, modal close (10 scenarios total)
-- `apps/jarga_web/test/features/workspaces/navigation.browser.feature` — 6 scenarios covering detail view, guest limitations, member actions, workspace list, card navigation, empty state, new workspace link
+- `apps/jarga_web/test/features/workspaces/members.browser.feature` — 10 scenarios covering modal open, invite, member/guest restrictions, role change, owner role display, member removal, owner protection, modal close, non-member access
+- `apps/jarga_web/test/features/workspaces/navigation.browser.feature` — 7 scenarios covering detail view, guest limitations, member actions, workspace list, card navigation, empty state, new workspace link
 
 ### Router Configuration
 - Routes defined in `apps/jarga_web/lib/router.ex` under `/app` scope with `:require_authenticated_user` pipeline

@@ -2,7 +2,7 @@
 
 ## Overview
 
-The workspace management UI LiveView code already exists across 4 files in `apps/jarga_web/lib/live/app_live/workspaces/`. The domain, application, and infrastructure layers are fully built. **21 BDD browser scenarios** have been written across 3 feature files. This plan focuses on gap analysis: running existing BDD tests, identifying failures, and fixing/implementing whatever is needed to make all 21 scenarios pass.
+The workspace management UI LiveView code already exists across 4 files in `apps/jarga_web/lib/live/app_live/workspaces/`. The domain, application, and infrastructure layers are fully built. **24 BDD browser scenarios** have been written across 3 feature files. This plan focuses on gap analysis: running existing BDD tests, identifying failures, and fixing/implementing whatever is needed to make all 24 scenarios pass.
 
 ## UI Strategy
 
@@ -33,7 +33,7 @@ The workspace management UI LiveView code already exists across 4 files in `apps
 | `apps/jarga_web/test/live/app_live/workspaces_test.exs` | ~30 | Index, New, Show, Edit, Delete, PubSub |
 | `apps/jarga_web/test/live/app_live/workspaces/show_test.exs` | ~25 | Members modal, docs section, PubSub, permissions, cloning |
 
-### BDD Feature Files (21 scenarios total)
+### BDD Feature Files (24 scenarios total)
 | File | Scenarios | Coverage |
 |------|-----------|----------|
 | `crud.browser.feature` | 7 | Create, Edit (admin, member, guest), Delete (owner, admin), Validation |
@@ -118,7 +118,7 @@ After thoroughly reading ALL existing code, BDD scenarios, seed data, and config
 
 ## Phase 0: Baseline — Run All BDD Tests
 
-### 0.1 Run All 21 BDD Scenarios
+### 0.1 Run All 24 BDD Scenarios
 - [ ] **RUN**: Execute all workspace BDD tests to establish baseline
   ```bash
   mix exo_test --name jarga-web --adapter browser
@@ -165,7 +165,7 @@ Based on the code review, the implementation looks largely complete. This phase 
   - Ensure `handle_event("save", ...)` with empty name returns changeset with errors
   - The current code calls `Workspaces.create_workspace(user, workspace_params)` which should return `{:error, changeset}` for blank name
   - If the changeset doesn't propagate to the form correctly, fix the error handling branch
-- [ ] **REFACTOR**: Clean up any redundant validation between `phx-change` and `phx-submit` paths
+- [ ] **REFACTOR**: Consolidate duplicate validation logic between `phx-change` and `phx-submit` handlers if both perform identical changeset validation
 
 ### 2.2 Members Modal — Invite Flow (members.browser.feature scenario 2)
 - [ ] **RED**: Write unit test for invite flow end-to-end
@@ -176,7 +176,7 @@ Based on the code review, the implementation looks largely complete. This phase 
   - Verify `invite_member` event correctly handles the form params
   - BDD submits `[name='email']` and `[name='role']` — these come as top-level params: `%{"email" => "...", "role" => "..."}`
   - Current code: `handle_event("invite_member", %{"email" => email, "role" => role}, socket)` — matches correctly
-- [ ] **REFACTOR**: Ensure invite form selector names match BDD expectations
+- [ ] **REFACTOR**: Verify invite form field names (`email`, `role`) align with BDD selectors and add comments documenting the expected params structure
 
 ### 2.3 Members Modal — Role Change (members.browser.feature scenario 5)
 - [ ] **RED**: Write unit test for role change via select dropdown
@@ -187,7 +187,6 @@ Based on the code review, the implementation looks largely complete. This phase 
   - The `<form phx-change="change_role">` wraps a hidden `email` input and a `value` select
   - When the select changes, params are: `%{"email" => "...", "value" => "admin"}`
   - Current handler: `handle_event("change_role", %{"email" => email, "value" => new_role}, socket)` — matches
-- [ ] **REFACTOR**: Clean up
 
 ### 2.4 Members Modal — Remove Button Selector (members.browser.feature scenarios 7 & 8)
 - [ ] **RED**: Write unit test verifying remove button has `phx-value-email` attribute
@@ -197,7 +196,6 @@ Based on the code review, the implementation looks largely complete. This phase 
   - The `.button` component uses `:global` rest which passes through `phx-value-email`
   - The `phx-click="remove_member"` and `phx-value-email={member.email}` should render correctly
   - If `.button` component doesn't pass through `phx-value-email`, may need to use raw `<button>` element
-- [ ] **REFACTOR**: Clean up
 
 ### 2.5 Kebab Menu Visibility (crud & members scenarios for member/guest)
 - [ ] **RED**: Write unit test confirming kebab menu is hidden for member/guest roles
@@ -207,7 +205,6 @@ Based on the code review, the implementation looks largely complete. This phase 
   - The kebab is wrapped in `if can_edit_workspace? || can_manage_members? || can_delete_workspace?`
   - For member/guest, all three should return false
   - `can_manage_members?` checks `member.role in [:admin, :owner]` — correct
-- [ ] **REFACTOR**: Clean up
 
 ### 2.6 Admin Delete Restriction (crud.browser.feature scenario 6)
 - [ ] **RED**: Write unit test confirming admin sees Edit + Manage Members but NOT Delete in kebab
@@ -216,7 +213,6 @@ Based on the code review, the implementation looks largely complete. This phase 
   - Test: Verify "Delete Workspace" NOT visible
 - [ ] **GREEN**: If test fails, fix `show.ex` template conditional rendering
   - `can_delete_workspace?` calls `WorkspacePermissionsPolicy.can?(member.role, :delete_workspace)` — only owner should pass
-- [ ] **REFACTOR**: Clean up
 
 ### 2.7 Non-Member Access Control (members.browser.feature scenario 10)
 - [ ] **RED**: Write unit test for non-member redirect
@@ -227,7 +223,6 @@ Based on the code review, the implementation looks largely complete. This phase 
   {:error, :workspace_not_found} ->
     {:ok, socket |> put_flash(:error, "Workspace not found") |> push_navigate(to: ~p"/app/workspaces")}
   ```
-- [ ] **REFACTOR**: Clean up
 
 ### Phase 2 Validation
 - [ ] All new unit tests pass: `mix test apps/jarga_web/test/live/app_live/workspaces/`
@@ -245,32 +240,28 @@ This phase addresses any remaining BDD failures after Phase 2 fixes. The fixes h
 - [ ] **GREEN**: The feature files already include `I wait for network idle` after navigation. If specific scenarios still fail:
   - Add `I wait for 1 seconds` or `I wait for 2 seconds` after critical actions
   - Ensure flash messages persist long enough for assertions
-- [ ] **REFACTOR**: Minimize waits to only where necessary
+  - Prefer waiting for specific DOM conditions over fixed-duration sleeps
 
 ### 3.2 Modal Rendering — Members Modal
 - [ ] **RED**: If `I wait for ".modal.modal-open" to be visible` fails
 - [ ] **GREEN**: The modal uses `<%= if @show_members_modal do %>` which conditionally renders. When the flag is set, the modal appears in DOM with class `modal modal-open`. Playwright's visibility check should work.
   - If timing issue: the members list loads via `Workspaces.list_members/1` which is synchronous, so the modal should render immediately with data
-- [ ] **REFACTOR**: Clean up
 
 ### 3.3 Modal Close — Members Modal
 - [ ] **RED**: If `I wait for ".modal.modal-open" to be hidden` fails after clicking "Done"
 - [ ] **GREEN**: When `hide_members_modal` fires, `@show_members_modal` becomes false, and the entire modal is removed from DOM. The `to be hidden` check should pass when the element no longer exists.
   - Also: `#members-list` should not exist after modal closes (BDD assertion line 187)
-- [ ] **REFACTOR**: Clean up
 
 ### 3.4 Dropdown Menu Behavior
 - [ ] **RED**: If clicking kebab menu doesn't open dropdown (DaisyUI dropdown needs focus)
 - [ ] **GREEN**: DaisyUI `dropdown` component opens on focus/click. The `I click "button[aria-label='Actions menu']"` step should trigger the dropdown. BDD adds `I wait for 1 seconds` after click.
   - If dropdown items aren't visible: may need to verify the `dropdown-content` is rendered in DOM and just hidden via CSS
-- [ ] **REFACTOR**: Clean up
 
 ### 3.5 Confirm Dialog Handling
 - [ ] **RED**: If delete workspace or remove member fails due to confirm dialog
 - [ ] **GREEN**: The BDD uses `I accept the next browser dialog` BEFORE the click action. The `data-confirm` attribute triggers a browser confirm dialog. Playwright's `page.on('dialog')` handler must accept before the click.
   - Delete Workspace: `data_confirm="Are you sure you want to delete this workspace?..."` on kebab item
   - Remove Member: `data-confirm="Are you sure you want to remove this member?"` on `.button` component
-- [ ] **REFACTOR**: Clean up
 
 ### 3.6 Form Selector Compatibility
 - [ ] **RED**: If `I fill "[name='workspace[name]']"` or `I select "member" from "[name='role']"` fails
@@ -278,15 +269,13 @@ This phase addresses any remaining BDD failures after Phase 2 fixes. The fixes h
   - Workspace form: `<.input field={@form[:name]} ...>` with `as: :workspace` produces `name="workspace[name]"` 
   - Invite email: `<.input field={@invite_form[:email]} ...>` — the form is `to_form(%{}, ...)` without `as:` parameter, so field names are `name="email"` and `name="role"` (matches BDD selectors `[name='email']` and `[name='role']`)
   - Role select per member: `<select name="value" data-email={member.email} ...>` — BDD uses `select[data-email='...']` (matches)
-- [ ] **REFACTOR**: Clean up
 
 ### Phase 3 Validation
 - [ ] Run all workspace BDD tests:
   ```bash
   mix exo_test --name jarga-web --adapter browser
   ```
-- [ ] All 21 scenarios pass (7 CRUD + 10 members + 7 navigation = 24 total)
-  - Note: PRD says 21 but actual count from files is 7 + 10 + 7 = 24 scenarios
+- [ ] All 24 scenarios pass (7 CRUD + 10 members + 7 navigation)
 - [ ] Document any remaining failures with screenshots from `tools/exo-bdd/test-failures/`
 
 ---
@@ -302,7 +291,6 @@ After BDD scenarios pass, fill any gaps in the LiveView unit test suite.
   - Test: Invite with valid email shows success flash and member appears in list
   - Test: Invite form resets after successful invite
 - [ ] **GREEN**: Verify existing `show.ex` event handlers cover these cases (they do)
-- [ ] **REFACTOR**: Clean up
 
 ### 4.2 Member Management — Role Change Cases
 - [ ] **RED**: Write tests in `apps/jarga_web/test/live/app_live/workspaces/show_members_test.exs`
@@ -310,7 +298,6 @@ After BDD scenarios pass, fill any gaps in the LiveView unit test suite.
   - Test: Cannot change owner role (owner has badge, no select)
   - Test: Role change reloads members list with updated role
 - [ ] **GREEN**: Verify existing event handlers
-- [ ] **REFACTOR**: Clean up
 
 ### 4.3 Member Management — Remove Cases
 - [ ] **RED**: Write tests in `apps/jarga_web/test/live/app_live/workspaces/show_members_test.exs`
@@ -318,7 +305,6 @@ After BDD scenarios pass, fill any gaps in the LiveView unit test suite.
   - Test: Removed member disappears from list
   - Test: Owner has no remove button
 - [ ] **GREEN**: Verify existing event handlers
-- [ ] **REFACTOR**: Clean up
 
 ### 4.4 Permission-Based UI Rendering
 - [ ] **RED**: Write tests in `apps/jarga_web/test/live/app_live/workspaces/show_permissions_test.exs`
@@ -329,7 +315,6 @@ After BDD scenarios pass, fill any gaps in the LiveView unit test suite.
   - Test: Guest sees workspace content (name, Projects, Documents, Agents sections)
   - Test: Guest sees no "New Project", "New Document" buttons
 - [ ] **GREEN**: Verify existing permission helpers and template conditionals
-- [ ] **REFACTOR**: Clean up
 
 ### 4.5 Edit Page Authorization
 - [ ] **RED**: Write tests
@@ -339,7 +324,6 @@ After BDD scenarios pass, fill any gaps in the LiveView unit test suite.
 - [ ] **GREEN**: Currently `edit.ex` uses `get_workspace_by_slug!` which only checks membership, not role. This may need role-based authorization.
   - **Potential gap**: Edit page doesn't check if user has edit permission — any member can access it. The BDD doesn't test this directly (it tests via kebab menu visibility), but it's a security concern.
   - If needed, add role check in `edit.ex` mount
-- [ ] **REFACTOR**: Clean up
 
 ### Phase 4 Validation
 - [ ] All new unit tests pass
@@ -401,7 +385,7 @@ After BDD scenarios pass, fill any gaps in the LiveView unit test suite.
 ### Files that should NOT be modified
 | File | Reason |
 |------|--------|
-| `apps/identity/lib/identity.ex` | Domain layer is complete |
+| `apps/identity/lib/identity.ex` | Public API facade is complete |
 | `apps/jarga/lib/workspaces.ex` | Facade is complete |
 | `apps/jarga_web/lib/live/permissions_helper.ex` | Permission checks are correct |
 | `apps/jarga_web/lib/components/core_components.ex` | Components are working |
