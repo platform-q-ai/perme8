@@ -138,7 +138,7 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jarga_test
 
   exo-bdd-360:
-    name: "360: ${{ matrix.name }}"
+    name: "360: ${{ matrix.domain }} / ${{ matrix.app }}"
     needs: [changes]
     if: needs.changes.outputs.umbrella == 'true' || needs.changes.outputs.exo_bdd == 'true'
     timeout-minutes: ${{ matrix.timeout }}
@@ -147,36 +147,50 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        app: [alkali, erm, identity, jarga-api, jarga-web]
+        domain: [browser, cli, http, security]
+        exclude:
+          # alkali only has CLI features
+          - app: alkali
+            domain: browser
+          - app: alkali
+            domain: http
+          - app: alkali
+            domain: security
+          # ERM has HTTP and security features
+          - app: erm
+            domain: browser
+          - app: erm
+            domain: cli
+          # identity has browser and security features
+          - app: identity
+            domain: cli
+          - app: identity
+            domain: http
+          # jarga-api has HTTP and security features
+          - app: jarga-api
+            domain: browser
+          - app: jarga-api
+            domain: cli
+          # jarga-web only has browser features
+          - app: jarga-web
+            domain: cli
+          - app: jarga-web
+            domain: http
+          - app: jarga-web
+            domain: security
         include:
-          - name: alkali
-            config_name: alkali
-            needs_db: false
-            needs_browser: false
-            needs_js_assets: false
-            timeout: 5
-          - name: ERM
+          # Map app names to exo-bdd config stems where they differ
+          - app: erm
             config_name: entity-relationship-manager
-            needs_db: true
-            needs_browser: false
-            needs_js_assets: false
-            timeout: 10
-          - name: identity
-            config_name: identity
-            needs_db: true
-            needs_browser: true
-            needs_js_assets: true
+          # Timeouts per domain
+          - domain: browser
             timeout: 15
-          - name: jarga-api
-            config_name: jarga-api
-            needs_db: true
-            needs_browser: false
-            needs_js_assets: false
+          - domain: cli
+            timeout: 5
+          - domain: http
             timeout: 10
-          - name: jarga-web
-            config_name: jarga-web
-            needs_db: true
-            needs_browser: true
-            needs_js_assets: true
+          - domain: security
             timeout: 15
 
     services:
@@ -230,7 +244,7 @@ jobs:
         run: mix deps.compile
 
       - name: Set up Node.js
-        if: matrix.needs_js_assets
+        if: matrix.domain == 'browser'
         uses: actions/setup-node@v4
         with:
           node-version-file: .tool-versions
@@ -240,34 +254,34 @@ jobs:
         working-directory: tools/exo-bdd
 
       - name: Install JavaScript dependencies
-        if: matrix.needs_js_assets
+        if: matrix.domain == 'browser'
         run: |
           cd apps/jarga_web/assets && npm ci
           cd ../../identity/assets && npm ci
 
       - name: Install Playwright browsers
-        if: matrix.needs_browser
+        if: matrix.domain == 'browser'
         run: bunx playwright install --with-deps chromium
         working-directory: tools/exo-bdd
 
       - name: Build assets
-        if: matrix.needs_js_assets
+        if: matrix.domain == 'browser'
         run: mix assets.build
 
       - name: Create test database
-        if: matrix.needs_db
+        if: matrix.app != 'alkali'
         run: MIX_ENV=test mix ecto.create
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jarga_test
 
       - name: Run database migrations
-        if: matrix.needs_db
+        if: matrix.app != 'alkali'
         run: MIX_ENV=test mix ecto.migrate
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jarga_test
 
       - name: Run exo-bdd tests
-        run: mix exo_test --name ${{ matrix.config_name }}
+        run: mix exo_test --name ${{ matrix.config_name || matrix.app }} --adapter ${{ matrix.domain }}
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jarga_test
 
