@@ -76,15 +76,17 @@ export class HandleAwarenessSync {
     const handleAwarenessChange = (changes: AwarenessChanges) => {
       if (isCleanedUp) return
 
-      // Only broadcast if local client changed
-      const hasLocalChange =
+      // Check if local client was added, updated, or removed
+      const hasLocalAddOrUpdate =
         changes.added.includes(localClientId) ||
         changes.updated.includes(localClientId)
 
-      if (!hasLocalChange) return
+      const hasLocalRemoval = changes.removed.includes(localClientId)
 
-      // Encode awareness update for changed clients
-      const clientIds = [...changes.added, ...changes.updated]
+      if (!hasLocalAddOrUpdate && !hasLocalRemoval) return
+
+      // Encode awareness update for changed clients (including removals)
+      const clientIds = [...changes.added, ...changes.updated, ...changes.removed]
       const update = yjsAwarenessAdapter.encodeUpdate(clientIds)
       const updateBase64 = this.encodeBase64(update)
 
