@@ -75,6 +75,25 @@ describe('parseRunArgs', () => {
     expect(opts.adapter).toBe('http')
     expect(opts.passthrough).toEqual(['--format', 'progress'])
   })
+
+  test('parses --no-retry flag', () => {
+    const opts = parseRunArgs(['--config', 'config.ts', '--no-retry'])
+    expect(opts.noRetry).toBe(true)
+  })
+
+  test('noRetry defaults to false when not provided', () => {
+    const opts = parseRunArgs(['--config', 'config.ts'])
+    expect(opts.noRetry).toBe(false)
+  })
+
+  test('parses --no-retry with other flags', () => {
+    const opts = parseRunArgs(['-c', 'config.ts', '-t', '@smoke', '--no-retry', '-a', 'http'])
+    expect(opts.config).toBe('config.ts')
+    expect(opts.tags).toBe('@smoke')
+    expect(opts.adapter).toBe('http')
+    expect(opts.noRetry).toBe(true)
+    expect(opts.passthrough).toEqual([])
+  })
 })
 
 describe('filterFeaturesByAdapter', () => {
@@ -256,6 +275,37 @@ describe('buildCucumberArgs', () => {
     })
 
     expect(args).not.toContain('--tags')
+  })
+
+  test('includes --retry 0 when noRetry is true', () => {
+    const args = buildCucumberArgs({
+      ...baseOptions,
+      features: './features/**/*.feature',
+      noRetry: true,
+    })
+
+    const retryIdx = args.indexOf('--retry')
+    expect(retryIdx).toBeGreaterThanOrEqual(0)
+    expect(args[retryIdx + 1]).toBe('0')
+  })
+
+  test('omits --retry when noRetry is false', () => {
+    const args = buildCucumberArgs({
+      ...baseOptions,
+      features: './features/**/*.feature',
+      noRetry: false,
+    })
+
+    expect(args).not.toContain('--retry')
+  })
+
+  test('omits --retry when noRetry is undefined', () => {
+    const args = buildCucumberArgs({
+      ...baseOptions,
+      features: './features/**/*.feature',
+    })
+
+    expect(args).not.toContain('--retry')
   })
 })
 
