@@ -138,7 +138,7 @@ export function buildCucumberArgs(options: {
  * When adapter configs include a baseURL, it is automatically injected as a
  * variable so feature files can reference `${baseUrl}` without hardcoding it.
  */
-export function generateSetupContent(configAbsPath: string, exoBddRoot: string, config?: ExoBddConfig): string {
+export function generateSetupContent(configAbsPath: string, exoBddRoot: string, config?: ExoBddConfig, adapterFilter?: string): string {
   // Use file:// URLs for imports to ensure cross-platform compatibility
   const configUrl = pathToFileURL(configAbsPath).href
   const appConfigUrl = pathToFileURL(resolve(exoBddRoot, 'src/application/config/index.ts')).href
@@ -200,8 +200,8 @@ const failureDir = join(process.cwd(), 'test-failures')
 BeforeAll(async function () {
   const configModule = await import('${configUrl}')
   const config = configModule.default
-  adapters = await createAdapters(config)
-  // Ensure failure artifact directory exists (clean start each run)
+  adapters = await createAdapters(config${adapterFilter ? `, { adapterFilter: '${adapterFilter}' }` : ''})
+   // Ensure failure artifact directory exists (clean start each run)
   mkdirSync(failureDir, { recursive: true })
 })
 
@@ -327,7 +327,7 @@ export async function runTests(options: RunOptions): Promise<number> {
     mkdirSync(tmpDir, { recursive: true })
   }
   const setupPath = join(tmpDir, 'setup.ts')
-  const setupContent = generateSetupContent(configAbsPath, exoBddRoot, config)
+  const setupContent = generateSetupContent(configAbsPath, exoBddRoot, config, options.adapter)
   await Bun.write(setupPath, setupContent)
 
   // Build steps import path
