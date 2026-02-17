@@ -33,7 +33,7 @@ defmodule Agents.MixProject do
   defp boundary do
     [
       externals_mode: :relaxed,
-      ignore: [~r/\.Test\./]
+      ignore: [~r/\.Test\./, ~r/\.Mocks\./]
     ]
   end
 
@@ -58,6 +58,9 @@ defmodule Agents.MixProject do
       # Utilities
       {:jason, "~> 1.2"},
       {:decimal, "~> 2.0"},
+
+      # MCP
+      {:hermes_mcp, "~> 0.14"},
 
       # Testing
       {:mox, "~> 1.0", only: :test},

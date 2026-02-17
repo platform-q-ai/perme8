@@ -8,6 +8,8 @@ defmodule Agents.Infrastructure do
   - Services: LlmClient
   - Queries: AgentQueries
   - Notifiers: PubSubNotifier
+  - Gateways: ErmGateway (delegates to EntityRelationshipManager)
+  - MCP: Server, Router, AuthPlug, and 6 tool components
   """
 
   use Boundary,
@@ -17,7 +19,8 @@ defmodule Agents.Infrastructure do
       Agents.Application,
       # Cross-context dependencies
       Identity,
-      Identity.Repo
+      Identity.Repo,
+      EntityRelationshipManager
     ],
     exports: [
       # Schemas
@@ -31,6 +34,11 @@ defmodule Agents.Infrastructure do
       # Queries
       Queries.AgentQueries,
       # Notifiers
-      Notifiers.PubSubNotifier
+      Notifiers.PubSubNotifier,
+      # Knowledge MCP
+      Gateways.ErmGateway,
+      Mcp.Server,
+      Mcp.Router,
+      Mcp.AuthPlug
     ]
 end
