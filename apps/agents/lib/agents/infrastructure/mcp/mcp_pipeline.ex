@@ -10,6 +10,7 @@ defmodule Agents.Infrastructure.Mcp.McpPipeline do
   @behaviour Plug
 
   alias Agents.Infrastructure.Mcp.AuthPlug
+  alias Hermes.Server.Transport.StreamableHTTP
 
   @impl true
   def init(opts), do: opts
@@ -23,9 +24,9 @@ defmodule Agents.Infrastructure.Mcp.McpPipeline do
       authenticated_conn ->
         server = Keyword.fetch!(opts, :server)
 
-        Hermes.Server.Transport.StreamableHTTP.Plug.call(
+        StreamableHTTP.Plug.call(
           authenticated_conn,
-          Hermes.Server.Transport.StreamableHTTP.Plug.init(server: server)
+          StreamableHTTP.Plug.init(server: server)
         )
     end
   end
