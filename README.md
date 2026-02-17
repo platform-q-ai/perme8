@@ -8,17 +8,17 @@ Perme8 follows **Clean Architecture** principles throughout, with compile-time b
 
 ```
                     identity (authentication)
-                        ^
-                        |
-                      jarga (core domain)
-                     ^  ^  ^
-                    /   |   \
-                   /    |    \
-         jarga_web  jarga_api  entity_relationship_manager
-         (browser)  (REST API)       (graph API)
+                    ^      ^
+                    |      |
+                  jarga   agents (Knowledge MCP)
+                  ^  ^     ^  ^
+                 /   |    /   |
+                /    |   /    |
+      jarga_web  jarga_api   entity_relationship_manager
+      (browser)  (REST API)        (graph API)
 
-         alkali (standalone static site generator)
-         perme8_tools (development tooling)
+      alkali (standalone static site generator)
+      perme8_tools (development tooling)
 ```
 
 ## Umbrella Apps
@@ -26,7 +26,8 @@ Perme8 follows **Clean Architecture** principles throughout, with compile-time b
 | App | Description | Port |
 |-----|-------------|------|
 | [`identity`](apps/identity/) | Self-contained authentication and identity management | 4001 |
-| [`jarga`](apps/jarga/) | Core domain logic -- workspaces, projects, documents, agents, chat | -- |
+| [`jarga`](apps/jarga/) | Core domain logic -- projects, documents, notes, chat | -- |
+| [`agents`](apps/agents/) | Agent definitions, LLM orchestration, Knowledge MCP tools | 4007 |
 | [`jarga_web`](apps/jarga_web/) | Phoenix LiveView browser interface | 4000 |
 | [`jarga_api`](apps/jarga_api/) | JSON REST API for external integrations | -- |
 | [`entity_relationship_manager`](apps/entity_relationship_manager/) | Schema-driven graph data layer backed by Neo4j and PostgreSQL | 4005 |

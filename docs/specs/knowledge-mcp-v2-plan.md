@@ -1,5 +1,7 @@
 # Knowledge MCP v2 — TDD Implementation Plan
 
+**Status**: Implemented (branch `refactor/knowledge-mcp-to-agents`, PR #104)
+
 ## Overview
 
 Rearchitecture of the knowledge graph MCP functionality from a standalone `apps/knowledge_mcp/` umbrella app into the existing `apps/agents/` app. This consolidation follows reviewer feedback on PR #100 that the knowledge graph is just an ERM schema and MCP is a tool surface for the agents app.

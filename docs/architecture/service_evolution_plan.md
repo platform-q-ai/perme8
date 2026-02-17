@@ -13,15 +13,16 @@ Each bounded context becomes its own umbrella app (or standalone service) with a
 ```
 apps/
   identity/                    # Users, auth, workspaces, memberships, API keys
-  jarga/                       # Projects, documents, notes, agents, chat, notifications
+  jarga/                       # Projects, documents, notes, chat, notifications
+  agents/                      # Agent definitions, LLM orchestration, Knowledge MCP (EXTRACTED)
   jarga_web/                   # Browser UI (LiveView)
   jarga_api/                   # REST API
   entity_relationship_manager/ # Schema-driven graph layer (Neo4j + PG)
   alkali/                      # Static site generator (independent)
-  jarga_tools/                 # Dev-time Mix tasks (independent)
+  perme8_tools/                # Dev-time Mix tasks (independent)
 ```
 
-`jarga` currently owns 6 bounded contexts: Projects, Documents (+ Notes), Agents, Chat, Notifications, and thin delegation facades for Accounts/Workspaces.
+`jarga` currently owns 5 bounded contexts: Projects, Documents (+ Notes), Chat, Notifications, and thin delegation facades for Accounts/Workspaces. Agents has been extracted into its own app.
 
 ---
 
@@ -101,21 +102,24 @@ This is the core content management service. Everything that isn't a project or 
 
 ---
 
-### 4. Agents (new app)
+### 4. Agents (EXTRACTED)
 
-**Owns:** Agent definitions, workspace-agent associations, LLM client orchestration, agent query execution.
+**Owns:** Agent definitions, workspace-agent associations, LLM client orchestration, agent query execution, Knowledge MCP tools.
 
-| Responsibility | Source | Notes |
+**Status:** Extracted as standalone app. Agent CRUD, cloning, LLM client, query execution, and Knowledge MCP (6 tools via JSON-RPC 2.0 on port 4007) are implemented with 297 unit tests and 26 exo-bdd HTTP scenarios.
+
+| Responsibility | Source | Status |
 |---|---|---|
-| `Jarga.Agents` context | `jarga` | Full extraction — domain, use cases, infra |
-| `AgentSchema`, `WorkspaceAgentJoinSchema` | `jarga` | Moves to `agents` |
-| `AgentCloner` | `jarga` | Moves to `agents` |
-| `LLMClient` | `jarga` | Moves to `agents` |
-| `AgentQueryParser` (in Documents) | `jarga` | Moves to `agents`; documents calls agents via behaviour |
-| `ExecuteAgentQuery` use case | `jarga` | Moves to `agents` |
+| `Jarga.Agents` context | `jarga` | Extracted to `agents` app |
+| `AgentSchema`, `WorkspaceAgentJoinSchema` | `jarga` | In `agents` |
+| `AgentCloner` | `jarga` | In `agents` |
+| `LLMClient` | `jarga` | In `agents` |
+| `AgentQueryParser` (in Documents) | `jarga` | In `agents`; jarga calls via behaviour |
+| `ExecuteAgentQuery` use case | `jarga` | In `agents` |
+| Knowledge MCP (6 tools) | `knowledge_mcp` (deleted) | In `agents` |
 | Agent LiveViews (Index/Form) | `jarga_web` | Stays in `jarga_web`; calls `Agents` facade |
 
-**Integration pattern:** Synchronous calls from documents/chat into the agents facade. Agents may publish events (e.g., query completed) via PubSub.
+**Integration pattern:** Synchronous calls from documents/chat into the agents facade. Agents depends on `identity` (auth) and `entity_relationship_manager` (knowledge graph). Agents publishes lifecycle events via PubSub.
 
 ---
 
@@ -156,23 +160,24 @@ This is the core content management service. Everything that isn't a project or 
                   /     |     \        \
                  v      v      v        v
             jarga   agents   chat   notifications
-              |       |        |
-              v       v        |
-          components ←---------+
+              |       |  \       |
+              v       |   v      |
+          components  |  ERM     |
+                      |          |
+                      +←---------+
 
   jarga_web  ──→  all of the above (UI layer)
   jarga_api  ──→  all of the above (API layer)
 
-  entity_relationship_manager  ──→  identity (auth)
   alkali        (independent)
-  jarga_tools   (independent)
+  perme8_tools  (independent)
 ```
 
 **Rules:**
 - `identity` depends on nothing in the umbrella
 - Domain apps (`jarga`, `agents`, `chat`, `notifications`, `components`) depend on `identity` for auth/workspace context
-- `jarga` depends on `components` (documents reference components)
-- `agents` depends on nothing except `identity` (other apps call into agents)
+- `jarga` depends on `agents` and `components` (documents reference agents and components)
+- `agents` depends on `identity` and `entity_relationship_manager` (knowledge graph data)
 - `chat` depends on `agents` (for AI responses) and `identity`
 - `notifications` depends on `identity`; integrates with others via PubSub only
 - `jarga_web` and `jarga_api` depend on all domain apps (they are interface layers)
@@ -183,13 +188,13 @@ This is the core content management service. Everything that isn't a project or 
 
 Recommended sequence based on coupling and complexity:
 
-| Phase | Extraction | Rationale |
+| Phase | Extraction | Status |
 |---|---|---|
-| 0 | Remove delegation facades | Clean up `Jarga.Accounts`/`Jarga.Workspaces`; update all callers to use `Identity` directly |
-| 1 | **Notifications** | Lowest coupling. Event-driven. Few dependencies. Good first extraction. |
-| 2 | **Chat** | Self-contained sessions/messages. Clear domain boundary. |
-| 3 | **Agents** | More coupling (documents reference agents for queries). Requires defining a clean behaviour/callback interface in jarga for agent queries. |
-| 4 | **Components** | Tightest coupling to documents. Extract last so the document-component interface is well understood. |
+| 0 | Remove delegation facades | Pending -- clean up `Jarga.Accounts`/`Jarga.Workspaces` |
+| 1 | **Notifications** | Pending -- lowest coupling, event-driven |
+| 2 | **Chat** | Pending -- self-contained sessions/messages |
+| 3 | **Agents** | **DONE** -- extracted to `apps/agents/` with Knowledge MCP |
+| 4 | **Components** | Pending -- tightest coupling to documents |
 
 Each extraction follows the same playbook:
 1. Write a PRD for the extraction

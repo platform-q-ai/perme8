@@ -1,7 +1,7 @@
 # Feature: Extract Agents Bounded Context from Jarga into Standalone App
 
 **GitHub Issue**: #51
-**Status**: ⏸ Not Started
+**Status**: Done (completed on branch `refactor/knowledge-mcp-to-agents`, PR #104)
 **Created**: 2026-02-16
 
 ## Overview

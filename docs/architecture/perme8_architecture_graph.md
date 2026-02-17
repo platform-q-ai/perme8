@@ -27,7 +27,7 @@ graph TB
     subgraph "Domain Services"
         ID["identity<br/>(Auth, Users, Workspaces,<br/>API Keys, Roles)<br/><br/>90%"]
         JG["jarga<br/>(Projects, Documents,<br/>Notes, Collaboration)<br/><br/>70%"]
-        AG["agents<br/>(Agent Definitions, LLM<br/>Orchestration, Skills,<br/>MCP Tools, OpenCode Sessions)<br/><br/>15%"]
+        AG["agents<br/>(Agent Definitions, LLM<br/>Orchestration, Knowledge MCP,<br/>MCP Tools)<br/><br/>35%"]
         CH["chat<br/>(Sessions, Messages,<br/>Real-time Messaging)<br/><br/>10%"]
         NO["notifications<br/>(Delivery, Preferences,<br/>Event-driven OS Notifications)<br/><br/>10%"]
         CO["components<br/>(Component Registry,<br/>Themes, Generative UI)<br/><br/>5%"]
@@ -64,6 +64,7 @@ graph TB
     NO --> ID
 
     %% Graph layer
+    AG --> ER
     ER --> ID
 
     %% Styling
@@ -77,7 +78,7 @@ graph TB
     class ID,JA high
     class JW,JG,PT medium
     class ER,EX medium
-    class AG low
+    class AG medium
     class CH,NO low
     class CO vlow
 ```
@@ -1260,15 +1261,53 @@ Each section below lists every BDD feature and its scenarios for the given app. 
 
 ---
 
-### agents (planned extraction) -- 15%
+### agents -- 35%
 
-**Principles served:** Modularity (independent bounded context with own domain/infra), Interoperability (MCP tool endpoint, bot network for agent-to-agent comms, API for external consumers), Multitenancy (workspace-scoped agent assignments), Event-Driven (PubSub for agent lifecycle events)
+**Principles served:** Modularity (standalone umbrella app with own domain/application/infrastructure layers), Interoperability (MCP tool endpoint for LLM agents, ERM gateway for knowledge graph, API key auth), Multitenancy (workspace-scoped agent assignments and knowledge entries), Event-Driven (PubSub for agent lifecycle events)
 
-**Envisioned capabilities:** Agent definitions and CRUD, LLM orchestration, agent query execution, skills management, API permission per key, OpenCode sessions in containers, agentic flow orchestration, MCP tool endpoint, bot network for agent-to-agent communication.
+**Envisioned capabilities:** Agent definitions and CRUD, LLM orchestration, agent query execution, Knowledge MCP tools (6 tools), skills management, API permission per key, OpenCode sessions in containers, agentic flow orchestration, bot network for agent-to-agent communication.
 
-**Current state:** Agent CRUD, cloning, LLM client, and query execution exist as a bounded context inside `jarga`. Not yet extracted.
+**Current state:** Extracted as standalone app. Agent CRUD, cloning, LLM client, query execution, and Knowledge MCP (6 tools via JSON-RPC 2.0 on port 4007) are implemented with 297 unit tests and 26 exo-bdd HTTP scenarios.
 
-**Remaining:** Full extraction into standalone app, agents API, skills management, OpenCode containers, MCP tool endpoint, bot network, flow orchestration.
+**Remaining:** Skills management, OpenCode containers, agents API, bot network, flow orchestration.
+
+**3 feature files, 26 scenarios**
+
+<details>
+<summary><strong>Knowledge MCP Tools -- HTTP API</strong> -- 26 scenarios</summary>
+
+> As an LLM agent, I want to search, create, update, traverse, and relate knowledge entries via MCP tools so that institutional knowledge is structured, queryable, and accumulates over time.
+
+| # | Scenario |
+|---|---------|
+| 1 | Health check endpoint is accessible without auth |
+| 2 | Unauthenticated request is rejected |
+| 3 | Invalid API key is rejected |
+| 4 | Revoked API key is rejected |
+| 5 | Successful MCP initialize handshake |
+| 6 | Create a knowledge entry with required fields |
+| 7 | Create a knowledge entry with tags |
+| 8 | Create fails without title |
+| 9 | Create fails without body |
+| 10 | Create fails with invalid category |
+| 11 | Get entry by ID - create and verify via search |
+| 12 | Get a non-existent entry returns not found |
+| 13 | Search by keyword |
+| 14 | Search by category |
+| 15 | Search by tags |
+| 16 | Search with no criteria fails |
+| 17 | Search with no results returns empty |
+| 18 | Update a knowledge entry title |
+| 19 | Update fails for non-existent entry |
+| 20 | Update fails with invalid category |
+| 21 | Relate fails with self-reference |
+| 22 | Relate fails with invalid relationship type |
+| 23 | Create a relationship between two entries |
+| 24 | Traverse with no connections returns empty result |
+| 25 | Traverse with invalid relationship type fails |
+| 26 | Traverse non-existent entry returns not found |
+
+</details>
 
 > Feature files for agents UI are listed under jarga_web (agents section above).
 
@@ -1517,7 +1556,7 @@ How each app serves (or will serve) the four platform principles:
 | **jarga** | Focused content service | Behaviour facades | Workspace-scoped queries | PubSub on changes (planned) |
 | **jarga_web** | Interface layer only | Calls all facades | Workspace-scoped routing | Subscribes to PubSub |
 | **jarga_api** | Interface layer only | REST API | API key workspace scoping | Planned |
-| **agents** | Planned extraction | MCP, bot network, API | Workspace-agent joins | PubSub lifecycle events |
+| **agents** | Standalone app | MCP tools, ERM gateway, API key auth | Workspace-scoped entries | PubSub lifecycle events |
 | **chat** | Planned extraction | Calls agents facade | Workspace-scoped sessions | PubSub broadcasting |
 | **notifications** | Planned extraction | Subscribes to all events | Workspace-scoped delivery | Core event consumer |
 | **components** | Planned extraction | Component API, Alkali | Workspace-scoped registry | Generative UI via events |
@@ -1536,7 +1575,7 @@ How each app serves (or will serve) the four platform principles:
 | **jarga** (core) | -- | -- | **70%** |
 | **jarga_web** | 22 | 244 | **75%** |
 | **jarga_api** | 6 | 100 | **80%** |
-| **agents** | -- (UI in jarga_web) | 54 (UI) | **15%** |
+| **agents** | 3 + UI in jarga_web | 26 + 54 (UI) | **35%** |
 | **chat** | -- (UI in jarga_web) | 90 (UI) | **10%** |
 | **notifications** | -- (UI in jarga_web) | -- | **10%** |
 | **components** | -- (UI in jarga_web) | 3 (UI) | **5%** |
@@ -1551,5 +1590,5 @@ How each app serves (or will serve) the four platform principles:
 The foundational services (identity, jarga core, ERM) are well-established with comprehensive BDD coverage. The major remaining work falls into three tracks:
 
 1. **Service extraction** -- Decompose jarga's bounded contexts (notifications, chat, agents, components) into standalone apps per the service evolution plan
-2. **Agents platform** -- Build the agents API, MCP tool endpoint, OpenCode container sessions, skills management, and bot network for agent-to-agent communication
+2. **Agents platform** -- Knowledge MCP tools are live (6 tools, 26 BDD scenarios). Remaining: agents API, OpenCode container sessions, skills management, and bot network for agent-to-agent communication
 3. **Testing infrastructure** -- Complete the exo-bdd migration, wire up domain-specific CI, build the feature inspection UI, and add the chaos monkey adapter

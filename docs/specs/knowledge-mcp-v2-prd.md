@@ -255,18 +255,18 @@ Agents (MCP endpoint)
 
 ## Acceptance Criteria
 
-- [ ] **AC1**: The `knowledge_mcp` umbrella app is removed
-- [ ] **AC2**: Knowledge entry entity type and edge types are registered as an ERM schema (bootstrapped per workspace)
-- [ ] **AC3**: The agents app exposes an MCP endpoint with 6 knowledge tools
-- [ ] **AC4**: MCP tools authenticate via Identity API keys (Bearer token)
-- [ ] **AC5**: All knowledge operations are workspace-scoped via the API key
-- [ ] **AC6**: Tool registration is configuration-driven
-- [ ] **AC7**: All validation (category, tags, relationships) works correctly
-- [ ] **AC8**: Search returns results sorted by relevance
-- [ ] **AC9**: Graph traversal works with configurable depth
-- [ ] **AC10**: All tests pass (domain, application, infrastructure layers)
-- [ ] **AC11**: Boundary checks pass (`mix boundary`)
-- [ ] **AC12**: Pre-commit checks pass (`mix precommit`)
+- [x] **AC1**: The `knowledge_mcp` umbrella app is removed
+- [x] **AC2**: Knowledge entry entity type and edge types are registered as an ERM schema (bootstrapped per workspace)
+- [x] **AC3**: The agents app exposes an MCP endpoint with 6 knowledge tools
+- [x] **AC4**: MCP tools authenticate via Identity API keys (Bearer token)
+- [x] **AC5**: All knowledge operations are workspace-scoped via the API key
+- [x] **AC6**: Tool registration is configuration-driven
+- [x] **AC7**: All validation (category, tags, relationships) works correctly
+- [x] **AC8**: Search returns results sorted by relevance
+- [x] **AC9**: Graph traversal works with configurable depth
+- [x] **AC10**: All tests pass (domain, application, infrastructure layers)
+- [x] **AC11**: Boundary checks pass (`mix boundary`)
+- [x] **AC12**: Pre-commit checks pass (`mix precommit`)
 
 ---
 
@@ -280,7 +280,7 @@ Agents (MCP endpoint)
 | `apps/agents/lib/agents/otp_app.ex` | OTP supervisor -- needs MCP server children |
 | `apps/agents/mix.exs` | Dependencies -- needs hermes_mcp, entity_relationship_manager |
 | `apps/entity_relationship_manager/lib/entity_relationship_manager.ex` | ERM facade -- knowledge tools call this |
-| `apps/knowledge_mcp/` | Source of code to port (domain entities, policies, use cases, MCP tools) |
+| `apps/knowledge_mcp/` | Source of code to port (deleted -- ported to agents) |
 
 ### Existing Patterns to Follow
 
@@ -308,5 +308,5 @@ Agents (MCP endpoint)
 
 **Version**: 2.0 (rearchitected per PR #100 review feedback)
 **Date**: 2026-02-17
-**Status**: Approved for implementation
-**Related**: PR #100, Issues #97, #98, #99
+**Status**: Implemented (branch `refactor/knowledge-mcp-to-agents`, PR #104)
+**Related**: PR #100, PR #104, Issues #97, #98, #99
