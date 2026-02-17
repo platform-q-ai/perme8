@@ -10,6 +10,7 @@ export default defineConfig({
       port: 4002,
       workingDir: '../../../',
       env: { MIX_ENV: 'test' },
+      setup: 'cd apps/jarga_web && mix assets.build',
       seed: 'mix run --no-start apps/jarga/priv/repo/exo_seeds_web.exs',
       healthCheckPath: '/',
       startTimeout: 30000,

@@ -45,7 +45,7 @@ cd tools/exo-bdd && bun run src/cli/index.ts run \
 
 **LiveView critical pattern**: Always add `I wait for network idle` after navigating to a LiveView page before interacting with `phx-*` elements. See `tools/exo-bdd/README.md` "Phoenix LiveView Tips".
 
-**Asset rebuild required**: Tests run in `MIX_ENV=test` which has no asset watchers. After changing CSS/JS files, run `cd apps/jarga_web && mix assets.build` before running browser tests, otherwise the server serves stale assets.
+**Asset rebuild is automatic**: The jarga-web exo-bdd config uses the `setup` field to run `mix assets.build` before the test server starts. No manual asset rebuild is needed.
 
 **Failure artifacts**: When tests fail, screenshots and HTML are saved to `tools/exo-bdd/test-failures/`. Always check these before debugging -- they show exactly what the browser rendered.
 

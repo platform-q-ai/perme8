@@ -126,6 +126,7 @@ interface ServerConfig {
   port: number            // Port to health-check against
   workingDir?: string     // CWD for the command (relative to config file)
   env?: Record<string, string> // Environment variables
+  setup?: string          // Command to run before starting the server (e.g. asset build)
   seed?: string           // Command to run after server is healthy (e.g. DB seeds)
   healthCheckPath?: string // URL path to poll (default: "/")
   startTimeout?: number   // Max wait for healthy (ms, default: 30000)
@@ -136,11 +137,12 @@ interface ServerConfig {
 
 The `servers` array lets exo-bdd manage the full server lifecycle:
 
-1. Starts each server via its `command`
-2. Polls `http://localhost:{port}{healthCheckPath}` until a response arrives (any status)
-3. Runs the `seed` command (if provided) -- useful for loading test fixtures
-4. Runs all Cucumber scenarios
-5. Stops each server on completion (or on error)
+1. Runs the `setup` command (if provided) -- useful for asset compilation
+2. Starts each server via its `command`
+3. Polls `http://localhost:{port}{healthCheckPath}` until a response arrives (any status)
+4. Runs the `seed` command (if provided) -- useful for loading test fixtures
+5. Runs all Cucumber scenarios
+6. Stops each server on completion (or on error)
 
 ### Variables
 
@@ -312,13 +314,24 @@ The `test-failures/` directory is cleaned on each run but not deleted between ru
 
 ### Asset changes not taking effect in tests
 
-`mix phx.server` in `MIX_ENV=test` does **not** run asset watchers (esbuild/tailwind). It serves whatever is in `priv/static/assets/`. If you change CSS or JS files, you **must** rebuild before running tests:
+`mix phx.server` in `MIX_ENV=test` does **not** run asset watchers (esbuild/tailwind). It serves whatever is in `priv/static/assets/`.
+
+The recommended fix is to add a `setup` command to your server config so assets are rebuilt automatically before every test run:
+
+```typescript
+servers: [{
+  name: 'jarga-web',
+  command: 'mix phx.server',
+  setup: 'cd apps/jarga_web && mix assets.build',  // runs before server starts
+  // ...
+}]
+```
+
+If you don't use `setup`, you must manually rebuild after changing CSS or JS files:
 
 ```bash
 cd apps/jarga_web && mix assets.build
 ```
-
-Without this, the test server serves stale compiled assets and your CSS/JS changes will have no effect.
 
 ### Playwright click timeouts on DaisyUI drawers
 
