@@ -26,38 +26,42 @@ defmodule Agents.Infrastructure.Mcp.AuthPlugTest do
 
   describe "extracting Bearer token" do
     test "extracts Bearer token from Authorization header and authenticates" do
-      workspace_id = Fixtures.workspace_id()
+      workspace_slug = Fixtures.workspace_id()
+      workspace_uuid = Fixtures.unique_id()
       user_id = Fixtures.unique_id()
 
       Agents.Mocks.IdentityMock
       |> expect(:verify_api_key, fn "valid-token-123" ->
-        {:ok, Fixtures.api_key_struct(%{workspace_access: [workspace_id], user_id: user_id})}
+        {:ok, Fixtures.api_key_struct(%{workspace_access: [workspace_slug], user_id: user_id})}
       end)
+      |> expect(:resolve_workspace_id, fn ^workspace_slug -> {:ok, workspace_uuid} end)
 
       conn =
         build_conn([{"authorization", "Bearer valid-token-123"}])
         |> call_plug(identity_module: Agents.Mocks.IdentityMock)
 
       refute conn.halted
-      assert conn.assigns[:workspace_id] == workspace_id
+      assert conn.assigns[:workspace_id] == workspace_uuid
       assert conn.assigns[:user_id] == user_id
     end
 
     test "handles Bearer prefix case-insensitively" do
-      workspace_id = Fixtures.workspace_id()
+      workspace_slug = Fixtures.workspace_id()
+      workspace_uuid = Fixtures.unique_id()
       user_id = Fixtures.unique_id()
 
       Agents.Mocks.IdentityMock
       |> expect(:verify_api_key, fn "my-token" ->
-        {:ok, Fixtures.api_key_struct(%{workspace_access: [workspace_id], user_id: user_id})}
+        {:ok, Fixtures.api_key_struct(%{workspace_access: [workspace_slug], user_id: user_id})}
       end)
+      |> expect(:resolve_workspace_id, fn ^workspace_slug -> {:ok, workspace_uuid} end)
 
       conn =
         build_conn([{"authorization", "bearer my-token"}])
         |> call_plug(identity_module: Agents.Mocks.IdentityMock)
 
       refute conn.halted
-      assert conn.assigns[:workspace_id] == workspace_id
+      assert conn.assigns[:workspace_id] == workspace_uuid
     end
   end
 

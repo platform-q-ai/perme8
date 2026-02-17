@@ -548,6 +548,46 @@ defmodule Identity do
     UseCases.VerifyApiKey.execute(plain_token)
   end
 
+  @doc """
+  Resolves a workspace slug to its UUID.
+
+  If the given string is already a valid UUID, returns it as-is.
+  Otherwise, looks up the workspace by slug and returns the ID.
+
+  ## Examples
+
+      iex> Identity.resolve_workspace_id("product-team")
+      {:ok, "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeee01"}
+
+      iex> Identity.resolve_workspace_id("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeee01")
+      {:ok, "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeee01"}
+
+      iex> Identity.resolve_workspace_id("nonexistent")
+      {:error, :not_found}
+  """
+  def resolve_workspace_id(slug_or_id) when is_binary(slug_or_id) do
+    if uuid?(slug_or_id) do
+      {:ok, slug_or_id}
+    else
+      case Repo.one(
+             from(w in Identity.Infrastructure.Schemas.WorkspaceSchema,
+               where: w.slug == ^slug_or_id,
+               select: w.id
+             )
+           ) do
+        nil -> {:error, :not_found}
+        id -> {:ok, id}
+      end
+    end
+  end
+
+  defp uuid?(str) do
+    case Ecto.UUID.cast(str) do
+      {:ok, _} -> true
+      :error -> false
+    end
+  end
+
   ## Workspaces
 
   alias Identity.Domain.Entities.{Workspace, WorkspaceMember}

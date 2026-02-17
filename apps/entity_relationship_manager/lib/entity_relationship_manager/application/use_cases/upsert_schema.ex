@@ -9,7 +9,8 @@ defmodule EntityRelationshipManager.Application.UseCases.UpsertSchema do
   alias EntityRelationshipManager.Domain.Entities.{
     SchemaDefinition,
     EntityTypeDefinition,
-    EdgeTypeDefinition
+    EdgeTypeDefinition,
+    PropertyDefinition
   }
 
   alias EntityRelationshipManager.Application.RepoConfig
@@ -57,11 +58,32 @@ defmodule EntityRelationshipManager.Application.UseCases.UpsertSchema do
     })
   end
 
+  defp deserialize_entity_type(%EntityTypeDefinition{} = et), do: et
+
   defp deserialize_entity_type(map) when is_map(map) do
-    EntityTypeDefinition.from_map(map)
+    if atom_keyed?(map) do
+      props = map |> Map.get(:properties, []) |> Enum.map(&deserialize_property/1)
+      EntityTypeDefinition.new(%{map | properties: props})
+    else
+      EntityTypeDefinition.from_map(map)
+    end
   end
 
+  defp deserialize_edge_type(%EdgeTypeDefinition{} = et), do: et
+
   defp deserialize_edge_type(map) when is_map(map) do
-    EdgeTypeDefinition.from_map(map)
+    if atom_keyed?(map) do
+      props = map |> Map.get(:properties, []) |> Enum.map(&deserialize_property/1)
+      EdgeTypeDefinition.new(%{map | properties: props})
+    else
+      EdgeTypeDefinition.from_map(map)
+    end
+  end
+
+  defp deserialize_property(%PropertyDefinition{} = pd), do: pd
+  defp deserialize_property(map) when is_map(map), do: PropertyDefinition.new(map)
+
+  defp atom_keyed?(map) do
+    map |> Map.keys() |> List.first() |> is_atom()
   end
 end

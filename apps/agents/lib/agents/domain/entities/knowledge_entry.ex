@@ -74,16 +74,19 @@ defmodule Agents.Domain.Entities.KnowledgeEntry do
   """
   @spec to_erm_properties(t()) :: map()
   def to_erm_properties(%__MODULE__{} = entry) do
-    %{
+    props = %{
       "title" => entry.title,
       "body" => entry.body,
       "category" => entry.category,
       "tags" => Jason.encode!(entry.tags || []),
       "code_snippets" => Jason.encode!(entry.code_snippets || []),
       "file_paths" => Jason.encode!(entry.file_paths || []),
-      "external_links" => Jason.encode!(entry.external_links || []),
-      "last_verified_at" => entry.last_verified_at
+      "external_links" => Jason.encode!(entry.external_links || [])
     }
+
+    if entry.last_verified_at,
+      do: Map.put(props, "last_verified_at", entry.last_verified_at),
+      else: props
   end
 
   @doc """

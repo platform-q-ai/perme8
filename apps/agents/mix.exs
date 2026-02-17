@@ -61,6 +61,7 @@ defmodule Agents.MixProject do
 
       # MCP
       {:hermes_mcp, "~> 0.14"},
+      {:bandit, "~> 1.0"},
 
       # Testing
       {:mox, "~> 1.0", only: :test},

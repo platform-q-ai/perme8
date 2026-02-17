@@ -65,13 +65,15 @@ defmodule Agents.Infrastructure.Mcp.RouterTest do
 
   describe "authenticated requests" do
     test "forwards authenticated requests to MCP transport" do
-      workspace_id = Fixtures.workspace_id()
+      workspace_slug = Fixtures.workspace_id()
+      workspace_uuid = Fixtures.unique_id()
       user_id = Fixtures.unique_id()
 
       Agents.Mocks.IdentityMock
       |> expect(:verify_api_key, fn "valid-key" ->
-        {:ok, Fixtures.api_key_struct(%{workspace_access: [workspace_id], user_id: user_id})}
+        {:ok, Fixtures.api_key_struct(%{workspace_access: [workspace_slug], user_id: user_id})}
       end)
+      |> expect(:resolve_workspace_id, fn ^workspace_slug -> {:ok, workspace_uuid} end)
 
       conn =
         :post
@@ -103,13 +105,15 @@ defmodule Agents.Infrastructure.Mcp.RouterTest do
     end
 
     test "assigns workspace_id and user_id from authentication" do
-      workspace_id = Fixtures.workspace_id()
+      workspace_slug = Fixtures.workspace_id()
+      workspace_uuid = Fixtures.unique_id()
       user_id = Fixtures.unique_id()
 
       Agents.Mocks.IdentityMock
       |> expect(:verify_api_key, fn "valid-key" ->
-        {:ok, Fixtures.api_key_struct(%{workspace_access: [workspace_id], user_id: user_id})}
+        {:ok, Fixtures.api_key_struct(%{workspace_access: [workspace_slug], user_id: user_id})}
       end)
+      |> expect(:resolve_workspace_id, fn ^workspace_slug -> {:ok, workspace_uuid} end)
 
       conn =
         :post
@@ -132,7 +136,7 @@ defmodule Agents.Infrastructure.Mcp.RouterTest do
         |> Router.call(Router.init([]))
 
       # Verify assigns were set (they pass through to the Hermes transport context)
-      assert conn.assigns[:workspace_id] == workspace_id
+      assert conn.assigns[:workspace_id] == workspace_uuid
       assert conn.assigns[:user_id] == user_id
     end
   end
