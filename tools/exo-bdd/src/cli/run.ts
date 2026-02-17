@@ -8,6 +8,7 @@ export interface RunOptions {
   config: string
   tags?: string
   adapter?: string
+  noRetry: boolean
   passthrough: string[]
 }
 
@@ -15,6 +16,7 @@ export function parseRunArgs(args: string[]): RunOptions {
   let config: string | undefined
   let tags: string | undefined
   let adapter: string | undefined
+  let noRetry = false
   const passthrough: string[] = []
 
   for (let i = 0; i < args.length; i++) {
@@ -25,6 +27,8 @@ export function parseRunArgs(args: string[]): RunOptions {
       tags = args[++i]
     } else if (arg === '--adapter' || arg === '-a') {
       adapter = args[++i]
+    } else if (arg === '--no-retry') {
+      noRetry = true
     } else {
       passthrough.push(arg!)
     }
@@ -34,7 +38,7 @@ export function parseRunArgs(args: string[]): RunOptions {
     throw new Error('Missing required argument: --config <path>')
   }
 
-  return { config, tags, adapter, passthrough }
+  return { config, tags, adapter, noRetry, passthrough }
 }
 
 /**
@@ -106,8 +110,9 @@ export function buildCucumberArgs(options: {
   stepsImport: string
   passthrough: string[]
   tags?: string
+  noRetry?: boolean
 }): string[] {
-  const { features, configDir, setupPath, stepsImport, passthrough, tags } = options
+  const { features, configDir, setupPath, stepsImport, passthrough, tags, noRetry } = options
 
   // Resolve feature paths relative to the config file directory
   const featurePaths = Array.isArray(features) ? features : [features]
@@ -124,6 +129,11 @@ export function buildCucumberArgs(options: {
   // Add tag expression if configured
   if (tags) {
     args.push('--tags', tags)
+  }
+
+  // Disable retries when running in selective mode
+  if (noRetry) {
+    args.push('--retry', '0')
   }
 
   args.push(...passthrough)
@@ -344,6 +354,7 @@ export async function runTests(options: RunOptions): Promise<number> {
     stepsImport,
     passthrough: options.passthrough,
     tags: effectiveTags,
+    noRetry: options.noRetry,
   })
 
   const cucumberBin = resolve(exoBddRoot, 'node_modules/.bin/cucumber-js')

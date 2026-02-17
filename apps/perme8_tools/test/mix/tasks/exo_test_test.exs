@@ -49,6 +49,48 @@ defmodule Mix.Tasks.ExoTestTest do
                "not @security and not @slow"
              ]
     end
+
+    test "appends --no-retry when no_retry option is true" do
+      args = ExoTest.build_cmd_args("/abs/path/config.ts", nil, nil, true)
+
+      assert args == [
+               "run",
+               "src/cli/index.ts",
+               "run",
+               "--config",
+               "/abs/path/config.ts",
+               "--no-retry"
+             ]
+    end
+
+    test "appends --no-retry with other flags" do
+      args = ExoTest.build_cmd_args("/abs/path/config.ts", "@smoke", "browser", true)
+
+      assert args == [
+               "run",
+               "src/cli/index.ts",
+               "run",
+               "--config",
+               "/abs/path/config.ts",
+               "--tags",
+               "@smoke",
+               "--adapter",
+               "browser",
+               "--no-retry"
+             ]
+    end
+
+    test "does not append --no-retry when no_retry is false" do
+      args = ExoTest.build_cmd_args("/abs/path/config.ts", nil, nil, false)
+
+      assert args == [
+               "run",
+               "src/cli/index.ts",
+               "run",
+               "--config",
+               "/abs/path/config.ts"
+             ]
+    end
   end
 
   describe "config_name/1" do

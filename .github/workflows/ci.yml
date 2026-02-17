@@ -18,6 +18,15 @@ jobs:
     outputs:
       exo_bdd: ${{ steps.filter.outputs.exo_bdd }}
       umbrella: ${{ steps.filter.outputs.umbrella }}
+      # Per-app change detection
+      alkali: ${{ steps.filter.outputs.alkali }}
+      identity: ${{ steps.filter.outputs.identity }}
+      agents: ${{ steps.filter.outputs.agents }}
+      jarga: ${{ steps.filter.outputs.jarga }}
+      jarga_api: ${{ steps.filter.outputs.jarga_api }}
+      jarga_web: ${{ steps.filter.outputs.jarga_web }}
+      erm: ${{ steps.filter.outputs.erm }}
+      shared: ${{ steps.filter.outputs.shared }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
@@ -34,6 +43,24 @@ jobs:
               - '!docs/**'
               - '!LICENSE*'
               - '!.Claude/**'
+            alkali:
+              - 'apps/alkali/**'
+            identity:
+              - 'apps/identity/**'
+            agents:
+              - 'apps/agents/**'
+            jarga:
+              - 'apps/jarga/**'
+            jarga_api:
+              - 'apps/jarga_api/**'
+            jarga_web:
+              - 'apps/jarga_web/**'
+            erm:
+              - 'apps/entity_relationship_manager/**'
+            shared:
+              - 'config/**'
+              - 'mix.exs'
+              - 'mix.lock'
 
   exo-bdd:
     name: exo-bdd tests
@@ -137,61 +164,127 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jarga_test
 
+  selective-matrix:
+    name: Compute test matrix
+    needs: [changes]
+    if: needs.changes.outputs.umbrella == 'true' || needs.changes.outputs.exo_bdd == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.compute.outputs.matrix }}
+      selective: ${{ steps.compute.outputs.selective }}
+    steps:
+      - id: compute
+        name: Build selective matrix
+        env:
+          # Per-app change flags
+          CHANGED_ALKALI: ${{ needs.changes.outputs.alkali }}
+          CHANGED_IDENTITY: ${{ needs.changes.outputs.identity }}
+          CHANGED_AGENTS: ${{ needs.changes.outputs.agents }}
+          CHANGED_JARGA: ${{ needs.changes.outputs.jarga }}
+          CHANGED_JARGA_API: ${{ needs.changes.outputs.jarga_api }}
+          CHANGED_JARGA_WEB: ${{ needs.changes.outputs.jarga_web }}
+          CHANGED_ERM: ${{ needs.changes.outputs.erm }}
+          CHANGED_SHARED: ${{ needs.changes.outputs.shared }}
+          CHANGED_EXO_BDD: ${{ needs.changes.outputs.exo_bdd }}
+          IS_MAIN: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          python3 - <<'PYEOF'
+          import os, json, hashlib
+
+          # All valid app/domain combos with their metadata
+          ALL_COMBOS = [
+              {"app": "alkali",    "domain": "cli",      "config_name": "alkali",                      "timeout": 5},
+              {"app": "erm",       "domain": "http",     "config_name": "entity-relationship-manager", "timeout": 10},
+              {"app": "erm",       "domain": "security", "config_name": "entity-relationship-manager", "timeout": 15},
+              {"app": "identity",  "domain": "browser",  "config_name": "identity",                    "timeout": 15},
+              {"app": "identity",  "domain": "security", "config_name": "identity",                    "timeout": 15},
+              {"app": "jarga-api", "domain": "http",     "config_name": "jarga-api",                   "timeout": 10},
+              {"app": "jarga-api", "domain": "security", "config_name": "jarga-api",                   "timeout": 15},
+              {"app": "jarga-web", "domain": "browser",  "config_name": "jarga-web",                   "timeout": 15},
+          ]
+
+          # Dependency tree: if a dependency changes, all dependents need testing
+          # identity <- agents, jarga, jarga_api, erm (and transitively jarga_web)
+          # agents <- jarga, jarga_web
+          # jarga <- jarga_web, jarga_api, erm
+          def apps_needing_tests():
+              """Return set of app names (matrix-style) that need testing."""
+              changed = os.environ
+              needs_test = set()
+
+              # Direct changes
+              if changed.get("CHANGED_ALKALI") == "true":
+                  needs_test.add("alkali")
+              if changed.get("CHANGED_IDENTITY") == "true":
+                  needs_test.update(["identity", "jarga-api", "erm", "jarga-web"])
+              if changed.get("CHANGED_AGENTS") == "true":
+                  needs_test.update(["jarga-web"])
+              if changed.get("CHANGED_JARGA") == "true":
+                  needs_test.update(["jarga-web", "jarga-api", "erm"])
+              if changed.get("CHANGED_JARGA_API") == "true":
+                  needs_test.add("jarga-api")
+              if changed.get("CHANGED_JARGA_WEB") == "true":
+                  needs_test.add("jarga-web")
+              if changed.get("CHANGED_ERM") == "true":
+                  needs_test.add("erm")
+
+              return needs_test
+
+          is_main = os.environ.get("IS_MAIN") == "true"
+          shared_changed = os.environ.get("CHANGED_SHARED") == "true"
+          exo_bdd_changed = os.environ.get("CHANGED_EXO_BDD") == "true"
+          run_id = os.environ.get("RUN_ID", "0")
+
+          # On main branch, shared config changes, or exo-bdd framework changes: run everything
+          if is_main or shared_changed or exo_bdd_changed:
+              selected = ALL_COMBOS
+              selective = "false"
+          else:
+              apps_to_test = apps_needing_tests()
+              # If nothing changed that we track, run everything (safety net)
+              if not apps_to_test:
+                  selected = ALL_COMBOS
+                  selective = "false"
+              else:
+                  # Select combos for changed apps
+                  required = [c for c in ALL_COMBOS if c["app"] in apps_to_test]
+                  unrelated = [c for c in ALL_COMBOS if c["app"] not in apps_to_test]
+
+                  # Randomly sample ~10% of unrelated combos (seeded for reproducibility)
+                  seed = int(hashlib.sha256(run_id.encode()).hexdigest(), 16)
+                  import random
+                  rng = random.Random(seed)
+                  sample_count = max(1, round(len(unrelated) * 0.1)) if unrelated else 0
+                  sampled = rng.sample(unrelated, min(sample_count, len(unrelated))) if unrelated else []
+
+                  selected = required + sampled
+                  selective = "true"
+
+          # Output the matrix as JSON
+          matrix = {"include": selected}
+          matrix_json = json.dumps(matrix, separators=(",", ":"))
+
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write(f"matrix={matrix_json}\n")
+              f.write(f"selective={selective}\n")
+
+          # Log for debugging
+          app_list = sorted(set(c["app"] + "/" + c["domain"] for c in selected))
+          print(f"Selective mode: {selective}")
+          print(f"Running {len(selected)}/{len(ALL_COMBOS)} combos: {', '.join(app_list)}")
+          PYEOF
+
   exo-bdd-360:
     name: "360: ${{ matrix.domain }} / ${{ matrix.app }}"
-    needs: [changes]
+    needs: [changes, selective-matrix]
     if: needs.changes.outputs.umbrella == 'true' || needs.changes.outputs.exo_bdd == 'true'
     timeout-minutes: ${{ matrix.timeout }}
     runs-on: ubuntu-latest
 
     strategy:
       fail-fast: false
-      matrix:
-        app: [alkali, erm, identity, jarga-api, jarga-web]
-        domain: [browser, cli, http, security]
-        exclude:
-          # alkali only has CLI features
-          - app: alkali
-            domain: browser
-          - app: alkali
-            domain: http
-          - app: alkali
-            domain: security
-          # ERM has HTTP and security features
-          - app: erm
-            domain: browser
-          - app: erm
-            domain: cli
-          # identity has browser and security features
-          - app: identity
-            domain: cli
-          - app: identity
-            domain: http
-          # jarga-api has HTTP and security features
-          - app: jarga-api
-            domain: browser
-          - app: jarga-api
-            domain: cli
-          # jarga-web only has browser features
-          - app: jarga-web
-            domain: cli
-          - app: jarga-web
-            domain: http
-          - app: jarga-web
-            domain: security
-        include:
-          # Map app names to exo-bdd config stems where they differ
-          - app: erm
-            config_name: entity-relationship-manager
-          # Timeouts per domain
-          - domain: browser
-            timeout: 15
-          - domain: cli
-            timeout: 5
-          - domain: http
-            timeout: 10
-          - domain: security
-            timeout: 15
+      matrix: ${{ fromJson(needs.selective-matrix.outputs.matrix) }}
 
     services:
       postgres:
@@ -281,14 +374,19 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jarga_test
 
       - name: Run exo-bdd tests
-        run: mix exo_test --name ${{ matrix.config_name || matrix.app }} --adapter ${{ matrix.domain }}
+        run: |
+          ARGS="--name ${{ matrix.config_name }} --adapter ${{ matrix.domain }}"
+          if [ "${{ needs.selective-matrix.outputs.selective }}" = "true" ]; then
+            ARGS="$ARGS --no-retry"
+          fi
+          mix exo_test $ARGS
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jarga_test
 
   deploy:
     name: Deploy to Render
     runs-on: ubuntu-latest
-    needs: [changes, test, exo-bdd, exo-bdd-360]
+    needs: [changes, test, exo-bdd, selective-matrix, exo-bdd-360]
     if: |
       always() &&
       github.event_name == 'push' && github.ref == 'refs/heads/main' &&
