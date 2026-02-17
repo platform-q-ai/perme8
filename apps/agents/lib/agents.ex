@@ -35,7 +35,8 @@ defmodule Agents do
       Agents.Domain,
       Agents.Application,
       Agents.Infrastructure,
-      Identity.Repo
+      Identity.Repo,
+      EntityRelationshipManager
     ],
     exports: [
       {Domain.Entities.Agent, []}
@@ -296,5 +297,74 @@ defmodule Agents do
     # Send cancel signal to the query process
     send(query_pid, {:cancel, node_id})
     :ok
+  end
+
+  # ---------------------------------------------------------------------------
+  # Knowledge MCP — workspace-scoped knowledge base via MCP tools
+  # ---------------------------------------------------------------------------
+
+  alias Agents.Application.UseCases.{
+    AuthenticateMcpRequest,
+    BootstrapKnowledgeSchema,
+    CreateKnowledgeEntry,
+    UpdateKnowledgeEntry,
+    GetKnowledgeEntry,
+    SearchKnowledgeEntries,
+    TraverseKnowledgeGraph,
+    CreateKnowledgeRelationship
+  }
+
+  @doc "Authenticates an MCP API key token and resolves workspace context."
+  @spec authenticate_mcp(String.t(), keyword()) :: {:ok, map()} | {:error, atom()}
+  def authenticate_mcp(token, opts \\ []) do
+    AuthenticateMcpRequest.execute(token, opts)
+  end
+
+  @doc "Bootstraps the knowledge graph schema for a workspace (idempotent)."
+  @spec bootstrap_knowledge_schema(String.t(), keyword()) :: {:ok, term()} | {:error, term()}
+  def bootstrap_knowledge_schema(workspace_id, opts \\ []) do
+    BootstrapKnowledgeSchema.execute(workspace_id, opts)
+  end
+
+  @doc "Creates a new knowledge entry in a workspace."
+  @spec create_knowledge_entry(String.t(), map(), keyword()) ::
+          {:ok, struct()} | {:error, atom()}
+  def create_knowledge_entry(workspace_id, attrs, opts \\ []) do
+    CreateKnowledgeEntry.execute(workspace_id, attrs, opts)
+  end
+
+  @doc "Updates an existing knowledge entry."
+  @spec update_knowledge_entry(String.t(), String.t(), map(), keyword()) ::
+          {:ok, struct()} | {:error, atom()}
+  def update_knowledge_entry(workspace_id, entry_id, attrs, opts \\ []) do
+    UpdateKnowledgeEntry.execute(workspace_id, entry_id, attrs, opts)
+  end
+
+  @doc "Gets a knowledge entry with its relationships."
+  @spec get_knowledge_entry(String.t(), String.t(), keyword()) ::
+          {:ok, map()} | {:error, atom()}
+  def get_knowledge_entry(workspace_id, entry_id, opts \\ []) do
+    GetKnowledgeEntry.execute(workspace_id, entry_id, opts)
+  end
+
+  @doc "Searches knowledge entries by keyword, tags, and/or category."
+  @spec search_knowledge_entries(String.t(), map(), keyword()) ::
+          {:ok, [struct()]} | {:error, atom()}
+  def search_knowledge_entries(workspace_id, params, opts \\ []) do
+    SearchKnowledgeEntries.execute(workspace_id, params, opts)
+  end
+
+  @doc "Traverses the knowledge graph from a starting entry."
+  @spec traverse_knowledge_graph(String.t(), map(), keyword()) ::
+          {:ok, [struct()]} | {:error, atom()}
+  def traverse_knowledge_graph(workspace_id, params, opts \\ []) do
+    TraverseKnowledgeGraph.execute(workspace_id, params, opts)
+  end
+
+  @doc "Creates a relationship between two knowledge entries."
+  @spec create_knowledge_relationship(String.t(), map(), keyword()) ::
+          {:ok, struct()} | {:error, atom()}
+  def create_knowledge_relationship(workspace_id, params, opts \\ []) do
+    CreateKnowledgeRelationship.execute(workspace_id, params, opts)
   end
 end

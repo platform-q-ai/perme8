@@ -13,6 +13,10 @@ defmodule Agents.Domain do
     exports: [
       Entities.Agent,
       Entities.WorkspaceAgentJoin,
-      AgentCloner
+      Entities.KnowledgeEntry,
+      Entities.KnowledgeRelationship,
+      AgentCloner,
+      Policies.KnowledgeValidationPolicy,
+      Policies.SearchPolicy
     ]
 end

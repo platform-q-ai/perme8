@@ -9,7 +9,7 @@ defmodule Agents.Application do
 
   use Boundary,
     top_level?: true,
-    deps: [Agents.Domain],
+    deps: [Agents.Domain, Identity],
     exports: [
       # Use cases
       UseCases.AddAgentToWorkspace,
@@ -24,6 +24,15 @@ defmodule Agents.Application do
       UseCases.SyncAgentWorkspaces,
       UseCases.UpdateUserAgent,
       UseCases.ValidateAgentParams,
+      # Knowledge use cases
+      UseCases.AuthenticateMcpRequest,
+      UseCases.BootstrapKnowledgeSchema,
+      UseCases.CreateKnowledgeEntry,
+      UseCases.UpdateKnowledgeEntry,
+      UseCases.GetKnowledgeEntry,
+      UseCases.SearchKnowledgeEntries,
+      UseCases.TraverseKnowledgeGraph,
+      UseCases.CreateKnowledgeRelationship,
       # Policies
       Policies.AgentPolicy,
       Policies.VisibilityPolicy,
@@ -32,6 +41,10 @@ defmodule Agents.Application do
       Behaviours.AgentSchemaBehaviour,
       Behaviours.LlmClientBehaviour,
       Behaviours.PubSubNotifierBehaviour,
-      Behaviours.WorkspaceAgentRepositoryBehaviour
+      Behaviours.WorkspaceAgentRepositoryBehaviour,
+      Behaviours.ErmGatewayBehaviour,
+      Behaviours.IdentityBehaviour,
+      # Config
+      GatewayConfig
     ]
 end

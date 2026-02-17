@@ -75,3 +75,6 @@ config :phoenix_live_view,
 
 # Use mock LLM client for tests
 config :jarga, :llm_client, Jarga.Test.Support.MockLlmClient
+
+# Agents MCP: Use streamable_http transport in tests with start: true
+config :agents, :mcp_transport, {:streamable_http, start: true}
