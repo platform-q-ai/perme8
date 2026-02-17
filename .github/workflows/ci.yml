@@ -211,6 +211,7 @@ jobs:
               {"app": "jarga-api", "domain": "http",     "config_name": "jarga-api",                   "timeout": 10},
               {"app": "jarga-api", "domain": "security", "config_name": "jarga-api",                   "timeout": 15},
               {"app": "jarga-web", "domain": "browser",  "config_name": "jarga-web",                   "timeout": 15},
+              {"app": "jarga-web", "domain": "security", "config_name": "jarga-web",                   "timeout": 15},
           ]
 
           # Dependency tree: if a dependency changes, all dependents need testing
