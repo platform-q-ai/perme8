@@ -78,3 +78,6 @@ config :jarga, :llm_client, Jarga.Test.Support.MockLlmClient
 
 # Agents MCP: Use streamable_http transport in tests with start: true
 config :agents, :mcp_transport, {:streamable_http, start: true}
+
+# Agents MCP HTTP: Standalone Bandit server for MCP endpoint (exo-bdd tests)
+config :agents, :mcp_http, port: 4007
