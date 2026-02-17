@@ -197,7 +197,7 @@ defmodule JargaWeb.AppLive.Projects.ShowTest do
 
       # Submit form
       lv
-      |> form("#document-form", title: "New Test Document")
+      |> form("#document-form", "document-form": %{title: "New Test Document"})
       |> render_submit()
 
       # Should redirect to new page

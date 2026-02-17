@@ -101,9 +101,6 @@ defmodule Identity.MixProject do
       {:dns_cluster, "~> 0.2.0"},
       {:bandit, "~> 1.5"},
 
-      # Testing
-      {:wallaby, "~> 0.30", runtime: false, only: :test},
-
       # Architecture
       {:boundary, "~> 0.10", runtime: false}
     ]

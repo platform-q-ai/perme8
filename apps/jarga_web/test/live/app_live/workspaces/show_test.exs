@@ -144,7 +144,7 @@ defmodule JargaWeb.AppLive.Workspaces.ShowTest do
 
       # Submit form
       lv
-      |> form("#document-form", title: "New Document")
+      |> form("#document-form", "document-form": %{title: "New Document"})
       |> render_submit()
 
       assert_redirect(lv, ~p"/app/workspaces/#{workspace.slug}/documents/new-document")
@@ -477,7 +477,7 @@ defmodule JargaWeb.AppLive.Workspaces.ShowTest do
 
       # Submit with empty title (should fail validation)
       lv
-      |> form("#document-form", title: "")
+      |> form("#document-form", "document-form": %{title: ""})
       |> render_submit()
 
       html = render(lv)
