@@ -27,6 +27,7 @@ defmodule JargaWeb.AppLive.Workspaces.New do
         <.form
           for={@form}
           id="workspace-form"
+          phx-change="validate"
           phx-submit="save"
           class="space-y-6"
         >
@@ -35,7 +36,6 @@ defmodule JargaWeb.AppLive.Workspaces.New do
             type="text"
             label="Name"
             placeholder="My Workspace"
-            required
           />
 
           <.input
@@ -73,6 +73,18 @@ defmodule JargaWeb.AppLive.Workspaces.New do
     {:ok,
      socket
      |> assign(:form, to_form(changeset, as: :workspace))}
+  end
+
+  @impl true
+  def handle_event("validate", %{"workspace" => params}, socket) do
+    errors =
+      if String.trim(params["name"] || "") == "" do
+        [name: {"can't be blank", [validation: :required]}]
+      else
+        []
+      end
+
+    {:noreply, assign(socket, form: to_form(params, as: :workspace, errors: errors))}
   end
 
   @impl true
