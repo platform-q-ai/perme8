@@ -20,7 +20,9 @@ defmodule Agents.Infrastructure.Mcp.Router do
   use Plug.Router
 
   alias Agents.Infrastructure.Mcp.McpPipeline
+  alias Agents.Infrastructure.Mcp.SecurityHeadersPlug
 
+  plug(SecurityHeadersPlug)
   plug(:match)
   plug(:dispatch)
 
