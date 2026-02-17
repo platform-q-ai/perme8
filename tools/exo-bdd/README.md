@@ -204,6 +204,7 @@ Keep this low for browser tests (10s) so failing scenarios abort quickly. Playwr
 - **Element assertions**: `{string} should be visible/hidden`, `{string} should exist/not exist`, `{string} should be enabled/disabled`, `{string} should have text/value/class {string}`
 - **Page assertions**: `the URL should contain {string}`, `the page title should contain {string}`, `there should be {int} {string} elements`
 - **Storage**: `I store the text of {string} as {string}`, `I store the URL as {string}`
+- **Browser dialogs**: `I accept the next browser dialog`, `I dismiss the next browser dialog` (for `data-confirm`, `window.confirm()`, `alert()`)
 - **Other**: `I take a screenshot`, `I hover over {string}`, `I press {string}`, `I upload {string} to {string}`
 
 #### Phoenix LiveView Tips
@@ -213,6 +214,11 @@ LiveView pages use a websocket connection that initializes after the initial pag
 - **Always** add `I wait for network idle` after navigating to a LiveView page and before interacting with forms or `phx-*` elements.
 - LiveView `navigate` links (client-side patch) don't trigger a full page load. Use `I click the {string} link` + `I wait for network idle` instead of `I click the {string} link and wait for navigation`.
 - `I wait for the page to load` only waits for the initial HTTP load event, not the LiveView socket. Use `I wait for network idle` when you need the socket connected.
+- Phoenix `data-confirm` attributes trigger a native browser `confirm()` dialog. Add `I accept the next browser dialog` **before** the click that triggers it:
+  ```gherkin
+  And I accept the next browser dialog
+  And I click the "Delete Document" button
+  ```
 
 ### CLI Steps
 

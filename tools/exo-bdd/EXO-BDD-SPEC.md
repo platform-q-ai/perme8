@@ -632,6 +632,10 @@ When I upload {string} to {string}
 When I hover over {string}
 When I focus on {string}
 
+# Browser Dialogs (confirm/alert/prompt)
+When I accept the next browser dialog
+When I dismiss the next browser dialog
+
 # Waiting
 When I wait for {string} to be visible
 When I wait for {string} to be hidden
@@ -1501,6 +1505,8 @@ npx cucumber-js --format junit:reports/junit.xml
 | `Then {string} should be visible` | Assert element visible |
 | `Then the URL should contain {string}` | Assert URL |
 | `And I store the text of {string} as {string}` | Store element text |
+| `When I accept the next browser dialog` | Accept next confirm/alert dialog |
+| `When I dismiss the next browser dialog` | Dismiss next confirm/alert dialog |
 
 ### CLI Steps
 
