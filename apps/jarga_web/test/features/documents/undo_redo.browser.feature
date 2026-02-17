@@ -12,9 +12,7 @@ Feature: Undo/Redo in Collaborative Editor
   # Seeded documents used in this file:
   #   "Product Spec" - public, by alice (slug: product-spec)
   #
-  # @wip: All scenarios require typing into a ProseMirror/Milkdown contenteditable
-  # and sending Ctrl+Z / Ctrl+Shift+Z keyboard shortcuts. Multi-user scenarios
-  # additionally require two simultaneous browser sessions.
+  # @wip: Multi-user scenarios require two simultaneous browser sessions.
   #
   # Migrated from: apps/jarga_web/test/wallaby/undo_redo_test.exs
 
@@ -37,7 +35,6 @@ Feature: Undo/Redo in Collaborative Editor
     # TODO (multi-browser): User A's editor does NOT contain "Hello" but contains "World"
     # TODO (multi-browser): User B's editor still contains "World"
 
-  @wip
   Scenario: Redo re-applies local user's undone changes
     # Wallaby: "redo re-applies local user's undone changes"
     # Single-user: Type "Hello", Ctrl+Z (gone), Ctrl+Shift+Z (back).
@@ -49,10 +46,15 @@ Feature: Undo/Redo in Collaborative Editor
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/product-spec"
     And I wait for network idle
     Then "#editor-container" should be visible
-    # TODO: Type "Hello" in .ProseMirror
-    # TODO: Assert editor contains "Hello"
-    # TODO: Press Ctrl+Z — assert editor does NOT contain "Hello"
-    # TODO: Press Ctrl+Shift+Z — assert editor contains "Hello" again
+    When I click ".ProseMirror"
+    And I press "Control+a"
+    And I press "Backspace"
+    And I type "Hello" into ".ProseMirror"
+    Then ".ProseMirror" should contain text "Hello"
+    When I press "Control+z"
+    Then I should not see "Hello"
+    When I press "Control+Shift+z"
+    Then ".ProseMirror" should contain text "Hello"
 
   @wip
   Scenario: Undo does not affect other users' undo stacks

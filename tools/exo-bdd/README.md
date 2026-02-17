@@ -197,7 +197,7 @@ Keep this low for browser tests (10s) so failing scenarios abort quickly. Playwr
 ### Browser Steps
 
 - **Navigation**: `I navigate to {string}`, `I am on {string}`, `I reload the page`, `I go back`, `I go forward`
-- **Clicking**: `I click {string}` (CSS selector), `I click the {string} button` / `link` (text match), `... and wait for navigation` variants
+- **Clicking**: `I click {string}` (CSS selector), `I click the {string} button` / `link` (text match), `I click {string} at position {int},{int}` (coordinate-based click within element), `... and wait for navigation` variants
 - **Forms**: `I fill {string} with {string}`, `I type {string} into {string}`, `I select {string} from {string}`, `I clear {string}`, `I check/uncheck {string}`
 - **Waiting**: `I wait for {string} to be visible/hidden`, `I wait for {int} seconds`, `I wait for network idle`, `I wait for the page to load`
 - **Text assertions**: `I should see {string}`, `I should not see {string}`

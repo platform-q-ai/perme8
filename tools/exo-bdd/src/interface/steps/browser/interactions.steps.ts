@@ -51,6 +51,10 @@ export async function clickLinkAndNavigate(context: InteractionContext, text: st
   await navigationPromise
 }
 
+export async function clickAtPosition(context: InteractionContext, selector: string, x: number, y: number): Promise<void> {
+  await context.browser.page.locator(context.interpolate(selector)).first().click({ position: { x, y } })
+}
+
 export async function doubleClickSelector(context: InteractionContext, selector: string): Promise<void> {
   await context.browser.doubleClick(context.interpolate(selector))
 }
@@ -172,6 +176,10 @@ When<TestWorld>('I click the {string} button and wait for navigation', async fun
 
 When<TestWorld>('I click the {string} link and wait for navigation', async function (text: string) {
   await clickLinkAndNavigate(this, text)
+})
+
+When<TestWorld>('I click {string} at position {int},{int}', async function (selector: string, x: number, y: number) {
+  await clickAtPosition(this, selector, x, y)
 })
 
 When<TestWorld>('I double-click {string}', async function (selector: string) {

@@ -118,11 +118,9 @@ Feature: Document Collaboration
     # TODO (multi-browser): Both users type concurrently
     # TODO (multi-browser): Both editors contain both contributions (CRDT convergence)
 
-  @wip
   Scenario: Document saves persist after page refresh
     # Wallaby: "document saves persist after page refresh"
-    # Single-user: Type content, refresh page, verify content is still there.
-    # Auto-save should persist the document before navigation.
+    # Single-user: Type content, wait for auto-save, refresh page, verify content.
     Given I am on "${baseUrl}/users/log-in"
     And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
@@ -131,10 +129,15 @@ Feature: Document Collaboration
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/documents/product-spec"
     And I wait for network idle
     Then "#editor-container" should be visible
-    # TODO: Type "Persistent content" in .ProseMirror
-    # TODO: Refresh the page
-    # TODO: Wait for editor to reload
-    # TODO: Assert editor contains "Persistent content"
+    When I click ".ProseMirror"
+    And I press "Control+a"
+    And I press "Backspace"
+    And I type "Persistent content after refresh" into ".ProseMirror"
+    And I wait for 2 seconds
+    And I reload the page
+    And I wait for network idle
+    Then "#editor-container" should be visible
+    And ".ProseMirror" should contain text "Persistent content after refresh"
 
   @wip
   Scenario: Late-joining user receives full document state
