@@ -40,17 +40,17 @@ describe('FlashHook', () => {
   })
 
   describe('mounted', () => {
-    test('sets up auto-hide timer with default timeout (2 seconds)', () => {
+    test('sets up auto-hide timer with default timeout (5 seconds)', () => {
       hook.mounted()
 
       // Should not be hidden immediately
       expect(mockElement.classList.contains('fade-out')).toBe(false)
 
-      // Fast forward 1999ms (just before timeout)
-      vi.advanceTimersByTime(1999)
+      // Fast forward 4999ms (just before timeout)
+      vi.advanceTimersByTime(4999)
       expect(mockElement.classList.contains('fade-out')).toBe(false)
 
-      // Fast forward 1ms more (exactly at 2000ms)
+      // Fast forward 1ms more (exactly at 5000ms)
       vi.advanceTimersByTime(1)
       expect(mockElement.classList.contains('fade-out')).toBe(true)
     })
@@ -74,8 +74,8 @@ describe('FlashHook', () => {
 
       hook.mounted()
 
-      // Should fall back to default timeout (2000ms)
-      vi.advanceTimersByTime(2000)
+      // Should fall back to default timeout (5000ms)
+      vi.advanceTimersByTime(5000)
       expect(mockElement.classList.contains('fade-out')).toBe(true)
     })
 
@@ -84,8 +84,8 @@ describe('FlashHook', () => {
 
       hook.mounted()
 
-      // Should fall back to default timeout (2000ms)
-      vi.advanceTimersByTime(2000)
+      // Should fall back to default timeout (5000ms)
+      vi.advanceTimersByTime(5000)
       expect(mockElement.classList.contains('fade-out')).toBe(true)
     })
 
@@ -94,8 +94,8 @@ describe('FlashHook', () => {
 
       hook.mounted()
 
-      // Should fall back to default timeout (2000ms)
-      vi.advanceTimersByTime(2000)
+      // Should fall back to default timeout (5000ms)
+      vi.advanceTimersByTime(5000)
       expect(mockElement.classList.contains('fade-out')).toBe(true)
     })
 
@@ -105,7 +105,7 @@ describe('FlashHook', () => {
       hook.mounted()
 
       // Fast forward to trigger fade-out
-      vi.advanceTimersByTime(2000)
+      vi.advanceTimersByTime(5000)
       expect(mockElement.classList.contains('fade-out')).toBe(true)
 
       // Fast forward additional time for fade animation (300ms)
@@ -145,7 +145,7 @@ describe('FlashHook', () => {
       closeButton.click()
 
       // Fast forward past auto-hide time
-      vi.advanceTimersByTime(2000)
+      vi.advanceTimersByTime(5000)
 
       // Should not trigger auto-hide (already closed)
       // Element should still have fade-out (from manual close)
@@ -159,7 +159,7 @@ describe('FlashHook', () => {
 
       // Should not throw error
       expect(() => {
-        vi.advanceTimersByTime(2000)
+        vi.advanceTimersByTime(5000)
       }).not.toThrow()
     })
   })
@@ -177,7 +177,7 @@ describe('FlashHook', () => {
     test('clears auto-hide timer even if not yet triggered', () => {
       hook.mounted()
 
-      // Fast forward only 1 second (not yet triggered - timeout is 2 seconds)
+      // Fast forward only 1 second (not yet triggered - timeout is 5 seconds)
       vi.advanceTimersByTime(1000)
 
       hook.destroyed()

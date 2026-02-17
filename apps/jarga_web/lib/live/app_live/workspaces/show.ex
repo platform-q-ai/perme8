@@ -430,21 +430,24 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
                                   <.icon name="hero-star-solid" class="size-3" /> Owner
                                 </div>
                               <% else %>
-                                <select
-                                  class="select select-xs select-bordered"
-                                  phx-change="change_role"
-                                  phx-value-email={member.email}
-                                >
-                                  <option value="admin" selected={member.role == :admin}>
-                                    Admin
-                                  </option>
-                                  <option value="member" selected={member.role == :member}>
-                                    Member
-                                  </option>
-                                  <option value="guest" selected={member.role == :guest}>
-                                    Guest
-                                  </option>
-                                </select>
+                                <form phx-change="change_role">
+                                  <input type="hidden" name="email" value={member.email} />
+                                  <select
+                                    name="value"
+                                    data-email={member.email}
+                                    class="select select-xs select-bordered"
+                                  >
+                                    <option value="admin" selected={member.role == :admin}>
+                                      Admin
+                                    </option>
+                                    <option value="member" selected={member.role == :member}>
+                                      Member
+                                    </option>
+                                    <option value="guest" selected={member.role == :guest}>
+                                      Guest
+                                    </option>
+                                  </select>
+                                </form>
                               <% end %>
                             </td>
                             <td>

@@ -294,7 +294,14 @@ IO.puts("[exo-seeds-web] Created projects: q1-launch, mobile-app")
 {:ok, _important_doc} =
   Documents.create_document(alice, product_team.id, %{
     title: "Important Doc",
-    content: "An unpinned document for pinning tests",
+    content: "An unpinned document for pinning tests (crud)",
+    is_public: false
+  })
+
+{:ok, _collab_pin_doc} =
+  Documents.create_document(alice, product_team.id, %{
+    title: "Collab Pin Doc",
+    content: "An unpinned document for collaboration pin tests",
     is_public: false
   })
 
@@ -354,8 +361,9 @@ IO.puts("[exo-seeds-web] Created projects: q1-launch, mobile-app")
 
 IO.puts(
   "[exo-seeds-web] Created documents: product-spec, shared-doc, bobs-private-doc, launch-plan, " <>
-    "draft-roadmap, private-doc, public-doc, valid-title, important-doc, pinned-doc, old-doc, " <>
-    "private-notes, alices-private-notes, team-guidelines, private-roadmap, specs"
+    "draft-roadmap, private-doc, public-doc, valid-title, important-doc, collab-pin-doc, " <>
+    "pinned-doc, old-doc, private-notes, alices-private-notes, team-guidelines, " <>
+    "private-roadmap, specs"
 )
 
 # ---------------------------------------------------------------------------

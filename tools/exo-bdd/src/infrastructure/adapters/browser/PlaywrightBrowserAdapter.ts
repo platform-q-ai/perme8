@@ -169,6 +169,9 @@ export class PlaywrightBrowserAdapter implements BrowserPort {
     } catch {
       // localStorage may not be accessible on about:blank or error pages
     }
+    // Navigate to about:blank to kill any active WebSocket connections
+    // (e.g., Phoenix LiveView sockets from previous scenarios)
+    await this.guardPage().goto('about:blank')
   }
 
   // Lifecycle
