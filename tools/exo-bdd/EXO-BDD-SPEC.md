@@ -595,6 +595,12 @@ interface BrowserAdapter {
   // Context management
   clearContext(): Promise<void>
   
+  // Multi-browser session management
+  createSession(name: string): Promise<void>
+  switchTo(name: string): void
+  readonly activeSessionName: string | null
+  readonly sessionNames: string[]
+  
   // Lifecycle
   dispose(): Promise<void>
 }
@@ -636,6 +642,10 @@ When I focus on {string}
 # Browser Dialogs (confirm/alert/prompt)
 When I accept the next browser dialog
 When I dismiss the next browser dialog
+
+# Multi-Browser Sessions (for collaboration/multi-user testing)
+Given I open browser session {string}
+When I switch to browser session {string}
 
 # Waiting
 When I wait for {string} to be visible
@@ -1509,6 +1519,8 @@ npx cucumber-js --format junit:reports/junit.xml
 | `And I store the text of {string} as {string}` | Store element text |
 | `When I accept the next browser dialog` | Accept next confirm/alert dialog |
 | `When I dismiss the next browser dialog` | Dismiss next confirm/alert dialog |
+| `Given I open browser session {string}` | Create named session and switch to it |
+| `When I switch to browser session {string}` | Switch to an existing named session |
 
 ### CLI Steps
 

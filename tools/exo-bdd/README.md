@@ -205,7 +205,55 @@ Keep this low for browser tests (10s) so failing scenarios abort quickly. Playwr
 - **Page assertions**: `the URL should contain {string}`, `the page title should contain {string}`, `there should be {int} {string} elements`
 - **Storage**: `I store the text of {string} as {string}`, `I store the URL as {string}`
 - **Browser dialogs**: `I accept the next browser dialog`, `I dismiss the next browser dialog` (for `data-confirm`, `window.confirm()`, `alert()`)
+- **Multi-browser sessions**: `I open browser session {string}`, `I switch to browser session {string}` (for multi-user collaboration testing)
 - **Other**: `I take a screenshot`, `I hover over {string}`, `I press {string}`, `I upload {string} to {string}`
+
+#### Multi-Browser Sessions
+
+For testing real-time collaboration (e.g., two users editing the same document via WebSocket/Yjs), use named browser sessions. Each session gets its own `BrowserContext` and `Page` — independent cookies, localStorage, and WebSocket connections — so each session can log in as a different user.
+
+```gherkin
+Scenario: Two users can edit the same document simultaneously
+  # Alice opens the document
+  Given I open browser session "Alice"
+  And I navigate to "${baseUrl}/users/log_in"
+  And I wait for network idle
+  And I fill "#user_email" with "alice@example.com"
+  And I fill "#user_password" with "password123"
+  And I click the "Log in" button
+  And I wait for network idle
+  And I navigate to "${baseUrl}/app/workspaces/product-team/documents/shared-doc"
+  And I wait for network idle
+
+  # Bob opens the same document
+  Given I open browser session "Bob"
+  And I navigate to "${baseUrl}/users/log_in"
+  And I wait for network idle
+  And I fill "#user_email" with "bob@example.com"
+  And I fill "#user_password" with "password123"
+  And I click the "Log in" button
+  And I wait for network idle
+  And I navigate to "${baseUrl}/app/workspaces/product-team/documents/shared-doc"
+  And I wait for network idle
+
+  # Alice types and Bob should see it
+  When I switch to browser session "Alice"
+  And I click ".ProseMirror"
+  And I press "Control+a"
+  And I press "Backspace"
+  And I type "Hello from Alice" into ".ProseMirror"
+  And I wait for 2 seconds
+
+  Then I switch to browser session "Bob"
+  And ".ProseMirror" should contain text "Hello from Alice"
+```
+
+**Key points:**
+- `I open browser session {string}` creates a new session AND switches to it
+- `I switch to browser session {string}` switches subsequent steps to that session's page
+- All existing single-browser scenarios are unaffected — they use the default context
+- On failure, artifacts (screenshots/HTML) are captured from **every** active session, named `{scenario}--{session}.png`
+- Sessions are cleaned up automatically after each scenario
 
 #### Phoenix LiveView Tips
 
