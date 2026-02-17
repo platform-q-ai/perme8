@@ -68,6 +68,23 @@ export class ServerManager {
     console.log(`[exo-bdd]   command: ${config.command}`)
     console.log(`[exo-bdd]   cwd: ${cwd}`)
 
+    // Run setup command if provided (e.g. asset compilation)
+    if (config.setup) {
+      console.log(`[exo-bdd] Running setup for ${config.name}: ${config.setup}`)
+      const setupResult = Bun.spawnSync(['sh', '-c', config.setup], {
+        cwd,
+        env: { ...process.env, ...config.env },
+        stdout: 'inherit',
+        stderr: 'inherit',
+      })
+      if (setupResult.exitCode !== 0) {
+        throw new Error(
+          `Setup command for "${config.name}" failed with exit code ${setupResult.exitCode}`
+        )
+      }
+      console.log(`[exo-bdd] Setup complete for ${config.name}`)
+    }
+
     // Use `exec` so sh replaces itself with the actual command.
     // Without exec, kill() only hits the sh wrapper and the child
     // (e.g. BEAM for mix phx.server) survives, hanging CI runners.

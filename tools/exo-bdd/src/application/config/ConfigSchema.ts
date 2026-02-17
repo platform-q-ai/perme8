@@ -46,6 +46,12 @@ export interface ServerConfig {
    * Useful for seeding a database with test fixtures.
    */
   seed?: string
+  /**
+   * Shell command to run before starting the server (e.g. "mix assets.build").
+   * Runs synchronously in the same cwd and env as the server command.
+   * Useful for compiling assets that have no watcher in test mode.
+   */
+  setup?: string
   /** Health-check URL path to poll until the server is ready. Defaults to "/". */
   healthCheckPath?: string
   /** Maximum time in ms to wait for the server to become healthy. Defaults to 30000. */
