@@ -616,6 +616,7 @@ When I click {string}
 When I click the {string} button
 When I click the {string} link
 When I click the {string} element
+When I click {string} at position {int},{int}
 When I double-click {string}
 
 # Form Inputs
@@ -1497,6 +1498,7 @@ npx cucumber-js --format junit:reports/junit.xml
 | `Given I navigate to {string}` | Navigate to URL/path |
 | `When I click {string}` | Click element (text/selector) |
 | `When I click the {string} button` | Click button by text |
+| `When I click {string} at position {int},{int}` | Click at specific x,y within element |
 | `When I fill {string} with {string}` | Fill input field |
 | `When I select {string} from {string}` | Select dropdown option |
 | `When I check {string}` | Check checkbox |
