@@ -7,7 +7,7 @@ Feature: Chat Session Management
   # Chat sessions are managed within the global chat drawer panel.
   # Conversations view is toggled via phx-click="show_conversations".
   # Sessions are loaded via phx-click="load_session" and deleted via
-  # phx-click="delete_session" (with data-confirm).
+  # phx-click="delete_session".
 
   Background:
     Given I am on "${baseUrl}/users/log-in"
@@ -31,7 +31,6 @@ Feature: Chat Session Management
     And I wait for 1 seconds
     Then "div[phx-click='load_session']" should exist
 
-  @wip
   Scenario: Start new conversation clears chat
     When I fill "textarea#chat-input" with "Message in old session"
     And I click the "Send" button
@@ -64,9 +63,7 @@ Feature: Chat Session Management
     And I wait for 1 seconds
     Then "textarea#chat-input" should be visible
 
-  @wip
   Scenario: Delete conversation from history
-    # Tagged @wip because delete uses data-confirm which requires browser dialog handling
     When I fill "textarea#chat-input" with "Conversation to delete"
     And I click the "Send" button
     And I wait for "div.chat.chat-end" to be visible
@@ -74,6 +71,7 @@ Feature: Chat Session Management
     And I wait for 1 seconds
     When I click "button[phx-click='show_conversations']"
     And I wait for "div[phx-click='load_session']" to be visible
+    And I accept the next browser dialog
     When I click "button[phx-click='delete_session']"
     And I wait for 1 seconds
     Then "div[phx-click='load_session']" should not exist

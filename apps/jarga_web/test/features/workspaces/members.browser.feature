@@ -127,10 +127,8 @@ Feature: Workspace Member Management
   # Remove Members
   # ---------------------------------------------------------------------------
 
-  @wip
   Scenario: Admin removes member
-    # Tagged @wip because remove button uses native data-confirm browser
-    # dialog which Playwright cannot interact with via standard BDD steps.
+    # Uses frank (removableMemberEmail) to avoid destroying data needed by other tests
     # Log in as admin
     Given I navigate to "${baseUrl}/users/log-in"
     And I wait for network idle
@@ -144,8 +142,13 @@ Feature: Workspace Member Management
     And I wait for 1 seconds
     And I click the "Manage Members" button
     And I wait for ".modal.modal-open" to be visible
-    # Verify remove button exists for charlie
-    Then "button[phx-value-email='${memberEmail}']" should exist
+    # Verify remove button exists for frank
+    Then "button[phx-value-email='${removableMemberEmail}']" should exist
+    # Remove frank from workspace
+    And I accept the next browser dialog
+    And I click "button[phx-value-email='${removableMemberEmail}']"
+    And I wait for network idle
+    Then I should see "Member removed successfully"
 
   Scenario: Owner cannot be removed by admin
     # Log in as admin

@@ -91,20 +91,24 @@ Feature: Workspace CRUD Operations
   # Delete
   # ---------------------------------------------------------------------------
 
-  @wip
   Scenario: Owner deletes workspace
-    # Tagged @wip because "Delete Workspace" uses native data-confirm browser
-    # dialog which Playwright cannot interact with via standard BDD steps.
+    # Uses throwaway-workspace seed to avoid destroying data needed by other tests
     # Log in as owner
     Given I navigate to "${baseUrl}/users/log-in"
     And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
-    # Navigate to workspace
-    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
+    # Navigate to throwaway workspace
+    And I navigate to "${baseUrl}/app/workspaces/${throwawayWorkspaceSlug}"
     And I wait for network idle
-    Then I should see "Delete Workspace"
+    And I click "button[aria-label='Actions menu']"
+    And I wait for 1 seconds
+    And I accept the next browser dialog
+    And I click the "Delete Workspace" button
+    And I wait for network idle
+    Then I should see "Workspace deleted successfully"
+    And the URL should contain "/workspaces"
 
   Scenario: Admin cannot delete workspace
     # Log in as admin

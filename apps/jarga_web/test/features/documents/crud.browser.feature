@@ -216,11 +216,8 @@ Feature: Document CRUD Operations
 
   # ── Document Deletion ─────────────────────────────────────────────
 
-  @wip
   Scenario: Owner deletes a document
     # Precondition: alice owns "Old Doc" (seeded, slug: old-doc)
-    # @wip: Delete Document uses data-confirm which triggers a native browser dialog.
-    # Native dialogs cannot be handled with the available browser steps.
     Given I am on "${baseUrl}/users/log-in"
     And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
@@ -230,6 +227,7 @@ Feature: Document CRUD Operations
     And I wait for network idle
     And I click ".dropdown button[aria-label='Actions menu']"
     And I wait for 1 seconds
+    And I accept the next browser dialog
     And I click the "Delete Document" button
     And I wait for network idle
     Then the URL should contain "/app/workspaces/${productTeamSlug}"

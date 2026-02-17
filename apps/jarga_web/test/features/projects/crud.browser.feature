@@ -223,21 +223,20 @@ Feature: Project CRUD Operations
   # ---------------------------------------------------------------------------
   # Project Deletion
   # Delete uses phx-click with data-confirm (native browser dialog).
-  # Tagged @wip because the browser adapter cannot interact with native dialogs.
   # ---------------------------------------------------------------------------
 
-  @wip
   Scenario: Owner deletes their own project
+    # Uses throwaway-project seed to avoid destroying data needed by other tests
     Given I navigate to "${baseUrl}/users/log-in"
     And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
-    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/projects/q1-launch"
+    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/projects/throwaway-project"
     And I wait for network idle
-    # Delete uses data-confirm native dialog - cannot be automated
     And I click "button[aria-label='Actions menu']"
     And I wait for 1 seconds
+    And I accept the next browser dialog
     And I click the "Delete Project" button
     And I wait for network idle
     Then I should see "Project deleted successfully"
