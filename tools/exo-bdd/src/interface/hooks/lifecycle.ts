@@ -39,22 +39,41 @@ After(async function (this: TestWorld, scenario) {
         .slice(0, 80)
 
       try {
-        // Save screenshot to disk
-        const screenshot = await this.browser.screenshot({ fullPage: true })
-        this.attach(screenshot, 'image/png')
-        writeFileSync(join(failureDir, `${slug}.png`), screenshot)
+        // If there are named sessions, capture artifacts from each
+        const sessionNames = this.browser.sessionNames
+        if (sessionNames.length > 0) {
+          for (const name of sessionNames) {
+            this.browser.switchTo(name)
+            const screenshot = await this.browser.screenshot({ fullPage: true })
+            this.attach(screenshot, 'image/png')
+            writeFileSync(join(failureDir, `${slug}--${name}.png`), screenshot)
 
-        // Save page HTML to disk
-        const html = await this.browser.page.content()
-        writeFileSync(join(failureDir, `${slug}.html`), html, 'utf-8')
+            const html = await this.browser.page.content()
+            writeFileSync(join(failureDir, `${slug}--${name}.html`), html, 'utf-8')
 
-        // Save current URL for context
-        const url = this.browser.url()
-        writeFileSync(
-          join(failureDir, `${slug}.meta.txt`),
-          `URL: ${url}\nScenario: ${scenario.pickle.name}\n`,
-          'utf-8',
-        )
+            const url = this.browser.url()
+            writeFileSync(
+              join(failureDir, `${slug}--${name}.meta.txt`),
+              `URL: ${url}\nScenario: ${scenario.pickle.name}\nSession: ${name}\n`,
+              'utf-8',
+            )
+          }
+        } else {
+          // Single-browser scenario: capture from default page
+          const screenshot = await this.browser.screenshot({ fullPage: true })
+          this.attach(screenshot, 'image/png')
+          writeFileSync(join(failureDir, `${slug}.png`), screenshot)
+
+          const html = await this.browser.page.content()
+          writeFileSync(join(failureDir, `${slug}.html`), html, 'utf-8')
+
+          const url = this.browser.url()
+          writeFileSync(
+            join(failureDir, `${slug}.meta.txt`),
+            `URL: ${url}\nScenario: ${scenario.pickle.name}\n`,
+            'utf-8',
+          )
+        }
       } catch (artifactError) {
         console.error('[exo-bdd] Failed to save failure artifacts:', artifactError)
       }

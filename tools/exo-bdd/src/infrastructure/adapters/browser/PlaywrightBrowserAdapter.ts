@@ -3,34 +3,97 @@ import type { BrowserPort, WaitOptions } from '../../../application/ports/index.
 import type { BrowserAdapterConfig } from '../../../application/config/index.ts'
 import type { ScreenshotOptions } from '../../../domain/entities/index.ts'
 
+interface BrowserSession {
+  context: BrowserContext
+  page: Page
+}
+
 export class PlaywrightBrowserAdapter implements BrowserPort {
   private browser!: Browser
-  private context!: BrowserContext
-  private _page?: Page
+  private defaultContext!: BrowserContext
+  private defaultPage?: Page
+
+  // Named sessions for multi-browser scenarios
+  private sessions = new Map<string, BrowserSession>()
+  private _activeSessionName: string | null = null
 
   constructor(readonly config: BrowserAdapterConfig) {}
 
   async initialize(): Promise<void> {
     this.browser = await chromium.launch({ headless: this.config.headless ?? true })
-    this.context = await this.browser.newContext({
+    this.defaultContext = await this.browser.newContext({
       viewport: this.config.viewport,
       baseURL: this.config.baseURL,
     })
-    this._page = await this.context.newPage()
+    this.defaultPage = await this.defaultContext.newPage()
   }
 
   private guardPage(): Page {
-    if (!this._page) {
+    // If a named session is active, use its page
+    if (this._activeSessionName) {
+      const session = this.sessions.get(this._activeSessionName)
+      if (!session) {
+        throw new Error(`Browser session "${this._activeSessionName}" not found.`)
+      }
+      return session.page
+    }
+    // Otherwise use the default page
+    if (!this.defaultPage) {
       throw new Error('Browser not initialized. Call initialize() before accessing the page.')
     }
-    return this._page
+    return this.defaultPage
   }
 
   get page(): Page {
     return this.guardPage()
   }
 
-  // Navigation
+  // --- Session management (multi-browser) ---
+
+  get activeSessionName(): string | null {
+    return this._activeSessionName
+  }
+
+  get sessionNames(): string[] {
+    return Array.from(this.sessions.keys())
+  }
+
+  async createSession(name: string): Promise<void> {
+    if (this.sessions.has(name)) {
+      throw new Error(`Browser session "${name}" already exists.`)
+    }
+    const context = await this.browser.newContext({
+      viewport: this.config.viewport,
+      baseURL: this.config.baseURL,
+    })
+    const page = await context.newPage()
+    this.sessions.set(name, { context, page })
+    this._activeSessionName = name
+  }
+
+  switchTo(name: string): void {
+    if (!this.sessions.has(name)) {
+      throw new Error(`Browser session "${name}" does not exist. Create it first with createSession().`)
+    }
+    this._activeSessionName = name
+  }
+
+  private async clearSession(session: BrowserSession): Promise<void> {
+    await session.context.clearCookies()
+    try {
+      await session.page.evaluate(() => localStorage.clear())
+    } catch {
+      // localStorage may not be accessible on about:blank or error pages
+    }
+    await session.page.goto('about:blank')
+  }
+
+  private async disposeSession(session: BrowserSession): Promise<void> {
+    await session.context.close()
+  }
+
+  // --- Navigation ---
+
   async goto(path: string): Promise<void> {
     await this.guardPage().goto(path)
   }
@@ -47,7 +110,8 @@ export class PlaywrightBrowserAdapter implements BrowserPort {
     await this.guardPage().goForward()
   }
 
-  // Interactions
+  // --- Interactions ---
+
   async click(selector: string): Promise<void> {
     await this.guardPage().click(selector)
   }
@@ -96,12 +160,14 @@ export class PlaywrightBrowserAdapter implements BrowserPort {
     await this.guardPage().focus(selector)
   }
 
-  // File upload
+  // --- File upload ---
+
   async uploadFile(selector: string, filePath: string): Promise<void> {
     await this.guardPage().setInputFiles(selector, filePath)
   }
 
-  // Waiting
+  // --- Waiting ---
+
   async waitForSelector(selector: string, options?: WaitOptions): Promise<void> {
     await this.guardPage().waitForSelector(selector, {
       timeout: options?.timeout,
@@ -121,7 +187,8 @@ export class PlaywrightBrowserAdapter implements BrowserPort {
     await this.guardPage().waitForTimeout(ms)
   }
 
-  // Information
+  // --- Information ---
+
   url(): string {
     return this.guardPage().url()
   }
@@ -150,7 +217,8 @@ export class PlaywrightBrowserAdapter implements BrowserPort {
     return await this.guardPage().isChecked(selector)
   }
 
-  // Screenshots
+  // --- Screenshots ---
+
   async screenshot(options?: ScreenshotOptions): Promise<Buffer> {
     return (await this.guardPage().screenshot({
       fullPage: options?.fullPage,
@@ -161,9 +229,21 @@ export class PlaywrightBrowserAdapter implements BrowserPort {
     })) as Buffer
   }
 
-  // Context management
+  // --- Context management ---
+
   async clearContext(): Promise<void> {
-    await this.context.clearCookies()
+    // Clear all named sessions
+    for (const session of this.sessions.values()) {
+      await this.clearSession(session)
+    }
+    for (const session of this.sessions.values()) {
+      await this.disposeSession(session)
+    }
+    this.sessions.clear()
+    this._activeSessionName = null
+
+    // Clear default context
+    await this.defaultContext.clearCookies()
     try {
       await this.guardPage().evaluate(() => localStorage.clear())
     } catch {
@@ -174,9 +254,18 @@ export class PlaywrightBrowserAdapter implements BrowserPort {
     await this.guardPage().goto('about:blank')
   }
 
-  // Lifecycle
+  // --- Lifecycle ---
+
   async dispose(): Promise<void> {
-    await this.context.close()
+    // Dispose named sessions
+    for (const session of this.sessions.values()) {
+      await this.disposeSession(session)
+    }
+    this.sessions.clear()
+    this._activeSessionName = null
+
+    // Dispose default
+    await this.defaultContext.close()
     await this.browser.close()
   }
 }
