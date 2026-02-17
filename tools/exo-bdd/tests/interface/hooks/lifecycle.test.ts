@@ -49,6 +49,10 @@ const mockAdapters = {
   browser: {
     screenshot: mock(() => Promise.resolve(Buffer.from('fake-png'))),
     clearContext: mock(() => Promise.resolve()),
+    sessionNames: [] as string[],
+    page: { content: mock(() => Promise.resolve('<html></html>')) },
+    url: mock(() => 'http://localhost:4002/test'),
+    switchTo: mock(() => {}),
   },
   cli: { run: mock(() => {}) },
   graph: { query: mock(() => {}) },
@@ -189,7 +193,7 @@ describe('Lifecycle hooks', () => {
       attach: mockAttach,
     }
 
-    const scenario = { result: { status: 'FAILED' } }
+    const scenario = { result: { status: 'FAILED' }, pickle: { name: 'Test scenario' } }
 
     await capturedAfter!.call(worldContext, scenario)
 
@@ -205,7 +209,7 @@ describe('Lifecycle hooks', () => {
       attach: mockAttach,
     }
 
-    const scenario = { result: { status: 'FAILED' } }
+    const scenario = { result: { status: 'FAILED' }, pickle: { name: 'No browser scenario' } }
 
     await capturedAfter!.call(worldContext, scenario)
 
@@ -220,7 +224,7 @@ describe('Lifecycle hooks', () => {
       attach: mockAttach,
     }
 
-    const scenario = { result: { status: 'PASSED' } }
+    const scenario = { result: { status: 'PASSED' }, pickle: { name: 'Passing scenario' } }
 
     await capturedAfter!.call(worldContext, scenario)
 
@@ -235,7 +239,7 @@ describe('Lifecycle hooks', () => {
       attach: mock(() => {}),
     }
 
-    const scenario = { result: { status: 'PASSED' } }
+    const scenario = { result: { status: 'PASSED' }, pickle: { name: 'Context clear scenario' } }
 
     await capturedAfter!.call(worldContext, scenario)
 

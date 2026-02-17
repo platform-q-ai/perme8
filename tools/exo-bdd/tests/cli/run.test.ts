@@ -300,7 +300,7 @@ describe('generateSetupContent', () => {
     const content = generateSetupContent('/project/bdd/config.ts', '/tools/exo-bdd')
 
     expect(content).toContain('Status.FAILED')
-    expect(content).toContain('browser.screenshot()')
+    expect(content).toContain('this.browser.screenshot(')
   })
 
   test('uses hasBrowser guard instead of direct getter access in After hook', () => {

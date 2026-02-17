@@ -68,6 +68,7 @@ function createMockBrowser() {
       screenshot: mock(() => Promise.resolve(Buffer.from('element-screenshot'))),
     })),
     inputValue: mock((_selector: string) => Promise.resolve('')),
+    waitForURL: mock((_url: string, _options?: any) => Promise.resolve()),
     _locatorTarget: mockLocatorFirst,
   }
 
