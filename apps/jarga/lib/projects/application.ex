@@ -27,6 +27,7 @@ defmodule Jarga.Projects.Application do
     top_level?: true,
     deps: [
       Jarga.Projects.Domain,
+      Perme8.Events,
       # Cross-context dependencies
       Identity,
       Jarga.Accounts,

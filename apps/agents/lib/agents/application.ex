@@ -9,7 +9,7 @@ defmodule Agents.Application do
 
   use Boundary,
     top_level?: true,
-    deps: [Agents.Domain, Identity],
+    deps: [Agents.Domain, Perme8.Events, Identity],
     exports: [
       # Use cases
       UseCases.AddAgentToWorkspace,

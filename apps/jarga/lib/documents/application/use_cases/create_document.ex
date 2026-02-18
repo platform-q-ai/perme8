@@ -33,6 +33,7 @@ defmodule Jarga.Documents.Application.UseCases.CreateDocument do
   @default_authorization_repository Jarga.Documents.Infrastructure.Repositories.AuthorizationRepository
   @default_document_repository Jarga.Documents.Infrastructure.Repositories.DocumentRepository
   @default_notifier Jarga.Documents.Infrastructure.Notifiers.PubSubNotifier
+  @default_event_bus Perme8.Events.EventBus
 
   @doc """
   Executes the create document use case.
@@ -73,13 +74,15 @@ defmodule Jarga.Documents.Application.UseCases.CreateDocument do
 
     document_repository = Keyword.get(opts, :document_repository, @default_document_repository)
     notifier = Keyword.get(opts, :notifier, @default_notifier)
+    event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
 
     deps = %{
       document_schema: document_schema,
       document_component_schema: document_component_schema,
       note_repository: note_repository,
       document_repository: document_repository,
-      notifier: notifier
+      notifier: notifier,
+      event_bus: event_bus
     }
 
     with {:ok, member} <- get_workspace_member(actor, workspace_id),
@@ -121,7 +124,8 @@ defmodule Jarga.Documents.Application.UseCases.CreateDocument do
       document_component_schema: document_component_schema,
       note_repository: note_repository,
       document_repository: document_repository,
-      notifier: notifier
+      notifier: notifier,
+      event_bus: event_bus
     } = deps
 
     multi =
@@ -189,6 +193,7 @@ defmodule Jarga.Documents.Application.UseCases.CreateDocument do
       {:ok, %{document: document}} ->
         # Send notification AFTER transaction commits successfully
         notifier.notify_document_created(document)
+        emit_document_created_event(document, user, workspace_id, event_bus)
         {:ok, document}
 
       {:error, :note, reason, _} ->
@@ -200,5 +205,23 @@ defmodule Jarga.Documents.Application.UseCases.CreateDocument do
       {:error, :document_component, reason, _} ->
         {:error, reason}
     end
+  end
+
+  # Emit DocumentCreated domain event
+  defp emit_document_created_event(document, user, workspace_id, event_bus) do
+    alias Jarga.Documents.Domain.Events.DocumentCreated
+
+    event =
+      DocumentCreated.new(%{
+        aggregate_id: document.id,
+        actor_id: user.id,
+        document_id: document.id,
+        workspace_id: workspace_id,
+        project_id: document.project_id,
+        user_id: user.id,
+        title: document.title
+      })
+
+    event_bus.emit(event)
   end
 end

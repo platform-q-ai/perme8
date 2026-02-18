@@ -20,12 +20,14 @@ defmodule Jarga.Projects.Application.UseCases.UpdateProject do
 
   @behaviour Jarga.Projects.Application.UseCases.UseCase
 
+  alias Jarga.Projects.Domain.Events.ProjectUpdated
   alias Jarga.Workspaces
   alias Jarga.Domain.Policies.DomainPermissionsPolicy, as: PermissionsPolicy
 
   @default_project_repository Jarga.Projects.Infrastructure.Repositories.ProjectRepository
   @default_authorization_repository Jarga.Projects.Infrastructure.Repositories.AuthorizationRepository
   @default_notifier Jarga.Projects.Infrastructure.Notifiers.EmailAndPubSubNotifier
+  @default_event_bus Perme8.Events.EventBus
 
   @doc """
   Executes the update project use case.
@@ -61,12 +63,21 @@ defmodule Jarga.Projects.Application.UseCases.UpdateProject do
       Keyword.get(opts, :authorization_repository, @default_authorization_repository)
 
     notifier = Keyword.get(opts, :notifier, @default_notifier)
+    event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
 
     with {:ok, member} <- Workspaces.get_member(actor, workspace_id),
          {:ok, project} <-
            authorization_repository.verify_project_access(actor, workspace_id, project_id),
          :ok <- authorize_edit_project(member.role, project, actor.id) do
-      update_project_and_notify(project, attrs, project_repository, notifier)
+      update_project_and_notify(
+        project,
+        attrs,
+        project_repository,
+        notifier,
+        event_bus,
+        actor,
+        workspace_id
+      )
     end
   end
 
@@ -82,7 +93,15 @@ defmodule Jarga.Projects.Application.UseCases.UpdateProject do
   end
 
   # Update project and send notification
-  defp update_project_and_notify(project_schema, attrs, project_repository, notifier) do
+  defp update_project_and_notify(
+         project_schema,
+         attrs,
+         project_repository,
+         notifier,
+         event_bus,
+         actor,
+         workspace_id
+       ) do
     # Convert atom keys to string keys to avoid mixed keys
     string_attrs =
       attrs
@@ -92,10 +111,26 @@ defmodule Jarga.Projects.Application.UseCases.UpdateProject do
     case project_repository.update(project_schema, string_attrs) do
       {:ok, updated_project} ->
         notifier.notify_project_updated(updated_project)
+        emit_project_updated_event(updated_project, actor, workspace_id, event_bus)
         {:ok, updated_project}
 
       error ->
         error
     end
+  end
+
+  # Emit ProjectUpdated domain event
+  defp emit_project_updated_event(project, actor, workspace_id, event_bus) do
+    event =
+      ProjectUpdated.new(%{
+        aggregate_id: project.id,
+        actor_id: actor.id,
+        project_id: project.id,
+        workspace_id: workspace_id,
+        user_id: actor.id,
+        name: project.name
+      })
+
+    event_bus.emit(event)
   end
 end

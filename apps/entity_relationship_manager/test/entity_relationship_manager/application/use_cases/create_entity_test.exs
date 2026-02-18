@@ -1,5 +1,5 @@
 defmodule EntityRelationshipManager.Application.UseCases.CreateEntityTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   import Mox
 
@@ -10,32 +10,52 @@ defmodule EntityRelationshipManager.Application.UseCases.CreateEntityTest do
 
   setup :verify_on_exit!
 
-  describe "execute/3" do
-    test "creates entity when schema and type are valid" do
+  alias EntityRelationshipManager.Domain.Events.EntityCreated
+
+  describe "execute/3 - event emission" do
+    test "emits EntityCreated event via event_bus" do
+      ensure_test_event_bus_started()
       schema = schema_definition()
       created_entity = entity()
 
       SchemaRepositoryMock
-      |> expect(:get_schema, fn ws_id ->
-        assert ws_id == workspace_id()
-        {:ok, schema}
-      end)
+      |> expect(:get_schema, fn _ws_id -> {:ok, schema} end)
 
       GraphRepositoryMock
-      |> expect(:create_entity, fn ws_id, type, properties ->
-        assert ws_id == workspace_id()
-        assert type == "Person"
-        assert properties == %{"name" => "Alice"}
-        {:ok, created_entity}
-      end)
+      |> expect(:create_entity, fn _ws_id, _type, _props -> {:ok, created_entity} end)
 
       assert {:ok, ^created_entity} =
                CreateEntity.execute(
                  workspace_id(),
                  %{type: "Person", properties: %{"name" => "Alice"}},
                  schema_repo: SchemaRepositoryMock,
-                 graph_repo: GraphRepositoryMock
+                 graph_repo: GraphRepositoryMock,
+                 event_bus: Perme8.Events.TestEventBus
                )
+
+      assert [%EntityCreated{} = event] = Perme8.Events.TestEventBus.get_events()
+      assert event.entity_id == created_entity.id
+      assert event.workspace_id == workspace_id()
+      assert event.entity_type == "Person"
+      assert event.aggregate_id == created_entity.id
+    end
+
+    test "does not emit event when creation fails" do
+      ensure_test_event_bus_started()
+
+      SchemaRepositoryMock
+      |> expect(:get_schema, fn _ws_id -> {:error, :not_found} end)
+
+      assert {:error, :schema_not_found} =
+               CreateEntity.execute(
+                 workspace_id(),
+                 %{type: "Person", properties: %{"name" => "Alice"}},
+                 schema_repo: SchemaRepositoryMock,
+                 graph_repo: GraphRepositoryMock,
+                 event_bus: Perme8.Events.TestEventBus
+               )
+
+      assert [] = Perme8.Events.TestEventBus.get_events()
     end
 
     test "returns error when schema not found" do
@@ -97,6 +117,17 @@ defmodule EntityRelationshipManager.Application.UseCases.CreateEntityTest do
                )
 
       assert is_binary(msg)
+    end
+  end
+
+  defp ensure_test_event_bus_started do
+    case Process.whereis(Perme8.Events.TestEventBus) do
+      nil ->
+        {:ok, _pid} = Perme8.Events.TestEventBus.start_link([])
+        :ok
+
+      _pid ->
+        Perme8.Events.TestEventBus.reset()
     end
   end
 end

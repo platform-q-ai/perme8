@@ -14,7 +14,12 @@ defmodule EntityRelationshipManager.Application.UseCases.UpsertSchema do
   }
 
   alias EntityRelationshipManager.Application.RepoConfig
+
+  alias EntityRelationshipManager.Domain.Events.SchemaCreated
+  alias EntityRelationshipManager.Domain.Events.SchemaUpdated
   alias EntityRelationshipManager.Domain.Policies.SchemaValidationPolicy
+
+  @default_event_bus Perme8.Events.EventBus
 
   @doc """
   Validates and upserts a schema definition for a workspace.
@@ -28,15 +33,32 @@ defmodule EntityRelationshipManager.Application.UseCases.UpsertSchema do
   """
   def execute(workspace_id, attrs, opts \\ []) do
     schema_repo = Keyword.get(opts, :schema_repo, RepoConfig.schema_repo())
+    event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
 
     schema_def = build_schema_definition(workspace_id, attrs)
 
     case SchemaValidationPolicy.validate_schema_structure(schema_def) do
       :ok ->
-        schema_repo.upsert_schema(workspace_id, attrs)
+        is_create = not schema_exists?(schema_repo, workspace_id)
+
+        case schema_repo.upsert_schema(workspace_id, attrs) do
+          {:ok, schema} ->
+            emit_schema_event(schema, workspace_id, is_create, event_bus)
+            {:ok, schema}
+
+          error ->
+            error
+        end
 
       {:error, errors} ->
         {:error, errors}
+    end
+  end
+
+  defp schema_exists?(schema_repo, workspace_id) do
+    case schema_repo.get_schema(workspace_id) do
+      {:ok, _} -> true
+      {:error, :not_found} -> false
     end
   end
 
@@ -88,4 +110,28 @@ defmodule EntityRelationshipManager.Application.UseCases.UpsertSchema do
   end
 
   defp atom_keyed?(_), do: false
+
+  defp emit_schema_event(schema, workspace_id, true = _is_create, event_bus) do
+    event =
+      SchemaCreated.new(%{
+        aggregate_id: schema.id,
+        actor_id: nil,
+        schema_id: schema.id,
+        workspace_id: workspace_id
+      })
+
+    event_bus.emit(event)
+  end
+
+  defp emit_schema_event(schema, workspace_id, false = _is_update, event_bus) do
+    event =
+      SchemaUpdated.new(%{
+        aggregate_id: schema.id,
+        actor_id: nil,
+        schema_id: schema.id,
+        workspace_id: workspace_id
+      })
+
+    event_bus.emit(event)
+  end
 end

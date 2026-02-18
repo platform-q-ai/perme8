@@ -31,6 +31,7 @@ defmodule Jarga.Documents.Application do
     top_level?: true,
     deps: [
       Jarga.Documents.Domain,
+      Perme8.Events,
       # Cross-context dependencies
       Identity,
       Jarga.Accounts,

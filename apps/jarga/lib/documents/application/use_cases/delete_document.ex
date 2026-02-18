@@ -26,6 +26,7 @@ defmodule Jarga.Documents.Application.UseCases.DeleteDocument do
   # Default Infrastructure implementations (injected via opts for testing)
   @default_document_repository Jarga.Documents.Infrastructure.Repositories.DocumentRepository
   @default_notifier Jarga.Documents.Infrastructure.Notifiers.PubSubNotifier
+  @default_event_bus Perme8.Events.EventBus
 
   @doc """
   Executes the delete document use case.
@@ -54,10 +55,12 @@ defmodule Jarga.Documents.Application.UseCases.DeleteDocument do
     # Extract dependencies from opts
     document_repository = Keyword.get(opts, :document_repository, @default_document_repository)
     notifier = Keyword.get(opts, :notifier, @default_notifier)
+    event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
 
     deps = %{
       document_repository: document_repository,
-      notifier: notifier
+      notifier: notifier,
+      event_bus: event_bus
     }
 
     with {:ok, document} <-
@@ -105,7 +108,8 @@ defmodule Jarga.Documents.Application.UseCases.DeleteDocument do
   defp delete_document_and_notify(document, deps) do
     %{
       document_repository: document_repository,
-      notifier: notifier
+      notifier: notifier,
+      event_bus: event_bus
     } = deps
 
     result = document_repository.delete_in_transaction(document)
@@ -114,10 +118,27 @@ defmodule Jarga.Documents.Application.UseCases.DeleteDocument do
       {:ok, deleted_document} ->
         # Send notification AFTER transaction commits
         notifier.notify_document_deleted(deleted_document)
+        emit_document_deleted_event(deleted_document, document, event_bus)
         {:ok, deleted_document}
 
       {:error, changeset} ->
         {:error, changeset}
     end
+  end
+
+  # Emit DocumentDeleted domain event
+  defp emit_document_deleted_event(deleted_document, original_document, event_bus) do
+    alias Jarga.Documents.Domain.Events.DocumentDeleted
+
+    event =
+      DocumentDeleted.new(%{
+        aggregate_id: deleted_document.id,
+        actor_id: original_document.user_id,
+        document_id: deleted_document.id,
+        workspace_id: original_document.workspace_id,
+        user_id: original_document.user_id
+      })
+
+    event_bus.emit(event)
   end
 end

@@ -9,10 +9,12 @@ defmodule Jarga.Notifications.Application.UseCases.DeclineWorkspaceInvitation do
   4. Marks the notification as action_taken
   """
 
+  alias Jarga.Notifications.Domain.Events.NotificationActionTaken
   alias Jarga.Workspaces
 
   @default_notification_repository Jarga.Notifications.Infrastructure.Repositories.NotificationRepository
   @default_notifier Jarga.Notifications.Infrastructure.Notifiers.PubSubNotifier
+  @default_event_bus Perme8.Events.EventBus
 
   @doc """
   Declines a workspace invitation.
@@ -35,6 +37,7 @@ defmodule Jarga.Notifications.Application.UseCases.DeclineWorkspaceInvitation do
       Keyword.get(opts, :notification_repository, @default_notification_repository)
 
     notifier = Keyword.get(opts, :notifier, @default_notifier)
+    event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
 
     result =
       notification_repository.transact(fn ->
@@ -54,6 +57,7 @@ defmodule Jarga.Notifications.Application.UseCases.DeclineWorkspaceInvitation do
       {:ok, notification} ->
         workspace_id = notification.data["workspace_id"]
         notifier.broadcast_invitation_declined(notification.user_id, workspace_id)
+        emit_action_taken_event(notification, "declined", event_bus)
         {:ok, notification}
 
       error ->
@@ -95,5 +99,18 @@ defmodule Jarga.Notifications.Application.UseCases.DeclineWorkspaceInvitation do
 
   defp mark_notification_as_read(notification, notification_repository) do
     notification_repository.mark_as_read(notification)
+  end
+
+  defp emit_action_taken_event(notification, action, event_bus) do
+    event =
+      NotificationActionTaken.new(%{
+        aggregate_id: notification.id,
+        actor_id: notification.user_id,
+        notification_id: notification.id,
+        user_id: notification.user_id,
+        action: action
+      })
+
+    event_bus.emit(event)
   end
 end
