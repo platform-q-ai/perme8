@@ -80,7 +80,11 @@ defmodule Perme8.Events.EventHandler do
       end
 
       @impl GenServer
-      def handle_info(_message, state) do
+      def handle_info(message, state) do
+        Logger.debug(
+          "[#{inspect(__MODULE__)}] Received unexpected non-struct message: #{inspect(message)}"
+        )
+
         {:noreply, state}
       end
 
