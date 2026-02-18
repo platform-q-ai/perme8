@@ -21,11 +21,11 @@ defmodule Agents.Application.UseCases.TraverseKnowledgeGraph do
           {:ok, [KnowledgeEntry.t()]} | {:error, atom()}
   def execute(workspace_id, params, opts \\ []) do
     erm_gateway = Keyword.get(opts, :erm_gateway, GatewayConfig.erm_gateway())
-    start_id = Map.fetch!(params, :start_id)
     relationship_type = Map.get(params, :relationship_type)
     depth = SearchPolicy.clamp_depth(Map.get(params, :depth))
 
-    with :ok <- validate_relationship_type(relationship_type),
+    with {:ok, start_id} <- fetch_required(params, :start_id),
+         :ok <- validate_relationship_type(relationship_type),
          {:ok, _entity} <- erm_gateway.get_entity(workspace_id, start_id) do
       traverse_opts =
         [max_depth: depth]
@@ -48,6 +48,13 @@ defmodule Agents.Application.UseCases.TraverseKnowledgeGraph do
       :ok
     else
       {:error, :invalid_relationship_type}
+    end
+  end
+
+  defp fetch_required(map, key) do
+    case Map.fetch(map, key) do
+      {:ok, _value} = ok -> ok
+      :error -> {:error, :missing_required_param}
     end
   end
 

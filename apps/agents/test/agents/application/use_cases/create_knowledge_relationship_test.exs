@@ -50,6 +50,15 @@ defmodule Agents.Application.UseCases.CreateKnowledgeRelationshipTest do
                )
     end
 
+    test "returns {:error, :missing_required_param} when required params are missing" do
+      assert {:error, :missing_required_param} =
+               CreateKnowledgeRelationship.execute(
+                 workspace_id(),
+                 %{from_id: unique_id()},
+                 erm_gateway: ErmGatewayMock
+               )
+    end
+
     test "returns {:error, :self_reference} when from_id == to_id" do
       id = unique_id()
 

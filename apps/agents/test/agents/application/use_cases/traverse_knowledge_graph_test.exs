@@ -101,6 +101,11 @@ defmodule Agents.Application.UseCases.TraverseKnowledgeGraphTest do
                )
     end
 
+    test "returns {:error, :missing_required_param} when start_id is missing" do
+      assert {:error, :missing_required_param} =
+               TraverseKnowledgeGraph.execute(workspace_id(), %{}, erm_gateway: ErmGatewayMock)
+    end
+
     test "returns {:error, :invalid_relationship_type} for bad relationship type" do
       assert {:error, :invalid_relationship_type} =
                TraverseKnowledgeGraph.execute(
