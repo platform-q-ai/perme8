@@ -21,7 +21,7 @@ defmodule Agents.Application.UseCases.TraverseKnowledgeGraph do
     with :ok <- validate_relationship_type(relationship_type),
          {:ok, _entity} <- erm_gateway.get_entity(workspace_id, start_id) do
       traverse_opts =
-        [depth: depth]
+        [max_depth: depth]
         |> maybe_add_edge_type(relationship_type)
 
       case erm_gateway.traverse(workspace_id, start_id, traverse_opts) do
