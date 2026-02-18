@@ -4,6 +4,13 @@ defmodule Agents.Application.UseCases.TraverseKnowledgeGraph do
 
   Validates the relationship type, clamps depth, verifies the start entity
   exists, then calls ERM traverse with appropriate filters.
+
+  ## Limitations
+
+  The ERM `traverse/3` does not currently support `edge_type` filtering.
+  When a `relationship_type` is provided, it is validated for correctness but
+  the actual traversal returns all reachable neighbors regardless of edge type.
+  True edge-type-filtered traversal requires an ERM enhancement (see follow-up).
   """
 
   alias Agents.Application.GatewayConfig
