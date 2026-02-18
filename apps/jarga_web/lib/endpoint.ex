@@ -53,5 +53,6 @@ defmodule JargaWeb.Endpoint do
   plug(Plug.MethodOverride)
   plug(Plug.Head)
   plug(Plug.Session, @session_options)
+  plug(JargaWeb.Plugs.SecurityHeadersPlug)
   plug(JargaWeb.Router)
 end
