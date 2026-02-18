@@ -48,6 +48,11 @@ defmodule Agents.Domain.Entities.KnowledgeEntry do
   Converts an ERM Entity with properties into a KnowledgeEntry.
 
   Decodes JSON-encoded list fields from ERM properties.
+
+  Note: This function uses Jason for JSON decoding. While Jason is technically
+  an infrastructure concern, it is kept here for pragmatism — the alternative
+  (a separate mapper in Infrastructure) would require all Application-layer
+  use cases to depend on Infrastructure for mapping, which is a larger refactor.
   """
   @spec from_erm_entity(map()) :: t()
   def from_erm_entity(%{properties: properties} = entity) do
@@ -71,6 +76,7 @@ defmodule Agents.Domain.Entities.KnowledgeEntry do
   Converts a KnowledgeEntry to ERM-compatible properties map.
 
   JSON-encodes list fields for storage in ERM properties.
+  See `from_erm_entity/1` for rationale on Jason usage in domain.
   """
   @spec to_erm_properties(t()) :: map()
   def to_erm_properties(%__MODULE__{} = entry) do
