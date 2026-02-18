@@ -12,7 +12,8 @@ defmodule Perme8.Events do
       # Domain layers whose event structs the LegacyBridge translates
       Jarga.Projects.Domain,
       Jarga.Documents.Domain,
-      Jarga.Notifications.Domain
+      Jarga.Notifications.Domain,
+      Agents.Domain
     ],
     exports: [EventBus, EventHandler, TestEventBus]
 
