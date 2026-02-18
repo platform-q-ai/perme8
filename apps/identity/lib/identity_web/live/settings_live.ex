@@ -18,7 +18,13 @@ defmodule IdentityWeb.SettingsLive do
           </.header>
         </div>
 
-        <.form for={@email_form} id="email_form" phx-submit="update_email" phx-change="validate_email">
+        <.form
+          for={@email_form}
+          id="email_form"
+          phx-submit="update_email"
+          phx-change="validate_email"
+          novalidate
+        >
           <.input
             field={@email_form[:email]}
             type="email"
@@ -41,6 +47,7 @@ defmodule IdentityWeb.SettingsLive do
           phx-change="validate_password"
           phx-submit="update_password"
           phx-trigger-action={@trigger_submit}
+          novalidate
         >
           <input
             name={@password_form[:email].name}
