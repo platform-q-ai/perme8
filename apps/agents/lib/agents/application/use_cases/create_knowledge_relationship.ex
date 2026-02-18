@@ -15,11 +15,11 @@ defmodule Agents.Application.UseCases.CreateKnowledgeRelationship do
           {:ok, KnowledgeRelationship.t()} | {:error, atom()}
   def execute(workspace_id, params, opts \\ []) do
     erm_gateway = Keyword.get(opts, :erm_gateway, GatewayConfig.erm_gateway())
-    from_id = Map.fetch!(params, :from_id)
-    to_id = Map.fetch!(params, :to_id)
-    type = Map.fetch!(params, :type)
 
-    with :ok <- KnowledgeValidationPolicy.validate_self_reference(from_id, to_id),
+    with {:ok, from_id} <- fetch_required(params, :from_id),
+         {:ok, to_id} <- fetch_required(params, :to_id),
+         {:ok, type} <- fetch_required(params, :type),
+         :ok <- KnowledgeValidationPolicy.validate_self_reference(from_id, to_id),
          :ok <- validate_type(type),
          {:ok, _} <- BootstrapKnowledgeSchema.execute(workspace_id, opts),
          {:ok, _} <- erm_gateway.get_entity(workspace_id, from_id),
@@ -31,6 +31,13 @@ defmodule Agents.Application.UseCases.CreateKnowledgeRelationship do
              type: type
            }) do
       {:ok, KnowledgeRelationship.from_erm_edge(edge)}
+    end
+  end
+
+  defp fetch_required(map, key) do
+    case Map.fetch(map, key) do
+      {:ok, _value} = ok -> ok
+      :error -> {:error, :missing_required_param}
     end
   end
 
