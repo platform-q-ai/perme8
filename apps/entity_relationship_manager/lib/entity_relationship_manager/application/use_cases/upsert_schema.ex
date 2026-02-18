@@ -83,7 +83,9 @@ defmodule EntityRelationshipManager.Application.UseCases.UpsertSchema do
   defp deserialize_property(%PropertyDefinition{} = pd), do: pd
   defp deserialize_property(map) when is_map(map), do: PropertyDefinition.new(map)
 
-  defp atom_keyed?(map) do
+  defp atom_keyed?(map) when map_size(map) > 0 do
     map |> Map.keys() |> List.first() |> is_atom()
   end
+
+  defp atom_keyed?(_), do: false
 end
