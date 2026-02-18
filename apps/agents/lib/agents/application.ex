@@ -44,6 +44,7 @@ defmodule Agents.Application do
       Behaviours.WorkspaceAgentRepositoryBehaviour,
       Behaviours.ErmGatewayBehaviour,
       Behaviours.IdentityBehaviour,
+      Behaviours.JargaGatewayBehaviour,
       # Config
       GatewayConfig
     ]
