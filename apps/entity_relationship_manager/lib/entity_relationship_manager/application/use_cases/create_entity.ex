@@ -57,6 +57,7 @@ defmodule EntityRelationshipManager.Application.UseCases.CreateEntity do
     SchemaValidationPolicy.validate_entity_against_schema(entity, schema, type)
   end
 
+  # TODO(Part 2): thread actor_id from controller layer for audit trail attribution
   defp emit_entity_created_event(entity, workspace_id, type, properties, event_bus) do
     event =
       EntityCreated.new(%{

@@ -50,6 +50,7 @@ defmodule EntityRelationshipManager.Application.UseCases.UpdateEntity do
     SchemaValidationPolicy.validate_entity_against_schema(entity, schema, type)
   end
 
+  # TODO(Part 2): thread actor_id from controller layer for audit trail attribution
   defp emit_entity_updated_event(entity, workspace_id, changes, event_bus) do
     event =
       EntityUpdated.new(%{
