@@ -133,3 +133,4 @@ Use the **BDD Feature Translator** skill to generate domain-specific feature fil
 3. **Seed data over fixtures** — deterministic test data via seed scripts
 4. **One adapter per file** — each `.feature` file targets one adapter
 5. **Observable assertions** — verify what users/clients can see, not internal state
+6. **Fix the app, not the tests** — when security tests fail, fix the security gap in application code (e.g., add missing headers via a Plug, tighten CSP directives). Never weaken assertions or remove scenarios to make tests pass. The only acceptable exclusions are documented false positives inherent to the framework (e.g., LiveView requires `'unsafe-inline'` for script-src, so `"CSP:"` alerts are excluded; LiveView uses meta-tag CSRF tokens that ZAP's spider can't see, so `"Absence of Anti-CSRF"` is excluded).

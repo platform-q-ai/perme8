@@ -46,9 +46,11 @@ Feature: Workspace Management Security Baseline
   # ===========================================================================
 
   # NOTE: Two ZAP false-positive alert families are excluded from passive scans:
-  # - "CSP:" -- LiveView requires 'unsafe-inline' for script-src; ZAP flags this
+  # - "CSP:" -- LiveView requires 'unsafe-inline' for script-src and style-src;
+  #   ZAP flags this as "CSP: script-src unsafe-inline" and "CSP: style-src unsafe-inline"
   # - "Absence of Anti-CSRF" -- LiveView uses meta-tag CSRF tokens, not hidden
   #   form fields; ZAP's spider doesn't see the JS-injected tokens
+
   Scenario: Passive scan on workspace list page finds no high-risk issues
     Given a new ZAP session
     When I spider "${workspaceListPage}"
