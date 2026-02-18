@@ -198,11 +198,18 @@ defmodule Mix.Tasks.Check.CiSync do
       timeout = if domain == "security", do: "15", else: "10"
 
       combo_line =
-        ~s(  {"app": "#{config_name}", "domain": "#{domain}", ) <>
+        ~s(  {"app": "<APP_NAME>", "domain": "#{domain}", ) <>
           ~s("config_name": "#{config_name}", "timeout": #{timeout}},\n)
 
       Mix.shell().error([:reset, combo_line])
     end)
+
+    Mix.shell().error([
+      :yellow,
+      "Note: Replace <APP_NAME> with the correct umbrella app name\n",
+      :reset,
+      "(app and config_name may differ, e.g., app=\"erm\" vs config_name=\"entity-relationship-manager\")\n"
+    ])
 
     existing_count = MapSet.size(ci_combos)
     missing_count = MapSet.size(missing)
