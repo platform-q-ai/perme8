@@ -33,7 +33,7 @@ defmodule Agents.Infrastructure.Mcp.Tools.TraverseToolTest do
         {:ok, Fixtures.erm_knowledge_entity(%{id: start_id})}
       end)
       |> expect(:traverse, fn ^workspace_id, ^start_id, opts ->
-        assert Keyword.get(opts, :depth) == 2
+        assert Keyword.get(opts, :max_depth) == 2
         {:ok, [neighbor]}
       end)
 

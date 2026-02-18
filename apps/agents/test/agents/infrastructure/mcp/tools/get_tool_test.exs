@@ -27,11 +27,13 @@ defmodule Agents.Infrastructure.Mcp.Tools.GetToolTest do
       frame = build_frame(workspace_id)
 
       entity = Fixtures.erm_knowledge_entity(%{id: entity_id, workspace_id: workspace_id})
-      edge = Fixtures.erm_knowledge_edge(%{source_id: entity_id, workspace_id: workspace_id})
+
+      neighbor =
+        Fixtures.erm_knowledge_entity(%{id: Fixtures.unique_id(), workspace_id: workspace_id})
 
       Agents.Mocks.ErmGatewayMock
       |> expect(:get_entity, fn ^workspace_id, ^entity_id -> {:ok, entity} end)
-      |> expect(:list_edges, fn ^workspace_id, %{entity_id: ^entity_id} -> {:ok, [edge]} end)
+      |> expect(:get_neighbors, fn ^workspace_id, ^entity_id, [] -> {:ok, [neighbor]} end)
 
       params = %{id: entity_id}
 
