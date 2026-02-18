@@ -25,7 +25,7 @@ defmodule Agents.Application.UseCases.TraverseKnowledgeGraphTest do
       end)
       |> expect(:traverse, fn _ws_id, sid, opts ->
         assert sid == start_id
-        assert Keyword.get(opts, :depth) == 2
+        assert Keyword.get(opts, :max_depth) == 2
         {:ok, [neighbor1, neighbor2]}
       end)
 
@@ -64,7 +64,7 @@ defmodule Agents.Application.UseCases.TraverseKnowledgeGraphTest do
       ErmGatewayMock
       |> expect(:get_entity, fn _ws_id, _eid -> {:ok, start_entity} end)
       |> expect(:traverse, fn _ws_id, _sid, opts ->
-        assert Keyword.get(opts, :depth) == 2
+        assert Keyword.get(opts, :max_depth) == 2
         {:ok, []}
       end)
 
@@ -81,7 +81,7 @@ defmodule Agents.Application.UseCases.TraverseKnowledgeGraphTest do
       ErmGatewayMock
       |> expect(:get_entity, fn _ws_id, _eid -> {:ok, start_entity} end)
       |> expect(:traverse, fn _ws_id, _sid, opts ->
-        assert Keyword.get(opts, :depth) == 5
+        assert Keyword.get(opts, :max_depth) == 5
         {:ok, []}
       end)
 
