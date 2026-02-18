@@ -214,6 +214,11 @@ if config_env() == :prod do
     ],
     secret_key_base: secret_key_base
 
+  # LiveDashboard Basic Auth credentials
+  config :jarga,
+    dashboard_username: System.get_env("DASHBOARD_USERNAME"),
+    dashboard_password: System.get_env("DASHBOARD_PASSWORD")
+
   # Mailer Config
   sendgrid_api_key = System.get_env("SENDGRID_API_KEY")
 
