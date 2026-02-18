@@ -3,6 +3,8 @@ defmodule Agents.Infrastructure.Mcp.Tools.CreateTool do
 
   use Hermes.Server.Component, type: :tool
 
+  require Logger
+
   alias Hermes.Server.Response
   alias Agents.Application.UseCases.CreateKnowledgeEntry
 
@@ -65,5 +67,9 @@ defmodule Agents.Infrastructure.Mcp.Tools.CreateTool do
   defp format_error(:title_too_long), do: "Title must be 255 characters or less."
   defp format_error(:too_many_tags), do: "Maximum of 20 tags allowed."
   defp format_error(:invalid_tag), do: "Tags must be non-empty strings."
-  defp format_error(reason), do: "Failed to create entry: #{inspect(reason)}"
+
+  defp format_error(reason) do
+    Logger.error("CreateTool unexpected error: #{inspect(reason)}")
+    "An unexpected error occurred while creating the entry."
+  end
 end

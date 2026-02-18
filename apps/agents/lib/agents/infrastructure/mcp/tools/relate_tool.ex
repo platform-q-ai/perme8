@@ -3,6 +3,8 @@ defmodule Agents.Infrastructure.Mcp.Tools.RelateTool do
 
   use Hermes.Server.Component, type: :tool
 
+  require Logger
+
   alias Hermes.Server.Response
   alias Agents.Application.UseCases.CreateKnowledgeRelationship
   alias Agents.Domain.Policies.KnowledgeValidationPolicy
@@ -52,8 +54,13 @@ defmodule Agents.Infrastructure.Mcp.Tools.RelateTool do
         {:reply, Response.error(Response.tool(), "One or both entries not found."), frame}
 
       {:error, reason} ->
-        {:reply, Response.error(Response.tool(), "Failed to create relationship: #{reason}"),
-         frame}
+        Logger.error("RelateTool unexpected error: #{inspect(reason)}")
+
+        {:reply,
+         Response.error(
+           Response.tool(),
+           "An unexpected error occurred while creating the relationship."
+         ), frame}
     end
   end
 
