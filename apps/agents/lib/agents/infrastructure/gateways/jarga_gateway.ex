@@ -11,6 +11,8 @@ defmodule Agents.Infrastructure.Gateways.JargaGateway do
   # compile-time dependencies. The modules are available at runtime.
   @compile {:no_warn_undefined, [Identity, Jarga.Projects, Jarga.Documents]}
 
+  alias Agents.Application.GatewayConfig
+
   @behaviour Agents.Application.Behaviours.JargaGatewayBehaviour
 
   @impl true
@@ -76,7 +78,7 @@ defmodule Agents.Infrastructure.Gateways.JargaGateway do
   end
 
   defp resolve_user(user_id) do
-    identity = Agents.Application.GatewayConfig.identity_module()
+    identity = GatewayConfig.identity_module()
 
     case identity.get_user(user_id) do
       nil -> {:error, :user_not_found}
