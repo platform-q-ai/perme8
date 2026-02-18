@@ -46,7 +46,7 @@ defmodule Mix.Tasks.Check.CiSync do
     umbrella_root = umbrella_root()
     configs = discover_configs(umbrella_root)
     ci_combos = parse_ci_combos(umbrella_root)
-    disk_combos = discover_disk_combos(configs, umbrella_root)
+    disk_combos = discover_disk_combos(configs)
 
     if verbose do
       log_combos("CI matrix entries", ci_combos)
@@ -71,16 +71,23 @@ defmodule Mix.Tasks.Check.CiSync do
   # ---------------------------------------------------------------------------
 
   defp discover_configs(umbrella_root) do
-    Path.join(umbrella_root, "apps/**/exo-bdd*.config.ts")
-    |> Path.wildcard()
-    |> Enum.sort()
+    configs =
+      Path.join(umbrella_root, "apps/**/exo-bdd*.config.ts")
+      |> Path.wildcard()
+      |> Enum.sort()
+
+    if configs == [] do
+      Mix.raise("No exo-bdd config files found under #{umbrella_root}/apps/")
+    end
+
+    configs
   end
 
   @doc """
   Finds all {config_name, domain} pairs that have at least one matching feature
   file on disk. Uses the config file's directory as the search root for features.
   """
-  def discover_disk_combos(config_paths, _umbrella_root) do
+  def discover_disk_combos(config_paths) do
     config_paths
     |> Enum.flat_map(fn config_path ->
       config_name = extract_config_name(config_path)
