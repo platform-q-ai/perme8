@@ -36,13 +36,21 @@ defmodule Agents.Infrastructure.Mcp.Tools.Jarga.GetDocumentTool do
 
   defp format_document(doc) do
     visibility = if doc[:is_public], do: "public", else: "private"
+    content = Map.get(doc, :body) || Map.get(doc, :content, "")
 
-    """
-    **#{doc.title}**
-    - **Slug**: `#{doc.slug}`
-    - **ID**: #{doc.id}
-    - **Visibility**: #{visibility}
-    """
-    |> String.trim()
+    base =
+      """
+      **#{doc.title}**
+      - **Slug**: `#{doc.slug}`
+      - **ID**: #{doc.id}
+      - **Visibility**: #{visibility}
+      """
+      |> String.trim()
+
+    if content != "" do
+      base <> "\n\n---\n\n" <> content
+    else
+      base
+    end
   end
 end

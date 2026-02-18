@@ -18,10 +18,13 @@ defmodule Agents.Infrastructure.Mcp.Tools.Jarga.CreateProjectTool do
     user_id = frame.assigns[:user_id]
     workspace_id = frame.assigns[:workspace_id]
 
-    attrs = %{
-      name: params.name,
-      description: Map.get(params, :description)
-    }
+    attrs = %{name: params.name}
+
+    attrs =
+      case Map.get(params, :description) do
+        nil -> attrs
+        description -> Map.put(attrs, :description, description)
+      end
 
     case CreateProject.execute(user_id, workspace_id, attrs) do
       {:ok, project} ->
@@ -49,7 +52,17 @@ defmodule Agents.Infrastructure.Mcp.Tools.Jarga.CreateProjectTool do
   defp format_changeset(%Ecto.Changeset{} = changeset) do
     Ecto.Changeset.traverse_errors(changeset, fn {msg, opts} ->
       Regex.replace(~r"%{(\w+)}", msg, fn _, key ->
-        opts |> Keyword.get(String.to_existing_atom(key), key) |> to_string()
+        atom_key =
+          try do
+            String.to_existing_atom(key)
+          rescue
+            ArgumentError -> nil
+          end
+
+        case atom_key && Keyword.get(opts, atom_key) do
+          nil -> key
+          value -> to_string(value)
+        end
       end)
     end)
     |> Enum.map_join(", ", fn {field, errors} -> "#{field}: #{Enum.join(errors, ", ")}" end)

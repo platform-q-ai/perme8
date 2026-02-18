@@ -27,6 +27,9 @@ defmodule Agents.Infrastructure.Mcp.Tools.Jarga.ListDocumentsTool do
         text = format_documents(documents)
         {:reply, Response.text(Response.tool(), text), frame}
 
+      {:error, :project_not_found} ->
+        {:reply, Response.error(Response.tool(), "Project not found."), frame}
+
       {:error, reason} ->
         Logger.error("ListDocumentsTool unexpected error: #{inspect(reason)}")
         {:reply, Response.error(Response.tool(), "An unexpected error occurred."), frame}

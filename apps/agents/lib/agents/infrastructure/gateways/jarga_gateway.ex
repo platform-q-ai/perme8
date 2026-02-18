@@ -76,7 +76,9 @@ defmodule Agents.Infrastructure.Gateways.JargaGateway do
   end
 
   defp resolve_user(user_id) do
-    case Identity.get_user(user_id) do
+    identity = Agents.Application.GatewayConfig.identity_module()
+
+    case identity.get_user(user_id) do
       nil -> {:error, :user_not_found}
       user -> {:ok, user}
     end
