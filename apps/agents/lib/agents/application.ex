@@ -33,6 +33,15 @@ defmodule Agents.Application do
       UseCases.SearchKnowledgeEntries,
       UseCases.TraverseKnowledgeGraph,
       UseCases.CreateKnowledgeRelationship,
+      # Jarga use cases
+      UseCases.ListWorkspaces,
+      UseCases.GetWorkspace,
+      UseCases.ListProjects,
+      UseCases.CreateProject,
+      UseCases.GetProject,
+      UseCases.ListDocuments,
+      UseCases.CreateDocument,
+      UseCases.GetDocument,
       # Policies
       Policies.AgentPolicy,
       Policies.VisibilityPolicy,
