@@ -124,6 +124,7 @@ defmodule Agents do
       iex> list_user_agents(user_id)
       [%Agent{}, ...]
   """
+  @spec list_user_agents(String.t()) :: [struct()]
   defdelegate list_user_agents(user_id), to: ListUserAgents, as: :execute
 
   @doc """
@@ -136,6 +137,7 @@ defmodule Agents do
       iex> list_viewable_agents(user_id)
       [%Agent{}, ...]
   """
+  @spec list_viewable_agents(String.t()) :: [struct()]
   defdelegate list_viewable_agents(user_id), to: ListViewableAgents, as: :execute
 
   @doc """
@@ -146,6 +148,7 @@ defmodule Agents do
       iex> create_user_agent(%{user_id: user_id, name: "My Agent"})
       {:ok, %Agent{}}
   """
+  @spec create_user_agent(map()) :: {:ok, struct()} | {:error, Ecto.Changeset.t()}
   defdelegate create_user_agent(attrs), to: CreateUserAgent, as: :execute
 
   @doc """
@@ -161,6 +164,7 @@ defmodule Agents do
       iex> validate_agent_params(%{temperature: "invalid"})
       %Ecto.Changeset{valid?: false}
   """
+  @spec validate_agent_params(map()) :: Ecto.Changeset.t()
   defdelegate validate_agent_params(attrs), to: ValidateAgentParams, as: :execute
 
   @doc """
@@ -171,6 +175,8 @@ defmodule Agents do
       iex> update_user_agent(agent_id, user_id, %{name: "New Name"})
       {:ok, %Agent{}}
   """
+  @spec update_user_agent(String.t(), String.t(), map()) ::
+          {:ok, struct()} | {:error, :not_found | Ecto.Changeset.t()}
   defdelegate update_user_agent(agent_id, user_id, attrs), to: UpdateUserAgent, as: :execute
 
   @doc """
@@ -181,6 +187,7 @@ defmodule Agents do
       iex> delete_user_agent(agent_id, user_id)
       {:ok, %Agent{}}
   """
+  @spec delete_user_agent(String.t(), String.t()) :: {:ok, struct()} | {:error, :not_found}
   defdelegate delete_user_agent(agent_id, user_id), to: DeleteUserAgent, as: :execute
 
   @doc """
@@ -200,6 +207,8 @@ defmodule Agents do
   - `{:error, :not_found}` - Agent not found
   - `{:error, :forbidden}` - User cannot clone this agent
   """
+  @spec clone_shared_agent(String.t(), String.t(), keyword()) ::
+          {:ok, struct()} | {:error, :not_found | :forbidden}
   defdelegate clone_shared_agent(agent_id, user_id, opts \\ []),
     to: CloneSharedAgent,
     as: :execute
@@ -216,6 +225,8 @@ defmodule Agents do
       iex> list_workspace_available_agents(workspace_id, user_id)
       %{my_agents: [...], other_agents: [...]}
   """
+  @spec list_workspace_available_agents(String.t(), String.t()) ::
+          %{my_agents: [struct()], other_agents: [struct()]}
   defdelegate list_workspace_available_agents(workspace_id, user_id),
     to: ListWorkspaceAvailableAgents,
     as: :execute
@@ -237,6 +248,7 @@ defmodule Agents do
       iex> get_workspace_agents_list(workspace_id, user_id, enabled_only: true)
       [%Agent{enabled: true}, ...]
   """
+  @spec get_workspace_agents_list(String.t(), String.t(), keyword()) :: [struct()]
   def get_workspace_agents_list(workspace_id, user_id, opts \\ []) do
     result = list_workspace_available_agents(workspace_id, user_id)
     agents = (result.my_agents || []) ++ (result.other_agents || [])
@@ -256,6 +268,7 @@ defmodule Agents do
       iex> get_agent_workspace_ids(agent_id)
       ["workspace-id-1", "workspace-id-2"]
   """
+  @spec get_agent_workspace_ids(String.t()) :: [String.t()]
   def get_agent_workspace_ids(agent_id) do
     alias Agents.Infrastructure.Repositories.WorkspaceAgentRepository
     WorkspaceAgentRepository.get_agent_workspace_ids(agent_id)
@@ -272,6 +285,7 @@ defmodule Agents do
       iex> sync_agent_workspaces(agent_id, user_id, ["workspace-1", "workspace-2"])
       :ok
   """
+  @spec sync_agent_workspaces(String.t(), String.t(), [String.t()]) :: :ok | {:error, term()}
   def sync_agent_workspaces(agent_id, user_id, workspace_ids) do
     SyncAgentWorkspaces.execute(agent_id, user_id, workspace_ids)
   end
