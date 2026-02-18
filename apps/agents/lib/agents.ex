@@ -381,4 +381,73 @@ defmodule Agents do
   def create_knowledge_relationship(workspace_id, params, opts \\ []) do
     CreateKnowledgeRelationship.execute(workspace_id, params, opts)
   end
+
+  # ---------------------------------------------------------------------------
+  # Jarga MCP — workspace-scoped project & document tools via MCP
+  # ---------------------------------------------------------------------------
+
+  alias Agents.Application.UseCases.{
+    ListWorkspaces,
+    GetWorkspace,
+    ListProjects,
+    CreateProject,
+    GetProject,
+    ListDocuments,
+    CreateDocument,
+    GetDocument
+  }
+
+  @doc "Lists workspaces accessible to the user."
+  @spec list_workspaces(String.t(), keyword()) :: {:ok, [map()]} | {:error, term()}
+  def list_workspaces(user_id, opts \\ []) do
+    ListWorkspaces.execute(user_id, opts)
+  end
+
+  @doc "Gets workspace details by slug."
+  @spec get_workspace(String.t(), String.t(), keyword()) ::
+          {:ok, map()} | {:error, :not_found | :unauthorized}
+  def get_workspace(user_id, workspace_slug, opts \\ []) do
+    GetWorkspace.execute(user_id, workspace_slug, opts)
+  end
+
+  @doc "Lists projects in a workspace."
+  @spec list_projects(String.t(), String.t(), keyword()) :: {:ok, [map()]} | {:error, term()}
+  def list_projects(user_id, workspace_id, opts \\ []) do
+    ListProjects.execute(user_id, workspace_id, opts)
+  end
+
+  @doc "Creates a project in a workspace."
+  @spec create_project(String.t(), String.t(), map(), keyword()) ::
+          {:ok, map()} | {:error, term()}
+  def create_project(user_id, workspace_id, attrs, opts \\ []) do
+    CreateProject.execute(user_id, workspace_id, attrs, opts)
+  end
+
+  @doc "Gets project details by slug."
+  @spec get_project(String.t(), String.t(), String.t(), keyword()) ::
+          {:ok, map()} | {:error, :project_not_found}
+  def get_project(user_id, workspace_id, slug, opts \\ []) do
+    GetProject.execute(user_id, workspace_id, slug, opts)
+  end
+
+  @doc "Lists documents in a workspace, optionally filtered by project."
+  @spec list_documents(String.t(), String.t(), map(), keyword()) ::
+          {:ok, [map()]} | {:error, term()}
+  def list_documents(user_id, workspace_id, params \\ %{}, opts \\ []) do
+    ListDocuments.execute(user_id, workspace_id, params, opts)
+  end
+
+  @doc "Creates a document in a workspace."
+  @spec create_document(String.t(), String.t(), map(), keyword()) ::
+          {:ok, map()} | {:error, term()}
+  def create_document(user_id, workspace_id, attrs, opts \\ []) do
+    CreateDocument.execute(user_id, workspace_id, attrs, opts)
+  end
+
+  @doc "Gets document details by slug."
+  @spec get_document(String.t(), String.t(), String.t(), keyword()) ::
+          {:ok, map()} | {:error, :document_not_found | :forbidden}
+  def get_document(user_id, workspace_id, slug, opts \\ []) do
+    GetDocument.execute(user_id, workspace_id, slug, opts)
+  end
 end
