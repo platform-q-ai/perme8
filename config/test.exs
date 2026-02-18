@@ -3,6 +3,9 @@ import Config
 # Set environment to test
 config :jarga, :env, :test
 
+# Enable LiveDashboard route in test so we can verify basic auth behaviour
+config :jarga, live_dashboard_in_prod: true
+
 # Fast document save debouncing for tests (1ms)
 config :jarga, :document_save_debounce_ms, 1
 
