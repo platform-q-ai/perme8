@@ -70,9 +70,22 @@ mix exo_test -n identity -a security
 mix exo_test --name entity --tag "not @security"
 ```
 
+### `mix check.ci_sync`
+
+Validates that every exo-bdd config + adapter domain with feature files on disk has a corresponding entry in the CI workflow matrix (`ALL_COMBOS`). Prevents accidentally adding a new test adapter (e.g., security) without wiring it into CI.
+
+```bash
+mix check.ci_sync
+
+# Verbose output showing all detected combos
+mix check.ci_sync --verbose
+```
+
+Exits with code 1 if any config+domain pair has feature files but no CI matrix entry, and prints the missing entries in copy-pasteable format.
+
 ## Integration with Pre-commit
 
-The `step_linter` task is included in the root-level `mix precommit` alias, running automatically before every commit to catch BDD step quality issues early.
+Both `step_linter` and `check.ci_sync` are included in the root-level `mix precommit` alias, running automatically before every commit.
 
 ## Dependencies
 

@@ -60,6 +60,23 @@ bun run tools/exo-bdd/src/cli/index.ts run \
   --adapter http --tags "@smoke"
 ```
 
+### Security Tests (ZAP scanning)
+
+Run OWASP ZAP security scans against any app with `*.security.feature` files:
+
+```bash
+# jarga-web security suite
+mix exo_test --name jarga-web --adapter security
+
+# identity security suite
+mix exo_test --name identity --adapter security
+
+# With tag filter
+mix exo_test --name jarga-web --adapter security --tag "@smoke"
+```
+
+Security tests require Docker (ZAP runs as a container). The exo-bdd security adapter manages the ZAP container lifecycle automatically. Timeout is 300s per step to accommodate active scans.
+
 **LiveView critical pattern**: Always add `I wait for network idle` after navigating to a LiveView page before interacting with `phx-*` elements. See `tools/exo-bdd/README.md` "Phoenix LiveView Tips".
 
 **Asset rebuild is automatic**: The jarga-web exo-bdd config uses the `setup` field to run `mix assets.build` before the test server starts. No manual asset rebuild is needed.
