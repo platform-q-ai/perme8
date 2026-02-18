@@ -32,6 +32,11 @@ defmodule Jarga.Documents.Domain do
       Entities.DocumentComponent,
       Policies.DocumentAccessPolicy,
       SlugGenerator,
-      AgentQueryParser
+      AgentQueryParser,
+      Events.DocumentCreated,
+      Events.DocumentDeleted,
+      Events.DocumentTitleChanged,
+      Events.DocumentVisibilityChanged,
+      Events.DocumentPinnedChanged
     ]
 end

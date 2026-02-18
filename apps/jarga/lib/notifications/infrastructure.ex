@@ -29,6 +29,7 @@ defmodule Jarga.Notifications.Infrastructure do
     top_level?: true,
     deps: [
       Jarga.Notifications.Application,
+      Jarga.Notifications.Domain,
       Jarga.Repo,
       # Cross-context dependencies
       Identity,

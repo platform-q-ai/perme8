@@ -25,7 +25,27 @@ defmodule Perme8.Events.DomainEvent do
   - `workspace_id` - Optional, nil for global events
   - `occurred_at` - Auto-generated UTC datetime
   - `metadata` - Defaults to empty map
+
+  ## Location
+
+  This module lives in the `identity` app because it must be available at
+  compile-time for all umbrella apps (including `agents` which cannot depend
+  on `jarga` due to a cyclic dependency). The rest of the event infrastructure
+  (EventBus, EventHandler, LegacyBridge) remains in `jarga`.
+
+  ## Boundary
+
+  Defined as a standalone boundary with `check: [in: false]` so any module in
+  any app can reference it without needing to declare it as a dependency. This is
+  necessary because it lives in the `identity` app but is used by domain layers
+  across all apps (jarga, agents, ERM).
   """
+
+  use Boundary,
+    top_level?: true,
+    check: [in: false, out: true],
+    deps: [],
+    exports: []
 
   defmacro __using__(opts) do
     fields = Keyword.get(opts, :fields, [])
@@ -35,22 +55,21 @@ defmodule Perme8.Events.DomainEvent do
     base_required = [:aggregate_id, :actor_id]
     all_required = base_required ++ required
 
-    base_fields = [
-      event_id: nil,
-      event_type: nil,
-      aggregate_type: nil,
-      aggregate_id: nil,
-      actor_id: nil,
-      workspace_id: nil,
-      occurred_at: nil,
-      metadata: %{}
-    ]
-
-    all_fields = Macro.escape(base_fields ++ fields)
+    base_fields =
+      Macro.escape(
+        event_id: nil,
+        event_type: nil,
+        aggregate_type: nil,
+        aggregate_id: nil,
+        actor_id: nil,
+        workspace_id: nil,
+        occurred_at: nil,
+        metadata: %{}
+      )
 
     quote do
       @enforce_keys unquote(all_required)
-      defstruct unquote(all_fields)
+      defstruct unquote(base_fields) ++ unquote(fields)
 
       @doc "Returns the event type string derived from the module name."
       def event_type do
