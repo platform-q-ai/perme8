@@ -70,20 +70,21 @@ defmodule Agents.Infrastructure.Mcp.Tools.Jarga.CreateDocumentTool do
 
   defp format_changeset(%Ecto.Changeset{} = changeset) do
     Ecto.Changeset.traverse_errors(changeset, fn {msg, opts} ->
-      Regex.replace(~r"%{(\w+)}", msg, fn _, key ->
-        atom_key =
-          try do
-            String.to_existing_atom(key)
-          rescue
-            ArgumentError -> nil
-          end
-
-        case atom_key && Keyword.get(opts, atom_key) do
-          nil -> key
-          value -> to_string(value)
-        end
-      end)
+      Regex.replace(~r"%{(\w+)}", msg, fn _, key -> interpolate_opt(key, opts) end)
     end)
     |> Enum.map_join(", ", fn {field, errors} -> "#{field}: #{Enum.join(errors, ", ")}" end)
+  end
+
+  defp interpolate_opt(key, opts) do
+    case key |> safe_to_existing_atom() |> then(&(&1 && Keyword.get(opts, &1))) do
+      nil -> key
+      value -> to_string(value)
+    end
+  end
+
+  defp safe_to_existing_atom(key) do
+    String.to_existing_atom(key)
+  rescue
+    ArgumentError -> nil
   end
 end
