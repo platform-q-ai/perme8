@@ -35,17 +35,17 @@ defmodule Mix.Tasks.Check.CiSyncTest do
     end
   end
 
-  describe "discover_disk_combos/2" do
+  describe "discover_disk_combos/1" do
     test "finds combos for configs with matching feature files" do
       configs = [Path.join(@umbrella_root, "apps/jarga_web/test/exo-bdd-jarga-web.config.ts")]
-      combos = CiSync.discover_disk_combos(configs, @umbrella_root)
+      combos = CiSync.discover_disk_combos(configs)
 
       assert MapSet.member?(combos, {"jarga-web", "browser"})
       assert MapSet.member?(combos, {"jarga-web", "security"})
     end
 
     test "returns empty set for nonexistent config paths" do
-      combos = CiSync.discover_disk_combos(["/nonexistent/config.ts"], "/nonexistent")
+      combos = CiSync.discover_disk_combos(["/nonexistent/config.ts"])
       assert MapSet.size(combos) == 0
     end
   end
