@@ -125,14 +125,14 @@ defmodule Mix.Tasks.Check.CiSync do
 
   defp parse_combo_entries(block) do
     # Each line looks like: {"app": "...", "domain": "...", "config_name": "...", "timeout": N}
-    # We extract config_name and domain from each entry.
-    Regex.scan(~r/"config_name":\s*"([^"]+)".*?"domain":\s*"([^"]+)"/, block)
-    |> Enum.concat(
-      Regex.scan(~r/"domain":\s*"([^"]+)".*?"config_name":\s*"([^"]+)"/, block)
-      |> Enum.map(fn [full, domain, config_name] -> [full, config_name, domain] end)
-    )
-    |> Enum.map(fn [_full, config_name, domain] -> {config_name, domain} end)
-    |> MapSet.new()
+    # Extract config_name and domain independently, then zip by position.
+    config_names =
+      Regex.scan(~r/"config_name":\s*"([^"]+)"/, block) |> Enum.map(&List.last/1)
+
+    domains =
+      Regex.scan(~r/"domain":\s*"([^"]+)"/, block) |> Enum.map(&List.last/1)
+
+    Enum.zip(config_names, domains) |> MapSet.new()
   end
 
   # ---------------------------------------------------------------------------
