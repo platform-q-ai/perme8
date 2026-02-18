@@ -22,6 +22,9 @@ defmodule Jarga.Chat.Domain do
     deps: [],
     exports: [
       Entities.Session,
-      Entities.Message
+      Entities.Message,
+      Events.ChatSessionStarted,
+      Events.ChatMessageSent,
+      Events.ChatSessionDeleted
     ]
 end

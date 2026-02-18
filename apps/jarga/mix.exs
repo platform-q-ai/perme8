@@ -78,6 +78,8 @@ defmodule Jarga.MixProject do
             {:ecto_sql, :relaxed},
             # Agents (extracted umbrella app)
             {:agents, :relaxed},
+            # Identity (DomainEvent macro lives here for compile-time availability)
+            {:identity, :relaxed},
             # Other - allow Mix for compile tasks
             {:mix, :relaxed}
           ]

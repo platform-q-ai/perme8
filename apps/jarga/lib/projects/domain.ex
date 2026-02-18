@@ -24,6 +24,10 @@ defmodule Jarga.Projects.Domain do
     deps: [],
     exports: [
       Entities.Project,
-      SlugGenerator
+      SlugGenerator,
+      Events.ProjectCreated,
+      Events.ProjectUpdated,
+      Events.ProjectDeleted,
+      Events.ProjectArchived
     ]
 end
