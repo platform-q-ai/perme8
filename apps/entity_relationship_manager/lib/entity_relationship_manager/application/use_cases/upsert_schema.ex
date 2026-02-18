@@ -39,6 +39,11 @@ defmodule EntityRelationshipManager.Application.UseCases.UpsertSchema do
 
     case SchemaValidationPolicy.validate_schema_structure(schema_def) do
       :ok ->
+        # NOTE(Part 1): TOCTOU race — schema_exists? and upsert_schema are separate calls,
+        # so the emitted event type (SchemaCreated vs SchemaUpdated) could be wrong if
+        # another process creates/deletes the schema between these two calls.
+        # Part 2 will fix this by having upsert_schema return {:ok, schema, :inserted | :updated}
+        # metadata so event type can be derived atomically from the repo operation.
         is_create = not schema_exists?(schema_repo, workspace_id)
 
         case schema_repo.upsert_schema(workspace_id, attrs) do
