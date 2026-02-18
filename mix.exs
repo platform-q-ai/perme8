@@ -61,6 +61,7 @@ defmodule Perme8.MixProject do
         "credo --strict",
         "check.behaviours",
         "step_linter",
+        "check.ci_sync",
         "assets.build",
         fn _ ->
           if System.cmd("npm", ["test", "--prefix", "apps/jarga_web/assets"],
