@@ -3,6 +3,8 @@ defmodule Agents.Infrastructure.Mcp.Tools.SearchTool do
 
   use Hermes.Server.Component, type: :tool
 
+  require Logger
+
   alias Hermes.Server.Response
   alias Agents.Application.UseCases.SearchKnowledgeEntries
 
@@ -40,7 +42,10 @@ defmodule Agents.Infrastructure.Mcp.Tools.SearchTool do
          ), frame}
 
       {:error, reason} ->
-        {:reply, Response.error(Response.tool(), "Search failed: #{reason}"), frame}
+        Logger.error("SearchTool unexpected error: #{inspect(reason)}")
+
+        {:reply, Response.error(Response.tool(), "An unexpected error occurred while searching."),
+         frame}
     end
   end
 

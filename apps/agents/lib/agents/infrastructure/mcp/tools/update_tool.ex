@@ -3,6 +3,8 @@ defmodule Agents.Infrastructure.Mcp.Tools.UpdateTool do
 
   use Hermes.Server.Component, type: :tool
 
+  require Logger
+
   alias Hermes.Server.Response
   alias Agents.Application.UseCases.UpdateKnowledgeEntry
 
@@ -46,7 +48,13 @@ defmodule Agents.Infrastructure.Mcp.Tools.UpdateTool do
          ), frame}
 
       {:error, reason} ->
-        {:reply, Response.error(Response.tool(), "Failed to update entry: #{reason}"), frame}
+        Logger.error("UpdateTool unexpected error: #{inspect(reason)}")
+
+        {:reply,
+         Response.error(
+           Response.tool(),
+           "An unexpected error occurred while updating the entry."
+         ), frame}
     end
   end
 

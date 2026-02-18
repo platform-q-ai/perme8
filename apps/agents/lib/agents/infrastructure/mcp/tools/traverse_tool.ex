@@ -3,6 +3,8 @@ defmodule Agents.Infrastructure.Mcp.Tools.TraverseTool do
 
   use Hermes.Server.Component, type: :tool
 
+  require Logger
+
   alias Hermes.Server.Response
   alias Agents.Application.UseCases.TraverseKnowledgeGraph
   alias Agents.Domain.Policies.KnowledgeValidationPolicy
@@ -44,7 +46,10 @@ defmodule Agents.Infrastructure.Mcp.Tools.TraverseTool do
          ), frame}
 
       {:error, reason} ->
-        {:reply, Response.error(Response.tool(), "Traversal failed: #{reason}"), frame}
+        Logger.error("TraverseTool unexpected error: #{inspect(reason)}")
+
+        {:reply,
+         Response.error(Response.tool(), "An unexpected error occurred during traversal."), frame}
     end
   end
 

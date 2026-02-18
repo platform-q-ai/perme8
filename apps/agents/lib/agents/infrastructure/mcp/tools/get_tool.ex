@@ -3,6 +3,8 @@ defmodule Agents.Infrastructure.Mcp.Tools.GetTool do
 
   use Hermes.Server.Component, type: :tool
 
+  require Logger
+
   alias Hermes.Server.Response
   alias Agents.Application.UseCases.GetKnowledgeEntry
 
@@ -23,7 +25,13 @@ defmodule Agents.Infrastructure.Mcp.Tools.GetTool do
         {:reply, Response.error(Response.tool(), "Knowledge entry not found."), frame}
 
       {:error, reason} ->
-        {:reply, Response.error(Response.tool(), "Failed to get entry: #{reason}"), frame}
+        Logger.error("GetTool unexpected error: #{inspect(reason)}")
+
+        {:reply,
+         Response.error(
+           Response.tool(),
+           "An unexpected error occurred while retrieving the entry."
+         ), frame}
     end
   end
 
