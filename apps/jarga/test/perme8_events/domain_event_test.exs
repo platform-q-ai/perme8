@@ -1,6 +1,10 @@
 defmodule Perme8.Events.DomainEventTest do
   use ExUnit.Case, async: true
 
+  alias Perme8.Events.DomainEventTest.Agents.Domain.Events.AgentUpdated
+  alias Perme8.Events.DomainEventTest.EntityRelationshipManager.Domain.Events.EntityCreated
+  alias Perme8.Events.DomainEventTest.Jarga.Projects.Domain.Events.ProjectCreated
+
   # Test helper module using the DomainEvent macro
   defmodule TestEvent do
     use Perme8.Events.DomainEvent,
@@ -148,16 +152,16 @@ defmodule Perme8.Events.DomainEventTest do
 
   describe "event_type/0" do
     test "derives context.event_name from full module name" do
-      assert Jarga.Projects.Domain.Events.ProjectCreated.event_type() ==
+      assert ProjectCreated.event_type() ==
                "projects.project_created"
     end
 
     test "derives from agents context" do
-      assert Agents.Domain.Events.AgentUpdated.event_type() == "agents.agent_updated"
+      assert AgentUpdated.event_type() == "agents.agent_updated"
     end
 
     test "derives from underscored context name" do
-      assert EntityRelationshipManager.Domain.Events.EntityCreated.event_type() ==
+      assert EntityCreated.event_type() ==
                "entity_relationship_manager.entity_created"
     end
   end
@@ -165,8 +169,8 @@ defmodule Perme8.Events.DomainEventTest do
   describe "aggregate_type/0" do
     test "returns the aggregate type string" do
       assert TestEvent.aggregate_type() == "test"
-      assert Jarga.Projects.Domain.Events.ProjectCreated.aggregate_type() == "project"
-      assert Agents.Domain.Events.AgentUpdated.aggregate_type() == "agent"
+      assert ProjectCreated.aggregate_type() == "project"
+      assert AgentUpdated.aggregate_type() == "agent"
     end
   end
 end

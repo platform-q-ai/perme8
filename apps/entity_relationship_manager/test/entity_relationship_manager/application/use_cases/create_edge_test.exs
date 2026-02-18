@@ -9,6 +9,7 @@ defmodule EntityRelationshipManager.Application.UseCases.CreateEdgeTest do
   import EntityRelationshipManager.UseCaseFixtures
 
   alias EntityRelationshipManager.Domain.Events.EdgeCreated
+  alias Perme8.Events.TestEventBus
 
   setup :verify_on_exit!
 
@@ -35,10 +36,10 @@ defmodule EntityRelationshipManager.Application.UseCases.CreateEdgeTest do
                  },
                  schema_repo: SchemaRepositoryMock,
                  graph_repo: GraphRepositoryMock,
-                 event_bus: Perme8.Events.TestEventBus
+                 event_bus: TestEventBus
                )
 
-      assert [%EdgeCreated{} = event] = Perme8.Events.TestEventBus.get_events()
+      assert [%EdgeCreated{} = event] = TestEventBus.get_events()
       assert event.edge_id == created_edge.id
       assert event.workspace_id == workspace_id()
       assert event.source_id == valid_uuid()
@@ -64,10 +65,10 @@ defmodule EntityRelationshipManager.Application.UseCases.CreateEdgeTest do
                  },
                  schema_repo: SchemaRepositoryMock,
                  graph_repo: GraphRepositoryMock,
-                 event_bus: Perme8.Events.TestEventBus
+                 event_bus: TestEventBus
                )
 
-      assert [] = Perme8.Events.TestEventBus.get_events()
+      assert [] = TestEventBus.get_events()
     end
 
     test "returns error when schema not found" do
@@ -208,13 +209,13 @@ defmodule EntityRelationshipManager.Application.UseCases.CreateEdgeTest do
   end
 
   defp ensure_test_event_bus_started do
-    case Process.whereis(Perme8.Events.TestEventBus) do
+    case Process.whereis(TestEventBus) do
       nil ->
-        {:ok, _pid} = Perme8.Events.TestEventBus.start_link([])
+        {:ok, _pid} = TestEventBus.start_link([])
         :ok
 
       _pid ->
-        Perme8.Events.TestEventBus.reset()
+        TestEventBus.reset()
     end
   end
 end

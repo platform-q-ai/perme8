@@ -14,6 +14,7 @@ defmodule Jarga.Chat.Application.UseCases.CreateSessionTest do
   alias Identity.Repo, as: Repo
 
   alias Jarga.Chat.Domain.Events.ChatSessionStarted
+  alias Perme8.Events.TestEventBus
 
   describe "execute/2 - event emission" do
     test "emits ChatSessionStarted event via event_bus" do
@@ -25,10 +26,10 @@ defmodule Jarga.Chat.Application.UseCases.CreateSessionTest do
       assert {:ok, session} =
                CreateSession.execute(
                  %{user_id: user.id, workspace_id: workspace.id, title: "Event Test"},
-                 event_bus: Perme8.Events.TestEventBus
+                 event_bus: TestEventBus
                )
 
-      assert [%ChatSessionStarted{} = event] = Perme8.Events.TestEventBus.get_events()
+      assert [%ChatSessionStarted{} = event] = TestEventBus.get_events()
       assert event.session_id == session.id
       assert event.user_id == user.id
       assert event.workspace_id == workspace.id
@@ -40,9 +41,9 @@ defmodule Jarga.Chat.Application.UseCases.CreateSessionTest do
       ensure_test_event_bus_started()
 
       assert {:error, _changeset} =
-               CreateSession.execute(%{}, event_bus: Perme8.Events.TestEventBus)
+               CreateSession.execute(%{}, event_bus: TestEventBus)
 
-      assert [] = Perme8.Events.TestEventBus.get_events()
+      assert [] = TestEventBus.get_events()
     end
   end
 
@@ -164,13 +165,13 @@ defmodule Jarga.Chat.Application.UseCases.CreateSessionTest do
   end
 
   defp ensure_test_event_bus_started do
-    case Process.whereis(Perme8.Events.TestEventBus) do
+    case Process.whereis(TestEventBus) do
       nil ->
-        {:ok, _pid} = Perme8.Events.TestEventBus.start_link([])
+        {:ok, _pid} = TestEventBus.start_link([])
         :ok
 
       _pid ->
-        Perme8.Events.TestEventBus.reset()
+        TestEventBus.reset()
     end
   end
 end

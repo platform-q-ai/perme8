@@ -3,7 +3,9 @@ defmodule Jarga.Documents.Application.UseCases.DeleteDocumentTest do
   use Jarga.DataCase, async: false
 
   alias Jarga.Documents.Application.UseCases.DeleteDocument
+  alias Jarga.Documents.Domain.Events.DocumentDeleted
   alias Jarga.Documents.Infrastructure.Schemas.DocumentSchema
+  alias Perme8.Events.TestEventBus
 
   import Jarga.AccountsFixtures
   import Jarga.WorkspacesFixtures
@@ -102,12 +104,12 @@ defmodule Jarga.Documents.Application.UseCases.DeleteDocumentTest do
         document_id: document.id
       }
 
-      opts = [notifier: EventTestNotifier, event_bus: Perme8.Events.TestEventBus]
+      opts = [notifier: EventTestNotifier, event_bus: TestEventBus]
 
       assert {:ok, deleted_document} = DeleteDocument.execute(params, opts)
 
-      assert [%Jarga.Documents.Domain.Events.DocumentDeleted{} = event] =
-               Perme8.Events.TestEventBus.get_events()
+      assert [%DocumentDeleted{} = event] =
+               TestEventBus.get_events()
 
       assert event.document_id == deleted_document.id
       assert event.workspace_id == document.workspace_id
@@ -128,10 +130,10 @@ defmodule Jarga.Documents.Application.UseCases.DeleteDocumentTest do
         document_id: fake_document_id
       }
 
-      opts = [notifier: EventTestNotifier, event_bus: Perme8.Events.TestEventBus]
+      opts = [notifier: EventTestNotifier, event_bus: TestEventBus]
 
       assert {:error, _reason} = DeleteDocument.execute(params, opts)
-      assert [] = Perme8.Events.TestEventBus.get_events()
+      assert [] = TestEventBus.get_events()
     end
   end
 
@@ -237,13 +239,13 @@ defmodule Jarga.Documents.Application.UseCases.DeleteDocumentTest do
   end
 
   defp ensure_test_event_bus_started do
-    case Process.whereis(Perme8.Events.TestEventBus) do
+    case Process.whereis(TestEventBus) do
       nil ->
-        {:ok, _pid} = Perme8.Events.TestEventBus.start_link([])
+        {:ok, _pid} = TestEventBus.start_link([])
         :ok
 
       _pid ->
-        Perme8.Events.TestEventBus.reset()
+        TestEventBus.reset()
     end
   end
 end

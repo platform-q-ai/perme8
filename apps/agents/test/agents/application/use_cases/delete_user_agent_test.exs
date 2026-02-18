@@ -2,6 +2,8 @@ defmodule Agents.Application.UseCases.DeleteUserAgentTest do
   use Agents.DataCase, async: false
 
   alias Agents.Application.UseCases.DeleteUserAgent
+  alias Agents.Domain.Events.AgentDeleted
+  alias Perme8.Events.TestEventBus
 
   import Agents.Test.AccountsFixtures
   import Agents.AgentsFixtures
@@ -21,11 +23,11 @@ defmodule Agents.Application.UseCases.DeleteUserAgentTest do
       assert {:ok, _deleted_agent} =
                DeleteUserAgent.execute(agent.id, user.id,
                  notifier: MockNotifier,
-                 event_bus: Perme8.Events.TestEventBus
+                 event_bus: TestEventBus
                )
 
-      assert [%Agents.Domain.Events.AgentDeleted{} = event] =
-               Perme8.Events.TestEventBus.get_events()
+      assert [%AgentDeleted{} = event] =
+               TestEventBus.get_events()
 
       assert event.agent_id == agent.id
       assert event.user_id == user.id
@@ -41,21 +43,21 @@ defmodule Agents.Application.UseCases.DeleteUserAgentTest do
       assert {:error, :not_found} =
                DeleteUserAgent.execute(Ecto.UUID.generate(), user.id,
                  notifier: MockNotifier,
-                 event_bus: Perme8.Events.TestEventBus
+                 event_bus: TestEventBus
                )
 
-      assert [] = Perme8.Events.TestEventBus.get_events()
+      assert [] = TestEventBus.get_events()
     end
   end
 
   defp ensure_test_event_bus_started do
-    case Process.whereis(Perme8.Events.TestEventBus) do
+    case Process.whereis(TestEventBus) do
       nil ->
-        {:ok, _pid} = Perme8.Events.TestEventBus.start_link([])
+        {:ok, _pid} = TestEventBus.start_link([])
         :ok
 
       _pid ->
-        Perme8.Events.TestEventBus.reset()
+        TestEventBus.reset()
     end
   end
 end

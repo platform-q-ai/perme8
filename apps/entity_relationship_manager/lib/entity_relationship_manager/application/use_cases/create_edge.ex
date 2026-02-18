@@ -63,7 +63,7 @@ defmodule EntityRelationshipManager.Application.UseCases.CreateEdge do
     SchemaValidationPolicy.validate_edge_against_schema(edge, schema, type)
   end
 
-  # TODO(Part 2): thread actor_id from controller layer for audit trail attribution
+  # Part 2: thread actor_id from controller layer for audit trail attribution
   defp emit_edge_created_event(edge, workspace_id, source_id, target_id, type, event_bus) do
     event =
       EdgeCreated.new(%{

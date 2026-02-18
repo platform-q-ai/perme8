@@ -13,6 +13,9 @@ defmodule Agents.Application.UseCases.SyncAgentWorkspaces do
   @default_accounts Jarga.Accounts
   @default_workspaces Jarga.Workspaces
 
+  alias Agents.Domain.Events.AgentAddedToWorkspace
+  alias Agents.Domain.Events.AgentRemovedFromWorkspace
+
   @doc """
   Synchronizes workspace associations for an agent.
 
@@ -111,7 +114,7 @@ defmodule Agents.Application.UseCases.SyncAgentWorkspaces do
       changes.to_add
       |> MapSet.to_list()
       |> Enum.map(fn ws_id ->
-        Agents.Domain.Events.AgentAddedToWorkspace.new(%{
+        AgentAddedToWorkspace.new(%{
           aggregate_id: agent_id,
           actor_id: user_id,
           agent_id: agent_id,
@@ -124,7 +127,7 @@ defmodule Agents.Application.UseCases.SyncAgentWorkspaces do
       changes.to_remove
       |> MapSet.to_list()
       |> Enum.map(fn ws_id ->
-        Agents.Domain.Events.AgentRemovedFromWorkspace.new(%{
+        AgentRemovedFromWorkspace.new(%{
           aggregate_id: agent_id,
           actor_id: user_id,
           agent_id: agent_id,

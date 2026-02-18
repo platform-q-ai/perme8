@@ -29,7 +29,7 @@ defmodule EntityRelationshipManager.Application.UseCases.DeleteEntity do
     end
   end
 
-  # TODO(Part 2): thread actor_id from controller layer for audit trail attribution
+  # Part 2: thread actor_id from controller layer for audit trail attribution
   defp emit_entity_deleted_event(entity, workspace_id, event_bus) do
     event =
       EntityDeleted.new(%{

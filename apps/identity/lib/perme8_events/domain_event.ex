@@ -67,13 +67,15 @@ defmodule Perme8.Events.DomainEvent do
         metadata: %{}
       )
 
+    domain_event_module = __MODULE__
+
     quote do
       @enforce_keys unquote(all_required)
       defstruct unquote(base_fields) ++ unquote(fields)
 
       @doc "Returns the event type string derived from the module name."
       def event_type do
-        Perme8.Events.DomainEvent.derive_event_type(__MODULE__)
+        unquote(domain_event_module).derive_event_type(__MODULE__)
       end
 
       @doc "Returns the aggregate type string."

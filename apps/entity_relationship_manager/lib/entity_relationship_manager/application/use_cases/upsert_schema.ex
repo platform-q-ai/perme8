@@ -116,7 +116,7 @@ defmodule EntityRelationshipManager.Application.UseCases.UpsertSchema do
 
   defp atom_keyed?(_), do: false
 
-  # TODO(Part 2): thread actor_id from controller layer for audit trail attribution
+  # Part 2: thread actor_id from controller layer for audit trail attribution
   defp emit_schema_event(schema, workspace_id, true = _is_create, event_bus) do
     event =
       SchemaCreated.new(%{
