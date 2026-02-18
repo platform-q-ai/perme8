@@ -23,6 +23,11 @@ defmodule Perme8.Events.EventBus do
 
   Broadcasts the event struct to context, aggregate, and workspace topics,
   then calls the LegacyBridge for backward-compatible tuple broadcasts.
+
+  ## Options
+
+  Reserved for future use (e.g., correlation IDs, tracing metadata).
+  Currently unused but accepted for forward-compatible call sites.
   """
   def emit(event, _opts \\ []) do
     topics = derive_topics(event)
@@ -38,6 +43,8 @@ defmodule Perme8.Events.EventBus do
 
   @doc """
   Emits multiple domain events sequentially.
+
+  See `emit/2` for available options.
   """
   def emit_all(events, opts \\ []) do
     Enum.each(events, &emit(&1, opts))
