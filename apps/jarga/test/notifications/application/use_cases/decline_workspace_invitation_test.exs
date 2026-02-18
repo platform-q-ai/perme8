@@ -49,6 +49,7 @@ defmodule Jarga.Notifications.Application.UseCases.DeclineWorkspaceInvitationTes
       assert event.action == "declined"
       assert event.aggregate_id == notification.id
       assert event.actor_id == invitee.id
+      assert event.workspace_id == workspace.id
     end
 
     test "does not emit event when notification not found" do
