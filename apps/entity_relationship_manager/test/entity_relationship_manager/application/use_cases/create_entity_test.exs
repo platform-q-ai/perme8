@@ -8,9 +8,10 @@ defmodule EntityRelationshipManager.Application.UseCases.CreateEntityTest do
 
   import EntityRelationshipManager.UseCaseFixtures
 
-  setup :verify_on_exit!
-
   alias EntityRelationshipManager.Domain.Events.EntityCreated
+  alias Perme8.Events.TestEventBus
+
+  setup :verify_on_exit!
 
   describe "execute/3 - event emission" do
     test "emits EntityCreated event via event_bus" do
@@ -30,10 +31,10 @@ defmodule EntityRelationshipManager.Application.UseCases.CreateEntityTest do
                  %{type: "Person", properties: %{"name" => "Alice"}},
                  schema_repo: SchemaRepositoryMock,
                  graph_repo: GraphRepositoryMock,
-                 event_bus: Perme8.Events.TestEventBus
+                 event_bus: TestEventBus
                )
 
-      assert [%EntityCreated{} = event] = Perme8.Events.TestEventBus.get_events()
+      assert [%EntityCreated{} = event] = TestEventBus.get_events()
       assert event.entity_id == created_entity.id
       assert event.workspace_id == workspace_id()
       assert event.entity_type == "Person"
@@ -52,10 +53,10 @@ defmodule EntityRelationshipManager.Application.UseCases.CreateEntityTest do
                  %{type: "Person", properties: %{"name" => "Alice"}},
                  schema_repo: SchemaRepositoryMock,
                  graph_repo: GraphRepositoryMock,
-                 event_bus: Perme8.Events.TestEventBus
+                 event_bus: TestEventBus
                )
 
-      assert [] = Perme8.Events.TestEventBus.get_events()
+      assert [] = TestEventBus.get_events()
     end
 
     test "returns error when schema not found" do
@@ -121,13 +122,13 @@ defmodule EntityRelationshipManager.Application.UseCases.CreateEntityTest do
   end
 
   defp ensure_test_event_bus_started do
-    case Process.whereis(Perme8.Events.TestEventBus) do
+    case Process.whereis(TestEventBus) do
       nil ->
-        {:ok, _pid} = Perme8.Events.TestEventBus.start_link([])
+        {:ok, _pid} = TestEventBus.start_link([])
         :ok
 
       _pid ->
-        Perme8.Events.TestEventBus.reset()
+        TestEventBus.reset()
     end
   end
 end

@@ -9,6 +9,7 @@ defmodule EntityRelationshipManager.Application.UseCases.DeleteEdgeTest do
   import EntityRelationshipManager.UseCaseFixtures
 
   alias EntityRelationshipManager.Domain.Events.EdgeDeleted
+  alias Perme8.Events.TestEventBus
 
   setup :verify_on_exit!
 
@@ -23,10 +24,10 @@ defmodule EntityRelationshipManager.Application.UseCases.DeleteEdgeTest do
       assert {:ok, ^deleted} =
                DeleteEdge.execute(workspace_id(), valid_uuid3(),
                  graph_repo: GraphRepositoryMock,
-                 event_bus: Perme8.Events.TestEventBus
+                 event_bus: TestEventBus
                )
 
-      assert [%EdgeDeleted{} = event] = Perme8.Events.TestEventBus.get_events()
+      assert [%EdgeDeleted{} = event] = TestEventBus.get_events()
       assert event.edge_id == deleted.id
       assert event.workspace_id == workspace_id()
       assert event.aggregate_id == deleted.id
@@ -41,10 +42,10 @@ defmodule EntityRelationshipManager.Application.UseCases.DeleteEdgeTest do
       assert {:error, :not_found} =
                DeleteEdge.execute(workspace_id(), valid_uuid(),
                  graph_repo: GraphRepositoryMock,
-                 event_bus: Perme8.Events.TestEventBus
+                 event_bus: TestEventBus
                )
 
-      assert [] = Perme8.Events.TestEventBus.get_events()
+      assert [] = TestEventBus.get_events()
     end
   end
 
@@ -80,13 +81,13 @@ defmodule EntityRelationshipManager.Application.UseCases.DeleteEdgeTest do
   end
 
   defp ensure_test_event_bus_started do
-    case Process.whereis(Perme8.Events.TestEventBus) do
+    case Process.whereis(TestEventBus) do
       nil ->
-        {:ok, _pid} = Perme8.Events.TestEventBus.start_link([])
+        {:ok, _pid} = TestEventBus.start_link([])
         :ok
 
       _pid ->
-        Perme8.Events.TestEventBus.reset()
+        TestEventBus.reset()
     end
   end
 end

@@ -3,6 +3,8 @@ defmodule Jarga.Notifications.Application.UseCases.CreateWorkspaceInvitationNoti
 
   alias Jarga.Notifications.Application.UseCases.CreateWorkspaceInvitationNotification
   alias Jarga.Notifications.Domain.Events.NotificationCreated
+  alias Perme8.Events.TestEventBus
+
   import Jarga.AccountsFixtures
 
   # Mock notifier for event tests
@@ -28,10 +30,10 @@ defmodule Jarga.Notifications.Application.UseCases.CreateWorkspaceInvitationNoti
       assert {:ok, notification} =
                CreateWorkspaceInvitationNotification.execute(params,
                  notifier: MockNotifier,
-                 event_bus: Perme8.Events.TestEventBus
+                 event_bus: TestEventBus
                )
 
-      assert [%NotificationCreated{} = event] = Perme8.Events.TestEventBus.get_events()
+      assert [%NotificationCreated{} = event] = TestEventBus.get_events()
       assert event.notification_id == notification.id
       assert event.user_id == user.id
       assert event.type == "workspace_invitation"
@@ -52,10 +54,10 @@ defmodule Jarga.Notifications.Application.UseCases.CreateWorkspaceInvitationNoti
       assert {:error, _changeset} =
                CreateWorkspaceInvitationNotification.execute(params,
                  notifier: MockNotifier,
-                 event_bus: Perme8.Events.TestEventBus
+                 event_bus: TestEventBus
                )
 
-      assert [] = Perme8.Events.TestEventBus.get_events()
+      assert [] = TestEventBus.get_events()
     end
   end
 
@@ -192,13 +194,13 @@ defmodule Jarga.Notifications.Application.UseCases.CreateWorkspaceInvitationNoti
   end
 
   defp ensure_test_event_bus_started do
-    case Process.whereis(Perme8.Events.TestEventBus) do
+    case Process.whereis(TestEventBus) do
       nil ->
-        {:ok, _pid} = Perme8.Events.TestEventBus.start_link([])
+        {:ok, _pid} = TestEventBus.start_link([])
         :ok
 
       _pid ->
-        Perme8.Events.TestEventBus.reset()
+        TestEventBus.reset()
     end
   end
 end

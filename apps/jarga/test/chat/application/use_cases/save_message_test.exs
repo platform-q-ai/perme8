@@ -11,6 +11,7 @@ defmodule Jarga.Chat.Application.UseCases.SaveMessageTest do
   alias Jarga.Chat.Infrastructure.Schemas.MessageSchema
   # Use Identity.Repo for all operations to ensure consistent transaction visibility
   alias Identity.Repo, as: Repo
+  alias Perme8.Events.TestEventBus
 
   describe "execute/2 - event emission" do
     test "emits ChatMessageSent event via event_bus" do
@@ -25,10 +26,10 @@ defmodule Jarga.Chat.Application.UseCases.SaveMessageTest do
                    role: "user",
                    content: "Hello from event test"
                  },
-                 event_bus: Perme8.Events.TestEventBus
+                 event_bus: TestEventBus
                )
 
-      assert [%ChatMessageSent{} = event] = Perme8.Events.TestEventBus.get_events()
+      assert [%ChatMessageSent{} = event] = TestEventBus.get_events()
       assert event.message_id == message.id
       assert event.session_id == session.id
       assert event.user_id == session.user_id
@@ -43,10 +44,10 @@ defmodule Jarga.Chat.Application.UseCases.SaveMessageTest do
       assert {:error, _changeset} =
                SaveMessage.execute(
                  %{role: "user", content: "No session"},
-                 event_bus: Perme8.Events.TestEventBus
+                 event_bus: TestEventBus
                )
 
-      assert [] = Perme8.Events.TestEventBus.get_events()
+      assert [] = TestEventBus.get_events()
     end
   end
 
@@ -212,13 +213,13 @@ defmodule Jarga.Chat.Application.UseCases.SaveMessageTest do
   end
 
   defp ensure_test_event_bus_started do
-    case Process.whereis(Perme8.Events.TestEventBus) do
+    case Process.whereis(TestEventBus) do
       nil ->
-        {:ok, _pid} = Perme8.Events.TestEventBus.start_link([])
+        {:ok, _pid} = TestEventBus.start_link([])
         :ok
 
       _pid ->
-        Perme8.Events.TestEventBus.reset()
+        TestEventBus.reset()
     end
   end
 end

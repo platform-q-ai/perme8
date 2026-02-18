@@ -1,8 +1,10 @@
 defmodule Jarga.Projects.UseCases.DeleteProjectTest do
   use Jarga.DataCase, async: false
 
-  alias Jarga.Projects.Application.UseCases.DeleteProject
   alias Jarga.Projects
+  alias Jarga.Projects.Application.UseCases.DeleteProject
+  alias Jarga.Projects.Domain.Events.ProjectDeleted
+  alias Perme8.Events.TestEventBus
 
   import Jarga.AccountsFixtures
   import Jarga.WorkspacesFixtures
@@ -208,12 +210,12 @@ defmodule Jarga.Projects.UseCases.DeleteProjectTest do
         project_id: project.id
       }
 
-      opts = [notifier: MockNotifier, event_bus: Perme8.Events.TestEventBus]
+      opts = [notifier: MockNotifier, event_bus: TestEventBus]
 
       assert {:ok, deleted_project} = DeleteProject.execute(params, opts)
 
-      assert [%Jarga.Projects.Domain.Events.ProjectDeleted{} = event] =
-               Perme8.Events.TestEventBus.get_events()
+      assert [%ProjectDeleted{} = event] =
+               TestEventBus.get_events()
 
       assert event.project_id == deleted_project.id
       assert event.workspace_id == workspace.id
@@ -236,10 +238,10 @@ defmodule Jarga.Projects.UseCases.DeleteProjectTest do
         project_id: Ecto.UUID.generate()
       }
 
-      opts = [notifier: MockNotifier, event_bus: Perme8.Events.TestEventBus]
+      opts = [notifier: MockNotifier, event_bus: TestEventBus]
 
       assert {:error, _reason} = DeleteProject.execute(params, opts)
-      assert [] = Perme8.Events.TestEventBus.get_events()
+      assert [] = TestEventBus.get_events()
     end
   end
 
@@ -293,13 +295,13 @@ defmodule Jarga.Projects.UseCases.DeleteProjectTest do
   end
 
   defp ensure_test_event_bus_started do
-    case Process.whereis(Perme8.Events.TestEventBus) do
+    case Process.whereis(TestEventBus) do
       nil ->
-        {:ok, _pid} = Perme8.Events.TestEventBus.start_link([])
+        {:ok, _pid} = TestEventBus.start_link([])
         :ok
 
       _pid ->
-        Perme8.Events.TestEventBus.reset()
+        TestEventBus.reset()
     end
   end
 end

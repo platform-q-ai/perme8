@@ -3,8 +3,10 @@ defmodule Jarga.Documents.UseCases.CreateDocumentTest do
   use Jarga.DataCase, async: false
 
   alias Jarga.Documents.Application.UseCases.CreateDocument
+  alias Jarga.Documents.Domain.Events.DocumentCreated
   alias Jarga.Documents.Infrastructure.Schemas.DocumentSchema
   alias Jarga.Documents.Notes.Infrastructure.Schemas.NoteSchema
+  alias Perme8.Events.TestEventBus
 
   import Jarga.AccountsFixtures
   import Jarga.WorkspacesFixtures
@@ -236,12 +238,12 @@ defmodule Jarga.Documents.UseCases.CreateDocumentTest do
         attrs: %{title: "Event Document", project_id: project.id}
       }
 
-      opts = [notifier: EventTestNotifier, event_bus: Perme8.Events.TestEventBus]
+      opts = [notifier: EventTestNotifier, event_bus: TestEventBus]
 
       assert {:ok, document} = CreateDocument.execute(params, opts)
 
-      assert [%Jarga.Documents.Domain.Events.DocumentCreated{} = event] =
-               Perme8.Events.TestEventBus.get_events()
+      assert [%DocumentCreated{} = event] =
+               TestEventBus.get_events()
 
       assert event.document_id == document.id
       assert event.workspace_id == workspace.id
@@ -264,12 +266,12 @@ defmodule Jarga.Documents.UseCases.CreateDocumentTest do
         attrs: %{title: "No Project Doc"}
       }
 
-      opts = [notifier: EventTestNotifier, event_bus: Perme8.Events.TestEventBus]
+      opts = [notifier: EventTestNotifier, event_bus: TestEventBus]
 
       assert {:ok, _document} = CreateDocument.execute(params, opts)
 
-      assert [%Jarga.Documents.Domain.Events.DocumentCreated{} = event] =
-               Perme8.Events.TestEventBus.get_events()
+      assert [%DocumentCreated{} = event] =
+               TestEventBus.get_events()
 
       assert event.project_id == nil
     end
@@ -287,10 +289,10 @@ defmodule Jarga.Documents.UseCases.CreateDocumentTest do
         attrs: %{title: "Should Fail"}
       }
 
-      opts = [notifier: EventTestNotifier, event_bus: Perme8.Events.TestEventBus]
+      opts = [notifier: EventTestNotifier, event_bus: TestEventBus]
 
       assert {:error, _reason} = CreateDocument.execute(params, opts)
-      assert [] = Perme8.Events.TestEventBus.get_events()
+      assert [] = TestEventBus.get_events()
     end
   end
 
@@ -387,7 +389,7 @@ defmodule Jarga.Documents.UseCases.CreateDocumentTest do
 
       # Count pages before
       documents_before =
-        Repo.aggregate(Jarga.Documents.Infrastructure.Schemas.DocumentSchema, :count)
+        Repo.aggregate(DocumentSchema, :count)
 
       # This would need to be done with a mock or by causing note creation to fail
       # For now, we'll just verify successful creation
@@ -401,20 +403,20 @@ defmodule Jarga.Documents.UseCases.CreateDocumentTest do
 
       # Verify page count increased by 1
       documents_after =
-        Repo.aggregate(Jarga.Documents.Infrastructure.Schemas.DocumentSchema, :count)
+        Repo.aggregate(DocumentSchema, :count)
 
       assert documents_after == documents_before + 1
     end
   end
 
   defp ensure_test_event_bus_started do
-    case Process.whereis(Perme8.Events.TestEventBus) do
+    case Process.whereis(TestEventBus) do
       nil ->
-        {:ok, _pid} = Perme8.Events.TestEventBus.start_link([])
+        {:ok, _pid} = TestEventBus.start_link([])
         :ok
 
       _pid ->
-        Perme8.Events.TestEventBus.reset()
+        TestEventBus.reset()
     end
   end
 end

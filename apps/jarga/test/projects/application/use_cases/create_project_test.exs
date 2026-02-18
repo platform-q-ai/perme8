@@ -2,6 +2,8 @@ defmodule Jarga.Projects.UseCases.CreateProjectTest do
   use Jarga.DataCase, async: false
 
   alias Jarga.Projects.Application.UseCases.CreateProject
+  alias Jarga.Projects.Domain.Events.ProjectCreated
+  alias Perme8.Events.TestEventBus
 
   import Jarga.AccountsFixtures
   import Jarga.WorkspacesFixtures
@@ -196,12 +198,12 @@ defmodule Jarga.Projects.UseCases.CreateProjectTest do
         attrs: %{name: "Event Project", description: "Testing events"}
       }
 
-      opts = [notifier: MockNotifier, event_bus: Perme8.Events.TestEventBus]
+      opts = [notifier: MockNotifier, event_bus: TestEventBus]
 
       assert {:ok, project} = CreateProject.execute(params, opts)
 
-      assert [%Jarga.Projects.Domain.Events.ProjectCreated{} = event] =
-               Perme8.Events.TestEventBus.get_events()
+      assert [%ProjectCreated{} = event] =
+               TestEventBus.get_events()
 
       assert event.project_id == project.id
       assert event.workspace_id == workspace.id
@@ -224,10 +226,10 @@ defmodule Jarga.Projects.UseCases.CreateProjectTest do
         attrs: %{description: "No name - will fail"}
       }
 
-      opts = [notifier: MockNotifier, event_bus: Perme8.Events.TestEventBus]
+      opts = [notifier: MockNotifier, event_bus: TestEventBus]
 
       assert {:error, _changeset} = CreateProject.execute(params, opts)
-      assert [] = Perme8.Events.TestEventBus.get_events()
+      assert [] = TestEventBus.get_events()
     end
   end
 
@@ -278,13 +280,13 @@ defmodule Jarga.Projects.UseCases.CreateProjectTest do
   end
 
   defp ensure_test_event_bus_started do
-    case Process.whereis(Perme8.Events.TestEventBus) do
+    case Process.whereis(TestEventBus) do
       nil ->
-        {:ok, _pid} = Perme8.Events.TestEventBus.start_link([])
+        {:ok, _pid} = TestEventBus.start_link([])
         :ok
 
       _pid ->
-        Perme8.Events.TestEventBus.reset()
+        TestEventBus.reset()
     end
   end
 end

@@ -9,6 +9,7 @@ defmodule EntityRelationshipManager.Application.UseCases.UpsertSchemaTest do
 
   alias EntityRelationshipManager.Domain.Events.SchemaCreated
   alias EntityRelationshipManager.Domain.Events.SchemaUpdated
+  alias Perme8.Events.TestEventBus
 
   setup :verify_on_exit!
 
@@ -34,10 +35,10 @@ defmodule EntityRelationshipManager.Application.UseCases.UpsertSchemaTest do
       assert {:ok, ^schema} =
                UpsertSchema.execute(workspace_id(), attrs,
                  schema_repo: SchemaRepositoryMock,
-                 event_bus: Perme8.Events.TestEventBus
+                 event_bus: TestEventBus
                )
 
-      assert [%SchemaCreated{} = event] = Perme8.Events.TestEventBus.get_events()
+      assert [%SchemaCreated{} = event] = TestEventBus.get_events()
       assert event.schema_id == schema.id
       assert event.workspace_id == workspace_id()
       assert event.aggregate_id == schema.id
@@ -67,10 +68,10 @@ defmodule EntityRelationshipManager.Application.UseCases.UpsertSchemaTest do
       assert {:ok, ^updated_schema} =
                UpsertSchema.execute(workspace_id(), attrs,
                  schema_repo: SchemaRepositoryMock,
-                 event_bus: Perme8.Events.TestEventBus
+                 event_bus: TestEventBus
                )
 
-      assert [%SchemaUpdated{} = event] = Perme8.Events.TestEventBus.get_events()
+      assert [%SchemaUpdated{} = event] = TestEventBus.get_events()
       assert event.schema_id == updated_schema.id
       assert event.workspace_id == workspace_id()
       assert event.aggregate_id == updated_schema.id
@@ -93,10 +94,10 @@ defmodule EntityRelationshipManager.Application.UseCases.UpsertSchemaTest do
       assert {:error, _errors} =
                UpsertSchema.execute(workspace_id(), attrs,
                  schema_repo: SchemaRepositoryMock,
-                 event_bus: Perme8.Events.TestEventBus
+                 event_bus: TestEventBus
                )
 
-      assert [] = Perme8.Events.TestEventBus.get_events()
+      assert [] = TestEventBus.get_events()
     end
   end
 
@@ -209,13 +210,13 @@ defmodule EntityRelationshipManager.Application.UseCases.UpsertSchemaTest do
   end
 
   defp ensure_test_event_bus_started do
-    case Process.whereis(Perme8.Events.TestEventBus) do
+    case Process.whereis(TestEventBus) do
       nil ->
-        {:ok, _pid} = Perme8.Events.TestEventBus.start_link([])
+        {:ok, _pid} = TestEventBus.start_link([])
         :ok
 
       _pid ->
-        Perme8.Events.TestEventBus.reset()
+        TestEventBus.reset()
     end
   end
 end

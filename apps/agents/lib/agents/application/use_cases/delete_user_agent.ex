@@ -11,6 +11,8 @@ defmodule Agents.Application.UseCases.DeleteUserAgent do
   @default_notifier Agents.Infrastructure.Notifiers.PubSubNotifier
   @default_event_bus Perme8.Events.EventBus
 
+  alias Agents.Domain.Events.AgentDeleted
+
   @doc """
   Deletes an agent if the user is the owner.
 
@@ -59,7 +61,7 @@ defmodule Agents.Application.UseCases.DeleteUserAgent do
 
   defp emit_agent_deleted_event(agent_id, user_id, workspace_ids, event_bus) do
     event =
-      Agents.Domain.Events.AgentDeleted.new(%{
+      AgentDeleted.new(%{
         aggregate_id: agent_id,
         actor_id: user_id,
         agent_id: agent_id,

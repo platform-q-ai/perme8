@@ -2,6 +2,9 @@ defmodule Agents.Application.UseCases.SyncAgentWorkspacesTest do
   use Agents.DataCase, async: false
 
   alias Agents.Application.UseCases.SyncAgentWorkspaces
+  alias Agents.Domain.Events.AgentAddedToWorkspace
+  alias Agents.Domain.Events.AgentRemovedFromWorkspace
+  alias Perme8.Events.TestEventBus
 
   import Agents.Test.AccountsFixtures
   import Agents.Test.WorkspacesFixtures
@@ -23,13 +26,13 @@ defmodule Agents.Application.UseCases.SyncAgentWorkspacesTest do
       assert :ok =
                SyncAgentWorkspaces.execute(agent.id, user.id, [workspace.id],
                  notifier: MockNotifier,
-                 event_bus: Perme8.Events.TestEventBus
+                 event_bus: TestEventBus
                )
 
-      events = Perme8.Events.TestEventBus.get_events()
+      events = TestEventBus.get_events()
 
       added_events =
-        Enum.filter(events, &match?(%Agents.Domain.Events.AgentAddedToWorkspace{}, &1))
+        Enum.filter(events, &match?(%AgentAddedToWorkspace{}, &1))
 
       assert length(added_events) == 1
       event = hd(added_events)
@@ -49,23 +52,23 @@ defmodule Agents.Application.UseCases.SyncAgentWorkspacesTest do
       :ok =
         SyncAgentWorkspaces.execute(agent.id, user.id, [workspace.id],
           notifier: MockNotifier,
-          event_bus: Perme8.Events.TestEventBus
+          event_bus: TestEventBus
         )
 
       # Reset event bus
-      Perme8.Events.TestEventBus.reset()
+      TestEventBus.reset()
 
       # Now remove by syncing with empty list
       :ok =
         SyncAgentWorkspaces.execute(agent.id, user.id, [],
           notifier: MockNotifier,
-          event_bus: Perme8.Events.TestEventBus
+          event_bus: TestEventBus
         )
 
-      events = Perme8.Events.TestEventBus.get_events()
+      events = TestEventBus.get_events()
 
       removed_events =
-        Enum.filter(events, &match?(%Agents.Domain.Events.AgentRemovedFromWorkspace{}, &1))
+        Enum.filter(events, &match?(%AgentRemovedFromWorkspace{}, &1))
 
       assert length(removed_events) == 1
       event = hd(removed_events)
@@ -82,21 +85,21 @@ defmodule Agents.Application.UseCases.SyncAgentWorkspacesTest do
       assert {:error, :not_found} =
                SyncAgentWorkspaces.execute(Ecto.UUID.generate(), user.id, [],
                  notifier: MockNotifier,
-                 event_bus: Perme8.Events.TestEventBus
+                 event_bus: TestEventBus
                )
 
-      assert [] = Perme8.Events.TestEventBus.get_events()
+      assert [] = TestEventBus.get_events()
     end
   end
 
   defp ensure_test_event_bus_started do
-    case Process.whereis(Perme8.Events.TestEventBus) do
+    case Process.whereis(TestEventBus) do
       nil ->
-        {:ok, _pid} = Perme8.Events.TestEventBus.start_link([])
+        {:ok, _pid} = TestEventBus.start_link([])
         :ok
 
       _pid ->
-        Perme8.Events.TestEventBus.reset()
+        TestEventBus.reset()
     end
   end
 end
