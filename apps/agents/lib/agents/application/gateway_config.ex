@@ -7,8 +7,11 @@ defmodule Agents.Application.GatewayConfig do
   can use Mox mocks while production uses real implementations.
   """
 
-  @default_erm_gateway Agents.Infrastructure.Gateways.ErmGateway
-  @default_identity_module Identity
+  # Defaults are module names (atoms) — no compile-time dependency on
+  # Infrastructure modules. The actual modules are resolved at runtime via
+  # Application.get_env, allowing tests to inject Mox mocks.
+  @default_erm_gateway :"Elixir.Agents.Infrastructure.Gateways.ErmGateway"
+  @default_identity_module :"Elixir.Identity"
 
   @doc "Returns the configured ERM gateway module."
   @spec erm_gateway() :: module()
