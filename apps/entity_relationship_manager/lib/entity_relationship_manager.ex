@@ -23,8 +23,7 @@ defmodule EntityRelationshipManager do
     deps: [
       Identity,
       Jarga.Workspaces,
-      Jarga.Repo,
-      Perme8.Events
+      Jarga.Repo
     ],
     exports: [
       Endpoint,
