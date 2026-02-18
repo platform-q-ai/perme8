@@ -1,5 +1,6 @@
 defmodule JargaWeb.RouterTest do
-  use JargaWeb.ConnCase, async: true
+  # async: false because dashboard tests mutate global Application env
+  use JargaWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
   import Jarga.AccountsFixtures
@@ -58,21 +59,38 @@ defmodule JargaWeb.RouterTest do
   end
 
   describe "/admin/dashboard (LiveDashboard with Basic Auth)" do
-    test "returns 503 when dashboard credentials are not configured", %{conn: conn} do
-      # Clear any dashboard credentials that might be set
-      original_username = Application.get_env(:jarga, :dashboard_username)
-      original_password = Application.get_env(:jarga, :dashboard_password)
+    setup do
+      on_exit(fn ->
+        Application.delete_env(:jarga, :dashboard_username)
+        Application.delete_env(:jarga, :dashboard_password)
+      end)
 
+      :ok
+    end
+
+    test "returns 503 when dashboard credentials are not configured", %{conn: conn} do
       Application.put_env(:jarga, :dashboard_username, nil)
       Application.put_env(:jarga, :dashboard_password, nil)
 
       conn = get(conn, "/admin/dashboard")
       assert conn.status == 503
       assert conn.resp_body == "Dashboard authentication not configured"
+    end
 
-      # Restore original values
-      Application.put_env(:jarga, :dashboard_username, original_username)
-      Application.put_env(:jarga, :dashboard_password, original_password)
+    test "returns 503 when only username is configured", %{conn: conn} do
+      Application.put_env(:jarga, :dashboard_username, "admin")
+      Application.put_env(:jarga, :dashboard_password, nil)
+
+      conn = get(conn, "/admin/dashboard")
+      assert conn.status == 503
+    end
+
+    test "returns 503 when only password is configured", %{conn: conn} do
+      Application.put_env(:jarga, :dashboard_username, nil)
+      Application.put_env(:jarga, :dashboard_password, "secret")
+
+      conn = get(conn, "/admin/dashboard")
+      assert conn.status == 503
     end
 
     test "returns 401 when no credentials are provided but dashboard is configured", %{
@@ -84,9 +102,6 @@ defmodule JargaWeb.RouterTest do
       conn = get(conn, "/admin/dashboard")
       assert conn.status == 401
       assert get_resp_header(conn, "www-authenticate") != []
-
-      Application.delete_env(:jarga, :dashboard_username)
-      Application.delete_env(:jarga, :dashboard_password)
     end
 
     test "allows access with valid Basic Auth credentials", %{conn: conn} do
@@ -100,14 +115,12 @@ defmodule JargaWeb.RouterTest do
         |> put_req_header("authorization", "Basic #{credentials}")
         |> get("/admin/dashboard")
 
-      # LiveDashboard returns a redirect to its home page
-      assert conn.status in [200, 302]
-
-      Application.delete_env(:jarga, :dashboard_username)
-      Application.delete_env(:jarga, :dashboard_password)
+      # LiveDashboard redirects to its home page
+      assert conn.status == 302
+      assert redirected_to(conn) =~ "/admin/dashboard"
     end
 
-    test "rejects invalid Basic Auth credentials", %{conn: conn} do
+    test "rejects invalid password", %{conn: conn} do
       Application.put_env(:jarga, :dashboard_username, "admin")
       Application.put_env(:jarga, :dashboard_password, "secret")
 
@@ -119,9 +132,20 @@ defmodule JargaWeb.RouterTest do
         |> get("/admin/dashboard")
 
       assert conn.status == 401
+    end
 
-      Application.delete_env(:jarga, :dashboard_username)
-      Application.delete_env(:jarga, :dashboard_password)
+    test "rejects invalid username", %{conn: conn} do
+      Application.put_env(:jarga, :dashboard_username, "admin")
+      Application.put_env(:jarga, :dashboard_password, "secret")
+
+      credentials = Base.encode64("hacker:secret")
+
+      conn =
+        conn
+        |> put_req_header("authorization", "Basic #{credentials}")
+        |> get("/admin/dashboard")
+
+      assert conn.status == 401
     end
 
     test "verifies /admin/dashboard route exists" do
