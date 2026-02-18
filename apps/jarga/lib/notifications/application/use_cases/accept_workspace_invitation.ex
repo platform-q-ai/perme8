@@ -111,7 +111,8 @@ defmodule Jarga.Notifications.Application.UseCases.AcceptWorkspaceInvitation do
         actor_id: user_id,
         notification_id: notification.id,
         user_id: user_id,
-        action: action
+        action: action,
+        workspace_id: notification.data["workspace_id"]
       })
 
     event_bus.emit(event)
