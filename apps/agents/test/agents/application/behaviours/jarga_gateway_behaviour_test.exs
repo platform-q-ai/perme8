@@ -1,6 +1,8 @@
 defmodule Agents.Application.Behaviours.JargaGatewayBehaviourTest do
   use ExUnit.Case, async: true
 
+  alias Agents.Application.Behaviours.JargaGatewayBehaviour
+
   describe "callbacks" do
     @expected_callbacks [
       list_workspaces: 1,
@@ -14,8 +16,7 @@ defmodule Agents.Application.Behaviours.JargaGatewayBehaviourTest do
     ]
 
     test "defines all 8 Jarga gateway callbacks" do
-      callbacks =
-        Agents.Application.Behaviours.JargaGatewayBehaviour.behaviour_info(:callbacks)
+      callbacks = JargaGatewayBehaviour.behaviour_info(:callbacks)
 
       for {name, arity} <- @expected_callbacks do
         assert {name, arity} in callbacks,
