@@ -106,6 +106,35 @@ defmodule Agents.Application.UseCases.BootstrapKnowledgeSchemaTest do
                BootstrapKnowledgeSchema.execute(workspace_id(), erm_gateway: ErmGatewayMock)
     end
 
+    test "does not duplicate existing edge types when upserting" do
+      alias EntityRelationshipManager.Domain.Entities.{SchemaDefinition, EdgeTypeDefinition}
+
+      existing_edge = EdgeTypeDefinition.new(%{name: "relates_to", properties: []})
+
+      schema =
+        SchemaDefinition.new(%{
+          id: "schema-001",
+          workspace_id: workspace_id(),
+          version: 1,
+          entity_types: [],
+          edge_types: [existing_edge]
+        })
+
+      ErmGatewayMock
+      |> expect(:get_schema, fn _ws_id -> {:ok, schema} end)
+      |> expect(:upsert_schema, fn _ws_id, attrs ->
+        edge_names = Enum.map(attrs[:edge_types], & &1.name)
+        # relates_to should appear exactly once (not duplicated)
+        assert Enum.count(edge_names, &(&1 == "relates_to")) == 1
+        # All 6 knowledge edge types should be present
+        assert length(edge_names) == 6
+        {:ok, schema_definition_with_knowledge()}
+      end)
+
+      assert {:ok, _} =
+               BootstrapKnowledgeSchema.execute(workspace_id(), erm_gateway: ErmGatewayMock)
+    end
+
     test "is idempotent -- calling twice does not error" do
       schema = schema_definition_with_knowledge()
 
