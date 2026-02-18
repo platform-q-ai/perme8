@@ -56,6 +56,7 @@ Jarga (core domain) + Identity (authentication)
 | `PermissionsHelper` | Helper functions for checking user permissions in templates |
 | `AllowEctoSandbox` | Test hook for Ecto sandbox in browser tests |
 | `NotificationLive.OnMount` | Mount hook for loading notifications on page load |
+| `SecurityHeadersPlug` | Sets security headers (CSP, HSTS, X-Frame-Options, etc.) at the endpoint level |
 
 ## Assets
 
@@ -104,5 +105,10 @@ Visit [`localhost:4000`](http://localhost:4000) in your browser.
 mix test apps/jarga_web/test
 
 # Run browser-based BDD feature tests (exo-bdd)
-mix exo_test --app jarga_web
+mix exo_test --name jarga-web --adapter browser
+
+# Run security BDD tests (requires ZAP via Docker)
+mix exo_test --name jarga-web --adapter security
 ```
+
+Security tests use OWASP ZAP for vulnerability scanning (spider, passive/active scans, header checks). ZAP runs via Docker and is managed automatically by the exo-bdd security adapter.

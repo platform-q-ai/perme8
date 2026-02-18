@@ -46,7 +46,7 @@ Each app that has exo-bdd features has a config file at `apps/<app>/test/exo-bdd
 - **servers** — Phoenix servers to start/stop with health checks and seed scripts
 - **variables** — test data (API keys, emails, passwords) interpolated into features via `${name}`
 - **adapters** — adapter-specific config (baseURL, headless mode, ZAP docker settings)
-- **timeout** — step timeout (300s for security scans, 120s for browser, default for others)
+- **timeout** — step timeout (10s for browser/HTTP-only configs, 300s when config includes security features)
 
 ## Seed Data
 
