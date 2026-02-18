@@ -4,7 +4,17 @@ defmodule Agents.Application.UseCases.SearchKnowledgeEntries do
 
   Lists all KnowledgeEntry entities from ERM, applies SearchPolicy for
   filtering and scoring, sorts by relevance, and returns truncated entries.
+
+  ## MVP Trade-off
+
+  Search is implemented as in-memory filter over `list_entities`. This is
+  acceptable for MVP-scale workspaces (< 10k entries) because the ERM's
+  `list_entities` already caps at 100 results per call. For larger datasets,
+  a server-side full-text search (e.g., PostgreSQL tsvector) should replace
+  the in-memory approach.
   """
+
+  @max_fetch_limit 100
 
   alias Agents.Application.GatewayConfig
   alias Agents.Domain.Entities.KnowledgeEntry
@@ -16,7 +26,11 @@ defmodule Agents.Application.UseCases.SearchKnowledgeEntries do
     erm_gateway = Keyword.get(opts, :erm_gateway, GatewayConfig.erm_gateway())
 
     with {:ok, validated_params} <- SearchPolicy.validate_search_params(search_params),
-         {:ok, entities} <- erm_gateway.list_entities(workspace_id, %{type: "KnowledgeEntry"}) do
+         {:ok, entities} <-
+           erm_gateway.list_entities(workspace_id, %{
+             type: "KnowledgeEntry",
+             limit: @max_fetch_limit
+           }) do
       results =
         entities
         |> Enum.map(&KnowledgeEntry.from_erm_entity/1)
