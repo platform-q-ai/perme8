@@ -190,11 +190,11 @@ defmodule Mix.Tasks.Check.CiSync do
     Enum.each(sorted, fn {config_name, domain} ->
       timeout = if domain == "security", do: "15", else: "10"
 
-      Mix.shell().error([
-        :reset,
-        "  {\"app\": \"#{config_name}\", \"domain\": \"#{domain}\", " <>
-          "\"config_name\": \"#{config_name}\", \"timeout\": #{timeout}},\n"
-      ])
+      combo_line =
+        ~s(  {"app": "#{config_name}", "domain": "#{domain}", ) <>
+          ~s("config_name": "#{config_name}", "timeout": #{timeout}},\n)
+
+      Mix.shell().error([:reset, combo_line])
     end)
 
     existing_count = MapSet.size(ci_combos)
