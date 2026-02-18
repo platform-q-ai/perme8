@@ -20,7 +20,9 @@ defmodule Agents.Infrastructure do
       # Cross-context dependencies
       Identity,
       Identity.Repo,
-      EntityRelationshipManager
+      EntityRelationshipManager,
+      Jarga.Projects,
+      Jarga.Documents
     ],
     exports: [
       # Schemas
@@ -37,6 +39,7 @@ defmodule Agents.Infrastructure do
       Notifiers.PubSubNotifier,
       # Knowledge MCP
       Gateways.ErmGateway,
+      Gateways.JargaGateway,
       Mcp.Server,
       Mcp.Router,
       Mcp.AuthPlug

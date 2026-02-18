@@ -15,3 +15,8 @@ Mox.defmock(Agents.Mocks.ErmGatewayMock,
 Mox.defmock(Agents.Mocks.IdentityMock,
   for: Agents.Application.Behaviours.IdentityBehaviour
 )
+
+# Jarga MCP mocks
+Mox.defmock(Agents.Mocks.JargaGatewayMock,
+  for: Agents.Application.Behaviours.JargaGatewayBehaviour
+)
