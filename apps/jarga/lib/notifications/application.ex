@@ -27,7 +27,10 @@ defmodule Jarga.Notifications.Application do
     top_level?: true,
     deps: [
       # Cross-context dependencies (context for facade access)
-      Jarga.Workspaces
+      Jarga.Workspaces,
+      Perme8.Events,
+      # Domain layer (event structs)
+      Jarga.Notifications.Domain
     ],
     exports: [
       UseCases.AcceptWorkspaceInvitation,

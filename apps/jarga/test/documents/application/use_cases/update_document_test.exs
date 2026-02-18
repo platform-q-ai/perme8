@@ -1,5 +1,5 @@
 defmodule Jarga.Documents.Application.UseCases.UpdateDocumentTest do
-  use Jarga.DataCase, async: true
+  use Jarga.DataCase, async: false
 
   alias Jarga.Documents.Application.UseCases.UpdateDocument
 
@@ -253,6 +253,133 @@ defmodule Jarga.Documents.Application.UseCases.UpdateDocumentTest do
     end
   end
 
+  describe "execute/2 - event emission" do
+    # Mock notifier that does nothing (for event tests)
+    defmodule EventTestNotifier do
+      @behaviour Jarga.Documents.Application.Services.NotificationService
+      def notify_document_created(_document), do: :ok
+      def notify_document_deleted(_document), do: :ok
+      def notify_document_title_changed(_document), do: :ok
+      def notify_document_visibility_changed(_document), do: :ok
+      def notify_document_pinned_changed(_document), do: :ok
+    end
+
+    test "emits DocumentTitleChanged event when title changes" do
+      ensure_test_event_bus_started()
+
+      owner = user_fixture()
+      workspace = workspace_fixture(owner)
+      document = document_fixture(owner, workspace, nil, %{})
+
+      params = %{
+        actor: owner,
+        document_id: document.id,
+        attrs: %{title: "New Title"}
+      }
+
+      opts = [notifier: EventTestNotifier, event_bus: Perme8.Events.TestEventBus]
+
+      assert {:ok, _updated} = UpdateDocument.execute(params, opts)
+
+      events = Perme8.Events.TestEventBus.get_events()
+      assert [%Jarga.Documents.Domain.Events.DocumentTitleChanged{} = event] = events
+      assert event.document_id == document.id
+      assert event.workspace_id == document.workspace_id
+      assert event.title == "New Title"
+      assert event.user_id == owner.id
+    end
+
+    test "emits DocumentVisibilityChanged event when is_public changes" do
+      ensure_test_event_bus_started()
+
+      owner = user_fixture()
+      workspace = workspace_fixture(owner)
+      document = document_fixture(owner, workspace, nil, %{is_public: false})
+
+      params = %{
+        actor: owner,
+        document_id: document.id,
+        attrs: %{is_public: true}
+      }
+
+      opts = [notifier: EventTestNotifier, event_bus: Perme8.Events.TestEventBus]
+
+      assert {:ok, _updated} = UpdateDocument.execute(params, opts)
+
+      events = Perme8.Events.TestEventBus.get_events()
+      assert [%Jarga.Documents.Domain.Events.DocumentVisibilityChanged{} = event] = events
+      assert event.document_id == document.id
+      assert event.is_public == true
+    end
+
+    test "emits DocumentPinnedChanged event when is_pinned changes" do
+      ensure_test_event_bus_started()
+
+      owner = user_fixture()
+      workspace = workspace_fixture(owner)
+      document = document_fixture(owner, workspace, nil, %{is_pinned: false})
+
+      params = %{
+        actor: owner,
+        document_id: document.id,
+        attrs: %{is_pinned: true}
+      }
+
+      opts = [notifier: EventTestNotifier, event_bus: Perme8.Events.TestEventBus]
+
+      assert {:ok, _updated} = UpdateDocument.execute(params, opts)
+
+      events = Perme8.Events.TestEventBus.get_events()
+      assert [%Jarga.Documents.Domain.Events.DocumentPinnedChanged{} = event] = events
+      assert event.document_id == document.id
+      assert event.is_pinned == true
+    end
+
+    test "does not emit events when no relevant fields change" do
+      ensure_test_event_bus_started()
+
+      owner = user_fixture()
+      workspace = workspace_fixture(owner)
+      document = document_fixture(owner, workspace, nil, %{})
+
+      params = %{
+        actor: owner,
+        document_id: document.id,
+        attrs: %{title: document.title}
+      }
+
+      opts = [notifier: EventTestNotifier, event_bus: Perme8.Events.TestEventBus]
+
+      assert {:ok, _updated} = UpdateDocument.execute(params, opts)
+      assert [] = Perme8.Events.TestEventBus.get_events()
+    end
+
+    test "emits multiple events when multiple fields change" do
+      ensure_test_event_bus_started()
+
+      owner = user_fixture()
+      workspace = workspace_fixture(owner)
+      document = document_fixture(owner, workspace, nil, %{is_public: false, is_pinned: false})
+
+      params = %{
+        actor: owner,
+        document_id: document.id,
+        attrs: %{title: "New Title", is_public: true}
+      }
+
+      opts = [notifier: EventTestNotifier, event_bus: Perme8.Events.TestEventBus]
+
+      assert {:ok, _updated} = UpdateDocument.execute(params, opts)
+
+      events = Perme8.Events.TestEventBus.get_events()
+      assert length(events) == 2
+
+      event_types = Enum.map(events, & &1.__struct__)
+      assert Jarga.Documents.Domain.Events.DocumentVisibilityChanged in event_types
+      assert Jarga.Documents.Domain.Events.DocumentTitleChanged in event_types
+    end
+  end
+
   describe "execute/2 - validation failures" do
     test "returns error with invalid attributes" do
       owner = user_fixture()
@@ -317,6 +444,17 @@ defmodule Jarga.Documents.Application.UseCases.UpdateDocumentTest do
 
       assert {:ok, _updated} = UpdateDocument.execute(params, notifier: notifier)
       assert_received :title_notified
+    end
+  end
+
+  defp ensure_test_event_bus_started do
+    case Process.whereis(Perme8.Events.TestEventBus) do
+      nil ->
+        {:ok, _pid} = Perme8.Events.TestEventBus.start_link([])
+        :ok
+
+      _pid ->
+        Perme8.Events.TestEventBus.reset()
     end
   end
 end

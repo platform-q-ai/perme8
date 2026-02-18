@@ -2,14 +2,53 @@ defmodule Jarga.Chat.Application.UseCases.SaveMessageTest do
   @moduledoc """
   Tests for SaveMessage use case.
   """
-  use Jarga.DataCase, async: true
+  use Jarga.DataCase, async: false
 
   import Jarga.ChatFixtures
 
   alias Jarga.Chat.Application.UseCases.SaveMessage
+  alias Jarga.Chat.Domain.Events.ChatMessageSent
   alias Jarga.Chat.Infrastructure.Schemas.MessageSchema
   # Use Identity.Repo for all operations to ensure consistent transaction visibility
   alias Identity.Repo, as: Repo
+
+  describe "execute/2 - event emission" do
+    test "emits ChatMessageSent event via event_bus" do
+      ensure_test_event_bus_started()
+
+      session = chat_session_fixture()
+
+      assert {:ok, message} =
+               SaveMessage.execute(
+                 %{
+                   chat_session_id: session.id,
+                   role: "user",
+                   content: "Hello from event test"
+                 },
+                 event_bus: Perme8.Events.TestEventBus
+               )
+
+      assert [%ChatMessageSent{} = event] = Perme8.Events.TestEventBus.get_events()
+      assert event.message_id == message.id
+      assert event.session_id == session.id
+      assert event.user_id == session.user_id
+      assert event.role == "user"
+      assert event.aggregate_id == message.id
+      assert event.actor_id == session.user_id
+    end
+
+    test "does not emit event when message creation fails" do
+      ensure_test_event_bus_started()
+
+      assert {:error, _changeset} =
+               SaveMessage.execute(
+                 %{role: "user", content: "No session"},
+                 event_bus: Perme8.Events.TestEventBus
+               )
+
+      assert [] = Perme8.Events.TestEventBus.get_events()
+    end
+  end
 
   describe "execute/1" do
     test "saves a user message" do
@@ -169,6 +208,17 @@ defmodule Jarga.Chat.Application.UseCases.SaveMessageTest do
                "Second message",
                "Third message"
              ]
+    end
+  end
+
+  defp ensure_test_event_bus_started do
+    case Process.whereis(Perme8.Events.TestEventBus) do
+      nil ->
+        {:ok, _pid} = Perme8.Events.TestEventBus.start_link([])
+        :ok
+
+      _pid ->
+        Perme8.Events.TestEventBus.reset()
     end
   end
 end

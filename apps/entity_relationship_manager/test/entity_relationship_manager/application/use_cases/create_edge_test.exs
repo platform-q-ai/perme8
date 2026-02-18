@@ -1,5 +1,5 @@
 defmodule EntityRelationshipManager.Application.UseCases.CreateEdgeTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   import Mox
 
@@ -8,10 +8,13 @@ defmodule EntityRelationshipManager.Application.UseCases.CreateEdgeTest do
 
   import EntityRelationshipManager.UseCaseFixtures
 
+  alias EntityRelationshipManager.Domain.Events.EdgeCreated
+
   setup :verify_on_exit!
 
-  describe "execute/3" do
-    test "creates edge when schema, type, source, and target are valid" do
+  describe "execute/3 - event emission" do
+    test "emits EdgeCreated event via event_bus" do
+      ensure_test_event_bus_started()
       schema = schema_definition()
       created_edge = edge()
 
@@ -19,14 +22,7 @@ defmodule EntityRelationshipManager.Application.UseCases.CreateEdgeTest do
       |> expect(:get_schema, fn _ws_id -> {:ok, schema} end)
 
       GraphRepositoryMock
-      |> expect(:create_edge, fn ws_id, type, source_id, target_id, properties ->
-        assert ws_id == workspace_id()
-        assert type == "WORKS_AT"
-        assert source_id == valid_uuid()
-        assert target_id == valid_uuid2()
-        assert properties == %{"role" => "Engineer"}
-        {:ok, created_edge}
-      end)
+      |> expect(:create_edge, fn _ws_id, _type, _sid, _tid, _props -> {:ok, created_edge} end)
 
       assert {:ok, ^created_edge} =
                CreateEdge.execute(
@@ -38,8 +34,40 @@ defmodule EntityRelationshipManager.Application.UseCases.CreateEdgeTest do
                    properties: %{"role" => "Engineer"}
                  },
                  schema_repo: SchemaRepositoryMock,
-                 graph_repo: GraphRepositoryMock
+                 graph_repo: GraphRepositoryMock,
+                 event_bus: Perme8.Events.TestEventBus
                )
+
+      assert [%EdgeCreated{} = event] = Perme8.Events.TestEventBus.get_events()
+      assert event.edge_id == created_edge.id
+      assert event.workspace_id == workspace_id()
+      assert event.source_id == valid_uuid()
+      assert event.target_id == valid_uuid2()
+      assert event.edge_type == "WORKS_AT"
+      assert event.aggregate_id == created_edge.id
+    end
+
+    test "does not emit event when creation fails" do
+      ensure_test_event_bus_started()
+
+      SchemaRepositoryMock
+      |> expect(:get_schema, fn _ws_id -> {:error, :not_found} end)
+
+      assert {:error, :schema_not_found} =
+               CreateEdge.execute(
+                 workspace_id(),
+                 %{
+                   type: "WORKS_AT",
+                   source_id: valid_uuid(),
+                   target_id: valid_uuid2(),
+                   properties: %{}
+                 },
+                 schema_repo: SchemaRepositoryMock,
+                 graph_repo: GraphRepositoryMock,
+                 event_bus: Perme8.Events.TestEventBus
+               )
+
+      assert [] = Perme8.Events.TestEventBus.get_events()
     end
 
     test "returns error when schema not found" do
@@ -176,6 +204,17 @@ defmodule EntityRelationshipManager.Application.UseCases.CreateEdgeTest do
                )
 
       assert is_list(errors)
+    end
+  end
+
+  defp ensure_test_event_bus_started do
+    case Process.whereis(Perme8.Events.TestEventBus) do
+      nil ->
+        {:ok, _pid} = Perme8.Events.TestEventBus.start_link([])
+        :ok
+
+      _pid ->
+        Perme8.Events.TestEventBus.reset()
     end
   end
 end

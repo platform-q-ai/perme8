@@ -27,6 +27,7 @@ defmodule Jarga.Documents.Application.UseCases.UpdateDocument do
   @default_document_schema Jarga.Documents.Infrastructure.Schemas.DocumentSchema
   @default_document_repository Jarga.Documents.Infrastructure.Repositories.DocumentRepository
   @default_notifier Jarga.Documents.Infrastructure.Notifiers.PubSubNotifier
+  @default_event_bus Perme8.Events.EventBus
 
   @doc """
   Executes the update document use case.
@@ -58,11 +59,13 @@ defmodule Jarga.Documents.Application.UseCases.UpdateDocument do
     document_schema = Keyword.get(opts, :document_schema, @default_document_schema)
     document_repository = Keyword.get(opts, :document_repository, @default_document_repository)
     notifier = Keyword.get(opts, :notifier, @default_notifier)
+    event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
 
     deps = %{
       document_schema: document_schema,
       document_repository: document_repository,
-      notifier: notifier
+      notifier: notifier,
+      event_bus: event_bus
     }
 
     with {:ok, document} <-
@@ -122,7 +125,8 @@ defmodule Jarga.Documents.Application.UseCases.UpdateDocument do
     %{
       document_schema: document_schema,
       document_repository: document_repository,
-      notifier: notifier
+      notifier: notifier,
+      event_bus: event_bus
     } = deps
 
     changeset = document_schema.changeset(document, attrs)
@@ -132,6 +136,7 @@ defmodule Jarga.Documents.Application.UseCases.UpdateDocument do
       {:ok, updated_document} ->
         # Send notifications AFTER transaction commits
         send_notifications(document, updated_document, attrs, notifier)
+        emit_document_change_events(document, updated_document, attrs, event_bus)
         {:ok, updated_document}
 
       {:error, changeset} ->
@@ -151,6 +156,48 @@ defmodule Jarga.Documents.Application.UseCases.UpdateDocument do
 
     if Map.has_key?(attrs, :title) and attrs.title != old_document.title do
       notifier.notify_document_title_changed(updated_document)
+    end
+  end
+
+  # Emit domain events for relevant changes
+  defp emit_document_change_events(old_document, updated_document, attrs, event_bus) do
+    alias Jarga.Documents.Domain.Events.{
+      DocumentTitleChanged,
+      DocumentVisibilityChanged,
+      DocumentPinnedChanged
+    }
+
+    base_attrs = %{
+      aggregate_id: updated_document.id,
+      actor_id: updated_document.user_id,
+      document_id: updated_document.id,
+      workspace_id: updated_document.workspace_id,
+      user_id: updated_document.user_id
+    }
+
+    if Map.has_key?(attrs, :is_public) and attrs.is_public != old_document.is_public do
+      event =
+        DocumentVisibilityChanged.new(Map.put(base_attrs, :is_public, updated_document.is_public))
+
+      event_bus.emit(event)
+    end
+
+    if Map.has_key?(attrs, :is_pinned) and attrs.is_pinned != old_document.is_pinned do
+      event =
+        DocumentPinnedChanged.new(Map.put(base_attrs, :is_pinned, updated_document.is_pinned))
+
+      event_bus.emit(event)
+    end
+
+    if Map.has_key?(attrs, :title) and attrs.title != old_document.title do
+      event =
+        DocumentTitleChanged.new(
+          base_attrs
+          |> Map.put(:title, updated_document.title)
+          |> Map.put(:previous_title, old_document.title)
+        )
+
+      event_bus.emit(event)
     end
   end
 end

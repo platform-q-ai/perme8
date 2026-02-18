@@ -1,6 +1,6 @@
 # credo:disable-for-this-file Jarga.Credo.Check.Architecture.NoDirectRepoInUseCases
 defmodule Jarga.Documents.Application.UseCases.DeleteDocumentTest do
-  use Jarga.DataCase, async: true
+  use Jarga.DataCase, async: false
 
   alias Jarga.Documents.Application.UseCases.DeleteDocument
   alias Jarga.Documents.Infrastructure.Schemas.DocumentSchema
@@ -76,6 +76,62 @@ defmodule Jarga.Documents.Application.UseCases.DeleteDocumentTest do
 
       assert {:ok, deleted_document} = DeleteDocument.execute(params)
       assert deleted_document.id == document.id
+    end
+  end
+
+  describe "execute/2 - event emission" do
+    # Mock notifier that does nothing (for event tests)
+    defmodule EventTestNotifier do
+      @behaviour Jarga.Documents.Application.Services.NotificationService
+      def notify_document_created(_document), do: :ok
+      def notify_document_deleted(_document), do: :ok
+      def notify_document_title_changed(_document), do: :ok
+      def notify_document_visibility_changed(_document), do: :ok
+      def notify_document_pinned_changed(_document), do: :ok
+    end
+
+    test "emits DocumentDeleted event via event_bus" do
+      ensure_test_event_bus_started()
+
+      owner = user_fixture()
+      workspace = workspace_fixture(owner)
+      document = document_fixture(owner, workspace, nil, %{})
+
+      params = %{
+        actor: owner,
+        document_id: document.id
+      }
+
+      opts = [notifier: EventTestNotifier, event_bus: Perme8.Events.TestEventBus]
+
+      assert {:ok, deleted_document} = DeleteDocument.execute(params, opts)
+
+      assert [%Jarga.Documents.Domain.Events.DocumentDeleted{} = event] =
+               Perme8.Events.TestEventBus.get_events()
+
+      assert event.document_id == deleted_document.id
+      assert event.workspace_id == document.workspace_id
+      assert event.user_id == owner.id
+      assert event.aggregate_id == deleted_document.id
+      assert event.actor_id == owner.id
+    end
+
+    test "does not emit event when deletion fails" do
+      ensure_test_event_bus_started()
+
+      owner = user_fixture()
+      _workspace = workspace_fixture(owner)
+      fake_document_id = Ecto.UUID.generate()
+
+      params = %{
+        actor: owner,
+        document_id: fake_document_id
+      }
+
+      opts = [notifier: EventTestNotifier, event_bus: Perme8.Events.TestEventBus]
+
+      assert {:error, _reason} = DeleteDocument.execute(params, opts)
+      assert [] = Perme8.Events.TestEventBus.get_events()
     end
   end
 
@@ -177,6 +233,17 @@ defmodule Jarga.Documents.Application.UseCases.DeleteDocumentTest do
       }
 
       assert {:error, :forbidden} = DeleteDocument.execute(params)
+    end
+  end
+
+  defp ensure_test_event_bus_started do
+    case Process.whereis(Perme8.Events.TestEventBus) do
+      nil ->
+        {:ok, _pid} = Perme8.Events.TestEventBus.start_link([])
+        :ok
+
+      _pid ->
+        Perme8.Events.TestEventBus.reset()
     end
   end
 end

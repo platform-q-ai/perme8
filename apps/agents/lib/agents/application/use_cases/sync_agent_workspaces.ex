@@ -9,6 +9,7 @@ defmodule Agents.Application.UseCases.SyncAgentWorkspaces do
   @default_agent_repo Agents.Infrastructure.Repositories.AgentRepository
   @default_workspace_agent_repo Agents.Infrastructure.Repositories.WorkspaceAgentRepository
   @default_notifier Agents.Infrastructure.Notifiers.PubSubNotifier
+  @default_event_bus Perme8.Events.EventBus
   @default_accounts Jarga.Accounts
   @default_workspaces Jarga.Workspaces
 
@@ -39,6 +40,7 @@ defmodule Agents.Application.UseCases.SyncAgentWorkspaces do
     agent_repo = Keyword.get(opts, :agent_repo, @default_agent_repo)
     workspace_agent_repo = Keyword.get(opts, :workspace_agent_repo, @default_workspace_agent_repo)
     notifier = Keyword.get(opts, :notifier, @default_notifier)
+    event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
     accounts = Keyword.get(opts, :accounts, @default_accounts)
     workspaces = Keyword.get(opts, :workspaces, @default_workspaces)
 
@@ -69,6 +71,9 @@ defmodule Agents.Application.UseCases.SyncAgentWorkspaces do
           MapSet.to_list(changes.to_remove)
         )
 
+        # Emit domain events for workspace changes
+        emit_workspace_change_events(agent_id, user_id, changes, event_bus)
+
         :ok
     end
   end
@@ -98,6 +103,37 @@ defmodule Agents.Application.UseCases.SyncAgentWorkspaces do
     valid_to_add = MapSet.intersection(to_add, user_workspace_ids)
 
     %{to_add: valid_to_add, to_remove: to_remove}
+  end
+
+  # Emit domain events for workspace add/remove
+  defp emit_workspace_change_events(agent_id, user_id, changes, event_bus) do
+    added_events =
+      changes.to_add
+      |> MapSet.to_list()
+      |> Enum.map(fn ws_id ->
+        Agents.Domain.Events.AgentAddedToWorkspace.new(%{
+          aggregate_id: agent_id,
+          actor_id: user_id,
+          agent_id: agent_id,
+          workspace_id: ws_id,
+          user_id: user_id
+        })
+      end)
+
+    removed_events =
+      changes.to_remove
+      |> MapSet.to_list()
+      |> Enum.map(fn ws_id ->
+        Agents.Domain.Events.AgentRemovedFromWorkspace.new(%{
+          aggregate_id: agent_id,
+          actor_id: user_id,
+          agent_id: agent_id,
+          workspace_id: ws_id,
+          user_id: user_id
+        })
+      end)
+
+    event_bus.emit_all(added_events ++ removed_events)
   end
 
   # Apply workspace changes in a transaction

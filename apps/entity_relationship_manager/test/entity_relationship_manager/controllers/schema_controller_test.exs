@@ -50,6 +50,7 @@ defmodule EntityRelationshipManager.SchemaControllerTest do
       schema = UseCaseFixtures.schema_definition(%{workspace_id: ws_id})
 
       EntityRelationshipManager.Mocks.SchemaRepositoryMock
+      |> expect(:get_schema, fn _wid -> {:error, :not_found} end)
       |> expect(:upsert_schema, fn _wid, _attrs -> {:ok, schema} end)
 
       body = %{

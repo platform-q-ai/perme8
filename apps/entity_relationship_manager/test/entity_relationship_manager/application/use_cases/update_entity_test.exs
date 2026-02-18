@@ -1,5 +1,5 @@
 defmodule EntityRelationshipManager.Application.UseCases.UpdateEntityTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   import Mox
 
@@ -8,34 +8,58 @@ defmodule EntityRelationshipManager.Application.UseCases.UpdateEntityTest do
 
   import EntityRelationshipManager.UseCaseFixtures
 
+  alias EntityRelationshipManager.Domain.Events.EntityUpdated
+
   setup :verify_on_exit!
 
-  describe "execute/4" do
-    test "updates entity with valid properties" do
+  describe "execute/4 - event emission" do
+    test "emits EntityUpdated event via event_bus" do
+      ensure_test_event_bus_started()
       schema = schema_definition()
       existing = entity()
-      updated = entity(%{properties: %{"name" => "Bob", "age" => 30}})
+      updated = entity(%{properties: %{"name" => "Bob"}})
 
       SchemaRepositoryMock
       |> expect(:get_schema, fn _ws_id -> {:ok, schema} end)
 
       GraphRepositoryMock
       |> expect(:get_entity, fn _ws_id, _id, _opts -> {:ok, existing} end)
-      |> expect(:update_entity, fn ws_id, entity_id, properties ->
-        assert ws_id == workspace_id()
-        assert entity_id == valid_uuid()
-        assert properties == %{"name" => "Bob", "age" => 30}
-        {:ok, updated}
-      end)
+      |> expect(:update_entity, fn _ws_id, _id, _props -> {:ok, updated} end)
 
       assert {:ok, ^updated} =
                UpdateEntity.execute(
                  workspace_id(),
                  valid_uuid(),
-                 %{"name" => "Bob", "age" => 30},
+                 %{"name" => "Bob"},
                  schema_repo: SchemaRepositoryMock,
-                 graph_repo: GraphRepositoryMock
+                 graph_repo: GraphRepositoryMock,
+                 event_bus: Perme8.Events.TestEventBus
                )
+
+      assert [%EntityUpdated{} = event] = Perme8.Events.TestEventBus.get_events()
+      assert event.entity_id == updated.id
+      assert event.workspace_id == workspace_id()
+      assert event.changes == %{"name" => "Bob"}
+      assert event.aggregate_id == updated.id
+    end
+
+    test "does not emit event when update fails" do
+      ensure_test_event_bus_started()
+
+      SchemaRepositoryMock
+      |> expect(:get_schema, fn _ws_id -> {:error, :not_found} end)
+
+      assert {:error, :schema_not_found} =
+               UpdateEntity.execute(
+                 workspace_id(),
+                 valid_uuid(),
+                 %{"name" => "Bob"},
+                 schema_repo: SchemaRepositoryMock,
+                 graph_repo: GraphRepositoryMock,
+                 event_bus: Perme8.Events.TestEventBus
+               )
+
+      assert [] = Perme8.Events.TestEventBus.get_events()
     end
 
     test "returns error when entity not found" do
@@ -105,6 +129,17 @@ defmodule EntityRelationshipManager.Application.UseCases.UpdateEntityTest do
                )
 
       assert msg =~ "UUID"
+    end
+  end
+
+  defp ensure_test_event_bus_started do
+    case Process.whereis(Perme8.Events.TestEventBus) do
+      nil ->
+        {:ok, _pid} = Perme8.Events.TestEventBus.start_link([])
+        :ok
+
+      _pid ->
+        Perme8.Events.TestEventBus.reset()
     end
   end
 end

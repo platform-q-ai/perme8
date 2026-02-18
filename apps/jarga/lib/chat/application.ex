@@ -25,7 +25,7 @@ defmodule Jarga.Chat.Application do
 
   use Boundary,
     top_level?: true,
-    deps: [Jarga.Chat.Domain],
+    deps: [Jarga.Chat.Domain, Perme8.Events],
     exports: [
       UseCases.PrepareContext,
       UseCases.CreateSession,
