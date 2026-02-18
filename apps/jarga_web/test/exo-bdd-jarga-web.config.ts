@@ -16,6 +16,7 @@ export default defineConfig({
       startTimeout: 30000,
     },
   ],
+  // 5 min: required for ZAP active scans; browser steps fail-fast via Playwright's own timeout
   timeout: 300_000,
   variables: {
     // Test user credentials (must match exo_seeds_web.exs)
