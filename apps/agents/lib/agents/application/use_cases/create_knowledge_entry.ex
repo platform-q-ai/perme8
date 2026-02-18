@@ -4,6 +4,15 @@ defmodule Agents.Application.UseCases.CreateKnowledgeEntry do
 
   Validates attributes, bootstraps schema if needed, creates the ERM entity,
   and converts the result to a KnowledgeEntry domain entity.
+
+  ## Bootstrap Strategy
+
+  `BootstrapKnowledgeSchema` is called on every create as an intentional
+  idempotency guard. When the schema already exists, it short-circuits with
+  a single `get_schema` call (~1ms). This avoids requiring a separate
+  initialization step and guarantees the schema is always present. If
+  per-request overhead becomes measurable, an ETS/process-level cache can
+  be added as a follow-up.
   """
 
   alias Agents.Application.GatewayConfig
