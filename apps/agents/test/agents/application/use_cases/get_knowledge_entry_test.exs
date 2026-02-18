@@ -15,21 +15,17 @@ defmodule Agents.Application.UseCases.GetKnowledgeEntryTest do
     test "returns {:ok, %{entry: knowledge_entry, relationships: [...]}} for existing entry" do
       entity_id = unique_id()
       entity = erm_knowledge_entity(%{id: entity_id})
-
-      edge1 =
-        erm_knowledge_edge(%{source_id: entity_id, target_id: unique_id(), type: "relates_to"})
-
-      edge2 =
-        erm_knowledge_edge(%{source_id: unique_id(), target_id: entity_id, type: "depends_on"})
+      neighbor1 = erm_knowledge_entity(%{id: unique_id()})
+      neighbor2 = erm_knowledge_entity(%{id: unique_id()})
 
       ErmGatewayMock
       |> expect(:get_entity, fn _ws_id, eid ->
         assert eid == entity_id
         {:ok, entity}
       end)
-      |> expect(:list_edges, fn _ws_id, filters ->
-        assert filters.entity_id == entity_id
-        {:ok, [edge1, edge2]}
+      |> expect(:get_neighbors, fn _ws_id, eid, _opts ->
+        assert eid == entity_id
+        {:ok, [neighbor1, neighbor2]}
       end)
 
       assert {:ok, %{entry: %KnowledgeEntry{id: ^entity_id}, relationships: rels}} =
@@ -49,37 +45,31 @@ defmodule Agents.Application.UseCases.GetKnowledgeEntryTest do
                )
     end
 
-    test "converts all ERM entities/edges to domain types" do
+    test "derives relationships from neighbors with correct from/to IDs" do
       entity_id = unique_id()
       other_id = unique_id()
       entity = erm_knowledge_entity(%{id: entity_id})
-
-      edge =
-        erm_knowledge_edge(%{
-          source_id: entity_id,
-          target_id: other_id,
-          type: "prerequisite_for"
-        })
+      neighbor = erm_knowledge_entity(%{id: other_id})
 
       ErmGatewayMock
       |> expect(:get_entity, fn _ws_id, _eid -> {:ok, entity} end)
-      |> expect(:list_edges, fn _ws_id, _filters -> {:ok, [edge]} end)
+      |> expect(:get_neighbors, fn _ws_id, _eid, _opts -> {:ok, [neighbor]} end)
 
       assert {:ok, %{entry: %KnowledgeEntry{}, relationships: [rel]}} =
                GetKnowledgeEntry.execute(workspace_id(), entity_id, erm_gateway: ErmGatewayMock)
 
       assert rel.from_id == entity_id
       assert rel.to_id == other_id
-      assert rel.type == "prerequisite_for"
+      assert rel.type == "relates_to"
     end
 
-    test "returns empty relationships when no edges exist" do
+    test "returns empty relationships when no neighbors exist" do
       entity_id = unique_id()
       entity = erm_knowledge_entity(%{id: entity_id})
 
       ErmGatewayMock
       |> expect(:get_entity, fn _ws_id, _eid -> {:ok, entity} end)
-      |> expect(:list_edges, fn _ws_id, _filters -> {:ok, []} end)
+      |> expect(:get_neighbors, fn _ws_id, _eid, _opts -> {:ok, []} end)
 
       assert {:ok, %{entry: %KnowledgeEntry{}, relationships: []}} =
                GetKnowledgeEntry.execute(workspace_id(), entity_id, erm_gateway: ErmGatewayMock)
