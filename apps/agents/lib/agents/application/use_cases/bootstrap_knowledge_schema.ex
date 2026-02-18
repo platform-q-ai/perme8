@@ -36,9 +36,14 @@ defmodule Agents.Application.UseCases.BootstrapKnowledgeSchema do
   end
 
   defp upsert_with_knowledge(erm_gateway, workspace_id, existing_schema) do
+    existing_edge_names = MapSet.new(existing_schema.edge_types, & &1.name)
+
+    new_edge_types =
+      Enum.reject(knowledge_edge_types(), fn et -> et.name in existing_edge_names end)
+
     attrs = %{
       entity_types: existing_schema.entity_types ++ [knowledge_entity_type()],
-      edge_types: existing_schema.edge_types ++ knowledge_edge_types()
+      edge_types: existing_schema.edge_types ++ new_edge_types
     }
 
     erm_gateway.upsert_schema(workspace_id, attrs)
