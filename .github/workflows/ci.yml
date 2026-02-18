@@ -348,7 +348,7 @@ jobs:
         run: mix deps.compile
 
       - name: Set up Node.js
-        if: matrix.domain == 'browser' || matrix.domain == 'security'
+        if: matrix.domain == 'browser' || (matrix.domain == 'security' && contains('jarga-web identity', matrix.app))
         uses: actions/setup-node@v4
         with:
           node-version-file: .tool-versions
@@ -358,7 +358,7 @@ jobs:
         working-directory: tools/exo-bdd
 
       - name: Install JavaScript dependencies
-        if: matrix.domain == 'browser' || matrix.domain == 'security'
+        if: matrix.domain == 'browser' || (matrix.domain == 'security' && contains('jarga-web identity', matrix.app))
         run: |
           cd apps/jarga_web/assets && npm ci
           cd ../../identity/assets && npm ci
@@ -369,7 +369,7 @@ jobs:
         working-directory: tools/exo-bdd
 
       - name: Build assets
-        if: matrix.domain == 'browser' || matrix.domain == 'security'
+        if: matrix.domain == 'browser' || (matrix.domain == 'security' && contains('jarga-web identity', matrix.app))
         run: mix assets.build
 
       - name: Create test database
