@@ -136,5 +136,15 @@ config :phoenix_live_view,
   debug_attributes: true,
   enable_expensive_runtime_checks: true
 
+# ============================================================================
+# Agents App Development Configuration
+# ============================================================================
+
+# Agents MCP: Enable StreamableHTTP transport in dev
+config :agents, :mcp_transport, {:streamable_http, start: true}
+
+# Agents MCP HTTP: Standalone Bandit server for MCP endpoint on port 4007
+config :agents, :mcp_http, port: 4007
+
 # Disable swoosh api client as it is only required for production adapters.
 config :swoosh, :api_client, false
