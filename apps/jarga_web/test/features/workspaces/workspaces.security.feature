@@ -246,27 +246,6 @@ Feature: Workspace Management Security Baseline
     Then there should be no alerts of type "Cross-Site Request Forgery"
 
   # ===========================================================================
-  # COMPREHENSIVE ACTIVE SCAN -- Full Workspace Management Application
-  # Maps to: All scenarios combined -- deep active scan across all workspace
-  # management pages to catch any vulnerability class. Covers the public
-  # workspace list as well as authenticated create, show, and edit pages.
-  # ===========================================================================
-
-  Scenario: Comprehensive active scan on workspace pages finds no high-risk vulnerabilities
-    Given a new ZAP session
-    When I spider "${workspaceListPage}"
-    And I spider "${workspaceNewPage}"
-    And I spider "${workspaceShowPage}"
-    And I spider "${workspaceEditPage}"
-    And I run an active scan on "${workspaceListPage}"
-    And I run an active scan on "${workspaceNewPage}"
-    And I run an active scan on "${workspaceShowPage}"
-    And I run an active scan on "${workspaceEditPage}"
-    Then no high risk alerts should be found
-    And I store the alerts as "workspaceScanAlerts"
-    And I should see the alert details
-
-  # ===========================================================================
   # BASELINE SCAN -- Quick Combined Spider + Passive
   # Maps to: Overall Workspace app health check for each endpoint
   # Baseline = spider + passive scan combined; good for CI/CD pipelines
@@ -357,9 +336,11 @@ Feature: Workspace Management Security Baseline
 
   # ===========================================================================
   # SECURITY REPORTING -- Audit Trail
-  # Maps to: Compliance requirement -- generate artifacts after full scan suite
-  # covering all Workspace management endpoints (list, create, show with members
-  # modal and invite/role/remove actions, edit, delete)
+  # Maps to: Compliance requirement -- generate audit artifacts after scanning.
+  # Uses passive scans only (spider + passive) since individual scenarios above
+  # already perform per-page active scans for each vulnerability class. This
+  # avoids redundant active scanning (~4-8 min) while still producing a
+  # comprehensive report with header and passive findings.
   # ===========================================================================
 
   Scenario: Generate security audit report for Workspace management
@@ -372,17 +353,7 @@ Feature: Workspace Management Security Baseline
     And I run a passive scan on "${workspaceNewPage}"
     And I run a passive scan on "${workspaceShowPage}"
     And I run a passive scan on "${workspaceEditPage}"
-    And I run an active scan on "${workspaceListPage}"
-    And I run an active scan on "${workspaceNewPage}"
-    And I run an active scan on "${workspaceShowPage}"
-    And I run an active scan on "${workspaceEditPage}"
     Then no high risk alerts should be found
-    And there should be no alerts of type "SQL Injection"
-    And there should be no alerts of type "Cross Site Scripting (Reflected)"
-    And there should be no alerts of type "Cross Site Scripting (Persistent)"
-    And there should be no alerts of type "Path Traversal"
-    And there should be no alerts of type "Remote OS Command Injection"
-    And there should be no alerts of type "Cross-Site Request Forgery"
     And I should see the alert details
     When I save the security report to "reports/workspaces-security-audit.html"
     And I save the security report as JSON to "reports/workspaces-security-audit.json"
