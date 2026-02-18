@@ -91,6 +91,12 @@ jobs:
         run: bun test integration/
         working-directory: tools/exo-bdd
 
+      - name: Cancel workflow on failure
+        if: failure()
+        run: gh run cancel ${{ github.run_id }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+
   test:
     name: Build and test
     needs: changes
@@ -170,6 +176,12 @@ jobs:
         run: mix precommit
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jarga_test
+
+      - name: Cancel workflow on failure
+        if: failure()
+        run: gh run cancel ${{ github.run_id }}
+        env:
+          GH_TOKEN: ${{ github.token }}
 
   selective-matrix:
     name: Compute test matrix
@@ -294,7 +306,7 @@ jobs:
     runs-on: ubuntu-latest
 
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix: ${{ fromJson(needs.selective-matrix.outputs.matrix) }}
 
     services:
@@ -393,6 +405,12 @@ jobs:
           mix exo_test $ARGS
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jarga_test
+
+      - name: Cancel workflow on failure
+        if: failure()
+        run: gh run cancel ${{ github.run_id }}
+        env:
+          GH_TOKEN: ${{ github.token }}
 
   ci-gate:
     name: CI gate
