@@ -393,10 +393,29 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jarga_test
 
+  ci-gate:
+    name: CI gate
+    runs-on: ubuntu-latest
+    needs: [changes, test, exo-bdd, exo-bdd-360]
+    if: always()
+    steps:
+      - name: Check all jobs passed
+        run: |
+          # Fail if any dependency failed or was cancelled.
+          # Skipped jobs (due to path filtering) are acceptable.
+          results="${{ needs.test.result }} ${{ needs.exo-bdd.result }} ${{ needs.exo-bdd-360.result }}"
+          for r in $results; do
+            if [ "$r" = "failure" ] || [ "$r" = "cancelled" ]; then
+              echo "::error::Job result '$r' detected — failing CI gate"
+              exit 1
+            fi
+          done
+          echo "All jobs passed or were skipped"
+
   deploy:
     name: Deploy to Render
     runs-on: ubuntu-latest
-    needs: [changes, test, exo-bdd, selective-matrix, exo-bdd-360]
+    needs: [changes, test, exo-bdd, selective-matrix, exo-bdd-360, ci-gate]
     if: |
       always() &&
       github.event_name == 'push' && github.ref == 'refs/heads/main' &&
