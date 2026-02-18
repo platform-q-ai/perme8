@@ -27,6 +27,7 @@ defmodule EntityRelationshipManager.Application.UseCases.DeleteEdge do
     end
   end
 
+  # TODO(Part 2): thread actor_id from controller layer for audit trail attribution
   defp emit_edge_deleted_event(edge, workspace_id, event_bus) do
     event =
       EdgeDeleted.new(%{
