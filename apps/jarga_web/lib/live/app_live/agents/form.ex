@@ -21,25 +21,7 @@ defmodule JargaWeb.AppLive.Agents.Form do
 
   @impl true
   def mount(_params, _session, socket) do
-    if connected?(socket) do
-      user = socket.assigns.current_scope.user
-
-      # Subscribe to workspace topic(s) for agent events (AgentUpdated, AgentDeleted, etc.)
-      # Agent events are broadcast to workspace topics, not user topics.
-      case Map.get(socket.assigns.current_scope, :workspace) do
-        nil ->
-          # No workspace context — subscribe to all user's workspaces
-          workspaces = Workspaces.list_workspaces_for_user(user)
-
-          Enum.each(workspaces, fn workspace ->
-            Perme8.Events.subscribe("events:workspace:#{workspace.id}")
-          end)
-
-        workspace ->
-          Perme8.Events.subscribe("events:workspace:#{workspace.id}")
-      end
-    end
-
+    if connected?(socket), do: subscribe_to_agent_events(socket)
     {:ok, socket}
   end
 
@@ -417,6 +399,21 @@ defmodule JargaWeb.AppLive.Agents.Form do
 
   # Chat panel streaming messages
   handle_chat_messages()
+
+  # Subscribe to workspace topic(s) for agent events (AgentUpdated, AgentDeleted, etc.)
+  # Agent events are broadcast to workspace topics, not user topics.
+  defp subscribe_to_agent_events(socket) do
+    case Map.get(socket.assigns.current_scope, :workspace) do
+      nil ->
+        # No workspace context — subscribe to all user's workspaces
+        user = socket.assigns.current_scope.user
+        workspaces = Workspaces.list_workspaces_for_user(user)
+        Enum.each(workspaces, fn ws -> Perme8.Events.subscribe("events:workspace:#{ws.id}") end)
+
+      workspace ->
+        Perme8.Events.subscribe("events:workspace:#{workspace.id}")
+    end
+  end
 
   defp reload_agents_for_chat_panel(socket) do
     user = socket.assigns.current_scope.user
