@@ -63,10 +63,3 @@ git push "https://x-access-token:${TOKEN}@github.com/platform-q-ai/perme8.git" <
 ### Testing Skills
 
 - **Generate Exo-BDD Features** -- generates domain-specific BDD feature files (browser, HTTP, security) from a PRD.
-
-## Principles
-
-- Tests first -- always write tests before implementation
-- Boundary enforcement -- `mix boundary` catches violations
-- SOLID principles
-- Clean Architecture -- Domain > Application > Infrastructure > Interface
