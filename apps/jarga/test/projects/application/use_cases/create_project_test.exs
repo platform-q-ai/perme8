@@ -8,11 +8,6 @@ defmodule Jarga.Projects.UseCases.CreateProjectTest do
   import Jarga.AccountsFixtures
   import Jarga.WorkspacesFixtures
 
-  # Mock notifier for testing
-  defmodule MockNotifier do
-    def notify_project_created(_project), do: :ok
-  end
-
   describe "execute/2 - successful project creation" do
     test "creates project when actor is workspace owner" do
       owner = user_fixture()
@@ -28,9 +23,7 @@ defmodule Jarga.Projects.UseCases.CreateProjectTest do
         }
       }
 
-      opts = [notifier: MockNotifier]
-
-      assert {:ok, project} = CreateProject.execute(params, opts)
+      assert {:ok, project} = CreateProject.execute(params)
       assert project.name == "New Project"
       assert project.description == "A new project"
       assert project.color == "#10B981"
@@ -53,9 +46,7 @@ defmodule Jarga.Projects.UseCases.CreateProjectTest do
         attrs: %{name: "Admin Project"}
       }
 
-      opts = [notifier: MockNotifier]
-
-      assert {:ok, project} = CreateProject.execute(params, opts)
+      assert {:ok, project} = CreateProject.execute(params)
       assert project.name == "Admin Project"
       assert project.user_id == admin.id
     end
@@ -74,9 +65,7 @@ defmodule Jarga.Projects.UseCases.CreateProjectTest do
         attrs: %{name: "Member Project"}
       }
 
-      opts = [notifier: MockNotifier]
-
-      assert {:ok, project} = CreateProject.execute(params, opts)
+      assert {:ok, project} = CreateProject.execute(params)
       assert project.name == "Member Project"
       assert project.user_id == member.id
     end
@@ -92,9 +81,7 @@ defmodule Jarga.Projects.UseCases.CreateProjectTest do
         attrs: %{name: "My Project"}
       }
 
-      opts = [notifier: MockNotifier]
-
-      assert {:ok, project1} = CreateProject.execute(params1, opts)
+      assert {:ok, project1} = CreateProject.execute(params1)
       assert project1.slug == "my-project"
 
       # Create second project with same name
@@ -104,7 +91,7 @@ defmodule Jarga.Projects.UseCases.CreateProjectTest do
         attrs: %{name: "My Project"}
       }
 
-      assert {:ok, project2} = CreateProject.execute(params2, opts)
+      assert {:ok, project2} = CreateProject.execute(params2)
       assert project2.slug != "my-project"
       assert String.starts_with?(project2.slug, "my-project-")
     end
@@ -119,9 +106,7 @@ defmodule Jarga.Projects.UseCases.CreateProjectTest do
         attrs: %{name: "Minimal Project"}
       }
 
-      opts = [notifier: MockNotifier]
-
-      assert {:ok, project} = CreateProject.execute(params, opts)
+      assert {:ok, project} = CreateProject.execute(params)
       assert project.name == "Minimal Project"
     end
   end
@@ -198,7 +183,7 @@ defmodule Jarga.Projects.UseCases.CreateProjectTest do
         attrs: %{name: "Event Project", description: "Testing events"}
       }
 
-      opts = [notifier: MockNotifier, event_bus: TestEventBus]
+      opts = [event_bus: TestEventBus]
 
       assert {:ok, project} = CreateProject.execute(params, opts)
 
@@ -226,56 +211,10 @@ defmodule Jarga.Projects.UseCases.CreateProjectTest do
         attrs: %{description: "No name - will fail"}
       }
 
-      opts = [notifier: MockNotifier, event_bus: TestEventBus]
+      opts = [event_bus: TestEventBus]
 
       assert {:error, _changeset} = CreateProject.execute(params, opts)
       assert [] = TestEventBus.get_events()
-    end
-  end
-
-  describe "execute/2 - notification behavior" do
-    test "calls notifier with created project" do
-      owner = user_fixture()
-      workspace = workspace_fixture(owner)
-
-      # Create a test process to capture notification
-      test_pid = self()
-
-      defmodule TestNotifier do
-        def notify_project_created(project) do
-          send(Process.get(:test_pid), {:notified, project})
-          :ok
-        end
-      end
-
-      Process.put(:test_pid, test_pid)
-
-      params = %{
-        actor: owner,
-        workspace_id: workspace.id,
-        attrs: %{name: "Notified Project"}
-      }
-
-      opts = [notifier: TestNotifier]
-
-      assert {:ok, project} = CreateProject.execute(params, opts)
-
-      assert_receive {:notified, notified_project}
-      assert notified_project.id == project.id
-    end
-
-    test "uses default notifier when not specified" do
-      owner = user_fixture()
-      workspace = workspace_fixture(owner)
-
-      params = %{
-        actor: owner,
-        workspace_id: workspace.id,
-        attrs: %{name: "Default Notifier Project"}
-      }
-
-      # Should not raise error with default notifier
-      assert {:ok, _project} = CreateProject.execute(params, [])
     end
   end
 

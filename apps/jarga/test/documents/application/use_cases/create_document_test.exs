@@ -215,16 +215,6 @@ defmodule Jarga.Documents.UseCases.CreateDocumentTest do
   end
 
   describe "execute/2 - event emission" do
-    # Mock notifier that does nothing (for event tests)
-    defmodule EventTestNotifier do
-      @behaviour Jarga.Documents.Application.Services.NotificationService
-      def notify_document_created(_document), do: :ok
-      def notify_document_deleted(_document), do: :ok
-      def notify_document_title_changed(_document), do: :ok
-      def notify_document_visibility_changed(_document), do: :ok
-      def notify_document_pinned_changed(_document), do: :ok
-    end
-
     test "emits DocumentCreated event via event_bus" do
       ensure_test_event_bus_started()
 
@@ -238,7 +228,7 @@ defmodule Jarga.Documents.UseCases.CreateDocumentTest do
         attrs: %{title: "Event Document", project_id: project.id}
       }
 
-      opts = [notifier: EventTestNotifier, event_bus: TestEventBus]
+      opts = [event_bus: TestEventBus]
 
       assert {:ok, document} = CreateDocument.execute(params, opts)
 
@@ -266,7 +256,7 @@ defmodule Jarga.Documents.UseCases.CreateDocumentTest do
         attrs: %{title: "No Project Doc"}
       }
 
-      opts = [notifier: EventTestNotifier, event_bus: TestEventBus]
+      opts = [event_bus: TestEventBus]
 
       assert {:ok, _document} = CreateDocument.execute(params, opts)
 
@@ -289,7 +279,7 @@ defmodule Jarga.Documents.UseCases.CreateDocumentTest do
         attrs: %{title: "Should Fail"}
       }
 
-      opts = [notifier: EventTestNotifier, event_bus: TestEventBus]
+      opts = [event_bus: TestEventBus]
 
       assert {:error, _reason} = CreateDocument.execute(params, opts)
       assert [] = TestEventBus.get_events()

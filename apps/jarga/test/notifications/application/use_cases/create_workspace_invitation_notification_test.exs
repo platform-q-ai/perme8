@@ -7,11 +7,6 @@ defmodule Jarga.Notifications.Application.UseCases.CreateWorkspaceInvitationNoti
 
   import Jarga.AccountsFixtures
 
-  # Mock notifier for event tests
-  defmodule MockNotifier do
-    def broadcast_new_notification(_user_id, _notification), do: :ok
-  end
-
   describe "execute/2 - event emission" do
     test "emits NotificationCreated event via event_bus" do
       ensure_test_event_bus_started()
@@ -29,7 +24,6 @@ defmodule Jarga.Notifications.Application.UseCases.CreateWorkspaceInvitationNoti
 
       assert {:ok, notification} =
                CreateWorkspaceInvitationNotification.execute(params,
-                 notifier: MockNotifier,
                  event_bus: TestEventBus
                )
 
@@ -53,7 +47,6 @@ defmodule Jarga.Notifications.Application.UseCases.CreateWorkspaceInvitationNoti
 
       assert {:error, _changeset} =
                CreateWorkspaceInvitationNotification.execute(params,
-                 notifier: MockNotifier,
                  event_bus: TestEventBus
                )
 
@@ -170,13 +163,8 @@ defmodule Jarga.Notifications.Application.UseCases.CreateWorkspaceInvitationNoti
       assert notification.title == "Workspace Invitation: String Keys Corp"
     end
 
-    test "creates notification with custom notifier option" do
+    test "creates notification with default options" do
       user = user_fixture()
-
-      # Create a mock notifier module
-      defmodule TestNotifier do
-        def broadcast_new_notification(_user_id, _notification), do: :ok
-      end
 
       params = %{
         user_id: user.id,
@@ -187,7 +175,7 @@ defmodule Jarga.Notifications.Application.UseCases.CreateWorkspaceInvitationNoti
       }
 
       assert {:ok, notification} =
-               CreateWorkspaceInvitationNotification.execute(params, notifier: TestNotifier)
+               CreateWorkspaceInvitationNotification.execute(params)
 
       assert notification.type == "workspace_invitation"
     end

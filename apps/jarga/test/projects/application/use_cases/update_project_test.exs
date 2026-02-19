@@ -9,11 +9,6 @@ defmodule Jarga.Projects.UseCases.UpdateProjectTest do
   import Jarga.WorkspacesFixtures
   import Jarga.ProjectsFixtures
 
-  # Mock notifier for testing
-  defmodule MockNotifier do
-    def notify_project_updated(_project), do: :ok
-  end
-
   describe "execute/2 - event emission" do
     test "emits ProjectUpdated event via event_bus" do
       ensure_test_event_bus_started()
@@ -29,7 +24,7 @@ defmodule Jarga.Projects.UseCases.UpdateProjectTest do
         attrs: %{name: "Updated Name"}
       }
 
-      opts = [notifier: MockNotifier, event_bus: TestEventBus]
+      opts = [event_bus: TestEventBus]
 
       assert {:ok, updated_project} = UpdateProject.execute(params, opts)
 
@@ -58,7 +53,7 @@ defmodule Jarga.Projects.UseCases.UpdateProjectTest do
         attrs: %{name: ""}
       }
 
-      opts = [notifier: MockNotifier, event_bus: TestEventBus]
+      opts = [event_bus: TestEventBus]
 
       assert {:error, _changeset} = UpdateProject.execute(params, opts)
       assert [] = TestEventBus.get_events()

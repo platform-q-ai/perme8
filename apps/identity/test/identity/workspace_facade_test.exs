@@ -4,14 +4,6 @@ defmodule Identity.WorkspaceFacadeTest do
   import Identity.AccountsFixtures
   import Identity.WorkspacesFixtures
 
-  # Mock notifier for testing
-  defmodule MockNotifier do
-    def notify_existing_user(_user, _workspace, _inviter), do: :ok
-    def notify_new_user(_email, _workspace, _inviter), do: :ok
-    def notify_user_removed(_user, _workspace), do: :ok
-    def notify_workspace_updated(_workspace), do: :ok
-  end
-
   describe "list_workspaces_for_user/1" do
     test "returns workspace list for a user" do
       user = user_fixture()
@@ -153,9 +145,7 @@ defmodule Identity.WorkspaceFacadeTest do
       workspace = workspace_fixture(user)
 
       assert {:ok, updated} =
-               Identity.update_workspace(user, workspace.id, %{"name" => "Updated"},
-                 notifier: MockNotifier
-               )
+               Identity.update_workspace(user, workspace.id, %{"name" => "Updated"})
 
       assert updated.name == "Updated"
     end
@@ -166,9 +156,7 @@ defmodule Identity.WorkspaceFacadeTest do
       non_member = user_fixture()
 
       assert {:error, :unauthorized} =
-               Identity.update_workspace(non_member, workspace.id, %{"name" => "Updated"},
-                 notifier: MockNotifier
-               )
+               Identity.update_workspace(non_member, workspace.id, %{"name" => "Updated"})
     end
 
     test "returns error when guest tries to edit" do
@@ -178,9 +166,7 @@ defmodule Identity.WorkspaceFacadeTest do
       _member = add_workspace_member_fixture(workspace.id, guest, :guest)
 
       assert {:error, :forbidden} =
-               Identity.update_workspace(guest, workspace.id, %{"name" => "Updated"},
-                 notifier: MockNotifier
-               )
+               Identity.update_workspace(guest, workspace.id, %{"name" => "Updated"})
     end
   end
 
@@ -279,7 +265,7 @@ defmodule Identity.WorkspaceFacadeTest do
 
       assert {:ok, {:invitation_sent, invitation}} =
                Identity.invite_member(owner, workspace.id, "new@example.com", :member,
-                 notifier: MockNotifier
+                 skip_email: true
                )
 
       assert invitation.email == "new@example.com"

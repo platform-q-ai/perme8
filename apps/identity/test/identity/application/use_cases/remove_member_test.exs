@@ -6,13 +6,6 @@ defmodule Identity.Application.UseCases.RemoveMemberTest do
   import Identity.AccountsFixtures
   import Identity.WorkspacesFixtures
 
-  # Mock notifier for testing
-  defmodule MockNotifier do
-    def notify_existing_user(_user, _workspace, _inviter), do: :ok
-    def notify_new_user(_email, _workspace, _inviter), do: :ok
-    def notify_user_removed(_user, _workspace), do: :ok
-  end
-
   describe "execute/2 - successful removal" do
     test "removes a member from workspace" do
       owner = user_fixture()
@@ -33,7 +26,7 @@ defmodule Identity.Application.UseCases.RemoveMemberTest do
         member_email: member.email
       }
 
-      assert {:ok, deleted_member} = RemoveMember.execute(params, notifier: MockNotifier)
+      assert {:ok, deleted_member} = RemoveMember.execute(params)
       assert deleted_member.user_id == member.id
 
       # Verify member is removed
@@ -51,7 +44,7 @@ defmodule Identity.Application.UseCases.RemoveMemberTest do
       {:ok, {:invitation_sent, _}} =
         InviteMember.execute(
           %{inviter: owner, workspace_id: workspace.id, email: email, role: :admin},
-          notifier: MockNotifier
+          skip_email: true
         )
 
       # Verify invitation exists
@@ -65,7 +58,7 @@ defmodule Identity.Application.UseCases.RemoveMemberTest do
         member_email: email
       }
 
-      assert {:ok, deleted_invitation} = RemoveMember.execute(params, notifier: MockNotifier)
+      assert {:ok, deleted_invitation} = RemoveMember.execute(params)
       assert deleted_invitation.email == email
 
       # Verify invitation is removed
@@ -112,13 +105,13 @@ defmodule Identity.Application.UseCases.RemoveMemberTest do
       {:ok, {:invitation_sent, _}} =
         InviteMember.execute(
           %{inviter: owner, workspace_id: workspace.id, email: email, role: :admin},
-          notifier: MockNotifier
+          skip_email: true
         )
 
       # Subscribe to a hypothetical user topic (no user exists yet)
       Phoenix.PubSub.subscribe(Jarga.PubSub, "user:any")
 
-      # Remove invitation using default notifier
+      # Remove invitation
       params = %{
         actor: owner,
         workspace_id: workspace.id,
@@ -162,7 +155,7 @@ defmodule Identity.Application.UseCases.RemoveMemberTest do
         member_email: member.email
       }
 
-      assert {:error, :forbidden} = RemoveMember.execute(params, notifier: MockNotifier)
+      assert {:error, :forbidden} = RemoveMember.execute(params)
     end
 
     test "returns error when actor is a regular member (not admin/owner)" do
@@ -180,7 +173,7 @@ defmodule Identity.Application.UseCases.RemoveMemberTest do
         member_email: member2.email
       }
 
-      assert {:error, :forbidden} = RemoveMember.execute(params, notifier: MockNotifier)
+      assert {:error, :forbidden} = RemoveMember.execute(params)
     end
 
     test "allows admin to remove member" do
@@ -198,7 +191,7 @@ defmodule Identity.Application.UseCases.RemoveMemberTest do
         member_email: member.email
       }
 
-      assert {:ok, deleted} = RemoveMember.execute(params, notifier: MockNotifier)
+      assert {:ok, deleted} = RemoveMember.execute(params)
       assert deleted.user_id == member.id
     end
 
