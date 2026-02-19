@@ -31,6 +31,8 @@
   "dependencies": {
     "@cucumber/cucumber": "^12.6.0",
     "@playwright/test": "^1.58.2",
+    "allure-cucumberjs": "^3.4.5",
+    "allure-js-commons": "^3.4.5",
     "jsonpath": "^1.2.1",
     "neo4j-driver": "^6.0.1",
     "tsx": "^4.21.0"
