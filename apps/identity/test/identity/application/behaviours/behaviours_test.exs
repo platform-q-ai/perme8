@@ -2,8 +2,7 @@ defmodule Identity.Application.Behaviours.BehavioursTest do
   use ExUnit.Case, async: true
 
   alias Identity.Application.Behaviours.MembershipRepositoryBehaviour
-  alias Identity.Application.Behaviours.NotificationServiceBehaviour
-  alias Identity.Application.Behaviours.PubSubNotifierBehaviour
+  alias Identity.Application.Behaviours.WorkspaceNotifierBehaviour
   alias Identity.Application.Behaviours.WorkspaceQueriesBehaviour
 
   describe "MembershipRepositoryBehaviour" do
@@ -53,32 +52,15 @@ defmodule Identity.Application.Behaviours.BehavioursTest do
     end
   end
 
-  describe "NotificationServiceBehaviour" do
+  describe "WorkspaceNotifierBehaviour" do
     test "defines notify_existing_user/3 callback" do
-      callbacks = NotificationServiceBehaviour.behaviour_info(:callbacks)
+      callbacks = WorkspaceNotifierBehaviour.behaviour_info(:callbacks)
       assert {:notify_existing_user, 3} in callbacks
     end
 
     test "defines notify_new_user/3 callback" do
-      callbacks = NotificationServiceBehaviour.behaviour_info(:callbacks)
+      callbacks = WorkspaceNotifierBehaviour.behaviour_info(:callbacks)
       assert {:notify_new_user, 3} in callbacks
-    end
-
-    test "defines notify_user_removed/2 callback" do
-      callbacks = NotificationServiceBehaviour.behaviour_info(:callbacks)
-      assert {:notify_user_removed, 2} in callbacks
-    end
-
-    test "defines notify_workspace_updated/1 callback" do
-      callbacks = NotificationServiceBehaviour.behaviour_info(:callbacks)
-      assert {:notify_workspace_updated, 1} in callbacks
-    end
-  end
-
-  describe "PubSubNotifierBehaviour" do
-    test "defines broadcast_invitation_created/5 callback" do
-      callbacks = PubSubNotifierBehaviour.behaviour_info(:callbacks)
-      assert {:broadcast_invitation_created, 5} in callbacks
     end
   end
 

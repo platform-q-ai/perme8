@@ -39,8 +39,7 @@ defmodule Identity.ApplicationLayerTest do
       behaviours = Identity.ApplicationLayer.behaviours()
 
       assert Identity.Application.Behaviours.MembershipRepositoryBehaviour in behaviours
-      assert Identity.Application.Behaviours.NotificationServiceBehaviour in behaviours
-      assert Identity.Application.Behaviours.PubSubNotifierBehaviour in behaviours
+      assert Identity.Application.Behaviours.WorkspaceNotifierBehaviour in behaviours
       assert Identity.Application.Behaviours.WorkspaceQueriesBehaviour in behaviours
     end
 
@@ -59,10 +58,10 @@ defmodule Identity.ApplicationLayerTest do
       assert summary.use_cases == 16
       # 2 original + 1 workspace = 3
       assert summary.services == 3
-      # 7 original + 4 workspace = 11
-      assert summary.behaviours == 11
-      # Total = 16 + 3 + 11 = 30
-      assert summary.total == 30
+      # 7 original + 3 workspace = 10
+      assert summary.behaviours == 10
+      # Total = 16 + 3 + 10 = 29
+      assert summary.total == 29
     end
   end
 end
