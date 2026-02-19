@@ -20,9 +20,9 @@ defmodule Identity.Application.UseCases.InviteMember do
   alias Identity.Domain.Events.{MemberInvited, WorkspaceInvitationNotified}
   alias Identity.Domain.Policies.MembershipPolicy
   alias Identity.Domain.Policies.WorkspacePermissionsPolicy
-  alias Identity.Infrastructure.Notifiers.WorkspaceNotifier
 
   @default_membership_repository Identity.Infrastructure.Repositories.MembershipRepository
+  @default_workspace_notifier Identity.Infrastructure.Notifiers.WorkspaceNotifier
   @default_event_bus Perme8.Events.EventBus
 
   @doc """
@@ -57,10 +57,12 @@ defmodule Identity.Application.UseCases.InviteMember do
     membership_repository =
       Keyword.get(opts, :membership_repository, @default_membership_repository)
 
+    workspace_notifier = Keyword.get(opts, :workspace_notifier, @default_workspace_notifier)
     event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
     skip_email = Keyword.get(opts, :skip_email, false)
 
     deps = %{
+      workspace_notifier: workspace_notifier,
       event_bus: event_bus,
       skip_email: skip_email,
       membership_repository: membership_repository
@@ -137,6 +139,7 @@ defmodule Identity.Application.UseCases.InviteMember do
 
   defp create_pending_invitation(workspace, email, role, inviter, user, deps) do
     %{
+      workspace_notifier: workspace_notifier,
       event_bus: event_bus,
       skip_email: skip_email,
       membership_repository: membership_repository
@@ -155,17 +158,18 @@ defmodule Identity.Application.UseCases.InviteMember do
           joined_at: nil
         }
 
-        case create_workspace_member(attrs, membership_repository) do
-          {:ok, invitation} ->
-            # Send email notifications unless skipped (e.g. in tests)
-            unless skip_email do
-              send_email_notification(user, email, workspace, inviter, event_bus)
-            end
+        with {:ok, invitation} <- create_workspace_member(attrs, membership_repository) do
+          maybe_send_email(
+            skip_email,
+            workspace_notifier,
+            user,
+            email,
+            workspace,
+            inviter,
+            event_bus
+          )
 
-            {:ok, invitation}
-
-          error ->
-            error
+          {:ok, invitation}
         end
       end)
 
@@ -182,6 +186,12 @@ defmodule Identity.Application.UseCases.InviteMember do
 
   defp create_workspace_member(attrs, membership_repository) do
     membership_repository.create_member(attrs)
+  end
+
+  defp maybe_send_email(true, _notifier, _user, _email, _workspace, _inviter, _event_bus), do: :ok
+
+  defp maybe_send_email(false, notifier, user, email, workspace, inviter, event_bus) do
+    send_email_notification(notifier, user, email, workspace, inviter, event_bus)
   end
 
   defp maybe_emit_member_invited(nil, _workspace, _role, _inviter, _event_bus),
@@ -207,16 +217,12 @@ defmodule Identity.Application.UseCases.InviteMember do
     {:ok, nil}
   end
 
-  defp send_email_notification(nil, email, workspace, inviter, _event_bus) do
-    # New user - send signup invitation email
-    signup_url = build_signup_url()
-    WorkspaceNotifier.deliver_invitation_to_new_user(email, workspace, inviter, signup_url)
+  defp send_email_notification(notifier, nil, email, workspace, inviter, _event_bus) do
+    notifier.notify_new_user(email, workspace, inviter)
   end
 
-  defp send_email_notification(user, _email, workspace, inviter, event_bus) do
-    # Existing user - send workspace invitation email
-    workspace_url = build_workspace_url(workspace.id)
-    WorkspaceNotifier.deliver_invitation_to_existing_user(user, workspace, inviter, workspace_url)
+  defp send_email_notification(notifier, user, _email, workspace, inviter, event_bus) do
+    notifier.notify_existing_user(user, workspace, inviter)
 
     # Emit invitation notified event
     event_bus.emit(
@@ -230,21 +236,5 @@ defmodule Identity.Application.UseCases.InviteMember do
         role: "member"
       })
     )
-  end
-
-  defp build_workspace_url(workspace_id) do
-    base_url =
-      Application.get_env(:identity, :base_url) ||
-        Application.get_env(:jarga, :base_url, "http://localhost:4000")
-
-    "#{base_url}/app/workspaces/#{workspace_id}"
-  end
-
-  defp build_signup_url do
-    base_url =
-      Application.get_env(:identity, :base_url) ||
-        Application.get_env(:jarga, :base_url, "http://localhost:4000")
-
-    "#{base_url}/users/register"
   end
 end
