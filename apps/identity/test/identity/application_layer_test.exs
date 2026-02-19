@@ -20,13 +20,7 @@ defmodule Identity.ApplicationLayerTest do
   end
 
   describe "services/0" do
-    test "includes workspace notification service" do
-      services = Identity.ApplicationLayer.services()
-
-      assert Identity.Application.Services.NotificationService in services
-    end
-
-    test "includes all original services" do
+    test "includes all services" do
       services = Identity.ApplicationLayer.services()
 
       assert Identity.Application.Services.PasswordService in services
@@ -56,12 +50,12 @@ defmodule Identity.ApplicationLayerTest do
 
       # 12 original + 4 workspace = 16
       assert summary.use_cases == 16
-      # 2 original + 1 workspace = 3
-      assert summary.services == 3
+      # 2 original services
+      assert summary.services == 2
       # 7 original + 3 workspace = 10
       assert summary.behaviours == 10
-      # Total = 16 + 3 + 10 = 29
-      assert summary.total == 29
+      # Total = 16 + 2 + 10 = 28
+      assert summary.total == 28
     end
   end
 end

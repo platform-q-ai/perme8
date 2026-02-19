@@ -20,7 +20,7 @@ defmodule Jarga.Documents.Application do
   - Domain layer (same context)
 
   It cannot import:
-  - Infrastructure layer (repos, schemas, notifiers)
+  - Infrastructure layer (repos, schemas)
   - Other contexts directly (use dependency injection)
   """
 
@@ -46,7 +46,6 @@ defmodule Jarga.Documents.Application do
       UseCases.ExecuteAgentQuery,
       UseCases.UseCase,
       Policies.DocumentAuthorizationPolicy,
-      Services.NotificationService,
       # Behaviours (interfaces for Infrastructure to implement)
       Behaviours.AuthorizationRepositoryBehaviour,
       Behaviours.DocumentComponentSchemaBehaviour,

@@ -124,23 +124,18 @@ defmodule Jarga.ApplicationLayer do
   @doc """
   Lists all known application service modules across all contexts.
 
+  Note: Account services (PasswordService, ApiKeyTokenService) have been moved
+  to the Identity app. Legacy NotificationService modules were removed as part
+  of the Event Bus migration (Part 2c).
+
   ## Examples
 
       iex> Jarga.ApplicationLayer.services()
-      [Jarga.Documents.Application.Services.NotificationService, ...]
+      []
   """
   @spec services() :: [module()]
   def services do
-    [
-      # Note: Account services (PasswordService, ApiKeyTokenService) have been
-      # moved to the Identity app.
-      #
-      # Documents
-      Jarga.Documents.Application.Services.NotificationService,
-      # Projects
-      Jarga.Projects.Application.Services.NotificationService
-      # Workspaces — migrated to Identity app
-    ]
+    []
   end
 
   @doc """
