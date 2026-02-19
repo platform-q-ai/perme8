@@ -29,8 +29,10 @@ defmodule JargaWeb do
       Jarga.Documents,
       Jarga.Notes,
       Agents,
+      Agents.Domain,
       Jarga.Chat,
       Jarga.Notifications,
+      Jarga.Notifications.Domain,
       # Shared infrastructure
       Jarga.Repo,
       Jarga.Mailer,
