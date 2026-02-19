@@ -94,6 +94,31 @@ describe('parseRunArgs', () => {
     expect(opts.noRetry).toBe(true)
     expect(opts.passthrough).toEqual([])
   })
+
+  test('parses --allure flag', () => {
+    const opts = parseRunArgs(['--config', 'config.ts', '--allure'])
+    expect(opts.allure).toBe(true)
+  })
+
+  test('allure defaults to false when not provided', () => {
+    const opts = parseRunArgs(['--config', 'config.ts'])
+    expect(opts.allure).toBe(false)
+  })
+
+  test('parses --allure with other flags', () => {
+    const opts = parseRunArgs(['-c', 'config.ts', '-t', '@smoke', '--allure', '-a', 'http'])
+    expect(opts.allure).toBe(true)
+    expect(opts.config).toBe('config.ts')
+    expect(opts.tags).toBe('@smoke')
+    expect(opts.adapter).toBe('http')
+    expect(opts.passthrough).toEqual([])
+  })
+
+  test('--allure does not appear in passthrough', () => {
+    const opts = parseRunArgs(['--config', 'config.ts', '--allure', '--format', 'progress'])
+    expect(opts.allure).toBe(true)
+    expect(opts.passthrough).toEqual(['--format', 'progress'])
+  })
 })
 
 describe('filterFeaturesByAdapter', () => {

@@ -9,6 +9,7 @@ export interface RunOptions {
   tags?: string
   adapter?: string
   noRetry: boolean
+  allure: boolean
   passthrough: string[]
 }
 
@@ -17,6 +18,7 @@ export function parseRunArgs(args: string[]): RunOptions {
   let tags: string | undefined
   let adapter: string | undefined
   let noRetry = false
+  let allure = false
   const passthrough: string[] = []
 
   for (let i = 0; i < args.length; i++) {
@@ -29,6 +31,8 @@ export function parseRunArgs(args: string[]): RunOptions {
       adapter = args[++i]
     } else if (arg === '--no-retry') {
       noRetry = true
+    } else if (arg === '--allure') {
+      allure = true
     } else {
       passthrough.push(arg!)
     }
@@ -38,7 +42,7 @@ export function parseRunArgs(args: string[]): RunOptions {
     throw new Error('Missing required argument: --config <path>')
   }
 
-  return { config, tags, adapter, noRetry, passthrough }
+  return { config, tags, adapter, noRetry, allure, passthrough }
 }
 
 /**
