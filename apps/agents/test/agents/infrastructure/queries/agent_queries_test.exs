@@ -55,9 +55,11 @@ defmodule Agents.Infrastructure.AgentQueriesTest do
         |> AgentSchema.changeset(%{user_id: user.id, name: "Shared", visibility: "SHARED"})
         |> Repo.insert!()
 
+      # Scope to this test's user to avoid interference from seed data
       # Filter for PRIVATE
       private_agents =
         AgentSchema
+        |> AgentQueries.for_user(user.id)
         |> AgentQueries.by_visibility("PRIVATE")
         |> Repo.all()
 
@@ -67,6 +69,7 @@ defmodule Agents.Infrastructure.AgentQueriesTest do
       # Filter for SHARED
       shared_agents =
         AgentSchema
+        |> AgentQueries.for_user(user.id)
         |> AgentQueries.by_visibility("SHARED")
         |> Repo.all()
 
