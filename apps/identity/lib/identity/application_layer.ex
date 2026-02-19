@@ -110,6 +110,7 @@ defmodule Identity.ApplicationLayer do
       Identity.Application.Behaviours.QueriesBehaviour,
       # Workspace behaviours
       Identity.Application.Behaviours.MembershipRepositoryBehaviour,
+      Identity.Application.Behaviours.WorkspaceNotifierBehaviour,
       Identity.Application.Behaviours.WorkspaceQueriesBehaviour
     ]
   end
