@@ -26,6 +26,7 @@ defmodule Identity.Application.UseCases.InviteMember do
 
   @default_membership_repository Identity.Infrastructure.Repositories.MembershipRepository
   @default_pubsub_notifier Identity.Infrastructure.Notifiers.PubSubNotifier
+  @default_event_bus Perme8.Events.EventBus
 
   @doc """
   Executes the invite member use case.
@@ -61,6 +62,7 @@ defmodule Identity.Application.UseCases.InviteMember do
 
     notifier = Keyword.get(opts, :notifier)
     pubsub_notifier = Keyword.get(opts, :pubsub_notifier, @default_pubsub_notifier)
+    event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
 
     with :ok <- validate_role(role),
          {:ok, workspace} <-
@@ -79,6 +81,7 @@ defmodule Identity.Application.UseCases.InviteMember do
         user,
         notifier,
         pubsub_notifier,
+        event_bus,
         membership_repository
       )
     end
@@ -148,6 +151,7 @@ defmodule Identity.Application.UseCases.InviteMember do
          user,
          notifier,
          pubsub_notifier,
+         event_bus,
          membership_repository
        ) do
     result =
@@ -178,7 +182,7 @@ defmodule Identity.Application.UseCases.InviteMember do
     # Broadcast AFTER transaction commits to avoid race conditions
     case result do
       {:ok, invitation} ->
-        maybe_create_notification(user, workspace, role, inviter, pubsub_notifier)
+        maybe_create_notification(user, workspace, role, inviter, pubsub_notifier, event_bus)
         {:ok, {:invitation_sent, invitation}}
 
       error ->
@@ -190,10 +194,10 @@ defmodule Identity.Application.UseCases.InviteMember do
     membership_repository.create_member(attrs)
   end
 
-  defp maybe_create_notification(nil, _workspace, _role, _inviter, _pubsub_notifier),
+  defp maybe_create_notification(nil, _workspace, _role, _inviter, _pubsub_notifier, _event_bus),
     do: {:ok, nil}
 
-  defp maybe_create_notification(user, workspace, role, inviter, pubsub_notifier) do
+  defp maybe_create_notification(user, workspace, role, inviter, pubsub_notifier, event_bus) do
     # Broadcast event for notification creation (existing users only)
     inviter_name = "#{inviter.first_name} #{inviter.last_name}"
 
@@ -204,6 +208,20 @@ defmodule Identity.Application.UseCases.InviteMember do
       inviter_name,
       to_string(role)
     )
+
+    # Emit structured domain event
+    event =
+      Identity.Domain.Events.MemberInvited.new(%{
+        aggregate_id: "#{workspace.id}:#{user.id}",
+        actor_id: inviter.id,
+        user_id: user.id,
+        workspace_id: workspace.id,
+        workspace_name: workspace.name,
+        invited_by_name: inviter_name,
+        role: to_string(role)
+      })
+
+    event_bus.emit(event)
 
     {:ok, nil}
   end
