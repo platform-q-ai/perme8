@@ -10,11 +10,15 @@ defmodule Identity.Application.UseCases.InviteMemberTest do
 
   defp ensure_test_event_bus_started do
     case TestEventBus.start_link([]) do
-      {:ok, _pid} -> :ok
+      {:ok, pid} -> Process.unlink(pid)
       {:error, {:already_started, _pid}} -> :ok
     end
+  end
 
-    TestEventBus.reset()
+  defp invited_events_for(workspace_id) do
+    Enum.filter(TestEventBus.get_events(), fn event ->
+      match?(%MemberInvited{}, event) && event.workspace_id == workspace_id
+    end)
   end
 
   describe "execute/2 - existing user" do
@@ -122,8 +126,7 @@ defmodule Identity.Application.UseCases.InviteMemberTest do
 
       assert {:ok, {:invitation_sent, _}} = InviteMember.execute(params, opts)
 
-      events = TestEventBus.get_events()
-      assert [%MemberInvited{} = event] = events
+      assert [%MemberInvited{} = event] = invited_events_for(workspace.id)
       assert event.user_id == invitee.id
       assert event.workspace_id == workspace.id
       assert event.workspace_name == workspace.name
@@ -188,8 +191,7 @@ defmodule Identity.Application.UseCases.InviteMemberTest do
 
       assert {:ok, {:invitation_sent, _}} = InviteMember.execute(params, opts)
 
-      events = TestEventBus.get_events()
-      assert events == []
+      assert [] = invited_events_for(workspace.id)
     end
 
     test "is case-insensitive for email matching" do

@@ -10,9 +10,21 @@ defmodule Identity.Application.UseCases.CreateNotificationsForPendingInvitations
 
   defp ensure_test_event_bus_started do
     case TestEventBus.start_link([]) do
-      {:ok, _pid} -> :ok
-      {:error, {:already_started, _pid}} -> TestEventBus.reset()
+      {:ok, pid} -> Process.unlink(pid)
+      {:error, {:already_started, _pid}} -> :ok
     end
+  end
+
+  defp events_of_type(type, workspace_id) do
+    Enum.filter(TestEventBus.get_events(), fn event ->
+      event.__struct__ == type && event.workspace_id == workspace_id
+    end)
+  end
+
+  defp events_for_user(type, user_id) do
+    Enum.filter(TestEventBus.get_events(), fn event ->
+      event.__struct__ == type && event.user_id == user_id
+    end)
   end
 
   describe "execute/2" do
@@ -32,8 +44,7 @@ defmodule Identity.Application.UseCases.CreateNotificationsForPendingInvitations
 
       assert {:ok, []} = CreateNotificationsForPendingInvitations.execute(params, opts)
 
-      events = TestEventBus.get_events()
-      assert [%MemberInvited{} = event] = events
+      assert [%MemberInvited{} = event] = events_of_type(MemberInvited, workspace.id)
       assert event.user_id == invitee.id
       assert event.workspace_id == workspace.id
       assert event.workspace_name == workspace.name
@@ -50,8 +61,7 @@ defmodule Identity.Application.UseCases.CreateNotificationsForPendingInvitations
 
       assert {:ok, []} = CreateNotificationsForPendingInvitations.execute(params, opts)
 
-      events = TestEventBus.get_events()
-      assert events == []
+      assert [] = events_for_user(MemberInvited, user.id)
     end
 
     test "emits MemberInvited events via event_bus for each pending invitation" do
@@ -69,8 +79,7 @@ defmodule Identity.Application.UseCases.CreateNotificationsForPendingInvitations
 
       assert {:ok, []} = CreateNotificationsForPendingInvitations.execute(params, opts)
 
-      events = TestEventBus.get_events()
-      assert [%MemberInvited{} = event] = events
+      assert [%MemberInvited{} = event] = events_of_type(MemberInvited, workspace.id)
       assert event.user_id == invitee.id
       assert event.workspace_id == workspace.id
       assert event.workspace_name == workspace.name
@@ -87,8 +96,7 @@ defmodule Identity.Application.UseCases.CreateNotificationsForPendingInvitations
 
       assert {:ok, []} = CreateNotificationsForPendingInvitations.execute(params, opts)
 
-      events = TestEventBus.get_events()
-      assert events == []
+      assert [] = events_for_user(MemberInvited, user.id)
     end
   end
 end
