@@ -121,7 +121,7 @@ defmodule Identity.ApplicationLayer do
   ## Examples
 
        iex> Identity.ApplicationLayer.summary()
-       %{use_cases: 16, services: 3, behaviours: 11, total: 30}
+       %{use_cases: 16, services: 3, behaviours: 10, total: 29}
   """
   @spec summary() :: map()
   def summary do
