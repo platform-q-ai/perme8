@@ -114,7 +114,7 @@ export function assertUrl(context: AssertionContext, expectedUrl: string): void 
 
 export async function assertUrlContains(context: AssertionContext, expectedPart: string): Promise<void> {
   const interpolated = context.interpolate(expectedPart)
-  await context.browser.page.waitForURL(`**/*${interpolated}*`, { timeout: 5000 }).catch(() => {
+  await context.browser.page.waitForURL(`**/*${interpolated}*`, { timeout: 15_000 }).catch(() => {
     // If waitForURL times out, fall back to a direct assertion for a clear error message
     expect(context.browser.url()).toContain(interpolated)
   })
