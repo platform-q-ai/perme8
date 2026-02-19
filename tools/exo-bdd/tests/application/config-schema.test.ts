@@ -7,6 +7,8 @@ import type {
   CliAdapterConfig,
   GraphAdapterConfig,
   SecurityAdapterConfig,
+  ReportConfig,
+  AllureReportConfig,
 } from '../../src/application/config/ConfigSchema.ts'
 
 describe('ConfigSchema type validation', () => {
@@ -252,5 +254,46 @@ describe('ConfigSchema type validation', () => {
     }
     expect(config.variables).toBeDefined()
     expect(Object.keys(config.variables!)).toHaveLength(0)
+  })
+
+  test('ExoBddConfig with report.allure as true', () => {
+    const config: ExoBddConfig = {
+      adapters: {},
+      report: { allure: true },
+    }
+    expect(config.report?.allure).toBe(true)
+  })
+
+  test('ExoBddConfig with report.allure as object with resultsDir', () => {
+    const config: ExoBddConfig = {
+      adapters: {},
+      report: { allure: { resultsDir: 'custom-results' } },
+    }
+    expect(typeof config.report?.allure).toBe('object')
+    const allure = config.report?.allure as { resultsDir?: string }
+    expect(allure.resultsDir).toBe('custom-results')
+  })
+
+  test('ExoBddConfig with report omitted (optional)', () => {
+    const config: ExoBddConfig = {
+      adapters: {},
+    }
+    expect(config.report).toBeUndefined()
+  })
+
+  test('ExoBddConfig with report.allure as false', () => {
+    const config: ExoBddConfig = {
+      adapters: {},
+      report: { allure: false },
+    }
+    expect(config.report?.allure).toBe(false)
+  })
+
+  test('ExoBddConfig with empty report object', () => {
+    const config: ExoBddConfig = {
+      adapters: {},
+      report: {},
+    }
+    expect(config.report?.allure).toBeUndefined()
   })
 })

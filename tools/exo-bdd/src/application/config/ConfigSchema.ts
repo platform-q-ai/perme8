@@ -1,3 +1,19 @@
+/**
+ * Allure report configuration.
+ * - `true` enables Allure with default settings (results written to `allure-results/`)
+ * - An object enables Allure with custom options
+ * - `false` or omitted disables Allure
+ */
+export type AllureReportConfig = boolean | {
+  /** Directory for Allure result files. Defaults to 'allure-results'. */
+  resultsDir?: string
+}
+
+export interface ReportConfig {
+  /** Enable Allure test reporting. */
+  allure?: AllureReportConfig
+}
+
 export interface ExoBddConfig {
   /** Glob or path(s) to feature files. Used by the CLI runner to locate .feature files. */
   features?: string | string[]
@@ -21,6 +37,10 @@ export interface ExoBddConfig {
    * Passed directly to cucumber-js as --tags.
    */
   tags?: string
+  /**
+   * Reporting configuration. Controls which reporters/formatters are enabled.
+   */
+  report?: ReportConfig
   adapters: {
     http?: HttpAdapterConfig
     browser?: BrowserAdapterConfig
