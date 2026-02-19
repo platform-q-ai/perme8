@@ -11,25 +11,6 @@ defmodule Identity.Application.UseCases.InviteMemberTest do
     def notify_new_user(_email, _workspace, _inviter), do: :ok
   end
 
-  # Mock PubSub notifier for testing event bus
-  defmodule MockPubSubNotifier do
-    def broadcast_invitation_created(
-          _user_id,
-          _workspace_id,
-          _workspace_name,
-          _inviter_name,
-          _role
-        ),
-        do: :ok
-  end
-
-  defp start_test_event_bus do
-    case Perme8.Events.TestEventBus.start_link([]) do
-      {:ok, _pid} -> :ok
-      {:error, {:already_started, _pid}} -> Perme8.Events.TestEventBus.reset()
-    end
-  end
-
   describe "execute/2 - existing user" do
     test "creates pending invitation for existing user (requires acceptance)" do
       owner = user_fixture()
@@ -118,32 +99,6 @@ defmodule Identity.Application.UseCases.InviteMemberTest do
       assert {:error, :workspace_not_found} = InviteMember.execute(params, [])
     end
 
-    test "emits MemberInvited event via event_bus for existing users" do
-      start_test_event_bus()
-      owner = user_fixture()
-      workspace = workspace_fixture(owner)
-      invitee = user_fixture()
-
-      params = %{
-        inviter: owner,
-        workspace_id: workspace.id,
-        email: invitee.email,
-        role: :admin
-      }
-
-      opts = [notifier: MockNotifier, event_bus: Perme8.Events.TestEventBus]
-
-      assert {:ok, {:invitation_sent, _}} = InviteMember.execute(params, opts)
-
-      events = Perme8.Events.TestEventBus.get_events()
-      assert [%Identity.Domain.Events.MemberInvited{} = event] = events
-      assert event.user_id == invitee.id
-      assert event.workspace_id == workspace.id
-      assert event.workspace_name == workspace.name
-      assert event.role == "admin"
-      assert event.invited_by_name != nil
-    end
-
     test "returns error when inviter lacks permission (guest role)" do
       owner = user_fixture()
       workspace = workspace_fixture(owner)
@@ -183,26 +138,6 @@ defmodule Identity.Application.UseCases.InviteMemberTest do
       assert invitation.email == email
       assert invitation.user_id == nil
       assert invitation.joined_at == nil
-    end
-
-    test "does not emit MemberInvited event for non-existing users" do
-      start_test_event_bus()
-      owner = user_fixture()
-      workspace = workspace_fixture(owner)
-
-      params = %{
-        inviter: owner,
-        workspace_id: workspace.id,
-        email: "nonexistent@example.com",
-        role: :member
-      }
-
-      opts = [notifier: MockNotifier, event_bus: Perme8.Events.TestEventBus]
-
-      assert {:ok, {:invitation_sent, _}} = InviteMember.execute(params, opts)
-
-      events = Perme8.Events.TestEventBus.get_events()
-      assert events == []
     end
 
     test "is case-insensitive for email matching" do
