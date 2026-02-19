@@ -8,7 +8,6 @@ defmodule Agents.Application.UseCases.SyncAgentWorkspaces do
 
   @default_agent_repo Agents.Infrastructure.Repositories.AgentRepository
   @default_workspace_agent_repo Agents.Infrastructure.Repositories.WorkspaceAgentRepository
-  @default_notifier Agents.Infrastructure.Notifiers.PubSubNotifier
   @default_event_bus Perme8.Events.EventBus
   @default_accounts Jarga.Accounts
   @default_workspaces Jarga.Workspaces
@@ -26,7 +25,6 @@ defmodule Agents.Application.UseCases.SyncAgentWorkspaces do
   - `opts` - Keyword list with:
     - `:agent_repo` - Repository module for agents (default: AgentRepository)
     - `:workspace_agent_repo` - Repository for workspace-agent associations (default: WorkspaceAgentRepository)
-    - `:notifier` - Notifier module for PubSub events (default: PubSubNotifier)
     - `:accounts` - Accounts context module (default: Jarga.Accounts)
     - `:workspaces` - Workspaces context module (default: Jarga.Workspaces)
 
@@ -42,7 +40,6 @@ defmodule Agents.Application.UseCases.SyncAgentWorkspaces do
   def execute(agent_id, user_id, workspace_ids, opts \\ []) do
     agent_repo = Keyword.get(opts, :agent_repo, @default_agent_repo)
     workspace_agent_repo = Keyword.get(opts, :workspace_agent_repo, @default_workspace_agent_repo)
-    notifier = Keyword.get(opts, :notifier, @default_notifier)
     event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
     accounts = Keyword.get(opts, :accounts, @default_accounts)
     workspaces = Keyword.get(opts, :workspaces, @default_workspaces)
@@ -66,13 +63,6 @@ defmodule Agents.Application.UseCases.SyncAgentWorkspaces do
 
         # Apply changes atomically
         apply_workspace_changes(agent_id, changes, workspace_agent_repo)
-
-        # Notify all affected workspaces
-        notifier.notify_workspace_associations_changed(
-          agent,
-          MapSet.to_list(changes.to_add),
-          MapSet.to_list(changes.to_remove)
-        )
 
         # Emit domain events for workspace changes
         emit_workspace_change_events(agent_id, user_id, changes, event_bus)
