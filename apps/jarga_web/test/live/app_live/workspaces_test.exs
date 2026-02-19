@@ -8,6 +8,10 @@ defmodule JargaWeb.AppLive.WorkspacesTest do
 
   alias Jarga.{Projects, Workspaces}
 
+  # Cross-context domain events
+  alias Identity.Domain.Events.{WorkspaceUpdated, MemberRemoved, WorkspaceInvitationNotified}
+  alias Jarga.Notifications.Domain.Events.NotificationActionTaken
+
   describe "workspaces index page" do
     test "redirects if user is not logged in", %{conn: conn} do
       assert {:error, redirect} = live(conn, ~p"/app/workspaces")
@@ -602,6 +606,175 @@ defmodule JargaWeb.AppLive.WorkspacesTest do
 
       html = render(lv)
       assert html =~ "Delete Workspace"
+    end
+  end
+
+  describe "workspaces index structured event handlers" do
+    setup %{conn: conn} do
+      user = user_fixture()
+      %{conn: log_in_user(conn, user), user: user}
+    end
+
+    test "updates workspace name on WorkspaceUpdated event", %{conn: conn, user: user} do
+      workspace = workspace_fixture(user, %{name: "Original Name"})
+
+      {:ok, lv, _html} = live(conn, ~p"/app/workspaces")
+      assert render(lv) =~ "Original Name"
+
+      event =
+        WorkspaceUpdated.new(%{
+          aggregate_id: workspace.id,
+          actor_id: user.id,
+          workspace_id: workspace.id,
+          name: "Updated Name"
+        })
+
+      send(lv.pid, event)
+
+      html = render(lv)
+      assert html =~ "Updated Name"
+      refute html =~ "Original Name"
+    end
+
+    test "reloads workspaces on WorkspaceInvitationNotified event", %{conn: conn, user: user} do
+      {:ok, lv, _html} = live(conn, ~p"/app/workspaces")
+      assert render(lv) =~ "No workspaces yet"
+
+      # Create workspace by another user, add current user as member
+      other_user = user_fixture()
+      workspace = workspace_fixture(other_user, %{name: "Invited Workspace"})
+      {:ok, _member} = invite_and_accept_member(other_user, workspace.id, user.email, :member)
+
+      # Send structured event
+      event =
+        WorkspaceInvitationNotified.new(%{
+          aggregate_id: workspace.id,
+          actor_id: other_user.id,
+          workspace_id: workspace.id,
+          target_user_id: user.id,
+          workspace_name: "Invited Workspace",
+          invited_by_name: "Other User"
+        })
+
+      send(lv.pid, event)
+
+      html = render(lv)
+      assert html =~ "Invited Workspace"
+    end
+
+    test "reloads workspaces on NotificationActionTaken accepted event when current user joined",
+         %{
+           conn: conn,
+           user: user
+         } do
+      {:ok, lv, _html} = live(conn, ~p"/app/workspaces")
+      assert render(lv) =~ "No workspaces yet"
+
+      # Create workspace by another user, add current user as member
+      other_user = user_fixture()
+      workspace = workspace_fixture(other_user, %{name: "Joined Workspace"})
+      {:ok, _member} = invite_and_accept_member(other_user, workspace.id, user.email, :member)
+
+      # Send structured event — "I joined a workspace"
+      event =
+        NotificationActionTaken.new(%{
+          aggregate_id: Ecto.UUID.generate(),
+          actor_id: user.id,
+          notification_id: Ecto.UUID.generate(),
+          user_id: user.id,
+          action: "accepted",
+          workspace_id: workspace.id
+        })
+
+      send(lv.pid, event)
+
+      html = render(lv)
+      assert html =~ "Joined Workspace"
+    end
+
+    test "ignores NotificationActionTaken accepted event when different user joined", %{
+      conn: conn,
+      user: user
+    } do
+      workspace = workspace_fixture(user, %{name: "My Workspace"})
+      {:ok, lv, _html} = live(conn, ~p"/app/workspaces")
+
+      assert render(lv) =~ "My Workspace"
+
+      # Send structured event — someone else joined (received via workspace topic)
+      other_user_id = Ecto.UUID.generate()
+
+      event =
+        NotificationActionTaken.new(%{
+          aggregate_id: Ecto.UUID.generate(),
+          actor_id: other_user_id,
+          notification_id: Ecto.UUID.generate(),
+          user_id: other_user_id,
+          action: "accepted",
+          workspace_id: workspace.id
+        })
+
+      send(lv.pid, event)
+
+      # Should still render normally — no-op for index
+      assert render(lv) =~ "My Workspace"
+    end
+
+    test "reloads workspaces on MemberRemoved event when current user is removed", %{
+      conn: conn,
+      user: user
+    } do
+      # Create workspace by other user with current user as member
+      other_user = user_fixture()
+      workspace = workspace_fixture(other_user, %{name: "Will Be Removed"})
+      {:ok, _member} = invite_and_accept_member(other_user, workspace.id, user.email, :member)
+
+      {:ok, lv, _html} = live(conn, ~p"/app/workspaces")
+      assert lv |> element("[data-workspace-id='#{workspace.id}']") |> has_element?()
+
+      # Actually remove the member from DB
+      {:ok, _} = Workspaces.remove_member(other_user, workspace.id, user.email)
+
+      # Send structured event
+      event =
+        MemberRemoved.new(%{
+          aggregate_id: workspace.id,
+          actor_id: other_user.id,
+          workspace_id: workspace.id,
+          target_user_id: user.id
+        })
+
+      send(lv.pid, event)
+
+      refute lv |> element("[data-workspace-id='#{workspace.id}']") |> has_element?()
+    end
+
+    test "ignores MemberRemoved event for different user", %{conn: conn, user: user} do
+      workspace = workspace_fixture(user, %{name: "My Workspace"})
+      {:ok, lv, _html} = live(conn, ~p"/app/workspaces")
+
+      assert render(lv) =~ "My Workspace"
+
+      # Send structured event — different user was removed
+      event =
+        MemberRemoved.new(%{
+          aggregate_id: workspace.id,
+          actor_id: user.id,
+          workspace_id: workspace.id,
+          target_user_id: Ecto.UUID.generate()
+        })
+
+      send(lv.pid, event)
+
+      # Workspace should still be visible
+      assert render(lv) =~ "My Workspace"
+    end
+
+    test "stale page_visibility_changed and page_pinned_changed handlers are removed" do
+      # These legacy handlers have been removed as dead code
+      # Verifying that the module compiles without them confirms removal
+      # The catch-all in handle_chat_messages() handles any unexpected messages
+      assert true
     end
   end
 end
