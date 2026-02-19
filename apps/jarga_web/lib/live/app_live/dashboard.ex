@@ -125,20 +125,7 @@ defmodule JargaWeb.AppLive.Dashboard do
 
     if uid == current_user_id do
       # "I joined a workspace" (received via user topic) — reload workspaces + subscribe
-      user = socket.assigns.current_scope.user
-      workspaces = Workspaces.list_workspaces_for_user(user)
-
-      # Find newly joined workspace and subscribe to its events
-      current_ws_ids =
-        Enum.map(socket.assigns.workspaces, & &1.id) |> MapSet.new()
-
-      Enum.each(workspaces, fn ws ->
-        unless MapSet.member?(current_ws_ids, ws.id) do
-          Perme8.Events.subscribe("events:workspace:#{ws.id}")
-        end
-      end)
-
-      {:noreply, assign(socket, workspaces: workspaces)}
+      {:noreply, reload_and_subscribe_workspaces(socket)}
     else
       # "Someone joined my workspace" (received via workspace topic) — no-op on dashboard
       {:noreply, socket}
@@ -221,4 +208,20 @@ defmodule JargaWeb.AppLive.Dashboard do
 
   # Chat panel streaming messages and notification handlers - provided by MessageHandlers
   handle_chat_messages()
+
+  defp reload_and_subscribe_workspaces(socket) do
+    user = socket.assigns.current_scope.user
+    workspaces = Workspaces.list_workspaces_for_user(user)
+
+    # Subscribe to event topics for any newly joined workspaces
+    current_ws_ids = socket.assigns.workspaces |> Enum.map(& &1.id) |> MapSet.new()
+
+    Enum.each(workspaces, fn ws ->
+      unless MapSet.member?(current_ws_ids, ws.id) do
+        Perme8.Events.subscribe("events:workspace:#{ws.id}")
+      end
+    end)
+
+    assign(socket, workspaces: workspaces)
+  end
 end
