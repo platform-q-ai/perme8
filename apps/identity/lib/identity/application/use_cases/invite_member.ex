@@ -13,20 +13,16 @@ defmodule Identity.Application.UseCases.InviteMember do
   - Create pending invitations for both existing and new users
   - Send appropriate notifications
 
-  ## Dependencies
-
-  This use case accepts dependencies via options for testability:
-  - `:notifier` - Module implementing notification callbacks
   """
 
   @behaviour Identity.Application.UseCases.UseCase
 
-  alias Identity.Domain.Events.MemberInvited
+  alias Identity.Domain.Events.{MemberInvited, WorkspaceInvitationNotified}
   alias Identity.Domain.Policies.MembershipPolicy
   alias Identity.Domain.Policies.WorkspacePermissionsPolicy
+  alias Identity.Infrastructure.Notifiers.WorkspaceNotifier
 
   @default_membership_repository Identity.Infrastructure.Repositories.MembershipRepository
-  @default_pubsub_notifier Identity.Infrastructure.Notifiers.PubSubNotifier
   @default_event_bus Perme8.Events.EventBus
 
   @doc """
@@ -41,9 +37,8 @@ defmodule Identity.Application.UseCases.InviteMember do
     - `:role` - Role to assign (:admin, :member, or :guest)
 
   - `opts` - Keyword list of options:
-    - `:notifier` - Optional email notifier module (default: uses real notifier)
-    - `:pubsub_notifier` - Optional PubSub notifier module (default: PubSubNotifier)
     - `:event_bus` - Optional event bus module (default: Perme8.Events.EventBus)
+    - `:skip_email` - Skip email sending (for testing, default: false)
 
   ## Returns
 
@@ -62,14 +57,12 @@ defmodule Identity.Application.UseCases.InviteMember do
     membership_repository =
       Keyword.get(opts, :membership_repository, @default_membership_repository)
 
-    notifier = Keyword.get(opts, :notifier)
-    pubsub_notifier = Keyword.get(opts, :pubsub_notifier, @default_pubsub_notifier)
     event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
+    skip_email = Keyword.get(opts, :skip_email, false)
 
     deps = %{
-      notifier: notifier,
-      pubsub_notifier: pubsub_notifier,
       event_bus: event_bus,
+      skip_email: skip_email,
       membership_repository: membership_repository
     }
 
@@ -144,9 +137,8 @@ defmodule Identity.Application.UseCases.InviteMember do
 
   defp create_pending_invitation(workspace, email, role, inviter, user, deps) do
     %{
-      notifier: notifier,
-      pubsub_notifier: pubsub_notifier,
       event_bus: event_bus,
+      skip_email: skip_email,
       membership_repository: membership_repository
     } = deps
 
@@ -165,8 +157,10 @@ defmodule Identity.Application.UseCases.InviteMember do
 
         case create_workspace_member(attrs, membership_repository) do
           {:ok, invitation} ->
-            # Send email notifications if notifier is provided
-            send_email_notification(notifier, user, email, workspace, inviter)
+            # Send email notifications unless skipped (e.g. in tests)
+            unless skip_email do
+              send_email_notification(user, email, workspace, inviter, event_bus)
+            end
 
             {:ok, invitation}
 
@@ -178,7 +172,7 @@ defmodule Identity.Application.UseCases.InviteMember do
     # Broadcast AFTER transaction commits to avoid race conditions
     case result do
       {:ok, invitation} ->
-        maybe_create_notification(user, workspace, role, inviter, pubsub_notifier, event_bus)
+        maybe_emit_member_invited(user, workspace, role, inviter, event_bus)
         {:ok, {:invitation_sent, invitation}}
 
       error ->
@@ -190,20 +184,11 @@ defmodule Identity.Application.UseCases.InviteMember do
     membership_repository.create_member(attrs)
   end
 
-  defp maybe_create_notification(nil, _workspace, _role, _inviter, _pubsub_notifier, _event_bus),
+  defp maybe_emit_member_invited(nil, _workspace, _role, _inviter, _event_bus),
     do: {:ok, nil}
 
-  defp maybe_create_notification(user, workspace, role, inviter, pubsub_notifier, event_bus) do
-    # Broadcast event for notification creation (existing users only)
+  defp maybe_emit_member_invited(user, workspace, role, inviter, event_bus) do
     inviter_name = "#{inviter.first_name} #{inviter.last_name}"
-
-    pubsub_notifier.broadcast_invitation_created(
-      user.id,
-      workspace.id,
-      workspace.name,
-      inviter_name,
-      to_string(role)
-    )
 
     # Emit structured domain event
     event =
@@ -222,13 +207,44 @@ defmodule Identity.Application.UseCases.InviteMember do
     {:ok, nil}
   end
 
-  defp send_email_notification(nil, _user, _email, _workspace, _inviter), do: :ok
-
-  defp send_email_notification(notifier, nil, email, workspace, inviter) do
-    notifier.notify_new_user(email, workspace, inviter)
+  defp send_email_notification(nil, email, workspace, inviter, _event_bus) do
+    # New user - send signup invitation email
+    signup_url = build_signup_url()
+    WorkspaceNotifier.deliver_invitation_to_new_user(email, workspace, inviter, signup_url)
   end
 
-  defp send_email_notification(notifier, user, _email, workspace, inviter) do
-    notifier.notify_existing_user(user, workspace, inviter)
+  defp send_email_notification(user, _email, workspace, inviter, event_bus) do
+    # Existing user - send workspace invitation email
+    workspace_url = build_workspace_url(workspace.id)
+    WorkspaceNotifier.deliver_invitation_to_existing_user(user, workspace, inviter, workspace_url)
+
+    # Emit invitation notified event
+    event_bus.emit(
+      WorkspaceInvitationNotified.new(%{
+        aggregate_id: "#{workspace.id}:#{user.id}",
+        actor_id: inviter.id,
+        workspace_id: workspace.id,
+        target_user_id: user.id,
+        workspace_name: workspace.name,
+        invited_by_name: inviter.first_name,
+        role: "member"
+      })
+    )
+  end
+
+  defp build_workspace_url(workspace_id) do
+    base_url =
+      Application.get_env(:identity, :base_url) ||
+        Application.get_env(:jarga, :base_url, "http://localhost:4000")
+
+    "#{base_url}/app/workspaces/#{workspace_id}"
+  end
+
+  defp build_signup_url do
+    base_url =
+      Application.get_env(:identity, :base_url) ||
+        Application.get_env(:jarga, :base_url, "http://localhost:4000")
+
+    "#{base_url}/users/register"
   end
 end

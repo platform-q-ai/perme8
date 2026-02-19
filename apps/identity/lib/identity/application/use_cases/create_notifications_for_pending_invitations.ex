@@ -21,7 +21,6 @@ defmodule Identity.Application.UseCases.CreateNotificationsForPendingInvitations
   alias Identity.Domain.Events.MemberInvited
 
   @default_membership_repository Identity.Infrastructure.Repositories.MembershipRepository
-  @default_pubsub_notifier Identity.Infrastructure.Notifiers.PubSubNotifier
   @default_queries Identity.Infrastructure.Queries.WorkspaceQueries
   @default_repo Identity.Repo
   @default_event_bus Perme8.Events.EventBus
@@ -35,7 +34,6 @@ defmodule Identity.Application.UseCases.CreateNotificationsForPendingInvitations
     - `:user` - The user who just confirmed their email
 
   - `opts` - Keyword list of options:
-    - `:pubsub_notifier` - Optional PubSub notifier module (default: PubSubNotifier)
     - `:event_bus` - Optional event bus module (default: Perme8.Events.EventBus)
     - `:queries` - Optional queries module (default: WorkspaceQueries)
     - `:repo` - Optional Ecto repo (default: Identity.Repo)
@@ -50,7 +48,6 @@ defmodule Identity.Application.UseCases.CreateNotificationsForPendingInvitations
     membership_repository =
       Keyword.get(opts, :membership_repository, @default_membership_repository)
 
-    pubsub_notifier = Keyword.get(opts, :pubsub_notifier, @default_pubsub_notifier)
     queries = Keyword.get(opts, :queries, @default_queries)
     repo = Keyword.get(opts, :repo, @default_repo)
     event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
@@ -72,7 +69,7 @@ defmodule Identity.Application.UseCases.CreateNotificationsForPendingInvitations
     case result do
       {:ok, pending_invitations} ->
         Enum.each(pending_invitations, fn invitation ->
-          broadcast_invitation_notification(user, invitation, pubsub_notifier, event_bus)
+          emit_member_invited_event(user, invitation, event_bus)
         end)
 
         {:ok, []}
@@ -82,16 +79,8 @@ defmodule Identity.Application.UseCases.CreateNotificationsForPendingInvitations
     end
   end
 
-  defp broadcast_invitation_notification(user, invitation_schema, pubsub_notifier, event_bus) do
+  defp emit_member_invited_event(user, invitation_schema, event_bus) do
     inviter_name = get_inviter_name(invitation_schema.inviter)
-
-    pubsub_notifier.broadcast_invitation_created(
-      user.id,
-      invitation_schema.workspace_id,
-      invitation_schema.workspace.name,
-      inviter_name,
-      to_string(invitation_schema.role)
-    )
 
     # Emit structured domain event
     event =

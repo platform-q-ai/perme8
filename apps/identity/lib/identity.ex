@@ -601,7 +601,7 @@ defmodule Identity do
   alias Identity.Infrastructure.Repositories.MembershipRepository
   alias Identity.Domain.Policies.WorkspacePermissionsPolicy
 
-  alias Identity.Infrastructure.Notifiers.EmailAndPubSubNotifier
+  alias Identity.Domain.Events.WorkspaceUpdated
 
   @doc """
   Returns the list of workspaces for a given user.
@@ -757,8 +757,7 @@ defmodule Identity do
   Only admins and owners can edit workspaces.
   """
   def update_workspace(%User{} = user, workspace_id, attrs, opts \\ []) do
-    # Get notifier from opts or use default
-    notifier = Keyword.get(opts, :notifier, EmailAndPubSubNotifier)
+    event_bus = Keyword.get(opts, :event_bus, Perme8.Events.EventBus)
 
     with {:ok, member} <- get_member(user, workspace_id),
          :ok <- authorize_edit_workspace(member.role) do
@@ -770,11 +769,19 @@ defmodule Identity do
             |> WorkspaceSchema.changeset(attrs)
             |> Repo.update()
 
-          # Notify workspace members via injected notifier
           case result do
             {:ok, schema} ->
               updated_workspace = Workspace.from_schema(schema)
-              notifier.notify_workspace_updated(updated_workspace)
+
+              event_bus.emit(
+                WorkspaceUpdated.new(%{
+                  aggregate_id: updated_workspace.id,
+                  actor_id: user.id,
+                  workspace_id: updated_workspace.id,
+                  name: updated_workspace.name
+                })
+              )
+
               {:ok, updated_workspace}
 
             error ->
@@ -877,9 +884,6 @@ defmodule Identity do
   roles are allowed (owner role is reserved for workspace creators).
   """
   def invite_member(%User{} = inviter, workspace_id, email, role, opts \\ []) do
-    # Get notifier from opts or use default
-    notifier = Keyword.get(opts, :notifier, EmailAndPubSubNotifier)
-
     params = %{
       inviter: inviter,
       workspace_id: workspace_id,
@@ -887,8 +891,8 @@ defmodule Identity do
       role: role
     }
 
-    # Delegate to use case
-    UseCases.InviteMember.execute(params, notifier: notifier)
+    # Delegate to use case, forwarding relevant opts
+    UseCases.InviteMember.execute(params, opts)
   end
 
   @doc """

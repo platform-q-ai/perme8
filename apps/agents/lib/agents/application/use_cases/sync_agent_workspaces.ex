@@ -49,7 +49,7 @@ defmodule Agents.Application.UseCases.SyncAgentWorkspaces do
       nil ->
         {:error, :not_found}
 
-      agent ->
+      _agent ->
         # Calculate workspace changes
         changes =
           calculate_workspace_changes(

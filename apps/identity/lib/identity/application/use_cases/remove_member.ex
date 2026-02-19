@@ -18,11 +18,12 @@ defmodule Identity.Application.UseCases.RemoveMember do
   @behaviour Identity.Application.UseCases.UseCase
 
   alias Identity.Domain.Entities.WorkspaceMember
+  alias Identity.Domain.Events.MemberRemoved
   alias Identity.Domain.Policies.MembershipPolicy
   alias Identity.Domain.Policies.WorkspacePermissionsPolicy
 
   @default_membership_repository Identity.Infrastructure.Repositories.MembershipRepository
-  @default_notifier Identity.Infrastructure.Notifiers.EmailAndPubSubNotifier
+  @default_event_bus Perme8.Events.EventBus
 
   @doc """
   Executes the remove member use case.
@@ -34,8 +35,7 @@ defmodule Identity.Application.UseCases.RemoveMember do
     - `:workspace_id` - ID of the workspace
     - `:member_email` - Email of the member to remove
 
-  - `opts` - Keyword list of options:
-    - `:notifier` - Notification service implementation (default: EmailAndPubSubNotifier)
+  - `opts` - Keyword list of options
 
   ## Returns
 
@@ -53,7 +53,7 @@ defmodule Identity.Application.UseCases.RemoveMember do
     membership_repository =
       Keyword.get(opts, :membership_repository, @default_membership_repository)
 
-    notifier = Keyword.get(opts, :notifier, @default_notifier)
+    event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
 
     with {:ok, workspace} <- verify_actor_membership(actor, workspace_id, membership_repository),
          {:ok, actor_member} <- get_actor_member(actor, workspace_id, membership_repository),
@@ -61,7 +61,7 @@ defmodule Identity.Application.UseCases.RemoveMember do
          {:ok, member} <- find_member(workspace_id, member_email, membership_repository),
          :ok <- validate_can_remove(member),
          {:ok, deleted_member} <- delete_member(member, membership_repository) do
-      notify_user_if_joined(deleted_member, workspace, notifier)
+      emit_member_removed_event(deleted_member, workspace, actor, event_bus)
       {:ok, deleted_member}
     end
   end
@@ -119,20 +119,24 @@ defmodule Identity.Application.UseCases.RemoveMember do
     membership_repository.delete_member(member)
   end
 
-  # Notify user if they had already joined (not just a pending invitation)
-  defp notify_user_if_joined(
+  # Emit MemberRemoved event if the member had already joined (not just a pending invitation)
+  defp emit_member_removed_event(
          %WorkspaceMember{user_id: user_id, joined_at: joined_at},
          workspace,
-         notifier
+         actor,
+         event_bus
        )
        when not is_nil(user_id) and not is_nil(joined_at) do
-    # Fetch the user and notify (don't fail if user not found)
-    # Use Identity directly - no cross-app dependency
-    user = Identity.get_user!(user_id)
-    notifier.notify_user_removed(user, workspace)
-  rescue
-    Ecto.NoResultsError -> :ok
+    event =
+      MemberRemoved.new(%{
+        aggregate_id: "#{workspace.id}:#{user_id}",
+        actor_id: actor.id,
+        workspace_id: workspace.id,
+        target_user_id: user_id
+      })
+
+    event_bus.emit(event)
   end
 
-  defp notify_user_if_joined(_member, _workspace, _notifier), do: :ok
+  defp emit_member_removed_event(_member, _workspace, _actor, _event_bus), do: :ok
 end
