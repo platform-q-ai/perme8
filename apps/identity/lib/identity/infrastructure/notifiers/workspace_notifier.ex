@@ -74,4 +74,36 @@ defmodule Identity.Infrastructure.Notifiers.WorkspaceNotifier do
     ==============================
     """)
   end
+
+  @doc """
+  Sends an invitation email to an existing user, building the workspace URL automatically.
+  """
+  def notify_existing_user(%User{} = user, %Workspace{} = workspace, %User{} = inviter) do
+    workspace_url = build_workspace_url(workspace.id)
+    deliver_invitation_to_existing_user(user, workspace, inviter, workspace_url)
+  end
+
+  @doc """
+  Sends an invitation email to a new user, building the signup URL automatically.
+  """
+  def notify_new_user(email, %Workspace{} = workspace, %User{} = inviter) do
+    signup_url = build_signup_url()
+    deliver_invitation_to_new_user(email, workspace, inviter, signup_url)
+  end
+
+  defp build_workspace_url(workspace_id) do
+    base_url =
+      Application.get_env(:identity, :base_url) ||
+        Application.get_env(:jarga, :base_url, "http://localhost:4000")
+
+    "#{base_url}/app/workspaces/#{workspace_id}"
+  end
+
+  defp build_signup_url do
+    base_url =
+      Application.get_env(:identity, :base_url) ||
+        Application.get_env(:jarga, :base_url, "http://localhost:4000")
+
+    "#{base_url}/users/register"
+  end
 end
