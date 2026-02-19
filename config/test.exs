@@ -80,9 +80,6 @@ config :phoenix, :plug_init_mode, :runtime
 config :phoenix_live_view,
   enable_expensive_runtime_checks: true
 
-# Use mock LLM client for tests
-config :jarga, :llm_client, Jarga.Test.Support.MockLlmClient
-
 # Agents MCP: Use streamable_http transport in tests with start: true
 config :agents, :mcp_transport, {:streamable_http, start: true}
 
