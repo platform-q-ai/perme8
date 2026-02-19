@@ -20,7 +20,7 @@ env:
 jobs:
   changes:
     name: Detect changes
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-32vcpu-ubuntu-2404
     outputs:
       exo_bdd: ${{ steps.filter.outputs.exo_bdd }}
       umbrella: ${{ steps.filter.outputs.umbrella }}
@@ -79,7 +79,7 @@ jobs:
     name: exo-bdd tests
     needs: changes
     if: needs.changes.outputs.exo_bdd == 'true'
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-32vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@v4
 
@@ -107,7 +107,7 @@ jobs:
     name: Build and test
     needs: changes
     if: needs.changes.outputs.umbrella == 'true'
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-32vcpu-ubuntu-2404
 
     services:
       postgres:
@@ -193,7 +193,7 @@ jobs:
     name: Compute test matrix
     needs: [changes]
     if: needs.changes.outputs.umbrella == 'true' || needs.changes.outputs.exo_bdd == 'true'
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-32vcpu-ubuntu-2404
     outputs:
       matrix: ${{ steps.compute.outputs.matrix }}
       selective: ${{ steps.compute.outputs.selective }}
@@ -309,7 +309,7 @@ jobs:
     needs: [changes, selective-matrix]
     if: needs.changes.outputs.umbrella == 'true' || needs.changes.outputs.exo_bdd == 'true'
     timeout-minutes: ${{ matrix.timeout }}
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-32vcpu-ubuntu-2404
 
     strategy:
       fail-fast: ${{ inputs.fail_fast != false }}
@@ -420,7 +420,7 @@ jobs:
 
   ci-gate:
     name: CI gate
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-32vcpu-ubuntu-2404
     needs: [changes, test, exo-bdd, exo-bdd-360]
     if: always()
     steps:
@@ -439,7 +439,7 @@ jobs:
 
   deploy:
     name: Deploy to Render
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-32vcpu-ubuntu-2404
     needs: [changes, test, exo-bdd, selective-matrix, exo-bdd-360, ci-gate]
     if: |
       always() &&
