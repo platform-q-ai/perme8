@@ -3,6 +3,11 @@ defmodule AgentsApi.Test.Fixtures do
   Test fixtures for the Agents API app.
   """
 
+  use Boundary,
+    top_level?: true,
+    deps: [Identity, Identity.Repo, Agents],
+    exports: []
+
   alias Identity.Infrastructure.Schemas.ApiKeySchema
   alias Identity.Infrastructure.Schemas.UserSchema
   alias Identity.Application.Services.ApiKeyTokenService
