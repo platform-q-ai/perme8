@@ -53,6 +53,10 @@ config :jarga_api, JargaApi.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4005],
   secret_key_base: "jarga_api_test_secret_key_base_at_least_64_bytes_long_for_security"
 
+config :agents_api, AgentsApi.Endpoint,
+  http: [ip: {127, 0, 0, 1}, port: 4009],
+  secret_key_base: "agents_api_test_secret_key_base_at_least_64_bytes_long_for_security"
+
 # ============================================================================
 # Identity App Test Configuration
 # ============================================================================

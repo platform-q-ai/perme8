@@ -56,6 +56,16 @@ config :jarga_api, JargaApi.Endpoint,
   ],
   pubsub_server: Jarga.PubSub
 
+# Configures the AgentsApi endpoint (JSON API for agent management)
+config :agents_api, AgentsApi.Endpoint,
+  url: [host: "localhost"],
+  adapter: Bandit.PhoenixAdapter,
+  render_errors: [
+    formats: [json: AgentsApi.ErrorJSON],
+    layout: false
+  ],
+  pubsub_server: Jarga.PubSub
+
 # Configures the endpoint
 config :jarga_web, JargaWeb.Endpoint,
   url: [host: "localhost"],
