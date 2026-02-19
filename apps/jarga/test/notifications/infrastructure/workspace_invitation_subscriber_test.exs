@@ -4,36 +4,38 @@ defmodule Jarga.Notifications.Infrastructure.WorkspaceInvitationSubscriberTest d
   import Jarga.AccountsFixtures
 
   alias Ecto.Adapters.SQL.Sandbox
-  alias Identity.Domain.Events.MemberInvited
   alias Jarga.Notifications
   alias Jarga.Notifications.Infrastructure.Subscribers.WorkspaceInvitationSubscriber
   # Use Identity.Repo for all operations to ensure consistent transaction visibility
   alias Identity.Repo, as: Repo
 
   describe "WorkspaceInvitationSubscriber" do
-    test "creates notification when MemberInvited event is received" do
+    test "creates notification when workspace_invitation_created event is received" do
+      # Start the subscriber
       {:ok, pid} = WorkspaceInvitationSubscriber.start_link([])
+
+      # Allow the subscriber to use our test's database connection
       Sandbox.allow(Repo, self(), pid)
 
+      # Create test data
       user = user_fixture()
       workspace_id = Ecto.UUID.generate()
 
-      event =
-        MemberInvited.new(%{
-          aggregate_id: "#{workspace_id}:#{user.id}",
-          actor_id: Ecto.UUID.generate(),
-          user_id: user.id,
-          workspace_id: workspace_id,
-          workspace_name: "Test Workspace",
-          invited_by_name: "Test Inviter",
-          role: "member"
-        })
+      params = %{
+        user_id: user.id,
+        workspace_id: workspace_id,
+        workspace_name: "Test Workspace",
+        invited_by_name: "Test Inviter",
+        role: "member"
+      }
 
-      # Send structured event (EventHandler routes structs to handle_event/1)
-      send(pid, event)
+      # Send the event
+      send(pid, {:workspace_invitation_created, params})
 
+      # Wait for async processing
       :timer.sleep(50)
 
+      # Verify notification was created
       notifications = Notifications.list_notifications(user.id)
       assert length(notifications) == 1
 
@@ -43,37 +45,14 @@ defmodule Jarga.Notifications.Infrastructure.WorkspaceInvitationSubscriberTest d
       assert notification.data["workspace_name"] == "Test Workspace"
     end
 
-    test "ignores non-MemberInvited events" do
+    test "handles unknown messages gracefully" do
       {:ok, pid} = WorkspaceInvitationSubscriber.start_link([])
       Sandbox.allow(Repo, self(), pid)
 
-      user = user_fixture()
-
-      # Send a different event struct
-      event =
-        Jarga.Notifications.Domain.Events.NotificationCreated.new(%{
-          aggregate_id: Ecto.UUID.generate(),
-          actor_id: Ecto.UUID.generate(),
-          notification_id: Ecto.UUID.generate(),
-          user_id: user.id,
-          type: "test"
-        })
-
-      send(pid, event)
-
-      :timer.sleep(50)
-
-      # No notification should be created
-      notifications = Notifications.list_notifications(user.id)
-      assert length(notifications) == 0
-    end
-
-    test "handles unknown non-struct messages gracefully" do
-      {:ok, pid} = WorkspaceInvitationSubscriber.start_link([])
-      Sandbox.allow(Repo, self(), pid)
-
+      # Send unknown message
       send(pid, {:unknown_event, %{}})
 
+      # Process should still be alive
       :timer.sleep(10)
       assert Process.alive?(pid)
     end
