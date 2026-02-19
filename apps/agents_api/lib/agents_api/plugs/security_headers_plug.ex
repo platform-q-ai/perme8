@@ -13,7 +13,12 @@ defmodule AgentsApi.Plugs.SecurityHeadersPlug do
 
   import Plug.Conn
 
+  @behaviour Plug
+
+  @impl Plug
   def init(opts), do: opts
+
+  @impl Plug
 
   def call(conn, _opts) do
     conn

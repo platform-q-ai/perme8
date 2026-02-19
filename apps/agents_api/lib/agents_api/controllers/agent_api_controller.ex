@@ -20,8 +20,7 @@ defmodule AgentsApi.AgentApiController do
 
   use AgentsApi, :controller
 
-  @allowed_create_fields ~w(name description system_prompt model temperature visibility enabled)
-  @allowed_update_fields ~w(name description system_prompt model temperature visibility enabled)
+  @allowed_fields ~w(name description system_prompt model temperature visibility enabled)
 
   @doc """
   Lists all agents owned by the authenticated user.
@@ -59,7 +58,7 @@ defmodule AgentsApi.AgentApiController do
 
     attrs =
       params
-      |> Map.take(@allowed_create_fields)
+      |> Map.take(@allowed_fields)
       |> Map.put("user_id", user.id)
 
     case Agents.create_user_agent(attrs) do
@@ -80,7 +79,7 @@ defmodule AgentsApi.AgentApiController do
   """
   def update(conn, %{"id" => id} = params) do
     user = conn.assigns.current_user
-    attrs = Map.take(params, @allowed_update_fields)
+    attrs = Map.take(params, @allowed_fields)
 
     case Agents.update_user_agent(id, user.id, attrs) do
       {:ok, agent} ->

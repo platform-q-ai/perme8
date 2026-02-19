@@ -83,17 +83,12 @@ defmodule AgentsApi.SkillApiController do
 
     case Agents.get_user_agent(id, user.id) do
       {:ok, _agent} ->
-        skills = Enum.map(@available_skills, &struct_skill/1)
-        render(conn, :index, skills: skills)
+        render(conn, :index, skills: @available_skills)
 
       {:error, :not_found} ->
         conn
         |> put_status(:not_found)
         |> render(:error, message: "Agent not found")
     end
-  end
-
-  defp struct_skill(skill_map) do
-    %{name: skill_map.name, description: skill_map.description}
   end
 end
