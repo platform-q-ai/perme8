@@ -7,7 +7,6 @@ defmodule Agents.Application.UseCases.UpdateUserAgent do
 
   @default_agent_repo Agents.Infrastructure.Repositories.AgentRepository
   @default_workspace_agent_repo Agents.Infrastructure.Repositories.WorkspaceAgentRepository
-  @default_notifier Agents.Infrastructure.Notifiers.PubSubNotifier
   @default_event_bus Perme8.Events.EventBus
 
   alias Agents.Domain.Events.AgentUpdated
@@ -22,8 +21,6 @@ defmodule Agents.Application.UseCases.UpdateUserAgent do
   - `opts` - Keyword list with:
     - `:agent_repo` - Repository module for agents (default: AgentRepository)
     - `:workspace_agent_repo` - Repository for workspace-agent associations (default: WorkspaceAgentRepository)
-    - `:notifier` - Notifier module for PubSub events (default: PubSubNotifier)
-
   ## Returns
   - `{:ok, agent}` - Successfully updated agent
   - `{:error, :not_found}` - Agent not found or user not owner
@@ -32,7 +29,6 @@ defmodule Agents.Application.UseCases.UpdateUserAgent do
   def execute(agent_id, user_id, attrs, opts \\ []) do
     agent_repo = Keyword.get(opts, :agent_repo, @default_agent_repo)
     workspace_agent_repo = Keyword.get(opts, :workspace_agent_repo, @default_workspace_agent_repo)
-    notifier = Keyword.get(opts, :notifier, @default_notifier)
     event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
 
     case agent_repo.get_agent_for_user(user_id, agent_id) do
@@ -44,9 +40,6 @@ defmodule Agents.Application.UseCases.UpdateUserAgent do
           {:ok, updated_agent} ->
             # Get all workspaces this agent is in
             workspace_ids = workspace_agent_repo.get_agent_workspace_ids(agent_id)
-
-            # Notify all affected workspaces and user
-            notifier.notify_agent_updated(updated_agent, workspace_ids)
 
             # Emit domain event
             emit_agent_updated_event(agent_id, user_id, workspace_ids, event_bus)

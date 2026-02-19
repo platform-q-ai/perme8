@@ -8,7 +8,6 @@ defmodule Agents.Application.UseCases.DeleteUserAgent do
 
   @default_agent_repo Agents.Infrastructure.Repositories.AgentRepository
   @default_workspace_agent_repo Agents.Infrastructure.Repositories.WorkspaceAgentRepository
-  @default_notifier Agents.Infrastructure.Notifiers.PubSubNotifier
   @default_event_bus Perme8.Events.EventBus
 
   alias Agents.Domain.Events.AgentDeleted
@@ -22,8 +21,6 @@ defmodule Agents.Application.UseCases.DeleteUserAgent do
   - `opts` - Keyword list with:
     - `:agent_repo` - Repository module for agents (default: AgentRepository)
     - `:workspace_agent_repo` - Repository for workspace-agent associations (default: WorkspaceAgentRepository)
-    - `:notifier` - Notifier module for PubSub events (default: PubSubNotifier)
-
   ## Returns
   - `{:ok, agent}` - Successfully deleted agent
   - `{:error, :not_found}` - Agent not found or user not owner
@@ -32,7 +29,6 @@ defmodule Agents.Application.UseCases.DeleteUserAgent do
   def execute(agent_id, user_id, opts \\ []) do
     agent_repo = Keyword.get(opts, :agent_repo, @default_agent_repo)
     workspace_agent_repo = Keyword.get(opts, :workspace_agent_repo, @default_workspace_agent_repo)
-    notifier = Keyword.get(opts, :notifier, @default_notifier)
     event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
 
     case agent_repo.get_agent_for_user(user_id, agent_id) do
@@ -45,9 +41,6 @@ defmodule Agents.Application.UseCases.DeleteUserAgent do
 
         case agent_repo.delete_agent(agent) do
           {:ok, deleted_agent} ->
-            # Notify all affected workspaces that the agent was deleted
-            notifier.notify_agent_deleted(deleted_agent, workspace_ids)
-
             # Emit domain event
             emit_agent_deleted_event(agent_id, user_id, workspace_ids, event_bus)
 
