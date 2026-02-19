@@ -8,11 +8,6 @@ defmodule Agents.Application.UseCases.UpdateUserAgentTest do
   import Agents.Test.AccountsFixtures
   import Agents.AgentsFixtures
 
-  # Mock notifier for testing
-  defmodule MockNotifier do
-    def notify_agent_updated(_agent, _workspace_ids), do: :ok
-  end
-
   describe "execute/4 - event emission" do
     test "emits AgentUpdated event via event_bus" do
       ensure_test_event_bus_started()
@@ -22,7 +17,6 @@ defmodule Agents.Application.UseCases.UpdateUserAgentTest do
 
       assert {:ok, updated_agent} =
                UpdateUserAgent.execute(agent.id, user.id, %{name: "Updated Agent"},
-                 notifier: MockNotifier,
                  event_bus: TestEventBus
                )
 
@@ -42,7 +36,6 @@ defmodule Agents.Application.UseCases.UpdateUserAgentTest do
 
       assert {:error, :not_found} =
                UpdateUserAgent.execute(Ecto.UUID.generate(), user.id, %{name: "X"},
-                 notifier: MockNotifier,
                  event_bus: TestEventBus
                )
 

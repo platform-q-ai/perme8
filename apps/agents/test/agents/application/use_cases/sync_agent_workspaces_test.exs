@@ -10,11 +10,6 @@ defmodule Agents.Application.UseCases.SyncAgentWorkspacesTest do
   import Agents.Test.WorkspacesFixtures
   import Agents.AgentsFixtures
 
-  # Mock notifier for testing
-  defmodule MockNotifier do
-    def notify_workspace_associations_changed(_agent, _added, _removed), do: :ok
-  end
-
   describe "execute/4 - event emission" do
     test "emits AgentAddedToWorkspace events for new workspaces" do
       ensure_test_event_bus_started()
@@ -25,7 +20,6 @@ defmodule Agents.Application.UseCases.SyncAgentWorkspacesTest do
 
       assert :ok =
                SyncAgentWorkspaces.execute(agent.id, user.id, [workspace.id],
-                 notifier: MockNotifier,
                  event_bus: TestEventBus
                )
 
@@ -50,20 +44,14 @@ defmodule Agents.Application.UseCases.SyncAgentWorkspacesTest do
 
       # First, add agent to workspace
       :ok =
-        SyncAgentWorkspaces.execute(agent.id, user.id, [workspace.id],
-          notifier: MockNotifier,
-          event_bus: TestEventBus
-        )
+        SyncAgentWorkspaces.execute(agent.id, user.id, [workspace.id], event_bus: TestEventBus)
 
       # Reset event bus
       TestEventBus.reset()
 
       # Now remove by syncing with empty list
       :ok =
-        SyncAgentWorkspaces.execute(agent.id, user.id, [],
-          notifier: MockNotifier,
-          event_bus: TestEventBus
-        )
+        SyncAgentWorkspaces.execute(agent.id, user.id, [], event_bus: TestEventBus)
 
       events = TestEventBus.get_events()
 
@@ -84,7 +72,6 @@ defmodule Agents.Application.UseCases.SyncAgentWorkspacesTest do
 
       assert {:error, :not_found} =
                SyncAgentWorkspaces.execute(Ecto.UUID.generate(), user.id, [],
-                 notifier: MockNotifier,
                  event_bus: TestEventBus
                )
 

@@ -8,11 +8,6 @@ defmodule Agents.Application.UseCases.DeleteUserAgentTest do
   import Agents.Test.AccountsFixtures
   import Agents.AgentsFixtures
 
-  # Mock notifier for testing
-  defmodule MockNotifier do
-    def notify_agent_deleted(_agent, _workspace_ids), do: :ok
-  end
-
   describe "execute/3 - event emission" do
     test "emits AgentDeleted event via event_bus" do
       ensure_test_event_bus_started()
@@ -21,10 +16,7 @@ defmodule Agents.Application.UseCases.DeleteUserAgentTest do
       agent = agent_fixture(user)
 
       assert {:ok, _deleted_agent} =
-               DeleteUserAgent.execute(agent.id, user.id,
-                 notifier: MockNotifier,
-                 event_bus: TestEventBus
-               )
+               DeleteUserAgent.execute(agent.id, user.id, event_bus: TestEventBus)
 
       assert [%AgentDeleted{} = event] =
                TestEventBus.get_events()
@@ -41,10 +33,7 @@ defmodule Agents.Application.UseCases.DeleteUserAgentTest do
       user = user_fixture()
 
       assert {:error, :not_found} =
-               DeleteUserAgent.execute(Ecto.UUID.generate(), user.id,
-                 notifier: MockNotifier,
-                 event_bus: TestEventBus
-               )
+               DeleteUserAgent.execute(Ecto.UUID.generate(), user.id, event_bus: TestEventBus)
 
       assert [] = TestEventBus.get_events()
     end

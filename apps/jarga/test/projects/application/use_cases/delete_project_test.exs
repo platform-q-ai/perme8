@@ -10,11 +10,6 @@ defmodule Jarga.Projects.UseCases.DeleteProjectTest do
   import Jarga.WorkspacesFixtures
   import Jarga.ProjectsFixtures
 
-  # Mock notifier for testing
-  defmodule MockNotifier do
-    def notify_project_deleted(_project, _workspace_id), do: :ok
-  end
-
   describe "execute/2 - successful project deletion" do
     test "owner can delete their own project" do
       owner = user_fixture()
@@ -27,9 +22,7 @@ defmodule Jarga.Projects.UseCases.DeleteProjectTest do
         project_id: project.id
       }
 
-      opts = [notifier: MockNotifier]
-
-      assert {:ok, deleted_project} = DeleteProject.execute(params, opts)
+      assert {:ok, deleted_project} = DeleteProject.execute(params)
       assert deleted_project.id == project.id
 
       # Verify project is actually deleted
@@ -52,9 +45,7 @@ defmodule Jarga.Projects.UseCases.DeleteProjectTest do
         project_id: project.id
       }
 
-      opts = [notifier: MockNotifier]
-
-      assert {:ok, deleted_project} = DeleteProject.execute(params, opts)
+      assert {:ok, deleted_project} = DeleteProject.execute(params)
       assert deleted_project.id == project.id
     end
 
@@ -77,9 +68,7 @@ defmodule Jarga.Projects.UseCases.DeleteProjectTest do
         project_id: project.id
       }
 
-      opts = [notifier: MockNotifier]
-
-      assert {:ok, deleted_project} = DeleteProject.execute(params, opts)
+      assert {:ok, deleted_project} = DeleteProject.execute(params)
       assert deleted_project.id == project.id
     end
 
@@ -100,9 +89,7 @@ defmodule Jarga.Projects.UseCases.DeleteProjectTest do
         project_id: project.id
       }
 
-      opts = [notifier: MockNotifier]
-
-      assert {:ok, deleted_project} = DeleteProject.execute(params, opts)
+      assert {:ok, deleted_project} = DeleteProject.execute(params)
       assert deleted_project.id == project.id
     end
   end
@@ -210,7 +197,7 @@ defmodule Jarga.Projects.UseCases.DeleteProjectTest do
         project_id: project.id
       }
 
-      opts = [notifier: MockNotifier, event_bus: TestEventBus]
+      opts = [event_bus: TestEventBus]
 
       assert {:ok, deleted_project} = DeleteProject.execute(params, opts)
 
@@ -238,59 +225,10 @@ defmodule Jarga.Projects.UseCases.DeleteProjectTest do
         project_id: Ecto.UUID.generate()
       }
 
-      opts = [notifier: MockNotifier, event_bus: TestEventBus]
+      opts = [event_bus: TestEventBus]
 
       assert {:error, _reason} = DeleteProject.execute(params, opts)
       assert [] = TestEventBus.get_events()
-    end
-  end
-
-  describe "execute/2 - notification behavior" do
-    test "calls notifier with deleted project and workspace_id" do
-      owner = user_fixture()
-      workspace = workspace_fixture(owner)
-      project = project_fixture(owner, workspace)
-
-      # Create a test process to capture notification
-      test_pid = self()
-
-      defmodule TestNotifier do
-        def notify_project_deleted(project, workspace_id) do
-          send(Process.get(:test_pid), {:notified, project, workspace_id})
-          :ok
-        end
-      end
-
-      Process.put(:test_pid, test_pid)
-
-      params = %{
-        actor: owner,
-        workspace_id: workspace.id,
-        project_id: project.id
-      }
-
-      opts = [notifier: TestNotifier]
-
-      assert {:ok, deleted_project} = DeleteProject.execute(params, opts)
-
-      assert_receive {:notified, notified_project, notified_workspace_id}
-      assert notified_project.id == deleted_project.id
-      assert notified_workspace_id == workspace.id
-    end
-
-    test "uses default notifier when not specified" do
-      owner = user_fixture()
-      workspace = workspace_fixture(owner)
-      project = project_fixture(owner, workspace)
-
-      params = %{
-        actor: owner,
-        workspace_id: workspace.id,
-        project_id: project.id
-      }
-
-      # Should not raise error with default notifier
-      assert {:ok, _deleted_project} = DeleteProject.execute(params, [])
     end
   end
 

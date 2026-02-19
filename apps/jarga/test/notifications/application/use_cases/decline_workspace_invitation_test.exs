@@ -12,11 +12,6 @@ defmodule Jarga.Notifications.Application.UseCases.DeclineWorkspaceInvitationTes
   import Jarga.WorkspacesFixtures
   import Jarga.NotificationsFixtures
 
-  # Mock notifier to prevent real PubSub broadcasts
-  defmodule MockNotifier do
-    def broadcast_invitation_declined(_user_id, _workspace_id), do: :ok
-  end
-
   describe "execute/3 - event emission" do
     test "emits NotificationActionTaken event with action=declined" do
       ensure_test_event_bus_started()
@@ -40,7 +35,6 @@ defmodule Jarga.Notifications.Application.UseCases.DeclineWorkspaceInvitationTes
 
       assert {:ok, _notification} =
                DeclineWorkspaceInvitation.execute(notification.id, invitee.id,
-                 notifier: MockNotifier,
                  event_bus: TestEventBus
                )
 
@@ -60,10 +54,7 @@ defmodule Jarga.Notifications.Application.UseCases.DeclineWorkspaceInvitationTes
       fake_id = Ecto.UUID.generate()
 
       assert {:error, :not_found} =
-               DeclineWorkspaceInvitation.execute(fake_id, user.id,
-                 notifier: MockNotifier,
-                 event_bus: TestEventBus
-               )
+               DeclineWorkspaceInvitation.execute(fake_id, user.id, event_bus: TestEventBus)
 
       assert [] = TestEventBus.get_events()
     end

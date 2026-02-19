@@ -8,24 +8,6 @@ defmodule Identity.Application.UseCases.InviteMemberTest do
   import Identity.AccountsFixtures
   import Identity.WorkspacesFixtures
 
-  # Mock notifier for testing
-  defmodule MockNotifier do
-    def notify_existing_user(_user, _workspace, _inviter), do: :ok
-    def notify_new_user(_email, _workspace, _inviter), do: :ok
-  end
-
-  # Mock PubSub notifier for testing event bus
-  defmodule MockPubSubNotifier do
-    def broadcast_invitation_created(
-          _user_id,
-          _workspace_id,
-          _workspace_name,
-          _inviter_name,
-          _role
-        ),
-        do: :ok
-  end
-
   defp ensure_test_event_bus_started do
     case TestEventBus.start_link([]) do
       {:ok, _pid} -> :ok
@@ -46,7 +28,7 @@ defmodule Identity.Application.UseCases.InviteMemberTest do
         role: :admin
       }
 
-      opts = [notifier: MockNotifier]
+      opts = [skip_email: true]
 
       assert {:ok, {:invitation_sent, invitation}} = InviteMember.execute(params, opts)
       assert invitation.email == invitee.email
@@ -82,7 +64,7 @@ defmodule Identity.Application.UseCases.InviteMemberTest do
         role: :admin
       }
 
-      opts = [notifier: MockNotifier]
+      opts = [skip_email: true]
 
       # First invitation succeeds
       assert {:ok, {:invitation_sent, _}} = InviteMember.execute(params, opts)
@@ -134,7 +116,7 @@ defmodule Identity.Application.UseCases.InviteMemberTest do
         role: :admin
       }
 
-      opts = [notifier: MockNotifier, event_bus: TestEventBus]
+      opts = [skip_email: true, event_bus: TestEventBus]
 
       assert {:ok, {:invitation_sent, _}} = InviteMember.execute(params, opts)
 
@@ -180,7 +162,7 @@ defmodule Identity.Application.UseCases.InviteMemberTest do
         role: :admin
       }
 
-      opts = [notifier: MockNotifier]
+      opts = [skip_email: true]
 
       assert {:ok, {:invitation_sent, invitation}} = InviteMember.execute(params, opts)
       assert invitation.email == email
@@ -200,7 +182,7 @@ defmodule Identity.Application.UseCases.InviteMemberTest do
         role: :member
       }
 
-      opts = [notifier: MockNotifier, event_bus: TestEventBus]
+      opts = [skip_email: true, event_bus: TestEventBus]
 
       assert {:ok, {:invitation_sent, _}} = InviteMember.execute(params, opts)
 
@@ -220,7 +202,7 @@ defmodule Identity.Application.UseCases.InviteMemberTest do
         role: :admin
       }
 
-      opts = [notifier: MockNotifier]
+      opts = [skip_email: true]
 
       assert {:ok, {:invitation_sent, invitation}} = InviteMember.execute(params, opts)
       assert invitation.email == "user@example.com"

@@ -11,17 +11,6 @@ defmodule Jarga.Documents.Application.UseCases.UpdateDocumentTest do
   import Jarga.WorkspacesFixtures
   import Jarga.DocumentsFixtures
 
-  # Test notifier for testing notifications without actual PubSub
-  defmodule TestNotifier do
-    @behaviour Jarga.Documents.Application.Services.NotificationService
-
-    def notify_document_visibility_changed(_document), do: send(self(), :visibility_notified)
-    def notify_document_pinned_changed(_document), do: send(self(), :pinned_notified)
-    def notify_document_title_changed(_document), do: send(self(), :title_notified)
-    def notify_document_created(_document), do: send(self(), :created_notified)
-    def notify_document_deleted(_document), do: send(self(), :deleted_notified)
-  end
-
   describe "execute/2 - successful document updates" do
     test "owner can update their own document" do
       owner = user_fixture()
@@ -258,16 +247,6 @@ defmodule Jarga.Documents.Application.UseCases.UpdateDocumentTest do
   end
 
   describe "execute/2 - event emission" do
-    # Mock notifier that does nothing (for event tests)
-    defmodule EventTestNotifier do
-      @behaviour Jarga.Documents.Application.Services.NotificationService
-      def notify_document_created(_document), do: :ok
-      def notify_document_deleted(_document), do: :ok
-      def notify_document_title_changed(_document), do: :ok
-      def notify_document_visibility_changed(_document), do: :ok
-      def notify_document_pinned_changed(_document), do: :ok
-    end
-
     test "emits DocumentTitleChanged event when title changes" do
       ensure_test_event_bus_started()
 
@@ -281,7 +260,7 @@ defmodule Jarga.Documents.Application.UseCases.UpdateDocumentTest do
         attrs: %{title: "New Title"}
       }
 
-      opts = [notifier: EventTestNotifier, event_bus: TestEventBus]
+      opts = [event_bus: TestEventBus]
 
       assert {:ok, _updated} = UpdateDocument.execute(params, opts)
 
@@ -306,7 +285,7 @@ defmodule Jarga.Documents.Application.UseCases.UpdateDocumentTest do
         attrs: %{is_public: true}
       }
 
-      opts = [notifier: EventTestNotifier, event_bus: TestEventBus]
+      opts = [event_bus: TestEventBus]
 
       assert {:ok, _updated} = UpdateDocument.execute(params, opts)
 
@@ -329,7 +308,7 @@ defmodule Jarga.Documents.Application.UseCases.UpdateDocumentTest do
         attrs: %{is_pinned: true}
       }
 
-      opts = [notifier: EventTestNotifier, event_bus: TestEventBus]
+      opts = [event_bus: TestEventBus]
 
       assert {:ok, _updated} = UpdateDocument.execute(params, opts)
 
@@ -352,7 +331,7 @@ defmodule Jarga.Documents.Application.UseCases.UpdateDocumentTest do
         attrs: %{title: document.title}
       }
 
-      opts = [notifier: EventTestNotifier, event_bus: TestEventBus]
+      opts = [event_bus: TestEventBus]
 
       assert {:ok, _updated} = UpdateDocument.execute(params, opts)
       assert [] = TestEventBus.get_events()
@@ -371,7 +350,7 @@ defmodule Jarga.Documents.Application.UseCases.UpdateDocumentTest do
         attrs: %{title: "New Title", is_public: true}
       }
 
-      opts = [notifier: EventTestNotifier, event_bus: TestEventBus]
+      opts = [event_bus: TestEventBus]
 
       assert {:ok, _updated} = UpdateDocument.execute(params, opts)
 
@@ -397,57 +376,6 @@ defmodule Jarga.Documents.Application.UseCases.UpdateDocumentTest do
       }
 
       assert {:error, %Ecto.Changeset{}} = UpdateDocument.execute(params)
-    end
-  end
-
-  describe "execute/2 - notifications" do
-    setup do
-      {:ok, notifier: TestNotifier}
-    end
-
-    test "sends notification when visibility changes", %{notifier: notifier} do
-      owner = user_fixture()
-      workspace = workspace_fixture(owner)
-      document = document_fixture(owner, workspace, nil, %{is_public: false})
-
-      params = %{
-        actor: owner,
-        document_id: document.id,
-        attrs: %{is_public: true}
-      }
-
-      assert {:ok, _updated} = UpdateDocument.execute(params, notifier: notifier)
-      assert_received :visibility_notified
-    end
-
-    test "sends notification when pin status changes", %{notifier: notifier} do
-      owner = user_fixture()
-      workspace = workspace_fixture(owner)
-      document = document_fixture(owner, workspace, nil, %{is_pinned: false})
-
-      params = %{
-        actor: owner,
-        document_id: document.id,
-        attrs: %{is_pinned: true}
-      }
-
-      assert {:ok, _updated} = UpdateDocument.execute(params, notifier: notifier)
-      assert_received :pinned_notified
-    end
-
-    test "sends notification when title changes", %{notifier: notifier} do
-      owner = user_fixture()
-      workspace = workspace_fixture(owner)
-      document = document_fixture(owner, workspace, nil, %{})
-
-      params = %{
-        actor: owner,
-        document_id: document.id,
-        attrs: %{title: "New Title"}
-      }
-
-      assert {:ok, _updated} = UpdateDocument.execute(params, notifier: notifier)
-      assert_received :title_notified
     end
   end
 
