@@ -28,6 +28,7 @@ jobs:
       alkali: ${{ steps.filter.outputs.alkali }}
       identity: ${{ steps.filter.outputs.identity }}
       agents: ${{ steps.filter.outputs.agents }}
+      agents_api: ${{ steps.filter.outputs.agents_api }}
       jarga: ${{ steps.filter.outputs.jarga }}
       jarga_api: ${{ steps.filter.outputs.jarga_api }}
       jarga_web: ${{ steps.filter.outputs.jarga_web }}
@@ -60,6 +61,8 @@ jobs:
               - 'apps/identity/**/*.{ex,exs,heex,ts,js,cjs,css,json,feature,po,pot}'
             agents:
               - 'apps/agents/**/*.{ex,exs,heex,ts,js,cjs,css,json,feature}'
+            agents_api:
+              - 'apps/agents_api/**/*.{ex,exs,heex,ts,js,cjs,css,json,feature}'
             jarga:
               - 'apps/jarga/**/*.{ex,exs,heex,ts,js,cjs,css,json,bat}'
               - 'apps/jarga/**/rel/overlays/bin/*'
@@ -205,6 +208,7 @@ jobs:
           CHANGED_ALKALI: ${{ needs.changes.outputs.alkali }}
           CHANGED_IDENTITY: ${{ needs.changes.outputs.identity }}
           CHANGED_AGENTS: ${{ needs.changes.outputs.agents }}
+          CHANGED_AGENTS_API: ${{ needs.changes.outputs.agents_api }}
           CHANGED_JARGA: ${{ needs.changes.outputs.jarga }}
           CHANGED_JARGA_API: ${{ needs.changes.outputs.jarga_api }}
           CHANGED_JARGA_WEB: ${{ needs.changes.outputs.jarga_web }}
@@ -221,6 +225,7 @@ jobs:
           ALL_COMBOS = [
               {"app": "agents",    "domain": "http",     "config_name": "agents",                      "timeout": 10},
               {"app": "agents",    "domain": "security", "config_name": "agents",                      "timeout": 15},
+              {"app": "agents-api","domain": "http",    "config_name": "agents-api",                  "timeout": 10},
               {"app": "alkali",    "domain": "cli",      "config_name": "alkali",                      "timeout": 5},
               {"app": "erm",       "domain": "http",     "config_name": "entity-relationship-manager", "timeout": 10},
               {"app": "erm",       "domain": "security", "config_name": "entity-relationship-manager", "timeout": 15},
@@ -232,31 +237,33 @@ jobs:
               {"app": "jarga-web", "domain": "security", "config_name": "jarga-web",                   "timeout": 15},
           ]
 
-          # Dependency tree: if a dependency changes, all dependents need testing
-          # identity <- agents, jarga, jarga_api, erm (and transitively jarga_web)
-          # agents <- jarga, jarga_web
-          # erm <- agents
-          # jarga <- jarga_web, jarga_api, erm
-          def apps_needing_tests():
-              """Return set of app names (matrix-style) that need testing."""
-              changed = os.environ
-              needs_test = set()
+           # Dependency tree: if a dependency changes, all dependents need testing
+           # identity <- agents, agents-api, jarga, jarga_api, erm (and transitively jarga_web)
+           # agents <- agents-api, jarga, jarga_web
+           # erm <- agents
+           # jarga <- jarga_web, jarga_api, erm
+           def apps_needing_tests():
+               """Return set of app names (matrix-style) that need testing."""
+               changed = os.environ
+               needs_test = set()
 
-              # Direct changes
-              if changed.get("CHANGED_ALKALI") == "true":
-                  needs_test.add("alkali")
-              if changed.get("CHANGED_IDENTITY") == "true":
-                  needs_test.update(["identity", "agents", "jarga-api", "erm", "jarga-web"])
-              if changed.get("CHANGED_AGENTS") == "true":
-                  needs_test.update(["agents", "jarga-web"])
-              if changed.get("CHANGED_JARGA") == "true":
-                  needs_test.update(["jarga-web", "jarga-api", "erm"])
-              if changed.get("CHANGED_JARGA_API") == "true":
-                  needs_test.add("jarga-api")
-              if changed.get("CHANGED_JARGA_WEB") == "true":
-                  needs_test.add("jarga-web")
-              if changed.get("CHANGED_ERM") == "true":
-                  needs_test.update(["erm", "agents"])
+               # Direct changes
+               if changed.get("CHANGED_ALKALI") == "true":
+                   needs_test.add("alkali")
+               if changed.get("CHANGED_IDENTITY") == "true":
+                   needs_test.update(["identity", "agents", "agents-api", "jarga-api", "erm", "jarga-web"])
+               if changed.get("CHANGED_AGENTS") == "true":
+                   needs_test.update(["agents", "agents-api", "jarga-web"])
+               if changed.get("CHANGED_AGENTS_API") == "true":
+                   needs_test.add("agents-api")
+               if changed.get("CHANGED_JARGA") == "true":
+                   needs_test.update(["jarga-web", "jarga-api", "erm"])
+               if changed.get("CHANGED_JARGA_API") == "true":
+                   needs_test.add("jarga-api")
+               if changed.get("CHANGED_JARGA_WEB") == "true":
+                   needs_test.add("jarga-web")
+               if changed.get("CHANGED_ERM") == "true":
+                   needs_test.update(["erm", "agents"])
 
               return needs_test
 
