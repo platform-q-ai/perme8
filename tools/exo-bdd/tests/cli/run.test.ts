@@ -332,6 +332,118 @@ describe('buildCucumberArgs', () => {
 
     expect(args).not.toContain('--retry')
   })
+
+  test('includes --format allure-cucumberjs/reporter when allure is true', () => {
+    const args = buildCucumberArgs({
+      ...baseOptions,
+      features: './features/**/*.feature',
+      allure: true,
+    })
+
+    const formatIdx = args.indexOf('--format')
+    expect(formatIdx).toBeGreaterThanOrEqual(0)
+    expect(args[formatIdx + 1]).toBe('allure-cucumberjs/reporter')
+  })
+
+  test('includes --format allure-cucumberjs/reporter when allure is object', () => {
+    const args = buildCucumberArgs({
+      ...baseOptions,
+      features: './features/**/*.feature',
+      allure: {},
+    })
+
+    const formatIdx = args.indexOf('--format')
+    expect(formatIdx).toBeGreaterThanOrEqual(0)
+    expect(args[formatIdx + 1]).toBe('allure-cucumberjs/reporter')
+  })
+
+  test('includes --format allure-cucumberjs/reporter when allure object has resultsDir', () => {
+    const args = buildCucumberArgs({
+      ...baseOptions,
+      features: './features/**/*.feature',
+      allure: { resultsDir: 'custom-dir' },
+    })
+
+    const formatIdx = args.indexOf('--format')
+    expect(formatIdx).toBeGreaterThanOrEqual(0)
+    expect(args[formatIdx + 1]).toBe('allure-cucumberjs/reporter')
+  })
+
+  test('does not include --format allure-cucumberjs/reporter when allure is false', () => {
+    const args = buildCucumberArgs({
+      ...baseOptions,
+      features: './features/**/*.feature',
+      allure: false,
+    })
+
+    expect(args).not.toContain('allure-cucumberjs/reporter')
+  })
+
+  test('does not include --format allure-cucumberjs/reporter when allure is undefined', () => {
+    const args = buildCucumberArgs({
+      ...baseOptions,
+      features: './features/**/*.feature',
+    })
+
+    expect(args).not.toContain('allure-cucumberjs/reporter')
+  })
+
+  test('includes --format-options with resultsDir when configured', () => {
+    const args = buildCucumberArgs({
+      ...baseOptions,
+      features: './features/**/*.feature',
+      allure: { resultsDir: 'my-results' },
+    })
+
+    const optIdx = args.indexOf('--format-options')
+    expect(optIdx).toBeGreaterThanOrEqual(0)
+    expect(args[optIdx + 1]).toBe('{"resultsDir":"my-results"}')
+  })
+
+  test('does not include --format-options when allure is true (boolean)', () => {
+    const args = buildCucumberArgs({
+      ...baseOptions,
+      features: './features/**/*.feature',
+      allure: true,
+    })
+
+    expect(args).not.toContain('--format-options')
+  })
+
+  test('does not include --format-options when allure object has no resultsDir', () => {
+    const args = buildCucumberArgs({
+      ...baseOptions,
+      features: './features/**/*.feature',
+      allure: {},
+    })
+
+    expect(args).not.toContain('--format-options')
+  })
+
+  test('allure format args come before passthrough args', () => {
+    const args = buildCucumberArgs({
+      ...baseOptions,
+      features: './features/**/*.feature',
+      allure: { resultsDir: 'r' },
+      passthrough: ['--format', 'progress'],
+    })
+
+    const allureIdx = args.indexOf('allure-cucumberjs/reporter')
+    const progressIdx = args.indexOf('progress')
+    expect(allureIdx).toBeLessThan(progressIdx)
+  })
+
+  test('allure format args do not interfere with existing passthrough --format', () => {
+    const args = buildCucumberArgs({
+      ...baseOptions,
+      features: './features/**/*.feature',
+      allure: true,
+      passthrough: ['--format', 'progress'],
+    })
+
+    expect(args).toContain('allure-cucumberjs/reporter')
+    expect(args).toContain('progress')
+  })
 })
 
 describe('generateSetupContent', () => {

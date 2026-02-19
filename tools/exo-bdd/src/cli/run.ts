@@ -1,7 +1,7 @@
 import { resolve, dirname, join } from 'node:path'
 import { mkdirSync, existsSync, rmSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
-import type { ExoBddConfig } from '../application/config/index.ts'
+import type { ExoBddConfig, AllureReportConfig } from '../application/config/index.ts'
 import { ServerManager, DockerManager } from '../infrastructure/servers/index.ts'
 
 export interface RunOptions {
@@ -115,8 +115,9 @@ export function buildCucumberArgs(options: {
   passthrough: string[]
   tags?: string
   noRetry?: boolean
+  allure?: AllureReportConfig
 }): string[] {
-  const { features, configDir, setupPath, stepsImport, passthrough, tags, noRetry } = options
+  const { features, configDir, setupPath, stepsImport, passthrough, tags, noRetry, allure } = options
 
   // Resolve feature paths relative to the config file directory
   const featurePaths = Array.isArray(features) ? features : [features]
@@ -138,6 +139,14 @@ export function buildCucumberArgs(options: {
   // Disable retries when running in selective mode
   if (noRetry) {
     args.push('--retry', '0')
+  }
+
+  // Inject Allure formatter when enabled
+  if (allure && allure !== false) {
+    args.push('--format', 'allure-cucumberjs/reporter')
+    if (typeof allure === 'object' && allure.resultsDir) {
+      args.push('--format-options', JSON.stringify({ resultsDir: allure.resultsDir }))
+    }
   }
 
   args.push(...passthrough)
