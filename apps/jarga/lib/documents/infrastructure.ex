@@ -15,9 +15,6 @@ defmodule Jarga.Documents.Infrastructure do
   ## Queries (Ecto Query Builders)
   - `Queries.DocumentQueries` - Document query operations
 
-  ## Notifiers (External Communication)
-  - `Notifiers.PubSubNotifier` - PubSub notifications for documents
-
   ## Services
   - `Services.ComponentLoader` - Polymorphic component loading
 
@@ -52,7 +49,6 @@ defmodule Jarga.Documents.Infrastructure do
       Repositories.DocumentRepository,
       Repositories.AuthorizationRepository,
       Queries.DocumentQueries,
-      Notifiers.PubSubNotifier,
       Services.ComponentLoader
     ]
 end

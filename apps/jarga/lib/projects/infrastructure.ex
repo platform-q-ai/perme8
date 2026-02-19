@@ -14,9 +14,6 @@ defmodule Jarga.Projects.Infrastructure do
   ## Queries (Ecto Query Builders)
   - `Queries.Queries` - Project query operations
 
-  ## Notifiers (External Communication)
-  - `Notifiers.EmailAndPubSubNotifier` - Email and PubSub notifications
-
   ## Dependency Rule
 
   The Infrastructure layer may depend on:
@@ -42,7 +39,6 @@ defmodule Jarga.Projects.Infrastructure do
       Schemas.ProjectSchema,
       Repositories.ProjectRepository,
       Repositories.AuthorizationRepository,
-      Queries.Queries,
-      Notifiers.EmailAndPubSubNotifier
+      Queries.Queries
     ]
 end

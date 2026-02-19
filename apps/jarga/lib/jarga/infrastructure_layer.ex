@@ -19,7 +19,7 @@ defmodule Jarga.InfrastructureLayer do
   - **Repositories** - Data persistence via Ecto
   - **Schemas** - Ecto schemas for database mapping
   - **Queries** - Reusable Ecto query builders
-  - **Notifiers** - Email, PubSub, and push notifications
+  - **Event Handlers** - Subscribers for structured domain events
   - **External Services** - API clients, LLM integrations
 
   ## Dependency Rules
@@ -123,25 +123,17 @@ defmodule Jarga.InfrastructureLayer do
   Lists all known notifier modules across all Jarga contexts.
 
   Note: User notifiers are in the Identity app.
+  Legacy PubSub notifiers have been removed — event delivery is now handled
+  by the EventBus and EventHandler infrastructure.
 
   ## Examples
 
       iex> Jarga.InfrastructureLayer.notifiers()
-      [Agents.Infrastructure.Notifiers.PubSubNotifier, ...]
+      []
   """
   @spec notifiers() :: [module()]
   def notifiers do
-    [
-      # Agents (extracted to apps/agents/)
-      Agents.Infrastructure.Notifiers.PubSubNotifier,
-      # Documents
-      Jarga.Documents.Infrastructure.Notifiers.PubSubNotifier,
-      # Notifications
-      Jarga.Notifications.Infrastructure.Notifiers.PubSubNotifier,
-      # Projects
-      Jarga.Projects.Infrastructure.Notifiers.EmailAndPubSubNotifier
-      # Workspaces — migrated to Identity app
-    ]
+    []
   end
 
   @doc """
@@ -165,8 +157,8 @@ defmodule Jarga.InfrastructureLayer do
 
   ## Examples
 
-      iex> Jarga.InfrastructureLayer.summary()
-      %{repositories: 13, schemas: 11, queries: 6, notifiers: 7, services: 1, total: 38}
+       iex> Jarga.InfrastructureLayer.summary()
+       %{repositories: 11, schemas: 9, queries: 5, notifiers: 0, services: 1, total: 26}
   """
   @spec summary() :: map()
   def summary do

@@ -7,7 +7,6 @@ defmodule Agents.Infrastructure do
   - Repositories: AgentRepository, WorkspaceAgentRepository
   - Services: LlmClient
   - Queries: AgentQueries
-  - Notifiers: PubSubNotifier
   - Gateways: ErmGateway (delegates to EntityRelationshipManager)
   - MCP: Server, Router, AuthPlug, and 6 tool components
   """
@@ -35,8 +34,6 @@ defmodule Agents.Infrastructure do
       Services.LlmClient,
       # Queries
       Queries.AgentQueries,
-      # Notifiers
-      Notifiers.PubSubNotifier,
       # Knowledge MCP
       Gateways.ErmGateway,
       Gateways.JargaGateway,

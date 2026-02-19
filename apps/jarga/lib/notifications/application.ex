@@ -36,7 +36,6 @@ defmodule Jarga.Notifications.Application do
       UseCases.MarkAllAsRead,
       UseCases.MarkAsRead,
       # Behaviours (interfaces for Infrastructure to implement)
-      Behaviours.NotificationRepositoryBehaviour,
-      Behaviours.PubSubNotifierBehaviour
+      Behaviours.NotificationRepositoryBehaviour
     ]
 end

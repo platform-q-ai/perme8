@@ -14,9 +14,6 @@ defmodule Jarga.Documents.Application do
   ## Policies
   - `Policies.DocumentAuthorizationPolicy` - Document authorization rules
 
-  ## Services
-  - `Services.NotificationService` - Document notification service
-
   ## Dependency Rule
 
   The Application layer may only depend on:
@@ -54,7 +51,6 @@ defmodule Jarga.Documents.Application do
       Behaviours.AuthorizationRepositoryBehaviour,
       Behaviours.DocumentComponentSchemaBehaviour,
       Behaviours.DocumentRepositoryBehaviour,
-      Behaviours.DocumentSchemaBehaviour,
-      Behaviours.NotificationServiceBehaviour
+      Behaviours.DocumentSchemaBehaviour
     ]
 end
