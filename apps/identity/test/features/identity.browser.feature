@@ -57,7 +57,7 @@ Feature: Identity Browser UI
 
   Scenario: Registration shows validation errors for short password
     Given I navigate to "${baseUrl}/users/register"
-    And I wait for the page to load
+    And I wait for network idle
     When I fill "#user_first_name" with "Bob"
     And I fill "#user_last_name" with "Tester"
     And I fill "#user_email" with "bob.short@example.com"
@@ -68,7 +68,7 @@ Feature: Identity Browser UI
 
   Scenario: Registration shows validation errors for invalid email
     Given I navigate to "${baseUrl}/users/register"
-    And I wait for the page to load
+    And I wait for network idle
     When I fill "#user_first_name" with "Bob"
     And I fill "#user_last_name" with "Tester"
     And I fill "#user_email" with "not-an-email"
