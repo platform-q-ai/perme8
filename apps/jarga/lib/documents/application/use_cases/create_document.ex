@@ -32,7 +32,6 @@ defmodule Jarga.Documents.Application.UseCases.CreateDocument do
   @default_note_repository Jarga.Documents.Notes.Infrastructure.Repositories.NoteRepository
   @default_authorization_repository Jarga.Documents.Infrastructure.Repositories.AuthorizationRepository
   @default_document_repository Jarga.Documents.Infrastructure.Repositories.DocumentRepository
-  @default_notifier Jarga.Documents.Infrastructure.Notifiers.PubSubNotifier
   @default_event_bus Perme8.Events.EventBus
 
   @doc """
@@ -45,8 +44,7 @@ defmodule Jarga.Documents.Application.UseCases.CreateDocument do
     - `:workspace_id` - ID of the workspace
     - `:attrs` - Document attributes (title, project_id, etc.)
 
-  - `opts` - Keyword list of options:
-    - `:notifier` - Notification service (default: PubSubNotifier)
+  - `opts` - Keyword list of options
 
   ## Returns
 
@@ -73,7 +71,6 @@ defmodule Jarga.Documents.Application.UseCases.CreateDocument do
       Keyword.get(opts, :authorization_repository, @default_authorization_repository)
 
     document_repository = Keyword.get(opts, :document_repository, @default_document_repository)
-    notifier = Keyword.get(opts, :notifier, @default_notifier)
     event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
 
     deps = %{
@@ -81,7 +78,6 @@ defmodule Jarga.Documents.Application.UseCases.CreateDocument do
       document_component_schema: document_component_schema,
       note_repository: note_repository,
       document_repository: document_repository,
-      notifier: notifier,
       event_bus: event_bus
     }
 
@@ -124,7 +120,6 @@ defmodule Jarga.Documents.Application.UseCases.CreateDocument do
       document_component_schema: document_component_schema,
       note_repository: note_repository,
       document_repository: document_repository,
-      notifier: notifier,
       event_bus: event_bus
     } = deps
 
@@ -191,8 +186,6 @@ defmodule Jarga.Documents.Application.UseCases.CreateDocument do
 
     case result do
       {:ok, %{document: document}} ->
-        # Send notification AFTER transaction commits successfully
-        notifier.notify_document_created(document)
         emit_document_created_event(document, user, workspace_id, event_bus)
         {:ok, document}
 

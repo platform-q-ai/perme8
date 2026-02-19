@@ -13,7 +13,6 @@ defmodule Jarga.Notifications.Application.UseCases.AcceptWorkspaceInvitation do
   alias Jarga.Workspaces
 
   @default_notification_repository Jarga.Notifications.Infrastructure.Repositories.NotificationRepository
-  @default_notifier Jarga.Notifications.Infrastructure.Notifiers.PubSubNotifier
   @default_event_bus Perme8.Events.EventBus
 
   @doc """
@@ -25,9 +24,6 @@ defmodule Jarga.Notifications.Application.UseCases.AcceptWorkspaceInvitation do
   Returns `{:error, :already_accepted}` if invitation was already accepted.
   Returns `{:error, :invitation_not_found}` if the workspace invitation record doesn't exist.
 
-  ## Options
-  - `:notifier` - Module implementing notification broadcasting (default: PubSubNotifier)
-
   ## Examples
 
       iex> execute(notification_id, user_id)
@@ -37,7 +33,6 @@ defmodule Jarga.Notifications.Application.UseCases.AcceptWorkspaceInvitation do
     notification_repository =
       Keyword.get(opts, :notification_repository, @default_notification_repository)
 
-    notifier = Keyword.get(opts, :notifier, @default_notifier)
     event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
 
     result =
@@ -58,8 +53,6 @@ defmodule Jarga.Notifications.Application.UseCases.AcceptWorkspaceInvitation do
     # Broadcast AFTER transaction commits
     case result do
       {:ok, {workspace_member, notification}} ->
-        workspace_id = notification.data["workspace_id"]
-        notifier.broadcast_workspace_joined(user_id, workspace_id)
         emit_action_taken_event(notification, user_id, "accepted", event_bus)
         {:ok, workspace_member}
 

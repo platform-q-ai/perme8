@@ -26,7 +26,6 @@ defmodule Jarga.Projects.Application.UseCases.UpdateProject do
 
   @default_project_repository Jarga.Projects.Infrastructure.Repositories.ProjectRepository
   @default_authorization_repository Jarga.Projects.Infrastructure.Repositories.AuthorizationRepository
-  @default_notifier Jarga.Projects.Infrastructure.Notifiers.EmailAndPubSubNotifier
   @default_event_bus Perme8.Events.EventBus
 
   @doc """
@@ -40,8 +39,7 @@ defmodule Jarga.Projects.Application.UseCases.UpdateProject do
     - `:project_id` - ID of the project to update
     - `:attrs` - Project attributes to update
 
-  - `opts` - Keyword list of options:
-    - `:notifier` - Notification service (default: EmailAndPubSubNotifier)
+  - `opts` - Keyword list of options
 
   ## Returns
 
@@ -62,7 +60,6 @@ defmodule Jarga.Projects.Application.UseCases.UpdateProject do
     authorization_repository =
       Keyword.get(opts, :authorization_repository, @default_authorization_repository)
 
-    notifier = Keyword.get(opts, :notifier, @default_notifier)
     event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
 
     with {:ok, member} <- Workspaces.get_member(actor, workspace_id),
@@ -73,7 +70,6 @@ defmodule Jarga.Projects.Application.UseCases.UpdateProject do
         project,
         attrs,
         project_repository,
-        notifier,
         event_bus,
         actor,
         workspace_id
@@ -92,12 +88,11 @@ defmodule Jarga.Projects.Application.UseCases.UpdateProject do
     end
   end
 
-  # Update project and send notification
+  # Update project and emit event
   defp update_project_and_notify(
          project_schema,
          attrs,
          project_repository,
-         notifier,
          event_bus,
          actor,
          workspace_id
@@ -110,7 +105,6 @@ defmodule Jarga.Projects.Application.UseCases.UpdateProject do
 
     case project_repository.update(project_schema, string_attrs) do
       {:ok, updated_project} ->
-        notifier.notify_project_updated(updated_project)
         emit_project_updated_event(updated_project, actor, workspace_id, event_bus)
         {:ok, updated_project}
 

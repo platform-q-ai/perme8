@@ -26,7 +26,6 @@ defmodule Jarga.Documents.Application.UseCases.UpdateDocument do
   # Default Infrastructure implementations (injected via opts for testing)
   @default_document_schema Jarga.Documents.Infrastructure.Schemas.DocumentSchema
   @default_document_repository Jarga.Documents.Infrastructure.Repositories.DocumentRepository
-  @default_notifier Jarga.Documents.Infrastructure.Notifiers.PubSubNotifier
   @default_event_bus Perme8.Events.EventBus
 
   @doc """
@@ -39,8 +38,7 @@ defmodule Jarga.Documents.Application.UseCases.UpdateDocument do
     - `:document_id` - ID of the document to update
     - `:attrs` - Document attributes to update
 
-  - `opts` - Keyword list of options:
-    - `:notifier` - Notification service (default: PubSubNotifier)
+  - `opts` - Keyword list of options
 
   ## Returns
 
@@ -58,13 +56,11 @@ defmodule Jarga.Documents.Application.UseCases.UpdateDocument do
     # Extract dependencies from opts
     document_schema = Keyword.get(opts, :document_schema, @default_document_schema)
     document_repository = Keyword.get(opts, :document_repository, @default_document_repository)
-    notifier = Keyword.get(opts, :notifier, @default_notifier)
     event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
 
     deps = %{
       document_schema: document_schema,
       document_repository: document_repository,
-      notifier: notifier,
       event_bus: event_bus
     }
 
@@ -125,7 +121,6 @@ defmodule Jarga.Documents.Application.UseCases.UpdateDocument do
     %{
       document_schema: document_schema,
       document_repository: document_repository,
-      notifier: notifier,
       event_bus: event_bus
     } = deps
 
@@ -134,28 +129,11 @@ defmodule Jarga.Documents.Application.UseCases.UpdateDocument do
 
     case result do
       {:ok, updated_document} ->
-        # Send notifications AFTER transaction commits
-        send_notifications(document, updated_document, attrs, notifier)
         emit_document_change_events(document, updated_document, attrs, event_bus)
         {:ok, updated_document}
 
       {:error, changeset} ->
         {:error, changeset}
-    end
-  end
-
-  # Send notifications for relevant changes
-  defp send_notifications(old_document, updated_document, attrs, notifier) do
-    if Map.has_key?(attrs, :is_public) and attrs.is_public != old_document.is_public do
-      notifier.notify_document_visibility_changed(updated_document)
-    end
-
-    if Map.has_key?(attrs, :is_pinned) and attrs.is_pinned != old_document.is_pinned do
-      notifier.notify_document_pinned_changed(updated_document)
-    end
-
-    if Map.has_key?(attrs, :title) and attrs.title != old_document.title do
-      notifier.notify_document_title_changed(updated_document)
     end
   end
 

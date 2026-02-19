@@ -6,7 +6,6 @@ defmodule Jarga.Notifications.Application.UseCases.CreateWorkspaceInvitationNoti
   alias Jarga.Notifications.Domain.Events.NotificationCreated
 
   @default_notification_repository Jarga.Notifications.Infrastructure.Repositories.NotificationRepository
-  @default_notifier Jarga.Notifications.Infrastructure.Notifiers.PubSubNotifier
   @default_event_bus Perme8.Events.EventBus
 
   @doc """
@@ -18,9 +17,6 @@ defmodule Jarga.Notifications.Application.UseCases.CreateWorkspaceInvitationNoti
     * `:workspace_name` - The name of the workspace
     * `:invited_by_name` - The name of the person who sent the invitation
     * `:role` - The role they're being invited as (e.g., "member", "admin")
-
-  ## Options
-  - `:notifier` - Module implementing notification broadcasting (default: PubSubNotifier)
 
   Returns `{:ok, notification}` if successful.
   Returns `{:error, changeset}` if validation fails.
@@ -40,7 +36,6 @@ defmodule Jarga.Notifications.Application.UseCases.CreateWorkspaceInvitationNoti
     notification_repository =
       Keyword.get(opts, :notification_repository, @default_notification_repository)
 
-    notifier = Keyword.get(opts, :notifier, @default_notifier)
     event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
     user_id = get_param(params, :user_id)
 
@@ -59,8 +54,6 @@ defmodule Jarga.Notifications.Application.UseCases.CreateWorkspaceInvitationNoti
 
     case notification_repository.create(notification_attrs) do
       {:ok, notification} = result ->
-        # Broadcast notification to user via PubSub
-        notifier.broadcast_new_notification(user_id, notification)
         emit_notification_created_event(notification, event_bus)
         result
 
