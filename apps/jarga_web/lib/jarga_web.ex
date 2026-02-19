@@ -40,6 +40,9 @@ defmodule JargaWeb do
       Identity,
       # Domain policies for permissions
       Jarga.Domain,
+      # Domain event structs for LiveView struct-matching handlers
+      Jarga.Documents.Domain,
+      Jarga.Projects.Domain,
       # Structured event bus for LiveView subscriptions
       Perme8.Events
     ],
