@@ -148,22 +148,6 @@ defmodule Perme8.Events.Infrastructure.LegacyBridge do
     [{"workspace:#{event.workspace_id}", {:invitation_declined, event.user_id}}]
   end
 
-  # --- Identity Context ---
-
-  def translate(%Identity.Domain.Events.MemberInvited{} = event) do
-    [
-      {"workspace_invitations",
-       {:workspace_invitation_created,
-        %{
-          user_id: event.user_id,
-          workspace_id: event.workspace_id,
-          workspace_name: event.workspace_name,
-          invited_by_name: event.invited_by_name,
-          role: event.role
-        }}}
-    ]
-  end
-
   # --- Catch-all (Chat, ERM, and unknown events have no legacy translations) ---
 
   def translate(_event), do: []
