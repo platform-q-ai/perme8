@@ -162,37 +162,37 @@ defmodule Jarga.ProjectsTest do
       assert project.name == "Mock Notifier Test"
     end
 
-    # Integration test: verifies default notifier broadcasts to PubSub
-    test "broadcasts project_added message to workspace topic on success (integration)" do
+    # Integration test: verifies EventBus emits ProjectCreated event
+    test "emits ProjectCreated event to workspace topic on success (integration)" do
       user = user_fixture()
       workspace = workspace_fixture(user)
 
-      # Subscribe to the workspace topic
-      Phoenix.PubSub.subscribe(Jarga.PubSub, "workspace:#{workspace.id}")
+      # Subscribe to the structured event topic
+      Phoenix.PubSub.subscribe(Jarga.PubSub, "events:workspace:#{workspace.id}")
 
       attrs = %{name: "Broadcast Test Project"}
 
       assert {:ok, project} = Projects.create_project(user, workspace.id, attrs)
 
-      # Verify the broadcast was sent
-      assert_receive {:project_added, project_id}
+      # Verify the structured event was emitted via EventBus
+      assert_receive %Jarga.Projects.Domain.Events.ProjectCreated{project_id: project_id}
       assert project_id == project.id
     end
 
-    # Integration test: verifies no broadcast on failure
-    test "does not broadcast when project creation fails (integration)" do
+    # Integration test: verifies no event on failure
+    test "does not emit event when project creation fails (integration)" do
       user = user_fixture()
       workspace = workspace_fixture(user)
 
-      # Subscribe to the workspace topic
-      Phoenix.PubSub.subscribe(Jarga.PubSub, "workspace:#{workspace.id}")
+      # Subscribe to the structured event topic
+      Phoenix.PubSub.subscribe(Jarga.PubSub, "events:workspace:#{workspace.id}")
 
       attrs = %{name: ""}
 
       assert {:error, _changeset} = Projects.create_project(user, workspace.id, attrs)
 
-      # Verify no broadcast was sent
-      refute_receive {:project_added, _}, 100
+      # Verify no event was emitted
+      refute_receive %Jarga.Projects.Domain.Events.ProjectCreated{}, 100
     end
   end
 
@@ -371,35 +371,35 @@ defmodule Jarga.ProjectsTest do
       assert deleted_project.id == project.id
     end
 
-    # Integration test: verifies default notifier broadcasts to PubSub
-    test "broadcasts project_removed message to workspace topic on success (integration)" do
+    # Integration test: verifies EventBus emits ProjectDeleted event
+    test "emits ProjectDeleted event to workspace topic on success (integration)" do
       user = user_fixture()
       workspace = workspace_fixture(user)
       project = project_fixture(user, workspace)
 
-      # Subscribe to the workspace topic
-      Phoenix.PubSub.subscribe(Jarga.PubSub, "workspace:#{workspace.id}")
+      # Subscribe to the structured event topic
+      Phoenix.PubSub.subscribe(Jarga.PubSub, "events:workspace:#{workspace.id}")
 
       assert {:ok, deleted_project} = Projects.delete_project(user, workspace.id, project.id)
 
-      # Verify the broadcast was sent
-      assert_receive {:project_removed, project_id}
+      # Verify the structured event was emitted via EventBus
+      assert_receive %Jarga.Projects.Domain.Events.ProjectDeleted{project_id: project_id}
       assert project_id == deleted_project.id
     end
 
-    # Integration test: verifies no broadcast on failure
-    test "does not broadcast when project deletion fails (integration)" do
+    # Integration test: verifies no event on failure
+    test "does not emit event when project deletion fails (integration)" do
       user = user_fixture()
       workspace = workspace_fixture(user)
 
-      # Subscribe to the workspace topic
-      Phoenix.PubSub.subscribe(Jarga.PubSub, "workspace:#{workspace.id}")
+      # Subscribe to the structured event topic
+      Phoenix.PubSub.subscribe(Jarga.PubSub, "events:workspace:#{workspace.id}")
 
       assert {:error, :project_not_found} =
                Projects.delete_project(user, workspace.id, Ecto.UUID.generate())
 
-      # Verify no broadcast was sent
-      refute_receive {:project_removed, _}, 100
+      # Verify no event was emitted
+      refute_receive %Jarga.Projects.Domain.Events.ProjectDeleted{}, 100
     end
   end
 

@@ -8,15 +8,7 @@ defmodule Perme8.Events do
 
   use Boundary,
     top_level?: true,
-    deps: [
-      # Domain layers whose event structs the LegacyBridge translates
-      Jarga.Projects.Domain,
-      Jarga.Documents.Domain,
-      Jarga.Notifications.Domain,
-      Agents.Domain,
-      # Identity exports MemberInvited for LegacyBridge translation
-      Identity
-    ],
+    deps: [],
     exports: [EventBus, EventHandler, TestEventBus]
 
   @pubsub Jarga.PubSub

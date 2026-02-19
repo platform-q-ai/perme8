@@ -31,7 +31,7 @@ defmodule Perme8.Events.DomainEvent do
   This module lives in the `identity` app because it must be available at
   compile-time for all umbrella apps (including `agents` which cannot depend
   on `jarga` due to a cyclic dependency). The rest of the event infrastructure
-  (EventBus, EventHandler, LegacyBridge) remains in `jarga`.
+  (EventBus, EventHandler) remains in `jarga`.
 
   ## Boundary
 

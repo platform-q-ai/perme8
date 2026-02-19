@@ -73,7 +73,7 @@ defmodule Identity.Application.UseCases.RemoveMemberTest do
       assert length(members) == 1
     end
 
-    test "broadcasts workspace_removed message when member is removed" do
+    test "emits MemberRemoved event when member is removed" do
       owner = user_fixture()
       workspace = workspace_fixture(owner)
       member = user_fixture()
@@ -81,8 +81,8 @@ defmodule Identity.Application.UseCases.RemoveMemberTest do
       # Add member directly
       _member = add_workspace_member_fixture(workspace.id, member, :admin)
 
-      # Subscribe to the user topic
-      Phoenix.PubSub.subscribe(Jarga.PubSub, "user:#{member.id}")
+      # Subscribe to the structured event topic
+      Phoenix.PubSub.subscribe(Jarga.PubSub, "events:user:#{member.id}")
 
       # Remove member using default notifier (EmailAndPubSubNotifier)
       params = %{
@@ -93,9 +93,14 @@ defmodule Identity.Application.UseCases.RemoveMemberTest do
 
       assert {:ok, _deleted_member} = RemoveMember.execute(params, [])
 
-      # Verify the broadcast was sent
-      assert_receive {:workspace_removed, workspace_id}
-      assert workspace_id == workspace.id
+      # Verify the structured event was emitted via EventBus
+      assert_receive %Identity.Domain.Events.MemberRemoved{
+        workspace_id: ws_id,
+        target_user_id: target_uid
+      }
+
+      assert ws_id == workspace.id
+      assert target_uid == member.id
     end
 
     test "does not broadcast when removing pending invitation" do
