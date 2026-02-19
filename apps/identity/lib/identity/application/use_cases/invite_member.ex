@@ -21,6 +21,7 @@ defmodule Identity.Application.UseCases.InviteMember do
 
   @behaviour Identity.Application.UseCases.UseCase
 
+  alias Identity.Domain.Events.MemberInvited
   alias Identity.Domain.Policies.MembershipPolicy
   alias Identity.Domain.Policies.WorkspacePermissionsPolicy
 
@@ -64,6 +65,13 @@ defmodule Identity.Application.UseCases.InviteMember do
     pubsub_notifier = Keyword.get(opts, :pubsub_notifier, @default_pubsub_notifier)
     event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
 
+    deps = %{
+      notifier: notifier,
+      pubsub_notifier: pubsub_notifier,
+      event_bus: event_bus,
+      membership_repository: membership_repository
+    }
+
     with :ok <- validate_role(role),
          {:ok, workspace} <-
            verify_inviter_membership(inviter, workspace_id, membership_repository),
@@ -73,17 +81,7 @@ defmodule Identity.Application.UseCases.InviteMember do
          :ok <- check_not_already_member(workspace_id, email, membership_repository),
          user <- find_user_by_email_case_insensitive(email) do
       # Always create pending invitation (requires acceptance via notification)
-      create_pending_invitation(
-        workspace,
-        email,
-        role,
-        inviter,
-        user,
-        notifier,
-        pubsub_notifier,
-        event_bus,
-        membership_repository
-      )
+      create_pending_invitation(workspace, email, role, inviter, user, deps)
     end
   end
 
@@ -143,17 +141,14 @@ defmodule Identity.Application.UseCases.InviteMember do
     Identity.get_user_by_email_case_insensitive(email)
   end
 
-  defp create_pending_invitation(
-         workspace,
-         email,
-         role,
-         inviter,
-         user,
-         notifier,
-         pubsub_notifier,
-         event_bus,
-         membership_repository
-       ) do
+  defp create_pending_invitation(workspace, email, role, inviter, user, deps) do
+    %{
+      notifier: notifier,
+      pubsub_notifier: pubsub_notifier,
+      event_bus: event_bus,
+      membership_repository: membership_repository
+    } = deps
+
     result =
       membership_repository.transact(fn ->
         # Create workspace_member record (pending invitation)
@@ -211,7 +206,7 @@ defmodule Identity.Application.UseCases.InviteMember do
 
     # Emit structured domain event
     event =
-      Identity.Domain.Events.MemberInvited.new(%{
+      MemberInvited.new(%{
         aggregate_id: "#{workspace.id}:#{user.id}",
         actor_id: inviter.id,
         user_id: user.id,
