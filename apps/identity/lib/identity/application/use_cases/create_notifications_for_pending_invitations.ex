@@ -36,7 +36,6 @@ defmodule Identity.Application.UseCases.CreateNotificationsForPendingInvitations
 
   - `opts` - Keyword list of options:
     - `:pubsub_notifier` - Optional PubSub notifier module (default: PubSubNotifier)
-    - `:event_bus` - Optional event bus module (default: Perme8.Events.EventBus)
     - `:queries` - Optional queries module (default: WorkspaceQueries)
     - `:repo` - Optional Ecto repo (default: Identity.Repo)
 
@@ -97,9 +96,6 @@ defmodule Identity.Application.UseCases.CreateNotificationsForPendingInvitations
     event =
       MemberInvited.new(%{
         aggregate_id: "#{invitation_schema.workspace_id}:#{user.id}",
-        # Fallback to invitee's ID when inviter is unknown (legacy invitations
-        # without invited_by). The invited_by_name will be "Someone" via
-        # get_inviter_name(nil) in this case.
         actor_id: invitation_schema.invited_by || user.id,
         user_id: user.id,
         workspace_id: invitation_schema.workspace_id,

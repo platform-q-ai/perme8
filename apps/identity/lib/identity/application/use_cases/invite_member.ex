@@ -43,7 +43,6 @@ defmodule Identity.Application.UseCases.InviteMember do
   - `opts` - Keyword list of options:
     - `:notifier` - Optional email notifier module (default: uses real notifier)
     - `:pubsub_notifier` - Optional PubSub notifier module (default: PubSubNotifier)
-    - `:event_bus` - Optional event bus module (default: Perme8.Events.EventBus)
 
   ## Returns
 
