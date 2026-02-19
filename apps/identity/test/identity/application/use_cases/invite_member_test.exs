@@ -26,7 +26,7 @@ defmodule Identity.Application.UseCases.InviteMemberTest do
         do: :ok
   end
 
-  defp ensure_test_event_bus_started do
+  defp start_test_event_bus do
     case TestEventBus.start_link([]) do
       {:ok, _pid} -> :ok
       {:error, {:already_started, _pid}} -> TestEventBus.reset()
@@ -122,7 +122,7 @@ defmodule Identity.Application.UseCases.InviteMemberTest do
     end
 
     test "emits MemberInvited event via event_bus for existing users" do
-      ensure_test_event_bus_started()
+      start_test_event_bus()
       owner = user_fixture()
       workspace = workspace_fixture(owner)
       invitee = user_fixture()
@@ -189,7 +189,7 @@ defmodule Identity.Application.UseCases.InviteMemberTest do
     end
 
     test "does not emit MemberInvited event for non-existing users" do
-      ensure_test_event_bus_started()
+      start_test_event_bus()
       owner = user_fixture()
       workspace = workspace_fixture(owner)
 
