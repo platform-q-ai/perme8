@@ -16,7 +16,7 @@ defmodule Jarga.Projects.Application do
   - Domain layer (same context)
 
   It cannot import:
-  - Infrastructure layer (repos, schemas, notifiers)
+  - Infrastructure layer (repos, schemas)
   - Other contexts directly (use dependency injection)
   """
 
@@ -36,7 +36,6 @@ defmodule Jarga.Projects.Application do
       UseCases.UpdateProject,
       UseCases.DeleteProject,
       UseCases.UseCase,
-      Services.NotificationService,
       # Behaviours (interfaces for Infrastructure to implement)
       Behaviours.AuthorizationRepositoryBehaviour,
       Behaviours.ProjectRepositoryBehaviour

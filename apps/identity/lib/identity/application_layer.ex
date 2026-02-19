@@ -84,9 +84,7 @@ defmodule Identity.ApplicationLayer do
   def services do
     [
       Identity.Application.Services.PasswordService,
-      Identity.Application.Services.ApiKeyTokenService,
-      # Workspace services
-      Identity.Application.Services.NotificationService
+      Identity.Application.Services.ApiKeyTokenService
     ]
   end
 
@@ -121,7 +119,7 @@ defmodule Identity.ApplicationLayer do
   ## Examples
 
        iex> Identity.ApplicationLayer.summary()
-       %{use_cases: 16, services: 3, behaviours: 10, total: 29}
+       %{use_cases: 16, services: 2, behaviours: 10, total: 28}
   """
   @spec summary() :: map()
   def summary do
