@@ -9,6 +9,7 @@ defmodule Perme8.Events.EventBus do
   - `events:{context}` — All events for a context (e.g., `events:projects`)
   - `events:{context}:{aggregate_type}` — Scoped by aggregate (e.g., `events:projects:project`)
   - `events:workspace:{workspace_id}` — Workspace-scoped events (when workspace_id present)
+  - `events:user:{target_user_id}` — User-scoped events (when target_user_id present)
 
   Additionally, `LegacyBridge.broadcast_legacy/1` is called to maintain
   backward compatibility with existing tuple-based PubSub consumers.
@@ -61,10 +62,17 @@ defmodule Perme8.Events.EventBus do
       "events:#{context}:#{aggregate_type}"
     ]
 
-    if event.workspace_id do
-      base_topics ++ ["events:workspace:#{event.workspace_id}"]
+    topics =
+      if event.workspace_id do
+        base_topics ++ ["events:workspace:#{event.workspace_id}"]
+      else
+        base_topics
+      end
+
+    if Map.has_key?(event, :target_user_id) && Map.get(event, :target_user_id) do
+      topics ++ ["events:user:#{event.target_user_id}"]
     else
-      base_topics
+      topics
     end
   end
 end

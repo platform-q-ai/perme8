@@ -18,6 +18,13 @@ defmodule Perme8.Events.EventBusTest do
       required: []
   end
 
+  defmodule TestUserScopedEvent do
+    use Perme8.Events.DomainEvent,
+      aggregate_type: "notification",
+      fields: [target_user_id: nil],
+      required: []
+  end
+
   defp build_event(overrides \\ %{}) do
     defaults = %{
       aggregate_id: "proj-123",
@@ -37,6 +44,17 @@ defmodule Perme8.Events.EventBusTest do
     }
 
     TestGlobalEvent.new(Map.merge(defaults, overrides))
+  end
+
+  defp build_user_scoped_event(overrides \\ %{}) do
+    defaults = %{
+      aggregate_id: "notif-123",
+      actor_id: "user-456",
+      workspace_id: "ws-789",
+      target_user_id: "target-user-1"
+    }
+
+    TestUserScopedEvent.new(Map.merge(defaults, overrides))
   end
 
   describe "emit/2" do
@@ -83,6 +101,37 @@ defmodule Perme8.Events.EventBusTest do
     test "returns :ok" do
       event = build_event()
       assert :ok = EventBus.emit(event)
+    end
+  end
+
+  describe "emit/2 user-scoped topic" do
+    test "broadcasts to events:user:{target_user_id} when target_user_id is set" do
+      event = build_user_scoped_event(%{target_user_id: "target-user-1"})
+      Phoenix.PubSub.subscribe(Jarga.PubSub, "events:user:target-user-1")
+
+      EventBus.emit(event)
+
+      assert_receive %TestUserScopedEvent{target_user_id: "target-user-1"}
+    end
+
+    test "does not broadcast user topic when target_user_id is nil" do
+      event = build_user_scoped_event(%{target_user_id: nil})
+      Phoenix.PubSub.subscribe(Jarga.PubSub, "events:user:")
+
+      EventBus.emit(event)
+
+      refute_receive _, 100
+    end
+
+    test "broadcasts to both workspace and user topics when both are present" do
+      event = build_user_scoped_event(%{workspace_id: "ws-789", target_user_id: "target-user-1"})
+      Phoenix.PubSub.subscribe(Jarga.PubSub, "events:workspace:ws-789")
+      Phoenix.PubSub.subscribe(Jarga.PubSub, "events:user:target-user-1")
+
+      EventBus.emit(event)
+
+      assert_receive %TestUserScopedEvent{workspace_id: "ws-789"}
+      assert_receive %TestUserScopedEvent{target_user_id: "target-user-1"}
     end
   end
 

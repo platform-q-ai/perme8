@@ -23,6 +23,9 @@ defmodule Perme8.Events.Infrastructure.LegacyBridgeTest do
   alias Jarga.Notifications.Domain.Events.NotificationActionTaken
 
   alias Identity.Domain.Events.MemberInvited
+  alias Identity.Domain.Events.WorkspaceUpdated
+  alias Identity.Domain.Events.MemberRemoved
+  alias Identity.Domain.Events.WorkspaceInvitationNotified
 
   # Test event to verify catch-all behaviour
   defmodule UnknownEvent do
@@ -349,6 +352,51 @@ defmodule Perme8.Events.Infrastructure.LegacyBridgeTest do
                    role: "member"
                  }}}
              ] = LegacyBridge.translate(event)
+    end
+  end
+
+  # --- Identity (new events) ---
+
+  describe "translate/1 - Identity (new events)" do
+    test "WorkspaceUpdated translates to legacy workspace_updated tuple" do
+      event =
+        WorkspaceUpdated.new(%{
+          aggregate_id: "ws-123",
+          actor_id: "system",
+          workspace_id: "ws-123",
+          name: "New Name"
+        })
+
+      assert [{"workspace:ws-123", {:workspace_updated, "ws-123", "New Name"}}] =
+               LegacyBridge.translate(event)
+    end
+
+    test "MemberRemoved translates to legacy workspace_removed tuple" do
+      event =
+        MemberRemoved.new(%{
+          aggregate_id: "ws-123:user-456",
+          actor_id: "admin-789",
+          workspace_id: "ws-123",
+          target_user_id: "user-456"
+        })
+
+      assert [{"user:user-456", {:workspace_removed, "ws-123"}}] =
+               LegacyBridge.translate(event)
+    end
+
+    test "WorkspaceInvitationNotified translates to legacy workspace_invitation tuple" do
+      event =
+        WorkspaceInvitationNotified.new(%{
+          aggregate_id: "ws-123:user-456",
+          actor_id: "inviter-789",
+          workspace_id: "ws-123",
+          target_user_id: "user-456",
+          workspace_name: "Test Workspace",
+          invited_by_name: "John"
+        })
+
+      assert [{"user:user-456", {:workspace_invitation, "ws-123", "Test Workspace", "John"}}] =
+               LegacyBridge.translate(event)
     end
   end
 

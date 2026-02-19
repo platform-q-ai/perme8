@@ -164,6 +164,21 @@ defmodule Perme8.Events.Infrastructure.LegacyBridge do
     ]
   end
 
+  def translate(%Identity.Domain.Events.WorkspaceUpdated{} = event) do
+    [{"workspace:#{event.workspace_id}", {:workspace_updated, event.workspace_id, event.name}}]
+  end
+
+  def translate(%Identity.Domain.Events.MemberRemoved{} = event) do
+    [{"user:#{event.target_user_id}", {:workspace_removed, event.workspace_id}}]
+  end
+
+  def translate(%Identity.Domain.Events.WorkspaceInvitationNotified{} = event) do
+    [
+      {"user:#{event.target_user_id}",
+       {:workspace_invitation, event.workspace_id, event.workspace_name, event.invited_by_name}}
+    ]
+  end
+
   # --- Catch-all (Chat, ERM, and unknown events have no legacy translations) ---
 
   def translate(_event), do: []
