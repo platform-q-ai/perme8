@@ -97,4 +97,37 @@ defmodule Identity.Infrastructure.Notifiers.WorkspaceNotifierTest do
       assert email.text_body =~ "Hi Charlie"
     end
   end
+
+  describe "notify_existing_user/3 (behaviour callback)" do
+    test "builds workspace URL and delegates to deliver_invitation_to_existing_user" do
+      inviter = user_fixture(%{first_name: "Alice", last_name: "Johnson"})
+      existing_user = user_fixture(%{first_name: "Bob"})
+      workspace = workspace_fixture(inviter, %{name: "Test Workspace"})
+
+      assert {:ok, email} =
+               WorkspaceNotifier.notify_existing_user(existing_user, workspace, inviter)
+
+      assert email.to == [{"", existing_user.email}]
+      assert email.subject == "You've been invited to Test Workspace"
+      assert email.text_body =~ "Alice Johnson has invited you"
+      # Verify URL was auto-built (contains workspace ID)
+      assert email.text_body =~ workspace.id
+    end
+  end
+
+  describe "notify_new_user/3 (behaviour callback)" do
+    test "builds signup URL and delegates to deliver_invitation_to_new_user" do
+      inviter = user_fixture(%{first_name: "John", last_name: "Doe"})
+      workspace = workspace_fixture(inviter, %{name: "New Workspace"})
+      new_email = "newuser@example.com"
+
+      assert {:ok, email} = WorkspaceNotifier.notify_new_user(new_email, workspace, inviter)
+
+      assert email.to == [{"", "newuser@example.com"}]
+      assert email.subject == "You've been invited to New Workspace on Jarga"
+      assert email.text_body =~ "John Doe has invited you"
+      # Verify signup URL was auto-built
+      assert email.text_body =~ "/users/register"
+    end
+  end
 end

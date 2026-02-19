@@ -4,6 +4,16 @@ defmodule Identity.WorkspaceFacadeTest do
   import Identity.AccountsFixtures
   import Identity.WorkspacesFixtures
 
+  alias Identity.Domain.Events.WorkspaceUpdated
+  alias Perme8.Events.TestEventBus
+
+  defp ensure_test_event_bus_started do
+    case TestEventBus.start_link([]) do
+      {:ok, _pid} -> :ok
+      {:error, {:already_started, _pid}} -> TestEventBus.reset()
+    end
+  end
+
   describe "list_workspaces_for_user/1" do
     test "returns workspace list for a user" do
       user = user_fixture()
@@ -167,6 +177,39 @@ defmodule Identity.WorkspaceFacadeTest do
 
       assert {:error, :forbidden} =
                Identity.update_workspace(guest, workspace.id, %{"name" => "Updated"})
+    end
+
+    test "emits WorkspaceUpdated event on success" do
+      ensure_test_event_bus_started()
+
+      user = user_fixture()
+      workspace = workspace_fixture(user)
+
+      assert {:ok, updated} =
+               Identity.update_workspace(user, workspace.id, %{"name" => "Event Test"},
+                 event_bus: TestEventBus
+               )
+
+      events = TestEventBus.get_events()
+      assert [%WorkspaceUpdated{} = event] = events
+      assert event.workspace_id == workspace.id
+      assert event.name == "Event Test"
+      assert event.actor_id == user.id
+    end
+
+    test "does not emit event on failure" do
+      ensure_test_event_bus_started()
+
+      owner = user_fixture()
+      workspace = workspace_fixture(owner)
+      non_member = user_fixture()
+
+      assert {:error, :unauthorized} =
+               Identity.update_workspace(non_member, workspace.id, %{"name" => "X"},
+                 event_bus: TestEventBus
+               )
+
+      assert [] = TestEventBus.get_events()
     end
   end
 
