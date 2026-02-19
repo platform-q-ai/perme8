@@ -11,7 +11,7 @@ defmodule Identity.Application.UseCases.InviteMember do
   - Validate role is allowed for invitation
   - Check if email is already a member
   - Create pending invitations for both existing and new users
-  - Send appropriate notifications
+  - Send invitation emails and emit domain events
 
   """
 
@@ -158,24 +158,16 @@ defmodule Identity.Application.UseCases.InviteMember do
           joined_at: nil
         }
 
-        with {:ok, invitation} <- create_workspace_member(attrs, membership_repository) do
-          maybe_send_email(
-            skip_email,
-            workspace_notifier,
-            user,
-            email,
-            workspace,
-            inviter,
-            event_bus
-          )
-
-          {:ok, invitation}
-        end
+        create_workspace_member(attrs, membership_repository)
       end)
 
-    # Broadcast AFTER transaction commits to avoid race conditions
+    # Side effects AFTER transaction commits to avoid race conditions
     case result do
       {:ok, invitation} ->
+        maybe_send_email(skip_email, workspace_notifier, user, email, workspace, inviter, role,
+          event_bus: event_bus
+        )
+
         maybe_emit_member_invited(user, workspace, role, inviter, event_bus)
         {:ok, {:invitation_sent, invitation}}
 
@@ -188,10 +180,12 @@ defmodule Identity.Application.UseCases.InviteMember do
     membership_repository.create_member(attrs)
   end
 
-  defp maybe_send_email(true, _notifier, _user, _email, _workspace, _inviter, _event_bus), do: :ok
+  defp maybe_send_email(true, _notifier, _user, _email, _workspace, _inviter, _role, _opts),
+    do: :ok
 
-  defp maybe_send_email(false, notifier, user, email, workspace, inviter, event_bus) do
-    send_email_notification(notifier, user, email, workspace, inviter, event_bus)
+  defp maybe_send_email(false, notifier, user, email, workspace, inviter, role, opts) do
+    event_bus = Keyword.get(opts, :event_bus)
+    send_email_notification(notifier, user, email, workspace, inviter, role, event_bus)
   end
 
   defp maybe_emit_member_invited(nil, _workspace, _role, _inviter, _event_bus),
@@ -217,14 +211,16 @@ defmodule Identity.Application.UseCases.InviteMember do
     {:ok, nil}
   end
 
-  defp send_email_notification(notifier, nil, email, workspace, inviter, _event_bus) do
+  defp send_email_notification(notifier, nil, email, workspace, inviter, _role, _event_bus) do
     notifier.notify_new_user(email, workspace, inviter)
   end
 
-  defp send_email_notification(notifier, user, _email, workspace, inviter, event_bus) do
+  defp send_email_notification(notifier, user, _email, workspace, inviter, role, event_bus) do
     notifier.notify_existing_user(user, workspace, inviter)
 
     # Emit invitation notified event
+    inviter_name = "#{inviter.first_name} #{inviter.last_name}"
+
     event_bus.emit(
       WorkspaceInvitationNotified.new(%{
         aggregate_id: "#{workspace.id}:#{user.id}",
@@ -232,8 +228,8 @@ defmodule Identity.Application.UseCases.InviteMember do
         workspace_id: workspace.id,
         target_user_id: user.id,
         workspace_name: workspace.name,
-        invited_by_name: inviter.first_name,
-        role: "member"
+        invited_by_name: inviter_name,
+        role: to_string(role)
       })
     )
   end
