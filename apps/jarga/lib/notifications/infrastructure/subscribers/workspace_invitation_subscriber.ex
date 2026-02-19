@@ -21,11 +21,10 @@ defmodule Jarga.Notifications.Infrastructure.Subscribers.WorkspaceInvitationSubs
 
   @impl Perme8.Events.EventHandler
   def subscriptions do
-    # Subscribe to the aggregate-scoped topic only to avoid duplicate delivery.
-    # The EventBus broadcasts to both "events:identity" and
-    # "events:identity:workspace_member" — subscribing to both would cause
-    # handle_event/1 to fire twice for the same event.
-    ["events:identity:workspace_member"]
+    [
+      "events:identity",
+      "events:identity:workspace_member"
+    ]
   end
 
   @impl Perme8.Events.EventHandler
