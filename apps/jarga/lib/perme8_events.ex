@@ -13,9 +13,7 @@ defmodule Perme8.Events do
       Jarga.Projects.Domain,
       Jarga.Documents.Domain,
       Jarga.Notifications.Domain,
-      Agents.Domain,
-      # Identity exports MemberInvited for LegacyBridge translation
-      Identity
+      Agents.Domain
     ],
     exports: [EventBus, EventHandler, TestEventBus]
 
