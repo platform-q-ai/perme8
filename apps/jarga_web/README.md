@@ -48,6 +48,28 @@ Jarga (core domain) + Identity (authentication)
 | `PageController` | Landing page |
 | `UserSessionController` | Session create/delete (login/logout) |
 
+## Real-Time Event Handling
+
+All LiveViews subscribe to structured domain event topics and pattern-match on typed event structs in `handle_info/2`. This is the core mechanism for real-time UI updates.
+
+**Subscription pattern (in `mount/3`):**
+```elixir
+if connected?(socket) do
+  Perme8.Events.subscribe("events:workspace:#{workspace.id}")
+end
+```
+
+**Event handling (in `handle_info/2`):**
+```elixir
+def handle_info(%ProjectCreated{} = event, socket) do
+  {:noreply, stream_insert(socket, :projects, load_project(event.aggregate_id))}
+end
+```
+
+LiveViews that handle events: `DashboardLive`, `WorkspaceLive.Index`, `WorkspaceLive.Show`, `ProjectLive.Show`, `DocumentLive.Show`, `AgentLive.Index`, `AgentLive.Form`, `NotificationLive.OnMount`.
+
+> **Note:** CRDT collaborative editing in `DocumentLive.Show` intentionally uses raw `Phoenix.PubSub` on `document:{id}` topics for operational transforms. This is not a domain event -- it's real-time CRDT sync.
+
 ## Supporting Modules
 
 | Module | Description |

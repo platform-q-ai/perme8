@@ -655,6 +655,14 @@ defmodule MyAppWeb.PostsLive do
     {:noreply, stream_delete(socket, :posts, %Post{id: id})}
   end
 
+  # Handle structured domain events (Perme8 pattern)
+  # In this project, all real-time updates use typed event structs:
+  #   def handle_info(%PostCreated{} = event, socket) do
+  #     post = load_post(event.aggregate_id)
+  #     {:noreply, stream_insert(socket, :posts, post, at: 0)}
+  #   end
+  #
+  # Generic Phoenix example (for reference):
   def handle_info({:new_post, post}, socket) do
     {:noreply, stream_insert(socket, :posts, post, at: 0)}
   end
@@ -942,6 +950,21 @@ Test the side effects of sending or receiving regular messages to a LiveView:
 send(view.pid, {:set_temp, 50})
 assert render(view) =~ "The temperature is: 50℉"
 ```
+
+**Note:** In this project, LiveView messages are structured domain event structs, not bare tuples. Use typed event structs when testing real-time updates:
+
+```elixir
+send(view.pid, %ProjectCreated{
+  aggregate_id: project.id,
+  actor_id: user.id,
+  workspace_id: workspace.id,
+  name: "New Project",
+  # ... base fields (event_id, event_type, occurred_at, metadata) ...
+})
+assert render(view) =~ "New Project"
+```
+
+See `docs/prompts/architect/PUBSUB_TESTING_GUIDE.md` for the full event-driven testing guide.
 
 #### Testing Portal Content
 

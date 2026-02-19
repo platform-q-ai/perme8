@@ -27,21 +27,22 @@ defmodule Credo.Check.Custom.Architecture.NoPubSubInContexts do
         end
       end
 
-  ### Valid - Extract to notifier service:
+  ### Valid - Use EventBus via dependency injection:
 
-      defmodule Jarga.Pages do
-        def update_page(page, attrs, opts \\\\ []) do
-          notifier = Keyword.get(opts, :notifier, PageNotifier)
+      defmodule Jarga.Pages.Application.UseCases.UpdatePage do
+        @default_event_bus Perme8.Events.EventBus
+
+        def execute(params, opts \\\\ []) do
+          event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
 
           with {:ok, page} <- Repo.update(changeset) do
-            notifier.notify_updated(page)  # ✅ Depends on abstraction
+            event_bus.emit(%PageUpdated{  # ✅ Structured event via EventBus
+              aggregate_id: page.id,
+              actor_id: params.user.id
+            })
             {:ok, page}
           end
         end
-      end
-
-      defmodule Jarga.Pages.Services.PageNotifier do
-        @callback notify_updated(page :: Page.t()) :: :ok
       end
   """
 
@@ -52,11 +53,12 @@ defmodule Credo.Check.Custom.Architecture.NoPubSubInContexts do
       check: """
       Context modules should not directly use Phoenix.PubSub.
 
-      Broadcasting is an infrastructure concern. Extract it to a separate
-      notifier service following the Dependency Injection pattern.
+      Use the EventBus via dependency injection instead:
+        event_bus = Keyword.get(opts, :event_bus, Perme8.Events.EventBus)
+        event_bus.emit(%MyEvent{...})
 
-      See lib/jarga/projects/use_cases/create_project.ex for an example
-      of the correct pattern.
+      See lib/jarga/projects/application/use_cases/create_project.ex for an
+      example of the correct pattern.
       """
     ]
 
@@ -123,7 +125,7 @@ defmodule Credo.Check.Custom.Architecture.NoPubSubInContexts do
     format_issue(
       issue_meta,
       message:
-        "Context modules should not directly use #{trigger}. Extract to a notifier service with dependency injection (SRP/DIP).",
+        "Context modules should not directly use #{trigger}. Use EventBus via opts[:event_bus] dependency injection instead.",
       trigger: trigger,
       line_no: Keyword.get(meta, :line, 0)
     )

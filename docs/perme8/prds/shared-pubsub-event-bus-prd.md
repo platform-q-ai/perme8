@@ -1,7 +1,7 @@
 # PRD: Shared PubSub Event Bus
 
 **Ticket**: #37 — Make all apps event driven via shared PubSub event bus
-**Status**: Draft
+**Status**: Implemented (Parts 1 + 2a + 2b + 2c complete; P1/P2 enhancements deferred)
 **Date**: 2026-02-18
 
 ---

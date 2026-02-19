@@ -167,25 +167,40 @@ end
 
 - Write tests first using `MyApp.DataCase`
 - Use Mox for external dependencies
-- Test orchestration and workflows
-- Mock infrastructure services
+- Inject `event_bus: Perme8.Events.TestEventBus` to capture emitted events
+- Test orchestration, workflows, and event emission
 - Test transaction boundaries
 
 **Example:**
 ```elixir
-defmodule MyApp.Application.CalculateShippingTest do
+defmodule MyApp.Application.CreateProjectTest do
   use MyApp.DataCase, async: true
 
-  import Mox
+  alias MyApp.Application.UseCases.CreateProject
+  alias MyApp.Domain.Events.ProjectCreated
 
-  alias MyApp.Application.CalculateShipping
+  setup do
+    bus_name = :"test_bus_#{System.unique_integer()}"
+    {:ok, _pid} = Perme8.Events.TestEventBus.start_link(name: bus_name)
+    %{bus_name: bus_name}
+  end
 
   describe "execute/2" do
-    test "calculates shipping and applies user discount" do
-      user = insert(:user, discount: 0.1)
+    test "creates project and emits ProjectCreated event", %{bus_name: bus_name} do
+      user = insert(:user)
+      workspace = insert(:workspace)
 
-      assert {:ok, %{cost: cost}} = CalculateShipping.execute(user.id, weight: 5, distance: 100)
-      assert cost == 45.0  # 50.0 with 10% discount
+      assert {:ok, project} =
+        CreateProject.execute(
+          %{user: user, workspace_id: workspace.id, attrs: %{name: "Test"}},
+          event_bus: Perme8.Events.TestEventBus,
+          event_bus_opts: [name: bus_name]
+        )
+
+      events = Perme8.Events.TestEventBus.get_events(name: bus_name)
+      assert [%ProjectCreated{} = event] = events
+      assert event.aggregate_id == project.id
+      assert event.actor_id == user.id
     end
   end
 end
@@ -300,6 +315,7 @@ mix test --cover
 1. **Test the render** - What should the user see?
 2. **Test user interactions** - What happens when they click/submit?
 3. **Test state management** - How does the UI state change?
+4. **Test event handling** - How does the UI respond to domain events?
 
 **Best Practices:**
 
@@ -308,10 +324,15 @@ mix test --cover
 - Keep LiveView callbacks focused on UI state management
 - Use assigns for view state, not business state
 - Handle events by calling context functions and updating UI accordingly
+- Subscribe to `events:workspace:{id}` topics in `mount/3` when `connected?/1` is true
+- Pattern-match on domain event structs in `handle_info/2` (e.g., `%ProjectCreated{}`)
+- Test event handling by sending event structs via `send(view.pid, %Event{...})`
 
 ### Channel TDD Approach
 
-**Write Channel tests first**, then implement:
+> **Note:** This project uses LiveView's built-in WebSocket for all real-time communication. No custom Phoenix Channels are used. All real-time updates flow through the `Perme8.Events.EventBus` to LiveView `handle_info/2` callbacks.
+
+**If custom Channels are needed in the future**, write tests first:
 
 1. **Test join logic** - Can user join the channel?
 2. **Test message handling** - What happens with incoming messages?
@@ -323,7 +344,7 @@ mix test --cover
 - Channels should delegate to contexts/use cases for business operations
 - Keep join/handle_in callbacks focused on message handling
 - Use socket assigns for connection state
-- Broadcast events after successful business operations
+- Emit domain events via EventBus after successful business operations (never broadcast directly)
 
 ## When NOT to Write Tests First
 

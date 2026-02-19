@@ -1,6 +1,6 @@
 # Jarga
 
-Core domain logic for the Perme8 platform. Contains all primary bounded contexts: Workspaces, Projects, Documents, Notes, Agents, Chat, and Notifications. Owns the main database (`Jarga.Repo`), mailer, and PubSub system.
+Core domain logic for the Perme8 platform. Contains all primary bounded contexts: Workspaces, Projects, Documents, Notes, Chat, and Notifications. Owns the main database (`Jarga.Repo`), mailer, and PubSub system. Also hosts the shared `Perme8.Events` event-driven infrastructure (EventBus, EventHandler, TestEventBus).
 
 ## Architecture
 
@@ -9,9 +9,51 @@ Jarga is organized as a collection of bounded contexts, each following Clean Arc
 ```
 Application (Use Cases, Behaviours)
     |
-Domain (Entities, Policies, Services)
+Domain (Entities, Policies, Services, Events)
     |
-Infrastructure (Ecto Schemas, Repositories, Queries, Notifiers)
+Infrastructure (Ecto Schemas, Repositories, Queries, Subscribers)
+```
+
+## Perme8.Events (Shared Event Infrastructure)
+
+This app hosts the core event-driven infrastructure used by all umbrella apps:
+
+| Module | Purpose |
+|--------|---------|
+| `Perme8.Events` | Top-level boundary; provides `subscribe/1` and `unsubscribe/1` helpers |
+| `Perme8.Events.EventBus` | Central event dispatcher; wraps `Phoenix.PubSub` with topic-based routing |
+| `Perme8.Events.EventHandler` | Behaviour + macro for GenServer-based event subscribers |
+| `Perme8.Events.TestEventBus` | In-memory event bus for unit test assertions |
+
+> **Note**: The `Perme8.Events.DomainEvent` macro lives in the `identity` app due to compile-time dependency constraints (agents cannot depend on jarga).
+
+### Topic Routing
+
+Each event is broadcast to multiple topics:
+- `events:{context}` (e.g., `events:projects`)
+- `events:{context}:{aggregate_type}` (e.g., `events:projects:project`)
+- `events:workspace:{workspace_id}` (workspace-scoped)
+- `events:user:{target_user_id}` (user-scoped)
+
+### Event Emission Pattern
+
+All use cases emit structured domain events via `opts[:event_bus]` dependency injection:
+
+```elixir
+@default_event_bus Perme8.Events.EventBus
+
+def execute(params, opts \\ []) do
+  event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
+
+  result = Repo.transact(fn -> ... end)
+
+  case result do
+    {:ok, entity} ->
+      event_bus.emit(%ProjectCreated{...})
+      {:ok, entity}
+    error -> error
+  end
+end
 ```
 
 ## Bounded Contexts
@@ -24,7 +66,7 @@ Multi-tenant workspace management with role-based membership.
 |-------|---------|
 | Domain | `Workspace`, `WorkspaceMember` entities; `SlugGenerator` |
 | Application | `InviteMember`, `RemoveMember`, `CreateNotificationsForPendingInvitations` use cases |
-| Infrastructure | `WorkspaceSchema`, `WorkspaceMemberSchema`, `WorkspaceRepository`, `WorkspaceMemberRepository`, PubSub notifier |
+| Infrastructure | `WorkspaceSchema`, `WorkspaceMemberSchema`, `WorkspaceRepository`, `WorkspaceMemberRepository` |
 
 Roles: Owner, Admin, Member, Guest
 
@@ -34,7 +76,8 @@ Project management within workspaces.
 
 | Layer | Modules |
 |-------|---------|
-| Domain | `Project` entity |
+| Domain | `Project` entity; `ProjectCreated`, `ProjectUpdated`, `ProjectDeleted`, `ProjectArchived` events |
+| Application | `CreateProject`, `UpdateProject`, `DeleteProject` use cases |
 | Infrastructure | `ProjectSchema`, `ProjectRepository` |
 
 ### Documents
@@ -43,9 +86,9 @@ Collaborative document management with component-based structure and agent query
 
 | Layer | Modules |
 |-------|---------|
-| Domain | `Document`, `DocumentComponent` entities; `SlugGenerator`, `AgentQueryParser`, `DocumentAccessPolicy` |
+| Domain | `Document`, `DocumentComponent` entities; `DocumentCreated`, `DocumentDeleted`, `DocumentTitleChanged`, `DocumentVisibilityChanged`, `DocumentPinnedChanged` events; `SlugGenerator`, `AgentQueryParser`, `DocumentAccessPolicy` |
 | Application | `CreateDocument`, `UpdateDocument`, `DeleteDocument`, `ExecuteAgentQuery` use cases; authorization module |
-| Infrastructure | `DocumentSchema`, `DocumentComponentSchema`, repositories, queries, PubSub notifier, `ComponentLoader` |
+| Infrastructure | `DocumentSchema`, `DocumentComponentSchema`, repositories, queries, `ComponentLoader` |
 
 ### Documents.Notes
 
@@ -56,31 +99,24 @@ Note-taking within documents with content hashing for change detection.
 | Domain | `Note` entity, `ContentHash` |
 | Infrastructure | `NoteSchema`, `NoteRepository`, `AuthorizationRepository`, queries |
 
-### Agents
-
-AI agent configuration per workspace with LLM client integration.
-
-| Layer | Modules |
-|-------|---------|
-| Domain | Agent entities |
-| Infrastructure | `AgentSchema`, `WorkspaceAgentJoinSchema`, `LLMClient`, repositories, PubSub |
-
 ### Chat
 
 Chat sessions and messaging tied to agents.
 
 | Layer | Modules |
 |-------|---------|
-| Domain | `Session`, `Message` entities |
+| Domain | `Session`, `Message` entities; `ChatSessionStarted`, `ChatMessageSent`, `ChatSessionDeleted` events |
 | Infrastructure | `SessionSchema`, `MessageSchema`, repositories, queries |
 
 ### Notifications
 
-Real-time notification system with PubSub subscribers.
+Real-time notification system with EventHandler-based subscribers.
 
 | Layer | Modules |
 |-------|---------|
-| Infrastructure | `NotificationSchema`, `WorkspaceInvitationSubscriber` |
+| Domain | `NotificationCreated`, `NotificationRead`, `NotificationActionTaken` events |
+| Application | `AcceptWorkspaceInvitation`, `CreateWorkspaceInvitationNotification`, `DeclineWorkspaceInvitation`, `GetUnreadCount`, `ListNotifications`, `MarkAsRead` use cases |
+| Infrastructure | `NotificationSchema`, `WorkspaceInvitationSubscriber` (EventHandler) |
 
 ### Accounts
 
@@ -111,4 +147,4 @@ mix test apps/jarga/test/jarga/workspaces/
 mix test apps/jarga/test/jarga/documents/
 ```
 
-Uses Mox for dependency mocking and Bypass for HTTP client testing.
+Uses `Perme8.Events.TestEventBus` for event emission assertions, Mox for dependency mocking, and Bypass for HTTP client testing.

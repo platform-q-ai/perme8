@@ -410,6 +410,15 @@ defmodule JargaWeb.MyLive do
 end
 ```
 
+## Event System Boundaries
+
+The event infrastructure has special boundary rules:
+
+- **`Perme8.Events.DomainEvent`** lives in `identity` app with `check: [in: false]` -- any module in any app can `use` it without declaring a dependency
+- **`Perme8.Events`** (EventBus, EventHandler, TestEventBus) lives in `jarga` app as a `top_level?: true` boundary
+- **Domain event structs** (e.g., `Events.ProjectCreated`) are exported from their context's Domain boundary
+- **EventHandler subscribers** live in `infrastructure/subscribers/` and are private to their context
+
 ## Key Rules
 
 1. ✅ **Web can call Contexts** - but only public APIs
@@ -418,6 +427,7 @@ end
 4. ❌ **Never access internal modules** - Queries, Policies, etc.
 5. ✅ **Export only what's needed** - schemas used across boundaries
 6. ✅ **Use type specs** - document your public API clearly
+7. ✅ **Emit events via EventBus** - never call `Phoenix.PubSub.broadcast` directly from use cases
 
 ## Benefits
 

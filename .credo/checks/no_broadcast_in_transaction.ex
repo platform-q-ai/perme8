@@ -13,26 +13,26 @@ defmodule Credo.Check.Custom.Architecture.NoBroadcastInTransaction do
 
   ## Examples
 
-  ### Invalid - Broadcasting inside transaction:
+  ### Invalid - Emitting events inside transaction:
 
       def execute(user_id, opts \\ []) do
-        notifier = Keyword.get(opts, :notifier, PubSubNotifier)
+        event_bus = Keyword.get(opts, :event_bus, Perme8.Events.EventBus)
 
         Repo.transact(fn ->
           user = Repo.get!(User, user_id)
           {:ok, updated} = Repo.update(changeset)
 
-          # ❌ RACE CONDITION: Broadcast before commit
-          notifier.broadcast_event(:user_updated, updated)
+          # ❌ RACE CONDITION: Event emitted before commit
+          event_bus.emit(%UserUpdated{aggregate_id: updated.id})
 
           {:ok, updated}
         end)
       end
 
-  ### Valid - Broadcast after transaction commits:
+  ### Valid - Emit events after transaction commits:
 
       def execute(user_id, opts \\ []) do
-        notifier = Keyword.get(opts, :notifier, PubSubNotifier)
+        event_bus = Keyword.get(opts, :event_bus, Perme8.Events.EventBus)
 
         result = Repo.transact(fn ->
           user = Repo.get!(User, user_id)
@@ -40,10 +40,13 @@ defmodule Credo.Check.Custom.Architecture.NoBroadcastInTransaction do
           {:ok, updated}
         end)
 
-        # ✅ SAFE: Broadcast after transaction commits
+        # ✅ SAFE: Event emitted after transaction commits
         case result do
           {:ok, updated} ->
-            notifier.broadcast_event(:user_updated, updated)
+            event_bus.emit(%UserUpdated{
+              aggregate_id: updated.id,
+              actor_id: user_id
+            })
             {:ok, updated}
 
           error ->
@@ -92,8 +95,8 @@ defmodule Credo.Check.Custom.Architecture.NoBroadcastInTransaction do
 
   # Match Repo.transaction(...) or Repo.transact(...)
   defp traverse(
-         {{:., meta, [{:__aliases__, _, [:Repo]}, function_name]}, _,
-          [transaction_body | _rest]} = ast,
+         {{:., meta, [{:__aliases__, _, [:Repo]}, function_name]}, _, [transaction_body | _rest]} =
+           ast,
          issues,
          issue_meta
        )
@@ -143,9 +146,7 @@ defmodule Credo.Check.Custom.Architecture.NoBroadcastInTransaction do
   end
 
   # Check for function calls starting with "broadcast_"
-  defp check_for_broadcast(
-         {{:., meta, [_module_or_var, function_name]}, _, _}
-       )
+  defp check_for_broadcast({{:., meta, [_module_or_var, function_name]}, _, _})
        when is_atom(function_name) do
     function_str = Atom.to_string(function_name)
 

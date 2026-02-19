@@ -19,7 +19,7 @@ defmodule Jarga.Documents.Domain do
 
   The Domain layer has NO dependencies. It cannot import:
   - Application layer (use cases, services)
-  - Infrastructure layer (repos, schemas, notifiers)
+  - Infrastructure layer (repos, schemas, subscribers)
   - External libraries (Ecto, Phoenix, etc.)
   - Other contexts
   """

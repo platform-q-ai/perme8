@@ -119,7 +119,7 @@ so that [benefit/value].
 **Technology Stack**:
 - **Backend**: [What Phoenix/Elixir components? e.g., "Channels for real-time updates"]
 - **Frontend**: [What TypeScript/LiveView? e.g., "LiveView hooks for rich text editor"]
-- **Real-time**: [Channels? PubSub? e.g., "PubSub to broadcast order updates"]
+- **Real-time**: [EventBus domain events? e.g., "Emit OrderCreated event via EventBus for real-time updates"]
 - **Storage**: [What DB changes? e.g., "new orders table, add status to users table"]
 - **External Services**: [Any APIs? e.g., "Stripe payment API, SendGrid email"]
 
@@ -391,8 +391,8 @@ Features or enhancements to consider for **future iterations** (not MVP):
 **Features This Connects To**:
 - [Feature name] - [File/module] - [Integration type]
 
-**Events/PubSub Topics**:
-- [Existing topics that might be relevant]
+**Domain Events / EventBus Topics**:
+- [Existing domain events that might be relevant, e.g., "events:workspace:{id}", "ProjectCreated", "DocumentDeleted"]
 
 ---
 
