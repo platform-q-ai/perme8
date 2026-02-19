@@ -1,3 +1,4 @@
+# CI rebuild trigger: blacksmith-migration
 defmodule Perme8.MixProject do
   use Mix.Project
 
