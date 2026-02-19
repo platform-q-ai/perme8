@@ -20,13 +20,17 @@ database_url =
 config :jarga, Jarga.Repo,
   url: database_url,
   pool: Ecto.Adapters.SQL.Sandbox,
-  pool_size: 20
+  pool_size: 20,
+  # LiveView processes during exo-bdd browser tests hold connections for the
+  # full scenario duration, easily exceeding the default 120s ownership timeout.
+  ownership_timeout: :infinity
 
 # Identity uses the same database as Jarga
 config :identity, Identity.Repo,
   url: database_url,
   pool: Ecto.Adapters.SQL.Sandbox,
-  pool_size: 20
+  pool_size: 20,
+  ownership_timeout: :infinity
 
 config :jarga_web, JargaWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4002],
