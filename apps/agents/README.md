@@ -48,6 +48,20 @@ A standalone [MCP](https://modelcontextprotocol.io/) endpoint exposes 6 knowledg
 | `Agents.Domain.Policies.KnowledgeValidationPolicy` | Category, tag, and relationship validation |
 | `Agents.Domain.Policies.SearchPolicy` | Search criteria validation and normalization |
 
+## Domain Events
+
+Agent use cases emit structured domain events via the `Perme8.Events.EventBus`:
+
+| Event | Aggregate | Emitted By |
+|-------|-----------|------------|
+| `AgentCreated` | `agent` | Agent creation flow |
+| `AgentUpdated` | `agent` | `UpdateUserAgent` use case |
+| `AgentDeleted` | `agent` | `DeleteUserAgent` use case |
+| `AgentAddedToWorkspace` | `agent` | `SyncAgentWorkspaces` use case |
+| `AgentRemovedFromWorkspace` | `agent` | `SyncAgentWorkspaces` use case |
+
+All use cases inject `event_bus` via `opts[:event_bus]` for testability.
+
 ## Dependencies
 
 - **`identity`** (in_umbrella) -- authentication, workspace resolution, API keys

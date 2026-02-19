@@ -327,7 +327,7 @@ Follow the test pyramid - more tests at the bottom, fewer at the top:
 **Phoenix LiveView Integration:**
 - LiveView handles server-side rendering and state
 - Phoenix hooks provide client-side interactivity
-- Use PubSub for real-time updates
+- Use the `Perme8.Events.EventBus` for real-time updates (wraps Phoenix.PubSub)
 - Hooks delegate to frontend use cases, not inline logic
 
 **Event Flow:**
@@ -336,15 +336,16 @@ Follow the test pyramid - more tests at the bottom, fewer at the top:
 - Use case applies business logic
 - Hook updates DOM and/or pushes event to LiveView
 - LiveView processes event with backend use case
-- LiveView broadcasts updates via PubSub
-- All connected clients update
+- Use case emits structured domain event via `EventBus.emit(%SomeEvent{...})`
+- EventBus broadcasts to topic-derived subscribers (e.g., `events:workspace:{id}`)
+- All connected LiveViews receive the event struct in `handle_info/2` and update UI
 
-### Critical: PubSub and Transactions
+### Critical: Domain Events and Transactions
 
-**Rule:** Always broadcast AFTER transactions commit.
+**Rule:** Always emit domain events AFTER transactions commit.
 
 **Reasoning:**
-- Broadcasting inside a transaction creates race conditions
+- Emitting inside a transaction creates race conditions
 - Listeners may query database before transaction commits
 - They would see stale data
 - Can cause data inconsistencies
@@ -352,8 +353,10 @@ Follow the test pyramid - more tests at the bottom, fewer at the top:
 **Pattern:**
 1. Complete database transaction
 2. Pattern match on success result
-3. Broadcast event after commit confirmed
+3. Emit domain event via `event_bus.emit(%Event{...})` after commit confirmed
 4. Handle result appropriately
+
+**Implementation:** Use cases inject `event_bus` via `opts[:event_bus]` and emit typed `DomainEvent` structs. Never call `Phoenix.PubSub.broadcast` directly from use cases.
 
 ### Separation of Ecto Schemas and Domain Logic
 

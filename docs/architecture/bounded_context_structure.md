@@ -19,6 +19,8 @@ lib/
 │   ├── domain/
 │   │   ├── entities/             # Pure domain structs
 │   │   │   └── user.ex
+│   │   ├── events/               # Domain event structs (use Perme8.Events.DomainEvent)
+│   │   │   └── user_registered.ex
 │   │   ├── policies/             # Business rules (pure functions)
 │   │   │   └── authentication_policy.ex
 │   │   └── services/             # Domain services (pure functions)
@@ -37,6 +39,8 @@ lib/
 │       │   └── user_repo.ex
 │       ├── queries/              # Ecto query builders
 │       │   └── user_queries.ex
+│       ├── subscribers/          # EventHandler-based cross-context subscribers
+│       │   └── invitation_subscriber.ex
 │       └── external/             # External service adapters
 │           └── email_adapter.ex
 ├── shared/                       # Shared infrastructure (optional)
@@ -214,7 +218,8 @@ end
 │   └─────────────┘    └─────────────┘    └─────────────┘        │
 │                                                                 │
 │   Entities          Use Cases           Schemas                │
-│   Policies          Services            Repos                  │
+│   Events            Services            Repos                  │
+│   Policies                              Subscribers            │
 │   Domain Services                       External Adapters      │
 └─────────────────────────────────────────────────────────────────┘
                                       │
@@ -239,13 +244,15 @@ Additional Credo checks provide defense-in-depth:
 - `EX7004`: Verifies boundary deps follow CA rules
 - `NoRepoInDomain`: Detects Repo imports in domain
 - `NoEctoInDomainLayer`: Detects Ecto usage in domain
+- `NoPubSubInContexts`: Prevents direct `Phoenix.PubSub.broadcast` in context modules (use `EventBus.emit` instead)
+- `NoBroadcastInTransaction`: Prevents PubSub broadcasts inside database transaction blocks
 - ... (30+ architectural checks)
 
 ## Creating a New Context
 
 1. Create the directory structure:
    ```bash
-   mkdir -p lib/{context}/{domain,application,infrastructure}/{entities,policies,services,use_cases,schemas,repos,queries}
+   mkdir -p lib/{context}/{domain,application,infrastructure}/{entities,events,policies,services,use_cases,schemas,repos,queries,subscribers}
    ```
 
 2. Create the boundary files:

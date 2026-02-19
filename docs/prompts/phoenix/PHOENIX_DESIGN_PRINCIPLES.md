@@ -296,7 +296,8 @@ lib/
 │   └── infrastructure/          # Infrastructure Layer (Technical Details)
 │       ├── queries/             # Query objects (Ecto queries)
 │       ├── repositories/        # Data access abstraction
-│       ├── notifiers/           # Email, SMS, push notifications
+│       ├── notifiers/           # Email notifications (e.g., UserNotifier)
+│       ├── subscribers/         # EventHandler-based cross-context subscribers
 │       └── services/            # External API clients
 ├── my_app_web/                  # Interface Layer (Presentation)
 │   ├── controllers/             # HTTP request handlers
@@ -429,7 +430,8 @@ Handles all I/O operations and external dependencies, including **Ecto schemas**
 - **Schemas**: Ecto schemas for database persistence (`infrastructure/schemas/`)
 - **Queries**: Ecto query objects (composable, reusable)
 - **Repositories**: Data access abstraction (thin wrappers around `Repo`)
-- **Notifiers**: Email, SMS, push notification sending
+- **Notifiers**: Email notification sending (e.g., `UserNotifier`, `WorkspaceNotifier`)
+- **Subscribers**: `EventHandler`-based GenServers that react to domain events from other contexts
 - **Services**: External API clients, file storage, etc.
 
 **Infrastructure Schemas Pattern**
@@ -636,9 +638,12 @@ end
 **Pattern:**
 ```elixir
 # Use case with injected dependencies
+@default_event_bus Perme8.Events.EventBus
+
 def execute(params, opts \\ []) do
   repo = Keyword.get(opts, :repo, Repo)
-  notifier = Keyword.get(opts, :notifier, UserNotifier)
+  event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
+  notifier = Keyword.get(opts, :notifier, WorkspaceNotifier)  # For email-only notifiers
   
   # Use injected dependencies
 end
@@ -647,12 +652,14 @@ end
 **Benefits:**
 - ✅ Testable without database (inject mocks)
 - ✅ Testable without sending emails (inject test notifier)
+- ✅ Testable event emission (inject `Perme8.Events.TestEventBus`)
 - ✅ Fast unit tests for business logic
 - ✅ Clear dependencies visible in function signature
 
 **What to inject:**
+- `event_bus` -- `Perme8.Events.EventBus` (primary for domain event emission)
 - Repository/Repo access
-- Notifiers (email, SMS, push)
+- Notifiers (email-only, e.g., `WorkspaceNotifier` for invitation emails)
 - External API clients
 - Time/clock (for testing time-dependent logic)
 
@@ -678,17 +685,33 @@ end
 **Use Case Structure:**
 ```elixir
 defmodule MyContext.Application.UseCases.OperationName do
-  @behaviour MyContext.Application.UseCases.UseCase
-  
-  @impl true
+  @default_event_bus Perme8.Events.EventBus
+
   def execute(params, opts \\ []) do
     # 1. Extract dependencies
     repo = Keyword.get(opts, :repo, Repo)
+    event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
     
     # 2. Validate with domain policies
-    # 3. Orchestrate infrastructure
-    # 4. Define transaction boundaries
-    # 5. Handle side effects AFTER transaction
+    # 3. Orchestrate infrastructure within transaction
+    result = repo.transact(fn ->
+      # ... database operations ...
+      {:ok, entity}
+    end)
+
+    # 4. Emit domain events AFTER transaction commits
+    case result do
+      {:ok, entity} ->
+        event_bus.emit(%MyContext.Domain.Events.EntityCreated{
+          aggregate_id: entity.id,
+          actor_id: params.user.id,
+          workspace_id: params.workspace_id
+        })
+        {:ok, entity}
+
+      error ->
+        error
+    end
   end
 end
 ```
@@ -914,24 +937,32 @@ Add public functions to the context module that delegate to internal layers.
 **Key Principle:**
 If you see a Boundary warning, you're accessing an internal module. Add a public function to the context instead.
 
-### 10. PubSub and Transactions
+### 10. Domain Events and Transactions
 
-**Critical Rule: Always broadcast AFTER transactions commit.**
+**Critical Rule: Always emit events AFTER transactions commit.**
 
-**Why:** Broadcasting inside a transaction creates race conditions. Listeners may query the database before the transaction commits, seeing stale or missing data.
+**Why:** Emitting inside a transaction creates race conditions. Listeners may query the database before the transaction commits, seeing stale or missing data.
 
 **Pattern:**
 ```elixir
-def some_operation(params) do
+@default_event_bus Perme8.Events.EventBus
+
+def execute(params, opts \\ []) do
+  event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
+
   result = Repo.transact(fn ->
     # Database operations
     {:ok, entity}
   end)
 
-  # Broadcast AFTER transaction commits
+  # Emit domain event AFTER transaction commits
   case result do
     {:ok, entity} ->
-      Phoenix.PubSub.broadcast(MyApp.PubSub, topic, {:event, entity})
+      event_bus.emit(%MyEvent{
+        aggregate_id: entity.id,
+        actor_id: params.user.id,
+        workspace_id: params.workspace_id
+      })
       {:ok, entity}
     error ->
       error
@@ -939,13 +970,16 @@ def some_operation(params) do
 end
 ```
 
-**Where to implement:**
-- Use cases that have side effects
-- Context functions that wrap transactions
-- NEVER broadcast inside `Repo.transact/1` callback
+**Rules:**
+- Use `opts[:event_bus]` injection -- never call `Phoenix.PubSub.broadcast` directly from use cases
+- Emit structured domain event structs (defined with `use Perme8.Events.DomainEvent`)
+- NEVER emit inside `Repo.transact/1` callback (enforced by Credo `NoBroadcastInTransaction` check)
+- LiveViews subscribe to `events:workspace:{id}` topics and pattern-match on event structs
+- Cross-context subscribers use the `Perme8.Events.EventHandler` behaviour
 
 **Testing:**
-Check that broadcasts happen after transactions commit, not inside them.
+- Inject `event_bus: Perme8.Events.TestEventBus` in tests to capture emitted events
+- See `docs/prompts/architect/PUBSUB_TESTING_GUIDE.md` for the full testing guide
 
 ---
 
@@ -967,13 +1001,14 @@ When reviewing or writing code, check these principles:
 - [ ] Use cases define transaction boundaries
 - [ ] Use cases accept dependency injection via `opts`
 - [ ] Use cases orchestrate domain policies + infrastructure
-- [ ] Side effects (broadcasts, emails) happen AFTER transactions
+- [ ] Domain events emitted via `opts[:event_bus]` AFTER transactions
 
 ### Infrastructure Layer
 - [ ] All Ecto queries in `infrastructure/queries/` modules
 - [ ] Queries return queryables, not results
 - [ ] Repositories are thin wrappers around Repo
-- [ ] Notifiers handle all external communications
+- [ ] Email notifiers handle external email communications
+- [ ] EventHandler subscribers handle cross-context reactions
 - [ ] Infrastructure depends on domain, not vice versa
 
 ### Context Module
@@ -987,7 +1022,7 @@ When reviewing or writing code, check these principles:
 - [ ] Boundary library catches all violations
 - [ ] No cross-context access to internal modules
 - [ ] Dependencies injected, not hardcoded
-- [ ] Broadcasts happen after transaction commits
+- [ ] Domain events emitted after transaction commits (never inside `Repo.transact`)
 - [ ] Configuration injected via opts, not `System.get_env`
 
 **When in doubt, ask:**

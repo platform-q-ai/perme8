@@ -41,12 +41,23 @@ Umbrella applications are a way to organize multiple Elixir applications within 
 
 All cross-app dependencies are enforced at compile time by the [`boundary`](https://hex.pm/packages/boundary) library. Each app is organized into layers:
 
-- **Domain** — pure business logic, entities, value objects, policies (no I/O)
+- **Domain** — pure business logic, entities, value objects, policies, domain events (no I/O)
 - **Application** — use cases, behaviours (ports), gateway interfaces
-- **Infrastructure** — repositories, schemas, external service adapters
+- **Infrastructure** — repositories, schemas, external service adapters, event handler subscribers
 - **Interface** — controllers, LiveViews, plugs (in web/API apps only)
 
 Run `mix boundary` to check for violations.
+
+### Shared Event Infrastructure
+
+The `Perme8.Events` system provides structured event-driven communication across all apps:
+
+- **`Perme8.Events.DomainEvent`** (in `identity`) — macro for defining typed event structs. Lives in `identity` due to cyclic dependency constraints.
+- **`Perme8.Events.EventBus`** (in `jarga`) — central dispatcher wrapping `Phoenix.PubSub` with topic-based routing
+- **`Perme8.Events.EventHandler`** (in `jarga`) — behaviour for GenServer-based cross-context subscribers
+- **`Perme8.Events.TestEventBus`** (in `jarga`) — in-memory bus for unit test assertions
+
+All use cases emit events via `opts[:event_bus]` dependency injection. All LiveViews subscribe to `events:workspace:{id}` topics and pattern-match on typed event structs.
 
 ---
 

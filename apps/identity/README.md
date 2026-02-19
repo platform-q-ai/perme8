@@ -60,10 +60,10 @@ The `Identity` module (`lib/identity.ex`) is a **facade** -- a thin public API t
 - `VerifyApiKey` -- constant-time hash verification
 
 ### Workspace Membership
-- `InviteMember` -- permission-checked invitation with email + PubSub
+- `InviteMember` -- permission-checked invitation with email notification + domain event emission
 - `ChangeMemberRole` -- role update with authorization
 - `RemoveMember` -- member removal with authorization
-- `CreateNotificationsForPendingInvitations` -- broadcast on new user signup
+- `CreateNotificationsForPendingInvitations` -- emits events on new user signup for pending invitations
 
 ## Routes
 
@@ -167,6 +167,19 @@ The test runner automatically:
 2. Seeds the database (`priv/repo/exo_seeds.exs`)
 3. Launches ZAP Docker container on port 8080 (for security tests)
 4. Launches headless Chromium (for browser tests)
+
+## Perme8.Events.DomainEvent
+
+This app hosts the `Perme8.Events.DomainEvent` macro (`lib/perme8_events/domain_event.ex`), which is the base macro for all domain event structs across the umbrella. It lives here (rather than in `jarga`) because `agents` depends on `identity` but cannot depend on `jarga` (cyclic dependency). The macro is defined as a standalone boundary with `check: [in: false]` so any module in any app can use it.
+
+### Identity Domain Events
+
+| Event | Aggregate | Emitted By |
+|-------|-----------|------------|
+| `MemberInvited` | `workspace_member` | `InviteMember` use case |
+| `WorkspaceUpdated` | `workspace` | Identity facade |
+| `MemberRemoved` | `workspace_member` | `RemoveMember` use case |
+| `WorkspaceInvitationNotified` | `workspace_member` | `CreateNotificationsForPendingInvitations` use case |
 
 ## Umbrella Context
 

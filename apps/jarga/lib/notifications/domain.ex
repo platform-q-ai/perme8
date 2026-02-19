@@ -13,7 +13,7 @@ defmodule Jarga.Notifications.Domain do
 
   The Domain layer has NO dependencies. It cannot import:
   - Application layer (use cases)
-  - Infrastructure layer (repos, schemas, notifiers)
+  - Infrastructure layer (repos, schemas, subscribers)
   - External libraries (Ecto, Phoenix, etc.)
   - Other contexts
   """

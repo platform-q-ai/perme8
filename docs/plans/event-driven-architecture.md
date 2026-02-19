@@ -1,7 +1,14 @@
 # Event-Driven Architecture Plan for Perme8
 
-## Status: DRAFT
-## Date: 2026-02-15
+## Status: IMPLEMENTED (Parts 1 + 2a + 2b + 2c complete)
+## Date: 2026-02-15 (original) | Updated: 2026-02-19
+
+> **Note:** The core event-driven migration described in this plan has been completed.
+> Parts 1, 2a, 2b, and 2c are all merged. The system is production-ready with 31 domain
+> event structs across 7 contexts, structured EventBus dispatch, EventHandler subscribers,
+> and all LiveViews migrated to structured event pattern matching. The LegacyBridge has
+> been created and removed. Legacy notifier infrastructure has been cleaned up.
+> Remaining P1/P2 items (event persistence, telemetry, sagas) are deferred to future work.
 
 ---
 
@@ -9,27 +16,32 @@
 
 This plan transforms perme8 from its current **ad-hoc PubSub notification pattern** into a **structured event-driven architecture** across all umbrella apps. The goal is to decouple bounded contexts, enable reliable cross-context communication, create an auditable event history, and lay the foundation for future event sourcing if needed.
 
-### What We Have Today
+### What We Have Today (Post-Migration)
 
-The codebase already has strong event-driven *instincts*:
+The event-driven system is fully operational:
 
-- **Phoenix PubSub** as a shared event bus (`Jarga.PubSub`)
-- **Notifier behaviour pattern** with DI via `opts[:notifier]` in every use case
-- **One GenServer subscriber** (`WorkspaceInvitationSubscriber`) proving the pattern works
-- **~15 distinct event types** broadcast as bare tuples across ~8 PubSub topics
+- **`Perme8.Events.EventBus`** wraps `Phoenix.PubSub` with structured topic-based routing
+- **`Perme8.Events.DomainEvent`** macro generates typed event structs with metadata
+- **`Perme8.Events.EventHandler`** behaviour for GenServer-based cross-context subscribers
+- **`Perme8.Events.TestEventBus`** for unit test event assertions
+- **31 domain event structs** across 7 contexts (Projects, Documents, Agents, Chat, Notifications, Identity, ERM)
+- **All use cases** emit events via `opts[:event_bus]` dependency injection
+- **All LiveViews** subscribe to structured event topics and pattern-match on event structs
+- **Credo checks** enforce PubSub usage patterns at compile time
 
-### What's Missing
+### What Remains (P1/P2 -- Deferred)
 
-| Gap | Impact |
-|-----|--------|
-| Events are bare tuples (`{:project_added, id}`), not structured data | No schema validation, no versioning, inconsistent payloads |
-| No central event registry | Impossible to discover what events exist or who listens |
-| Only 1 GenServer subscriber | Most cross-context reactions require direct function calls |
-| No event persistence | No audit trail, no replay, no debugging history |
-| Notifiers mix concerns | Email + PubSub + domain events conflated in single modules |
-| No event metadata | Missing `occurred_at`, `actor_id`, `correlation_id`, `causation_id` |
-| Entity Relationship Manager has no events | Graph mutations are invisible to the rest of the system |
-| Chat/Agents contexts have minimal events | LLM interactions don't emit domain events |
+| Gap | Priority | Status |
+|-----|----------|--------|
+| No event persistence (EventStore / `event_log` table) | P1 | Not started |
+| No event registry | P1 | Not started |
+| No telemetry integration | P1 | Not started |
+| Event replay / projections | P2 | Not started |
+| Dead-letter logging | P2 | Not started |
+| Saga / process manager | P2 | Not started |
+| API WebSocket/SSE streaming | P2 | Not started |
+| Webhook dispatcher | P2 | Not started |
+| Graph projection handler (ERM auto-sync) | P2 | Not started |
 
 ---
 

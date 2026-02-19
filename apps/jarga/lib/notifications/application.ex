@@ -19,7 +19,7 @@ defmodule Jarga.Notifications.Application do
   The Application layer has no domain layer dependency (Notifications has no domain).
 
   It cannot import:
-  - Infrastructure layer (repos, schemas, notifiers)
+  - Infrastructure layer (repos, schemas, subscribers)
   - Other contexts directly (use dependency injection)
   """
 

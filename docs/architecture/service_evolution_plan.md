@@ -95,10 +95,10 @@ This is the core content management service. Everything that isn't a project or 
 |---|---|---|
 | `Jarga.Notifications` context | `jarga` | Full extraction — domain, use cases, infra |
 | `NotificationSchema` | `jarga` | Moves to `notifications` with its own repo or shared repo |
-| `WorkspaceInvitationSubscriber` | `jarga` | Moves to `notifications`; subscribes to identity events via PubSub |
+| `WorkspaceInvitationSubscriber` | `jarga` | Moves to `notifications`; EventHandler subscribing to identity domain events |
 | Notification bell (LiveView) | `jarga_web` | Stays in `jarga_web`; calls `Notifications` facade |
 
-**Integration pattern:** PubSub-driven. Other services publish events (e.g., `identity` publishes invitation events, `jarga` publishes document events). Notifications subscribes and creates/delivers notifications.
+**Integration pattern:** Event-driven via `Perme8.Events.EventBus`. Other services emit structured domain events (e.g., `identity` emits `MemberInvited`, `jarga` emits `DocumentCreated`). Notifications uses `EventHandler` subscribers to react and create/deliver notifications.
 
 ---
 
@@ -119,7 +119,7 @@ This is the core content management service. Everything that isn't a project or 
 | Knowledge MCP (6 tools) | `knowledge_mcp` (deleted) | In `agents` |
 | Agent LiveViews (Index/Form) | `jarga_web` | Stays in `jarga_web`; calls `Agents` facade |
 
-**Integration pattern:** Synchronous calls from documents/chat into the agents facade. Agents depends on `identity` (auth) and `entity_relationship_manager` (knowledge graph). Agents publishes lifecycle events via PubSub.
+**Integration pattern:** Synchronous calls from documents/chat into the agents facade. Agents depends on `identity` (auth) and `entity_relationship_manager` (knowledge graph). Agents emits lifecycle domain events via `Perme8.Events.EventBus` (e.g., `AgentCreated`, `AgentUpdated`, `AgentDeleted`).
 
 ---
 
@@ -133,7 +133,7 @@ This is the core content management service. Everything that isn't a project or 
 | `SessionSchema`, `MessageSchema` | `jarga` | Moves to `chat` |
 | Chat panel (LiveView) | `jarga_web` | Stays in `jarga_web`; calls `Chat` facade |
 
-**Integration pattern:** PubSub for real-time message broadcasting. Chat may call `Agents` for AI-powered responses. Chat may trigger `Notifications` events.
+**Integration pattern:** EventBus domain events for real-time message broadcasting (`ChatMessageSent`, `ChatSessionStarted`). Chat may call `Agents` for AI-powered responses. Chat may trigger `Notifications` events.
 
 ---
 
