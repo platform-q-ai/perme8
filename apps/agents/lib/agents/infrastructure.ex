@@ -17,12 +17,9 @@ defmodule Agents.Infrastructure do
     deps: [
       Agents.Domain,
       Agents.Application,
-      # Cross-context dependencies
+      # Cross-context dependencies (cross-app modules resolved at runtime)
       Identity,
-      Identity.Repo,
-      EntityRelationshipManager,
-      Jarga.Projects,
-      Jarga.Documents
+      Identity.Repo
     ],
     exports: [
       # Schemas
