@@ -22,7 +22,6 @@ defmodule Identity.Application.UseCases.CreateNotificationsForPendingInvitations
   @default_pubsub_notifier Identity.Infrastructure.Notifiers.PubSubNotifier
   @default_queries Identity.Infrastructure.Queries.WorkspaceQueries
   @default_repo Identity.Repo
-  @default_event_bus Perme8.Events.EventBus
 
   @doc """
   Executes the create notifications for pending invitations use case.
@@ -50,7 +49,6 @@ defmodule Identity.Application.UseCases.CreateNotificationsForPendingInvitations
     pubsub_notifier = Keyword.get(opts, :pubsub_notifier, @default_pubsub_notifier)
     queries = Keyword.get(opts, :queries, @default_queries)
     repo = Keyword.get(opts, :repo, @default_repo)
-    event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
 
     %{user: %{id: _, email: _} = user} = params
 
@@ -69,7 +67,7 @@ defmodule Identity.Application.UseCases.CreateNotificationsForPendingInvitations
     case result do
       {:ok, pending_invitations} ->
         Enum.each(pending_invitations, fn invitation ->
-          broadcast_invitation_notification(user, invitation, pubsub_notifier, event_bus)
+          broadcast_invitation_notification(user, invitation, pubsub_notifier)
         end)
 
         {:ok, []}
@@ -79,7 +77,7 @@ defmodule Identity.Application.UseCases.CreateNotificationsForPendingInvitations
     end
   end
 
-  defp broadcast_invitation_notification(user, invitation_schema, pubsub_notifier, event_bus) do
+  defp broadcast_invitation_notification(user, invitation_schema, pubsub_notifier) do
     inviter_name = get_inviter_name(invitation_schema.inviter)
 
     pubsub_notifier.broadcast_invitation_created(
@@ -89,20 +87,6 @@ defmodule Identity.Application.UseCases.CreateNotificationsForPendingInvitations
       inviter_name,
       to_string(invitation_schema.role)
     )
-
-    # Emit structured domain event
-    event =
-      Identity.Domain.Events.MemberInvited.new(%{
-        aggregate_id: "#{invitation_schema.workspace_id}:#{user.id}",
-        actor_id: invitation_schema.invited_by || user.id,
-        user_id: user.id,
-        workspace_id: invitation_schema.workspace_id,
-        workspace_name: invitation_schema.workspace.name,
-        invited_by_name: inviter_name,
-        role: to_string(invitation_schema.role)
-      })
-
-    event_bus.emit(event)
   end
 
   defp get_inviter_name(nil), do: "Someone"
