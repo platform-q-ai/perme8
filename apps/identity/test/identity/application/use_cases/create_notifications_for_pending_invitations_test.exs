@@ -2,6 +2,9 @@ defmodule Identity.Application.UseCases.CreateNotificationsForPendingInvitations
   use Identity.DataCase, async: true
 
   alias Identity.Application.UseCases.CreateNotificationsForPendingInvitations
+  alias Identity.Domain.Events.MemberInvited
+  alias Perme8.Events.TestEventBus
+
   import Identity.AccountsFixtures
   import Identity.WorkspacesFixtures
 
@@ -18,9 +21,9 @@ defmodule Identity.Application.UseCases.CreateNotificationsForPendingInvitations
   end
 
   defp start_test_event_bus do
-    case Perme8.Events.TestEventBus.start_link([]) do
+    case TestEventBus.start_link([]) do
       {:ok, _pid} -> :ok
-      {:error, {:already_started, _pid}} -> Perme8.Events.TestEventBus.reset()
+      {:error, {:already_started, _pid}} -> TestEventBus.reset()
     end
   end
 
@@ -70,12 +73,12 @@ defmodule Identity.Application.UseCases.CreateNotificationsForPendingInvitations
         pending_invitation_fixture(workspace.id, invitee.email, :admin, invited_by: owner.id)
 
       params = %{user: invitee}
-      opts = [pubsub_notifier: MockPubSubNotifier, event_bus: Perme8.Events.TestEventBus]
+      opts = [pubsub_notifier: MockPubSubNotifier, event_bus: TestEventBus]
 
       assert {:ok, []} = CreateNotificationsForPendingInvitations.execute(params, opts)
 
-      events = Perme8.Events.TestEventBus.get_events()
-      assert [%Identity.Domain.Events.MemberInvited{} = event] = events
+      events = TestEventBus.get_events()
+      assert [%MemberInvited{} = event] = events
       assert event.user_id == invitee.id
       assert event.workspace_id == workspace.id
       assert event.workspace_name == workspace.name
@@ -88,11 +91,11 @@ defmodule Identity.Application.UseCases.CreateNotificationsForPendingInvitations
       user = user_fixture()
 
       params = %{user: user}
-      opts = [pubsub_notifier: MockPubSubNotifier, event_bus: Perme8.Events.TestEventBus]
+      opts = [pubsub_notifier: MockPubSubNotifier, event_bus: TestEventBus]
 
       assert {:ok, []} = CreateNotificationsForPendingInvitations.execute(params, opts)
 
-      events = Perme8.Events.TestEventBus.get_events()
+      events = TestEventBus.get_events()
       assert events == []
     end
   end
