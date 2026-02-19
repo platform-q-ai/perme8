@@ -4,33 +4,29 @@ defmodule Identity.Infrastructure.Notifiers.PubSubNotifierTest do
   alias Identity.Infrastructure.Notifiers.PubSubNotifier
 
   describe "broadcast_invitation_created/5" do
-    test "broadcasts to workspace_invitations topic" do
-      # Subscribe to the topic
-      Phoenix.PubSub.subscribe(Jarga.PubSub, "workspace_invitations")
-
-      user_id = "user-123"
-      workspace_id = "workspace-456"
-      workspace_name = "Test Workspace"
-      invited_by_name = "Jane Smith"
-      role = "admin"
-
+    test "returns :ok (no-op — EventBus handles delivery now)" do
       assert :ok =
                PubSubNotifier.broadcast_invitation_created(
-                 user_id,
-                 workspace_id,
-                 workspace_name,
-                 invited_by_name,
-                 role
+                 "user-123",
+                 "workspace-456",
+                 "Test Workspace",
+                 "Jane Smith",
+                 "admin"
                )
+    end
 
-      assert_receive {:workspace_invitation_created,
-                      %{
-                        user_id: "user-123",
-                        workspace_id: "workspace-456",
-                        workspace_name: "Test Workspace",
-                        invited_by_name: "Jane Smith",
-                        role: "admin"
-                      }}
+    test "does not broadcast to legacy workspace_invitations topic" do
+      Phoenix.PubSub.subscribe(Jarga.PubSub, "workspace_invitations")
+
+      PubSubNotifier.broadcast_invitation_created(
+        "user-123",
+        "workspace-456",
+        "Test Workspace",
+        "Jane Smith",
+        "admin"
+      )
+
+      refute_receive {:workspace_invitation_created, _}
     end
   end
 end

@@ -1,98 +1,32 @@
 defmodule Jarga.Notifications.Infrastructure.Notifiers.PubSubNotifier do
   @moduledoc """
-  PubSub notification service for broadcasting notification-related events.
+  No-op PubSub notification service for notification-related events.
 
-  Uses Phoenix PubSub to broadcast real-time updates for workspace invitations
-  and other notification events.
+  Legacy PubSub broadcasts have been removed. The EventBus now handles all
+  structured event delivery via use case `event_bus.emit` calls. This module
+  is retained as a no-op shell because use cases still inject it via
+  `opts[:pubsub_notifier]`. Full removal of the notifier module, behaviour,
+  and injection is deferred to Part 2c.
   """
 
   @behaviour Jarga.Notifications.Application.Behaviours.PubSubNotifierBehaviour
 
-  @doc """
-  Broadcasts a workspace invitation created event.
-
-  ## Parameters
-  - `user_id` - The ID of the user who received the invitation
-  - `workspace_id` - The ID of the workspace they were invited to
-  - `workspace_name` - The name of the workspace
-  - `invited_by_name` - The name of the person who sent the invitation
-  - `role` - The role they were invited as
-  """
   @impl true
-  def broadcast_invitation_created(user_id, workspace_id, workspace_name, invited_by_name, role) do
-    Phoenix.PubSub.broadcast(
-      Jarga.PubSub,
-      "workspace_invitations",
-      {:workspace_invitation_created,
-       %{
-         user_id: user_id,
-         workspace_id: workspace_id,
-         workspace_name: workspace_name,
-         invited_by_name: invited_by_name,
-         role: role
-       }}
-    )
+  def broadcast_invitation_created(
+        _user_id,
+        _workspace_id,
+        _workspace_name,
+        _invited_by_name,
+        _role
+      ),
+      do: :ok
 
-    :ok
-  end
-
-  @doc """
-  Broadcasts a workspace joined event when a user accepts an invitation.
-
-  ## Parameters
-  - `user_id` - The ID of the user who joined
-  - `workspace_id` - The ID of the workspace they joined
-  """
   @impl true
-  def broadcast_workspace_joined(user_id, workspace_id) do
-    Phoenix.PubSub.broadcast(
-      Jarga.PubSub,
-      "user:#{user_id}",
-      {:workspace_joined, workspace_id}
-    )
+  def broadcast_workspace_joined(_user_id, _workspace_id), do: :ok
 
-    Phoenix.PubSub.broadcast(
-      Jarga.PubSub,
-      "workspace:#{workspace_id}",
-      {:member_joined, user_id}
-    )
-
-    :ok
-  end
-
-  @doc """
-  Broadcasts an invitation declined event.
-
-  ## Parameters
-  - `user_id` - The ID of the user who declined
-  - `workspace_id` - The ID of the workspace invitation they declined
-  """
   @impl true
-  def broadcast_invitation_declined(user_id, workspace_id) do
-    Phoenix.PubSub.broadcast(
-      Jarga.PubSub,
-      "workspace:#{workspace_id}",
-      {:invitation_declined, user_id}
-    )
+  def broadcast_invitation_declined(_user_id, _workspace_id), do: :ok
 
-    :ok
-  end
-
-  @doc """
-  Broadcasts a new notification event to a user.
-
-  ## Parameters
-  - `user_id` - The ID of the user receiving the notification
-  - `notification` - The notification struct
-  """
   @impl true
-  def broadcast_new_notification(user_id, notification) do
-    Phoenix.PubSub.broadcast(
-      Jarga.PubSub,
-      "user:#{user_id}:notifications",
-      {:new_notification, notification}
-    )
-
-    :ok
-  end
+  def broadcast_new_notification(_user_id, _notification), do: :ok
 end

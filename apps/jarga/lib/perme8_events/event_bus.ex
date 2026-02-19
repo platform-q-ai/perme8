@@ -10,20 +10,14 @@ defmodule Perme8.Events.EventBus do
   - `events:{context}:{aggregate_type}` — Scoped by aggregate (e.g., `events:projects:project`)
   - `events:workspace:{workspace_id}` — Workspace-scoped events (when workspace_id present)
   - `events:user:{target_user_id}` — User-scoped events (when target_user_id present)
-
-  Additionally, `LegacyBridge.broadcast_legacy/1` is called to maintain
-  backward compatibility with existing tuple-based PubSub consumers.
   """
-
-  alias Perme8.Events.Infrastructure.LegacyBridge
 
   @pubsub Jarga.PubSub
 
   @doc """
   Emits a domain event to all derived topics.
 
-  Broadcasts the event struct to context, aggregate, and workspace topics,
-  then calls the LegacyBridge for backward-compatible tuple broadcasts.
+  Broadcasts the event struct to context, aggregate, workspace, and user topics.
 
   ## Options
 
@@ -36,8 +30,6 @@ defmodule Perme8.Events.EventBus do
     Enum.each(topics, fn topic ->
       Phoenix.PubSub.broadcast(@pubsub, topic, event)
     end)
-
-    LegacyBridge.broadcast_legacy(event)
 
     :ok
   end

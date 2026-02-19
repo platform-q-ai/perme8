@@ -1,10 +1,10 @@
 defmodule Identity.Infrastructure.Notifiers.EmailAndPubSubNotifier do
   @moduledoc """
-  Default implementation of NotificationService that sends both email and in-app notifications.
+  Default implementation of NotificationService that sends both email and structured event notifications.
 
   This implementation:
   - Sends email notifications via WorkspaceNotifier
-  - Broadcasts in-app notifications via Phoenix.PubSub
+  - Emits structured domain events via EventBus for real-time updates
   - Uses configurable URL builders for links in emails
   """
 
@@ -15,20 +15,11 @@ defmodule Identity.Infrastructure.Notifiers.EmailAndPubSubNotifier do
   alias Identity.Infrastructure.Notifiers.WorkspaceNotifier
   alias Identity.Domain.Events.{WorkspaceUpdated, MemberRemoved, WorkspaceInvitationNotified}
 
-  @pubsub Application.compile_env(:identity, :pubsub_module, Jarga.PubSub)
-
   @impl true
   def notify_existing_user(%User{} = user, %Workspace{} = workspace, %User{} = inviter) do
     # Send email notification
     workspace_url = build_workspace_url(workspace.id)
     WorkspaceNotifier.deliver_invitation_to_existing_user(user, workspace, inviter, workspace_url)
-
-    # Broadcast in-app notification via PubSub
-    Phoenix.PubSub.broadcast(
-      @pubsub,
-      "user:#{user.id}",
-      {:workspace_invitation, workspace.id, workspace.name, inviter.first_name}
-    )
 
     # Emit structured event for EventBus
     event_bus().emit(
@@ -57,13 +48,6 @@ defmodule Identity.Infrastructure.Notifiers.EmailAndPubSubNotifier do
 
   @impl true
   def notify_user_removed(%User{} = user, %Workspace{} = workspace) do
-    # Broadcast in-app notification via PubSub
-    Phoenix.PubSub.broadcast(
-      @pubsub,
-      "user:#{user.id}",
-      {:workspace_removed, workspace.id}
-    )
-
     # Emit structured event for EventBus
     event_bus().emit(
       MemberRemoved.new(%{
@@ -79,13 +63,6 @@ defmodule Identity.Infrastructure.Notifiers.EmailAndPubSubNotifier do
 
   @impl true
   def notify_workspace_updated(%Workspace{} = workspace) do
-    # Broadcast in-app notification via PubSub to all workspace members
-    Phoenix.PubSub.broadcast(
-      @pubsub,
-      "workspace:#{workspace.id}",
-      {:workspace_updated, workspace.id, workspace.name}
-    )
-
     # Emit structured event for EventBus
     event_bus().emit(
       WorkspaceUpdated.new(%{

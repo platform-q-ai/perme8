@@ -1,39 +1,24 @@
 defmodule Identity.Infrastructure.Notifiers.PubSubNotifier do
   @moduledoc """
-  PubSub notification service for broadcasting workspace invitation events.
+  No-op PubSub notifier for workspace invitation events.
 
-  Uses Phoenix PubSub to broadcast real-time updates for workspace invitations.
+  Legacy PubSub broadcasts have been removed. The EventBus now handles all
+  structured event delivery. This module is retained as a no-op shell because
+  use cases still inject it via `opts[:pubsub_notifier]`. Full removal of the
+  notifier module, behaviour, and injection is deferred to Part 2c.
   """
 
   @behaviour Identity.Application.Behaviours.PubSubNotifierBehaviour
 
-  @pubsub Application.compile_env(:identity, :pubsub_module, Jarga.PubSub)
-
-  @doc """
-  Broadcasts a workspace invitation created event.
-
-  ## Parameters
-  - `user_id` - The ID of the user who received the invitation
-  - `workspace_id` - The ID of the workspace they were invited to
-  - `workspace_name` - The name of the workspace
-  - `invited_by_name` - The name of the person who sent the invitation
-  - `role` - The role they were invited as
-  """
   @impl true
-  def broadcast_invitation_created(user_id, workspace_id, workspace_name, invited_by_name, role) do
-    Phoenix.PubSub.broadcast(
-      @pubsub,
-      "workspace_invitations",
-      {:workspace_invitation_created,
-       %{
-         user_id: user_id,
-         workspace_id: workspace_id,
-         workspace_name: workspace_name,
-         invited_by_name: invited_by_name,
-         role: role
-       }}
-    )
-
+  def broadcast_invitation_created(
+        _user_id,
+        _workspace_id,
+        _workspace_name,
+        _invited_by_name,
+        _role
+      ) do
+    # No-op: EventBus.emit handles all event delivery now
     :ok
   end
 end
