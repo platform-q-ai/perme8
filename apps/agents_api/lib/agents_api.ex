@@ -12,6 +12,7 @@ defmodule AgentsApi do
 
   # API interface layer - depends on Agents context and Identity for auth
   use Boundary,
+    top_level?: true,
     deps: [
       Agents,
       Identity
