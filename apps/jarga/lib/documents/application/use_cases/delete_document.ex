@@ -25,7 +25,6 @@ defmodule Jarga.Documents.Application.UseCases.DeleteDocument do
 
   # Default Infrastructure implementations (injected via opts for testing)
   @default_document_repository Jarga.Documents.Infrastructure.Repositories.DocumentRepository
-  @default_notifier Jarga.Documents.Infrastructure.Notifiers.PubSubNotifier
   @default_event_bus Perme8.Events.EventBus
 
   @doc """
@@ -37,8 +36,7 @@ defmodule Jarga.Documents.Application.UseCases.DeleteDocument do
     - `:actor` - User deleting the document
     - `:document_id` - ID of the document to delete
 
-  - `opts` - Keyword list of options:
-    - `:notifier` - Notification service (default: PubSubNotifier)
+  - `opts` - Keyword list of options
 
   ## Returns
 
@@ -54,12 +52,10 @@ defmodule Jarga.Documents.Application.UseCases.DeleteDocument do
 
     # Extract dependencies from opts
     document_repository = Keyword.get(opts, :document_repository, @default_document_repository)
-    notifier = Keyword.get(opts, :notifier, @default_notifier)
     event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
 
     deps = %{
       document_repository: document_repository,
-      notifier: notifier,
       event_bus: event_bus
     }
 
@@ -108,7 +104,6 @@ defmodule Jarga.Documents.Application.UseCases.DeleteDocument do
   defp delete_document_and_notify(document, deps) do
     %{
       document_repository: document_repository,
-      notifier: notifier,
       event_bus: event_bus
     } = deps
 
@@ -116,8 +111,6 @@ defmodule Jarga.Documents.Application.UseCases.DeleteDocument do
 
     case result do
       {:ok, deleted_document} ->
-        # Send notification AFTER transaction commits
-        notifier.notify_document_deleted(deleted_document)
         emit_document_deleted_event(deleted_document, document, event_bus)
         {:ok, deleted_document}
 

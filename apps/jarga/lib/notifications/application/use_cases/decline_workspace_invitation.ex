@@ -13,7 +13,6 @@ defmodule Jarga.Notifications.Application.UseCases.DeclineWorkspaceInvitation do
   alias Jarga.Workspaces
 
   @default_notification_repository Jarga.Notifications.Infrastructure.Repositories.NotificationRepository
-  @default_notifier Jarga.Notifications.Infrastructure.Notifiers.PubSubNotifier
   @default_event_bus Perme8.Events.EventBus
 
   @doc """
@@ -24,9 +23,6 @@ defmodule Jarga.Notifications.Application.UseCases.DeclineWorkspaceInvitation do
   Returns `{:error, :invalid_notification_type}` if notification is not a workspace_invitation.
   Returns `{:error, :already_actioned}` if invitation was already accepted or declined.
 
-  ## Options
-  - `:notifier` - Module implementing notification broadcasting (default: PubSubNotifier)
-
   ## Examples
 
       iex> execute(notification_id, user_id)
@@ -36,7 +32,6 @@ defmodule Jarga.Notifications.Application.UseCases.DeclineWorkspaceInvitation do
     notification_repository =
       Keyword.get(opts, :notification_repository, @default_notification_repository)
 
-    notifier = Keyword.get(opts, :notifier, @default_notifier)
     event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
 
     result =
@@ -55,8 +50,6 @@ defmodule Jarga.Notifications.Application.UseCases.DeclineWorkspaceInvitation do
     # Broadcast AFTER transaction commits
     case result do
       {:ok, notification} ->
-        workspace_id = notification.data["workspace_id"]
-        notifier.broadcast_invitation_declined(notification.user_id, workspace_id)
         emit_action_taken_event(notification, "declined", event_bus)
         {:ok, notification}
 

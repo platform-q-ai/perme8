@@ -25,7 +25,6 @@ defmodule Jarga.Projects.Application.UseCases.CreateProject do
   alias Jarga.Domain.Policies.DomainPermissionsPolicy, as: PermissionsPolicy
 
   @default_project_repository Jarga.Projects.Infrastructure.Repositories.ProjectRepository
-  @default_notifier Jarga.Projects.Infrastructure.Notifiers.EmailAndPubSubNotifier
   @default_event_bus Perme8.Events.EventBus
 
   @doc """
@@ -38,8 +37,7 @@ defmodule Jarga.Projects.Application.UseCases.CreateProject do
     - `:workspace_id` - ID of the workspace
     - `:attrs` - Project attributes (name, description, etc.)
 
-  - `opts` - Keyword list of options:
-    - `:notifier` - Notification service implementation (default: EmailAndPubSubNotifier)
+  - `opts` - Keyword list of options
 
   ## Returns
 
@@ -55,13 +53,11 @@ defmodule Jarga.Projects.Application.UseCases.CreateProject do
     } = params
 
     project_repository = Keyword.get(opts, :project_repository, @default_project_repository)
-    notifier = Keyword.get(opts, :notifier, @default_notifier)
     event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
 
     with {:ok, member} <- get_workspace_member(actor, workspace_id),
          :ok <- authorize_create_project(member.role),
          {:ok, project} <- create_project(actor, workspace_id, attrs, project_repository) do
-      notifier.notify_project_created(project)
       emit_project_created_event(project, actor, workspace_id, event_bus)
       {:ok, project}
     end

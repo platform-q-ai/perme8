@@ -26,7 +26,6 @@ defmodule Jarga.Projects.Application.UseCases.DeleteProject do
 
   @default_project_repository Jarga.Projects.Infrastructure.Repositories.ProjectRepository
   @default_authorization_repository Jarga.Projects.Infrastructure.Repositories.AuthorizationRepository
-  @default_notifier Jarga.Projects.Infrastructure.Notifiers.EmailAndPubSubNotifier
   @default_event_bus Perme8.Events.EventBus
 
   @doc """
@@ -39,8 +38,7 @@ defmodule Jarga.Projects.Application.UseCases.DeleteProject do
     - `:workspace_id` - ID of the workspace
     - `:project_id` - ID of the project to delete
 
-  - `opts` - Keyword list of options:
-    - `:notifier` - Notification service implementation (default: EmailAndPubSubNotifier)
+  - `opts` - Keyword list of options
 
   ## Returns
 
@@ -60,7 +58,6 @@ defmodule Jarga.Projects.Application.UseCases.DeleteProject do
     authorization_repository =
       Keyword.get(opts, :authorization_repository, @default_authorization_repository)
 
-    notifier = Keyword.get(opts, :notifier, @default_notifier)
     event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
 
     with {:ok, member} <- get_workspace_member(actor, workspace_id),
@@ -68,7 +65,6 @@ defmodule Jarga.Projects.Application.UseCases.DeleteProject do
            verify_project_access(actor, workspace_id, project_id, authorization_repository),
          :ok <- authorize_delete_project(member.role, project, actor.id),
          {:ok, deleted_project} <- delete_project(project, project_repository) do
-      notifier.notify_project_deleted(deleted_project, workspace_id)
       emit_project_deleted_event(deleted_project, actor, workspace_id, event_bus)
       {:ok, deleted_project}
     end
