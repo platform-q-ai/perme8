@@ -5,6 +5,7 @@ defmodule Jarga.Notifications.Infrastructure.WorkspaceInvitationSubscriberIntegr
 
   alias Identity.Domain.Events.MemberInvited
   alias Jarga.Notifications
+  alias Perme8.Events.EventBus
 
   @moduletag :integration
 
@@ -33,7 +34,7 @@ defmodule Jarga.Notifications.Infrastructure.WorkspaceInvitationSubscriberIntegr
       # The subscriber listens on events:identity:workspace_member only
       # (single topic to avoid duplicate delivery).
       # No one listens on "workspace_invitations" anymore (subscriber was converted).
-      Perme8.Events.EventBus.emit(event)
+      EventBus.emit(event)
 
       # Wait for async processing
       :timer.sleep(200)
