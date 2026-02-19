@@ -338,7 +338,15 @@
              # agents: facade delegates to both Application and Infrastructure
              #   (LlmClient for chat/stream) — extracting a separate ApplicationLayer
              #   boundary is planned but not yet done
-             excluded_apps: ["perme8_tools", "jarga_api", "entity_relationship_manager", "agents"]
+             # agents_api: interface app that depends on Agents context and Identity
+             #   directly, not a single ApplicationLayer — same pattern as jarga_api
+             excluded_apps: [
+               "perme8_tools",
+               "jarga_api",
+               "entity_relationship_manager",
+               "agents",
+               "agents_api"
+             ]
            ]},
 
           #
