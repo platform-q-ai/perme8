@@ -16,13 +16,20 @@ defmodule JargaWeb.AppLive.Agents.Index do
     AgentRemovedFromWorkspace
   }
 
+  alias Jarga.Workspaces
   alias JargaWeb.Layouts
 
   @impl true
   def mount(_params, _session, socket) do
     if connected?(socket) do
-      user_id = socket.assigns.current_scope.user.id
-      Perme8.Events.subscribe("events:user:#{user_id}")
+      # Subscribe to workspace topic(s) for agent events (AgentUpdated, AgentDeleted, etc.)
+      # Agent events are broadcast to workspace topics, not user topics.
+      user = socket.assigns.current_scope.user
+      workspaces = Workspaces.list_workspaces_for_user(user)
+
+      Enum.each(workspaces, fn workspace ->
+        Perme8.Events.subscribe("events:workspace:#{workspace.id}")
+      end)
     end
 
     {:ok,

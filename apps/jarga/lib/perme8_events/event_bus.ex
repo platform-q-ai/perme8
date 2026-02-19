@@ -61,7 +61,7 @@ defmodule Perme8.Events.EventBus do
         base_topics
       end
 
-    if Map.has_key?(event, :target_user_id) && Map.get(event, :target_user_id) do
+    if Map.get(event, :target_user_id) do
       topics ++ ["events:user:#{event.target_user_id}"]
     else
       topics
