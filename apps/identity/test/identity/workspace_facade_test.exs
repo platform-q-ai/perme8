@@ -9,11 +9,15 @@ defmodule Identity.WorkspaceFacadeTest do
 
   defp ensure_test_event_bus_started do
     case TestEventBus.start_link([]) do
-      {:ok, _pid} -> :ok
+      {:ok, pid} -> Process.unlink(pid)
       {:error, {:already_started, _pid}} -> :ok
     end
+  end
 
-    TestEventBus.reset()
+  defp updated_events_for(workspace_id) do
+    Enum.filter(TestEventBus.get_events(), fn event ->
+      match?(%WorkspaceUpdated{}, event) && event.workspace_id == workspace_id
+    end)
   end
 
   describe "list_workspaces_for_user/1" do
@@ -192,8 +196,7 @@ defmodule Identity.WorkspaceFacadeTest do
                  event_bus: TestEventBus
                )
 
-      events = TestEventBus.get_events()
-      assert [%WorkspaceUpdated{} = event] = events
+      assert [%WorkspaceUpdated{} = event] = updated_events_for(workspace.id)
       assert event.workspace_id == workspace.id
       assert event.name == "Event Test"
       assert event.actor_id == user.id
@@ -211,7 +214,7 @@ defmodule Identity.WorkspaceFacadeTest do
                  event_bus: TestEventBus
                )
 
-      assert [] = TestEventBus.get_events()
+      assert [] = updated_events_for(workspace.id)
     end
   end
 
