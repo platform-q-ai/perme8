@@ -11,8 +11,10 @@ defmodule Identity.Application.UseCases.InviteMemberTest do
   defp ensure_test_event_bus_started do
     case TestEventBus.start_link([]) do
       {:ok, _pid} -> :ok
-      {:error, {:already_started, _pid}} -> TestEventBus.reset()
+      {:error, {:already_started, _pid}} -> :ok
     end
+
+    TestEventBus.reset()
   end
 
   describe "execute/2 - existing user" do
