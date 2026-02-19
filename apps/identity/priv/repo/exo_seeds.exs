@@ -106,4 +106,29 @@ IO.puts("[identity-exo-seeds] Created user: alice@example.com")
 
 IO.puts("[identity-exo-seeds] Created reset password token for alice@example.com")
 
+# ---------------------------------------------------------------------------
+# 3. Create API keys for Alice (browser feature tests)
+#    Seeds two keys: one active, one revoked, to test filtering and display.
+# ---------------------------------------------------------------------------
+
+{:ok, {_active_key, _token}} =
+  Identity.create_api_key(alice.id, %{
+    name: "Seeded Active Key",
+    description: "Pre-seeded key for browser tests",
+    workspace_access: []
+  })
+
+IO.puts("[identity-exo-seeds] Created active API key for alice@example.com")
+
+{:ok, {revoke_target, _token2}} =
+  Identity.create_api_key(alice.id, %{
+    name: "Seeded Revoked Key",
+    description: "Pre-seeded revoked key for browser tests",
+    workspace_access: []
+  })
+
+{:ok, _revoked} = Identity.revoke_api_key(alice.id, revoke_target.id)
+
+IO.puts("[identity-exo-seeds] Created and revoked API key for alice@example.com")
+
 IO.puts("[identity-exo-seeds] Done!")
