@@ -1081,12 +1081,6 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
      |> assign(:other_agents, agents_result.other_agents)}
   end
 
-  # Chat panel streaming messages
+  # Chat panel streaming messages (includes catch-all for unhandled messages)
   handle_chat_messages()
-
-  # Catch-all for unhandled messages (e.g., email notifications from Swoosh)
-  @impl true
-  def handle_info(_msg, socket) do
-    {:noreply, socket}
-  end
 end

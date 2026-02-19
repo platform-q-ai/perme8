@@ -8,10 +8,23 @@ defmodule JargaWeb.AppLive.Agents.Index do
   import JargaWeb.ChatLive.MessageHandlers
 
   alias Agents
+
+  alias Agents.Domain.Events.{
+    AgentUpdated,
+    AgentDeleted,
+    AgentAddedToWorkspace,
+    AgentRemovedFromWorkspace
+  }
+
   alias JargaWeb.Layouts
 
   @impl true
   def mount(_params, _session, socket) do
+    if connected?(socket) do
+      user_id = socket.assigns.current_scope.user.id
+      Perme8.Events.subscribe("events:user:#{user_id}")
+    end
+
     {:ok,
      socket
      |> assign(:page_title, "My Agents")
@@ -125,22 +138,30 @@ defmodule JargaWeb.AppLive.Agents.Index do
   end
 
   @impl true
-  def handle_info({:workspace_agent_updated, _agent}, socket) do
-    # Reload all user's agents when an agent is created/updated/deleted
+  def handle_info(%AgentUpdated{}, socket), do: {:noreply, reload_agents(socket)}
+
+  @impl true
+  def handle_info(%AgentDeleted{}, socket), do: {:noreply, reload_agents(socket)}
+
+  @impl true
+  def handle_info(%AgentAddedToWorkspace{}, socket), do: {:noreply, reload_agents(socket)}
+
+  @impl true
+  def handle_info(%AgentRemovedFromWorkspace{}, socket), do: {:noreply, reload_agents(socket)}
+
+  # Chat panel streaming messages
+  handle_chat_messages()
+
+  defp reload_agents(socket) do
     user = socket.assigns.current_scope.user
     agents = Agents.list_user_agents(user.id)
 
-    # Update the chat panel with fresh agent list
     send_update(JargaWeb.ChatLive.Panel,
       id: "global-chat-panel",
       workspace_agents: agents,
       from_pubsub: true
     )
 
-    # Reload the agents list on this page too
-    {:noreply, assign(socket, :agents, agents)}
+    assign(socket, :agents, agents)
   end
-
-  # Chat panel streaming messages
-  handle_chat_messages()
 end
