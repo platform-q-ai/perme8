@@ -1,7 +1,9 @@
 defmodule Jarga.Projects.UseCases.CreateProjectTest do
-  use Jarga.DataCase, async: true
+  use Jarga.DataCase, async: false
 
   alias Jarga.Projects.Application.UseCases.CreateProject
+  alias Jarga.Projects.Domain.Events.ProjectCreated
+  alias Perme8.Events.TestEventBus
 
   import Jarga.AccountsFixtures
   import Jarga.WorkspacesFixtures
@@ -183,6 +185,54 @@ defmodule Jarga.Projects.UseCases.CreateProjectTest do
     end
   end
 
+  describe "execute/2 - event emission" do
+    test "emits ProjectCreated event via event_bus" do
+      ensure_test_event_bus_started()
+
+      owner = user_fixture()
+      workspace = workspace_fixture(owner)
+
+      params = %{
+        actor: owner,
+        workspace_id: workspace.id,
+        attrs: %{name: "Event Project", description: "Testing events"}
+      }
+
+      opts = [notifier: MockNotifier, event_bus: TestEventBus]
+
+      assert {:ok, project} = CreateProject.execute(params, opts)
+
+      assert [%ProjectCreated{} = event] =
+               TestEventBus.get_events()
+
+      assert event.project_id == project.id
+      assert event.workspace_id == workspace.id
+      assert event.user_id == owner.id
+      assert event.name == project.name
+      assert event.slug == project.slug
+      assert event.aggregate_id == project.id
+      assert event.actor_id == owner.id
+    end
+
+    test "does not emit event when project creation fails" do
+      ensure_test_event_bus_started()
+
+      owner = user_fixture()
+      workspace = workspace_fixture(owner)
+
+      params = %{
+        actor: owner,
+        workspace_id: workspace.id,
+        attrs: %{description: "No name - will fail"}
+      }
+
+      opts = [notifier: MockNotifier, event_bus: TestEventBus]
+
+      assert {:error, _changeset} = CreateProject.execute(params, opts)
+      assert [] = TestEventBus.get_events()
+    end
+  end
+
   describe "execute/2 - notification behavior" do
     test "calls notifier with created project" do
       owner = user_fixture()
@@ -226,6 +276,17 @@ defmodule Jarga.Projects.UseCases.CreateProjectTest do
 
       # Should not raise error with default notifier
       assert {:ok, _project} = CreateProject.execute(params, [])
+    end
+  end
+
+  defp ensure_test_event_bus_started do
+    case Process.whereis(TestEventBus) do
+      nil ->
+        {:ok, _pid} = TestEventBus.start_link([])
+        :ok
+
+      _pid ->
+        TestEventBus.reset()
     end
   end
 end

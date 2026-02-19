@@ -97,7 +97,7 @@ defmodule Agents.Infrastructure.Services.LlmClient do
     headers = [
       {"Authorization", "Bearer #{api_key}"},
       {"Content-Type", "application/json"},
-      {"HTTP-Referer", config(:site_url, "https://jarga.ai")},
+      {"HTTP-Referer", config(:site_url, "https://jarga.app")},
       {"X-Title", config(:app_name, "Jarga")}
     ]
 
@@ -127,7 +127,7 @@ defmodule Agents.Infrastructure.Services.LlmClient do
     headers = [
       {"Authorization", "Bearer #{api_key}"},
       {"Content-Type", "application/json"},
-      {"HTTP-Referer", config(:site_url, "https://jarga.ai")},
+      {"HTTP-Referer", config(:site_url, "https://jarga.app")},
       {"X-Title", config(:app_name, "Jarga")}
     ]
 

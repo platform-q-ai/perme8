@@ -52,7 +52,7 @@ Feature: Identity Browser UI
     And I fill "#user_email" with "bob.tester@example.com"
     And I fill "#user_password" with "SecurePassword123!"
     And I click the "Create an account" button
-    And I wait for 5 seconds
+    And I wait for the URL to contain "/users/log-in"
     Then I should see "An email was sent to bob.tester@example.com"
 
   Scenario: Registration shows validation errors for short password

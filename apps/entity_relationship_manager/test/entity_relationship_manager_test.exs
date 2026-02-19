@@ -43,6 +43,7 @@ defmodule EntityRelationshipManagerTest do
       }
 
       EntityRelationshipManager.Mocks.SchemaRepositoryMock
+      |> expect(:get_schema, fn _wid -> {:error, :not_found} end)
       |> expect(:upsert_schema, fn wid, _a ->
         assert wid == ws_id
         {:ok, schema}

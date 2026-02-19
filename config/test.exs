@@ -3,6 +3,9 @@ import Config
 # Set environment to test
 config :jarga, :env, :test
 
+# Enable LiveDashboard route in test so we can verify basic auth behaviour
+config :jarga, live_dashboard_in_prod: true
+
 # Fast document save debouncing for tests (1ms)
 config :jarga, :document_save_debounce_ms, 1
 
@@ -17,13 +20,17 @@ database_url =
 config :jarga, Jarga.Repo,
   url: database_url,
   pool: Ecto.Adapters.SQL.Sandbox,
-  pool_size: 20
+  pool_size: 20,
+  # LiveView processes during exo-bdd browser tests hold connections for the
+  # full scenario duration, easily exceeding the default 120s ownership timeout.
+  ownership_timeout: :infinity
 
 # Identity uses the same database as Jarga
 config :identity, Identity.Repo,
   url: database_url,
   pool: Ecto.Adapters.SQL.Sandbox,
-  pool_size: 20
+  pool_size: 20,
+  ownership_timeout: :infinity
 
 config :jarga_web, JargaWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4002],
@@ -72,9 +79,6 @@ config :phoenix, :plug_init_mode, :runtime
 # Enable helpful, but potentially expensive runtime checks
 config :phoenix_live_view,
   enable_expensive_runtime_checks: true
-
-# Use mock LLM client for tests
-config :jarga, :llm_client, Jarga.Test.Support.MockLlmClient
 
 # Agents MCP: Use streamable_http transport in tests with start: true
 config :agents, :mcp_transport, {:streamable_http, start: true}

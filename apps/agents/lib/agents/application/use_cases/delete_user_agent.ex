@@ -9,6 +9,9 @@ defmodule Agents.Application.UseCases.DeleteUserAgent do
   @default_agent_repo Agents.Infrastructure.Repositories.AgentRepository
   @default_workspace_agent_repo Agents.Infrastructure.Repositories.WorkspaceAgentRepository
   @default_notifier Agents.Infrastructure.Notifiers.PubSubNotifier
+  @default_event_bus Perme8.Events.EventBus
+
+  alias Agents.Domain.Events.AgentDeleted
 
   @doc """
   Deletes an agent if the user is the owner.
@@ -30,6 +33,7 @@ defmodule Agents.Application.UseCases.DeleteUserAgent do
     agent_repo = Keyword.get(opts, :agent_repo, @default_agent_repo)
     workspace_agent_repo = Keyword.get(opts, :workspace_agent_repo, @default_workspace_agent_repo)
     notifier = Keyword.get(opts, :notifier, @default_notifier)
+    event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
 
     case agent_repo.get_agent_for_user(user_id, agent_id) do
       nil ->
@@ -44,11 +48,27 @@ defmodule Agents.Application.UseCases.DeleteUserAgent do
             # Notify all affected workspaces that the agent was deleted
             notifier.notify_agent_deleted(deleted_agent, workspace_ids)
 
+            # Emit domain event
+            emit_agent_deleted_event(agent_id, user_id, workspace_ids, event_bus)
+
             {:ok, deleted_agent}
 
           error ->
             error
         end
     end
+  end
+
+  defp emit_agent_deleted_event(agent_id, user_id, workspace_ids, event_bus) do
+    event =
+      AgentDeleted.new(%{
+        aggregate_id: agent_id,
+        actor_id: user_id,
+        agent_id: agent_id,
+        user_id: user_id,
+        workspace_ids: workspace_ids
+      })
+
+    event_bus.emit(event)
   end
 end

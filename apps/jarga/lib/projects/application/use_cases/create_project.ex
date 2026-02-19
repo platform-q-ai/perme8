@@ -19,12 +19,14 @@ defmodule Jarga.Projects.Application.UseCases.CreateProject do
   @behaviour Jarga.Projects.Application.UseCases.UseCase
 
   alias Identity.Domain.Entities.User
+  alias Jarga.Projects.Domain.Events.ProjectCreated
   alias Jarga.Projects.Domain.SlugGenerator
   alias Jarga.Workspaces
   alias Jarga.Domain.Policies.DomainPermissionsPolicy, as: PermissionsPolicy
 
   @default_project_repository Jarga.Projects.Infrastructure.Repositories.ProjectRepository
   @default_notifier Jarga.Projects.Infrastructure.Notifiers.EmailAndPubSubNotifier
+  @default_event_bus Perme8.Events.EventBus
 
   @doc """
   Executes the create project use case.
@@ -54,13 +56,31 @@ defmodule Jarga.Projects.Application.UseCases.CreateProject do
 
     project_repository = Keyword.get(opts, :project_repository, @default_project_repository)
     notifier = Keyword.get(opts, :notifier, @default_notifier)
+    event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
 
     with {:ok, member} <- get_workspace_member(actor, workspace_id),
          :ok <- authorize_create_project(member.role),
          {:ok, project} <- create_project(actor, workspace_id, attrs, project_repository) do
       notifier.notify_project_created(project)
+      emit_project_created_event(project, actor, workspace_id, event_bus)
       {:ok, project}
     end
+  end
+
+  # Emit ProjectCreated domain event
+  defp emit_project_created_event(project, actor, workspace_id, event_bus) do
+    event =
+      ProjectCreated.new(%{
+        aggregate_id: project.id,
+        actor_id: actor.id,
+        project_id: project.id,
+        workspace_id: workspace_id,
+        user_id: actor.id,
+        name: project.name,
+        slug: project.slug
+      })
+
+    event_bus.emit(event)
   end
 
   # Get actor's workspace membership

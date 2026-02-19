@@ -2,7 +2,7 @@ defmodule Jarga.Chat.Application.UseCases.CreateSessionTest do
   @moduledoc """
   Tests for CreateSession use case.
   """
-  use Jarga.DataCase, async: true
+  use Jarga.DataCase, async: false
 
   import Jarga.AccountsFixtures
   import Jarga.WorkspacesFixtures
@@ -12,6 +12,40 @@ defmodule Jarga.Chat.Application.UseCases.CreateSessionTest do
   alias Jarga.Chat.Infrastructure.Schemas.SessionSchema
   # Use Identity.Repo for all operations to ensure consistent transaction visibility
   alias Identity.Repo, as: Repo
+
+  alias Jarga.Chat.Domain.Events.ChatSessionStarted
+  alias Perme8.Events.TestEventBus
+
+  describe "execute/2 - event emission" do
+    test "emits ChatSessionStarted event via event_bus" do
+      ensure_test_event_bus_started()
+
+      user = user_fixture()
+      workspace = workspace_fixture(user)
+
+      assert {:ok, session} =
+               CreateSession.execute(
+                 %{user_id: user.id, workspace_id: workspace.id, title: "Event Test"},
+                 event_bus: TestEventBus
+               )
+
+      assert [%ChatSessionStarted{} = event] = TestEventBus.get_events()
+      assert event.session_id == session.id
+      assert event.user_id == user.id
+      assert event.workspace_id == workspace.id
+      assert event.aggregate_id == session.id
+      assert event.actor_id == user.id
+    end
+
+    test "does not emit event when session creation fails" do
+      ensure_test_event_bus_started()
+
+      assert {:error, _changeset} =
+               CreateSession.execute(%{}, event_bus: TestEventBus)
+
+      assert [] = TestEventBus.get_events()
+    end
+  end
 
   describe "execute/1" do
     test "creates a session with user_id" do
@@ -127,6 +161,17 @@ defmodule Jarga.Chat.Application.UseCases.CreateSessionTest do
         })
 
       assert session.title == "Custom Title"
+    end
+  end
+
+  defp ensure_test_event_bus_started do
+    case Process.whereis(TestEventBus) do
+      nil ->
+        {:ok, _pid} = TestEventBus.start_link([])
+        :ok
+
+      _pid ->
+        TestEventBus.reset()
     end
   end
 end

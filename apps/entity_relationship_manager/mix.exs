@@ -39,7 +39,8 @@ defmodule EntityRelationshipManager.MixProject do
           apps: [
             {:phoenix, :relaxed},
             {:phoenix_ecto, :relaxed},
-            {:jarga, :relaxed}
+            {:jarga, :relaxed},
+            {:identity, :relaxed}
           ]
         ]
       ],

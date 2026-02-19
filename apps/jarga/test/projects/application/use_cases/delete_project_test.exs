@@ -1,8 +1,10 @@
 defmodule Jarga.Projects.UseCases.DeleteProjectTest do
-  use Jarga.DataCase, async: true
+  use Jarga.DataCase, async: false
 
-  alias Jarga.Projects.Application.UseCases.DeleteProject
   alias Jarga.Projects
+  alias Jarga.Projects.Application.UseCases.DeleteProject
+  alias Jarga.Projects.Domain.Events.ProjectDeleted
+  alias Perme8.Events.TestEventBus
 
   import Jarga.AccountsFixtures
   import Jarga.WorkspacesFixtures
@@ -194,6 +196,55 @@ defmodule Jarga.Projects.UseCases.DeleteProjectTest do
     end
   end
 
+  describe "execute/2 - event emission" do
+    test "emits ProjectDeleted event via event_bus" do
+      ensure_test_event_bus_started()
+
+      owner = user_fixture()
+      workspace = workspace_fixture(owner)
+      project = project_fixture(owner, workspace)
+
+      params = %{
+        actor: owner,
+        workspace_id: workspace.id,
+        project_id: project.id
+      }
+
+      opts = [notifier: MockNotifier, event_bus: TestEventBus]
+
+      assert {:ok, deleted_project} = DeleteProject.execute(params, opts)
+
+      assert [%ProjectDeleted{} = event] =
+               TestEventBus.get_events()
+
+      assert event.project_id == deleted_project.id
+      assert event.workspace_id == workspace.id
+      assert event.user_id == owner.id
+      assert event.aggregate_id == deleted_project.id
+      assert event.actor_id == owner.id
+    end
+
+    test "does not emit event when deletion fails (unauthorized)" do
+      ensure_test_event_bus_started()
+
+      owner = user_fixture()
+      non_member = user_fixture()
+      workspace = workspace_fixture(owner)
+      _project = project_fixture(owner, workspace)
+
+      params = %{
+        actor: non_member,
+        workspace_id: workspace.id,
+        project_id: Ecto.UUID.generate()
+      }
+
+      opts = [notifier: MockNotifier, event_bus: TestEventBus]
+
+      assert {:error, _reason} = DeleteProject.execute(params, opts)
+      assert [] = TestEventBus.get_events()
+    end
+  end
+
   describe "execute/2 - notification behavior" do
     test "calls notifier with deleted project and workspace_id" do
       owner = user_fixture()
@@ -240,6 +291,17 @@ defmodule Jarga.Projects.UseCases.DeleteProjectTest do
 
       # Should not raise error with default notifier
       assert {:ok, _deleted_project} = DeleteProject.execute(params, [])
+    end
+  end
+
+  defp ensure_test_event_bus_started do
+    case Process.whereis(TestEventBus) do
+      nil ->
+        {:ok, _pid} = TestEventBus.start_link([])
+        :ok
+
+      _pid ->
+        TestEventBus.reset()
     end
   end
 end

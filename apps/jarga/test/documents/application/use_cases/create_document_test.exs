@@ -1,10 +1,12 @@
 # credo:disable-for-this-file Jarga.Credo.Check.Architecture.NoDirectRepoInUseCases
 defmodule Jarga.Documents.UseCases.CreateDocumentTest do
-  use Jarga.DataCase, async: true
+  use Jarga.DataCase, async: false
 
   alias Jarga.Documents.Application.UseCases.CreateDocument
+  alias Jarga.Documents.Domain.Events.DocumentCreated
   alias Jarga.Documents.Infrastructure.Schemas.DocumentSchema
   alias Jarga.Documents.Notes.Infrastructure.Schemas.NoteSchema
+  alias Perme8.Events.TestEventBus
 
   import Jarga.AccountsFixtures
   import Jarga.WorkspacesFixtures
@@ -212,6 +214,88 @@ defmodule Jarga.Documents.UseCases.CreateDocumentTest do
     end
   end
 
+  describe "execute/2 - event emission" do
+    # Mock notifier that does nothing (for event tests)
+    defmodule EventTestNotifier do
+      @behaviour Jarga.Documents.Application.Services.NotificationService
+      def notify_document_created(_document), do: :ok
+      def notify_document_deleted(_document), do: :ok
+      def notify_document_title_changed(_document), do: :ok
+      def notify_document_visibility_changed(_document), do: :ok
+      def notify_document_pinned_changed(_document), do: :ok
+    end
+
+    test "emits DocumentCreated event via event_bus" do
+      ensure_test_event_bus_started()
+
+      owner = user_fixture()
+      workspace = workspace_fixture(owner)
+      project = project_fixture(owner, workspace)
+
+      params = %{
+        actor: owner,
+        workspace_id: workspace.id,
+        attrs: %{title: "Event Document", project_id: project.id}
+      }
+
+      opts = [notifier: EventTestNotifier, event_bus: TestEventBus]
+
+      assert {:ok, document} = CreateDocument.execute(params, opts)
+
+      assert [%DocumentCreated{} = event] =
+               TestEventBus.get_events()
+
+      assert event.document_id == document.id
+      assert event.workspace_id == workspace.id
+      assert event.project_id == project.id
+      assert event.user_id == owner.id
+      assert event.title == "Event Document"
+      assert event.aggregate_id == document.id
+      assert event.actor_id == owner.id
+    end
+
+    test "emits DocumentCreated event with nil project_id when no project" do
+      ensure_test_event_bus_started()
+
+      owner = user_fixture()
+      workspace = workspace_fixture(owner)
+
+      params = %{
+        actor: owner,
+        workspace_id: workspace.id,
+        attrs: %{title: "No Project Doc"}
+      }
+
+      opts = [notifier: EventTestNotifier, event_bus: TestEventBus]
+
+      assert {:ok, _document} = CreateDocument.execute(params, opts)
+
+      assert [%DocumentCreated{} = event] =
+               TestEventBus.get_events()
+
+      assert event.project_id == nil
+    end
+
+    test "does not emit event when document creation fails" do
+      ensure_test_event_bus_started()
+
+      owner = user_fixture()
+      non_member = user_fixture()
+      workspace = workspace_fixture(owner)
+
+      params = %{
+        actor: non_member,
+        workspace_id: workspace.id,
+        attrs: %{title: "Should Fail"}
+      }
+
+      opts = [notifier: EventTestNotifier, event_bus: TestEventBus]
+
+      assert {:error, _reason} = CreateDocument.execute(params, opts)
+      assert [] = TestEventBus.get_events()
+    end
+  end
+
   describe "execute/2 - authorization failures" do
     test "returns error when actor is not a workspace member" do
       owner = user_fixture()
@@ -305,7 +389,7 @@ defmodule Jarga.Documents.UseCases.CreateDocumentTest do
 
       # Count pages before
       documents_before =
-        Repo.aggregate(Jarga.Documents.Infrastructure.Schemas.DocumentSchema, :count)
+        Repo.aggregate(DocumentSchema, :count)
 
       # This would need to be done with a mock or by causing note creation to fail
       # For now, we'll just verify successful creation
@@ -319,9 +403,20 @@ defmodule Jarga.Documents.UseCases.CreateDocumentTest do
 
       # Verify page count increased by 1
       documents_after =
-        Repo.aggregate(Jarga.Documents.Infrastructure.Schemas.DocumentSchema, :count)
+        Repo.aggregate(DocumentSchema, :count)
 
       assert documents_after == documents_before + 1
+    end
+  end
+
+  defp ensure_test_event_bus_started do
+    case Process.whereis(TestEventBus) do
+      nil ->
+        {:ok, _pid} = TestEventBus.start_link([])
+        :ok
+
+      _pid ->
+        TestEventBus.reset()
     end
   end
 end

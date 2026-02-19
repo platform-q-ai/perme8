@@ -9,10 +9,10 @@ defmodule Agents.Infrastructure.Mcp.ServerTest do
       assert {:init, 2} in functions
     end
 
-    test "registers all 6 tool components" do
+    test "registers all 14 tool components (6 knowledge + 8 jarga)" do
       components = Server.__components__(:tool)
 
-      assert length(components) == 6
+      assert length(components) == 14
     end
 
     test "registers knowledge.search tool" do

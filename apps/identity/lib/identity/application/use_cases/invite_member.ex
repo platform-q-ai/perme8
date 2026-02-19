@@ -21,11 +21,13 @@ defmodule Identity.Application.UseCases.InviteMember do
 
   @behaviour Identity.Application.UseCases.UseCase
 
+  alias Identity.Domain.Events.MemberInvited
   alias Identity.Domain.Policies.MembershipPolicy
   alias Identity.Domain.Policies.WorkspacePermissionsPolicy
 
   @default_membership_repository Identity.Infrastructure.Repositories.MembershipRepository
   @default_pubsub_notifier Identity.Infrastructure.Notifiers.PubSubNotifier
+  @default_event_bus Perme8.Events.EventBus
 
   @doc """
   Executes the invite member use case.
@@ -41,6 +43,7 @@ defmodule Identity.Application.UseCases.InviteMember do
   - `opts` - Keyword list of options:
     - `:notifier` - Optional email notifier module (default: uses real notifier)
     - `:pubsub_notifier` - Optional PubSub notifier module (default: PubSubNotifier)
+    - `:event_bus` - Optional event bus module (default: Perme8.Events.EventBus)
 
   ## Returns
 
@@ -61,6 +64,14 @@ defmodule Identity.Application.UseCases.InviteMember do
 
     notifier = Keyword.get(opts, :notifier)
     pubsub_notifier = Keyword.get(opts, :pubsub_notifier, @default_pubsub_notifier)
+    event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
+
+    deps = %{
+      notifier: notifier,
+      pubsub_notifier: pubsub_notifier,
+      event_bus: event_bus,
+      membership_repository: membership_repository
+    }
 
     with :ok <- validate_role(role),
          {:ok, workspace} <-
@@ -71,16 +82,7 @@ defmodule Identity.Application.UseCases.InviteMember do
          :ok <- check_not_already_member(workspace_id, email, membership_repository),
          user <- find_user_by_email_case_insensitive(email) do
       # Always create pending invitation (requires acceptance via notification)
-      create_pending_invitation(
-        workspace,
-        email,
-        role,
-        inviter,
-        user,
-        notifier,
-        pubsub_notifier,
-        membership_repository
-      )
+      create_pending_invitation(workspace, email, role, inviter, user, deps)
     end
   end
 
@@ -140,16 +142,14 @@ defmodule Identity.Application.UseCases.InviteMember do
     Identity.get_user_by_email_case_insensitive(email)
   end
 
-  defp create_pending_invitation(
-         workspace,
-         email,
-         role,
-         inviter,
-         user,
-         notifier,
-         pubsub_notifier,
-         membership_repository
-       ) do
+  defp create_pending_invitation(workspace, email, role, inviter, user, deps) do
+    %{
+      notifier: notifier,
+      pubsub_notifier: pubsub_notifier,
+      event_bus: event_bus,
+      membership_repository: membership_repository
+    } = deps
+
     result =
       membership_repository.transact(fn ->
         # Create workspace_member record (pending invitation)
@@ -178,7 +178,7 @@ defmodule Identity.Application.UseCases.InviteMember do
     # Broadcast AFTER transaction commits to avoid race conditions
     case result do
       {:ok, invitation} ->
-        maybe_create_notification(user, workspace, role, inviter, pubsub_notifier)
+        maybe_create_notification(user, workspace, role, inviter, pubsub_notifier, event_bus)
         {:ok, {:invitation_sent, invitation}}
 
       error ->
@@ -190,10 +190,10 @@ defmodule Identity.Application.UseCases.InviteMember do
     membership_repository.create_member(attrs)
   end
 
-  defp maybe_create_notification(nil, _workspace, _role, _inviter, _pubsub_notifier),
+  defp maybe_create_notification(nil, _workspace, _role, _inviter, _pubsub_notifier, _event_bus),
     do: {:ok, nil}
 
-  defp maybe_create_notification(user, workspace, role, inviter, pubsub_notifier) do
+  defp maybe_create_notification(user, workspace, role, inviter, pubsub_notifier, event_bus) do
     # Broadcast event for notification creation (existing users only)
     inviter_name = "#{inviter.first_name} #{inviter.last_name}"
 
@@ -204,6 +204,20 @@ defmodule Identity.Application.UseCases.InviteMember do
       inviter_name,
       to_string(role)
     )
+
+    # Emit structured domain event
+    event =
+      MemberInvited.new(%{
+        aggregate_id: "#{workspace.id}:#{user.id}",
+        actor_id: inviter.id,
+        user_id: user.id,
+        workspace_id: workspace.id,
+        workspace_name: workspace.name,
+        invited_by_name: inviter_name,
+        role: to_string(role)
+      })
+
+    event_bus.emit(event)
 
     {:ok, nil}
   end

@@ -3,8 +3,11 @@ defmodule Jarga.Notifications.Application.UseCases.CreateWorkspaceInvitationNoti
   Creates a workspace invitation notification for a user.
   """
 
+  alias Jarga.Notifications.Domain.Events.NotificationCreated
+
   @default_notification_repository Jarga.Notifications.Infrastructure.Repositories.NotificationRepository
   @default_notifier Jarga.Notifications.Infrastructure.Notifiers.PubSubNotifier
+  @default_event_bus Perme8.Events.EventBus
 
   @doc """
   Creates a workspace invitation notification.
@@ -38,6 +41,7 @@ defmodule Jarga.Notifications.Application.UseCases.CreateWorkspaceInvitationNoti
       Keyword.get(opts, :notification_repository, @default_notification_repository)
 
     notifier = Keyword.get(opts, :notifier, @default_notifier)
+    event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
     user_id = get_param(params, :user_id)
 
     notification_attrs = %{
@@ -57,6 +61,7 @@ defmodule Jarga.Notifications.Application.UseCases.CreateWorkspaceInvitationNoti
       {:ok, notification} = result ->
         # Broadcast notification to user via PubSub
         notifier.broadcast_new_notification(user_id, notification)
+        emit_notification_created_event(notification, event_bus)
         result
 
       error ->
@@ -80,5 +85,19 @@ defmodule Jarga.Notifications.Application.UseCases.CreateWorkspaceInvitationNoti
     role = get_param(params, :role)
 
     "#{invited_by_name} has invited you to join #{workspace_name} as a #{role}."
+  end
+
+  defp emit_notification_created_event(notification, event_bus) do
+    event =
+      NotificationCreated.new(%{
+        aggregate_id: notification.id,
+        actor_id: notification.user_id,
+        notification_id: notification.id,
+        user_id: notification.user_id,
+        type: notification.type,
+        target_user_id: notification.user_id
+      })
+
+    event_bus.emit(event)
   end
 end

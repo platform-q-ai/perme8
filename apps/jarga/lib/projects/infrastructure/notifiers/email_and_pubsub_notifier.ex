@@ -1,8 +1,12 @@
 defmodule Jarga.Projects.Infrastructure.Notifiers.EmailAndPubSubNotifier do
   @moduledoc """
-  Default notification service implementation for projects.
+  No-op notification service for projects.
 
-  Uses Phoenix PubSub to broadcast real-time notifications to workspace members.
+  Legacy PubSub broadcasts have been removed. The EventBus now handles all
+  structured event delivery via use case `event_bus.emit` calls. This module
+  is retained as a no-op shell because use cases still inject it via
+  `opts[:notifier]`. Full removal of the notifier module, behaviour, and
+  injection is deferred to Part 2c.
   """
 
   @behaviour Jarga.Projects.Application.Behaviours.NotificationServiceBehaviour
@@ -10,38 +14,11 @@ defmodule Jarga.Projects.Infrastructure.Notifiers.EmailAndPubSubNotifier do
   alias Jarga.Projects.Domain.Entities.Project
 
   @impl true
-  def notify_project_created(%Project{} = project) do
-    # Broadcast in-app notification via PubSub
-    Phoenix.PubSub.broadcast(
-      Jarga.PubSub,
-      "workspace:#{project.workspace_id}",
-      {:project_added, project.id}
-    )
-
-    :ok
-  end
+  def notify_project_created(%Project{}), do: :ok
 
   @impl true
-  def notify_project_deleted(%Project{} = project, workspace_id) do
-    # Broadcast in-app notification via PubSub
-    Phoenix.PubSub.broadcast(
-      Jarga.PubSub,
-      "workspace:#{workspace_id}",
-      {:project_removed, project.id}
-    )
-
-    :ok
-  end
+  def notify_project_deleted(%Project{}, _workspace_id), do: :ok
 
   @impl true
-  def notify_project_updated(%Project{} = project) do
-    # Broadcast in-app notification via PubSub
-    Phoenix.PubSub.broadcast(
-      Jarga.PubSub,
-      "workspace:#{project.workspace_id}",
-      {:project_updated, project.id, project.name}
-    )
-
-    :ok
-  end
+  def notify_project_updated(%Project{}), do: :ok
 end

@@ -1,8 +1,65 @@
 defmodule Jarga.Notifications.Application.UseCases.CreateWorkspaceInvitationNotificationTest do
-  use Jarga.DataCase, async: true
+  use Jarga.DataCase, async: false
 
   alias Jarga.Notifications.Application.UseCases.CreateWorkspaceInvitationNotification
+  alias Jarga.Notifications.Domain.Events.NotificationCreated
+  alias Perme8.Events.TestEventBus
+
   import Jarga.AccountsFixtures
+
+  # Mock notifier for event tests
+  defmodule MockNotifier do
+    def broadcast_new_notification(_user_id, _notification), do: :ok
+  end
+
+  describe "execute/2 - event emission" do
+    test "emits NotificationCreated event via event_bus" do
+      ensure_test_event_bus_started()
+
+      user = user_fixture()
+      workspace_id = Ecto.UUID.generate()
+
+      params = %{
+        user_id: user.id,
+        workspace_id: workspace_id,
+        workspace_name: "Event Test Workspace",
+        invited_by_name: "Jane",
+        role: "member"
+      }
+
+      assert {:ok, notification} =
+               CreateWorkspaceInvitationNotification.execute(params,
+                 notifier: MockNotifier,
+                 event_bus: TestEventBus
+               )
+
+      assert [%NotificationCreated{} = event] = TestEventBus.get_events()
+      assert event.notification_id == notification.id
+      assert event.user_id == user.id
+      assert event.type == "workspace_invitation"
+      assert event.aggregate_id == notification.id
+      assert event.actor_id == user.id
+    end
+
+    test "does not emit event when notification creation fails" do
+      ensure_test_event_bus_started()
+
+      params = %{
+        workspace_id: Ecto.UUID.generate(),
+        workspace_name: "Fail Test",
+        invited_by_name: "Jane",
+        role: "member"
+      }
+
+      assert {:error, _changeset} =
+               CreateWorkspaceInvitationNotification.execute(params,
+                 notifier: MockNotifier,
+                 event_bus: TestEventBus
+               )
+
+      assert [] = TestEventBus.get_events()
+    end
+  end
 
   describe "execute/2" do
     test "creates workspace invitation notification with valid params" do
@@ -133,6 +190,17 @@ defmodule Jarga.Notifications.Application.UseCases.CreateWorkspaceInvitationNoti
                CreateWorkspaceInvitationNotification.execute(params, notifier: TestNotifier)
 
       assert notification.type == "workspace_invitation"
+    end
+  end
+
+  defp ensure_test_event_bus_started do
+    case Process.whereis(TestEventBus) do
+      nil ->
+        {:ok, _pid} = TestEventBus.start_link([])
+        :ok
+
+      _pid ->
+        TestEventBus.reset()
     end
   end
 end

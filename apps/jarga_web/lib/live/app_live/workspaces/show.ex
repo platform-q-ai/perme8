@@ -11,6 +11,30 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
   alias Jarga.{Workspaces, Projects, Documents}
   alias JargaWeb.Layouts
 
+  # Document domain events
+  alias Jarga.Documents.Domain.Events.{
+    DocumentVisibilityChanged,
+    DocumentPinnedChanged,
+    DocumentTitleChanged,
+    DocumentCreated,
+    DocumentDeleted
+  }
+
+  # Project domain events
+  alias Jarga.Projects.Domain.Events.{ProjectCreated, ProjectDeleted, ProjectUpdated}
+
+  # Cross-context domain events
+  alias Identity.Domain.Events.WorkspaceUpdated
+  alias Jarga.Notifications.Domain.Events.NotificationActionTaken
+
+  # Agent domain events
+  alias Agents.Domain.Events.{
+    AgentUpdated,
+    AgentDeleted,
+    AgentAddedToWorkspace,
+    AgentRemovedFromWorkspace
+  }
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -612,9 +636,9 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
         # Load agents available in this workspace
         agents_result = Agents.list_workspace_available_agents(workspace.id, user.id)
 
-        # Subscribe to workspace-specific PubSub topic for real-time updates
+        # Subscribe to workspace-scoped structured domain events
         if connected?(socket) do
-          Phoenix.PubSub.subscribe(Jarga.PubSub, "workspace:#{workspace.id}")
+          Perme8.Events.subscribe("events:workspace:#{workspace.id}")
         end
 
         {:ok,
@@ -931,38 +955,42 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
     end
   end
 
+  # --- Project domain events ---
+
   @impl true
-  def handle_info({:project_added, _project_id}, socket) do
-    # Reload projects when a new project is added
-    user = socket.assigns.current_scope.user
-    workspace_id = socket.assigns.workspace.id
-    projects = Projects.list_projects_for_workspace(user, workspace_id)
+  def handle_info(%ProjectCreated{}, socket) do
+    {:noreply, reload_projects(socket)}
+  end
+
+  @impl true
+  def handle_info(%ProjectDeleted{}, socket) do
+    {:noreply, reload_projects(socket)}
+  end
+
+  @impl true
+  def handle_info(%ProjectUpdated{project_id: project_id, name: name}, socket) do
+    # Update project name in the list
+    projects =
+      Enum.map(socket.assigns.projects, fn project ->
+        if project.id == project_id do
+          %{project | name: name}
+        else
+          project
+        end
+      end)
 
     {:noreply, assign(socket, projects: projects)}
   end
 
-  @impl true
-  def handle_info({:project_removed, _project_id}, socket) do
-    # Reload projects when a project is removed
-    user = socket.assigns.current_scope.user
-    workspace_id = socket.assigns.workspace.id
-    projects = Projects.list_projects_for_workspace(user, workspace_id)
+  # --- Document domain events ---
 
-    {:noreply, assign(socket, projects: projects)}
+  @impl true
+  def handle_info(%DocumentVisibilityChanged{}, socket) do
+    {:noreply, reload_documents(socket)}
   end
 
   @impl true
-  def handle_info({:document_visibility_changed, _document_id, _is_public}, socket) do
-    # Reload documents when a document's visibility changes
-    user = socket.assigns.current_scope.user
-    workspace_id = socket.assigns.workspace.id
-    documents = Documents.list_documents_for_workspace(user, workspace_id)
-
-    {:noreply, assign(socket, documents: documents)}
-  end
-
-  @impl true
-  def handle_info({:document_pinned_changed, document_id, is_pinned}, socket) do
+  def handle_info(%DocumentPinnedChanged{document_id: document_id, is_pinned: is_pinned}, socket) do
     # Update document pinned state in the list
     documents =
       Enum.map(socket.assigns.documents, fn document ->
@@ -977,7 +1005,7 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
   end
 
   @impl true
-  def handle_info({:document_title_changed, document_id, title}, socket) do
+  def handle_info(%DocumentTitleChanged{document_id: document_id, title: title}, socket) do
     # Update document title in the list
     documents =
       Enum.map(socket.assigns.documents, fn document ->
@@ -992,25 +1020,22 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
   end
 
   @impl true
-  def handle_info({:document_created, document}, socket) do
-    # Add new document to the list if it belongs to this workspace
-    if document.workspace_id == socket.assigns.workspace.id do
-      documents = [document | socket.assigns.documents]
-      {:noreply, assign(socket, documents: documents)}
-    else
-      {:noreply, socket}
-    end
+  def handle_info(%DocumentCreated{}, socket) do
+    # Reload documents list (rather than inserting the event data directly)
+    {:noreply, reload_documents(socket)}
   end
 
   @impl true
-  def handle_info({:document_deleted, document_id}, socket) do
+  def handle_info(%DocumentDeleted{document_id: document_id}, socket) do
     # Remove document from the list
     documents = Enum.reject(socket.assigns.documents, fn doc -> doc.id == document_id end)
     {:noreply, assign(socket, documents: documents)}
   end
 
+  # --- Workspace domain events ---
+
   @impl true
-  def handle_info({:workspace_updated, workspace_id, name}, socket) do
+  def handle_info(%WorkspaceUpdated{workspace_id: workspace_id, name: name}, socket) do
     # Update workspace name in breadcrumbs
     if socket.assigns.workspace.id == workspace_id do
       workspace = %{socket.assigns.workspace | name: name}
@@ -1020,24 +1045,11 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
     end
   end
 
-  @impl true
-  def handle_info({:project_updated, project_id, name}, socket) do
-    # Update project name in the list
-    projects =
-      Enum.map(socket.assigns.projects, fn project ->
-        if project.id == project_id do
-          %{project | name: name}
-        else
-          project
-        end
-      end)
-
-    {:noreply, assign(socket, projects: projects)}
-  end
+  # --- Notification domain events (member joined/declined) ---
 
   @impl true
-  def handle_info({:member_joined, _user_id}, socket) do
-    # Reload members list if modal is open
+  def handle_info(%NotificationActionTaken{action: "accepted"}, socket) do
+    # Someone accepted an invitation to this workspace — reload members if modal is open
     if socket.assigns.show_members_modal do
       members = Workspaces.list_members(socket.assigns.workspace.id)
       {:noreply, assign(socket, members: members)}
@@ -1047,8 +1059,8 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
   end
 
   @impl true
-  def handle_info({:invitation_declined, _user_id}, socket) do
-    # Reload members list if modal is open
+  def handle_info(%NotificationActionTaken{action: "declined"}, socket) do
+    # Someone declined an invitation — reload members if modal is open
     if socket.assigns.show_members_modal do
       members = Workspaces.list_members(socket.assigns.workspace.id)
       {:noreply, assign(socket, members: members)}
@@ -1057,9 +1069,39 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
     end
   end
 
+  # --- Agent domain events ---
+
   @impl true
-  def handle_info({:workspace_agent_updated, _agent}, socket) do
-    # Reload workspace agents and send to chat panel
+  def handle_info(%AgentUpdated{}, socket), do: {:noreply, reload_workspace_agents(socket)}
+
+  @impl true
+  def handle_info(%AgentDeleted{}, socket), do: {:noreply, reload_workspace_agents(socket)}
+
+  @impl true
+  def handle_info(%AgentAddedToWorkspace{}, socket),
+    do: {:noreply, reload_workspace_agents(socket)}
+
+  @impl true
+  def handle_info(%AgentRemovedFromWorkspace{}, socket),
+    do: {:noreply, reload_workspace_agents(socket)}
+
+  # --- Private helpers ---
+
+  defp reload_projects(socket) do
+    user = socket.assigns.current_scope.user
+    workspace_id = socket.assigns.workspace.id
+    projects = Projects.list_projects_for_workspace(user, workspace_id)
+    assign(socket, projects: projects)
+  end
+
+  defp reload_documents(socket) do
+    user = socket.assigns.current_scope.user
+    workspace_id = socket.assigns.workspace.id
+    documents = Documents.list_documents_for_workspace(user, workspace_id)
+    assign(socket, documents: documents)
+  end
+
+  defp reload_workspace_agents(socket) do
     workspace_id = socket.assigns.workspace.id
     user = socket.assigns.current_scope.user
 
@@ -1075,18 +1117,11 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
     # Reload for workspace overview page (my_agents and other_agents)
     agents_result = Agents.list_workspace_available_agents(workspace_id, user.id)
 
-    {:noreply,
-     socket
-     |> assign(:my_agents, agents_result.my_agents)
-     |> assign(:other_agents, agents_result.other_agents)}
+    socket
+    |> assign(:my_agents, agents_result.my_agents)
+    |> assign(:other_agents, agents_result.other_agents)
   end
 
-  # Chat panel streaming messages
+  # Chat panel streaming messages (includes catch-all for unhandled messages)
   handle_chat_messages()
-
-  # Catch-all for unhandled messages (e.g., email notifications from Swoosh)
-  @impl true
-  def handle_info(_msg, socket) do
-    {:noreply, socket}
-  end
 end

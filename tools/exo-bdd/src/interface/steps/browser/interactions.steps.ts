@@ -131,6 +131,11 @@ export async function waitForNetworkIdle(context: InteractionContext): Promise<v
   await context.browser.waitForLoadState('networkidle')
 }
 
+export async function waitForUrlToContain(context: InteractionContext, urlPart: string): Promise<void> {
+  const interpolated = context.interpolate(urlPart)
+  await context.browser.page.waitForURL(`**/*${interpolated}*`, { timeout: 30_000 })
+}
+
 // Screenshots
 export async function takeScreenshot(context: InteractionContext): Promise<void> {
   const screenshot = await context.browser.screenshot()
@@ -256,6 +261,10 @@ When<TestWorld>('I wait for the page to load', async function () {
 
 When<TestWorld>('I wait for network idle', async function () {
   await waitForNetworkIdle(this)
+})
+
+When<TestWorld>('I wait for the URL to contain {string}', async function (urlPart: string) {
+  await waitForUrlToContain(this, urlPart)
 })
 
 // Screenshots

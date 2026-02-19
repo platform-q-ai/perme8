@@ -23,6 +23,13 @@ defmodule EntityRelationshipManager.Domain do
       {Policies.InputSanitizationPolicy, []},
       {Policies.TraversalPolicy, []},
       {Policies.AuthorizationPolicy, []},
-      {Services.PropertyValidator, []}
+      {Services.PropertyValidator, []},
+      {Events.SchemaCreated, []},
+      {Events.SchemaUpdated, []},
+      {Events.EntityCreated, []},
+      {Events.EntityUpdated, []},
+      {Events.EntityDeleted, []},
+      {Events.EdgeCreated, []},
+      {Events.EdgeDeleted, []}
     ]
 end

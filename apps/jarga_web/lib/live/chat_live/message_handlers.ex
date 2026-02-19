@@ -29,6 +29,8 @@ defmodule JargaWeb.ChatLive.MessageHandlers do
   # credo:disable-for-next-line Credo.Check.Refactor.CyclomaticComplexity
   defmacro handle_chat_messages do
     quote do
+      alias Jarga.Notifications.Domain.Events.NotificationCreated
+
       @impl true
       def handle_event("agent-selected", %{"agent_id" => agent_id}, socket) do
         # Forward agent selection to chat panel component
@@ -110,7 +112,7 @@ defmodule JargaWeb.ChatLive.MessageHandlers do
       end
 
       @impl true
-      def handle_info({:new_notification, _notification}, socket) do
+      def handle_info(%NotificationCreated{}, socket) do
         # Notification received - update the NotificationBell LiveComponent
         Phoenix.LiveView.send_update(JargaWeb.NotificationsLive.NotificationBell,
           id: "notification-bell",
@@ -123,6 +125,11 @@ defmodule JargaWeb.ChatLive.MessageHandlers do
       @impl true
       def handle_info({:put_flash, type, message}, socket) do
         {:noreply, Phoenix.LiveView.put_flash(socket, type, message)}
+      end
+
+      @impl true
+      def handle_info(_msg, socket) do
+        {:noreply, socket}
       end
     end
   end

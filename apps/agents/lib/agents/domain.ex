@@ -17,6 +17,11 @@ defmodule Agents.Domain do
       Entities.KnowledgeRelationship,
       AgentCloner,
       Policies.KnowledgeValidationPolicy,
-      Policies.SearchPolicy
+      Policies.SearchPolicy,
+      Events.AgentCreated,
+      Events.AgentUpdated,
+      Events.AgentDeleted,
+      Events.AgentAddedToWorkspace,
+      Events.AgentRemovedFromWorkspace
     ]
 end

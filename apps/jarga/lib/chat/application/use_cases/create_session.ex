@@ -22,7 +22,10 @@ defmodule Jarga.Chat.Application.UseCases.CreateSession do
       {:ok, %ChatSession{title: "Hello?"}}
   """
 
+  alias Jarga.Chat.Domain.Events.ChatSessionStarted
+
   @default_session_repository Jarga.Chat.Infrastructure.Repositories.SessionRepository
+  @default_event_bus Perme8.Events.EventBus
 
   @max_auto_title_length 50
 
@@ -43,8 +46,31 @@ defmodule Jarga.Chat.Application.UseCases.CreateSession do
   """
   def execute(attrs, opts \\ []) do
     session_repository = Keyword.get(opts, :session_repository, @default_session_repository)
+    event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
+
     attrs = maybe_generate_title(attrs)
-    session_repository.create_session(attrs)
+
+    case session_repository.create_session(attrs) do
+      {:ok, session} ->
+        emit_session_started_event(session, event_bus)
+        {:ok, session}
+
+      error ->
+        error
+    end
+  end
+
+  defp emit_session_started_event(session, event_bus) do
+    event =
+      ChatSessionStarted.new(%{
+        aggregate_id: session.id,
+        actor_id: session.user_id,
+        session_id: session.id,
+        user_id: session.user_id,
+        workspace_id: session.workspace_id
+      })
+
+    event_bus.emit(event)
   end
 
   defp maybe_generate_title(%{title: title} = attrs) when not is_nil(title) do

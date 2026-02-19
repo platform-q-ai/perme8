@@ -29,15 +29,22 @@ defmodule JargaWeb do
       Jarga.Documents,
       Jarga.Notes,
       Agents,
+      Agents.Domain,
       Jarga.Chat,
       Jarga.Notifications,
+      Jarga.Notifications.Domain,
       # Shared infrastructure
       Jarga.Repo,
       Jarga.Mailer,
       # Identity for domain entities and scope
       Identity,
       # Domain policies for permissions
-      Jarga.Domain
+      Jarga.Domain,
+      # Domain event structs for LiveView struct-matching handlers
+      Jarga.Documents.Domain,
+      Jarga.Projects.Domain,
+      # Structured event bus for LiveView subscriptions
+      Perme8.Events
     ],
     exports: [Endpoint, Telemetry]
 

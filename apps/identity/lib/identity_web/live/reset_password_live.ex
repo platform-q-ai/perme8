@@ -28,6 +28,7 @@ defmodule IdentityWeb.ResetPasswordLive do
           id="reset_password_form"
           phx-submit="reset_password"
           phx-change="validate"
+          novalidate
         >
           <.input
             field={@form[:password]}

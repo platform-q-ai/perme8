@@ -25,10 +25,7 @@ defmodule Jarga.Notifications.Application do
 
   use Boundary,
     top_level?: true,
-    deps: [
-      # Cross-context dependencies (context for facade access)
-      Jarga.Workspaces
-    ],
+    deps: [Jarga.Notifications.Domain, Jarga.Workspaces, Perme8.Events],
     exports: [
       UseCases.AcceptWorkspaceInvitation,
       UseCases.CreateWorkspaceInvitationNotification,

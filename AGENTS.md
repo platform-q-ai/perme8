@@ -1,38 +1,72 @@
 # AGENTS.md
 
-## Project Structure
+## GitHub Identity & Authentication
 
-Elixir Phoenix umbrella project. **MUST** read `docs/umbrella_apps.md` before any development work.
+All agent operations (commits, PRs, issues, project board updates) MUST be attributed to the `perme8[bot]` GitHub App identity.
 
-## Reference Docs
+### Git Commits
 
-- `docs/prompts/architect/FEATURE_TESTING_GUIDE.md`
-- `docs/prompts/phoenix/PHOENIX_DESIGN_PRINCIPLES.md`
-- `docs/prompts/phoenix/PHOENIX_BEST_PRACTICES.md`
-- `docs/prompts/typescript/TYPESCRIPT_DESIGN_PRINCIPLES.md`
+Local git config is set to the bot identity — no extra steps needed:
+- `user.name`: `perme8[bot]`
+- `user.email`: `262472400+perme8[bot]@users.noreply.github.com`
 
-## Subagents
+### GitHub API / `gh` CLI Operations
 
-- `.opencode/agent/prd.md` -- requirements gathering and PRD creation
-- `.opencode/agent/architect.md` -- TDD implementation plans from PRDs
-- `.opencode/agent/phoenix-tdd.md` -- Phoenix backend/LiveView implementation via TDD
-- `.opencode/agent/typescript-tdd.md` -- TypeScript implementation via TDD
+Set `GH_TOKEN` before any `gh` command so PRs, issues, and project updates are attributed to `perme8[bot]`:
+
+```bash
+export GH_TOKEN=$(~/.config/perme8/get-token)
+```
+
+The token is short-lived (9 minutes). Re-generate if a command fails with a 401.
+
+### Pushing Code
+
+The remote uses SSH which authenticates as `@krisquigley`. To push as the bot, use HTTPS with the token:
+
+```bash
+TOKEN=$(~/.config/perme8/get-token)
+git push "https://x-access-token:${TOKEN}@github.com/platform-q-ai/perme8.git" <branch>
+```
+
+### Manual Use (`@krisquigley`)
+
+- `gh` CLI without `GH_TOKEN` defaults to `@krisquigley` (PAT in keyring)
+- `git push` via SSH defaults to `@krisquigley`
+- For manual commits: `git -c user.name='Kris Quigley' -c user.email='5502215+krisquigley@users.noreply.github.com' commit`
 
 ## Skills
 
-- **Build Feature** -- full lifecycle: PRD → Architect → Execute Plan → PR. Use for new features from scratch.
-- **Execute Plan** -- implements an existing architectural plan end-to-end with commits, PR, CI, review.
-- **Commit and PR** -- git workflow: branch, incremental commits, pre-commit checks, push, PR creation, CI monitoring.
-- **PR Reviewer** -- automated code review with inline comments on a GitHub PR.
-- **Address PR Comments** -- reads and resolves review comments with fix commits.
-- **BDD Feature Translator** -- generates domain-specific feature files (browser, HTTP, security) from a PRD.
-- **Update Project** -- creates/updates issues on the Perme8 GitHub Project board with all fields populated. Use `/update-project`.
+### Orchestration Skills
 
-## Exo-BDD Tests
+- **Pick Up Ticket** -- picks up a GitHub issue, classifies the work type (feature, bug, refactor, spike, removal), and routes to the appropriate CRUD workflow. Manages board status and finalization. Use `/pick-up-ticket`.
+- **Create Issue** -- orchestrates fully-populated GitHub issue creation with project board fields (Status, Priority, Size, Iteration, App/Tool) and parent linking. Use `/create-issue`.
+
+### CRUD Skills
+
+- **CRUD Create** -- implements new features from a ticket or direct description. Triages scope (Full/Medium/Micro) and delegates to PRD + Architect + Execute Plan, Architect + Execute Plan, or direct TDD.
+- **CRUD Read** -- handles research spikes and exploration. Strictly read-only. Posts findings as a comment on the ticket.
+- **CRUD Update** -- modifies existing functionality (bug fix, refactor, chore, docs). Runs impact analysis, regression baseline, and TDD.
+- **CRUD Delete** -- removes or deprecates features. Scans dependencies, determines migration strategy, and executes staged removal.
+
+### Workflow Skills
+
+- **Execute Plan** -- implements an existing architectural plan end-to-end with commits, PR, CI, review.
+- **Finalize** -- reusable finalization and quality gate: pre-commit validation, test coverage verification, PRD reconciliation, documentation checks, and follow-up issue creation. Use `/finalize`.
+- **Commit and PR** -- git workflow: branch, incremental commits, pre-commit checks, push, PR creation, CI monitoring.
+
+### Review Skills
+
+- **Review PR** -- automated code review with 8 parallel specialist workers and inline comments on a GitHub PR.
+- **Address PR Comments** -- reads and resolves review comments with fix commits and GitHub replies.
+
+### Testing Skills
+
+- **Generate Exo-BDD Features** -- generates domain-specific BDD feature files (browser, HTTP, security) from a PRD.
+
+## Running Tests
 
 ### Browser Tests (jarga-web)
-
-Run browser tests iteratively by tagging features/scenarios for fast feedback:
 
 ```bash
 # Full suite

@@ -1,9 +1,12 @@
 defmodule Jarga.Documents.Infrastructure.Notifiers.PubSubNotifier do
   @moduledoc """
-  Default notification service implementation for documents.
+  No-op notification service for documents.
 
-  Uses Phoenix PubSub to broadcast real-time notifications to workspace members
-  and to the document channel itself.
+  Legacy PubSub broadcasts have been removed. The EventBus now handles all
+  structured event delivery via use case `event_bus.emit` calls. This module
+  is retained as a no-op shell because use cases still inject it via
+  `opts[:notifier]`. Full removal of the notifier module, behaviour, and
+  injection is deferred to Part 2c.
   """
 
   @behaviour Jarga.Documents.Application.Behaviours.NotificationServiceBehaviour
@@ -11,83 +14,17 @@ defmodule Jarga.Documents.Infrastructure.Notifiers.PubSubNotifier do
   alias Jarga.Documents.Domain.Entities.Document
 
   @impl true
-  def notify_document_visibility_changed(%Document{} = document) do
-    # Broadcast to workspace for list updates
-    Phoenix.PubSub.broadcast(
-      Jarga.PubSub,
-      "workspace:#{document.workspace_id}",
-      {:document_visibility_changed, document.id, document.is_public}
-    )
-
-    # Also broadcast to the document itself for document show view
-    Phoenix.PubSub.broadcast(
-      Jarga.PubSub,
-      "document:#{document.id}",
-      {:document_visibility_changed, document.id, document.is_public}
-    )
-
-    :ok
-  end
+  def notify_document_visibility_changed(%Document{}), do: :ok
 
   @impl true
-  def notify_document_pinned_changed(%Document{} = document) do
-    # Broadcast to workspace for list updates
-    Phoenix.PubSub.broadcast(
-      Jarga.PubSub,
-      "workspace:#{document.workspace_id}",
-      {:document_pinned_changed, document.id, document.is_pinned}
-    )
-
-    # Also broadcast to the document itself for document show view
-    Phoenix.PubSub.broadcast(
-      Jarga.PubSub,
-      "document:#{document.id}",
-      {:document_pinned_changed, document.id, document.is_pinned}
-    )
-
-    :ok
-  end
+  def notify_document_pinned_changed(%Document{}), do: :ok
 
   @impl true
-  def notify_document_title_changed(%Document{} = document) do
-    # Broadcast to workspace for list updates
-    Phoenix.PubSub.broadcast(
-      Jarga.PubSub,
-      "workspace:#{document.workspace_id}",
-      {:document_title_changed, document.id, document.title}
-    )
-
-    # Also broadcast to the document itself for document show view
-    Phoenix.PubSub.broadcast(
-      Jarga.PubSub,
-      "document:#{document.id}",
-      {:document_title_changed, document.id, document.title}
-    )
-
-    :ok
-  end
+  def notify_document_title_changed(%Document{}), do: :ok
 
   @impl true
-  def notify_document_created(%Document{} = document) do
-    # Broadcast to workspace for list updates
-    Phoenix.PubSub.broadcast(
-      Jarga.PubSub,
-      "workspace:#{document.workspace_id}",
-      {:document_created, document}
-    )
-
-    :ok
-  end
+  def notify_document_created(%Document{}), do: :ok
 
   @impl true
-  def notify_document_deleted(%Document{} = document) do
-    # Broadcast to workspace for list updates
-    Phoenix.PubSub.broadcast(
-      Jarga.PubSub,
-      "workspace:#{document.workspace_id}",
-      {:document_deleted, document.id}
-    )
-
-    :ok
-  end
+  def notify_document_deleted(%Document{}), do: :ok
 end

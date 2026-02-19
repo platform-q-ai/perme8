@@ -8,6 +8,24 @@ defmodule JargaWeb.AppLive.Projects.ShowTest do
 
   alias Jarga.Documents
 
+  alias Jarga.Documents.Domain.Events.{
+    DocumentVisibilityChanged,
+    DocumentTitleChanged,
+    DocumentPinnedChanged,
+    DocumentCreated,
+    DocumentDeleted
+  }
+
+  alias Identity.Domain.Events.WorkspaceUpdated
+  alias Jarga.Projects.Domain.Events.{ProjectUpdated, ProjectDeleted}
+
+  alias Agents.Domain.Events.{
+    AgentUpdated,
+    AgentDeleted,
+    AgentAddedToWorkspace,
+    AgentRemovedFromWorkspace
+  }
+
   describe "show project page" do
     test "redirects if user is not logged in", %{conn: conn} do
       user = user_fixture()
@@ -266,7 +284,7 @@ defmodule JargaWeb.AppLive.Projects.ShowTest do
       assert path == ~p"/app/workspaces"
     end
 
-    test "updates document title in real-time when document_title_changed event is received", %{
+    test "updates document title in real-time when DocumentTitleChanged event is received", %{
       conn: conn,
       user: user,
       workspace: workspace,
@@ -282,21 +300,31 @@ defmodule JargaWeb.AppLive.Projects.ShowTest do
 
       assert html =~ "Original Title"
 
-      # Simulate PubSub event
-      send(lv.pid, {:document_title_changed, document.id, "Updated Title"})
+      # Send structured event
+      event =
+        DocumentTitleChanged.new(%{
+          aggregate_id: document.id,
+          actor_id: user.id,
+          document_id: document.id,
+          user_id: user.id,
+          workspace_id: workspace.id,
+          title: "Updated Title"
+        })
+
+      send(lv.pid, event)
 
       html = render(lv)
       assert html =~ "Updated Title"
       refute html =~ "Original Title"
     end
 
-    test "reloads documents when document_visibility_changed event is received", %{
+    test "reloads documents when DocumentVisibilityChanged event is received", %{
       conn: conn,
       user: user,
       workspace: workspace,
       project: project
     } do
-      {:ok, document} =
+      {:ok, _document} =
         Documents.create_document(user, workspace.id, %{
           title: "Test Document",
           project_id: project.id
@@ -305,15 +333,26 @@ defmodule JargaWeb.AppLive.Projects.ShowTest do
       {:ok, lv, _html} =
         live(conn, ~p"/app/workspaces/#{workspace.slug}/projects/#{project.slug}")
 
-      # Simulate PubSub event
-      send(lv.pid, {:document_visibility_changed, document.id, true})
+      # Send structured event
+      event =
+        DocumentVisibilityChanged.new(%{
+          aggregate_id: Ecto.UUID.generate(),
+          actor_id: user.id,
+          document_id: Ecto.UUID.generate(),
+          user_id: user.id,
+          workspace_id: workspace.id,
+          is_public: true
+        })
+
+      send(lv.pid, event)
 
       # Page list should be reloaded
       assert render(lv) =~ "Test Document"
     end
 
-    test "updates workspace name when workspace_updated event is received", %{
+    test "updates workspace name when WorkspaceUpdated event is received", %{
       conn: conn,
+      user: user,
       workspace: workspace,
       project: project
     } do
@@ -321,15 +360,24 @@ defmodule JargaWeb.AppLive.Projects.ShowTest do
 
       assert html =~ workspace.name
 
-      # Simulate PubSub event
-      send(lv.pid, {:workspace_updated, workspace.id, "New Workspace Name"})
+      # Send structured event
+      event =
+        WorkspaceUpdated.new(%{
+          aggregate_id: workspace.id,
+          actor_id: user.id,
+          workspace_id: workspace.id,
+          name: "New Workspace Name"
+        })
+
+      send(lv.pid, event)
 
       html = render(lv)
       assert html =~ "New Workspace Name"
     end
 
-    test "updates project name when project_updated event is received", %{
+    test "updates project name when ProjectUpdated event is received", %{
       conn: conn,
+      user: user,
       workspace: workspace,
       project: project
     } do
@@ -337,15 +385,26 @@ defmodule JargaWeb.AppLive.Projects.ShowTest do
 
       assert html =~ project.name
 
-      # Simulate PubSub event
-      send(lv.pid, {:project_updated, project.id, "New Project Name"})
+      # Send structured event
+      event =
+        ProjectUpdated.new(%{
+          aggregate_id: project.id,
+          actor_id: user.id,
+          project_id: project.id,
+          user_id: user.id,
+          workspace_id: workspace.id,
+          name: "New Project Name"
+        })
+
+      send(lv.pid, event)
 
       html = render(lv)
       assert html =~ "New Project Name"
     end
 
-    test "ignores workspace_updated event for different workspace", %{
+    test "ignores WorkspaceUpdated event for different workspace", %{
       conn: conn,
+      user: user,
       workspace: workspace,
       project: project
     } do
@@ -354,16 +413,27 @@ defmodule JargaWeb.AppLive.Projects.ShowTest do
       original_name = workspace.name
       assert html =~ original_name
 
-      # Simulate PubSub event for different workspace
-      send(lv.pid, {:workspace_updated, Ecto.UUID.generate(), "Other Name"})
+      # Send structured event for different workspace
+      other_workspace_id = Ecto.UUID.generate()
+
+      event =
+        WorkspaceUpdated.new(%{
+          aggregate_id: other_workspace_id,
+          actor_id: user.id,
+          workspace_id: other_workspace_id,
+          name: "Other Name"
+        })
+
+      send(lv.pid, event)
 
       html = render(lv)
       assert html =~ original_name
       refute html =~ "Other Name"
     end
 
-    test "ignores project_updated event for different project", %{
+    test "ignores ProjectUpdated event for different project", %{
       conn: conn,
+      user: user,
       workspace: workspace,
       project: project
     } do
@@ -372,12 +442,295 @@ defmodule JargaWeb.AppLive.Projects.ShowTest do
       original_name = project.name
       assert html =~ original_name
 
-      # Simulate PubSub event for different project
-      send(lv.pid, {:project_updated, Ecto.UUID.generate(), "Other Name"})
+      # Send structured event for different project
+      other_project_id = Ecto.UUID.generate()
+
+      event =
+        ProjectUpdated.new(%{
+          aggregate_id: other_project_id,
+          actor_id: user.id,
+          project_id: other_project_id,
+          user_id: user.id,
+          workspace_id: workspace.id,
+          name: "Other Name"
+        })
+
+      send(lv.pid, event)
 
       html = render(lv)
       assert html =~ original_name
       refute html =~ "Other Name"
+    end
+
+    test "handles DocumentPinnedChanged event by updating pinned status", %{
+      conn: conn,
+      user: user,
+      workspace: workspace,
+      project: project
+    } do
+      {:ok, document} =
+        Documents.create_document(user, workspace.id, %{
+          title: "Test Document",
+          project_id: project.id,
+          is_pinned: false
+        })
+
+      {:ok, lv, html} =
+        live(conn, ~p"/app/workspaces/#{workspace.slug}/projects/#{project.slug}")
+
+      assert html =~ "Test Document"
+      refute html =~ "Pinned"
+
+      event =
+        DocumentPinnedChanged.new(%{
+          aggregate_id: document.id,
+          actor_id: user.id,
+          document_id: document.id,
+          user_id: user.id,
+          workspace_id: workspace.id,
+          is_pinned: true
+        })
+
+      send(lv.pid, event)
+
+      html = render(lv)
+      assert html =~ "Pinned"
+    end
+
+    test "handles DocumentCreated event by adding document to list", %{
+      conn: conn,
+      user: user,
+      workspace: workspace,
+      project: project
+    } do
+      {:ok, lv, html} =
+        live(conn, ~p"/app/workspaces/#{workspace.slug}/projects/#{project.slug}")
+
+      assert html =~ "No documents yet"
+
+      # Create a document in the DB first (event handler will fetch it)
+      {:ok, document} =
+        Documents.create_document(user, workspace.id, %{
+          title: "Newly Created Doc",
+          project_id: project.id
+        })
+
+      # Send structured event
+      event =
+        DocumentCreated.new(%{
+          aggregate_id: document.id,
+          actor_id: user.id,
+          document_id: document.id,
+          project_id: project.id,
+          user_id: user.id,
+          workspace_id: workspace.id,
+          title: "Newly Created Doc"
+        })
+
+      send(lv.pid, event)
+
+      html = render(lv)
+      assert html =~ "Newly Created Doc"
+    end
+
+    test "ignores DocumentCreated event for different project", %{
+      conn: conn,
+      user: user,
+      workspace: workspace,
+      project: project
+    } do
+      {:ok, lv, html} =
+        live(conn, ~p"/app/workspaces/#{workspace.slug}/projects/#{project.slug}")
+
+      assert html =~ "No documents yet"
+
+      other_project_id = Ecto.UUID.generate()
+
+      event =
+        DocumentCreated.new(%{
+          aggregate_id: Ecto.UUID.generate(),
+          actor_id: user.id,
+          document_id: Ecto.UUID.generate(),
+          project_id: other_project_id,
+          user_id: user.id,
+          workspace_id: workspace.id,
+          title: "Other Project Doc"
+        })
+
+      send(lv.pid, event)
+
+      html = render(lv)
+      assert html =~ "No documents yet"
+    end
+
+    test "handles DocumentDeleted event by removing document from list", %{
+      conn: conn,
+      user: user,
+      workspace: workspace,
+      project: project
+    } do
+      {:ok, document} =
+        Documents.create_document(user, workspace.id, %{
+          title: "To Be Deleted",
+          project_id: project.id
+        })
+
+      {:ok, lv, html} =
+        live(conn, ~p"/app/workspaces/#{workspace.slug}/projects/#{project.slug}")
+
+      assert html =~ "To Be Deleted"
+
+      event =
+        DocumentDeleted.new(%{
+          aggregate_id: document.id,
+          actor_id: user.id,
+          document_id: document.id,
+          user_id: user.id,
+          workspace_id: workspace.id
+        })
+
+      send(lv.pid, event)
+
+      html = render(lv)
+      refute html =~ "To Be Deleted"
+    end
+
+    test "handles ProjectDeleted event by redirecting when current project is deleted", %{
+      conn: conn,
+      user: user,
+      workspace: workspace,
+      project: project
+    } do
+      {:ok, lv, _html} =
+        live(conn, ~p"/app/workspaces/#{workspace.slug}/projects/#{project.slug}")
+
+      event =
+        ProjectDeleted.new(%{
+          aggregate_id: project.id,
+          actor_id: user.id,
+          project_id: project.id,
+          user_id: user.id,
+          workspace_id: workspace.id
+        })
+
+      send(lv.pid, event)
+
+      assert_redirect(lv, ~p"/app/workspaces/#{workspace.slug}")
+    end
+
+    test "ignores ProjectDeleted event for different project", %{
+      conn: conn,
+      user: user,
+      workspace: workspace,
+      project: project
+    } do
+      {:ok, lv, _html} =
+        live(conn, ~p"/app/workspaces/#{workspace.slug}/projects/#{project.slug}")
+
+      other_project_id = Ecto.UUID.generate()
+
+      event =
+        ProjectDeleted.new(%{
+          aggregate_id: other_project_id,
+          actor_id: user.id,
+          project_id: other_project_id,
+          user_id: user.id,
+          workspace_id: workspace.id
+        })
+
+      send(lv.pid, event)
+
+      # Should not redirect, page should still render
+      assert render(lv)
+    end
+
+    test "handles AgentUpdated event by reloading workspace agents", %{
+      conn: conn,
+      user: user,
+      workspace: workspace,
+      project: project
+    } do
+      {:ok, lv, _html} =
+        live(conn, ~p"/app/workspaces/#{workspace.slug}/projects/#{project.slug}")
+
+      event =
+        AgentUpdated.new(%{
+          aggregate_id: Ecto.UUID.generate(),
+          actor_id: user.id,
+          agent_id: Ecto.UUID.generate(),
+          user_id: user.id,
+          workspace_ids: [workspace.id],
+          changes: %{name: "Updated Agent"}
+        })
+
+      send(lv.pid, event)
+      assert render(lv)
+    end
+
+    test "handles AgentDeleted event by reloading workspace agents", %{
+      conn: conn,
+      user: user,
+      workspace: workspace,
+      project: project
+    } do
+      {:ok, lv, _html} =
+        live(conn, ~p"/app/workspaces/#{workspace.slug}/projects/#{project.slug}")
+
+      event =
+        AgentDeleted.new(%{
+          aggregate_id: Ecto.UUID.generate(),
+          actor_id: user.id,
+          agent_id: Ecto.UUID.generate(),
+          user_id: user.id,
+          workspace_ids: [workspace.id]
+        })
+
+      send(lv.pid, event)
+      assert render(lv)
+    end
+
+    test "handles AgentAddedToWorkspace event by reloading workspace agents", %{
+      conn: conn,
+      user: user,
+      workspace: workspace,
+      project: project
+    } do
+      {:ok, lv, _html} =
+        live(conn, ~p"/app/workspaces/#{workspace.slug}/projects/#{project.slug}")
+
+      event =
+        AgentAddedToWorkspace.new(%{
+          aggregate_id: Ecto.UUID.generate(),
+          actor_id: user.id,
+          agent_id: Ecto.UUID.generate(),
+          user_id: user.id,
+          workspace_id: workspace.id
+        })
+
+      send(lv.pid, event)
+      assert render(lv)
+    end
+
+    test "handles AgentRemovedFromWorkspace event by reloading workspace agents", %{
+      conn: conn,
+      user: user,
+      workspace: workspace,
+      project: project
+    } do
+      {:ok, lv, _html} =
+        live(conn, ~p"/app/workspaces/#{workspace.slug}/projects/#{project.slug}")
+
+      event =
+        AgentRemovedFromWorkspace.new(%{
+          aggregate_id: Ecto.UUID.generate(),
+          actor_id: user.id,
+          agent_id: Ecto.UUID.generate(),
+          user_id: user.id,
+          workspace_id: workspace.id
+        })
+
+      send(lv.pid, event)
+      assert render(lv)
     end
   end
 end
