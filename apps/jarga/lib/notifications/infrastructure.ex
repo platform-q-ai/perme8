@@ -13,8 +13,8 @@ defmodule Jarga.Notifications.Infrastructure do
   ## Notifiers (External Communication)
   - `Notifiers.PubSubNotifier` - PubSub notifications
 
-  ## Subscribers (Event Handlers)
-  - `Subscribers.WorkspaceInvitationSubscriber` - Handles workspace invitation events
+  ## Event Handlers (Subscribers)
+  - `Subscribers.WorkspaceInvitationSubscriber` - Handles workspace invitation events (EventHandler)
 
   ## Dependency Rule
 
@@ -34,7 +34,9 @@ defmodule Jarga.Notifications.Infrastructure do
       # Cross-context dependencies
       Identity,
       Identity.Repo,
-      Jarga.Accounts
+      Jarga.Accounts,
+      # EventHandler behaviour for subscriber conversion
+      Perme8.Events
     ],
     exports: [
       Schemas.NotificationSchema,
