@@ -63,6 +63,7 @@ defmodule Identity do
       Domain.Services.TokenBuilder,
       Domain.Services.SlugGenerator,
       Domain.Scope,
+      Domain.Events.MemberInvited,
       # Infrastructure schemas exported for test fixtures and cross-app integration
       # These are needed by Jarga.AccountsFixtures for creating test data
       Infrastructure.Schemas.UserSchema,

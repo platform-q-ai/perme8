@@ -2,11 +2,13 @@ defmodule Perme8.Events.EventTypeUniquenessTest do
   use ExUnit.Case, async: true
 
   @moduledoc """
-  Cross-cutting test that verifies all 27 domain event types are unique.
+  Cross-cutting test that verifies all 28 domain event types are unique.
   This prevents naming collisions as new events are added.
   """
 
   @all_event_modules [
+    # Identity (1)
+    Identity.Domain.Events.MemberInvited,
     # Projects (4)
     Jarga.Projects.Domain.Events.ProjectCreated,
     Jarga.Projects.Domain.Events.ProjectUpdated,
@@ -43,8 +45,8 @@ defmodule Perme8.Events.EventTypeUniquenessTest do
   ]
 
   describe "event_type uniqueness" do
-    test "all 27 event modules are listed" do
-      assert length(@all_event_modules) == 27
+    test "all 28 event modules are listed" do
+      assert length(@all_event_modules) == 28
     end
 
     test "all event_type/0 strings are unique" do
