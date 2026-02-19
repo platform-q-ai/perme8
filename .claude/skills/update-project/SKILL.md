@@ -11,6 +11,16 @@ Manage issues and project board fields for the **Perme8** GitHub Project V2 (`pl
 
 For complete field IDs, option mappings, and mutation templates, see [reference.md](reference.md).
 
+## Authentication
+
+All `gh` commands MUST run as `perme8[bot]`. Set the token before every operation:
+
+```bash
+export GH_TOKEN=$(~/.config/perme8/get-token)
+```
+
+The token is short-lived (9 minutes). Re-generate if a command fails with a 401.
+
 ## Core Principles
 
 1. **All project fields must be populated** when creating issues: Status, Priority, Size, Iteration, and App/Tool.
