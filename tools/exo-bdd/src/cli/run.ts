@@ -361,6 +361,14 @@ export async function runTests(options: RunOptions): Promise<number> {
   // Merge config-level tags with CLI-provided tags
   const effectiveTags = mergeTags(config.tags, options.tags)
 
+  // Resolve Allure reporting config: CLI --allure flag OR config.report.allure
+  const allureConfig = options.allure
+    ? (config.report?.allure || true)
+    : config.report?.allure
+  const effectiveAllure = allureConfig && allureConfig !== false
+    ? allureConfig
+    : undefined
+
   // Build cucumber-js args
   const cucumberArgs = buildCucumberArgs({
     features,
@@ -370,6 +378,7 @@ export async function runTests(options: RunOptions): Promise<number> {
     passthrough: options.passthrough,
     tags: effectiveTags,
     noRetry: options.noRetry,
+    allure: effectiveAllure,
   })
 
   const cucumberBin = resolve(exoBddRoot, 'node_modules/.bin/cucumber-js')
