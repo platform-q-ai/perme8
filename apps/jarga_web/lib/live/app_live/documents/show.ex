@@ -9,6 +9,26 @@ defmodule JargaWeb.AppLive.Documents.Show do
 
   alias Jarga.{Documents, Notes, Workspaces, Projects}
 
+  # Document domain events
+  alias Jarga.Documents.Domain.Events.{
+    DocumentVisibilityChanged,
+    DocumentPinnedChanged,
+    DocumentTitleChanged,
+    DocumentCreated
+  }
+
+  # Cross-context domain events
+  alias Identity.Domain.Events.WorkspaceUpdated
+  alias Jarga.Projects.Domain.Events.ProjectUpdated
+
+  # Agent domain events
+  alias Agents.Domain.Events.{
+    AgentUpdated,
+    AgentDeleted,
+    AgentAddedToWorkspace,
+    AgentRemovedFromWorkspace
+  }
+
   @impl true
   def mount(
         %{"workspace_slug" => workspace_slug, "document_slug" => document_slug},
@@ -26,9 +46,11 @@ defmodule JargaWeb.AppLive.Documents.Show do
       note = Documents.get_document_note(document)
 
       # Subscribe to document updates via PubSub for collaborative editing
+      # CRDT sync messages (yjs_update, awareness_update, user_disconnected) stay on raw topic
+      # Domain events (visibility, pinned, title, workspace, project, agent) use structured events
       if connected?(socket) do
         Phoenix.PubSub.subscribe(Jarga.PubSub, "document:#{document.id}")
-        Phoenix.PubSub.subscribe(Jarga.PubSub, "workspace:#{workspace.id}")
+        Perme8.Events.subscribe("events:workspace:#{workspace.id}")
       end
 
       # Generate user ID for collaborative editing
@@ -360,7 +382,10 @@ defmodule JargaWeb.AppLive.Documents.Show do
   end
 
   @impl true
-  def handle_info({:document_visibility_changed, document_id, is_public}, socket) do
+  def handle_info(
+        %DocumentVisibilityChanged{document_id: document_id, is_public: is_public},
+        socket
+      ) do
     # Update document visibility in real-time when changed by another user
     if socket.assigns.document.id == document_id do
       document = %{socket.assigns.document | is_public: is_public}
@@ -371,7 +396,7 @@ defmodule JargaWeb.AppLive.Documents.Show do
   end
 
   @impl true
-  def handle_info({:document_pinned_changed, document_id, is_pinned}, socket) do
+  def handle_info(%DocumentPinnedChanged{document_id: document_id, is_pinned: is_pinned}, socket) do
     # Update document pinned state in real-time when changed by another user
     if socket.assigns.document.id == document_id do
       document = %{socket.assigns.document | is_pinned: is_pinned}
@@ -382,7 +407,7 @@ defmodule JargaWeb.AppLive.Documents.Show do
   end
 
   @impl true
-  def handle_info({:document_title_changed, document_id, title}, socket) do
+  def handle_info(%DocumentTitleChanged{document_id: document_id, title: title}, socket) do
     # Update document title in the document show view (from another user's edit)
     if socket.assigns.document.id == document_id do
       document = %{socket.assigns.document | title: title}
@@ -394,7 +419,7 @@ defmodule JargaWeb.AppLive.Documents.Show do
   end
 
   @impl true
-  def handle_info({:workspace_updated, workspace_id, name}, socket) do
+  def handle_info(%WorkspaceUpdated{workspace_id: workspace_id, name: name}, socket) do
     # Update workspace name in breadcrumbs
     if socket.assigns.workspace.id == workspace_id do
       workspace = %{socket.assigns.workspace | name: name}
@@ -405,7 +430,7 @@ defmodule JargaWeb.AppLive.Documents.Show do
   end
 
   @impl true
-  def handle_info({:project_updated, project_id, name}, socket) do
+  def handle_info(%ProjectUpdated{project_id: project_id, name: name}, socket) do
     # Update project name in breadcrumbs
     if socket.assigns.project && socket.assigns.project.id == project_id do
       project = %{socket.assigns.project | name: name}
@@ -461,25 +486,23 @@ defmodule JargaWeb.AppLive.Documents.Show do
     {:noreply, socket}
   end
 
+  # Agent domain events — reload workspace agents and update chat panel
   @impl true
-  def handle_info({:workspace_agent_updated, _agent}, socket) do
-    # Reload workspace agents and send to chat panel
-    workspace_id = socket.assigns.workspace.id
-    user = socket.assigns.current_scope.user
-
-    agents = Agents.get_workspace_agents_list(workspace_id, user.id, enabled_only: true)
-
-    send_update(JargaWeb.ChatLive.Panel,
-      id: "global-chat-panel",
-      workspace_agents: agents,
-      from_pubsub: true
-    )
-
-    {:noreply, socket}
-  end
+  def handle_info(%AgentUpdated{}, socket), do: {:noreply, reload_workspace_agents(socket)}
 
   @impl true
-  def handle_info({:document_created, _document}, socket) do
+  def handle_info(%AgentDeleted{}, socket), do: {:noreply, reload_workspace_agents(socket)}
+
+  @impl true
+  def handle_info(%AgentAddedToWorkspace{}, socket),
+    do: {:noreply, reload_workspace_agents(socket)}
+
+  @impl true
+  def handle_info(%AgentRemovedFromWorkspace{}, socket),
+    do: {:noreply, reload_workspace_agents(socket)}
+
+  @impl true
+  def handle_info(%DocumentCreated{}, socket) do
     # Document created broadcasts - no action needed on document show page
     {:noreply, socket}
   end
@@ -630,6 +653,20 @@ defmodule JargaWeb.AppLive.Documents.Show do
       </div>
     </Layouts.admin>
     """
+  end
+
+  defp reload_workspace_agents(socket) do
+    workspace_id = socket.assigns.workspace.id
+    user = socket.assigns.current_scope.user
+    agents = Agents.get_workspace_agents_list(workspace_id, user.id, enabled_only: true)
+
+    send_update(JargaWeb.ChatLive.Panel,
+      id: "global-chat-panel",
+      workspace_agents: agents,
+      from_pubsub: true
+    )
+
+    socket
   end
 
   defp get_document_by_slug(user, workspace_id, slug) do
