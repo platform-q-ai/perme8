@@ -65,6 +65,15 @@ config :jarga_api, JargaApi.Endpoint,
   secret_key_base: "jarga_api_dev_secret_key_base_at_least_64_bytes_long_for_security",
   watchers: []
 
+# AgentsApi dev configuration (JSON API for agents on port 4008)
+config :agents_api, AgentsApi.Endpoint,
+  http: [ip: {127, 0, 0, 1}, port: 4008],
+  check_origin: false,
+  code_reloader: true,
+  debug_errors: true,
+  secret_key_base: "agents_api_dev_secret_key_base_at_least_64_bytes_long_for_security",
+  watchers: []
+
 # For development, we disable any cache and enable
 # debugging and code reloading.
 config :jarga_web, JargaWeb.Endpoint,

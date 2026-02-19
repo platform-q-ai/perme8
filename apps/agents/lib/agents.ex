@@ -47,6 +47,7 @@ defmodule Agents do
   alias Agents.Application.UseCases.{
     AgentQuery,
     ListUserAgents,
+    GetUserAgent,
     CreateUserAgent,
     UpdateUserAgent,
     DeleteUserAgent,
@@ -126,6 +127,20 @@ defmodule Agents do
   """
   @spec list_user_agents(String.t()) :: [struct()]
   defdelegate list_user_agents(user_id), to: ListUserAgents, as: :execute
+
+  @doc """
+  Gets a single agent owned by the user.
+
+  ## Examples
+
+      iex> get_user_agent(agent_id, user_id)
+      {:ok, %Agent{}}
+
+      iex> get_user_agent(non_existent_id, user_id)
+      {:error, :not_found}
+  """
+  @spec get_user_agent(String.t(), String.t()) :: {:ok, struct()} | {:error, :not_found}
+  defdelegate get_user_agent(agent_id, user_id), to: GetUserAgent, as: :execute
 
   @doc """
   Lists all agents viewable by the user.

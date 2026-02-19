@@ -17,6 +17,7 @@ defmodule Agents.Application do
       UseCases.CloneSharedAgent,
       UseCases.CreateUserAgent,
       UseCases.DeleteUserAgent,
+      UseCases.GetUserAgent,
       UseCases.ListUserAgents,
       UseCases.ListViewableAgents,
       UseCases.ListWorkspaceAvailableAgents,
