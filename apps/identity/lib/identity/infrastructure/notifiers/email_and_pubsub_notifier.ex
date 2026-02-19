@@ -13,6 +13,7 @@ defmodule Identity.Infrastructure.Notifiers.EmailAndPubSubNotifier do
   alias Identity.Domain.Entities.User
   alias Identity.Domain.Entities.Workspace
   alias Identity.Infrastructure.Notifiers.WorkspaceNotifier
+  alias Identity.Domain.Events.{WorkspaceUpdated, MemberRemoved, WorkspaceInvitationNotified}
 
   @pubsub Application.compile_env(:identity, :pubsub_module, Jarga.PubSub)
 
@@ -27,6 +28,19 @@ defmodule Identity.Infrastructure.Notifiers.EmailAndPubSubNotifier do
       @pubsub,
       "user:#{user.id}",
       {:workspace_invitation, workspace.id, workspace.name, inviter.first_name}
+    )
+
+    # Emit structured event for EventBus
+    event_bus().emit(
+      WorkspaceInvitationNotified.new(%{
+        aggregate_id: "#{workspace.id}:#{user.id}",
+        actor_id: inviter.id,
+        workspace_id: workspace.id,
+        target_user_id: user.id,
+        workspace_name: workspace.name,
+        invited_by_name: inviter.first_name,
+        role: "member"
+      })
     )
 
     :ok
@@ -50,6 +64,16 @@ defmodule Identity.Infrastructure.Notifiers.EmailAndPubSubNotifier do
       {:workspace_removed, workspace.id}
     )
 
+    # Emit structured event for EventBus
+    event_bus().emit(
+      MemberRemoved.new(%{
+        aggregate_id: "#{workspace.id}:#{user.id}",
+        actor_id: "system",
+        workspace_id: workspace.id,
+        target_user_id: user.id
+      })
+    )
+
     :ok
   end
 
@@ -60,6 +84,16 @@ defmodule Identity.Infrastructure.Notifiers.EmailAndPubSubNotifier do
       @pubsub,
       "workspace:#{workspace.id}",
       {:workspace_updated, workspace.id, workspace.name}
+    )
+
+    # Emit structured event for EventBus
+    event_bus().emit(
+      WorkspaceUpdated.new(%{
+        aggregate_id: workspace.id,
+        actor_id: "system",
+        workspace_id: workspace.id,
+        name: workspace.name
+      })
     )
 
     :ok
@@ -80,5 +114,10 @@ defmodule Identity.Infrastructure.Notifiers.EmailAndPubSubNotifier do
         Application.get_env(:jarga, :base_url, "http://localhost:4000")
 
     "#{base_url}/users/register"
+  end
+
+  # Resolved at runtime to avoid compile-time dependency on jarga app
+  defp event_bus do
+    Application.get_env(:identity, :event_bus, Perme8.Events.EventBus)
   end
 end

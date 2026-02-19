@@ -94,7 +94,8 @@ defmodule Jarga.Notifications.Application.UseCases.CreateWorkspaceInvitationNoti
         actor_id: notification.user_id,
         notification_id: notification.id,
         user_id: notification.user_id,
-        type: notification.type
+        type: notification.type,
+        target_user_id: notification.user_id
       })
 
     event_bus.emit(event)

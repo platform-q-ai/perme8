@@ -37,7 +37,9 @@ defmodule JargaWeb do
       # Identity for domain entities and scope
       Identity,
       # Domain policies for permissions
-      Jarga.Domain
+      Jarga.Domain,
+      # Structured event bus for LiveView subscriptions
+      Perme8.Events
     ],
     exports: [Endpoint, Telemetry]
 
