@@ -4,7 +4,10 @@ defmodule AgentsApi.Test.Fixtures do
   """
 
   alias Identity.Infrastructure.Schemas.ApiKeySchema
+  alias Identity.Infrastructure.Schemas.UserSchema
   alias Identity.Application.Services.ApiKeyTokenService
+  alias Identity.Application.Services.PasswordService
+  alias Identity.Domain.Entities.User
 
   @doc """
   Creates a confirmed user for testing.
@@ -28,15 +31,15 @@ defmodule AgentsApi.Test.Fixtures do
     {:ok, {_confirmed_user, _expired}} = Identity.login_user_by_magic_link(token)
 
     # Set a hashed password for completeness
-    hashed_password = Identity.Application.Services.PasswordService.hash_password("hello world!")
+    hashed_password = PasswordService.hash_password("hello world!")
 
     updated =
       user
-      |> Identity.Infrastructure.Schemas.UserSchema.to_schema()
+      |> UserSchema.to_schema()
       |> Ecto.Changeset.change(hashed_password: hashed_password)
       |> Identity.Repo.update!()
 
-    Identity.Domain.Entities.User.from_schema(updated)
+    User.from_schema(updated)
   end
 
   @doc """
