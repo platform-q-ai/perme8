@@ -20,7 +20,7 @@ defmodule Identity.Application.UseCases.CreateNotificationsForPendingInvitations
     end
   end
 
-  defp start_test_event_bus do
+  defp ensure_test_event_bus_started do
     case TestEventBus.start_link([]) do
       {:ok, _pid} -> :ok
       {:error, {:already_started, _pid}} -> TestEventBus.reset()
@@ -63,7 +63,7 @@ defmodule Identity.Application.UseCases.CreateNotificationsForPendingInvitations
     end
 
     test "emits MemberInvited events via event_bus for each pending invitation" do
-      start_test_event_bus()
+      ensure_test_event_bus_started()
       owner = user_fixture()
       workspace = workspace_fixture(owner)
       invitee = user_fixture()
@@ -87,7 +87,7 @@ defmodule Identity.Application.UseCases.CreateNotificationsForPendingInvitations
     end
 
     test "does not emit events when no pending invitations" do
-      start_test_event_bus()
+      ensure_test_event_bus_started()
       user = user_fixture()
 
       params = %{user: user}
