@@ -9,7 +9,7 @@ defmodule Identity.Application.UseCases.CreateNotificationsForPendingInvitations
 
   - Find all pending invitations for the user's email
   - Create a notification for each pending invitation
-  - Send broadcasts via PubSub for real-time updates
+  - Emit domain events via EventBus for real-time updates
 
   ## Dependencies
 

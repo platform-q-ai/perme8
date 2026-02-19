@@ -2,7 +2,7 @@ defmodule Identity.Domain.Events.WorkspaceUpdated do
   @moduledoc """
   Domain event emitted when a workspace is updated (e.g., renamed).
 
-  Emitted by `Identity.Infrastructure.Notifiers.EmailAndPubSubNotifier.notify_workspace_updated/1`.
+  Emitted by `Identity.update_workspace/4` when a workspace is renamed or modified.
   """
 
   use Perme8.Events.DomainEvent,

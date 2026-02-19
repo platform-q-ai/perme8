@@ -2,7 +2,7 @@ defmodule Identity.Domain.Events.WorkspaceInvitationNotified do
   @moduledoc """
   Domain event emitted when an existing user is notified of a workspace invitation.
 
-  Emitted by `Identity.Infrastructure.Notifiers.EmailAndPubSubNotifier.notify_existing_user/3`.
+  Emitted by `Identity.Application.UseCases.InviteMember` after sending an invitation email.
   The `target_user_id` is the invitee. This enables user-scoped topic derivation.
   """
 
