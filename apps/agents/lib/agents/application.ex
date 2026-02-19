@@ -49,7 +49,6 @@ defmodule Agents.Application do
       Behaviours.AgentRepositoryBehaviour,
       Behaviours.AgentSchemaBehaviour,
       Behaviours.LlmClientBehaviour,
-      Behaviours.PubSubNotifierBehaviour,
       Behaviours.WorkspaceAgentRepositoryBehaviour,
       Behaviours.ErmGatewayBehaviour,
       Behaviours.IdentityBehaviour,

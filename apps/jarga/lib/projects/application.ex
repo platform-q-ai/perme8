@@ -10,9 +10,6 @@ defmodule Jarga.Projects.Application do
   - `UseCases.DeleteProject` - Project deletion flow
   - `UseCases.UseCase` - Base use case behaviour
 
-  ## Services
-  - `Services.NotificationService` - Project notification service
-
   ## Dependency Rule
 
   The Application layer may only depend on:
@@ -42,7 +39,6 @@ defmodule Jarga.Projects.Application do
       Services.NotificationService,
       # Behaviours (interfaces for Infrastructure to implement)
       Behaviours.AuthorizationRepositoryBehaviour,
-      Behaviours.NotificationServiceBehaviour,
       Behaviours.ProjectRepositoryBehaviour
     ]
 end

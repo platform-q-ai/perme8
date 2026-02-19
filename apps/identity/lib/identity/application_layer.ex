@@ -110,8 +110,6 @@ defmodule Identity.ApplicationLayer do
       Identity.Application.Behaviours.QueriesBehaviour,
       # Workspace behaviours
       Identity.Application.Behaviours.MembershipRepositoryBehaviour,
-      Identity.Application.Behaviours.NotificationServiceBehaviour,
-      Identity.Application.Behaviours.PubSubNotifierBehaviour,
       Identity.Application.Behaviours.WorkspaceQueriesBehaviour
     ]
   end

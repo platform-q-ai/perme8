@@ -10,9 +10,6 @@ defmodule Jarga.Notifications.Infrastructure do
   ## Repositories (Data Access)
   - `Repositories.NotificationRepository` - Notification persistence operations
 
-  ## Notifiers (External Communication)
-  - `Notifiers.PubSubNotifier` - PubSub notifications
-
   ## Event Handlers (Subscribers)
   - `Subscribers.WorkspaceInvitationSubscriber` - Handles workspace invitation events (EventHandler)
 
@@ -41,7 +38,6 @@ defmodule Jarga.Notifications.Infrastructure do
     exports: [
       Schemas.NotificationSchema,
       Repositories.NotificationRepository,
-      Notifiers.PubSubNotifier,
       Subscribers.WorkspaceInvitationSubscriber
     ]
 end
