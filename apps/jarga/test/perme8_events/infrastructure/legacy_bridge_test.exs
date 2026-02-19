@@ -22,6 +22,8 @@ defmodule Perme8.Events.Infrastructure.LegacyBridgeTest do
   alias Jarga.Notifications.Domain.Events.NotificationCreated
   alias Jarga.Notifications.Domain.Events.NotificationActionTaken
 
+  alias Identity.Domain.Events.MemberInvited
+
   # Test event to verify catch-all behaviour
   defmodule UnknownEvent do
     use Perme8.Events.DomainEvent,
@@ -318,6 +320,35 @@ defmodule Perme8.Events.Infrastructure.LegacyBridgeTest do
 
       assert [{"workspace:ws-1", {:invitation_declined, "user-1"}}] =
                LegacyBridge.translate(event)
+    end
+  end
+
+  # --- Identity Context ---
+
+  describe "translate/1 - Identity" do
+    test "MemberInvited translates to legacy workspace_invitations tuple" do
+      event =
+        MemberInvited.new(%{
+          aggregate_id: "ws-123:user-456",
+          actor_id: "inviter-789",
+          user_id: "user-456",
+          workspace_id: "ws-123",
+          workspace_name: "Test Workspace",
+          invited_by_name: "John Doe",
+          role: "member"
+        })
+
+      assert [
+               {"workspace_invitations",
+                {:workspace_invitation_created,
+                 %{
+                   user_id: "user-456",
+                   workspace_id: "ws-123",
+                   workspace_name: "Test Workspace",
+                   invited_by_name: "John Doe",
+                   role: "member"
+                 }}}
+             ] = LegacyBridge.translate(event)
     end
   end
 
