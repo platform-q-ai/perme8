@@ -17,7 +17,7 @@ defmodule Jarga.Notifications.Infrastructure.Subscribers.WorkspaceInvitationSubs
 
   alias Identity.Domain.Events.MemberInvited
 
-  @default_create_notification_use_case Jarga.Notifications.Application.UseCases.CreateWorkspaceInvitationNotification
+  @create_notification_use_case Jarga.Notifications.Application.UseCases.CreateWorkspaceInvitationNotification
 
   @impl Perme8.Events.EventHandler
   def subscriptions do
@@ -38,7 +38,7 @@ defmodule Jarga.Notifications.Infrastructure.Subscribers.WorkspaceInvitationSubs
       role: event.role
     }
 
-    case @default_create_notification_use_case.execute(params) do
+    case @create_notification_use_case.execute(params) do
       {:ok, _notification} ->
         Logger.debug("Created notification for workspace invitation: #{event.workspace_id}")
         :ok
