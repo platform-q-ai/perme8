@@ -22,8 +22,22 @@ defmodule JargaWeb.AppLive.Agents.Form do
   @impl true
   def mount(_params, _session, socket) do
     if connected?(socket) do
-      user_id = socket.assigns.current_scope.user.id
-      Perme8.Events.subscribe("events:user:#{user_id}")
+      user = socket.assigns.current_scope.user
+
+      # Subscribe to workspace topic(s) for agent events (AgentUpdated, AgentDeleted, etc.)
+      # Agent events are broadcast to workspace topics, not user topics.
+      case Map.get(socket.assigns.current_scope, :workspace) do
+        nil ->
+          # No workspace context — subscribe to all user's workspaces
+          workspaces = Workspaces.list_workspaces_for_user(user)
+
+          Enum.each(workspaces, fn workspace ->
+            Perme8.Events.subscribe("events:workspace:#{workspace.id}")
+          end)
+
+        workspace ->
+          Perme8.Events.subscribe("events:workspace:#{workspace.id}")
+      end
     end
 
     {:ok, socket}
