@@ -13,7 +13,7 @@ defmodule Jarga.Projects.Application.UseCases.CreateProject do
 
   - Validate actor has workspace membership
   - Create project with proper attributes
-  - Notify workspace members of new project
+  - Emit domain event for new project
   """
 
   @behaviour Jarga.Projects.Application.UseCases.UseCase

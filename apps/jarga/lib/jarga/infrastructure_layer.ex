@@ -120,23 +120,6 @@ defmodule Jarga.InfrastructureLayer do
   end
 
   @doc """
-  Lists all known notifier modules across all Jarga contexts.
-
-  Note: User notifiers are in the Identity app.
-  Legacy PubSub notifiers have been removed — event delivery is now handled
-  by the EventBus and EventHandler infrastructure.
-
-  ## Examples
-
-      iex> Jarga.InfrastructureLayer.notifiers()
-      []
-  """
-  @spec notifiers() :: [module()]
-  def notifiers do
-    []
-  end
-
-  @doc """
   Lists all known external service modules across all Jarga contexts.
 
   ## Examples
@@ -158,23 +141,21 @@ defmodule Jarga.InfrastructureLayer do
   ## Examples
 
        iex> Jarga.InfrastructureLayer.summary()
-       %{repositories: 11, schemas: 9, queries: 5, notifiers: 0, services: 1, total: 26}
+       %{repositories: 11, schemas: 9, queries: 5, services: 1, total: 26}
   """
   @spec summary() :: map()
   def summary do
     repo_count = length(repositories())
     schema_count = length(schemas())
     query_count = length(queries())
-    notifier_count = length(notifiers())
     service_count = length(external_services())
 
     %{
       repositories: repo_count,
       schemas: schema_count,
       queries: query_count,
-      notifiers: notifier_count,
       services: service_count,
-      total: repo_count + schema_count + query_count + notifier_count + service_count
+      total: repo_count + schema_count + query_count + service_count
     }
   end
 end

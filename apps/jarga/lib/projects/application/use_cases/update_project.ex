@@ -7,7 +7,7 @@ defmodule Jarga.Projects.Application.UseCases.UpdateProject do
   - Actor must be a member of the workspace
   - Actor must have access to the project
   - Actor must have permission to edit the project (owner or admin, or project creator)
-  - Sends notification when project is updated
+  - Emits event when project is updated
 
   ## Responsibilities
 
@@ -15,7 +15,7 @@ defmodule Jarga.Projects.Application.UseCases.UpdateProject do
   - Verify project access
   - Authorize update based on role and ownership
   - Update project attributes
-  - Send notification
+  - Emit domain event
   """
 
   @behaviour Jarga.Projects.Application.UseCases.UseCase

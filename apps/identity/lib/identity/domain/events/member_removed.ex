@@ -2,7 +2,7 @@ defmodule Identity.Domain.Events.MemberRemoved do
   @moduledoc """
   Domain event emitted when a member is removed from a workspace.
 
-  Emitted by `Identity.Infrastructure.Notifiers.EmailAndPubSubNotifier.notify_user_removed/2`.
+  Emitted by `Identity.Application.UseCases.RemoveMember` when a joined member is removed.
   The `target_user_id` field is the user who was removed. The `actor_id` is whoever performed the removal.
   """
 
