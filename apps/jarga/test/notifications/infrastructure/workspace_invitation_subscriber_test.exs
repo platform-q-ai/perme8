@@ -6,7 +6,6 @@ defmodule Jarga.Notifications.Infrastructure.WorkspaceInvitationSubscriberTest d
   alias Ecto.Adapters.SQL.Sandbox
   alias Identity.Domain.Events.MemberInvited
   alias Jarga.Notifications
-  alias Jarga.Notifications.Domain.Events.NotificationCreated
   alias Jarga.Notifications.Infrastructure.Subscribers.WorkspaceInvitationSubscriber
   # Use Identity.Repo for all operations to ensure consistent transaction visibility
   alias Identity.Repo, as: Repo
@@ -52,7 +51,7 @@ defmodule Jarga.Notifications.Infrastructure.WorkspaceInvitationSubscriberTest d
 
       # Send a different event struct
       event =
-        NotificationCreated.new(%{
+        Jarga.Notifications.Domain.Events.NotificationCreated.new(%{
           aggregate_id: Ecto.UUID.generate(),
           actor_id: Ecto.UUID.generate(),
           notification_id: Ecto.UUID.generate(),
@@ -66,7 +65,7 @@ defmodule Jarga.Notifications.Infrastructure.WorkspaceInvitationSubscriberTest d
 
       # No notification should be created
       notifications = Notifications.list_notifications(user.id)
-      assert notifications == []
+      assert length(notifications) == 0
     end
 
     test "handles unknown non-struct messages gracefully" do
