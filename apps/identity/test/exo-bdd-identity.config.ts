@@ -7,6 +7,9 @@ export default defineConfig({
   ],
   variables: {
     resetToken: '7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u4',
+    // Test user credentials (must match exo_seeds.exs)
+    testEmail: 'alice@example.com',
+    testPassword: 'SecurePassword123!',
   },
   servers: [
     {
