@@ -18,8 +18,6 @@ defmodule Identity.Application.UseCases.CreateNotificationsForPendingInvitations
 
   @behaviour Identity.Application.UseCases.UseCase
 
-  alias Identity.Domain.Events.MemberInvited
-
   @default_membership_repository Identity.Infrastructure.Repositories.MembershipRepository
   @default_pubsub_notifier Identity.Infrastructure.Notifiers.PubSubNotifier
   @default_queries Identity.Infrastructure.Queries.WorkspaceQueries
@@ -94,7 +92,7 @@ defmodule Identity.Application.UseCases.CreateNotificationsForPendingInvitations
 
     # Emit structured domain event
     event =
-      MemberInvited.new(%{
+      Identity.Domain.Events.MemberInvited.new(%{
         aggregate_id: "#{invitation_schema.workspace_id}:#{user.id}",
         actor_id: invitation_schema.invited_by || user.id,
         user_id: user.id,

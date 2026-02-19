@@ -2,9 +2,6 @@ defmodule Identity.Application.UseCases.InviteMemberTest do
   use Identity.DataCase, async: true
 
   alias Identity.Application.UseCases.InviteMember
-  alias Identity.Domain.Events.MemberInvited
-  alias Perme8.Events.TestEventBus
-
   import Identity.AccountsFixtures
   import Identity.WorkspacesFixtures
 
@@ -27,9 +24,9 @@ defmodule Identity.Application.UseCases.InviteMemberTest do
   end
 
   defp start_test_event_bus do
-    case TestEventBus.start_link([]) do
+    case Perme8.Events.TestEventBus.start_link([]) do
       {:ok, _pid} -> :ok
-      {:error, {:already_started, _pid}} -> TestEventBus.reset()
+      {:error, {:already_started, _pid}} -> Perme8.Events.TestEventBus.reset()
     end
   end
 
@@ -134,12 +131,12 @@ defmodule Identity.Application.UseCases.InviteMemberTest do
         role: :admin
       }
 
-      opts = [notifier: MockNotifier, event_bus: TestEventBus]
+      opts = [notifier: MockNotifier, event_bus: Perme8.Events.TestEventBus]
 
       assert {:ok, {:invitation_sent, _}} = InviteMember.execute(params, opts)
 
-      events = TestEventBus.get_events()
-      assert [%MemberInvited{} = event] = events
+      events = Perme8.Events.TestEventBus.get_events()
+      assert [%Identity.Domain.Events.MemberInvited{} = event] = events
       assert event.user_id == invitee.id
       assert event.workspace_id == workspace.id
       assert event.workspace_name == workspace.name
@@ -200,11 +197,11 @@ defmodule Identity.Application.UseCases.InviteMemberTest do
         role: :member
       }
 
-      opts = [notifier: MockNotifier, event_bus: TestEventBus]
+      opts = [notifier: MockNotifier, event_bus: Perme8.Events.TestEventBus]
 
       assert {:ok, {:invitation_sent, _}} = InviteMember.execute(params, opts)
 
-      events = TestEventBus.get_events()
+      events = Perme8.Events.TestEventBus.get_events()
       assert events == []
     end
 
