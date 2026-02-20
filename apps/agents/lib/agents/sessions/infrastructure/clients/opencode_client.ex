@@ -56,7 +56,7 @@ defmodule Agents.Sessions.Infrastructure.Clients.OpencodeClient do
     http = Keyword.get(opts, :http, &default_http/3)
 
     pid =
-      spawn_link(fn ->
+      spawn(fn ->
         # In production, this would be a long-lived SSE connection.
         # The http function handles the streaming; events are forwarded
         # to the caller as {:opencode_event, event}.
@@ -66,6 +66,7 @@ defmodule Agents.Sessions.Infrastructure.Clients.OpencodeClient do
         end
       end)
 
+    Process.monitor(pid)
     {:ok, pid}
   end
 
