@@ -11,17 +11,23 @@ defmodule Agents.Sessions.Application.UseCases.CancelTaskTest do
   describe "execute/3" do
     test "sends cancel to TaskRunner for a running task" do
       task = struct(TaskSchema, %{id: "task-1", user_id: "user-1", status: "running"})
+      test_pid = self()
 
       Agents.Mocks.TaskRepositoryMock
       |> expect(:get_task_for_user, fn "task-1", "user-1" -> task end)
 
-      # Register a fake process as the TaskRunner
-      Registry.register(Agents.Sessions.TaskRegistry, "task-1", [])
+      cancel_fn = fn task_id ->
+        send(test_pid, {:cancel_called, task_id})
+        :ok
+      end
 
       assert :ok =
-               CancelTask.execute("task-1", "user-1", task_repo: Agents.Mocks.TaskRepositoryMock)
+               CancelTask.execute("task-1", "user-1",
+                 task_repo: Agents.Mocks.TaskRepositoryMock,
+                 task_runner_cancel: cancel_fn
+               )
 
-      assert_receive :cancel
+      assert_receive {:cancel_called, "task-1"}
     end
 
     test "returns error when task not found" do
