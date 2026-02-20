@@ -21,6 +21,7 @@ defmodule Agents.Sessions.Infrastructure do
     exports: [
       Schemas.TaskSchema,
       Repositories.TaskRepository,
-      Queries.TaskQueries
+      Queries.TaskQueries,
+      TaskRunnerSupervisor
     ]
 end
