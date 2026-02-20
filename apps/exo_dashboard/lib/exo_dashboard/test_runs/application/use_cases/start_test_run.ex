@@ -14,7 +14,7 @@ defmodule ExoDashboard.TestRuns.Application.UseCases.StartTestRun do
   Accepts opts with:
   - `:scope` -- {:app, app_name} | {:feature, uri} | {:scenario, uri, line}
   - `:store` / `:store_mod` -- store process and module (dependency injection)
-  - `:executor` / `:executor_mod` -- executor process and module
+  - `:executor_mod` -- executor module (stateless, no process needed)
   - `:pubsub` / `:pubsub_mod` -- PubSub process and module
 
   Returns `{:ok, run_id}`.
@@ -24,7 +24,6 @@ defmodule ExoDashboard.TestRuns.Application.UseCases.StartTestRun do
     scope = Keyword.fetch!(opts, :scope)
     store = Keyword.fetch!(opts, :store)
     store_mod = Keyword.fetch!(opts, :store_mod)
-    executor = Keyword.fetch!(opts, :executor)
     executor_mod = Keyword.fetch!(opts, :executor_mod)
     pubsub = Keyword.fetch!(opts, :pubsub)
     pubsub_mod = Keyword.fetch!(opts, :pubsub_mod)
@@ -40,7 +39,7 @@ defmodule ExoDashboard.TestRuns.Application.UseCases.StartTestRun do
 
     store_mod.create_run(store, run)
 
-    executor_mod.start(executor, run_id, scope: scope)
+    executor_mod.start(run_id, scope: scope)
 
     pubsub_mod.broadcast(pubsub, "exo_dashboard:runs", {:test_run_started, run_id})
 
