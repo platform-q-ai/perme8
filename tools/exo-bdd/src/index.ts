@@ -8,6 +8,7 @@ export type {
   CliAdapterConfig,
   GraphAdapterConfig,
   SecurityAdapterConfig,
+  ReportConfig,
 } from './application/config/index.ts'
 
 // Ports (for custom adapter implementations)

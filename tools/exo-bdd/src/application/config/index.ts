@@ -7,5 +7,6 @@ export type {
   GraphAdapterConfig,
   SecurityAdapterConfig,
   ZapDockerConfig,
+  ReportConfig,
 } from './ConfigSchema.ts'
 export { loadConfig, defineConfig } from './ConfigLoader.ts'
