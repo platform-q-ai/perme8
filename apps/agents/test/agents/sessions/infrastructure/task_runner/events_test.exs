@@ -25,8 +25,12 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.EventsTest do
 
     Agents.Mocks.TaskRepositoryMock
     |> stub(:get_task, fn _id -> task end)
-    |> stub(:update_task_status, fn _task, %{status: "failed", error: error} ->
-      send(test_pid, {:failed, error})
+    |> stub(:update_task_status, fn _task, attrs ->
+      case attrs do
+        %{status: "failed", error: error} -> send(test_pid, {:failed, error})
+        _ -> :ok
+      end
+
       {:ok, task}
     end)
 

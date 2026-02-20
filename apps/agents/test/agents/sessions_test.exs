@@ -12,10 +12,10 @@ defmodule Agents.SessionsTest do
       user = user_fixture()
 
       assert {:ok, %Task{} = task} =
-               Sessions.create_task(%{
-                 instruction: "Write tests",
-                 user_id: user.id
-               })
+               Sessions.create_task(
+                 %{instruction: "Write tests", user_id: user.id},
+                 task_runner_starter: fn _id, _opts -> {:ok, self()} end
+               )
 
       assert task.instruction == "Write tests"
       assert task.status == "pending"
