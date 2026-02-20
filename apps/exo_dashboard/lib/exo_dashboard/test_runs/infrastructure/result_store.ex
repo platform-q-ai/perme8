@@ -181,8 +181,7 @@ defmodule ExoDashboard.TestRuns.Infrastructure.ResultStore do
 
   def handle_call({:get_test_case_results, run_id}, _from, state) do
     results =
-      :ets.tab2list(state.results)
-      |> Enum.filter(fn {{rid, _}, _} -> rid == run_id end)
+      :ets.match_object(state.results, {{run_id, :_}, :_})
       |> Enum.map(fn {_, result} -> result end)
 
     {:reply, results, state}
