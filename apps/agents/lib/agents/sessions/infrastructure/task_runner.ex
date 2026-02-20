@@ -137,11 +137,13 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
   # ---- Health Check ----
 
+  @impl true
   def handle_info(:wait_for_health, %{health_retries: 0} = state) do
     fail_task(state, "Health check timed out")
     {:stop, :normal, state}
   end
 
+  @impl true
   def handle_info(:wait_for_health, state) do
     base_url = "http://localhost:#{state.container_port}"
 
@@ -159,6 +161,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
   # ---- Session Create & Prompt ----
 
+  @impl true
   def handle_info(:create_session, state) do
     base_url = "http://localhost:#{state.container_port}"
 
@@ -176,6 +179,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     end
   end
 
+  @impl true
   def handle_info(:send_prompt, state) do
     base_url = "http://localhost:#{state.container_port}"
     parts = [%{type: "text", text: state.instruction}]
@@ -198,6 +202,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
   # ---- Event Streaming ----
 
+  @impl true
   def handle_info({:opencode_event, event}, state) do
     new_events = state.events ++ [event]
 
@@ -223,8 +228,30 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     end
   end
 
+  # ---- SSE Error ----
+
+  @impl true
+  def handle_info({:opencode_error, reason}, state) do
+    fail_task(state, "SSE connection failed: #{inspect(reason)}")
+    {:stop, :normal, state}
+  end
+
+  # ---- SSE Process Down ----
+
+  @impl true
+  def handle_info({:DOWN, _ref, :process, _pid, reason}, state) when reason != :normal do
+    fail_task(state, "SSE process crashed: #{inspect(reason)}")
+    {:stop, :normal, state}
+  end
+
+  @impl true
+  def handle_info({:DOWN, _ref, :process, _pid, :normal}, state) do
+    {:noreply, state}
+  end
+
   # ---- Timeout ----
 
+  @impl true
   def handle_info(:timeout, state) do
     fail_task(state, "Task timed out")
     {:stop, :normal, state}
@@ -232,6 +259,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
   # ---- Cancellation ----
 
+  @impl true
   def handle_info(:cancel, state) do
     if state.session_id && state.container_port do
       base_url = "http://localhost:#{state.container_port}"
