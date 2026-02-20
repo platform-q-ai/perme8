@@ -91,6 +91,49 @@ defmodule Mix.Tasks.ExoTestTest do
                "/abs/path/config.ts"
              ]
     end
+
+    test "appends --allure when report option is true" do
+      args = ExoTest.build_cmd_args("/abs/path/config.ts", nil, nil, false, true)
+
+      assert args == [
+               "run",
+               "src/cli/index.ts",
+               "run",
+               "--config",
+               "/abs/path/config.ts",
+               "--allure"
+             ]
+    end
+
+    test "appends --allure with other flags" do
+      args = ExoTest.build_cmd_args("/abs/path/config.ts", "@smoke", "browser", true, true)
+
+      assert args == [
+               "run",
+               "src/cli/index.ts",
+               "run",
+               "--config",
+               "/abs/path/config.ts",
+               "--tags",
+               "@smoke",
+               "--adapter",
+               "browser",
+               "--no-retry",
+               "--allure"
+             ]
+    end
+
+    test "does not append --allure when report is false" do
+      args = ExoTest.build_cmd_args("/abs/path/config.ts", nil, nil, false, false)
+
+      assert args == [
+               "run",
+               "src/cli/index.ts",
+               "run",
+               "--config",
+               "/abs/path/config.ts"
+             ]
+    end
   end
 
   describe "config_name/1" do

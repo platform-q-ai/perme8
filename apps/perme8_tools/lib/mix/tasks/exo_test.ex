@@ -31,6 +31,10 @@ defmodule Mix.Tasks.ExoTest do
       # Disable test retries (useful in selective CI mode)
       mix exo_test --name jarga-web --adapter browser --no-retry
 
+      # Enable Allure test reporting (generates allure-results/ directory)
+      mix exo_test --report
+      mix exo_test --name jarga-api --report
+
   ## Options
 
     * `--config` / `-c` - Path to the exo-bdd config file (optional; discovers all configs under apps/ if omitted)
@@ -38,6 +42,7 @@ defmodule Mix.Tasks.ExoTest do
     * `--name` / `-n` - Filter by config name stem (exact match preferred, then substring)
     * `--adapter` / `-a` - Filter feature files by adapter type (e.g. browser, http, cli, security, graph)
     * `--no-retry` - Disable test retries (passes `--retry 0` to cucumber-js)
+    * `--report` - Enable Allure test reporting (passes `--allure` to exo-bdd, generates result files)
 
   The config path is resolved relative to the umbrella root.
   """
@@ -45,7 +50,14 @@ defmodule Mix.Tasks.ExoTest do
   use Mix.Task
   use Boundary, top_level?: true
 
-  @switches [config: :string, tag: :string, name: :string, adapter: :string, no_retry: :boolean]
+  @switches [
+    config: :string,
+    tag: :string,
+    name: :string,
+    adapter: :string,
+    no_retry: :boolean,
+    report: :boolean
+  ]
   @aliases [c: :config, t: :tag, n: :name, a: :adapter]
 
   @impl Mix.Task
@@ -71,6 +83,7 @@ defmodule Mix.Tasks.ExoTest do
     name = Keyword.get(opts, :name)
     adapter = Keyword.get(opts, :adapter)
     no_retry = Keyword.get(opts, :no_retry, false)
+    report = Keyword.get(opts, :report, false)
     config_paths = resolve_config_paths(opts, umbrella_root, name)
 
     if config_paths == [] do
@@ -80,7 +93,8 @@ defmodule Mix.Tasks.ExoTest do
     if tag, do: Mix.shell().info([:cyan, "CLI tag filter: #{tag}\n"])
     if adapter, do: Mix.shell().info([:cyan, "Adapter filter: #{adapter}\n"])
     if no_retry, do: Mix.shell().info([:cyan, "Retries disabled\n"])
-    run_configs(config_paths, umbrella_root, tag, adapter, no_retry)
+    if report, do: Mix.shell().info([:cyan, "Allure reporting enabled\n"])
+    run_configs(config_paths, umbrella_root, tag, adapter, no_retry, report)
   end
 
   defp resolve_config_paths(opts, umbrella_root, name) do
@@ -105,12 +119,12 @@ defmodule Mix.Tasks.ExoTest do
     end
   end
 
-  defp run_configs(config_paths, umbrella_root, tag, adapter, no_retry) do
+  defp run_configs(config_paths, umbrella_root, tag, adapter, no_retry, report) do
     exo_bdd_root = Path.join(umbrella_root, "tools/exo-bdd")
 
     Enum.each(config_paths, fn config_path ->
       abs_config = Path.expand(config_path, umbrella_root)
-      cmd_args = build_cmd_args(abs_config, tag, adapter, no_retry)
+      cmd_args = build_cmd_args(abs_config, tag, adapter, no_retry, report)
 
       Mix.shell().info([:cyan, "Running exo-bdd tests with config: #{config_path}\n"])
       run_bun(cmd_args, exo_bdd_root)
@@ -147,13 +161,14 @@ defmodule Mix.Tasks.ExoTest do
   end
 
   @doc false
-  def build_cmd_args(abs_config, tag, adapter \\ nil, no_retry \\ false) do
+  def build_cmd_args(abs_config, tag, adapter \\ nil, no_retry \\ false, report \\ false) do
     base = ["run", "src/cli/index.ts", "run", "--config", abs_config]
 
     base
     |> maybe_append("--tags", tag)
     |> maybe_append("--adapter", adapter)
     |> maybe_append_flag("--no-retry", no_retry)
+    |> maybe_append_flag("--allure", report)
   end
 
   defp maybe_append(args, _flag, nil), do: args
