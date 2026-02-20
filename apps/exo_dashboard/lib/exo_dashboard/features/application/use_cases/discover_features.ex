@@ -6,6 +6,8 @@ defmodule ExoDashboard.Features.Application.UseCases.DiscoverFeatures do
   and returns a catalog grouped by app and adapter type.
   """
 
+  require Logger
+
   alias ExoDashboard.Features.Domain.Policies.AdapterClassifier
 
   @doc """
@@ -31,7 +33,8 @@ defmodule ExoDashboard.Features.Application.UseCases.DiscoverFeatures do
             app = AdapterClassifier.app_from_path(path)
             %{feature | adapter: adapter, app: app}
 
-          {:error, _reason} ->
+          {:error, reason} ->
+            Logger.warning("Failed to parse feature file #{path}: #{inspect(reason)}")
             nil
         end
       end)
