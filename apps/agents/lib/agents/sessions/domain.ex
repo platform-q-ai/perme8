@@ -4,7 +4,6 @@ defmodule Agents.Sessions.Domain do
 
   Contains pure business logic with no external dependencies:
   - Entities: Task
-  - Events: TaskCreated, TaskStatusChanged
   - Policies: TaskPolicy
   """
 
@@ -13,8 +12,6 @@ defmodule Agents.Sessions.Domain do
     deps: [],
     exports: [
       Entities.Task,
-      Events.TaskCreated,
-      Events.TaskStatusChanged,
       Policies.TaskPolicy
     ]
 end
