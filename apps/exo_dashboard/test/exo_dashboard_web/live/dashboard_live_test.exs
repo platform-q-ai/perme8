@@ -79,7 +79,8 @@ defmodule ExoDashboardWeb.DashboardLiveTest do
     end
 
     test "shows feature list grouped by app", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/")
+      {:ok, view, _html} = live(conn, ~p"/")
+      html = render(view)
 
       assert html =~ "jarga_web"
       assert html =~ "identity"
@@ -89,7 +90,8 @@ defmodule ExoDashboardWeb.DashboardLiveTest do
     end
 
     test "shows adapter badges", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/")
+      {:ok, view, _html} = live(conn, ~p"/")
+      html = render(view)
 
       assert html =~ "Browser"
       assert html =~ "HTTP"
@@ -97,7 +99,8 @@ defmodule ExoDashboardWeb.DashboardLiveTest do
     end
 
     test "shows scenario counts", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/")
+      {:ok, view, _html} = live(conn, ~p"/")
+      html = render(view)
 
       assert html =~ "1 scenario"
     end
