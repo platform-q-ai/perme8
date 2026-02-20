@@ -19,7 +19,7 @@ defmodule ExoDashboard.TestRuns.Application.UseCases.StartTestRun do
 
   Returns `{:ok, run_id}`.
   """
-  @spec execute(keyword()) :: {:ok, String.t()}
+  @spec execute(keyword()) :: {:ok, String.t()} | {:error, term()}
   def execute(opts) do
     scope = Keyword.fetch!(opts, :scope)
     store = Keyword.fetch!(opts, :store)
@@ -39,11 +39,14 @@ defmodule ExoDashboard.TestRuns.Application.UseCases.StartTestRun do
 
     store_mod.create_run(store, run)
 
-    executor_mod.start(run_id, scope: scope)
+    case executor_mod.start(run_id, scope: scope) do
+      {:ok, _pid} ->
+        pubsub_mod.broadcast(pubsub, "exo_dashboard:runs", {:test_run_started, run_id})
+        {:ok, run_id}
 
-    pubsub_mod.broadcast(pubsub, "exo_dashboard:runs", {:test_run_started, run_id})
-
-    {:ok, run_id}
+      {:error, reason} ->
+        {:error, {:executor_failed, reason}}
+    end
   end
 
   defp generate_id do
