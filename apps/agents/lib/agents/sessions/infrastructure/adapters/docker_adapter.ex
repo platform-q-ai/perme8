@@ -66,6 +66,9 @@ defmodule Agents.Sessions.Infrastructure.Adapters.DockerAdapter do
 
       {_output, 1} ->
         {:ok, :not_found}
+
+      {output, exit_code} ->
+        {:error, {:docker_inspect_failed, exit_code, String.trim(output)}}
     end
   end
 

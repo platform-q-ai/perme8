@@ -87,6 +87,15 @@ defmodule Agents.Sessions.Infrastructure.Adapters.DockerAdapterTest do
       assert {:ok, :stopped} = DockerAdapter.status("abc123", system_cmd: mock_cmd)
     end
 
+    test "returns error for unexpected exit codes" do
+      mock_cmd = fn "docker", ["inspect" | _], _opts ->
+        {"Cannot connect to Docker daemon\n", 125}
+      end
+
+      assert {:error, {:docker_inspect_failed, 125, _}} =
+               DockerAdapter.status("abc123", system_cmd: mock_cmd)
+    end
+
     test "returns not_found for non-existent container" do
       mock_cmd = fn "docker", ["inspect" | _], _opts ->
         {"Error: No such object\n", 1}
