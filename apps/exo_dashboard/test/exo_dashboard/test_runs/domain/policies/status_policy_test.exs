@@ -27,6 +27,20 @@ defmodule ExoDashboard.TestRuns.Domain.Policies.StatusPolicyTest do
     test "returns :passed for single passed step" do
       assert StatusPolicy.aggregate_status([:passed]) == :passed
     end
+
+    test "returns :skipped when all steps are skipped" do
+      assert StatusPolicy.aggregate_status([:skipped, :skipped]) == :skipped
+    end
+
+    test "returns :skipped for single skipped step" do
+      assert StatusPolicy.aggregate_status([:skipped]) == :skipped
+    end
+
+    test "returns :pending when passed and skipped both present" do
+      # When there are both passed and skipped, the skipped branch requires
+      # no passed steps, so it falls through to the catchall :pending
+      assert StatusPolicy.aggregate_status([:passed, :skipped]) == :pending
+    end
   end
 
   describe "severity_rank/1" do
