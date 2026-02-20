@@ -10,7 +10,7 @@ defmodule ExoDashboardWeb.FeatureDetailLive do
 
   @impl true
   def mount(%{"uri" => uri_parts}, _session, socket) do
-    uri = Enum.join(uri_parts, "/")
+    uri = "/" <> Enum.join(uri_parts, "/")
 
     socket =
       socket
