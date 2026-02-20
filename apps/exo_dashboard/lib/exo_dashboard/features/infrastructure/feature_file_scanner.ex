@@ -35,10 +35,10 @@ defmodule ExoDashboard.Features.Infrastructure.FeatureFileScanner do
   end
 
   defp find_umbrella_root do
-    # Walk up from this file's directory to find the umbrella root
-    # The umbrella root has a `mix.exs` and an `apps/` directory
+    # Application.app_dir(:exo_dashboard) => _build/dev/lib/exo_dashboard
+    # Need to go up 4 levels to reach the umbrella root
     Application.app_dir(:exo_dashboard)
-    |> Path.join("../../..")
+    |> Path.join("../../../..")
     |> Path.expand()
   end
 end
