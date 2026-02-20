@@ -29,11 +29,13 @@ defmodule ExoDashboard.TestRuns.Infrastructure.NdjsonWatcher do
     path = Keyword.fetch!(opts, :path)
     callback = Keyword.fetch!(opts, :callback)
     poll_interval = Keyword.get(opts, :poll_interval, @default_poll_interval)
+    file_system = Keyword.get(opts, :file_system, File)
 
     state = %{
       path: path,
       callback: callback,
       poll_interval: poll_interval,
+      file_system: file_system,
       offset: 0,
       finished: false
     }
@@ -67,13 +69,15 @@ defmodule ExoDashboard.TestRuns.Infrastructure.NdjsonWatcher do
   end
 
   defp read_new_lines(state) do
-    case File.stat(state.path) do
+    fs = state.file_system
+
+    case fs.stat(state.path) do
       {:ok, %{size: size}} when size > state.offset ->
-        case File.open(state.path, [:read, :binary]) do
+        case fs.open(state.path, [:read, :binary]) do
           {:ok, file} ->
             :file.position(file, state.offset)
             data = IO.binread(file, size - state.offset)
-            File.close(file)
+            fs.close(file)
 
             process_data(state, data, size)
 

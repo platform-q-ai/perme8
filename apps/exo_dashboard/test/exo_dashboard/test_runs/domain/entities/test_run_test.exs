@@ -46,8 +46,17 @@ defmodule ExoDashboard.TestRuns.Domain.Entities.TestRunTest do
     end
   end
 
-  describe "start/1" do
+  describe "start/2" do
     test "transitions status to :running and sets started_at" do
+      now = ~U[2025-06-15 10:00:00Z]
+      run = TestRun.new(id: "run-1")
+      started = TestRun.start(run, now: now)
+
+      assert started.status == :running
+      assert started.started_at == now
+    end
+
+    test "defaults started_at to DateTime.utc_now when no :now opt" do
       run = TestRun.new(id: "run-1")
       started = TestRun.start(run)
 
@@ -57,15 +66,25 @@ defmodule ExoDashboard.TestRuns.Domain.Entities.TestRunTest do
 
     test "preserves other fields" do
       run = TestRun.new(id: "run-1", config_path: "some/path")
-      started = TestRun.start(run)
+      started = TestRun.start(run, now: ~U[2025-06-15 10:00:00Z])
 
       assert started.id == "run-1"
       assert started.config_path == "some/path"
     end
   end
 
-  describe "finish/2" do
+  describe "finish/3" do
     test "transitions status to :passed and sets finished_at" do
+      now_start = ~U[2025-06-15 10:00:00Z]
+      now_finish = ~U[2025-06-15 10:05:00Z]
+      run = TestRun.new(id: "run-1") |> TestRun.start(now: now_start)
+      finished = TestRun.finish(run, :passed, now: now_finish)
+
+      assert finished.status == :passed
+      assert finished.finished_at == now_finish
+    end
+
+    test "defaults finished_at to DateTime.utc_now when no :now opt" do
       run = TestRun.new(id: "run-1") |> TestRun.start()
       finished = TestRun.finish(run, :passed)
 
@@ -75,17 +94,17 @@ defmodule ExoDashboard.TestRuns.Domain.Entities.TestRunTest do
 
     test "transitions status to :failed" do
       run = TestRun.new(id: "run-1") |> TestRun.start()
-      finished = TestRun.finish(run, :failed)
+      finished = TestRun.finish(run, :failed, now: ~U[2025-06-15 10:05:00Z])
 
       assert finished.status == :failed
     end
 
     test "preserves started_at" do
-      run = TestRun.new(id: "run-1") |> TestRun.start()
-      started_at = run.started_at
-      finished = TestRun.finish(run, :passed)
+      now_start = ~U[2025-06-15 10:00:00Z]
+      run = TestRun.new(id: "run-1") |> TestRun.start(now: now_start)
+      finished = TestRun.finish(run, :passed, now: ~U[2025-06-15 10:05:00Z])
 
-      assert finished.started_at == started_at
+      assert finished.started_at == now_start
     end
   end
 end
