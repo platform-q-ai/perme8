@@ -91,24 +91,23 @@ defmodule ExoDashboard.TestRuns.Infrastructure.NdjsonWatcher do
 
     finished =
       Enum.reduce(lines, state.finished, fn line, finished ->
-        case Jason.decode(line) do
-          {:ok, envelope} ->
-            state.callback.(envelope)
-
-            if Map.has_key?(envelope, "testRunFinished") do
-              true
-            else
-              finished
-            end
-
-          {:error, _} ->
-            Logger.warning("Malformed JSON in NDJSON file: #{String.slice(line, 0..100)}")
-            finished
-        end
+        process_line(line, state.callback, finished)
       end)
 
     %{state | offset: new_offset, finished: finished}
   end
 
   defp process_data(state, _data, _new_offset), do: state
+
+  defp process_line(line, callback, finished) do
+    case Jason.decode(line) do
+      {:ok, envelope} ->
+        callback.(envelope)
+        finished || Map.has_key?(envelope, "testRunFinished")
+
+      {:error, _} ->
+        Logger.warning("Malformed JSON in NDJSON file: #{String.slice(line, 0..100)}")
+        finished
+    end
+  end
 end
