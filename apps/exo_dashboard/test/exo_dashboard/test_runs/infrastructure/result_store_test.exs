@@ -35,6 +35,11 @@ defmodule ExoDashboard.TestRuns.Infrastructure.ResultStoreTest do
       {:ok, updated} = ResultStore.get_run(store, "run-2")
       assert updated.status == :running
     end
+
+    test "returns {:error, :not_found} for nonexistent run", %{store: store} do
+      result = ResultStore.update_run(store, "nonexistent", fn r -> %{r | status: :running} end)
+      assert {:error, :not_found} = result
+    end
   end
 
   describe "register_pickle/4 and get_pickle/3" do
