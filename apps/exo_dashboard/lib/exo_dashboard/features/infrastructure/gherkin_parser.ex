@@ -15,21 +15,25 @@ defmodule ExoDashboard.Features.Infrastructure.GherkinParser do
   """
   @spec parse(String.t()) :: {:ok, Feature.t()} | {:error, String.t()}
   def parse(path) do
-    unless File.exists?(path) do
-      {:error, "File not found: #{path}"}
+    if File.exists?(path) do
+      run_parser(path)
     else
-      parser_dir = parser_script_dir()
+      {:error, "File not found: #{path}"}
+    end
+  end
 
-      case System.cmd("bun", ["run", "parse.mjs", path],
-             cd: parser_dir,
-             stderr_to_stdout: true
-           ) do
-        {output, 0} ->
-          parse_output(output, path)
+  defp run_parser(path) do
+    parser_dir = parser_script_dir()
 
-        {error_output, _code} ->
-          {:error, "Parser failed: #{String.trim(error_output)}"}
-      end
+    case System.cmd("bun", ["run", "parse.mjs", path],
+           cd: parser_dir,
+           stderr_to_stdout: true
+         ) do
+      {output, 0} ->
+        parse_output(output, path)
+
+      {error_output, _code} ->
+        {:error, "Parser failed: #{String.trim(error_output)}"}
     end
   end
 
