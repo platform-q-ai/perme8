@@ -8,14 +8,15 @@ defmodule ExoDashboardWeb.DashboardLive do
 
   @impl true
   def mount(_params, _session, socket) do
-    catalog = discover_features()
-
     socket =
       socket
       |> assign(:page_title, "Features")
-      |> assign(:catalog, catalog)
+      |> assign(:catalog, nil)
+      |> assign(:loading, true)
       |> assign(:filter, :all)
-      |> assign(:filtered_apps, catalog.apps)
+      |> assign(:filtered_apps, %{})
+
+    send(self(), :load_features)
 
     {:ok, socket}
   end
@@ -53,6 +54,18 @@ defmodule ExoDashboardWeb.DashboardLive do
   end
 
   @impl true
+  def handle_info(:load_features, socket) do
+    catalog = discover_features()
+
+    socket =
+      socket
+      |> assign(:catalog, catalog)
+      |> assign(:loading, false)
+      |> assign(:filtered_apps, catalog.apps)
+
+    {:noreply, socket}
+  end
+
   def handle_info({:test_run_started, _run_id}, socket) do
     {:noreply, socket}
   end
@@ -112,8 +125,14 @@ defmodule ExoDashboardWeb.DashboardLive do
         </button>
       </div>
       
+    <!-- Loading state -->
+      <div :if={@loading} class="text-center py-12 text-base-content/50">
+        <.icon name="hero-arrow-path" class="size-12 mx-auto mb-3 animate-spin" />
+        <p>Discovering features...</p>
+      </div>
+      
     <!-- Feature groups by app -->
-      <div :if={@filtered_apps == %{}} class="text-center py-12 text-base-content/50">
+      <div :if={!@loading && @filtered_apps == %{}} class="text-center py-12 text-base-content/50">
         <.icon name="hero-document-magnifying-glass" class="size-12 mx-auto mb-3" />
         <p>No features found matching the current filter.</p>
       </div>

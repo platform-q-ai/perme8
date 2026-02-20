@@ -11,17 +11,31 @@ defmodule ExoDashboardWeb.FeatureDetailLive do
   @impl true
   def mount(%{"uri" => uri_parts}, _session, socket) do
     uri = Enum.join(uri_parts, "/")
-    catalog = discover_features()
 
-    feature = find_feature(catalog, uri)
+    socket =
+      socket
+      |> assign(:page_title, "Loading...")
+      |> assign(:feature, nil)
+      |> assign(:loading, true)
+      |> assign(:uri, uri)
+
+    send(self(), :load_features)
+
+    {:ok, socket}
+  end
+
+  @impl true
+  def handle_info(:load_features, socket) do
+    catalog = discover_features()
+    feature = find_feature(catalog, socket.assigns.uri)
 
     socket =
       socket
       |> assign(:page_title, (feature && feature.name) || "Feature Not Found")
       |> assign(:feature, feature)
-      |> assign(:uri, uri)
+      |> assign(:loading, false)
 
-    {:ok, socket}
+    {:noreply, socket}
   end
 
   defp find_feature(catalog, uri) do
@@ -50,7 +64,12 @@ defmodule ExoDashboardWeb.FeatureDetailLive do
     <div>
       <.back navigate={~p"/"}>Back to dashboard</.back>
 
-      <div :if={@feature} class="mt-6">
+      <div :if={@loading} class="text-center py-12 text-base-content/50">
+        <.icon name="hero-arrow-path" class="size-12 mx-auto mb-3 animate-spin" />
+        <p>Loading feature...</p>
+      </div>
+
+      <div :if={!@loading && @feature} class="mt-6">
         <.header>
           {@feature.name}
           <:subtitle>
@@ -73,7 +92,7 @@ defmodule ExoDashboardWeb.FeatureDetailLive do
         </div>
       </div>
 
-      <div :if={!@feature} class="text-center py-12 text-base-content/50">
+      <div :if={!@loading && !@feature} class="text-center py-12 text-base-content/50">
         <.icon name="hero-exclamation-triangle" class="size-12 mx-auto mb-3" />
         <p>Feature not found: {@uri}</p>
       </div>

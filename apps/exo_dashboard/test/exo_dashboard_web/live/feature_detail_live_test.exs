@@ -57,23 +57,27 @@ defmodule ExoDashboardWeb.FeatureDetailLiveTest do
 
   describe "GET /features/*uri" do
     test "renders feature detail page", %{conn: conn} do
-      {:ok, _view, html} =
+      {:ok, view, _html} =
         live(conn, ~p"/features/apps/jarga_web/test/features/login.browser.feature")
 
+      html = render(view)
       assert html =~ "Login Feature"
     end
 
     test "shows feature name and description", %{conn: conn} do
-      {:ok, _view, html} =
+      {:ok, view, _html} =
         live(conn, ~p"/features/apps/jarga_web/test/features/login.browser.feature")
 
+      html = render(view)
       assert html =~ "Login Feature"
+      assert html =~ "User login functionality"
     end
 
     test "shows scenarios with steps", %{conn: conn} do
-      {:ok, _view, html} =
+      {:ok, view, _html} =
         live(conn, ~p"/features/apps/jarga_web/test/features/login.browser.feature")
 
+      html = render(view)
       assert html =~ "Successful login"
       assert html =~ "I am on the login page"
       assert html =~ "I enter valid credentials"
@@ -81,17 +85,19 @@ defmodule ExoDashboardWeb.FeatureDetailLiveTest do
     end
 
     test "shows Rules as sections", %{conn: conn} do
-      {:ok, _view, html} =
+      {:ok, view, _html} =
         live(conn, ~p"/features/apps/jarga_web/test/features/login.browser.feature")
 
+      html = render(view)
       assert html =~ "Password Validation"
       assert html =~ "Short password rejected"
     end
 
     test "shows back link to dashboard", %{conn: conn} do
-      {:ok, _view, html} =
+      {:ok, view, _html} =
         live(conn, ~p"/features/apps/jarga_web/test/features/login.browser.feature")
 
+      html = render(view)
       assert html =~ "Back"
     end
   end
