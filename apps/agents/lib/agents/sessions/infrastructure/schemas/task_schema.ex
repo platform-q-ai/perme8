@@ -41,10 +41,10 @@ defmodule Agents.Sessions.Infrastructure.Schemas.TaskSchema do
     field(:session_id, :string)
     field(:user_id, Ecto.UUID)
     field(:error, :string)
-    field(:started_at, :utc_datetime_usec)
-    field(:completed_at, :utc_datetime_usec)
+    field(:started_at, :utc_datetime)
+    field(:completed_at, :utc_datetime)
 
-    timestamps(type: :utc_datetime_usec)
+    timestamps(type: :utc_datetime)
   end
 
   @doc """
