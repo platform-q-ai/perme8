@@ -144,6 +144,9 @@ export function buildCucumberArgs(options: {
   // Inject Allure formatter when enabled
   if (allure) {
     args.push('--format', 'allure-cucumberjs/reporter')
+    // NOTE: --format-options is global in cucumber-js (applies to all formatters).
+    // If users pass their own --format-options via passthrough, the last one wins.
+    // A future enhancement could use the ALLURE_RESULTS_DIR env var instead.
     if (typeof allure === 'object' && allure.resultsDir) {
       args.push('--format-options', JSON.stringify({ resultsDir: allure.resultsDir }))
     }
