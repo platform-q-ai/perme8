@@ -142,7 +142,7 @@ export function buildCucumberArgs(options: {
   }
 
   // Inject Allure formatter when enabled
-  if (allure && allure !== false) {
+  if (allure) {
     args.push('--format', 'allure-cucumberjs/reporter')
     if (typeof allure === 'object' && allure.resultsDir) {
       args.push('--format-options', JSON.stringify({ resultsDir: allure.resultsDir }))
@@ -365,7 +365,7 @@ export async function runTests(options: RunOptions): Promise<number> {
   const allureConfig = options.allure
     ? (config.report?.allure || true)
     : config.report?.allure
-  const effectiveAllure = allureConfig && allureConfig !== false
+  const effectiveAllure = allureConfig
     ? allureConfig
     : undefined
 
