@@ -63,9 +63,9 @@ defmodule ExoDashboard.TestRuns.Infrastructure.NdjsonWatcherTest do
 
       assert_receive {:envelope, %{"testRunFinished" => _}}, 1000
 
-      # Watcher should stop itself
-      Process.sleep(200)
-      refute Process.alive?(watcher)
+      # Watcher should stop itself — use monitor instead of sleep to avoid flakiness
+      ref = Process.monitor(watcher)
+      assert_receive {:DOWN, ^ref, :process, ^watcher, _reason}, 2000
     end
   end
 end
