@@ -6,7 +6,7 @@ defmodule ExoDashboard.TestRuns.Infrastructure.RunExecutor do
   spawns a Task that runs the test suite.
   """
 
-  @ndjson_dir "/tmp/exo_dashboard"
+  @ndjson_dir Application.compile_env(:exo_dashboard, :ndjson_dir, "/tmp/exo_dashboard")
 
   @doc """
   Starts a test run for the given run_id and scope.
