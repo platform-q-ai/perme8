@@ -92,6 +92,27 @@ defmodule Agents.Sessions.Application.UseCases.CreateTaskTest do
       assert_receive {:started, "task-1"}
     end
 
+    test "returns error when runner start fails" do
+      task_schema = %{
+        id: "task-1",
+        instruction: "Write tests",
+        user_id: "user-123",
+        status: "pending"
+      }
+
+      Agents.Mocks.TaskRepositoryMock
+      |> expect(:running_task_count_for_user, fn "user-123" -> 0 end)
+      |> expect(:create_task, fn _attrs ->
+        {:ok, struct(Agents.Sessions.Infrastructure.Schemas.TaskSchema, task_schema)}
+      end)
+
+      assert {:error, :runner_start_failed} =
+               CreateTask.execute(@valid_attrs,
+                 task_repo: Agents.Mocks.TaskRepositoryMock,
+                 task_runner_starter: fn _task_id, _opts -> {:error, :already_started} end
+               )
+    end
+
     test "returns domain entity" do
       task_schema = %{
         id: "task-1",
