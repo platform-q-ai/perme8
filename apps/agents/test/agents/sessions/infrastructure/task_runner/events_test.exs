@@ -8,9 +8,12 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.EventsTest do
   setup :set_mox_global
   setup :verify_on_exit!
 
+  alias Agents.Test.AccountsFixtures
+  alias Agents.SessionsFixtures
+
   setup do
-    user = Agents.Test.AccountsFixtures.user_fixture()
-    task = Agents.SessionsFixtures.task_fixture(%{user_id: user.id})
+    user = AccountsFixtures.user_fixture()
+    task = SessionsFixtures.task_fixture(%{user_id: user.id})
 
     Phoenix.PubSub.subscribe(Jarga.PubSub, "task:#{task.id}")
 
