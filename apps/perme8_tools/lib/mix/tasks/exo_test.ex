@@ -147,13 +147,14 @@ defmodule Mix.Tasks.ExoTest do
   end
 
   @doc false
-  def build_cmd_args(abs_config, tag, adapter \\ nil, no_retry \\ false) do
+  def build_cmd_args(abs_config, tag, adapter \\ nil, no_retry \\ false, message_output \\ nil) do
     base = ["run", "src/cli/index.ts", "run", "--config", abs_config]
 
     base
     |> maybe_append("--tags", tag)
     |> maybe_append("--adapter", adapter)
     |> maybe_append_flag("--no-retry", no_retry)
+    |> maybe_append_message_format(message_output)
   end
 
   defp maybe_append(args, _flag, nil), do: args
@@ -161,6 +162,11 @@ defmodule Mix.Tasks.ExoTest do
 
   defp maybe_append_flag(args, _flag, false), do: args
   defp maybe_append_flag(args, flag, true), do: args ++ [flag]
+
+  defp maybe_append_message_format(args, nil), do: args
+
+  defp maybe_append_message_format(args, path) when is_binary(path),
+    do: args ++ ["--format", "message:#{path}"]
 
   @doc """
   Extracts the config name stem from a config path.

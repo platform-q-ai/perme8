@@ -1,7 +1,7 @@
-import { resolve, dirname, join } from 'node:path'
+import { resolve, dirname, join, basename } from 'node:path'
 import { mkdirSync, existsSync, rmSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
-import type { ExoBddConfig } from '../application/config/index.ts'
+import type { ExoBddConfig, ReportConfig } from '../application/config/index.ts'
 import { ServerManager, DockerManager } from '../infrastructure/servers/index.ts'
 
 export interface RunOptions {
@@ -100,6 +100,53 @@ function getExoBddRoot(): string {
 }
 
 /**
+ * Extracts a human-readable config name from the config file path.
+ *
+ * Examples:
+ * - `/project/bdd/exo-bdd-identity.config.ts` → `"identity"`
+ * - `/project/bdd/jarga-web.config.ts` → `"jarga-web"`
+ * - `/project/bdd/config.ts` → `"config"`
+ */
+export function extractConfigName(configPath: string): string {
+  let name = basename(configPath)
+  // Remove .config.ts or .ts extension
+  name = name.replace(/\.config\.ts$/, '').replace(/\.ts$/, '')
+  // Remove exo-bdd- prefix if present
+  name = name.replace(/^exo-bdd-/, '')
+  return name
+}
+
+/**
+ * Builds CLI arguments for the Cucumber Messages NDJSON formatter.
+ *
+ * When `report.message` is enabled, returns `['--format', 'message:<path>']`.
+ * The output path is `<outputDir>/<configName>-<ISO-timestamp>.ndjson`.
+ * Returns an empty array when message reporting is disabled or absent.
+ *
+ * @param report - The report configuration from ExoBddConfig
+ * @param configName - Human-readable config name used in the output filename
+ * @returns Array of CLI args to append (empty if disabled)
+ */
+export function buildMessageFormatterArgs(
+  report: ReportConfig | undefined,
+  configName: string = 'unknown',
+): string[] {
+  if (!report?.message) return []
+
+  const defaultOutputDir = '.exo-bdd-reports'
+  const outputDir = typeof report.message === 'object' && report.message.outputDir
+    ? report.message.outputDir
+    : defaultOutputDir
+
+  // Generate a filesystem-safe ISO timestamp: colons replaced with hyphens
+  const timestamp = new Date().toISOString().replace(/:/g, '-')
+  const filename = `${configName}-${timestamp}.ndjson`
+  const outputPath = join(outputDir, filename)
+
+  return ['--format', `message:${outputPath}`]
+}
+
+/**
  * Builds the cucumber-js CLI arguments from a config and options.
  * Exported for testing.
  */
@@ -111,8 +158,10 @@ export function buildCucumberArgs(options: {
   passthrough: string[]
   tags?: string
   noRetry?: boolean
+  report?: ReportConfig
+  configName?: string
 }): string[] {
-  const { features, configDir, setupPath, stepsImport, passthrough, tags, noRetry } = options
+  const { features, configDir, setupPath, stepsImport, passthrough, tags, noRetry, report, configName } = options
 
   // Resolve feature paths relative to the config file directory
   const featurePaths = Array.isArray(features) ? features : [features]
@@ -135,6 +184,9 @@ export function buildCucumberArgs(options: {
   if (noRetry) {
     args.push('--retry', '0')
   }
+
+  // Add message formatter args if configured
+  args.push(...buildMessageFormatterArgs(report, configName))
 
   args.push(...passthrough)
 
@@ -348,7 +400,10 @@ export async function runTests(options: RunOptions): Promise<number> {
   // Merge config-level tags with CLI-provided tags
   const effectiveTags = mergeTags(config.tags, options.tags)
 
-  // Build cucumber-js args
+  // Extract config name for report filenames
+  const configName = extractConfigName(configAbsPath)
+
+  // Build cucumber-js args (includes message formatter if report.message is enabled)
   const cucumberArgs = buildCucumberArgs({
     features,
     configDir,
@@ -357,7 +412,19 @@ export async function runTests(options: RunOptions): Promise<number> {
     passthrough: options.passthrough,
     tags: effectiveTags,
     noRetry: options.noRetry,
+    report: config.report,
+    configName,
   })
+
+  // Ensure the NDJSON output directory exists before spawning cucumber-js
+  if (config.report?.message) {
+    const defaultOutputDir = '.exo-bdd-reports'
+    const outputDir = typeof config.report.message === 'object' && config.report.message.outputDir
+      ? config.report.message.outputDir
+      : defaultOutputDir
+    const resolvedOutputDir = resolve(exoBddRoot, outputDir)
+    mkdirSync(resolvedOutputDir, { recursive: true })
+  }
 
   const cucumberBin = resolve(exoBddRoot, 'node_modules/.bin/cucumber-js')
 
