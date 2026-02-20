@@ -16,6 +16,11 @@ defmodule ExoDashboard.Features.Application.UseCases.DiscoverFeaturesTest do
     end
   end
 
+  # Mock scanner that returns an empty list
+  defmodule EmptyScanner do
+    def scan(_opts \\ []), do: []
+  end
+
   # Mock parser that returns a fixed Feature struct for any path
   defmodule MockParser do
     def parse(path) do
@@ -77,10 +82,6 @@ defmodule ExoDashboard.Features.Application.UseCases.DiscoverFeaturesTest do
     end
 
     test "handles empty scan results gracefully" do
-      defmodule EmptyScanner do
-        def scan(_opts \\ []), do: []
-      end
-
       {:ok, catalog} = DiscoverFeatures.execute(scanner: EmptyScanner, parser: MockParser)
       assert catalog.apps == %{}
       assert catalog.by_adapter == %{}
