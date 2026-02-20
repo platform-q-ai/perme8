@@ -37,7 +37,8 @@ defmodule ExoDashboard.TestRuns.Infrastructure.NdjsonWatcher do
       poll_interval: poll_interval,
       file_system: file_system,
       offset: 0,
-      finished: false
+      finished: false,
+      buffer: ""
     }
 
     schedule_poll(poll_interval)
@@ -91,14 +92,23 @@ defmodule ExoDashboard.TestRuns.Infrastructure.NdjsonWatcher do
   end
 
   defp process_data(state, data, new_offset) when is_binary(data) do
-    lines = String.split(data, "\n", trim: true)
+    full_data = state.buffer <> data
 
-    finished =
-      Enum.reduce(lines, state.finished, fn line, finished ->
-        process_line(line, state.callback, finished)
-      end)
+    case String.split(full_data, "\n") do
+      [] ->
+        %{state | offset: new_offset}
 
-    %{state | offset: new_offset, finished: finished}
+      parts ->
+        {lines, [remainder]} = Enum.split(parts, -1)
+        lines = Enum.reject(lines, &(&1 == ""))
+
+        finished =
+          Enum.reduce(lines, state.finished, fn line, finished ->
+            process_line(line, state.callback, finished)
+          end)
+
+        %{state | offset: new_offset, finished: finished, buffer: remainder}
+    end
   end
 
   defp process_data(state, _data, _new_offset), do: state
