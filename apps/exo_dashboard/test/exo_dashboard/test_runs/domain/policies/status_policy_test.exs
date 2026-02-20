@@ -41,6 +41,26 @@ defmodule ExoDashboard.TestRuns.Domain.Policies.StatusPolicyTest do
       # no passed steps, so it falls through to the catchall :pending
       assert StatusPolicy.aggregate_status([:passed, :skipped]) == :pending
     end
+
+    test "returns :failed for single failed step" do
+      assert StatusPolicy.aggregate_status([:failed]) == :failed
+    end
+
+    test "returns :pending for single pending step" do
+      assert StatusPolicy.aggregate_status([:pending]) == :pending
+    end
+
+    test "handles :undefined status in the list" do
+      assert StatusPolicy.aggregate_status([:undefined]) == :pending
+    end
+
+    test "returns :failed when :undefined and :failed both present" do
+      assert StatusPolicy.aggregate_status([:undefined, :failed]) == :failed
+    end
+
+    test "returns :pending when :undefined and :passed both present" do
+      assert StatusPolicy.aggregate_status([:undefined, :passed]) == :pending
+    end
   end
 
   describe "severity_rank/1" do
