@@ -7,6 +7,7 @@ defmodule ExoDashboard.TestRuns.Application.UseCases.ProcessEnvelope do
   """
 
   alias ExoDashboard.TestRuns.Domain.Entities.TestRun
+  alias ExoDashboard.TestRuns.Domain.Policies.StatusPolicy
 
   @doc """
   Processes a Cucumber Message envelope for a given run.
@@ -131,6 +132,6 @@ defmodule ExoDashboard.TestRuns.Application.UseCases.ProcessEnvelope do
 
   defp aggregate_step_statuses(steps) do
     statuses = Enum.map(steps, & &1.status)
-    ExoDashboard.TestRuns.Domain.Policies.StatusPolicy.aggregate_status(statuses)
+    StatusPolicy.aggregate_status(statuses)
   end
 end

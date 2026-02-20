@@ -19,9 +19,11 @@ defmodule ExoDashboard.TestRuns.Infrastructure.RunExecutor do
     args = build_args(run_id, opts)
     exo_bdd_root = Keyword.get(opts, :exo_bdd_root, find_exo_bdd_root())
 
+    file_system = Keyword.get(opts, :file_system, File)
+
     task =
       Task.async(fn ->
-        File.mkdir_p!(@ndjson_dir)
+        file_system.mkdir_p!(@ndjson_dir)
 
         System.cmd("bun", ["run", "exo-bdd" | args],
           cd: exo_bdd_root,

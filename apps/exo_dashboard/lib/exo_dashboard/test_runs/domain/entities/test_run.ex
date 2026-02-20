@@ -35,14 +35,16 @@ defmodule ExoDashboard.TestRuns.Domain.Entities.TestRun do
   def new(attrs) when is_map(attrs), do: struct(__MODULE__, attrs)
 
   @doc "Transitions the run to :running status with a timestamp."
-  @spec start(t()) :: t()
-  def start(%__MODULE__{} = run) do
-    %{run | status: :running, started_at: DateTime.utc_now()}
+  @spec start(t(), keyword()) :: t()
+  def start(%__MODULE__{} = run, opts \\ []) do
+    now = Keyword.get(opts, :now, DateTime.utc_now())
+    %{run | status: :running, started_at: now}
   end
 
   @doc "Transitions the run to a final status (:passed or :failed) with a timestamp."
-  @spec finish(t(), :passed | :failed) :: t()
-  def finish(%__MODULE__{} = run, status) when status in [:passed, :failed] do
-    %{run | status: status, finished_at: DateTime.utc_now()}
+  @spec finish(t(), :passed | :failed, keyword()) :: t()
+  def finish(%__MODULE__{} = run, status, opts \\ []) when status in [:passed, :failed] do
+    now = Keyword.get(opts, :now, DateTime.utc_now())
+    %{run | status: status, finished_at: now}
   end
 end
