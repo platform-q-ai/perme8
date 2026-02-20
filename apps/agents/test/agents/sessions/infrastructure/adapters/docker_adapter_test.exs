@@ -10,7 +10,7 @@ defmodule Agents.Sessions.Infrastructure.Adapters.DockerAdapterTest do
           {"abc123def\n", 0}
 
         "docker", ["port", "abc123def", "4096"], _opts ->
-          {"0.0.0.0:32768\n", 0}
+          {"127.0.0.1:32768\n", 0}
       end
 
       assert {:ok, %{container_id: "abc123def", port: 32_768}} =
@@ -27,7 +27,7 @@ defmodule Agents.Sessions.Infrastructure.Adapters.DockerAdapterTest do
           if List.first(args) == "run" do
             {"container123\n", 0}
           else
-            {"0.0.0.0:32768\n", 0}
+            {"127.0.0.1:32768\n", 0}
           end
       end
 

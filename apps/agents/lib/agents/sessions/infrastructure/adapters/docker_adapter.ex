@@ -17,7 +17,17 @@ defmodule Agents.Sessions.Infrastructure.Adapters.DockerAdapter do
     env_args = build_env_args(env)
 
     args =
-      ["run", "-d", "-p", "0:4096", "--rm"] ++ env_args ++ [image]
+      [
+        "run",
+        "-d",
+        "-p",
+        "127.0.0.1:0:4096",
+        "--rm",
+        "--cap-drop=ALL",
+        "--memory=512m",
+        "--cpus=1"
+      ] ++
+        env_args ++ [image]
 
     case system_cmd.("docker", args, stderr_to_stdout: true) do
       {output, 0} ->
