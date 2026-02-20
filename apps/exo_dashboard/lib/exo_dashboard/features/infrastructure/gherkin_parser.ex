@@ -12,10 +12,16 @@ defmodule ExoDashboard.Features.Infrastructure.GherkinParser do
   Parses a single .feature file and returns a Feature struct.
 
   Returns `{:ok, %Feature{}}` on success, `{:error, reason}` on failure.
+
+  ## Options
+
+    * `:file_system` - Module implementing `exists?/1`. Defaults to `File`.
   """
-  @spec parse(String.t()) :: {:ok, Feature.t()} | {:error, String.t()}
-  def parse(path) do
-    if File.exists?(path) do
+  @spec parse(String.t(), keyword()) :: {:ok, Feature.t()} | {:error, String.t()}
+  def parse(path, opts \\ []) do
+    file_system = Keyword.get(opts, :file_system, File)
+
+    if file_system.exists?(path) do
       run_parser(path)
     else
       {:error, "File not found: #{path}"}

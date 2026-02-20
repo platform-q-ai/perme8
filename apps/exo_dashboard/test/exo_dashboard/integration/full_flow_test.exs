@@ -17,10 +17,12 @@ defmodule ExoDashboard.Integration.FullFlowTest do
 
   # A scanner module that uses the correct umbrella root
   defmodule UmbrellaScanner do
+    alias ExoDashboard.Features.Infrastructure.FeatureFileScanner
+
     @umbrella_root Path.expand("../../../../..", __DIR__)
 
     def scan do
-      ExoDashboard.Features.Infrastructure.FeatureFileScanner.scan(@umbrella_root)
+      FeatureFileScanner.scan(@umbrella_root)
     end
   end
 
