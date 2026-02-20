@@ -20,12 +20,21 @@ switch (subcommand) {
     break
   }
 
+  case 'serve': {
+    const { parseServeArgs, serve } = await import('./serve.ts')
+    const options = parseServeArgs(rest)
+    const exitCode = await serve(options)
+    process.exit(exitCode)
+    break
+  }
+
   default:
     console.error(`Unknown command: ${subcommand ?? '(none)'}`)
     console.error('Usage: exo-bdd <command> [options]')
     console.error('')
     console.error('Commands:')
-    console.error('  init   Scaffold a new exo-bdd project config')
-    console.error('  run    Run BDD tests with a config file')
+    console.error('  init    Scaffold a new exo-bdd project config')
+    console.error('  run     Run BDD tests with a config file')
+    console.error('  serve   Launch the Allure dashboard (watches for new results)')
     process.exit(1)
 }
