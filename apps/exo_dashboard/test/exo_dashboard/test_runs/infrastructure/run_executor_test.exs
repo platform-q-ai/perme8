@@ -7,7 +7,7 @@ defmodule ExoDashboard.TestRuns.Infrastructure.RunExecutorTest do
     test "builds correct bun args for app scope" do
       args = RunExecutor.build_args("run-1", scope: {:app, "jarga_web"})
 
-      assert "--tags" in args or true
+      assert "--tags" in args
       # Should include format message output
       assert Enum.any?(args, &String.contains?(&1, "--format"))
     end
