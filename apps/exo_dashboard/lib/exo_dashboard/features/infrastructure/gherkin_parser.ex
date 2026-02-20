@@ -8,6 +8,8 @@ defmodule ExoDashboard.Features.Infrastructure.GherkinParser do
 
   alias ExoDashboard.Features.Domain.Entities.{Feature, Scenario, Step, Rule}
 
+  @parser_timeout 30_000
+
   @doc """
   Parses a single .feature file and returns a Feature struct.
 
@@ -31,15 +33,23 @@ defmodule ExoDashboard.Features.Infrastructure.GherkinParser do
   defp run_parser(path) do
     parser_dir = parser_script_dir()
 
-    case System.cmd("bun", ["run", "parse.mjs", path],
-           cd: parser_dir,
-           stderr_to_stdout: true
-         ) do
-      {output, 0} ->
+    task =
+      Task.async(fn ->
+        System.cmd("bun", ["run", "parse.mjs", path],
+          cd: parser_dir,
+          stderr_to_stdout: true
+        )
+      end)
+
+    case Task.yield(task, @parser_timeout) || Task.shutdown(task) do
+      {:ok, {output, 0}} ->
         parse_output(output, path)
 
-      {error_output, _code} ->
+      {:ok, {error_output, _code}} ->
         {:error, "Parser failed: #{String.trim(error_output)}"}
+
+      nil ->
+        {:error, "Parser timed out after #{@parser_timeout}ms"}
     end
   end
 
