@@ -9,8 +9,10 @@ defmodule ExoDashboard.MixProject do
       config_path: "../../config/config.exs",
       deps_path: "../../deps",
       lockfile: "../../mix.lock",
+      elixir: "~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
       compilers: [:boundary, :phoenix_live_view] ++ Mix.compilers(),
+      boundary: boundary(),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       deps: deps()
@@ -26,6 +28,22 @@ defmodule ExoDashboard.MixProject do
 
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
+
+  defp boundary do
+    [
+      externals_mode: :relaxed,
+      default: [
+        check: [
+          apps: [
+            {:phoenix, :relaxed},
+            {:phoenix_live_view, :relaxed},
+            {:phoenix_html, :relaxed}
+          ]
+        ]
+      ],
+      ignore: [~r/\.Test\./]
+    ]
+  end
 
   defp deps do
     [
