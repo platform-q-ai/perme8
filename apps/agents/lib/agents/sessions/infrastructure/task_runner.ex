@@ -74,28 +74,33 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     pubsub = Keyword.get(opts, :pubsub, Jarga.PubSub)
 
     # Load task from DB to get instruction and user_id
-    task = task_repo.get_task(task_id)
+    case task_repo.get_task(task_id) do
+      nil ->
+        Logger.warning("TaskRunner: task #{task_id} not found during init, stopping")
+        {:stop, :task_not_found}
 
-    state = %__MODULE__{
-      task_id: task_id,
-      instruction: task && task.instruction,
-      user_id: task && task.user_id,
-      container_provider: container_provider,
-      opencode_client: opencode_client,
-      task_repo: task_repo,
-      pubsub: pubsub,
-      health_retries: SessionsConfig.health_check_max_retries()
-    }
+      task ->
+        state = %__MODULE__{
+          task_id: task_id,
+          instruction: task.instruction,
+          user_id: task.user_id,
+          container_provider: container_provider,
+          opencode_client: opencode_client,
+          task_repo: task_repo,
+          pubsub: pubsub,
+          health_retries: SessionsConfig.health_check_max_retries()
+        }
 
-    # Set task timeout
-    timeout_ms = SessionsConfig.task_timeout_ms()
-    timeout_ref = Process.send_after(self(), :timeout, timeout_ms)
-    state = %{state | timeout_ref: timeout_ref}
+        # Set task timeout
+        timeout_ms = SessionsConfig.task_timeout_ms()
+        timeout_ref = Process.send_after(self(), :timeout, timeout_ms)
+        state = %{state | timeout_ref: timeout_ref}
 
-    # Start the lifecycle
-    send(self(), :start_container)
+        # Start the lifecycle
+        send(self(), :start_container)
 
-    {:ok, state}
+        {:ok, state}
+    end
   end
 
   # ---- Container Start ----

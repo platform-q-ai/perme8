@@ -79,6 +79,25 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.InitTest do
     assert_receive {:status_updated, "starting"}, 5000
   end
 
+  test "init returns {:stop, :task_not_found} when task is nil", %{task: task} do
+    Agents.Mocks.TaskRepositoryMock
+    |> stub(:get_task, fn _id -> nil end)
+
+    result =
+      GenServer.start(
+        TaskRunner,
+        {task.id,
+         [
+           container_provider: Agents.Mocks.ContainerProviderMock,
+           opencode_client: Agents.Mocks.OpencodeClientMock,
+           task_repo: Agents.Mocks.TaskRepositoryMock,
+           pubsub: Jarga.PubSub
+         ]}
+      )
+
+    assert {:error, :task_not_found} = result
+  end
+
   test "on container start failure, updates status to failed", %{task: task} do
     test_pid = self()
 
