@@ -164,12 +164,19 @@ jobs:
         with:
           node-version-file: .tool-versions
 
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+
       - name: Install JavaScript dependencies
         run: |
           cd apps/jarga_web/assets
           npm ci
           cd ../../identity/assets
           npm ci
+
+      - name: Install Gherkin parser dependencies
+        run: bun install
+        working-directory: apps/exo_dashboard/priv/gherkin_parser
 
       - name: Create test database
         run: MIX_ENV=test mix ecto.create
