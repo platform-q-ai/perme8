@@ -21,8 +21,8 @@ defmodule ExoDashboard.TestRuns.Infrastructure.RunExecutor do
 
     file_system = Keyword.get(opts, :file_system, File)
 
-    task =
-      Task.async(fn ->
+    {:ok, pid} =
+      Task.start(fn ->
         file_system.mkdir_p!(@ndjson_dir)
 
         System.cmd("bun", ["run", "exo-bdd" | args],
@@ -31,7 +31,7 @@ defmodule ExoDashboard.TestRuns.Infrastructure.RunExecutor do
         )
       end)
 
-    {:ok, task.pid}
+    {:ok, pid}
   end
 
   @doc """
