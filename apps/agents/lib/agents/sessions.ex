@@ -19,6 +19,7 @@ defmodule Agents.Sessions do
     ]
 
   alias Agents.Sessions.Application.UseCases.{CreateTask, CancelTask, GetTask, ListTasks}
+  alias Agents.Sessions.Infrastructure.TaskRunnerSupervisor
 
   @doc """
   Creates a new coding task.
@@ -70,7 +71,7 @@ defmodule Agents.Sessions do
       opts
     else
       Keyword.put(opts, :task_runner_starter, fn task_id, runner_opts ->
-        Agents.Sessions.Infrastructure.TaskRunnerSupervisor.start_child(task_id, runner_opts)
+        TaskRunnerSupervisor.start_child(task_id, runner_opts)
       end)
     end
   end

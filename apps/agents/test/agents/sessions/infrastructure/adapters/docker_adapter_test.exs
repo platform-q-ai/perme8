@@ -13,7 +13,7 @@ defmodule Agents.Sessions.Infrastructure.Adapters.DockerAdapterTest do
           {"0.0.0.0:32768\n", 0}
       end
 
-      assert {:ok, %{container_id: "abc123def", port: 32768}} =
+      assert {:ok, %{container_id: "abc123def", port: 32_768}} =
                DockerAdapter.start("perme8-opencode", system_cmd: mock_cmd)
     end
 
