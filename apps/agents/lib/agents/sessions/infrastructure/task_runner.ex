@@ -28,7 +28,6 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     :timeout_ref,
     status: :starting,
     health_retries: 0,
-    events: [],
     # Dependency injection
     container_provider: nil,
     opencode_client: nil,
@@ -204,8 +203,6 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
   @impl true
   def handle_info({:opencode_event, event}, state) do
-    new_events = state.events ++ [event]
-
     Phoenix.PubSub.broadcast(
       state.pubsub,
       "task:#{state.task_id}",
@@ -216,15 +213,15 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     case detect_completion(event) do
       :completed ->
         complete_task(state)
-        {:stop, :normal, %{state | events: new_events}}
+        {:stop, :normal, state}
 
       :error ->
         error_msg = extract_error(event)
         fail_task(state, error_msg || "Unknown error from opencode")
-        {:stop, :normal, %{state | events: new_events}}
+        {:stop, :normal, state}
 
       :continue ->
-        {:noreply, %{state | events: new_events}}
+        {:noreply, state}
     end
   end
 
