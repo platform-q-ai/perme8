@@ -30,19 +30,10 @@ defmodule ExoDashboard.TestRuns.Application.UseCases.StartTestRunTest do
     end
   end
 
-  # Mock executor that records spawned commands
+  # Mock executor (stateless module, no process needed)
   defmodule MockExecutor do
-    def start_link do
-      Agent.start_link(fn -> [] end)
-    end
-
-    def start(agent, run_id, opts) do
-      Agent.update(agent, fn calls -> calls ++ [{:start, run_id, opts}] end)
+    def start(_run_id, _opts) do
       {:ok, self()}
-    end
-
-    def get_calls(agent) do
-      Agent.get(agent, fn calls -> calls end)
     end
   end
 
@@ -64,9 +55,8 @@ defmodule ExoDashboard.TestRuns.Application.UseCases.StartTestRunTest do
 
   setup do
     {:ok, store} = MockStore.start_link()
-    {:ok, executor} = MockExecutor.start_link()
     {:ok, pubsub} = MockPubSub.start_link()
-    %{store: store, executor: executor, pubsub: pubsub}
+    %{store: store, pubsub: pubsub}
   end
 
   describe "execute/1 with :app scope" do
@@ -76,7 +66,6 @@ defmodule ExoDashboard.TestRuns.Application.UseCases.StartTestRunTest do
           scope: {:app, "jarga_web"},
           store: ctx.store,
           store_mod: MockStore,
-          executor: ctx.executor,
           executor_mod: MockExecutor,
           pubsub: ctx.pubsub,
           pubsub_mod: MockPubSub
@@ -89,29 +78,12 @@ defmodule ExoDashboard.TestRuns.Application.UseCases.StartTestRunTest do
       assert [{:create_run, ^run_id}] = store_calls
     end
 
-    test "spawns executor with run config", ctx do
-      {:ok, run_id} =
-        StartTestRun.execute(
-          scope: {:app, "jarga_web"},
-          store: ctx.store,
-          store_mod: MockStore,
-          executor: ctx.executor,
-          executor_mod: MockExecutor,
-          pubsub: ctx.pubsub,
-          pubsub_mod: MockPubSub
-        )
-
-      executor_calls = MockExecutor.get_calls(ctx.executor)
-      assert [{:start, ^run_id, _opts}] = executor_calls
-    end
-
     test "broadcasts :test_run_started via PubSub", ctx do
       {:ok, run_id} =
         StartTestRun.execute(
           scope: {:app, "jarga_web"},
           store: ctx.store,
           store_mod: MockStore,
-          executor: ctx.executor,
           executor_mod: MockExecutor,
           pubsub: ctx.pubsub,
           pubsub_mod: MockPubSub
@@ -131,7 +103,6 @@ defmodule ExoDashboard.TestRuns.Application.UseCases.StartTestRunTest do
           scope: {:feature, "apps/jarga_web/test/features/login.browser.feature"},
           store: ctx.store,
           store_mod: MockStore,
-          executor: ctx.executor,
           executor_mod: MockExecutor,
           pubsub: ctx.pubsub,
           pubsub_mod: MockPubSub
@@ -149,7 +120,6 @@ defmodule ExoDashboard.TestRuns.Application.UseCases.StartTestRunTest do
           scope: {:scenario, "apps/jarga_web/test/features/login.browser.feature", 10},
           store: ctx.store,
           store_mod: MockStore,
-          executor: ctx.executor,
           executor_mod: MockExecutor,
           pubsub: ctx.pubsub,
           pubsub_mod: MockPubSub
