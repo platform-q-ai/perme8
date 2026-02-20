@@ -8,7 +8,7 @@ defmodule ExoDashboard.Features.Infrastructure.GherkinParserTest do
 
   # These tests require bun + @cucumber/gherkin installed; tag as :external
   # so they can be excluded from CI or fast test runs.
-  # TODO: Add fixture-based unit tests for parse_output/2 and transform_document/2
+  # Future: Add fixture-based unit tests for parse_output/2 and transform_document/2
   # that don't require the bun runtime.
 
   describe "parse/1 with simple feature" do
