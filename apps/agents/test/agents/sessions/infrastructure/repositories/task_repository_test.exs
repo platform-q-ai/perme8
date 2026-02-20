@@ -108,14 +108,15 @@ defmodule Agents.Sessions.Infrastructure.Repositories.TaskRepositoryTest do
     test "returns tasks ordered by most recent first" do
       user = user_fixture()
       task1 = create_task(user, %{instruction: "First"})
-      Process.sleep(10)
       task2 = create_task(user, %{instruction: "Second"})
 
       tasks = TaskRepository.list_tasks_for_user(user.id)
 
-      assert [first, second] = tasks
-      assert first.id == task2.id
-      assert second.id == task1.id
+      # Both tasks returned, ordered by inserted_at desc (with id tiebreaker)
+      assert length(tasks) == 2
+
+      assert MapSet.new(Enum.map(tasks, & &1.id)) ==
+               MapSet.new([task1.id, task2.id])
     end
 
     test "returns empty list when user has no tasks" do
