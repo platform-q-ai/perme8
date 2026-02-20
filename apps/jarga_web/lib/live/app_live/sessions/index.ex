@@ -147,8 +147,8 @@ defmodule JargaWeb.AppLive.Sessions.Index do
     assign(socket, :tasks, tasks)
   end
 
-  defp format_event_component(%{event: %{type: type} = event} = assigns) do
-    content = get_in(event, [:data, :content]) || inspect(event[:data])
+  defp format_event_component(%{event: %{"type" => type} = event} = assigns) do
+    content = get_in(event, ["data", "content"]) || inspect(event["data"])
     assigns = assign(assigns, :type, type)
     assigns = assign(assigns, :content, content)
 
