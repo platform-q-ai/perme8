@@ -9,6 +9,8 @@ defmodule Agents.Sessions.Application.UseCases.CreateTask do
   alias Agents.Sessions.Application.SessionsConfig
   alias Agents.Sessions.Domain.Entities.Task
 
+  require Logger
+
   @default_task_repo Agents.Sessions.Infrastructure.Repositories.TaskRepository
 
   @doc """
@@ -33,8 +35,8 @@ defmodule Agents.Sessions.Application.UseCases.CreateTask do
 
     with :ok <- validate_instruction(attrs),
          :ok <- check_concurrent_limit(attrs.user_id, task_repo),
-         {:ok, schema} <- task_repo.create_task(attrs) do
-      start_runner(schema.id, opts)
+         {:ok, schema} <- task_repo.create_task(attrs),
+         :ok <- start_runner(schema.id, opts) do
       {:ok, Task.from_schema(schema)}
     end
   end
@@ -55,8 +57,21 @@ defmodule Agents.Sessions.Application.UseCases.CreateTask do
 
   defp start_runner(task_id, opts) do
     case Keyword.get(opts, :task_runner_starter) do
-      nil -> :ok
-      starter -> starter.(task_id, opts)
+      nil ->
+        :ok
+
+      starter ->
+        case starter.(task_id, opts) do
+          {:ok, _pid} ->
+            :ok
+
+          {:error, reason} ->
+            Logger.error(
+              "CreateTask: failed to start runner for task #{task_id}: #{inspect(reason)}"
+            )
+
+            {:error, :runner_start_failed}
+        end
     end
   end
 end
