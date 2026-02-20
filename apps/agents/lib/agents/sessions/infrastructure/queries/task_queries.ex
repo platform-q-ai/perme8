@@ -48,7 +48,7 @@ defmodule Agents.Sessions.Infrastructure.Queries.TaskQueries do
   """
   @spec recent_first(Ecto.Query.t()) :: Ecto.Query.t()
   def recent_first(query \\ base()) do
-    from(t in query, order_by: [desc: t.inserted_at])
+    from(t in query, order_by: [desc: t.inserted_at, desc: t.id])
   end
 
   @doc """
