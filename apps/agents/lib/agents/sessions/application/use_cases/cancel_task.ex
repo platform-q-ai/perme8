@@ -25,10 +25,11 @@ defmodule Agents.Sessions.Application.UseCases.CancelTask do
   """
   def execute(task_id, user_id, opts \\ []) do
     task_repo = Keyword.get(opts, :task_repo, @default_task_repo)
+    cancel_fn = Keyword.get(opts, :task_runner_cancel, &default_cancel/1)
 
     with {:ok, task} <- find_task(task_id, user_id, task_repo),
          :ok <- validate_cancellable(task) do
-      send_cancel(task_id)
+      cancel_fn.(task_id)
     end
   end
 
@@ -47,7 +48,7 @@ defmodule Agents.Sessions.Application.UseCases.CancelTask do
     end
   end
 
-  defp send_cancel(task_id) do
+  defp default_cancel(task_id) do
     case Registry.lookup(Agents.Sessions.TaskRegistry, task_id) do
       [{pid, _}] ->
         send(pid, :cancel)
