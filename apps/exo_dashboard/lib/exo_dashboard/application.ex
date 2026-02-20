@@ -11,6 +11,7 @@ defmodule ExoDashboard.OTPApp do
   @impl true
   def start(_type, _args) do
     children = [
+      ExoDashboard.TestRuns.Infrastructure.ResultStore,
       ExoDashboardWeb.Telemetry,
       ExoDashboardWeb.Endpoint
     ]
