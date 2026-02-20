@@ -94,6 +94,12 @@ config :esbuild,
       ~w(js/app.ts --bundle --target=es2022 --outdir=../priv/static/assets/js --external:/fonts/* --external:/images/*),
     cd: Path.expand("../apps/identity/assets", __DIR__),
     env: %{"NODE_PATH" => [Path.expand("../deps", __DIR__), Mix.Project.build_path()]}
+  ],
+  exo_dashboard: [
+    args:
+      ~w(js/app.ts --bundle --target=es2022 --outdir=../priv/static/assets/js --external:/fonts/* --external:/images/*),
+    cd: Path.expand("../apps/exo_dashboard/assets", __DIR__),
+    env: %{"NODE_PATH" => [Path.expand("../deps", __DIR__), Mix.Project.build_path()]}
   ]
 
 # Configure tailwind (the version is required)
@@ -112,6 +118,13 @@ config :tailwind,
       --output=priv/static/assets/css/app.css
     ),
     cd: Path.expand("../apps/identity", __DIR__)
+  ],
+  exo_dashboard: [
+    args: ~w(
+      --input=assets/css/app.css
+      --output=priv/static/assets/css/app.css
+    ),
+    cd: Path.expand("../apps/exo_dashboard", __DIR__)
   ]
 
 # Configures Elixir's Logger
@@ -140,6 +153,20 @@ config :identity, IdentityWeb.Endpoint,
   ],
   pubsub_server: Jarga.PubSub,
   live_view: [signing_salt: "identity_lv_salt"]
+
+# ============================================================================
+# ExoDashboard App Configuration
+# ============================================================================
+
+config :exo_dashboard, ExoDashboardWeb.Endpoint,
+  url: [host: "localhost"],
+  adapter: Bandit.PhoenixAdapter,
+  render_errors: [
+    formats: [html: ExoDashboardWeb.ErrorHTML],
+    layout: false
+  ],
+  pubsub_server: Jarga.PubSub,
+  live_view: [signing_salt: "exo_dashboard_salt"]
 
 # Shared session configuration - must match jarga_web for session sharing
 config :identity, :session_options,

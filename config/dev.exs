@@ -131,6 +131,30 @@ config :identity, IdentityWeb.Endpoint,
 # Enable dev routes for identity dashboard and mailbox
 config :identity, dev_routes: true
 
+# ============================================================================
+# ExoDashboard App Development Configuration
+# ============================================================================
+
+config :exo_dashboard, ExoDashboardWeb.Endpoint,
+  http: [ip: {127, 0, 0, 1}, port: 4010],
+  check_origin: false,
+  code_reloader: true,
+  debug_errors: true,
+  secret_key_base:
+    "exo_dashboard_dev_secret_key_base_that_is_at_least_64_bytes_long_for_security",
+  watchers: [
+    esbuild: {Esbuild, :install_and_run, [:exo_dashboard, ~w(--sourcemap=inline --watch)]},
+    tailwind: {Tailwind, :install_and_run, [:exo_dashboard, ~w(--watch)]}
+  ]
+
+config :exo_dashboard, ExoDashboardWeb.Endpoint,
+  live_reload: [
+    patterns: [
+      ~r"priv/static/(?!uploads/).*(js|css|png|jpeg|jpg|gif|svg)$",
+      ~r"lib/exo_dashboard_web/(controllers|live|components)/.*(ex|heex)$"
+    ]
+  ]
+
 # Do not include metadata nor timestamps in development logs
 config :logger, :default_formatter, format: "[$level] $message\n"
 
