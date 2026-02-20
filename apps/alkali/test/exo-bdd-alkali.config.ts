@@ -14,6 +14,7 @@ export default defineConfig({
     umbrellaRoot,
     testTmpDir,
   },
+  report: { allure: true },
   adapters: {
     cli: {
       workingDir: umbrellaRoot,

@@ -34,6 +34,7 @@ export default defineConfig({
     // alice (no workspace access at all)
     'valid-no-access-key': 'exo_test_no_access_key_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
   },
+  report: { allure: true },
   adapters: {
     http: {
       baseURL: 'http://localhost:4007',

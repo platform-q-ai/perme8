@@ -22,6 +22,7 @@ export default defineConfig({
     'revoked-key-product-team': 'exo_test_revoked_key_product_team_aaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
     'valid-no-access-key': 'exo_test_no_access_key_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
   },
+  report: { allure: true },
   adapters: {
     http: {
       baseURL: 'http://localhost:4009',

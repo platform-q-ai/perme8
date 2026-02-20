@@ -46,6 +46,7 @@ export default defineConfig({
     // alice (product-team + ghost-workspace that doesn't exist)
     'valid-phantom-workspace-key': 'exo_test_phantom_workspace_key_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
   },
+  report: { allure: true },
   adapters: {
     http: {
       baseURL: 'http://localhost:4006',

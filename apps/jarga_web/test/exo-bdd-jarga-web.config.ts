@@ -40,6 +40,7 @@ export default defineConfig({
     engineeringSlug: 'engineering',
     throwawayWorkspaceSlug: 'throwaway-workspace',
   },
+  report: { allure: true },
   adapters: {
     browser: {
       baseURL: 'http://localhost:4002',

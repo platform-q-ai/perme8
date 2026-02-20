@@ -32,6 +32,7 @@ export default defineConfig({
     'valid-no-access-key': 'exo_test_no_access_key_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
     'valid-phantom-workspace-key': 'exo_test_phantom_workspace_key_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
   },
+  report: { allure: true },
   adapters: {
     http: {
       baseURL: 'http://localhost:4005',

@@ -28,6 +28,7 @@ export default defineConfig({
   ],
   // Active ZAP scans can take minutes; raise Cucumber step timeout accordingly.
   timeout: 300_000,
+  report: { allure: true },
   adapters: {
     browser: {
       baseURL: 'http://localhost:4001',
