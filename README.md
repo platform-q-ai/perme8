@@ -18,6 +18,7 @@ Perme8 follows **Clean Architecture** principles throughout, with compile-time b
       (browser)  (REST API)        (graph API)
 
       alkali (standalone static site generator)
+      exo_dashboard (BDD feature dashboard)
       perme8_tools (development tooling)
 ```
 
@@ -32,6 +33,7 @@ Perme8 follows **Clean Architecture** principles throughout, with compile-time b
 | [`jarga_api`](apps/jarga_api/) | JSON REST API for external integrations | -- |
 | [`entity_relationship_manager`](apps/entity_relationship_manager/) | Schema-driven graph data layer backed by Neo4j and PostgreSQL | 4005 |
 | [`alkali`](apps/alkali/) | Static site generator (standalone, publishable to Hex) | -- |
+| [`exo_dashboard`](apps/exo_dashboard/) | BDD feature dashboard -- browse features, trigger runs, view results | 4010 |
 | [`perme8_tools`](apps/perme8_tools/) | Development-time Mix tasks and linters | -- |
 
 ## Prerequisites
@@ -62,7 +64,7 @@ npm install --prefix tools/exo-bdd
 mix phx.server
 ```
 
-Visit [`localhost:4000`](http://localhost:4000) for the web interface and [`localhost:4001`](http://localhost:4001) for the identity service.
+Visit [`localhost:4000`](http://localhost:4000) for the web interface, [`localhost:4001`](http://localhost:4001) for the identity service, and [`localhost:4010`](http://localhost:4010) for the BDD feature dashboard.
 
 ## Development
 
