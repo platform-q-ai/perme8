@@ -12,7 +12,9 @@ defmodule Agents.OTPApp do
   def start(_type, _args) do
     children =
       [
-        Hermes.Server.Registry
+        Hermes.Server.Registry,
+        {Registry, keys: :unique, name: Agents.Sessions.TaskRegistry},
+        Agents.Sessions.Infrastructure.TaskRunnerSupervisor
       ] ++ mcp_children() ++ mcp_http_children()
 
     opts = [strategy: :one_for_one, name: Agents.Supervisor]
