@@ -30,6 +30,8 @@ defmodule JargaWeb do
       Jarga.Notes,
       Agents,
       Agents.Domain,
+      Agents.Sessions,
+      Agents.Sessions.Domain,
       Jarga.Chat,
       Jarga.Notifications,
       Jarga.Notifications.Domain,
