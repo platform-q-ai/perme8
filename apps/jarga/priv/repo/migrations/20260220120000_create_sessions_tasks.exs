@@ -11,14 +11,15 @@ defmodule Jarga.Repo.Migrations.CreateSessionsTasks do
       add(:session_id, :string)
       add(:user_id, references(:users, type: :binary_id, on_delete: :delete_all), null: false)
       add(:error, :text)
-      add(:started_at, :utc_datetime_usec)
-      add(:completed_at, :utc_datetime_usec)
+      add(:started_at, :utc_datetime)
+      add(:completed_at, :utc_datetime)
 
-      timestamps(type: :utc_datetime_usec)
+      timestamps(type: :utc_datetime)
     end
 
     create(index(:sessions_tasks, [:user_id]))
     create(index(:sessions_tasks, [:status]))
     create(index(:sessions_tasks, [:user_id, :inserted_at]))
+    create(index(:sessions_tasks, [:user_id, :status]))
   end
 end
