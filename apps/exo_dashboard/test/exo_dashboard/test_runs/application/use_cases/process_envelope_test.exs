@@ -158,7 +158,7 @@ defmodule ExoDashboard.TestRuns.Application.UseCases.ProcessEnvelopeTest do
           _ -> false
         end)
 
-      assert length(result_calls) >= 1
+      assert result_calls != []
     end
   end
 

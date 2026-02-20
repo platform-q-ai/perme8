@@ -1,0 +1,9 @@
+{
+  "name": "exo-dashboard-gherkin-parser",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@cucumber/gherkin": "^29.0.0",
+    "@cucumber/messages": "^26.0.0"
+  }
+}
