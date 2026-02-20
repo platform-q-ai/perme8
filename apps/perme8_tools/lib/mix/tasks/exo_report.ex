@@ -73,16 +73,39 @@ defmodule Mix.Tasks.ExoReport do
   end
 
   defp run_bun(cmd_args, exo_bdd_root) do
-    case System.cmd("bun", cmd_args, cd: exo_bdd_root, into: IO.stream(:stdio, :line)) do
-      {_, 0} ->
-        :ok
+    bun = System.find_executable("bun") || raise "bun not found"
 
-      {_, code} ->
-        Mix.raise("Allure dashboard exited with code #{code}")
-    end
+    # Use a port instead of System.cmd so the long-running allure watch process
+    # gets a proper TTY-like stream. System.cmd with into: IO.stream(:stdio, :line)
+    # buffers by line which breaks allure's progress plugin (EPIPE on terminal writes).
+    port =
+      Port.open({:spawn_executable, bun}, [
+        :binary,
+        :exit_status,
+        :use_stdio,
+        :stderr_to_stdout,
+        args: cmd_args,
+        cd: String.to_charlist(exo_bdd_root)
+      ])
+
+    stream_port(port)
   rescue
     e in ErlangError ->
       handle_erlang_error(e, __STACKTRACE__)
+  end
+
+  defp stream_port(port) do
+    receive do
+      {^port, {:data, data}} ->
+        IO.write(data)
+        stream_port(port)
+
+      {^port, {:exit_status, 0}} ->
+        :ok
+
+      {^port, {:exit_status, code}} ->
+        Mix.raise("Allure dashboard exited with code #{code}")
+    end
   end
 
   defp handle_erlang_error(%ErlangError{original: :enoent}, _stacktrace) do

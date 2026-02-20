@@ -42,6 +42,7 @@ export async function serve(options: ServeOptions): Promise<number> {
 
   const proc = Bun.spawn([allureBin, 'watch', resultsDir], {
     cwd: exoBddRoot,
+    stdin: 'inherit',
     stdout: 'inherit',
     stderr: 'inherit',
     env: process.env,
