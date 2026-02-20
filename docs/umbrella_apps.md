@@ -14,6 +14,7 @@ Umbrella applications are a way to organize multiple Elixir applications within 
 | `agents_api` | Phoenix (API) | 4008 / 4009 | JSON REST API for agent management and query execution |
 | `entity_relationship_manager` | Phoenix (API) | 4006 / -- | Schema-driven graph data layer (Neo4j + PostgreSQL) |
 | `alkali` | Elixir (standalone) | -- | Static site generator, publishable to Hex |
+| `exo_dashboard` | Phoenix (dev tool) | 4010 / 4011 | BDD feature dashboard -- browse features, trigger runs, view results in real time |
 | `perme8_tools` | Elixir (dev) | -- | Mix tasks, linters, scaffolding |
 
 ### Dependency Graph
