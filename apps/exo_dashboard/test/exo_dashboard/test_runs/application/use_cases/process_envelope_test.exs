@@ -194,6 +194,15 @@ defmodule ExoDashboard.TestRuns.Application.UseCases.ProcessEnvelopeTest do
       }
 
       assert :ok == ProcessEnvelope.execute("run-1", envelope, store: store, store_mod: MockStore)
+
+      # Verify the step was actually recorded with correct data
+      result = MockStore.get_test_case_result(store, "run-1", "tcs-1")
+      assert length(result.step_results) == 1
+
+      [step] = result.step_results
+      assert step.status == :passed
+      assert step.duration_ms == 42
+      assert step.test_step_id == "ts-1"
     end
   end
 
@@ -213,6 +222,11 @@ defmodule ExoDashboard.TestRuns.Application.UseCases.ProcessEnvelopeTest do
       }
 
       assert :ok == ProcessEnvelope.execute("run-1", envelope, store: store, store_mod: MockStore)
+
+      # Verify the result is still stored (finalization preserves data)
+      result = MockStore.get_test_case_result(store, "run-1", "tcs-1")
+      assert result != nil
+      assert result.pickle_id == "pickle-1"
     end
   end
 
