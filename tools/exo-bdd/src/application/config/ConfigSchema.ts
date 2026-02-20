@@ -1,3 +1,8 @@
+export interface ReportConfig {
+  /** Emit Cucumber Messages NDJSON during test runs. */
+  message?: boolean | { outputDir?: string }
+}
+
 export interface ExoBddConfig {
   /** Glob or path(s) to feature files. Used by the CLI runner to locate .feature files. */
   features?: string | string[]
@@ -21,6 +26,8 @@ export interface ExoBddConfig {
    * Passed directly to cucumber-js as --tags.
    */
   tags?: string
+  /** Reporting configuration for test run output. */
+  report?: ReportConfig
   adapters: {
     http?: HttpAdapterConfig
     browser?: BrowserAdapterConfig

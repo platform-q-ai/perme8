@@ -7,6 +7,7 @@ import type {
   CliAdapterConfig,
   GraphAdapterConfig,
   SecurityAdapterConfig,
+  ReportConfig,
 } from '../../src/application/config/ConfigSchema.ts'
 
 describe('ConfigSchema type validation', () => {
@@ -252,5 +253,90 @@ describe('ConfigSchema type validation', () => {
     }
     expect(config.variables).toBeDefined()
     expect(Object.keys(config.variables!)).toHaveLength(0)
+  })
+})
+
+describe('ReportConfig type validation', () => {
+  test('ReportConfig with message set to true', () => {
+    const report: ReportConfig = {
+      message: true,
+    }
+    expect(report.message).toBe(true)
+  })
+
+  test('ReportConfig with message set to false', () => {
+    const report: ReportConfig = {
+      message: false,
+    }
+    expect(report.message).toBe(false)
+  })
+
+  test('ReportConfig with message as object with outputDir', () => {
+    const report: ReportConfig = {
+      message: { outputDir: '/custom/reports' },
+    }
+    expect(report.message).toEqual({ outputDir: '/custom/reports' })
+  })
+
+  test('ReportConfig with message as object with empty outputDir', () => {
+    const report: ReportConfig = {
+      message: {},
+    }
+    expect(report.message).toEqual({})
+  })
+
+  test('ReportConfig with message omitted', () => {
+    const report: ReportConfig = {}
+    expect(report.message).toBeUndefined()
+  })
+
+  test('ExoBddConfig accepts report field', () => {
+    const config: ExoBddConfig = {
+      adapters: {},
+      report: {
+        message: true,
+      },
+    }
+    expect(config.report).toBeDefined()
+    expect(config.report!.message).toBe(true)
+  })
+
+  test('ExoBddConfig with report.message as object', () => {
+    const config: ExoBddConfig = {
+      adapters: {},
+      report: {
+        message: { outputDir: '/tmp/reports' },
+      },
+    }
+    expect(config.report!.message).toEqual({ outputDir: '/tmp/reports' })
+  })
+
+  test('ExoBddConfig without report is backward compatible', () => {
+    const config: ExoBddConfig = {
+      adapters: {
+        http: { baseURL: 'http://localhost:3000' },
+      },
+    }
+    expect(config.report).toBeUndefined()
+  })
+
+  test('ExoBddConfig with report and all other fields', () => {
+    const config: ExoBddConfig = {
+      features: './features/**/*.feature',
+      servers: [{ name: 'api', command: 'mix phx.server', port: 4005 }],
+      variables: { token: 'abc' },
+      timeout: 30000,
+      tags: '@smoke',
+      adapters: {
+        http: { baseURL: 'http://localhost:4005' },
+      },
+      report: {
+        message: true,
+      },
+    }
+    expect(config.report!.message).toBe(true)
+    expect(config.features).toBe('./features/**/*.feature')
+    expect(config.servers).toHaveLength(1)
+    expect(config.variables!['token']).toBe('abc')
   })
 })

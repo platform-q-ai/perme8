@@ -1,6 +1,7 @@
 import { test, expect, describe } from 'bun:test'
 import { resolve } from 'node:path'
-import { parseRunArgs, buildCucumberArgs, generateSetupContent, mergeTags, filterFeaturesByAdapter } from '../../src/cli/run.ts'
+import { parseRunArgs, buildCucumberArgs, buildMessageFormatterArgs, extractConfigName, generateSetupContent, mergeTags, filterFeaturesByAdapter } from '../../src/cli/run.ts'
+import type { ReportConfig } from '../../src/application/config/ConfigSchema.ts'
 
 describe('parseRunArgs', () => {
   test('parses --config flag', () => {
@@ -306,6 +307,180 @@ describe('buildCucumberArgs', () => {
     })
 
     expect(args).not.toContain('--retry')
+  })
+
+  test('includes --format message:<path> when report.message is true', () => {
+    const args = buildCucumberArgs({
+      ...baseOptions,
+      features: './features/**/*.feature',
+      report: { message: true },
+      configName: 'identity',
+    })
+
+    const formatIdx = args.indexOf('--format')
+    expect(formatIdx).toBeGreaterThanOrEqual(0)
+    const formatValue = args[formatIdx + 1]!
+    expect(formatValue).toMatch(/^message:/)
+    expect(formatValue).toMatch(/\.exo-bdd-reports\/identity-.*\.ndjson$/)
+  })
+
+  test('uses custom outputDir when report.message is an object', () => {
+    const args = buildCucumberArgs({
+      ...baseOptions,
+      features: './features/**/*.feature',
+      report: { message: { outputDir: '/tmp/custom-reports' } },
+      configName: 'identity',
+    })
+
+    const formatIdx = args.indexOf('--format')
+    expect(formatIdx).toBeGreaterThanOrEqual(0)
+    const formatValue = args[formatIdx + 1]!
+    expect(formatValue).toMatch(/^message:\/tmp\/custom-reports\/identity-.*\.ndjson$/)
+  })
+
+  test('does not include --format message when report.message is false', () => {
+    const args = buildCucumberArgs({
+      ...baseOptions,
+      features: './features/**/*.feature',
+      report: { message: false },
+    })
+
+    const formatArgs = args.filter((_, i) => args[i - 1] === '--format')
+    const messageFormatArgs = formatArgs.filter((v) => v?.startsWith('message:'))
+    expect(messageFormatArgs).toHaveLength(0)
+  })
+
+  test('does not include --format message when report is undefined', () => {
+    const args = buildCucumberArgs({
+      ...baseOptions,
+      features: './features/**/*.feature',
+    })
+
+    const formatArgs = args.filter((_, i) => args[i - 1] === '--format')
+    const messageFormatArgs = formatArgs.filter((v) => v?.startsWith('message:'))
+    expect(messageFormatArgs).toHaveLength(0)
+  })
+
+  test('does not include --format message when report.message is undefined', () => {
+    const args = buildCucumberArgs({
+      ...baseOptions,
+      features: './features/**/*.feature',
+      report: {},
+    })
+
+    const formatArgs = args.filter((_, i) => args[i - 1] === '--format')
+    const messageFormatArgs = formatArgs.filter((v) => v?.startsWith('message:'))
+    expect(messageFormatArgs).toHaveLength(0)
+  })
+
+  test('message formatter coexists with tags and other args', () => {
+    const args = buildCucumberArgs({
+      ...baseOptions,
+      features: './features/**/*.feature',
+      tags: '@smoke',
+      noRetry: true,
+      passthrough: ['--format', 'progress'],
+      report: { message: true },
+      configName: 'jarga',
+    })
+
+    // Tags are present
+    expect(args).toContain('--tags')
+    expect(args).toContain('@smoke')
+    // Retry arg is present
+    expect(args).toContain('--retry')
+    // Passthrough format is present
+    expect(args).toContain('progress')
+    // Message format is also present
+    const formatIndices = args.reduce<number[]>((acc, v, i) => {
+      if (v === '--format') acc.push(i)
+      return acc
+    }, [])
+    expect(formatIndices.length).toBeGreaterThanOrEqual(2)
+    const hasMessageFormat = formatIndices.some((i) => args[i + 1]?.startsWith('message:'))
+    expect(hasMessageFormat).toBe(true)
+  })
+
+  test('uses "unknown" as config name when configName is not provided', () => {
+    const args = buildCucumberArgs({
+      ...baseOptions,
+      features: './features/**/*.feature',
+      report: { message: true },
+    })
+
+    const formatIdx = args.indexOf('--format')
+    const formatValue = args[formatIdx + 1]!
+    expect(formatValue).toMatch(/\.exo-bdd-reports\/unknown-.*\.ndjson$/)
+  })
+})
+
+describe('buildMessageFormatterArgs', () => {
+  test('returns empty array when report is undefined', () => {
+    const args = buildMessageFormatterArgs(undefined, 'test-config')
+    expect(args).toEqual([])
+  })
+
+  test('returns empty array when report.message is undefined', () => {
+    const args = buildMessageFormatterArgs({}, 'test-config')
+    expect(args).toEqual([])
+  })
+
+  test('returns empty array when report.message is false', () => {
+    const args = buildMessageFormatterArgs({ message: false }, 'test-config')
+    expect(args).toEqual([])
+  })
+
+  test('returns --format and message:<default-path> when report.message is true', () => {
+    const args = buildMessageFormatterArgs({ message: true }, 'identity')
+    expect(args).toHaveLength(2)
+    expect(args[0]).toBe('--format')
+    expect(args[1]).toMatch(/^message:\.exo-bdd-reports\/identity-\d{4}-\d{2}-\d{2}T.*\.ndjson$/)
+  })
+
+  test('uses custom outputDir when report.message is an object', () => {
+    const args = buildMessageFormatterArgs({ message: { outputDir: '/tmp/out' } }, 'jarga')
+    expect(args).toHaveLength(2)
+    expect(args[0]).toBe('--format')
+    expect(args[1]).toMatch(/^message:\/tmp\/out\/jarga-\d{4}-\d{2}-\d{2}T.*\.ndjson$/)
+  })
+
+  test('generates ISO timestamp in filename', () => {
+    const args = buildMessageFormatterArgs({ message: true }, 'test')
+    const path = args[1]!.replace('message:', '')
+    const filename = path.split('/').pop()!
+    // Filename should be like: test-2026-02-20T12-30-45.123Z.ndjson
+    expect(filename).toMatch(/^test-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}\.\d{3}Z\.ndjson$/)
+  })
+
+  test('uses "unknown" config name when not provided', () => {
+    const args = buildMessageFormatterArgs({ message: true })
+    expect(args[1]).toMatch(/^message:\.exo-bdd-reports\/unknown-/)
+  })
+})
+
+describe('extractConfigName', () => {
+  test('extracts name from exo-bdd-<name>.config.ts pattern', () => {
+    expect(extractConfigName('/project/bdd/exo-bdd-identity.config.ts')).toBe('identity')
+  })
+
+  test('extracts name from exo-bdd-<name>.config.ts with hyphenated name', () => {
+    expect(extractConfigName('/project/bdd/exo-bdd-jarga-web.config.ts')).toBe('jarga-web')
+  })
+
+  test('extracts name from plain config filename', () => {
+    expect(extractConfigName('/project/bdd/my-app.config.ts')).toBe('my-app')
+  })
+
+  test('strips .config.ts suffix', () => {
+    expect(extractConfigName('/project/bdd/identity.config.ts')).toBe('identity')
+  })
+
+  test('returns basename without extension for non-standard names', () => {
+    expect(extractConfigName('/project/bdd/config.ts')).toBe('config')
+  })
+
+  test('handles deeply nested paths', () => {
+    expect(extractConfigName('/home/user/workspace/apps/identity/test/bdd/exo-bdd-identity.config.ts')).toBe('identity')
   })
 })
 
