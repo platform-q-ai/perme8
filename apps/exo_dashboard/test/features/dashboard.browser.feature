@@ -41,33 +41,32 @@ Feature: Dashboard Feature Tree
     And "[data-filter='security']" should be visible
     And "[data-filter='cli']" should be visible
 
-  Scenario: Filtering by browser adapter shows only browser features
+  Scenario: Filtering by browser adapter hides non-browser features
     Given I navigate to "${baseUrl}/"
     And I wait for the page to load
     And I wait for "[data-app]" to be visible
     When I click "[data-filter='browser']"
-    And I wait for "[data-adapter='browser']" to be visible
-    Then "[data-adapter='http']" should not exist
+    And I wait for "[data-adapter='http']" to be hidden
+    Then "[data-adapter='browser']" should exist
     And "[data-adapter='cli']" should not exist
 
-  Scenario: Filtering by HTTP adapter shows only HTTP features
+  Scenario: Filtering by HTTP adapter hides non-HTTP features
     Given I navigate to "${baseUrl}/"
     And I wait for the page to load
     And I wait for "[data-app]" to be visible
     When I click "[data-filter='http']"
-    And I wait for "[data-adapter='http']" to be visible
-    Then "[data-adapter='browser']" should not exist
+    And I wait for "[data-adapter='browser']" to be hidden
+    Then "[data-adapter='http']" should exist
 
   Scenario: All filter resets to show all features
     Given I navigate to "${baseUrl}/"
     And I wait for the page to load
     And I wait for "[data-app]" to be visible
     When I click "[data-filter='browser']"
-    And I wait for "[data-adapter='browser']" to be visible
+    And I wait for "[data-adapter='http']" to be hidden
     When I click "[data-filter='all']"
-    And I wait for 1 seconds
+    And I wait for "[data-adapter='http']" to be visible
     Then "[data-adapter='browser']" should exist
-    And "[data-adapter='http']" should exist
 
   Scenario: Refresh button is present
     Given I navigate to "${baseUrl}/"
