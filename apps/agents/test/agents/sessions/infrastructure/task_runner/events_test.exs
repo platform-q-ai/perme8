@@ -91,12 +91,12 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.EventsTest do
       spawn(fn ->
         Process.sleep(50)
 
-        # Session starts running
+        # Session starts running (SDK sends "busy")
         send(runner_pid, {
           :opencode_event,
           %{
             "type" => "session.status",
-            "properties" => %{"sessionID" => "sess-1", "status" => %{"type" => "running"}}
+            "properties" => %{"sessionID" => "sess-1", "status" => %{"type" => "busy"}}
           }
         })
 
@@ -229,7 +229,11 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.EventsTest do
           :opencode_event,
           %{
             "type" => "permission.asked",
-            "properties" => %{"id" => "perm-1", "permission" => "bash"}
+            "properties" => %{
+              "id" => "perm-1",
+              "sessionID" => "sess-1",
+              "permission" => "bash"
+            }
           }
         })
 
@@ -240,7 +244,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.EventsTest do
           :opencode_event,
           %{
             "type" => "session.status",
-            "properties" => %{"sessionID" => "sess-1", "status" => %{"type" => "running"}}
+            "properties" => %{"sessionID" => "sess-1", "status" => %{"type" => "busy"}}
           }
         })
 
@@ -258,7 +262,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.EventsTest do
       {:ok, self()}
     end)
     |> expect(:send_prompt_async, fn _url, "sess-1", _parts, _opts -> :ok end)
-    |> expect(:reply_permission, fn _url, "perm-1", "always", _opts ->
+    |> expect(:reply_permission, fn _url, "sess-1", "perm-1", "always", _opts ->
       send(test_pid, :permission_replied)
       :ok
     end)

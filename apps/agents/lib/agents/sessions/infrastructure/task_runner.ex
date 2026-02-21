@@ -230,10 +230,18 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
         fail_task(new_state, error_msg)
         {:stop, :normal, new_state}
 
-      {:permission, request_id, new_state} ->
+      {:permission, session_id, permission_id, new_state} ->
         # Auto-approve all tool permission requests
         base_url = "http://localhost:#{new_state.container_port}"
-        new_state.opencode_client.reply_permission(base_url, request_id, "always", [])
+
+        new_state.opencode_client.reply_permission(
+          base_url,
+          session_id,
+          permission_id,
+          "always",
+          []
+        )
+
         {:noreply, new_state}
 
       {:continue, new_state} ->
@@ -304,7 +312,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     status_type = get_in(props, ["status", "type"]) || props["status"]
 
     case status_type do
-      "running" ->
+      status when status in ["running", "busy"] ->
         {:continue, %{state | was_running: true}}
 
       "idle" when state.was_running ->
@@ -331,10 +339,11 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
   # Permission requests - auto-approve
   defp handle_sdk_event(%{"type" => "permission.asked", "properties" => props}, state) do
-    request_id = props["id"]
+    permission_id = props["id"]
+    session_id = props["sessionID"]
 
-    if request_id do
-      {:permission, request_id, state}
+    if permission_id && session_id do
+      {:permission, session_id, permission_id, state}
     else
       {:continue, state}
     end

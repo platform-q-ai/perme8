@@ -109,19 +109,19 @@ defmodule Agents.Sessions.Infrastructure.Clients.OpencodeClientTest do
     end
   end
 
-  describe "reply_permission/4" do
+  describe "reply_permission/5" do
     test "returns :ok on 200" do
       http = fn :post, url, opts ->
-        assert String.contains?(url, "/permission/reply")
+        assert String.contains?(url, "/session/sess-1/permissions/perm-1")
         body = Keyword.get(opts, :json)
-        assert body.requestID == "perm-1"
-        assert body.reply == "always"
-        {:ok, %{status: 200, body: %{}}}
+        assert body.response == "always"
+        {:ok, %{status: 200, body: true}}
       end
 
       assert :ok =
                OpencodeClient.reply_permission(
                  "http://localhost:4096",
+                 "sess-1",
                  "perm-1",
                  "always",
                  http: http
@@ -136,6 +136,7 @@ defmodule Agents.Sessions.Infrastructure.Clients.OpencodeClientTest do
       assert :ok =
                OpencodeClient.reply_permission(
                  "http://localhost:4096",
+                 "sess-1",
                  "perm-1",
                  "once",
                  http: http
