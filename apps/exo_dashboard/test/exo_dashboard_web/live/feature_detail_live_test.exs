@@ -4,7 +4,7 @@ defmodule ExoDashboardWeb.FeatureDetailLiveTest do
   alias ExoDashboard.Features.Domain.Entities.{Feature, Scenario, Step, Rule}
 
   @feature Feature.new(
-             uri: "apps/jarga_web/test/features/login.browser.feature",
+             uri: "/apps/jarga_web/test/features/login.browser.feature",
              name: "Login Feature",
              description: "User login functionality",
              adapter: :browser,
