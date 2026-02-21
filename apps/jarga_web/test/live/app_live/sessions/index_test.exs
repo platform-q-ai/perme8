@@ -95,6 +95,46 @@ defmodule JargaWeb.AppLive.Sessions.IndexTest do
       html = render(lv)
       assert html =~ "failed"
     end
+
+    test "shows error message when viewing failed task from history", %{conn: conn, user: user} do
+      task =
+        task_fixture(%{
+          user_id: user.id,
+          status: "failed",
+          error: "Model not found: anthropic/claude-sonnet-4-5"
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/app/sessions")
+
+      # Click the failed task in history to view it
+      lv |> element(~s(tr[phx-value-task-id="#{task.id}"])) |> render_click()
+
+      html = render(lv)
+      assert html =~ "Task failed"
+      assert html =~ "Model not found"
+    end
+
+    test "shows error alert when status changes to failed with error in DB", %{
+      conn: conn,
+      user: user
+    } do
+      # Create a task that already has the error saved (simulates TaskRunner saving before broadcast)
+      task =
+        task_fixture(%{
+          user_id: user.id,
+          status: "failed",
+          error: "Container start failed: timeout"
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/app/sessions")
+
+      # View the task (simulates clicking on it or receiving status change)
+      lv |> element(~s(tr[phx-value-task-id="#{task.id}"])) |> render_click()
+
+      html = render(lv)
+      assert html =~ "Task failed"
+      assert html =~ "Container start failed: timeout"
+    end
   end
 
   describe "task history and status indicators" do

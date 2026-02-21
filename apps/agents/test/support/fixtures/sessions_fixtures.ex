@@ -16,15 +16,22 @@ defmodule Agents.SessionsFixtures do
   def task_fixture(attrs \\ %{}) do
     user_id = attrs[:user_id] || user_fixture().id
 
-    {:ok, task} =
-      %TaskSchema{}
-      |> TaskSchema.changeset(%{
+    changeset_attrs =
+      %{
         user_id: user_id,
         instruction: attrs[:instruction] || "Write tests for the login flow",
         status: attrs[:status] || "pending"
-      })
+      }
+      |> maybe_put(:error, attrs[:error])
+
+    {:ok, task} =
+      %TaskSchema{}
+      |> TaskSchema.changeset(changeset_attrs)
       |> Repo.insert()
 
     task
   end
+
+  defp maybe_put(map, _key, nil), do: map
+  defp maybe_put(map, key, value), do: Map.put(map, key, value)
 end

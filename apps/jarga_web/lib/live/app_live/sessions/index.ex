@@ -127,7 +127,17 @@ defmodule JargaWeb.AppLive.Sessions.Index do
 
     updated_task =
       if current_task && current_task.id == task_id do
-        Map.put(current_task, :status, status)
+        if status == "failed" do
+          # Reload from DB to get the error message
+          user = socket.assigns.current_scope.user
+
+          case Sessions.get_task(task_id, user.id) do
+            {:ok, %{error: error} = task} when not is_nil(error) -> task
+            _ -> Map.put(current_task, :status, status)
+          end
+        else
+          Map.put(current_task, :status, status)
+        end
       else
         current_task
       end
@@ -168,6 +178,11 @@ defmodule JargaWeb.AppLive.Sessions.Index do
     <span class="font-mono text-xs">{@raw}</span>
     """
   end
+
+  defp format_error(error) when is_binary(error), do: error
+  defp format_error(%{"message" => msg}), do: msg
+  defp format_error(%{"data" => %{"message" => msg}}), do: msg
+  defp format_error(error), do: inspect(error)
 
   defp truncate_instruction(instruction, max_length \\ 80) do
     if String.length(instruction) > max_length do
@@ -234,6 +249,19 @@ defmodule JargaWeb.AppLive.Sessions.Index do
                 </.button>
               </div>
             </form>
+          </div>
+        </div>
+
+        <%!-- Error Alert --%>
+        <div
+          :if={@current_task && @current_task.status == "failed" && @current_task.error}
+          class="alert alert-error"
+          id="task-error"
+        >
+          <.icon name="hero-exclamation-triangle" class="size-5 shrink-0" />
+          <div>
+            <h3 class="font-semibold">Task failed</h3>
+            <p class="text-sm">{format_error(@current_task.error)}</p>
           </div>
         </div>
 
