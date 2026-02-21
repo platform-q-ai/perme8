@@ -39,6 +39,7 @@ alias Agents
 
 IO.puts("[exo-seeds-web] Cleaning previous seed data...")
 
+Ecto.Adapters.SQL.query!(Identity.Repo, "TRUNCATE sessions_tasks CASCADE", [])
 Ecto.Adapters.SQL.query!(Identity.Repo, "TRUNCATE api_keys CASCADE", [])
 Ecto.Adapters.SQL.query!(Identity.Repo, "TRUNCATE chat_messages CASCADE", [])
 Ecto.Adapters.SQL.query!(Identity.Repo, "TRUNCATE chat_sessions CASCADE", [])
@@ -429,5 +430,53 @@ alias Agents.Infrastructure.Repositories.WorkspaceAgentRepository
 {:ok, _} = WorkspaceAgentRepository.add_to_workspace(product_team.id, code_helper.id)
 
 IO.puts("[exo-seeds-web] Created agents: code-helper, doc-writer")
+
+# ---------------------------------------------------------------------------
+# 7. Create session tasks (for sessions browser tests)
+# ---------------------------------------------------------------------------
+
+alias Agents.Sessions.Infrastructure.Schemas.TaskSchema
+
+{:ok, _completed_task} =
+  %TaskSchema{}
+  |> TaskSchema.changeset(%{
+    user_id: alice.id,
+    instruction: "Write unit tests for auth",
+    status: "completed"
+  })
+  |> Jarga.Repo.insert()
+
+{:ok, _failed_task} =
+  %TaskSchema{}
+  |> TaskSchema.changeset(%{
+    user_id: alice.id,
+    instruction: "Refactor database queries",
+    status: "failed"
+  })
+  |> Jarga.Repo.insert()
+
+{:ok, _cancelled_task} =
+  %TaskSchema{}
+  |> TaskSchema.changeset(%{
+    user_id: alice.id,
+    instruction: "Add API endpoint for users",
+    status: "cancelled"
+  })
+  |> Jarga.Repo.insert()
+
+# Long instruction for truncation test (120+ chars)
+long_instruction =
+  "This is a very long instruction that should be truncated in the task history table to keep the UI clean and this part should not be visible in the table row"
+
+{:ok, _long_task} =
+  %TaskSchema{}
+  |> TaskSchema.changeset(%{
+    user_id: alice.id,
+    instruction: long_instruction,
+    status: "completed"
+  })
+  |> Jarga.Repo.insert()
+
+IO.puts("[exo-seeds-web] Created session tasks for alice")
 
 IO.puts("[exo-seeds-web] Done!")

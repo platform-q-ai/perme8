@@ -20,13 +20,15 @@ import { MilkdownEditorHook } from './presentation/hooks/milkdown-editor-hook'
 import { ChatPanelHook } from './presentation/hooks/chat-panel-hook'
 import { FlashHook } from './presentation/hooks/flash-hook'
 import { CopyToClipboardHook } from './presentation/hooks/copy-to-clipboard-hook'
+import { SessionLogHook } from './presentation/hooks/session-log-hook'
 
 // Export individual hooks for selective import
 export {
   MilkdownEditorHook as MilkdownEditor,
   ChatPanelHook as ChatPanel,
   FlashHook as AutoHideFlash,
-  CopyToClipboardHook as CopyToClipboard
+  CopyToClipboardHook as CopyToClipboard,
+  SessionLogHook as SessionLog
 }
 
 // Default export for Phoenix LiveView
@@ -35,5 +37,6 @@ export default {
   MilkdownEditor: MilkdownEditorHook,
   ChatPanel: ChatPanelHook,
   AutoHideFlash: FlashHook,
-  CopyToClipboard: CopyToClipboardHook
+  CopyToClipboard: CopyToClipboardHook,
+  SessionLog: SessionLogHook
 }

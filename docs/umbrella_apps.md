@@ -8,7 +8,7 @@ Umbrella applications are a way to organize multiple Elixir applications within 
 |-----|------|-------------------|-------------|
 | `identity` | Phoenix (auth) | 4001 / 4003 | Users, authentication, workspaces, memberships, roles, API keys |
 | `jarga` | Ecto (domain) | -- | Projects, documents, notes, chat, notifications |
-| `agents` | Elixir + Bandit | -- / 4007 | Agent definitions, LLM orchestration, Knowledge MCP tools (6 tools via JSON-RPC) |
+| `agents` | Elixir + Bandit | -- / 4007 | Agent definitions, LLM orchestration, Knowledge MCP tools (6 tools via JSON-RPC), Sessions (ephemeral opencode containers) |
 | `jarga_web` | Phoenix (UI) | 4000 / 4002 | LiveView browser interface for all domain services |
 | `jarga_api` | Phoenix (API) | 4004 / 4005 | JSON REST API for external integrations |
 | `agents_api` | Phoenix (API) | 4008 / 4009 | JSON REST API for agent management and query execution |

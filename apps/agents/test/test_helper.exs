@@ -20,3 +20,16 @@ Mox.defmock(Agents.Mocks.IdentityMock,
 Mox.defmock(Agents.Mocks.JargaGatewayMock,
   for: Agents.Application.Behaviours.JargaGatewayBehaviour
 )
+
+# Sessions mocks
+Mox.defmock(Agents.Mocks.ContainerProviderMock,
+  for: Agents.Sessions.Application.Behaviours.ContainerProviderBehaviour
+)
+
+Mox.defmock(Agents.Mocks.OpencodeClientMock,
+  for: Agents.Sessions.Application.Behaviours.OpencodeClientBehaviour
+)
+
+Mox.defmock(Agents.Mocks.TaskRepositoryMock,
+  for: Agents.Sessions.Application.Behaviours.TaskRepositoryBehaviour
+)

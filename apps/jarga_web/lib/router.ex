@@ -79,6 +79,7 @@ defmodule JargaWeb.Router do
       live("/agents/new", AppLive.Agents.Form, :new)
       live("/agents/:id/view", AppLive.Agents.Form, :view)
       live("/agents/:id/edit", AppLive.Agents.Form, :edit)
+      live("/sessions", AppLive.Sessions.Index, :index)
       live("/workspaces", AppLive.Workspaces.Index, :index)
       live("/workspaces/new", AppLive.Workspaces.New, :new)
       live("/workspaces/:workspace_slug/edit", AppLive.Workspaces.Edit, :edit)

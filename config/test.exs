@@ -84,6 +84,14 @@ config :phoenix, :plug_init_mode, :runtime
 config :phoenix_live_view,
   enable_expensive_runtime_checks: true
 
+# Agents Sessions: faster timeouts for tests
+config :agents, :sessions,
+  image: "perme8-opencode",
+  max_concurrent_tasks: 1,
+  task_timeout_ms: 10_000,
+  health_check_interval_ms: 100,
+  health_check_max_retries: 5
+
 # Agents MCP: Use streamable_http transport in tests with start: true
 config :agents, :mcp_transport, {:streamable_http, start: true}
 
