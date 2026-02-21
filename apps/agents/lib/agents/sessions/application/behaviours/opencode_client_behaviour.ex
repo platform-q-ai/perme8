@@ -66,13 +66,14 @@ defmodule Agents.Sessions.Application.Behaviours.OpencodeClientBehaviour do
   @doc """
   Reply to a permission request.
 
-  Posts to `POST /permission/reply` with the request ID and reply action.
-  Reply actions: "once", "always", "reject"
+  Posts to `POST /session/:sessionID/permissions/:permissionID` with the response.
+  Response values: "once", "always", "reject"
   """
   @callback reply_permission(
               base_url :: String.t(),
-              request_id :: String.t(),
-              reply :: String.t(),
+              session_id :: String.t(),
+              permission_id :: String.t(),
+              response :: String.t(),
               opts :: keyword()
             ) :: :ok | {:error, term()}
 end

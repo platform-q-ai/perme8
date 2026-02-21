@@ -14,9 +14,10 @@ if [ -z "$ANTHROPIC_REFRESH_TOKEN" ]; then
   exit 1
 fi
 
-# Write opencode auth using Claude Max OAuth refresh token
+# Write opencode auth using Claude Max OAuth refresh token (skip if already mounted)
 mkdir -p /home/appuser/.local/share/opencode
-cat > /home/appuser/.local/share/opencode/auth.json <<EOF
+if [ ! -f /home/appuser/.local/share/opencode/auth.json ]; then
+  cat > /home/appuser/.local/share/opencode/auth.json <<EOF
 {
   "anthropic": {
     "type": "oauth",
@@ -24,12 +25,13 @@ cat > /home/appuser/.local/share/opencode/auth.json <<EOF
   }
 }
 EOF
+fi
 
 echo "Cloning perme8 (branch: $BRANCH)..."
 git clone --depth 1 --branch "$BRANCH" "${AUTH}/platform-q-ai/perme8.git" /workspace/perme8
 
 echo "Cloning skills into ~/.claude/..."
-git clone --depth 1 "${AUTH}/platform-q-ai/skills.git" /home/appuser/.claude
+git clone --depth 1 "${AUTH}/platform-q-ai/skills.git" /home/appuser/.claude || echo "warn: skills repo not available, skipping"
 
 cd /workspace/perme8
 
