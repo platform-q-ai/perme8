@@ -33,6 +33,7 @@ jobs:
       jarga_api: ${{ steps.filter.outputs.jarga_api }}
       jarga_web: ${{ steps.filter.outputs.jarga_web }}
       erm: ${{ steps.filter.outputs.erm }}
+      exo_dashboard: ${{ steps.filter.outputs.exo_dashboard }}
       shared: ${{ steps.filter.outputs.shared }}
     steps:
       - uses: actions/checkout@v4
@@ -73,6 +74,8 @@ jobs:
               - 'apps/jarga_web/**/*.{svg,png,ico,webmanifest,txt}'
             erm:
               - 'apps/entity_relationship_manager/**/*.{ex,exs,heex,ts,js,cjs,css,json,feature}'
+            exo_dashboard:
+              - 'apps/exo_dashboard/**/*.{ex,exs,heex,ts,js,cjs,css,json,feature}'
             shared:
               - 'config/**'
               - 'mix.exs'
@@ -222,6 +225,7 @@ jobs:
           CHANGED_ERM: ${{ needs.changes.outputs.erm }}
           CHANGED_SHARED: ${{ needs.changes.outputs.shared }}
           CHANGED_EXO_BDD: ${{ needs.changes.outputs.exo_bdd }}
+          CHANGED_EXO_DASHBOARD: ${{ needs.changes.outputs.exo_dashboard }}
           IS_MAIN: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
           RUN_ID: ${{ github.run_id }}
         run: |
@@ -242,6 +246,7 @@ jobs:
               {"app": "jarga-api", "domain": "security", "config_name": "jarga-api",                   "timeout": 15},
               {"app": "jarga-web", "domain": "browser",  "config_name": "jarga-web",                   "timeout": 15},
               {"app": "jarga-web", "domain": "security", "config_name": "jarga-web",                   "timeout": 15},
+              {"app": "exo-dashboard", "domain": "browser", "config_name": "exo-dashboard",            "timeout": 10},
           ]
 
           # Dependency tree: if a dependency changes, all dependents need testing
@@ -271,6 +276,8 @@ jobs:
                   needs_test.add("jarga-web")
               if changed.get("CHANGED_ERM") == "true":
                   needs_test.update(["erm", "agents"])
+              if changed.get("CHANGED_EXO_DASHBOARD") == "true":
+                  needs_test.add("exo-dashboard")
 
               return needs_test
 
