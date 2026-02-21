@@ -10,6 +10,13 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   5. Streaming events via PubSub
   6. Handling completion, failure, cancellation, and timeout
   7. Cleanup (container stop)
+
+  Events from the opencode SDK SSE stream follow these types:
+  - `"session.status"` - status changes (running → idle = completed)
+  - `"message.part.updated"` - text/tool output streaming
+  - `"permission.asked"` - tool permission requests (auto-approved)
+  - `"session.error"` - session-level errors
+  - `"server.connected"` - initial connection
   """
   use GenServer
 
@@ -28,6 +35,9 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     :timeout_ref,
     status: :starting,
     health_retries: 0,
+    # Track whether we've seen session go to "running" so we know
+    # that a transition to "idle" means completion
+    was_running: false,
     # Dependency injection
     container_provider: nil,
     opencode_client: nil,
@@ -199,29 +209,35 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     end
   end
 
-  # ---- Event Streaming ----
+  # ---- Event Streaming (opencode SDK events) ----
 
   @impl true
   def handle_info({:opencode_event, event}, state) do
+    # Broadcast all events to the LiveView via PubSub
     Phoenix.PubSub.broadcast(
       state.pubsub,
       "task:#{state.task_id}",
       {:task_event, state.task_id, event}
     )
 
-    # Check for completion events
-    case detect_completion(event) do
-      :completed ->
-        complete_task(state)
-        {:stop, :normal, state}
+    # Handle event by type
+    case handle_sdk_event(event, state) do
+      {:completed, new_state} ->
+        complete_task(new_state)
+        {:stop, :normal, new_state}
 
-      :error ->
-        error_msg = extract_error(event)
-        fail_task(state, error_msg || "Unknown error from opencode")
-        {:stop, :normal, state}
+      {:error, error_msg, new_state} ->
+        fail_task(new_state, error_msg)
+        {:stop, :normal, new_state}
 
-      :continue ->
-        {:noreply, state}
+      {:permission, request_id, new_state} ->
+        # Auto-approve all tool permission requests
+        base_url = "http://localhost:#{new_state.container_port}"
+        new_state.opencode_client.reply_permission(base_url, request_id, "always", [])
+        {:noreply, new_state}
+
+      {:continue, new_state} ->
+        {:noreply, new_state}
     end
   end
 
@@ -281,6 +297,55 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     :ok
   end
 
+  # ---- Private: SDK Event Handling ----
+
+  # Session status changes: running → idle means the task completed
+  defp handle_sdk_event(%{"type" => "session.status", "properties" => props}, state) do
+    status_type = get_in(props, ["status", "type"]) || props["status"]
+
+    case status_type do
+      "running" ->
+        {:continue, %{state | was_running: true}}
+
+      "idle" when state.was_running ->
+        # Session went from running → idle, task is done
+        {:completed, state}
+
+      "idle" ->
+        {:continue, state}
+
+      "error" ->
+        error = get_in(props, ["error"]) || "Session entered error state"
+        {:error, error, state}
+
+      _ ->
+        {:continue, state}
+    end
+  end
+
+  # Session error events
+  defp handle_sdk_event(%{"type" => "session.error", "properties" => props}, state) do
+    error = props["error"] || "Unknown session error"
+    {:error, error, state}
+  end
+
+  # Permission requests - auto-approve
+  defp handle_sdk_event(%{"type" => "permission.asked", "properties" => props}, state) do
+    request_id = props["id"]
+
+    if request_id do
+      {:permission, request_id, state}
+    else
+      {:continue, state}
+    end
+  end
+
+  # All other events (message.part.updated, server.connected, etc.)
+  # are broadcast via PubSub but don't change runner state
+  defp handle_sdk_event(_event, state) do
+    {:continue, state}
+  end
+
   # ---- Private helpers ----
 
   defp update_task_status(state, attrs) do
@@ -329,12 +394,4 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
       {:task_status_changed, task_id, status}
     )
   end
-
-  defp detect_completion(%{"type" => "message.completed"}), do: :completed
-  defp detect_completion(%{"type" => "error"}), do: :error
-  defp detect_completion(_), do: :continue
-
-  defp extract_error(%{"error" => error}) when is_binary(error), do: error
-  defp extract_error(%{"message" => msg}) when is_binary(msg), do: msg
-  defp extract_error(_), do: nil
 end
