@@ -13,8 +13,10 @@
       </div>
     </div>
     <!-- Page content -->
-    <main class="flex-1 flex flex-col p-4 lg:p-6 overflow-y-auto">
-      {@inner_content}
+    <main class="flex-1 flex flex-col p-4 lg:p-8 overflow-y-auto">
+      <div class="w-full max-w-5xl mx-auto">
+        {@inner_content}
+      </div>
     </main>
 
     <.flash_group flash={@flash} />

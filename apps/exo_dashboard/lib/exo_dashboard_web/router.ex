@@ -13,7 +13,7 @@ defmodule ExoDashboardWeb.Router do
   scope "/", ExoDashboardWeb do
     pipe_through(:browser)
 
-    live_session :dashboard do
+    live_session :dashboard, layout: {ExoDashboardWeb.Layouts, :app} do
       live("/", DashboardLive, :index)
       live("/features/*uri", FeatureDetailLive, :show)
     end

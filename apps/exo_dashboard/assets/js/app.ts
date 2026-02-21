@@ -12,11 +12,36 @@ declare global {
   }
 }
 
+// Hooks
+const Hooks = {
+  ScrollToHash: {
+    mounted() {
+      this.scrollToHash();
+    },
+    updated() {
+      this.scrollToHash();
+    },
+    scrollToHash() {
+      const hash = window.location.hash;
+      if (hash) {
+        // Small delay to let the DOM settle after LiveView patch
+        requestAnimationFrame(() => {
+          const el = document.querySelector(hash);
+          if (el) {
+            el.scrollIntoView({ behavior: "smooth", block: "start" });
+          }
+        });
+      }
+    },
+  },
+};
+
 const csrfTokenElement = document.querySelector("meta[name='csrf-token']");
 const csrfToken = csrfTokenElement?.getAttribute("content");
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: { _csrf_token: csrfToken },
+  hooks: Hooks,
 });
 
 // Show progress bar on live navigation and form submits
