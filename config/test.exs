@@ -72,8 +72,7 @@ config :identity, IdentityWeb.Endpoint,
 config :exo_dashboard, ExoDashboardWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4011],
   secret_key_base:
-    "exo_dashboard_test_secret_key_base_that_is_at_least_64_bytes_long_for_security",
-  server: false
+    "exo_dashboard_test_secret_key_base_that_is_at_least_64_bytes_long_for_security"
 
 # In test we don't send emails
 config :identity, Identity.Mailer, adapter: Swoosh.Adapters.Test
