@@ -65,12 +65,13 @@ defmodule Agents.Sessions.Infrastructure.Clients.OpencodeClient do
   # ---- Permissions ----
 
   @impl true
-  def reply_permission(base_url, request_id, reply, opts \\ []) do
+  def reply_permission(base_url, session_id, permission_id, response, opts \\ []) do
     http = Keyword.get(opts, :http, &default_http/3)
 
-    body = %{requestID: request_id, reply: reply}
+    url = "#{base_url}/session/#{session_id}/permissions/#{permission_id}"
+    body = %{response: response}
 
-    case http.(:post, "#{base_url}/permission/reply", json: body) do
+    case http.(:post, url, json: body) do
       {:ok, %{status: status}} when status in [200, 204] -> :ok
       {:ok, %{status: status, body: resp_body}} -> {:error, {:http_error, status, resp_body}}
       {:error, reason} -> {:error, reason}
