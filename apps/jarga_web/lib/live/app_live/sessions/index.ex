@@ -148,7 +148,11 @@ defmodule JargaWeb.AppLive.Sessions.Index do
   end
 
   defp format_event_component(%{event: %{"type" => type} = event} = assigns) do
-    content = get_in(event, ["data", "content"]) || inspect(event["data"])
+    content =
+      get_in(event, ["data", "content"]) ||
+        get_in(event, ["properties", "content"]) ||
+        inspect(event["properties"] || event["data"])
+
     assigns = assign(assigns, :type, type)
     assigns = assign(assigns, :content, content)
 
