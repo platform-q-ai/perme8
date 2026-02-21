@@ -69,12 +69,12 @@ defmodule ExoDashboardWeb.FeatureDetailLive do
         <p>Loading feature...</p>
       </div>
 
-      <div :if={!@loading && @feature} class="mt-6">
+      <div :if={!@loading && @feature} id="feature-detail" phx-hook="ScrollToHash" class="mt-6">
         <.header>
           {@feature.name}
           <:subtitle>
-            <span :if={@feature.description} class="text-sm text-base-content/60">
-              {@feature.description}
+            <span :if={@feature.description} class="text-sm text-base-content/60 whitespace-pre-line">
+              {String.trim(@feature.description)}
             </span>
           </:subtitle>
           <:actions>
@@ -101,8 +101,11 @@ defmodule ExoDashboardWeb.FeatureDetailLive do
   end
 
   defp render_child(%{child: %Scenario{}} = assigns) do
+    anchor = ExoDashboardWeb.FeatureComponents.scenario_anchor(assigns.child)
+    assigns = assign(assigns, :anchor, anchor)
+
     ~H"""
-    <div class="card bg-base-200 p-4" data-scenario={@child.name}>
+    <div id={@anchor} class="card bg-base-200 p-4 scroll-mt-20" data-scenario={@child.name}>
       <h3 class="font-semibold text-sm mb-2">
         <span class="text-base-content/50">{@child.keyword}:</span>
         {@child.name}

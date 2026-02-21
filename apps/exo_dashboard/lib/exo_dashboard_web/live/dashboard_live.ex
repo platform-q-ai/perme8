@@ -131,17 +131,19 @@ defmodule ExoDashboardWeb.DashboardLive do
         <p>Discovering features...</p>
       </div>
       
-    <!-- Feature groups by app -->
+    <!-- Feature tree by app -->
       <div :if={!@loading && @filtered_apps == %{}} class="text-center py-12 text-base-content/50">
         <.icon name="hero-document-magnifying-glass" class="size-12 mx-auto mb-3" />
         <p>No features found matching the current filter.</p>
       </div>
 
-      <.app_group
-        :for={{app_name, features} <- Enum.sort(@filtered_apps)}
-        app_name={app_name}
-        features={features}
-      />
+      <div :if={!@loading && @filtered_apps != %{}} class="space-y-2">
+        <.app_tree
+          :for={{app_name, features} <- Enum.sort(@filtered_apps)}
+          app_name={app_name}
+          features={features}
+        />
+      </div>
     </div>
     """
   end
