@@ -3,13 +3,17 @@ defmodule AgentsWeb.UserAuth do
   Authentication helpers for AgentsWeb LiveViews.
 
   Provides `on_mount` callbacks for authenticating users via session tokens.
-  Delegates to `Jarga.Accounts` for token validation.
+  Delegates to `Identity` for token validation. Shares the `_identity_key`
+  session cookie with Identity so users authenticated there are also
+  authenticated here.
+
+  When unauthenticated, redirects to the Identity app's login page.
   """
 
   import Plug.Conn
   import Phoenix.Controller
 
-  alias Jarga.Accounts
+  alias Identity
   alias Identity.Domain.Scope
 
   @doc """
@@ -17,7 +21,7 @@ defmodule AgentsWeb.UserAuth do
   """
   def fetch_current_scope_for_user(conn, _opts) do
     with token when is_binary(token) <- get_session(conn, :user_token),
-         {user, _inserted_at} <- Accounts.get_user_by_session_token(token) do
+         {user, _inserted_at} <- Identity.get_user_by_session_token(token) do
       assign(conn, :current_scope, Scope.for_user(user))
     else
       _ -> assign(conn, :current_scope, Scope.for_user(nil))
@@ -26,15 +30,14 @@ defmodule AgentsWeb.UserAuth do
 
   @doc """
   Plug that requires the user to be authenticated.
-  Redirects to the login page on jarga_web if not authenticated.
+  Redirects to Identity's login page if not authenticated.
   """
   def require_authenticated_user(conn, _opts) do
     if conn.assigns[:current_scope] && conn.assigns.current_scope.user do
       conn
     else
       conn
-      |> put_flash(:error, "You must log in to access this page.")
-      |> redirect(to: "/users/log-in")
+      |> redirect(external: identity_login_url())
       |> halt()
     end
   end
@@ -52,11 +55,7 @@ defmodule AgentsWeb.UserAuth do
     if socket.assigns.current_scope && socket.assigns.current_scope.user do
       {:cont, socket}
     else
-      socket =
-        socket
-        |> Phoenix.LiveView.put_flash(:error, "You must log in to access this page.")
-        |> Phoenix.LiveView.redirect(to: "/users/log-in")
-
+      socket = Phoenix.LiveView.redirect(socket, external: identity_login_url())
       {:halt, socket}
     end
   end
@@ -65,10 +64,14 @@ defmodule AgentsWeb.UserAuth do
     Phoenix.Component.assign_new(socket, :current_scope, fn ->
       {user, _} =
         if user_token = session["user_token"] do
-          Accounts.get_user_by_session_token(user_token)
+          Identity.get_user_by_session_token(user_token)
         end || {nil, nil}
 
       Scope.for_user(user)
     end)
+  end
+
+  defp identity_login_url do
+    IdentityWeb.Endpoint.url() <> "/users/log-in"
   end
 end

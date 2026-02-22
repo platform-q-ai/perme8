@@ -42,6 +42,7 @@ defmodule AgentsWeb.MixProject do
             {:phoenix_html, :relaxed},
             {:phoenix_ecto, :relaxed},
             {:agents, :relaxed},
+            {:identity, :relaxed},
             {:jarga, :relaxed}
           ]
         ]
@@ -67,6 +68,7 @@ defmodule AgentsWeb.MixProject do
        depth: 1},
       {:gettext, "~> 0.26"},
       {:agents, in_umbrella: true},
+      {:identity, in_umbrella: true},
       {:jarga, in_umbrella: true},
       {:jason, "~> 1.2"},
       {:bandit, "~> 1.5"},

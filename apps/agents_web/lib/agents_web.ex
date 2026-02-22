@@ -11,9 +11,10 @@ defmodule AgentsWeb do
       Agents,
       Agents.Sessions,
       Agents.Sessions.Domain,
+      Identity,
+      IdentityWeb,
       Jarga,
-      Jarga.Accounts,
-      Identity
+      Jarga.Accounts
     ],
     exports: [Endpoint, Telemetry]
 
