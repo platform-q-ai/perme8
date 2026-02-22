@@ -1,0 +1,118 @@
+/* Session Output Markdown Styles */
+
+.session-markdown {
+  @apply leading-relaxed;
+}
+
+.session-markdown p {
+  @apply mb-3;
+}
+
+.session-markdown p:last-child {
+  @apply mb-0;
+}
+
+.session-markdown strong {
+  @apply font-semibold;
+}
+
+.session-markdown em {
+  @apply italic;
+}
+
+.session-markdown code {
+  @apply bg-white/10 px-1 py-0.5 rounded text-[0.875em];
+}
+
+.session-markdown pre {
+  @apply bg-white/5 p-3 rounded-md overflow-x-auto mb-3;
+}
+
+.session-markdown pre code {
+  @apply bg-transparent p-0 text-sm;
+}
+
+.session-markdown ul,
+.session-markdown ol {
+  @apply mb-3 pl-6 list-outside block;
+}
+
+.session-markdown ul {
+  @apply list-disc;
+}
+
+.session-markdown ol {
+  @apply list-decimal;
+}
+
+.session-markdown li {
+  @apply mb-1;
+  display: list-item !important;
+}
+
+/* Task list (checkbox) styling */
+.session-markdown ul:has(input[type="checkbox"]) {
+  @apply list-none pl-2;
+}
+
+.session-markdown li:has(input[type="checkbox"]) {
+  @apply list-none ml-0 grid grid-cols-[auto_1fr] gap-2 items-start;
+  display: grid !important;
+}
+
+.session-markdown li:has(input[type="checkbox"]) > :not(input[type="checkbox"]) {
+  @apply m-0 inline;
+}
+
+.session-markdown input[type="checkbox"] {
+  @apply w-4 h-4 mt-0.5 cursor-default pointer-events-none;
+  appearance: auto;
+  -webkit-appearance: checkbox;
+  -moz-appearance: checkbox;
+}
+
+.session-markdown del {
+  @apply line-through opacity-70;
+}
+
+.session-markdown h1,
+.session-markdown h2,
+.session-markdown h3,
+.session-markdown h4,
+.session-markdown h5,
+.session-markdown h6 {
+  @apply font-semibold mt-4 mb-2;
+}
+
+.session-markdown h1 { @apply text-xl; }
+.session-markdown h2 { @apply text-lg; }
+.session-markdown h3 { @apply text-base; }
+
+.session-markdown blockquote {
+  @apply border-l-4 border-current pl-4 opacity-80 mb-3;
+}
+
+.session-markdown a {
+  @apply text-info underline;
+}
+
+.session-markdown a:hover {
+  @apply opacity-80;
+}
+
+.session-markdown table {
+  @apply w-full mb-3 border-collapse;
+}
+
+.session-markdown th,
+.session-markdown td {
+  @apply border border-base-content/20 px-3 py-1.5 text-left;
+}
+
+.session-markdown th {
+  @apply font-semibold bg-white/5;
+}
+
+.session-markdown hr {
+  @apply my-4 border-base-content/20;
+}
