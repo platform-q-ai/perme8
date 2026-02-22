@@ -95,8 +95,3 @@ Feature: Perme8 Dashboard Browser UI
     Then "html" should have attribute "data-theme" with value "dark"
     And "body" should have class "bg-base-100"
 
-  Scenario: Exo Dashboard old URL works without sidebar chrome
-    Given I navigate to "${exoDashboardUrl}/"
-    And I wait for the page to load
-    Then I should see "feature"
-    And ".drawer" should not exist

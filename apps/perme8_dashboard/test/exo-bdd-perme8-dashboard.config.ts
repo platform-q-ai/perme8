@@ -28,7 +28,5 @@ export default defineConfig({
       },
     },
   },
-  variables: {
-    exoDashboardUrl: 'http://localhost:4011',
-  },
+  variables: {},
 })

@@ -82,3 +82,9 @@ Feature: Dashboard Feature Tree
     Then the URL should contain "/features/"
     And I should see "Identity Browser UI"
     And I should see "Back to dashboard"
+
+  Scenario: Exo Dashboard serves layout-less views after migration
+    Given I navigate to "${baseUrl}/"
+    And I wait for the page to load
+    Then I should see "feature"
+    And ".drawer" should not exist
