@@ -107,7 +107,7 @@ defmodule IdentityWeb.LoginLive do
   end
 
   @impl true
-  def mount(params, _session, socket) do
+  def mount(_params, _session, socket) do
     email =
       Phoenix.Flash.get(socket.assigns.flash, :email) ||
         get_in(socket.assigns, [:current_scope, Access.key(:user), Access.key(:email)])
@@ -115,17 +115,21 @@ defmodule IdentityWeb.LoginLive do
     magic_form = to_form(%{"email" => email}, as: "user")
     password_form = to_form(%{"email" => email}, as: "user")
 
-    # External apps (e.g. agents_web) can pass ?return_to=<url> so the user
-    # is sent back after login.
-    return_to = params["return_to"]
-
     {:ok,
      assign(socket,
        magic_form: magic_form,
        password_form: password_form,
        trigger_submit: false,
-       return_to: return_to
+       return_to: nil
      )}
+  end
+
+  @impl true
+  def handle_params(params, _uri, socket) do
+    # External apps (e.g. agents_web) pass ?return_to=<url> so the user
+    # is sent back after login. handle_params runs on both dead and connected
+    # mount, ensuring the hidden form field is present when the form submits.
+    {:noreply, assign(socket, :return_to, params["return_to"])}
   end
 
   @impl true

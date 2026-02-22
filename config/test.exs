@@ -37,7 +37,9 @@ config :agents_web, :identity_url, "http://localhost:4003"
 
 config :agents_web, AgentsWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4012],
-  secret_key_base: "agents_web_test_secret_key_base_at_least_64_bytes_long_for_security"
+  # Must match Identity's secret_key_base so the shared session cookie
+  # (_identity_key) signed by Identity can be verified by agents_web.
+  secret_key_base: "test_identity_secret_key_base_at_least_64_bytes_long_for_security"
 
 config :jarga_web, JargaWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4002],

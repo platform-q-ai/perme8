@@ -49,6 +49,21 @@ if config_env() == :prod do
 
   config :identity, :session_options, signing_salt: identity_session_signing_salt
 
+  # AgentsWeb shares Identity's session cookie, so it must use the same
+  # secret_key_base to verify the cookie signature.
+  agents_web_host = System.get_env("AGENTS_WEB_HOST") || host
+  agents_web_port = String.to_integer(System.get_env("AGENTS_WEB_PORT") || "4010")
+
+  config :agents_web, :identity_url, System.get_env("IDENTITY_URL") || "https://#{host}"
+
+  config :agents_web, AgentsWeb.Endpoint,
+    url: [host: agents_web_host, port: 443, scheme: "https"],
+    http: [
+      ip: {0, 0, 0, 0, 0, 0, 0, 0},
+      port: agents_web_port
+    ],
+    secret_key_base: secret_key_base
+
   config :identity, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
   config :identity, IdentityWeb.Endpoint,
@@ -133,6 +148,7 @@ if System.get_env("PHX_SERVER") do
   config :jarga_web, JargaWeb.Endpoint, server: true
   config :jarga_api, JargaApi.Endpoint, server: true
   config :entity_relationship_manager, EntityRelationshipManager.Endpoint, server: true
+  config :agents_web, AgentsWeb.Endpoint, server: true
 end
 
 if config_env() == :prod do
