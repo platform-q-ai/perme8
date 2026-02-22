@@ -10,7 +10,7 @@ export default defineConfig({
       workingDir: '../../../',
       env: { MIX_ENV: 'test' },
       setup: 'cd apps/exo_dashboard && mix assets.build',
-      healthCheckPath: '/',
+      healthCheckPath: '/health',
       startTimeout: 30000,
     },
   ],
