@@ -24,17 +24,20 @@ Feature: Cross-App Authentication for Sessions
     And I should see "Log in"
 
   # ---------------------------------------------------------------------------
-  # Login Return Flow
+  # Shared Session Cookie
   # ---------------------------------------------------------------------------
 
-  Scenario: After login, user is redirected back to sessions page
-    Given I navigate to "${baseUrl}/sessions"
-    And I wait for the URL to contain "/users/log-in"
+  Scenario: After login on Identity, shared session grants access to sessions page
+    # Log in directly on Identity (same approach as sessions.browser.feature Background)
+    Given I navigate to "${identityUrl}/users/log-in"
+    And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
-    And I click the "Log in and stay logged in" button
-    And I wait for the URL to contain "/sessions"
-    And I wait for the page to load
+    And I click the "Log in and stay logged in" button and wait for navigation
+    And I wait for network idle
+    # Now navigate to agents_web — the shared _identity_key cookie authenticates us
+    When I navigate to "${baseUrl}/sessions"
+    And I wait for network idle
     Then the URL should contain "/sessions"
     And I should see "Sessions"
     And I should see "Run coding tasks in containers"
