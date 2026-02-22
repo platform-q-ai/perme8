@@ -17,8 +17,11 @@ defmodule JargaApi do
       Jarga.Projects,
       Jarga.Documents,
       Jarga.Documents.Notes.Domain,
+      Jarga.Webhooks,
       Identity,
-      JargaApi.Accounts
+      Identity.Repo,
+      JargaApi.Accounts,
+      JargaApi.Accounts.Domain
     ],
     exports: [Endpoint]
 
