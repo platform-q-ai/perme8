@@ -97,26 +97,6 @@ defmodule AgentsWeb.SessionsLive.Index do
     end
   end
 
-  defp do_cancel_task(task, user, socket) do
-    case Sessions.cancel_task(task.id, user.id) do
-      :ok ->
-        updated_task =
-          case Sessions.get_task(task.id, user.id) do
-            {:ok, t} -> t
-            _ -> Map.put(task, :status, "cancelled")
-          end
-
-        {:noreply,
-         socket
-         |> assign(:current_task, updated_task)
-         |> reload_tasks()
-         |> put_flash(:info, "Task cancelled")}
-
-      {:error, _reason} ->
-        {:noreply, put_flash(socket, :error, "Failed to cancel task")}
-    end
-  end
-
   @impl true
   def handle_event("delete_task", %{"task-id" => task_id}, socket) do
     user = socket.assigns.current_scope.user
@@ -166,6 +146,30 @@ defmodule AgentsWeb.SessionsLive.Index do
     end
   end
 
+  # ---- handle_event helpers ----
+
+  defp do_cancel_task(task, user, socket) do
+    case Sessions.cancel_task(task.id, user.id) do
+      :ok ->
+        updated_task =
+          case Sessions.get_task(task.id, user.id) do
+            {:ok, t} -> t
+            _ -> Map.put(task, :status, "cancelled")
+          end
+
+        {:noreply,
+         socket
+         |> assign(:current_task, updated_task)
+         |> reload_tasks()
+         |> put_flash(:info, "Task cancelled")}
+
+      {:error, _reason} ->
+        {:noreply, put_flash(socket, :error, "Failed to cancel task")}
+    end
+  end
+
+  # ---- handle_info callbacks ----
+
   @impl true
   def handle_info({:task_event, _task_id, event}, socket) do
     {:noreply, process_event(event, socket)}
@@ -180,6 +184,12 @@ defmodule AgentsWeb.SessionsLive.Index do
      socket
      |> assign(:current_task, updated_task)
      |> reload_tasks()}
+  end
+
+  # Catch-all for unhandled messages
+  @impl true
+  def handle_info(_msg, socket) do
+    {:noreply, socket}
   end
 
   defp maybe_update_task_status(nil, _task_id, _status, _socket), do: nil
@@ -198,12 +208,6 @@ defmodule AgentsWeb.SessionsLive.Index do
 
   defp maybe_update_task_status(task, _task_id, status, _socket) do
     Map.put(task, :status, status)
-  end
-
-  # Catch-all for unhandled messages
-  @impl true
-  def handle_info(_msg, socket) do
-    {:noreply, socket}
   end
 
   # ---- Session state management ----
