@@ -40,6 +40,9 @@ jarga-*.tar
 npm-debug.log
 /**/node_modules/
 
+# ElixirLS build artifacts
+.elixir_ls/
+
 # Environment variables
 .env
 .env.local

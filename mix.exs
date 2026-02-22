@@ -47,7 +47,9 @@ defmodule Perme8.MixProject do
         "tailwind exo_dashboard",
         "esbuild exo_dashboard",
         "tailwind perme8_dashboard",
-        "esbuild perme8_dashboard"
+        "esbuild perme8_dashboard",
+        "tailwind agents",
+        "esbuild agents"
       ],
       "assets.deploy": [
         "tailwind jarga --minify",
@@ -62,7 +64,10 @@ defmodule Perme8.MixProject do
         "phx.digest apps/exo_dashboard/priv/static -o apps/exo_dashboard/priv/static",
         "tailwind perme8_dashboard --minify",
         "esbuild perme8_dashboard --minify",
-        "phx.digest apps/perme8_dashboard/priv/static -o apps/perme8_dashboard/priv/static"
+        "phx.digest apps/perme8_dashboard/priv/static -o apps/perme8_dashboard/priv/static",
+        "tailwind agents --minify",
+        "esbuild agents --minify",
+        "phx.digest apps/agents_web/priv/static -o apps/agents_web/priv/static"
       ],
       precommit: [
         "compile --warnings-as-errors",
