@@ -3,15 +3,10 @@ defmodule IdentityWeb.Endpoint do
 
   # The session will be stored in the cookie and signed,
   # this means its contents can be read but not tampered with.
-  # Set :encryption_salt if you would also like to encrypt it.
-  # IMPORTANT: This uses the same session key and salt as jarga_web
-  # to enable session sharing between the two endpoints.
-  @session_options Application.compile_env(:identity, :session_options,
-                     store: :cookie,
-                     key: "_jarga_key",
-                     signing_salt: "shared_session_salt",
-                     same_site: "Lax"
-                   )
+  # Apps that delegate auth to Identity (e.g. agents_web) share this
+  # cookie key and signing salt so sessions are portable across endpoints.
+  # The signing_salt is set per-environment (dev.exs, test.exs, runtime.exs).
+  @session_options Application.compile_env!(:identity, :session_options)
 
   socket "/live", Phoenix.LiveView.Socket,
     websocket: [connect_info: [session: @session_options]],

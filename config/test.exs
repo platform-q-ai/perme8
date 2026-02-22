@@ -65,6 +65,9 @@ config :agents_api, AgentsApi.Endpoint,
 # Identity App Test Configuration
 # ============================================================================
 
+# Identity session signing salt (shared with agents_web for cookie portability)
+config :identity, :session_options, signing_salt: "test_identity_session_signing_salt"
+
 config :identity, IdentityWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4003],
   secret_key_base: "test_identity_secret_key_base_at_least_64_bytes_long_for_security"

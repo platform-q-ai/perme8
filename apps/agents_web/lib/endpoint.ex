@@ -1,12 +1,9 @@
 defmodule AgentsWeb.Endpoint do
   use Phoenix.Endpoint, otp_app: :agents_web
 
-  @session_options [
-    store: :cookie,
-    key: "_agents_web_key",
-    signing_salt: "aSe55i0n",
-    same_site: "Lax"
-  ]
+  # Share session cookie with Identity so users authenticated via
+  # Identity's login page are also authenticated here.
+  @session_options Application.compile_env!(:identity, :session_options)
 
   socket("/live", Phoenix.LiveView.Socket,
     websocket: [connect_info: [:x_headers, session: @session_options]],

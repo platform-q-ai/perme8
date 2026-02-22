@@ -230,11 +230,13 @@ config :perme8_dashboard, Perme8DashboardWeb.Endpoint,
   pubsub_server: Jarga.PubSub,
   live_view: [signing_salt: "perme8_dashboard_salt"]
 
-# Shared session configuration - must match jarga_web for session sharing
+# Identity session configuration
+# Apps that delegate auth to Identity (agents_web) must use the same key and salt.
+# The signing_salt is set per-environment in dev.exs/test.exs and via
+# IDENTITY_SESSION_SIGNING_SALT in runtime.exs for production.
 config :identity, :session_options,
   store: :cookie,
-  key: "_jarga_key",
-  signing_salt: "shared_session_salt",
+  key: "_identity_key",
   same_site: "Lax"
 
 # Identity mailer configuration
