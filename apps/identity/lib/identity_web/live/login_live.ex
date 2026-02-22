@@ -41,6 +41,7 @@ defmodule IdentityWeb.LoginLive do
           action={~p"/users/log-in"}
           phx-submit="submit_magic"
         >
+          <input :if={@return_to} type="hidden" name="user[return_to]" value={@return_to} />
           <.input
             readonly={!!@current_scope}
             field={@magic_form[:email]}
@@ -65,6 +66,7 @@ defmodule IdentityWeb.LoginLive do
           phx-submit="submit_password"
           phx-trigger-action={@trigger_submit}
         >
+          <input :if={@return_to} type="hidden" name="user[return_to]" value={@return_to} />
           <.input
             readonly={!!@current_scope}
             field={@password_form[:email]}
@@ -105,7 +107,7 @@ defmodule IdentityWeb.LoginLive do
   end
 
   @impl true
-  def mount(_params, _session, socket) do
+  def mount(params, _session, socket) do
     email =
       Phoenix.Flash.get(socket.assigns.flash, :email) ||
         get_in(socket.assigns, [:current_scope, Access.key(:user), Access.key(:email)])
@@ -113,8 +115,17 @@ defmodule IdentityWeb.LoginLive do
     magic_form = to_form(%{"email" => email}, as: "user")
     password_form = to_form(%{"email" => email}, as: "user")
 
+    # External apps (e.g. agents_web) can pass ?return_to=<url> so the user
+    # is sent back after login.
+    return_to = params["return_to"]
+
     {:ok,
-     assign(socket, magic_form: magic_form, password_form: password_form, trigger_submit: false)}
+     assign(socket,
+       magic_form: magic_form,
+       password_form: password_form,
+       trigger_submit: false,
+       return_to: return_to
+     )}
   end
 
   @impl true

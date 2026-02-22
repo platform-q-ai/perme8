@@ -41,13 +41,33 @@ defmodule IdentityWeb.Plugs.UserAuth do
 
   Redirects to the session's `:user_return_to` path
   or falls back to the `signed_in_path/1`.
+
+  When the params contain a `"return_to"` key with a valid URL
+  (e.g. from an external app like agents_web), an external redirect
+  is performed instead of an internal one. Only localhost URLs (any port)
+  are accepted to prevent open-redirect attacks.
   """
   def log_in_user(conn, user, params \\ %{}) do
+    external_return_to = validated_external_return_to(params["return_to"])
     user_return_to = get_session(conn, :user_return_to)
 
-    conn
-    |> create_or_extend_session(user, params)
-    |> redirect(to: user_return_to || signed_in_path(conn))
+    conn = create_or_extend_session(conn, user, params)
+
+    if external_return_to do
+      redirect(conn, external: external_return_to)
+    else
+      redirect(conn, to: user_return_to || signed_in_path(conn))
+    end
+  end
+
+  defp validated_external_return_to(nil), do: nil
+  defp validated_external_return_to(""), do: nil
+
+  defp validated_external_return_to(url) when is_binary(url) do
+    case URI.parse(url) do
+      %URI{host: "localhost", scheme: scheme} when scheme in ["http", "https"] -> url
+      _ -> nil
+    end
   end
 
   @doc """
