@@ -43,7 +43,11 @@ defmodule Perme8.MixProject do
         "assets.copy_fonts",
         "esbuild jarga",
         "tailwind identity",
-        "esbuild identity"
+        "esbuild identity",
+        "tailwind exo_dashboard",
+        "esbuild exo_dashboard",
+        "tailwind perme8_dashboard",
+        "esbuild perme8_dashboard"
       ],
       "assets.deploy": [
         "tailwind jarga --minify",
@@ -52,7 +56,13 @@ defmodule Perme8.MixProject do
         "phx.digest apps/jarga_web/priv/static -o apps/jarga_web/priv/static",
         "tailwind identity --minify",
         "esbuild identity --minify",
-        "phx.digest apps/identity/priv/static -o apps/identity/priv/static"
+        "phx.digest apps/identity/priv/static -o apps/identity/priv/static",
+        "tailwind exo_dashboard --minify",
+        "esbuild exo_dashboard --minify",
+        "phx.digest apps/exo_dashboard/priv/static -o apps/exo_dashboard/priv/static",
+        "tailwind perme8_dashboard --minify",
+        "esbuild perme8_dashboard --minify",
+        "phx.digest apps/perme8_dashboard/priv/static -o apps/perme8_dashboard/priv/static"
       ],
       precommit: [
         "compile --warnings-as-errors",
