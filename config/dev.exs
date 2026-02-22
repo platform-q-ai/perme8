@@ -74,6 +74,27 @@ config :agents_api, AgentsApi.Endpoint,
   secret_key_base: "agents_api_dev_secret_key_base_at_least_64_bytes_long_for_security",
   watchers: []
 
+# AgentsWeb dev configuration (Sessions UI on port 4010)
+config :agents_web, AgentsWeb.Endpoint,
+  http: [ip: {127, 0, 0, 1}, port: 4010],
+  check_origin: false,
+  code_reloader: true,
+  debug_errors: true,
+  secret_key_base: "agents_web_dev_secret_key_base_at_least_64_bytes_long_for_security",
+  watchers: [
+    esbuild: {Esbuild, :install_and_run, [:agents, ~w(--sourcemap=inline --watch)]},
+    tailwind: {Tailwind, :install_and_run, [:agents, ~w(--watch)]}
+  ]
+
+config :agents_web, AgentsWeb.Endpoint,
+  live_reload: [
+    web_console_logger: true,
+    patterns: [
+      ~r"priv/static/(?!uploads/).*(js|css|png|jpeg|jpg|gif|svg)$",
+      ~r"lib/agents_web/(?:live|components|router)/?.*\.(ex|heex)$"
+    ]
+  ]
+
 # For development, we disable any cache and enable
 # debugging and code reloading.
 config :jarga_web, JargaWeb.Endpoint,

@@ -32,6 +32,10 @@ config :identity, Identity.Repo,
   pool_size: 20,
   ownership_timeout: :infinity
 
+config :agents_web, AgentsWeb.Endpoint,
+  http: [ip: {127, 0, 0, 1}, port: 4012],
+  secret_key_base: "agents_web_test_secret_key_base_at_least_64_bytes_long_for_security"
+
 config :jarga_web, JargaWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4002],
   secret_key_base: "k/DpMQ7vB/8OirPNBlAhucs6RCPp5ZRK09Is1Sd7Jb+YThz21IeYYYpueAbJYNEd"

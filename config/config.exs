@@ -66,6 +66,17 @@ config :agents_api, AgentsApi.Endpoint,
   ],
   pubsub_server: Jarga.PubSub
 
+# Configures the AgentsWeb endpoint (Sessions UI)
+config :agents_web, AgentsWeb.Endpoint,
+  url: [host: "localhost"],
+  adapter: Bandit.PhoenixAdapter,
+  render_errors: [
+    formats: [html: AgentsWeb.ErrorHTML],
+    layout: false
+  ],
+  pubsub_server: Jarga.PubSub,
+  live_view: [signing_salt: "aG3ntSe5"]
+
 # Configures the endpoint
 config :jarga_web, JargaWeb.Endpoint,
   url: [host: "localhost"],
@@ -106,6 +117,12 @@ config :esbuild,
       ~w(js/app.ts --bundle --target=es2022 --outdir=../priv/static/assets/js --external:/fonts/* --external:/images/*),
     cd: Path.expand("../apps/perme8_dashboard/assets", __DIR__),
     env: %{"NODE_PATH" => [Path.expand("../deps", __DIR__), Mix.Project.build_path()]}
+  ],
+  agents: [
+    args:
+      ~w(js/app.ts --bundle --target=es2022 --outdir=../priv/static/assets/js --external:/fonts/* --external:/images/*),
+    cd: Path.expand("../apps/agents_web/assets", __DIR__),
+    env: %{"NODE_PATH" => [Path.expand("../deps", __DIR__), Mix.Project.build_path()]}
   ]
 
 # Configure tailwind (the version is required)
@@ -138,6 +155,13 @@ config :tailwind,
       --output=priv/static/assets/css/app.css
     ),
     cd: Path.expand("../apps/perme8_dashboard", __DIR__)
+  ],
+  agents: [
+    args: ~w(
+      --input=assets/css/app.css
+      --output=priv/static/assets/css/app.css
+    ),
+    cd: Path.expand("../apps/agents_web", __DIR__)
   ]
 
 # ============================================================================
