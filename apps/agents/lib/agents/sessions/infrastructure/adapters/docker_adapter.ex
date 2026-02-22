@@ -1,6 +1,9 @@
 defmodule Agents.Sessions.Infrastructure.Adapters.DockerAdapter do
   @moduledoc """
-  Docker CLI adapter for managing ephemeral opencode containers.
+  Docker CLI adapter for managing opencode containers.
+
+  Containers are task-scoped: stopped on completion (preserving state for resume),
+  and only removed on explicit user delete.
 
   Uses `System.cmd/3` (injectable for testing) to interact with the Docker daemon.
   """
@@ -22,8 +25,6 @@ defmodule Agents.Sessions.Infrastructure.Adapters.DockerAdapter do
         "-d",
         "-p",
         "127.0.0.1:0:4096",
-        "--rm",
-        "--cap-drop=ALL",
         "--memory=512m",
         "--cpus=1"
       ] ++
@@ -53,6 +54,32 @@ defmodule Agents.Sessions.Infrastructure.Adapters.DockerAdapter do
   end
 
   @impl true
+  def remove(container_id, opts \\ []) do
+    system_cmd = Keyword.get(opts, :system_cmd, &System.cmd/3)
+
+    case system_cmd.("docker", ["rm", "-f", container_id], stderr_to_stdout: true) do
+      {_output, 0} ->
+        :ok
+
+      {output, exit_code} ->
+        {:error, {:docker_remove_failed, exit_code, String.trim(output)}}
+    end
+  end
+
+  @impl true
+  def restart(container_id, opts \\ []) do
+    system_cmd = Keyword.get(opts, :system_cmd, &System.cmd/3)
+
+    case system_cmd.("docker", ["start", container_id], stderr_to_stdout: true) do
+      {_output, 0} ->
+        discover_port_for_restart(container_id, system_cmd)
+
+      {output, exit_code} ->
+        {:error, {:docker_start_failed, exit_code, String.trim(output)}}
+    end
+  end
+
+  @impl true
   def status(container_id, opts \\ []) do
     system_cmd = Keyword.get(opts, :system_cmd, &System.cmd/3)
 
@@ -72,14 +99,63 @@ defmodule Agents.Sessions.Infrastructure.Adapters.DockerAdapter do
     end
   end
 
-  defp discover_port(container_id, system_cmd) do
+  @port_retries 5
+  @port_retry_interval_ms 500
+
+  defp discover_port(container_id, system_cmd, retries \\ @port_retries) do
     case system_cmd.("docker", ["port", container_id, "4096"], stderr_to_stdout: true) do
       {output, 0} ->
         port = parse_port(String.trim(output))
         {:ok, %{container_id: container_id, port: port}}
 
+      {_output, _exit_code} when retries > 1 ->
+        # Check if container is still running before retrying
+        case container_running?(container_id, system_cmd) do
+          true ->
+            Process.sleep(@port_retry_interval_ms)
+            discover_port(container_id, system_cmd, retries - 1)
+
+          false ->
+            # Container exited — grab logs for diagnostics
+            logs = fetch_logs(container_id, system_cmd)
+            {:error, {:container_exited, container_id, logs}}
+        end
+
       {output, exit_code} ->
         {:error, {:docker_port_failed, exit_code, String.trim(output)}}
+    end
+  end
+
+  defp discover_port_for_restart(container_id, system_cmd, retries \\ @port_retries) do
+    case system_cmd.("docker", ["port", container_id, "4096"], stderr_to_stdout: true) do
+      {output, 0} ->
+        port = parse_port(String.trim(output))
+        {:ok, %{port: port}}
+
+      {_output, _exit_code} when retries > 1 ->
+        Process.sleep(@port_retry_interval_ms)
+        discover_port_for_restart(container_id, system_cmd, retries - 1)
+
+      {output, exit_code} ->
+        {:error, {:docker_port_failed, exit_code, String.trim(output)}}
+    end
+  end
+
+  defp container_running?(container_id, system_cmd) do
+    case system_cmd.(
+           "docker",
+           ["inspect", "--format", "{{.State.Running}}", container_id],
+           stderr_to_stdout: true
+         ) do
+      {"true\n", 0} -> true
+      _ -> false
+    end
+  end
+
+  defp fetch_logs(container_id, system_cmd) do
+    case system_cmd.("docker", ["logs", "--tail", "20", container_id], stderr_to_stdout: true) do
+      {output, 0} -> String.trim(output)
+      _ -> "unable to fetch logs"
     end
   end
 

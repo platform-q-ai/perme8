@@ -65,15 +65,80 @@ defmodule JargaWeb.AppLive.Sessions.IndexTest do
       %{conn: log_in_user(conn, user), user: user}
     end
 
-    test "receiving task_event appends event to the log", %{conn: conn, user: user} do
+    test "receiving text output event displays content in session panel", %{
+      conn: conn,
+      user: user
+    } do
       task = task_fixture(%{user_id: user.id, status: "running"})
       {:ok, lv, _html} = live(conn, ~p"/app/sessions")
 
-      event = %{type: "message.delta", data: %{content: "Working on it..."}}
+      event = %{
+        "type" => "message.part.updated",
+        "properties" => %{
+          "part" => %{
+            "type" => "text",
+            "text" => "Working on it..."
+          }
+        }
+      }
+
       send(lv.pid, {:task_event, task.id, event})
 
       html = render(lv)
       assert html =~ "Working on it..."
+    end
+
+    test "receiving session.updated shows session title", %{conn: conn, user: user} do
+      task = task_fixture(%{user_id: user.id, status: "running"})
+      {:ok, lv, _html} = live(conn, ~p"/app/sessions")
+
+      event = %{
+        "type" => "session.updated",
+        "properties" => %{
+          "info" => %{
+            "title" => "Fix login bug",
+            "slug" => "fix-login"
+          }
+        }
+      }
+
+      send(lv.pid, {:task_event, task.id, event})
+
+      html = render(lv)
+      assert html =~ "Fix login bug"
+    end
+
+    test "receiving assistant message.updated shows model and tokens", %{
+      conn: conn,
+      user: user
+    } do
+      task = task_fixture(%{user_id: user.id, status: "running"})
+      {:ok, lv, _html} = live(conn, ~p"/app/sessions")
+
+      event = %{
+        "type" => "message.updated",
+        "properties" => %{
+          "info" => %{
+            "role" => "assistant",
+            "modelID" => "claude-opus-4-6",
+            "providerID" => "anthropic",
+            "tokens" => %{
+              "input" => 5200,
+              "output" => 150,
+              "cache" => %{"read" => 13000, "write" => 0}
+            },
+            "cost" => 0
+          }
+        }
+      }
+
+      send(lv.pid, {:task_event, task.id, event})
+
+      html = render(lv)
+      assert html =~ "claude-opus-4-6"
+      assert html =~ "5.2k in"
+      assert html =~ "150 out"
+      assert html =~ "13.0k cached"
     end
 
     test "receiving task_status_changed to completed updates UI", %{conn: conn, user: user} do
@@ -134,6 +199,41 @@ defmodule JargaWeb.AppLive.Sessions.IndexTest do
       html = render(lv)
       assert html =~ "Task failed"
       assert html =~ "Container start failed: timeout"
+    end
+  end
+
+  describe "delete task" do
+    setup %{conn: conn} do
+      user = user_fixture()
+      %{conn: log_in_user(conn, user), user: user}
+    end
+
+    test "shows delete button for completed tasks", %{conn: conn, user: user} do
+      task_fixture(%{user_id: user.id, instruction: "Done task", status: "completed"})
+
+      {:ok, _lv, html} = live(conn, ~p"/app/sessions")
+      assert html =~ "hero-trash"
+    end
+
+    test "does not show delete button for running tasks", %{conn: conn, user: user} do
+      task = task_fixture(%{user_id: user.id, instruction: "Active task", status: "running"})
+
+      {:ok, _lv, html} = live(conn, ~p"/app/sessions")
+      refute html =~ "delete_task\" phx-value-task-id=\"#{task.id}\""
+    end
+
+    test "deleting a task removes it from the list", %{conn: conn, user: user} do
+      task = task_fixture(%{user_id: user.id, instruction: "Delete me", status: "failed"})
+
+      {:ok, lv, _html} = live(conn, ~p"/app/sessions")
+
+      html =
+        lv
+        |> element(~s(button[phx-click="delete_task"][phx-value-task-id="#{task.id}"]))
+        |> render_click()
+
+      assert html =~ "Session deleted"
+      refute html =~ "Delete me"
     end
   end
 

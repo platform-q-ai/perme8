@@ -79,4 +79,42 @@ defmodule Agents.SessionsTest do
       assert {:error, :not_cancellable} = Sessions.cancel_task(task.id, user.id)
     end
   end
+
+  describe "delete_task/2" do
+    test "deletes a completed task" do
+      user = user_fixture()
+      task = task_fixture(%{user_id: user.id, status: "completed"})
+
+      assert :ok = Sessions.delete_task(task.id, user.id)
+      assert {:error, :not_found} = Sessions.get_task(task.id, user.id)
+    end
+
+    test "deletes a failed task" do
+      user = user_fixture()
+      task = task_fixture(%{user_id: user.id, status: "failed"})
+
+      assert :ok = Sessions.delete_task(task.id, user.id)
+      assert {:error, :not_found} = Sessions.get_task(task.id, user.id)
+    end
+
+    test "returns error for running task" do
+      user = user_fixture()
+      task = task_fixture(%{user_id: user.id, status: "running"})
+
+      assert {:error, :not_deletable} = Sessions.delete_task(task.id, user.id)
+    end
+
+    test "returns error for non-existent task" do
+      user = user_fixture()
+      assert {:error, :not_found} = Sessions.delete_task(Ecto.UUID.generate(), user.id)
+    end
+
+    test "returns error for other user's task" do
+      user = user_fixture()
+      other_user = user_fixture()
+      task = task_fixture(%{user_id: other_user.id, status: "completed"})
+
+      assert {:error, :not_found} = Sessions.delete_task(task.id, user.id)
+    end
+  end
 end

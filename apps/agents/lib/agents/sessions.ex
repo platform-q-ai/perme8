@@ -18,7 +18,15 @@ defmodule Agents.Sessions do
       {Domain.Entities.Task, []}
     ]
 
-  alias Agents.Sessions.Application.UseCases.{CreateTask, CancelTask, GetTask, ListTasks}
+  alias Agents.Sessions.Application.UseCases.{
+    CreateTask,
+    CancelTask,
+    DeleteTask,
+    ResumeTask,
+    GetTask,
+    ListTasks
+  }
+
   alias Agents.Sessions.Infrastructure.TaskRunnerSupervisor
 
   @doc """
@@ -47,6 +55,26 @@ defmodule Agents.Sessions do
   @spec cancel_task(String.t(), String.t(), keyword()) :: :ok | {:error, term()}
   def cancel_task(task_id, user_id, opts \\ []) do
     CancelTask.execute(task_id, user_id, opts)
+  end
+
+  @doc """
+  Deletes a completed, failed, or cancelled task.
+  """
+  @spec delete_task(String.t(), String.t(), keyword()) :: :ok | {:error, term()}
+  def delete_task(task_id, user_id, opts \\ []) do
+    DeleteTask.execute(task_id, user_id, opts)
+  end
+
+  @doc """
+  Resumes a session with a follow-up instruction.
+
+  Creates a new task linked to the parent, reuses the same container
+  and opencode session.
+  """
+  @spec resume_task(String.t(), map(), keyword()) :: {:ok, struct()} | {:error, term()}
+  def resume_task(parent_task_id, attrs, opts \\ []) do
+    opts = inject_task_runner_starter(opts)
+    ResumeTask.execute(parent_task_id, attrs, opts)
   end
 
   @doc """

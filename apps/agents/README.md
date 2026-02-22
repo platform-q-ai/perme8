@@ -58,30 +58,45 @@ A standalone [MCP](https://modelcontextprotocol.io/) endpoint exposes 6 knowledg
 
 ### Sessions
 
-Threaded coding sessions that spawn ephemeral Docker containers running [opencode](https://opencode.ai/), stream real-time SSE events to the browser via PubSub, and clean up on completion, failure, cancellation, or timeout.
+Threaded coding sessions that spawn Docker containers running [opencode](https://opencode.ai/), stream real-time SSE events to the browser via PubSub, and persist containers across multiple instructions until explicitly deleted.
 
 **How it works:**
 1. User submits an instruction via the Sessions LiveView
 2. `CreateTask` persists the task, then starts a `TaskRunner` GenServer via DynamicSupervisor
 3. TaskRunner boots a Docker container (`perme8/opencode`), waits for health, creates an opencode session, and sends the prompt
 4. SSE events stream back through PubSub to the LiveView in real-time
-5. On completion/failure/cancel/timeout, the container is stopped and removed
+5. On completion/failure/cancel/timeout, the container is **stopped** (not removed) — preserving filesystem and opencode state
+6. User can view historical output (cached in DB or lazy-loaded from container)
+7. User can resume the session by sending a follow-up instruction (new task, same container/session)
+8. Container is only **removed** when the user explicitly deletes the session
+
+**Container Lifecycle:**
+
+```
+Task created → container starts → opencode runs → prompt completes
+  → container STOPPED (docker stop) — preserves state for resume
+  → user views output → shows cached DB data (or restarts container to fetch)
+  → user sends follow-up → container restarted → new prompt in same session → stopped
+  → user deletes session → container REMOVED (docker rm -f) + DB row deleted
+```
 
 **Layers:**
 
 ```
-Agents.Sessions.Domain          -- Task entity, TaskPolicy (status transitions, cancellability)
-Agents.Sessions.Application     -- CreateTask, CancelTask, GetTask, ListTasks use cases
+Agents.Sessions.Domain          -- Task entity, TaskPolicy (status transitions, cancellability, deletability)
+Agents.Sessions.Application     -- CreateTask, CancelTask, DeleteTask, ResumeTask, GetTask, ListTasks use cases
 Agents.Sessions.Infrastructure  -- TaskRunner, DockerAdapter, OpencodeClient, TaskRepository
 ```
 
 **Public API** (`Agents.Sessions` facade):
 
 ```elixir
-Agents.Sessions.create_task(attrs)              # Create and start a coding task
-Agents.Sessions.cancel_task(task_id, user_id)   # Cancel a running task
-Agents.Sessions.get_task(task_id, user_id)       # Get a task by ID (ownership-checked)
-Agents.Sessions.list_tasks(user_id)              # List all tasks for a user
+Agents.Sessions.create_task(attrs)                       # Create and start a coding task
+Agents.Sessions.cancel_task(task_id, user_id)            # Cancel a running task
+Agents.Sessions.delete_task(task_id, user_id)            # Delete a session (removes container)
+Agents.Sessions.resume_task(parent_task_id, attrs)       # Send follow-up instruction to existing session
+Agents.Sessions.get_task(task_id, user_id)               # Get a task by ID (ownership-checked)
+Agents.Sessions.list_tasks(user_id)                      # List all tasks for a user
 ```
 
 All functions accept an optional trailing `opts` keyword list for dependency injection.
@@ -91,34 +106,35 @@ All functions accept an optional trailing `opts` keyword list for dependency inj
 | Module | Purpose |
 |--------|---------|
 | `Agents.Sessions` | Public facade for session operations |
-| `Agents.Sessions.Domain.Entities.Task` | Pure value object: instruction, status, container_id, error |
-| `Agents.Sessions.Domain.Policies.TaskPolicy` | Status validation, cancellability, state transitions |
+| `Agents.Sessions.Domain.Entities.Task` | Pure value object: instruction, status, container_id, output, parent_task_id |
+| `Agents.Sessions.Domain.Policies.TaskPolicy` | Status validation, cancellability, deletability, state transitions |
 | `Agents.Sessions.Application.UseCases.CreateTask` | Validates, persists, starts TaskRunner |
 | `Agents.Sessions.Application.UseCases.CancelTask` | Ownership check + cancellation via Registry |
+| `Agents.Sessions.Application.UseCases.DeleteTask` | Ownership + deletability check, removes container, deletes DB row |
+| `Agents.Sessions.Application.UseCases.ResumeTask` | Creates linked follow-up task, restarts container, sends to existing session |
 | `Agents.Sessions.Application.Behaviours.TaskRepositoryBehaviour` | Port for task persistence |
-| `Agents.Sessions.Application.Behaviours.OpencodeClientBehaviour` | Port for opencode HTTP/SSE |
-| `Agents.Sessions.Application.Behaviours.ContainerProviderBehaviour` | Port for container lifecycle |
+| `Agents.Sessions.Application.Behaviours.OpencodeClientBehaviour` | Port for opencode HTTP/SSE + retrieval |
+| `Agents.Sessions.Application.Behaviours.ContainerProviderBehaviour` | Port for container lifecycle (start, stop, remove, restart) |
 | `Agents.Sessions.Application.SessionsConfig` | Configuration: image, max concurrency, timeout |
 | `Agents.Sessions.Infrastructure.TaskRunner` | GenServer managing full task lifecycle |
 | `Agents.Sessions.Infrastructure.TaskRunnerSupervisor` | DynamicSupervisor for TaskRunner processes |
-| `Agents.Sessions.Infrastructure.Adapters.DockerAdapter` | Docker CLI adapter (start, stop, inspect) |
-| `Agents.Sessions.Infrastructure.Clients.OpencodeClient` | HTTP/SSE client for opencode API |
+| `Agents.Sessions.Infrastructure.Adapters.DockerAdapter` | Docker CLI adapter (start, stop, remove, restart, status) |
+| `Agents.Sessions.Infrastructure.Clients.OpencodeClient` | HTTP/SSE client + retrieval APIs (list sessions, get messages) |
 | `Agents.Sessions.Infrastructure.Repositories.TaskRepository` | Ecto-backed task persistence |
 | `Agents.Sessions.Infrastructure.Schemas.TaskSchema` | Ecto schema for `sessions_tasks` table |
 | `Agents.Sessions.Infrastructure.Queries.TaskQueries` | Composable Ecto query functions |
 
 **Container Security:**
 - Ports bound to `127.0.0.1` only (no external access)
-- `--cap-drop=ALL` (no Linux capabilities)
 - `--memory=512m`, `--cpus=1` (resource limits)
 - Non-root `appuser` inside the container
-- Auto-cleanup on task completion/failure
+- Stopped on task completion, removed only on explicit delete
 
-**LiveView:** `JargaWeb.AppLive.Sessions.Index` -- instruction form, real-time event log, cancel button, task history with status badges.
+**LiveView:** `JargaWeb.AppLive.Sessions.Index` -- instruction form, structured session panel (title, model, tokens, output), cancel/delete buttons, task history with status badges, resume capability.
 
-**Migration:** `sessions_tasks` table in `jarga` repo with indexes on `user_id`, `status`, and composite `[:user_id, :status]`.
+**Migration:** `sessions_tasks` table in `jarga` repo with indexes on `user_id`, `status`, and composite `[:user_id, :status]`. Includes `output` (cached text), `parent_task_id` (resume chains), and `session_id` (opencode session reference).
 
-**Docker image:** `infra/opencode/Dockerfile` -- based on `oven/bun`, installs `opencode-ai@latest`, runs as non-root `appuser`, exposes port 4096.
+**Docker image:** `infra/opencode/Dockerfile` -- based on `hexpm/elixir` Alpine, installs opencode binary, runs as non-root `appuser`, exposes port 4096. Entrypoint generates GitHub App tokens, configures git as `perme8[bot]`, clones repos, and starts `opencode serve`.
 
 ## Domain Events
 

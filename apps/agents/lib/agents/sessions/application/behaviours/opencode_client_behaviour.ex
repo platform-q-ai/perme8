@@ -76,4 +76,31 @@ defmodule Agents.Sessions.Application.Behaviours.OpencodeClientBehaviour do
               response :: String.t(),
               opts :: keyword()
             ) :: :ok | {:error, term()}
+
+  # ---- Retrieval APIs (for historical output and resume) ----
+
+  @doc """
+  List all sessions on the opencode server.
+
+  Hits `GET /session` and returns a list of session objects.
+  """
+  @callback list_sessions(base_url :: String.t(), opts :: keyword()) ::
+              {:ok, [map()]} | {:error, term()}
+
+  @doc """
+  Get a specific session by ID.
+
+  Hits `GET /session/:id` and returns session details.
+  """
+  @callback get_session(base_url :: String.t(), session_id :: String.t(), opts :: keyword()) ::
+              {:ok, map()} | {:error, term()}
+
+  @doc """
+  Get all messages for a session.
+
+  Hits `GET /session/:id/message` and returns message list with parts.
+  Each message has `info` (role, tokens, etc.) and `parts` (text, tool-use).
+  """
+  @callback get_messages(base_url :: String.t(), session_id :: String.t(), opts :: keyword()) ::
+              {:ok, [map()]} | {:error, term()}
 end

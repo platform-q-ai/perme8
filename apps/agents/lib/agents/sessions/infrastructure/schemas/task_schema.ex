@@ -22,6 +22,8 @@ defmodule Agents.Sessions.Infrastructure.Schemas.TaskSchema do
           session_id: String.t() | nil,
           user_id: Ecto.UUID.t(),
           error: String.t() | nil,
+          output: String.t() | nil,
+          parent_task_id: Ecto.UUID.t() | nil,
           started_at: DateTime.t() | nil,
           completed_at: DateTime.t() | nil,
           inserted_at: DateTime.t(),
@@ -41,6 +43,8 @@ defmodule Agents.Sessions.Infrastructure.Schemas.TaskSchema do
     field(:session_id, :string)
     field(:user_id, Ecto.UUID)
     field(:error, :string)
+    field(:output, :string)
+    field(:parent_task_id, Ecto.UUID)
     field(:started_at, :utc_datetime)
     field(:completed_at, :utc_datetime)
 
@@ -68,12 +72,15 @@ defmodule Agents.Sessions.Infrastructure.Schemas.TaskSchema do
       :container_port,
       :session_id,
       :error,
+      :output,
+      :parent_task_id,
       :started_at,
       :completed_at
     ])
     |> validate_required([:instruction, :user_id])
     |> validate_inclusion(:status, @valid_statuses)
     |> foreign_key_constraint(:user_id)
+    |> foreign_key_constraint(:parent_task_id)
   end
 
   @doc """
@@ -89,6 +96,7 @@ defmodule Agents.Sessions.Infrastructure.Schemas.TaskSchema do
       :container_port,
       :session_id,
       :error,
+      :output,
       :started_at,
       :completed_at
     ])

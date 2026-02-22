@@ -32,6 +32,20 @@ defmodule Agents.Sessions.Domain.Policies.TaskPolicyTest do
     end
   end
 
+  describe "can_delete?/1" do
+    test "returns true for terminal statuses" do
+      assert TaskPolicy.can_delete?("completed")
+      assert TaskPolicy.can_delete?("failed")
+      assert TaskPolicy.can_delete?("cancelled")
+    end
+
+    test "returns false for active statuses" do
+      refute TaskPolicy.can_delete?("pending")
+      refute TaskPolicy.can_delete?("starting")
+      refute TaskPolicy.can_delete?("running")
+    end
+  end
+
   describe "valid_status_transition?/2" do
     test "pending can transition to starting" do
       assert TaskPolicy.valid_status_transition?("pending", "starting")
