@@ -9,6 +9,7 @@ export default defineConfig({
       port: 4012,
       workingDir: '../../../',
       env: { MIX_ENV: 'test' },
+      setup: 'cd apps/perme8_dashboard && mix assets.build',
       healthCheckPath: '/',
       startTimeout: 30000,
     },
