@@ -16,7 +16,7 @@ Serves as the central hub for developer tooling. Currently mounts the Exo Dashbo
 | Environment | Port |
 |-------------|------|
 | Dev         | 4012 |
-| Test        | 4013 |
+| Test        | 4012 |
 
 Dev-only application -- not included in production releases.
 
