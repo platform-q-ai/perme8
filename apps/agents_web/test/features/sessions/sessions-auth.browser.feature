@@ -32,9 +32,9 @@ Feature: Cross-App Authentication for Sessions
     And I wait for the URL to contain "/users/log-in"
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
-    And I click the "Log in and stay logged in" button and wait for navigation
+    And I click the "Log in and stay logged in" button
     And I wait for the URL to contain "/sessions"
-    And I wait for network idle
+    And I wait for the page to load
     Then the URL should contain "/sessions"
     And I should see "Sessions"
     And I should see "Run coding tasks in containers"
