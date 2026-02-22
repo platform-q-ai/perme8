@@ -32,6 +32,9 @@ config :identity, Identity.Repo,
   pool_size: 20,
   ownership_timeout: :infinity
 
+# Identity URL for login redirects (Identity runs on port 4003 in test)
+config :agents_web, :identity_url, "http://localhost:4003"
+
 config :agents_web, AgentsWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4012],
   secret_key_base: "agents_web_test_secret_key_base_at_least_64_bytes_long_for_security"

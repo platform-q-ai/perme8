@@ -75,6 +75,9 @@ config :agents_api, AgentsApi.Endpoint,
   watchers: []
 
 # AgentsWeb dev configuration (Sessions UI on port 4010)
+# Identity URL for login redirects (Identity runs on port 4001 in dev)
+config :agents_web, :identity_url, "http://localhost:4001"
+
 config :agents_web, AgentsWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4010],
   check_origin: false,
