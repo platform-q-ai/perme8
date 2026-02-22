@@ -72,6 +72,7 @@ defmodule AgentsWeb.UserAuth do
   end
 
   defp identity_login_url do
-    IdentityWeb.Endpoint.url() <> "/users/log-in"
+    identity_url = Application.get_env(:agents_web, :identity_url) || IdentityWeb.Endpoint.url()
+    identity_url <> "/users/log-in"
   end
 end
