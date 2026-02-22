@@ -7,6 +7,8 @@ defmodule Perme8DashboardWeb.CoreComponents do
   use Phoenix.Component
   use Gettext, backend: Perme8DashboardWeb.Gettext
 
+  alias Phoenix.LiveView.JS
+
   @doc """
   Renders flash notices.
 
@@ -46,7 +48,12 @@ defmodule Perme8DashboardWeb.CoreComponents do
           <p>{msg}</p>
         </div>
         <div class="flex-1" />
-        <button type="button" class="group self-start cursor-pointer" aria-label={gettext("close")}>
+        <button
+          type="button"
+          class="group self-start cursor-pointer"
+          aria-label={gettext("close")}
+          phx-click={JS.push("lv:clear-flash", value: %{key: @kind}) |> JS.hide(to: "##{@id}")}
+        >
           <.icon name="hero-x-mark" class="size-5 opacity-40 group-hover:opacity-70" />
         </button>
       </div>
