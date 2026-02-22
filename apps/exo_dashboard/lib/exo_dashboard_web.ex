@@ -11,7 +11,7 @@ defmodule ExoDashboardWeb do
 
   use Boundary,
     deps: [ExoDashboard.Features, ExoDashboard.TestRuns],
-    exports: [Endpoint, Telemetry]
+    exports: [Endpoint, Telemetry, DashboardLive, FeatureDetailLive]
 
   def static_paths, do: ~w(assets fonts images favicon.ico robots.txt)
 
