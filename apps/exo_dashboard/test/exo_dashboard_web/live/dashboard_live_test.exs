@@ -135,6 +135,22 @@ defmodule ExoDashboardWeb.DashboardLiveTest do
     end
   end
 
+  describe "layout migration" do
+    setup do
+      mock_discover_module()
+      :ok
+    end
+
+    test "renders without drawer layout chrome", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      # Drawer should not exist after migration
+      refute html =~ "drawer"
+      # Content should still render
+      assert html =~ "Exo Dashboard"
+    end
+  end
+
   describe "refresh event" do
     setup do
       mock_discover_module()

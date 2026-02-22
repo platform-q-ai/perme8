@@ -15,4 +15,13 @@ defmodule Perme8DashboardWeb.Router do
 
     get("/health", HealthController, :index)
   end
+
+  scope "/" do
+    pipe_through(:browser)
+
+    live_session :dashboard, layout: {Perme8DashboardWeb.Layouts, :app} do
+      live("/", ExoDashboardWeb.DashboardLive, :index)
+      live("/features/*uri", ExoDashboardWeb.FeatureDetailLive, :show)
+    end
+  end
 end

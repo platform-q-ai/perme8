@@ -91,7 +91,7 @@ defmodule ExoDashboardWeb.DashboardLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <div>
+    <div data-feature-tree>
       <.header>
         Exo Dashboard
         <:subtitle>BDD Feature File Explorer</:subtitle>

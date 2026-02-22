@@ -106,7 +106,7 @@ Then customise the generated files:
 
 ---
 
-## Phase 2: Assets and Styling (phoenix-tdd)
+## Phase 2: Assets and Styling (phoenix-tdd) ✓
 
 Set up the CSS/JS asset pipeline for perme8_dashboard, replicating the DaisyUI dark theme from exo_dashboard.
 
@@ -124,10 +124,10 @@ Set up the CSS/JS asset pipeline for perme8_dashboard, replicating the DaisyUI d
 **Files to modify:**
 - `config/config.exs` — add `perme8_dashboard` esbuild and tailwind profiles
 
-- [ ] ⏸ **RED**: Write test `apps/perme8_dashboard/test/perme8_dashboard_web/assets_test.exs`
+- [x] ✓ **RED**: Write test `apps/perme8_dashboard/test/perme8_dashboard_web/assets_test.exs`
   - Tests: CSS file exists at expected path, JS file exists, assets compile without error
-- [ ] ⏸ **GREEN**: Create all asset files, configure esbuild/tailwind profiles
-- [ ] ⏸ **REFACTOR**: Deduplicate vendor files if possible (or document why copies are needed)
+- [x] ✓ **GREEN**: Create all asset files, configure esbuild/tailwind profiles
+- [x] ✓ **REFACTOR**: Deduplicate vendor files if possible (or document why copies are needed)
 
 ### Step 2.2: Root Layout with Dark Theme
 
@@ -137,19 +137,19 @@ Must satisfy BDD scenarios:
 - `"html" should have attribute "data-theme" with value "dark"`
 - `"body" should have class "bg-base-100"`
 
-- [ ] ⏸ **RED**: Write test in `apps/perme8_dashboard/test/perme8_dashboard_web/layouts_test.exs`
+- [x] ✓ **RED**: Write test in `apps/perme8_dashboard/test/perme8_dashboard_web/layouts_test.exs`
   - Tests: Root layout renders `data-theme="dark"` on `<html>`, `bg-base-100` on `<body>`, includes CSRF token, live title, asset links
-- [ ] ⏸ **GREEN**: Implement root layout template (similar to exo_dashboard's but with "Perme8 Dashboard" title)
-- [ ] ⏸ **REFACTOR**: Clean up
+- [x] ✓ **GREEN**: Implement root layout template (similar to exo_dashboard's but with "Perme8 Dashboard" title)
+- [x] ✓ **REFACTOR**: Clean up
 
 ### Phase 2 Validation
-- [ ] ⏸ Assets compile: `tailwind perme8_dashboard` and `esbuild perme8_dashboard` succeed
-- [ ] ⏸ Layout tests pass
-- [ ] ⏸ Dark theme renders correctly
+- [x] ✓ Assets compile: `tailwind perme8_dashboard` and `esbuild perme8_dashboard` succeed
+- [x] ✓ Layout tests pass
+- [x] ✓ Dark theme renders correctly
 
 ---
 
-## Phase 3: Core Components and App Layout (phoenix-tdd)
+## Phase 3: Core Components and App Layout (phoenix-tdd) ✓
 
 ### Step 3.1: Core Components
 
@@ -157,10 +157,10 @@ Must satisfy BDD scenarios:
 
 Provide minimal core components (flash, icon, button) that match the DaisyUI dark theme. These are needed by the app layout for flash messages and the tab navigation.
 
-- [ ] ⏸ **RED**: Write test `apps/perme8_dashboard/test/perme8_dashboard_web/components/core_components_test.exs`
+- [x] ✓ **RED**: Write test `apps/perme8_dashboard/test/perme8_dashboard_web/components/core_components_test.exs`
   - Tests: `flash/1` renders correctly, `icon/1` renders hero icon span, `button/1` renders with DaisyUI classes
-- [ ] ⏸ **GREEN**: Implement core components (copy structure from exo_dashboard's CoreComponents, adapted for perme8_dashboard)
-- [ ] ⏸ **REFACTOR**: Remove any unused components
+- [x] ✓ **GREEN**: Implement core components (copy structure from exo_dashboard's CoreComponents, adapted for perme8_dashboard)
+- [x] ✓ **REFACTOR**: Remove any unused components
 
 ### Step 3.2: Tab Navigation Component
 
@@ -173,20 +173,20 @@ Must satisfy BDD scenarios:
 - `"[data-tab='features']" should have class "tab-active"`
 - `"[data-tab]" should exist`
 
-- [ ] ⏸ **RED**: Write test `apps/perme8_dashboard/test/perme8_dashboard_web/components/tab_components_test.exs`
+- [x] ✓ **RED**: Write test `apps/perme8_dashboard/test/perme8_dashboard_web/components/tab_components_test.exs`
   - Tests:
     - Renders tab bar with `data-tab` attributes
     - Active tab has `tab-active` class
     - Inactive tabs do not have `tab-active` class
     - Tabs render as navigation links with correct paths
     - Features tab links to root `/`
-- [ ] ⏸ **GREEN**: Implement `tab_bar/1` component accepting tabs list and active_tab assign
+- [x] ✓ **GREEN**: Implement `tab_bar/1` component accepting tabs list and active_tab assign
   ```elixir
   attr :tabs, :list, required: true  # [{key, label, path}]
   attr :active_tab, :atom, required: true
   def tab_bar(assigns)
   ```
-- [ ] ⏸ **REFACTOR**: Ensure component is reusable and extensible
+- [x] ✓ **REFACTOR**: Ensure component is reusable and extensible
 
 ### Step 3.3: App Layout with Tabbed Navigation
 
@@ -201,24 +201,24 @@ Must satisfy BDD scenarios:
 - `I should see "Perme8 Dashboard"`
 - Tab navigation is visible on landing
 
-- [ ] ⏸ **RED**: Write test `apps/perme8_dashboard/test/perme8_dashboard_web/layouts/app_layout_test.exs`
+- [x] ✓ **RED**: Write test `apps/perme8_dashboard/test/perme8_dashboard_web/layouts/app_layout_test.exs`
   - Tests:
     - Layout renders "Perme8 Dashboard" branding
     - Layout includes tab navigation via `tab_bar` component
     - Layout renders `@inner_content`
     - Flash group is rendered
     - Drawer sidebar pattern with DaisyUI classes
-- [ ] ⏸ **GREEN**: Implement app layout template with drawer sidebar and tab navigation
-- [ ] ⏸ **REFACTOR**: Keep thin, delegate to components
+- [x] ✓ **GREEN**: Implement app layout template with drawer sidebar and tab navigation
+- [x] ✓ **REFACTOR**: Keep thin, delegate to components
 
 ### Phase 3 Validation
-- [ ] ⏸ All component tests pass
-- [ ] ⏸ Layout renders correctly with tab navigation
-- [ ] ⏸ No boundary violations
+- [x] ✓ All component tests pass
+- [x] ✓ Layout renders correctly with tab navigation
+- [x] ✓ No boundary violations
 
 ---
 
-## Phase 4: Router and LiveView Integration (phoenix-tdd)
+## Phase 4: Router and LiveView Integration (phoenix-tdd) ✓
 
 ### Step 4.1: Router with Exo LiveView Mounts
 
@@ -236,13 +236,13 @@ Configure the router to:
 
 **Resolution:** Since the LiveViews are declared with `use ExoDashboardWeb, :live_view`, their verified routes point to `ExoDashboardWeb.Endpoint`. When rendered inside perme8_dashboard, navigation links should be relative to the current connection, which is on the perme8_dashboard endpoint. The `~p` sigil generates static paths at compile time that are verified against `ExoDashboardWeb.Router`. Since both routers define the same paths (`/` and `/features/*uri`), the generated paths will work correctly on either endpoint.
 
-- [ ] ⏸ **RED**: Write test `apps/perme8_dashboard/test/perme8_dashboard_web/router_test.exs`
+- [x] **RED**: Write test `apps/perme8_dashboard/test/perme8_dashboard_web/router_test.exs`
   - Tests:
     - `GET /` returns 200 and renders DashboardLive content
     - `GET /features/some/path.feature` returns 200 and renders FeatureDetailLive content
     - Layout is from Perme8DashboardWeb (not ExoDashboardWeb)
     - Tab navigation is visible on all routes
-- [ ] ⏸ **GREEN**: Implement router with browser pipeline and live_session
+- [x] **GREEN**: Implement router with browser pipeline and live_session
   ```elixir
   pipeline :browser do
     plug :accepts, ["html"]
@@ -263,7 +263,7 @@ Configure the router to:
   end
   ```
   Note: We use the fully-qualified module name for the exo LiveViews since they live in a different app. The `scope` alias `Perme8DashboardWeb` won't affect them because they're specified with their full module path.
-- [ ] ⏸ **REFACTOR**: Verify route helpers work correctly
+- [x] **REFACTOR**: Verify route helpers work correctly
 
 ### Step 4.2: Perme8DashboardWeb Module
 
@@ -271,16 +271,16 @@ Configure the router to:
 
 Configure the web module with proper verified routes, html helpers, and imports. The key consideration is that this module defines how `use Perme8DashboardWeb, :live_view` etc. work, but the exo LiveViews use `use ExoDashboardWeb, :live_view`. The perme8_dashboard_web module is primarily for its own layouts and components.
 
-- [ ] ⏸ **RED**: Write test `apps/perme8_dashboard/test/perme8_dashboard_web/web_module_test.exs`
+- [x] **RED**: Write test `apps/perme8_dashboard/test/perme8_dashboard_web/web_module_test.exs`
   - Tests: Module defines `:router`, `:controller`, `:live_view`, `:html` functions
-- [ ] ⏸ **GREEN**: Implement `Perme8DashboardWeb` module following exo_dashboard pattern
-- [ ] ⏸ **REFACTOR**: Ensure imports/aliases are minimal and correct
+- [x] **GREEN**: Implement `Perme8DashboardWeb` module following exo_dashboard pattern
+- [x] **REFACTOR**: Ensure imports/aliases are minimal and correct
 
 ### Step 4.3: DashboardLive Integration Test
 
 Test that exo's DashboardLive renders correctly inside perme8_dashboard's layout.
 
-- [ ] ⏸ **RED**: Write test `apps/perme8_dashboard/test/perme8_dashboard_web/live/dashboard_live_test.exs`
+- [x] **RED**: Write test `apps/perme8_dashboard/test/perme8_dashboard_web/live/dashboard_live_test.exs`
   - Uses `Perme8DashboardWeb.ConnCase` with `@endpoint Perme8DashboardWeb.Endpoint`
   - Tests (mapping to BDD scenarios):
     - Dashboard landing page shows "Perme8 Dashboard" in layout
@@ -295,19 +295,19 @@ Test that exo's DashboardLive renders correctly inside perme8_dashboard's layout
     - Feature detail shows scenarios with "Given"/"Then" steps
     - Back navigation returns to feature list
     - Tab navigation supports additional tabs (multiple `[data-tab]` elements exist)
-- [ ] ⏸ **GREEN**: Ensure router, layout, and LiveView integration work end-to-end
-- [ ] ⏸ **REFACTOR**: DRY up test setup (mock catalog injection)
+- [x] **GREEN**: Ensure router, layout, and LiveView integration work end-to-end
+- [x] **REFACTOR**: DRY up test setup (mock catalog injection)
 
 ### Phase 4 Validation
-- [ ] ⏸ All router tests pass
-- [ ] ⏸ All LiveView integration tests pass
-- [ ] ⏸ Exo LiveViews render correctly inside perme8_dashboard layout
-- [ ] ⏸ Navigation between feature list and detail works
-- [ ] ⏸ Filter buttons work correctly
+- [x] All router tests pass
+- [x] All LiveView integration tests pass
+- [x] Exo LiveViews render correctly inside perme8_dashboard layout
+- [x] Navigation between feature list and detail works
+- [x] Filter buttons work correctly
 
 ---
 
-## Phase 5: Exo Dashboard Layout Migration (phoenix-tdd)
+## Phase 5: Exo Dashboard Layout Migration (phoenix-tdd) ✓
 
 ### Step 5.1: Strip Exo Dashboard App Layout
 
@@ -320,12 +320,12 @@ Must satisfy BDD scenario in `apps/exo_dashboard/test/features/dashboard.browser
   - `I should see "feature"`
   - `".drawer" should not exist`
 
-- [ ] ⏸ **RED**: Write/update test `apps/exo_dashboard/test/exo_dashboard_web/live/dashboard_live_test.exs`
+- [x] **RED**: Write/update test `apps/exo_dashboard/test/exo_dashboard_web/live/dashboard_live_test.exs`
   - Add new test: "renders without drawer layout chrome"
     - Assert `.drawer` CSS class is NOT present in rendered HTML
     - Assert content still renders (features visible)
     - Assert "Exo Dashboard" header text still appears (from DashboardLive's render, not layout)
-- [ ] ⏸ **GREEN**: Replace `app.html.heex` content:
+- [x] **GREEN**: Replace `app.html.heex` content:
   ```heex
   <main class="flex-1 flex flex-col p-4 lg:p-8 overflow-y-auto">
     <div class="w-full max-w-5xl mx-auto">
@@ -335,21 +335,21 @@ Must satisfy BDD scenario in `apps/exo_dashboard/test/features/dashboard.browser
   <.flash_group flash={@flash} />
   ```
   This removes the drawer, sidebar, and topbar while keeping the content wrapper and flash messages.
-- [ ] ⏸ **REFACTOR**: Verify all existing exo_dashboard tests still pass
+- [x] **REFACTOR**: Verify all existing exo_dashboard tests still pass
 
 ### Step 5.2: Verify Exo Dashboard Standalone Still Works
 
 The exo_dashboard should still be usable standalone (port 4010) with its root layout providing the HTML skeleton. It just won't have the sidebar/topbar chrome.
 
-- [ ] ⏸ **RED**: Write test `apps/exo_dashboard/test/exo_dashboard_web/live/standalone_test.exs`
+- [x] **RED**: Write test `apps/exo_dashboard/test/exo_dashboard_web/live/standalone_test.exs`
   - Tests:
     - Dashboard loads on exo endpoint (port 4011 in test)
     - Content renders without drawer
     - Feature list is functional
     - Navigation to feature detail works
     - Back navigation works
-- [ ] ⏸ **GREEN**: Ensure exo_dashboard root layout + minimal app layout provides a usable standalone experience
-- [ ] ⏸ **REFACTOR**: Clean up any layout references in exo_dashboard
+- [x] **GREEN**: Ensure exo_dashboard root layout + minimal app layout provides a usable standalone experience
+- [x] **REFACTOR**: Clean up any layout references in exo_dashboard
 
 ### Step 5.3: Add Data Attributes for BDD Scenarios
 
@@ -363,20 +363,20 @@ Several BDD scenarios reference data attributes that don't currently exist in th
 
 Also, the perme8_dashboard app layout should wrap the inner content in a container that has the `data-feature-tree` visible when on the features tab.
 
-- [ ] ⏸ **RED**: Write test assertions in `apps/perme8_dashboard/test/perme8_dashboard_web/live/dashboard_live_test.exs`
+- [x] **RED**: Write test assertions in `apps/perme8_dashboard/test/perme8_dashboard_web/live/dashboard_live_test.exs`
   - Assert `[data-feature-tree]` exists when feature list is rendered
   - Assert `[data-feature-detail]` exists when feature detail is rendered
-- [ ] ⏸ **GREEN**: Add data attributes to exo LiveView templates:
+- [x] **GREEN**: Add data attributes to exo LiveView templates:
   - DashboardLive: wrap feature tree output in `<div data-feature-tree>...</div>`
   - FeatureDetailLive: add `data-feature-detail` to the `#feature-detail` div
-- [ ] ⏸ **REFACTOR**: Ensure attributes don't break existing exo_dashboard tests
+- [x] **REFACTOR**: Ensure attributes don't break existing exo_dashboard tests
 
 ### Phase 5 Validation
-- [ ] ⏸ Exo dashboard layout chrome is removed (no `.drawer`)
-- [ ] ⏸ All existing exo_dashboard tests pass
-- [ ] ⏸ Exo standalone mode still functional
-- [ ] ⏸ Data attributes added for BDD scenario selectors
-- [ ] ⏸ All perme8_dashboard integration tests still pass
+- [x] Exo dashboard layout chrome is removed (no `.drawer`)
+- [x] All existing exo_dashboard tests pass
+- [x] Exo standalone mode still functional
+- [x] Data attributes added for BDD scenario selectors
+- [x] All perme8_dashboard integration tests still pass
 
 ---
 

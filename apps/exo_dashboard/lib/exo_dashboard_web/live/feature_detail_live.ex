@@ -69,7 +69,13 @@ defmodule ExoDashboardWeb.FeatureDetailLive do
         <p>Loading feature...</p>
       </div>
 
-      <div :if={!@loading && @feature} id="feature-detail" phx-hook="ScrollToHash" class="mt-6">
+      <div
+        :if={!@loading && @feature}
+        id="feature-detail"
+        data-feature-detail
+        phx-hook="ScrollToHash"
+        class="mt-6"
+      >
         <.header>
           {@feature.name}
           <:subtitle>
