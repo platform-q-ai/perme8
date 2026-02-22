@@ -308,7 +308,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
       {:permission, session_id, permission_id, tool_name, new_state} ->
         # Auto-approve tool permission requests inside the sandboxed container.
         # The container runs with --cap-drop=ALL, memory/cpu limits, and non-root user.
-        # TODO: Implement a tool allowlist for additional defense-in-depth.
+        # Future improvement: add a tool allowlist for additional defense-in-depth.
         Logger.info(
           "TaskRunner: auto-approving tool '#{tool_name}' for task #{new_state.task_id}"
         )
