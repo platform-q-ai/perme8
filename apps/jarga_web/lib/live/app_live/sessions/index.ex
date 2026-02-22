@@ -31,6 +31,7 @@ defmodule JargaWeb.AppLive.Sessions.Index do
      |> assign(:tasks, tasks)
      |> assign(:current_task, current_task)
      |> assign(:events, [])
+     |> assign_session_state()
      |> assign(:form, to_form(%{"instruction" => ""}))}
   end
 
@@ -44,13 +45,20 @@ defmodule JargaWeb.AppLive.Sessions.Index do
     instruction = String.trim(instruction)
 
     if instruction == "" do
-      {:noreply,
-       socket
-       |> put_flash(:error, "Instruction is required")}
+      {:noreply, put_flash(socket, :error, "Instruction is required")}
     else
       user = socket.assigns.current_scope.user
+      current_task = socket.assigns.current_task
 
-      case Sessions.create_task(%{instruction: instruction, user_id: user.id}) do
+      # If viewing a completed task with a container, resume it; otherwise create new
+      result =
+        if resumable_task?(current_task) do
+          Sessions.resume_task(current_task.id, %{instruction: instruction, user_id: user.id})
+        else
+          Sessions.create_task(%{instruction: instruction, user_id: user.id})
+        end
+
+      case result do
         {:ok, task} ->
           Phoenix.PubSub.subscribe(Jarga.PubSub, "task:#{task.id}")
 
@@ -58,6 +66,7 @@ defmodule JargaWeb.AppLive.Sessions.Index do
            socket
            |> assign(:current_task, task)
            |> assign(:events, [])
+           |> assign_session_state()
            |> assign(:form, to_form(%{"instruction" => ""}))
            |> reload_tasks()}
 
@@ -67,7 +76,13 @@ defmodule JargaWeb.AppLive.Sessions.Index do
         {:error, :instruction_required} ->
           {:noreply, put_flash(socket, :error, "Instruction is required")}
 
-        {:error, _changeset} ->
+        {:error, :not_resumable} ->
+          {:noreply, put_flash(socket, :error, "This session cannot be resumed")}
+
+        {:error, :no_container} ->
+          {:noreply, put_flash(socket, :error, "No container available for resume")}
+
+        {:error, _} ->
           {:noreply, put_flash(socket, :error, "Failed to create task")}
       end
     end
@@ -105,6 +120,34 @@ defmodule JargaWeb.AppLive.Sessions.Index do
   end
 
   @impl true
+  def handle_event("delete_task", %{"task-id" => task_id}, socket) do
+    user = socket.assigns.current_scope.user
+
+    case Sessions.delete_task(task_id, user.id) do
+      :ok ->
+        # Clear current_task if it was the deleted one
+        current_task = socket.assigns.current_task
+
+        socket =
+          if current_task && current_task.id == task_id do
+            socket
+            |> assign(:current_task, nil)
+            |> assign_session_state()
+          else
+            socket
+          end
+
+        {:noreply,
+         socket
+         |> reload_tasks()
+         |> put_flash(:info, "Session deleted")}
+
+      {:error, _reason} ->
+        {:noreply, put_flash(socket, :error, "Failed to delete session")}
+    end
+  end
+
+  @impl true
   def handle_event("view_task", %{"task-id" => task_id}, socket) do
     user = socket.assigns.current_scope.user
 
@@ -117,7 +160,9 @@ defmodule JargaWeb.AppLive.Sessions.Index do
         {:noreply,
          socket
          |> assign(:current_task, task)
-         |> assign(:events, [])}
+         |> assign(:events, [])
+         |> assign_session_state()
+         |> maybe_load_cached_output(task)}
 
       {:error, :not_found} ->
         {:noreply, put_flash(socket, :error, "Task not found")}
@@ -126,11 +171,7 @@ defmodule JargaWeb.AppLive.Sessions.Index do
 
   @impl true
   def handle_info({:task_event, _task_id, event}, socket) do
-    events = socket.assigns.events ++ [event]
-
-    {:noreply,
-     socket
-     |> assign(:events, events)}
+    {:noreply, process_event(event, socket)}
   end
 
   @impl true
@@ -163,38 +204,124 @@ defmodule JargaWeb.AppLive.Sessions.Index do
   # Chat panel streaming messages
   handle_chat_messages()
 
+  # ---- Session state management ----
+
+  defp assign_session_state(socket) do
+    socket
+    |> assign(:session_title, nil)
+    |> assign(:session_model, nil)
+    |> assign(:session_tokens, nil)
+    |> assign(:session_cost, nil)
+    |> assign(:session_summary, nil)
+    |> assign(:output_parts, [])
+  end
+
+  # ---- Event processing ----
+
+  # Session title and file summary
+  defp process_event(%{"type" => "session.updated", "properties" => %{"info" => info}}, socket) do
+    socket
+    |> maybe_assign(:session_title, info["title"])
+    |> maybe_assign(:session_summary, info["summary"])
+  end
+
+  # Assistant message: extract model, tokens, cost
+  defp process_event(
+         %{
+           "type" => "message.updated",
+           "properties" => %{"info" => %{"role" => "assistant"} = info}
+         },
+         socket
+       ) do
+    socket
+    |> maybe_assign(:session_model, format_model(info))
+    |> maybe_assign(:session_tokens, info["tokens"])
+    |> maybe_assign(:session_cost, info["cost"])
+  end
+
+  # Text output streaming
+  defp process_event(
+         %{
+           "type" => "message.part.updated",
+           "properties" => %{"part" => %{"type" => "text", "text" => text}}
+         },
+         socket
+       )
+       when text != "" do
+    part_id = get_in(socket, [Access.key(:assigns), Access.key(:events)]) |> length()
+    parts = update_output_part(socket.assigns.output_parts, part_id, text)
+    assign(socket, :output_parts, parts)
+  end
+
+  # Tool use start
+  defp process_event(
+         %{
+           "type" => "message.part.updated",
+           "properties" => %{"part" => %{"type" => "tool-start"} = part}
+         },
+         socket
+       ) do
+    tool_name = part["name"] || "tool"
+    parts = socket.assigns.output_parts ++ [{:tool, tool_name, :running}]
+    assign(socket, :output_parts, parts)
+  end
+
+  # Tool use finish
+  defp process_event(
+         %{
+           "type" => "message.part.updated",
+           "properties" => %{"part" => %{"type" => "tool-result"} = part}
+         },
+         socket
+       ) do
+    tool_name = part["name"] || "tool"
+    parts = socket.assigns.output_parts ++ [{:tool, tool_name, :done}]
+    assign(socket, :output_parts, parts)
+  end
+
+  # All other events — ignore
+  defp process_event(_event, socket), do: socket
+
+  defp maybe_assign(socket, _key, nil), do: socket
+  defp maybe_assign(socket, key, value), do: assign(socket, key, value)
+
+  defp update_output_part(parts, _id, text) do
+    # Replace last text part or append new one
+    case List.last(parts) do
+      {:text, _old} -> List.replace_at(parts, -1, {:text, text})
+      _ -> parts ++ [{:text, text}]
+    end
+  end
+
+  defp format_model(%{"modelID" => model_id}), do: model_id
+  defp format_model(_), do: nil
+
+  # ---- Cached output loading ----
+
+  defp maybe_load_cached_output(socket, %{output: output})
+       when is_binary(output) and output != "" do
+    assign(socket, :output_parts, [{:text, output}])
+  end
+
+  defp maybe_load_cached_output(socket, _task), do: socket
+
+  # ---- Helpers ----
+
   defp reload_tasks(socket) do
     user = socket.assigns.current_scope.user
     tasks = Sessions.list_tasks(user.id)
     assign(socket, :tasks, tasks)
   end
 
-  defp format_event_component(%{event: %{"type" => type} = event} = assigns) do
-    content =
-      get_in(event, ["data", "content"]) ||
-        get_in(event, ["properties", "content"]) ||
-        inspect(event["properties"] || event["data"])
-
-    assigns = assign(assigns, :type, type)
-    assigns = assign(assigns, :content, content)
-
-    ~H"""
-    <span class="text-base-content/50 font-mono text-xs">[{@type}]</span> {@content}
-    """
-  end
-
-  defp format_event_component(assigns) do
-    assigns = assign(assigns, :raw, inspect(assigns.event))
-
-    ~H"""
-    <span class="font-mono text-xs">{@raw}</span>
-    """
-  end
-
   defp format_error(error) when is_binary(error), do: error
   defp format_error(%{"message" => msg}), do: msg
   defp format_error(%{"data" => %{"message" => msg}}), do: msg
   defp format_error(error), do: inspect(error)
+
+  defp format_token_count(nil), do: "-"
+  defp format_token_count(n) when is_number(n) and n >= 1000, do: "#{Float.round(n / 1000, 1)}k"
+  defp format_token_count(n) when is_number(n), do: "#{n}"
+  defp format_token_count(_), do: "-"
 
   defp truncate_instruction(instruction, max_length \\ 80) do
     if String.length(instruction) > max_length do
@@ -214,6 +341,16 @@ defmodule JargaWeb.AppLive.Sessions.Index do
 
   defp task_running?(nil), do: false
   defp task_running?(task), do: active_task?(task)
+
+  defp task_deletable?(%{status: status}), do: status in ["completed", "failed", "cancelled"]
+  defp task_deletable?(_), do: false
+
+  defp resumable_task?(%{status: status, container_id: cid, session_id: sid})
+       when status in ["completed", "failed", "cancelled"] and
+              not is_nil(cid) and not is_nil(sid),
+       do: true
+
+  defp resumable_task?(_), do: false
 
   @impl true
   def render(assigns) do
@@ -238,7 +375,11 @@ defmodule JargaWeb.AppLive.Sessions.Index do
                   id="session-instruction"
                   rows="3"
                   class="textarea textarea-bordered w-full"
-                  placeholder="Describe the coding task..."
+                  placeholder={
+                    if resumable_task?(@current_task),
+                      do: "Follow-up instruction...",
+                      else: "Describe the coding task..."
+                  }
                   disabled={task_running?(@current_task)}
                 >{@form["instruction"].value}</textarea>
               </div>
@@ -248,7 +389,11 @@ defmodule JargaWeb.AppLive.Sessions.Index do
                   variant="primary"
                   disabled={task_running?(@current_task)}
                 >
-                  <.icon name="hero-play" class="size-4" /> Run
+                  <%= if resumable_task?(@current_task) do %>
+                    <.icon name="hero-arrow-path" class="size-4" /> Resume
+                  <% else %>
+                    <.icon name="hero-play" class="size-4" /> Run
+                  <% end %>
                 </.button>
                 <.button
                   :if={task_running?(@current_task)}
@@ -277,20 +422,72 @@ defmodule JargaWeb.AppLive.Sessions.Index do
           </div>
         </div>
 
-        <%!-- Event Log --%>
+        <%!-- Session Panel --%>
         <div :if={@current_task} class="card bg-base-200">
-          <div class="card-body">
-            <h3 class="card-title text-sm">
-              Event Log <.status_badge status={@current_task.status} />
-            </h3>
+          <div class="card-body space-y-4">
+            <%!-- Session header: status + title --%>
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <.status_badge status={@current_task.status} />
+                <h3 :if={@session_title} class="font-medium text-sm" id="session-title">
+                  {@session_title}
+                </h3>
+              </div>
+              <span
+                :if={@session_model}
+                class="text-xs text-base-content/50 font-mono"
+                id="session-model"
+              >
+                {@session_model}
+              </span>
+            </div>
+
+            <%!-- Stats bar: tokens + files --%>
+            <div
+              :if={@session_tokens || @session_summary}
+              class="flex flex-wrap gap-4 text-xs text-base-content/60"
+              id="session-stats"
+            >
+              <div :if={@session_tokens} class="flex items-center gap-1">
+                <.icon name="hero-arrow-down-tray" class="size-3" />
+                <span>{format_token_count(@session_tokens["input"])} in</span>
+              </div>
+              <div :if={@session_tokens} class="flex items-center gap-1">
+                <.icon name="hero-arrow-up-tray" class="size-3" />
+                <span>{format_token_count(@session_tokens["output"])} out</span>
+              </div>
+              <div :if={@session_tokens && @session_tokens["cache"]} class="flex items-center gap-1">
+                <.icon name="hero-circle-stack" class="size-3" />
+                <span>{format_token_count(@session_tokens["cache"]["read"])} cached</span>
+              </div>
+              <div
+                :if={@session_summary && @session_summary["files"] && @session_summary["files"] > 0}
+                class="flex items-center gap-1"
+              >
+                <.icon name="hero-document-text" class="size-3" />
+                <span>
+                  {Map.get(@session_summary, "files", 0)} files
+                  <span class="text-success">+{Map.get(@session_summary, "additions", 0)}</span>
+                  <span class="text-error">-{Map.get(@session_summary, "deletions", 0)}</span>
+                </span>
+              </div>
+            </div>
+
+            <%!-- Output area --%>
             <div
               id="session-log"
               phx-hook="SessionLog"
-              class="bg-base-300 rounded-lg p-4 h-64 overflow-y-auto font-mono text-sm"
+              class="bg-base-300 rounded-lg p-4 min-h-32 max-h-96 overflow-y-auto font-mono text-sm"
             >
-              <div :for={event <- @events} class="py-1 text-sm">
-                <.format_event_component event={event} />
-              </div>
+              <%= if @output_parts == [] && task_running?(@current_task) do %>
+                <div class="flex items-center gap-2 text-base-content/50">
+                  <span class="loading loading-dots loading-xs"></span>
+                  <span>Waiting for response...</span>
+                </div>
+              <% end %>
+              <%= for part <- @output_parts do %>
+                <.output_part part={part} />
+              <% end %>
             </div>
           </div>
         </div>
@@ -321,6 +518,7 @@ defmodule JargaWeb.AppLive.Sessions.Index do
                       <th class="text-sm font-semibold">Instruction</th>
                       <th class="text-sm font-semibold">Status</th>
                       <th class="text-sm font-semibold">Created</th>
+                      <th class="text-sm font-semibold w-10"></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -335,6 +533,22 @@ defmodule JargaWeb.AppLive.Sessions.Index do
                         <td class="text-sm text-base-content/70">
                           {Calendar.strftime(task.inserted_at, "%Y-%m-%d %H:%M")}
                         </td>
+                        <td>
+                          <button
+                            :if={task_deletable?(task)}
+                            type="button"
+                            phx-click="delete_task"
+                            phx-value-task-id={task.id}
+                            data-confirm="Delete this session?"
+                            class="btn btn-ghost btn-xs"
+                            title="Delete"
+                          >
+                            <.icon
+                              name="hero-trash"
+                              class="size-4 text-base-content/40 hover:text-error"
+                            />
+                          </button>
+                        </td>
                       </tr>
                     <% end %>
                   </tbody>
@@ -345,6 +559,32 @@ defmodule JargaWeb.AppLive.Sessions.Index do
         <% end %>
       </div>
     </Layouts.admin>
+    """
+  end
+
+  defp output_part(%{part: {:text, text}} = assigns) do
+    assigns = assign(assigns, :text, text)
+
+    ~H"""
+    <div class="whitespace-pre-wrap py-1">{@text}</div>
+    """
+  end
+
+  defp output_part(%{part: {:tool, name, status}} = assigns) do
+    assigns = assign(assigns, :name, name)
+    assigns = assign(assigns, :tool_status, status)
+
+    ~H"""
+    <div class="flex items-center gap-2 py-1 text-base-content/60 text-xs">
+      <span :if={@tool_status == :running} class="loading loading-spinner loading-xs"></span>
+      <.icon :if={@tool_status == :done} name="hero-check-circle" class="size-3 text-success" />
+      <span>{@name}</span>
+    </div>
+    """
+  end
+
+  defp output_part(assigns) do
+    ~H"""
     """
   end
 

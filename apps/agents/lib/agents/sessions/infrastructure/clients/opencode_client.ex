@@ -78,6 +78,45 @@ defmodule Agents.Sessions.Infrastructure.Clients.OpencodeClient do
     end
   end
 
+  # ---- Retrieval APIs ----
+
+  @impl true
+  def list_sessions(base_url, opts \\ []) do
+    http = Keyword.get(opts, :http, &default_http/3)
+
+    case http.(:get, "#{base_url}/session", []) do
+      {:ok, %{status: 200, body: body}} when is_list(body) -> {:ok, body}
+      {:ok, %{status: 200, body: %{"data" => data}}} when is_list(data) -> {:ok, data}
+      {:ok, %{status: 200, body: body}} -> {:ok, List.wrap(body)}
+      {:ok, %{status: status, body: body}} -> {:error, {:http_error, status, body}}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @impl true
+  def get_session(base_url, session_id, opts \\ []) do
+    http = Keyword.get(opts, :http, &default_http/3)
+
+    case http.(:get, "#{base_url}/session/#{session_id}", []) do
+      {:ok, %{status: 200, body: body}} -> {:ok, body}
+      {:ok, %{status: status, body: body}} -> {:error, {:http_error, status, body}}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @impl true
+  def get_messages(base_url, session_id, opts \\ []) do
+    http = Keyword.get(opts, :http, &default_http/3)
+
+    case http.(:get, "#{base_url}/session/#{session_id}/message", []) do
+      {:ok, %{status: 200, body: body}} when is_list(body) -> {:ok, body}
+      {:ok, %{status: 200, body: %{"data" => data}}} when is_list(data) -> {:ok, data}
+      {:ok, %{status: 200, body: body}} -> {:ok, List.wrap(body)}
+      {:ok, %{status: status, body: body}} -> {:error, {:http_error, status, body}}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
   # ---- SSE Event Stream ----
 
   @impl true

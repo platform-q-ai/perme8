@@ -29,7 +29,19 @@ defmodule Agents.Sessions.Application.UseCases.CancelTask do
 
     with {:ok, task} <- find_task(task_id, user_id, task_repo),
          :ok <- validate_cancellable(task) do
-      cancel_fn.(task_id)
+      case cancel_fn.(task_id) do
+        :ok ->
+          :ok
+
+        :orphaned ->
+          # Runner already gone — update DB directly so task isn't stuck
+          task_repo.update_task_status(task, %{
+            status: "cancelled",
+            completed_at: DateTime.utc_now()
+          })
+
+          :ok
+      end
     end
   end
 
@@ -55,8 +67,8 @@ defmodule Agents.Sessions.Application.UseCases.CancelTask do
         :ok
 
       [] ->
-        # Runner already stopped — still return :ok since the intent was cancel
-        :ok
+        # Runner already stopped — caller must clean up the DB record
+        :orphaned
     end
   end
 end

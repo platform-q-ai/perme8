@@ -51,6 +51,8 @@ defmodule Agents.Sessions.Domain.Entities.TaskTest do
       assert Map.has_key?(task, :session_id)
       assert Map.has_key?(task, :user_id)
       assert Map.has_key?(task, :error)
+      assert Map.has_key?(task, :output)
+      assert Map.has_key?(task, :parent_task_id)
       assert Map.has_key?(task, :started_at)
       assert Map.has_key?(task, :completed_at)
       assert Map.has_key?(task, :inserted_at)
@@ -70,6 +72,8 @@ defmodule Agents.Sessions.Domain.Entities.TaskTest do
         session_id: "sess-456",
         user_id: "user-789",
         error: nil,
+        output: nil,
+        parent_task_id: nil,
         started_at: ~U[2026-01-01 00:00:00.000000Z],
         completed_at: nil,
         inserted_at: ~U[2026-01-01 00:00:00.000000Z],
@@ -87,6 +91,8 @@ defmodule Agents.Sessions.Domain.Entities.TaskTest do
       assert task.session_id == "sess-456"
       assert task.user_id == "user-789"
       assert task.error == nil
+      assert task.output == nil
+      assert task.parent_task_id == nil
       assert task.started_at == ~U[2026-01-01 00:00:00.000000Z]
       assert task.completed_at == nil
       assert task.inserted_at == ~U[2026-01-01 00:00:00.000000Z]
@@ -104,6 +110,8 @@ defmodule Agents.Sessions.Domain.Entities.TaskTest do
         session_id: nil,
         user_id: "user-123",
         error: nil,
+        output: nil,
+        parent_task_id: nil,
         started_at: nil,
         completed_at: nil,
         inserted_at: ~U[2026-01-01 00:00:00.000000Z],

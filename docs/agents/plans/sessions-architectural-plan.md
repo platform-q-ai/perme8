@@ -1,14 +1,33 @@
 # Feature: Threaded Opencode Sessions for Perme8 Inside Jarga
 
 **Ticket**: #57
-**Status**: ✓ Complete
+**Status**: In Progress (Phase 12+)
 **Created**: 2026-02-20
+**Updated**: 2026-02-22 — Persistent containers, session resume, output caching
 
 ---
 
 ## Overview
 
-Build a new `Agents.Sessions` bounded context within the `agents` app that enables developers to run agentic coding sessions from within Jarga. Each task runs in an ephemeral Docker container running `opencode serve`, with the Elixir backend communicating via the opencode HTTP API and SSE event stream. Events are streamed in real-time via PubSub (in-memory only, not persisted). A dedicated LiveView page in `jarga_web` provides the user interface.
+Build a new `Agents.Sessions` bounded context within the `agents` app that enables developers to run agentic coding sessions from within Jarga. Each task runs in a Docker container running `opencode serve`, with the Elixir backend communicating via the opencode HTTP API and SSE event stream. Events are streamed in real-time via PubSub (in-memory only, not persisted). A dedicated LiveView page in `jarga_web` provides the user interface.
+
+### Container Lifecycle (Revised 2026-02-22)
+
+Containers are **task-scoped, not prompt-scoped**. They persist across multiple instructions until the user explicitly deletes the session (or, in future, until the associated PR is merged/closed via webhook).
+
+```
+Container started → opencode runs → prompt completes (idle)
+  → container STOPPED (docker stop) — preserves filesystem, opencode state
+  → user views historical output → container restarted → messages fetched via API → stopped
+  → user sends follow-up instruction → container restarted → new prompt in same session → stopped
+  → user deletes session → container REMOVED (docker rm -f) + DB row deleted
+```
+
+This enables:
+- **Resumability**: follow-up instructions run in the same container with full git state and conversation history
+- **Historical output**: fetch conversation from the opencode API by restarting the container
+- **Output caching**: assistant output is cached in a DB `output` column to avoid restarting containers for viewing
+- **Explicit cleanup**: containers are only destroyed on user delete (manual) or PR merge (future webhook)
 
 ## UI Strategy
 
@@ -979,6 +998,192 @@ The codebase uses class-based hooks registered via `apps/jarga_web/assets/js/hoo
 
 ---
 
+## Phase 12: Persistent Container Lifecycle — Stop vs Remove (2026-02-22)
+
+**Goal**: Containers survive task completion for resume and historical output retrieval. Only destroyed on explicit user delete.
+
+### 12.1 ContainerProviderBehaviour — New Callbacks
+
+- [ ] Update `apps/agents/lib/agents/sessions/application/behaviours/container_provider_behaviour.ex`:
+  - Rename existing `stop/1` semantics — it now means graceful stop (preserves container)
+  - Add `@callback remove(container_id :: String.t()) :: :ok | {:error, term()}` — permanent destruction
+  - Add `@callback restart(container_id :: String.t()) :: {:ok, %{port: integer()}} | {:error, term()}` — restart stopped container, re-discover port
+
+### 12.2 DockerAdapter — Stop, Remove, Restart
+
+- [ ] **RED**: Write/update tests in `docker_adapter_test.exs`
+  - Test `stop/1` runs `docker stop` (not `docker rm -f`)
+  - Test `remove/1` runs `docker rm -f`
+  - Test `restart/1` runs `docker start`, then `docker port` to discover new mapped port
+  - Test `restart/1` returns `{:ok, %{port: port}}` on success
+  - Test `restart/1` returns `{:error, reason}` when container doesn't exist
+- [ ] **GREEN**: Update `apps/agents/lib/agents/sessions/infrastructure/adapters/docker_adapter.ex`
+  - `stop/1` → `docker stop <id>` (was `docker rm -f`)
+  - `remove/1` → `docker rm -f <id>` (new function, permanent destruction)
+  - `restart/1` → `docker start <id>`, then `docker port <id> 4096` with retry logic
+- [ ] **REFACTOR**: Clean up, ensure port discovery retry works for restart path too
+
+### 12.3 TaskRunner — Stop Instead of Remove
+
+- [ ] Update `task_runner.ex`:
+  - `cleanup_container/1` calls `stop/1` (preserves container)
+  - Save `session_id` to DB when opencode session is created (in `:create_session` handler)
+  - Accumulate assistant text output in GenServer state (`output_text` field)
+  - In `complete_task/1`, save `output` to DB along with status/completed_at
+
+### 12.4 DeleteTask — Remove Container on Delete
+
+- [ ] Update `apps/agents/lib/agents/sessions/application/use_cases/delete_task.ex`:
+  - After ownership + deletability validation, call `container_provider.remove/1` to destroy the container
+  - Then delete the DB row
+  - Handle case where container is already gone (idempotent)
+- [ ] Update tests for new container removal step
+
+### Phase 12 Validation
+
+- [ ] `docker stop` is used for task completion (container preserved)
+- [ ] `docker rm -f` only used on explicit delete
+- [ ] `session_id` is persisted to DB
+- [ ] Output text is cached in DB `output` column on completion
+- [ ] All existing tests still pass
+
+---
+
+## Phase 13: Opencode Retrieval APIs
+
+**Goal**: Add read APIs to the opencode client for fetching session history from a stopped-then-restarted container.
+
+### 13.1 OpencodeClientBehaviour — New Callbacks
+
+- [ ] Update `apps/agents/lib/agents/sessions/application/behaviours/opencode_client_behaviour.ex`:
+  - Add `@callback list_sessions(base_url :: String.t(), opts :: keyword()) :: {:ok, [map()]} | {:error, term()}`
+  - Add `@callback get_session(base_url :: String.t(), session_id :: String.t(), opts :: keyword()) :: {:ok, map()} | {:error, term()}`
+  - Add `@callback get_messages(base_url :: String.t(), session_id :: String.t(), opts :: keyword()) :: {:ok, [map()]} | {:error, term()}`
+
+### 13.2 OpencodeClient — Retrieval Implementations
+
+- [ ] **RED**: Write tests in `opencode_client_test.exs`
+  - Test `list_sessions/2` → `GET /session` returns session list
+  - Test `get_session/3` → `GET /session/{id}` returns session details
+  - Test `get_messages/3` → `GET /session/{id}/message` returns message list with parts
+  - Test error handling for all three
+- [ ] **GREEN**: Implement in `opencode_client.ex`
+  - `list_sessions/2` → `GET <base_url>/session`
+  - `get_session/3` → `GET <base_url>/session/<session_id>`
+  - `get_messages/3` → `GET <base_url>/session/<session_id>/message`
+- [ ] **REFACTOR**: Clean up
+
+### Phase 13 Validation
+
+- [ ] All retrieval API tests pass
+- [ ] Mock definitions updated for new callbacks
+
+---
+
+## Phase 14: Schema + Entity — Output Cache + Parent Task
+
+**Goal**: Add `output` column for cached assistant text and `parent_task_id` for resume chains.
+
+### 14.1 Migration — Add output and parent_task_id columns
+
+- [ ] Create migration `apps/jarga/priv/repo/migrations/YYYYMMDDHHMMSS_add_output_and_parent_task_to_sessions_tasks.exs`:
+  - `add(:output, :text)` — cached assistant output (already created as standalone migration)
+  - `add(:parent_task_id, references(:sessions_tasks, type: :binary_id, on_delete: :nilify_all))` — links follow-up tasks to their parent
+
+### 14.2 TaskSchema — New Fields
+
+- [ ] Update `task_schema.ex`:
+  - Add `field(:output, :string)` to schema
+  - Add `belongs_to(:parent_task, TaskSchema, type: Ecto.UUID)` or `field(:parent_task_id, Ecto.UUID)`
+  - Add `:output` to `status_changeset` cast fields
+  - Add `:parent_task_id` to `changeset` cast fields
+
+### 14.3 Domain Entity — New Fields
+
+- [ ] Update `task.ex`:
+  - Add `:output` and `:parent_task_id` to struct, typespec, and `from_schema/1`
+
+### Phase 14 Validation
+
+- [ ] Migration runs successfully
+- [ ] Schema and entity tests updated
+- [ ] All existing tests pass
+
+---
+
+## Phase 15: View Historical Output
+
+**Goal**: When a user clicks a completed task, show the cached output (or lazy-load it from the container).
+
+### 15.1 LiveView — Display Cached Output
+
+- [ ] Update `view_task` handler in `index.ex`:
+  - For completed/failed tasks with cached `output`: parse into `output_parts` immediately
+  - For completed tasks without cached `output` (legacy data): show loading state, attempt async container restart + message fetch
+- [ ] Add helper to parse raw output text into `output_parts` (text parts only for cached data)
+
+### 15.2 Async Output Fetching (Fallback)
+
+- [ ] Implement async output loading when no cache exists:
+  1. Restart container (`DockerAdapter.restart/1`)
+  2. Wait for health check
+  3. Fetch messages (`OpencodeClient.get_messages/3`)
+  4. Parse into output text
+  5. Cache to DB (`output` column)
+  6. Stop container
+  7. Send result back to LiveView via `send/2`
+- [ ] LiveView handles `{:output_loaded, task_id, output_parts}` message
+
+### Phase 15 Validation
+
+- [ ] Cached output displays immediately on click
+- [ ] Fallback loading works for tasks without cached output
+- [ ] LiveView tests updated
+
+---
+
+## Phase 16: Resume Sessions — Follow-Up Instructions
+
+**Goal**: Users can send follow-up instructions to an existing session, creating a new linked task.
+
+### 16.1 ResumeTask Use Case
+
+- [ ] Create `apps/agents/lib/agents/sessions/application/use_cases/resume_task.ex`:
+  - `execute(parent_task_id, attrs, opts)` — creates a new task linked via `parent_task_id`
+  - Validates parent task is in a terminal state (completed/failed)
+  - Reuses `container_id` and `session_id` from parent task
+  - Starts a new TaskRunner that:
+    1. Restarts the container (not creates a new one)
+    2. Health check
+    3. Sends new prompt to existing session (no `create_session`)
+    4. Streams events via PubSub
+    5. On completion: stops container, caches output
+
+### 16.2 Facade — Resume
+
+- [ ] Add `resume_task/3` to `Agents.Sessions` facade:
+  ```elixir
+  @spec resume_task(String.t(), map(), keyword()) :: {:ok, struct()} | {:error, term()}
+  def resume_task(parent_task_id, attrs, opts \\ [])
+  ```
+
+### 16.3 LiveView — Resume UX
+
+- [ ] When viewing a completed task, the instruction form becomes a "resume" form:
+  - Form submits to `resume_task` instead of `run_task`
+  - New task appears in history linked to the parent
+  - Same real-time streaming as initial task
+
+### Phase 16 Validation
+
+- [ ] Resume creates a new task linked to the parent
+- [ ] Container is restarted (not recreated)
+- [ ] Prompt is sent to existing opencode session
+- [ ] Output streams in real-time
+- [ ] Full test suite passes
+
+---
+
 ## Pre-Commit Checkpoint
 
 - [ ] `mix compile` -- no warnings
@@ -1025,10 +1230,10 @@ The codebase uses class-based hooks registered via `apps/jarga_web/assets/js/hoo
 |---|---|
 | `Agents.Sessions` bounded context with clean architecture | Phases 1-9 |
 | Task entity with DB persistence | Phases 1, 2 |
-| ContainerProvider behaviour with Docker adapter | Phases 3, 5 |
-| OpencodeClient behaviour with Req-based HTTP/SSE implementation | Phases 3, 6 |
+| ContainerProvider behaviour with Docker adapter | Phases 3, 5, 12 |
+| OpencodeClient behaviour with Req-based HTTP/SSE implementation | Phases 3, 6, 13 |
 | Dockerfile that runs `opencode serve` in a container | Phase 7 |
-| TaskRunner GenServer managing full lifecycle | Phase 8 |
+| TaskRunner GenServer managing full lifecycle | Phase 8, 12 |
 | Concurrent task limit of 1 (configurable) | Phases 4 (CreateTask validation) |
 | Events streamed in real-time via PubSub (in-memory, not persisted) | Phases 8, 10 |
 | Dedicated LiveView page with instruction input and scrolling log | Phase 10 |
@@ -1037,6 +1242,16 @@ The codebase uses class-based hooks registered via `apps/jarga_web/assets/js/hoo
 | Task history with status indicators | Phase 11 |
 | LLM provider API keys passed as env vars to container | Phase 5 (DockerAdapter reads config) |
 | 10-minute timeout with configurable default | Phase 8 (TaskRunner timeout) |
+| Persistent containers — stop on completion, remove on delete | Phase 12 |
+| Session ID persisted to DB for resume | Phase 12 |
+| Output cached in DB for instant historical viewing | Phases 12, 14 |
+| Opencode retrieval APIs (list sessions, get messages) | Phase 13 |
+| View historical task output from cached DB data | Phase 15 |
+| Lazy-load output from container when cache is empty | Phase 15 |
+| Resume sessions with follow-up instructions | Phase 16 |
+| New task per instruction, linked via parent_task_id | Phases 14, 16 |
+| Delete session destroys container (docker rm) | Phase 12 |
+| Auto-cleanup on PR merge/close | Future (webhooks app dependency) |
 
 ---
 
@@ -1127,6 +1342,23 @@ The codebase uses class-based hooks registered via `apps/jarga_web/assets/js/hoo
 64. `apps/jarga_web/assets/js/presentation/hooks/session-log-hook.ts` -- SessionLog JS hook
 65. `apps/jarga_web/assets/js/hooks.ts` -- Register hook in hooks barrel file
 
+### Phase 12-16 Additions (Persistent Containers + Resume)
+66. `application/use_cases/resume_task.ex` -- ResumeTask use case
+67. `apps/agents/test/agents/sessions/application/use_cases/resume_task_test.exs`
+68. `apps/jarga/priv/repo/migrations/YYYYMMDDHHMMSS_add_output_and_parent_task_to_sessions_tasks.exs`
+
+### Phase 12-16 Modifications
+- `application/behaviours/container_provider_behaviour.ex` -- Add `remove/1`, `restart/1` callbacks
+- `application/behaviours/opencode_client_behaviour.ex` -- Add `list_sessions/2`, `get_session/3`, `get_messages/3` callbacks
+- `infrastructure/adapters/docker_adapter.ex` -- Stop vs remove vs restart separation
+- `infrastructure/clients/opencode_client.ex` -- Retrieval API implementations
+- `infrastructure/task_runner.ex` -- Stop (not remove) on cleanup, save session_id and output
+- `infrastructure/schemas/task_schema.ex` -- Add `output`, `parent_task_id` fields
+- `domain/entities/task.ex` -- Add `output`, `parent_task_id` fields
+- `application/use_cases/delete_task.ex` -- Call container remove before DB delete
+- `sessions.ex` -- Add `resume_task/3` facade function
+- `apps/jarga_web/lib/live/app_live/sessions/index.ex` -- Historical output display, resume UX
+
 ---
 
 ## Notes for Implementers
@@ -1137,7 +1369,7 @@ The codebase uses class-based hooks registered via `apps/jarga_web/assets/js/hoo
 
 3. **PubSub uses `Jarga.PubSub`** -- this is the global PubSub server. Use `Phoenix.PubSub.broadcast(Jarga.PubSub, topic, message)` for broadcasts.
 
-4. **Events are NOT persisted** -- events are held in TaskRunner GenServer state and broadcast via PubSub. When the GenServer terminates, events are lost. The LiveView accumulates events in assigns for display.
+4. **Events are NOT persisted** -- events are held in TaskRunner GenServer state and broadcast via PubSub. When the GenServer terminates, events are lost. The LiveView accumulates events in assigns for display. However, assistant text output is **cached in the DB `output` column** when the task completes, so historical tasks can display output without restarting the container.
 
 5. **TaskRunner naming**: `{:via, Registry, {Agents.Sessions.TaskRegistry, task_id}}` -- this enables looking up a running TaskRunner by task_id.
 
@@ -1146,3 +1378,13 @@ The codebase uses class-based hooks registered via `apps/jarga_web/assets/js/hoo
 7. **SSE parsing**: The opencode server streams events as Server-Sent Events. The `subscribe_events/2` function spawns a process that keeps an HTTP connection open and parses the SSE stream, forwarding each event as `{:opencode_event, event}` to the caller pid.
 
 8. **Concurrent limit**: The `CreateTask` use case checks `task_repo.running_task_count_for_user/1` before creating a new task. The limit is configurable via `SessionsConfig.max_concurrent_tasks/0`.
+
+9. **Container lifecycle: stop vs remove** -- `DockerAdapter.stop/1` calls `docker stop` (preserves container for resume). `DockerAdapter.remove/1` calls `docker rm -f` (permanent destruction). TaskRunner calls `stop` on completion/failure/cancel. DeleteTask calls `remove` on explicit user delete.
+
+10. **Session ID persistence** -- TaskRunner saves the opencode `session_id` to the DB when the session is created. This enables resume (send new prompt to same session) and message retrieval for historical output.
+
+11. **Container restart** -- `DockerAdapter.restart/1` calls `docker start` + port re-discovery. Used when viewing historical output (if no cached output) or resuming a session with a new instruction.
+
+12. **Opencode retrieval APIs** -- The opencode SDK exposes `GET /session` (list sessions), `GET /session/{id}` (session details), and `GET /session/{id}/message` (message history with parts). These are used to fetch historical conversation data from a stopped-then-restarted container.
+
+13. **Resume model** -- Follow-up instructions create a **new task row** linked to the same container via `parent_task_id`. Each instruction is a separate task, but they share the same Docker container and opencode session. The task history shows the full chain of instructions.

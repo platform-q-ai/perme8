@@ -18,7 +18,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   - `"session.error"` - session-level errors
   - `"server.connected"` - initial connection
   """
-  use GenServer
+  use GenServer, restart: :temporary
 
   alias Agents.Sessions.Application.SessionsConfig
   alias Agents.Sessions.Infrastructure.Schemas.TaskSchema
@@ -38,6 +38,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     # Track whether we've seen session go to "running" so we know
     # that a transition to "idle" means completion
     was_running: false,
+    # Accumulated assistant text output for DB caching
+    output_text: "",
     # Dependency injection
     container_provider: nil,
     opencode_client: nil,
@@ -82,6 +84,11 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
     pubsub = Keyword.get(opts, :pubsub, Jarga.PubSub)
 
+    # Resume context — if resuming, we already have container_id and session_id
+    resume? = Keyword.get(opts, :resume, false)
+    resume_container_id = Keyword.get(opts, :container_id)
+    resume_session_id = Keyword.get(opts, :session_id)
+
     # Load task from DB to get instruction and user_id
     case task_repo.get_task(task_id) do
       nil ->
@@ -105,10 +112,15 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
         timeout_ref = Process.send_after(self(), :timeout, timeout_ms)
         state = %{state | timeout_ref: timeout_ref}
 
-        # Start the lifecycle
-        send(self(), :start_container)
-
-        {:ok, state}
+        # Start the lifecycle — either resume or fresh start
+        if resume? do
+          state = %{state | container_id: resume_container_id, session_id: resume_session_id}
+          send(self(), :restart_container)
+          {:ok, state}
+        else
+          send(self(), :start_container)
+          {:ok, state}
+        end
     end
   end
 
@@ -144,6 +156,29 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     end
   end
 
+  # ---- Container Restart (resume path) ----
+
+  @impl true
+  def handle_info(:restart_container, state) do
+    case state.container_provider.restart(state.container_id) do
+      {:ok, %{port: port}} ->
+        update_task_status(state, %{
+          status: "starting",
+          container_port: port
+        })
+
+        broadcast_status(state.task_id, "starting", state.pubsub)
+
+        new_state = %{state | container_port: port, status: :health_check}
+        send(self(), :wait_for_health_resume)
+        {:noreply, new_state}
+
+      {:error, reason} ->
+        fail_task(state, "Container restart failed: #{inspect(reason)}")
+        {:stop, :normal, state}
+    end
+  end
+
   # ---- Health Check ----
 
   @impl true
@@ -168,6 +203,32 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     end
   end
 
+  # ---- Resume Health Check (skips session creation) ----
+
+  @impl true
+  def handle_info(:wait_for_health_resume, %{health_retries: 0} = state) do
+    fail_task(state, "Health check timed out on resume")
+    {:stop, :normal, state}
+  end
+
+  @impl true
+  def handle_info(:wait_for_health_resume, state) do
+    base_url = "http://localhost:#{state.container_port}"
+
+    case state.opencode_client.health(base_url) do
+      :ok ->
+        # Resume path: session already exists, just subscribe and send prompt
+        state.opencode_client.subscribe_events(base_url, self())
+        send(self(), :send_prompt)
+        {:noreply, %{state | status: :prompting}}
+
+      {:error, _reason} ->
+        interval = SessionsConfig.health_check_interval_ms()
+        Process.send_after(self(), :wait_for_health_resume, interval)
+        {:noreply, %{state | health_retries: state.health_retries - 1}}
+    end
+  end
+
   # ---- Session Create & Prompt ----
 
   @impl true
@@ -176,6 +237,9 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
     case state.opencode_client.create_session(base_url, []) do
       {:ok, %{"id" => session_id}} ->
+        # Persist session_id to DB for resume and message retrieval
+        update_task_status(state, %{session_id: session_id})
+
         # Subscribe to SSE events
         state.opencode_client.subscribe_events(base_url, self())
 
@@ -349,7 +413,19 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     end
   end
 
-  # All other events (message.part.updated, server.connected, etc.)
+  # Text output from assistant — accumulate for DB caching
+  defp handle_sdk_event(
+         %{
+           "type" => "message.part.updated",
+           "properties" => %{"part" => %{"type" => "text", "text" => text}}
+         },
+         state
+       )
+       when is_binary(text) and text != "" do
+    {:continue, %{state | output_text: text}}
+  end
+
+  # All other events (server.connected, tool use, etc.)
   # are broadcast via PubSub but don't change runner state
   defp handle_sdk_event(_event, state) do
     {:continue, state}
@@ -368,22 +444,40 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   end
 
   defp fail_task(state, error) do
-    update_task_status(state, %{
+    attrs = %{
       status: "failed",
-      error: error,
+      error: serialize_error(error),
       completed_at: DateTime.utc_now()
-    })
+    }
 
+    # Cache any partial output even on failure
+    attrs =
+      if state.output_text != "" do
+        Map.put(attrs, :output, state.output_text)
+      else
+        attrs
+      end
+
+    update_task_status(state, attrs)
     broadcast_status(state.task_id, "failed", state.pubsub)
     cleanup_container(state)
   end
 
   defp complete_task(state) do
-    update_task_status(state, %{
+    attrs = %{
       status: "completed",
       completed_at: DateTime.utc_now()
-    })
+    }
 
+    # Cache accumulated output text to DB if we have any
+    attrs =
+      if state.output_text != "" do
+        Map.put(attrs, :output, state.output_text)
+      else
+        attrs
+      end
+
+    update_task_status(state, attrs)
     broadcast_status(state.task_id, "completed", state.pubsub)
     cleanup_container(state)
   end
@@ -395,6 +489,20 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   rescue
     _ -> :ok
   end
+
+  defp serialize_error(error) when is_binary(error), do: error
+
+  defp serialize_error(%{"data" => %{"message" => msg}}), do: msg
+  defp serialize_error(%{"message" => msg}), do: msg
+
+  defp serialize_error(error) when is_map(error) do
+    case Jason.encode(error) do
+      {:ok, json} -> json
+      _ -> inspect(error)
+    end
+  end
+
+  defp serialize_error(error), do: inspect(error)
 
   defp broadcast_status(task_id, status, pubsub) do
     Phoenix.PubSub.broadcast(

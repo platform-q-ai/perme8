@@ -14,6 +14,8 @@ defmodule Agents.Sessions.Application do
       Behaviours.TaskRepositoryBehaviour,
       UseCases.CreateTask,
       UseCases.CancelTask,
+      UseCases.DeleteTask,
+      UseCases.ResumeTask,
       UseCases.GetTask,
       UseCases.ListTasks,
       SessionsConfig

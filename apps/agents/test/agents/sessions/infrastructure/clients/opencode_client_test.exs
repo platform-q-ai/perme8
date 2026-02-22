@@ -144,6 +144,132 @@ defmodule Agents.Sessions.Infrastructure.Clients.OpencodeClientTest do
     end
   end
 
+  describe "list_sessions/2" do
+    test "returns list when response is an array" do
+      http = fn :get, url, _opts ->
+        assert url == "http://localhost:4096/session"
+
+        {:ok,
+         %{
+           status: 200,
+           body: [%{"id" => "sess-1", "title" => "Session 1"}, %{"id" => "sess-2"}]
+         }}
+      end
+
+      assert {:ok, sessions} =
+               OpencodeClient.list_sessions("http://localhost:4096", http: http)
+
+      assert length(sessions) == 2
+      assert Enum.at(sessions, 0)["id"] == "sess-1"
+    end
+
+    test "returns list when response is wrapped in data key" do
+      http = fn :get, _url, _opts ->
+        {:ok,
+         %{
+           status: 200,
+           body: %{"data" => [%{"id" => "sess-1"}]}
+         }}
+      end
+
+      assert {:ok, [%{"id" => "sess-1"}]} =
+               OpencodeClient.list_sessions("http://localhost:4096", http: http)
+    end
+
+    test "returns error on failure" do
+      http = fn :get, _url, _opts ->
+        {:ok, %{status: 500, body: %{"error" => "internal"}}}
+      end
+
+      assert {:error, {:http_error, 500, _}} =
+               OpencodeClient.list_sessions("http://localhost:4096", http: http)
+    end
+  end
+
+  describe "get_session/3" do
+    test "returns session data on 200" do
+      http = fn :get, url, _opts ->
+        assert url == "http://localhost:4096/session/sess-123"
+        {:ok, %{status: 200, body: %{"id" => "sess-123", "title" => "My Session"}}}
+      end
+
+      assert {:ok, %{"id" => "sess-123", "title" => "My Session"}} =
+               OpencodeClient.get_session("http://localhost:4096", "sess-123", http: http)
+    end
+
+    test "returns error on 404" do
+      http = fn :get, _url, _opts ->
+        {:ok, %{status: 404, body: %{"error" => "not found"}}}
+      end
+
+      assert {:error, {:http_error, 404, _}} =
+               OpencodeClient.get_session("http://localhost:4096", "sess-123", http: http)
+    end
+
+    test "returns error on connection failure" do
+      http = fn :get, _url, _opts ->
+        {:error, %Req.TransportError{reason: :econnrefused}}
+      end
+
+      assert {:error, %Req.TransportError{}} =
+               OpencodeClient.get_session("http://localhost:4096", "sess-123", http: http)
+    end
+  end
+
+  describe "get_messages/3" do
+    test "returns messages when response is an array" do
+      http = fn :get, url, _opts ->
+        assert url == "http://localhost:4096/session/sess-123/message"
+
+        {:ok,
+         %{
+           status: 200,
+           body: [
+             %{
+               "id" => "msg-1",
+               "role" => "user",
+               "parts" => [%{"type" => "text", "text" => "Hello"}]
+             },
+             %{
+               "id" => "msg-2",
+               "role" => "assistant",
+               "parts" => [%{"type" => "text", "text" => "Hi!"}]
+             }
+           ]
+         }}
+      end
+
+      assert {:ok, messages} =
+               OpencodeClient.get_messages("http://localhost:4096", "sess-123", http: http)
+
+      assert length(messages) == 2
+      assert Enum.at(messages, 0)["role"] == "user"
+      assert Enum.at(messages, 1)["role"] == "assistant"
+    end
+
+    test "returns messages when response is wrapped in data key" do
+      http = fn :get, _url, _opts ->
+        {:ok,
+         %{
+           status: 200,
+           body: %{"data" => [%{"id" => "msg-1", "role" => "user"}]}
+         }}
+      end
+
+      assert {:ok, [%{"id" => "msg-1"}]} =
+               OpencodeClient.get_messages("http://localhost:4096", "sess-123", http: http)
+    end
+
+    test "returns error on failure" do
+      http = fn :get, _url, _opts ->
+        {:ok, %{status: 500, body: %{"error" => "internal"}}}
+      end
+
+      assert {:error, {:http_error, 500, _}} =
+               OpencodeClient.get_messages("http://localhost:4096", "sess-123", http: http)
+    end
+  end
+
   describe "subscribe_events/2" do
     test "spawns process that forwards SSE events" do
       test_pid = self()

@@ -47,5 +47,24 @@ defmodule Agents.Sessions.Application.UseCases.CancelTaskTest do
       assert {:error, :not_cancellable} =
                CancelTask.execute("task-1", "user-1", task_repo: Agents.Mocks.TaskRepositoryMock)
     end
+
+    test "updates DB status when runner is orphaned (process already dead)" do
+      task = struct(TaskSchema, %{id: "task-1", user_id: "user-1", status: "running"})
+
+      Agents.Mocks.TaskRepositoryMock
+      |> expect(:get_task_for_user, fn "task-1", "user-1" -> task end)
+      |> expect(:update_task_status, fn ^task,
+                                        %{status: "cancelled", completed_at: %DateTime{}} ->
+        {:ok, %{task | status: "cancelled"}}
+      end)
+
+      orphaned_cancel_fn = fn _task_id -> :orphaned end
+
+      assert :ok =
+               CancelTask.execute("task-1", "user-1",
+                 task_repo: Agents.Mocks.TaskRepositoryMock,
+                 task_runner_cancel: orphaned_cancel_fn
+               )
+    end
   end
 end
