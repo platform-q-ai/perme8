@@ -24,11 +24,13 @@ defmodule JargaApi.Plugs.RawBodyReader do
   def read_body(conn, opts) do
     case Plug.Conn.read_body(conn, opts) do
       {:ok, body, conn} ->
-        conn = Plug.Conn.put_private(conn, :raw_body, body)
+        existing = conn.private[:raw_body] || ""
+        conn = Plug.Conn.put_private(conn, :raw_body, existing <> body)
         {:ok, body, conn}
 
       {:more, body, conn} ->
-        conn = Plug.Conn.put_private(conn, :raw_body, body)
+        existing = conn.private[:raw_body] || ""
+        conn = Plug.Conn.put_private(conn, :raw_body, existing <> body)
         {:more, body, conn}
 
       {:error, reason} ->

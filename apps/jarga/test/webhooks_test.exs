@@ -92,17 +92,18 @@ defmodule Jarga.WebhooksTest do
 
   describe "process_inbound_webhook/2" do
     test "delegates to ProcessInboundWebhook use case", %{workspace: workspace} do
-      secret = "test_webhook_secret_key"
-      payload = Jason.encode!(%{"event_type" => "test.event", "data" => "value"})
+      # Store the inbound secret in the database (server-side lookup)
+      config = inbound_webhook_config_fixture(%{workspace_id: workspace.id})
+      secret = config.inbound_secret
 
+      payload = Jason.encode!(%{"event_type" => "test.event", "data" => "value"})
       signature = SignaturePolicy.build_signature_header(payload, secret)
 
       params = %{
         workspace_id: workspace.id,
         raw_body: payload,
         signature: signature,
-        source_ip: "127.0.0.1",
-        workspace_secret: secret
+        source_ip: "127.0.0.1"
       }
 
       assert {:ok, inbound} = Webhooks.process_inbound_webhook(params)

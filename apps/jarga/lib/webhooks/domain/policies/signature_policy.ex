@@ -50,7 +50,11 @@ defmodule Jarga.Webhooks.Domain.Policies.SignaturePolicy do
   def parse_signature_header(""), do: {:error, :invalid_format}
 
   def parse_signature_header("sha256=" <> hex) when byte_size(hex) > 0 do
-    {:ok, hex}
+    if Regex.match?(~r/^[a-f0-9]+$/, hex) do
+      {:ok, hex}
+    else
+      {:error, :invalid_format}
+    end
   end
 
   def parse_signature_header(_), do: {:error, :invalid_format}

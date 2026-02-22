@@ -7,4 +7,6 @@ defmodule Jarga.Webhooks.Application.Behaviours.InboundWebhookRepositoryBehaviou
 
   @callback insert(map(), keyword()) :: {:ok, struct()} | {:error, Ecto.Changeset.t()}
   @callback list_for_workspace(String.t(), keyword()) :: [struct()]
+  @callback get_inbound_secret(String.t(), keyword()) ::
+              {:ok, String.t()} | {:error, :not_configured}
 end

@@ -11,10 +11,19 @@ defmodule JargaApi.WebhookApiJSON do
   end
 
   @doc """
-  Renders a single webhook subscription.
+  Renders a single webhook subscription (without secret).
   """
   def show(%{subscription: subscription}) do
     %{data: subscription_data(subscription)}
+  end
+
+  @doc """
+  Renders a newly created webhook subscription (includes secret).
+
+  The secret is only returned at creation time so the subscriber can save it.
+  """
+  def created(%{subscription: subscription}) do
+    %{data: subscription_data_with_secret(subscription)}
   end
 
   @doc """
@@ -49,11 +58,16 @@ defmodule JargaApi.WebhookApiJSON do
     %{
       id: subscription.id,
       url: subscription.url,
-      secret: subscription.secret,
       event_types: subscription.event_types,
       is_active: subscription.is_active,
       inserted_at: subscription.inserted_at,
       updated_at: subscription.updated_at
     }
+  end
+
+  defp subscription_data_with_secret(subscription) do
+    subscription
+    |> subscription_data()
+    |> Map.put(:secret, subscription.secret)
   end
 end

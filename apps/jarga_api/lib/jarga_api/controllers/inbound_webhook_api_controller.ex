@@ -23,18 +23,13 @@ defmodule JargaApi.InboundWebhookApiController do
   This endpoint does NOT use Bearer token auth. Instead, it verifies
   the payload using HMAC signature from the X-Webhook-Signature header.
 
-  The workspace secret is provided via the X-Webhook-Secret header
-  (in production this would come from workspace configuration).
+  The workspace secret is looked up server-side from the database — it is
+  NEVER accepted from the client request.
   """
-  def receive(conn, %{"workspace_slug" => workspace_slug} = params) do
+  def receive(conn, %{"workspace_slug" => workspace_slug}) do
     signature = get_signature(conn)
-    workspace_secret = get_workspace_secret(conn)
     source_ip = conn.remote_ip |> :inet.ntoa() |> to_string()
-
-    # Re-encode the parsed body (minus the path param) as the raw body for HMAC
-    # In production, use RawBodyReader to capture the actual raw bytes
-    payload_params = Map.drop(params, ["workspace_slug"])
-    raw_body = Jason.encode!(payload_params)
+    raw_body = conn.private[:raw_body]
 
     # Resolve workspace from slug to get workspace_id
     # For inbound webhooks, there's no authenticated user — use direct lookup
@@ -44,8 +39,7 @@ defmodule JargaApi.InboundWebhookApiController do
           workspace_id: workspace_id,
           raw_body: raw_body,
           signature: signature,
-          source_ip: source_ip,
-          workspace_secret: workspace_secret
+          source_ip: source_ip
         }
 
         case Webhooks.process_inbound_webhook(webhook_params) do
@@ -66,6 +60,11 @@ defmodule JargaApi.InboundWebhookApiController do
             conn
             |> put_status(:bad_request)
             |> render(:error, message: "Invalid payload")
+
+          {:error, :not_configured} ->
+            conn
+            |> put_status(:not_found)
+            |> render(:error, message: "Inbound webhooks not configured for this workspace")
         end
 
       {:error, :not_found} ->
@@ -111,13 +110,6 @@ defmodule JargaApi.InboundWebhookApiController do
   defp get_signature(conn) do
     case Plug.Conn.get_req_header(conn, "x-webhook-signature") do
       [sig] when byte_size(sig) > 0 -> sig
-      _ -> nil
-    end
-  end
-
-  defp get_workspace_secret(conn) do
-    case Plug.Conn.get_req_header(conn, "x-webhook-secret") do
-      [secret] when byte_size(secret) > 0 -> secret
       _ -> nil
     end
   end

@@ -61,10 +61,23 @@ defmodule Jarga.Webhooks.Infrastructure.Schemas.WebhookSubscriptionSchemaTest do
                errors_on(changeset)
     end
 
-    test "URL with http scheme is accepted" do
+    test "URL with http scheme is accepted in non-production" do
       attrs = Map.put(@valid_attrs, :url, "http://example.com/webhook")
       changeset = WebhookSubscriptionSchema.changeset(%WebhookSubscriptionSchema{}, attrs)
+      # In test env, http:// is allowed
       assert changeset.valid?
+    end
+
+    test "URL with https scheme is always accepted" do
+      attrs = Map.put(@valid_attrs, :url, "https://example.com/webhook")
+      changeset = WebhookSubscriptionSchema.changeset(%WebhookSubscriptionSchema{}, attrs)
+      assert changeset.valid?
+    end
+
+    test "URL with ftp scheme is rejected" do
+      attrs = Map.put(@valid_attrs, :url, "ftp://example.com/webhook")
+      changeset = WebhookSubscriptionSchema.changeset(%WebhookSubscriptionSchema{}, attrs)
+      refute changeset.valid?
     end
   end
 end

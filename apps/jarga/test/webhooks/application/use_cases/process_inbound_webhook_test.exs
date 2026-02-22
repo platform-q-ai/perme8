@@ -41,6 +41,7 @@ defmodule Jarga.Webhooks.Application.UseCases.ProcessInboundWebhookTest do
       }
 
       MockInboundWebhookRepository
+      |> expect(:get_inbound_secret, fn "ws-123", _opts -> {:ok, @secret} end)
       |> expect(:insert, fn attrs, _opts ->
         assert attrs.signature_valid == true
         assert attrs.event_type == "stripe.payment_succeeded"
@@ -52,8 +53,7 @@ defmodule Jarga.Webhooks.Application.UseCases.ProcessInboundWebhookTest do
         workspace_id: "ws-123",
         raw_body: raw_body,
         signature: signature,
-        source_ip: "192.168.1.1",
-        workspace_secret: @secret
+        source_ip: "192.168.1.1"
       }
 
       assert {:ok, result} = ProcessInboundWebhook.execute(params, base_opts(ctx))
@@ -68,12 +68,14 @@ defmodule Jarga.Webhooks.Application.UseCases.ProcessInboundWebhookTest do
     test "returns error for invalid signature", ctx do
       raw_body = ~s({"event_type":"test.event"})
 
+      MockInboundWebhookRepository
+      |> expect(:get_inbound_secret, fn "ws-123", _opts -> {:ok, @secret} end)
+
       params = %{
         workspace_id: "ws-123",
         raw_body: raw_body,
-        signature: "sha256=invalid_signature",
-        source_ip: "192.168.1.1",
-        workspace_secret: @secret
+        signature: "sha256=0000000000000000000000000000000000000000000000000000000000000000",
+        source_ip: "192.168.1.1"
       }
 
       assert {:error, :invalid_signature} = ProcessInboundWebhook.execute(params, base_opts(ctx))
@@ -88,11 +90,28 @@ defmodule Jarga.Webhooks.Application.UseCases.ProcessInboundWebhookTest do
         workspace_id: "ws-123",
         raw_body: raw_body,
         signature: nil,
-        source_ip: "192.168.1.1",
-        workspace_secret: @secret
+        source_ip: "192.168.1.1"
       }
 
       assert {:error, :missing_signature} = ProcessInboundWebhook.execute(params, base_opts(ctx))
+    end
+  end
+
+  describe "execute/2 - workspace not configured" do
+    test "returns error when workspace has no inbound config", ctx do
+      raw_body = ~s({"event_type":"test.event"})
+
+      MockInboundWebhookRepository
+      |> expect(:get_inbound_secret, fn "ws-999", _opts -> {:error, :not_configured} end)
+
+      params = %{
+        workspace_id: "ws-999",
+        raw_body: raw_body,
+        signature: "sha256=abc123",
+        source_ip: "192.168.1.1"
+      }
+
+      assert {:error, :not_configured} = ProcessInboundWebhook.execute(params, base_opts(ctx))
     end
   end
 
@@ -101,12 +120,14 @@ defmodule Jarga.Webhooks.Application.UseCases.ProcessInboundWebhookTest do
       raw_body = "not valid json {"
       signature = SignaturePolicy.build_signature_header(raw_body, @secret)
 
+      MockInboundWebhookRepository
+      |> expect(:get_inbound_secret, fn "ws-123", _opts -> {:ok, @secret} end)
+
       params = %{
         workspace_id: "ws-123",
         raw_body: raw_body,
         signature: signature,
-        source_ip: "192.168.1.1",
-        workspace_secret: @secret
+        source_ip: "192.168.1.1"
       }
 
       assert {:error, :invalid_payload} = ProcessInboundWebhook.execute(params, base_opts(ctx))

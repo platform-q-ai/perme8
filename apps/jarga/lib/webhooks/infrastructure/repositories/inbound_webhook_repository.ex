@@ -11,6 +11,7 @@ defmodule Jarga.Webhooks.Infrastructure.Repositories.InboundWebhookRepository do
   alias Jarga.Webhooks.Domain.Entities.InboundWebhook
   alias Jarga.Webhooks.Infrastructure.Schemas.InboundWebhookSchema
   alias Jarga.Webhooks.Infrastructure.Queries.InboundWebhookQueries
+  alias Jarga.Webhooks.Infrastructure.Queries.InboundWebhookConfigQueries
 
   @impl true
   def insert(attrs, _opts \\ []) do
@@ -29,6 +30,14 @@ defmodule Jarga.Webhooks.Infrastructure.Repositories.InboundWebhookRepository do
     |> InboundWebhookQueries.ordered()
     |> Repo.all()
     |> Enum.map(&to_domain/1)
+  end
+
+  @impl true
+  def get_inbound_secret(workspace_id, _opts \\ []) do
+    case InboundWebhookConfigQueries.for_workspace(workspace_id) |> Repo.one() do
+      nil -> {:error, :not_configured}
+      config -> {:ok, config.inbound_secret}
+    end
   end
 
   @doc "Converts a schema to a domain entity."

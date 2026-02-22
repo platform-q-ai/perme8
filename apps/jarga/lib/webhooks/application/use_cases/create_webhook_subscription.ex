@@ -45,12 +45,18 @@ defmodule Jarga.Webhooks.Application.UseCases.CreateWebhookSubscription do
     membership_checker = Keyword.get(opts, :membership_checker, &default_membership_checker/2)
 
     with {:ok, member} <- membership_checker.(actor, workspace_id),
-         :ok <- authorize(member.role),
-         secret <- generate_secret(),
-         insert_attrs <- build_insert_attrs(attrs, workspace_id, actor.id, secret),
-         {:ok, subscription} <- webhook_repository.insert(insert_attrs, opts) do
-      emit_event(subscription, actor, workspace_id, event_bus, event_bus_opts)
-      {:ok, subscription}
+         :ok <- authorize(member.role) do
+      secret = generate_secret()
+      insert_attrs = build_insert_attrs(attrs, workspace_id, actor.id, secret)
+
+      case webhook_repository.insert(insert_attrs, opts) do
+        {:ok, subscription} ->
+          emit_event(subscription, actor, workspace_id, event_bus, event_bus_opts)
+          {:ok, subscription}
+
+        {:error, reason} ->
+          {:error, reason}
+      end
     end
   end
 

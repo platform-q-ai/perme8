@@ -13,6 +13,7 @@ defmodule Jarga.Webhooks.Infrastructure.Schemas.WebhookSubscriptionSchema do
 
   schema "webhook_subscriptions" do
     field(:url, :string)
+    # TODO: Encrypt signing secret at rest (follow-up: add Cloak.Ecto or similar)
     field(:secret, :string)
     field(:event_types, {:array, :string}, default: [])
     field(:is_active, :boolean, default: true)
@@ -29,8 +30,20 @@ defmodule Jarga.Webhooks.Infrastructure.Schemas.WebhookSubscriptionSchema do
     schema
     |> cast(attrs, [:url, :secret, :event_types, :is_active, :workspace_id, :created_by_id])
     |> validate_required([:url, :secret, :workspace_id])
-    |> validate_format(:url, ~r/^https?:\/\/.+/,
-      message: "must be a valid URL starting with http:// or https://"
-    )
+    |> validate_url_scheme()
+  end
+
+  defp validate_url_scheme(changeset) do
+    if enforce_https?() do
+      validate_format(changeset, :url, ~r/^https:\/\/.+/, message: "must be a valid HTTPS URL")
+    else
+      validate_format(changeset, :url, ~r/^https?:\/\/.+/,
+        message: "must be a valid URL starting with http:// or https://"
+      )
+    end
+  end
+
+  defp enforce_https? do
+    Application.get_env(:jarga, :webhook_enforce_https, false)
   end
 end

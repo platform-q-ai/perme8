@@ -17,6 +17,7 @@ defmodule Jarga.WebhookFixtures do
   alias Jarga.Webhooks.Infrastructure.Schemas.WebhookSubscriptionSchema
   alias Jarga.Webhooks.Infrastructure.Schemas.WebhookDeliverySchema
   alias Jarga.Webhooks.Infrastructure.Schemas.InboundWebhookSchema
+  alias Jarga.Webhooks.Infrastructure.Schemas.InboundWebhookConfigSchema
 
   @doc """
   Creates a webhook subscription in the database.
@@ -78,6 +79,22 @@ defmodule Jarga.WebhookFixtures do
 
     %InboundWebhookSchema{}
     |> InboundWebhookSchema.changeset(attrs)
+    |> Repo.insert!()
+  end
+
+  @doc """
+  Creates an inbound webhook config (per-workspace secret) in the database.
+
+  Requires `workspace_id` in attrs.
+  """
+  def inbound_webhook_config_fixture(attrs \\ %{}) do
+    attrs =
+      Enum.into(attrs, %{
+        inbound_secret: :crypto.strong_rand_bytes(32) |> Base.url_encode64(padding: false)
+      })
+
+    %InboundWebhookConfigSchema{}
+    |> InboundWebhookConfigSchema.changeset(attrs)
     |> Repo.insert!()
   end
 end

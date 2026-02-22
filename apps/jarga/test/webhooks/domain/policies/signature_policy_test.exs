@@ -91,5 +91,23 @@ defmodule Jarga.Webhooks.Domain.Policies.SignaturePolicyTest do
     test "returns error for wrong prefix" do
       assert {:error, :invalid_format} = SignaturePolicy.parse_signature_header("md5=abc123")
     end
+
+    test "returns error for non-hex characters after sha256= prefix" do
+      assert {:error, :invalid_format} = SignaturePolicy.parse_signature_header("sha256=ZZZZ")
+    end
+
+    test "returns error for uppercase hex characters" do
+      assert {:error, :invalid_format} = SignaturePolicy.parse_signature_header("sha256=ABCD1234")
+    end
+
+    test "returns error for hex with special characters" do
+      assert {:error, :invalid_format} =
+               SignaturePolicy.parse_signature_header("sha256=abc123!@#")
+    end
+
+    test "accepts valid lowercase hex after sha256= prefix" do
+      assert {:ok, "abcdef0123456789"} =
+               SignaturePolicy.parse_signature_header("sha256=abcdef0123456789")
+    end
   end
 end

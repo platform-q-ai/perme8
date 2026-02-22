@@ -33,7 +33,7 @@ defmodule JargaApi.WebhookApiController do
         {:ok, subscription} ->
           conn
           |> put_status(:created)
-          |> render(:show, subscription: subscription)
+          |> render(:created, subscription: subscription)
 
         {:error, :forbidden} ->
           forbidden(conn)
@@ -151,10 +151,12 @@ defmodule JargaApi.WebhookApiController do
     if ApiKeyScope.includes?(api_key, workspace_slug), do: :ok, else: {:error, :forbidden}
   end
 
+  @allowed_attrs ~w(url event_types is_active)
+
   defp webhook_attrs(params) do
     params
-    |> Map.take(["url", "event_types", "is_active"])
-    |> Enum.into(%{}, fn {k, v} -> {String.to_existing_atom(k), v} end)
+    |> Map.take(@allowed_attrs)
+    |> Map.new(fn {k, v} -> {String.to_atom(k), v} end)
   end
 
   defp forbidden(conn) do

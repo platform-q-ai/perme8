@@ -5,15 +5,17 @@ defmodule Jarga.Webhooks.Infrastructure do
   Contains database schemas, query objects, repositories, HTTP client,
   and event handler subscribers.
 
-  ## Schemas
-  - `Schemas.WebhookSubscriptionSchema` - Ecto schema for subscriptions
-  - `Schemas.WebhookDeliverySchema` - Ecto schema for deliveries
-  - `Schemas.InboundWebhookSchema` - Ecto schema for inbound webhooks
+   ## Schemas
+   - `Schemas.WebhookSubscriptionSchema` - Ecto schema for subscriptions
+   - `Schemas.WebhookDeliverySchema` - Ecto schema for deliveries
+   - `Schemas.InboundWebhookSchema` - Ecto schema for inbound webhooks
+   - `Schemas.InboundWebhookConfigSchema` - Ecto schema for inbound webhook config
 
-  ## Queries
-  - `Queries.WebhookQueries` - Subscription query objects
-  - `Queries.DeliveryQueries` - Delivery query objects
-  - `Queries.InboundWebhookQueries` - Inbound webhook query objects
+   ## Queries
+   - `Queries.WebhookQueries` - Subscription query objects
+   - `Queries.DeliveryQueries` - Delivery query objects
+   - `Queries.InboundWebhookQueries` - Inbound webhook query objects
+   - `Queries.InboundWebhookConfigQueries` - Inbound webhook config query objects
 
   ## Repositories
   - `Repositories.WebhookRepository` - Subscription data access
@@ -40,6 +42,7 @@ defmodule Jarga.Webhooks.Infrastructure do
       Schemas.WebhookSubscriptionSchema,
       Schemas.WebhookDeliverySchema,
       Schemas.InboundWebhookSchema,
+      Schemas.InboundWebhookConfigSchema,
       Repositories.WebhookRepository,
       Repositories.DeliveryRepository,
       Repositories.InboundWebhookRepository,
@@ -47,6 +50,7 @@ defmodule Jarga.Webhooks.Infrastructure do
       Queries.WebhookQueries,
       Queries.DeliveryQueries,
       Queries.InboundWebhookQueries,
+      Queries.InboundWebhookConfigQueries,
       Subscribers.WebhookDispatchSubscriber
     ]
 end

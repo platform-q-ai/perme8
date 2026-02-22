@@ -8,6 +8,7 @@ defmodule JargaApi.Integration.InboundWebhookFlowTest do
 
   import Jarga.AccountsFixtures
   import Jarga.WorkspacesFixtures
+  import Jarga.WebhookFixtures
 
   setup do
     owner = user_fixture()
@@ -19,13 +20,14 @@ defmodule JargaApi.Integration.InboundWebhookFlowTest do
         workspace_access: [workspace.slug]
       })
 
-    workspace_secret = :crypto.strong_rand_bytes(32) |> Base.url_encode64(padding: false)
+    # Store the inbound webhook secret in the database (server-side)
+    config = inbound_webhook_config_fixture(%{workspace_id: workspace.id})
 
     %{
       owner: owner,
       workspace: workspace,
       plain_token: plain_token,
-      workspace_secret: workspace_secret
+      workspace_secret: config.inbound_secret
     }
   end
 
@@ -36,20 +38,18 @@ defmodule JargaApi.Integration.InboundWebhookFlowTest do
       plain_token: token,
       workspace_secret: secret
     } do
-      # Step 1: Send inbound webhook with valid signature
-      payload = %{"event_type" => "payment.received", "amount" => 100}
-      encoded_body = Jason.encode!(payload)
+      # Step 1: Send inbound webhook with valid signature (raw body is used for HMAC)
+      raw_body = Jason.encode!(%{"event_type" => "payment.received", "amount" => 100})
 
       signature =
         "sha256=" <>
-          (:crypto.mac(:hmac, :sha256, secret, encoded_body) |> Base.encode16(case: :lower))
+          (:crypto.mac(:hmac, :sha256, secret, raw_body) |> Base.encode16(case: :lower))
 
       receive_conn =
         build_conn()
         |> put_req_header("content-type", "application/json")
         |> put_req_header("x-webhook-signature", signature)
-        |> put_req_header("x-webhook-secret", secret)
-        |> post("/api/workspaces/#{workspace.slug}/webhooks/inbound", payload)
+        |> post("/api/workspaces/#{workspace.slug}/webhooks/inbound", raw_body)
 
       assert receive_conn.status == 200
       response = json_response(receive_conn, 200)
@@ -73,18 +73,16 @@ defmodule JargaApi.Integration.InboundWebhookFlowTest do
     test "POST with invalid signature → 401, no audit log created", %{
       conn: conn,
       workspace: workspace,
-      plain_token: token,
-      workspace_secret: secret
+      plain_token: token
     } do
-      payload = %{"event_type" => "payment.received"}
+      raw_body = Jason.encode!(%{"event_type" => "payment.received"})
       bad_signature = "sha256=0000000000000000000000000000000000000000000000000000000000000000"
 
       receive_conn =
         build_conn()
         |> put_req_header("content-type", "application/json")
         |> put_req_header("x-webhook-signature", bad_signature)
-        |> put_req_header("x-webhook-secret", secret)
-        |> post("/api/workspaces/#{workspace.slug}/webhooks/inbound", payload)
+        |> post("/api/workspaces/#{workspace.slug}/webhooks/inbound", raw_body)
 
       assert receive_conn.status == 401
 

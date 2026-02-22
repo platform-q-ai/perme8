@@ -25,73 +25,93 @@ defmodule JargaApi.InboundWebhookApiControllerTest do
         workspace_access: [workspace.slug]
       })
 
-    # Generate a workspace-level webhook secret for inbound signature verification
-    workspace_secret = :crypto.strong_rand_bytes(32) |> Base.url_encode64(padding: false)
+    # Store the inbound webhook secret in the database (server-side)
+    config = inbound_webhook_config_fixture(%{workspace_id: workspace.id})
 
     %{
       owner: owner,
       workspace: workspace,
       plain_token: plain_token,
       member_token: member_token,
-      workspace_secret: workspace_secret
+      workspace_secret: config.inbound_secret
     }
   end
 
   describe "POST /api/workspaces/:workspace_slug/webhooks/inbound" do
-    test "accepts webhook with valid signature", %{
+    test "accepts webhook with valid signature (secret from DB, raw body for HMAC)", %{
       conn: conn,
       workspace: workspace,
       workspace_secret: secret
     } do
-      # Build payload and encode it deterministically — the controller will
-      # re-encode the parsed body with Jason, so we use Jason's output for the HMAC
-      payload = %{"event" => "payment.received", "data" => %{"amount" => 100}}
-      encoded_body = Jason.encode!(payload)
+      # The raw body is what the sender signs — the exact bytes sent over the wire
+      raw_body = Jason.encode!(%{"event" => "payment.received", "data" => %{"amount" => 100}})
 
       signature =
         "sha256=" <>
-          (:crypto.mac(:hmac, :sha256, secret, encoded_body) |> Base.encode16(case: :lower))
+          (:crypto.mac(:hmac, :sha256, secret, raw_body) |> Base.encode16(case: :lower))
 
       conn =
         conn
         |> put_req_header("content-type", "application/json")
         |> put_req_header("x-webhook-signature", signature)
-        |> put_req_header("x-webhook-secret", secret)
-        |> post("/api/workspaces/#{workspace.slug}/webhooks/inbound", payload)
+        |> post("/api/workspaces/#{workspace.slug}/webhooks/inbound", raw_body)
 
       assert conn.status == 200
       response = json_response(conn, 200)
       assert response["data"]["status"] == "accepted"
     end
 
-    test "returns 401 when signature is missing", %{
+    test "does not accept a client-supplied secret header", %{
       conn: conn,
-      workspace: workspace
+      workspace: workspace,
+      workspace_secret: _db_secret
     } do
-      body = ~s({"event":"payment.received"})
+      # Even if the attacker provides a custom secret, the server uses its own
+      attacker_secret = "attacker_controlled_secret"
+      raw_body = Jason.encode!(%{"event" => "hack.attempt"})
+
+      signature =
+        "sha256=" <>
+          (:crypto.mac(:hmac, :sha256, attacker_secret, raw_body) |> Base.encode16(case: :lower))
 
       conn =
         conn
         |> put_req_header("content-type", "application/json")
-        |> post("/api/workspaces/#{workspace.slug}/webhooks/inbound", body)
+        |> put_req_header("x-webhook-signature", signature)
+        # Attacker tries to supply their own secret — should be ignored
+        |> put_req_header("x-webhook-secret", attacker_secret)
+        |> post("/api/workspaces/#{workspace.slug}/webhooks/inbound", raw_body)
+
+      # Signature verification fails because server uses DB secret, not the attacker's
+      assert conn.status == 401
+    end
+
+    test "returns 401 when signature is missing", %{
+      conn: conn,
+      workspace: workspace
+    } do
+      raw_body = ~s({"event":"payment.received"})
+
+      conn =
+        conn
+        |> put_req_header("content-type", "application/json")
+        |> post("/api/workspaces/#{workspace.slug}/webhooks/inbound", raw_body)
 
       assert conn.status == 401
     end
 
     test "returns 401 when signature is invalid", %{
       conn: conn,
-      workspace: workspace,
-      workspace_secret: secret
+      workspace: workspace
     } do
-      body = ~s({"event":"payment.received"})
+      raw_body = ~s({"event":"payment.received"})
       bad_signature = "sha256=0000000000000000000000000000000000000000000000000000000000000000"
 
       conn =
         conn
         |> put_req_header("content-type", "application/json")
         |> put_req_header("x-webhook-signature", bad_signature)
-        |> put_req_header("x-webhook-secret", secret)
-        |> post("/api/workspaces/#{workspace.slug}/webhooks/inbound", body)
+        |> post("/api/workspaces/#{workspace.slug}/webhooks/inbound", raw_body)
 
       assert conn.status == 401
       response = json_response(conn, 401)
@@ -114,7 +134,6 @@ defmodule JargaApi.InboundWebhookApiControllerTest do
         conn
         |> put_req_header("content-type", "application/json")
         |> put_req_header("x-webhook-signature", signature)
-        |> put_req_header("x-webhook-secret", secret)
         |> post("/api/workspaces/#{workspace.slug}/webhooks/inbound", body)
       end
     end

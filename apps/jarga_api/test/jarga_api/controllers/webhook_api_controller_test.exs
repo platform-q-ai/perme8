@@ -38,7 +38,7 @@ defmodule JargaApi.WebhookApiControllerTest do
   end
 
   describe "POST /api/workspaces/:workspace_slug/webhooks" do
-    test "creates subscription with valid attrs", %{
+    test "creates subscription with valid attrs and returns secret only on creation", %{
       conn: conn,
       plain_token: token,
       workspace: workspace
@@ -116,7 +116,7 @@ defmodule JargaApi.WebhookApiControllerTest do
   end
 
   describe "GET /api/workspaces/:workspace_slug/webhooks" do
-    test "lists subscriptions for workspace", %{
+    test "lists subscriptions for workspace without exposing secrets", %{
       conn: conn,
       plain_token: token,
       workspace: workspace
@@ -145,6 +145,11 @@ defmodule JargaApi.WebhookApiControllerTest do
       response = json_response(conn, 200)
       assert is_list(response["data"])
       assert length(response["data"]) == 2
+
+      # Secrets should NOT be exposed in list responses
+      Enum.each(response["data"], fn sub ->
+        refute Map.has_key?(sub, "secret")
+      end)
     end
 
     test "returns 403 for non-admin", %{
@@ -162,7 +167,7 @@ defmodule JargaApi.WebhookApiControllerTest do
   end
 
   describe "GET /api/workspaces/:workspace_slug/webhooks/:id" do
-    test "returns subscription by ID", %{
+    test "returns subscription by ID without exposing secret", %{
       conn: conn,
       plain_token: token,
       workspace: workspace
@@ -183,6 +188,8 @@ defmodule JargaApi.WebhookApiControllerTest do
       response = json_response(conn, 200)
       assert response["data"]["id"] == sub.id
       assert response["data"]["url"] == "https://example.com/hook"
+      # Secret should NOT be exposed in show response
+      refute Map.has_key?(response["data"], "secret")
     end
 
     test "returns 404 for non-existent subscription", %{

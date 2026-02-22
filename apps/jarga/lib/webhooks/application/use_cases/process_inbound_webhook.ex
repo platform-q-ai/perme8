@@ -16,8 +16,7 @@ defmodule Jarga.Webhooks.Application.UseCases.ProcessInboundWebhook do
       workspace_id: workspace_id,
       raw_body: raw_body,
       signature: signature,
-      source_ip: source_ip,
-      workspace_secret: workspace_secret
+      source_ip: source_ip
     } = params
 
     inbound_webhook_repository =
@@ -27,6 +26,8 @@ defmodule Jarga.Webhooks.Application.UseCases.ProcessInboundWebhook do
     event_bus_opts = Keyword.get(opts, :event_bus_opts, [])
 
     with :ok <- validate_signature_present(signature),
+         {:ok, workspace_secret} <-
+           inbound_webhook_repository.get_inbound_secret(workspace_id, opts),
          {:ok, hex_sig} <- SignaturePolicy.parse_signature_header(signature),
          :ok <- verify_signature(raw_body, workspace_secret, hex_sig),
          {:ok, parsed} <- parse_payload(raw_body) do
