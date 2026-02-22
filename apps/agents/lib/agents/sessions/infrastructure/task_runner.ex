@@ -38,7 +38,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     # Track whether we've seen session go to "running" so we know
     # that a transition to "idle" means completion
     was_running: false,
-    # Accumulated assistant text output for DB caching
+    # Latest assistant text output for DB caching (opencode sends full text on each update)
     output_text: "",
     # Dependency injection
     container_provider: nil,
@@ -82,7 +82,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
         Agents.Sessions.Infrastructure.Repositories.TaskRepository
       )
 
-    pubsub = Keyword.get(opts, :pubsub, Jarga.PubSub)
+    pubsub = Keyword.get(opts, :pubsub, SessionsConfig.pubsub())
 
     # Resume context — if resuming, we already have container_id and session_id
     resume? = Keyword.get(opts, :resume, false)
@@ -218,9 +218,15 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     case state.opencode_client.health(base_url) do
       :ok ->
         # Resume path: session already exists, just subscribe and send prompt
-        state.opencode_client.subscribe_events(base_url, self())
-        send(self(), :send_prompt)
-        {:noreply, %{state | status: :prompting}}
+        case state.opencode_client.subscribe_events(base_url, self()) do
+          {:ok, _pid} ->
+            send(self(), :send_prompt)
+            {:noreply, %{state | status: :prompting}}
+
+          {:error, reason} ->
+            fail_task(state, "SSE subscription failed on resume: #{inspect(reason)}")
+            {:stop, :normal, state}
+        end
 
       {:error, _reason} ->
         interval = SessionsConfig.health_check_interval_ms()
@@ -241,10 +247,15 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
         update_task_status(state, %{session_id: session_id})
 
         # Subscribe to SSE events
-        state.opencode_client.subscribe_events(base_url, self())
+        case state.opencode_client.subscribe_events(base_url, self()) do
+          {:ok, _pid} ->
+            send(self(), :send_prompt)
+            {:noreply, %{state | session_id: session_id, status: :prompting}}
 
-        send(self(), :send_prompt)
-        {:noreply, %{state | session_id: session_id, status: :prompting}}
+          {:error, reason} ->
+            fail_task(state, "SSE subscription failed: #{inspect(reason)}")
+            {:stop, :normal, state}
+        end
 
       {:error, reason} ->
         fail_task(state, "Session creation failed: #{inspect(reason)}")
@@ -294,8 +305,14 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
         fail_task(new_state, error_msg)
         {:stop, :normal, new_state}
 
-      {:permission, session_id, permission_id, new_state} ->
-        # Auto-approve all tool permission requests
+      {:permission, session_id, permission_id, tool_name, new_state} ->
+        # Auto-approve tool permission requests inside the sandboxed container.
+        # The container runs with --cap-drop=ALL, memory/cpu limits, and non-root user.
+        # TODO: Implement a tool allowlist for additional defense-in-depth.
+        Logger.info(
+          "TaskRunner: auto-approving tool '#{tool_name}' for task #{new_state.task_id}"
+        )
+
         base_url = "http://localhost:#{new_state.container_port}"
 
         new_state.opencode_client.reply_permission(
@@ -405,9 +422,10 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   defp handle_sdk_event(%{"type" => "permission.asked", "properties" => props}, state) do
     permission_id = props["id"]
     session_id = props["sessionID"]
+    tool_name = props["tool"] || props["name"] || "unknown"
 
     if permission_id && session_id do
-      {:permission, session_id, permission_id, state}
+      {:permission, session_id, permission_id, tool_name, state}
     else
       {:continue, state}
     end
@@ -487,7 +505,12 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   defp cleanup_container(state) do
     state.container_provider.stop(state.container_id)
   rescue
-    _ -> :ok
+    error ->
+      Logger.warning(
+        "TaskRunner: cleanup_container failed for #{state.container_id}: #{inspect(error)}"
+      )
+
+      :ok
   end
 
   defp serialize_error(error) when is_binary(error), do: error
