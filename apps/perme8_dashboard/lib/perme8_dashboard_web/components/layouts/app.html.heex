@@ -1,5 +1,11 @@
-<% tabs = [{:features, "Features", "/"}]
-active_tab = assigns[:active_tab] || :features %>
+<% # Tab configuration: {key, label, path}
+# NOTE: active_tab defaults to :features. When adding future tabs,
+# set active_tab per route via on_mount hooks or live_session assigns.
+tabs = [{:features, "Features", ~p"/"}]
+active_tab = assigns[:active_tab] || :features
+
+# Icon mapping for sidebar navigation (keyed by tab key)
+tab_icons = %{features: "hero-squares-2x2"} %>
 <div class="drawer lg:drawer-open h-screen overflow-hidden">
   <input id="dashboard-drawer" type="checkbox" class="drawer-toggle" />
   <div class="drawer-content flex flex-col min-w-0 h-full overflow-hidden">
@@ -16,7 +22,7 @@ active_tab = assigns[:active_tab] || :features %>
     </div>
     <!-- Page content -->
     <main class="flex-1 flex flex-col p-4 lg:p-8 overflow-y-auto">
-      <div class="w-full max-w-5xl mx-auto" data-feature-tree>
+      <div class="w-full max-w-5xl mx-auto">
         {@inner_content}
       </div>
     </main>
@@ -29,7 +35,7 @@ active_tab = assigns[:active_tab] || :features %>
     <label for="dashboard-drawer" aria-label="close sidebar" class="drawer-overlay"></label>
     <aside class="bg-base-200 min-h-full w-64 p-4 flex flex-col">
       <div class="px-4 py-6">
-        <.link navigate="/" class="flex items-center gap-3">
+        <.link navigate={~p"/"} class="flex items-center gap-3">
           <.icon name="hero-beaker" class="size-8 text-primary" />
           <span class="text-2xl font-bold">Perme8 Dashboard</span>
         </.link>
@@ -37,10 +43,10 @@ active_tab = assigns[:active_tab] || :features %>
 
       <nav class="flex-1 py-4">
         <ul class="menu gap-1">
-          <li>
-            <.link navigate="/" class="flex items-center gap-3">
-              <.icon name="hero-squares-2x2" class="size-5" />
-              <span>Features</span>
+          <li :for={{key, label, path} <- tabs}>
+            <.link navigate={path} class="flex items-center gap-3">
+              <.icon name={tab_icons[key] || "hero-squares-2x2"} class="size-5" />
+              <span>{label}</span>
             </.link>
           </li>
         </ul>

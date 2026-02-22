@@ -32,9 +32,9 @@ defmodule Perme8DashboardWeb.AppLayoutTest do
       assert content =~ "drawer"
     end
 
-    test "includes data-feature-tree wrapper for BDD selectors" do
+    test "data-feature-tree is provided by DashboardLive, not the layout" do
       content = File.read!(@app_layout_path)
-      assert content =~ "data-feature-tree"
+      refute content =~ "data-feature-tree"
     end
 
     test "includes sidebar with dashboard icon" do

@@ -20,6 +20,18 @@ defmodule Perme8DashboardWeb.CoreComponentsTest do
       assert html =~ ~s|role="alert"|
     end
 
+    test "close button has phx-click handler to dismiss flash" do
+      assigns = %{flash: %{"info" => "Dismissable message"}}
+
+      html =
+        rendered_to_string(~H"""
+        <CoreComponents.flash kind={:info} flash={@flash} />
+        """)
+
+      assert html =~ "phx-click"
+      assert html =~ "lv:clear-flash"
+    end
+
     test "renders error flash message" do
       assigns = %{flash: %{"error" => "Something went wrong"}}
 
