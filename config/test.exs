@@ -32,9 +32,11 @@ config :identity, Identity.Repo,
   pool_size: 20,
   ownership_timeout: :infinity
 
-# Identity URL for login redirects (Identity runs on port 4003 in test)
+# Identity URL for login redirects.
+# NOTE: runtime.exs overrides Identity's port to 4001 for ALL environments
+# (not just prod), so Identity actually listens on 4001 even in MIX_ENV=test.
 # AgentsWeb test port: 4015 (avoids conflict with perme8_dashboard on 4012/4013)
-config :agents_web, :identity_url, "http://localhost:4003"
+config :agents_web, :identity_url, "http://localhost:4001"
 
 config :agents_web, AgentsWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4015],

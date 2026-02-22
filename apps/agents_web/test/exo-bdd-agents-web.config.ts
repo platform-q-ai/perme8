@@ -18,8 +18,8 @@ export default defineConfig({
   ],
   timeout: 60_000,
   variables: {
-    // Identity login URL (users log in via Identity, cookie is shared)
-    identityUrl: 'http://localhost:4003',
+    // Identity login URL (runtime.exs overrides Identity to port 4001 for all envs)
+    identityUrl: 'http://localhost:4001',
     // AgentsWeb base URL
     baseUrl: 'http://localhost:4015',
     // Test user credentials (must match exo_seeds_web.exs)
