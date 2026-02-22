@@ -71,12 +71,12 @@ Main sessions interface for running coding tasks in ephemeral opencode container
 
 | Environment | Port |
 |-------------|------|
-| dev | 4010 |
-| test | 4012 |
+| dev | 4014 |
+| test | 4015 |
 
 **Production env vars** (in `config/runtime.exs`):
 - `AGENTS_WEB_HOST` -- hostname (default: `localhost`)
-- `AGENTS_WEB_PORT` -- port (default: `4010`)
+- `AGENTS_WEB_PORT` -- port (default: `4014`)
 - `IDENTITY_URL` -- Identity app URL for login redirects
 - `SECRET_KEY_BASE` -- must match Identity and all other apps sharing the session cookie
 

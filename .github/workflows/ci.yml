@@ -179,6 +179,8 @@ jobs:
           npm ci
           cd ../../identity/assets
           npm ci
+          cd ../../agents_web/assets
+          npm ci
 
       - name: Install Gherkin parser dependencies
         run: bun install
@@ -409,6 +411,7 @@ jobs:
         run: |
           cd apps/jarga_web/assets && npm ci
           cd ../../identity/assets && npm ci
+          cd ../../agents_web/assets && npm ci
 
       - name: Install Playwright browsers
         if: matrix.domain == 'browser'

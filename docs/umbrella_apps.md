@@ -11,7 +11,7 @@ Umbrella applications are a way to organize multiple Elixir applications within 
 | `agents` | Elixir + Bandit | -- / 4007 | Agent definitions, LLM orchestration, Knowledge MCP tools (6 tools via JSON-RPC), Sessions (ephemeral opencode containers) |
 | `jarga_web` | Phoenix (UI) | 4000 / 4002 | LiveView browser interface for all domain services |
 | `jarga_api` | Phoenix (API) | 4004 / 4005 | JSON REST API for external integrations |
-| `agents_web` | Phoenix (UI) | 4010 / 4012 | Sessions LiveView browser interface, delegates auth to Identity via shared cookie |
+| `agents_web` | Phoenix (UI) | 4014 / 4015 | Sessions LiveView browser interface, delegates auth to Identity via shared cookie |
 | `agents_api` | Phoenix (API) | 4008 / 4009 | JSON REST API for agent management and query execution |
 | `entity_relationship_manager` | Phoenix (API) | 4006 / -- | Schema-driven graph data layer (Neo4j + PostgreSQL) |
 | `alkali` | Elixir (standalone) | -- | Static site generator, publishable to Hex |
