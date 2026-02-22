@@ -33,10 +33,11 @@ config :identity, Identity.Repo,
   ownership_timeout: :infinity
 
 # Identity URL for login redirects (Identity runs on port 4003 in test)
+# AgentsWeb test port: 4015 (avoids conflict with perme8_dashboard on 4012/4013)
 config :agents_web, :identity_url, "http://localhost:4003"
 
 config :agents_web, AgentsWeb.Endpoint,
-  http: [ip: {127, 0, 0, 1}, port: 4012],
+  http: [ip: {127, 0, 0, 1}, port: 4015],
   # Must match Identity's secret_key_base so the shared session cookie
   # (_identity_key) signed by Identity can be verified by agents_web.
   secret_key_base: "test_identity_secret_key_base_at_least_64_bytes_long_for_security"

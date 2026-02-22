@@ -30,7 +30,7 @@ Perme8 follows **Clean Architecture** principles throughout, with compile-time b
 | [`jarga`](apps/jarga/) | Core domain logic -- projects, documents, notes, chat | -- |
 | [`agents`](apps/agents/) | Agent definitions, LLM orchestration, Knowledge MCP tools | 4007 |
 | [`jarga_web`](apps/jarga_web/) | Phoenix LiveView browser interface | 4000 |
-| [`agents_web`](apps/agents_web/) | Sessions LiveView browser interface, delegates auth to Identity | 4010 |
+| [`agents_web`](apps/agents_web/) | Sessions LiveView browser interface, delegates auth to Identity | 4014 |
 | [`jarga_api`](apps/jarga_api/) | JSON REST API for external integrations | -- |
 | [`agents_api`](apps/agents_api/) | JSON REST API for agent management and query execution | 4008 |
 | [`entity_relationship_manager`](apps/entity_relationship_manager/) | Schema-driven graph data layer backed by Neo4j and PostgreSQL | 4005 |

@@ -74,12 +74,12 @@ config :agents_api, AgentsApi.Endpoint,
   secret_key_base: "agents_api_dev_secret_key_base_at_least_64_bytes_long_for_security",
   watchers: []
 
-# AgentsWeb dev configuration (Sessions UI on port 4010)
+# AgentsWeb dev configuration (Sessions UI on port 4014)
 # Identity URL for login redirects (Identity runs on port 4001 in dev)
 config :agents_web, :identity_url, "http://localhost:4001"
 
 config :agents_web, AgentsWeb.Endpoint,
-  http: [ip: {127, 0, 0, 1}, port: 4010],
+  http: [ip: {127, 0, 0, 1}, port: 4014],
   check_origin: false,
   code_reloader: true,
   debug_errors: true,
