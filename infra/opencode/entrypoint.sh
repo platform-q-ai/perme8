@@ -29,7 +29,24 @@ GITHUB_TOKEN=$("$GET_TOKEN")
 export GITHUB_TOKEN
 echo "GitHub installation token generated"
 
-AUTH="https://x-access-token:${GITHUB_TOKEN}@github.com"
+# ---- Configure GIT_ASKPASS for token-based auth ----
+# Uses GIT_ASKPASS so the token is never persisted in .git/config.
+# The get-token script regenerates short-lived tokens on each git operation.
+# GIT_ASKPASS is invoked with a prompt argument; we check whether git is
+# asking for the username or the password and respond accordingly.
+
+GIT_ASKPASS_SCRIPT="$HOME/.config/perme8/git-askpass"
+cat > "$GIT_ASKPASS_SCRIPT" <<'ASKPASS'
+#!/bin/bash
+case "$1" in
+  Username*) echo "x-access-token" ;;
+  Password*) exec "$HOME/.config/perme8/get-token" ;;
+esac
+ASKPASS
+chmod +x "$GIT_ASKPASS_SCRIPT"
+
+export GIT_ASKPASS="$GIT_ASKPASS_SCRIPT"
+export GIT_TERMINAL_PROMPT=0
 
 # ---- Configure git identity (perme8[bot]) ----
 
@@ -45,15 +62,12 @@ echo "opencode auth.json written"
 # ---- Clone repos ----
 
 echo "Cloning perme8 (branch: $BRANCH)..."
-git clone --depth 1 --branch "$BRANCH" "${AUTH}/platform-q-ai/perme8.git" /workspace/perme8
+git clone --depth 1 --branch "$BRANCH" "https://github.com/platform-q-ai/perme8.git" /workspace/perme8
 
 echo "Cloning skills into ~/.claude/..."
-git clone --depth 1 "${AUTH}/platform-q-ai/skills.git" "$HOME/.claude" || echo "warn: skills repo not available, skipping"
+git clone --depth 1 "https://github.com/platform-q-ai/skills.git" "$HOME/.claude" || echo "warn: skills repo not available, skipping"
 
 cd /workspace/perme8
-
-# Configure push remote to use token (refreshable via get-token)
-git remote set-url origin "${AUTH}/platform-q-ai/perme8.git"
 
 # Copy opencode config into the repo root
 cp /workspace/opencode.json /workspace/perme8/opencode.json
