@@ -185,7 +185,7 @@ This app hosts the `Perme8.Events.DomainEvent` macro (`lib/perme8_events/domain_
 
 - **Endpoint**: `IdentityWeb.Endpoint` on port 4001 (configurable)
 - **Database**: shares PostgreSQL with `jarga` app (migrations live in `apps/jarga/priv/repo/migrations/`)
-- **Session**: shares cookie with `JargaWeb` (`_jarga_key`, same signing salt) for SSO
+- **Session**: shares `_identity_key` cookie with `JargaWeb` and `AgentsWeb` (same signing salt + `secret_key_base`) for SSO. `AgentsWeb` redirects unauthenticated users to Identity login with a `?return_to=` URL; Identity validates the return URL (localhost-only) and redirects back after successful login
 - **Dependencies**: Identity depends on no other umbrella apps at compile time. Runtime coupling to `Jarga.Workspaces` uses `Code.ensure_loaded?/1` + `apply/3` to avoid compile-time boundary violations
 - **Exports**: domain entities, policies, services, and schemas used by other apps (e.g., `Jarga.AccountsFixtures`)
 
