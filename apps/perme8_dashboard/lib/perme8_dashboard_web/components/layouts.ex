@@ -4,5 +4,7 @@ defmodule Perme8DashboardWeb.Layouts do
   """
   use Perme8DashboardWeb, :html
 
+  import Perme8DashboardWeb.TabComponents
+
   embed_templates("layouts/*")
 end
