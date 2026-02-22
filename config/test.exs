@@ -69,6 +69,10 @@ config :identity, IdentityWeb.Endpoint,
 # ExoDashboard App Test Configuration
 # ============================================================================
 
+# Enable basic auth in test so the plug compiles and can be tested.
+# Credentials are injected per-test via Application.put_env/3.
+config :exo_dashboard, basic_auth_enabled: true
+
 config :exo_dashboard, ExoDashboardWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4011],
   secret_key_base:
@@ -77,6 +81,10 @@ config :exo_dashboard, ExoDashboardWeb.Endpoint,
 # ============================================================================
 # Perme8Dashboard App Test Configuration
 # ============================================================================
+
+# Enable basic auth in test so the plug compiles and can be tested.
+# Credentials are injected per-test via Application.put_env/3.
+config :perme8_dashboard, basic_auth_enabled: true
 
 config :perme8_dashboard, Perme8DashboardWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4012],
