@@ -74,6 +74,16 @@ config :exo_dashboard, ExoDashboardWeb.Endpoint,
   secret_key_base:
     "exo_dashboard_test_secret_key_base_that_is_at_least_64_bytes_long_for_security"
 
+# ============================================================================
+# Perme8Dashboard App Test Configuration
+# ============================================================================
+
+config :perme8_dashboard, Perme8DashboardWeb.Endpoint,
+  http: [ip: {127, 0, 0, 1}, port: 4013],
+  secret_key_base:
+    "perme8_dashboard_test_secret_key_base_that_is_at_least_64_bytes_long_for_security",
+  server: false
+
 # In test we don't send emails
 config :identity, Identity.Mailer, adapter: Swoosh.Adapters.Test
 
