@@ -64,10 +64,19 @@ defmodule IdentityWeb.Plugs.UserAuth do
   defp validated_external_return_to(""), do: nil
 
   defp validated_external_return_to(url) when is_binary(url) do
+    allowed_hosts = allowed_return_hosts()
+
     case URI.parse(url) do
-      %URI{host: "localhost", scheme: scheme} when scheme in ["http", "https"] -> url
-      _ -> nil
+      %URI{host: host, scheme: scheme} when scheme in ["http", "https"] ->
+        if host in allowed_hosts, do: url, else: nil
+
+      _ ->
+        nil
     end
+  end
+
+  defp allowed_return_hosts do
+    Application.get_env(:identity, :allowed_return_hosts, ["localhost"])
   end
 
   @doc """
