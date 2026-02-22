@@ -323,7 +323,7 @@ defmodule AgentsWeb.SessionsLive.Index do
     ]
 
     case MDEx.to_html(text, opts) do
-      {:ok, html} -> Phoenix.HTML.raw(html)
+      {:ok, html} -> Phoenix.HTML.raw(MDEx.safe_html(html))
       {:error, _} -> text
     end
   end
