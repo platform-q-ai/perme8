@@ -14,7 +14,7 @@ Feature: Perme8 Dashboard Security Baseline
 
   Scenario: Dashboard security headers are present
     When I check "${baseUrl}" for security headers
-    Then X-Frame-Options should be set to "SAMEORIGIN"
+    Then the security headers should include "Content-Security-Policy"
     And the security headers should include "X-Content-Type-Options"
 
   Scenario: Dashboard pages are free from common vulnerabilities
