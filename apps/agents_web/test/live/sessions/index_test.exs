@@ -125,7 +125,7 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
             "tokens" => %{
               "input" => 5200,
               "output" => 150,
-              "cache" => %{"read" => 13000, "write" => 0}
+              "cache" => %{"read" => 13_000, "write" => 0}
             },
             "cost" => 0
           }

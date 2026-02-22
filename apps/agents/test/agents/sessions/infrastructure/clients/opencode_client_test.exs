@@ -303,8 +303,8 @@ defmodule Agents.Sessions.Infrastructure.Clients.OpencodeClientTest do
 
     test "parses multiple complete SSE messages" do
       raw =
-        "event: server.connected\ndata: {\"version\":\"1.2.10\"}\n\n" <>
-          "event: session.status\ndata: {\"sessionID\":\"s1\",\"status\":{\"type\":\"running\"}}\n\n"
+        ~s(event: server.connected\ndata: {"version":"1.2.10"}\n\n) <>
+          ~s(event: session.status\ndata: {"sessionID":"s1","status":{"type":"running"}}\n\n)
 
       {events, remaining} = OpencodeClient.parse_sse_chunk(raw)
 

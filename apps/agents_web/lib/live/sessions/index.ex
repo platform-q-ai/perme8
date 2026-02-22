@@ -93,24 +93,27 @@ defmodule AgentsWeb.SessionsLive.Index do
 
       task ->
         user = socket.assigns.current_scope.user
+        do_cancel_task(task, user, socket)
+    end
+  end
 
-        case Sessions.cancel_task(task.id, user.id) do
-          :ok ->
-            updated_task =
-              case Sessions.get_task(task.id, user.id) do
-                {:ok, t} -> t
-                _ -> Map.put(task, :status, "cancelled")
-              end
+  defp do_cancel_task(task, user, socket) do
+    case Sessions.cancel_task(task.id, user.id) do
+      :ok ->
+        updated_task =
+          case Sessions.get_task(task.id, user.id) do
+            {:ok, t} -> t
+            _ -> Map.put(task, :status, "cancelled")
+          end
 
-            {:noreply,
-             socket
-             |> assign(:current_task, updated_task)
-             |> reload_tasks()
-             |> put_flash(:info, "Task cancelled")}
+        {:noreply,
+         socket
+         |> assign(:current_task, updated_task)
+         |> reload_tasks()
+         |> put_flash(:info, "Task cancelled")}
 
-          {:error, _reason} ->
-            {:noreply, put_flash(socket, :error, "Failed to cancel task")}
-        end
+      {:error, _reason} ->
+        {:noreply, put_flash(socket, :error, "Failed to cancel task")}
     end
   end
 
@@ -171,27 +174,30 @@ defmodule AgentsWeb.SessionsLive.Index do
   @impl true
   def handle_info({:task_status_changed, task_id, status}, socket) do
     current_task = socket.assigns.current_task
-
-    updated_task =
-      if current_task && current_task.id == task_id do
-        if status == "failed" do
-          user = socket.assigns.current_scope.user
-
-          case Sessions.get_task(task_id, user.id) do
-            {:ok, %{error: error} = task} when not is_nil(error) -> task
-            _ -> Map.put(current_task, :status, status)
-          end
-        else
-          Map.put(current_task, :status, status)
-        end
-      else
-        current_task
-      end
+    updated_task = maybe_update_task_status(current_task, task_id, status, socket)
 
     {:noreply,
      socket
      |> assign(:current_task, updated_task)
      |> reload_tasks()}
+  end
+
+  defp maybe_update_task_status(nil, _task_id, _status, _socket), do: nil
+
+  defp maybe_update_task_status(%{id: id} = task, task_id, _status, _socket) when id != task_id,
+    do: task
+
+  defp maybe_update_task_status(task, task_id, "failed", socket) do
+    user = socket.assigns.current_scope.user
+
+    case Sessions.get_task(task_id, user.id) do
+      {:ok, %{error: error} = refreshed} when not is_nil(error) -> refreshed
+      _ -> Map.put(task, :status, "failed")
+    end
+  end
+
+  defp maybe_update_task_status(task, _task_id, status, _socket) do
+    Map.put(task, :status, status)
   end
 
   # Catch-all for unhandled messages
