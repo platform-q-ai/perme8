@@ -31,6 +31,7 @@ defmodule IdentityWeb.CoreComponents do
 
   alias Phoenix.HTML.Form, as: HTMLForm
   alias Phoenix.HTML.FormField
+  alias Phoenix.LiveView.JS
 
   @doc """
   Renders flash notices.
@@ -57,25 +58,29 @@ defmodule IdentityWeb.CoreComponents do
       id={@id}
       data-flash
       role="alert"
-      class="toast toast-top toast-end z-50"
-      {@rest}
-    >
-      <div class={[
-        "alert w-80 sm:w-96 max-w-80 sm:max-w-96 text-wrap",
+      class={[
+        "alert text-wrap mb-4",
         @kind == :info && "alert-info",
         @kind == :error && "alert-error"
-      ]}>
-        <.icon :if={@kind == :info} name="hero-information-circle" class="size-5 shrink-0" />
-        <.icon :if={@kind == :error} name="hero-exclamation-circle" class="size-5 shrink-0" />
-        <div>
-          <p :if={@title} class="font-semibold">{@title}</p>
-          <p>{msg}</p>
-        </div>
-        <div class="flex-1" />
-        <button type="button" class="group self-start cursor-pointer" aria-label={gettext("close")}>
-          <.icon name="hero-x-mark" class="size-5 opacity-40 group-hover:opacity-70" />
-        </button>
+      ]}
+      {@rest}
+    >
+      <.icon :if={@kind == :info} name="hero-information-circle" class="size-5 shrink-0" />
+      <.icon :if={@kind == :error} name="hero-exclamation-circle" class="size-5 shrink-0" />
+      <div class="flex-1">
+        <p :if={@title} class="font-semibold">{@title}</p>
+        <p>{msg}</p>
       </div>
+      <button
+        type="button"
+        class="group self-start cursor-pointer"
+        aria-label={gettext("close")}
+        phx-click={
+          JS.hide(to: "##{@id}", transition: {"ease-out duration-200", "opacity-100", "opacity-0"})
+        }
+      >
+        <.icon name="hero-x-mark" class="size-5 opacity-40 group-hover:opacity-70" />
+      </button>
     </div>
     """
   end

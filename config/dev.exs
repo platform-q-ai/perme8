@@ -83,7 +83,9 @@ config :agents_web, AgentsWeb.Endpoint,
   check_origin: false,
   code_reloader: true,
   debug_errors: true,
-  secret_key_base: "agents_web_dev_secret_key_base_at_least_64_bytes_long_for_security",
+  # Must match Identity's secret_key_base so the shared session cookie
+  # (_identity_key) signed by Identity can be verified by agents_web.
+  secret_key_base: "dev_identity_secret_key_base_at_least_64_bytes_long_for_security",
   watchers: [
     esbuild: {Esbuild, :install_and_run, [:agents, ~w(--sourcemap=inline --watch)]},
     tailwind: {Tailwind, :install_and_run, [:agents, ~w(--watch)]}
