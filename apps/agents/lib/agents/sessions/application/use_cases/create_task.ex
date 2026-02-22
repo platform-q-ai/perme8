@@ -36,7 +36,7 @@ defmodule Agents.Sessions.Application.UseCases.CreateTask do
     with :ok <- validate_instruction(attrs),
          :ok <- check_concurrent_limit(attrs.user_id, task_repo),
          {:ok, schema} <- task_repo.create_task(attrs),
-         :ok <- start_runner(schema.id, opts) do
+         :ok <- start_runner(schema.id, task_repo, opts) do
       {:ok, Task.from_schema(schema)}
     end
   end
@@ -55,7 +55,7 @@ defmodule Agents.Sessions.Application.UseCases.CreateTask do
     if count < max, do: :ok, else: {:error, :concurrent_limit_reached}
   end
 
-  defp start_runner(task_id, opts) do
+  defp start_runner(task_id, task_repo, opts) do
     case Keyword.get(opts, :task_runner_starter) do
       nil ->
         :ok
@@ -70,8 +70,16 @@ defmodule Agents.Sessions.Application.UseCases.CreateTask do
               "CreateTask: failed to start runner for task #{task_id}: #{inspect(reason)}"
             )
 
+            mark_task_failed(task_id, task_repo, "Runner failed to start: #{inspect(reason)}")
             {:error, :runner_start_failed}
         end
+    end
+  end
+
+  defp mark_task_failed(task_id, task_repo, error) do
+    case task_repo.get_task(task_id) do
+      nil -> :ok
+      task -> task_repo.update_task_status(task, %{status: "failed", error: error})
     end
   end
 end
