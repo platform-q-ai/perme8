@@ -136,5 +136,8 @@
 @import '@milkdown/theme-nord/style.css';
 @import './editor.css';
 
+/* Session Styles */
+@import './sessions.css';
+
 /* Agent Response Styles */
 @import './agent-response.css';

@@ -313,6 +313,24 @@ defmodule JargaWeb.AppLive.Sessions.Index do
     assign(socket, :tasks, tasks)
   end
 
+  defp render_markdown(text) when is_binary(text) do
+    opts = [
+      extension: [
+        strikethrough: true,
+        table: true,
+        tasklist: true,
+        autolink: true
+      ]
+    ]
+
+    case MDEx.to_html(text, opts) do
+      {:ok, html} -> Phoenix.HTML.raw(html)
+      {:error, _} -> text
+    end
+  end
+
+  defp render_markdown(text), do: text
+
   defp format_error(error) when is_binary(error), do: error
   defp format_error(%{"message" => msg}), do: msg
   defp format_error(%{"data" => %{"message" => msg}}), do: msg
@@ -564,10 +582,10 @@ defmodule JargaWeb.AppLive.Sessions.Index do
   end
 
   defp output_part(%{part: {:text, text}} = assigns) do
-    assigns = assign(assigns, :text, text)
+    assigns = assign(assigns, :rendered_html, render_markdown(text))
 
     ~H"""
-    <div class="whitespace-pre-wrap py-1">{@text}</div>
+    <div class="session-markdown py-1">{@rendered_html}</div>
     """
   end
 
