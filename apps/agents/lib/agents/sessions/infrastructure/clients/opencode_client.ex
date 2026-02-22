@@ -210,24 +210,22 @@ defmodule Agents.Sessions.Infrastructure.Clients.OpencodeClient do
         end
       end)
 
-    if data do
-      case Jason.decode(data) do
-        {:ok, parsed} ->
-          # Wrap with the event type for easy pattern matching
-          if event_type do
-            Map.put(parsed, "type", event_type)
-          else
-            parsed
-          end
+    data && decode_sse_data(data, event_type)
+  end
 
-        {:error, _} ->
-          Logger.warning("OpencodeClient: failed to parse SSE data: #{inspect(data)}")
-          nil
-      end
-    else
-      nil
+  defp decode_sse_data(data, event_type) do
+    case Jason.decode(data) do
+      {:ok, parsed} ->
+        maybe_add_event_type(parsed, event_type)
+
+      {:error, _} ->
+        Logger.warning("OpencodeClient: failed to parse SSE data: #{inspect(data)}")
+        nil
     end
   end
+
+  defp maybe_add_event_type(parsed, nil), do: parsed
+  defp maybe_add_event_type(parsed, event_type), do: Map.put(parsed, "type", event_type)
 
   # ---- Private: Default HTTP ----
 
