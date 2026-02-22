@@ -44,7 +44,7 @@ git push "https://x-access-token:${TOKEN}@github.com/platform-q-ai/perme8.git" <
 
 ### CRUD Skills
 
-- **CRUD Create** -- implements new features from a ticket or direct description. Triages scope (Full/Medium/Micro) and delegates to PRD + Architect + Execute Plan, Architect + Execute Plan, or direct TDD.
+- **CRUD Create** -- implements new features from a ticket or direct description. Triages scope (Full/Medium/Micro) and delegates to PRD + BDD Features + Architect + Execute Plan, BDD Features + Architect + Execute Plan, or BDD Features + direct TDD. Feature files are generated before the architect phase as acceptance specifications.
 - **CRUD Read** -- handles research spikes and exploration. Strictly read-only. Posts findings as a comment on the ticket.
 - **CRUD Update** -- modifies existing functionality (bug fix, refactor, chore, docs). Runs impact analysis, regression baseline, and TDD.
 - **CRUD Delete** -- removes or deprecates features. Scans dependencies, determines migration strategy, and executes staged removal.
@@ -62,4 +62,4 @@ git push "https://x-access-token:${TOKEN}@github.com/platform-q-ai/perme8.git" <
 
 ### Testing Skills
 
-- **Generate Exo-BDD Features** -- generates domain-specific BDD feature files (browser, HTTP, security) from a PRD.
+- **Generate Exo-BDD Features** -- generates domain-specific BDD feature files (browser, HTTP, security) from a PRD. Supports early-pipeline mode (before architect, business-language steps) and post-plan mode (after architect, concrete implementation details).
