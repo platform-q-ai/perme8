@@ -373,6 +373,7 @@ defmodule JargaWeb.AppLive.Sessions.Index do
                 <textarea
                   name="instruction"
                   id="session-instruction"
+                  phx-hook="SessionForm"
                   rows="3"
                   class="textarea textarea-bordered w-full"
                   placeholder={

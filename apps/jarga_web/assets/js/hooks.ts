@@ -21,6 +21,7 @@ import { ChatPanelHook } from './presentation/hooks/chat-panel-hook'
 import { FlashHook } from './presentation/hooks/flash-hook'
 import { CopyToClipboardHook } from './presentation/hooks/copy-to-clipboard-hook'
 import { SessionLogHook } from './presentation/hooks/session-log-hook'
+import { SessionFormHook } from './presentation/hooks/session-form-hook'
 
 // Export individual hooks for selective import
 export {
@@ -28,7 +29,8 @@ export {
   ChatPanelHook as ChatPanel,
   FlashHook as AutoHideFlash,
   CopyToClipboardHook as CopyToClipboard,
-  SessionLogHook as SessionLog
+  SessionLogHook as SessionLog,
+  SessionFormHook as SessionForm
 }
 
 // Default export for Phoenix LiveView
@@ -38,5 +40,6 @@ export default {
   ChatPanel: ChatPanelHook,
   AutoHideFlash: FlashHook,
   CopyToClipboard: CopyToClipboardHook,
-  SessionLog: SessionLogHook
+  SessionLog: SessionLogHook,
+  SessionForm: SessionFormHook
 }
