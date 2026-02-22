@@ -16,6 +16,7 @@ Feature: Perme8 Dashboard Browser UI
     And I wait for the page to load
     And I wait for "[data-tab='features']" to be visible
     Then "[data-feature-tree]" should be visible
+    And I wait for "[data-app]" to be visible
     And "[data-app]" should exist
 
   Scenario: Feature list displays app groups with feature counts
