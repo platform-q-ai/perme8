@@ -35,6 +35,11 @@ defmodule Agents.Sessions.Application.SessionsConfig do
     Application.get_env(:agents, :sessions_env, %{})
   end
 
+  @doc "Returns the PubSub server name for broadcasting task events."
+  def pubsub do
+    config()[:pubsub] || Jarga.PubSub
+  end
+
   defp config do
     Application.get_env(:agents, :sessions, [])
   end
