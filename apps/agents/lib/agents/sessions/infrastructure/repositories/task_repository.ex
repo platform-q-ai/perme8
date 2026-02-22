@@ -40,11 +40,16 @@ defmodule Agents.Sessions.Infrastructure.Repositories.TaskRepository do
     |> Repo.update()
   end
 
+  @default_task_limit 50
+
   @impl true
-  def list_tasks_for_user(user_id, _opts \\ []) do
+  def list_tasks_for_user(user_id, opts \\ []) do
+    limit = Keyword.get(opts, :limit, @default_task_limit)
+
     TaskQueries.base()
     |> TaskQueries.for_user(user_id)
     |> TaskQueries.recent_first()
+    |> TaskQueries.limit(limit)
     |> Repo.all()
   end
 

@@ -52,6 +52,14 @@ defmodule Agents.Sessions.Infrastructure.Queries.TaskQueries do
   end
 
   @doc """
+  Limits the number of results returned.
+  """
+  @spec limit(Ecto.Query.t(), non_neg_integer()) :: Ecto.Query.t()
+  def limit(query \\ base(), max) do
+    from(t in query, limit: ^max)
+  end
+
+  @doc """
   Returns a query that counts active tasks (pending, starting, running) for a user.
   """
   @spec running_count_for_user(Ecto.UUID.t()) :: Ecto.Query.t()
