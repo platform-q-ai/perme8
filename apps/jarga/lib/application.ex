@@ -34,7 +34,10 @@ defmodule Jarga.Application do
     enable_in_test = Application.get_env(:jarga, :enable_pubsub_in_test, false)
 
     if env != :test or enable_in_test do
-      [Jarga.Notifications.Infrastructure.Subscribers.WorkspaceInvitationSubscriber]
+      [
+        Jarga.Notifications.Infrastructure.Subscribers.WorkspaceInvitationSubscriber,
+        Jarga.Webhooks.Infrastructure.Subscribers.WebhookDispatchSubscriber
+      ]
     else
       []
     end

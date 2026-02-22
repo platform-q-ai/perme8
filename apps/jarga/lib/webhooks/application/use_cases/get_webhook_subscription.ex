@@ -15,9 +15,8 @@ defmodule Jarga.Webhooks.Application.UseCases.GetWebhookSubscription do
     membership_checker = Keyword.get(opts, :membership_checker, &default_membership_checker/2)
 
     with {:ok, member} <- membership_checker.(actor, workspace_id),
-         :ok <- authorize(member.role),
-         {:ok, subscription} <- fetch(subscription_id, webhook_repository, opts) do
-      {:ok, subscription}
+         :ok <- authorize(member.role) do
+      fetch(subscription_id, webhook_repository, opts)
     end
   end
 

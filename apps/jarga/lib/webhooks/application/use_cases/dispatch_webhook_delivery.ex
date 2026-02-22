@@ -23,9 +23,7 @@ defmodule Jarga.Webhooks.Application.UseCases.DispatchWebhookDelivery do
     event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
     event_bus_opts = Keyword.get(opts, :event_bus_opts, [])
 
-    if not subscription.is_active do
-      {:error, :subscription_inactive}
-    else
+    if subscription.is_active do
       payload_json = Jason.encode!(payload)
       signature_header = SignaturePolicy.build_signature_header(payload_json, subscription.secret)
 
@@ -45,6 +43,8 @@ defmodule Jarga.Webhooks.Application.UseCases.DispatchWebhookDelivery do
         {:error, reason} ->
           {:error, reason}
       end
+    else
+      {:error, :subscription_inactive}
     end
   end
 

@@ -15,9 +15,8 @@ defmodule Jarga.Webhooks.Application.UseCases.GetDelivery do
     membership_checker = Keyword.get(opts, :membership_checker, &default_membership_checker/2)
 
     with {:ok, member} <- membership_checker.(actor, workspace_id),
-         :ok <- authorize(member.role),
-         {:ok, delivery} <- fetch(delivery_id, delivery_repository, opts) do
-      {:ok, delivery}
+         :ok <- authorize(member.role) do
+      fetch(delivery_id, delivery_repository, opts)
     end
   end
 
