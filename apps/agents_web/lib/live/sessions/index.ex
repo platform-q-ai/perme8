@@ -44,47 +44,9 @@ defmodule AgentsWeb.SessionsLive.Index do
     if instruction == "" do
       {:noreply, put_flash(socket, :error, "Instruction is required")}
     else
-      user = socket.assigns.current_scope.user
-      current_task = socket.assigns.current_task
-
-      # If viewing a completed task with a container, resume it; otherwise create new
-      result =
-        if resumable_task?(current_task) do
-          Sessions.resume_task(current_task.id, %{instruction: instruction, user_id: user.id})
-        else
-          Sessions.create_task(%{instruction: instruction, user_id: user.id})
-        end
-
-      case result do
-        {:ok, task} ->
-          Phoenix.PubSub.subscribe(Jarga.PubSub, "task:#{task.id}")
-
-          {:noreply,
-           socket
-           |> assign(:current_task, task)
-           |> assign(:events, [])
-           |> assign_session_state()
-           |> assign(:form, to_form(%{"instruction" => ""}))
-           |> reload_tasks()}
-
-        {:error, :concurrent_limit_reached} ->
-          {:noreply, put_flash(socket, :error, "A task is already running")}
-
-        {:error, :instruction_required} ->
-          {:noreply, put_flash(socket, :error, "Instruction is required")}
-
-        {:error, :not_resumable} ->
-          {:noreply, put_flash(socket, :error, "This session cannot be resumed")}
-
-        {:error, :no_container} ->
-          {:noreply, put_flash(socket, :error, "No container available for resume")}
-
-        {:error, :no_session} ->
-          {:noreply, put_flash(socket, :error, "No session available for resume")}
-
-        {:error, _} ->
-          {:noreply, put_flash(socket, :error, "Failed to create task")}
-      end
+      socket
+      |> run_or_resume_task(instruction)
+      |> handle_task_result(socket)
     end
   end
 
@@ -150,6 +112,40 @@ defmodule AgentsWeb.SessionsLive.Index do
   end
 
   # ---- handle_event helpers ----
+
+  defp run_or_resume_task(socket, instruction) do
+    user = socket.assigns.current_scope.user
+    current_task = socket.assigns.current_task
+
+    if resumable_task?(current_task) do
+      Sessions.resume_task(current_task.id, %{instruction: instruction, user_id: user.id})
+    else
+      Sessions.create_task(%{instruction: instruction, user_id: user.id})
+    end
+  end
+
+  defp handle_task_result({:ok, task}, socket) do
+    Phoenix.PubSub.subscribe(Jarga.PubSub, "task:#{task.id}")
+
+    {:noreply,
+     socket
+     |> assign(:current_task, task)
+     |> assign(:events, [])
+     |> assign_session_state()
+     |> assign(:form, to_form(%{"instruction" => ""}))
+     |> reload_tasks()}
+  end
+
+  defp handle_task_result({:error, reason}, socket) do
+    {:noreply, put_flash(socket, :error, task_error_message(reason))}
+  end
+
+  defp task_error_message(:concurrent_limit_reached), do: "A task is already running"
+  defp task_error_message(:instruction_required), do: "Instruction is required"
+  defp task_error_message(:not_resumable), do: "This session cannot be resumed"
+  defp task_error_message(:no_container), do: "No container available for resume"
+  defp task_error_message(:no_session), do: "No session available for resume"
+  defp task_error_message(_), do: "Failed to create task"
 
   defp do_cancel_task(task, user, socket) do
     case Sessions.cancel_task(task.id, user.id) do
