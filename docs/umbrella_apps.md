@@ -11,6 +11,7 @@ Umbrella applications are a way to organize multiple Elixir applications within 
 | `agents` | Elixir + Bandit | -- / 4007 | Agent definitions, LLM orchestration, Knowledge MCP tools (6 tools via JSON-RPC), Sessions (ephemeral opencode containers) |
 | `jarga_web` | Phoenix (UI) | 4000 / 4002 | LiveView browser interface for all domain services |
 | `jarga_api` | Phoenix (API) | 4004 / 4005 | JSON REST API for external integrations |
+| `agents_web` | Phoenix (UI) | 4010 / 4012 | Sessions LiveView browser interface, delegates auth to Identity via shared cookie |
 | `agents_api` | Phoenix (API) | 4008 / 4009 | JSON REST API for agent management and query execution |
 | `entity_relationship_manager` | Phoenix (API) | 4006 / -- | Schema-driven graph data layer (Neo4j + PostgreSQL) |
 | `alkali` | Elixir (standalone) | -- | Static site generator, publishable to Hex |
@@ -25,10 +26,10 @@ Umbrella applications are a way to organize multiple Elixir applications within 
                     ^      ^
                     |      |
                   jarga   agents ──→ entity_relationship_manager
-                  ^  ^     ^  ^
-                 /   |    /    \
-                /    |   /      \
-      jarga_web  jarga_api   agents_api
+                  ^  ^     ^  ^  ^
+                 /   |    /   |   \
+                /    |   /    |    \
+      jarga_web  jarga_api  agents_web  agents_api
 
       perme8_dashboard ──→ exo_dashboard
 ```
@@ -38,6 +39,7 @@ Umbrella applications are a way to organize multiple Elixir applications within 
 - `agents` depends on `identity` (auth/workspace context) and `entity_relationship_manager` (knowledge graph data)
 - `jarga` depends on `identity` and `agents`
 - `jarga_web` and `jarga_api` depend on `jarga` and `agents` (interface layers)
+- `agents_web` depends on `agents` and `identity` (Sessions LiveView, delegates auth to Identity via shared session cookie)
 - `agents_api` depends on `agents` and `identity` (REST API for agent management)
 - `perme8_dashboard` depends on `exo_dashboard` (mounts its LiveViews in a tabbed layout)
 - `alkali` and `perme8_tools` are independent

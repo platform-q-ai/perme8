@@ -130,7 +130,7 @@ All functions accept an optional trailing `opts` keyword list for dependency inj
 - Non-root `appuser` inside the container
 - Stopped on task completion, removed only on explicit delete
 
-**LiveView:** `JargaWeb.AppLive.Sessions.Index` -- instruction form, structured session panel (title, model, tokens, output), cancel/delete buttons, task history with status badges, resume capability.
+**LiveView:** `AgentsWeb.SessionsLive.Index` (in `agents_web` app) -- instruction form, structured session panel (title, model, tokens, output), cancel/delete buttons, task history with status badges, resume capability.
 
 **Migration:** `sessions_tasks` table in `jarga` repo with indexes on `user_id`, `status`, and composite `[:user_id, :status]`. Includes `output` (cached text), `parent_task_id` (resume chains), and `session_id` (opencode session reference).
 
