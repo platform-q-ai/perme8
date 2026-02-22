@@ -30,14 +30,18 @@ defmodule AgentsWeb.UserAuth do
 
   @doc """
   Plug that requires the user to be authenticated.
-  Redirects to Identity's login page if not authenticated.
+  Redirects to Identity's login page if not authenticated,
+  including the current URL as a `return_to` parameter so the
+  user is sent back after login.
   """
   def require_authenticated_user(conn, _opts) do
     if conn.assigns[:current_scope] && conn.assigns.current_scope.user do
       conn
     else
+      return_to = AgentsWeb.Endpoint.url() <> current_path(conn)
+
       conn
-      |> redirect(external: identity_login_url())
+      |> redirect(external: identity_login_url(return_to))
       |> halt()
     end
   end
@@ -55,7 +59,12 @@ defmodule AgentsWeb.UserAuth do
     if socket.assigns.current_scope && socket.assigns.current_scope.user do
       {:cont, socket}
     else
-      socket = Phoenix.LiveView.redirect(socket, external: identity_login_url())
+      # The :require_authenticated_user plug handles the initial HTTP request
+      # with a proper return_to URL. This on_mount only fires on WebSocket
+      # reconnect (e.g. expired session mid-use), so a simple redirect suffices.
+      return_to = AgentsWeb.Endpoint.url() <> "/sessions"
+
+      socket = Phoenix.LiveView.redirect(socket, external: identity_login_url(return_to))
       {:halt, socket}
     end
   end
@@ -71,8 +80,14 @@ defmodule AgentsWeb.UserAuth do
     end)
   end
 
-  defp identity_login_url do
+  defp identity_login_url(return_to) do
     identity_url = Application.get_env(:agents_web, :identity_url) || IdentityWeb.Endpoint.url()
-    identity_url <> "/users/log-in"
+    base = identity_url <> "/users/log-in"
+
+    if return_to do
+      base <> "?" <> URI.encode_query(%{"return_to" => return_to})
+    else
+      base
+    end
   end
 end
