@@ -143,7 +143,7 @@ defmodule Agents.Sessions.Application.UseCases.ResumeTaskTest do
       Agents.Mocks.TaskRepositoryMock
       |> expect(:get_task_for_user, fn "parent-1", "user-1" -> no_session end)
 
-      assert {:error, :no_container} =
+      assert {:error, :no_session} =
                ResumeTask.execute(
                  "parent-1",
                  %{instruction: "Follow up", user_id: "user-1"},

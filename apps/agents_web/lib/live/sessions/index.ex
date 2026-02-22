@@ -79,6 +79,9 @@ defmodule AgentsWeb.SessionsLive.Index do
         {:error, :no_container} ->
           {:noreply, put_flash(socket, :error, "No container available for resume")}
 
+        {:error, :no_session} ->
+          {:noreply, put_flash(socket, :error, "No session available for resume")}
+
         {:error, _} ->
           {:noreply, put_flash(socket, :error, "Failed to create task")}
       end

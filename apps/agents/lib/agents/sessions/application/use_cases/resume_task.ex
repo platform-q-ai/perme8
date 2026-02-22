@@ -32,6 +32,7 @@ defmodule Agents.Sessions.Application.UseCases.ResumeTask do
   - `{:error, :not_found}` - Parent task not found or not owned by user
   - `{:error, :not_resumable}` - Parent task is not in a terminal state
   - `{:error, :no_container}` - Parent task has no container to resume
+  - `{:error, :no_session}` - Parent task has no opencode session to resume
   - `{:error, :concurrent_limit_reached}` - User already has an active task
   """
   def execute(parent_task_id, attrs, opts \\ []) do
@@ -70,7 +71,7 @@ defmodule Agents.Sessions.Application.UseCases.ResumeTask do
         {:error, :no_container}
 
       is_nil(parent.session_id) ->
-        {:error, :no_container}
+        {:error, :no_session}
 
       true ->
         :ok
