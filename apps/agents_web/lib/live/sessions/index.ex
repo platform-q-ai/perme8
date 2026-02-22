@@ -180,10 +180,20 @@ defmodule AgentsWeb.SessionsLive.Index do
     current_task = socket.assigns.current_task
     updated_task = maybe_update_task_status(current_task, task_id, status, socket)
 
-    {:noreply,
-     socket
-     |> assign(:current_task, updated_task)
-     |> reload_tasks()}
+    socket =
+      socket
+      |> assign(:current_task, updated_task)
+      |> update_task_in_list(task_id, status)
+
+    # Only do a full reload from DB on terminal status changes
+    socket =
+      if status in ["completed", "failed", "cancelled"] do
+        reload_tasks(socket)
+      else
+        socket
+      end
+
+    {:noreply, socket}
   end
 
   # Catch-all for unhandled messages
@@ -305,6 +315,16 @@ defmodule AgentsWeb.SessionsLive.Index do
   defp maybe_load_cached_output(socket, _task), do: socket
 
   # ---- Helpers ----
+
+  defp update_task_in_list(socket, task_id, status) do
+    tasks =
+      Enum.map(socket.assigns.tasks, fn
+        %{id: ^task_id} = task -> Map.put(task, :status, status)
+        task -> task
+      end)
+
+    assign(socket, :tasks, tasks)
+  end
 
   defp reload_tasks(socket) do
     user = socket.assigns.current_scope.user
