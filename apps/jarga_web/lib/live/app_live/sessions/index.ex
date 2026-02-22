@@ -84,7 +84,19 @@ defmodule JargaWeb.AppLive.Sessions.Index do
 
         case Sessions.cancel_task(task.id, user.id) do
           :ok ->
-            {:noreply, put_flash(socket, :info, "Task cancelled")}
+            # Reload task from DB to reflect the updated status
+            # (handles both live-runner and orphaned-runner cancellation)
+            updated_task =
+              case Sessions.get_task(task.id, user.id) do
+                {:ok, t} -> t
+                _ -> Map.put(task, :status, "cancelled")
+              end
+
+            {:noreply,
+             socket
+             |> assign(:current_task, updated_task)
+             |> reload_tasks()
+             |> put_flash(:info, "Task cancelled")}
 
           {:error, _reason} ->
             {:noreply, put_flash(socket, :error, "Failed to cancel task")}

@@ -246,6 +246,28 @@ if config_env() in [:dev, :test] do
   Dotenvy.source!(env_files)
 end
 
+# Sessions: pass secrets to ephemeral opencode Docker containers.
+# In dev, derive secrets from local files if env vars aren't explicitly set.
+github_app_pem =
+  System.get_env("GITHUB_APP_PEM") ||
+    case File.read(Path.expand("~/.config/perme8/private-key.pem")) do
+      {:ok, pem} -> Base.encode64(pem)
+      _ -> nil
+    end
+
+opencode_auth =
+  System.get_env("OPENCODE_AUTH") ||
+    case File.read(Path.expand("~/.local/share/opencode/auth.json")) do
+      {:ok, json} -> Base.encode64(json)
+      _ -> nil
+    end
+
+config :agents, :sessions_env, %{
+  GITHUB_APP_PEM: github_app_pem,
+  OPENCODE_AUTH: opencode_auth,
+  REPO_BRANCH: System.get_env("REPO_BRANCH")
+}
+
 # Configure OpenRouter for LLM chat (consumed by Agents.Infrastructure.Services.LlmClient)
 config :agents, :openrouter,
   api_key: System.get_env("OPENROUTER_API_KEY"),
