@@ -140,16 +140,16 @@ defmodule Agents.Sessions.Infrastructure.Clients.OpencodeClient do
   # ---- Private: Production SSE ----
 
   defp sse_connect(url, caller_pid) do
-    buffer = ""
+    Process.put(:sse_buffer, "")
 
     into_fun = fn {:data, chunk}, {_req, resp} ->
+      buffer = Process.get(:sse_buffer, "")
       {events, remaining} = parse_sse_chunk(buffer <> chunk)
 
       for event <- events do
         send(caller_pid, {:opencode_event, event})
       end
 
-      # Update buffer via process dictionary for simplicity
       Process.put(:sse_buffer, remaining)
       {:cont, {Req.Request.new(), resp}}
     end
@@ -200,10 +200,10 @@ defmodule Agents.Sessions.Infrastructure.Clients.OpencodeClient do
       Enum.reduce(lines, {nil, nil}, fn line, {type, data} ->
         cond do
           String.starts_with?(line, "event: ") ->
-            {String.trim_leading(line, "event: "), data}
+            {String.replace_prefix(line, "event: ", ""), data}
 
           String.starts_with?(line, "data: ") ->
-            {type, String.trim_leading(line, "data: ")}
+            {type, String.replace_prefix(line, "data: ", "")}
 
           true ->
             {type, data}
