@@ -380,13 +380,13 @@ Also, the perme8_dashboard app layout should wrap the inner content in a contain
 
 ---
 
-## Phase 6: Full Integration and BDD Readiness (phoenix-tdd)
+## Phase 6: Full Integration and BDD Readiness (phoenix-tdd) ✓
 
 ### Step 6.1: End-to-End LiveView Tests
 
 Comprehensive integration tests that verify the full flow matches all BDD browser scenarios.
 
-- [ ] ⏸ **RED**: Write test `apps/perme8_dashboard/test/perme8_dashboard_web/live/full_flow_test.exs`
+- [x] **RED**: Write test `apps/perme8_dashboard/test/perme8_dashboard_web/live/full_flow_test.exs`
   - Tests mapping to each BDD browser scenario:
     1. Landing page shows "Perme8 Dashboard" with active Features tab
     2. Features tab displays feature tree on landing
@@ -399,20 +399,20 @@ Comprehensive integration tests that verify the full flow matches all BDD browse
     9. Back navigation returns to feature list
     10. Tab navigation supports additional tabs
     11. Dashboard uses DaisyUI dark theme (data-theme="dark", bg-base-100)
-- [ ] ⏸ **GREEN**: Fix any remaining issues to make all tests pass
-- [ ] ⏸ **REFACTOR**: DRY up test helpers
+- [x] **GREEN**: Fix any remaining issues to make all tests pass
+- [x] **REFACTOR**: DRY up test helpers
 
 ### Step 6.2: Security Headers
 
 Ensure the endpoint is configured with proper security headers for BDD security scenarios.
 
-- [ ] ⏸ **RED**: Write test `apps/perme8_dashboard/test/perme8_dashboard_web/security_test.exs`
+- [x] **RED**: Write test `apps/perme8_dashboard/test/perme8_dashboard_web/security_test.exs`
   - Tests:
-    - X-Frame-Options header is "SAMEORIGIN"
-    - X-Content-Type-Options header is present
-    - Response contains no inline scripts (CSP readiness)
-- [ ] ⏸ **GREEN**: Verify `put_secure_browser_headers` plug is in the pipeline (it sets X-Frame-Options and X-Content-Type-Options by default)
-- [ ] ⏸ **REFACTOR**: Add any missing security headers
+    - content-security-policy with frame-ancestors 'self' (Phoenix 1.8+ replacement for X-Frame-Options)
+    - X-Content-Type-Options header is "nosniff"
+    - cache-control header is present
+- [x] **GREEN**: Verify `put_secure_browser_headers` plug is in the pipeline (it sets CSP and X-Content-Type-Options by default)
+- [x] **REFACTOR**: Tests aligned to Phoenix 1.8 security header defaults
 
 ### Step 6.3: BDD Feature Files
 
@@ -425,34 +425,34 @@ Create the BDD feature files that define the acceptance criteria. These files ar
 **File to update:**
 - `apps/exo_dashboard/test/features/dashboard.browser.feature` — add the "layout-less views after migration" scenario (already present per the ticket)
 
-- [ ] ⏸ Create BDD feature files with content matching the ticket specification
-- [ ] ⏸ Verify feature file paths follow the `test/features/<context>/<name>.<adapter>.feature` convention
+- [x] Create BDD feature files with content matching the ticket specification
+- [x] Verify feature file paths follow the `test/features/<context>/<name>.<adapter>.feature` convention
 
 ### Phase 6 Validation
-- [ ] ⏸ All end-to-end LiveView tests pass
-- [ ] ⏸ Security header tests pass
-- [ ] ⏸ BDD feature files created and parseable
+- [x] All end-to-end LiveView tests pass
+- [x] Security header tests pass
+- [x] BDD feature files created and parseable
 
 ---
 
-## Phase 7: Pre-commit and Final Validation
+## Phase 7: Pre-commit and Final Validation ✓
 
 ### Step 7.1: Pre-commit Checkpoint
 
-- [ ] ⏸ `mix compile --warnings-as-errors` passes for all apps
-- [ ] ⏸ `mix boundary` passes with no violations
-- [ ] ⏸ `mix format --check-formatted` passes
-- [ ] ⏸ `mix credo --strict` passes
-- [ ] ⏸ `mix test` passes (all apps)
-- [ ] ⏸ `mix precommit` passes end-to-end
+- [x] `mix compile --warnings-as-errors` passes for all apps
+- [x] `mix boundary` passes with no violations (via `mix precommit`)
+- [x] `mix format --check-formatted` passes
+- [x] `mix credo --strict` passes
+- [x] `mix test` passes (all apps)
+- [x] `mix precommit` passes end-to-end
 
 ### Step 7.2: Documentation Updates
 
-- [ ] ⏸ Update `docs/umbrella_apps.md` to include `perme8_dashboard` in the apps table:
+- [x] Update `docs/umbrella_apps.md` to include `perme8_dashboard` in the apps table:
   ```
   | `perme8_dashboard` | Phoenix (dev tool) | 4012 / 4013 | Unified dev-tool dashboard — mounts Exo Dashboard views and future tool tabs |
   ```
-- [ ] ⏸ Update dependency graph to show `perme8_dashboard -> exo_dashboard`
+- [x] Update dependency graph to show `perme8_dashboard -> exo_dashboard`
 
 ---
 

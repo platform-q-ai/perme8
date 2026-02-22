@@ -15,6 +15,7 @@ Umbrella applications are a way to organize multiple Elixir applications within 
 | `entity_relationship_manager` | Phoenix (API) | 4006 / -- | Schema-driven graph data layer (Neo4j + PostgreSQL) |
 | `alkali` | Elixir (standalone) | -- | Static site generator, publishable to Hex |
 | `exo_dashboard` | Phoenix (dev tool) | 4010 / 4011 | BDD feature dashboard -- browse features, trigger runs, view results in real time |
+| `perme8_dashboard` | Phoenix (dev tool) | 4012 / 4013 | Unified dev-tool dashboard -- mounts Exo Dashboard views and future tool tabs |
 | `perme8_tools` | Elixir (dev) | -- | Mix tasks, linters, scaffolding |
 
 ### Dependency Graph
@@ -28,6 +29,8 @@ Umbrella applications are a way to organize multiple Elixir applications within 
                  /   |    /    \
                 /    |   /      \
       jarga_web  jarga_api   agents_api
+
+      perme8_dashboard ──→ exo_dashboard
 ```
 
 **Rules:**
@@ -36,6 +39,7 @@ Umbrella applications are a way to organize multiple Elixir applications within 
 - `jarga` depends on `identity` and `agents`
 - `jarga_web` and `jarga_api` depend on `jarga` and `agents` (interface layers)
 - `agents_api` depends on `agents` and `identity` (REST API for agent management)
+- `perme8_dashboard` depends on `exo_dashboard` (mounts its LiveViews in a tabbed layout)
 - `alkali` and `perme8_tools` are independent
 
 ### Boundary Enforcement
