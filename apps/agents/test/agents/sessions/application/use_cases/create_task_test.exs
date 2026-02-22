@@ -100,11 +100,13 @@ defmodule Agents.Sessions.Application.UseCases.CreateTaskTest do
         status: "pending"
       }
 
+      schema = struct(Agents.Sessions.Infrastructure.Schemas.TaskSchema, task_schema)
+
       Agents.Mocks.TaskRepositoryMock
       |> expect(:running_task_count_for_user, fn "user-123" -> 0 end)
-      |> expect(:create_task, fn _attrs ->
-        {:ok, struct(Agents.Sessions.Infrastructure.Schemas.TaskSchema, task_schema)}
-      end)
+      |> expect(:create_task, fn _attrs -> {:ok, schema} end)
+      |> expect(:get_task, fn "task-1" -> schema end)
+      |> expect(:update_task_status, fn _task, %{status: "failed"} -> {:ok, schema} end)
 
       assert {:error, :runner_start_failed} =
                CreateTask.execute(@valid_attrs,
