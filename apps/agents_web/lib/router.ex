@@ -13,6 +13,11 @@ defmodule AgentsWeb.Router do
     plug(:fetch_current_scope_for_user)
   end
 
+  # Health check endpoint (no auth required) for exo-bdd server readiness probes
+  scope "/" do
+    get("/health", AgentsWeb.HealthController, :index)
+  end
+
   scope "/", AgentsWeb do
     pipe_through([:browser, :require_authenticated_user])
 

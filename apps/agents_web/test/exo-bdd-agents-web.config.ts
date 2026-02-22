@@ -12,7 +12,7 @@ export default defineConfig({
       env: { MIX_ENV: 'test' },
       setup: 'cd apps/agents_web && mix assets.build',
       seed: 'mix run --no-start apps/jarga/priv/repo/exo_seeds_web.exs',
-      healthCheckPath: '/sessions',
+      healthCheckPath: '/health',
       startTimeout: 30000,
     },
   ],
