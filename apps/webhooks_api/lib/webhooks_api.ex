@@ -14,7 +14,7 @@ defmodule WebhooksApi do
     deps: [
       Identity,
       Webhooks,
-      WebhooksApi.Repo
+      Webhooks.Repo
     ],
     exports: [Endpoint]
 

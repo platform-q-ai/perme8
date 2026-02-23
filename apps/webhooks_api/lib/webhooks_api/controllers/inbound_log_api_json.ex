@@ -1,4 +1,4 @@
-defmodule WebhooksApi.InboundLogJSON do
+defmodule WebhooksApi.InboundLogApiJSON do
   @moduledoc "JSON rendering for Inbound Log API endpoints."
 
   def index(%{logs: logs}) do

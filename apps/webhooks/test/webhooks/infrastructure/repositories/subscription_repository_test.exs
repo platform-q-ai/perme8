@@ -35,12 +35,17 @@ defmodule Webhooks.Infrastructure.Repositories.SubscriptionRepositoryTest do
     end
   end
 
-  describe "update/3" do
+  describe "update/4" do
     test "updates and returns domain entity" do
       {:ok, sub} = insert_subscription()
 
       assert {:ok, %Subscription{} = updated} =
-               SubscriptionRepository.update(sub.id, %{url: "https://new-url.com/hook"}, Repo)
+               SubscriptionRepository.update(
+                 sub.id,
+                 @workspace_id,
+                 %{url: "https://new-url.com/hook"},
+                 Repo
+               )
 
       assert updated.url == "https://new-url.com/hook"
       assert updated.id == sub.id
@@ -48,15 +53,55 @@ defmodule Webhooks.Infrastructure.Repositories.SubscriptionRepositoryTest do
 
     test "returns :not_found for non-existent subscription" do
       assert {:error, :not_found} =
-               SubscriptionRepository.update(Ecto.UUID.generate(), %{url: "https://x.com"}, Repo)
+               SubscriptionRepository.update(
+                 Ecto.UUID.generate(),
+                 @workspace_id,
+                 %{url: "https://x.com"},
+                 Repo
+               )
+    end
+
+    test "returns :not_found when workspace_id doesn't match" do
+      {:ok, sub} = insert_subscription()
+
+      assert {:error, :not_found} =
+               SubscriptionRepository.update(
+                 sub.id,
+                 Ecto.UUID.generate(),
+                 %{url: "https://x.com"},
+                 Repo
+               )
+    end
+
+    test "does not allow updating secret or workspace_id" do
+      {:ok, sub} = insert_subscription()
+
+      assert {:ok, %Subscription{} = updated} =
+               SubscriptionRepository.update(
+                 sub.id,
+                 @workspace_id,
+                 %{
+                   url: "https://new-url.com/hook",
+                   secret: "hacked_secret",
+                   workspace_id: Ecto.UUID.generate()
+                 },
+                 Repo
+               )
+
+      # Secret and workspace_id should NOT change (update_changeset excludes them)
+      assert updated.url == "https://new-url.com/hook"
+      assert updated.secret == "whsec_test_secret_long_enough"
+      assert updated.workspace_id == @workspace_id
     end
   end
 
-  describe "delete/2" do
+  describe "delete/3" do
     test "removes record and returns domain entity" do
       {:ok, sub} = insert_subscription()
 
-      assert {:ok, %Subscription{} = deleted} = SubscriptionRepository.delete(sub.id, Repo)
+      assert {:ok, %Subscription{} = deleted} =
+               SubscriptionRepository.delete(sub.id, @workspace_id, Repo)
+
       assert deleted.id == sub.id
 
       # Verify it's actually deleted
@@ -64,7 +109,18 @@ defmodule Webhooks.Infrastructure.Repositories.SubscriptionRepositoryTest do
     end
 
     test "returns :not_found for non-existent subscription" do
-      assert {:error, :not_found} = SubscriptionRepository.delete(Ecto.UUID.generate(), Repo)
+      assert {:error, :not_found} =
+               SubscriptionRepository.delete(Ecto.UUID.generate(), @workspace_id, Repo)
+    end
+
+    test "returns :not_found when workspace_id doesn't match" do
+      {:ok, sub} = insert_subscription()
+
+      assert {:error, :not_found} =
+               SubscriptionRepository.delete(sub.id, Ecto.UUID.generate(), Repo)
+
+      # Verify it's NOT deleted
+      assert Repo.get(SubscriptionSchema, sub.id) != nil
     end
   end
 

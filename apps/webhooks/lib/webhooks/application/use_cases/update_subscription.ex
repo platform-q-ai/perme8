@@ -14,7 +14,7 @@ defmodule Webhooks.Application.UseCases.UpdateSubscription do
   @impl true
   def execute(params, opts \\ []) do
     %{
-      workspace_id: _workspace_id,
+      workspace_id: workspace_id,
       member_role: member_role,
       subscription_id: subscription_id,
       attrs: attrs
@@ -26,7 +26,8 @@ defmodule Webhooks.Application.UseCases.UpdateSubscription do
     repo = Keyword.get(opts, :repo, nil)
 
     with :ok <- authorize(member_role),
-         {:ok, subscription} <- subscription_repository.update(subscription_id, attrs, repo) do
+         {:ok, subscription} <-
+           subscription_repository.update(subscription_id, workspace_id, attrs, repo) do
       {:ok, strip_secret(subscription)}
     end
   end

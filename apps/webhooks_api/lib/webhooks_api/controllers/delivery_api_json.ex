@@ -1,4 +1,4 @@
-defmodule WebhooksApi.DeliveryJSON do
+defmodule WebhooksApi.DeliveryApiJSON do
   @moduledoc "JSON rendering for Delivery API endpoints."
 
   def index(%{deliveries: deliveries}) do

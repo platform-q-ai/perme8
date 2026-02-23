@@ -24,13 +24,23 @@ defmodule Webhooks.Infrastructure.Schemas.SubscriptionSchema do
     timestamps(type: :utc_datetime)
   end
 
-  @doc "Changeset for creating or updating a webhook subscription."
+  @doc "Changeset for creating a webhook subscription."
   def changeset(schema, attrs) do
     schema
     |> cast(attrs, [:url, :secret, :event_types, :is_active, :workspace_id, :created_by_id])
     |> validate_required([:url, :secret, :workspace_id])
-    |> validate_format(:url, ~r/^https?:\/\/.+/,
-      message: "must be a valid URL starting with http:// or https://"
+    |> validate_format(:url, ~r/^https:\/\/.+/,
+      message: "must be a valid HTTPS URL starting with https://"
+    )
+  end
+
+  @doc "Changeset for updating a webhook subscription (excludes immutable fields)."
+  def update_changeset(schema, attrs) do
+    schema
+    |> cast(attrs, [:url, :event_types, :is_active])
+    |> validate_required([:url])
+    |> validate_format(:url, ~r/^https:\/\/.+/,
+      message: "must be a valid HTTPS URL starting with https://"
     )
   end
 

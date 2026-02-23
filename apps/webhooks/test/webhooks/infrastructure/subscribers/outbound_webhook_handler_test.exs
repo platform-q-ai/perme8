@@ -37,7 +37,7 @@ defmodule Webhooks.Infrastructure.Subscribers.OutboundWebhookHandlerTest do
       assert result == :ok
       assert_receive {:dispatched, params}
       assert params.workspace_id == "workspace-789"
-      assert params.event_type == "projects.project_created"
+      assert params.event_type == "project.created"
       assert is_map(params.payload)
     end
 
@@ -64,7 +64,7 @@ defmodule Webhooks.Infrastructure.Subscribers.OutboundWebhookHandlerTest do
       assert result == :ok
       assert_receive {:dispatched, params}
       assert params.workspace_id == "workspace-789"
-      assert params.event_type == "documents.document_created"
+      assert params.event_type == "document.created"
     end
 
     test "returns :ok for unmatched event type" do

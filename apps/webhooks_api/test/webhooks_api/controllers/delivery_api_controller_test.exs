@@ -1,4 +1,4 @@
-defmodule WebhooksApi.DeliveryControllerTest do
+defmodule WebhooksApi.DeliveryApiControllerTest do
   use WebhooksApi.ConnCase, async: true
 
   import Jarga.AccountsFixtures
@@ -52,7 +52,7 @@ defmodule WebhooksApi.DeliveryControllerTest do
     } do
       # Insert delivery records directly via schema
       {:ok, _delivery} =
-        WebhooksApi.Repo.insert(
+        Webhooks.Repo.insert(
           DeliverySchema.changeset(%DeliverySchema{}, %{
             subscription_id: subscription.id,
             event_type: "project.created",
@@ -116,7 +116,7 @@ defmodule WebhooksApi.DeliveryControllerTest do
       subscription: subscription
     } do
       {:ok, delivery_schema} =
-        WebhooksApi.Repo.insert(
+        Webhooks.Repo.insert(
           DeliverySchema.changeset(%DeliverySchema{}, %{
             subscription_id: subscription.id,
             event_type: "project.created",

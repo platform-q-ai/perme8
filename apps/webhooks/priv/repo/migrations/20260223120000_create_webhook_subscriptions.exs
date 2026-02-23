@@ -1,4 +1,4 @@
-defmodule WebhooksApi.Repo.Migrations.CreateWebhookSubscriptions do
+defmodule Webhooks.Repo.Migrations.CreateWebhookSubscriptions do
   use Ecto.Migration
 
   def change do

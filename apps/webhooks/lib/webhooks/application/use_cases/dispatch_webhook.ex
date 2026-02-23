@@ -13,6 +13,8 @@ defmodule Webhooks.Application.UseCases.DispatchWebhook do
 
   @behaviour Webhooks.Application.UseCases.UseCase
 
+  require Logger
+
   alias Webhooks.Domain.Policies.HmacPolicy
   alias Webhooks.Domain.Policies.RetryPolicy
 
@@ -42,15 +44,33 @@ defmodule Webhooks.Application.UseCases.DispatchWebhook do
     with {:ok, subscriptions} <-
            subscription_repository.list_active_for_event_type(workspace_id, event_type, repo) do
       deliveries =
-        Enum.map(subscriptions, fn subscription ->
-          dispatch_to_subscription(
-            subscription,
-            event_type,
-            payload,
-            http_dispatcher,
-            delivery_repository,
-            repo
-          )
+        subscriptions
+        |> Task.async_stream(
+          fn subscription ->
+            dispatch_to_subscription(
+              subscription,
+              event_type,
+              payload,
+              http_dispatcher,
+              delivery_repository,
+              repo
+            )
+          end,
+          max_concurrency: 10,
+          timeout: 15_000,
+          on_timeout: :kill_task
+        )
+        |> Enum.flat_map(fn
+          {:ok, {:ok, delivery}} ->
+            [delivery]
+
+          {:ok, {:error, reason}} ->
+            Logger.warning("Webhook dispatch failed: #{inspect(reason)}")
+            []
+
+          {:exit, reason} ->
+            Logger.warning("Webhook dispatch task exited: #{inspect(reason)}")
+            []
         end)
 
       {:ok, deliveries}
@@ -76,8 +96,18 @@ defmodule Webhooks.Application.UseCases.DispatchWebhook do
     result = http_dispatcher.dispatch(subscription.url, payload_json, headers)
 
     delivery_attrs = build_delivery_attrs(subscription, event_type, payload, result)
-    {:ok, delivery} = delivery_repository.insert(delivery_attrs, repo)
-    delivery
+
+    case delivery_repository.insert(delivery_attrs, repo) do
+      {:ok, delivery} ->
+        {:ok, delivery}
+
+      {:error, reason} ->
+        Logger.error(
+          "Failed to record webhook delivery for subscription #{subscription.id}: #{inspect(reason)}"
+        )
+
+        {:error, reason}
+    end
   end
 
   defp build_delivery_attrs(subscription, event_type, payload, {:ok, status_code, response_body}) do

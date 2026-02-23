@@ -42,39 +42,39 @@ defmodule Webhooks.Infrastructure.Subscribers.OutboundWebhookHandler do
   Accepts `dispatch_fn: fn/2` in opts for testing.
   """
   def handle_event(%ProjectCreated{} = event, opts) do
-    dispatch(event, "projects.project_created", opts)
+    dispatch(event, "project.created", opts)
   end
 
   def handle_event(%ProjectUpdated{} = event, opts) do
-    dispatch(event, "projects.project_updated", opts)
+    dispatch(event, "project.updated", opts)
   end
 
   def handle_event(%ProjectDeleted{} = event, opts) do
-    dispatch(event, "projects.project_deleted", opts)
+    dispatch(event, "project.deleted", opts)
   end
 
   def handle_event(%ProjectArchived{} = event, opts) do
-    dispatch(event, "projects.project_archived", opts)
+    dispatch(event, "project.archived", opts)
   end
 
   def handle_event(%DocumentCreated{} = event, opts) do
-    dispatch(event, "documents.document_created", opts)
+    dispatch(event, "document.created", opts)
   end
 
   def handle_event(%DocumentDeleted{} = event, opts) do
-    dispatch(event, "documents.document_deleted", opts)
+    dispatch(event, "document.deleted", opts)
   end
 
   def handle_event(%DocumentTitleChanged{} = event, opts) do
-    dispatch(event, "documents.document_title_changed", opts)
+    dispatch(event, "document.title_changed", opts)
   end
 
   def handle_event(%DocumentVisibilityChanged{} = event, opts) do
-    dispatch(event, "documents.document_visibility_changed", opts)
+    dispatch(event, "document.visibility_changed", opts)
   end
 
   def handle_event(%DocumentPinnedChanged{} = event, opts) do
-    dispatch(event, "documents.document_pinned_changed", opts)
+    dispatch(event, "document.pinned_changed", opts)
   end
 
   def handle_event(_event, _opts), do: :ok

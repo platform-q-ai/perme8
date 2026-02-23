@@ -16,4 +16,9 @@ defmodule Webhooks.Infrastructure.Queries.InboundLogQueries do
   def ordered(query) do
     from(l in query, order_by: [desc: l.received_at])
   end
+
+  @doc "Limits the number of results returned."
+  def limit(query, max) do
+    from(l in query, limit: ^max)
+  end
 end

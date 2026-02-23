@@ -1,4 +1,4 @@
-defmodule WebhooksApi.InboundLogController do
+defmodule WebhooksApi.InboundLogApiController do
   use WebhooksApi, :controller
 
   def index(conn, %{"workspace_slug" => workspace_slug}) do
@@ -9,7 +9,7 @@ defmodule WebhooksApi.InboundLogController do
       {:ok, logs} ->
         conn |> put_status(:ok) |> render(:index, logs: logs)
 
-      {:error, :forbidden} ->
+      {:error, reason} when reason in [:forbidden, :unauthorized] ->
         conn |> put_status(:forbidden) |> render(:error, message: "Insufficient permissions")
 
       {:error, :workspace_not_found} ->

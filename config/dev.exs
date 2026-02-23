@@ -71,8 +71,8 @@ config :webhooks_api, WebhooksApi.Endpoint,
   secret_key_base: "webhooks_api_dev_secret_key_base_at_least_64_bytes_long_for_security",
   watchers: []
 
-# WebhooksApi uses the same database as Jarga
-config :webhooks_api, WebhooksApi.Repo,
+# Webhooks uses the same database as Jarga
+config :webhooks, Webhooks.Repo,
   url: database_url,
   show_sensitive_data_on_connection_error: true,
   pool_size: 10

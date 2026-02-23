@@ -5,7 +5,7 @@ defmodule Webhooks.Application.UseCases.UpdateSubscriptionTest do
   alias Webhooks.Domain.Entities.Subscription
 
   defmodule MockSubscriptionRepo do
-    def update("sub-123", attrs, _repo) do
+    def update("sub-123", "ws-123", attrs, _repo) do
       {:ok,
        Subscription.new(%{
          id: "sub-123",
@@ -17,7 +17,7 @@ defmodule Webhooks.Application.UseCases.UpdateSubscriptionTest do
        })}
     end
 
-    def update("sub-missing", _attrs, _repo) do
+    def update("sub-missing", _workspace_id, _attrs, _repo) do
       {:error, :not_found}
     end
   end

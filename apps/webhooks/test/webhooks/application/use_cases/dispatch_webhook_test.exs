@@ -65,7 +65,9 @@ defmodule Webhooks.Application.UseCases.DispatchWebhookTest do
   end
 
   defmodule MockDeliveryRepo do
-    # Track state via process dictionary for test assertions
+    # Track state via process dictionary for test assertions.
+    # Uses :dispatch_test_pid from the process dictionary (set by callers via
+    # Task inheritance) or falls back to self() for backwards compatibility.
     def insert(attrs, _repo) do
       delivery =
         Delivery.new(%{
@@ -80,7 +82,8 @@ defmodule Webhooks.Application.UseCases.DispatchWebhookTest do
           next_retry_at: attrs[:next_retry_at]
         })
 
-      send(self(), {:delivery_inserted, delivery})
+      target = Process.get(:dispatch_test_pid, self())
+      send(target, {:delivery_inserted, delivery})
       {:ok, delivery}
     end
 
@@ -106,14 +109,13 @@ defmodule Webhooks.Application.UseCases.DispatchWebhookTest do
       assert {:ok, deliveries} = DispatchWebhook.execute(params, opts)
       assert length(deliveries) == 1
 
-      # Verify delivery was created with success status
-      assert_received {:delivery_inserted, delivery}
+      [delivery] = deliveries
       assert delivery.status == "success"
       assert delivery.response_code == 200
       assert delivery.attempts == 1
     end
 
-    test "dispatches to multiple matching subscriptions" do
+    test "dispatches to multiple matching subscriptions concurrently" do
       params = %{
         workspace_id: "ws-multi",
         event_type: "project.created",
@@ -148,7 +150,7 @@ defmodule Webhooks.Application.UseCases.DispatchWebhookTest do
       assert {:ok, deliveries} = DispatchWebhook.execute(params, opts)
       assert length(deliveries) == 1
 
-      assert_received {:delivery_inserted, delivery}
+      [delivery] = deliveries
       assert delivery.status == "pending"
       assert delivery.response_code == 500
       assert delivery.next_retry_at != nil
@@ -170,7 +172,7 @@ defmodule Webhooks.Application.UseCases.DispatchWebhookTest do
       assert {:ok, deliveries} = DispatchWebhook.execute(params, opts)
       assert length(deliveries) == 1
 
-      assert_received {:delivery_inserted, delivery}
+      [delivery] = deliveries
       assert delivery.status == "pending"
       assert delivery.next_retry_at != nil
     end

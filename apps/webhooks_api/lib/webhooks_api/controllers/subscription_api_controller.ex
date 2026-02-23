@@ -1,4 +1,4 @@
-defmodule WebhooksApi.SubscriptionController do
+defmodule WebhooksApi.SubscriptionApiController do
   use WebhooksApi, :controller
 
   def create(conn, %{"workspace_slug" => workspace_slug} = params) do
@@ -15,7 +15,7 @@ defmodule WebhooksApi.SubscriptionController do
         |> put_status(:unprocessable_entity)
         |> render(:validation_error, changeset: changeset)
 
-      {:error, :forbidden} ->
+      {:error, reason} when reason in [:forbidden, :unauthorized] ->
         conn |> put_status(:forbidden) |> render(:error, message: "Insufficient permissions")
 
       {:error, :workspace_not_found} ->
@@ -31,7 +31,7 @@ defmodule WebhooksApi.SubscriptionController do
       {:ok, subscriptions} ->
         conn |> put_status(:ok) |> render(:index, subscriptions: subscriptions)
 
-      {:error, :forbidden} ->
+      {:error, reason} when reason in [:forbidden, :unauthorized] ->
         conn |> put_status(:forbidden) |> render(:error, message: "Insufficient permissions")
 
       {:error, :workspace_not_found} ->
@@ -50,7 +50,7 @@ defmodule WebhooksApi.SubscriptionController do
       {:error, :not_found} ->
         conn |> put_status(:not_found) |> render(:error, message: "Subscription not found")
 
-      {:error, :forbidden} ->
+      {:error, reason} when reason in [:forbidden, :unauthorized] ->
         conn |> put_status(:forbidden) |> render(:error, message: "Insufficient permissions")
 
       {:error, :workspace_not_found} ->
@@ -75,7 +75,7 @@ defmodule WebhooksApi.SubscriptionController do
       {:error, :not_found} ->
         conn |> put_status(:not_found) |> render(:error, message: "Subscription not found")
 
-      {:error, :forbidden} ->
+      {:error, reason} when reason in [:forbidden, :unauthorized] ->
         conn |> put_status(:forbidden) |> render(:error, message: "Insufficient permissions")
 
       {:error, :workspace_not_found} ->
@@ -94,7 +94,7 @@ defmodule WebhooksApi.SubscriptionController do
       {:error, :not_found} ->
         conn |> put_status(:not_found) |> render(:error, message: "Subscription not found")
 
-      {:error, :forbidden} ->
+      {:error, reason} when reason in [:forbidden, :unauthorized] ->
         conn |> put_status(:forbidden) |> render(:error, message: "Insufficient permissions")
 
       {:error, :workspace_not_found} ->

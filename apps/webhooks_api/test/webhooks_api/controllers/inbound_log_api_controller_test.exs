@@ -1,4 +1,4 @@
-defmodule WebhooksApi.InboundLogControllerTest do
+defmodule WebhooksApi.InboundLogApiControllerTest do
   use WebhooksApi.ConnCase, async: true
 
   import Jarga.AccountsFixtures
@@ -43,7 +43,7 @@ defmodule WebhooksApi.InboundLogControllerTest do
 
       # Insert inbound log records directly
       {:ok, _log1} =
-        WebhooksApi.Repo.insert(
+        Webhooks.Repo.insert(
           InboundLogSchema.changeset(%InboundLogSchema{}, %{
             workspace_id: workspace.id,
             event_type: "payment.completed",
@@ -55,7 +55,7 @@ defmodule WebhooksApi.InboundLogControllerTest do
         )
 
       {:ok, _log2} =
-        WebhooksApi.Repo.insert(
+        Webhooks.Repo.insert(
           InboundLogSchema.changeset(%InboundLogSchema{}, %{
             workspace_id: workspace.id,
             event_type: "payment.failed",

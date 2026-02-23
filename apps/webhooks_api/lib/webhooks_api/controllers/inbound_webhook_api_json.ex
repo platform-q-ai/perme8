@@ -1,4 +1,4 @@
-defmodule WebhooksApi.InboundWebhookJSON do
+defmodule WebhooksApi.InboundWebhookApiJSON do
   @moduledoc "JSON rendering for Inbound Webhook API endpoints."
 
   def received(%{}) do
