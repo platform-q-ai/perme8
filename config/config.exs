@@ -50,7 +50,7 @@ config :entity_relationship_manager, EntityRelationshipManager.Endpoint,
     formats: [json: EntityRelationshipManager.Views.ErrorJSON],
     layout: false
   ],
-  pubsub_server: Jarga.PubSub
+  pubsub_server: Perme8.Events.PubSub
 
 # Configures the JargaApi endpoint (JSON API)
 config :jarga_api, JargaApi.Endpoint,
@@ -60,7 +60,7 @@ config :jarga_api, JargaApi.Endpoint,
     formats: [json: JargaApi.ErrorJSON],
     layout: false
   ],
-  pubsub_server: Jarga.PubSub
+  pubsub_server: Perme8.Events.PubSub
 
 # Configures the WebhooksApi endpoint (JSON API for webhooks)
 config :webhooks_api, WebhooksApi.Endpoint,
@@ -84,7 +84,7 @@ config :agents_api, AgentsApi.Endpoint,
     formats: [json: AgentsApi.ErrorJSON],
     layout: false
   ],
-  pubsub_server: Jarga.PubSub
+  pubsub_server: Perme8.Events.PubSub
 
 # Configures the AgentsWeb endpoint (Sessions UI)
 config :agents_web, AgentsWeb.Endpoint,
@@ -94,7 +94,7 @@ config :agents_web, AgentsWeb.Endpoint,
     formats: [html: AgentsWeb.ErrorHTML],
     layout: false
   ],
-  pubsub_server: Jarga.PubSub,
+  pubsub_server: Perme8.Events.PubSub,
   live_view: [signing_salt: "aG3ntSe5"]
 
 # Configures the endpoint
@@ -105,7 +105,7 @@ config :jarga_web, JargaWeb.Endpoint,
     formats: [html: JargaWeb.ErrorHTML, json: JargaWeb.ErrorJSON],
     layout: false
   ],
-  pubsub_server: Jarga.PubSub,
+  pubsub_server: Perme8.Events.PubSub,
   live_view: [signing_salt: "5rdQlpgP"]
 
 # Configures the mailer
@@ -223,7 +223,7 @@ config :identity, IdentityWeb.Endpoint,
     formats: [html: IdentityWeb.ErrorHTML, json: IdentityWeb.ErrorJSON],
     layout: false
   ],
-  pubsub_server: Jarga.PubSub,
+  pubsub_server: Perme8.Events.PubSub,
   live_view: [signing_salt: "identity_lv_salt"]
 
 # ============================================================================
@@ -237,7 +237,7 @@ config :exo_dashboard, ExoDashboardWeb.Endpoint,
     formats: [html: ExoDashboardWeb.ErrorHTML],
     layout: false
   ],
-  pubsub_server: Jarga.PubSub,
+  pubsub_server: Perme8.Events.PubSub,
   live_view: [signing_salt: "exo_dashboard_salt"]
 
 # ============================================================================
@@ -251,7 +251,7 @@ config :perme8_dashboard, Perme8DashboardWeb.Endpoint,
     formats: [html: Perme8DashboardWeb.ErrorHTML],
     layout: false
   ],
-  pubsub_server: Jarga.PubSub,
+  pubsub_server: Perme8.Events.PubSub,
   live_view: [signing_salt: "perme8_dashboard_salt"]
 
 # Identity session configuration

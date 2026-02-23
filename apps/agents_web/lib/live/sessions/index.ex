@@ -96,7 +96,7 @@ defmodule AgentsWeb.SessionsLive.Index do
     case Sessions.get_task(task_id, user.id) do
       {:ok, task} ->
         if task.status in ["pending", "starting", "running"] do
-          Phoenix.PubSub.subscribe(Jarga.PubSub, "task:#{task.id}")
+          Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "task:#{task.id}")
         end
 
         {:noreply,
@@ -125,7 +125,7 @@ defmodule AgentsWeb.SessionsLive.Index do
   end
 
   defp handle_task_result({:ok, task}, socket) do
-    Phoenix.PubSub.subscribe(Jarga.PubSub, "task:#{task.id}")
+    Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "task:#{task.id}")
 
     {:noreply,
      socket
@@ -370,7 +370,7 @@ defmodule AgentsWeb.SessionsLive.Index do
   defp subscribe_to_active_tasks(tasks) do
     tasks
     |> Enum.filter(&active_task?/1)
-    |> Enum.each(&Phoenix.PubSub.subscribe(Jarga.PubSub, "task:#{&1.id}"))
+    |> Enum.each(&Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "task:#{&1.id}"))
   end
 
   defp active_task?(%{status: status}), do: status in ["pending", "starting", "running"]

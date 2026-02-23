@@ -40,6 +40,7 @@ defmodule Agents.MixProject do
   defp deps do
     [
       # Umbrella dependencies
+      {:perme8_events, in_umbrella: true},
       {:identity, in_umbrella: true},
 
       # Architecture

@@ -49,7 +49,7 @@ defmodule JargaWeb.AppLive.Documents.Show do
       # CRDT sync messages (yjs_update, awareness_update, user_disconnected) stay on raw topic
       # Domain events (visibility, pinned, title, workspace, project, agent) use structured events
       if connected?(socket) do
-        Phoenix.PubSub.subscribe(Jarga.PubSub, "document:#{document.id}")
+        Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "document:#{document.id}")
         Perme8.Events.subscribe("events:workspace:#{workspace.id}")
       end
 
@@ -96,7 +96,7 @@ defmodule JargaWeb.AppLive.Documents.Show do
 
     # 1. IMMEDIATELY broadcast the incremental update to other clients
     Phoenix.PubSub.broadcast_from(
-      Jarga.PubSub,
+      Perme8.Events.PubSub,
       self(),
       "document:#{document.id}",
       {:yjs_update, %{update: update, user_id: user_id}}
@@ -157,7 +157,7 @@ defmodule JargaWeb.AppLive.Documents.Show do
 
     # Broadcast awareness updates to other clients
     Phoenix.PubSub.broadcast_from(
-      Jarga.PubSub,
+      Perme8.Events.PubSub,
       self(),
       "document:#{document.id}",
       {:awareness_update, %{update: update, user_id: user_id}}
@@ -517,7 +517,7 @@ defmodule JargaWeb.AppLive.Documents.Show do
       user_id = socket.assigns.user_id
 
       Phoenix.PubSub.broadcast_from(
-        Jarga.PubSub,
+        Perme8.Events.PubSub,
         self(),
         "document:#{document.id}",
         {:user_disconnected, %{user_id: user_id}}

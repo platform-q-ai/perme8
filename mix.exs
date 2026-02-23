@@ -17,6 +17,7 @@ defmodule Perme8.MixProject do
     [
       perme8: [
         applications: [
+          perme8_events: :permanent,
           alkali: :permanent,
           identity: :permanent,
           jarga: :permanent,

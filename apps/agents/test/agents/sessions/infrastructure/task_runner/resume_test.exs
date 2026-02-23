@@ -21,7 +21,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.ResumeTest do
         session_id: "existing-session"
       })
 
-    Phoenix.PubSub.subscribe(Jarga.PubSub, "task:#{task.id}")
+    Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "task:#{task.id}")
 
     {:ok, task: task}
   end
@@ -30,7 +30,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.ResumeTest do
     container_provider: Agents.Mocks.ContainerProviderMock,
     opencode_client: Agents.Mocks.OpencodeClientMock,
     task_repo: Agents.Mocks.TaskRepositoryMock,
-    pubsub: Jarga.PubSub
+    pubsub: Perme8.Events.PubSub
   ]
 
   test "resume path restarts container, skips session creation, and sends prompt", %{task: task} do

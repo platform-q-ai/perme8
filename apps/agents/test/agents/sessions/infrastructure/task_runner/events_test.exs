@@ -15,7 +15,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.EventsTest do
     user = AccountsFixtures.user_fixture()
     task = SessionsFixtures.task_fixture(%{user_id: user.id})
 
-    Phoenix.PubSub.subscribe(Jarga.PubSub, "task:#{task.id}")
+    Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "task:#{task.id}")
 
     {:ok, task: task}
   end
@@ -60,7 +60,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.EventsTest do
            container_provider: Agents.Mocks.ContainerProviderMock,
            opencode_client: Agents.Mocks.OpencodeClientMock,
            task_repo: Agents.Mocks.TaskRepositoryMock,
-           pubsub: Jarga.PubSub
+           pubsub: Perme8.Events.PubSub
          ]}
       )
 
@@ -135,7 +135,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.EventsTest do
            container_provider: Agents.Mocks.ContainerProviderMock,
            opencode_client: Agents.Mocks.OpencodeClientMock,
            task_repo: Agents.Mocks.TaskRepositoryMock,
-           pubsub: Jarga.PubSub
+           pubsub: Perme8.Events.PubSub
          ]}
       )
 
@@ -196,7 +196,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.EventsTest do
            container_provider: Agents.Mocks.ContainerProviderMock,
            opencode_client: Agents.Mocks.OpencodeClientMock,
            task_repo: Agents.Mocks.TaskRepositoryMock,
-           pubsub: Jarga.PubSub
+           pubsub: Perme8.Events.PubSub
          ]}
       )
 
@@ -275,7 +275,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.EventsTest do
            container_provider: Agents.Mocks.ContainerProviderMock,
            opencode_client: Agents.Mocks.OpencodeClientMock,
            task_repo: Agents.Mocks.TaskRepositoryMock,
-           pubsub: Jarga.PubSub
+           pubsub: Perme8.Events.PubSub
          ]}
       )
 

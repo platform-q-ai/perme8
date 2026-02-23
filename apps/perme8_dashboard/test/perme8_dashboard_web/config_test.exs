@@ -8,9 +8,9 @@ defmodule Perme8DashboardWeb.ConfigTest do
       assert Keyword.get(config, :url) == [host: "localhost"]
     end
 
-    test "PubSub config uses Jarga.PubSub" do
+    test "PubSub config uses Perme8.Events.PubSub" do
       config = Application.get_env(:perme8_dashboard, Perme8DashboardWeb.Endpoint)
-      assert Keyword.get(config, :pubsub_server) == Jarga.PubSub
+      assert Keyword.get(config, :pubsub_server) == Perme8.Events.PubSub
     end
 
     test "render_errors is configured" do
