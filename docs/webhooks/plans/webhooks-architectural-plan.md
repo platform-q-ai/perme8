@@ -17,7 +17,7 @@ Add a webhooks module to support outbound webhook subscriptions (event-driven HT
   - `Identity` -- API key verification, user lookup, workspace membership
   - `Jarga.Workspaces` -- workspace and member resolution via `get_workspace_and_member_by_slug/2`
   - `Perme8.Events` -- EventBus subscription (outbound handler), EventHandler behaviour, DomainEvent macro
-  - `Identity.Repo` / `Jarga.Repo` -- shared Postgres database
+  - `WebhooksApi.Repo` -- own Repo pointing to the shared Postgres database (migrations at `apps/webhooks_api/priv/repo/migrations/`)
 - **Exported schemas**: `Webhooks.Domain.Entities.Subscription`, `Webhooks.Infrastructure.Schemas.SubscriptionSchema`
 - **New context needed?**: Yes -- webhooks is a distinct bounded context with its own aggregate lifecycle (subscriptions, deliveries, inbound logs)
 
@@ -364,9 +364,9 @@ The outbound webhook EventHandler subscribes to these existing event topics:
 
 ### 3.1 Database Migrations
 
-All migrations go in `apps/jarga/priv/repo/migrations/` (shared DB via Jarga.Repo).
+All migrations go in `apps/webhooks_api/priv/repo/migrations/` (managed by `WebhooksApi.Repo`, pointing to the shared Postgres database).
 
-- [ ] ⏸ **GREEN**: Create `apps/jarga/priv/repo/migrations/YYYYMMDDHHMMSS_create_webhook_subscriptions.exs`
+- [ ] ⏸ **GREEN**: Create `apps/webhooks_api/priv/repo/migrations/YYYYMMDDHHMMSS_create_webhook_subscriptions.exs`
   ```elixir
   create table(:webhook_subscriptions, primary_key: false) do
     add :id, :binary_id, primary_key: true
@@ -382,7 +382,7 @@ All migrations go in `apps/jarga/priv/repo/migrations/` (shared DB via Jarga.Rep
   create index(:webhook_subscriptions, [:workspace_id, :is_active])
   ```
 
-- [ ] ⏸ **GREEN**: Create `apps/jarga/priv/repo/migrations/YYYYMMDDHHMMSS_create_webhook_deliveries.exs`
+- [ ] ⏸ **GREEN**: Create `apps/webhooks_api/priv/repo/migrations/YYYYMMDDHHMMSS_create_webhook_deliveries.exs`
   ```elixir
   create table(:webhook_deliveries, primary_key: false) do
     add :id, :binary_id, primary_key: true
@@ -400,7 +400,7 @@ All migrations go in `apps/jarga/priv/repo/migrations/` (shared DB via Jarga.Rep
   create index(:webhook_deliveries, [:status, :next_retry_at])
   ```
 
-- [ ] ⏸ **GREEN**: Create `apps/jarga/priv/repo/migrations/YYYYMMDDHHMMSS_create_inbound_webhook_configs.exs`
+- [ ] ⏸ **GREEN**: Create `apps/webhooks_api/priv/repo/migrations/YYYYMMDDHHMMSS_create_inbound_webhook_configs.exs`
   ```elixir
   create table(:inbound_webhook_configs, primary_key: false) do
     add :id, :binary_id, primary_key: true
@@ -412,7 +412,7 @@ All migrations go in `apps/jarga/priv/repo/migrations/` (shared DB via Jarga.Rep
   create unique_index(:inbound_webhook_configs, [:workspace_id])
   ```
 
-- [ ] ⏸ **GREEN**: Create `apps/jarga/priv/repo/migrations/YYYYMMDDHHMMSS_create_inbound_webhook_logs.exs`
+- [ ] ⏸ **GREEN**: Create `apps/webhooks_api/priv/repo/migrations/YYYYMMDDHHMMSS_create_inbound_webhook_logs.exs`
   ```elixir
   create table(:inbound_webhook_logs, primary_key: false) do
     add :id, :binary_id, primary_key: true
@@ -521,7 +521,7 @@ All migrations go in `apps/jarga/priv/repo/migrations/` (shared DB via Jarga.Rep
     - `list_for_workspace/3` returns list of domain entities
 - [ ] ⏸ **GREEN**: Implement `apps/webhooks/lib/webhooks/infrastructure/repositories/subscription_repository.ex`
   - `@behaviour SubscriptionRepositoryBehaviour`
-  - Uses `Identity.Repo`, converts to/from domain entities
+  - Uses `WebhooksApi.Repo`, converts to/from domain entities
 - [ ] ⏸ **REFACTOR**: Clean up
 
 ### 3.10 DeliveryRepository
@@ -605,9 +605,7 @@ All migrations go in `apps/jarga/priv/repo/migrations/` (shared DB via Jarga.Rep
       deps: [
         Webhooks.Domain,
         Webhooks.Application,
-        Identity,
-        Identity.Repo,
-        Jarga.Repo,
+        WebhooksApi.Repo,
         Perme8.Events
       ],
       exports: [
@@ -653,12 +651,11 @@ All migrations go in `apps/jarga/priv/repo/migrations/` (shared DB via Jarga.Rep
       top_level?: true,
       deps: [
         Identity,
-        Identity.Repo,
-        Jarga.Repo,
         Jarga.Workspaces,
         Webhooks.Domain,
         Webhooks.Application,
         Webhooks.Infrastructure,
+        WebhooksApi.Repo,
         Perme8.Events
       ],
       exports: [
@@ -941,7 +938,7 @@ All migrations go in `apps/jarga/priv/repo/migrations/` (shared DB via Jarga.Rep
   - Follow `apps/jarga/mix.exs` pattern (minus web/asset deps)
   - `app: :webhooks`
   - `compilers: [:boundary] ++ Mix.compilers()`
-  - Deps: `identity` (in_umbrella), `jarga` (in_umbrella), `req`, `jason`, `boundary`
+  - Deps: `identity` (in_umbrella), `jarga` (in_umbrella), `webhooks_api` (in_umbrella, for Repo access), `req`, `jason`, `boundary`
   - `elixirc_paths(:test)` includes `["lib", "test/support"]`
   - Boundary config: `externals_mode: :relaxed`, relaxed checks for phoenix, ecto, identity, jarga
 
@@ -950,17 +947,23 @@ All migrations go in `apps/jarga/priv/repo/migrations/` (shared DB via Jarga.Rep
 - [ ] ⏸ **GREEN**: Create `apps/webhooks_api/mix.exs`
   - Follow `apps/jarga_api/mix.exs` pattern
   - `app: :webhooks_api`
-  - Deps: `phoenix`, `webhooks` (in_umbrella), `identity` (in_umbrella), `jarga` (in_umbrella), `jason`, `bandit`, `boundary`
+  - Deps: `phoenix`, `webhooks` (in_umbrella), `identity` (in_umbrella), `jarga` (in_umbrella), `ecto_sql`, `postgrex`, `jason`, `bandit`, `boundary`
+  - Defines `WebhooksApi.Repo` (`use Ecto.Repo, otp_app: :webhooks_api, adapter: Ecto.Adapters.Postgres`)
+  - Migrations at `apps/webhooks_api/priv/repo/migrations/`
 
 ### 6.3 Config Files
 
 - [ ] ⏸ **GREEN**: Update `config/config.exs`
   - Add `config :webhooks_api, WebhooksApi.Endpoint, ...` (url, port, secret_key_base)
+  - Add `config :webhooks_api, WebhooksApi.Repo, ...` (same database connection as other repos)
+  - Add `config :webhooks_api, ecto_repos: [WebhooksApi.Repo]`
   - Add `config :webhooks_api, generators: [context_app: :webhooks]`
 - [ ] ⏸ **GREEN**: Update `config/dev.exs`
   - Add `config :webhooks_api, WebhooksApi.Endpoint, http: [port: 4016], ...`
+  - Add `config :webhooks_api, WebhooksApi.Repo, ...` (dev database config)
 - [ ] ⏸ **GREEN**: Update `config/test.exs`
   - Add `config :webhooks_api, WebhooksApi.Endpoint, http: [port: 4017], server: true`
+  - Add `config :webhooks_api, WebhooksApi.Repo, pool: Ecto.Adapters.SQL.Sandbox`
 - [ ] ⏸ **GREEN**: Update `config/runtime.exs` (if needed)
   - Add production endpoint config for webhooks_api
 
@@ -1014,7 +1017,7 @@ All migrations go in `apps/jarga/priv/repo/migrations/` (shared DB via Jarga.Rep
 
 - [ ] ⏸ `mix deps.get` succeeds
 - [ ] ⏸ `mix compile` succeeds with no boundary warnings
-- [ ] ⏸ `mix ecto.migrate` runs all new migrations
+- [ ] ⏸ `mix ecto.migrate --repo WebhooksApi.Repo` runs all new migrations
 - [ ] ⏸ `mix boundary` reports no violations
 - [ ] ⏸ Supervision tree starts OutboundWebhookHandler and RetryWorker in non-test env
 - [ ] ⏸ Full test suite passes: `mix test`
@@ -1222,7 +1225,7 @@ apps/webhooks_api/
 ### Modified Files
 
 ```
-apps/jarga/priv/repo/migrations/
+apps/webhooks_api/priv/repo/migrations/
 ├── YYYYMMDDHHMMSS_create_webhook_subscriptions.exs         # New migration
 ├── YYYYMMDDHHMMSS_create_webhook_deliveries.exs            # New migration
 ├── YYYYMMDDHHMMSS_create_inbound_webhook_configs.exs       # New migration
