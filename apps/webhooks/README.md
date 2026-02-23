@@ -78,8 +78,9 @@ Tables: `webhook_subscriptions`, `webhook_deliveries`, `inbound_webhook_configs`
 
 ## Dependencies
 
+- **`perme8_events`** (in_umbrella) -- EventHandler behaviour for outbound webhook subscriber
 - **`identity`** (in_umbrella) -- API key verification, user lookup
-- **`jarga`** (in_umbrella) -- workspace resolution, PubSub event infrastructure
+- **`jarga`** (in_umbrella) -- workspace resolution
 - Req -- HTTP client for outbound dispatch
 - Boundary -- compile-time boundary enforcement
 
