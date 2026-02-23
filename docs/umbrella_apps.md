@@ -6,6 +6,7 @@ Umbrella applications are a way to organize multiple Elixir applications within 
 
 | App | Type | Port (dev / test) | Description |
 |-----|------|-------------------|-------------|
+| `perme8_events` | Elixir (shared infra) | -- | Domain events, PubSub event bus, event handler behaviour |
 | `identity` | Phoenix (auth) | 4001 / 4003 | Users, authentication, workspaces, memberships, roles, API keys |
 | `jarga` | Ecto (domain) | -- | Projects, documents, notes, chat, notifications |
 | `agents` | Elixir + Bandit | -- / 4007 | Agent definitions, LLM orchestration, Knowledge MCP tools (6 tools via JSON-RPC), Sessions (ephemeral opencode containers) |
@@ -24,27 +25,29 @@ Umbrella applications are a way to organize multiple Elixir applications within 
 ### Dependency Graph
 
 ```
-                    identity (standalone — depends on nothing)
-                    ^      ^       ^
-                    |      |       |
-                  jarga   agents  webhooks ──→ jarga (events, workspaces)
-                  ^  ^     ^  ^  ^       ^
-                 /   |    /   |   \       \
-                /    |   /    |    \       \
-      jarga_web  jarga_api  agents_web  agents_api  webhooks_api
+      perme8_events (standalone — depends on nothing in the umbrella)
+         ^      ^       ^       ^       ^
+         |      |       |       |       |
+      identity  agents  ERM    jarga  webhooks ──→ jarga (workspaces)
+         ^       ^  ^           ^  ^        ^
+         |      /   |          /   |         \
+         |     /    |         /    |          \
+      agents_web  agents_api  jarga_web  jarga_api  webhooks_api
 
       agents ──→ entity_relationship_manager
       perme8_dashboard ──→ exo_dashboard
 ```
 
 **Rules:**
-- `identity` depends on nothing in the umbrella
-- `agents` depends on `identity` (auth/workspace context) and `entity_relationship_manager` (knowledge graph data)
-- `jarga` depends on `identity` and `agents`
-- `jarga_web` and `jarga_api` depend on `jarga` and `agents` (interface layers)
-- `agents_web` depends on `agents` and `identity` (Sessions LiveView, delegates auth to Identity via shared session cookie)
+- `perme8_events` depends on nothing in the umbrella (leaf-node shared infrastructure)
+- `identity` depends on `perme8_events`
+- `agents` depends on `identity`, `perme8_events`, and `entity_relationship_manager` (knowledge graph data)
+- `jarga` depends on `identity`, `agents`, and `perme8_events`
+- `jarga_web` and `jarga_api` depend on `jarga`, `agents`, and `perme8_events` (interface layers)
+- `agents_web` depends on `agents`, `identity`, and `perme8_events` (Sessions LiveView, delegates auth to Identity via shared session cookie)
 - `agents_api` depends on `agents` and `identity` (REST API for agent management)
-- `webhooks` depends on `identity` (auth/API key verification) and `jarga` (workspaces, events infrastructure)
+- `entity_relationship_manager` depends on `identity`, `jarga`, and `perme8_events`
+- `webhooks` depends on `identity` (auth/API key verification), `jarga` (workspaces), and `perme8_events`
 - `webhooks_api` depends on `webhooks`, `identity`, and `jarga`
 - `perme8_dashboard` depends on `exo_dashboard` (mounts its LiveViews in a tabbed layout)
 - `alkali` and `perme8_tools` are independent
@@ -62,14 +65,17 @@ Run `mix boundary` to check for violations.
 
 ### Shared Event Infrastructure
 
-The `Perme8.Events` system provides structured event-driven communication across all apps:
+The `Perme8.Events` system (in the `perme8_events` app) provides structured event-driven communication across all apps:
 
-- **`Perme8.Events.DomainEvent`** (in `identity`) — macro for defining typed event structs. Lives in `identity` due to cyclic dependency constraints.
-- **`Perme8.Events.EventBus`** (in `jarga`) — central dispatcher wrapping `Phoenix.PubSub` with topic-based routing
-- **`Perme8.Events.EventHandler`** (in `jarga`) — behaviour for GenServer-based cross-context subscribers
-- **`Perme8.Events.TestEventBus`** (in `jarga`) — in-memory bus for unit test assertions
+- **`Perme8.Events`** — facade for subscribing/unsubscribing to event topics
+- **`Perme8.Events.DomainEvent`** — macro for defining typed event structs
+- **`Perme8.Events.EventBus`** — central dispatcher wrapping `Phoenix.PubSub` with topic-based routing
+- **`Perme8.Events.EventHandler`** — behaviour for GenServer-based cross-context subscribers
+- **`Perme8.Events.TestEventBus`** — in-memory bus for unit test assertions
 
-All use cases emit events via `opts[:event_bus]` dependency injection. All LiveViews subscribe to `events:workspace:{id}` topics and pattern-match on typed event structs.
+All modules live in `apps/perme8_events/`. The PubSub server (`Perme8.Events.PubSub`) is supervised by `Perme8Events.Application` and shared across all apps via endpoint config.
+
+All use cases emit events via `opts[:event_bus]` dependency injection. All LiveViews subscribe to `events:workspace:{id}` topics and pattern-match on typed event structs. Domain event structs remain in their respective apps (identity, jarga, agents, ERM) — only the infrastructure modules live in `perme8_events`.
 
 ---
 
