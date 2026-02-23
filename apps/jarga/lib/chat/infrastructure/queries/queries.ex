@@ -99,6 +99,15 @@ defmodule Jarga.Chat.Infrastructure.Queries.Queries do
     )
   end
 
+  @doc """
+  Base query for all sessions (no user filter).
+
+  Used by admin/dashboard views to list all sessions across all users.
+  """
+  def all_sessions do
+    session_base()
+  end
+
   # ChatMessage Queries
 
   @doc """
