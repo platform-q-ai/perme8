@@ -66,6 +66,7 @@ defmodule Jarga.Chat do
     DeleteMessage,
     LoadSession,
     ListSessions,
+    ListAllSessions,
     DeleteSession
   }
 
@@ -135,6 +136,25 @@ defmodule Jarga.Chat do
 
   """
   defdelegate list_sessions(user_id, opts \\ []), to: ListSessions, as: :execute
+
+  @doc """
+  Lists all chat sessions across all users.
+
+  Intended for admin/dashboard views where no user filtering is needed.
+
+  ## Options
+    - `:limit` - Maximum number of sessions to return (default: 50)
+
+  ## Examples
+
+      iex> list_all_sessions()
+      {:ok, [%{id: ..., title: "...", message_count: 5}]}
+
+      iex> list_all_sessions(limit: 10)
+      {:ok, [%{id: ..., title: "...", message_count: 3}]}
+
+  """
+  defdelegate list_all_sessions(opts \\ []), to: ListAllSessions, as: :execute
 
   @doc """
   Loads a chat session with its messages.

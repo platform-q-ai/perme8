@@ -26,6 +26,29 @@ defmodule Jarga.Chat.Infrastructure.Queries.QueriesTest do
     end
   end
 
+  describe "all_sessions/0" do
+    test "returns all sessions across all users" do
+      user1 = Jarga.AccountsFixtures.user_fixture()
+      user2 = Jarga.AccountsFixtures.user_fixture()
+
+      session1 = chat_session_fixture(%{user_id: user1.id})
+      session2 = chat_session_fixture(%{user_id: user2.id})
+
+      results =
+        Queries.all_sessions()
+        |> Repo.all()
+
+      result_ids = Enum.map(results, & &1.id)
+      assert session1.id in result_ids
+      assert session2.id in result_ids
+    end
+
+    test "returns a queryable for sessions" do
+      query = Queries.all_sessions()
+      assert %Ecto.Query{} = query
+    end
+  end
+
   describe "for_user/2" do
     test "filters sessions by user ID", %{user: user} do
       session1 = chat_session_fixture(%{user_id: user.id})

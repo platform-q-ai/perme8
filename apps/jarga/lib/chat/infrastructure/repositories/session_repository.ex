@@ -34,6 +34,20 @@ defmodule Jarga.Chat.Infrastructure.Repositories.SessionRepository do
   end
 
   @doc """
+  Lists all sessions across all users with message counts.
+
+  Returns a list of session maps with aggregated data, ordered by most recent first.
+  Used by admin/dashboard views where no user filtering is needed.
+  """
+  def list_all_sessions(limit, repo \\ Repo) do
+    Queries.all_sessions()
+    |> Queries.ordered_by_recent()
+    |> Queries.with_message_count()
+    |> Queries.limit_results(limit)
+    |> repo.all()
+  end
+
+  @doc """
   Lists sessions for a user with message counts.
 
   Returns a list of session maps with aggregated data.
