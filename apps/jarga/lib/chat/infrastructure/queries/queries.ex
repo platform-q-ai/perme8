@@ -52,6 +52,19 @@ defmodule Jarga.Chat.Infrastructure.Queries.Queries do
   end
 
   @doc """
+  Selects only the user_id for a session by ID.
+
+  Lightweight query for cases where only ownership info is needed,
+  avoiding the cost of preloading relationships.
+  """
+  def session_user_id(session_id) do
+    from(s in SessionSchema,
+      where: s.id == ^session_id,
+      select: s.user_id
+    )
+  end
+
+  @doc """
   Preloads session relationships including messages.
   """
   def with_preloads(query \\ session_base()) do

@@ -30,9 +30,14 @@ defmodule AgentsWeb.ChatSessionsLive.Index do
 
   @impl true
   def handle_event("delete_session", %{"id" => session_id}, socket) do
-    case Jarga.Chat.load_session(session_id) do
-      {:ok, session} ->
-        case Jarga.Chat.delete_session(session_id, session.user_id) do
+    # Dev-only dashboard: look up the session's user_id to satisfy the
+    # DeleteSession use case's ownership check. The ownership check is
+    # semantically a no-op here (we pass the session's own user_id back),
+    # but we preserve it to reuse the standard delete use case which
+    # enforces authorization in user-facing contexts.
+    case Jarga.Chat.get_session_user_id(session_id) do
+      {:ok, user_id} ->
+        case Jarga.Chat.delete_session(session_id, user_id) do
           {:ok, _deleted} ->
             {:noreply,
              socket

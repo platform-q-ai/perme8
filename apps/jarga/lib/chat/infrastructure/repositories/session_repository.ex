@@ -34,6 +34,19 @@ defmodule Jarga.Chat.Infrastructure.Repositories.SessionRepository do
   end
 
   @doc """
+  Gets the user_id for a session by ID.
+
+  Lightweight query that avoids loading full session with preloads.
+  Returns `{:ok, user_id}` or `{:error, :not_found}`.
+  """
+  def get_session_user_id(session_id, repo \\ Repo) do
+    case session_id |> Queries.session_user_id() |> repo.one() do
+      nil -> {:error, :not_found}
+      user_id -> {:ok, user_id}
+    end
+  end
+
+  @doc """
   Lists all sessions across all users with message counts.
 
   Returns a list of session maps with aggregated data, ordered by most recent first.
