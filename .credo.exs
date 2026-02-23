@@ -340,12 +340,15 @@
              #   boundary is planned but not yet done
              # agents_api: interface app that depends on Agents context and Identity
              #   directly, not a single ApplicationLayer — same pattern as jarga_api
+             # webhooks_api: interface app that depends on Webhooks context and Identity
+             #   directly — same pattern as jarga_api and agents_api
              excluded_apps: [
                "perme8_tools",
                "jarga_api",
                "entity_relationship_manager",
                "agents",
-               "agents_api"
+               "agents_api",
+               "webhooks_api"
              ]
            ]},
 
