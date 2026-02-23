@@ -37,13 +37,20 @@ defmodule Agents.DataCase do
   @doc """
   Sets up the sandbox based on the test tags.
 
-  Uses Agents.Repo for all database operations.
+  Checks out both Agents.Repo (sessions) and Identity.Repo (agents CRUD,
+  user fixtures) since both share the same database and agents tests
+  exercise code that uses either repo.
   """
   def setup_sandbox(tags) do
     :ok = Sandbox.checkout(Agents.Repo)
+    :ok = Sandbox.checkout(Identity.Repo)
+
+    Sandbox.allow(Agents.Repo, self(), self())
+    Sandbox.allow(Identity.Repo, self(), self())
 
     unless tags[:async] do
       Sandbox.mode(Agents.Repo, {:shared, self()})
+      Sandbox.mode(Identity.Repo, {:shared, self()})
     end
   end
 
