@@ -244,7 +244,7 @@ defmodule JargaWeb.AppLive.PagesTest do
       {:ok, lv, _html} = live(conn, ~p"/app/workspaces/#{workspace.slug}/documents/#{page.slug}")
 
       # Subscribe to see the broadcast
-      Phoenix.PubSub.subscribe(Jarga.PubSub, "document:#{page.id}")
+      Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "document:#{page.id}")
 
       # Simulate yjs update from client
       update_data = Base.encode64(<<1, 2, 3, 4>>)
@@ -337,7 +337,7 @@ defmodule JargaWeb.AppLive.PagesTest do
       {:ok, lv, _html} = live(conn, ~p"/app/workspaces/#{workspace.slug}/documents/#{page.slug}")
 
       # Subscribe to the document topic to listen for broadcasts
-      Phoenix.PubSub.subscribe(Jarga.PubSub, "document:#{page.id}")
+      Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "document:#{page.id}")
 
       # Simulate yjs update
       update_data = Base.encode64(<<5, 6, 7, 8>>)
@@ -369,7 +369,7 @@ defmodule JargaWeb.AppLive.PagesTest do
       update_data = Base.encode64(<<9, 10, 11, 12>>)
 
       Phoenix.PubSub.broadcast(
-        Jarga.PubSub,
+        Perme8.Events.PubSub,
         "document:#{page.id}",
         {:yjs_update, %{update: update_data, user_id: "other_user"}}
       )

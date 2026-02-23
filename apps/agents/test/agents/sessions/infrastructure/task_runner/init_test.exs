@@ -39,7 +39,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.InitTest do
            container_provider: Agents.Mocks.ContainerProviderMock,
            opencode_client: Agents.Mocks.OpencodeClientMock,
            task_repo: Agents.Mocks.TaskRepositoryMock,
-           pubsub: Jarga.PubSub
+           pubsub: Perme8.Events.PubSub
          ]}
       )
 
@@ -72,7 +72,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.InitTest do
            container_provider: Agents.Mocks.ContainerProviderMock,
            opencode_client: Agents.Mocks.OpencodeClientMock,
            task_repo: Agents.Mocks.TaskRepositoryMock,
-           pubsub: Jarga.PubSub
+           pubsub: Perme8.Events.PubSub
          ]}
       )
 
@@ -91,7 +91,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.InitTest do
            container_provider: Agents.Mocks.ContainerProviderMock,
            opencode_client: Agents.Mocks.OpencodeClientMock,
            task_repo: Agents.Mocks.TaskRepositoryMock,
-           pubsub: Jarga.PubSub
+           pubsub: Perme8.Events.PubSub
          ]}
       )
 
@@ -119,7 +119,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.InitTest do
            container_provider: Agents.Mocks.ContainerProviderMock,
            opencode_client: Agents.Mocks.OpencodeClientMock,
            task_repo: Agents.Mocks.TaskRepositoryMock,
-           pubsub: Jarga.PubSub
+           pubsub: Perme8.Events.PubSub
          ]}
       )
 

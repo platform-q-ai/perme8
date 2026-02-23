@@ -24,7 +24,7 @@ Application.ensure_all_started(:bcrypt_elixir)
 {:ok, _} = Webhooks.Repo.start_link()
 
 # Start PubSub (required by context modules that broadcast events)
-{:ok, _} = Phoenix.PubSub.Supervisor.start_link(name: Jarga.PubSub)
+{:ok, _} = Phoenix.PubSub.Supervisor.start_link(name: Perme8.Events.PubSub)
 
 alias Identity.Application.Services.{ApiKeyTokenService, PasswordService}
 alias Identity.Infrastructure.Schemas.{ApiKeySchema, UserSchema}

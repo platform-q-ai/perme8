@@ -37,7 +37,7 @@ defmodule Agents.Sessions.Application.SessionsConfig do
 
   @doc "Returns the PubSub server name for broadcasting task events."
   def pubsub do
-    config()[:pubsub] || Jarga.PubSub
+    config()[:pubsub] || Perme8.Events.PubSub
   end
 
   defp config do

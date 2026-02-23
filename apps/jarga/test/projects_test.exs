@@ -147,7 +147,7 @@ defmodule Jarga.ProjectsTest do
       workspace = workspace_fixture(user)
 
       # Subscribe to the structured event topic
-      Phoenix.PubSub.subscribe(Jarga.PubSub, "events:workspace:#{workspace.id}")
+      Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "events:workspace:#{workspace.id}")
 
       attrs = %{name: "Broadcast Test Project"}
 
@@ -164,7 +164,7 @@ defmodule Jarga.ProjectsTest do
       workspace = workspace_fixture(user)
 
       # Subscribe to the structured event topic
-      Phoenix.PubSub.subscribe(Jarga.PubSub, "events:workspace:#{workspace.id}")
+      Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "events:workspace:#{workspace.id}")
 
       attrs = %{name: ""}
 
@@ -345,7 +345,7 @@ defmodule Jarga.ProjectsTest do
       project = project_fixture(user, workspace)
 
       # Subscribe to the structured event topic
-      Phoenix.PubSub.subscribe(Jarga.PubSub, "events:workspace:#{workspace.id}")
+      Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "events:workspace:#{workspace.id}")
 
       assert {:ok, deleted_project} = Projects.delete_project(user, workspace.id, project.id)
 
@@ -360,7 +360,7 @@ defmodule Jarga.ProjectsTest do
       workspace = workspace_fixture(user)
 
       # Subscribe to the structured event topic
-      Phoenix.PubSub.subscribe(Jarga.PubSub, "events:workspace:#{workspace.id}")
+      Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "events:workspace:#{workspace.id}")
 
       assert {:error, :project_not_found} =
                Projects.delete_project(user, workspace.id, Ecto.UUID.generate())

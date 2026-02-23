@@ -40,7 +40,8 @@ defmodule EntityRelationshipManager.MixProject do
             {:phoenix, :relaxed},
             {:phoenix_ecto, :relaxed},
             {:jarga, :relaxed},
-            {:identity, :relaxed}
+            {:identity, :relaxed},
+            {:perme8_events, :relaxed}
           ]
         ]
       ],
@@ -51,6 +52,7 @@ defmodule EntityRelationshipManager.MixProject do
   defp deps do
     [
       {:phoenix, "~> 1.8"},
+      {:perme8_events, in_umbrella: true},
       {:jarga, in_umbrella: true},
       {:identity, in_umbrella: true},
       {:jason, "~> 1.2"},

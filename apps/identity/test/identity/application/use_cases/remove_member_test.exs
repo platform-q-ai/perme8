@@ -75,7 +75,7 @@ defmodule Identity.Application.UseCases.RemoveMemberTest do
       _member = add_workspace_member_fixture(workspace.id, member, :admin)
 
       # Subscribe to the structured event topic
-      Phoenix.PubSub.subscribe(Jarga.PubSub, "events:user:#{member.id}")
+      Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "events:user:#{member.id}")
 
       # Remove member using default notifier (EmailAndPubSubNotifier)
       params = %{
@@ -109,7 +109,7 @@ defmodule Identity.Application.UseCases.RemoveMemberTest do
         )
 
       # Subscribe to a hypothetical user topic (no user exists yet)
-      Phoenix.PubSub.subscribe(Jarga.PubSub, "user:any")
+      Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "user:any")
 
       # Remove invitation
       params = %{

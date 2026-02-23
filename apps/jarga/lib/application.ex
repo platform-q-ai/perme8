@@ -15,7 +15,6 @@ defmodule Jarga.Application do
       [
         Jarga.Repo,
         {DNSCluster, query: Application.get_env(:jarga, :dns_cluster_query) || :ignore},
-        {Phoenix.PubSub, name: Jarga.PubSub},
         # Start the Finch HTTP client for sending emails
         {Finch, name: Jarga.Finch}
       ] ++ pubsub_subscribers()
