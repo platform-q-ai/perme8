@@ -199,6 +199,12 @@ config :agents, :sessions,
   health_check_interval_ms: 1_000,
   health_check_max_retries: 30
 
+# MCP tool providers: modules implementing ToolProvider behaviour
+config :agents, :mcp_tool_providers, [
+  Agents.Infrastructure.Mcp.ToolProviders.KnowledgeToolProvider,
+  Agents.Infrastructure.Mcp.ToolProviders.JargaToolProvider
+]
+
 # Configures Elixir's Logger
 config :logger, :default_formatter,
   format: "$time $metadata[$level] $message\n",
