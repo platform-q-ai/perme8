@@ -28,6 +28,23 @@ Each app has a single owner and a clear set of responsibilities. No two apps own
 | **notifications** | Domain context | Notification creation, delivery, preferences, subscriptions -- **planned, currently in `jarga`** | Needs own Repo | `identity`, `perme8_events` |
 | **perme8_tools** | Dev tool | Mix tasks, linters | None | Nothing |
 
+### App Naming Conventions
+
+Domain apps follow a `{app}` / `{app}_web` / `{app}_api` triad:
+
+| Suffix | Role | Contains | Does NOT contain |
+|--------|------|----------|-----------------|
+| `{app}` | Domain context | Business logic, entities, use cases, repositories, schemas, domain events | Controllers, endpoints, routers, API routes, LiveViews |
+| `{app}_web` | Interface (LiveView) | LiveViews, live components, browser routes, Phoenix endpoints | Domain logic, API endpoints, REST controllers |
+| `{app}_api` | Interface (REST) | Controllers, JSON views, API routes, Phoenix endpoints | Domain logic, LiveViews, browser routes |
+
+**Key rules:**
+
+- **No API routes in domain apps.** REST endpoints, controllers, and JSON views always go in a dedicated `{app}_api` app. The domain app exposes a public facade that the API app calls.
+- **No domain logic in interface apps.** `_web` and `_api` apps are thin wrappers that call into the domain app. They own routing, request/response handling, and presentation only.
+- **Not every domain app needs all three.** Some apps only have `{app}` (e.g., `webhooks` has `webhooks` + `webhooks_api` but no `webhooks_web`). Only create interface apps when needed.
+- **Exception: `entity_relationship_manager`** is a combined domain + API app (see registry). This is a legacy pattern -- new apps should follow the triad.
+
 ### Path Conventions
 
 Most apps use `apps/<app>/lib/<app>/` as their root namespace (e.g., `apps/agents/lib/agents/`). However, **jarga** organises its bounded contexts as peer directories under `apps/jarga/lib/`:
@@ -95,7 +112,21 @@ Domain events follow a simple rule: **events live in the emitting app**.
 Feature files test the **owning app**, not the mounting app:
 
 - **Domain feature files** (e.g., HTTP API tests) go in the owning domain app: `apps/agents/test/features/`
-- **UI feature files** (e.g., browser tests) go in the owning web app: `apps/jarga_web/test/features/`
+- **UI feature files** (e.g., browser tests) go in the owning web app: `apps/agents_web/test/features/`
 - **API feature files** go in the owning API app: `apps/jarga_api/test/features/`
 
-If `jarga_web` mounts a LiveView from `agents_web`, the feature file for that view goes in `agents_web`, not `jarga_web`.
+### Mounting Apps vs. Owning Apps
+
+Some apps exist primarily to mount other apps into a unified shell (e.g., `jarga_web` mounts `agents_web`, `perme8_dashboard` mounts `exo_dashboard`). These mounting apps should only contain feature files for:
+
+- **Navigation** -- verifying the user can navigate to the mounted app
+- **Shell integration** -- verifying the mounted app renders within the shell (tabs, layout, sidebar)
+
+The mounted app's **own functionality** (forms, interactions, data display, workflows) is tested in feature files within the mounted app itself.
+
+| Scenario | Feature file location | What it tests |
+|----------|----------------------|---------------|
+| Agent session management UI | `apps/agents_web/test/features/` | Session creation, message sending, agent behaviour |
+| Navigating to agents from jarga shell | `apps/jarga_web/test/features/` | Navigation link works, agents UI mounts in shell |
+| BDD dashboard functionality | `apps/exo_dashboard/test/features/` | Feature browsing, run triggering, result display |
+| Navigating to exo dashboard tab | `apps/perme8_dashboard/test/features/` | Tab renders, dashboard mounts in hub |
