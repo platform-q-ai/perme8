@@ -13,6 +13,8 @@ Umbrella applications are a way to organize multiple Elixir applications within 
 | `jarga_api` | Phoenix (API) | 4004 / 4005 | JSON REST API for external integrations |
 | `agents_web` | Phoenix (UI) | 4014 / 4015 | Sessions LiveView browser interface, delegates auth to Identity via shared cookie |
 | `agents_api` | Phoenix (API) | 4008 / 4009 | JSON REST API for agent management and query execution |
+| `webhooks` | Elixir (domain) | -- | Outbound webhook dispatch (HMAC-SHA256, exponential backoff retries) and inbound webhook reception |
+| `webhooks_api` | Phoenix (API) | 4016 / 4017 | JSON REST API for webhook subscription management and inbound webhook receiver |
 | `entity_relationship_manager` | Phoenix (API) | 4006 / -- | Schema-driven graph data layer (Neo4j + PostgreSQL) |
 | `alkali` | Elixir (standalone) | -- | Static site generator, publishable to Hex |
 | `exo_dashboard` | Phoenix (dev tool) | 4010 / 4011 | BDD feature dashboard -- browse features, trigger runs, view results in real time |
@@ -23,14 +25,15 @@ Umbrella applications are a way to organize multiple Elixir applications within 
 
 ```
                     identity (standalone — depends on nothing)
-                    ^      ^
-                    |      |
-                  jarga   agents ──→ entity_relationship_manager
-                  ^  ^     ^  ^  ^
-                 /   |    /   |   \
-                /    |   /    |    \
-      jarga_web  jarga_api  agents_web  agents_api
+                    ^      ^       ^
+                    |      |       |
+                  jarga   agents  webhooks ──→ jarga (events, workspaces)
+                  ^  ^     ^  ^  ^       ^
+                 /   |    /   |   \       \
+                /    |   /    |    \       \
+      jarga_web  jarga_api  agents_web  agents_api  webhooks_api
 
+      agents ──→ entity_relationship_manager
       perme8_dashboard ──→ exo_dashboard
 ```
 
@@ -41,6 +44,8 @@ Umbrella applications are a way to organize multiple Elixir applications within 
 - `jarga_web` and `jarga_api` depend on `jarga` and `agents` (interface layers)
 - `agents_web` depends on `agents` and `identity` (Sessions LiveView, delegates auth to Identity via shared session cookie)
 - `agents_api` depends on `agents` and `identity` (REST API for agent management)
+- `webhooks` depends on `identity` (auth/API key verification) and `jarga` (workspaces, events infrastructure)
+- `webhooks_api` depends on `webhooks`, `identity`, and `jarga`
 - `perme8_dashboard` depends on `exo_dashboard` (mounts its LiveViews in a tabbed layout)
 - `alkali` and `perme8_tools` are independent
 
