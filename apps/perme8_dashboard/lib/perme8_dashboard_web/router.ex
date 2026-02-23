@@ -1,6 +1,8 @@
 defmodule Perme8DashboardWeb.Router do
   use Perme8DashboardWeb, :router
 
+  import Perme8DashboardWeb.UserAuth
+
   pipeline :browser do
     plug(:accepts, ["html"])
     plug(:fetch_session)
@@ -8,6 +10,7 @@ defmodule Perme8DashboardWeb.Router do
     plug(:put_root_layout, html: {Perme8DashboardWeb.Layouts, :root})
     plug(:protect_from_forgery)
     plug(:put_secure_browser_headers)
+    plug(:fetch_current_scope_for_user)
   end
 
   if Application.compile_env(:perme8_dashboard, :basic_auth_enabled) do
@@ -29,6 +32,10 @@ defmodule Perme8DashboardWeb.Router do
     end
   end
 
+  pipeline :require_auth do
+    plug(:require_authenticated_user)
+  end
+
   # Health endpoint is always unauthenticated (load balancer checks)
   scope "/", Perme8DashboardWeb do
     pipe_through(:browser)
@@ -43,13 +50,33 @@ defmodule Perme8DashboardWeb.Router do
       pipe_through(:browser)
     end
 
+    # Features (no auth required — uses mount_current_scope for optional user info)
     live_session :dashboard,
       layout: {Perme8DashboardWeb.Layouts, :app},
-      on_mount: [{Perme8DashboardWeb.Hooks.SetActiveTab, :default}] do
+      on_mount: [
+        {Perme8DashboardWeb.Hooks.SetActiveTab, :default},
+        {Perme8DashboardWeb.UserAuth, :mount_current_scope}
+      ] do
       live("/", ExoDashboardWeb.DashboardLive, :index)
       live("/features/*uri", ExoDashboardWeb.FeatureDetailLive, :show)
-      live("/sessions", AgentsWeb.ChatSessionsLive.Index, :index)
-      live("/sessions/:id", AgentsWeb.ChatSessionsLive.Show, :show)
+    end
+  end
+
+  # Sessions (requires Identity auth — uses AgentsWeb.SessionsLive.Index directly)
+  scope "/" do
+    if Application.compile_env(:perme8_dashboard, :basic_auth_enabled) do
+      pipe_through([:browser, :basic_auth, :require_auth])
+    else
+      pipe_through([:browser, :require_auth])
+    end
+
+    live_session :dashboard_authenticated,
+      layout: {Perme8DashboardWeb.Layouts, :app},
+      on_mount: [
+        {Perme8DashboardWeb.Hooks.SetActiveTab, :default},
+        {Perme8DashboardWeb.UserAuth, :require_authenticated}
+      ] do
+      live("/sessions", AgentsWeb.SessionsLive.Index, :index)
     end
   end
 end

@@ -11,7 +11,6 @@ defmodule Jarga.Chat.Application do
   - `UseCases.DeleteMessage` - Delete message from chat session
   - `UseCases.LoadSession` - Load session with messages
   - `UseCases.ListSessions` - List user's chat sessions
-  - `UseCases.ListAllSessions` - List all chat sessions across all users
   - `UseCases.DeleteSession` - Delete chat session
 
   ## Dependency Rule
@@ -34,7 +33,6 @@ defmodule Jarga.Chat.Application do
       UseCases.DeleteMessage,
       UseCases.LoadSession,
       UseCases.ListSessions,
-      UseCases.ListAllSessions,
       UseCases.DeleteSession,
       # Behaviours (interfaces for Infrastructure to implement)
       Behaviours.MessageRepositoryBehaviour,

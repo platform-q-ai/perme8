@@ -100,10 +100,14 @@ config :exo_dashboard, ExoDashboardWeb.Endpoint,
 # Perme8Dashboard App Test Configuration
 # ============================================================================
 
+# Identity URL for login redirects
+config :perme8_dashboard, :identity_url, "http://localhost:4001"
+
 config :perme8_dashboard, Perme8DashboardWeb.Endpoint,
-  http: [ip: {127, 0, 0, 1}, port: 4012],
-  secret_key_base:
-    "perme8_dashboard_test_secret_key_base_that_is_at_least_64_bytes_long_for_security"
+  http: [ip: {127, 0, 0, 1}, port: 4013],
+  # Must match Identity's secret_key_base so the shared session cookie
+  # (_identity_key) signed by Identity can be verified by perme8_dashboard.
+  secret_key_base: "test_identity_secret_key_base_at_least_64_bytes_long_for_security"
 
 # In test we don't send emails
 config :identity, Identity.Mailer, adapter: Swoosh.Adapters.Test

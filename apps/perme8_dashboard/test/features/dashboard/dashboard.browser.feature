@@ -84,11 +84,16 @@ Feature: Perme8 Dashboard Browser UI
     And I wait for "[data-app]" to be visible
     Then "[data-feature-tree]" should be visible
 
-  Scenario: Tab navigation supports additional tabs
+  Scenario: Tab navigation includes Sessions tab
     Given I navigate to "${baseUrl}/"
     And I wait for the page to load
-    Then "[data-tab]" should exist
-    And "[data-tab='features']" should be visible
+    Then "[data-tab='features']" should be visible
+    And "[data-tab='sessions']" should be visible
+
+  Scenario: Clicking Sessions tab redirects to login when unauthenticated
+    Given I navigate to "${baseUrl}/sessions"
+    And I wait for the URL to contain "/users/log-in"
+    Then I should see "Log in"
 
   Scenario: Dashboard uses DaisyUI dark theme
     Given I navigate to "${baseUrl}/"

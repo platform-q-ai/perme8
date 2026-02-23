@@ -14,10 +14,9 @@ defmodule AgentsWeb do
       Identity,
       IdentityWeb,
       Jarga,
-      Jarga.Accounts,
-      Jarga.Chat
+      Jarga.Accounts
     ],
-    exports: [Endpoint, Telemetry, ChatSessionsLive.Index, ChatSessionsLive.Show]
+    exports: [Endpoint, Telemetry, SessionsLive.Index]
 
   def static_paths do
     ~w(assets fonts images favicon.ico robots.txt)

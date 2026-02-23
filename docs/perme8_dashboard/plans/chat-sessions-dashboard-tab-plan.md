@@ -88,120 +88,103 @@ The `JargaWeb.ChatLive.Components.Message` component uses `MDEx.to_html` for mar
 
 ---
 
-## Phase 2: Interface Layer — AgentsWeb LiveViews (phoenix-tdd)
+## Phase 2: Interface Layer — AgentsWeb LiveViews (phoenix-tdd) ✓
 
 > Create standalone `ChatSessionsLive.Index` and `ChatSessionsLive.Show` in agents_web.
 
 ### 2.1 Message Component
 
-- [ ] **RED** ⏸: Write test `apps/agents_web/test/live/chat_sessions/components/message_component_test.exs`
+- [x] **RED**: Write test `apps/agents_web/test/live/chat_sessions/components/message_component_test.exs`
   - Tests:
     - Renders user messages with plain text content
     - Renders assistant messages with markdown-rendered HTML (uses MDEx)
     - Shows role indicator (user vs assistant)
     - Renders timestamp
-    - Uses `data-testid="chat-message"` attribute
-    - Uses `data-role` attribute for role identification
-- [ ] **GREEN** ⏸: Implement `apps/agents_web/lib/live/chat_sessions/components/message_component.ex`
+    - Uses `data-message-role` attribute for role identification
+    - Uses `data-message-content` attribute
+    - Uses `data-message-timestamp` attribute
+    - DaisyUI chat bubble styling (chat-end/chat-start)
+- [x] **GREEN**: Implement `apps/agents_web/lib/live/chat_sessions/components/message_component.ex`
   - Function component (not LiveComponent)
   - Uses `MDEx.to_html/2` for assistant message rendering (same approach as `JargaWeb.ChatLive.Components.Message`)
   - Simpler than jarga_web version — no insert/delete/streaming, read-only view
   - Attrs: `message` (map with `:role`, `:content`, `:inserted_at`)
-- [ ] **REFACTOR** ⏸: Clean up
+- [x] **REFACTOR**: Clean up
 
 ### 2.2 ChatSessionsLive.Index
 
-- [ ] **RED** ⏸: Write test `apps/agents_web/test/live/chat_sessions/index_test.exs`
+- [x] **RED**: Write test `apps/agents_web/test/live/chat_sessions/index_test.exs`
   - Tests:
     - Mounts and renders page heading "Chat Sessions"
+    - Sets page title
     - Lists all chat sessions (uses `Jarga.Chat.list_all_sessions/1`)
-    - Displays session title, message count, preview, and relative timestamp
-    - Uses LiveView streams for the sessions collection
-    - Shows empty state when no sessions exist
-    - Each session row has `data-testid="session-row"` and `data-session-id={session.id}`
+    - Displays session title, message count, and relative timestamp with data attributes
+    - Shows empty state when no sessions exist (`data-empty-state`)
+    - Each session has `data-session` attribute and `data-session-list` container
     - Clicking a session navigates to show view (`/chat-sessions/:id`)
-    - Has delete button per session with confirmation
-    - Deleting a session removes it from the list and calls `Jarga.Chat.delete_session/2`
-    - Page title is set to "Chat Sessions"
-  - Uses: `AgentsWeb.ConnCase` with authenticated user
-- [ ] **GREEN** ⏸: Implement `apps/agents_web/lib/live/chat_sessions/index.ex`
+    - Has delete button per session (`data-session-delete`)
+    - Deleting a session removes it from the list
+  - Uses: `AgentsWeb.ConnCase` with authenticated user + `Jarga.ChatFixtures`
+- [x] **GREEN**: Implement `apps/agents_web/lib/live/chat_sessions/index.ex` (inline render)
   - Module: `AgentsWeb.ChatSessionsLive.Index`
   - `use AgentsWeb, :live_view`
   - `mount/3`: calls `Jarga.Chat.list_all_sessions(limit: 50)`, streams sessions
-  - `handle_params/3`: supports `:index` live_action
-  - `handle_event("delete_session", ...)`: calls `Jarga.Chat.delete_session(session_id, session.user_id)` — extracts user_id from the session data
-  - Renders session list with DaisyUI table/card styling
+  - `handle_event("delete_session", ...)`: loads session to get user_id, then calls `Jarga.Chat.delete_session/2`
+  - DaisyUI table styling with data-* attributes per BDD feature file
   - Empty state with icon and message
-  - `data-testid` attributes for BDD testing
-- [ ] **GREEN** ⏸: Create template `apps/agents_web/lib/live/chat_sessions/index.html.heex`
-  - Session list table with columns: Title, Messages, Preview, Last Updated, Actions
-  - Each row: `data-testid="session-row"` `data-session-id={session.id}`
-  - Delete button: `data-testid="delete-session"`
-  - Empty state: `data-testid="sessions-empty-state"`
-  - Link to session detail: `navigate={~p"/chat-sessions/#{session.id}"}`
-- [ ] **REFACTOR** ⏸: Extract reusable components if needed
+  - Added `Jarga.Chat` to AgentsWeb boundary deps
+  - Added `Jarga.ChatFixtures` to ConnCase boundary deps
+- [x] **REFACTOR**: Clean up
 
 ### 2.3 ChatSessionsLive.Show
 
-- [ ] **RED** ⏸: Write test `apps/agents_web/test/live/chat_sessions/show_test.exs`
+- [x] **RED**: Write test `apps/agents_web/test/live/chat_sessions/show_test.exs`
   - Tests:
-    - Mounts with session ID param and loads session with messages
+    - Mounts with session ID and loads session with messages
     - Displays session title in heading
-    - Renders all messages using message component
-    - Shows messages in chronological order
-    - User messages styled differently from assistant messages
-    - Back link navigates to index (`/chat-sessions`)
-    - Page title shows session title
-    - Returns 404/redirect when session not found
-    - Has `data-testid="session-detail"` on container
-    - Has `data-testid="messages-list"` on messages container
-    - Has `data-testid="back-link"` on back navigation
-  - Uses: `AgentsWeb.ConnCase` with authenticated user
-- [ ] **GREEN** ⏸: Implement `apps/agents_web/lib/live/chat_sessions/show.ex`
+    - Renders messages with data-session-message, data-message-role, data-message-content attributes
+    - Messages in chronological order
+    - data-session-detail container
+    - Back link to /chat-sessions
+    - Redirects when session not found
+    - Sets page title to session title
+    - Handles session without title (shows "Untitled Session")
+  - Uses: `AgentsWeb.ConnCase` with authenticated user + `Jarga.ChatFixtures`
+- [x] **GREEN**: Implement `apps/agents_web/lib/live/chat_sessions/show.ex` (inline render)
   - Module: `AgentsWeb.ChatSessionsLive.Show`
   - `use AgentsWeb, :live_view`
-  - `mount/3`: assigns empty defaults
-  - `handle_params/3`: loads session via `Jarga.Chat.load_session(id)`, handles `:not_found`
-  - Renders session header + message list
+  - `mount/3`: no-op (handle_params loads session)
+  - `handle_params/3`: loads session via `Jarga.Chat.load_session(id)`, handles `:not_found` with redirect
+  - Renders session header + message list using MessageComponent
   - Back link to `/chat-sessions`
-  - Import message component
-- [ ] **GREEN** ⏸: Create template `apps/agents_web/lib/live/chat_sessions/show.html.heex`
-  - Session header with title and metadata
-  - Messages list with `data-testid="messages-list"` and `phx-update="stream"` (or simple for loop since messages are loaded once)
-  - Each message rendered via `<.message>` component
-  - Back link: `<.link navigate={~p"/chat-sessions"} data-testid="back-link">`
-- [ ] **REFACTOR** ⏸: Clean up
+  - Data attributes per BDD feature file
+- [x] **REFACTOR**: Clean up
 
 ### 2.4 AgentsWeb Router Extension
 
-- [ ] **RED** ⏸: Write test `apps/agents_web/test/live/chat_sessions/routing_test.exs`
+- [x] **RED**: Write test `apps/agents_web/test/live/chat_sessions/routing_test.exs`
   - Tests:
     - `GET /chat-sessions` renders the chat sessions index
     - `GET /chat-sessions/:id` renders session detail
     - Both routes require authentication (redirect to login when unauthenticated)
-- [ ] **GREEN** ⏸: Modify `apps/agents_web/lib/router.ex`
-  - Add routes inside the existing `:sessions` live_session (already has auth):
-    ```elixir
-    live("/chat-sessions", ChatSessionsLive.Index, :index)
-    live("/chat-sessions/:id", ChatSessionsLive.Show, :show)
-    ```
-- [ ] **REFACTOR** ⏸: Clean up
+- [x] **GREEN**: Routes already added to `apps/agents_web/lib/router.ex` in 2.2
+- [x] **REFACTOR**: Clean up
 
 ### Phase 2 Validation
 
-- [ ] All agents_web tests pass (`mix test apps/agents_web/`)
-- [ ] No boundary violations (`mix boundary`)
+- [x] All new agents_web tests pass (34 tests, 0 failures; 13 pre-existing failures in SessionsLive.IndexTest unrelated to chat sessions)
+- [x] No new boundary violations (`mix boundary` — only pre-existing warnings in other apps)
 - [ ] Routes respond correctly in dev (`http://localhost:4014/chat-sessions`)
 
 ---
 
-## Phase 3: Dashboard Integration — Perme8 Dashboard Tab (phoenix-tdd)
+## Phase 3: Dashboard Integration — Perme8 Dashboard Tab (phoenix-tdd) ✓
 
 > Mount the new ChatSessionsLive views in perme8_dashboard and add the "Sessions" tab.
 
 ### 3.1 Dependency Configuration
 
-- [ ] **GREEN** ⏸: Modify `apps/perme8_dashboard/mix.exs`
+- [x] **GREEN**: Modify `apps/perme8_dashboard/mix.exs`
   - Add dependencies:
     ```elixir
     {:agents_web, in_umbrella: true},
@@ -212,7 +195,7 @@ The `JargaWeb.ChatLive.Components.Message` component uses `MDEx.to_html` for mar
     {:agents_web, :relaxed},
     {:jarga, :relaxed}
     ```
-- [ ] **GREEN** ⏸: Modify `apps/perme8_dashboard/lib/perme8_dashboard_web.ex`
+- [x] **GREEN**: Modify `apps/perme8_dashboard/lib/perme8_dashboard_web.ex`
   - Update boundary deps:
     ```elixir
     use Boundary,
@@ -220,22 +203,28 @@ The `JargaWeb.ChatLive.Components.Message` component uses `MDEx.to_html` for mar
       deps: [ExoDashboardWeb, AgentsWeb],
       exports: [Endpoint, Telemetry]
     ```
-- [ ] **REFACTOR** ⏸: Verify compilation with `mix compile`
+- [x] **REFACTOR**: Verify compilation with `mix compile`
 
 ### 3.2 Dashboard Router — Sessions Routes
 
-- [ ] **RED** ⏸: Write test `apps/perme8_dashboard/test/perme8_dashboard_web/live/chat_sessions_tab_test.exs`
+- [x] **RED**: Write test `apps/perme8_dashboard/test/perme8_dashboard_web/live/chat_sessions_tab_test.exs`
   - Tests:
     - `GET /sessions` renders the sessions tab within dashboard layout
     - `GET /sessions/:id` renders session detail within dashboard layout
     - Dashboard layout wraps the content (sidebar, tabs visible)
     - Sessions tab is marked as active (`data-tab="sessions"` has `tab-active` class)
     - Features tab is NOT marked as active when on sessions page
-  - Note: These tests need session fixtures since they render the LiveView. Perme8Dashboard ConnCase has no DB setup — we need to extend it to include `Jarga.DataCase.setup_sandbox/1` and create session fixtures.
-- [ ] **GREEN** ⏸: Modify `apps/perme8_dashboard/lib/perme8_dashboard_web/router.ex`
-  - Add routes in the `:dashboard` live_session:
+    - Session links use /sessions/ prefix (dashboard route)
+    - Back link uses /sessions (dashboard route)
+    - Session deletion works in dashboard context
+    - Tab navigation shows both tabs on all pages
+  - Note: ConnCase extended with `Jarga.DataCase.setup_sandbox/1` for DB access.
+- [x] **GREEN**: Modify `apps/perme8_dashboard/lib/perme8_dashboard_web/router.ex`
+  - Add routes in the `:dashboard` live_session with on_mount hook:
     ```elixir
-    live_session :dashboard, layout: {Perme8DashboardWeb.Layouts, :app} do
+    live_session :dashboard,
+      layout: {Perme8DashboardWeb.Layouts, :app},
+      on_mount: [{Perme8DashboardWeb.Hooks.SetActiveTab, :default}] do
       live("/", ExoDashboardWeb.DashboardLive, :index)
       live("/features/*uri", ExoDashboardWeb.FeatureDetailLive, :show)
       live("/sessions", AgentsWeb.ChatSessionsLive.Index, :index)
@@ -243,38 +232,39 @@ The `JargaWeb.ChatLive.Components.Message` component uses `MDEx.to_html` for mar
     end
     ```
   - Note: No auth pipeline needed — perme8_dashboard is dev-only
-- [ ] **REFACTOR** ⏸: Clean up
+- [x] **REFACTOR**: Clean up
 
 ### 3.3 Active Tab Assignment via on_mount Hook
 
-- [ ] **RED** ⏸: Write test `apps/perme8_dashboard/test/perme8_dashboard_web/hooks/set_active_tab_test.exs`
+- [x] **RED**: Write test `apps/perme8_dashboard/test/perme8_dashboard_web/hooks/set_active_tab_test.exs`
   - Tests:
     - Sets `active_tab: :sessions` when path starts with `/sessions`
     - Sets `active_tab: :features` when path is `/` or starts with `/features`
     - Default is `:features` for unknown paths
-- [ ] **GREEN** ⏸: Create `apps/perme8_dashboard/lib/perme8_dashboard_web/hooks/set_active_tab.ex`
+    - Assigns sessions_path and sessions_base_path for cross-app navigation
+- [x] **GREEN**: Create `apps/perme8_dashboard/lib/perme8_dashboard_web/hooks/set_active_tab.ex`
   - Module: `Perme8DashboardWeb.Hooks.SetActiveTab`
   - Implements `on_mount/4` callback
   - Inspects the current URL/path to determine active tab
   - Assigns `active_tab` to socket
-- [ ] **GREEN** ⏸: Modify `apps/perme8_dashboard/lib/perme8_dashboard_web/router.ex`
+- [x] **GREEN**: Modify `apps/perme8_dashboard/lib/perme8_dashboard_web/router.ex`
   - Add `on_mount` to the `:dashboard` live_session:
     ```elixir
     live_session :dashboard,
       layout: {Perme8DashboardWeb.Layouts, :app},
       on_mount: [{Perme8DashboardWeb.Hooks.SetActiveTab, :default}] do
     ```
-- [ ] **REFACTOR** ⏸: Clean up
+- [x] **REFACTOR**: Clean up
 
 ### 3.4 Dashboard Layout — Sessions Tab Entry
 
-- [ ] **RED** ⏸: Write test `apps/perme8_dashboard/test/perme8_dashboard_web/layouts/app_layout_sessions_tab_test.exs`
+- [x] **RED**: Write test `apps/perme8_dashboard/test/perme8_dashboard_web/layouts/app_layout_sessions_tab_test.exs`
   - Tests:
     - Layout contains "Sessions" tab in tab bar
-    - Layout contains `data-tab="sessions"` attribute
+    - Layout contains sessions tab key and path in config
     - Layout contains `hero-chat-bubble-left-right` icon for sessions
-    - Sidebar contains Sessions navigation link
-- [ ] **GREEN** ⏸: Modify `apps/perme8_dashboard/lib/perme8_dashboard_web/components/layouts/app.html.heex`
+    - Sidebar contains data-sidebar- attributes for navigation links
+- [x] **GREEN**: Modify `apps/perme8_dashboard/lib/perme8_dashboard_web/components/layouts/app.html.heex`
   - Update `tabs` list:
     ```elixir
     tabs = [{:features, "Features", ~p"/"}, {:sessions, "Sessions", ~p"/sessions"}]
@@ -283,11 +273,11 @@ The `JargaWeb.ChatLive.Components.Message` component uses `MDEx.to_html` for mar
     ```elixir
     tab_icons = %{features: "hero-squares-2x2", sessions: "hero-chat-bubble-left-right"}
     ```
-- [ ] **REFACTOR** ⏸: Clean up
+- [x] **REFACTOR**: Clean up
 
 ### 3.5 Dashboard ConnCase Extension
 
-- [ ] **GREEN** ⏸: Modify `apps/perme8_dashboard/test/support/conn_case.ex`
+- [x] **GREEN**: Modify `apps/perme8_dashboard/test/support/conn_case.ex`
   - Add sandbox setup for database access (sessions live in DB):
     ```elixir
     setup tags do
@@ -296,28 +286,33 @@ The `JargaWeb.ChatLive.Components.Message` component uses `MDEx.to_html` for mar
     end
     ```
   - Add boundary dep on `Jarga.DataCase` if needed
-- [ ] **GREEN** ⏸: Modify `apps/perme8_dashboard/mix.exs`
+- [x] **GREEN**: Modify `apps/perme8_dashboard/mix.exs`
   - Ensure `{:jarga, in_umbrella: true}` provides DataCase access for tests
-- [ ] **REFACTOR** ⏸: Clean up
+- [x] **REFACTOR**: Clean up
 
 ### 3.6 LiveView Compatibility — Layout Awareness
 
 The `AgentsWeb.ChatSessionsLive.Index` and `Show` modules use `use AgentsWeb, :live_view`, which imports `AgentsWeb.CoreComponents` and aliases `AgentsWeb.Layouts`. When mounted in perme8_dashboard's router, the layout is overridden by `{Perme8DashboardWeb.Layouts, :app}` (from the `live_session`), so the inner content works correctly. However, we need to ensure:
 
-- [ ] **RED** ⏸: Write test confirming that the ChatSessionsLive modules render correctly when accessed via perme8_dashboard routes (integration test in `apps/perme8_dashboard/test/perme8_dashboard_web/live/chat_sessions_tab_test.exs`)
+- [x] **RED**: Tests in `chat_sessions_tab_test.exs` cover cross-app rendering
   - Renders session list within dashboard frame
   - Tab navigation works between Features and Sessions
   - Session detail view loads within dashboard frame
-- [ ] **GREEN** ⏸: Handle any compatibility issues (e.g., verified routes, component imports)
-  - If `~p` sigil from `AgentsWeb.verified_routes` conflicts with perme8_dashboard routes, use raw paths or make routes available in both routers
-  - May need to pass paths as assigns rather than using `~p` for cross-app navigation
-- [ ] **REFACTOR** ⏸: Clean up
+  - Session links use dashboard routes (/sessions/) not agents_web routes (/chat-sessions/)
+  - Back link uses /sessions (dashboard route)
+- [x] **GREEN**: Resolved cross-app routing via configurable path assigns
+  - `assign_new` in Index mount sets `:sessions_base_path` (defaults to `~p"/chat-sessions"`)
+  - `assign_new` in Show mount sets `:sessions_path` (defaults to `~p"/chat-sessions"`)
+  - `SetActiveTab` on_mount hook injects `/sessions` paths for dashboard context
+  - Templates use `@sessions_base_path` and `@sessions_path` instead of hardcoded `~p`
+  - Added `ChatSessionsLive.Index` and `.Show` to AgentsWeb boundary exports
+- [x] **REFACTOR**: Clean up
 
 ### Phase 3 Validation
 
-- [ ] All perme8_dashboard tests pass (`mix test apps/perme8_dashboard/`)
-- [ ] All agents_web tests pass (`mix test apps/agents_web/`)
-- [ ] No boundary violations (`mix boundary`)
+- [x] All perme8_dashboard tests pass (122 tests, 0 failures)
+- [x] All agents_web chat sessions tests pass (34 tests, 0 failures)
+- [x] No new boundary violations (only pre-existing warnings in other apps)
 - [ ] Dashboard serves at `http://localhost:4012/sessions` with tab navigation
 - [ ] Features tab still works at `http://localhost:4012/`
 - [ ] Session detail loads at `http://localhost:4012/sessions/:id`

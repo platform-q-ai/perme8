@@ -1,11 +1,9 @@
 defmodule Perme8DashboardWeb.Endpoint do
   use Phoenix.Endpoint, otp_app: :perme8_dashboard
 
-  @session_options [
-    store: :cookie,
-    key: "_perme8_dashboard_key",
-    signing_salt: "perme8_dashboard_session"
-  ]
+  # Share session cookie with Identity so users authenticated via
+  # Identity's login page are also authenticated here.
+  @session_options Application.compile_env!(:identity, :session_options)
 
   socket("/live", Phoenix.LiveView.Socket,
     websocket: [connect_info: [session: @session_options]],
