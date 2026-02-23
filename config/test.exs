@@ -20,7 +20,7 @@ database_url =
 config :jarga, Jarga.Repo,
   url: database_url,
   pool: Ecto.Adapters.SQL.Sandbox,
-  pool_size: 20,
+  pool_size: 10,
   # LiveView processes during exo-bdd browser tests hold connections for the
   # full scenario duration, easily exceeding the default 120s ownership timeout.
   ownership_timeout: :infinity
@@ -29,14 +29,14 @@ config :jarga, Jarga.Repo,
 config :identity, Identity.Repo,
   url: database_url,
   pool: Ecto.Adapters.SQL.Sandbox,
-  pool_size: 20,
+  pool_size: 10,
   ownership_timeout: :infinity
 
 # Agents uses the same database as Jarga
 config :agents, Agents.Repo,
   url: database_url,
   pool: Ecto.Adapters.SQL.Sandbox,
-  pool_size: 20,
+  pool_size: 10,
   ownership_timeout: :infinity
 
 # Identity URL for login redirects.
@@ -72,7 +72,7 @@ config :entity_relationship_manager,
 config :webhooks, Webhooks.Repo,
   url: database_url,
   pool: Ecto.Adapters.SQL.Sandbox,
-  pool_size: 20,
+  pool_size: 10,
   ownership_timeout: :infinity
 
 config :webhooks_api, WebhooksApi.Endpoint,
