@@ -52,19 +52,6 @@ defmodule Jarga.Chat.Infrastructure.Queries.Queries do
   end
 
   @doc """
-  Selects only the user_id for a session by ID.
-
-  Lightweight query for cases where only ownership info is needed,
-  avoiding the cost of preloading relationships.
-  """
-  def session_user_id(session_id) do
-    from(s in SessionSchema,
-      where: s.id == ^session_id,
-      select: s.user_id
-    )
-  end
-
-  @doc """
   Preloads session relationships including messages.
   """
   def with_preloads(query \\ session_base()) do
@@ -112,15 +99,6 @@ defmodule Jarga.Chat.Infrastructure.Queries.Queries do
     )
   end
 
-  @doc """
-  Base query for all sessions (no user filter).
-
-  Used by admin/dashboard views to list all sessions across all users.
-  """
-  def all_sessions do
-    session_base()
-  end
-
   # ChatMessage Queries
 
   @doc """
@@ -153,32 +131,6 @@ defmodule Jarga.Chat.Infrastructure.Queries.Queries do
       order_by: [asc: m.inserted_at],
       limit: 1,
       select: m.content
-    )
-  end
-
-  @doc """
-  Gets the first message content for multiple sessions in a single query.
-
-  Uses a lateral join to efficiently fetch the earliest message per session,
-  avoiding N+1 queries when listing sessions with previews.
-
-  Returns `[{session_id, content}]` pairs.
-  """
-  def first_message_contents_batch(session_ids) do
-    first_msg =
-      from(m in MessageSchema,
-        where: m.chat_session_id == parent_as(:session).id,
-        order_by: [asc: m.inserted_at],
-        limit: 1,
-        select: m.content
-      )
-
-    from(s in SessionSchema,
-      as: :session,
-      where: s.id in ^session_ids,
-      left_lateral_join: m in subquery(first_msg),
-      on: true,
-      select: {s.id, m.content}
     )
   end
 

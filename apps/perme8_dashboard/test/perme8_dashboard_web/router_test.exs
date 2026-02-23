@@ -80,6 +80,22 @@ defmodule Perme8DashboardWeb.RouterTest do
     end
   end
 
+  describe "GET /sessions (requires auth)" do
+    test "redirects unauthenticated users to Identity login", %{conn: conn} do
+      conn = get(conn, "/sessions")
+
+      assert redirected_to(conn) =~ "/users/log-in"
+    end
+
+    test "renders sessions page when authenticated", %{conn: conn} do
+      %{conn: conn} = register_and_log_in_user(%{conn: conn})
+      {:ok, _view, html} = live(conn, "/sessions")
+
+      assert html =~ "Sessions"
+      assert html =~ "Perme8 Dashboard"
+    end
+  end
+
   describe "GET /health" do
     test "health check still works outside live_session", %{conn: conn} do
       conn = get(conn, "/health")

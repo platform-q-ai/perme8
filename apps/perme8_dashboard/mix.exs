@@ -39,6 +39,7 @@ defmodule Perme8Dashboard.MixProject do
             {:phoenix_live_view, :relaxed},
             {:phoenix_html, :relaxed},
             {:agents_web, :relaxed},
+            {:identity, :relaxed},
             {:jarga, :relaxed}
           ]
         ]
@@ -66,6 +67,7 @@ defmodule Perme8Dashboard.MixProject do
       {:lazy_html, ">= 0.1.0", only: :test},
       {:exo_dashboard, in_umbrella: true},
       {:agents_web, in_umbrella: true},
+      {:identity, in_umbrella: true},
       {:jarga, in_umbrella: true}
     ]
   end

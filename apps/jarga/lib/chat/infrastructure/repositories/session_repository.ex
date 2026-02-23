@@ -34,34 +34,6 @@ defmodule Jarga.Chat.Infrastructure.Repositories.SessionRepository do
   end
 
   @doc """
-  Gets the user_id for a session by ID.
-
-  Lightweight query that avoids loading full session with preloads.
-  Returns `{:ok, user_id}` or `{:error, :not_found}`.
-  """
-  def get_session_user_id(session_id, repo \\ Repo) do
-    case session_id |> Queries.session_user_id() |> repo.one() do
-      nil -> {:error, :not_found}
-      user_id -> {:ok, user_id}
-    end
-  end
-
-  @doc """
-  Lists all sessions across all users with message counts.
-
-  Returns a list of session maps with aggregated data, ordered by most recent first.
-  Used by admin/dashboard views where no user filtering is needed.
-  """
-  @impl true
-  def list_all_sessions(limit, repo \\ Repo) do
-    Queries.all_sessions()
-    |> Queries.ordered_by_recent()
-    |> Queries.with_message_count()
-    |> Queries.limit_results(limit)
-    |> repo.all()
-  end
-
-  @doc """
   Lists sessions for a user with message counts.
 
   Returns a list of session maps with aggregated data.
@@ -84,20 +56,6 @@ defmodule Jarga.Chat.Infrastructure.Repositories.SessionRepository do
     session_id
     |> Queries.first_message_content()
     |> repo.one()
-  end
-
-  @doc """
-  Gets the first message content for multiple sessions in a single query.
-
-  Returns a map of `%{session_id => content}` for efficient batch preview lookups.
-  Sessions without messages will have `nil` as the content value.
-  """
-  @impl true
-  def get_first_message_contents(session_ids, repo \\ Repo) do
-    session_ids
-    |> Queries.first_message_contents_batch()
-    |> repo.all()
-    |> Map.new()
   end
 
   @doc """

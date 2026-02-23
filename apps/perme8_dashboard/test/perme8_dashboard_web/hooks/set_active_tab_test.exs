@@ -55,41 +55,20 @@ defmodule Perme8DashboardWeb.Hooks.SetActiveTabTest do
       assert has_element?(view, "[data-tab='features'].tab-active")
     end
 
-    test "sets active_tab to :sessions when on /sessions", %{conn: conn} do
+    test "sets active_tab to :sessions when on /sessions (authenticated)", %{conn: conn} do
+      %{conn: conn} = register_and_log_in_user(%{conn: conn})
       {:ok, view, _html} = live(conn, "/sessions")
-
-      assert has_element?(view, "[data-tab='sessions'].tab-active")
-      refute has_element?(view, "[data-tab='features'].tab-active")
-    end
-
-    test "sets active_tab to :sessions when on /sessions/:id", %{conn: conn} do
-      user = Jarga.AccountsFixtures.user_fixture()
-      session = Jarga.ChatFixtures.chat_session_fixture(user: user, title: "Test Session")
-
-      {:ok, view, _html} = live(conn, "/sessions/#{session.id}")
 
       assert has_element?(view, "[data-tab='sessions'].tab-active")
       refute has_element?(view, "[data-tab='features'].tab-active")
     end
 
     test "assigns sessions_path for cross-app navigation", %{conn: conn} do
-      {:ok, view, _html} = live(conn, "/sessions")
-
-      # The sessions_path should be "/sessions" (dashboard route)
-      # Verify by checking the "Back" link in the show view uses /sessions
-      # For index, just verify the view mounted successfully with the assign
-      html = render(view)
-      assert html =~ "Chat Sessions"
-    end
-
-    test "assigns sessions_base_path for building detail paths", %{conn: conn} do
-      user = Jarga.AccountsFixtures.user_fixture()
-      session = Jarga.ChatFixtures.chat_session_fixture(user: user, title: "Detail Test")
-
+      %{conn: conn} = register_and_log_in_user(%{conn: conn})
       {:ok, _view, html} = live(conn, "/sessions")
 
-      # The session link should use /sessions/ prefix (dashboard route), not /chat-sessions/
-      assert html =~ ~s(href="/sessions/#{session.id}")
+      # Sessions content present (AgentsWeb.SessionsLive.Index renders "Sessions" header)
+      assert html =~ "Sessions"
     end
   end
 end
