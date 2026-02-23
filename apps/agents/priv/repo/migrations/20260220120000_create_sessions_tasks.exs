@@ -9,7 +9,12 @@ defmodule Agents.Repo.Migrations.CreateSessionsTasks do
       add(:container_id, :string)
       add(:container_port, :integer)
       add(:session_id, :string)
-      add(:user_id, references(:users, type: :binary_id, on_delete: :delete_all), null: false)
+      # user_id references the users table (managed by Jarga/Identity repos).
+      # We use a plain column instead of references() because Agents.Repo
+      # migrations run before Jarga.Repo migrations (alphabetical order)
+      # and the users table may not exist yet. Ownership is enforced at
+      # the application layer.
+      add(:user_id, :binary_id, null: false)
       add(:error, :text)
       add(:started_at, :utc_datetime)
       add(:completed_at, :utc_datetime)
