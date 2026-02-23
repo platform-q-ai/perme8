@@ -70,6 +70,8 @@ defmodule Jarga.Chat do
     DeleteSession
   }
 
+  alias Jarga.Chat.Infrastructure.Repositories.SessionRepository
+
   # Chat Context and Message Preparation
 
   @doc """
@@ -155,6 +157,22 @@ defmodule Jarga.Chat do
 
   """
   defdelegate list_all_sessions(opts \\ []), to: ListAllSessions, as: :execute
+
+  @doc """
+  Gets the user_id for a session by ID.
+
+  Lightweight lookup that avoids loading the full session with preloads.
+
+  ## Examples
+
+      iex> get_session_user_id(session_id)
+      {:ok, user_id}
+
+      iex> get_session_user_id(invalid_id)
+      {:error, :not_found}
+
+  """
+  defdelegate get_session_user_id(session_id), to: SessionRepository
 
   @doc """
   Loads a chat session with its messages.
