@@ -35,7 +35,7 @@ defmodule Agents do
       Agents.Domain,
       Agents.Application,
       Agents.Infrastructure,
-      Identity.Repo,
+      Agents.Repo,
       EntityRelationshipManager
     ],
     exports: [

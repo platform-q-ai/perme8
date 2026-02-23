@@ -12,7 +12,7 @@ defmodule Agents.Sessions do
       Agents.Sessions.Domain,
       Agents.Sessions.Application,
       Agents.Sessions.Infrastructure,
-      Identity.Repo
+      Agents.Repo
     ],
     exports: [
       {Domain.Entities.Task, []}

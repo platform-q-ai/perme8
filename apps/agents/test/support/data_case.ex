@@ -20,7 +20,7 @@ defmodule Agents.DataCase do
 
   using do
     quote do
-      alias Identity.Repo, as: Repo
+      alias Agents.Repo
 
       import Ecto
       import Ecto.Changeset
@@ -37,13 +37,13 @@ defmodule Agents.DataCase do
   @doc """
   Sets up the sandbox based on the test tags.
 
-  Uses Identity.Repo for all database operations.
+  Uses Agents.Repo for all database operations.
   """
   def setup_sandbox(tags) do
-    :ok = Sandbox.checkout(Identity.Repo)
+    :ok = Sandbox.checkout(Agents.Repo)
 
     unless tags[:async] do
-      Sandbox.mode(Identity.Repo, {:shared, self()})
+      Sandbox.mode(Agents.Repo, {:shared, self()})
     end
   end
 

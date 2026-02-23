@@ -9,7 +9,7 @@ defmodule Agents.Sessions.Infrastructure.Repositories.TaskRepository do
 
   import Ecto.Query, warn: false
 
-  alias Identity.Repo, as: Repo
+  alias Agents.Repo
   alias Agents.Sessions.Infrastructure.Schemas.TaskSchema
   alias Agents.Sessions.Infrastructure.Queries.TaskQueries
 

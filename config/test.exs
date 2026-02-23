@@ -32,6 +32,13 @@ config :identity, Identity.Repo,
   pool_size: 20,
   ownership_timeout: :infinity
 
+# Agents uses the same database as Jarga
+config :agents, Agents.Repo,
+  url: database_url,
+  pool: Ecto.Adapters.SQL.Sandbox,
+  pool_size: 20,
+  ownership_timeout: :infinity
+
 # Identity URL for login redirects.
 # NOTE: runtime.exs overrides Identity's port to 4001 for ALL environments
 # (not just prod), so Identity actually listens on 4001 even in MIX_ENV=test.

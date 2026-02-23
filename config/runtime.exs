@@ -188,6 +188,13 @@ if config_env() == :prod do
     pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
     socket_options: maybe_ipv6
 
+  # Agents uses the same database as Jarga
+  config :agents, Agents.Repo,
+    ssl: true,
+    url: database_url,
+    pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
+    socket_options: maybe_ipv6
+
   # Build list of allowed origins for WebSocket connections
   check_origins = [
     "https://www.jarga.ai",
