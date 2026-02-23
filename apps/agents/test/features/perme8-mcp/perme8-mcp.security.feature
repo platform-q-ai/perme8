@@ -235,5 +235,5 @@ Feature: Knowledge MCP Endpoint Security Baseline
     And there should be no alerts of type "Path Traversal"
     And there should be no alerts of type "Remote OS Command Injection"
     And I should see the alert details
-    When I save the security report to "reports/knowledge-mcp-security-audit.html"
-    And I save the security report as JSON to "reports/knowledge-mcp-security-audit.json"
+    When I save the security report to "reports/perme8-mcp-security-audit.html"
+    And I save the security report as JSON to "reports/perme8-mcp-security-audit.json"

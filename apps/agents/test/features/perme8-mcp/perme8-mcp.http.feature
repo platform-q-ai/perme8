@@ -34,7 +34,7 @@ Feature: Knowledge MCP Tools — HTTP API
     Then the response status should be 200
     And the response body should be valid JSON
     And the response body path "$.status" should equal "ok"
-    And the response body path "$.service" should equal "knowledge-mcp"
+    And the response body path "$.service" should equal "perme8-mcp"
 
   # ===========================================================================
   # Authentication — missing, invalid, and revoked tokens
@@ -118,7 +118,7 @@ Feature: Knowledge MCP Tools — HTTP API
       """
     Then the response status should be 200
     And the response body should be valid JSON
-    And the response body path "$.result.serverInfo.name" should equal "knowledge-mcp"
+    And the response body path "$.result.serverInfo.name" should equal "perme8-mcp"
     And the response body path "$.result.serverInfo.version" should equal "1.0.0"
     And the response body path "$.result.protocolVersion" should exist
     And the response body path "$.result.capabilities" should exist
