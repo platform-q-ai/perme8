@@ -29,110 +29,110 @@ The outbound webhook EventHandler subscribes to these existing event topics:
 
 ---
 
-## Phase 1: Domain Layer (pure business logic, no I/O)
+## Phase 1: Domain Layer (pure business logic, no I/O) ✓
 
 > **App**: `apps/webhooks/`
 > **Test case**: `use ExUnit.Case, async: true` (pure, no DB)
 
 ### 1.1 Subscription Entity
 
-- [ ] ⏸ **RED**: Write test `apps/webhooks/test/webhooks/domain/entities/subscription_test.exs`
+- [x] ✓ **RED**: Write test `apps/webhooks/test/webhooks/domain/entities/subscription_test.exs`
   - Tests:
     - `new/1` creates a struct with all fields (id, url, secret, event_types, is_active, workspace_id, created_by_id, inserted_at, updated_at)
     - `from_schema/1` converts an infrastructure schema map to a domain entity
     - Default `is_active` is `true`
     - `active?/1` returns correct boolean
-- [ ] ⏸ **GREEN**: Implement `apps/webhooks/lib/webhooks/domain/entities/subscription.ex`
+- [x] ✓ **GREEN**: Implement `apps/webhooks/lib/webhooks/domain/entities/subscription.ex`
   - Pure `defstruct` with `@type t` spec
   - Functions: `new/1`, `from_schema/1`, `active?/1`
-- [ ] ⏸ **REFACTOR**: Clean up
+- [x] ✓ **REFACTOR**: Clean up
 
 ### 1.2 Delivery Entity
 
-- [ ] ⏸ **RED**: Write test `apps/webhooks/test/webhooks/domain/entities/delivery_test.exs`
+- [x] ✓ **RED**: Write test `apps/webhooks/test/webhooks/domain/entities/delivery_test.exs`
   - Tests:
     - `new/1` creates struct (id, subscription_id, event_type, payload, status, response_code, attempts, next_retry_at, inserted_at, updated_at)
     - `from_schema/1` converts schema to domain entity
     - `success?/1`, `failed?/1`, `pending?/1` status predicates
     - `max_retries_reached?/1` returns true when attempts >= 5
-- [ ] ⏸ **GREEN**: Implement `apps/webhooks/lib/webhooks/domain/entities/delivery.ex`
+- [x] ✓ **GREEN**: Implement `apps/webhooks/lib/webhooks/domain/entities/delivery.ex`
   - Pure `defstruct`, status predicates, `@max_retries 5`
-- [ ] ⏸ **REFACTOR**: Clean up
+- [x] ✓ **REFACTOR**: Clean up
 
 ### 1.3 InboundLog Entity
 
-- [ ] ⏸ **RED**: Write test `apps/webhooks/test/webhooks/domain/entities/inbound_log_test.exs`
+- [x] ✓ **RED**: Write test `apps/webhooks/test/webhooks/domain/entities/inbound_log_test.exs`
   - Tests:
     - `new/1` creates struct (id, workspace_id, event_type, payload, source_ip, signature_valid, received_at)
     - `from_schema/1` converts schema to domain entity
-- [ ] ⏸ **GREEN**: Implement `apps/webhooks/lib/webhooks/domain/entities/inbound_log.ex`
+- [x] ✓ **GREEN**: Implement `apps/webhooks/lib/webhooks/domain/entities/inbound_log.ex`
   - Pure `defstruct`
-- [ ] ⏸ **REFACTOR**: Clean up
+- [x] ✓ **REFACTOR**: Clean up
 
 ### 1.4 InboundWebhookConfig Entity
 
-- [ ] ⏸ **RED**: Write test `apps/webhooks/test/webhooks/domain/entities/inbound_webhook_config_test.exs`
+- [x] ✓ **RED**: Write test `apps/webhooks/test/webhooks/domain/entities/inbound_webhook_config_test.exs`
   - Tests:
     - `new/1` creates struct (id, workspace_id, secret, is_active, inserted_at, updated_at)
     - `from_schema/1` converts schema to domain entity
-- [ ] ⏸ **GREEN**: Implement `apps/webhooks/lib/webhooks/domain/entities/inbound_webhook_config.ex`
+- [x] ✓ **GREEN**: Implement `apps/webhooks/lib/webhooks/domain/entities/inbound_webhook_config.ex`
   - Pure `defstruct`
-- [ ] ⏸ **REFACTOR**: Clean up
+- [x] ✓ **REFACTOR**: Clean up
 
 ### 1.5 WebhookAuthorizationPolicy
 
-- [ ] ⏸ **RED**: Write test `apps/webhooks/test/webhooks/domain/policies/webhook_authorization_policy_test.exs`
+- [x] ✓ **RED**: Write test `apps/webhooks/test/webhooks/domain/policies/webhook_authorization_policy_test.exs`
   - Tests:
     - `:owner` can manage webhooks (`can_manage_webhooks?/1` returns true)
     - `:admin` can manage webhooks (returns true)
     - `:member` cannot manage webhooks (returns false)
     - `:guest` cannot manage webhooks (returns false)
-- [ ] ⏸ **GREEN**: Implement `apps/webhooks/lib/webhooks/domain/policies/webhook_authorization_policy.ex`
+- [x] ✓ **GREEN**: Implement `apps/webhooks/lib/webhooks/domain/policies/webhook_authorization_policy.ex`
   - Pure function: `can_manage_webhooks?(role)` -- returns true for `:owner` and `:admin`
-- [ ] ⏸ **REFACTOR**: Clean up
+- [x] ✓ **REFACTOR**: Clean up
 
 ### 1.6 HmacPolicy (pure signature computation)
 
-- [ ] ⏸ **RED**: Write test `apps/webhooks/test/webhooks/domain/policies/hmac_policy_test.exs`
+- [x] ✓ **RED**: Write test `apps/webhooks/test/webhooks/domain/policies/hmac_policy_test.exs`
   - Tests:
     - `compute_signature/2` returns HMAC-SHA256 hex digest of (secret, payload)
     - `valid_signature?/3` returns true when signature matches
     - `valid_signature?/3` returns false when signature does not match
     - `valid_signature?/3` returns false for nil or empty signature
     - Works with binary payload (raw JSON string)
-- [ ] ⏸ **GREEN**: Implement `apps/webhooks/lib/webhooks/domain/policies/hmac_policy.ex`
+- [x] ✓ **GREEN**: Implement `apps/webhooks/lib/webhooks/domain/policies/hmac_policy.ex`
   - `:crypto.mac(:hmac, :sha256, secret, payload)` wrapped as pure functions
   - `compute_signature/2`, `valid_signature?/3`
-- [ ] ⏸ **REFACTOR**: Clean up
+- [x] ✓ **REFACTOR**: Clean up
 
 ### 1.7 RetryPolicy (pure backoff computation)
 
-- [ ] ⏸ **RED**: Write test `apps/webhooks/test/webhooks/domain/policies/retry_policy_test.exs`
+- [x] ✓ **RED**: Write test `apps/webhooks/test/webhooks/domain/policies/retry_policy_test.exs`
   - Tests:
     - `should_retry?/1` returns true for attempts 0..4, false for 5+
     - `next_retry_delay_seconds/1` returns exponential backoff (2^attempt * base)
     - `max_retries/0` returns 5
     - Backoff values are within expected ranges (base * 2^attempt)
-- [ ] ⏸ **GREEN**: Implement `apps/webhooks/lib/webhooks/domain/policies/retry_policy.ex`
+- [x] ✓ **GREEN**: Implement `apps/webhooks/lib/webhooks/domain/policies/retry_policy.ex`
   - Pure functions: `should_retry?/1`, `next_retry_delay_seconds/1`, `max_retries/0`
   - Exponential backoff: base 15s, formula: `15 * 2^attempt` (15s, 30s, 60s, 120s, 240s)
-- [ ] ⏸ **REFACTOR**: Clean up
+- [x] ✓ **REFACTOR**: Clean up
 
 ### 1.8 SecretGeneratorPolicy
 
-- [ ] ⏸ **RED**: Write test `apps/webhooks/test/webhooks/domain/policies/secret_generator_policy_test.exs`
+- [x] ✓ **RED**: Write test `apps/webhooks/test/webhooks/domain/policies/secret_generator_policy_test.exs`
   - Tests:
     - `generate/0` returns a string of at least 32 characters
     - `generate/0` returns unique values on repeated calls
     - `sufficient_length?/1` returns true for strings >= 32 chars, false otherwise
-- [ ] ⏸ **GREEN**: Implement `apps/webhooks/lib/webhooks/domain/policies/secret_generator_policy.ex`
+- [x] ✓ **GREEN**: Implement `apps/webhooks/lib/webhooks/domain/policies/secret_generator_policy.ex`
   - Uses `:crypto.strong_rand_bytes(32) |> Base.url_encode64(padding: false)`
   - `generate/0`, `sufficient_length?/1`
-- [ ] ⏸ **REFACTOR**: Clean up
+- [x] ✓ **REFACTOR**: Clean up
 
 ### 1.9 Domain Boundary Module
 
-- [ ] ⏸ **GREEN**: Create `apps/webhooks/lib/webhooks/domain.ex`
+- [x] ✓ **GREEN**: Create `apps/webhooks/lib/webhooks/domain.ex`
   ```elixir
   defmodule Webhooks.Domain do
     use Boundary,
@@ -153,9 +153,9 @@ The outbound webhook EventHandler subscribes to these existing event topics:
 
 ### Phase 1 Validation
 
-- [ ] ⏸ All domain tests pass with `use ExUnit.Case, async: true` (milliseconds, no I/O)
-- [ ] ⏸ Domain has ZERO deps in boundary config
-- [ ] ⏸ No Ecto, Phoenix, or Repo references in domain layer
+- [x] ✓ All domain tests pass with `use ExUnit.Case, async: true` (milliseconds, no I/O)
+- [x] ✓ Domain has ZERO deps in boundary config
+- [x] ✓ No Ecto, Phoenix, or Repo references in domain layer
 
 ---
 

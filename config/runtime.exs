@@ -149,6 +149,7 @@ if System.get_env("PHX_SERVER") do
   config :jarga_api, JargaApi.Endpoint, server: true
   config :entity_relationship_manager, EntityRelationshipManager.Endpoint, server: true
   config :agents_web, AgentsWeb.Endpoint, server: true
+  config :webhooks_api, WebhooksApi.Endpoint, server: true
 end
 
 if config_env() == :prod do
