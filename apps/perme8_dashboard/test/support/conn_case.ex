@@ -3,8 +3,8 @@ defmodule Perme8DashboardWeb.ConnCase do
   This module defines the test case to be used by
   tests that require setting up a connection.
 
-  No database is used -- Perme8Dashboard is a dev tool
-  that wraps other dashboard apps.
+  Includes database sandbox setup for tests that render LiveViews
+  which access the database (e.g., chat sessions from Jarga.Chat).
   """
   use ExUnit.CaseTemplate
 
@@ -21,7 +21,8 @@ defmodule Perme8DashboardWeb.ConnCase do
     end
   end
 
-  setup _tags do
+  setup tags do
+    Jarga.DataCase.setup_sandbox(tags)
     {:ok, conn: Phoenix.ConnTest.build_conn()}
   end
 end

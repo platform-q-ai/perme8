@@ -43,9 +43,13 @@ defmodule Perme8DashboardWeb.Router do
       pipe_through(:browser)
     end
 
-    live_session :dashboard, layout: {Perme8DashboardWeb.Layouts, :app} do
+    live_session :dashboard,
+      layout: {Perme8DashboardWeb.Layouts, :app},
+      on_mount: [{Perme8DashboardWeb.Hooks.SetActiveTab, :default}] do
       live("/", ExoDashboardWeb.DashboardLive, :index)
       live("/features/*uri", ExoDashboardWeb.FeatureDetailLive, :show)
+      live("/sessions", AgentsWeb.ChatSessionsLive.Index, :index)
+      live("/sessions/:id", AgentsWeb.ChatSessionsLive.Show, :show)
     end
   end
 end

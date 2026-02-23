@@ -15,7 +15,9 @@ defmodule AgentsWeb.ChatSessionsLive.Show do
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, socket}
+    {:ok,
+     socket
+     |> assign_new(:sessions_path, fn -> ~p"/chat-sessions" end)}
   end
 
   @impl true
@@ -34,7 +36,7 @@ defmodule AgentsWeb.ChatSessionsLive.Show do
         {:noreply,
          socket
          |> put_flash(:error, "Session not found")
-         |> redirect(to: ~p"/chat-sessions")}
+         |> redirect(to: socket.assigns.sessions_path)}
     end
   end
 
@@ -43,7 +45,7 @@ defmodule AgentsWeb.ChatSessionsLive.Show do
     ~H"""
     <div data-session-detail class="space-y-6">
       <div class="flex items-center gap-4">
-        <.link navigate={~p"/chat-sessions"} class="btn btn-ghost btn-sm">
+        <.link navigate={@sessions_path} class="btn btn-ghost btn-sm">
           <.icon name="hero-arrow-left" class="size-4" /> Back
         </.link>
         <h1 class="text-2xl font-bold" data-session-title>{@display_title}</h1>

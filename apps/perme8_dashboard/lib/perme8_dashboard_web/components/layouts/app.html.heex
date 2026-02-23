@@ -1,11 +1,10 @@
 <% # Tab configuration: {key, label, path}
-# NOTE: active_tab defaults to :features. When adding future tabs,
-# set active_tab per route via on_mount hooks or live_session assigns.
-tabs = [{:features, "Features", ~p"/"}]
+# active_tab is set by the SetActiveTab on_mount hook.
+tabs = [{:features, "Features", ~p"/"}, {:sessions, "Sessions", ~p"/sessions"}]
 active_tab = assigns[:active_tab] || :features
 
 # Icon mapping for sidebar navigation (keyed by tab key)
-tab_icons = %{features: "hero-squares-2x2"} %>
+tab_icons = %{features: "hero-squares-2x2", sessions: "hero-chat-bubble-left-right"} %>
 <div class="drawer lg:drawer-open h-screen overflow-hidden">
   <input id="dashboard-drawer" type="checkbox" class="drawer-toggle" />
   <div class="drawer-content flex flex-col min-w-0 h-full overflow-hidden">
@@ -44,7 +43,11 @@ tab_icons = %{features: "hero-squares-2x2"} %>
       <nav class="flex-1 py-4">
         <ul class="menu gap-1">
           <li :for={{key, label, path} <- tabs}>
-            <.link navigate={path} class="flex items-center gap-3">
+            <.link
+              navigate={path}
+              class="flex items-center gap-3"
+              {%{"data-sidebar-#{key}" => true}}
+            >
               <.icon name={tab_icons[key] || "hero-squares-2x2"} class="size-5" />
               <span>{label}</span>
             </.link>
