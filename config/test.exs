@@ -20,7 +20,7 @@ database_url =
 config :jarga, Jarga.Repo,
   url: database_url,
   pool: Ecto.Adapters.SQL.Sandbox,
-  pool_size: 10,
+  pool_size: 20,
   # LiveView processes during exo-bdd browser tests hold connections for the
   # full scenario duration, easily exceeding the default 120s ownership timeout.
   ownership_timeout: :infinity
@@ -29,14 +29,14 @@ config :jarga, Jarga.Repo,
 config :identity, Identity.Repo,
   url: database_url,
   pool: Ecto.Adapters.SQL.Sandbox,
-  pool_size: 10,
+  pool_size: 20,
   ownership_timeout: :infinity
 
 # Agents uses the same database as Jarga
 config :agents, Agents.Repo,
   url: database_url,
   pool: Ecto.Adapters.SQL.Sandbox,
-  pool_size: 10,
+  pool_size: 20,
   ownership_timeout: :infinity
 
 # Identity URL for login redirects.
@@ -68,11 +68,13 @@ config :entity_relationship_manager,
   schema_repository: EntityRelationshipManager.Mocks.SchemaRepositoryMock,
   graph_repository: EntityRelationshipManager.Mocks.GraphRepositoryMock
 
-# Webhooks uses the same database as Jarga
+# Webhooks uses the same database as Jarga.
+# pool_size kept small (5) to stay within Postgres max_connections (100)
+# when all 5 repos boot in umbrella: 4×20 + 1×5 = 85 connections.
 config :webhooks, Webhooks.Repo,
   url: database_url,
   pool: Ecto.Adapters.SQL.Sandbox,
-  pool_size: 10,
+  pool_size: 5,
   ownership_timeout: :infinity
 
 config :webhooks_api, WebhooksApi.Endpoint,
