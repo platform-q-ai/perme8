@@ -14,7 +14,8 @@ defmodule AgentsWeb do
       Identity,
       IdentityWeb,
       Jarga,
-      Jarga.Accounts
+      Jarga.Accounts,
+      Jarga.Chat
     ],
     exports: [Endpoint, Telemetry]
 

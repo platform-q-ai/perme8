@@ -24,6 +24,8 @@ defmodule AgentsWeb.Router do
     live_session :sessions,
       on_mount: [{AgentsWeb.UserAuth, :require_authenticated}] do
       live("/sessions", SessionsLive.Index, :index)
+      live("/chat-sessions", ChatSessionsLive.Index, :index)
+      live("/chat-sessions/:id", ChatSessionsLive.Show, :show)
     end
   end
 end
