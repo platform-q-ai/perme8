@@ -21,6 +21,10 @@ defmodule Agents.Infrastructure.Mcp.ToolProvider.Loader do
   """
 
   defmacro __using__(_opts) do
+    # Application.compile_env/3 cannot be called inside macro bodies (treated as
+    # function bodies by the compiler). Application.get_env/3 is used instead,
+    # which is evaluated at compile time during macro expansion -- functionally
+    # equivalent since this macro is only invoked during compilation.
     providers = Application.get_env(:agents, :mcp_tool_providers, [])
 
     component_calls =

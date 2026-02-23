@@ -2,8 +2,8 @@ defmodule Agents.Infrastructure.Mcp.Server do
   @moduledoc """
   Hermes MCP server definition for the Agents MCP service.
 
-  Tool components are dynamically registered from configured ToolProviders
-  via `Application.get_env(:agents, :mcp_tool_providers)`.
+  Tool components are registered at compile time from configured ToolProviders.
+  See `:agents, :mcp_tool_providers` in application config.
   """
 
   use Hermes.Server,
