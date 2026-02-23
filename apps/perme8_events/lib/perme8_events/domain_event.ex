@@ -26,19 +26,12 @@ defmodule Perme8.Events.DomainEvent do
   - `occurred_at` - Auto-generated UTC datetime
   - `metadata` - Defaults to empty map
 
-  ## Location
-
-  This module lives in the `identity` app because it must be available at
-  compile-time for all umbrella apps (including `agents` which cannot depend
-  on `jarga` due to a cyclic dependency). The rest of the event infrastructure
-  (EventBus, EventHandler) remains in `jarga`.
-
   ## Boundary
 
   Defined as a standalone boundary with `check: [in: false]` so any module in
   any app can reference it without needing to declare it as a dependency. This is
-  necessary because it lives in the `identity` app but is used by domain layers
-  across all apps (jarga, agents, ERM).
+  necessary because domain event structs are defined across all apps (identity,
+  jarga, agents, ERM).
   """
 
   use Boundary,

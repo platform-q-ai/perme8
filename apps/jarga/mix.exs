@@ -78,8 +78,10 @@ defmodule Jarga.MixProject do
             {:ecto_sql, :relaxed},
             # Agents (extracted umbrella app)
             {:agents, :relaxed},
-            # Identity (DomainEvent macro lives here for compile-time availability)
+            # Identity
             {:identity, :relaxed},
+            # Event infrastructure
+            {:perme8_events, :relaxed},
             # Other - allow Mix for compile tasks
             {:mix, :relaxed}
           ]
@@ -96,6 +98,7 @@ defmodule Jarga.MixProject do
   defp deps do
     [
       # Umbrella dependencies
+      {:perme8_events, in_umbrella: true},
       {:identity, in_umbrella: true},
       {:agents, in_umbrella: true},
 

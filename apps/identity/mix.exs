@@ -33,7 +33,8 @@ defmodule Identity.MixProject do
             {:phoenix_html, :relaxed},
             {:phoenix_ecto, :relaxed},
             {:ecto, :relaxed},
-            {:ecto_sql, :relaxed}
+            {:ecto_sql, :relaxed},
+            {:perme8_events, :relaxed}
           ]
         ]
       ],
@@ -66,6 +67,9 @@ defmodule Identity.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
+      # Umbrella dependencies
+      {:perme8_events, in_umbrella: true},
+
       # Database
       {:phoenix_ecto, "~> 4.6"},
       {:ecto_sql, "~> 3.12"},
