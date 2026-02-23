@@ -1,11 +1,9 @@
 defmodule Perme8Events do
-  @moduledoc """
-  Internal application module for perme8_events.
+  @moduledoc false
 
-  The public API is provided by `Perme8.Events` (the facade module).
-  This module exists only as the OTP application container.
-  """
-
+  # OTP application container — the public API is `Perme8.Events`.
+  # This boundary exists only to satisfy Boundary's requirement that
+  # every module belongs to a boundary.
   use Boundary,
     top_level?: true,
     deps: [],
