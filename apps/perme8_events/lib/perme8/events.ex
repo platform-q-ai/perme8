@@ -9,7 +9,7 @@ defmodule Perme8.Events do
   use Boundary,
     top_level?: true,
     deps: [],
-    exports: [EventBus, EventHandler, TestEventBus, DomainEvent]
+    exports: [EventBus, EventHandler, TestEventBus]
 
   @pubsub Application.compile_env(:perme8_events, :pubsub, Perme8.Events.PubSub)
 
