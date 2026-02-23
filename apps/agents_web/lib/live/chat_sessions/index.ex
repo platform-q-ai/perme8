@@ -79,7 +79,7 @@ defmodule AgentsWeb.ChatSessionsLive.Index do
         </div>
       <% end %>
 
-      <div data-session-list>
+      <div :if={@session_count > 0} data-session-list>
         <div class="card bg-base-200">
           <div class="card-body p-0">
             <table class="table table-zebra">
