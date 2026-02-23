@@ -24,7 +24,7 @@ defmodule WebhooksApi.DeliveryApiJSON do
   end
 
   defp delivery_detail(delivery) do
-    %{
+    base = %{
       id: delivery.id,
       subscription_id: delivery.subscription_id,
       event_type: delivery.event_type,
@@ -33,8 +33,13 @@ defmodule WebhooksApi.DeliveryApiJSON do
       response_code: delivery.response_code,
       response_body: delivery.response_body,
       attempts: delivery.attempts,
-      next_retry_at: delivery.next_retry_at,
       inserted_at: delivery.inserted_at
     }
+
+    if delivery.next_retry_at do
+      Map.put(base, :next_retry_at, delivery.next_retry_at)
+    else
+      base
+    end
   end
 end

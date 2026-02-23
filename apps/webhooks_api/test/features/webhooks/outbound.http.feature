@@ -98,7 +98,7 @@ Feature: Outbound Webhooks API
     When I GET "/api/workspaces/product-team/webhooks/00000000-0000-0000-0000-000000000000"
     Then the response status should be 404
     And the response body should be valid JSON
-    And the response body path "$.error" should equal "Webhook subscription not found"
+    And the response body path "$.error" should equal "Subscription not found"
 
   # ---------------------------------------------------------------------------
   # Webhook Subscription UPDATE Endpoint
@@ -141,7 +141,7 @@ Feature: Outbound Webhooks API
       """
     Then the response status should be 404
     And the response body should be valid JSON
-    And the response body path "$.error" should equal "Webhook subscription not found"
+    And the response body path "$.error" should equal "Subscription not found"
 
   # ---------------------------------------------------------------------------
   # Webhook Subscription DEACTIVATE

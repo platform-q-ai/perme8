@@ -17,7 +17,7 @@ Feature: Inbound Webhooks API
     # Assumes: ${inbound-webhook-secret-product-team} is the known HMAC secret
     # Assumes: ${valid-inbound-signature} is a pre-computed HMAC-SHA256 signature for the payload
     Given I set header "X-Webhook-Signature" to "${valid-inbound-signature}"
-    When I POST to "/api/workspaces/product-team/webhooks/inbound" with body:
+    When I POST raw to "/api/workspaces/product-team/webhooks/inbound" with body:
       """
       {
         "event_type": "external.event.received",
@@ -33,7 +33,7 @@ Feature: Inbound Webhooks API
   Scenario: Accepted inbound webhook payload is routed to the appropriate handler
     # Assumes: pre-computed valid signature for the routable payload below
     Given I set header "X-Webhook-Signature" to "${valid-inbound-signature-routable}"
-    When I POST to "/api/workspaces/product-team/webhooks/inbound" with body:
+    When I POST raw to "/api/workspaces/product-team/webhooks/inbound" with body:
       """
       {
         "event_type": "document.sync",
@@ -92,7 +92,7 @@ Feature: Inbound Webhooks API
       """
     Then the response status should be 400
     And the response body should be valid JSON
-    And the response body path "$.error" should exist
+    And the response body path "$.errors.detail" should equal "Bad Request"
 
   # ---------------------------------------------------------------------------
   # Inbound Webhook - Audit Logging
@@ -101,7 +101,7 @@ Feature: Inbound Webhooks API
   Scenario: Inbound webhook payload is recorded in the audit log
     # First, send a valid inbound webhook so it gets recorded
     Given I set header "X-Webhook-Signature" to "${valid-inbound-signature-audit}"
-    When I POST to "/api/workspaces/product-team/webhooks/inbound" with body:
+    When I POST raw to "/api/workspaces/product-team/webhooks/inbound" with body:
       """
       {
         "event_type": "audit.test.event",
