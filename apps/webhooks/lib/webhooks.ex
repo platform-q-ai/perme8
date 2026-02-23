@@ -10,9 +10,7 @@ defmodule Webhooks do
   use Boundary,
     top_level?: true,
     deps: [
-      Webhooks.Domain,
       Webhooks.Application,
-      Webhooks.Infrastructure,
       WebhooksApi.Repo
     ],
     exports: []

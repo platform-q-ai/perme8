@@ -17,6 +17,9 @@ defmodule WebhooksApi.ConnCase do
 
   use ExUnit.CaseTemplate
 
+  alias Ecto.Adapters.SQL.Sandbox
+  alias Phoenix.ConnTest
+
   using do
     quote do
       @endpoint WebhooksApi.Endpoint
@@ -33,13 +36,13 @@ defmodule WebhooksApi.ConnCase do
     Jarga.DataCase.setup_sandbox(tags)
 
     # Also checkout WebhooksApi.Repo (same database, separate Ecto Repo)
-    :ok = Ecto.Adapters.SQL.Sandbox.checkout(WebhooksApi.Repo)
-    Ecto.Adapters.SQL.Sandbox.allow(WebhooksApi.Repo, self(), self())
+    :ok = Sandbox.checkout(WebhooksApi.Repo)
+    Sandbox.allow(WebhooksApi.Repo, self(), self())
 
     unless tags[:async] do
-      Ecto.Adapters.SQL.Sandbox.mode(WebhooksApi.Repo, {:shared, self()})
+      Sandbox.mode(WebhooksApi.Repo, {:shared, self()})
     end
 
-    {:ok, conn: Phoenix.ConnTest.build_conn()}
+    {:ok, conn: ConnTest.build_conn()}
   end
 end
