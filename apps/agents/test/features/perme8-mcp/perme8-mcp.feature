@@ -37,7 +37,7 @@ Feature: Knowledge MCP Tools
   Scenario: Successful MCP initialize handshake
     When I send an MCP initialize request with a valid API key
     Then I receive a 200 response
-    And the response contains server info with name "knowledge-mcp"
+    And the response contains server info with name "perme8-mcp"
     And the response contains server version "1.0.0"
 
   # --- knowledge.create ---

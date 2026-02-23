@@ -2,7 +2,7 @@ defmodule Agents.OTPApp do
   @moduledoc """
   OTP Application for the Agents bounded context.
 
-  Starts the MCP server for knowledge tools alongside any other
+  Starts the perme8-mcp server alongside any other
   agent-related processes. Optionally starts a standalone Bandit HTTP
   server to expose the MCP endpoint when `:mcp_http` is configured.
   """

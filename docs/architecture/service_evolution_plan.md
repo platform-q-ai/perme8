@@ -116,7 +116,7 @@ This is the core content management service. Everything that isn't a project or 
 | `LLMClient` | `jarga` | In `agents` |
 | `AgentQueryParser` (in Documents) | `jarga` | In `agents`; jarga calls via behaviour |
 | `ExecuteAgentQuery` use case | `jarga` | In `agents` |
-| Knowledge MCP (6 tools) | `knowledge_mcp` (deleted) | In `agents` |
+| Perme8 MCP (14 tools) | `knowledge_mcp` (deleted) | In `agents` |
 | Agent LiveViews (Index/Form) | `jarga_web` | Stays in `jarga_web`; calls `Agents` facade |
 
 **Integration pattern:** Synchronous calls from documents/chat into the agents facade. Agents depends on `identity` (auth) and `entity_relationship_manager` (knowledge graph). Agents emits lifecycle domain events via `Perme8.Events.EventBus` (e.g., `AgentCreated`, `AgentUpdated`, `AgentDeleted`).

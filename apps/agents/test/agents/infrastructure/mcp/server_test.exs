@@ -57,9 +57,9 @@ defmodule Agents.Infrastructure.Mcp.ServerTest do
       assert "knowledge.relate" in names
     end
 
-    test "server name is knowledge-mcp" do
+    test "server name is perme8-mcp" do
       info = Server.server_info()
-      assert info["name"] == "knowledge-mcp"
+      assert info["name"] == "perme8-mcp"
     end
 
     test "server version is 1.0.0" do

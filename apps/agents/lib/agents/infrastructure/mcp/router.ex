@@ -30,7 +30,7 @@ defmodule Agents.Infrastructure.Mcp.Router do
   get "/health" do
     conn
     |> put_resp_content_type("application/json")
-    |> send_resp(200, Jason.encode!(%{status: "ok", service: "knowledge-mcp"}))
+    |> send_resp(200, Jason.encode!(%{status: "ok", service: "perme8-mcp"}))
   end
 
   # All MCP requests require authentication

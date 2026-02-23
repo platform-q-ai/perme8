@@ -115,7 +115,7 @@ defmodule Agents.Infrastructure.Mcp.RouterTest do
       assert conn.status == 200
 
       body = Jason.decode!(conn.resp_body)
-      assert body["result"]["serverInfo"]["name"] == "knowledge-mcp"
+      assert body["result"]["serverInfo"]["name"] == "perme8-mcp"
       assert body["result"]["serverInfo"]["version"] == "1.0.0"
     end
 

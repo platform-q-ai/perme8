@@ -3,11 +3,11 @@ defmodule Agents.Infrastructure.Mcp.Server do
   Hermes MCP server definition for the Agents MCP service.
 
   Registers 14 tool components (6 knowledge + 8 jarga) and configures
-  the server with name "knowledge-mcp" and version "1.0.0".
+  the server with name "perme8-mcp" and version "1.0.0".
   """
 
   use Hermes.Server,
-    name: "knowledge-mcp",
+    name: "perme8-mcp",
     version: "1.0.0",
     capabilities: [:tools]
 
