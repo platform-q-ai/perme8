@@ -21,23 +21,21 @@ defmodule Agents.Infrastructure.Mcp.ToolProvider.Loader do
   """
 
   defmacro __using__(_opts) do
-    # Application.compile_env/3 cannot be called inside macro bodies (treated as
-    # function bodies by the compiler). Application.get_env/3 is used instead,
-    # which is evaluated at compile time during macro expansion -- functionally
-    # equivalent since this macro is only invoked during compilation.
-    providers = Application.get_env(:agents, :mcp_tool_providers, [])
-
-    component_calls =
-      providers
-      |> Enum.flat_map(fn provider -> provider.components() end)
-      |> Enum.map(fn {mod, name} ->
-        quote do
-          component(unquote(mod), name: unquote(name))
-        end
-      end)
-
     quote do
-      (unquote_splicing(component_calls))
+      providers = Application.compile_env(:agents, :mcp_tool_providers, [])
+
+      for provider <- providers do
+        Code.ensure_compiled!(provider)
+
+        unless function_exported?(provider, :components, 0) do
+          raise CompileError,
+            description: "#{inspect(provider)} does not implement ToolProvider.components/0"
+        end
+
+        for {mod, name} <- provider.components() do
+          component(mod, name: name)
+        end
+      end
     end
   end
 end
