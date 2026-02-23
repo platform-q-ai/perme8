@@ -104,7 +104,7 @@ config :exo_dashboard, ExoDashboardWeb.Endpoint,
 config :perme8_dashboard, :identity_url, "http://localhost:4001"
 
 config :perme8_dashboard, Perme8DashboardWeb.Endpoint,
-  http: [ip: {127, 0, 0, 1}, port: 4013],
+  http: [ip: {127, 0, 0, 1}, port: 4012],
   # Must match Identity's secret_key_base so the shared session cookie
   # (_identity_key) signed by Identity can be verified by perme8_dashboard.
   secret_key_base: "test_identity_secret_key_base_at_least_64_bytes_long_for_security"
