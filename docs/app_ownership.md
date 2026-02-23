@@ -15,7 +15,7 @@ Each app has a single owner and a clear set of responsibilities. No two apps own
 | **agents** | Domain context | Agent definitions, LLM orchestration, perme8-mcp server, ToolProvider infrastructure, Sessions | `Agents.Repo` | `identity`, `perme8_events` |
 | **webhooks** | Domain context | Outbound/inbound webhooks, HMAC signing, audit logging | `Webhooks.Repo` | `identity`, `perme8_events` |
 | **entity_relationship_manager** | Domain context | Schema definitions, entities, edges, graph traversal | Needs own Repo | `identity`, `perme8_events` |
-| **perme8_events** | Shared infrastructure | Eventbus facade (`Perme8.Events`), EventBus dispatcher, EventHandler behaviour, DomainEvent macro, PubSub server | None | Nothing (foundational) |
+| **perme8_events** | Shared infrastructure | Eventbus facade (`Perme8.Events`), EventBus dispatcher, EventHandler behaviour, DomainEvent macro, PubSub server -- **planned, see [#200](https://github.com/platform-q-ai/perme8/issues/200)** | None | Nothing (foundational) |
 | **jarga_web** | Interface (LiveView) | UI shell, mounts companion `_web` apps | None | `jarga`, `agents`, `identity`, `perme8_events` |
 | **jarga_api** | Interface (REST) | JSON API for workspaces, projects, documents | None | `jarga`, `identity` |
 | **agents_web** | Interface (LiveView) | Sessions UI, agent management UI | None | `agents`, `identity` |
