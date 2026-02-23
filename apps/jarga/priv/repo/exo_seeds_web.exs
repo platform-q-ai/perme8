@@ -24,7 +24,7 @@ Application.ensure_all_started(:bcrypt_elixir)
 {:ok, _} = Jarga.Repo.start_link()
 
 # Start PubSub (required by context modules that broadcast events)
-{:ok, _} = Phoenix.PubSub.Supervisor.start_link(name: Perme8.Events.PubSub)
+Application.ensure_all_started(:perme8_events)
 
 alias Identity.Application.Services.PasswordService
 alias Identity.Infrastructure.Schemas.{UserSchema, WorkspaceSchema, WorkspaceMemberSchema}

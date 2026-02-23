@@ -56,6 +56,8 @@ defmodule Perme8.Events.EventHandler do
 
       @impl GenServer
       def init(opts) do
+        # Runtime lookup: this runs inside a quote block (macro-expanded into consumer
+        # modules), so compile_env would capture the value at the wrong compile context.
         pubsub = Application.get_env(:perme8_events, :pubsub, Perme8.Events.PubSub)
 
         subscriptions()

@@ -26,19 +26,9 @@ defmodule Perme8.Events.DomainEvent do
   - `occurred_at` - Auto-generated UTC datetime
   - `metadata` - Defaults to empty map
 
-  ## Boundary
-
-  Defined as a standalone boundary with `check: [in: false]` so any module in
-  any app can reference it without needing to declare it as a dependency. This is
-  necessary because domain event structs are defined across all apps (identity,
-  jarga, agents, ERM).
+  Exported from the `Perme8.Events` boundary so all umbrella apps that depend on
+  `perme8_events` can use the macro.
   """
-
-  use Boundary,
-    top_level?: true,
-    check: [in: false, out: true],
-    deps: [],
-    exports: []
 
   defmacro __using__(opts) do
     fields = Keyword.get(opts, :fields, [])
