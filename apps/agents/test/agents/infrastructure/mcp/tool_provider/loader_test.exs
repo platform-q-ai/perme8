@@ -1,6 +1,7 @@
 defmodule Agents.Infrastructure.Mcp.ToolProvider.LoaderTest do
   use ExUnit.Case, async: true
 
+  alias Agents.Infrastructure.Mcp.Server
   alias Agents.Infrastructure.Mcp.ToolProvider.Loader
 
   describe "module definition" do
@@ -21,14 +22,14 @@ defmodule Agents.Infrastructure.Mcp.ToolProvider.LoaderTest do
     # We test this indirectly through the Server module which uses the Loader.
 
     test "Server.__components__(:tool) returns all 14 tools from configured providers" do
-      components = Agents.Infrastructure.Mcp.Server.__components__(:tool)
+      components = Server.__components__(:tool)
 
       assert length(components) == 14
     end
 
     test "Server includes all knowledge tools loaded by KnowledgeToolProvider" do
       names =
-        Agents.Infrastructure.Mcp.Server.__components__(:tool)
+        Server.__components__(:tool)
         |> Enum.map(& &1.name)
 
       knowledge_names = [
@@ -47,7 +48,7 @@ defmodule Agents.Infrastructure.Mcp.ToolProvider.LoaderTest do
 
     test "Server includes all jarga tools loaded by JargaToolProvider" do
       names =
-        Agents.Infrastructure.Mcp.Server.__components__(:tool)
+        Server.__components__(:tool)
         |> Enum.map(& &1.name)
 
       jarga_names = [
