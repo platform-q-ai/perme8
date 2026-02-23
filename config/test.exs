@@ -68,6 +68,20 @@ config :entity_relationship_manager,
   schema_repository: EntityRelationshipManager.Mocks.SchemaRepositoryMock,
   graph_repository: EntityRelationshipManager.Mocks.GraphRepositoryMock
 
+# WebhooksApi uses the same database as Jarga
+config :webhooks_api, WebhooksApi.Repo,
+  url: database_url,
+  pool: Ecto.Adapters.SQL.Sandbox,
+  pool_size: 20,
+  ownership_timeout: :infinity
+
+config :webhooks_api, WebhooksApi.Endpoint,
+  http: [ip: {127, 0, 0, 1}, port: 4017],
+  secret_key_base: "webhooks_api_test_secret_key_base_at_least_64_bytes_long_for_security",
+  server: true
+
+config :webhooks, :env, :test
+
 config :jarga_api, JargaApi.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4005],
   secret_key_base: "jarga_api_test_secret_key_base_at_least_64_bytes_long_for_security"

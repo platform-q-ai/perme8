@@ -56,6 +56,20 @@ config :jarga_api, JargaApi.Endpoint,
   ],
   pubsub_server: Jarga.PubSub
 
+# Configures the WebhooksApi endpoint (JSON API for webhooks)
+config :webhooks_api, WebhooksApi.Endpoint,
+  url: [host: "localhost"],
+  adapter: Bandit.PhoenixAdapter,
+  render_errors: [
+    formats: [json: WebhooksApi.ErrorJSON],
+    layout: false
+  ],
+  pubsub_server: Jarga.PubSub
+
+config :webhooks_api,
+  ecto_repos: [WebhooksApi.Repo],
+  generators: [timestamp_type: :utc_datetime, binary_id: true]
+
 # Configures the AgentsApi endpoint (JSON API for agent management)
 config :agents_api, AgentsApi.Endpoint,
   url: [host: "localhost"],

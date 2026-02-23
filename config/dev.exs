@@ -62,6 +62,21 @@ config :entity_relationship_manager, EntityRelationshipManager.Endpoint,
   secret_key_base: "erm_dev_secret_key_base_at_least_64_bytes_long_for_security_purposes",
   watchers: []
 
+# WebhooksApi dev configuration (JSON API for webhooks on port 4016)
+config :webhooks_api, WebhooksApi.Endpoint,
+  http: [ip: {127, 0, 0, 1}, port: 4016],
+  check_origin: false,
+  code_reloader: true,
+  debug_errors: true,
+  secret_key_base: "webhooks_api_dev_secret_key_base_at_least_64_bytes_long_for_security",
+  watchers: []
+
+# WebhooksApi uses the same database as Jarga
+config :webhooks_api, WebhooksApi.Repo,
+  url: database_url,
+  show_sensitive_data_on_connection_error: true,
+  pool_size: 10
+
 # JargaApi dev configuration (JSON API on port 4004)
 config :jarga_api, JargaApi.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4004],
