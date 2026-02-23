@@ -1,4 +1,4 @@
-defmodule Jarga.Repo.Migrations.CreateSessionsTasks do
+defmodule Agents.Repo.Migrations.CreateSessionsTasks do
   use Ecto.Migration
 
   def change do

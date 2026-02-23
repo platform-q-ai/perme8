@@ -55,32 +55,35 @@ defmodule Jarga.DataCase do
   If the test is tagged with @integration, it will enable PubSub subscribers
   and start the WorkspaceInvitationSubscriber for real-time notifications.
 
-  IMPORTANT: Both Jarga.Repo and Identity.Repo point to the same PostgreSQL database.
-  We checkout Jarga.Repo first, then allow Identity.Repo to use the same connection.
-  This ensures foreign key constraints work across repos.
+  IMPORTANT: Jarga.Repo, Identity.Repo, and Agents.Repo all point to the same
+  PostgreSQL database. We checkout all repos and allow them to share data so
+  foreign key constraints work across repos.
   """
   def setup_sandbox(tags) do
-    # Checkout Jarga.Repo first
+    # Checkout all repos that share the same database
     :ok = Sandbox.checkout(Jarga.Repo)
-    # Checkout Identity.Repo second
     :ok = Sandbox.checkout(Identity.Repo)
+    :ok = Sandbox.checkout(Agents.Repo)
 
-    # CRITICAL: Allow both repos to share data by allowing cross-process access
-    # Since both repos connect to the same database, we need to allow them
+    # CRITICAL: Allow all repos to share data by allowing cross-process access
+    # Since all repos connect to the same database, we need to allow them
     # to see each other's uncommitted data for foreign key constraints to work.
-    # The trick is to use the same owner (self()) for both repos.
+    # The trick is to use the same owner (self()) for all repos.
     Sandbox.allow(Jarga.Repo, self(), self())
     Sandbox.allow(Identity.Repo, self(), self())
+    Sandbox.allow(Agents.Repo, self(), self())
 
     unless tags[:async] do
       # In non-async mode, share the connection with any spawned processes
       Sandbox.mode(Jarga.Repo, {:shared, self()})
       Sandbox.mode(Identity.Repo, {:shared, self()})
+      Sandbox.mode(Agents.Repo, {:shared, self()})
     end
 
     on_exit(fn ->
       Sandbox.checkin(Jarga.Repo)
       Sandbox.checkin(Identity.Repo)
+      Sandbox.checkin(Agents.Repo)
     end)
 
     # Enable PubSub subscribers for integration tests

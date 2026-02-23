@@ -3,7 +3,7 @@ defmodule Agents.Sessions.Infrastructure.Repositories.TaskRepositoryTest do
 
   alias Agents.Sessions.Infrastructure.Repositories.TaskRepository
   alias Agents.Sessions.Infrastructure.Schemas.TaskSchema
-  alias Identity.Repo, as: Repo
+  alias Agents.Repo
 
   import Agents.Test.AccountsFixtures
 

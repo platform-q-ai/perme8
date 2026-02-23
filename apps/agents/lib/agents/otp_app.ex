@@ -12,6 +12,7 @@ defmodule Agents.OTPApp do
   def start(_type, _args) do
     children =
       [
+        Agents.Repo,
         Hermes.Server.Registry,
         {Registry, keys: :unique, name: Agents.Sessions.TaskRegistry},
         Agents.Sessions.Infrastructure.TaskRunnerSupervisor

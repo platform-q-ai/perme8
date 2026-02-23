@@ -5,13 +5,13 @@ defmodule Agents.SessionsFixtures do
 
   use Boundary,
     top_level?: true,
-    deps: [Agents.Sessions.Infrastructure, Agents.Test.AccountsFixtures, Identity.Repo],
+    deps: [Agents.Sessions.Infrastructure, Agents.Test.AccountsFixtures, Agents.Repo],
     exports: []
 
   import Agents.Test.AccountsFixtures
 
   alias Agents.Sessions.Infrastructure.Schemas.TaskSchema
-  alias Identity.Repo
+  alias Agents.Repo
 
   def task_fixture(attrs \\ %{}) do
     user_id = attrs[:user_id] || user_fixture().id

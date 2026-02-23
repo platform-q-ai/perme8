@@ -16,7 +16,7 @@ defmodule Agents.Sessions.Infrastructure do
     deps: [
       Agents.Sessions.Domain,
       Agents.Sessions.Application,
-      Identity.Repo
+      Agents.Repo
     ],
     exports: [
       Schemas.TaskSchema,
