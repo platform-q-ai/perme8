@@ -12,7 +12,7 @@ defmodule Perme8.Events.EventBus do
   - `events:user:{target_user_id}` — User-scoped events (when target_user_id present)
   """
 
-  @pubsub Jarga.PubSub
+  @pubsub Application.compile_env(:perme8_events, :pubsub, Perme8.Events.PubSub)
 
   @doc """
   Emits a domain event to all derived topics.

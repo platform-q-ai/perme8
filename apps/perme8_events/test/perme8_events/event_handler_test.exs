@@ -1,7 +1,9 @@
 defmodule Perme8.Events.EventHandlerTest do
-  use Jarga.DataCase, async: false
+  use ExUnit.Case, async: false
 
   import ExUnit.CaptureLog
+
+  @pubsub Application.compile_env(:perme8_events, :pubsub, Perme8.Events.PubSub)
 
   # A test event struct
   defmodule TestEvent do
@@ -72,7 +74,7 @@ defmodule Perme8.Events.EventHandlerTest do
 
       # Broadcast on the subscribed topic and verify the handler receives it
       event = TestEvent.new(%{aggregate_id: "agg-1", actor_id: "act-1", data: "hello"})
-      Phoenix.PubSub.broadcast(Jarga.PubSub, "events:test_handler", event)
+      Phoenix.PubSub.broadcast(@pubsub, "events:test_handler", event)
 
       assert_receive {:handled, %TestEvent{data: "hello"}}, 1000
 
@@ -85,7 +87,7 @@ defmodule Perme8.Events.EventHandlerTest do
       {:ok, pid} = TestHandler.start_link([])
 
       event = TestEvent.new(%{aggregate_id: "agg-1", actor_id: "act-1", data: "routed"})
-      Phoenix.PubSub.broadcast(Jarga.PubSub, "events:test_handler", event)
+      Phoenix.PubSub.broadcast(@pubsub, "events:test_handler", event)
 
       assert_receive {:handled, %TestEvent{data: "routed"}}, 1000
 
@@ -120,7 +122,7 @@ defmodule Perme8.Events.EventHandlerTest do
       log =
         capture_log(fn ->
           event = TestEvent.new(%{aggregate_id: "agg-1", actor_id: "act-1", data: "fail"})
-          Phoenix.PubSub.broadcast(Jarga.PubSub, "events:error_handler", event)
+          Phoenix.PubSub.broadcast(@pubsub, "events:error_handler", event)
           # Give it time to process
           Process.sleep(100)
         end)
