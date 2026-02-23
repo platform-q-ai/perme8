@@ -5,7 +5,7 @@ defmodule Webhooks.Application.UseCases.DeleteSubscriptionTest do
   alias Webhooks.Domain.Entities.Subscription
 
   defmodule MockSubscriptionRepo do
-    def delete("sub-123", _repo) do
+    def delete("sub-123", "ws-123", _repo) do
       {:ok,
        Subscription.new(%{
          id: "sub-123",
@@ -16,7 +16,7 @@ defmodule Webhooks.Application.UseCases.DeleteSubscriptionTest do
        })}
     end
 
-    def delete("sub-missing", _repo) do
+    def delete("sub-missing", _workspace_id, _repo) do
       {:error, :not_found}
     end
   end

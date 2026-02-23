@@ -1,4 +1,4 @@
-defmodule WebhooksApi.DeliveryController do
+defmodule WebhooksApi.DeliveryApiController do
   use WebhooksApi, :controller
 
   def index(conn, %{"workspace_slug" => workspace_slug, "subscription_id" => subscription_id}) do
@@ -12,7 +12,7 @@ defmodule WebhooksApi.DeliveryController do
       {:error, :not_found} ->
         conn |> put_status(:not_found) |> render(:error, message: "Subscription not found")
 
-      {:error, :forbidden} ->
+      {:error, reason} when reason in [:forbidden, :unauthorized] ->
         conn |> put_status(:forbidden) |> render(:error, message: "Insufficient permissions")
 
       {:error, :workspace_not_found} ->
@@ -35,7 +35,7 @@ defmodule WebhooksApi.DeliveryController do
       {:error, :not_found} ->
         conn |> put_status(:not_found) |> render(:error, message: "Delivery not found")
 
-      {:error, :forbidden} ->
+      {:error, reason} when reason in [:forbidden, :unauthorized] ->
         conn |> put_status(:forbidden) |> render(:error, message: "Insufficient permissions")
 
       {:error, :workspace_not_found} ->

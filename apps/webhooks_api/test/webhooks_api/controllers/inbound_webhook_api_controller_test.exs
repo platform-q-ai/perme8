@@ -1,4 +1,4 @@
-defmodule WebhooksApi.InboundWebhookControllerTest do
+defmodule WebhooksApi.InboundWebhookApiControllerTest do
   use WebhooksApi.ConnCase, async: true
 
   import Jarga.AccountsFixtures
@@ -15,7 +15,7 @@ defmodule WebhooksApi.InboundWebhookControllerTest do
     inbound_secret = "test_inbound_secret_#{System.unique_integer([:positive])}"
 
     {:ok, _config} =
-      WebhooksApi.Repo.insert(
+      Webhooks.Repo.insert(
         InboundWebhookConfigSchema.changeset(%InboundWebhookConfigSchema{}, %{
           workspace_id: workspace.id,
           secret: inbound_secret,

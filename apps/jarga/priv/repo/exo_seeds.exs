@@ -21,7 +21,7 @@ Application.ensure_all_started(:bcrypt_elixir)
 # Start Ecto repos
 {:ok, _} = Identity.Repo.start_link()
 {:ok, _} = Jarga.Repo.start_link()
-{:ok, _} = WebhooksApi.Repo.start_link()
+{:ok, _} = Webhooks.Repo.start_link()
 
 # Start PubSub (required by context modules that broadcast events)
 {:ok, _} = Phoenix.PubSub.Supervisor.start_link(name: Jarga.PubSub)
@@ -84,10 +84,10 @@ Ecto.Adapters.SQL.query!(Identity.Repo, "TRUNCATE workspace_members CASCADE", []
 Ecto.Adapters.SQL.query!(Identity.Repo, "TRUNCATE workspaces CASCADE", [])
 Ecto.Adapters.SQL.query!(Identity.Repo, "TRUNCATE users_tokens CASCADE", [])
 Ecto.Adapters.SQL.query!(Identity.Repo, "TRUNCATE users CASCADE", [])
-Ecto.Adapters.SQL.query!(WebhooksApi.Repo, "TRUNCATE inbound_webhook_logs CASCADE", [])
-Ecto.Adapters.SQL.query!(WebhooksApi.Repo, "TRUNCATE inbound_webhook_configs CASCADE", [])
-Ecto.Adapters.SQL.query!(WebhooksApi.Repo, "TRUNCATE webhook_deliveries CASCADE", [])
-Ecto.Adapters.SQL.query!(WebhooksApi.Repo, "TRUNCATE webhook_subscriptions CASCADE", [])
+Ecto.Adapters.SQL.query!(Webhooks.Repo, "TRUNCATE inbound_webhook_logs CASCADE", [])
+Ecto.Adapters.SQL.query!(Webhooks.Repo, "TRUNCATE inbound_webhook_configs CASCADE", [])
+Ecto.Adapters.SQL.query!(Webhooks.Repo, "TRUNCATE webhook_deliveries CASCADE", [])
+Ecto.Adapters.SQL.query!(Webhooks.Repo, "TRUNCATE webhook_subscriptions CASCADE", [])
 
 IO.puts("[exo-seeds] Seeding exo-bdd test data...")
 
@@ -433,7 +433,7 @@ inbound_secret = "whsec_exo_test_inbound_secret_product_team_0001"
 # --- Create webhook subscriptions ---
 
 # General purpose subscription
-WebhooksApi.Repo.insert!(%SubscriptionSchema{
+Webhooks.Repo.insert!(%SubscriptionSchema{
   id: webhook_ids["seeded-webhook-id"],
   url: "https://example.com/webhook",
   secret: "whsec_test_general_" <> String.duplicate("a", 32),
@@ -446,7 +446,7 @@ WebhooksApi.Repo.insert!(%SubscriptionSchema{
 })
 
 # Active subscription (for deactivation test)
-WebhooksApi.Repo.insert!(%SubscriptionSchema{
+Webhooks.Repo.insert!(%SubscriptionSchema{
   id: webhook_ids["seeded-active-webhook-id"],
   url: "https://example.com/webhook-active",
   secret: "whsec_test_active_" <> String.duplicate("a", 32),
@@ -459,7 +459,7 @@ WebhooksApi.Repo.insert!(%SubscriptionSchema{
 })
 
 # Deactivated subscription
-WebhooksApi.Repo.insert!(%SubscriptionSchema{
+Webhooks.Repo.insert!(%SubscriptionSchema{
   id: webhook_ids["seeded-deactivated-webhook-id"],
   url: "https://example.com/webhook-deactivated",
   secret: "whsec_test_deactiv_" <> String.duplicate("a", 32),
@@ -474,7 +474,7 @@ WebhooksApi.Repo.insert!(%SubscriptionSchema{
 # NOTE: seeded-deleted-webhook-id is NOT inserted. It's just a UUID that doesn't exist.
 
 # Subscription with delivery records
-WebhooksApi.Repo.insert!(%SubscriptionSchema{
+Webhooks.Repo.insert!(%SubscriptionSchema{
   id: webhook_ids["seeded-webhook-with-deliveries-id"],
   url: "https://example.com/webhook-with-deliveries",
   secret: "whsec_test_deliver_" <> String.duplicate("a", 32),
@@ -487,7 +487,7 @@ WebhooksApi.Repo.insert!(%SubscriptionSchema{
 })
 
 # Subscription with no deliveries
-WebhooksApi.Repo.insert!(%SubscriptionSchema{
+Webhooks.Repo.insert!(%SubscriptionSchema{
   id: webhook_ids["seeded-webhook-no-deliveries-id"],
   url: "https://example.com/webhook-empty",
   secret: "whsec_test_empty_" <> String.duplicate("a", 34),
@@ -504,7 +504,7 @@ IO.puts("[exo-seeds] Created webhook subscriptions")
 # --- Create delivery records ---
 
 # Success delivery
-WebhooksApi.Repo.insert!(%DeliverySchema{
+Webhooks.Repo.insert!(%DeliverySchema{
   id: webhook_ids["seeded-success-delivery-id"],
   subscription_id: webhook_ids["seeded-webhook-with-deliveries-id"],
   event_type: "project.created",
@@ -520,7 +520,7 @@ WebhooksApi.Repo.insert!(%DeliverySchema{
 })
 
 # Failed delivery
-WebhooksApi.Repo.insert!(%DeliverySchema{
+Webhooks.Repo.insert!(%DeliverySchema{
   id: webhook_ids["seeded-failed-delivery-id"],
   subscription_id: webhook_ids["seeded-webhook-with-deliveries-id"],
   event_type: "document.created",
@@ -536,7 +536,7 @@ WebhooksApi.Repo.insert!(%DeliverySchema{
 })
 
 # Retried delivery (has retry info: multiple attempts, next_retry_at set)
-WebhooksApi.Repo.insert!(%DeliverySchema{
+Webhooks.Repo.insert!(%DeliverySchema{
   id: webhook_ids["seeded-retried-delivery-id"],
   subscription_id: webhook_ids["seeded-webhook-with-deliveries-id"],
   event_type: "document.updated",
@@ -552,7 +552,7 @@ WebhooksApi.Repo.insert!(%DeliverySchema{
 })
 
 # Pending retry delivery (status=pending, response_code=500, next_retry_at present)
-WebhooksApi.Repo.insert!(%DeliverySchema{
+Webhooks.Repo.insert!(%DeliverySchema{
   id: webhook_ids["seeded-pending-retry-delivery-id"],
   subscription_id: webhook_ids["seeded-webhook-with-deliveries-id"],
   event_type: "project.created",
@@ -568,7 +568,7 @@ WebhooksApi.Repo.insert!(%DeliverySchema{
 })
 
 # Retried success delivery (was retried and succeeded)
-WebhooksApi.Repo.insert!(%DeliverySchema{
+Webhooks.Repo.insert!(%DeliverySchema{
   id: webhook_ids["seeded-retried-success-delivery-id"],
   subscription_id: webhook_ids["seeded-webhook-with-deliveries-id"],
   event_type: "document.created",
@@ -584,7 +584,7 @@ WebhooksApi.Repo.insert!(%DeliverySchema{
 })
 
 # Exhausted delivery (max retries reached, failed permanently)
-WebhooksApi.Repo.insert!(%DeliverySchema{
+Webhooks.Repo.insert!(%DeliverySchema{
   id: webhook_ids["seeded-exhausted-delivery-id"],
   subscription_id: webhook_ids["seeded-webhook-with-deliveries-id"],
   event_type: "document.updated",
@@ -603,7 +603,7 @@ IO.puts("[exo-seeds] Created webhook deliveries")
 
 # --- Create inbound webhook config ---
 
-WebhooksApi.Repo.insert!(%InboundWebhookConfigSchema{
+Webhooks.Repo.insert!(%InboundWebhookConfigSchema{
   workspace_id: product_team.id,
   secret: inbound_secret,
   is_active: true,

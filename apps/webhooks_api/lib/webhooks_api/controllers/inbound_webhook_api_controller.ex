@@ -1,4 +1,4 @@
-defmodule WebhooksApi.InboundWebhookController do
+defmodule WebhooksApi.InboundWebhookApiController do
   use WebhooksApi, :controller
 
   def receive(conn, %{"workspace_slug" => workspace_slug}) do

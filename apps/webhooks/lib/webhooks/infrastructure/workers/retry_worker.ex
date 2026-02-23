@@ -14,7 +14,7 @@ defmodule Webhooks.Infrastructure.Workers.RetryWorker do
 
   @default_delivery_repo_fn &Webhooks.Infrastructure.Repositories.DeliveryRepository.list_pending_retries/1
   @default_retry_fn &Webhooks.Application.UseCases.RetryDelivery.execute/2
-  @default_repo WebhooksApi.Repo
+  @default_repo Webhooks.Repo
 
   def start_link(opts \\ []) do
     name = Keyword.get(opts, :name, __MODULE__)

@@ -1,7 +1,7 @@
 defmodule Webhooks.DataCase do
   @moduledoc """
   This module defines the setup for tests requiring
-  access to the WebhooksApi database layer.
+  access to the Webhooks database layer.
 
   Uses the Ecto SQL Sandbox so changes are reverted
   at the end of every test.
@@ -13,7 +13,7 @@ defmodule Webhooks.DataCase do
 
   using do
     quote do
-      alias WebhooksApi.Repo
+      alias Webhooks.Repo
 
       import Ecto
       import Ecto.Changeset
@@ -30,18 +30,18 @@ defmodule Webhooks.DataCase do
   @doc """
   Sets up the sandbox based on the test tags.
 
-  Checks out WebhooksApi.Repo (and Identity.Repo / Jarga.Repo for
+  Checks out Webhooks.Repo (and Identity.Repo / Jarga.Repo for
   cross-context queries when needed).
   """
   def setup_sandbox(tags) do
-    :ok = Sandbox.checkout(WebhooksApi.Repo)
+    :ok = Sandbox.checkout(Webhooks.Repo)
 
     unless tags[:async] do
-      Sandbox.mode(WebhooksApi.Repo, {:shared, self()})
+      Sandbox.mode(Webhooks.Repo, {:shared, self()})
     end
 
     on_exit(fn ->
-      Sandbox.checkin(WebhooksApi.Repo)
+      Sandbox.checkin(Webhooks.Repo)
     end)
   end
 

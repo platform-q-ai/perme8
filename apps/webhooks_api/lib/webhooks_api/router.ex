@@ -14,34 +14,34 @@ defmodule WebhooksApi.Router do
   scope "/api", WebhooksApi do
     pipe_through([:api_base, :api_authenticated])
 
+    # Inbound webhook audit logs (must be ABOVE wildcard :id routes)
+    get("/workspaces/:workspace_slug/webhooks/inbound/logs", InboundLogApiController, :index)
+
     # Subscription CRUD
-    get("/workspaces/:workspace_slug/webhooks", SubscriptionController, :index)
-    post("/workspaces/:workspace_slug/webhooks", SubscriptionController, :create)
-    get("/workspaces/:workspace_slug/webhooks/:id", SubscriptionController, :show)
-    patch("/workspaces/:workspace_slug/webhooks/:id", SubscriptionController, :update)
-    delete("/workspaces/:workspace_slug/webhooks/:id", SubscriptionController, :delete)
+    get("/workspaces/:workspace_slug/webhooks", SubscriptionApiController, :index)
+    post("/workspaces/:workspace_slug/webhooks", SubscriptionApiController, :create)
+    get("/workspaces/:workspace_slug/webhooks/:id", SubscriptionApiController, :show)
+    patch("/workspaces/:workspace_slug/webhooks/:id", SubscriptionApiController, :update)
+    delete("/workspaces/:workspace_slug/webhooks/:id", SubscriptionApiController, :delete)
 
     # Delivery logs
     get(
       "/workspaces/:workspace_slug/webhooks/:subscription_id/deliveries",
-      DeliveryController,
+      DeliveryApiController,
       :index
     )
 
     get(
       "/workspaces/:workspace_slug/webhooks/:subscription_id/deliveries/:id",
-      DeliveryController,
+      DeliveryApiController,
       :show
     )
-
-    # Inbound webhook audit logs (authenticated)
-    get("/workspaces/:workspace_slug/webhooks/inbound/logs", InboundLogController, :index)
   end
 
   # Inbound webhook receiver (HMAC signature auth, NOT Bearer token)
   scope "/api", WebhooksApi do
     pipe_through([:api_base])
 
-    post("/workspaces/:workspace_slug/webhooks/inbound", InboundWebhookController, :receive)
+    post("/workspaces/:workspace_slug/webhooks/inbound", InboundWebhookApiController, :receive)
   end
 end

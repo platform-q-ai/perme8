@@ -12,10 +12,15 @@ defmodule Webhooks.Application.Behaviours.SubscriptionRepositoryBehaviour do
   @callback insert(attrs :: map(), repo) ::
               {:ok, Subscription.t()} | {:error, Ecto.Changeset.t()}
 
-  @callback update(subscription_id :: String.t(), attrs :: map(), repo) ::
+  @callback update(
+              subscription_id :: String.t(),
+              workspace_id :: String.t(),
+              attrs :: map(),
+              repo
+            ) ::
               {:ok, Subscription.t()} | {:error, :not_found} | {:error, Ecto.Changeset.t()}
 
-  @callback delete(subscription_id :: String.t(), repo) ::
+  @callback delete(subscription_id :: String.t(), workspace_id :: String.t(), repo) ::
               {:ok, Subscription.t()} | {:error, :not_found}
 
   @callback get_by_id(subscription_id :: String.t(), workspace_id :: String.t(), repo) ::

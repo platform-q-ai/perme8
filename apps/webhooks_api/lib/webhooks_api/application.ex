@@ -8,7 +8,6 @@ defmodule WebhooksApi.Application do
   @impl true
   def start(_type, _args) do
     children = [
-      WebhooksApi.Repo,
       WebhooksApi.Endpoint
     ]
 

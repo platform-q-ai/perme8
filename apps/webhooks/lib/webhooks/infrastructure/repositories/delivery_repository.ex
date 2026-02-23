@@ -13,7 +13,9 @@ defmodule Webhooks.Infrastructure.Repositories.DeliveryRepository do
   alias Webhooks.Infrastructure.Schemas.DeliverySchema
   alias Webhooks.Infrastructure.Queries.DeliveryQueries
 
-  @default_repo WebhooksApi.Repo
+  @default_repo Webhooks.Repo
+  @default_list_limit 100
+  @default_retry_limit 50
 
   @impl true
   def insert(attrs, repo \\ @default_repo) do
@@ -27,8 +29,13 @@ defmodule Webhooks.Infrastructure.Repositories.DeliveryRepository do
   end
 
   @impl true
-  def get_by_id(delivery_id, _workspace_id, repo \\ @default_repo) do
-    case repo.get(DeliverySchema, delivery_id) do
+  def get_by_id(delivery_id, workspace_id, repo \\ @default_repo) do
+    query =
+      DeliverySchema
+      |> DeliveryQueries.by_id(delivery_id)
+      |> DeliveryQueries.for_workspace(workspace_id)
+
+    case repo.one(query) do
       nil -> {:error, :not_found}
       schema -> {:ok, DeliverySchema.to_entity(schema)}
     end
@@ -40,6 +47,7 @@ defmodule Webhooks.Infrastructure.Repositories.DeliveryRepository do
       DeliverySchema
       |> DeliveryQueries.for_subscription(subscription_id)
       |> DeliveryQueries.ordered()
+      |> DeliveryQueries.limit(@default_list_limit)
       |> repo.all()
       |> Enum.map(&DeliverySchema.to_entity/1)
 
@@ -68,6 +76,7 @@ defmodule Webhooks.Infrastructure.Repositories.DeliveryRepository do
     results =
       DeliverySchema
       |> DeliveryQueries.pending_retries()
+      |> DeliveryQueries.limit(@default_retry_limit)
       |> repo.all()
       |> Enum.map(&DeliverySchema.to_entity/1)
 

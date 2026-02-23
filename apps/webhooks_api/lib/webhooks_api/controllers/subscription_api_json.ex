@@ -1,4 +1,4 @@
-defmodule WebhooksApi.SubscriptionJSON do
+defmodule WebhooksApi.SubscriptionApiJSON do
   @moduledoc "JSON rendering for Subscription API endpoints."
 
   def created(%{subscription: subscription}) do

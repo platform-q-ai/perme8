@@ -57,9 +57,6 @@ defmodule WebhooksApi.MixProject do
       {:webhooks, in_umbrella: true},
       {:identity, in_umbrella: true},
       {:jarga, in_umbrella: true},
-      {:ecto_sql, "~> 3.12"},
-      {:postgrex, ">= 0.0.0"},
-      {:phoenix_ecto, "~> 4.6"},
       {:jason, "~> 1.2"},
       {:bandit, "~> 1.5"},
       {:boundary, "~> 0.10", runtime: false}

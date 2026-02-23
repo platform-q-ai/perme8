@@ -35,12 +35,12 @@ defmodule WebhooksApi.ConnCase do
   setup tags do
     Jarga.DataCase.setup_sandbox(tags)
 
-    # Also checkout WebhooksApi.Repo (same database, separate Ecto Repo)
-    :ok = Sandbox.checkout(WebhooksApi.Repo)
-    Sandbox.allow(WebhooksApi.Repo, self(), self())
+    # Also checkout Webhooks.Repo (same database, separate Ecto Repo)
+    :ok = Sandbox.checkout(Webhooks.Repo)
+    Sandbox.allow(Webhooks.Repo, self(), self())
 
     unless tags[:async] do
-      Sandbox.mode(WebhooksApi.Repo, {:shared, self()})
+      Sandbox.mode(Webhooks.Repo, {:shared, self()})
     end
 
     {:ok, conn: ConnTest.build_conn()}

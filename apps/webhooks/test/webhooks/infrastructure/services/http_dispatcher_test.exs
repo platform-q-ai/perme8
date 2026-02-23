@@ -31,8 +31,8 @@ defmodule Webhooks.Infrastructure.Services.HttpDispatcherTest do
       assert {:ok, 200, body} =
                HttpDispatcher.dispatch("#{base_url}/webhook", ~s({"event":"test"}), headers)
 
-      # Req auto-decodes JSON responses to maps
-      assert body == %{"status" => "ok"}
+      # Req auto-decodes JSON; dispatcher normalizes to string
+      assert body == ~s({"status":"ok"})
     end
 
     test "includes custom headers in request", %{bypass: bypass, base_url: base_url} do

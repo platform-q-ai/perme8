@@ -7,7 +7,7 @@ defmodule Webhooks.App do
 
   @impl true
   def start(_type, _args) do
-    children = pubsub_subscribers() ++ workers()
+    children = [Webhooks.Repo] ++ pubsub_subscribers() ++ workers()
 
     opts = [strategy: :one_for_one, name: Webhooks.Supervisor]
     Supervisor.start_link(children, opts)

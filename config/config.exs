@@ -66,8 +66,8 @@ config :webhooks_api, WebhooksApi.Endpoint,
   ],
   pubsub_server: Jarga.PubSub
 
-config :webhooks_api,
-  ecto_repos: [WebhooksApi.Repo],
+config :webhooks,
+  ecto_repos: [Webhooks.Repo],
   generators: [timestamp_type: :utc_datetime, binary_id: true]
 
 # Configures the AgentsApi endpoint (JSON API for agent management)

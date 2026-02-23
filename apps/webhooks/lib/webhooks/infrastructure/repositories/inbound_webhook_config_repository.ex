@@ -11,7 +11,7 @@ defmodule Webhooks.Infrastructure.Repositories.InboundWebhookConfigRepository do
 
   alias Webhooks.Infrastructure.Schemas.InboundWebhookConfigSchema
 
-  @default_repo WebhooksApi.Repo
+  @default_repo Webhooks.Repo
 
   @impl true
   def get_by_workspace_id(workspace_id, repo \\ @default_repo) do

@@ -1,4 +1,4 @@
-defmodule WebhooksApi.Repo.Migrations.CreateInboundWebhookConfigs do
+defmodule Webhooks.Repo.Migrations.CreateInboundWebhookConfigs do
   use Ecto.Migration
 
   def change do

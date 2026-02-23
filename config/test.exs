@@ -68,8 +68,8 @@ config :entity_relationship_manager,
   schema_repository: EntityRelationshipManager.Mocks.SchemaRepositoryMock,
   graph_repository: EntityRelationshipManager.Mocks.GraphRepositoryMock
 
-# WebhooksApi uses the same database as Jarga
-config :webhooks_api, WebhooksApi.Repo,
+# Webhooks uses the same database as Jarga
+config :webhooks, Webhooks.Repo,
   url: database_url,
   pool: Ecto.Adapters.SQL.Sandbox,
   pool_size: 20,

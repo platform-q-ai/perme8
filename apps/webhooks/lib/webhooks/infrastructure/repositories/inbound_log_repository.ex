@@ -11,7 +11,8 @@ defmodule Webhooks.Infrastructure.Repositories.InboundLogRepository do
   alias Webhooks.Infrastructure.Schemas.InboundLogSchema
   alias Webhooks.Infrastructure.Queries.InboundLogQueries
 
-  @default_repo WebhooksApi.Repo
+  @default_repo Webhooks.Repo
+  @default_list_limit 100
 
   @impl true
   def insert(attrs, repo \\ @default_repo) do
@@ -30,6 +31,7 @@ defmodule Webhooks.Infrastructure.Repositories.InboundLogRepository do
       InboundLogSchema
       |> InboundLogQueries.for_workspace(workspace_id)
       |> InboundLogQueries.ordered()
+      |> InboundLogQueries.limit(@default_list_limit)
       |> repo.all()
       |> Enum.map(&InboundLogSchema.to_entity/1)
 

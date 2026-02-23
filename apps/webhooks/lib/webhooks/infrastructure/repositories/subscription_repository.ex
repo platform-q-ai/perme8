@@ -11,7 +11,7 @@ defmodule Webhooks.Infrastructure.Repositories.SubscriptionRepository do
   alias Webhooks.Infrastructure.Schemas.SubscriptionSchema
   alias Webhooks.Infrastructure.Queries.SubscriptionQueries
 
-  @default_repo WebhooksApi.Repo
+  @default_repo Webhooks.Repo
 
   @impl true
   def insert(attrs, repo \\ @default_repo) do
@@ -25,14 +25,18 @@ defmodule Webhooks.Infrastructure.Repositories.SubscriptionRepository do
   end
 
   @impl true
-  def update(subscription_id, attrs, repo \\ @default_repo) do
-    case repo.get(SubscriptionSchema, subscription_id) do
+  def update(subscription_id, workspace_id, attrs, repo \\ @default_repo) do
+    query =
+      SubscriptionSchema
+      |> SubscriptionQueries.by_id_and_workspace(subscription_id, workspace_id)
+
+    case repo.one(query) do
       nil ->
         {:error, :not_found}
 
       schema ->
         schema
-        |> SubscriptionSchema.changeset(attrs)
+        |> SubscriptionSchema.update_changeset(attrs)
         |> repo.update()
         |> case do
           {:ok, updated} -> {:ok, SubscriptionSchema.to_entity(updated)}
@@ -42,8 +46,12 @@ defmodule Webhooks.Infrastructure.Repositories.SubscriptionRepository do
   end
 
   @impl true
-  def delete(subscription_id, repo \\ @default_repo) do
-    case repo.get(SubscriptionSchema, subscription_id) do
+  def delete(subscription_id, workspace_id, repo \\ @default_repo) do
+    query =
+      SubscriptionSchema
+      |> SubscriptionQueries.by_id_and_workspace(subscription_id, workspace_id)
+
+    case repo.one(query) do
       nil ->
         {:error, :not_found}
 

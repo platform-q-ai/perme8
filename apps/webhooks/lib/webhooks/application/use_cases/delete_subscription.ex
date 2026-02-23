@@ -12,7 +12,7 @@ defmodule Webhooks.Application.UseCases.DeleteSubscription do
   @impl true
   def execute(params, opts \\ []) do
     %{
-      workspace_id: _workspace_id,
+      workspace_id: workspace_id,
       member_role: member_role,
       subscription_id: subscription_id
     } = params
@@ -23,7 +23,7 @@ defmodule Webhooks.Application.UseCases.DeleteSubscription do
     repo = Keyword.get(opts, :repo, nil)
 
     with :ok <- authorize(member_role) do
-      subscription_repository.delete(subscription_id, repo)
+      subscription_repository.delete(subscription_id, workspace_id, repo)
     end
   end
 

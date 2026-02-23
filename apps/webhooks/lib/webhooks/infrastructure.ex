@@ -35,7 +35,7 @@ defmodule Webhooks.Infrastructure do
   The Infrastructure layer may depend on:
   - Domain layer (for entities and policies)
   - Application layer (to implement service behaviours)
-  - WebhooksApi.Repo (database access)
+  - Webhooks.Repo (database access)
   - Perme8.Events (EventHandler behaviour)
   """
 
@@ -44,7 +44,7 @@ defmodule Webhooks.Infrastructure do
     deps: [
       Webhooks.Domain,
       Webhooks.Application,
-      WebhooksApi.Repo,
+      Webhooks.Repo,
       Perme8.Events,
       Jarga.Projects.Domain,
       Jarga.Documents.Domain

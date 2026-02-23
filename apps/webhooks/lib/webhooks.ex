@@ -11,7 +11,7 @@ defmodule Webhooks do
     top_level?: true,
     deps: [
       Webhooks.Application,
-      WebhooksApi.Repo
+      Webhooks.Repo
     ],
     exports: []
 
@@ -193,8 +193,8 @@ defmodule Webhooks do
   defp use_case_opts(opts) do
     cleaned = Keyword.drop(opts, [:get_workspace_and_member_by_slug, :resolve_workspace_id])
 
-    # Ensure :repo defaults to WebhooksApi.Repo so use cases don't pass nil
+    # Ensure :repo defaults to Webhooks.Repo so use cases don't pass nil
     # to repositories (which would override their default repo argument)
-    Keyword.put_new(cleaned, :repo, WebhooksApi.Repo)
+    Keyword.put_new(cleaned, :repo, Webhooks.Repo)
   end
 end

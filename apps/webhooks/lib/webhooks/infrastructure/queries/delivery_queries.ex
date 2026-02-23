@@ -17,6 +17,15 @@ defmodule Webhooks.Infrastructure.Queries.DeliveryQueries do
     from(d in query, where: d.id == ^id)
   end
 
+  @doc "Filters deliveries by workspace_id via join through webhook_subscriptions."
+  def for_workspace(query, workspace_id) do
+    from(d in query,
+      join: s in Webhooks.Infrastructure.Schemas.SubscriptionSchema,
+      on: d.subscription_id == s.id,
+      where: s.workspace_id == ^workspace_id
+    )
+  end
+
   @doc """
   Filters deliveries that are pending and due for retry.
 
@@ -33,5 +42,10 @@ defmodule Webhooks.Infrastructure.Queries.DeliveryQueries do
   @doc "Orders deliveries by inserted_at descending (newest first)."
   def ordered(query) do
     from(d in query, order_by: [desc: d.inserted_at])
+  end
+
+  @doc "Limits the number of results returned."
+  def limit(query, max) do
+    from(d in query, limit: ^max)
   end
 end

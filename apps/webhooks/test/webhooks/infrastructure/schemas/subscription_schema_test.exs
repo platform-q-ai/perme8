@@ -46,19 +46,20 @@ defmodule Webhooks.Infrastructure.Schemas.SubscriptionSchemaTest do
       assert "can't be blank" in errors_on(changeset).workspace_id
     end
 
-    test "validates url format must start with http(s)://" do
+    test "validates url format must start with https://" do
       attrs = Map.put(@valid_attrs, :url, "not-a-url")
       changeset = SubscriptionSchema.changeset(%SubscriptionSchema{}, attrs)
 
       refute changeset.valid?
-      assert "must be a valid URL starting with http:// or https://" in errors_on(changeset).url
+      assert "must be a valid HTTPS URL starting with https://" in errors_on(changeset).url
     end
 
-    test "accepts http:// urls (for test environments)" do
+    test "rejects http:// urls (HTTPS required)" do
       attrs = Map.put(@valid_attrs, :url, "http://localhost:4000/webhook")
       changeset = SubscriptionSchema.changeset(%SubscriptionSchema{}, attrs)
 
-      assert changeset.valid?
+      refute changeset.valid?
+      assert "must be a valid HTTPS URL starting with https://" in errors_on(changeset).url
     end
 
     test "casts event_types as array of strings" do

@@ -1,4 +1,4 @@
-defmodule WebhooksApi.SubscriptionControllerTest do
+defmodule WebhooksApi.SubscriptionApiControllerTest do
   use WebhooksApi.ConnCase, async: true
 
   import Jarga.AccountsFixtures
