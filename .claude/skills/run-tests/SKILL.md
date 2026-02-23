@@ -41,7 +41,7 @@ cd tools/exo-bdd && bun run src/cli/index.ts run \
 ### HTTP Tests
 
 ```bash
-# agents (Knowledge MCP) HTTP suite
+# agents (perme8-mcp) HTTP suite
 mix exo_test --name agents --adapter http
 
 # Or via CLI runner directly

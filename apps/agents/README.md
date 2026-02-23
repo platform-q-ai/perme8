@@ -1,6 +1,6 @@
 # Agents
 
-Standalone umbrella app for agent definitions, LLM orchestration, the Knowledge MCP tool endpoint, and threaded coding sessions.
+Standalone umbrella app for agent definitions, LLM orchestration, the perme8-mcp tool endpoint, and threaded coding sessions.
 
 ## Architecture
 
@@ -17,16 +17,16 @@ The app contains three bounded contexts:
 | Context | Facade | Purpose |
 |---------|--------|---------|
 | Agent CRUD | `Agents` | Agent definitions, cloning, workspace assignment, LLM client |
-| Knowledge MCP | `Agents` | MCP endpoint exposing knowledge graph tools to LLM agents |
+| perme8-mcp | `Agents` | MCP endpoint exposing knowledge and jarga tools to LLM agents |
 | Sessions | `Agents.Sessions` | Threaded coding sessions backed by ephemeral opencode containers |
 
 ### Agent CRUD
 
 Agent definitions (CRUD, cloning, workspace assignment, LLM client, query execution) were extracted from `jarga` into this standalone app. The `Agents` facade exposes all public API functions. `jarga_web` LiveViews and `jarga_api` controllers call the facade directly.
 
-### Knowledge MCP
+### perme8-mcp
 
-A standalone [MCP](https://modelcontextprotocol.io/) endpoint exposes 6 knowledge graph tools via JSON-RPC 2.0 over HTTP. The tools allow LLM agents to create, search, update, relate, traverse, and retrieve knowledge entries stored in the Entity Relationship Manager (ERM).
+A standalone [MCP](https://modelcontextprotocol.io/) endpoint exposes 14 tools (6 knowledge + 8 jarga) via JSON-RPC 2.0 over HTTP. Tool sets are composed from config-driven `ToolProvider` modules. The knowledge tools allow LLM agents to create, search, update, relate, traverse, and retrieve knowledge entries stored in the Entity Relationship Manager (ERM). The jarga tools provide workspace, project, document, and note management.
 
 | Tool | Description |
 |------|-------------|
