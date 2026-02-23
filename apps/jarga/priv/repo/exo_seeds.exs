@@ -21,6 +21,7 @@ Application.ensure_all_started(:bcrypt_elixir)
 # Start Ecto repos
 {:ok, _} = Identity.Repo.start_link()
 {:ok, _} = Jarga.Repo.start_link()
+{:ok, _} = WebhooksApi.Repo.start_link()
 
 # Start PubSub (required by context modules that broadcast events)
 {:ok, _} = Phoenix.PubSub.Supervisor.start_link(name: Jarga.PubSub)
@@ -83,6 +84,10 @@ Ecto.Adapters.SQL.query!(Identity.Repo, "TRUNCATE workspace_members CASCADE", []
 Ecto.Adapters.SQL.query!(Identity.Repo, "TRUNCATE workspaces CASCADE", [])
 Ecto.Adapters.SQL.query!(Identity.Repo, "TRUNCATE users_tokens CASCADE", [])
 Ecto.Adapters.SQL.query!(Identity.Repo, "TRUNCATE users CASCADE", [])
+Ecto.Adapters.SQL.query!(WebhooksApi.Repo, "TRUNCATE inbound_webhook_logs CASCADE", [])
+Ecto.Adapters.SQL.query!(WebhooksApi.Repo, "TRUNCATE inbound_webhook_configs CASCADE", [])
+Ecto.Adapters.SQL.query!(WebhooksApi.Repo, "TRUNCATE webhook_deliveries CASCADE", [])
+Ecto.Adapters.SQL.query!(WebhooksApi.Repo, "TRUNCATE webhook_subscriptions CASCADE", [])
 
 IO.puts("[exo-seeds] Seeding exo-bdd test data...")
 
@@ -393,4 +398,220 @@ IO.puts("[exo-seeds] Created guest user and added as guest of #{product_team.slu
   })
 
 IO.puts("[exo-seeds] Created API keys with deterministic tokens")
+
+# ---------------------------------------------------------------------------
+# 8. Seed webhook data
+# ---------------------------------------------------------------------------
+
+IO.puts("[exo-seeds] Seeding webhook data...")
+
+alias Webhooks.Infrastructure.Schemas.{
+  SubscriptionSchema,
+  DeliverySchema,
+  InboundWebhookConfigSchema
+}
+
+# Deterministic UUIDs for webhook entities
+webhook_ids = %{
+  "seeded-webhook-id" => "11111111-1111-1111-1111-111111111101",
+  "seeded-active-webhook-id" => "11111111-1111-1111-1111-111111111102",
+  "seeded-deactivated-webhook-id" => "11111111-1111-1111-1111-111111111103",
+  "seeded-deleted-webhook-id" => "11111111-1111-1111-1111-111111111104",
+  "seeded-webhook-with-deliveries-id" => "11111111-1111-1111-1111-111111111105",
+  "seeded-webhook-no-deliveries-id" => "11111111-1111-1111-1111-111111111106",
+  "seeded-success-delivery-id" => "22222222-2222-2222-2222-222222222201",
+  "seeded-failed-delivery-id" => "22222222-2222-2222-2222-222222222202",
+  "seeded-retried-delivery-id" => "22222222-2222-2222-2222-222222222203",
+  "seeded-pending-retry-delivery-id" => "22222222-2222-2222-2222-222222222204",
+  "seeded-retried-success-delivery-id" => "22222222-2222-2222-2222-222222222205",
+  "seeded-exhausted-delivery-id" => "22222222-2222-2222-2222-222222222206"
+}
+
+now = DateTime.utc_now() |> DateTime.truncate(:second)
+inbound_secret = "whsec_exo_test_inbound_secret_product_team_0001"
+
+# --- Create webhook subscriptions ---
+
+# General purpose subscription
+WebhooksApi.Repo.insert!(%SubscriptionSchema{
+  id: webhook_ids["seeded-webhook-id"],
+  url: "https://example.com/webhook",
+  secret: "whsec_test_general_" <> String.duplicate("a", 32),
+  event_types: ["project.created", "document.created"],
+  is_active: true,
+  workspace_id: product_team.id,
+  created_by_id: alice.id,
+  inserted_at: now,
+  updated_at: now
+})
+
+# Active subscription (for deactivation test)
+WebhooksApi.Repo.insert!(%SubscriptionSchema{
+  id: webhook_ids["seeded-active-webhook-id"],
+  url: "https://example.com/webhook-active",
+  secret: "whsec_test_active_" <> String.duplicate("a", 32),
+  event_types: ["project.created"],
+  is_active: true,
+  workspace_id: product_team.id,
+  created_by_id: alice.id,
+  inserted_at: now,
+  updated_at: now
+})
+
+# Deactivated subscription
+WebhooksApi.Repo.insert!(%SubscriptionSchema{
+  id: webhook_ids["seeded-deactivated-webhook-id"],
+  url: "https://example.com/webhook-deactivated",
+  secret: "whsec_test_deactiv_" <> String.duplicate("a", 32),
+  event_types: ["document.updated"],
+  is_active: false,
+  workspace_id: product_team.id,
+  created_by_id: alice.id,
+  inserted_at: now,
+  updated_at: now
+})
+
+# NOTE: seeded-deleted-webhook-id is NOT inserted. It's just a UUID that doesn't exist.
+
+# Subscription with delivery records
+WebhooksApi.Repo.insert!(%SubscriptionSchema{
+  id: webhook_ids["seeded-webhook-with-deliveries-id"],
+  url: "https://example.com/webhook-with-deliveries",
+  secret: "whsec_test_deliver_" <> String.duplicate("a", 32),
+  event_types: ["project.created", "document.created", "document.updated"],
+  is_active: true,
+  workspace_id: product_team.id,
+  created_by_id: alice.id,
+  inserted_at: now,
+  updated_at: now
+})
+
+# Subscription with no deliveries
+WebhooksApi.Repo.insert!(%SubscriptionSchema{
+  id: webhook_ids["seeded-webhook-no-deliveries-id"],
+  url: "https://example.com/webhook-empty",
+  secret: "whsec_test_empty_" <> String.duplicate("a", 34),
+  event_types: ["project.created"],
+  is_active: true,
+  workspace_id: product_team.id,
+  created_by_id: alice.id,
+  inserted_at: now,
+  updated_at: now
+})
+
+IO.puts("[exo-seeds] Created webhook subscriptions")
+
+# --- Create delivery records ---
+
+# Success delivery
+WebhooksApi.Repo.insert!(%DeliverySchema{
+  id: webhook_ids["seeded-success-delivery-id"],
+  subscription_id: webhook_ids["seeded-webhook-with-deliveries-id"],
+  event_type: "project.created",
+  payload: %{"event" => "project.created", "data" => %{"name" => "Test Project"}},
+  status: "success",
+  response_code: 200,
+  response_body: "OK",
+  attempts: 1,
+  max_attempts: 5,
+  next_retry_at: nil,
+  inserted_at: now,
+  updated_at: now
+})
+
+# Failed delivery
+WebhooksApi.Repo.insert!(%DeliverySchema{
+  id: webhook_ids["seeded-failed-delivery-id"],
+  subscription_id: webhook_ids["seeded-webhook-with-deliveries-id"],
+  event_type: "document.created",
+  payload: %{"event" => "document.created", "data" => %{"title" => "New Doc"}},
+  status: "failed",
+  response_code: 500,
+  response_body: "Internal Server Error",
+  attempts: 5,
+  max_attempts: 5,
+  next_retry_at: nil,
+  inserted_at: now,
+  updated_at: now
+})
+
+# Retried delivery (has retry info: multiple attempts, next_retry_at set)
+WebhooksApi.Repo.insert!(%DeliverySchema{
+  id: webhook_ids["seeded-retried-delivery-id"],
+  subscription_id: webhook_ids["seeded-webhook-with-deliveries-id"],
+  event_type: "document.updated",
+  payload: %{"event" => "document.updated", "data" => %{"title" => "Updated Doc"}},
+  status: "pending",
+  response_code: 502,
+  response_body: "Bad Gateway",
+  attempts: 2,
+  max_attempts: 5,
+  next_retry_at: DateTime.add(now, 3600, :second),
+  inserted_at: now,
+  updated_at: now
+})
+
+# Pending retry delivery (status=pending, response_code=500, next_retry_at present)
+WebhooksApi.Repo.insert!(%DeliverySchema{
+  id: webhook_ids["seeded-pending-retry-delivery-id"],
+  subscription_id: webhook_ids["seeded-webhook-with-deliveries-id"],
+  event_type: "project.created",
+  payload: %{"event" => "project.created", "data" => %{"name" => "Retry Project"}},
+  status: "pending",
+  response_code: 500,
+  response_body: "Internal Server Error",
+  attempts: 1,
+  max_attempts: 5,
+  next_retry_at: DateTime.add(now, 300, :second),
+  inserted_at: now,
+  updated_at: now
+})
+
+# Retried success delivery (was retried and succeeded)
+WebhooksApi.Repo.insert!(%DeliverySchema{
+  id: webhook_ids["seeded-retried-success-delivery-id"],
+  subscription_id: webhook_ids["seeded-webhook-with-deliveries-id"],
+  event_type: "document.created",
+  payload: %{"event" => "document.created", "data" => %{"title" => "Retry Success Doc"}},
+  status: "success",
+  response_code: 200,
+  response_body: "OK",
+  attempts: 3,
+  max_attempts: 5,
+  next_retry_at: nil,
+  inserted_at: now,
+  updated_at: now
+})
+
+# Exhausted delivery (max retries reached, failed permanently)
+WebhooksApi.Repo.insert!(%DeliverySchema{
+  id: webhook_ids["seeded-exhausted-delivery-id"],
+  subscription_id: webhook_ids["seeded-webhook-with-deliveries-id"],
+  event_type: "document.updated",
+  payload: %{"event" => "document.updated", "data" => %{"title" => "Exhausted Doc"}},
+  status: "failed",
+  response_code: 503,
+  response_body: "Service Unavailable",
+  attempts: 5,
+  max_attempts: 5,
+  next_retry_at: nil,
+  inserted_at: now,
+  updated_at: now
+})
+
+IO.puts("[exo-seeds] Created webhook deliveries")
+
+# --- Create inbound webhook config ---
+
+WebhooksApi.Repo.insert!(%InboundWebhookConfigSchema{
+  workspace_id: product_team.id,
+  secret: inbound_secret,
+  is_active: true,
+  inserted_at: now,
+  updated_at: now
+})
+
+IO.puts("[exo-seeds] Created inbound webhook config for #{product_team.slug}")
+IO.puts("[exo-seeds] Inbound webhook secret: #{inbound_secret}")
+
 IO.puts("[exo-seeds] Done!")
