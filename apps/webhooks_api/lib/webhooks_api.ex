@@ -13,6 +13,7 @@ defmodule WebhooksApi do
   use Boundary,
     deps: [
       Identity,
+      Webhooks,
       WebhooksApi.Repo
     ],
     exports: [Endpoint]
