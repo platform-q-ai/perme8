@@ -21,7 +21,7 @@ defmodule AgentsWeb.ChatSessionsLive.Components.MessageComponent do
     <div
       class={"chat #{if @message.role == "user", do: "chat-end", else: "chat-start"}"}
       data-message-role={@message.role}
-      data-message-content={@message.content}
+      data-message-content={truncate_for_attribute(@message.content)}
     >
       <div class="chat-header opacity-50 text-xs" data-message-role-label>
         {@message.role}
@@ -43,6 +43,18 @@ defmodule AgentsWeb.ChatSessionsLive.Components.MessageComponent do
     </div>
     """
   end
+
+  # Truncate content for data attributes to avoid bloated HTML.
+  # BDD tests only check attribute presence/visibility, not the full value.
+  @attribute_max_length 200
+
+  defp truncate_for_attribute(nil), do: nil
+
+  defp truncate_for_attribute(content) when byte_size(content) > @attribute_max_length do
+    String.slice(content, 0, @attribute_max_length)
+  end
+
+  defp truncate_for_attribute(content), do: content
 
   defp render_content(%{role: "assistant", content: content}) do
     opts = [
