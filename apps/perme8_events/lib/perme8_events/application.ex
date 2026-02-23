@@ -1,6 +1,4 @@
 defmodule Perme8Events.Application do
-  # See https://hexdocs.pm/elixir/Application.html
-  # for more information on OTP Applications
   @moduledoc false
 
   use Application
@@ -8,13 +6,14 @@ defmodule Perme8Events.Application do
   @impl true
   def start(_type, _args) do
     children = [
-      # Starts a worker by calling: Perme8Events.Worker.start_link(arg)
-      # {Perme8Events.Worker, arg}
+      {Phoenix.PubSub, name: pubsub_name()}
     ]
 
-    # See https://hexdocs.pm/elixir/Supervisor.html
-    # for other strategies and supported options
     opts = [strategy: :one_for_one, name: Perme8Events.Supervisor]
     Supervisor.start_link(children, opts)
+  end
+
+  defp pubsub_name do
+    Application.get_env(:perme8_events, :pubsub, Perme8.Events.PubSub)
   end
 end

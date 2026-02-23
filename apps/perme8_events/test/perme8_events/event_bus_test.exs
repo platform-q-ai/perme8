@@ -1,7 +1,9 @@
 defmodule Perme8.Events.EventBusTest do
-  use Jarga.DataCase, async: false
+  use ExUnit.Case, async: false
 
   alias Perme8.Events.EventBus
+
+  @pubsub Application.compile_env(:perme8_events, :pubsub, Perme8.Events.PubSub)
 
   # Define a test event for use in tests
   defmodule TestProjectCreated do
@@ -61,7 +63,7 @@ defmodule Perme8.Events.EventBusTest do
     test "broadcasts event to events:{context} topic" do
       event = build_event()
       context = event.event_type |> String.split(".") |> List.first()
-      Phoenix.PubSub.subscribe(Jarga.PubSub, "events:#{context}")
+      Phoenix.PubSub.subscribe(@pubsub, "events:#{context}")
 
       EventBus.emit(event)
 
@@ -71,7 +73,7 @@ defmodule Perme8.Events.EventBusTest do
     test "broadcasts event to events:{context}:{aggregate_type} topic" do
       event = build_event()
       context = event.event_type |> String.split(".") |> List.first()
-      Phoenix.PubSub.subscribe(Jarga.PubSub, "events:#{context}:#{event.aggregate_type}")
+      Phoenix.PubSub.subscribe(@pubsub, "events:#{context}:#{event.aggregate_type}")
 
       EventBus.emit(event)
 
@@ -80,7 +82,7 @@ defmodule Perme8.Events.EventBusTest do
 
     test "broadcasts event to events:workspace:{workspace_id} topic when workspace_id present" do
       event = build_event(%{workspace_id: "ws-789"})
-      Phoenix.PubSub.subscribe(Jarga.PubSub, "events:workspace:ws-789")
+      Phoenix.PubSub.subscribe(@pubsub, "events:workspace:ws-789")
 
       EventBus.emit(event)
 
@@ -91,7 +93,7 @@ defmodule Perme8.Events.EventBusTest do
       event = build_global_event(%{workspace_id: nil})
 
       # Subscribe to what would be the workspace topic if it existed
-      Phoenix.PubSub.subscribe(Jarga.PubSub, "events:workspace:")
+      Phoenix.PubSub.subscribe(@pubsub, "events:workspace:")
 
       EventBus.emit(event)
 
@@ -107,7 +109,7 @@ defmodule Perme8.Events.EventBusTest do
   describe "emit/2 user-scoped topic" do
     test "broadcasts to events:user:{target_user_id} when target_user_id is set" do
       event = build_user_scoped_event(%{target_user_id: "target-user-1"})
-      Phoenix.PubSub.subscribe(Jarga.PubSub, "events:user:target-user-1")
+      Phoenix.PubSub.subscribe(@pubsub, "events:user:target-user-1")
 
       EventBus.emit(event)
 
@@ -116,7 +118,7 @@ defmodule Perme8.Events.EventBusTest do
 
     test "does not broadcast user topic when target_user_id is nil" do
       event = build_user_scoped_event(%{target_user_id: nil})
-      Phoenix.PubSub.subscribe(Jarga.PubSub, "events:user:")
+      Phoenix.PubSub.subscribe(@pubsub, "events:user:")
 
       EventBus.emit(event)
 
@@ -125,8 +127,8 @@ defmodule Perme8.Events.EventBusTest do
 
     test "broadcasts to both workspace and user topics when both are present" do
       event = build_user_scoped_event(%{workspace_id: "ws-789", target_user_id: "target-user-1"})
-      Phoenix.PubSub.subscribe(Jarga.PubSub, "events:workspace:ws-789")
-      Phoenix.PubSub.subscribe(Jarga.PubSub, "events:user:target-user-1")
+      Phoenix.PubSub.subscribe(@pubsub, "events:workspace:ws-789")
+      Phoenix.PubSub.subscribe(@pubsub, "events:user:target-user-1")
 
       EventBus.emit(event)
 
@@ -141,7 +143,7 @@ defmodule Perme8.Events.EventBusTest do
       event2 = build_event(%{aggregate_id: "proj-2", project_id: "proj-2", name: "Project 2"})
 
       context = event1.event_type |> String.split(".") |> List.first()
-      Phoenix.PubSub.subscribe(Jarga.PubSub, "events:#{context}")
+      Phoenix.PubSub.subscribe(@pubsub, "events:#{context}")
 
       EventBus.emit_all([event1, event2])
 

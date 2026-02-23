@@ -9,9 +9,9 @@ defmodule Perme8.Events do
   use Boundary,
     top_level?: true,
     deps: [],
-    exports: [EventBus, EventHandler, TestEventBus]
+    exports: [EventBus, EventHandler, TestEventBus, DomainEvent]
 
-  @pubsub Jarga.PubSub
+  @pubsub Application.compile_env(:perme8_events, :pubsub, Perme8.Events.PubSub)
 
   @doc "Subscribe the calling process to an event topic."
   def subscribe(topic) do

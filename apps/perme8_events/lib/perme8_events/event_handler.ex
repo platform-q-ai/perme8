@@ -56,9 +56,11 @@ defmodule Perme8.Events.EventHandler do
 
       @impl GenServer
       def init(opts) do
+        pubsub = Application.get_env(:perme8_events, :pubsub, Perme8.Events.PubSub)
+
         subscriptions()
         |> Enum.each(fn topic ->
-          Phoenix.PubSub.subscribe(Jarga.PubSub, topic)
+          Phoenix.PubSub.subscribe(pubsub, topic)
         end)
 
         {:ok, %{opts: opts}}
