@@ -45,18 +45,22 @@ defmodule Jarga.Chat.Application.UseCases.ListAllSessions do
     limit = Keyword.get(opts, :limit, @default_limit)
     session_repository = Keyword.get(opts, :session_repository, @default_session_repository)
 
-    sessions =
-      limit
-      |> session_repository.list_all_sessions()
-      |> Enum.map(&add_preview(&1, session_repository))
+    sessions = session_repository.list_all_sessions(limit)
+
+    previews =
+      sessions
+      |> Enum.map(& &1.id)
+      |> session_repository.get_first_message_contents()
+
+    sessions = Enum.map(sessions, &add_preview(&1, previews))
 
     {:ok, sessions}
   end
 
-  defp add_preview(session, session_repository) do
+  defp add_preview(session, previews) do
     preview =
-      session.id
-      |> session_repository.get_first_message_content()
+      previews
+      |> Map.get(session.id)
       |> truncate_preview()
 
     Map.put(session, :preview, preview)

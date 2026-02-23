@@ -144,6 +144,32 @@ defmodule Jarga.Chat.Infrastructure.Queries.Queries do
   end
 
   @doc """
+  Gets the first message content for multiple sessions in a single query.
+
+  Uses a lateral join to efficiently fetch the earliest message per session,
+  avoiding N+1 queries when listing sessions with previews.
+
+  Returns `[{session_id, content}]` pairs.
+  """
+  def first_message_contents_batch(session_ids) do
+    first_msg =
+      from(m in MessageSchema,
+        where: m.chat_session_id == parent_as(:session).id,
+        order_by: [asc: m.inserted_at],
+        limit: 1,
+        select: m.content
+      )
+
+    from(s in SessionSchema,
+      as: :session,
+      where: s.id in ^session_ids,
+      left_lateral_join: m in subquery(first_msg),
+      on: true,
+      select: {s.id, m.content}
+    )
+  end
+
+  @doc """
   Gets a message by ID with user ownership verification through session.
   """
   def message_by_id_and_user(message_id, user_id) do
