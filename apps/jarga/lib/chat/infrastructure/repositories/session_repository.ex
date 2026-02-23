@@ -39,6 +39,7 @@ defmodule Jarga.Chat.Infrastructure.Repositories.SessionRepository do
   Returns a list of session maps with aggregated data, ordered by most recent first.
   Used by admin/dashboard views where no user filtering is needed.
   """
+  @impl true
   def list_all_sessions(limit, repo \\ Repo) do
     Queries.all_sessions()
     |> Queries.ordered_by_recent()
@@ -78,6 +79,7 @@ defmodule Jarga.Chat.Infrastructure.Repositories.SessionRepository do
   Returns a map of `%{session_id => content}` for efficient batch preview lookups.
   Sessions without messages will have `nil` as the content value.
   """
+  @impl true
   def get_first_message_contents(session_ids, repo \\ Repo) do
     session_ids
     |> Queries.first_message_contents_batch()
