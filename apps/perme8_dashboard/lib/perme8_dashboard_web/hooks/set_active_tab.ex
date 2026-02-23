@@ -42,10 +42,7 @@ defmodule Perme8DashboardWeb.Hooks.SetActiveTab do
     path = URI.parse(uri).path
 
     active_tab =
-      cond do
-        String.starts_with?(path, "/sessions") -> :sessions
-        true -> :features
-      end
+      if String.starts_with?(path, "/sessions"), do: :sessions, else: :features
 
     {:cont, assign(socket, :active_tab, active_tab)}
   end
