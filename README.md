@@ -29,7 +29,7 @@ Perme8 follows **Clean Architecture** principles throughout, with compile-time b
 |-----|-------------|------|
 | [`identity`](apps/identity/) | Self-contained authentication and identity management | 4001 |
 | [`jarga`](apps/jarga/) | Core domain logic -- projects, documents, notes, chat | -- |
-| [`agents`](apps/agents/) | Agent definitions, LLM orchestration, Knowledge MCP tools | 4007 |
+| [`agents`](apps/agents/) | Agent definitions, LLM orchestration, perme8-mcp tools | 4007 |
 | [`jarga_web`](apps/jarga_web/) | Phoenix LiveView browser interface | 4000 |
 | [`agents_web`](apps/agents_web/) | Sessions LiveView browser interface, delegates auth to Identity | 4014 |
 | [`jarga_api`](apps/jarga_api/) | JSON REST API for external integrations | -- |

@@ -101,7 +101,7 @@ mix assets.copy_fonts
 ## Dependencies
 
 - **`jarga`** (in_umbrella) -- core domain logic
-- **`agents`** (in_umbrella) -- agent definitions, Knowledge MCP
+- **`agents`** (in_umbrella) -- agent definitions, perme8-mcp
 - Phoenix, Phoenix LiveView, Phoenix LiveDashboard -- web framework
 - esbuild, tailwind -- asset compilation
 - Heroicons -- icon components
