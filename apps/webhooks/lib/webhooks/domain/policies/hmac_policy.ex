@@ -32,6 +32,11 @@ defmodule Webhooks.Domain.Policies.HmacPolicy do
 
   def valid_signature?(secret, payload, signature) do
     expected = compute_signature(secret, payload)
-    Plug.Crypto.secure_compare(expected, signature)
+    # Strip common "sha256=" prefix if present (GitHub/Stripe convention)
+    bare_signature = strip_algorithm_prefix(signature)
+    Plug.Crypto.secure_compare(expected, bare_signature)
   end
+
+  defp strip_algorithm_prefix("sha256=" <> hex), do: hex
+  defp strip_algorithm_prefix(sig), do: sig
 end
