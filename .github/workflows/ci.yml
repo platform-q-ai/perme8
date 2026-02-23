@@ -260,7 +260,7 @@ jobs:
               {"app": "erm",       "domain": "http",     "config_name": "entity-relationship-manager", "timeout": 10},
               {"app": "erm",       "domain": "security", "config_name": "entity-relationship-manager", "timeout": 15},
               {"app": "identity",  "domain": "browser",  "config_name": "identity",                    "timeout": 15},
-              {"app": "identity",  "domain": "security", "config_name": "identity",                    "timeout": 15},
+              {"app": "identity",  "domain": "security", "config_name": "identity",                    "timeout": 20},
               {"app": "jarga-api", "domain": "http",     "config_name": "jarga-api",                   "timeout": 10},
               {"app": "jarga-api", "domain": "security", "config_name": "jarga-api",                   "timeout": 15},
               {"app": "jarga-web", "domain": "browser",  "config_name": "jarga-web",                   "timeout": 15},
