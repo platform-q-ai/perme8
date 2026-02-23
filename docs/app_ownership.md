@@ -24,6 +24,8 @@ Each app has a single owner and a clear set of responsibilities. No two apps own
 | **exo_dashboard** | Dev tool | BDD feature dashboard | None | Nothing |
 | **perme8_dashboard** | Dev tool | Unified dev-tool hub | None | `exo_dashboard`, `agents_web` |
 | **alkali** | Standalone | Static site generator | None | Nothing |
+| **chat** | Domain context | Chat sessions, messages, real-time messaging -- **planned, currently in `jarga`** | Needs own Repo | `identity`, `agents`, `perme8_events` |
+| **notifications** | Domain context | Notification creation, delivery, preferences, subscriptions -- **planned, currently in `jarga`** | Needs own Repo | `identity`, `perme8_events` |
 | **perme8_tools** | Dev tool | Mix tasks, linters | None | Nothing |
 
 ### Path Conventions
@@ -41,6 +43,8 @@ Each context has its own `domain/`, `application/`, and `infrastructure/` layers
 
 - **perme8_events** -- Being extracted from `jarga` and `identity` in [#200](https://github.com/platform-q-ai/perme8/issues/200). Until that lands, eventbus infrastructure still lives in `jarga` (runtime) and `identity` (DomainEvent macro). The dependency relationships above reflect the target state.
 - **perme8-mcp** -- The MCP server in `agents` is being renamed from `knowledge-mcp` to `perme8-mcp` with a `ToolProvider` abstraction in [#181](https://github.com/platform-q-ai/perme8/issues/181). The `agents` ownership description above reflects the target state.
+- **chat** -- Planned extraction from `jarga` (see [service evolution plan](docs/architecture/service_evolution_plan.md)). Currently lives in `apps/jarga/lib/chat/`. Until extracted, all chat code belongs in `jarga`.
+- **notifications** -- Planned extraction from `jarga` (see [service evolution plan](docs/architecture/service_evolution_plan.md)). Currently lives in `apps/jarga/lib/notifications/`. Until extracted, all notifications code belongs in `jarga`.
 
 ---
 
