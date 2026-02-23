@@ -13,23 +13,21 @@ defmodule Webhooks.Infrastructure.Services.HttpDispatcher do
 
   @impl true
   def dispatch(url, payload_json, headers) do
-    try do
-      response =
-        Req.post!(url,
-          body: payload_json,
-          headers: headers,
-          receive_timeout: @receive_timeout
-        )
+    response =
+      Req.post!(url,
+        body: payload_json,
+        headers: headers,
+        receive_timeout: @receive_timeout
+      )
 
-      {:ok, response.status, response.body}
-    rescue
-      e in [Req.TransportError, Mint.TransportError] ->
-        Logger.warning("Webhook dispatch failed to #{url}: #{inspect(e)}")
-        {:error, Exception.message(e)}
+    {:ok, response.status, response.body}
+  rescue
+    e in [Req.TransportError, Mint.TransportError] ->
+      Logger.warning("Webhook dispatch failed to #{url}: #{inspect(e)}")
+      {:error, Exception.message(e)}
 
-      e ->
-        Logger.warning("Webhook dispatch failed to #{url}: #{inspect(e)}")
-        {:error, Exception.message(e)}
-    end
+    e ->
+      Logger.warning("Webhook dispatch failed to #{url}: #{inspect(e)}")
+      {:error, Exception.message(e)}
   end
 end
