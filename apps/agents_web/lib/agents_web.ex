@@ -17,7 +17,7 @@ defmodule AgentsWeb do
       Jarga.Accounts,
       Jarga.Chat
     ],
-    exports: [Endpoint, Telemetry]
+    exports: [Endpoint, Telemetry, ChatSessionsLive.Index, ChatSessionsLive.Show]
 
   def static_paths do
     ~w(assets fonts images favicon.ico robots.txt)

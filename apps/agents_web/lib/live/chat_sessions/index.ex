@@ -17,6 +17,7 @@ defmodule AgentsWeb.ChatSessionsLive.Index do
 
     {:ok,
      socket
+     |> assign_new(:sessions_base_path, fn -> ~p"/chat-sessions" end)
      |> assign(:page_title, "Chat Sessions")
      |> assign(:session_count, length(sessions))
      |> stream(:sessions, sessions)}
@@ -92,7 +93,7 @@ defmodule AgentsWeb.ChatSessionsLive.Index do
                   data-session={session.id}
                 >
                   <td data-session-title>
-                    <.link navigate={~p"/chat-sessions/#{session.id}"} class="link link-hover">
+                    <.link navigate={"#{@sessions_base_path}/#{session.id}"} class="link link-hover">
                       {session.title || "Untitled Session"}
                     </.link>
                   </td>

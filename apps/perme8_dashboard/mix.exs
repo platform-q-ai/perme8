@@ -37,7 +37,9 @@ defmodule Perme8Dashboard.MixProject do
           apps: [
             {:phoenix, :relaxed},
             {:phoenix_live_view, :relaxed},
-            {:phoenix_html, :relaxed}
+            {:phoenix_html, :relaxed},
+            {:agents_web, :relaxed},
+            {:jarga, :relaxed}
           ]
         ]
       ],
@@ -62,7 +64,9 @@ defmodule Perme8Dashboard.MixProject do
       {:telemetry_poller, "~> 1.0"},
       {:floki, ">= 0.30.0", only: :test},
       {:lazy_html, ">= 0.1.0", only: :test},
-      {:exo_dashboard, in_umbrella: true}
+      {:exo_dashboard, in_umbrella: true},
+      {:agents_web, in_umbrella: true},
+      {:jarga, in_umbrella: true}
     ]
   end
 
