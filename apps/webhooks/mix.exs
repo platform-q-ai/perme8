@@ -39,7 +39,8 @@ defmodule Webhooks.MixProject do
             {:ecto, :relaxed},
             {:ecto_sql, :relaxed},
             {:identity, :relaxed},
-            {:jarga, :relaxed}
+            {:jarga, :relaxed},
+            {:perme8_events, :relaxed}
           ]
         ]
       ],
@@ -49,6 +50,7 @@ defmodule Webhooks.MixProject do
 
   defp deps do
     [
+      {:perme8_events, in_umbrella: true},
       {:identity, in_umbrella: true},
       {:jarga, in_umbrella: true},
       {:ecto_sql, "~> 3.12"},
