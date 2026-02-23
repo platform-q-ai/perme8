@@ -261,6 +261,7 @@ config :perme8_dashboard, Perme8DashboardWeb.Endpoint,
 config :identity, :session_options,
   store: :cookie,
   key: "_identity_key",
+  signing_salt: "compile_time_placeholder",
   same_site: "Lax"
 
 # Identity mailer configuration
