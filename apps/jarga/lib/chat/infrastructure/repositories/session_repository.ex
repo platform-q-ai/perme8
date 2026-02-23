@@ -73,6 +73,19 @@ defmodule Jarga.Chat.Infrastructure.Repositories.SessionRepository do
   end
 
   @doc """
+  Gets the first message content for multiple sessions in a single query.
+
+  Returns a map of `%{session_id => content}` for efficient batch preview lookups.
+  Sessions without messages will have `nil` as the content value.
+  """
+  def get_first_message_contents(session_ids, repo \\ Repo) do
+    session_ids
+    |> Queries.first_message_contents_batch()
+    |> repo.all()
+    |> Map.new()
+  end
+
+  @doc """
   Finds a session by ID and user ID (for authorization).
 
   Returns the session struct or nil if not found or unauthorized.
