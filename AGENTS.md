@@ -35,6 +35,25 @@ git push "https://x-access-token:${TOKEN}@github.com/platform-q-ai/perme8.git" <
 - `git push` via SSH defaults to `@krisquigley`
 - For manual commits: `git -c user.name='Kris Quigley' -c user.email='5502215+krisquigley@users.noreply.github.com' commit`
 
+## App Ownership & Architectural Rules
+
+For the full ownership registry, file placement tables, and domain event rules, see [`docs/app_ownership.md`](docs/app_ownership.md). That document is the authoritative reference -- if it conflicts with other docs, it wins.
+
+### Standalone App Principle
+
+> Every domain app must boot and function without other domain apps (except `identity` for auth and `perme8_events` for event infrastructure). No shared Repos. No cross-app schema references. Communicate via domain events or public facade APIs.
+
+### Decision Tree
+
+When adding a new feature or placing code:
+
+1. **Determine the owning app** -- which app in the [ownership registry](docs/app_ownership.md) owns the domain concept? Check the "Owns" column.
+2. **Place ALL domain artifacts in the owning app** -- migrations, schemas, entities, policies, use cases, repositories, domain events.
+3. **Place interface artifacts in the owning `_web`/`_api` app** -- LiveViews, controllers, feature files.
+4. **If UI renders in another app's shell** -- the owning app exposes a public facade API; the rendering app calls it. The rendering app does NOT own the domain logic.
+5. **Never use another app's Repo** -- if you need data from another app, call its public API.
+6. **Domain events live in the emitting app** -- the app that produces the event defines the struct and publishes it. Event infrastructure lives in `perme8_events`.
+
 ## Skills
 
 ### Orchestration Skills
