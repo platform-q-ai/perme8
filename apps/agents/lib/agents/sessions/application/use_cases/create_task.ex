@@ -6,7 +6,6 @@ defmodule Agents.Sessions.Application.UseCases.CreateTask do
   creates the task in the database, and starts a TaskRunner.
   """
 
-  alias Agents.Sessions.Application.SessionsConfig
   alias Agents.Sessions.Domain.Entities.Task
 
   require Logger
@@ -27,14 +26,12 @@ defmodule Agents.Sessions.Application.UseCases.CreateTask do
   ## Returns
   - `{:ok, task}` - Domain entity on success
   - `{:error, :instruction_required}` - When instruction is blank
-  - `{:error, :concurrent_limit_reached}` - When user has too many active tasks
   - `{:error, changeset}` - On validation error
   """
   def execute(attrs, opts \\ []) do
     task_repo = Keyword.get(opts, :task_repo, @default_task_repo)
 
     with :ok <- validate_instruction(attrs),
-         :ok <- check_concurrent_limit(attrs.user_id, task_repo),
          {:ok, schema} <- task_repo.create_task(attrs),
          :ok <- start_runner(schema.id, task_repo, opts) do
       {:ok, Task.from_schema(schema)}
@@ -47,13 +44,6 @@ defmodule Agents.Sessions.Application.UseCases.CreateTask do
   end
 
   defp validate_instruction(_), do: {:error, :instruction_required}
-
-  defp check_concurrent_limit(user_id, task_repo) do
-    count = task_repo.running_task_count_for_user(user_id)
-    max = SessionsConfig.max_concurrent_tasks()
-
-    if count < max, do: :ok, else: {:error, :concurrent_limit_reached}
-  end
 
   defp start_runner(task_id, task_repo, opts) do
     case Keyword.get(opts, :task_runner_starter) do

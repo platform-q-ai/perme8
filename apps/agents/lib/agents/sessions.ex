@@ -4,6 +4,8 @@ defmodule Agents.Sessions do
 
   Provides operations for managing coding tasks that run in
   ephemeral Docker containers with opencode.
+
+  Sessions are groups of tasks sharing a container_id.
   """
 
   use Boundary,
@@ -22,6 +24,7 @@ defmodule Agents.Sessions do
     CreateTask,
     CancelTask,
     DeleteTask,
+    DeleteSession,
     ResumeTask,
     GetTask,
     ListTasks
@@ -38,7 +41,6 @@ defmodule Agents.Sessions do
   ## Returns
   - `{:ok, task}` - Domain entity on success
   - `{:error, :instruction_required}` - When instruction is blank
-  - `{:error, :concurrent_limit_reached}` - When user already has an active task
   - `{:error, changeset}` - On validation error
   """
   @spec create_task(map(), keyword()) :: {:ok, struct()} | {:error, term()}
@@ -58,11 +60,23 @@ defmodule Agents.Sessions do
   end
 
   @doc """
-  Deletes a completed, failed, or cancelled task.
+  Deletes a task record from the database.
+
+  Does NOT remove the Docker container. Use `delete_session/3` to
+  remove the container and all associated tasks.
   """
   @spec delete_task(String.t(), String.t(), keyword()) :: :ok | {:error, term()}
   def delete_task(task_id, user_id, opts \\ []) do
     DeleteTask.execute(task_id, user_id, opts)
+  end
+
+  @doc """
+  Deletes an entire session: removes the Docker container and all
+  tasks sharing the given container_id.
+  """
+  @spec delete_session(String.t(), String.t(), keyword()) :: :ok | {:error, term()}
+  def delete_session(container_id, user_id, opts \\ []) do
+    DeleteSession.execute(container_id, user_id, opts)
   end
 
   @doc """
@@ -91,6 +105,24 @@ defmodule Agents.Sessions do
   @spec list_tasks(String.t(), keyword()) :: [struct()]
   def list_tasks(user_id, opts \\ []) do
     ListTasks.execute(user_id, opts)
+  end
+
+  @doc """
+  Lists sessions (grouped by container_id) for a user.
+
+  Returns a list of maps with :container_id, :title, :task_count,
+  :latest_status, :latest_at, :created_at.
+  """
+  @spec list_sessions(String.t(), keyword()) :: [map()]
+  def list_sessions(user_id, opts \\ []) do
+    task_repo =
+      Keyword.get(
+        opts,
+        :task_repo,
+        Agents.Sessions.Infrastructure.Repositories.TaskRepository
+      )
+
+    task_repo.list_sessions_for_user(user_id, opts)
   end
 
   # Wire the real TaskRunnerSupervisor starter

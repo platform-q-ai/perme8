@@ -13,7 +13,7 @@ defmodule Agents.Sessions.Application.UseCases.CreateTaskTest do
   }
 
   describe "execute/2" do
-    test "creates task when instruction is valid and no tasks running" do
+    test "creates task when instruction is valid" do
       task_schema = %{
         id: "task-1",
         instruction: "Write tests",
@@ -22,7 +22,6 @@ defmodule Agents.Sessions.Application.UseCases.CreateTaskTest do
       }
 
       Agents.Mocks.TaskRepositoryMock
-      |> expect(:running_task_count_for_user, fn "user-123" -> 0 end)
       |> expect(:create_task, fn attrs ->
         assert attrs.instruction == "Write tests for the login flow"
         assert attrs.user_id == "user-123"
@@ -52,16 +51,6 @@ defmodule Agents.Sessions.Application.UseCases.CreateTaskTest do
                )
     end
 
-    test "returns error when concurrent limit is reached" do
-      Agents.Mocks.TaskRepositoryMock
-      |> expect(:running_task_count_for_user, fn "user-123" -> 1 end)
-
-      assert {:error, :concurrent_limit_reached} =
-               CreateTask.execute(@valid_attrs,
-                 task_repo: Agents.Mocks.TaskRepositoryMock
-               )
-    end
-
     test "starts TaskRunner after successful creation" do
       task_schema = %{
         id: "task-1",
@@ -73,7 +62,6 @@ defmodule Agents.Sessions.Application.UseCases.CreateTaskTest do
       test_pid = self()
 
       Agents.Mocks.TaskRepositoryMock
-      |> expect(:running_task_count_for_user, fn "user-123" -> 0 end)
       |> expect(:create_task, fn _attrs ->
         {:ok, struct(Agents.Sessions.Infrastructure.Schemas.TaskSchema, task_schema)}
       end)
@@ -103,7 +91,6 @@ defmodule Agents.Sessions.Application.UseCases.CreateTaskTest do
       schema = struct(Agents.Sessions.Infrastructure.Schemas.TaskSchema, task_schema)
 
       Agents.Mocks.TaskRepositoryMock
-      |> expect(:running_task_count_for_user, fn "user-123" -> 0 end)
       |> expect(:create_task, fn _attrs -> {:ok, schema} end)
       |> expect(:get_task, fn "task-1" -> schema end)
       |> expect(:update_task_status, fn _task, %{status: "failed"} -> {:ok, schema} end)
@@ -132,7 +119,6 @@ defmodule Agents.Sessions.Application.UseCases.CreateTaskTest do
       }
 
       Agents.Mocks.TaskRepositoryMock
-      |> expect(:running_task_count_for_user, fn "user-123" -> 0 end)
       |> expect(:create_task, fn _attrs ->
         {:ok, struct(Agents.Sessions.Infrastructure.Schemas.TaskSchema, task_schema)}
       end)

@@ -69,4 +69,36 @@ defmodule Agents.Sessions.Infrastructure.Queries.TaskQueries do
       select: count(t.id)
     )
   end
+
+  @doc """
+  Filters tasks by container_id.
+  """
+  @spec by_container(Ecto.Query.t(), String.t()) :: Ecto.Query.t()
+  def by_container(query \\ base(), container_id) do
+    from(t in query, where: t.container_id == ^container_id)
+  end
+
+  @doc """
+  Returns sessions grouped by container_id for a user.
+
+  Each session is represented as a map with the container_id,
+  the latest task's status, the first task's instruction (as title),
+  task count, and timestamps.
+  """
+  @spec sessions_for_user(Ecto.UUID.t()) :: Ecto.Query.t()
+  def sessions_for_user(user_id) do
+    from(t in TaskSchema,
+      where: t.user_id == ^user_id and not is_nil(t.container_id),
+      group_by: t.container_id,
+      select: %{
+        container_id: t.container_id,
+        task_count: count(t.id),
+        latest_status: fragment("(array_agg(? ORDER BY ? DESC))[1]", t.status, t.inserted_at),
+        title: fragment("(array_agg(? ORDER BY ? ASC))[1]", t.instruction, t.inserted_at),
+        latest_at: max(t.inserted_at),
+        created_at: min(t.inserted_at)
+      },
+      order_by: [desc: max(t.inserted_at)]
+    )
+  end
 end

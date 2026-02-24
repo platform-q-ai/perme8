@@ -63,4 +63,27 @@ defmodule Agents.Sessions.Infrastructure.Repositories.TaskRepository do
   def delete_task(%TaskSchema{} = task) do
     Repo.delete(task)
   end
+
+  @impl true
+  def list_tasks_for_container(container_id, user_id) do
+    TaskQueries.base()
+    |> TaskQueries.for_user(user_id)
+    |> TaskQueries.by_container(container_id)
+    |> TaskQueries.recent_first()
+    |> Repo.all()
+  end
+
+  @impl true
+  def delete_tasks_for_container(container_id, user_id) do
+    TaskQueries.base()
+    |> TaskQueries.for_user(user_id)
+    |> TaskQueries.by_container(container_id)
+    |> Repo.delete_all()
+  end
+
+  @impl true
+  def list_sessions_for_user(user_id, _opts \\ []) do
+    TaskQueries.sessions_for_user(user_id)
+    |> Repo.all()
+  end
 end

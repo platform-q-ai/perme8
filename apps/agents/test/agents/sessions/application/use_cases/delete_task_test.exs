@@ -8,13 +8,10 @@ defmodule Agents.Sessions.Application.UseCases.DeleteTaskTest do
 
   setup :verify_on_exit!
 
-  @default_opts [
-    task_repo: Agents.Mocks.TaskRepositoryMock,
-    container_provider: Agents.Mocks.ContainerProviderMock
-  ]
+  @default_opts [task_repo: Agents.Mocks.TaskRepositoryMock]
 
   describe "execute/3" do
-    test "removes container and deletes a completed task" do
+    test "deletes a completed task (DB record only, no container removal)" do
       task =
         struct(TaskSchema, %{
           id: "task-1",
@@ -27,13 +24,10 @@ defmodule Agents.Sessions.Application.UseCases.DeleteTaskTest do
       |> expect(:get_task_for_user, fn "task-1", "user-1" -> task end)
       |> expect(:delete_task, fn ^task -> {:ok, task} end)
 
-      Agents.Mocks.ContainerProviderMock
-      |> expect(:remove, fn "container-abc" -> :ok end)
-
       assert :ok = DeleteTask.execute("task-1", "user-1", @default_opts)
     end
 
-    test "deletes a failed task and removes container" do
+    test "deletes a failed task" do
       task =
         struct(TaskSchema, %{
           id: "task-1",
@@ -46,13 +40,10 @@ defmodule Agents.Sessions.Application.UseCases.DeleteTaskTest do
       |> expect(:get_task_for_user, fn "task-1", "user-1" -> task end)
       |> expect(:delete_task, fn ^task -> {:ok, task} end)
 
-      Agents.Mocks.ContainerProviderMock
-      |> expect(:remove, fn "container-def" -> :ok end)
-
       assert :ok = DeleteTask.execute("task-1", "user-1", @default_opts)
     end
 
-    test "deletes a cancelled task and removes container" do
+    test "deletes a cancelled task" do
       task =
         struct(TaskSchema, %{
           id: "task-1",
@@ -64,28 +55,6 @@ defmodule Agents.Sessions.Application.UseCases.DeleteTaskTest do
       Agents.Mocks.TaskRepositoryMock
       |> expect(:get_task_for_user, fn "task-1", "user-1" -> task end)
       |> expect(:delete_task, fn ^task -> {:ok, task} end)
-
-      Agents.Mocks.ContainerProviderMock
-      |> expect(:remove, fn "container-ghi" -> :ok end)
-
-      assert :ok = DeleteTask.execute("task-1", "user-1", @default_opts)
-    end
-
-    test "succeeds even when container is already gone" do
-      task =
-        struct(TaskSchema, %{
-          id: "task-1",
-          user_id: "user-1",
-          status: "completed",
-          container_id: "container-gone"
-        })
-
-      Agents.Mocks.TaskRepositoryMock
-      |> expect(:get_task_for_user, fn "task-1", "user-1" -> task end)
-      |> expect(:delete_task, fn ^task -> {:ok, task} end)
-
-      Agents.Mocks.ContainerProviderMock
-      |> expect(:remove, fn "container-gone" -> {:error, :not_found} end)
 
       assert :ok = DeleteTask.execute("task-1", "user-1", @default_opts)
     end
@@ -102,8 +71,6 @@ defmodule Agents.Sessions.Application.UseCases.DeleteTaskTest do
       Agents.Mocks.TaskRepositoryMock
       |> expect(:get_task_for_user, fn "task-1", "user-1" -> task end)
       |> expect(:delete_task, fn ^task -> {:ok, task} end)
-
-      # No container_provider call expected when container_id is nil
 
       assert :ok = DeleteTask.execute("task-1", "user-1", @default_opts)
     end
