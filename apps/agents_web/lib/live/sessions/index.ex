@@ -276,19 +276,14 @@ defmodule AgentsWeb.SessionsLive.Index do
           socket.assigns.active_container_id
       end
 
+    user = socket.assigns.current_scope.user
+
     socket =
       socket
       |> assign(:current_task, updated_task)
       |> assign(:active_container_id, active_container_id)
       |> update_task_in_list(task_id, status)
-
-    socket =
-      if status in ["completed", "failed", "cancelled"] do
-        user = socket.assigns.current_scope.user
-        reload_all(socket, user.id)
-      else
-        socket
-      end
+      |> reload_all(user.id)
 
     {:noreply, socket}
   end
