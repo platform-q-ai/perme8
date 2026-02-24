@@ -256,8 +256,12 @@ defmodule AgentsWeb.SessionsLive.Index do
   # ---- PubSub callbacks ----
 
   @impl true
-  def handle_info({:task_event, _task_id, event}, socket) do
-    {:noreply, process_event(event, socket)}
+  def handle_info({:task_event, task_id, event}, socket) do
+    # Only render output for the task currently being viewed
+    case socket.assigns.current_task do
+      %{id: ^task_id} -> {:noreply, process_event(event, socket)}
+      _ -> {:noreply, socket}
+    end
   end
 
   @impl true
