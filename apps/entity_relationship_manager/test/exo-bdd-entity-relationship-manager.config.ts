@@ -9,7 +9,7 @@ export default defineConfig({
     {
       name: 'entity-relationship-manager',
       command: 'mix phx.server',
-      port: 4006,
+      port: 5005,
       workingDir: '../../../',
       env: { MIX_ENV: 'test', ERM_REAL_REPOS: 'true' },
       seed: 'mix run --no-start apps/jarga/priv/repo/exo_seeds.exs',
@@ -48,7 +48,7 @@ export default defineConfig({
   },
   adapters: {
     http: {
-      baseURL: 'http://localhost:4006',
+      baseURL: 'http://localhost:5005',
     },
     security: {
       zapUrl: 'http://localhost:8080',

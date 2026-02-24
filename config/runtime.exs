@@ -20,9 +20,12 @@ if System.get_env("PHX_SERVER") do
   config :identity, IdentityWeb.Endpoint, server: true
 end
 
-# Identity uses a different port (default 4001) to avoid conflicts with jarga_web
+# Identity uses a different port (default 4001) to avoid conflicts with jarga_web.
+# Test uses the 5xxx range to avoid collisions with dev servers.
+identity_default_port = if config_env() == :test, do: "5001", else: "4001"
+
 config :identity, IdentityWeb.Endpoint,
-  http: [port: String.to_integer(System.get_env("IDENTITY_PORT") || "4001")]
+  http: [port: String.to_integer(System.get_env("IDENTITY_PORT") || identity_default_port)]
 
 if config_env() == :prod do
   # The secret key base is used to sign/encrypt cookies and other secrets.

@@ -9,7 +9,7 @@ export default defineConfig({
     {
       name: 'agents-mcp',
       command: 'mix phx.server',
-      port: 4007,
+      port: 5007,
       workingDir: '../../../',
       env: { MIX_ENV: 'test', ERM_REAL_REPOS: 'true' },
       seed: 'mix run --no-start apps/jarga/priv/repo/exo_seeds.exs',
@@ -36,7 +36,7 @@ export default defineConfig({
   },
   adapters: {
     http: {
-      baseURL: 'http://localhost:4007',
+      baseURL: 'http://localhost:5007',
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json, text/event-stream',

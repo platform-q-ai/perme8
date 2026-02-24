@@ -6,7 +6,7 @@ export default defineConfig({
     {
       name: 'exo-dashboard',
       command: 'mix phx.server',
-      port: 4011,
+      port: 5010,
       workingDir: '../../../',
       env: { MIX_ENV: 'test' },
       setup: 'cd apps/exo_dashboard && mix assets.build',
@@ -17,7 +17,7 @@ export default defineConfig({
   timeout: 300_000,
   adapters: {
     browser: {
-      baseURL: 'http://localhost:4011',
+      baseURL: 'http://localhost:5010',
       headless: true,
     },
   },

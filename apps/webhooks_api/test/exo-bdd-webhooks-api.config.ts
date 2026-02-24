@@ -6,7 +6,7 @@ export default defineConfig({
     {
       name: 'webhooks-api',
       command: 'mix phx.server',
-      port: 4017,
+      port: 5016,
       workingDir: '../../../',
       env: { MIX_ENV: 'test' },
       // --no-start avoids booting Phoenix endpoints (ports already bound by the running server).
@@ -56,7 +56,7 @@ export default defineConfig({
   },
   adapters: {
     http: {
-      baseURL: 'http://localhost:4017',
+      baseURL: 'http://localhost:5016',
     },
     security: {
       zapUrl: 'http://localhost:8080',

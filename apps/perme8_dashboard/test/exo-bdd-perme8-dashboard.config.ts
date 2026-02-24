@@ -6,7 +6,7 @@ export default defineConfig({
     {
       name: 'perme8-dashboard',
       command: 'mix phx.server',
-      port: 4012,
+      port: 5012,
       workingDir: '../../../',
       env: { MIX_ENV: 'test' },
       setup: 'cd apps/perme8_dashboard && mix assets.build',
@@ -17,7 +17,7 @@ export default defineConfig({
   timeout: 300_000,
   adapters: {
     browser: {
-      baseURL: 'http://localhost:4012',
+      baseURL: 'http://localhost:5012',
       headless: true,
     },
     security: {

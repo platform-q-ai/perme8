@@ -6,7 +6,7 @@ export default defineConfig({
     {
       name: 'agents-api',
       command: 'mix phx.server',
-      port: 4009,
+      port: 5008,
       workingDir: '../../../',
       env: { MIX_ENV: 'test' },
       seed: 'mix run --no-start apps/jarga/priv/repo/exo_seeds.exs',
@@ -24,7 +24,7 @@ export default defineConfig({
   },
   adapters: {
     http: {
-      baseURL: 'http://localhost:4009',
+      baseURL: 'http://localhost:5008',
     },
     security: {
       zapUrl: 'http://localhost:8080',
