@@ -293,7 +293,7 @@ defmodule AgentsWeb.SessionsLive.Index do
     # renders as proper markdown
     socket =
       if status in ["completed", "failed", "cancelled"] do
-        assign(socket, :output_parts, freeze_current_text(socket.assigns.output_parts))
+        assign(socket, :output_parts, freeze_streaming(socket.assigns.output_parts))
       else
         socket
       end
@@ -343,7 +343,6 @@ defmodule AgentsWeb.SessionsLive.Index do
     |> assign(:session_cost, nil)
     |> assign(:session_summary, nil)
     |> assign(:output_parts, [])
-    |> assign(:text_segment_id, 0)
   end
 
   # ---- Event processing ----
@@ -367,19 +366,35 @@ defmodule AgentsWeb.SessionsLive.Index do
     |> maybe_assign(:session_cost, info["cost"])
   end
 
+  # Text output — keyed by part ID so multiple messages accumulate
   defp process_event(
          %{
            "type" => "message.part.updated",
-           "properties" => %{"part" => %{"type" => "text", "text" => text}}
+           "properties" => %{"part" => %{"type" => "text", "text" => text} = part}
          },
          socket
        )
        when text != "" do
-    seg = socket.assigns.text_segment_id
-    parts = update_output_part(socket.assigns.output_parts, seg, text)
+    part_id = part["id"] || "text-default"
+    parts = upsert_part(socket.assigns.output_parts, {:text, part_id, text, :streaming})
     assign(socket, :output_parts, parts)
   end
 
+  # Reasoning/thinking content — keyed by part ID
+  defp process_event(
+         %{
+           "type" => "message.part.updated",
+           "properties" => %{"part" => %{"type" => "reasoning", "text" => text} = part}
+         },
+         socket
+       )
+       when is_binary(text) and text != "" do
+    part_id = part["id"] || "reasoning-default"
+    parts = upsert_part(socket.assigns.output_parts, {:reasoning, part_id, text, :streaming})
+    assign(socket, :output_parts, parts)
+  end
+
+  # tool-start / tool-result format
   defp process_event(
          %{
            "type" => "message.part.updated",
@@ -387,18 +402,7 @@ defmodule AgentsWeb.SessionsLive.Index do
          },
          socket
        ) do
-    tool_name = part["name"] || "tool"
-    input = part["input"] || part["args"]
-
-    # Freeze the current text segment (switch from :streaming to :frozen)
-    # so it renders as markdown, then start a new segment for post-tool text
-    seg = socket.assigns.text_segment_id
-    parts = freeze_current_text(socket.assigns.output_parts)
-    parts = parts ++ [{:tool, tool_name, :running, input}]
-
-    socket
-    |> assign(:output_parts, parts)
-    |> assign(:text_segment_id, seg + 1)
+    handle_tool_start(socket, part["id"], part["name"] || "tool", part["input"] || part["args"])
   end
 
   defp process_event(
@@ -408,49 +412,100 @@ defmodule AgentsWeb.SessionsLive.Index do
          },
          socket
        ) do
-    tool_name = part["name"] || "tool"
-    # Update the matching running tool entry to done
-    parts = finish_tool(socket.assigns.output_parts, tool_name)
-    assign(socket, :output_parts, parts)
+    handle_tool_done(socket, part["id"], part["name"] || "tool")
+  end
+
+  # SDK-style tool part with state object
+  defp process_event(
+         %{
+           "type" => "message.part.updated",
+           "properties" => %{
+             "part" => %{"type" => "tool", "state" => %{"status" => status}} = part
+           }
+         },
+         socket
+       ) do
+    tool_name = part["tool"] || part["name"] || "tool"
+    tool_id = part["id"]
+    input = part["input"] || part["args"]
+
+    case status do
+      s when s in ["pending", "running"] -> handle_tool_start(socket, tool_id, tool_name, input)
+      s when s in ["completed", "error"] -> handle_tool_done(socket, tool_id, tool_name)
+      _ -> socket
+    end
   end
 
   defp process_event(_event, socket), do: socket
 
+  defp handle_tool_start(socket, tool_id, tool_name, input) do
+    parts = freeze_streaming(socket.assigns.output_parts)
+    parts = upsert_part(parts, {:tool, tool_id, tool_name, :running, input})
+    assign(socket, :output_parts, parts)
+  end
+
+  defp handle_tool_done(socket, tool_id, tool_name) do
+    parts = finish_tool(socket.assigns.output_parts, tool_id, tool_name)
+    assign(socket, :output_parts, parts)
+  end
+
   defp maybe_assign(socket, _key, nil), do: socket
   defp maybe_assign(socket, key, value), do: assign(socket, key, value)
 
-  defp update_output_part(parts, seg, text) do
-    case List.last(parts) do
-      {:text, ^seg, _old, _state} -> List.replace_at(parts, -1, {:text, seg, text, :streaming})
-      _ -> parts ++ [{:text, seg, text, :streaming}]
+  # Insert or update a part by its ID (second element of the tuple).
+  # If a part with the same ID exists, replace it in-place. Otherwise append.
+  defp upsert_part(parts, new_part) do
+    new_id = elem(new_part, 1)
+
+    case Enum.find_index(parts, fn part -> elem(part, 1) == new_id end) do
+      nil -> parts ++ [new_part]
+      idx -> List.replace_at(parts, idx, new_part)
     end
   end
 
-  # Freeze all streaming text segments (switch to markdown rendering)
-  defp freeze_current_text(parts) do
+  # Freeze all streaming text/reasoning segments (switch to markdown rendering)
+  defp freeze_streaming(parts) do
     Enum.map(parts, fn
-      {:text, seg, text, :streaming} -> {:text, seg, text, :frozen}
+      {:text, id, text, :streaming} -> {:text, id, text, :frozen}
+      {:reasoning, id, text, :streaming} -> {:reasoning, id, text, :frozen}
       other -> other
     end)
   end
 
-  # Walk backwards to find the last matching running tool and mark it done
-  defp finish_tool(parts, tool_name) do
-    parts
-    |> Enum.reverse()
-    |> finish_tool_rev(tool_name, [])
-    |> Enum.reverse()
-  end
+  # Find a running tool by ID (preferred) or name fallback and mark it done
+  defp finish_tool(parts, tool_id, tool_name) do
+    # Try by ID first
+    idx =
+      if tool_id do
+        Enum.find_index(parts, fn
+          {:tool, ^tool_id, _name, :running, _input} -> true
+          _ -> false
+        end)
+      end
 
-  defp finish_tool_rev([{:tool, name, :running, input} | rest], name, acc) do
-    [{:tool, name, :done, input} | acc] ++ rest
-  end
+    # Fall back to last running tool with matching name
+    idx =
+      idx ||
+        parts
+        |> Enum.with_index()
+        |> Enum.reverse()
+        |> Enum.find_value(fn
+          {{:tool, _id, ^tool_name, :running, _input}, i} -> i
+          _ -> nil
+        end)
 
-  defp finish_tool_rev([head | rest], name, acc) do
-    finish_tool_rev(rest, name, [head | acc])
-  end
+    if idx do
+      case Enum.at(parts, idx) do
+        {:tool, id, name, :running, input} ->
+          List.replace_at(parts, idx, {:tool, id, name, :done, input})
 
-  defp finish_tool_rev([], _name, acc), do: acc
+        _ ->
+          parts
+      end
+    else
+      parts
+    end
+  end
 
   defp format_model(%{"modelID" => model_id}), do: model_id
   defp format_model(_), do: nil
@@ -473,16 +528,30 @@ defmodule AgentsWeb.SessionsLive.Index do
         parts |> Enum.map(&decode_output_part/1) |> Enum.reject(&is_nil/1)
 
       _ ->
-        [{:text, 0, output, :frozen}]
+        [{:text, "cached-0", output, :frozen}]
     end
   end
 
-  defp decode_output_part(%{"type" => "text", "segment" => seg, "text" => text}) do
-    {:text, seg, text, :frozen}
+  defp decode_output_part(%{"type" => "text", "id" => id, "text" => text}) do
+    {:text, id, text, :frozen}
   end
 
+  # Legacy format with "segment" key
+  defp decode_output_part(%{"type" => "text", "segment" => seg, "text" => text}) do
+    {:text, "seg-#{seg}", text, :frozen}
+  end
+
+  defp decode_output_part(%{"type" => "reasoning", "id" => id, "text" => text}) do
+    {:reasoning, id, text, :frozen}
+  end
+
+  defp decode_output_part(%{"type" => "tool", "id" => id, "name" => name, "status" => status}) do
+    {:tool, id, name, String.to_existing_atom(status), nil}
+  end
+
+  # Legacy format without id
   defp decode_output_part(%{"type" => "tool", "name" => name, "status" => status}) do
-    {:tool, name, String.to_existing_atom(status), nil}
+    {:tool, nil, name, String.to_existing_atom(status), nil}
   end
 
   defp decode_output_part(_), do: nil
@@ -853,7 +922,7 @@ defmodule AgentsWeb.SessionsLive.Index do
   # ---- Components ----
 
   # Streaming text — render raw for speed (character-by-character feel)
-  defp output_part(%{part: {:text, _seg, text, :streaming}} = assigns) do
+  defp output_part(%{part: {:text, _id, text, :streaming}} = assigns) do
     assigns = assign(assigns, :text, text)
 
     ~H"""
@@ -864,7 +933,7 @@ defmodule AgentsWeb.SessionsLive.Index do
   end
 
   # Frozen text — render as markdown (final form)
-  defp output_part(%{part: {:text, _seg, text, :frozen}} = assigns) do
+  defp output_part(%{part: {:text, _id, text, :frozen}} = assigns) do
     assigns = assign(assigns, :rendered_html, render_markdown(text))
 
     ~H"""
@@ -872,16 +941,50 @@ defmodule AgentsWeb.SessionsLive.Index do
     """
   end
 
-  # Legacy 3-tuple text compat (cached output from DB before streaming flag)
-  defp output_part(%{part: {:text, _seg, text}} = assigns) do
-    assigns = assign(assigns, :rendered_html, render_markdown(text))
+  # Streaming reasoning — render raw in a thinking block
+  defp output_part(%{part: {:reasoning, _id, text, :streaming}} = assigns) do
+    assigns = assign(assigns, :text, text)
 
     ~H"""
-    <div class="session-markdown py-1">{@rendered_html}</div>
+    <div class="my-1 rounded-lg border border-base-300 bg-base-200/30 text-xs">
+      <div class="flex items-center gap-1.5 px-3 py-1.5 border-b border-base-300/50">
+        <span class="loading loading-dots loading-xs text-secondary"></span>
+        <span class="font-medium text-secondary/80 text-[0.65rem] uppercase tracking-wider">
+          Thinking
+        </span>
+      </div>
+      <div class="px-3 py-2 whitespace-pre-wrap break-words text-base-content/60 max-h-48 overflow-y-auto">
+        {@text}
+      </div>
+    </div>
     """
   end
 
-  defp output_part(%{part: {:tool, name, status, input}} = assigns) do
+  # Frozen reasoning — render as markdown in a thinking block
+  defp output_part(%{part: {:reasoning, _id, text, :frozen}} = assigns) do
+    assigns = assign(assigns, :rendered_html, render_markdown(text))
+
+    ~H"""
+    <details class="my-1 rounded-lg border border-base-300 bg-base-200/30 text-xs group">
+      <summary class="flex items-center gap-1.5 px-3 py-1.5 cursor-pointer select-none">
+        <.icon name="hero-light-bulb" class="size-3.5 text-secondary/70" />
+        <span class="font-medium text-secondary/80 text-[0.65rem] uppercase tracking-wider">
+          Thinking
+        </span>
+        <.icon
+          name="hero-chevron-right"
+          class="size-3 text-base-content/40 ml-auto transition-transform group-open:rotate-90"
+        />
+      </summary>
+      <div class="px-3 py-2 border-t border-base-300/50 session-markdown text-base-content/60 max-h-64 overflow-y-auto">
+        {@rendered_html}
+      </div>
+    </details>
+    """
+  end
+
+  # Tool card — 5-tuple: {:tool, id, name, status, input}
+  defp output_part(%{part: {:tool, _id, name, status, input}} = assigns) do
     assigns = assign(assigns, :name, name)
     assigns = assign(assigns, :tool_status, status)
     assigns = assign(assigns, :input, input)
@@ -903,9 +1006,17 @@ defmodule AgentsWeb.SessionsLive.Index do
     """
   end
 
-  # Legacy 3-tuple compat (tests / old events)
-  defp output_part(%{part: {:tool, name, status}} = assigns) do
-    assigns = Map.put(assigns, :part, {:tool, name, status, nil})
+  # Legacy 4-tuple tool compat {:tool, name, status, input}
+  defp output_part(%{part: {:tool, name, status, input}} = assigns)
+       when is_atom(status) do
+    assigns = Map.put(assigns, :part, {:tool, nil, name, status, input})
+    output_part(assigns)
+  end
+
+  # Legacy 3-tuple tool compat {:tool, name, status}
+  defp output_part(%{part: {:tool, name, status}} = assigns)
+       when is_atom(status) do
+    assigns = Map.put(assigns, :part, {:tool, nil, name, status, nil})
     output_part(assigns)
   end
 

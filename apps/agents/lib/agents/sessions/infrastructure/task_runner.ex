@@ -40,10 +40,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     was_running: false,
     # Latest assistant text output for DB caching (opencode sends full text on each update)
     output_text: "",
-    # Structured output parts for rich DB caching (text segments + tool calls)
+    # Structured output parts for rich DB caching — keyed by part ID
     output_parts: [],
-    # Tracks the current text segment index; incremented when a tool call interrupts text
-    text_segment_id: 0,
     # Dependency injection
     container_provider: nil,
     opencode_client: nil,
@@ -435,21 +433,37 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     end
   end
 
-  # Text output from assistant — accumulate for DB caching
+  # Text output from assistant — accumulate for DB caching, keyed by part ID
   defp handle_sdk_event(
          %{
            "type" => "message.part.updated",
-           "properties" => %{"part" => %{"type" => "text", "text" => text}}
+           "properties" => %{"part" => %{"type" => "text", "text" => text} = part}
          },
          state
        )
        when is_binary(text) and text != "" do
-    seg = state.text_segment_id
-    parts = update_output_part(state.output_parts, seg, text)
+    part_id = part["id"] || "text-default"
+    entry = %{"type" => "text", "id" => part_id, "text" => text}
+    parts = upsert_output_part(state.output_parts, part_id, entry)
     {:continue, %{state | output_text: text, output_parts: parts}}
   end
 
-  # Tool start — record in output_parts and bump segment so next text starts fresh
+  # Reasoning/thinking content — accumulate for DB caching
+  defp handle_sdk_event(
+         %{
+           "type" => "message.part.updated",
+           "properties" => %{"part" => %{"type" => "reasoning", "text" => text} = part}
+         },
+         state
+       )
+       when is_binary(text) and text != "" do
+    part_id = part["id"] || "reasoning-default"
+    entry = %{"type" => "reasoning", "id" => part_id, "text" => text}
+    parts = upsert_output_part(state.output_parts, part_id, entry)
+    {:continue, %{state | output_parts: parts}}
+  end
+
+  # Tool start — record in output_parts
   defp handle_sdk_event(
          %{
            "type" => "message.part.updated",
@@ -457,9 +471,26 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
          },
          state
        ) do
+    tool_id = part["id"]
     tool_name = part["name"] || "tool"
-    parts = state.output_parts ++ [%{"type" => "tool", "name" => tool_name, "status" => "done"}]
-    {:continue, %{state | output_parts: parts, text_segment_id: state.text_segment_id + 1}}
+    entry = %{"type" => "tool", "id" => tool_id, "name" => tool_name, "status" => "done"}
+    parts = upsert_output_part(state.output_parts, tool_id, entry)
+    {:continue, %{state | output_parts: parts}}
+  end
+
+  # SDK-style tool part with state
+  defp handle_sdk_event(
+         %{
+           "type" => "message.part.updated",
+           "properties" => %{"part" => %{"type" => "tool", "state" => %{}} = part}
+         },
+         state
+       ) do
+    tool_id = part["id"]
+    tool_name = part["tool"] || part["name"] || "tool"
+    entry = %{"type" => "tool", "id" => tool_id, "name" => tool_name, "status" => "done"}
+    parts = upsert_output_part(state.output_parts, tool_id, entry)
+    {:continue, %{state | output_parts: parts}}
   end
 
   # All other events (server.connected, tool result, etc.)
@@ -531,15 +562,16 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
       :ok
   end
 
-  # Update or append a text segment in the output_parts list.
-  # Each text part is a map %{"type" => "text", "segment" => n, "text" => "..."}.
-  # If the last entry matches the same segment, replace it (opencode sends full text).
-  defp update_output_part(parts, seg, text) do
-    entry = %{"type" => "text", "segment" => seg, "text" => text}
+  # Insert or update a part by its ID. If a part with the same ID
+  # exists, replace it in-place. Otherwise append.
+  defp upsert_output_part(parts, nil, entry) do
+    parts ++ [entry]
+  end
 
-    case List.last(parts) do
-      %{"type" => "text", "segment" => ^seg} -> List.replace_at(parts, -1, entry)
-      _ -> parts ++ [entry]
+  defp upsert_output_part(parts, part_id, entry) do
+    case Enum.find_index(parts, fn p -> p["id"] == part_id end) do
+      nil -> parts ++ [entry]
+      idx -> List.replace_at(parts, idx, entry)
     end
   end
 
