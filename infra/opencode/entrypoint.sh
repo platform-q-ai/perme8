@@ -59,15 +59,22 @@ mkdir -p "$HOME/.local/share/opencode" "$HOME/.local/state"
 echo "$OPENCODE_AUTH" | base64 -d > "$HOME/.local/share/opencode/auth.json"
 echo "opencode auth.json written"
 
-# ---- Clone repos ----
+# ---- Clone repos (skip on container restart when dirs already exist) ----
 
-echo "Cloning perme8 (branch: $BRANCH)..."
-git clone --depth 1 --branch "$BRANCH" "https://github.com/platform-q-ai/perme8.git" /workspace/perme8
+if [ -d /workspace/perme8 ]; then
+  echo "Repo already cloned, pulling latest (branch: $BRANCH)..."
+  cd /workspace/perme8
+  git fetch origin "$BRANCH" --depth 1 && git reset --hard "origin/$BRANCH" || echo "warn: git pull failed, using existing checkout"
+else
+  echo "Cloning perme8 (branch: $BRANCH)..."
+  git clone --depth 1 --branch "$BRANCH" "https://github.com/platform-q-ai/perme8.git" /workspace/perme8
+  cd /workspace/perme8
+fi
 
-echo "Cloning skills into ~/.claude/..."
-git clone --depth 1 "https://github.com/platform-q-ai/skills.git" "$HOME/.claude" || echo "warn: skills repo not available, skipping"
-
-cd /workspace/perme8
+if [ ! -d "$HOME/.claude" ]; then
+  echo "Cloning skills into ~/.claude/..."
+  git clone --depth 1 "https://github.com/platform-q-ai/skills.git" "$HOME/.claude" || echo "warn: skills repo not available, skipping"
+fi
 
 # Copy opencode config into the repo root
 cp /workspace/opencode.json /workspace/perme8/opencode.json
