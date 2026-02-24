@@ -1282,7 +1282,7 @@ defmodule AgentsWeb.SessionsLive.Index do
 
   # Tool card — 5-tuple: {:tool, id, name, status, detail}
   # detail is a map with :title, :input, :output, :error keys
-  defp output_part(%{part: {:tool, _id, name, status, detail}} = assigns)
+  defp output_part(%{part: {:tool, id, name, status, detail}} = assigns)
        when is_map(detail) do
     title = detail[:title] || detail["title"]
     input = detail[:input] || detail["input"]
@@ -1291,6 +1291,7 @@ defmodule AgentsWeb.SessionsLive.Index do
 
     assigns =
       assigns
+      |> assign(:tool_id, id)
       |> assign(:name, name)
       |> assign(:tool_status, status)
       |> assign(:title, title)
@@ -1301,8 +1302,8 @@ defmodule AgentsWeb.SessionsLive.Index do
 
     ~H"""
     <details
+      id={"tool-detail-#{@tool_id}"}
       class="my-1 rounded-lg border border-base-300 bg-base-200/40 text-xs group"
-      open={@tool_status == :running}
     >
       <summary class="flex items-center gap-2 px-3 py-1.5 cursor-pointer select-none">
         <span :if={@tool_status == :running} class="loading loading-spinner loading-xs text-info">
