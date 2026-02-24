@@ -989,7 +989,7 @@ defmodule AgentsWeb.SessionsLive.Index do
                 </div>
                 <div class="flex-1 min-w-0">
                   <div class="text-xs font-medium text-base-content/50 mb-0.5">You</div>
-                  <div class="text-sm whitespace-pre-wrap break-words">
+                  <div class="text-sm whitespace-pre-line break-words">
                     {String.trim(@current_task.instruction)}
                   </div>
                 </div>
