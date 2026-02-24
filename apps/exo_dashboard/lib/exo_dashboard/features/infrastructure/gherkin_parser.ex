@@ -32,6 +32,7 @@ defmodule ExoDashboard.Features.Infrastructure.GherkinParser do
 
   defp run_parser(path) do
     parser_dir = parser_script_dir()
+    ensure_dependencies_installed(parser_dir)
 
     task =
       Task.async(fn ->
@@ -50,6 +51,14 @@ defmodule ExoDashboard.Features.Infrastructure.GherkinParser do
 
       nil ->
         {:error, "Parser timed out after #{@parser_timeout}ms"}
+    end
+  end
+
+  defp ensure_dependencies_installed(parser_dir) do
+    node_modules = Path.join(parser_dir, "node_modules")
+
+    unless File.dir?(node_modules) do
+      System.cmd("bun", ["install"], cd: parser_dir, stderr_to_stdout: true)
     end
   end
 

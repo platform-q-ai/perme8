@@ -77,11 +77,11 @@ defmodule Perme8DashboardWeb.Live.DashboardLiveTest do
       assert html =~ "Perme8 Dashboard"
     end
 
-    test "renders features tab as active", %{conn: conn} do
+    test "renders features sidebar link as active", %{conn: conn} do
       {:ok, view, _html} = live(conn, "/")
 
-      assert has_element?(view, "[data-tab='features']")
-      assert has_element?(view, "[data-tab='features'].tab-active")
+      assert has_element?(view, "[data-sidebar-features]")
+      assert has_element?(view, "[data-sidebar-features] a.active")
     end
 
     test "renders feature tree on landing", %{conn: conn} do
