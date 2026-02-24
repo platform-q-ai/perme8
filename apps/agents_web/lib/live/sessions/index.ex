@@ -1,12 +1,12 @@
 defmodule AgentsWeb.SessionsLive.Index do
   @moduledoc """
-  LiveView for running and managing coding sessions.
+  LiveView for the session manager — split-panel layout.
 
-  Provides:
-  - Instruction input form with "Run" button
-  - Real-time event log via PubSub
-  - Cancel button for running tasks
-  - Task history with status indicators
+  Left panel: list of sessions (grouped by container_id) with
+  creation/deletion controls.
+
+  Right panel: active session detail with instruction form,
+  real-time output log, and task history for the selected session.
   """
 
   use AgentsWeb, :live_view
@@ -16,26 +16,41 @@ defmodule AgentsWeb.SessionsLive.Index do
   @impl true
   def mount(_params, _session, socket) do
     user = socket.assigns.current_scope.user
+    sessions = Sessions.list_sessions(user.id)
     tasks = Sessions.list_tasks(user.id)
 
     if connected?(socket), do: subscribe_to_active_tasks(tasks)
 
-    current_task = Enum.find(tasks, &active_task?/1)
+    # Select the most recent session by default
+    active_container_id =
+      case sessions do
+        [first | _] -> first.container_id
+        [] -> nil
+      end
+
+    current_task = find_current_task(tasks, active_container_id)
 
     {:ok,
      socket
      |> assign(:page_title, "Sessions")
+     |> assign(:full_width, true)
+     |> assign(:sessions, sessions)
      |> assign(:tasks, tasks)
+     |> assign(:active_container_id, active_container_id)
      |> assign(:current_task, current_task)
+     |> assign(:composing_new, false)
      |> assign(:events, [])
      |> assign_session_state()
-     |> assign(:form, to_form(%{"instruction" => ""}))}
+     |> assign(:form, to_form(%{"instruction" => ""}))
+     |> maybe_load_cached_output(current_task)}
   end
 
   @impl true
   def handle_params(_params, _url, socket) do
     {:noreply, socket}
   end
+
+  # ---- Events ----
 
   @impl true
   def handle_event("run_task", %{"instruction" => instruction}, socket) do
@@ -53,12 +68,8 @@ defmodule AgentsWeb.SessionsLive.Index do
   @impl true
   def handle_event("cancel_task", _params, socket) do
     case socket.assigns.current_task do
-      nil ->
-        {:noreply, socket}
-
-      task ->
-        user = socket.assigns.current_scope.user
-        do_cancel_task(task, user, socket)
+      nil -> {:noreply, socket}
+      task -> do_cancel_task(task, socket)
     end
   end
 
@@ -66,10 +77,62 @@ defmodule AgentsWeb.SessionsLive.Index do
   def handle_event("new_session", _params, socket) do
     {:noreply,
      socket
+     |> assign(:active_container_id, nil)
      |> assign(:current_task, nil)
+     |> assign(:composing_new, true)
      |> assign(:events, [])
      |> assign_session_state()
      |> assign(:form, to_form(%{"instruction" => ""}))}
+  end
+
+  @impl true
+  def handle_event("select_session", %{"container-id" => container_id}, socket) do
+    user = socket.assigns.current_scope.user
+    tasks = Sessions.list_tasks(user.id)
+    current_task = find_current_task(tasks, container_id)
+
+    if current_task && active_task?(current_task) do
+      Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "task:#{current_task.id}")
+    end
+
+    {:noreply,
+     socket
+     |> assign(:tasks, tasks)
+     |> assign(:active_container_id, container_id)
+     |> assign(:current_task, current_task)
+     |> assign(:composing_new, false)
+     |> assign(:events, [])
+     |> assign_session_state()
+     |> assign(:form, to_form(%{"instruction" => ""}))
+     |> maybe_load_cached_output(current_task)}
+  end
+
+  @impl true
+  def handle_event("delete_session", %{"container-id" => container_id}, socket) do
+    user = socket.assigns.current_scope.user
+
+    case Sessions.delete_session(container_id, user.id) do
+      :ok ->
+        # If we deleted the active session, clear the right panel
+        socket =
+          if socket.assigns.active_container_id == container_id do
+            socket
+            |> assign(:active_container_id, nil)
+            |> assign(:current_task, nil)
+            |> assign(:events, [])
+            |> assign_session_state()
+          else
+            socket
+          end
+
+        {:noreply,
+         socket
+         |> reload_all(user.id)
+         |> put_flash(:info, "Session deleted")}
+
+      {:error, _reason} ->
+        {:noreply, put_flash(socket, :error, "Failed to delete session")}
+    end
   end
 
   @impl true
@@ -78,24 +141,29 @@ defmodule AgentsWeb.SessionsLive.Index do
 
     case Sessions.delete_task(task_id, user.id) do
       :ok ->
-        current_task = socket.assigns.current_task
-
         socket =
-          if current_task && current_task.id == task_id do
+          if socket.assigns.current_task && socket.assigns.current_task.id == task_id do
+            # Re-select the session to pick the next latest task
+            tasks = Sessions.list_tasks(user.id)
+            current_task = find_current_task(tasks, socket.assigns.active_container_id)
+
             socket
-            |> assign(:current_task, nil)
+            |> assign(:tasks, tasks)
+            |> assign(:current_task, current_task)
+            |> assign(:events, [])
             |> assign_session_state()
+            |> maybe_load_cached_output(current_task)
           else
-            socket
+            reload_all(socket, user.id)
           end
 
         {:noreply,
          socket
-         |> reload_tasks()
-         |> put_flash(:info, "Session deleted")}
+         |> reload_all(user.id)
+         |> put_flash(:info, "Task deleted")}
 
       {:error, _reason} ->
-        {:noreply, put_flash(socket, :error, "Failed to delete session")}
+        {:noreply, put_flash(socket, :error, "Failed to delete task")}
     end
   end
 
@@ -105,7 +173,7 @@ defmodule AgentsWeb.SessionsLive.Index do
 
     case Sessions.get_task(task_id, user.id) do
       {:ok, task} ->
-        if task.status in ["pending", "starting", "running"] do
+        if active_task?(task) do
           Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "task:#{task.id}")
         end
 
@@ -121,7 +189,7 @@ defmodule AgentsWeb.SessionsLive.Index do
     end
   end
 
-  # ---- handle_event helpers ----
+  # ---- Event helpers ----
 
   defp run_or_resume_task(socket, instruction) do
     user = socket.assigns.current_scope.user
@@ -135,29 +203,37 @@ defmodule AgentsWeb.SessionsLive.Index do
   end
 
   defp handle_task_result({:ok, task}, socket) do
+    user = socket.assigns.current_scope.user
     Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "task:#{task.id}")
+
+    # If this was a new session (no active container), set the container_id
+    # once the task comes back with one
+    active_container_id = task.container_id || socket.assigns.active_container_id
 
     {:noreply,
      socket
      |> assign(:current_task, task)
+     |> assign(:active_container_id, active_container_id)
+     |> assign(:composing_new, false)
      |> assign(:events, [])
      |> assign_session_state()
      |> assign(:form, to_form(%{"instruction" => ""}))
-     |> reload_tasks()}
+     |> reload_all(user.id)}
   end
 
   defp handle_task_result({:error, reason}, socket) do
     {:noreply, put_flash(socket, :error, task_error_message(reason))}
   end
 
-  defp task_error_message(:concurrent_limit_reached), do: "A task is already running"
   defp task_error_message(:instruction_required), do: "Instruction is required"
   defp task_error_message(:not_resumable), do: "This session cannot be resumed"
   defp task_error_message(:no_container), do: "No container available for resume"
   defp task_error_message(:no_session), do: "No session available for resume"
   defp task_error_message(_), do: "Failed to create task"
 
-  defp do_cancel_task(task, user, socket) do
+  defp do_cancel_task(task, socket) do
+    user = socket.assigns.current_scope.user
+
     case Sessions.cancel_task(task.id, user.id) do
       :ok ->
         updated_task =
@@ -169,7 +245,7 @@ defmodule AgentsWeb.SessionsLive.Index do
         {:noreply,
          socket
          |> assign(:current_task, updated_task)
-         |> reload_tasks()
+         |> reload_all(user.id)
          |> put_flash(:info, "Task cancelled")}
 
       {:error, _reason} ->
@@ -177,7 +253,7 @@ defmodule AgentsWeb.SessionsLive.Index do
     end
   end
 
-  # ---- handle_info callbacks ----
+  # ---- PubSub callbacks ----
 
   @impl true
   def handle_info({:task_event, _task_id, event}, socket) do
@@ -189,15 +265,27 @@ defmodule AgentsWeb.SessionsLive.Index do
     current_task = socket.assigns.current_task
     updated_task = maybe_update_task_status(current_task, task_id, status, socket)
 
+    # When a task gets a container_id (status changes from pending to starting/running),
+    # capture the container_id so the session list updates correctly
+    active_container_id =
+      cond do
+        updated_task && updated_task.container_id ->
+          updated_task.container_id
+
+        true ->
+          socket.assigns.active_container_id
+      end
+
     socket =
       socket
       |> assign(:current_task, updated_task)
+      |> assign(:active_container_id, active_container_id)
       |> update_task_in_list(task_id, status)
 
-    # Only do a full reload from DB on terminal status changes
     socket =
       if status in ["completed", "failed", "cancelled"] do
-        reload_tasks(socket)
+        user = socket.assigns.current_scope.user
+        reload_all(socket, user.id)
       else
         socket
       end
@@ -205,7 +293,6 @@ defmodule AgentsWeb.SessionsLive.Index do
     {:noreply, socket}
   end
 
-  # Catch-all for unhandled messages
   @impl true
   def handle_info(_msg, socket) do
     {:noreply, socket}
@@ -225,11 +312,18 @@ defmodule AgentsWeb.SessionsLive.Index do
     end
   end
 
-  defp maybe_update_task_status(task, _task_id, status, _socket) do
-    Map.put(task, :status, status)
+  defp maybe_update_task_status(task, task_id, status, socket) do
+    # Refresh from DB to get container_id etc., but always trust the
+    # PubSub status since it may arrive before the DB write completes.
+    user = socket.assigns.current_scope.user
+
+    case Sessions.get_task(task_id, user.id) do
+      {:ok, refreshed} -> Map.put(refreshed, :status, status)
+      _ -> Map.put(task, :status, status)
+    end
   end
 
-  # ---- Session state management ----
+  # ---- Session state ----
 
   defp assign_session_state(socket) do
     socket
@@ -314,7 +408,7 @@ defmodule AgentsWeb.SessionsLive.Index do
   defp format_model(%{"modelID" => model_id}), do: model_id
   defp format_model(_), do: nil
 
-  # ---- Cached output loading ----
+  # ---- Cached output ----
 
   defp maybe_load_cached_output(socket, %{output: output})
        when is_binary(output) and output != "" do
@@ -324,6 +418,22 @@ defmodule AgentsWeb.SessionsLive.Index do
   defp maybe_load_cached_output(socket, _task), do: socket
 
   # ---- Helpers ----
+
+  defp find_current_task(tasks, nil), do: Enum.find(tasks, &active_task?/1)
+
+  defp find_current_task(tasks, container_id) do
+    session_tasks =
+      tasks
+      |> Enum.filter(&(&1.container_id == container_id))
+
+    # Prefer running task, otherwise latest
+    Enum.find(session_tasks, &active_task?/1) || List.first(session_tasks)
+  end
+
+  defp session_tasks(tasks, container_id) do
+    tasks
+    |> Enum.filter(&(&1.container_id == container_id))
+  end
 
   defp update_task_in_list(socket, task_id, status) do
     tasks =
@@ -335,10 +445,13 @@ defmodule AgentsWeb.SessionsLive.Index do
     assign(socket, :tasks, tasks)
   end
 
-  defp reload_tasks(socket) do
-    user = socket.assigns.current_scope.user
-    tasks = Sessions.list_tasks(user.id)
-    assign(socket, :tasks, tasks)
+  defp reload_all(socket, user_id) do
+    sessions = Sessions.list_sessions(user_id)
+    tasks = Sessions.list_tasks(user_id)
+
+    socket
+    |> assign(:sessions, sessions)
+    |> assign(:tasks, tasks)
   end
 
   defp render_markdown(text) when is_binary(text) do
@@ -369,7 +482,7 @@ defmodule AgentsWeb.SessionsLive.Index do
   defp format_token_count(n) when is_number(n), do: "#{n}"
   defp format_token_count(_), do: "-"
 
-  defp truncate_instruction(instruction, max_length \\ 80) do
+  defp truncate_instruction(instruction, max_length) do
     if String.length(instruction) > max_length do
       String.slice(instruction, 0, max_length) <> "..."
     else
@@ -391,6 +504,13 @@ defmodule AgentsWeb.SessionsLive.Index do
   defp task_deletable?(%{status: status}), do: status in ["completed", "failed", "cancelled"]
   defp task_deletable?(_), do: false
 
+  defp session_deletable?(sessions, container_id) do
+    case Enum.find(sessions, &(&1.container_id == container_id)) do
+      %{latest_status: status} -> status in ["completed", "failed", "cancelled"]
+      _ -> false
+    end
+  end
+
   defp resumable_task?(%{status: status, container_id: cid, session_id: sid})
        when status in ["completed", "failed", "cancelled"] and
               not is_nil(cid) and not is_nil(sid),
@@ -398,111 +518,111 @@ defmodule AgentsWeb.SessionsLive.Index do
 
   defp resumable_task?(_), do: false
 
+  defp relative_time(datetime) do
+    now = DateTime.utc_now()
+    diff = DateTime.diff(now, datetime, :second)
+
+    cond do
+      diff < 60 -> "just now"
+      diff < 3600 -> "#{div(diff, 60)}m ago"
+      diff < 86400 -> "#{div(diff, 3600)}h ago"
+      diff < 604_800 -> "#{div(diff, 86400)}d ago"
+      true -> Calendar.strftime(datetime, "%b %d")
+    end
+  end
+
+  # ---- Render ----
+
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="space-y-6">
-      <.header>
-        Sessions
-        <:subtitle>Run coding tasks in containers</:subtitle>
-      </.header>
+    <div class="flex h-full">
+      <%!-- Left Panel: Session List --%>
+      <div class="w-72 shrink-0 border-r border-base-300 flex flex-col bg-base-100">
+        <div class="p-3 border-b border-base-300">
+          <button
+            type="button"
+            phx-click="new_session"
+            class="btn btn-primary btn-sm w-full"
+          >
+            <.icon name="hero-plus" class="size-4" /> New Session
+          </button>
+        </div>
 
-      <.flash :if={@flash != %{}} kind={:info} flash={@flash} />
-      <.flash :if={@flash != %{}} kind={:error} flash={@flash} />
-
-      <%!-- Instruction Form --%>
-      <div class="card bg-base-200">
-        <div class="card-body">
-          <form id="session-form" phx-submit="run_task">
-            <div class="form-control">
-              <label class="label" for="session-instruction">
-                <span class="label-text font-medium">Instruction</span>
-              </label>
-              <textarea
-                name="instruction"
-                id="session-instruction"
-                phx-hook="SessionForm"
-                rows="3"
-                class="textarea textarea-bordered w-full"
-                placeholder={
-                  if resumable_task?(@current_task),
-                    do: "Follow-up instruction...",
-                    else: "Describe the coding task..."
-                }
-                disabled={task_running?(@current_task)}
-              >{@form["instruction"].value}</textarea>
+        <div class="flex-1 overflow-y-auto">
+          <%= if @sessions == [] do %>
+            <div class="p-6 text-center text-base-content/50 text-sm">
+              <.icon name="hero-chat-bubble-left-right" class="size-8 mx-auto mb-2 opacity-40" />
+              <p>No sessions yet</p>
             </div>
-            <div class="mt-4 flex items-center gap-3">
-              <.button
-                type="submit"
-                variant="primary"
-                disabled={task_running?(@current_task)}
-              >
-                <%= if resumable_task?(@current_task) do %>
-                  <.icon name="hero-arrow-path" class="size-4" /> Resume
-                <% else %>
-                  <.icon name="hero-play" class="size-4" /> Run
-                <% end %>
-              </.button>
-              <.button
-                :if={resumable_task?(@current_task)}
-                type="button"
-                variant="ghost"
-                phx-click="new_session"
-                id="new-session-btn"
-              >
-                <.icon name="hero-plus" class="size-4" /> New Session
-              </.button>
-              <.button
-                :if={task_running?(@current_task)}
-                type="button"
-                variant="error"
-                phx-click="cancel_task"
-                id="cancel-task-btn"
-              >
-                <.icon name="hero-stop" class="size-4" /> Cancel
-              </.button>
-            </div>
-          </form>
+          <% else %>
+            <ul class="menu menu-sm p-2 gap-1">
+              <li :for={session <- @sessions}>
+                <div
+                  class={[
+                    "flex flex-col items-start gap-0.5 w-full rounded-lg p-2",
+                    session.container_id == @active_container_id && "active"
+                  ]}
+                  phx-click="select_session"
+                  phx-value-container-id={session.container_id}
+                >
+                  <div class="flex items-center justify-between w-full">
+                    <span class="text-xs font-medium truncate max-w-[10rem]">
+                      {truncate_instruction(session.title, 35)}
+                    </span>
+                    <.status_dot status={session.latest_status} />
+                  </div>
+                  <div class="flex items-center gap-2 text-[0.65rem] text-base-content/50 w-full">
+                    <span>{session.task_count} task{if session.task_count != 1, do: "s"}</span>
+                    <span>&middot;</span>
+                    <span>{relative_time(session.latest_at)}</span>
+                  </div>
+                </div>
+              </li>
+            </ul>
+          <% end %>
         </div>
       </div>
 
-      <%!-- Error Alert --%>
-      <div
-        :if={@current_task && @current_task.status == "failed" && @current_task.error}
-        class="alert alert-error"
-        id="task-error"
-      >
-        <.icon name="hero-exclamation-triangle" class="size-5 shrink-0" />
-        <div>
-          <h3 class="font-semibold">Task failed</h3>
-          <p class="text-sm">{format_error(@current_task.error)}</p>
-        </div>
-      </div>
-
-      <%!-- Session Panel --%>
-      <div :if={@current_task} class="card bg-base-200">
-        <div class="card-body space-y-4">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <.status_badge status={@current_task.status} />
-              <h3 :if={@session_title} class="font-medium text-sm" id="session-title">
-                {@session_title}
-              </h3>
+      <%!-- Right Panel: Active Session Detail --%>
+      <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <%= if @active_container_id || @current_task || @composing_new do %>
+          <%!-- Session header --%>
+          <div class="px-4 py-3 border-b border-base-300 flex items-center justify-between bg-base-100 shrink-0">
+            <div class="flex items-center gap-2 min-w-0">
+              <.status_badge status={if @current_task, do: @current_task.status, else: "idle"} />
+              <h2 class="text-sm font-medium truncate">
+                {@session_title ||
+                  if @current_task,
+                    do: truncate_instruction(@current_task.instruction, 60),
+                    else: "Session"}
+              </h2>
             </div>
-            <span
-              :if={@session_model}
-              class="text-xs text-base-content/50 font-mono"
-              id="session-model"
-            >
-              {@session_model}
-            </span>
+            <div class="flex items-center gap-2 shrink-0">
+              <span
+                :if={@session_model}
+                class="text-xs text-base-content/50 font-mono"
+              >
+                {@session_model}
+              </span>
+              <button
+                :if={@active_container_id && session_deletable?(@sessions, @active_container_id)}
+                type="button"
+                phx-click="delete_session"
+                phx-value-container-id={@active_container_id}
+                data-confirm="Delete this session and its container? This cannot be undone."
+                class="btn btn-ghost btn-xs text-error"
+                title="Delete session"
+              >
+                <.icon name="hero-trash" class="size-4" />
+              </button>
+            </div>
           </div>
 
+          <%!-- Stats bar --%>
           <div
             :if={@session_tokens || @session_summary}
-            class="flex flex-wrap gap-4 text-xs text-base-content/60"
-            id="session-stats"
+            class="px-4 py-1.5 border-b border-base-300 flex flex-wrap gap-4 text-xs text-base-content/60 bg-base-100 shrink-0"
           >
             <div :if={@session_tokens} class="flex items-center gap-1">
               <.icon name="hero-arrow-down-tray" class="size-3" />
@@ -529,92 +649,138 @@ defmodule AgentsWeb.SessionsLive.Index do
             </div>
           </div>
 
+          <%!-- Error alert --%>
           <div
-            id="session-log"
-            phx-hook="SessionLog"
-            class="bg-base-300 rounded-lg p-4 min-h-32 max-h-96 overflow-y-auto font-mono text-sm"
+            :if={@current_task && @current_task.status == "failed" && @current_task.error}
+            class="mx-4 mt-3 alert alert-error"
           >
+            <.icon name="hero-exclamation-triangle" class="size-5 shrink-0" />
+            <div>
+              <h3 class="font-semibold">Task failed</h3>
+              <p class="text-sm">{format_error(@current_task.error)}</p>
+            </div>
+          </div>
+
+          <%!-- Output log --%>
+          <div class="flex-1 overflow-y-auto p-4" id="session-log" phx-hook="SessionLog">
             <%= if @output_parts == [] && task_running?(@current_task) do %>
-              <div class="flex items-center gap-2 text-base-content/50">
+              <div class="flex items-center gap-2 text-base-content/50 text-sm">
                 <span class="loading loading-dots loading-xs"></span>
                 <span>Waiting for response...</span>
+              </div>
+            <% end %>
+            <%= if @output_parts == [] && !task_running?(@current_task) && @current_task == nil do %>
+              <div class="flex flex-col items-center justify-center h-full text-base-content/40">
+                <.icon name="hero-command-line" class="size-12 mb-3" />
+                <p class="text-sm">Enter an instruction below to start</p>
               </div>
             <% end %>
             <%= for part <- @output_parts do %>
               <.output_part part={part} />
             <% end %>
           </div>
-        </div>
-      </div>
 
-      <%!-- Task History --%>
-      <%= if @tasks == [] do %>
-        <div class="card bg-base-200">
-          <div class="card-body text-center">
-            <div class="flex flex-col items-center gap-4 py-8">
-              <.icon name="hero-command-line" class="size-16 opacity-50" />
-              <div>
-                <h3 class="text-base font-semibold">No sessions yet</h3>
-                <p class="text-base-content/70">
-                  Enter an instruction above and click Run to start a coding session
-                </p>
+          <%!-- Task history for this session --%>
+          <div
+            :if={@active_container_id && length(session_tasks(@tasks, @active_container_id)) > 1}
+            class="border-t border-base-300 shrink-0 max-h-40 overflow-y-auto"
+          >
+            <div class="px-4 py-2">
+              <h4 class="text-xs font-semibold text-base-content/60 mb-1">Task History</h4>
+              <div class="space-y-1">
+                <div
+                  :for={task <- session_tasks(@tasks, @active_container_id)}
+                  class={[
+                    "flex items-center gap-2 text-xs p-1.5 rounded cursor-pointer hover:bg-base-200",
+                    @current_task && @current_task.id == task.id && "bg-base-200"
+                  ]}
+                  phx-click="view_task"
+                  phx-value-task-id={task.id}
+                >
+                  <.status_dot status={task.status} />
+                  <span class="truncate flex-1">{truncate_instruction(task.instruction, 45)}</span>
+                  <span class="text-base-content/40 shrink-0">
+                    {relative_time(task.inserted_at)}
+                  </span>
+                  <button
+                    :if={task_deletable?(task)}
+                    type="button"
+                    phx-click="delete_task"
+                    phx-value-task-id={task.id}
+                    data-confirm="Delete this task?"
+                    class="btn btn-ghost btn-xs p-0 min-h-0 h-auto"
+                    title="Delete task"
+                  >
+                    <.icon name="hero-x-mark" class="size-3 text-base-content/30 hover:text-error" />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      <% else %>
-        <div class="card bg-base-200">
-          <div class="card-body">
-            <h3 class="card-title text-sm">History</h3>
-            <div class="overflow-x-auto">
-              <table class="table table-zebra">
-                <thead>
-                  <tr>
-                    <th class="text-sm font-semibold">Instruction</th>
-                    <th class="text-sm font-semibold">Status</th>
-                    <th class="text-sm font-semibold">Created</th>
-                    <th class="text-sm font-semibold w-10"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <%= for task <- @tasks do %>
-                    <tr
-                      class="cursor-pointer hover"
-                      phx-click="view_task"
-                      phx-value-task-id={task.id}
-                    >
-                      <td class="text-sm">{truncate_instruction(task.instruction)}</td>
-                      <td><.status_badge status={task.status} /></td>
-                      <td class="text-sm text-base-content/70">
-                        {Calendar.strftime(task.inserted_at, "%Y-%m-%d %H:%M")}
-                      </td>
-                      <td>
-                        <button
-                          :if={task_deletable?(task)}
-                          type="button"
-                          phx-click="delete_task"
-                          phx-value-task-id={task.id}
-                          data-confirm="Delete this session?"
-                          class="btn btn-ghost btn-xs"
-                          title="Delete"
-                        >
-                          <.icon
-                            name="hero-trash"
-                            class="size-4 text-base-content/40 hover:text-error"
-                          />
-                        </button>
-                      </td>
-                    </tr>
+
+          <%!-- Input form --%>
+          <div class="border-t border-base-300 p-3 bg-base-100 shrink-0">
+            <form id="session-form" phx-submit="run_task" class="flex gap-2 items-end">
+              <div class="flex-1">
+                <textarea
+                  name="instruction"
+                  id="session-instruction"
+                  phx-hook="SessionForm"
+                  rows="2"
+                  class="textarea textarea-bordered w-full text-sm leading-snug"
+                  placeholder={
+                    if resumable_task?(@current_task),
+                      do: "Follow-up instruction...",
+                      else: "Describe the coding task..."
+                  }
+                  disabled={task_running?(@current_task)}
+                >{@form["instruction"].value}</textarea>
+              </div>
+              <div class="flex gap-1 shrink-0">
+                <.button
+                  :if={task_running?(@current_task)}
+                  type="button"
+                  variant="error"
+                  size="sm"
+                  phx-click="cancel_task"
+                  id="cancel-task-btn"
+                >
+                  <.icon name="hero-stop" class="size-4" />
+                </.button>
+                <.button
+                  type="submit"
+                  variant="primary"
+                  size="sm"
+                  disabled={task_running?(@current_task)}
+                >
+                  <%= if resumable_task?(@current_task) do %>
+                    <.icon name="hero-arrow-path" class="size-4" />
+                  <% else %>
+                    <.icon name="hero-paper-airplane" class="size-4" />
                   <% end %>
-                </tbody>
-              </table>
-            </div>
+                </.button>
+              </div>
+            </form>
           </div>
-        </div>
-      <% end %>
+        <% else %>
+          <%!-- Empty state — no session selected --%>
+          <div class="flex-1 flex flex-col items-center justify-center text-base-content/40 p-8">
+            <.icon name="hero-command-line" class="size-16 mb-4" />
+            <h3 class="text-lg font-semibold mb-2">No sessions yet</h3>
+            <p class="text-sm text-center max-w-sm mb-4">
+              Start a new coding session to run tasks in containers with opencode.
+            </p>
+            <button type="button" phx-click="new_session" class="btn btn-primary btn-sm">
+              <.icon name="hero-plus" class="size-4" /> New Session
+            </button>
+          </div>
+        <% end %>
+      </div>
     </div>
     """
   end
+
+  # ---- Components ----
 
   defp output_part(%{part: {:text, text}} = assigns) do
     assigns = assign(assigns, :rendered_html, render_markdown(text))
@@ -642,6 +808,12 @@ defmodule AgentsWeb.SessionsLive.Index do
     """
   end
 
+  defp status_badge(%{status: "idle"} = assigns) do
+    ~H"""
+    <span class="badge badge-sm badge-ghost">idle</span>
+    """
+  end
+
   defp status_badge(assigns) do
     ~H"""
     <span class={[
@@ -654,6 +826,21 @@ defmodule AgentsWeb.SessionsLive.Index do
       @status == "cancelled" && "badge-ghost"
     ]}>
       {@status}
+    </span>
+    """
+  end
+
+  defp status_dot(assigns) do
+    ~H"""
+    <span class={[
+      "inline-block size-2 rounded-full shrink-0",
+      @status == "pending" && "bg-warning",
+      @status == "starting" && "bg-warning",
+      @status == "running" && "bg-info animate-pulse",
+      @status == "completed" && "bg-success",
+      @status == "failed" && "bg-error",
+      @status == "cancelled" && "bg-base-content/30"
+    ]}>
     </span>
     """
   end
