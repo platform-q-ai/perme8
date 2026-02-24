@@ -626,18 +626,18 @@ defmodule AgentsWeb.SessionsLive.Index do
               <p>No sessions yet</p>
             </div>
           <% else %>
-            <ul class="menu menu-sm p-2 gap-1">
-              <li :for={session <- @sessions}>
+            <ul class="menu menu-sm p-2 gap-1 w-full">
+              <li :for={session <- @sessions} class="w-full">
                 <div
                   class={[
-                    "flex flex-col items-start gap-0.5 w-full rounded-lg p-2",
+                    "flex flex-col gap-0.5 w-full rounded-lg p-2",
                     session.container_id == @active_container_id && "active"
                   ]}
                   phx-click="select_session"
                   phx-value-container-id={session.container_id}
                 >
                   <div class="flex items-center justify-between w-full">
-                    <span class="text-xs font-medium truncate max-w-[10rem]">
+                    <span class="text-xs font-medium truncate flex-1 min-w-0">
                       {truncate_instruction(session.title, 35)}
                     </span>
                     <.status_dot status={session.latest_status} />

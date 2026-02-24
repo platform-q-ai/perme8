@@ -48,11 +48,11 @@ tab_icons = %{features: "hero-squares-2x2", sessions: "hero-chat-bubble-left-rig
       </div>
 
       <nav class="flex-1 py-4">
-        <ul class="menu gap-1">
-          <li :for={{key, label, path} <- tabs} {%{"data-sidebar-#{key}" => true}}>
+        <ul class="menu gap-1 w-full">
+          <li :for={{key, label, path} <- tabs} class="w-full" {%{"data-sidebar-#{key}" => true}}>
             <.link
               navigate={path}
-              class={["flex items-center gap-3", key == active_tab && "active"]}
+              class={["flex items-center gap-3 w-full", key == active_tab && "active"]}
             >
               <.icon name={tab_icons[key] || "hero-squares-2x2"} class="size-5" />
               <span>{label}</span>
