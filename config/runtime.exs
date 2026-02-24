@@ -40,14 +40,16 @@ if config_env() == :prod do
   host = System.get_env("PHX_HOST") || "example.com"
 
   # Identity session signing salt — shared with apps that delegate auth to Identity.
+  # Stored under a separate key (not :session_options) to avoid compile_env vs
+  # runtime mismatch in releases. Each endpoint merges it at boot.
   identity_session_signing_salt =
     System.get_env("IDENTITY_SESSION_SIGNING_SALT") ||
       raise """
       environment variable IDENTITY_SESSION_SIGNING_SALT is missing.
-      You can generate one by calling: mix phx.gen.secret 8
+      You can generate one by calling: mix phx.gen.secret 32
       """
 
-  config :identity, :session_options, signing_salt: identity_session_signing_salt
+  config :identity, :session_signing_salt, identity_session_signing_salt
 
   # AgentsWeb shares Identity's session cookie, so it must use the same
   # secret_key_base to verify the cookie signature.

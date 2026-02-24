@@ -262,12 +262,21 @@ config :perme8_dashboard, Perme8DashboardWeb.Endpoint,
 
 # Identity session configuration
 # Apps that delegate auth to Identity (agents_web) must use the same key and salt.
-# The signing_salt is set per-environment in dev.exs/test.exs and via
-# IDENTITY_SESSION_SIGNING_SALT in runtime.exs for production.
+#
+# The signing_salt uses an MFA tuple so Plug.Session.Cookie resolves it at
+# runtime via IdentityWeb.Session.signing_salt/0, which reads the value from
+# Application.get_env(:identity, :session_signing_salt).  This avoids a
+# compile_env vs runtime mismatch in releases — the MFA tuple itself is the
+# same at both compile time and runtime; only its *return value* varies per
+# environment.
+#
+# The actual salt is set per-environment:
+#   dev.exs / test.exs  → hardcoded string
+#   runtime.exs (prod)  → IDENTITY_SESSION_SIGNING_SALT env var
 config :identity, :session_options,
   store: :cookie,
   key: "_identity_key",
-  signing_salt: "compile_time_placeholder",
+  signing_salt: {IdentityWeb.Session, :signing_salt, []},
   same_site: "Lax"
 
 # Identity mailer configuration

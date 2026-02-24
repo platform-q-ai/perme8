@@ -155,7 +155,8 @@ config :jarga_web, dev_routes: true
 # ============================================================================
 
 # Identity session signing salt (shared with agents_web for cookie portability)
-config :identity, :session_options, signing_salt: "dev_identity_session_signing_salt"
+# Kept separate from :session_options to avoid compile_env vs runtime mismatch in releases.
+config :identity, :session_signing_salt, "dev_identity_session_signing_salt"
 
 config :identity, IdentityWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4001],
