@@ -7,7 +7,6 @@ defmodule Agents.Sessions.Application.UseCases.ResumeTask do
   the stopped container and sends the new prompt to the existing session.
   """
 
-  alias Agents.Sessions.Application.SessionsConfig
   alias Agents.Sessions.Domain.Entities.Task
 
   require Logger
@@ -41,7 +40,6 @@ defmodule Agents.Sessions.Application.UseCases.ResumeTask do
     with :ok <- validate_instruction(attrs),
          {:ok, parent} <- find_parent(parent_task_id, attrs.user_id, task_repo),
          :ok <- validate_resumable(parent),
-         :ok <- check_concurrent_limit(attrs.user_id, task_repo),
          {:ok, schema} <- create_resume_task(parent, attrs, task_repo),
          :ok <- start_runner(schema.id, parent, task_repo, opts) do
       {:ok, Task.from_schema(schema)}
@@ -76,13 +74,6 @@ defmodule Agents.Sessions.Application.UseCases.ResumeTask do
       true ->
         :ok
     end
-  end
-
-  defp check_concurrent_limit(user_id, task_repo) do
-    count = task_repo.running_task_count_for_user(user_id)
-    max = SessionsConfig.max_concurrent_tasks()
-
-    if count < max, do: :ok, else: {:error, :concurrent_limit_reached}
   end
 
   defp create_resume_task(parent, attrs, task_repo) do

@@ -26,7 +26,6 @@ defmodule Agents.Sessions.Application.UseCases.ResumeTaskTest do
     test "creates a follow-up task linked to the parent" do
       Agents.Mocks.TaskRepositoryMock
       |> expect(:get_task_for_user, fn "parent-1", "user-1" -> @parent_task end)
-      |> expect(:running_task_count_for_user, fn "user-1" -> 0 end)
       |> expect(:create_task, fn attrs ->
         assert attrs.parent_task_id == "parent-1"
         assert attrs.container_id == "container-abc"
@@ -63,7 +62,6 @@ defmodule Agents.Sessions.Application.UseCases.ResumeTaskTest do
 
       Agents.Mocks.TaskRepositoryMock
       |> expect(:get_task_for_user, fn "parent-1", "user-1" -> @parent_task end)
-      |> expect(:running_task_count_for_user, fn "user-1" -> 0 end)
       |> expect(:create_task, fn attrs ->
         {:ok, struct(TaskSchema, Map.merge(%{id: "new-task-2", status: "pending"}, attrs))}
       end)
@@ -144,19 +142,6 @@ defmodule Agents.Sessions.Application.UseCases.ResumeTaskTest do
       |> expect(:get_task_for_user, fn "parent-1", "user-1" -> no_session end)
 
       assert {:error, :no_session} =
-               ResumeTask.execute(
-                 "parent-1",
-                 %{instruction: "Follow up", user_id: "user-1"},
-                 @default_opts
-               )
-    end
-
-    test "returns error when concurrent limit reached" do
-      Agents.Mocks.TaskRepositoryMock
-      |> expect(:get_task_for_user, fn "parent-1", "user-1" -> @parent_task end)
-      |> expect(:running_task_count_for_user, fn "user-1" -> 1 end)
-
-      assert {:error, :concurrent_limit_reached} =
                ResumeTask.execute(
                  "parent-1",
                  %{instruction: "Follow up", user_id: "user-1"},
