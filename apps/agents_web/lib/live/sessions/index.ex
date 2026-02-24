@@ -631,6 +631,15 @@ defmodule AgentsWeb.SessionsLive.Index do
 
   defp user_message_part?(_part, _socket), do: false
 
+  defp has_streaming_parts?(parts) do
+    Enum.any?(parts, fn
+      {:text, _, _, :streaming} -> true
+      {:reasoning, _, _, :streaming} -> true
+      {:tool, _, _, :running, _} -> true
+      _ -> false
+    end)
+  end
+
   defp maybe_assign(socket, _key, nil), do: socket
   defp maybe_assign(socket, key, value), do: assign(socket, key, value)
 
@@ -1032,6 +1041,14 @@ defmodule AgentsWeb.SessionsLive.Index do
                   <%= for part <- @output_parts do %>
                     <.output_part part={part} />
                   <% end %>
+                  <%!-- Show activity indicator when task is still running but all cached parts are frozen --%>
+                  <div
+                    :if={task_running?(@current_task) && !has_streaming_parts?(@output_parts)}
+                    class="flex items-center gap-2 text-base-content/40 text-xs py-1"
+                  >
+                    <span class="loading loading-dots loading-xs"></span>
+                    <span>Working...</span>
+                  </div>
                 </div>
               </div>
             <% end %>
