@@ -55,10 +55,11 @@ defmodule Perme8DashboardWeb.RouterTest do
       assert html =~ "Perme8 Dashboard"
     end
 
-    test "tab navigation is visible", %{conn: conn} do
+    test "sidebar navigation is visible", %{conn: conn} do
       {:ok, view, _html} = live(conn, "/")
 
-      assert has_element?(view, "[data-tab]")
+      assert has_element?(view, "[data-sidebar-features]")
+      assert has_element?(view, "[data-sidebar-sessions]")
     end
   end
 

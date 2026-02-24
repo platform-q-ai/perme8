@@ -16,28 +16,53 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       assert html =~ "Sessions"
     end
 
-    test "renders instruction textarea", %{conn: conn} do
+    test "renders New Session button", %{conn: conn} do
       {:ok, _lv, html} = live(conn, ~p"/sessions")
-      assert html =~ "session-instruction"
+      assert html =~ "New Session"
     end
 
-    test "renders Run button", %{conn: conn} do
-      {:ok, _lv, html} = live(conn, ~p"/sessions")
-      assert html =~ "Run"
-    end
-
-    test "renders empty state when no tasks exist", %{conn: conn} do
+    test "renders empty state when no sessions exist", %{conn: conn} do
       {:ok, _lv, html} = live(conn, ~p"/sessions")
       assert html =~ "No sessions yet"
     end
 
-    test "loads and displays task history on mount", %{conn: conn, user: user} do
-      task_fixture(%{user_id: user.id, instruction: "Write tests for login"})
-      task_fixture(%{user_id: user.id, instruction: "Refactor auth module"})
+    test "loads and displays sessions in left panel on mount", %{conn: conn, user: user} do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Write tests for login",
+        container_id: "c1",
+        status: "completed"
+      })
+
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Refactor auth module",
+        container_id: "c2",
+        status: "completed"
+      })
 
       {:ok, _lv, html} = live(conn, ~p"/sessions")
       assert html =~ "Write tests for login"
       assert html =~ "Refactor auth module"
+    end
+
+    test "selects most recent session by default", %{conn: conn, user: user} do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "First task",
+        container_id: "c1",
+        status: "completed"
+      })
+
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Second task",
+        container_id: "c2",
+        status: "completed"
+      })
+
+      {:ok, _lv, html} = live(conn, ~p"/sessions")
+      assert html =~ "Second task"
     end
   end
 
@@ -47,15 +72,25 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       %{conn: log_in_user(conn, user), user: user}
     end
 
-    test "submitting empty instruction shows validation error", %{conn: conn} do
+    test "submitting empty instruction does not create a task", %{conn: conn, user: user} do
+      # Create a session so the input form is visible
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Some task",
+        container_id: "c1",
+        status: "completed"
+      })
+
       {:ok, lv, _html} = live(conn, ~p"/sessions")
 
-      html =
-        lv
-        |> form("#session-form", %{"instruction" => ""})
-        |> render_submit()
+      lv
+      |> form("#session-form", %{"instruction" => ""})
+      |> render_submit()
 
-      assert html =~ "Instruction is required"
+      html = render(lv)
+      # Should still show the existing session, not a "Waiting for response..." indicator
+      assert html =~ "Some task"
+      refute html =~ "Waiting for response"
     end
   end
 
@@ -65,20 +100,15 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       %{conn: log_in_user(conn, user), user: user}
     end
 
-    test "receiving text output event displays content in session panel", %{
-      conn: conn,
-      user: user
-    } do
-      task = task_fixture(%{user_id: user.id, status: "running"})
+    test "receiving text output event displays content", %{conn: conn, user: user} do
+      task = task_fixture(%{user_id: user.id, status: "running", container_id: "c1"})
+
       {:ok, lv, _html} = live(conn, ~p"/sessions")
 
       event = %{
         "type" => "message.part.updated",
         "properties" => %{
-          "part" => %{
-            "type" => "text",
-            "text" => "Working on it..."
-          }
+          "part" => %{"type" => "text", "text" => "Working on it..."}
         }
       }
 
@@ -89,16 +119,14 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
     end
 
     test "receiving session.updated shows session title", %{conn: conn, user: user} do
-      task = task_fixture(%{user_id: user.id, status: "running"})
+      task = task_fixture(%{user_id: user.id, status: "running", container_id: "c1"})
+
       {:ok, lv, _html} = live(conn, ~p"/sessions")
 
       event = %{
         "type" => "session.updated",
         "properties" => %{
-          "info" => %{
-            "title" => "Fix login bug",
-            "slug" => "fix-login"
-          }
+          "info" => %{"title" => "Fix login bug", "slug" => "fix-login"}
         }
       }
 
@@ -108,11 +136,9 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       assert html =~ "Fix login bug"
     end
 
-    test "receiving assistant message.updated shows model and tokens", %{
-      conn: conn,
-      user: user
-    } do
-      task = task_fixture(%{user_id: user.id, status: "running"})
+    test "receiving assistant message.updated shows model and tokens", %{conn: conn, user: user} do
+      task = task_fixture(%{user_id: user.id, status: "running", container_id: "c1"})
+
       {:ok, lv, _html} = live(conn, ~p"/sessions")
 
       event = %{
@@ -142,7 +168,8 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
     end
 
     test "receiving task_status_changed to completed updates UI", %{conn: conn, user: user} do
-      task = task_fixture(%{user_id: user.id, status: "running"})
+      task = task_fixture(%{user_id: user.id, status: "running", container_id: "c1"})
+
       {:ok, lv, _html} = live(conn, ~p"/sessions")
 
       send(lv.pid, {:task_status_changed, task.id, "completed"})
@@ -151,8 +178,9 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       assert html =~ "completed"
     end
 
-    test "receiving task_status_changed to failed shows error", %{conn: conn, user: user} do
-      task = task_fixture(%{user_id: user.id, status: "running"})
+    test "receiving task_status_changed to failed shows failed badge", %{conn: conn, user: user} do
+      task = task_fixture(%{user_id: user.id, status: "running", container_id: "c1"})
+
       {:ok, lv, _html} = live(conn, ~p"/sessions")
 
       send(lv.pid, {:task_status_changed, task.id, "failed"})
@@ -161,42 +189,30 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       assert html =~ "failed"
     end
 
-    test "shows error message when viewing failed task from history", %{conn: conn, user: user} do
-      task =
-        task_fixture(%{
-          user_id: user.id,
-          status: "failed",
-          error: "Model not found: anthropic/claude-sonnet-4-5"
-        })
+    test "shows error message when viewing failed task", %{conn: conn, user: user} do
+      task_fixture(%{
+        user_id: user.id,
+        status: "failed",
+        container_id: "c1",
+        error: "Model not found: anthropic/claude-sonnet-4-5"
+      })
 
-      {:ok, lv, _html} = live(conn, ~p"/sessions")
+      {:ok, _lv, html} = live(conn, ~p"/sessions")
 
-      # Click the failed task in history to view it
-      lv |> element(~s(tr[phx-value-task-id="#{task.id}"])) |> render_click()
-
-      html = render(lv)
       assert html =~ "Task failed"
       assert html =~ "Model not found"
     end
 
-    test "shows error alert when status changes to failed with error in DB", %{
-      conn: conn,
-      user: user
-    } do
-      # Create a task that already has the error saved (simulates TaskRunner saving before broadcast)
-      task =
-        task_fixture(%{
-          user_id: user.id,
-          status: "failed",
-          error: "Container start failed: timeout"
-        })
+    test "shows error alert for failed task with error in DB", %{conn: conn, user: user} do
+      task_fixture(%{
+        user_id: user.id,
+        status: "failed",
+        container_id: "c1",
+        error: "Container start failed: timeout"
+      })
 
-      {:ok, lv, _html} = live(conn, ~p"/sessions")
+      {:ok, _lv, html} = live(conn, ~p"/sessions")
 
-      # View the task (simulates clicking on it or receiving status change)
-      lv |> element(~s(tr[phx-value-task-id="#{task.id}"])) |> render_click()
-
-      html = render(lv)
       assert html =~ "Task failed"
       assert html =~ "Container start failed: timeout"
     end
@@ -208,62 +224,136 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       %{conn: log_in_user(conn, user), user: user}
     end
 
-    test "shows delete button for completed tasks", %{conn: conn, user: user} do
-      task_fixture(%{user_id: user.id, instruction: "Done task", status: "completed"})
+    test "shows delete button for completed tasks in task history", %{conn: conn, user: user} do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "First task",
+        container_id: "c1",
+        status: "completed"
+      })
+
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Done task",
+        container_id: "c1",
+        status: "completed"
+      })
 
       {:ok, _lv, html} = live(conn, ~p"/sessions")
-      assert html =~ "hero-trash"
+      assert html =~ "hero-x-mark"
     end
 
     test "does not show delete button for running tasks", %{conn: conn, user: user} do
-      task = task_fixture(%{user_id: user.id, instruction: "Active task", status: "running"})
+      task =
+        task_fixture(%{
+          user_id: user.id,
+          instruction: "Active task",
+          container_id: "c1",
+          status: "running"
+        })
 
       {:ok, _lv, html} = live(conn, ~p"/sessions")
       refute html =~ "delete_task\" phx-value-task-id=\"#{task.id}\""
     end
 
-    test "deleting a task removes it from the list", %{conn: conn, user: user} do
-      task = task_fixture(%{user_id: user.id, instruction: "Delete me", status: "failed"})
+    test "deleting a task removes it from the history", %{conn: conn, user: user} do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Keep me",
+        container_id: "c1",
+        status: "completed"
+      })
+
+      task =
+        task_fixture(%{
+          user_id: user.id,
+          instruction: "Delete me",
+          container_id: "c1",
+          status: "failed"
+        })
 
       {:ok, lv, _html} = live(conn, ~p"/sessions")
 
-      html =
-        lv
-        |> element(~s(button[phx-click="delete_task"][phx-value-task-id="#{task.id}"]))
-        |> render_click()
+      lv
+      |> element(~s(button[phx-click="delete_task"][phx-value-task-id="#{task.id}"]))
+      |> render_click()
 
-      assert html =~ "Session deleted"
+      html = render(lv)
+      # The deleted task should no longer appear
       refute html =~ "Delete me"
+      # The other task should still be there
+      assert html =~ "Keep me"
     end
   end
 
-  describe "task history and status indicators" do
+  describe "session management" do
     setup %{conn: conn} do
       user = user_fixture()
       %{conn: log_in_user(conn, user), user: user}
     end
 
-    test "renders colour-coded status badges", %{conn: conn, user: user} do
-      task_fixture(%{user_id: user.id, instruction: "Completed task", status: "completed"})
-      task_fixture(%{user_id: user.id, instruction: "Failed task", status: "failed"})
-      task_fixture(%{user_id: user.id, instruction: "Pending task", status: "pending"})
+    test "clicking a session in the left panel selects it", %{conn: conn, user: user} do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Session A task",
+        container_id: "c-a",
+        status: "completed"
+      })
 
-      {:ok, _lv, html} = live(conn, ~p"/sessions")
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Session B task",
+        container_id: "c-b",
+        status: "completed"
+      })
 
-      assert html =~ "badge-success"
-      assert html =~ "badge-error"
-      assert html =~ "badge-warning"
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      html =
+        lv
+        |> element(~s([phx-click="select_session"][phx-value-container-id="c-a"]))
+        |> render_click()
+
+      assert html =~ "Session A task"
     end
 
-    test "truncates long instructions in history", %{conn: conn, user: user} do
-      long_instruction = String.duplicate("a", 120)
-      task_fixture(%{user_id: user.id, instruction: long_instruction})
+    test "renders status dots in session list", %{conn: conn, user: user} do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Completed session",
+        container_id: "c1",
+        status: "completed"
+      })
+
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Failed session",
+        container_id: "c2",
+        status: "failed"
+      })
 
       {:ok, _lv, html} = live(conn, ~p"/sessions")
+      assert html =~ "bg-success"
+      assert html =~ "bg-error"
+    end
 
-      # Should be truncated with ellipsis
-      refute html =~ long_instruction
-      assert html =~ String.slice(long_instruction, 0..79)
+    test "shows task count per session", %{conn: conn, user: user} do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "First",
+        container_id: "c1",
+        status: "completed"
+      })
+
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Second",
+        container_id: "c1",
+        status: "completed"
+      })
+
+      {:ok, _lv, html} = live(conn, ~p"/sessions")
+      assert html =~ "2 tasks"
     end
   end
 end

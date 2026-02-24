@@ -20,10 +20,17 @@ tab_icons = %{features: "hero-squares-2x2", sessions: "hero-chat-bubble-left-rig
       </div>
     </div>
     <!-- Page content -->
-    <main class="flex-1 flex flex-col p-4 lg:p-8 overflow-y-auto">
-      <div class="w-full max-w-5xl mx-auto">
+    <main class={[
+      "flex-1 flex flex-col",
+      if(assigns[:full_width], do: "overflow-hidden", else: "p-4 lg:p-8 overflow-y-auto")
+    ]}>
+      <%= if assigns[:full_width] do %>
         {@inner_content}
-      </div>
+      <% else %>
+        <div class="w-full max-w-5xl mx-auto">
+          {@inner_content}
+        </div>
+      <% end %>
     </main>
 
     <.flash_group flash={@flash} />
