@@ -40,6 +40,10 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     was_running: false,
     # Latest assistant text output for DB caching (opencode sends full text on each update)
     output_text: "",
+    # Structured output parts for rich DB caching (text segments + tool calls)
+    output_parts: [],
+    # Tracks the current text segment index; incremented when a tool call interrupts text
+    text_segment_id: 0,
     # Dependency injection
     container_provider: nil,
     opencode_client: nil,
@@ -440,10 +444,25 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
          state
        )
        when is_binary(text) and text != "" do
-    {:continue, %{state | output_text: text}}
+    seg = state.text_segment_id
+    parts = update_output_part(state.output_parts, seg, text)
+    {:continue, %{state | output_text: text, output_parts: parts}}
   end
 
-  # All other events (server.connected, tool use, etc.)
+  # Tool start — record in output_parts and bump segment so next text starts fresh
+  defp handle_sdk_event(
+         %{
+           "type" => "message.part.updated",
+           "properties" => %{"part" => %{"type" => "tool-start"} = part}
+         },
+         state
+       ) do
+    tool_name = part["name"] || "tool"
+    parts = state.output_parts ++ [%{"type" => "tool", "name" => tool_name, "status" => "done"}]
+    {:continue, %{state | output_parts: parts, text_segment_id: state.text_segment_id + 1}}
+  end
+
+  # All other events (server.connected, tool result, etc.)
   # are broadcast via PubSub but don't change runner state
   defp handle_sdk_event(_event, state) do
     {:continue, state}
@@ -468,13 +487,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
       completed_at: DateTime.utc_now()
     }
 
-    # Cache any partial output even on failure
-    attrs =
-      if state.output_text != "" do
-        Map.put(attrs, :output, state.output_text)
-      else
-        attrs
-      end
+    # Cache structured output parts (or plain text fallback) even on failure
+    attrs = put_output_attrs(attrs, state)
 
     update_task_status(state, attrs)
     broadcast_status(state.task_id, "failed", state.pubsub)
@@ -487,17 +501,21 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
       completed_at: DateTime.utc_now()
     }
 
-    # Cache accumulated output text to DB if we have any
-    attrs =
-      if state.output_text != "" do
-        Map.put(attrs, :output, state.output_text)
-      else
-        attrs
-      end
+    # Cache structured output parts (or plain text fallback)
+    attrs = put_output_attrs(attrs, state)
 
     update_task_status(state, attrs)
     broadcast_status(state.task_id, "completed", state.pubsub)
     cleanup_container(state)
+  end
+
+  # Prefer structured output_parts (JSON); fall back to plain output_text
+  defp put_output_attrs(attrs, state) do
+    case serialize_output_parts(state.output_parts) do
+      nil when state.output_text != "" -> Map.put(attrs, :output, state.output_text)
+      nil -> attrs
+      json -> Map.put(attrs, :output, json)
+    end
   end
 
   defp cleanup_container(%{container_id: nil}), do: :ok
@@ -511,6 +529,24 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
       )
 
       :ok
+  end
+
+  # Update or append a text segment in the output_parts list.
+  # Each text part is a map %{"type" => "text", "segment" => n, "text" => "..."}.
+  # If the last entry matches the same segment, replace it (opencode sends full text).
+  defp update_output_part(parts, seg, text) do
+    entry = %{"type" => "text", "segment" => seg, "text" => text}
+
+    case List.last(parts) do
+      %{"type" => "text", "segment" => ^seg} -> List.replace_at(parts, -1, entry)
+      _ -> parts ++ [entry]
+    end
+  end
+
+  defp serialize_output_parts([]), do: nil
+
+  defp serialize_output_parts(parts) do
+    Jason.encode!(parts)
   end
 
   defp serialize_error(error) when is_binary(error), do: error

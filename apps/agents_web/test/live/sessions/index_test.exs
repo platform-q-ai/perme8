@@ -5,6 +5,9 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
   import Jarga.AccountsFixtures
   import Agents.SessionsFixtures
 
+  alias Agents.Sessions.Infrastructure.Schemas.TaskSchema
+  alias Agents.Repo
+
   describe "mount and rendering" do
     setup %{conn: conn} do
       user = user_fixture()
@@ -244,6 +247,11 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
 
       {:ok, lv, _html} = live(conn, ~p"/sessions")
 
+      # Simulate what TaskRunner does: update DB first, then broadcast
+      Repo.get!(TaskSchema, task.id)
+      |> Ecto.Changeset.change(status: "completed")
+      |> Repo.update!()
+
       send(lv.pid, {:task_status_changed, task.id, "completed"})
 
       html = render(lv)
@@ -255,6 +263,8 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
 
       {:ok, lv, _html} = live(conn, ~p"/sessions")
 
+      # Simulate what TaskRunner does: update DB first, then broadcast
+      Repo.get!(TaskSchema, task.id) |> Ecto.Changeset.change(status: "failed") |> Repo.update!()
       send(lv.pid, {:task_status_changed, task.id, "failed"})
 
       html = render(lv)

@@ -312,12 +312,14 @@ defmodule AgentsWeb.SessionsLive.Index do
   end
 
   defp maybe_update_task_status(task, task_id, status, socket) do
-    # Refresh from DB to get container_id etc., but always trust the
-    # PubSub status since it may arrive before the DB write completes.
+    # Refresh from DB to get container_id, output, etc.
+    # The DB write happens before the PubSub broadcast in TaskRunner,
+    # so the DB status should already be correct. Fall back to the
+    # PubSub status only if the DB read fails.
     user = socket.assigns.current_scope.user
 
     case Sessions.get_task(task_id, user.id) do
-      {:ok, refreshed} -> Map.put(refreshed, :status, status)
+      {:ok, refreshed} -> refreshed
       _ -> Map.put(task, :status, status)
     end
   end
@@ -438,10 +440,33 @@ defmodule AgentsWeb.SessionsLive.Index do
 
   defp maybe_load_cached_output(socket, %{output: output})
        when is_binary(output) and output != "" do
-    assign(socket, :output_parts, [{:text, 0, output}])
+    parts = decode_cached_output(output)
+    assign(socket, :output_parts, parts)
   end
 
   defp maybe_load_cached_output(socket, _task), do: socket
+
+  # Try JSON decode first (structured output_parts from TaskRunner).
+  # Fall back to plain text for legacy records.
+  defp decode_cached_output(output) do
+    case Jason.decode(output) do
+      {:ok, parts} when is_list(parts) ->
+        parts |> Enum.map(&decode_output_part/1) |> Enum.reject(&is_nil/1)
+
+      _ ->
+        [{:text, 0, output}]
+    end
+  end
+
+  defp decode_output_part(%{"type" => "text", "segment" => seg, "text" => text}) do
+    {:text, seg, text}
+  end
+
+  defp decode_output_part(%{"type" => "tool", "name" => name, "status" => status}) do
+    {:tool, name, String.to_existing_atom(status), nil}
+  end
+
+  defp decode_output_part(_), do: nil
 
   # ---- Helpers ----
 
