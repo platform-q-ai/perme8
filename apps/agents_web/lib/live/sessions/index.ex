@@ -289,6 +289,15 @@ defmodule AgentsWeb.SessionsLive.Index do
       |> update_task_in_list(task_id, status)
       |> reload_all(user.id)
 
+    # Freeze streaming text when task reaches a terminal state so it
+    # renders as proper markdown
+    socket =
+      if status in ["completed", "failed", "cancelled"] do
+        assign(socket, :output_parts, freeze_current_text(socket.assigns.output_parts))
+      else
+        socket
+      end
+
     {:noreply, socket}
   end
 
@@ -381,9 +390,11 @@ defmodule AgentsWeb.SessionsLive.Index do
     tool_name = part["name"] || "tool"
     input = part["input"] || part["args"]
 
-    # Freeze the current text segment — next text will start a new one
+    # Freeze the current text segment (switch from :streaming to :frozen)
+    # so it renders as markdown, then start a new segment for post-tool text
     seg = socket.assigns.text_segment_id
-    parts = socket.assigns.output_parts ++ [{:tool, tool_name, :running, input}]
+    parts = freeze_current_text(socket.assigns.output_parts)
+    parts = parts ++ [{:tool, tool_name, :running, input}]
 
     socket
     |> assign(:output_parts, parts)
@@ -410,9 +421,17 @@ defmodule AgentsWeb.SessionsLive.Index do
 
   defp update_output_part(parts, seg, text) do
     case List.last(parts) do
-      {:text, ^seg, _old} -> List.replace_at(parts, -1, {:text, seg, text})
-      _ -> parts ++ [{:text, seg, text}]
+      {:text, ^seg, _old, _state} -> List.replace_at(parts, -1, {:text, seg, text, :streaming})
+      _ -> parts ++ [{:text, seg, text, :streaming}]
     end
+  end
+
+  # Freeze all streaming text segments (switch to markdown rendering)
+  defp freeze_current_text(parts) do
+    Enum.map(parts, fn
+      {:text, seg, text, :streaming} -> {:text, seg, text, :frozen}
+      other -> other
+    end)
   end
 
   # Walk backwards to find the last matching running tool and mark it done
@@ -454,12 +473,12 @@ defmodule AgentsWeb.SessionsLive.Index do
         parts |> Enum.map(&decode_output_part/1) |> Enum.reject(&is_nil/1)
 
       _ ->
-        [{:text, 0, output}]
+        [{:text, 0, output, :frozen}]
     end
   end
 
   defp decode_output_part(%{"type" => "text", "segment" => seg, "text" => text}) do
-    {:text, seg, text}
+    {:text, seg, text, :frozen}
   end
 
   defp decode_output_part(%{"type" => "tool", "name" => name, "status" => status}) do
@@ -833,6 +852,27 @@ defmodule AgentsWeb.SessionsLive.Index do
 
   # ---- Components ----
 
+  # Streaming text — render raw for speed (character-by-character feel)
+  defp output_part(%{part: {:text, _seg, text, :streaming}} = assigns) do
+    assigns = assign(assigns, :text, text)
+
+    ~H"""
+    <div class="session-markdown py-1 whitespace-pre-wrap break-words">
+      {@text}<span class="inline-block w-2 h-4 bg-primary/70 animate-pulse align-text-bottom ml-0.5"></span>
+    </div>
+    """
+  end
+
+  # Frozen text — render as markdown (final form)
+  defp output_part(%{part: {:text, _seg, text, :frozen}} = assigns) do
+    assigns = assign(assigns, :rendered_html, render_markdown(text))
+
+    ~H"""
+    <div class="session-markdown py-1">{@rendered_html}</div>
+    """
+  end
+
+  # Legacy 3-tuple text compat (cached output from DB before streaming flag)
   defp output_part(%{part: {:text, _seg, text}} = assigns) do
     assigns = assign(assigns, :rendered_html, render_markdown(text))
 

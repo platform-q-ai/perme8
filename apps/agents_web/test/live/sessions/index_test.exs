@@ -222,6 +222,81 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       assert html =~ "read"
     end
 
+    test "streaming text shows cursor, frozen text after tool call renders as markdown", %{
+      conn: conn,
+      user: user
+    } do
+      task = task_fixture(%{user_id: user.id, status: "running", container_id: "c1"})
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      # Send streaming text — should show raw with cursor
+      send(
+        lv.pid,
+        {:task_event, task.id,
+         %{
+           "type" => "message.part.updated",
+           "properties" => %{"part" => %{"type" => "text", "text" => "**bold text** streaming"}}
+         }}
+      )
+
+      html = render(lv)
+      # Streaming: raw text visible, cursor present, NOT rendered as markdown <strong>
+      assert html =~ "**bold text** streaming"
+      assert html =~ "animate-pulse"
+
+      # Tool call freezes the text segment
+      send(
+        lv.pid,
+        {:task_event, task.id,
+         %{
+           "type" => "message.part.updated",
+           "properties" => %{"part" => %{"type" => "tool-start", "name" => "bash"}}
+         }}
+      )
+
+      html = render(lv)
+      # First segment now frozen — rendered as markdown (<strong>)
+      assert html =~ "<strong>bold text</strong>"
+      # Cursor no longer on frozen text
+    end
+
+    test "text is frozen and rendered as markdown when task completes", %{
+      conn: conn,
+      user: user
+    } do
+      task = task_fixture(%{user_id: user.id, status: "running", container_id: "c1"})
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      # Stream some markdown text
+      send(
+        lv.pid,
+        {:task_event, task.id,
+         %{
+           "type" => "message.part.updated",
+           "properties" => %{"part" => %{"type" => "text", "text" => "# Heading\n\nDone."}}
+         }}
+      )
+
+      html = render(lv)
+      # While streaming: raw text
+      assert html =~ "# Heading"
+      refute html =~ "<h1>"
+
+      # Task completes — freezes all text
+      Repo.get!(TaskSchema, task.id)
+      |> Ecto.Changeset.change(status: "completed")
+      |> Repo.update!()
+
+      send(lv.pid, {:task_status_changed, task.id, "completed"})
+
+      html = render(lv)
+      # Now rendered as markdown
+      assert html =~ "<h1>"
+      assert html =~ "Heading"
+    end
+
     test "tool events from other tasks are ignored", %{conn: conn, user: user} do
       _task = task_fixture(%{user_id: user.id, status: "running", container_id: "c1"})
       _other = task_fixture(%{user_id: user.id, status: "running", container_id: "c2"})
