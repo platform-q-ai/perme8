@@ -111,7 +111,7 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       event = %{
         "type" => "message.part.updated",
         "properties" => %{
-          "part" => %{"type" => "text", "text" => "Working on it..."}
+          "part" => %{"id" => "part-1", "type" => "text", "text" => "Working on it..."}
         }
       }
 
@@ -175,13 +175,15 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
 
       {:ok, lv, _html} = live(conn, ~p"/sessions")
 
-      # 1. First text segment — thinking
+      # 1. First text part — thinking (unique part ID)
       send(
         lv.pid,
         {:task_event, task.id,
          %{
            "type" => "message.part.updated",
-           "properties" => %{"part" => %{"type" => "text", "text" => "Let me check the file..."}}
+           "properties" => %{
+             "part" => %{"id" => "part-1", "type" => "text", "text" => "Let me check the file..."}
+           }
          }}
       )
 
@@ -191,7 +193,9 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
         {:task_event, task.id,
          %{
            "type" => "message.part.updated",
-           "properties" => %{"part" => %{"type" => "tool-start", "name" => "read"}}
+           "properties" => %{
+             "part" => %{"id" => "tool-1", "type" => "tool-start", "name" => "read"}
+           }
          }}
       )
 
@@ -200,17 +204,21 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
         {:task_event, task.id,
          %{
            "type" => "message.part.updated",
-           "properties" => %{"part" => %{"type" => "tool-result", "name" => "read"}}
+           "properties" => %{
+             "part" => %{"id" => "tool-1", "type" => "tool-result", "name" => "read"}
+           }
          }}
       )
 
-      # 3. Second text segment — reasoning after tool
+      # 3. Second text part — different part ID (new message or continuation)
       send(
         lv.pid,
         {:task_event, task.id,
          %{
            "type" => "message.part.updated",
-           "properties" => %{"part" => %{"type" => "text", "text" => "Now I see the issue."}}
+           "properties" => %{
+             "part" => %{"id" => "part-2", "type" => "text", "text" => "Now I see the issue."}
+           }
          }}
       )
 
@@ -236,7 +244,13 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
         {:task_event, task.id,
          %{
            "type" => "message.part.updated",
-           "properties" => %{"part" => %{"type" => "text", "text" => "**bold text** streaming"}}
+           "properties" => %{
+             "part" => %{
+               "id" => "part-1",
+               "type" => "text",
+               "text" => "**bold text** streaming"
+             }
+           }
          }}
       )
 
@@ -251,14 +265,15 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
         {:task_event, task.id,
          %{
            "type" => "message.part.updated",
-           "properties" => %{"part" => %{"type" => "tool-start", "name" => "bash"}}
+           "properties" => %{
+             "part" => %{"id" => "tool-1", "type" => "tool-start", "name" => "bash"}
+           }
          }}
       )
 
       html = render(lv)
       # First segment now frozen — rendered as markdown (<strong>)
       assert html =~ "<strong>bold text</strong>"
-      # Cursor no longer on frozen text
     end
 
     test "text is frozen and rendered as markdown when task completes", %{
@@ -275,7 +290,9 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
         {:task_event, task.id,
          %{
            "type" => "message.part.updated",
-           "properties" => %{"part" => %{"type" => "text", "text" => "# Heading\n\nDone."}}
+           "properties" => %{
+             "part" => %{"id" => "part-1", "type" => "text", "text" => "# Heading\n\nDone."}
+           }
          }}
       )
 
@@ -295,6 +312,69 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       # Now rendered as markdown
       assert html =~ "<h1>"
       assert html =~ "Heading"
+    end
+
+    test "reasoning events render as thinking blocks", %{conn: conn, user: user} do
+      task = task_fixture(%{user_id: user.id, status: "running", container_id: "c1"})
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      send(
+        lv.pid,
+        {:task_event, task.id,
+         %{
+           "type" => "message.part.updated",
+           "properties" => %{
+             "part" => %{
+               "id" => "reasoning-1",
+               "type" => "reasoning",
+               "text" => "I need to analyze the function signature..."
+             }
+           }
+         }}
+      )
+
+      html = render(lv)
+      assert html =~ "Thinking"
+      assert html =~ "I need to analyze the function signature..."
+    end
+
+    test "multiple messages accumulate rather than replacing each other", %{
+      conn: conn,
+      user: user
+    } do
+      task = task_fixture(%{user_id: user.id, status: "running", container_id: "c1"})
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      # First assistant message (part-1)
+      send(
+        lv.pid,
+        {:task_event, task.id,
+         %{
+           "type" => "message.part.updated",
+           "properties" => %{
+             "part" => %{"id" => "part-1", "type" => "text", "text" => "First message content"}
+           }
+         }}
+      )
+
+      # Second assistant message (part-2, different ID)
+      send(
+        lv.pid,
+        {:task_event, task.id,
+         %{
+           "type" => "message.part.updated",
+           "properties" => %{
+             "part" => %{"id" => "part-2", "type" => "text", "text" => "Second message content"}
+           }
+         }}
+      )
+
+      html = render(lv)
+      # BOTH messages should be visible, not just the last one
+      assert html =~ "First message content"
+      assert html =~ "Second message content"
     end
 
     test "tool events from other tasks are ignored", %{conn: conn, user: user} do
