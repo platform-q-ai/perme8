@@ -40,5 +40,11 @@
 /* Make LiveView wrapper divs transparent for layout */
 [data-phx-session], [data-phx-teleported-src] { display: contents }
 
+/* Flash message fade-out animation (used by AutoHideFlash hook) */
+.fade-out {
+  opacity: 0;
+  transition: opacity 300ms ease-out;
+}
+
 /* Session Output Styles (shared with agents_web) */
 @import '../../../agents_web/assets/css/sessions.css';

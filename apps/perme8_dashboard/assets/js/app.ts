@@ -8,6 +8,8 @@ import topbar from "../vendor/topbar.cjs";
 // Session hooks from agents_web (used by cross-app mounted SessionsLive.Index)
 import { SessionLogHook } from "../../../agents_web/assets/js/presentation/hooks/session-log-hook";
 import { SessionFormHook } from "../../../agents_web/assets/js/presentation/hooks/session-form-hook";
+// Flash auto-hide hook from jarga_web
+import { FlashHook } from "../../../jarga_web/assets/js/presentation/hooks/flash-hook";
 
 // Extend Window interface for custom properties
 declare global {
@@ -40,6 +42,7 @@ const Hooks = {
   },
   SessionLog: SessionLogHook,
   SessionForm: SessionFormHook,
+  AutoHideFlash: FlashHook,
 };
 
 const csrfTokenElement = document.querySelector("meta[name='csrf-token']");
