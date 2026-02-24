@@ -5,6 +5,10 @@ import { Socket } from "phoenix";
 import { LiveSocket } from "phoenix_live_view";
 import topbar from "../vendor/topbar.cjs";
 
+// Session hooks from agents_web (used by cross-app mounted SessionsLive.Index)
+import { SessionLogHook } from "../../../agents_web/assets/js/presentation/hooks/session-log-hook";
+import { SessionFormHook } from "../../../agents_web/assets/js/presentation/hooks/session-form-hook";
+
 // Extend Window interface for custom properties
 declare global {
   interface Window {
@@ -34,6 +38,8 @@ const Hooks = {
       }
     },
   },
+  SessionLog: SessionLogHook,
+  SessionForm: SessionFormHook,
 };
 
 const csrfTokenElement = document.querySelector("meta[name='csrf-token']");

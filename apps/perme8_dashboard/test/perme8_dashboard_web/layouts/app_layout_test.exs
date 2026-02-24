@@ -12,9 +12,10 @@ defmodule Perme8DashboardWeb.AppLayoutTest do
       assert content =~ "Perme8 Dashboard"
     end
 
-    test "includes tab_bar component" do
+    test "includes sidebar navigation with menu" do
       content = File.read!(@app_layout_path)
-      assert content =~ "tab_bar"
+      assert content =~ "menu"
+      assert content =~ "data-sidebar-"
     end
 
     test "renders inner_content" do

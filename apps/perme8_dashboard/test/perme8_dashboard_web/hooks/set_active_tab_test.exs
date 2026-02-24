@@ -44,23 +44,23 @@ defmodule Perme8DashboardWeb.Hooks.SetActiveTabTest do
     test "sets active_tab to :features when on /", %{conn: conn} do
       {:ok, view, _html} = live(conn, "/")
 
-      assert has_element?(view, "[data-tab='features'].tab-active")
-      refute has_element?(view, "[data-tab='sessions'].tab-active")
+      assert has_element?(view, "[data-sidebar-features] a.active")
+      refute has_element?(view, "[data-sidebar-sessions] a.active")
     end
 
     test "sets active_tab to :features when on /features path", %{conn: conn} do
       {:ok, view, _html} =
         live(conn, "/features/apps/test_app/test/features/example.browser.feature")
 
-      assert has_element?(view, "[data-tab='features'].tab-active")
+      assert has_element?(view, "[data-sidebar-features] a.active")
     end
 
     test "sets active_tab to :sessions when on /sessions (authenticated)", %{conn: conn} do
       %{conn: conn} = register_and_log_in_user(%{conn: conn})
       {:ok, view, _html} = live(conn, "/sessions")
 
-      assert has_element?(view, "[data-tab='sessions'].tab-active")
-      refute has_element?(view, "[data-tab='features'].tab-active")
+      assert has_element?(view, "[data-sidebar-sessions] a.active")
+      refute has_element?(view, "[data-sidebar-features] a.active")
     end
 
     test "assigns sessions_path for cross-app navigation", %{conn: conn} do

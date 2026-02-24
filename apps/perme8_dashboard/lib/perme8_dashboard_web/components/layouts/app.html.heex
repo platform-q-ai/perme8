@@ -8,15 +8,15 @@ tab_icons = %{features: "hero-squares-2x2", sessions: "hero-chat-bubble-left-rig
 <div class="drawer lg:drawer-open h-screen overflow-hidden">
   <input id="dashboard-drawer" type="checkbox" class="drawer-toggle" />
   <div class="drawer-content flex flex-col min-w-0 h-full overflow-hidden">
-    <!-- Topbar -->
-    <div class="navbar bg-base-100 border-b border-base-300 sticky top-0 z-10">
-      <div class="flex-none lg:hidden">
+    <!-- Mobile header (hidden on desktop where sidebar is always open) -->
+    <div class="navbar bg-base-100 border-b border-base-300 sticky top-0 z-10 lg:hidden">
+      <div class="flex-none">
         <label for="dashboard-drawer" class="btn btn-square btn-ghost">
           <.icon name="hero-bars-3" class="size-6" />
         </label>
       </div>
       <div class="flex-1">
-        <.tab_bar tabs={tabs} active_tab={active_tab} />
+        <span class="text-lg font-semibold">Perme8 Dashboard</span>
       </div>
     </div>
     <!-- Page content -->
@@ -42,11 +42,10 @@ tab_icons = %{features: "hero-squares-2x2", sessions: "hero-chat-bubble-left-rig
 
       <nav class="flex-1 py-4">
         <ul class="menu gap-1">
-          <li :for={{key, label, path} <- tabs}>
+          <li :for={{key, label, path} <- tabs} {%{"data-sidebar-#{key}" => true}}>
             <.link
               navigate={path}
-              class="flex items-center gap-3"
-              {%{"data-sidebar-#{key}" => true}}
+              class={["flex items-center gap-3", key == active_tab && "active"]}
             >
               <.icon name={tab_icons[key] || "hero-squares-2x2"} class="size-5" />
               <span>{label}</span>

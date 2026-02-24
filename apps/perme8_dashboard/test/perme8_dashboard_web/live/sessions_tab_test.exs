@@ -68,11 +68,11 @@ defmodule Perme8DashboardWeb.Live.SessionsTabTest do
       assert html =~ "Sessions"
     end
 
-    test "sessions tab is marked active", %{conn: conn} do
+    test "sessions sidebar link is marked active", %{conn: conn} do
       {:ok, view, _html} = live(conn, "/sessions")
 
-      assert has_element?(view, "[data-tab='sessions'].tab-active")
-      refute has_element?(view, "[data-tab='features'].tab-active")
+      assert has_element?(view, "[data-sidebar-sessions] a.active")
+      refute has_element?(view, "[data-sidebar-features] a.active")
     end
 
     test "dashboard sidebar is visible", %{conn: conn} do
@@ -87,20 +87,20 @@ defmodule Perme8DashboardWeb.Live.SessionsTabTest do
     test "features page renders without authentication", %{conn: conn} do
       {:ok, view, _html} = live(conn, "/")
 
-      assert has_element?(view, "[data-tab='features'].tab-active")
+      assert has_element?(view, "[data-sidebar-features] a.active")
     end
 
-    test "both tabs display correct labels", %{conn: conn} do
+    test "both sidebar links display correct labels", %{conn: conn} do
       {:ok, _view, html} = live(conn, "/")
 
       assert html =~ "Features"
       assert html =~ "Sessions"
     end
 
-    test "sessions tab is visible on features page", %{conn: conn} do
+    test "sessions sidebar link is visible on features page", %{conn: conn} do
       {:ok, view, _html} = live(conn, "/")
 
-      assert has_element?(view, "[data-tab='sessions']")
+      assert has_element?(view, "[data-sidebar-sessions]")
     end
   end
 end
