@@ -99,6 +99,25 @@ defmodule Agents.Sessions.Infrastructure.Adapters.DockerAdapter do
     end
   end
 
+  @impl true
+  def stats(container_id, opts \\ []) do
+    system_cmd = Keyword.get(opts, :system_cmd, &System.cmd/3)
+
+    format = ~S({"cpu":"{{.CPUPerc}}","mem_usage":"{{.MemUsage}}"})
+
+    case system_cmd.(
+           "docker",
+           ["stats", "--no-stream", "--format", format, container_id],
+           stderr_to_stdout: true
+         ) do
+      {output, 0} ->
+        parse_stats(String.trim(output))
+
+      {output, exit_code} ->
+        {:error, {:docker_stats_failed, exit_code, String.trim(output)}}
+    end
+  end
+
   @port_retries 5
   @port_retry_interval_ms 500
 
@@ -172,6 +191,71 @@ defmodule Agents.Sessions.Infrastructure.Adapters.DockerAdapter do
   defp parse_status("created"), do: {:ok, :stopped}
   defp parse_status("dead"), do: {:ok, :stopped}
   defp parse_status(_), do: {:ok, :not_found}
+
+  defp parse_stats(json) do
+    case Jason.decode(json) do
+      {:ok, %{"cpu" => cpu_str, "mem_usage" => mem_str}} ->
+        cpu_percent = parse_percent(cpu_str)
+        {mem_usage, mem_limit} = parse_mem_usage(mem_str)
+        {:ok, %{cpu_percent: cpu_percent, memory_usage: mem_usage, memory_limit: mem_limit}}
+
+      _ ->
+        {:error, :stats_parse_failed}
+    end
+  end
+
+  # "0.35%" -> 0.35
+  defp parse_percent(str) do
+    str
+    |> String.replace("%", "")
+    |> String.trim()
+    |> Float.parse()
+    |> case do
+      {val, _} -> val
+      :error -> 0.0
+    end
+  end
+
+  # "128.5MiB / 512MiB" -> {134_742_016, 536_870_912}
+  defp parse_mem_usage(str) do
+    case String.split(str, "/") do
+      [usage_str, limit_str] ->
+        {parse_mem_value(String.trim(usage_str)), parse_mem_value(String.trim(limit_str))}
+
+      _ ->
+        {0, 0}
+    end
+  end
+
+  defp parse_mem_value(str) do
+    cond do
+      String.ends_with?(str, "GiB") ->
+        parse_float_prefix(str) |> Kernel.*(1_073_741_824) |> round()
+
+      String.ends_with?(str, "MiB") ->
+        parse_float_prefix(str) |> Kernel.*(1_048_576) |> round()
+
+      String.ends_with?(str, "KiB") ->
+        parse_float_prefix(str) |> Kernel.*(1_024) |> round()
+
+      String.ends_with?(str, "B") ->
+        parse_float_prefix(str) |> round()
+
+      true ->
+        0
+    end
+  end
+
+  defp parse_float_prefix(str) do
+    str
+    |> String.replace(~r/[A-Za-z]+$/, "")
+    |> String.trim()
+    |> Float.parse()
+    |> case do
+      {val, _} -> val
+      :error -> 0.0
+    end
+  end
 
   defp build_env_args(env) when is_map(env) do
     env
