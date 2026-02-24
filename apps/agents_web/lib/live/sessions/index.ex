@@ -63,6 +63,16 @@ defmodule AgentsWeb.SessionsLive.Index do
   end
 
   @impl true
+  def handle_event("new_session", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:current_task, nil)
+     |> assign(:events, [])
+     |> assign_session_state()
+     |> assign(:form, to_form(%{"instruction" => ""}))}
+  end
+
+  @impl true
   def handle_event("delete_task", %{"task-id" => task_id}, socket) do
     user = socket.assigns.current_scope.user
 
@@ -342,7 +352,7 @@ defmodule AgentsWeb.SessionsLive.Index do
     ]
 
     case MDEx.to_html(text, opts) do
-      {:ok, html} -> Phoenix.HTML.raw(MDEx.safe_html(html))
+      {:ok, html} -> Phoenix.HTML.raw(html)
       {:error, _} -> text
     end
   end
@@ -433,6 +443,15 @@ defmodule AgentsWeb.SessionsLive.Index do
                 <% else %>
                   <.icon name="hero-play" class="size-4" /> Run
                 <% end %>
+              </.button>
+              <.button
+                :if={resumable_task?(@current_task)}
+                type="button"
+                variant="ghost"
+                phx-click="new_session"
+                id="new-session-btn"
+              >
+                <.icon name="hero-plus" class="size-4" /> New Session
               </.button>
               <.button
                 :if={task_running?(@current_task)}
