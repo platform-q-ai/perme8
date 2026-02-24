@@ -52,23 +52,24 @@ config :notifications, Notifications.Repo,
 config :notifications, env: :test
 
 # Identity URL for login redirects.
-# NOTE: runtime.exs overrides Identity's port to 4001 for ALL environments
-# (not just prod), so Identity actually listens on 4001 even in MIX_ENV=test.
-# AgentsWeb test port: 4015 (avoids conflict with perme8_dashboard on 4012/4013)
-config :agents_web, :identity_url, "http://localhost:4001"
+# Test ports use the 5xxx range (mirroring dev 4xxx) to avoid conflicts.
+# AgentsWeb: dev 4014 → test 5014
+config :agents_web, :identity_url, "http://localhost:5001"
 
 config :agents_web, AgentsWeb.Endpoint,
-  http: [ip: {127, 0, 0, 1}, port: 4015],
+  http: [ip: {127, 0, 0, 1}, port: 5014],
   # Must match Identity's secret_key_base so the shared session cookie
   # (_identity_key) signed by Identity can be verified by agents_web.
   secret_key_base: "test_identity_secret_key_base_at_least_64_bytes_long_for_security"
 
+# JargaWeb: dev 4000 → test 5000
 config :jarga_web, JargaWeb.Endpoint,
-  http: [ip: {127, 0, 0, 1}, port: 4002],
+  http: [ip: {127, 0, 0, 1}, port: 5000],
   secret_key_base: "k/DpMQ7vB/8OirPNBlAhucs6RCPp5ZRK09Is1Sd7Jb+YThz21IeYYYpueAbJYNEd"
 
+# ERM: dev 4005 → test 5005
 config :entity_relationship_manager, EntityRelationshipManager.Endpoint,
-  http: [ip: {127, 0, 0, 1}, port: 4006],
+  http: [ip: {127, 0, 0, 1}, port: 5005],
   secret_key_base: "erm_test_secret_key_base_at_least_64_bytes_long_for_security_purposes"
 
 # ERM repository configuration.
@@ -89,19 +90,22 @@ config :webhooks, Webhooks.Repo,
   pool_size: 5,
   ownership_timeout: :infinity
 
+# WebhooksApi: dev 4016 → test 5016
 config :webhooks_api, WebhooksApi.Endpoint,
-  http: [ip: {127, 0, 0, 1}, port: 4017],
+  http: [ip: {127, 0, 0, 1}, port: 5016],
   secret_key_base: "webhooks_api_test_secret_key_base_at_least_64_bytes_long_for_security",
   server: true
 
 config :webhooks, :env, :test
 
+# JargaApi: dev 4004 → test 5004
 config :jarga_api, JargaApi.Endpoint,
-  http: [ip: {127, 0, 0, 1}, port: 4005],
+  http: [ip: {127, 0, 0, 1}, port: 5004],
   secret_key_base: "jarga_api_test_secret_key_base_at_least_64_bytes_long_for_security"
 
+# AgentsApi: dev 4008 → test 5008
 config :agents_api, AgentsApi.Endpoint,
-  http: [ip: {127, 0, 0, 1}, port: 4009],
+  http: [ip: {127, 0, 0, 1}, port: 5008],
   secret_key_base: "agents_api_test_secret_key_base_at_least_64_bytes_long_for_security"
 
 # ============================================================================
@@ -112,16 +116,18 @@ config :agents_api, AgentsApi.Endpoint,
 # Kept separate from :session_options to avoid compile_env vs runtime mismatch in releases.
 config :identity, :session_signing_salt, "test_identity_session_signing_salt"
 
+# Identity: dev 4001 → test 5001
 config :identity, IdentityWeb.Endpoint,
-  http: [ip: {127, 0, 0, 1}, port: 4003],
+  http: [ip: {127, 0, 0, 1}, port: 5001],
   secret_key_base: "test_identity_secret_key_base_at_least_64_bytes_long_for_security"
 
 # ============================================================================
 # ExoDashboard App Test Configuration
 # ============================================================================
 
+# ExoDashboard: dev 4010 → test 5010
 config :exo_dashboard, ExoDashboardWeb.Endpoint,
-  http: [ip: {127, 0, 0, 1}, port: 4011],
+  http: [ip: {127, 0, 0, 1}, port: 5010],
   secret_key_base:
     "exo_dashboard_test_secret_key_base_that_is_at_least_64_bytes_long_for_security"
 
@@ -130,10 +136,11 @@ config :exo_dashboard, ExoDashboardWeb.Endpoint,
 # ============================================================================
 
 # Identity URL for login redirects
-config :perme8_dashboard, :identity_url, "http://localhost:4001"
+config :perme8_dashboard, :identity_url, "http://localhost:5001"
 
+# Perme8Dashboard: dev 4012 → test 5012
 config :perme8_dashboard, Perme8DashboardWeb.Endpoint,
-  http: [ip: {127, 0, 0, 1}, port: 4012],
+  http: [ip: {127, 0, 0, 1}, port: 5012],
   # Must match Identity's secret_key_base so the shared session cookie
   # (_identity_key) signed by Identity can be verified by perme8_dashboard.
   secret_key_base: "test_identity_secret_key_base_at_least_64_bytes_long_for_security"
@@ -168,5 +175,5 @@ config :agents, :sessions,
 # Agents MCP: Use streamable_http transport in tests with start: true
 config :agents, :mcp_transport, {:streamable_http, start: true}
 
-# Agents MCP HTTP: Standalone Bandit server for MCP endpoint (exo-bdd tests)
-config :agents, :mcp_http, port: 4007
+# Agents MCP HTTP: dev 4007 → test 5007
+config :agents, :mcp_http, port: 5007

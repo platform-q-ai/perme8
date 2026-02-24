@@ -7,7 +7,7 @@ export default defineConfig({
     {
       name: 'jarga-web',
       command: 'mix phx.server',
-      port: 4002,
+      port: 5000,
       workingDir: '../../../',
       env: { MIX_ENV: 'test' },
       setup: 'cd apps/jarga_web && mix assets.build',
@@ -42,11 +42,11 @@ export default defineConfig({
   },
   adapters: {
     browser: {
-      baseURL: 'http://localhost:4002',
+      baseURL: 'http://localhost:5000',
       headless: true,
     },
     http: {
-      baseURL: 'http://localhost:4002',
+      baseURL: 'http://localhost:5000',
     },
     security: {
       zapUrl: 'http://localhost:8080',

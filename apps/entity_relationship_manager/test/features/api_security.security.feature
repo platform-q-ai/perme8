@@ -5,7 +5,7 @@ Feature: ERM API Security Baseline
   So that graph data, workspace isolation, and Neo4j/Cypher query parameters are protected against attack
 
   Background:
-    # baseUrl is auto-injected from exo-bdd config (http.baseURL → http://localhost:4006)
+    # baseUrl is auto-injected from exo-bdd config (http.baseURL → http://localhost:5005)
     Given I set variable "healthEndpoint" to "${baseUrl}/health"
     Given I set variable "schemaEndpoint" to "${baseUrl}/api/v1/workspaces/product-team/schema"
     Given I set variable "entitiesEndpoint" to "${baseUrl}/api/v1/workspaces/product-team/entities"
@@ -405,7 +405,7 @@ Feature: ERM API Security Baseline
 
   # ===========================================================================
   # NOTE: SSL/TLS certificate validation is skipped in the local test environment
-  # because the test server runs over plain HTTP (http://localhost:4006).
+  # because the test server runs over plain HTTP (http://localhost:5005).
   # In staging/production, SSL certificate checks should be added against the
   # HTTPS endpoint:
   #

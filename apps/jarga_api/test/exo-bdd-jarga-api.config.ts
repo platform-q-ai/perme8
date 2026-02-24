@@ -6,7 +6,7 @@ export default defineConfig({
     {
       name: 'jarga-api',
       command: 'mix phx.server',
-      port: 4005,
+      port: 5004,
       workingDir: '../../../',
       env: { MIX_ENV: 'test' },
       // --no-start avoids booting Phoenix endpoints (ports already bound by the running server).
@@ -34,7 +34,7 @@ export default defineConfig({
   },
   adapters: {
     http: {
-      baseURL: 'http://localhost:4005',
+      baseURL: 'http://localhost:5004',
     },
     security: {
       zapUrl: 'http://localhost:8080',
