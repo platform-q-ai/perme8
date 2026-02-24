@@ -332,6 +332,7 @@ defmodule AgentsWeb.SessionsLive.Index do
     |> assign(:session_cost, nil)
     |> assign(:session_summary, nil)
     |> assign(:output_parts, [])
+    |> assign(:text_segment_id, 0)
   end
 
   # ---- Event processing ----
@@ -363,8 +364,8 @@ defmodule AgentsWeb.SessionsLive.Index do
          socket
        )
        when text != "" do
-    part_id = get_in(socket, [Access.key(:assigns), Access.key(:events)]) |> length()
-    parts = update_output_part(socket.assigns.output_parts, part_id, text)
+    seg = socket.assigns.text_segment_id
+    parts = update_output_part(socket.assigns.output_parts, seg, text)
     assign(socket, :output_parts, parts)
   end
 
@@ -376,8 +377,15 @@ defmodule AgentsWeb.SessionsLive.Index do
          socket
        ) do
     tool_name = part["name"] || "tool"
-    parts = socket.assigns.output_parts ++ [{:tool, tool_name, :running}]
-    assign(socket, :output_parts, parts)
+    input = part["input"] || part["args"]
+
+    # Freeze the current text segment — next text will start a new one
+    seg = socket.assigns.text_segment_id
+    parts = socket.assigns.output_parts ++ [{:tool, tool_name, :running, input}]
+
+    socket
+    |> assign(:output_parts, parts)
+    |> assign(:text_segment_id, seg + 1)
   end
 
   defp process_event(
@@ -388,7 +396,8 @@ defmodule AgentsWeb.SessionsLive.Index do
          socket
        ) do
     tool_name = part["name"] || "tool"
-    parts = socket.assigns.output_parts ++ [{:tool, tool_name, :done}]
+    # Update the matching running tool entry to done
+    parts = finish_tool(socket.assigns.output_parts, tool_name)
     assign(socket, :output_parts, parts)
   end
 
@@ -397,12 +406,30 @@ defmodule AgentsWeb.SessionsLive.Index do
   defp maybe_assign(socket, _key, nil), do: socket
   defp maybe_assign(socket, key, value), do: assign(socket, key, value)
 
-  defp update_output_part(parts, _id, text) do
+  defp update_output_part(parts, seg, text) do
     case List.last(parts) do
-      {:text, _old} -> List.replace_at(parts, -1, {:text, text})
-      _ -> parts ++ [{:text, text}]
+      {:text, ^seg, _old} -> List.replace_at(parts, -1, {:text, seg, text})
+      _ -> parts ++ [{:text, seg, text}]
     end
   end
+
+  # Walk backwards to find the last matching running tool and mark it done
+  defp finish_tool(parts, tool_name) do
+    parts
+    |> Enum.reverse()
+    |> finish_tool_rev(tool_name, [])
+    |> Enum.reverse()
+  end
+
+  defp finish_tool_rev([{:tool, name, :running, input} | rest], name, acc) do
+    [{:tool, name, :done, input} | acc] ++ rest
+  end
+
+  defp finish_tool_rev([head | rest], name, acc) do
+    finish_tool_rev(rest, name, [head | acc])
+  end
+
+  defp finish_tool_rev([], _name, acc), do: acc
 
   defp format_model(%{"modelID" => model_id}), do: model_id
   defp format_model(_), do: nil
@@ -411,7 +438,7 @@ defmodule AgentsWeb.SessionsLive.Index do
 
   defp maybe_load_cached_output(socket, %{output: output})
        when is_binary(output) and output != "" do
-    assign(socket, :output_parts, [{:text, output}])
+    assign(socket, :output_parts, [{:text, 0, output}])
   end
 
   defp maybe_load_cached_output(socket, _task), do: socket
@@ -781,7 +808,7 @@ defmodule AgentsWeb.SessionsLive.Index do
 
   # ---- Components ----
 
-  defp output_part(%{part: {:text, text}} = assigns) do
+  defp output_part(%{part: {:text, _seg, text}} = assigns) do
     assigns = assign(assigns, :rendered_html, render_markdown(text))
 
     ~H"""
@@ -789,23 +816,59 @@ defmodule AgentsWeb.SessionsLive.Index do
     """
   end
 
-  defp output_part(%{part: {:tool, name, status}} = assigns) do
+  defp output_part(%{part: {:tool, name, status, input}} = assigns) do
     assigns = assign(assigns, :name, name)
     assigns = assign(assigns, :tool_status, status)
+    assigns = assign(assigns, :input, input)
 
     ~H"""
-    <div class="flex items-center gap-2 py-1 text-base-content/60 text-xs">
-      <span :if={@tool_status == :running} class="loading loading-spinner loading-xs"></span>
-      <.icon :if={@tool_status == :done} name="hero-check-circle" class="size-3 text-success" />
-      <span>{@name}</span>
+    <div class="my-1 rounded-lg border border-base-300 bg-base-200/50 text-xs">
+      <div class="flex items-center gap-2 px-3 py-1.5">
+        <span :if={@tool_status == :running} class="loading loading-spinner loading-xs text-info">
+        </span>
+        <.icon :if={@tool_status == :done} name="hero-check-circle" class="size-3.5 text-success" />
+        <span class="font-medium text-base-content/80">
+          <.tool_icon name={@name} /> {@name}
+        </span>
+      </div>
+      <div :if={@input} class="px-3 pb-2 pt-0.5">
+        <pre class="text-[0.65rem] leading-snug text-base-content/50 whitespace-pre-wrap break-all max-h-24 overflow-y-auto"><code>{format_tool_input(@input)}</code></pre>
+      </div>
     </div>
     """
+  end
+
+  # Legacy 3-tuple compat (tests / old events)
+  defp output_part(%{part: {:tool, name, status}} = assigns) do
+    assigns = Map.put(assigns, :part, {:tool, name, status, nil})
+    output_part(assigns)
   end
 
   defp output_part(assigns) do
     ~H"""
     """
   end
+
+  defp tool_icon(%{name: name} = assigns) do
+    assigns = assign(assigns, :icon_name, tool_icon_name(name))
+
+    ~H"""
+    <.icon name={@icon_name} class="size-3 inline-block" />
+    """
+  end
+
+  defp tool_icon_name("bash"), do: "hero-command-line"
+  defp tool_icon_name("read"), do: "hero-document-text"
+  defp tool_icon_name("write"), do: "hero-pencil-square"
+  defp tool_icon_name("edit"), do: "hero-pencil"
+  defp tool_icon_name("glob"), do: "hero-folder-open"
+  defp tool_icon_name("grep"), do: "hero-magnifying-glass"
+  defp tool_icon_name("list"), do: "hero-list-bullet"
+  defp tool_icon_name(_), do: "hero-wrench-screwdriver"
+
+  defp format_tool_input(input) when is_binary(input), do: input
+  defp format_tool_input(input) when is_map(input), do: Jason.encode!(input, pretty: true)
+  defp format_tool_input(input), do: inspect(input)
 
   defp status_badge(%{status: "idle"} = assigns) do
     ~H"""
