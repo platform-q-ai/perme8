@@ -13,13 +13,18 @@ defmodule AgentsWeb.SessionsLive.Index do
 
   alias Agents.Sessions
 
+  @stats_interval_ms 5_000
+
   @impl true
   def mount(_params, _session, socket) do
     user = socket.assigns.current_scope.user
     sessions = Sessions.list_sessions(user.id)
     tasks = Sessions.list_tasks(user.id)
 
-    if connected?(socket), do: subscribe_to_active_tasks(tasks)
+    if connected?(socket) do
+      subscribe_to_active_tasks(tasks)
+      schedule_stats_poll()
+    end
 
     # Select the most recent session by default
     active_container_id =
@@ -39,6 +44,7 @@ defmodule AgentsWeb.SessionsLive.Index do
      |> assign(:active_container_id, active_container_id)
      |> assign(:current_task, current_task)
      |> assign(:composing_new, false)
+     |> assign(:container_stats, %{})
      |> assign(:events, [])
      |> assign_session_state()
      |> assign(:form, to_form(%{"instruction" => ""}))
@@ -299,6 +305,13 @@ defmodule AgentsWeb.SessionsLive.Index do
       end
 
     {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info(:poll_container_stats, socket) do
+    stats = poll_running_session_stats(socket.assigns.sessions)
+    schedule_stats_poll()
+    {:noreply, assign(socket, :container_stats, stats)}
   end
 
   @impl true
@@ -635,6 +648,34 @@ defmodule AgentsWeb.SessionsLive.Index do
     |> Enum.each(&Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "task:#{&1.id}"))
   end
 
+  defp schedule_stats_poll do
+    Process.send_after(self(), :poll_container_stats, @stats_interval_ms)
+  end
+
+  defp poll_running_session_stats(sessions) do
+    sessions
+    |> Enum.filter(&(&1.latest_status in ["running", "starting", "pending"]))
+    |> Enum.reduce(%{}, fn session, acc ->
+      case Sessions.get_container_stats(session.container_id) do
+        {:ok, stats} ->
+          mem_percent =
+            if stats.memory_limit > 0,
+              do: Float.round(stats.memory_usage / stats.memory_limit * 100, 1),
+              else: 0.0
+
+          Map.put(acc, session.container_id, %{
+            cpu_percent: stats.cpu_percent,
+            memory_percent: mem_percent,
+            memory_usage: stats.memory_usage,
+            memory_limit: stats.memory_limit
+          })
+
+        {:error, _} ->
+          acc
+      end
+    end)
+  end
+
   defp active_task?(%{status: status}), do: status in ["pending", "starting", "running"]
 
   defp task_running?(nil), do: false
@@ -716,6 +757,10 @@ defmodule AgentsWeb.SessionsLive.Index do
                     <span>&middot;</span>
                     <span>{relative_time(session.latest_at)}</span>
                   </div>
+                  <.container_stats_bars
+                    :if={Map.has_key?(@container_stats, session.container_id)}
+                    stats={@container_stats[session.container_id]}
+                  />
                 </div>
               </li>
             </ul>
@@ -1111,4 +1156,54 @@ defmodule AgentsWeb.SessionsLive.Index do
     </span>
     """
   end
+
+  defp container_stats_bars(assigns) do
+    ~H"""
+    <div class="flex flex-col gap-0.5 w-full mt-1">
+      <div class="flex items-center gap-1.5">
+        <span class="text-[0.6rem] text-base-content/40 w-7 shrink-0">CPU</span>
+        <div class="flex-1 bg-base-300 rounded-full h-1.5 overflow-hidden">
+          <div
+            class="bg-info h-full rounded-full transition-all duration-500"
+            style={"width: #{min(@stats.cpu_percent, 100)}%"}
+          >
+          </div>
+        </div>
+        <span class="text-[0.6rem] text-base-content/40 w-8 text-right shrink-0">
+          {Float.round(@stats.cpu_percent, 0) |> trunc()}%
+        </span>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <span class="text-[0.6rem] text-base-content/40 w-7 shrink-0">MEM</span>
+        <div class="flex-1 bg-base-300 rounded-full h-1.5 overflow-hidden">
+          <div
+            class={[
+              "h-full rounded-full transition-all duration-500",
+              if(@stats.memory_percent >= 90, do: "bg-error", else: "bg-success")
+            ]}
+            style={"width: #{min(@stats.memory_percent, 100)}%"}
+          >
+          </div>
+        </div>
+        <span class="text-[0.6rem] text-base-content/40 w-8 text-right shrink-0">
+          {format_mem_short(@stats.memory_usage)}
+        </span>
+      </div>
+    </div>
+    """
+  end
+
+  defp format_mem_short(bytes) when bytes >= 1_073_741_824 do
+    "#{Float.round(bytes / 1_073_741_824, 1)}G"
+  end
+
+  defp format_mem_short(bytes) when bytes >= 1_048_576 do
+    "#{Float.round(bytes / 1_048_576, 0) |> trunc()}M"
+  end
+
+  defp format_mem_short(bytes) when bytes >= 1024 do
+    "#{Float.round(bytes / 1024, 0) |> trunc()}K"
+  end
+
+  defp format_mem_short(_bytes), do: "0"
 end

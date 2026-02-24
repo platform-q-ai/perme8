@@ -125,6 +125,53 @@ defmodule Agents.Sessions do
     task_repo.list_sessions_for_user(user_id, opts)
   end
 
+  @doc """
+  Returns CPU and memory stats for a running container.
+
+  ## Returns
+  - `{:ok, %{cpu_percent: float(), memory_usage: integer(), memory_limit: integer()}}`
+  - `{:error, term()}` if the container is not running or stats unavailable
+  """
+  @spec get_container_stats(String.t(), keyword()) :: {:ok, map()} | {:error, term()}
+  def get_container_stats(container_id, opts \\ []) do
+    container_provider =
+      Keyword.get(
+        opts,
+        :container_provider,
+        Agents.Sessions.Infrastructure.Adapters.DockerAdapter
+      )
+
+    container_provider.stats(container_id)
+  end
+
+  @doc """
+  Answers a question posed by the AI assistant during a task.
+
+  Forwards the answer to the TaskRunner GenServer which calls the
+  opencode question reply API.
+
+  `answers` is a list of lists of strings — one list of selected labels
+  per question. E.g. `[["Option A"], ["Option B", "Option C"]]`
+  """
+  @spec answer_question(String.t(), String.t(), [[String.t()]]) :: :ok | {:error, term()}
+  def answer_question(task_id, request_id, answers) do
+    case Registry.lookup(Agents.Sessions.TaskRegistry, task_id) do
+      [{pid, _}] -> GenServer.call(pid, {:answer_question, request_id, answers})
+      [] -> {:error, :task_not_running}
+    end
+  end
+
+  @doc """
+  Rejects/dismisses a question posed by the AI assistant during a task.
+  """
+  @spec reject_question(String.t(), String.t()) :: :ok | {:error, term()}
+  def reject_question(task_id, request_id) do
+    case Registry.lookup(Agents.Sessions.TaskRegistry, task_id) do
+      [{pid, _}] -> GenServer.call(pid, {:reject_question, request_id})
+      [] -> {:error, :task_not_running}
+    end
+  end
+
   # Wire the real TaskRunnerSupervisor starter
   defp inject_task_runner_starter(opts) do
     if Keyword.has_key?(opts, :task_runner_starter) do

@@ -10,6 +10,7 @@ defmodule Agents.Sessions.Application.Behaviours.ContainerProviderBehaviour do
   - `remove/1` — Permanently destroys a container (used on explicit delete)
   - `restart/1` — Restarts a stopped container and re-discovers the mapped port
   - `status/1` — Inspects container state
+  - `stats/1` — Returns CPU and memory usage for a running container
   """
 
   @callback start(image :: String.t(), opts :: keyword()) ::
@@ -24,4 +25,8 @@ defmodule Agents.Sessions.Application.Behaviours.ContainerProviderBehaviour do
 
   @callback status(container_id :: String.t()) ::
               {:ok, :running | :stopped | :not_found} | {:error, term()}
+
+  @callback stats(container_id :: String.t()) ::
+              {:ok, %{cpu_percent: float(), memory_usage: integer(), memory_limit: integer()}}
+              | {:error, term()}
 end
