@@ -45,6 +45,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     output_parts: [],
     # Track last flushed version to avoid redundant DB writes
     last_flushed_count: 0,
+    # User message IDs — skip their parts from output cache (shown separately in UI)
+    user_message_ids: MapSet.new(),
     # Dependency injection
     container_provider: nil,
     opencode_client: nil,
@@ -319,43 +321,15 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
       {:task_event, state.task_id, event}
     )
 
-    # Handle event by type
-    case handle_sdk_event(event, state) do
-      {:completed, new_state} ->
-        complete_task(new_state)
-        {:stop, :normal, new_state}
+    # Track user message IDs so we can filter their parts from output cache
+    state = track_user_message_id(event, state)
 
-      {:error, error_msg, new_state} ->
-        fail_task(new_state, error_msg)
-        {:stop, :normal, new_state}
-
-      {:permission, session_id, permission_id, tool_name, new_state} ->
-        # Auto-approve tool permission requests inside the sandboxed container.
-        # The container runs with --cap-drop=ALL, memory/cpu limits, and non-root user.
-        # Future improvement: add a tool allowlist for additional defense-in-depth.
-        Logger.info(
-          "TaskRunner: auto-approving tool '#{tool_name}' for task #{new_state.task_id}"
-        )
-
-        base_url = "http://localhost:#{new_state.container_port}"
-
-        new_state.opencode_client.reply_permission(
-          base_url,
-          session_id,
-          permission_id,
-          "always",
-          []
-        )
-
-        {:noreply, new_state}
-
-      {:question, new_state} ->
-        # question.asked events are broadcast to the LiveView via PubSub (above).
-        # The LiveView will render the question UI and call answer_question/reject_question.
-        {:noreply, new_state}
-
-      {:continue, new_state} ->
-        {:noreply, new_state}
+    # Skip caching parts that belong to user messages
+    # (the instruction is shown separately in the UI)
+    if skip_user_message_part?(event, state) do
+      {:noreply, state}
+    else
+      handle_sdk_result(event, state)
     end
   end
 
@@ -435,6 +409,71 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     cleanup_container(state)
     :ok
   end
+
+  # ---- Private: SDK event dispatch ----
+
+  defp handle_sdk_result(event, state) do
+    case handle_sdk_event(event, state) do
+      {:completed, new_state} ->
+        complete_task(new_state)
+        {:stop, :normal, new_state}
+
+      {:error, error_msg, new_state} ->
+        fail_task(new_state, error_msg)
+        {:stop, :normal, new_state}
+
+      {:permission, session_id, permission_id, tool_name, new_state} ->
+        Logger.info(
+          "TaskRunner: auto-approving tool '#{tool_name}' for task #{new_state.task_id}"
+        )
+
+        base_url = "http://localhost:#{new_state.container_port}"
+
+        new_state.opencode_client.reply_permission(
+          base_url,
+          session_id,
+          permission_id,
+          "always",
+          []
+        )
+
+        {:noreply, new_state}
+
+      {:question, new_state} ->
+        {:noreply, new_state}
+
+      {:continue, new_state} ->
+        {:noreply, new_state}
+    end
+  end
+
+  # ---- Private: User message filtering ----
+
+  defp track_user_message_id(
+         %{
+           "type" => "message.updated",
+           "properties" => %{"info" => %{"role" => "user", "id" => msg_id}}
+         },
+         state
+       )
+       when is_binary(msg_id) do
+    %{state | user_message_ids: MapSet.put(state.user_message_ids, msg_id)}
+  end
+
+  defp track_user_message_id(_event, state), do: state
+
+  defp skip_user_message_part?(
+         %{
+           "type" => "message.part.updated",
+           "properties" => %{"part" => %{"messageID" => msg_id}}
+         },
+         state
+       )
+       when is_binary(msg_id) do
+    MapSet.member?(state.user_message_ids, msg_id)
+  end
+
+  defp skip_user_message_part?(_event, _state), do: false
 
   # ---- Private: SDK Event Handling ----
 
