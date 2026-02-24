@@ -78,6 +78,35 @@ defmodule Agents.Sessions.Infrastructure.Clients.OpencodeClient do
     end
   end
 
+  # ---- Questions ----
+
+  @impl true
+  def reply_question(base_url, request_id, answers, opts \\ []) do
+    http = Keyword.get(opts, :http, &default_http/3)
+
+    url = "#{base_url}/question/#{request_id}/reply"
+    body = %{answers: answers}
+
+    case http.(:post, url, json: body) do
+      {:ok, %{status: status}} when status in [200, 204] -> :ok
+      {:ok, %{status: status, body: resp_body}} -> {:error, {:http_error, status, resp_body}}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @impl true
+  def reject_question(base_url, request_id, opts \\ []) do
+    http = Keyword.get(opts, :http, &default_http/3)
+
+    url = "#{base_url}/question/#{request_id}/reject"
+
+    case http.(:post, url, json: %{}) do
+      {:ok, %{status: status}} when status in [200, 204] -> :ok
+      {:ok, %{status: status, body: resp_body}} -> {:error, {:http_error, status, resp_body}}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
   # ---- Retrieval APIs ----
 
   @impl true
