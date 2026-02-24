@@ -692,13 +692,23 @@ defmodule AgentsWeb.SessionsLive.Index do
     {:reasoning, id, text, :frozen}
   end
 
-  defp decode_output_part(%{"type" => "tool", "id" => id, "name" => name, "status" => status}) do
-    {:tool, id, name, String.to_existing_atom(status), nil}
+  defp decode_output_part(
+         %{"type" => "tool", "id" => id, "name" => name, "status" => status} = entry
+       ) do
+    detail = %{
+      input: entry["input"],
+      title: entry["title"],
+      output: entry["output"],
+      error: entry["error"]
+    }
+
+    {:tool, id, name, String.to_existing_atom(status), detail}
   end
 
   # Legacy format without id
   defp decode_output_part(%{"type" => "tool", "name" => name, "status" => status}) do
-    {:tool, nil, name, String.to_existing_atom(status), nil}
+    {:tool, nil, name, String.to_existing_atom(status),
+     %{input: nil, title: nil, output: nil, error: nil}}
   end
 
   defp decode_output_part(_), do: nil
