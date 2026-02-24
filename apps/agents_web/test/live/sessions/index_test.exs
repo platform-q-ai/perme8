@@ -167,6 +167,78 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       assert html =~ "13.0k cached"
     end
 
+    test "text segments are preserved across tool calls", %{conn: conn, user: user} do
+      task = task_fixture(%{user_id: user.id, status: "running", container_id: "c1"})
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      # 1. First text segment — thinking
+      send(
+        lv.pid,
+        {:task_event, task.id,
+         %{
+           "type" => "message.part.updated",
+           "properties" => %{"part" => %{"type" => "text", "text" => "Let me check the file..."}}
+         }}
+      )
+
+      # 2. Tool call
+      send(
+        lv.pid,
+        {:task_event, task.id,
+         %{
+           "type" => "message.part.updated",
+           "properties" => %{"part" => %{"type" => "tool-start", "name" => "read"}}
+         }}
+      )
+
+      send(
+        lv.pid,
+        {:task_event, task.id,
+         %{
+           "type" => "message.part.updated",
+           "properties" => %{"part" => %{"type" => "tool-result", "name" => "read"}}
+         }}
+      )
+
+      # 3. Second text segment — reasoning after tool
+      send(
+        lv.pid,
+        {:task_event, task.id,
+         %{
+           "type" => "message.part.updated",
+           "properties" => %{"part" => %{"type" => "text", "text" => "Now I see the issue."}}
+         }}
+      )
+
+      html = render(lv)
+      # Both text segments should be visible
+      assert html =~ "Let me check the file..."
+      assert html =~ "Now I see the issue."
+      # Tool should be rendered
+      assert html =~ "read"
+    end
+
+    test "tool events from other tasks are ignored", %{conn: conn, user: user} do
+      _task = task_fixture(%{user_id: user.id, status: "running", container_id: "c1"})
+      _other = task_fixture(%{user_id: user.id, status: "running", container_id: "c2"})
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      # Send event for the OTHER task (not the one we're viewing)
+      send(
+        lv.pid,
+        {:task_event, "nonexistent-id",
+         %{
+           "type" => "message.part.updated",
+           "properties" => %{"part" => %{"type" => "text", "text" => "SHOULD NOT APPEAR"}}
+         }}
+      )
+
+      html = render(lv)
+      refute html =~ "SHOULD NOT APPEAR"
+    end
+
     test "receiving task_status_changed to completed updates UI", %{conn: conn, user: user} do
       task = task_fixture(%{user_id: user.id, status: "running", container_id: "c1"})
 
