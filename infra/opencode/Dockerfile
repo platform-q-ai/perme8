@@ -19,13 +19,14 @@ RUN adduser -D -g "" appuser
 # Pre-create directories opencode expects at runtime
 RUN mkdir -p /home/appuser/.local/share/opencode \
              /home/appuser/.local/state \
-             /home/appuser/.config/perme8
+             /home/appuser/.config/perme8 \
+             /home/appuser/.claude
 
 WORKDIR /workspace
 COPY opencode.json /workspace/opencode.json
 COPY entrypoint.sh /workspace/entrypoint.sh
 COPY get-token /home/appuser/.config/perme8/get-token
-RUN chown -R appuser:appuser /workspace /home/appuser/.local /home/appuser/.config
+RUN chown -R appuser:appuser /workspace /home/appuser/.local /home/appuser/.config /home/appuser/.claude
 
 USER appuser
 EXPOSE 4096
