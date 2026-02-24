@@ -7,6 +7,7 @@ mix deps.get --only prod
 
 # Install npm dependencies for assets
 npm install --prefix apps/jarga_web/assets
+npm install --prefix apps/agents_web/assets
 
 # Compile the application
 MIX_ENV=prod mix compile
