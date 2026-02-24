@@ -802,10 +802,29 @@ defmodule AgentsWeb.SessionsLive.Index do
 
           <%!-- Output log --%>
           <div class="flex-1 overflow-y-auto p-4" id="session-log" phx-hook="SessionLog">
+            <%= if @current_task do %>
+              <%!-- User message --%>
+              <div class="flex gap-2 mb-3">
+                <div class="shrink-0 size-6 rounded-full bg-primary/10 flex items-center justify-center">
+                  <.icon name="hero-user" class="size-3.5 text-primary" />
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="text-xs font-medium text-base-content/50 mb-0.5">You</div>
+                  <div class="text-sm whitespace-pre-wrap break-words">
+                    {@current_task.instruction}
+                  </div>
+                </div>
+              </div>
+            <% end %>
             <%= if @output_parts == [] && task_running?(@current_task) do %>
-              <div class="flex items-center gap-2 text-base-content/50 text-sm">
-                <span class="loading loading-dots loading-xs"></span>
-                <span>Waiting for response...</span>
+              <div class="flex gap-2">
+                <div class="shrink-0 size-6 rounded-full bg-secondary/10 flex items-center justify-center">
+                  <.icon name="hero-cpu-chip" class="size-3.5 text-secondary" />
+                </div>
+                <div class="flex items-center gap-2 text-base-content/50 text-sm">
+                  <span class="loading loading-dots loading-xs"></span>
+                  <span>Waiting for response...</span>
+                </div>
               </div>
             <% end %>
             <%= if @output_parts == [] && !task_running?(@current_task) && @current_task == nil do %>
@@ -814,8 +833,18 @@ defmodule AgentsWeb.SessionsLive.Index do
                 <p class="text-sm">Enter an instruction below to start</p>
               </div>
             <% end %>
-            <%= for part <- @output_parts do %>
-              <.output_part part={part} />
+            <%= if @output_parts != [] do %>
+              <div class="flex gap-2">
+                <div class="shrink-0 size-6 rounded-full bg-secondary/10 flex items-center justify-center mt-0.5">
+                  <.icon name="hero-cpu-chip" class="size-3.5 text-secondary" />
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="text-xs font-medium text-base-content/50 mb-0.5">Assistant</div>
+                  <%= for part <- @output_parts do %>
+                    <.output_part part={part} />
+                  <% end %>
+                </div>
+              </div>
             <% end %>
           </div>
 
