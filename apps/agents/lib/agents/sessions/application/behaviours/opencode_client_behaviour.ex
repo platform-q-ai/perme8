@@ -77,6 +77,32 @@ defmodule Agents.Sessions.Application.Behaviours.OpencodeClientBehaviour do
               opts :: keyword()
             ) :: :ok | {:error, term()}
 
+  # ---- Questions ----
+
+  @doc """
+  Reply to a question request from the AI assistant.
+
+  Posts to `POST /question/:requestID/reply` with answers.
+  Each answer is a list of selected option labels (strings).
+  """
+  @callback reply_question(
+              base_url :: String.t(),
+              request_id :: String.t(),
+              answers :: [[String.t()]],
+              opts :: keyword()
+            ) :: :ok | {:error, term()}
+
+  @doc """
+  Reject a question request from the AI assistant.
+
+  Posts to `POST /question/:requestID/reject`.
+  """
+  @callback reject_question(
+              base_url :: String.t(),
+              request_id :: String.t(),
+              opts :: keyword()
+            ) :: :ok | {:error, term()}
+
   # ---- Retrieval APIs (for historical output and resume) ----
 
   @doc """

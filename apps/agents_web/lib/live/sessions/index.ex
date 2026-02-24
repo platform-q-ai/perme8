@@ -174,6 +174,102 @@ defmodule AgentsWeb.SessionsLive.Index do
   end
 
   @impl true
+  def handle_event(
+        "toggle_question_option",
+        %{"question-index" => q_idx_str, "label" => label},
+        socket
+      ) do
+    case socket.assigns.pending_question do
+      nil ->
+        {:noreply, socket}
+
+      pending ->
+        q_idx = String.to_integer(q_idx_str)
+        question = Enum.at(pending.questions, q_idx)
+        multiple = question["multiple"] || false
+        current = Enum.at(pending.selected, q_idx, [])
+
+        new_selection =
+          if multiple do
+            if label in current, do: List.delete(current, label), else: current ++ [label]
+          else
+            if label in current, do: [], else: [label]
+          end
+
+        updated_selected = List.replace_at(pending.selected, q_idx, new_selection)
+        updated_pending = %{pending | selected: updated_selected}
+        {:noreply, assign(socket, :pending_question, updated_pending)}
+    end
+  end
+
+  @impl true
+  def handle_event("update_question_form", %{"custom_answer" => custom_map}, socket) do
+    case socket.assigns.pending_question do
+      nil ->
+        {:noreply, socket}
+
+      pending ->
+        # custom_map is %{"0" => "value", "1" => "value", ...}
+        updated_custom =
+          Enum.with_index(pending.custom_text)
+          |> Enum.map(fn {_old, idx} ->
+            Map.get(custom_map, to_string(idx), "")
+          end)
+
+        updated_pending = %{pending | custom_text: updated_custom}
+        {:noreply, assign(socket, :pending_question, updated_pending)}
+    end
+  end
+
+  @impl true
+  def handle_event("update_question_form", _params, socket) do
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("submit_question_answer", _params, socket) do
+    case {socket.assigns.pending_question, socket.assigns.current_task} do
+      {nil, _} ->
+        {:noreply, socket}
+
+      {pending, %{id: task_id}} ->
+        # Build final answers: for each question, merge selected options + custom text
+        answers =
+          Enum.zip(pending.selected, pending.custom_text)
+          |> Enum.map(fn {selected, custom} ->
+            custom_trimmed = String.trim(custom)
+
+            if custom_trimmed != "" do
+              selected ++ [custom_trimmed]
+            else
+              selected
+            end
+          end)
+
+        Sessions.answer_question(task_id, pending.request_id, answers)
+        {:noreply, assign(socket, :pending_question, nil)}
+
+      _ ->
+        {:noreply, socket}
+    end
+  end
+
+  @impl true
+  def handle_event("dismiss_question", _params, socket) do
+    case {socket.assigns.pending_question, socket.assigns.current_task} do
+      {nil, _} ->
+        {:noreply, socket}
+
+      {pending, %{id: task_id}} ->
+        Sessions.reject_question(task_id, pending.request_id)
+        {:noreply, assign(socket, :pending_question, nil)}
+
+      _ ->
+        {:noreply, socket}
+    end
+  end
+
+  @impl true
   def handle_event("view_task", %{"task-id" => task_id}, socket) do
     user = socket.assigns.current_scope.user
 
@@ -295,11 +391,12 @@ defmodule AgentsWeb.SessionsLive.Index do
       |> update_task_in_list(task_id, status)
       |> reload_all(user.id)
 
-    # Freeze streaming text when task reaches a terminal state so it
-    # renders as proper markdown
+    # Freeze streaming text and clear pending questions when task reaches a terminal state
     socket =
       if status in ["completed", "failed", "cancelled"] do
-        assign(socket, :output_parts, freeze_streaming(socket.assigns.output_parts))
+        socket
+        |> assign(:output_parts, freeze_streaming(socket.assigns.output_parts))
+        |> assign(:pending_question, nil)
       else
         socket
       end
@@ -356,6 +453,8 @@ defmodule AgentsWeb.SessionsLive.Index do
     |> assign(:session_cost, nil)
     |> assign(:session_summary, nil)
     |> assign(:output_parts, [])
+    |> assign(:pending_question, nil)
+    |> assign(:user_message_ids, MapSet.new())
   end
 
   # ---- Event processing ----
@@ -379,6 +478,19 @@ defmodule AgentsWeb.SessionsLive.Index do
     |> maybe_assign(:session_cost, info["cost"])
   end
 
+  # Track user message IDs so we can skip their parts in output
+  defp process_event(
+         %{
+           "type" => "message.updated",
+           "properties" => %{"info" => %{"role" => "user", "id" => msg_id}}
+         },
+         socket
+       )
+       when is_binary(msg_id) do
+    ids = MapSet.put(socket.assigns.user_message_ids, msg_id)
+    assign(socket, :user_message_ids, ids)
+  end
+
   # Text output — keyed by part ID so multiple messages accumulate
   defp process_event(
          %{
@@ -388,9 +500,13 @@ defmodule AgentsWeb.SessionsLive.Index do
          socket
        )
        when text != "" do
-    part_id = part["id"] || "text-default"
-    parts = upsert_part(socket.assigns.output_parts, {:text, part_id, text, :streaming})
-    assign(socket, :output_parts, parts)
+    if user_message_part?(part, socket) do
+      socket
+    else
+      part_id = part["id"] || "text-default"
+      parts = upsert_part(socket.assigns.output_parts, {:text, part_id, text, :streaming})
+      assign(socket, :output_parts, parts)
+    end
   end
 
   # Reasoning/thinking content — keyed by part ID
@@ -407,7 +523,7 @@ defmodule AgentsWeb.SessionsLive.Index do
     assign(socket, :output_parts, parts)
   end
 
-  # tool-start / tool-result format
+  # tool-start / tool-result format (legacy)
   defp process_event(
          %{
            "type" => "message.part.updated",
@@ -415,7 +531,8 @@ defmodule AgentsWeb.SessionsLive.Index do
          },
          socket
        ) do
-    handle_tool_start(socket, part["id"], part["name"] || "tool", part["input"] || part["args"])
+    detail = %{input: part["input"] || part["args"], title: nil, output: nil, error: nil}
+    handle_tool_event(socket, part["id"], part["name"] || "tool", :running, detail)
   end
 
   defp process_event(
@@ -425,42 +542,94 @@ defmodule AgentsWeb.SessionsLive.Index do
          },
          socket
        ) do
-    handle_tool_done(socket, part["id"], part["name"] || "tool")
+    handle_tool_event(socket, part["id"], part["name"] || "tool", :done, %{})
   end
 
-  # SDK-style tool part with state object
+  # SDK-style tool part with state object — the rich format
   defp process_event(
          %{
            "type" => "message.part.updated",
            "properties" => %{
-             "part" => %{"type" => "tool", "state" => %{"status" => status}} = part
+             "part" => %{"type" => "tool", "state" => %{"status" => status} = state} = part
            }
          },
          socket
        ) do
     tool_name = part["tool"] || part["name"] || "tool"
     tool_id = part["id"]
-    input = part["input"] || part["args"]
 
-    case status do
-      s when s in ["pending", "running"] -> handle_tool_start(socket, tool_id, tool_name, input)
-      s when s in ["completed", "error"] -> handle_tool_done(socket, tool_id, tool_name)
-      _ -> socket
-    end
+    detail = %{
+      input: state["input"],
+      title: state["title"],
+      output: state["output"],
+      error: state["error"]
+    }
+
+    tool_status =
+      case status do
+        s when s in ["pending", "running"] -> :running
+        "completed" -> :done
+        "error" -> :error
+        _ -> :running
+      end
+
+    handle_tool_event(socket, tool_id, tool_name, tool_status, detail)
+  end
+
+  # Question from the AI assistant — show options to user
+  defp process_event(
+         %{"type" => "question.asked", "properties" => properties},
+         socket
+       ) do
+    request_id = properties["id"]
+    questions = properties["questions"] || []
+
+    # Initialize selected answers — one empty list per question
+    initial_selections = Enum.map(questions, fn _q -> [] end)
+
+    pending = %{
+      request_id: request_id,
+      session_id: properties["sessionID"],
+      questions: questions,
+      selected: initial_selections,
+      custom_text: Enum.map(questions, fn _q -> "" end)
+    }
+
+    assign(socket, :pending_question, pending)
+  end
+
+  # Question answered — clear the pending question
+  defp process_event(%{"type" => "question.replied"}, socket) do
+    assign(socket, :pending_question, nil)
+  end
+
+  defp process_event(%{"type" => "question.rejected"}, socket) do
+    assign(socket, :pending_question, nil)
   end
 
   defp process_event(_event, socket), do: socket
 
-  defp handle_tool_start(socket, tool_id, tool_name, input) do
+  defp handle_tool_event(socket, tool_id, tool_name, status, new_detail) do
     parts = freeze_streaming(socket.assigns.output_parts)
-    parts = upsert_part(parts, {:tool, tool_id, tool_name, :running, input})
+
+    # Merge new detail into existing detail (if tool already exists)
+    existing_detail =
+      case Enum.find(parts, fn p -> elem(p, 0) == :tool && elem(p, 1) == tool_id end) do
+        {:tool, _, _, _, existing} when is_map(existing) -> existing
+        _ -> %{input: nil, title: nil, output: nil, error: nil}
+      end
+
+    merged = Map.merge(existing_detail, new_detail, fn _k, old, new -> new || old end)
+    parts = upsert_part(parts, {:tool, tool_id, tool_name, status, merged})
     assign(socket, :output_parts, parts)
   end
 
-  defp handle_tool_done(socket, tool_id, tool_name) do
-    parts = finish_tool(socket.assigns.output_parts, tool_id, tool_name)
-    assign(socket, :output_parts, parts)
+  # Check if a part belongs to a user message (should be filtered from output)
+  defp user_message_part?(%{"messageID" => msg_id}, socket) when is_binary(msg_id) do
+    MapSet.member?(socket.assigns.user_message_ids, msg_id)
   end
+
+  defp user_message_part?(_part, _socket), do: false
 
   defp maybe_assign(socket, _key, nil), do: socket
   defp maybe_assign(socket, key, value), do: assign(socket, key, value)
@@ -483,41 +652,6 @@ defmodule AgentsWeb.SessionsLive.Index do
       {:reasoning, id, text, :streaming} -> {:reasoning, id, text, :frozen}
       other -> other
     end)
-  end
-
-  # Find a running tool by ID (preferred) or name fallback and mark it done
-  defp finish_tool(parts, tool_id, tool_name) do
-    # Try by ID first
-    idx =
-      if tool_id do
-        Enum.find_index(parts, fn
-          {:tool, ^tool_id, _name, :running, _input} -> true
-          _ -> false
-        end)
-      end
-
-    # Fall back to last running tool with matching name
-    idx =
-      idx ||
-        parts
-        |> Enum.with_index()
-        |> Enum.reverse()
-        |> Enum.find_value(fn
-          {{:tool, _id, ^tool_name, :running, _input}, i} -> i
-          _ -> nil
-        end)
-
-    if idx do
-      case Enum.at(parts, idx) do
-        {:tool, id, name, :running, input} ->
-          List.replace_at(parts, idx, {:tool, id, name, :done, input})
-
-        _ ->
-          parts
-      end
-    else
-      parts
-    end
   end
 
   defp format_model(%{"modelID" => model_id}), do: model_id
@@ -856,7 +990,7 @@ defmodule AgentsWeb.SessionsLive.Index do
                 <div class="flex-1 min-w-0">
                   <div class="text-xs font-medium text-base-content/50 mb-0.5">You</div>
                   <div class="text-sm whitespace-pre-wrap break-words">
-                    {@current_task.instruction}
+                    {String.trim(@current_task.instruction)}
                   </div>
                 </div>
               </div>
@@ -891,6 +1025,11 @@ defmodule AgentsWeb.SessionsLive.Index do
                 </div>
               </div>
             <% end %>
+            <%!-- Pending question from assistant --%>
+            <.question_card
+              :if={@pending_question}
+              pending={@pending_question}
+            />
           </div>
 
           <%!-- Task history for this session --%>
@@ -995,6 +1134,80 @@ defmodule AgentsWeb.SessionsLive.Index do
 
   # ---- Components ----
 
+  # Question card — renders the AI assistant's question with selectable options
+  defp question_card(assigns) do
+    ~H"""
+    <div class="mt-3 rounded-lg border-2 border-warning/40 bg-warning/5 p-4">
+      <div class="flex items-center gap-2 mb-3">
+        <.icon name="hero-question-mark-circle" class="size-5 text-warning" />
+        <span class="font-semibold text-sm text-warning">Question from Assistant</span>
+      </div>
+
+      <form id="question-form" phx-change="update_question_form" phx-submit="submit_question_answer">
+        <%= for {question, q_idx} <- Enum.with_index(@pending.questions) do %>
+          <div class={["mb-4", q_idx > 0 && "pt-3 border-t border-base-300/50"]}>
+            <div class="text-xs font-semibold text-base-content/60 uppercase tracking-wider mb-1">
+              {question["header"]}
+            </div>
+            <p class="text-sm mb-2">{question["question"]}</p>
+
+            <div :if={question["multiple"]} class="text-[0.65rem] text-base-content/50 mb-1">
+              Select one or more options
+            </div>
+
+            <div class="flex flex-wrap gap-1.5 mb-2">
+              <%= for option <- question["options"] || [] do %>
+                <% selected = option["label"] in Enum.at(@pending.selected, q_idx, []) %>
+                <button
+                  type="button"
+                  phx-click="toggle_question_option"
+                  phx-value-question-index={q_idx}
+                  phx-value-label={option["label"]}
+                  class={[
+                    "btn btn-sm",
+                    if(selected, do: "btn-primary", else: "btn-outline")
+                  ]}
+                  title={option["description"]}
+                >
+                  {option["label"]}
+                </button>
+              <% end %>
+            </div>
+
+            <%!-- Custom text input — always available (opencode default) --%>
+            <div class="mt-2">
+              <input
+                type="text"
+                name={"custom_answer[#{q_idx}]"}
+                placeholder="Type your own answer..."
+                value={Enum.at(@pending.custom_text, q_idx, "")}
+                phx-debounce="300"
+                class="input input-bordered input-sm w-full text-sm"
+              />
+            </div>
+          </div>
+        <% end %>
+
+        <div class="flex gap-2 mt-2">
+          <button
+            type="submit"
+            class="btn btn-primary btn-sm"
+          >
+            <.icon name="hero-check" class="size-4" /> Submit Answer
+          </button>
+          <button
+            type="button"
+            phx-click="dismiss_question"
+            class="btn btn-ghost btn-sm"
+          >
+            Dismiss
+          </button>
+        </div>
+      </form>
+    </div>
+    """
+  end
+
   # Streaming text — render raw for speed (character-by-character feel)
   defp output_part(%{part: {:text, _id, text, :streaming}} = assigns) do
     assigns = assign(assigns, :text, text)
@@ -1057,40 +1270,104 @@ defmodule AgentsWeb.SessionsLive.Index do
     """
   end
 
-  # Tool card — 5-tuple: {:tool, id, name, status, input}
-  defp output_part(%{part: {:tool, _id, name, status, input}} = assigns) do
-    assigns = assign(assigns, :name, name)
-    assigns = assign(assigns, :tool_status, status)
-    assigns = assign(assigns, :input, input)
+  # Tool card — 5-tuple: {:tool, id, name, status, detail}
+  # detail is a map with :title, :input, :output, :error keys
+  defp output_part(%{part: {:tool, _id, name, status, detail}} = assigns)
+       when is_map(detail) do
+    title = detail[:title] || detail["title"]
+    input = detail[:input] || detail["input"]
+    output = detail[:output] || detail["output"]
+    error = detail[:error] || detail["error"]
+
+    assigns =
+      assigns
+      |> assign(:name, name)
+      |> assign(:tool_status, status)
+      |> assign(:title, title)
+      |> assign(:input, input)
+      |> assign(:output, output)
+      |> assign(:error, error)
+      |> assign(:has_detail, !!(input || output || error))
 
     ~H"""
-    <div class="my-1 rounded-lg border border-base-300 bg-base-200/50 text-xs">
-      <div class="flex items-center gap-2 px-3 py-1.5">
+    <details
+      class="my-1 rounded-lg border border-base-300 bg-base-200/40 text-xs group"
+      open={@tool_status == :running}
+    >
+      <summary class="flex items-center gap-2 px-3 py-1.5 cursor-pointer select-none">
         <span :if={@tool_status == :running} class="loading loading-spinner loading-xs text-info">
         </span>
         <.icon :if={@tool_status == :done} name="hero-check-circle" class="size-3.5 text-success" />
+        <.icon
+          :if={@tool_status == :error}
+          name="hero-exclamation-circle"
+          class="size-3.5 text-error"
+        />
         <span class="font-medium text-base-content/80">
           <.tool_icon name={@name} /> {@name}
         </span>
+        <span :if={@title} class="text-base-content/50 truncate flex-1">{@title}</span>
+        <.icon
+          :if={@has_detail}
+          name="hero-chevron-right"
+          class="size-3 text-base-content/30 ml-auto transition-transform group-open:rotate-90 shrink-0"
+        />
+      </summary>
+      <div :if={@has_detail} class="border-t border-base-300/50">
+        <div :if={@input} class="px-3 py-1.5">
+          <div class="text-[0.6rem] font-semibold text-base-content/40 uppercase tracking-wider mb-0.5">
+            Input
+          </div>
+          <pre class="text-[0.65rem] leading-snug text-base-content/60 whitespace-pre-wrap break-all max-h-32 overflow-y-auto"><code>{format_tool_input(@input)}</code></pre>
+        </div>
+        <div :if={@output} class={["px-3 py-1.5", @input && "border-t border-base-300/30"]}>
+          <div class="text-[0.6rem] font-semibold text-base-content/40 uppercase tracking-wider mb-0.5">
+            Output
+          </div>
+          <pre class="text-[0.65rem] leading-snug text-base-content/60 whitespace-pre-wrap break-all max-h-32 overflow-y-auto"><code>{truncate_output(@output)}</code></pre>
+        </div>
+        <div
+          :if={@error}
+          class={["px-3 py-1.5", (@input || @output) && "border-t border-base-300/30"]}
+        >
+          <div class="text-[0.6rem] font-semibold text-error/70 uppercase tracking-wider mb-0.5">
+            Error
+          </div>
+          <pre class="text-[0.65rem] leading-snug text-error/80 whitespace-pre-wrap break-all max-h-32 overflow-y-auto"><code>{@error}</code></pre>
+        </div>
       </div>
-      <div :if={@input} class="px-3 pb-2 pt-0.5">
-        <pre class="text-[0.65rem] leading-snug text-base-content/50 whitespace-pre-wrap break-all max-h-24 overflow-y-auto"><code>{format_tool_input(@input)}</code></pre>
-      </div>
-    </div>
+    </details>
     """
+  end
+
+  # Tool with non-map detail (legacy plain input value)
+  defp output_part(%{part: {:tool, id, name, status, input}} = assigns)
+       when not is_map(input) do
+    detail = %{input: input, title: nil, output: nil, error: nil}
+    assigns = Map.put(assigns, :part, {:tool, id, name, status, detail})
+    output_part(assigns)
   end
 
   # Legacy 4-tuple tool compat {:tool, name, status, input}
   defp output_part(%{part: {:tool, name, status, input}} = assigns)
        when is_atom(status) do
-    assigns = Map.put(assigns, :part, {:tool, nil, name, status, input})
+    detail =
+      if is_map(input), do: input, else: %{input: input, title: nil, output: nil, error: nil}
+
+    assigns = Map.put(assigns, :part, {:tool, nil, name, status, detail})
     output_part(assigns)
   end
 
   # Legacy 3-tuple tool compat {:tool, name, status}
   defp output_part(%{part: {:tool, name, status}} = assigns)
        when is_atom(status) do
-    assigns = Map.put(assigns, :part, {:tool, nil, name, status, nil})
+    assigns =
+      Map.put(
+        assigns,
+        :part,
+        {:tool, nil, name, status, %{input: nil, title: nil, output: nil, error: nil}}
+      )
+
     output_part(assigns)
   end
 
@@ -1116,9 +1393,19 @@ defmodule AgentsWeb.SessionsLive.Index do
   defp tool_icon_name("list"), do: "hero-list-bullet"
   defp tool_icon_name(_), do: "hero-wrench-screwdriver"
 
+  defp format_tool_input(nil), do: ""
   defp format_tool_input(input) when is_binary(input), do: input
   defp format_tool_input(input) when is_map(input), do: Jason.encode!(input, pretty: true)
   defp format_tool_input(input), do: inspect(input)
+
+  defp truncate_output(nil), do: ""
+
+  defp truncate_output(text) when is_binary(text) and byte_size(text) > 2000 do
+    String.slice(text, 0, 2000) <> "\n... (truncated)"
+  end
+
+  defp truncate_output(text) when is_binary(text), do: text
+  defp truncate_output(other), do: inspect(other)
 
   defp status_badge(%{status: "idle"} = assigns) do
     ~H"""

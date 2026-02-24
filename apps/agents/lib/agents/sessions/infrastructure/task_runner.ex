@@ -33,6 +33,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     :instruction,
     :user_id,
     :timeout_ref,
+    :flush_ref,
     status: :starting,
     health_retries: 0,
     # Track whether we've seen session go to "running" so we know
@@ -42,6 +43,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     output_text: "",
     # Structured output parts for rich DB caching — keyed by part ID
     output_parts: [],
+    # Track last flushed version to avoid redundant DB writes
+    last_flushed_count: 0,
     # Dependency injection
     container_provider: nil,
     opencode_client: nil,
@@ -124,6 +127,24 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
           {:ok, state}
         end
     end
+  end
+
+  # ---- Question handling (called by LiveView via GenServer.call) ----
+
+  @impl true
+  def handle_call({:answer_question, request_id, answers}, _from, state) do
+    base_url = "http://localhost:#{state.container_port}"
+
+    result = state.opencode_client.reply_question(base_url, request_id, answers, [])
+    {:reply, result, state}
+  end
+
+  @impl true
+  def handle_call({:reject_question, request_id}, _from, state) do
+    base_url = "http://localhost:#{state.container_port}"
+
+    result = state.opencode_client.reject_question(base_url, request_id, [])
+    {:reply, result, state}
   end
 
   # ---- Container Start ----
@@ -278,7 +299,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
         })
 
         broadcast_status(state.task_id, "running", state.pubsub)
-        {:noreply, %{state | status: :running}}
+        flush_ref = schedule_output_flush()
+        {:noreply, %{state | status: :running, flush_ref: flush_ref}}
 
       {:error, reason} ->
         fail_task(state, "Prompt send failed: #{inspect(reason)}")
@@ -327,9 +349,33 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
         {:noreply, new_state}
 
+      {:question, new_state} ->
+        # question.asked events are broadcast to the LiveView via PubSub (above).
+        # The LiveView will render the question UI and call answer_question/reject_question.
+        {:noreply, new_state}
+
       {:continue, new_state} ->
         {:noreply, new_state}
     end
+  end
+
+  # ---- Periodic output flush ----
+
+  @impl true
+  def handle_info(:flush_output, state) do
+    current_count = length(state.output_parts)
+
+    state =
+      if current_count > state.last_flushed_count do
+        flush_output_to_db(state)
+        %{state | last_flushed_count: current_count}
+      else
+        state
+      end
+
+    # Schedule the next flush if we're still running
+    flush_ref = schedule_output_flush()
+    {:noreply, %{state | flush_ref: flush_ref}}
   end
 
   # ---- SSE Error ----
@@ -365,6 +411,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
   @impl true
   def handle_info(:cancel, state) do
+    cancel_flush_timer(state)
+
     if state.session_id && state.container_port do
       base_url = "http://localhost:#{state.container_port}"
       state.opencode_client.abort_session(base_url, state.session_id)
@@ -431,6 +479,14 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     else
       {:continue, state}
     end
+  end
+
+  # Question requests — broadcast to LiveView for user interaction
+  defp handle_sdk_event(%{"type" => "question.asked"} = _event, state) do
+    # The full event (with properties containing id, sessionID, questions)
+    # is already broadcast via PubSub above. The LiveView will render the
+    # question UI. We return :question to the main handle_info.
+    {:question, state}
   end
 
   # Text output from assistant — accumulate for DB caching, keyed by part ID
@@ -512,6 +568,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   end
 
   defp fail_task(state, error) do
+    cancel_flush_timer(state)
+
     attrs = %{
       status: "failed",
       error: serialize_error(error),
@@ -527,6 +585,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   end
 
   defp complete_task(state) do
+    cancel_flush_timer(state)
+
     attrs = %{
       status: "completed",
       completed_at: DateTime.utc_now()
@@ -601,5 +661,20 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
       "task:#{task_id}",
       {:task_status_changed, task_id, status}
     )
+  end
+
+  defp cancel_flush_timer(%{flush_ref: nil}), do: :ok
+  defp cancel_flush_timer(%{flush_ref: ref}), do: Process.cancel_timer(ref)
+
+  defp schedule_output_flush do
+    interval = SessionsConfig.output_flush_interval_ms()
+    Process.send_after(self(), :flush_output, interval)
+  end
+
+  defp flush_output_to_db(state) do
+    case serialize_output_parts(state.output_parts) do
+      nil -> :ok
+      json -> update_task_status(state, %{output: json})
+    end
   end
 end

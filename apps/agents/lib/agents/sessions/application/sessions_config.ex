@@ -35,6 +35,11 @@ defmodule Agents.Sessions.Application.SessionsConfig do
     Application.get_env(:agents, :sessions_env, %{})
   end
 
+  @doc "Returns the interval in milliseconds for flushing output_parts to DB while a task is running."
+  def output_flush_interval_ms do
+    config()[:output_flush_interval_ms] || 3_000
+  end
+
   @doc "Returns the PubSub server name for broadcasting task events."
   def pubsub do
     config()[:pubsub] || Perme8.Events.PubSub
