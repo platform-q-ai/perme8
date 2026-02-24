@@ -8,7 +8,8 @@ RUN cp /root/.opencode/bin/opencode /usr/local/bin/opencode
 FROM hexpm/elixir:1.19.4-erlang-28.3.2-alpine-3.21.6
 
 # git: repo operations, bash+openssl+curl+python3: get-token script
-RUN apk add --no-cache git bash openssl curl python3 github-cli
+# ripgrep+fd: required by opencode's Grep and Glob tools
+RUN apk add --no-cache git bash openssl curl python3 github-cli ripgrep fd
 
 # Copy opencode binary from fetcher stage
 COPY --from=fetcher /usr/local/bin/opencode /usr/local/bin/opencode
