@@ -558,7 +558,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     {:continue, %{state | output_parts: parts}}
   end
 
-  # Tool start — record in output_parts
+  # Tool start — record in output_parts (legacy format)
   defp handle_sdk_event(
          %{
            "type" => "message.part.updated",
@@ -568,22 +568,60 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
        ) do
     tool_id = part["id"]
     tool_name = part["name"] || "tool"
-    entry = %{"type" => "tool", "id" => tool_id, "name" => tool_name, "status" => "done"}
+
+    entry = %{
+      "type" => "tool",
+      "id" => tool_id,
+      "name" => tool_name,
+      "status" => "running",
+      "input" => part["input"] || part["args"],
+      "title" => nil,
+      "output" => nil,
+      "error" => nil
+    }
+
     parts = upsert_output_part(state.output_parts, tool_id, entry)
     {:continue, %{state | output_parts: parts}}
   end
 
-  # SDK-style tool part with state
+  # SDK-style tool part with state — cache the full detail
   defp handle_sdk_event(
          %{
            "type" => "message.part.updated",
-           "properties" => %{"part" => %{"type" => "tool", "state" => %{}} = part}
+           "properties" => %{
+             "part" => %{"type" => "tool", "state" => %{"status" => status} = tool_state} = part
+           }
          },
          state
        ) do
     tool_id = part["id"]
     tool_name = part["tool"] || part["name"] || "tool"
-    entry = %{"type" => "tool", "id" => tool_id, "name" => tool_name, "status" => "done"}
+
+    cached_status =
+      case status do
+        s when s in ["pending", "running"] -> "running"
+        "completed" -> "done"
+        "error" -> "error"
+        _ -> "running"
+      end
+
+    # Merge into existing entry to preserve earlier fields
+    existing =
+      Enum.find(state.output_parts, fn p -> p["id"] == tool_id end) ||
+        %{}
+
+    entry =
+      Map.merge(existing, %{
+        "type" => "tool",
+        "id" => tool_id,
+        "name" => tool_name,
+        "status" => cached_status,
+        "input" => tool_state["input"] || existing["input"],
+        "title" => tool_state["title"] || existing["title"],
+        "output" => tool_state["output"] || existing["output"],
+        "error" => tool_state["error"] || existing["error"]
+      })
+
     parts = upsert_output_part(state.output_parts, tool_id, entry)
     {:continue, %{state | output_parts: parts}}
   end
