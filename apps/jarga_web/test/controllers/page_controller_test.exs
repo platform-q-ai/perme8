@@ -4,7 +4,7 @@ defmodule JargaWeb.PageControllerTest do
   describe "GET /" do
     test "renders home page for unauthenticated users", %{conn: conn} do
       conn = get(conn, ~p"/")
-      assert html_response(conn, 200) =~ "Ship Features or Kill Tech Debt?"
+      assert html_response(conn, 200) =~ "Coming Soon"
     end
 
     test "redirects authenticated users to /app", %{conn: conn} do
