@@ -142,38 +142,6 @@ defmodule AgentsWeb.SessionsLive.Index do
   end
 
   @impl true
-  def handle_event("delete_task", %{"task-id" => task_id}, socket) do
-    user = socket.assigns.current_scope.user
-
-    case Sessions.delete_task(task_id, user.id) do
-      :ok ->
-        socket =
-          if socket.assigns.current_task && socket.assigns.current_task.id == task_id do
-            # Re-select the session to pick the next latest task
-            tasks = Sessions.list_tasks(user.id)
-            current_task = find_current_task(tasks, socket.assigns.active_container_id)
-
-            socket
-            |> assign(:tasks, tasks)
-            |> assign(:current_task, current_task)
-            |> assign(:events, [])
-            |> assign_session_state()
-            |> maybe_load_cached_output(current_task)
-          else
-            reload_all(socket, user.id)
-          end
-
-        {:noreply,
-         socket
-         |> reload_all(user.id)
-         |> put_flash(:info, "Task deleted")}
-
-      {:error, _reason} ->
-        {:noreply, put_flash(socket, :error, "Failed to delete task")}
-    end
-  end
-
-  @impl true
   def handle_event(
         "toggle_question_option",
         %{"question-index" => q_idx_str, "label" => label},
@@ -834,9 +802,6 @@ defmodule AgentsWeb.SessionsLive.Index do
   defp task_running?(nil), do: false
   defp task_running?(task), do: active_task?(task)
 
-  defp task_deletable?(%{status: status}), do: status in ["completed", "failed", "cancelled"]
-  defp task_deletable?(_), do: false
-
   defp session_deletable?(sessions, container_id) do
     case Enum.find(sessions, &(&1.container_id == container_id)) do
       %{latest_status: status} -> status in ["completed", "failed", "cancelled"]
@@ -1081,17 +1046,6 @@ defmodule AgentsWeb.SessionsLive.Index do
                   <span class="text-base-content/40 shrink-0">
                     {relative_time(task.inserted_at)}
                   </span>
-                  <button
-                    :if={task_deletable?(task)}
-                    type="button"
-                    phx-click="delete_task"
-                    phx-value-task-id={task.id}
-                    data-confirm="Delete this task?"
-                    class="btn btn-ghost btn-xs p-0 min-h-0 h-auto"
-                    title="Delete task"
-                  >
-                    <.icon name="hero-x-mark" class="size-3 text-base-content/30 hover:text-error" />
-                  </button>
                 </div>
               </div>
             </div>
