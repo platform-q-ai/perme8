@@ -82,8 +82,8 @@ Feature: Notification Management
     When I click "[data-testid='notification-bell']"
     And I wait for "[data-testid='notification-dropdown']" to be visible
     Then "[data-testid='notification-dropdown']" should be visible
-    # Click the bell again to close the dropdown
-    When I click "[data-testid='notification-bell']"
+    # Click away from the dropdown to close it (triggers phx-click-away)
+    When I click "body"
     And I wait for "[data-testid='notification-dropdown']" to be hidden
     Then "[data-testid='notification-dropdown']" should be hidden
 

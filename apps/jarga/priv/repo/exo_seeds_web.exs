@@ -22,6 +22,7 @@ Application.ensure_all_started(:bcrypt_elixir)
 # Start Ecto repos
 {:ok, _} = Identity.Repo.start_link()
 {:ok, _} = Jarga.Repo.start_link()
+{:ok, _} = Notifications.Repo.start_link()
 
 # Start PubSub (required by context modules that broadcast events)
 Application.ensure_all_started(:perme8_events)
@@ -39,6 +40,7 @@ alias Agents
 
 IO.puts("[exo-seeds-web] Cleaning previous seed data...")
 
+Ecto.Adapters.SQL.query!(Identity.Repo, "TRUNCATE notifications CASCADE", [])
 Ecto.Adapters.SQL.query!(Identity.Repo, "TRUNCATE sessions_tasks CASCADE", [])
 Ecto.Adapters.SQL.query!(Identity.Repo, "TRUNCATE api_keys CASCADE", [])
 Ecto.Adapters.SQL.query!(Identity.Repo, "TRUNCATE chat_messages CASCADE", [])
@@ -478,5 +480,80 @@ long_instruction =
   |> Jarga.Repo.insert()
 
 IO.puts("[exo-seeds-web] Created session tasks for alice")
+
+# ---------------------------------------------------------------------------
+# 8. Create notifications (for notifications browser tests)
+# ---------------------------------------------------------------------------
+
+alias Notifications.Infrastructure.Schemas.NotificationSchema
+
+now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+# Charlie (member) gets 3 unread notifications
+for i <- 1..3 do
+  NotificationSchema.create_changeset(%{
+    user_id: charlie.id,
+    type: "workspace_invitation",
+    title: "Workspace Invitation #{i}",
+    body: "You have been invited to join Workspace #{i}",
+    data: %{"workspace_id" => Ecto.UUID.generate(), "workspace_name" => "Workspace #{i}"}
+  })
+  |> Notifications.Repo.insert!()
+end
+
+IO.puts("[exo-seeds-web] Created 3 unread notifications for charlie")
+
+# Alice (owner) gets 100+ unread notifications (for "99+" badge test)
+for i <- 1..105 do
+  NotificationSchema.create_changeset(%{
+    user_id: alice.id,
+    type: "workspace_invitation",
+    title: "Invitation #{i}",
+    body: "You have been invited to join Team #{i}",
+    data: %{"workspace_id" => Ecto.UUID.generate(), "workspace_name" => "Team #{i}"}
+  })
+  |> Notifications.Repo.insert!()
+end
+
+IO.puts("[exo-seeds-web] Created 105 unread notifications for alice (99+ badge test)")
+
+# Eve (non-member) gets a workspace invitation notification for accept/decline tests
+# Use the actual product_team workspace ID so accept_invitation works
+NotificationSchema.create_changeset(%{
+  user_id: eve.id,
+  type: "workspace_invitation",
+  title: "Join Product Team",
+  body: "Alice invited you to join Product Team",
+  data: %{"workspace_id" => product_team.id, "workspace_name" => "Product Team"}
+})
+|> Notifications.Repo.insert!()
+
+# Also add eve as a pending invitation member so accept/decline works
+%WorkspaceMemberSchema{}
+|> WorkspaceMemberSchema.changeset(%{
+  workspace_id: product_team.id,
+  user_id: eve.id,
+  email: eve.email,
+  role: :member,
+  invited_at: now,
+  joined_at: nil
+})
+|> Identity.Repo.insert!()
+
+IO.puts("[exo-seeds-web] Created workspace invitation notification for eve")
+
+# Diana (guest) gets 2 unread notifications (for user-scoping test: different from charlie)
+for i <- 1..2 do
+  NotificationSchema.create_changeset(%{
+    user_id: diana.id,
+    type: "workspace_invitation",
+    title: "Guest Notification #{i}",
+    body: "Notification for guest user #{i}",
+    data: %{"workspace_id" => Ecto.UUID.generate(), "workspace_name" => "Team #{i}"}
+  })
+  |> Notifications.Repo.insert!()
+end
+
+IO.puts("[exo-seeds-web] Created 2 unread notifications for diana")
 
 IO.puts("[exo-seeds-web] Done!")
