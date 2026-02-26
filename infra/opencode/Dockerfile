@@ -11,7 +11,13 @@ FROM hexpm/elixir:1.19.4-erlang-28.3.2-alpine-3.21.6
 # ripgrep+fd: required by opencode's Grep and Glob tools
 # postgresql16+contrib: embedded per-session database (contrib provides citext extension)
 # build-base: make/gcc/musl-dev needed by bcrypt_elixir and lazy_html NIFs
-RUN apk add --no-cache git bash openssl curl python3 github-cli ripgrep fd postgresql16 postgresql16-contrib build-base
+# unzip: required by bun installer
+RUN apk add --no-cache git bash openssl curl python3 github-cli ripgrep fd postgresql16 postgresql16-contrib build-base unzip
+
+# Install Bun (JavaScript runtime/toolkit)
+RUN curl -fsSL https://bun.sh/install | bash \
+    && mv /root/.bun/bin/bun /usr/local/bin/bun \
+    && ln -s /usr/local/bin/bun /usr/local/bin/bunx
 
 # Copy opencode binary from fetcher stage
 COPY --from=fetcher /usr/local/bin/opencode /usr/local/bin/opencode
