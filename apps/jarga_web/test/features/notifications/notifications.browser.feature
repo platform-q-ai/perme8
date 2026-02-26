@@ -116,8 +116,8 @@ Feature: Notification Management
     # User A (charlie) should see badge with count 3
     Then "[data-testid='notification-bell']" should be visible
     And "[data-testid='notification-badge']" should contain text "3"
-    # Log out and log in as a different user (diana, user B) who has 2 unread
-    When I navigate to "${baseUrl}/users/log-out"
+    # Log out via the sidebar link and log in as a different user (diana, user B)
+    When I click the "Log out" link and wait for navigation
     And I wait for network idle
     And I navigate to "${baseUrl}/users/log-in"
     And I wait for network idle
@@ -169,7 +169,7 @@ Feature: Notification Management
     # Open the dropdown and click the mark-as-read button (blue dot) on the first unread notification
     When I click "[data-testid='notification-bell']"
     And I wait for "[data-testid='notification-dropdown']" to be visible
-    And I click "[data-testid='notification-item'][data-notification-status='unread'] button[title='Mark as read']"
+    And I click "[data-testid='mark-read-button'] >> nth=0"
     And I wait for network idle
     # Charlie had 3 unread; after marking one as read, 2 remain
     Then "[data-testid='notification-badge']" should contain text "2"

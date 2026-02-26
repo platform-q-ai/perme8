@@ -174,6 +174,7 @@ defmodule JargaWeb.NotificationsLive.NotificationBell do
             <button
               type="button"
               id={"notification-mark-read-btn-#{@notification.id}"}
+              data-testid="mark-read-button"
               phx-click="mark_read"
               phx-value-notification-id={@notification.id}
               phx-target={@myself}
