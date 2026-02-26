@@ -4,7 +4,7 @@ defmodule JargaWeb.Release do
   installed.
   """
 
-  @apps [:jarga, :identity]
+  @apps [:identity, :jarga]
 
   def migrate do
     load_apps()
