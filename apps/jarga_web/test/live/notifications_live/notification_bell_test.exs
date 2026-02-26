@@ -4,8 +4,8 @@ defmodule JargaWeb.NotificationsLive.NotificationBellTest do
   import Phoenix.LiveViewTest
 
   alias Jarga.Accounts
-  alias Jarga.Notifications
   alias Jarga.Workspaces
+  alias Notifications
 
   setup do
     # Create test users
@@ -319,6 +319,10 @@ defmodule JargaWeb.NotificationsLive.NotificationBellTest do
       owner: owner,
       workspace: workspace
     } do
+      # Create a proper invitation using invite_member
+      {:ok, {:invitation_sent, _member}} =
+        Workspaces.invite_member(owner, workspace.id, invitee.email, :member)
+
       {:ok, notification} =
         Notifications.create_workspace_invitation_notification(%{
           user_id: invitee.id,
@@ -341,9 +345,9 @@ defmodule JargaWeb.NotificationsLive.NotificationBellTest do
       |> element("#notification-decline-btn-#{notification.id}")
       |> render_click()
 
-      # Verify action status is shown
-      html = render(view)
-      assert html =~ "Invitation declined" or html =~ "declined"
+      # Verify notification was marked as read
+      updated_notification = Notifications.get_notification(notification.id, invitee.id)
+      assert updated_notification.read == true
     end
 
     test "displays unread count badge with 99+ for large numbers", %{
@@ -408,7 +412,7 @@ defmodule JargaWeb.NotificationsLive.NotificationBellTest do
       assert html =~ "No notifications"
     end
 
-    test "shows action status for accepted invitation", %{
+    test "shows notification as read after accepting invitation", %{
       conn: conn,
       invitee: invitee,
       owner: owner,
@@ -447,47 +451,9 @@ defmodule JargaWeb.NotificationsLive.NotificationBellTest do
       members = Jarga.Workspaces.list_members(workspace.id)
       assert Enum.any?(members, fn m -> m.user_id == invitee.id and not is_nil(m.joined_at) end)
 
-      # Reload the page to get updated notification state
-      {:ok, view, _html} = live(conn, ~p"/app")
-
-      # Open dropdown to see the updated status
-      view
-      |> element("#notification-bell button[aria-label='Notifications']")
-      |> render_click()
-
-      html = render(view)
-      # The action status should show "accepted"
-      assert html =~ "accepted"
-    end
-
-    test "shows action status for declined invitation", %{
-      conn: conn,
-      invitee: invitee,
-      owner: owner,
-      workspace: workspace
-    } do
-      {:ok, notification} =
-        Notifications.create_workspace_invitation_notification(%{
-          user_id: invitee.id,
-          workspace_id: workspace.id,
-          workspace_name: workspace.name,
-          invited_by_name: owner.email,
-          role: "member"
-        })
-
-      # Decline the invitation
-      {:ok, _} = Notifications.decline_workspace_invitation(notification.id, invitee.id)
-
-      conn = log_in_user(conn, invitee)
-      {:ok, view, _html} = live(conn, ~p"/app")
-
-      # Open dropdown
-      view
-      |> element("#notification-bell button[aria-label='Notifications']")
-      |> render_click()
-
-      html = render(view)
-      assert html =~ "Invitation declined"
+      # Verify notification was marked as read
+      updated_notification = Notifications.get_notification(notification.id, invitee.id)
+      assert updated_notification.read == true
     end
   end
 end

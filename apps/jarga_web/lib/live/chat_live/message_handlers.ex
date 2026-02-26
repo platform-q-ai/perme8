@@ -29,7 +29,7 @@ defmodule JargaWeb.ChatLive.MessageHandlers do
   # credo:disable-for-next-line Credo.Check.Refactor.CyclomaticComplexity
   defmacro handle_chat_messages do
     quote do
-      alias Jarga.Notifications.Domain.Events.NotificationCreated
+      alias Notifications.Domain.Events.NotificationCreated
 
       @impl true
       def handle_event("agent-selected", %{"agent_id" => agent_id}, socket) do

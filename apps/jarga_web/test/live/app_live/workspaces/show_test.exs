@@ -21,7 +21,6 @@ defmodule JargaWeb.AppLive.Workspaces.ShowTest do
 
   # Cross-context domain events
   alias Identity.Domain.Events.WorkspaceUpdated
-  alias Jarga.Notifications.Domain.Events.NotificationActionTaken
 
   # Agent domain events
   alias Agents.Domain.Events.{
@@ -463,62 +462,6 @@ defmodule JargaWeb.AppLive.Workspaces.ShowTest do
       html = render(lv)
       assert html =~ "Updated Name"
       refute html =~ "Original Name"
-    end
-
-    test "reloads members on NotificationActionTaken accepted event when modal open", %{
-      conn: conn,
-      workspace: workspace
-    } do
-      {:ok, lv, _html} = live(conn, ~p"/app/workspaces/#{workspace.slug}")
-
-      # Open members modal
-      lv |> element("button", "Manage Members") |> render_click()
-
-      # Send structured event — someone accepted invitation to this workspace
-      other_user_id = Ecto.UUID.generate()
-
-      event =
-        NotificationActionTaken.new(%{
-          aggregate_id: Ecto.UUID.generate(),
-          actor_id: other_user_id,
-          notification_id: Ecto.UUID.generate(),
-          user_id: other_user_id,
-          action: "accepted",
-          workspace_id: workspace.id
-        })
-
-      send(lv.pid, event)
-
-      # Should still render (members reloaded)
-      assert render(lv) =~ "Team Members"
-    end
-
-    test "handles NotificationActionTaken declined event when modal open", %{
-      conn: conn,
-      workspace: workspace
-    } do
-      {:ok, lv, _html} = live(conn, ~p"/app/workspaces/#{workspace.slug}")
-
-      # Open members modal
-      lv |> element("button", "Manage Members") |> render_click()
-
-      # Send structured event — someone declined invitation
-      other_user_id = Ecto.UUID.generate()
-
-      event =
-        NotificationActionTaken.new(%{
-          aggregate_id: Ecto.UUID.generate(),
-          actor_id: other_user_id,
-          notification_id: Ecto.UUID.generate(),
-          user_id: other_user_id,
-          action: "declined",
-          workspace_id: workspace.id
-        })
-
-      send(lv.pid, event)
-
-      # Should still render (members reloaded)
-      assert render(lv) =~ "Team Members"
     end
 
     test "handles AgentUpdated event by reloading workspace agents", %{

@@ -11,11 +11,14 @@ defmodule Jarga.Test.SandboxHelper do
   """
 
   # Test support module - top-level boundary for sandbox management
-  use Boundary, top_level?: true, deps: [Jarga.Repo, Identity.Repo], exports: []
+  use Boundary,
+    top_level?: true,
+    deps: [Jarga.Repo, Identity.Repo, Agents.Repo, Notifications.Repo],
+    exports: []
 
   alias Ecto.Adapters.SQL.Sandbox
 
-  @repos [Jarga.Repo, Identity.Repo]
+  @repos [Jarga.Repo, Identity.Repo, Agents.Repo, Notifications.Repo]
 
   @doc """
   Allow a process to access the Ecto Sandbox.

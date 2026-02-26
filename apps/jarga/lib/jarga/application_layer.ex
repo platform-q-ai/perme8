@@ -82,15 +82,7 @@ defmodule Jarga.ApplicationLayer do
       Jarga.Documents.Application.UseCases.UpdateDocument,
       Jarga.Documents.Application.UseCases.DeleteDocument,
       Jarga.Documents.Application.UseCases.ExecuteAgentQuery,
-      # Notifications
-      Jarga.Notifications.Application.UseCases.ListNotifications,
-      Jarga.Notifications.Application.UseCases.ListUnreadNotifications,
-      Jarga.Notifications.Application.UseCases.GetUnreadCount,
-      Jarga.Notifications.Application.UseCases.MarkAsRead,
-      Jarga.Notifications.Application.UseCases.MarkAllAsRead,
-      Jarga.Notifications.Application.UseCases.CreateWorkspaceInvitationNotification,
-      Jarga.Notifications.Application.UseCases.AcceptWorkspaceInvitation,
-      Jarga.Notifications.Application.UseCases.DeclineWorkspaceInvitation,
+      # Notifications — extracted to apps/notifications/
       # Projects
       Jarga.Projects.Application.UseCases.CreateProject,
       Jarga.Projects.Application.UseCases.UpdateProject,

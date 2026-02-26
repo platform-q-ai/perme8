@@ -25,7 +25,6 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
 
   # Cross-context domain events
   alias Identity.Domain.Events.WorkspaceUpdated
-  alias Jarga.Notifications.Domain.Events.NotificationActionTaken
 
   # Agent domain events
   alias Agents.Domain.Events.{
@@ -1040,30 +1039,6 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
     if socket.assigns.workspace.id == workspace_id do
       workspace = %{socket.assigns.workspace | name: name}
       {:noreply, assign(socket, workspace: workspace)}
-    else
-      {:noreply, socket}
-    end
-  end
-
-  # --- Notification domain events (member joined/declined) ---
-
-  @impl true
-  def handle_info(%NotificationActionTaken{action: "accepted"}, socket) do
-    # Someone accepted an invitation to this workspace — reload members if modal is open
-    if socket.assigns.show_members_modal do
-      members = Workspaces.list_members(socket.assigns.workspace.id)
-      {:noreply, assign(socket, members: members)}
-    else
-      {:noreply, socket}
-    end
-  end
-
-  @impl true
-  def handle_info(%NotificationActionTaken{action: "declined"}, socket) do
-    # Someone declined an invitation — reload members if modal is open
-    if socket.assigns.show_members_modal do
-      members = Workspaces.list_members(socket.assigns.workspace.id)
-      {:noreply, assign(socket, members: members)}
     else
       {:noreply, socket}
     end

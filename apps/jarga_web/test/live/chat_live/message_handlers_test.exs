@@ -8,7 +8,7 @@ defmodule JargaWeb.ChatLive.MessageHandlersTest do
   import Phoenix.LiveViewTest
   import Jarga.AccountsFixtures
 
-  alias Jarga.Notifications.Domain.Events.NotificationCreated
+  alias Notifications.Domain.Events.NotificationCreated
 
   describe "NotificationCreated event handler (via macro)" do
     setup %{conn: conn} do

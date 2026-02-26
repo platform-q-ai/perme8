@@ -64,6 +64,7 @@ defmodule Identity do
       Domain.Services.SlugGenerator,
       Domain.Scope,
       Domain.Events.MemberInvited,
+      Domain.Events.MemberJoined,
       Domain.Events.WorkspaceUpdated,
       Domain.Events.MemberRemoved,
       Domain.Events.WorkspaceInvitationNotified,
@@ -945,12 +946,31 @@ defmodule Identity do
   and marks it as accepted by setting the user_id and joined_at timestamp.
   """
   def accept_invitation_by_workspace(workspace_id, user_id) do
-    Repo.transact(fn ->
-      case find_pending_invitation_record(workspace_id, user_id) do
-        {:error, reason} -> {:error, reason}
-        {:ok, workspace_member} -> accept_invitation_record(workspace_member, user_id)
-      end
-    end)
+    result =
+      Repo.transact(fn ->
+        case find_pending_invitation_record(workspace_id, user_id) do
+          {:error, reason} -> {:error, reason}
+          {:ok, workspace_member} -> accept_invitation_record(workspace_member, user_id)
+        end
+      end)
+
+    # Emit domain event AFTER transaction commits
+    case result do
+      {:ok, _workspace_member} ->
+        Perme8.Events.EventBus.emit(
+          Identity.Domain.Events.MemberJoined.new(%{
+            aggregate_id: "#{workspace_id}:#{user_id}",
+            actor_id: user_id,
+            workspace_id: workspace_id,
+            target_user_id: user_id
+          })
+        )
+
+        result
+
+      error ->
+        error
+    end
   end
 
   defp find_pending_invitation_record(workspace_id, user_id) do
