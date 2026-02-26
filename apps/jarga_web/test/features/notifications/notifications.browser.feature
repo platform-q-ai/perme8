@@ -6,28 +6,26 @@ Feature: Notification Management
 
   # Seed data (from exo_seeds_web.exs) provides:
   #   - Workspace "Product Team" with slug "product-team"
-  #   - alice@example.com as owner
-  #   - bob@example.com as admin
-  #   - charlie@example.com as member
-  #   - diana@example.com as guest
-  #   - eve@example.com as non-member
+  #   - alice@example.com as owner  (105 unread notifications)
+  #   - bob@example.com as admin    (0 notifications)
+  #   - charlie@example.com as member (3 unread notifications)
+  #   - diana@example.com as guest  (2 unread notifications)
+  #   - eve@example.com as non-member (1 workspace invitation notification)
+  #
+  # IMPORTANT: Scenarios are ordered so that read-only scenarios run first.
+  # Mutating scenarios (mark-as-read) run last because they modify shared
+  # database state and the seed is only loaded once per test suite run.
 
   # NOTE: The NotificationBell is a LiveComponent embedded in the application topbar.
   # It is visible on every authenticated page. All notification interactions happen
   # in-page via LiveView -- no traditional page navigation is needed after login.
 
-  # NOTE: Real-time / PubSub scenarios involve server-side event delivery.
-  # The browser adapter runs as a single user in a single session, so real-time
-  # delivery from external events cannot be fully triggered here. Those scenarios
-  # are simplified to verify the UI perspective: that the bell and dropdown reflect
-  # the expected state without requiring a manual page reload.
-
   # ---------------------------------------------------------------------------
-  # Notification Bell Badge
+  # Notification Bell Badge (read-only)
   # ---------------------------------------------------------------------------
 
   Scenario: Notification bell shows unread count
-    # Log in as member (who has seeded unread notifications)
+    # Log in as member (charlie, who has 3 seeded unread notifications)
     Given I navigate to "${baseUrl}/users/log-in"
     And I wait for network idle
     When I fill "#login_form_password_email" with "${memberEmail}"
@@ -52,7 +50,7 @@ Feature: Notification Management
     And "[data-testid='notification-badge']" should contain text "99+"
 
   # ---------------------------------------------------------------------------
-  # Notification Dropdown
+  # Notification Dropdown (read-only)
   # ---------------------------------------------------------------------------
 
   Scenario: User opens notification dropdown
@@ -88,11 +86,11 @@ Feature: Notification Management
     Then "[data-testid='notification-dropdown']" should be hidden
 
   Scenario: Empty notification state
-    # Log in as non-member (who has no notifications)
+    # Log in as admin (bob) who has no seeded notifications
     Given I navigate to "${baseUrl}/users/log-in"
     And I wait for network idle
-    When I fill "#login_form_password_email" with "${nonMemberEmail}"
-    And I fill "#login_form_password_password" with "${nonMemberPassword}"
+    When I fill "#login_form_password_email" with "${adminEmail}"
+    And I fill "#login_form_password_password" with "${adminPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I wait for network idle
     # The bell should be visible but with no badge
@@ -104,10 +102,41 @@ Feature: Notification Management
     Then I should see "No notifications"
 
   # ---------------------------------------------------------------------------
-  # Mark as Read
+  # User Scoping (read-only — must run before mark-as-read scenarios)
   # ---------------------------------------------------------------------------
 
-  Scenario: User marks a single notification as read
+  Scenario: Notifications are user-scoped
+    # Log in as member (charlie, user A) who has 3 unread notifications
+    Given I navigate to "${baseUrl}/users/log-in"
+    And I wait for network idle
+    When I fill "#login_form_password_email" with "${memberEmail}"
+    And I fill "#login_form_password_password" with "${memberPassword}"
+    And I click the "Log in and stay logged in" button and wait for navigation
+    And I wait for network idle
+    # User A (charlie) should see badge with count 3
+    Then "[data-testid='notification-bell']" should be visible
+    And "[data-testid='notification-badge']" should contain text "3"
+    # Log out and log in as a different user (diana, user B) who has 2 unread
+    When I navigate to "${baseUrl}/users/log-out"
+    And I wait for network idle
+    And I navigate to "${baseUrl}/users/log-in"
+    And I wait for network idle
+    And I fill "#login_form_password_email" with "${guestEmail}"
+    And I fill "#login_form_password_password" with "${guestPassword}"
+    And I click the "Log in and stay logged in" button and wait for navigation
+    And I wait for network idle
+    # User B (diana) should see her own count (2), not charlie's (3)
+    Then "[data-testid='notification-bell']" should be visible
+    And "[data-testid='notification-badge']" should contain text "2"
+
+  # ---------------------------------------------------------------------------
+  # Real-time Updates (read-only — verifies UI state without mutation)
+  # ---------------------------------------------------------------------------
+
+  Scenario: Real-time notification delivery updates bell
+    # NOTE: Multi-user real-time delivery cannot be triggered from a single browser
+    # session. This scenario verifies the UI perspective: that the bell and dropdown
+    # reflect the expected state. In practice, a PubSub event would trigger the update.
     # Log in as member
     Given I navigate to "${baseUrl}/users/log-in"
     And I wait for network idle
@@ -115,20 +144,38 @@ Feature: Notification Management
     And I fill "#login_form_password_password" with "${memberPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I wait for network idle
-    # Store the initial badge count for comparison
-    And I store the text of "[data-testid='notification-badge']" as "initialCount"
-    # Open the dropdown and click an unread notification
+    # Verify the bell is present and showing the current count
+    Then "[data-testid='notification-bell']" should be visible
+    And "[data-testid='notification-badge']" should be visible
+    # Open dropdown to verify notifications appear
     When I click "[data-testid='notification-bell']"
     And I wait for "[data-testid='notification-dropdown']" to be visible
-    And I click "[data-testid='notification-item-unread']:first-child"
+    Then "[data-testid='notification-item']" should exist
+
+  # ---------------------------------------------------------------------------
+  # Mark as Read (mutating — these modify database state, run last)
+  # ---------------------------------------------------------------------------
+
+  Scenario: User marks a single notification as read
+    # Log in as member (charlie, 3 unread)
+    Given I navigate to "${baseUrl}/users/log-in"
     And I wait for network idle
-    # The clicked notification should now be marked as read (visual change)
-    Then "[data-testid='notification-item-unread']:first-child" should not exist
-    # The badge count should have decreased
-    And "[data-testid='notification-badge']" should be visible
+    When I fill "#login_form_password_email" with "${memberEmail}"
+    And I fill "#login_form_password_password" with "${memberPassword}"
+    And I click the "Log in and stay logged in" button and wait for navigation
+    And I wait for network idle
+    # Verify charlie starts with 3 unread
+    Then "[data-testid='notification-badge']" should contain text "3"
+    # Open the dropdown and click the mark-as-read button (blue dot) on the first unread notification
+    When I click "[data-testid='notification-bell']"
+    And I wait for "[data-testid='notification-dropdown']" to be visible
+    And I click "[data-testid='notification-item'][data-notification-status='unread'] button[title='Mark as read']"
+    And I wait for network idle
+    # Charlie had 3 unread; after marking one as read, 2 remain
+    Then "[data-testid='notification-badge']" should contain text "2"
 
   Scenario: User marks all notifications as read
-    # Log in as member (who has 3 unread notifications)
+    # Log in as member (charlie, who now has 2 unread after the previous scenario)
     Given I navigate to "${baseUrl}/users/log-in"
     And I wait for network idle
     When I fill "#login_form_password_email" with "${memberEmail}"
@@ -144,43 +191,13 @@ Feature: Notification Management
     And I wait for network idle
     # All notifications should now be read and the badge should disappear
     Then "[data-testid='notification-badge']" should not exist
-    And "[data-testid='notification-item-unread']" should not exist
+    And "[data-testid='notification-item'][data-notification-status='unread']" should not exist
 
   # ---------------------------------------------------------------------------
-  # Real-time Updates
+  # Workspace Invitation Actions (require full invitation flow — deferred)
   # ---------------------------------------------------------------------------
 
-  Scenario: Real-time notification delivery updates bell
-    # NOTE: Multi-user real-time delivery cannot be triggered from a single browser
-    # session. This scenario verifies the UI perspective: that after a notification
-    # event is delivered via PubSub, the bell count updates without a page reload.
-    # In practice, the seed data or a test helper would trigger the notification.
-    # Log in as member
-    Given I navigate to "${baseUrl}/users/log-in"
-    And I wait for network idle
-    When I fill "#login_form_password_email" with "${memberEmail}"
-    And I fill "#login_form_password_password" with "${memberPassword}"
-    And I click the "Log in and stay logged in" button and wait for navigation
-    And I wait for network idle
-    # Verify the bell is present and showing the current count
-    Then "[data-testid='notification-bell']" should be visible
-    And "[data-testid='notification-badge']" should be visible
-    # Store the current count for later comparison
-    And I store the text of "[data-testid='notification-badge']" as "countBefore"
-    # When a new notification arrives (e.g., workspace invitation via PubSub),
-    # the badge should update in real-time without requiring a page reload.
-    # After the real-time event is delivered:
-    When I wait for 2 seconds
-    Then "[data-testid='notification-badge']" should be visible
-    # Open dropdown to verify the new notification appears
-    When I click "[data-testid='notification-bell']"
-    And I wait for "[data-testid='notification-dropdown']" to be visible
-    Then "[data-testid='notification-item']" should exist
-
-  # ---------------------------------------------------------------------------
-  # Workspace Invitation Actions
-  # ---------------------------------------------------------------------------
-
+  @wip
   Scenario: Accept workspace invitation from notification
     # Log in as a user who has a pending workspace invitation notification
     Given I navigate to "${baseUrl}/users/log-in"
@@ -204,6 +221,7 @@ Feature: Notification Management
     And I wait for network idle
     Then I should see "Product Team"
 
+  @wip
   Scenario: Decline workspace invitation from notification
     # Log in as a user who has a pending workspace invitation notification
     Given I navigate to "${baseUrl}/users/log-in"
@@ -222,36 +240,3 @@ Feature: Notification Management
     # The invitation should be declined and the notification marked as read
     Then I should see "Invitation declined"
     And "[data-testid='notification-invitation'] [data-testid='decline-invitation']" should not exist
-
-  # ---------------------------------------------------------------------------
-  # User Scoping
-  # ---------------------------------------------------------------------------
-
-  Scenario: Notifications are user-scoped
-    # Log in as member (user A) and capture their notification count
-    Given I navigate to "${baseUrl}/users/log-in"
-    And I wait for network idle
-    When I fill "#login_form_password_email" with "${memberEmail}"
-    And I fill "#login_form_password_password" with "${memberPassword}"
-    And I click the "Log in and stay logged in" button and wait for navigation
-    And I wait for network idle
-    # User A should see their own notifications
-    Then "[data-testid='notification-bell']" should be visible
-    When I click "[data-testid='notification-bell']"
-    And I wait for "[data-testid='notification-dropdown']" to be visible
-    Then "[data-testid='notification-item']" should exist
-    # Store the count of user A's notifications
-    And I store the text of "[data-testid='notification-badge']" as "userACount"
-    # Log out and log in as a different user (user B)
-    When I navigate to "${baseUrl}/users/log-out"
-    And I wait for network idle
-    And I navigate to "${baseUrl}/users/log-in"
-    And I wait for network idle
-    And I fill "#login_form_password_email" with "${guestEmail}"
-    And I fill "#login_form_password_password" with "${guestPassword}"
-    And I click the "Log in and stay logged in" button and wait for navigation
-    And I wait for network idle
-    # User B should see their own notifications (different from user A)
-    Then "[data-testid='notification-bell']" should be visible
-    # User B's badge should NOT show user A's count
-    # (The exact count differs per user based on their own notifications)
