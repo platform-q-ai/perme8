@@ -7,31 +7,48 @@
  *
  * This prevents the agent from finishing with outstanding work items
  * still marked as pending or in_progress.
+ *
+ * State machine per session:
+ *   "ready"   → waiting for the agent to go idle so we can prompt
+ *   "pending" → we sent the todo-check prompt; ignore idle events
+ *                until the agent finishes or the user sends a new message
+ *
+ * A user prompt (`session.prompt`) resets the state to "ready" so the
+ * plugin re-arms for each user interaction. This avoids the loop that
+ * occurred when interrupts (Esc) fired extra idle events while the
+ * old toggle-based guard had already cleared.
  */
 
 import type { Plugin } from "@opencode-ai/plugin"
 
+type SessionState = "ready" | "pending"
+
 export const TodoCheckPlugin: Plugin = async ({ client }) => {
-  // Track sessions we've already prompted to avoid infinite loops.
-  // Once we ask "have you completed your todos?", the agent responds
-  // and goes idle again -- we must not re-ask.
-  const prompted = new Set<string>()
+  const sessions = new Map<string, SessionState>()
 
   return {
     event: async ({ event }) => {
-      if (event.type !== "session.idle") return
-
       const sessionId = event.properties?.sessionID
       if (!sessionId) return
 
-      // Skip if we already asked this session
-      if (prompted.has(sessionId)) {
-        prompted.delete(sessionId)
+      // When the user sends a new prompt, re-arm so the next idle
+      // will trigger a todo check.
+      if (event.type === "session.prompt") {
+        sessions.set(sessionId, "ready")
         return
       }
 
-      // Mark that we're about to prompt this session
-      prompted.add(sessionId)
+      if (event.type !== "session.idle") return
+
+      const state = sessions.get(sessionId) ?? "ready"
+
+      // If we already sent the todo-check and are waiting for the
+      // agent to finish (or the user interrupted), stay quiet.
+      if (state === "pending") return
+
+      // Transition to pending before sending the prompt so that any
+      // idle events fired by interrupts are ignored.
+      sessions.set(sessionId, "pending")
 
       await client.session.prompt({
         path: { id: sessionId },
