@@ -15,7 +15,7 @@ defmodule Notifications do
     deps: [
       Notifications.Domain,
       Notifications.Application,
-      Notifications.Infrastructure,
+      Notifications.OTPApp,
       Notifications.Repo
     ],
     exports: [
@@ -25,7 +25,6 @@ defmodule Notifications do
     ]
 
   alias Notifications.Application.UseCases
-  alias Notifications.Infrastructure.Repositories.NotificationRepository
 
   @doc """
   Creates a notification.
@@ -98,7 +97,7 @@ defmodule Notifications do
       nil
   """
   def get_notification(notification_id, user_id) do
-    NotificationRepository.get_by_user(notification_id, user_id)
+    UseCases.GetNotification.execute(notification_id, user_id)
   end
 
   @doc """
@@ -182,16 +181,7 @@ defmodule Notifications do
   Returns the subscriber PID (either existing or newly started).
   """
   def ensure_subscribers_started do
-    alias Notifications.Infrastructure.Subscribers.WorkspaceInvitationSubscriber
-
-    case Process.whereis(WorkspaceInvitationSubscriber) do
-      nil ->
-        {:ok, pid} = WorkspaceInvitationSubscriber.start_link([])
-        pid
-
-      pid ->
-        pid
-    end
+    Notifications.OTPApp.ensure_subscribers_started()
   end
 
   @doc """

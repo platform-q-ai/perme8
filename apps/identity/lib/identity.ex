@@ -602,7 +602,9 @@ defmodule Identity do
   alias Identity.Infrastructure.Repositories.MembershipRepository
   alias Identity.Domain.Policies.WorkspacePermissionsPolicy
 
+  alias Identity.Domain.Events.MemberJoined
   alias Identity.Domain.Events.WorkspaceUpdated
+  alias Perme8.Events.EventBus
 
   @doc """
   Returns the list of workspaces for a given user.
@@ -758,7 +760,7 @@ defmodule Identity do
   Only admins and owners can edit workspaces.
   """
   def update_workspace(%User{} = user, workspace_id, attrs, opts \\ []) do
-    event_bus = Keyword.get(opts, :event_bus, Perme8.Events.EventBus)
+    event_bus = Keyword.get(opts, :event_bus, EventBus)
 
     with {:ok, member} <- get_member(user, workspace_id),
          :ok <- authorize_edit_workspace(member.role) do
@@ -957,8 +959,8 @@ defmodule Identity do
     # Emit domain event AFTER transaction commits
     case result do
       {:ok, _workspace_member} ->
-        Perme8.Events.EventBus.emit(
-          Identity.Domain.Events.MemberJoined.new(%{
+        EventBus.emit(
+          MemberJoined.new(%{
             aggregate_id: "#{workspace_id}:#{user_id}",
             actor_id: user_id,
             workspace_id: workspace_id,

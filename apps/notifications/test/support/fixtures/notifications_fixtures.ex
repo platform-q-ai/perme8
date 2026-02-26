@@ -6,6 +6,12 @@ defmodule Notifications.Test.Fixtures.NotificationsFixtures do
   triggering event emission that would happen through use cases.
   """
 
+  # Test fixture module - top-level boundary for test data creation
+  use Boundary,
+    top_level?: true,
+    deps: [Notifications, Notifications.Infrastructure, Notifications.Repo],
+    exports: []
+
   alias Notifications.Infrastructure.Schemas.NotificationSchema
   alias Notifications.Repo
 
