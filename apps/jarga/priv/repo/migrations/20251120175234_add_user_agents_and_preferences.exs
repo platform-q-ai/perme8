@@ -48,11 +48,29 @@ defmodule Jarga.Repo.Migrations.AddUserAgentsAndPreferences do
     # Create indexes for performance
     create(index(:workspace_agents, [:agent_id]))
 
-    # Add user preferences column
-    alter table(:users) do
-      add(:preferences, :jsonb, default: "{}", null: false)
-    end
+    # Add user preferences column if it doesn't already exist
+    # (Identity app may have already created this column)
+    execute(
+      """
+      DO $$ BEGIN
+        IF NOT EXISTS(SELECT 1 FROM information_schema.columns
+                      WHERE table_name='users' AND column_name='preferences')
+        THEN
+          ALTER TABLE users ADD COLUMN preferences jsonb NOT NULL DEFAULT '{}';
+        END IF;
+      END $$;
+      """,
+      """
+      DO $$ BEGIN
+        IF EXISTS(SELECT 1 FROM information_schema.columns
+                  WHERE table_name='users' AND column_name='preferences')
+        THEN
+          ALTER TABLE users DROP COLUMN preferences;
+        END IF;
+      END $$;
+      """
+    )
 
-    create(index(:users, [:preferences], using: :gin))
+    create_if_not_exists(index(:users, [:preferences], using: :gin))
   end
 end
