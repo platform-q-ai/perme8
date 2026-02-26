@@ -1130,7 +1130,7 @@ defmodule AgentsWeb.SessionsLive.Index do
             <div class="text-xs font-semibold text-base-content/60 uppercase tracking-wider mb-1">
               {question["header"]}
             </div>
-            <p class="text-sm mb-2">{question["question"]}</p>
+            <div class="text-sm mb-2 session-markdown">{render_markdown(question["question"])}</div>
 
             <div :if={question["multiple"]} class="text-[0.65rem] text-base-content/50 mb-1">
               Select one or more options
