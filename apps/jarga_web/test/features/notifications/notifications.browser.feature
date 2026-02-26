@@ -169,8 +169,8 @@ Feature: Notification Management
     # Open the dropdown and click the mark-as-read button (blue dot) on the first unread notification
     When I click "[data-testid='notification-bell']"
     And I wait for "[data-testid='notification-dropdown']" to be visible
-    And I click "[data-testid='mark-read-button'] >> nth=0"
-    And I wait for network idle
+    And I click "[data-testid='notification-item'][data-notification-status='unread'] >> nth=0"
+    And I wait for 2 seconds
     # Charlie had 3 unread; after marking one as read, 2 remain
     Then "[data-testid='notification-badge']" should contain text "2"
 
@@ -188,7 +188,7 @@ Feature: Notification Management
     When I click "[data-testid='notification-bell']"
     And I wait for "[data-testid='notification-dropdown']" to be visible
     And I click the "Mark all as read" button
-    And I wait for network idle
+    And I wait for 2 seconds
     # All notifications should now be read and the badge should disappear
     Then "[data-testid='notification-badge']" should not exist
     And "[data-testid='notification-item'][data-notification-status='unread']" should not exist
