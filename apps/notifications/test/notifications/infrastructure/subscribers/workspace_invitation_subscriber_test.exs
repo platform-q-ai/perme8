@@ -39,7 +39,8 @@ defmodule Notifications.Infrastructure.Subscribers.WorkspaceInvitationSubscriber
       # Send structured event (EventHandler routes structs to handle_event/1)
       send(pid, event)
 
-      :timer.sleep(100)
+      # Synchronize with the GenServer mailbox instead of sleeping
+      :sys.get_state(pid)
 
       notifications = NotificationRepository.list_by_user(user.id)
       assert length(notifications) == 1
@@ -70,7 +71,8 @@ defmodule Notifications.Infrastructure.Subscribers.WorkspaceInvitationSubscriber
 
       send(pid, event)
 
-      :timer.sleep(50)
+      # Synchronize with the GenServer mailbox instead of sleeping
+      :sys.get_state(pid)
 
       # No notification should be created
       notifications = NotificationRepository.list_by_user(user.id)
@@ -83,7 +85,8 @@ defmodule Notifications.Infrastructure.Subscribers.WorkspaceInvitationSubscriber
 
       send(pid, {:unknown_event, %{}})
 
-      :timer.sleep(10)
+      # Synchronize with the GenServer mailbox instead of sleeping
+      :sys.get_state(pid)
       assert Process.alive?(pid)
     end
   end

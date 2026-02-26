@@ -18,7 +18,7 @@ defmodule Notifications.Application.UseCases.ListUnreadNotificationsTest do
       ]
 
       NotificationRepositoryMock
-      |> expect(:list_unread_by_user, fn ^user_id -> notifications end)
+      |> expect(:list_unread_by_user, fn ^user_id, _opts -> notifications end)
 
       assert ^notifications =
                ListUnreadNotifications.execute(user_id,
@@ -30,7 +30,7 @@ defmodule Notifications.Application.UseCases.ListUnreadNotificationsTest do
       user_id = Ecto.UUID.generate()
 
       NotificationRepositoryMock
-      |> expect(:list_unread_by_user, fn ^user_id -> [] end)
+      |> expect(:list_unread_by_user, fn ^user_id, _opts -> [] end)
 
       assert [] ==
                ListUnreadNotifications.execute(user_id,

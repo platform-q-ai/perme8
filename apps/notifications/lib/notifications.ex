@@ -15,8 +15,7 @@ defmodule Notifications do
     deps: [
       Notifications.Domain,
       Notifications.Application,
-      Notifications.OTPApp,
-      Notifications.Repo
+      Notifications.OTPApp
     ],
     exports: [
       {Domain.Entities.Notification, []},
@@ -121,13 +120,19 @@ defmodule Notifications do
   @doc """
   Lists unread notifications for a user.
 
+  ## Options
+    * `:limit` - Maximum number of notifications to return
+
   ## Examples
 
       iex> list_unread_notifications(user_id)
       [%NotificationSchema{}, ...]
+
+      iex> list_unread_notifications(user_id, limit: 20)
+      [%NotificationSchema{}, ...]
   """
-  def list_unread_notifications(user_id) do
-    UseCases.ListUnreadNotifications.execute(user_id)
+  def list_unread_notifications(user_id, opts \\ []) do
+    UseCases.ListUnreadNotifications.execute(user_id, opts)
   end
 
   @doc """
@@ -182,23 +187,5 @@ defmodule Notifications do
   """
   def ensure_subscribers_started do
     Notifications.OTPApp.ensure_subscribers_started()
-  end
-
-  @doc """
-  Updates a notification for test purposes only.
-
-  This function bypasses normal business logic and directly updates
-  notification fields in the database. It should ONLY be used in test
-  fixtures to set up test data.
-
-  ## Examples
-
-      iex> update_for_test(notification, %{read: true, read_at: ~U[2024-01-01 12:00:00Z]})
-      %NotificationSchema{}
-  """
-  def update_for_test(notification, changes) do
-    notification
-    |> Ecto.Changeset.change(changes)
-    |> Notifications.Repo.update!()
   end
 end
