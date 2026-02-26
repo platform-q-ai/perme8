@@ -39,6 +39,15 @@ config :agents, Agents.Repo,
   pool_size: 20,
   ownership_timeout: :infinity
 
+# Notifications uses the same database as Jarga
+config :notifications, Notifications.Repo,
+  url: database_url,
+  pool: Ecto.Adapters.SQL.Sandbox,
+  pool_size: 5,
+  ownership_timeout: :infinity
+
+config :notifications, env: :test
+
 # Identity URL for login redirects.
 # NOTE: runtime.exs overrides Identity's port to 4001 for ALL environments
 # (not just prod), so Identity actually listens on 4001 even in MIX_ENV=test.

@@ -192,6 +192,14 @@ config :agents,
   ecto_repos: [Agents.Repo],
   generators: [timestamp_type: :utc_datetime, binary_id: true]
 
+# ============================================================================
+# Notifications App Configuration
+# ============================================================================
+
+config :notifications,
+  ecto_repos: [Notifications.Repo],
+  generators: [timestamp_type: :utc_datetime, binary_id: true]
+
 config :agents, :sessions,
   image: "perme8-opencode",
   max_concurrent_tasks: 1,

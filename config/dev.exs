@@ -53,6 +53,12 @@ config :agents, Agents.Repo,
   show_sensitive_data_on_connection_error: true,
   pool_size: 10
 
+# Notifications uses the same database as Jarga
+config :notifications, Notifications.Repo,
+  url: database_url,
+  show_sensitive_data_on_connection_error: true,
+  pool_size: 10
+
 # Entity Relationship Manager dev configuration (Graph API on port 4005)
 config :entity_relationship_manager, EntityRelationshipManager.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4005],
