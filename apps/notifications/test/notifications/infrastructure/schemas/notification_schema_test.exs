@@ -1,0 +1,112 @@
+defmodule Notifications.Infrastructure.Schemas.NotificationSchemaTest do
+  use ExUnit.Case, async: true
+
+  alias Notifications.Infrastructure.Schemas.NotificationSchema
+
+  describe "create_changeset/1" do
+    test "validates required fields" do
+      changeset = NotificationSchema.create_changeset(%{})
+
+      refute changeset.valid?
+
+      assert %{user_id: ["can't be blank"], type: ["can't be blank"], title: ["can't be blank"]} =
+               errors_on(changeset)
+    end
+
+    test "rejects invalid notification types" do
+      attrs = %{
+        user_id: Ecto.UUID.generate(),
+        type: "invalid_type",
+        title: "Test Notification"
+      }
+
+      changeset = NotificationSchema.create_changeset(attrs)
+
+      refute changeset.valid?
+      assert %{type: ["is invalid"]} = errors_on(changeset)
+    end
+
+    test "accepts valid workspace_invitation type" do
+      attrs = %{
+        user_id: Ecto.UUID.generate(),
+        type: "workspace_invitation",
+        title: "Test Notification",
+        body: "Test body",
+        data: %{"workspace_id" => Ecto.UUID.generate()}
+      }
+
+      changeset = NotificationSchema.create_changeset(attrs)
+
+      assert changeset.valid?
+    end
+
+    test "defaults read to false and data to empty map" do
+      attrs = %{
+        user_id: Ecto.UUID.generate(),
+        type: "workspace_invitation",
+        title: "Test Notification"
+      }
+
+      changeset = NotificationSchema.create_changeset(attrs)
+
+      assert changeset.valid?
+      assert Ecto.Changeset.get_field(changeset, :read) == false
+      assert Ecto.Changeset.get_field(changeset, :data) == %{}
+    end
+  end
+
+  describe "mark_read_changeset/1" do
+    test "marks notification as read with timestamp" do
+      notification = %NotificationSchema{
+        id: Ecto.UUID.generate(),
+        user_id: Ecto.UUID.generate(),
+        type: "workspace_invitation",
+        title: "Test",
+        read: false,
+        read_at: nil
+      }
+
+      changeset = NotificationSchema.mark_read_changeset(notification)
+
+      assert changeset.valid?
+      assert Ecto.Changeset.get_change(changeset, :read) == true
+      assert %DateTime{} = Ecto.Changeset.get_change(changeset, :read_at)
+    end
+  end
+
+  describe "mark_action_taken_changeset/1" do
+    test "marks action as taken with timestamp" do
+      notification = %NotificationSchema{
+        id: Ecto.UUID.generate(),
+        user_id: Ecto.UUID.generate(),
+        type: "workspace_invitation",
+        title: "Test",
+        action_taken_at: nil
+      }
+
+      changeset = NotificationSchema.mark_action_taken_changeset(notification)
+
+      assert changeset.valid?
+      assert %DateTime{} = Ecto.Changeset.get_change(changeset, :action_taken_at)
+    end
+  end
+
+  describe "schema structure" do
+    test "uses raw user_id UUID field (no belongs_to)" do
+      schema = %NotificationSchema{}
+
+      # Verify user_id is a direct field, not an association
+      assert Map.has_key?(schema, :user_id)
+      refute Map.has_key?(schema, :user)
+    end
+  end
+
+  # Helper function to extract errors from changeset
+  defp errors_on(changeset) do
+    Ecto.Changeset.traverse_errors(changeset, fn {msg, opts} ->
+      Regex.replace(~r"%{(\w+)}", msg, fn _, key ->
+        opts |> Keyword.get(String.to_existing_atom(key), key) |> to_string()
+      end)
+    end)
+  end
+end
