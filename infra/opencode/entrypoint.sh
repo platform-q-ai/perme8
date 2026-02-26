@@ -80,4 +80,55 @@ fi
 # Copy opencode config into the repo root
 cp /workspace/opencode.json /workspace/perme8/opencode.json
 
+# ---- Start embedded PostgreSQL ----
+
+PGDATA="/tmp/pgdata"
+
+if [ ! -f "$PGDATA/PG_VERSION" ]; then
+  echo "Initializing PostgreSQL data directory..."
+  initdb -D "$PGDATA" --auth=trust --no-locale --encoding=UTF8
+
+  # Tune for ephemeral single-session use (no durability needed)
+  cat >> "$PGDATA/postgresql.conf" <<'PGCONF'
+listen_addresses = 'localhost'
+port = 5432
+max_connections = 50
+shared_buffers = 32MB
+work_mem = 4MB
+fsync = off
+synchronous_commit = off
+full_page_writes = off
+wal_level = minimal
+max_wal_senders = 0
+ssl = off
+unix_socket_directories = '/tmp'
+log_destination = 'stderr'
+logging_collector = off
+PGCONF
+fi
+
+echo "Starting PostgreSQL..."
+pg_ctl start -D "$PGDATA" -l "$PGDATA/logfile" -o "-k /tmp -h localhost"
+
+# Create the postgres superuser role to match the app's default credentials
+createuser -h localhost -s postgres 2>/dev/null || true
+
+# ---- Build the Elixir project ----
+
+echo "Setting up Elixir project..."
+export DATABASE_URL="postgres://postgres:postgres@localhost/jarga_dev"
+export MIX_ENV=dev
+
+mix local.hex --force --if-missing
+mix local.rebar --force --if-missing
+mix deps.get
+mix compile
+
+# ---- Set up the application database ----
+
+echo "Setting up database..."
+mix ecto.create --quiet
+mix ecto.migrate --quiet
+echo "Database ready"
+
 exec opencode serve --hostname 0.0.0.0 --port 4096

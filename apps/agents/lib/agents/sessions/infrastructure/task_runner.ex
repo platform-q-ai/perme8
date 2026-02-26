@@ -511,7 +511,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   defp handle_sdk_event(%{"type" => "permission.asked", "properties" => props}, state) do
     permission_id = props["id"]
     session_id = props["sessionID"]
-    tool_name = props["tool"] || props["name"] || "unknown"
+    tool_name = extract_tool_name(props)
 
     if permission_id && session_id do
       {:permission, session_id, permission_id, tool_name, state}
@@ -633,6 +633,14 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   end
 
   # ---- Private helpers ----
+
+  # Extract a printable tool name from permission.asked properties.
+  # The "tool" field can be a map (e.g. %{"callID" => ..., "messageID" => ...})
+  # so we fall back to the "permission" type or "name" field.
+  defp extract_tool_name(%{"tool" => tool}) when is_binary(tool), do: tool
+  defp extract_tool_name(%{"permission" => perm}) when is_binary(perm), do: perm
+  defp extract_tool_name(%{"name" => name}) when is_binary(name), do: name
+  defp extract_tool_name(_), do: "unknown"
 
   defp update_task_status(state, attrs) do
     case state.task_repo.get_task(state.task_id) do

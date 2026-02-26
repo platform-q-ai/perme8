@@ -9,7 +9,9 @@ FROM hexpm/elixir:1.19.4-erlang-28.3.2-alpine-3.21.6
 
 # git: repo operations, bash+openssl+curl+python3: get-token script
 # ripgrep+fd: required by opencode's Grep and Glob tools
-RUN apk add --no-cache git bash openssl curl python3 github-cli ripgrep fd
+# postgresql16+contrib: embedded per-session database (contrib provides citext extension)
+# build-base: make/gcc/musl-dev needed by bcrypt_elixir and lazy_html NIFs
+RUN apk add --no-cache git bash openssl curl python3 github-cli ripgrep fd postgresql16 postgresql16-contrib build-base
 
 # Copy opencode binary from fetcher stage
 COPY --from=fetcher /usr/local/bin/opencode /usr/local/bin/opencode
@@ -21,13 +23,14 @@ RUN adduser -D -g "" appuser
 RUN mkdir -p /home/appuser/.local/share/opencode \
              /home/appuser/.local/state \
              /home/appuser/.config/perme8 \
-             /home/appuser/.claude
+             /home/appuser/.claude \
+             /tmp/pgdata
 
 WORKDIR /workspace
 COPY opencode.json /workspace/opencode.json
 COPY entrypoint.sh /workspace/entrypoint.sh
 COPY get-token /home/appuser/.config/perme8/get-token
-RUN chown -R appuser:appuser /workspace /home/appuser/.local /home/appuser/.config /home/appuser/.claude
+RUN chown -R appuser:appuser /workspace /home/appuser/.local /home/appuser/.config /home/appuser/.claude /tmp/pgdata
 
 USER appuser
 EXPOSE 4096

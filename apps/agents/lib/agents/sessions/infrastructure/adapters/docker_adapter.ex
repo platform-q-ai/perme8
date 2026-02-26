@@ -25,8 +25,8 @@ defmodule Agents.Sessions.Infrastructure.Adapters.DockerAdapter do
         "-d",
         "-p",
         "127.0.0.1:0:4096",
-        "--memory=512m",
-        "--cpus=1"
+        "--memory=2g",
+        "--cpus=2"
       ] ++
         env_args ++ [image]
 
