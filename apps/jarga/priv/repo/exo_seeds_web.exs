@@ -528,18 +528,6 @@ NotificationSchema.create_changeset(%{
 })
 |> Notifications.Repo.insert!()
 
-# Also add eve as a pending invitation member so accept/decline works
-%WorkspaceMemberSchema{}
-|> WorkspaceMemberSchema.changeset(%{
-  workspace_id: product_team.id,
-  user_id: eve.id,
-  email: eve.email,
-  role: :member,
-  invited_at: now,
-  joined_at: nil
-})
-|> Identity.Repo.insert!()
-
 IO.puts("[exo-seeds-web] Created workspace invitation notification for eve")
 
 # Diana (guest) gets 2 unread notifications (for user-scoping test: different from charlie)
