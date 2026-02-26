@@ -4,6 +4,11 @@ defmodule Notifications.OTPApp do
 
   Starts the Notifications.Repo and conditionally starts PubSub subscribers.
   """
+  use Boundary,
+    top_level?: true,
+    deps: [Notifications.Infrastructure, Notifications.Repo],
+    exports: []
+
   use Application
 
   @impl true
@@ -15,6 +20,28 @@ defmodule Notifications.OTPApp do
 
     opts = [strategy: :one_for_one, name: Notifications.Supervisor]
     Supervisor.start_link(children, opts)
+  end
+
+  @doc """
+  Ensures PubSub event subscribers are started.
+
+  Used by consuming apps' test support modules (e.g. Jarga.DataCase)
+  to start subscribers for integration tests where the Notifications
+  OTP app has subscribers disabled in test mode.
+
+  Returns the subscriber PID (either existing or newly started).
+  """
+  def ensure_subscribers_started do
+    alias Notifications.Infrastructure.Subscribers.WorkspaceInvitationSubscriber
+
+    case Process.whereis(WorkspaceInvitationSubscriber) do
+      nil ->
+        {:ok, pid} = WorkspaceInvitationSubscriber.start_link([])
+        pid
+
+      pid ->
+        pid
+    end
   end
 
   # PubSub subscribers are started in non-test environments.

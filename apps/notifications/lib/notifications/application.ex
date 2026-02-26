@@ -14,6 +14,7 @@ defmodule Notifications.Application do
     deps: [Notifications.Domain, Perme8.Events],
     exports: [
       UseCases.CreateNotification,
+      UseCases.GetNotification,
       UseCases.MarkAsRead,
       UseCases.MarkAllAsRead,
       UseCases.GetUnreadCount,
