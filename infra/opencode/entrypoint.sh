@@ -71,7 +71,12 @@ else
   cd /workspace/perme8
 fi
 
-if [ ! -d "$HOME/.claude/skills" ]; then
+if [ -d "$HOME/.claude/skills" ]; then
+  echo "Skills already cloned, pulling latest..."
+  cd "$HOME/.claude/skills"
+  git fetch origin --depth 1 && git reset --hard origin/main || echo "warn: skills pull failed, using existing checkout"
+  cd /workspace/perme8
+else
   echo "Cloning skills into ~/.claude/skills/..."
   mkdir -p "$HOME/.claude"
   git clone --depth 1 "https://github.com/platform-q-ai/skills.git" "$HOME/.claude/skills" || echo "warn: skills repo not available, skipping"
