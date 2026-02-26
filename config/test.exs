@@ -40,12 +40,13 @@ config :agents, Agents.Repo,
   ownership_timeout: :infinity
 
 # Notifications uses the same database as Jarga
-# pool_size 10 required: jarga-web browser tests hold sandbox connections
-# for the full scenario duration via LiveView notification bell components.
+# pool_size 15 required: jarga-web browser tests (exo-bdd) run concurrent
+# scenarios that each load the notification bell component via LiveView,
+# exhausting smaller pools under sandbox ownership semantics.
 config :notifications, Notifications.Repo,
   url: database_url,
   pool: Ecto.Adapters.SQL.Sandbox,
-  pool_size: 10,
+  pool_size: 15,
   ownership_timeout: :infinity
 
 config :notifications, env: :test
@@ -81,7 +82,7 @@ config :entity_relationship_manager,
 
 # Webhooks uses the same database as Jarga.
 # pool_size kept small (5) to stay within Postgres max_connections (100)
-# when all 6 repos boot in umbrella: 3×15 + 1×10 + 2×5 = 65 connections.
+# when all 6 repos boot in umbrella: 4×15 + 1×5 = 65 connections.
 config :webhooks, Webhooks.Repo,
   url: database_url,
   pool: Ecto.Adapters.SQL.Sandbox,
