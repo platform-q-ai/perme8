@@ -149,6 +149,15 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     {:reply, result, state}
   end
 
+  @impl true
+  def handle_call({:send_message, message}, _from, state) do
+    base_url = "http://localhost:#{state.container_port}"
+    parts = [%{"type" => "text", "text" => message}]
+
+    result = state.opencode_client.send_prompt_async(base_url, state.session_id, parts, [])
+    {:reply, result, state}
+  end
+
   # ---- Container Start ----
 
   @impl true
