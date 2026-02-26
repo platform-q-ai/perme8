@@ -55,8 +55,7 @@ defmodule Jarga.InfrastructureLayer do
       Jarga.Documents.Infrastructure.Repositories.AuthorizationRepository,
       Jarga.Documents.Notes.Infrastructure.Repositories.NoteRepository,
       Jarga.Documents.Notes.Infrastructure.Repositories.AuthorizationRepository,
-      # Notifications
-      Jarga.Notifications.Infrastructure.Repositories.NotificationRepository,
+      # Notifications — extracted to apps/notifications/
       # Projects
       Jarga.Projects.Infrastructure.Repositories.ProjectRepository,
       Jarga.Projects.Infrastructure.Repositories.AuthorizationRepository
@@ -87,8 +86,7 @@ defmodule Jarga.InfrastructureLayer do
       Jarga.Documents.Infrastructure.Schemas.DocumentSchema,
       Jarga.Documents.Infrastructure.Schemas.DocumentComponentSchema,
       Jarga.Documents.Notes.Infrastructure.Schemas.NoteSchema,
-      # Notifications
-      Jarga.Notifications.Infrastructure.Schemas.NotificationSchema,
+      # Notifications — extracted to apps/notifications/
       # Projects
       Jarga.Projects.Infrastructure.Schemas.ProjectSchema
       # Workspaces — migrated to Identity app

@@ -7,7 +7,7 @@ defmodule JargaWeb.NotificationsLive.OnMountTest do
   import Phoenix.LiveViewTest
   import Jarga.AccountsFixtures
 
-  alias Jarga.Notifications.Domain.Events.NotificationCreated
+  alias Notifications.Domain.Events.NotificationCreated
 
   describe "structured event subscription and handler" do
     setup %{conn: conn} do

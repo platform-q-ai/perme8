@@ -4,7 +4,7 @@ defmodule JargaWeb.NotificationsLive.NotificationBell do
   """
   use JargaWeb, :live_component
 
-  alias Jarga.Notifications
+  alias Notifications
 
   @impl true
   def mount(socket) do
@@ -43,6 +43,7 @@ defmodule JargaWeb.NotificationsLive.NotificationBell do
       <button
         type="button"
         id="notification-bell-toggle"
+        data-testid="notification-bell"
         phx-click="toggle_dropdown"
         phx-target={@myself}
         class="btn btn-ghost btn-circle relative"
@@ -52,6 +53,7 @@ defmodule JargaWeb.NotificationsLive.NotificationBell do
         <%= if @unread_count > 0 do %>
           <span
             id="notification-bell-badge"
+            data-testid="notification-badge"
             class="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-error rounded-full"
           >
             {if @unread_count > 99, do: "99+", else: @unread_count}
@@ -62,6 +64,7 @@ defmodule JargaWeb.NotificationsLive.NotificationBell do
     <!-- Dropdown -->
       <div
         id="notification-bell-dropdown"
+        data-testid="notification-dropdown"
         class={"absolute right-0 mt-2 w-96 bg-base-100 border border-base-300 rounded-lg shadow-xl z-50 #{if !@show_dropdown, do: "hidden"}"}
         phx-click-away="close_dropdown"
         phx-target={@myself}
@@ -77,7 +80,7 @@ defmodule JargaWeb.NotificationsLive.NotificationBell do
               phx-target={@myself}
               class="btn btn-ghost btn-xs"
             >
-              Mark all read
+              Mark all as read
             </button>
           <% end %>
         </div>
@@ -115,6 +118,7 @@ defmodule JargaWeb.NotificationsLive.NotificationBell do
     <div
       id={@id}
       data-notification-id={@notification.id}
+      data-testid={if !@notification.read, do: "notification-item-unread", else: "notification-item"}
       class={"px-4 py-3 border-b border-base-300 hover:bg-base-200 #{if !@notification.read, do: "bg-base-200/50"}"}
     >
       <div class="flex items-start gap-3">
@@ -131,11 +135,12 @@ defmodule JargaWeb.NotificationsLive.NotificationBell do
           <p class="text-sm text-base-content/70 mt-1">{@notification.body}</p>
           
     <!-- Workspace Invitation Actions -->
-          <%= if @notification.type == "workspace_invitation" && is_nil(@notification.action_taken_at) do %>
-            <div class="flex gap-2 mt-3">
+          <%= if @notification.type == "workspace_invitation" && !@notification.read do %>
+            <div class="flex gap-2 mt-3" data-testid="notification-invitation">
               <button
                 type="button"
                 id={"notification-accept-btn-#{@notification.id}"}
+                data-testid="accept-invitation"
                 phx-click="accept_invitation"
                 phx-value-notification-id={@notification.id}
                 phx-target={@myself}
@@ -146,6 +151,7 @@ defmodule JargaWeb.NotificationsLive.NotificationBell do
               <button
                 type="button"
                 id={"notification-decline-btn-#{@notification.id}"}
+                data-testid="decline-invitation"
                 phx-click="decline_invitation"
                 phx-value-notification-id={@notification.id}
                 phx-target={@myself}
@@ -154,16 +160,6 @@ defmodule JargaWeb.NotificationsLive.NotificationBell do
                 Decline
               </button>
             </div>
-          <% end %>
-
-          <%= if @notification.action_taken_at do %>
-            <p id={"notification-action-status-#{@notification.id}"} class="text-xs text-success mt-2">
-              ✓ Invitation {case @notification.data["action"] do
-                "accepted" -> "accepted"
-                "declined" -> "declined"
-                _ -> "handled"
-              end}
-            </p>
           <% end %>
 
           <p class="text-xs text-base-content/50 mt-2">
@@ -235,49 +231,59 @@ defmodule JargaWeb.NotificationsLive.NotificationBell do
 
   @impl true
   def handle_event("accept_invitation", %{"notification-id" => notification_id}, socket) do
-    user_id = socket.assigns.current_user.id
+    user = socket.assigns.current_user
 
-    case Notifications.accept_workspace_invitation(notification_id, user_id) do
-      {:ok, _workspace_member} ->
-        socket =
-          socket
-          |> load_notifications()
-          |> put_flash(:info, "Workspace invitation accepted!")
-
-        {:noreply, socket}
-
-      {:error, :not_found} ->
+    # Get the notification to extract workspace_id from data
+    case Notifications.get_notification(notification_id, user.id) do
+      nil ->
         {:noreply, put_flash(socket, :error, "Notification not found")}
 
-      {:error, :already_accepted} ->
-        {:noreply, put_flash(socket, :error, "Invitation already accepted")}
+      notification ->
+        workspace_id = notification.data["workspace_id"]
 
-      {:error, _reason} ->
-        {:noreply, put_flash(socket, :error, "Failed to accept invitation")}
+        case Identity.accept_invitation_by_workspace(workspace_id, user.id) do
+          {:ok, _workspace_member} ->
+            Notifications.mark_as_read(notification_id, user.id)
+
+            socket =
+              socket
+              |> load_notifications()
+              |> put_flash(:info, "Invitation accepted")
+
+            {:noreply, socket}
+
+          {:error, _reason} ->
+            {:noreply, put_flash(socket, :error, "Failed to accept invitation")}
+        end
     end
   end
 
   @impl true
   def handle_event("decline_invitation", %{"notification-id" => notification_id}, socket) do
-    user_id = socket.assigns.current_user.id
+    user = socket.assigns.current_user
 
-    case Notifications.decline_workspace_invitation(notification_id, user_id) do
-      {:ok, _notification} ->
-        socket =
-          socket
-          |> load_notifications()
-          |> put_flash(:info, "Workspace invitation declined")
-
-        {:noreply, socket}
-
-      {:error, :not_found} ->
+    # Get the notification to extract workspace_id from data
+    case Notifications.get_notification(notification_id, user.id) do
+      nil ->
         {:noreply, put_flash(socket, :error, "Notification not found")}
 
-      {:error, :already_actioned} ->
-        {:noreply, put_flash(socket, :error, "Invitation already handled")}
+      notification ->
+        workspace_id = notification.data["workspace_id"]
 
-      {:error, _reason} ->
-        {:noreply, put_flash(socket, :error, "Failed to decline invitation")}
+        case Identity.decline_invitation_by_workspace(workspace_id, user.id) do
+          :ok ->
+            Notifications.mark_as_read(notification_id, user.id)
+
+            socket =
+              socket
+              |> load_notifications()
+              |> put_flash(:info, "Invitation declined")
+
+            {:noreply, socket}
+
+          {:error, _reason} ->
+            {:noreply, put_flash(socket, :error, "Failed to decline invitation")}
+        end
     end
   end
 

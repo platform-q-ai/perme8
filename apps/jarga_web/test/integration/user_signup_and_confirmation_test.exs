@@ -15,7 +15,7 @@ defmodule JargaWeb.Integration.UserSignupAndConfirmationTest do
   # Helper function to wait for async notifications to be created
   defp wait_for_notification(user_id, max_attempts \\ 10) do
     Enum.reduce_while(1..max_attempts, nil, fn _attempt, _acc ->
-      case Jarga.Notifications.list_notifications(user_id) do
+      case Notifications.list_notifications(user_id) do
         [] ->
           Process.sleep(10)
           {:cont, nil}
@@ -347,7 +347,7 @@ defmodule JargaWeb.Integration.UserSignupAndConfirmationTest do
       assert new_user.confirmed_at != nil
 
       # Step 5: Verify notification was created for the pending invitation
-      notifications = Jarga.Notifications.list_notifications(new_user.id)
+      notifications = Notifications.list_notifications(new_user.id)
       assert length(notifications) == 1
       notification = List.first(notifications)
       assert notification.type == "workspace_invitation"
@@ -377,12 +377,13 @@ defmodule JargaWeb.Integration.UserSignupAndConfirmationTest do
       notification = wait_for_notification(existing_user.id)
       assert notification != nil, "Notification was not created"
 
-      # Accept the invitation
+      # Accept the invitation — call Identity directly then mark notification as read
+      workspace_id = notification.data["workspace_id"]
+
       {:ok, member} =
-        Jarga.Notifications.accept_workspace_invitation(
-          notification.id,
-          existing_user.id
-        )
+        Identity.accept_invitation_by_workspace(workspace_id, existing_user.id)
+
+      Notifications.mark_as_read(notification.id, existing_user.id)
 
       # Verify membership was updated with user_id and joined_at set
       assert member.user_id == existing_user.id
@@ -486,7 +487,7 @@ defmodule JargaWeb.Integration.UserSignupAndConfirmationTest do
       # We need to wait for both notifications (max 20 attempts)
       notifications =
         Enum.reduce_while(1..20, [], fn _attempt, _acc ->
-          notifs = Jarga.Notifications.list_notifications(new_user.id)
+          notifs = Notifications.list_notifications(new_user.id)
 
           if length(notifs) == 2 do
             {:halt, notifs}

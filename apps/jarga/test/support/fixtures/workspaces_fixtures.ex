@@ -13,14 +13,12 @@ defmodule Jarga.WorkspacesFixtures do
       Identity,
       Identity.Repo,
       Jarga.Workspaces,
-      Jarga.Accounts,
-      Jarga.Notifications
+      Jarga.Accounts
     ],
     exports: []
 
   alias Identity.Infrastructure.Schemas.WorkspaceMemberSchema
   alias Identity.Domain.Entities.WorkspaceMember
-  alias Jarga.Notifications
 
   def valid_workspace_attributes(attrs \\ %{}) do
     Enum.into(attrs, %{
@@ -73,27 +71,13 @@ defmodule Jarga.WorkspacesFixtures do
     {:ok, {:invitation_sent, _invitation}} =
       Identity.invite_member(inviter, workspace_id, user_email, role)
 
-    # Find the user by email
+    # Accept the invitation directly through Identity (bypasses notification flow)
+    # This is the new pattern: Identity handles workspace membership directly
     user = Identity.get_user_by_email_case_insensitive(user_email)
 
     if user do
-      # Get the workspace using the context API with the inviter (who has access)
-      workspace = Identity.get_workspace!(inviter, workspace_id)
-
-      # Create a notification manually for the test (bypassing the async PubSub subscriber)
-      {:ok, notification} =
-        Notifications.create_workspace_invitation_notification(%{
-          user_id: user.id,
-          workspace_id: workspace_id,
-          workspace_name: workspace.name,
-          invited_by_name: inviter.email,
-          role: to_string(role)
-        })
-
-      # Accept the invitation through the notification use case (this will broadcast)
-      Notifications.accept_workspace_invitation(notification.id, user.id)
+      Identity.accept_invitation_by_workspace(workspace_id, user.id)
     else
-      # For non-existent users, return error
       {:error, :user_not_found}
     end
   end

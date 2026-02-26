@@ -6,7 +6,7 @@ defmodule JargaWeb.NotificationsLive.OnMount do
   real-time notification updates by forwarding them to the NotificationBell component.
   """
 
-  alias Jarga.Notifications.Domain.Events.NotificationCreated
+  alias Notifications.Domain.Events.NotificationCreated
 
   import Phoenix.LiveView
 

@@ -9,7 +9,6 @@ defmodule JargaWeb.AppLive.DashboardTest do
 
   # Cross-context domain events
   alias Identity.Domain.Events.{WorkspaceUpdated, MemberRemoved, WorkspaceInvitationNotified}
-  alias Jarga.Notifications.Domain.Events.NotificationActionTaken
 
   # Agent domain events
   alias Agents.Domain.Events.{
@@ -266,64 +265,6 @@ defmodule JargaWeb.AppLive.DashboardTest do
 
       html = render(lv)
       assert html =~ "Invited Workspace"
-    end
-
-    test "reloads workspaces on NotificationActionTaken accepted event when current user joined",
-         %{
-           conn: conn,
-           user: user
-         } do
-      {:ok, lv, _html} = live(conn, ~p"/app")
-      assert render(lv) =~ "No workspaces yet"
-
-      # Create workspace by another user, add current user as member
-      other_user = user_fixture()
-      workspace = workspace_fixture(other_user, %{name: "Joined Workspace"})
-      {:ok, _member} = invite_and_accept_member(other_user, workspace.id, user.email, :member)
-
-      # Send structured event — "I joined a workspace"
-      event =
-        NotificationActionTaken.new(%{
-          aggregate_id: Ecto.UUID.generate(),
-          actor_id: user.id,
-          notification_id: Ecto.UUID.generate(),
-          user_id: user.id,
-          action: "accepted",
-          workspace_id: workspace.id
-        })
-
-      send(lv.pid, event)
-
-      html = render(lv)
-      assert html =~ "Joined Workspace"
-    end
-
-    test "ignores NotificationActionTaken accepted event when different user joined", %{
-      conn: conn,
-      user: user
-    } do
-      workspace = workspace_fixture(user, %{name: "My Workspace"})
-      {:ok, lv, _html} = live(conn, ~p"/app")
-
-      assert render(lv) =~ "My Workspace"
-
-      # Send structured event — someone else joined (received via workspace topic)
-      other_user_id = Ecto.UUID.generate()
-
-      event =
-        NotificationActionTaken.new(%{
-          aggregate_id: Ecto.UUID.generate(),
-          actor_id: other_user_id,
-          notification_id: Ecto.UUID.generate(),
-          user_id: other_user_id,
-          action: "accepted",
-          workspace_id: workspace.id
-        })
-
-      send(lv.pid, event)
-
-      # Should still render normally — no-op for dashboard
-      assert render(lv) =~ "My Workspace"
     end
 
     test "reloads workspaces on MemberRemoved event when current user is removed", %{

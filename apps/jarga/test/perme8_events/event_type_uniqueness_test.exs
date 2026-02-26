@@ -7,8 +7,9 @@ defmodule Perme8.Events.EventTypeUniquenessTest do
   """
 
   @all_event_modules [
-    # Identity (4)
+    # Identity (5)
     Identity.Domain.Events.MemberInvited,
+    Identity.Domain.Events.MemberJoined,
     Identity.Domain.Events.WorkspaceUpdated,
     Identity.Domain.Events.MemberRemoved,
     Identity.Domain.Events.WorkspaceInvitationNotified,
@@ -33,10 +34,9 @@ defmodule Perme8.Events.EventTypeUniquenessTest do
     Jarga.Chat.Domain.Events.ChatSessionStarted,
     Jarga.Chat.Domain.Events.ChatMessageSent,
     Jarga.Chat.Domain.Events.ChatSessionDeleted,
-    # Notifications (3)
-    Jarga.Notifications.Domain.Events.NotificationCreated,
-    Jarga.Notifications.Domain.Events.NotificationRead,
-    Jarga.Notifications.Domain.Events.NotificationActionTaken,
+    # Notifications (2) — extracted to apps/notifications/, NotificationActionTaken removed
+    Notifications.Domain.Events.NotificationCreated,
+    Notifications.Domain.Events.NotificationRead,
     # ERM (7)
     EntityRelationshipManager.Domain.Events.SchemaCreated,
     EntityRelationshipManager.Domain.Events.SchemaUpdated,
