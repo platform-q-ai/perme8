@@ -120,7 +120,10 @@ defmodule JargaWeb.NotificationsLive.NotificationBell do
       data-notification-id={@notification.id}
       data-testid="notification-item"
       data-notification-status={if @notification.read, do: "read", else: "unread"}
-      class={"px-4 py-3 border-b border-base-300 hover:bg-base-200 #{if !@notification.read, do: "bg-base-200/50"}"}
+      phx-click={if !@notification.read, do: "mark_read"}
+      phx-value-notification-id={if !@notification.read, do: @notification.id}
+      phx-target={if !@notification.read, do: @myself}
+      class={"px-4 py-3 border-b border-base-300 hover:bg-base-200 cursor-pointer #{if !@notification.read, do: "bg-base-200/50"}"}
     >
       <div class="flex items-start gap-3">
         <!-- Icon -->
