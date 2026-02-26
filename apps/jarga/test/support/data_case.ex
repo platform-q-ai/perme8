@@ -15,10 +15,10 @@ defmodule Jarga.DataCase do
   """
 
   # Test support module - top-level boundary for test infrastructure
-  # Needs access to Notifications for integration test setup (PubSub subscribers)
+  # Needs access to Notifications facade (for subscriber setup) and Notifications.Repo (for sandbox)
   use Boundary,
     top_level?: true,
-    deps: [Jarga.Repo, Jarga.Test.SandboxHelper],
+    deps: [Jarga.Repo, Jarga.Test.SandboxHelper, Notifications, Notifications.Repo],
     exports: []
 
   use ExUnit.CaseTemplate
@@ -90,18 +90,9 @@ defmodule Jarga.DataCase do
   alias Jarga.Test.SandboxHelper
 
   defp enable_pubsub_subscribers do
-    alias Notifications.Infrastructure.Subscribers.WorkspaceInvitationSubscriber
-
-    # Start the subscriber if it's not already running
-    subscriber_pid =
-      case Process.whereis(WorkspaceInvitationSubscriber) do
-        nil ->
-          {:ok, pid} = WorkspaceInvitationSubscriber.start_link([])
-          pid
-
-        pid ->
-          pid
-      end
+    # Use the Notifications public facade to start subscribers.
+    # This avoids reaching into Notifications internals from Jarga.
+    subscriber_pid = Notifications.ensure_subscribers_started()
 
     # Allow the subscriber to access the database
     SandboxHelper.allow_process(subscriber_pid)
