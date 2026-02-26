@@ -204,8 +204,8 @@ config :agents, :sessions,
   image: "perme8-opencode",
   max_concurrent_tasks: 1,
   task_timeout_ms: 600_000,
-  health_check_interval_ms: 1_000,
-  health_check_max_retries: 30
+  health_check_interval_ms: 2_000,
+  health_check_max_retries: 180
 
 # MCP tool providers: modules implementing ToolProvider behaviour
 config :agents, :mcp_tool_providers, [
