@@ -1,0 +1,20 @@
+defmodule Identity.Repo.Migrations.CreateApiKeys do
+  use Ecto.Migration
+
+  def change do
+    create_if_not_exists table(:api_keys, primary_key: false) do
+      add(:id, :binary_id, primary_key: true)
+      add(:name, :string, null: false)
+      add(:description, :text)
+      add(:hashed_token, :string, null: false)
+      add(:user_id, references(:users, type: :binary_id, on_delete: :delete_all), null: false)
+      add(:workspace_access, {:array, :string}, default: [])
+      add(:is_active, :boolean, default: true, null: false)
+
+      timestamps(type: :utc_datetime)
+    end
+
+    create_if_not_exists(index(:api_keys, [:user_id]))
+    create_if_not_exists(unique_index(:api_keys, [:hashed_token]))
+  end
+end
