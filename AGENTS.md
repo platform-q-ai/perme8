@@ -63,14 +63,14 @@ When adding a new feature or placing code:
 
 ### CRUD Skills
 
-- **CRUD Create** -- implements new features from a ticket or direct description. Triages scope (Full/Medium/Micro) and delegates to PRD + BDD Features + Architect + Execute Plan, BDD Features + Architect + Execute Plan, or BDD Features + direct TDD. Feature files are generated before the architect phase as acceptance specifications.
+- **CRUD Create** -- implements new features from a ticket or direct description. Triages scope (Full/Medium/Micro). Creates the implementation branch upfront, generates BDD feature files, opens a draft PR for user review, then continues with architecture and implementation on the same branch after approval. The draft PR is marked ready for review once implementation is complete.
 - **CRUD Read** -- handles research spikes and exploration. Strictly read-only. Posts findings as a comment on the ticket.
-- **CRUD Update** -- modifies existing functionality (bug fix, refactor, chore, docs). Runs impact analysis, regression baseline, and TDD.
+- **CRUD Update** -- modifies existing functionality (bug fix, refactor, chore, docs). Runs impact analysis, regression baseline, and TDD. For user-facing changes, opens a draft PR with BDD feature files for review before implementation.
 - **CRUD Delete** -- removes or deprecates features. Scans dependencies, determines migration strategy, and executes staged removal.
 
 ### Workflow Skills
 
-- **Execute Plan** -- implements an existing architectural plan end-to-end with commits, PR, CI, review.
+- **Execute Plan** -- implements an existing architectural plan end-to-end with commits, CI, review. Supports receiving an existing branch and draft PR from the calling skill (skips branch/PR creation, marks the draft PR as ready when done), or creating its own branch and PR from scratch.
 - **Finalize** -- reusable finalization and quality gate: pre-commit validation, test coverage verification, PRD reconciliation, documentation checks, and follow-up issue creation. Use `/finalize`.
 - **Commit and PR** -- git workflow: branch, incremental commits, pre-commit checks, push, PR creation, CI monitoring.
 
