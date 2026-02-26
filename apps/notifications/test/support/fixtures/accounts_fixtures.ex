@@ -7,6 +7,12 @@ defmodule Notifications.Test.Fixtures.AccountsFixtures do
   This avoids cross-repo sandbox visibility issues with `async: true`.
   """
 
+  # Test fixture module - top-level boundary for test data creation
+  use Boundary,
+    top_level?: true,
+    deps: [Notifications.Repo],
+    exports: []
+
   alias Notifications.Repo
 
   def unique_user_email, do: "user#{System.unique_integer([:positive])}@example.com"

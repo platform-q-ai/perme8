@@ -63,14 +63,28 @@ defmodule Notifications.Infrastructure.Repositories.NotificationRepository do
 
   @doc """
   Lists unread notifications for a user.
+
+  ## Options
+    * `:limit` - Maximum number of notifications to return
   """
   @impl true
-  def list_unread_by_user(user_id) do
-    NotificationQueries.base()
-    |> NotificationQueries.by_user(user_id)
-    |> NotificationQueries.unread()
-    |> NotificationQueries.ordered_by_recent()
-    |> Repo.all()
+  def list_unread_by_user(user_id, opts \\ []) do
+    limit = Keyword.get(opts, :limit)
+
+    query =
+      NotificationQueries.base()
+      |> NotificationQueries.by_user(user_id)
+      |> NotificationQueries.unread()
+      |> NotificationQueries.ordered_by_recent()
+
+    query =
+      if limit do
+        NotificationQueries.limited(query, limit)
+      else
+        query
+      end
+
+    Repo.all(query)
   end
 
   @doc """

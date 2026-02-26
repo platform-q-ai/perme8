@@ -36,8 +36,10 @@ defmodule Notifications.OTPApp do
 
     case Process.whereis(WorkspaceInvitationSubscriber) do
       nil ->
-        {:ok, pid} = WorkspaceInvitationSubscriber.start_link([])
-        pid
+        case WorkspaceInvitationSubscriber.start_link([]) do
+          {:ok, pid} -> pid
+          {:error, {:already_started, pid}} -> pid
+        end
 
       pid ->
         pid

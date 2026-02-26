@@ -54,4 +54,21 @@ defmodule Notifications.Test.Fixtures.NotificationsFixtures do
 
     notification
   end
+
+  @doc """
+  Updates a notification for test purposes only.
+
+  Bypasses normal business logic and directly updates
+  notification fields in the database.
+
+  ## Examples
+
+      iex> update_for_test(notification, %{read: true, read_at: ~U[2024-01-01 12:00:00Z]})
+      %NotificationSchema{}
+  """
+  def update_for_test(notification, changes) do
+    notification
+    |> Ecto.Changeset.change(changes)
+    |> Repo.update!()
+  end
 end

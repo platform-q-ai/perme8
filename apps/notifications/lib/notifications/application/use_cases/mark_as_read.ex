@@ -22,6 +22,9 @@ defmodule Notifications.Application.UseCases.MarkAsRead do
       nil ->
         {:error, :not_found}
 
+      %{read: true} = notification ->
+        {:ok, notification}
+
       notification ->
         notification_repository.mark_as_read(notification)
     end
