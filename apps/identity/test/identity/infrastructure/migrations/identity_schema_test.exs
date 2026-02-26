@@ -9,7 +9,7 @@ defmodule Identity.Infrastructure.Migrations.IdentitySchemaTest do
   describe "workspace_role enum" do
     test "exists in the database" do
       result = Identity.Repo.query!("SELECT 1 FROM pg_type WHERE typname = 'workspace_role'")
-      assert length(result.rows) == 1
+      assert [_] = result.rows
     end
 
     test "has expected values" do
@@ -54,7 +54,7 @@ defmodule Identity.Infrastructure.Migrations.IdentitySchemaTest do
         WHERE tablename = 'users' AND indexdef LIKE '%UNIQUE%' AND indexdef LIKE '%email%'
         """)
 
-      assert length(result.rows) >= 1
+      assert result.rows != []
     end
   end
 
@@ -110,7 +110,7 @@ defmodule Identity.Infrastructure.Migrations.IdentitySchemaTest do
         AND indexdef LIKE '%email%'
         """)
 
-      assert length(result.rows) >= 1
+      assert result.rows != []
     end
   end
 
@@ -162,7 +162,7 @@ defmodule Identity.Infrastructure.Migrations.IdentitySchemaTest do
         AND indexdef LIKE '%token%'
         """)
 
-      assert length(result.rows) >= 1
+      assert result.rows != []
     end
   end
 
@@ -174,7 +174,7 @@ defmodule Identity.Infrastructure.Migrations.IdentitySchemaTest do
         WHERE table_name = 'users' AND column_name = 'hashed_password'
         """)
 
-      assert length(result.rows) == 1
+      assert [_] = result.rows
     end
 
     test "confirmed_at column exists" do
@@ -184,7 +184,7 @@ defmodule Identity.Infrastructure.Migrations.IdentitySchemaTest do
         WHERE table_name = 'users' AND column_name = 'confirmed_at'
         """)
 
-      assert length(result.rows) == 1
+      assert [_] = result.rows
     end
 
     test "citext extension is installed" do
@@ -193,7 +193,7 @@ defmodule Identity.Infrastructure.Migrations.IdentitySchemaTest do
         SELECT 1 FROM pg_extension WHERE extname = 'citext'
         """)
 
-      assert length(result.rows) == 1
+      assert [_] = result.rows
     end
   end
 
@@ -205,7 +205,7 @@ defmodule Identity.Infrastructure.Migrations.IdentitySchemaTest do
         WHERE table_name = 'workspaces' AND column_name = 'slug'
         """)
 
-      assert length(result.rows) == 1
+      assert [_] = result.rows
     end
 
     test "slug has unique index" do
@@ -217,7 +217,7 @@ defmodule Identity.Infrastructure.Migrations.IdentitySchemaTest do
         AND indexdef LIKE '%slug%'
         """)
 
-      assert length(result.rows) >= 1
+      assert result.rows != []
     end
   end
 
@@ -231,7 +231,7 @@ defmodule Identity.Infrastructure.Migrations.IdentitySchemaTest do
         AND indexdef LIKE '%user_id%'
         """)
 
-      assert length(result.rows) >= 1
+      assert result.rows != []
     end
   end
 
@@ -255,7 +255,7 @@ defmodule Identity.Infrastructure.Migrations.IdentitySchemaTest do
         AND indexdef LIKE '%preferences%'
         """)
 
-      assert length(result.rows) >= 1
+      assert result.rows != []
     end
   end
 
@@ -288,7 +288,7 @@ defmodule Identity.Infrastructure.Migrations.IdentitySchemaTest do
         AND indexdef LIKE '%user_id%'
         """)
 
-      assert length(result.rows) >= 1
+      assert result.rows != []
     end
 
     test "has unique index on hashed_token" do
@@ -300,7 +300,7 @@ defmodule Identity.Infrastructure.Migrations.IdentitySchemaTest do
         AND indexdef LIKE '%hashed_token%'
         """)
 
-      assert length(result.rows) >= 1
+      assert result.rows != []
     end
   end
 end
