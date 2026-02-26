@@ -80,6 +80,8 @@ defmodule Jarga.MixProject do
             {:agents, :relaxed},
             # Identity
             {:identity, :relaxed},
+            # Notifications
+            {:notifications, :relaxed},
             # Event infrastructure
             {:perme8_events, :relaxed},
             # Other - allow Mix for compile tasks
@@ -101,6 +103,7 @@ defmodule Jarga.MixProject do
       {:perme8_events, in_umbrella: true},
       {:identity, in_umbrella: true},
       {:agents, in_umbrella: true},
+      {:notifications, in_umbrella: true},
 
       # Database
       {:phoenix_ecto, "~> 4.6"},

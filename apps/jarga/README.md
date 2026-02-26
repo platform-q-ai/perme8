@@ -110,13 +110,8 @@ Chat sessions and messaging tied to agents.
 
 ### Notifications
 
-Real-time notification system with EventHandler-based subscribers.
-
-| Layer | Modules |
-|-------|---------|
-| Domain | `NotificationCreated`, `NotificationRead`, `NotificationActionTaken` events |
-| Application | `AcceptWorkspaceInvitation`, `CreateWorkspaceInvitationNotification`, `DeclineWorkspaceInvitation`, `GetUnreadCount`, `ListNotifications`, `MarkAsRead` use cases |
-| Infrastructure | `NotificationSchema`, `WorkspaceInvitationSubscriber` (EventHandler) |
+Notifications have been extracted into the standalone `notifications` umbrella app.
+Jarga delegates to the `Notifications` public facade for all notification operations.
 
 ### Accounts
 
