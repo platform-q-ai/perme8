@@ -172,6 +172,20 @@ defmodule Agents.Sessions do
     end
   end
 
+  @doc """
+  Sends a message to a running session via prompt_async.
+
+  The message is queued by opencode and processed after the agent finishes
+  its current work. Does not interrupt or abort the current operation.
+  """
+  @spec send_message(String.t(), String.t()) :: :ok | {:error, term()}
+  def send_message(task_id, message) do
+    case Registry.lookup(Agents.Sessions.TaskRegistry, task_id) do
+      [{pid, _}] -> GenServer.call(pid, {:send_message, message})
+      [] -> {:error, :task_not_running}
+    end
+  end
+
   # Wire the real TaskRunnerSupervisor starter
   defp inject_task_runner_starter(opts) do
     if Keyword.has_key?(opts, :task_runner_starter) do

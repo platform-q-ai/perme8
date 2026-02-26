@@ -65,9 +65,22 @@ defmodule AgentsWeb.SessionsLive.Index do
     if instruction == "" do
       {:noreply, put_flash(socket, :error, "Instruction is required")}
     else
-      socket
-      |> run_or_resume_task(instruction)
-      |> handle_task_result(socket)
+      current_task = socket.assigns.current_task
+
+      if task_running?(current_task) do
+        # Send message to the running session (queued by opencode)
+        case Sessions.send_message(current_task.id, instruction) do
+          :ok ->
+            {:noreply, assign(socket, :form, to_form(%{"instruction" => ""}))}
+
+          {:error, _reason} ->
+            {:noreply, put_flash(socket, :error, "Failed to send message")}
+        end
+      else
+        socket
+        |> run_or_resume_task(instruction)
+        |> handle_task_result(socket)
+      end
     end
   end
 
@@ -1062,11 +1075,17 @@ defmodule AgentsWeb.SessionsLive.Index do
                   rows="2"
                   class="textarea textarea-bordered w-full text-sm leading-snug"
                   placeholder={
-                    if resumable_task?(@current_task),
-                      do: "Follow-up instruction...",
-                      else: "Describe the coding task..."
+                    cond do
+                      task_running?(@current_task) ->
+                        "Send a message (queued until agent finishes)..."
+
+                      resumable_task?(@current_task) ->
+                        "Follow-up instruction..."
+
+                      true ->
+                        "Describe the coding task..."
+                    end
                   }
-                  disabled={task_running?(@current_task)}
                 >{@form["instruction"].value}</textarea>
               </div>
               <div class="flex gap-1 shrink-0">
@@ -1082,14 +1101,16 @@ defmodule AgentsWeb.SessionsLive.Index do
                 </.button>
                 <.button
                   type="submit"
-                  variant="primary"
+                  variant={if(task_running?(@current_task), do: "ghost", else: "primary")}
                   size="sm"
-                  disabled={task_running?(@current_task)}
                 >
-                  <%= if resumable_task?(@current_task) do %>
-                    <.icon name="hero-arrow-path" class="size-4" />
-                  <% else %>
-                    <.icon name="hero-paper-airplane" class="size-4" />
+                  <%= cond do %>
+                    <% task_running?(@current_task) -> %>
+                      <.icon name="hero-chat-bubble-left-ellipsis" class="size-4" />
+                    <% resumable_task?(@current_task) -> %>
+                      <.icon name="hero-arrow-path" class="size-4" />
+                    <% true -> %>
+                      <.icon name="hero-paper-airplane" class="size-4" />
                   <% end %>
                 </.button>
               </div>
