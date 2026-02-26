@@ -16,13 +16,6 @@ defmodule Agents.Sessions.Application.SessionsConfigTest do
     end
   end
 
-  describe "task_timeout_ms/0" do
-    test "returns configured timeout" do
-      assert is_integer(SessionsConfig.task_timeout_ms())
-      assert SessionsConfig.task_timeout_ms() > 0
-    end
-  end
-
   describe "health_check_interval_ms/0" do
     test "returns configured interval" do
       assert is_integer(SessionsConfig.health_check_interval_ms())

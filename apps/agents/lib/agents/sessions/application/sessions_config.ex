@@ -15,11 +15,6 @@ defmodule Agents.Sessions.Application.SessionsConfig do
     config()[:max_concurrent_tasks] || 1
   end
 
-  @doc "Returns the task timeout in milliseconds."
-  def task_timeout_ms do
-    config()[:task_timeout_ms] || 600_000
-  end
-
   @doc "Returns the health check polling interval in milliseconds."
   def health_check_interval_ms do
     config()[:health_check_interval_ms] || 1_000

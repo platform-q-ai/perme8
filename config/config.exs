@@ -203,7 +203,6 @@ config :notifications,
 config :agents, :sessions,
   image: "perme8-opencode",
   max_concurrent_tasks: 1,
-  task_timeout_ms: 600_000,
   health_check_interval_ms: 2_000,
   health_check_max_retries: 180
 

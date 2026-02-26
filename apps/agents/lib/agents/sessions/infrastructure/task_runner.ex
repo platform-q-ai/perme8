@@ -8,7 +8,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   3. Creating an opencode session
   4. Sending the user's prompt
   5. Streaming events via PubSub
-  6. Handling completion, failure, cancellation, and timeout
+  6. Handling completion, failure, and cancellation
   7. Cleanup (container stop)
 
   Events from the opencode SDK SSE stream follow these types:
@@ -32,7 +32,6 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     :session_id,
     :instruction,
     :user_id,
-    :timeout_ref,
     :flush_ref,
     status: :starting,
     health_retries: 0,
@@ -113,11 +112,6 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
           pubsub: pubsub,
           health_retries: SessionsConfig.health_check_max_retries()
         }
-
-        # Set task timeout
-        timeout_ms = SessionsConfig.task_timeout_ms()
-        timeout_ref = Process.send_after(self(), :timeout, timeout_ms)
-        state = %{state | timeout_ref: timeout_ref}
 
         # Start the lifecycle — either resume or fresh start
         if resume? do
@@ -310,6 +304,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
         })
 
         broadcast_status(state.task_id, "running", state.pubsub)
+
         flush_ref = schedule_output_flush()
         {:noreply, %{state | status: :running, flush_ref: flush_ref}}
 
@@ -380,14 +375,6 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   @impl true
   def handle_info({:DOWN, _ref, :process, _pid, :normal}, state) do
     {:noreply, state}
-  end
-
-  # ---- Timeout ----
-
-  @impl true
-  def handle_info(:timeout, state) do
-    fail_task(state, "Task timed out")
-    {:stop, :normal, state}
   end
 
   # ---- Cancellation ----
