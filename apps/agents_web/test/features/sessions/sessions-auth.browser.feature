@@ -39,8 +39,7 @@ Feature: Cross-App Authentication for Sessions
     When I navigate to "${baseUrl}/sessions"
     And I wait for network idle
     Then the URL should contain "/sessions"
-    And I should see "Sessions"
-    And I should see "Run coding tasks in containers"
+    And I should see "New Session"
 
   # ---------------------------------------------------------------------------
   # Failed Login

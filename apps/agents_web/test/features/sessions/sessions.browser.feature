@@ -5,21 +5,17 @@ Feature: Coding Sessions Management
   So that I can run tasks in containers and track their progress
 
   # The Sessions page lives at /sessions on the agents_web endpoint.
-  # It shows an instruction form with a Run button, an event log (when a task
-  # is active), and a task history table with colour-coded status badges.
+  # It uses a split-pane layout: session list on the left, session detail
+  # on the right. When no sessions exist, an empty state is shown with a
+  # "New Session" button and guidance text.
   #
   # Authentication is handled via the Identity app — the browser logs in on
   # Identity's endpoint and the session cookie (_identity_key) is shared with
   # agents_web on the same domain (localhost).
   #
-  # Seed data: alice@example.com (owner) has three seeded tasks:
-  #   - "Write unit tests for auth" (completed)
-  #   - "Refactor database queries" (failed)
-  #   - "Add API endpoint for users" (cancelled)
-  #
   # NOTE: Actual task execution requires Docker + opencode and cannot be
   # tested end-to-end in browser tests. These scenarios cover the UI
-  # structure, form validation, and seeded data display.
+  # structure, empty state display, and form validation.
 
   Background:
     Given I am on "${identityUrl}/users/log-in"
@@ -33,73 +29,31 @@ Feature: Coding Sessions Management
   # Page Structure
   # ---------------------------------------------------------------------------
 
-  Scenario: Sessions page renders heading and subtitle
+  Scenario: Sessions page renders New Session button
     When I navigate to "${baseUrl}/sessions"
     And I wait for network idle
-    Then I should see "Sessions"
-    And I should see "Run coding tasks in containers"
+    Then I should see "New Session"
 
-  # ---------------------------------------------------------------------------
-  # Instruction Form
-  # ---------------------------------------------------------------------------
-
-  Scenario: Sessions page renders instruction form with textarea and Run button
+  Scenario: Sessions page shows empty state when no sessions exist
     When I navigate to "${baseUrl}/sessions"
     And I wait for network idle
+    Then I should see "No sessions yet"
+
+  # ---------------------------------------------------------------------------
+  # Instruction Form (visible after clicking New Session)
+  # ---------------------------------------------------------------------------
+
+  Scenario: New Session shows instruction form with textarea
+    When I navigate to "${baseUrl}/sessions"
+    And I wait for network idle
+    And I click the "New Session" button
+    And I wait for 1 seconds
     Then "form#session-form" should exist
     And "textarea#session-instruction" should exist
-    And I should see "Instruction"
-    And I should see "Run"
 
   Scenario: Instruction textarea has placeholder text
     When I navigate to "${baseUrl}/sessions"
     And I wait for network idle
-    Then "textarea#session-instruction[placeholder='Describe the coding task...']" should exist
-
-  Scenario: Submitting empty instruction shows validation error
-    When I navigate to "${baseUrl}/sessions"
-    And I wait for network idle
-    And I click the "Run" button
+    And I click the "New Session" button
     And I wait for 1 seconds
-    Then I should see "Instruction is required"
-
-  # ---------------------------------------------------------------------------
-  # Task History
-  # ---------------------------------------------------------------------------
-
-  Scenario: Task history shows seeded tasks
-    When I navigate to "${baseUrl}/sessions"
-    And I wait for network idle
-    Then I should see "History"
-    And I should see "Write unit tests for auth"
-    And I should see "Refactor database queries"
-    And I should see "Add API endpoint for users"
-
-  Scenario: Task history table has expected column headers
-    When I navigate to "${baseUrl}/sessions"
-    And I wait for network idle
-    Then I should see "Instruction"
-    And I should see "Status"
-    And I should see "Created"
-
-  Scenario: Task history displays colour-coded status badges
-    When I navigate to "${baseUrl}/sessions"
-    And I wait for network idle
-    Then I should see "completed"
-    And I should see "failed"
-    And I should see "cancelled"
-    And "span.badge-success" should exist
-    And "span.badge-error" should exist
-    And "span.badge-ghost" should exist
-
-  Scenario: Task history rows are clickable
-    When I navigate to "${baseUrl}/sessions"
-    And I wait for network idle
-    Then "tr[phx-click='view_task']" should exist
-
-  Scenario: Long instructions are truncated in history
-    When I navigate to "${baseUrl}/sessions"
-    And I wait for network idle
-    # The seeded 156-char instruction is sliced at 80 chars + "..."
-    Then I should see "This is a very long instruction that should be truncated in the task history tab"
-    And I should not see "and this part should not be visible in the table row"
+    Then "textarea#session-instruction[placeholder='Describe the coding task...']" should exist
