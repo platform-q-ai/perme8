@@ -2,7 +2,7 @@ defmodule IdentityWeb.LoginLiveTest do
   use IdentityWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
-  import Jarga.AccountsFixtures
+  import Identity.AccountsFixtures
 
   alias Identity
 

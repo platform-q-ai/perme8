@@ -6,7 +6,7 @@ defmodule IdentityWeb.Plugs.UserAuthTest do
   alias Identity.Domain.Scope
   alias IdentityWeb.Plugs.UserAuth
 
-  import Jarga.AccountsFixtures
+  import Identity.AccountsFixtures
 
   @remember_me_cookie "_identity_web_user_remember_me"
   @remember_me_cookie_max_age 60 * 60 * 24 * 14

@@ -1,7 +1,7 @@
 defmodule IdentityWeb.SessionControllerTest do
   use IdentityWeb.ConnCase, async: true
 
-  import Jarga.AccountsFixtures
+  import Identity.AccountsFixtures
   alias Identity
 
   setup do

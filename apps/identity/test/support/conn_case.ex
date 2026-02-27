@@ -41,19 +41,14 @@ defmodule IdentityWeb.ConnCase do
   end
 
   setup tags do
-    # Checkout both repos - Identity.Repo for identity data,
-    # Jarga.Repo for any cross-app test data that might be needed
     :ok = Sandbox.checkout(Identity.Repo)
-    :ok = Sandbox.checkout(Jarga.Repo)
 
     unless tags[:async] do
       Sandbox.mode(Identity.Repo, {:shared, self()})
-      Sandbox.mode(Jarga.Repo, {:shared, self()})
     end
 
     on_exit(fn ->
       Sandbox.checkin(Identity.Repo)
-      Sandbox.checkin(Jarga.Repo)
     end)
 
     {:ok, conn: Phoenix.ConnTest.build_conn()}
