@@ -15,7 +15,7 @@ export default defineConfig({
     {
       name: 'identity',
       command: 'mix phx.server',
-      port: 4001,
+      port: 5001,
       workingDir: '../../../',
       env: { MIX_ENV: 'test' },
       // --no-start avoids booting Phoenix endpoints (ports already bound by the running server).
@@ -30,12 +30,12 @@ export default defineConfig({
   timeout: 300_000,
   adapters: {
     browser: {
-      baseURL: 'http://localhost:4001',
+      baseURL: 'http://localhost:5001',
       headless: true,
     },
     // HTTP adapter provides ${baseUrl} for security feature files.
     http: {
-      baseURL: 'http://localhost:4001',
+      baseURL: 'http://localhost:5001',
     },
     security: {
       zapUrl: 'http://localhost:8080',
