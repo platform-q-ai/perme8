@@ -24,15 +24,15 @@ defmodule ExoDashboard.Features.Infrastructure.GherkinParser do
     file_system = Keyword.get(opts, :file_system, File)
 
     if file_system.exists?(path) do
-      run_parser(path)
+      run_parser(path, file_system)
     else
       {:error, "File not found: #{path}"}
     end
   end
 
-  defp run_parser(path) do
+  defp run_parser(path, file_system) do
     parser_dir = parser_script_dir()
-    ensure_dependencies_installed(parser_dir)
+    ensure_dependencies_installed(parser_dir, file_system)
 
     task =
       Task.async(fn ->
@@ -54,10 +54,10 @@ defmodule ExoDashboard.Features.Infrastructure.GherkinParser do
     end
   end
 
-  defp ensure_dependencies_installed(parser_dir) do
+  defp ensure_dependencies_installed(parser_dir, file_system) do
     node_modules = Path.join(parser_dir, "node_modules")
 
-    unless File.dir?(node_modules) do
+    unless file_system.dir?(node_modules) do
       System.cmd("bun", ["install"], cd: parser_dir, stderr_to_stdout: true)
     end
   end

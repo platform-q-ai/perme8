@@ -585,39 +585,14 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
          %{
            "type" => "message.part.updated",
            "properties" => %{
-             "part" => %{"type" => "tool", "state" => %{"status" => status} = tool_state} = part
+             "part" => %{"type" => "tool", "state" => %{} = tool_state} = part
            }
          },
          state
        ) do
     tool_id = part["id"]
-    tool_name = part["tool"] || part["name"] || "tool"
-
-    cached_status =
-      case status do
-        s when s in ["pending", "running"] -> "running"
-        "completed" -> "done"
-        "error" -> "error"
-        _ -> "running"
-      end
-
-    # Merge into existing entry to preserve earlier fields
-    existing =
-      Enum.find(state.output_parts, fn p -> p["id"] == tool_id end) ||
-        %{}
-
-    entry =
-      Map.merge(existing, %{
-        "type" => "tool",
-        "id" => tool_id,
-        "name" => tool_name,
-        "status" => cached_status,
-        "input" => tool_state["input"] || existing["input"],
-        "title" => tool_state["title"] || existing["title"],
-        "output" => tool_state["output"] || existing["output"],
-        "error" => tool_state["error"] || existing["error"]
-      })
-
+    existing = Enum.find(state.output_parts, fn p -> p["id"] == tool_id end) || %{}
+    entry = build_tool_entry(part, tool_state, existing)
     parts = upsert_output_part(state.output_parts, tool_id, entry)
     {:continue, %{state | output_parts: parts}}
   end
@@ -627,6 +602,23 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   defp handle_sdk_event(_event, state) do
     {:continue, state}
   end
+
+  defp build_tool_entry(part, tool_state, existing) do
+    Map.merge(existing, %{
+      "type" => "tool",
+      "id" => part["id"],
+      "name" => part["tool"] || part["name"] || "tool",
+      "status" => normalize_tool_status(tool_state["status"]),
+      "input" => tool_state["input"] || existing["input"],
+      "title" => tool_state["title"] || existing["title"],
+      "output" => tool_state["output"] || existing["output"],
+      "error" => tool_state["error"] || existing["error"]
+    })
+  end
+
+  defp normalize_tool_status("completed"), do: "done"
+  defp normalize_tool_status("error"), do: "error"
+  defp normalize_tool_status(_), do: "running"
 
   # ---- Private helpers ----
 

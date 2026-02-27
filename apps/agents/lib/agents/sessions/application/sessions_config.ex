@@ -32,17 +32,23 @@ defmodule Agents.Sessions.Application.SessionsConfig do
   read and base64-encoded at call time, not at boot time.  This means
   re-authenticated tokens (e.g. OPENCODE_AUTH) are picked up without
   requiring a Phoenix restart.
+
+  ## Options
+
+    * `:file_reader` - Module implementing `read/1`. Defaults to `File`.
   """
-  def container_env do
+  def container_env(opts \\ []) do
+    file_reader = Keyword.get(opts, :file_reader, File)
+
     Application.get_env(:agents, :sessions_env, %{})
     |> Enum.into(%{}, fn
-      {key, {:file, path}} -> {key, read_and_encode(path)}
+      {key, {:file, path}} -> {key, read_and_encode(path, file_reader)}
       {key, value} -> {key, value}
     end)
   end
 
-  defp read_and_encode(path) do
-    case File.read(path) do
+  defp read_and_encode(path, file_reader) do
+    case file_reader.read(path) do
       {:ok, contents} ->
         Base.encode64(contents)
 

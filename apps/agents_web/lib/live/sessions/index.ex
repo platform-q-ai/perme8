@@ -62,25 +62,17 @@ defmodule AgentsWeb.SessionsLive.Index do
   def handle_event("run_task", %{"instruction" => instruction}, socket) do
     instruction = String.trim(instruction)
 
-    if instruction == "" do
-      {:noreply, put_flash(socket, :error, "Instruction is required")}
-    else
-      current_task = socket.assigns.current_task
+    cond do
+      instruction == "" ->
+        {:noreply, put_flash(socket, :error, "Instruction is required")}
 
-      if task_running?(current_task) do
-        # Send message to the running session (queued by opencode)
-        case Sessions.send_message(current_task.id, instruction) do
-          :ok ->
-            {:noreply, assign(socket, :form, to_form(%{"instruction" => ""}))}
+      task_running?(socket.assigns.current_task) ->
+        send_message_to_running_task(socket, instruction)
 
-          {:error, _reason} ->
-            {:noreply, put_flash(socket, :error, "Failed to send message")}
-        end
-      else
+      true ->
         socket
         |> run_or_resume_task(instruction)
         |> handle_task_result(socket)
-      end
     end
   end
 
@@ -170,12 +162,7 @@ defmodule AgentsWeb.SessionsLive.Index do
         multiple = question["multiple"] || false
         current = Enum.at(pending.selected, q_idx, [])
 
-        new_selection =
-          if multiple do
-            if label in current, do: List.delete(current, label), else: current ++ [label]
-          else
-            if label in current, do: [], else: [label]
-          end
+        new_selection = toggle_selection(current, label, multiple)
 
         updated_selected = List.replace_at(pending.selected, q_idx, new_selection)
         updated_pending = %{pending | selected: updated_selected}
@@ -214,19 +201,7 @@ defmodule AgentsWeb.SessionsLive.Index do
         {:noreply, socket}
 
       {pending, %{id: task_id}} ->
-        # Build final answers: for each question, merge selected options + custom text
-        answers =
-          Enum.zip(pending.selected, pending.custom_text)
-          |> Enum.map(fn {selected, custom} ->
-            custom_trimmed = String.trim(custom)
-
-            if custom_trimmed != "" do
-              selected ++ [custom_trimmed]
-            else
-              selected
-            end
-          end)
-
+        answers = build_question_answers(pending)
         Sessions.answer_question(task_id, pending.request_id, answers)
         {:noreply, assign(socket, :pending_question, nil)}
 
@@ -273,6 +248,32 @@ defmodule AgentsWeb.SessionsLive.Index do
   end
 
   # ---- Event helpers ----
+
+  defp send_message_to_running_task(socket, instruction) do
+    case Sessions.send_message(socket.assigns.current_task.id, instruction) do
+      :ok ->
+        {:noreply, assign(socket, :form, to_form(%{"instruction" => ""}))}
+
+      {:error, _reason} ->
+        {:noreply, put_flash(socket, :error, "Failed to send message")}
+    end
+  end
+
+  defp toggle_selection(current, label, true = _multiple) do
+    if label in current, do: List.delete(current, label), else: current ++ [label]
+  end
+
+  defp toggle_selection(current, label, false = _single) do
+    if label in current, do: [], else: [label]
+  end
+
+  defp build_question_answers(pending) do
+    Enum.zip(pending.selected, pending.custom_text)
+    |> Enum.map(fn {selected, custom} ->
+      custom_trimmed = String.trim(custom)
+      if custom_trimmed != "", do: selected ++ [custom_trimmed], else: selected
+    end)
+  end
 
   defp run_or_resume_task(socket, instruction) do
     user = socket.assigns.current_scope.user
@@ -355,12 +356,10 @@ defmodule AgentsWeb.SessionsLive.Index do
     # When a task gets a container_id (status changes from pending to starting/running),
     # capture the container_id so the session list updates correctly
     active_container_id =
-      cond do
-        updated_task && updated_task.container_id ->
-          updated_task.container_id
-
-        true ->
-          socket.assigns.active_container_id
+      if updated_task && updated_task.container_id do
+        updated_task.container_id
+      else
+        socket.assigns.active_container_id
       end
 
     user = socket.assigns.current_scope.user
@@ -692,16 +691,21 @@ defmodule AgentsWeb.SessionsLive.Index do
       error: entry["error"]
     }
 
-    {:tool, id, name, String.to_existing_atom(status), detail}
+    {:tool, id, name, safe_tool_status(status), detail}
   end
 
   # Legacy format without id
   defp decode_output_part(%{"type" => "tool", "name" => name, "status" => status}) do
-    {:tool, nil, name, String.to_existing_atom(status),
+    {:tool, nil, name, safe_tool_status(status),
      %{input: nil, title: nil, output: nil, error: nil}}
   end
 
   defp decode_output_part(_), do: nil
+
+  defp safe_tool_status("running"), do: :running
+  defp safe_tool_status("done"), do: :done
+  defp safe_tool_status("error"), do: :error
+  defp safe_tool_status(_), do: :done
 
   # ---- Helpers ----
 
@@ -790,24 +794,32 @@ defmodule AgentsWeb.SessionsLive.Index do
     sessions
     |> Enum.filter(&(&1.latest_status in ["running", "starting", "pending"]))
     |> Enum.reduce(%{}, fn session, acc ->
-      case Sessions.get_container_stats(session.container_id) do
-        {:ok, stats} ->
-          mem_percent =
-            if stats.memory_limit > 0,
-              do: Float.round(stats.memory_usage / stats.memory_limit * 100, 1),
-              else: 0.0
-
-          Map.put(acc, session.container_id, %{
-            cpu_percent: stats.cpu_percent,
-            memory_percent: mem_percent,
-            memory_usage: stats.memory_usage,
-            memory_limit: stats.memory_limit
-          })
-
-        {:error, _} ->
-          acc
+      case fetch_container_stats(session.container_id) do
+        {:ok, stats_map} -> Map.put(acc, session.container_id, stats_map)
+        :error -> acc
       end
     end)
+  end
+
+  defp fetch_container_stats(container_id) do
+    case Sessions.get_container_stats(container_id) do
+      {:ok, stats} ->
+        mem_percent =
+          if stats.memory_limit > 0,
+            do: Float.round(stats.memory_usage / stats.memory_limit * 100, 1),
+            else: 0.0
+
+        {:ok,
+         %{
+           cpu_percent: stats.cpu_percent,
+           memory_percent: mem_percent,
+           memory_usage: stats.memory_usage,
+           memory_limit: stats.memory_limit
+         }}
+
+      {:error, _} ->
+        :error
+    end
   end
 
   defp active_task?(%{status: status}), do: status in ["pending", "starting", "running"]
@@ -836,8 +848,8 @@ defmodule AgentsWeb.SessionsLive.Index do
     cond do
       diff < 60 -> "just now"
       diff < 3600 -> "#{div(diff, 60)}m ago"
-      diff < 86400 -> "#{div(diff, 3600)}h ago"
-      diff < 604_800 -> "#{div(diff, 86400)}d ago"
+      diff < 86_400 -> "#{div(diff, 3600)}h ago"
+      diff < 604_800 -> "#{div(diff, 86_400)}d ago"
       true -> Calendar.strftime(datetime, "%b %d")
     end
   end
