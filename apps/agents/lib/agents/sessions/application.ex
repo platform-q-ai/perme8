@@ -12,6 +12,7 @@ defmodule Agents.Sessions.Application do
       Behaviours.ContainerProviderBehaviour,
       Behaviours.OpencodeClientBehaviour,
       Behaviours.TaskRepositoryBehaviour,
+      Services.AuthRefresher,
       UseCases.CreateTask,
       UseCases.CancelTask,
       UseCases.DeleteSession,

@@ -64,6 +64,16 @@ defmodule Agents.Sessions.Application.SessionsConfig do
     config()[:output_flush_interval_ms] || 3_000
   end
 
+  @doc """
+  Returns the interval in milliseconds between auth refresh cycles.
+
+  The auth refresher periodically pushes fresh credentials from the
+  host's auth.json to running opencode containers. Default: 30 minutes.
+  """
+  def auth_refresh_interval_ms do
+    config()[:auth_refresh_interval_ms] || :timer.minutes(30)
+  end
+
   @doc "Returns the PubSub server name for broadcasting task events."
   def pubsub do
     config()[:pubsub] || Perme8.Events.PubSub

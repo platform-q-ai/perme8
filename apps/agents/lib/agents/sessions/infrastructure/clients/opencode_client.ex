@@ -107,6 +107,30 @@ defmodule Agents.Sessions.Infrastructure.Clients.OpencodeClient do
     end
   end
 
+  # ---- Auth Management ----
+
+  @impl true
+  def set_auth(base_url, provider_id, credentials, opts \\ []) do
+    http = Keyword.get(opts, :http, &default_http/3)
+
+    case http.(:put, "#{base_url}/auth/#{provider_id}", json: credentials) do
+      {:ok, %{status: 200}} -> {:ok, true}
+      {:ok, %{status: status, body: body}} -> {:error, {:http_error, status, body}}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @impl true
+  def list_providers(base_url, opts \\ []) do
+    http = Keyword.get(opts, :http, &default_http/3)
+
+    case http.(:get, "#{base_url}/provider", []) do
+      {:ok, %{status: 200, body: body}} -> {:ok, body}
+      {:ok, %{status: status, body: body}} -> {:error, {:http_error, status, body}}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
   # ---- Retrieval APIs ----
 
   @impl true

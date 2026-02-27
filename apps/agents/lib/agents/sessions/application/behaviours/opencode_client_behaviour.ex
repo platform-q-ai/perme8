@@ -103,6 +103,29 @@ defmodule Agents.Sessions.Application.Behaviours.OpencodeClientBehaviour do
               opts :: keyword()
             ) :: :ok | {:error, term()}
 
+  # ---- Auth Management ----
+
+  @doc """
+  Set authentication credentials for a provider.
+
+  Hits `PUT /auth/:id` with provider-specific credentials.
+  Returns `{:ok, true}` on success.
+  """
+  @callback set_auth(
+              base_url :: String.t(),
+              provider_id :: String.t(),
+              credentials :: map(),
+              opts :: keyword()
+            ) :: {:ok, boolean()} | {:error, term()}
+
+  @doc """
+  List all providers and their connection status.
+
+  Hits `GET /provider` and returns provider data including which are connected.
+  """
+  @callback list_providers(base_url :: String.t(), opts :: keyword()) ::
+              {:ok, map()} | {:error, term()}
+
   # ---- Retrieval APIs (for historical output and resume) ----
 
   @doc """
