@@ -46,9 +46,13 @@ config :jarga, :document_save_debounce_ms, 1
 config :bcrypt_elixir, :log_rounds, 1
 
 # Configure your database
+# DATABASE_URL is set by .env.test (loaded above), CI workflow env, or shell export.
+# MIX_TEST_PARTITION is appended for parallel test partitions.
 database_url =
   System.get_env("DATABASE_URL") ||
-    "postgres://postgres:postgres@localhost:5433/jarga_test#{System.get_env("MIX_TEST_PARTITION")}"
+    raise "DATABASE_URL is not set. Ensure .env.test exists or export it in your shell."
+
+database_url = database_url <> "#{System.get_env("MIX_TEST_PARTITION")}"
 
 config :jarga, Jarga.Repo,
   url: database_url,
