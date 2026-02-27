@@ -2,8 +2,7 @@ defmodule Identity.Repo do
   @moduledoc """
   Ecto repository for the Identity app.
 
-  Connects to the same database as Jarga.Repo but allows Identity
-  to be self-contained without depending on the jarga app.
+  Ecto repository for the Identity-owned PostgreSQL database.
   """
 
   # Shared infrastructure - can be used by all Identity modules

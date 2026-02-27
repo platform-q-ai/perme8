@@ -19,8 +19,7 @@ defmodule Identity.Domain.Services.TokenBuilder do
   - `:user_token_schema` - Schema module for token structs (default: UserTokenSchema)
   """
 
-  # Default implementations - will be updated to Identity modules in Phase 4
-  # For now, they point to Jarga modules for backward compatibility during migration
+  # Default implementations for token generation
   @default_token_generator Identity.Infrastructure.Services.TokenGenerator
   @default_user_token_schema Identity.Infrastructure.Schemas.UserTokenSchema
 
