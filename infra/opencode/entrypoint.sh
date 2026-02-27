@@ -153,21 +153,25 @@ DATABASE_URL="postgres://postgres:postgres@localhost/jarga_test" MIX_ENV=test mi
 DATABASE_URL="postgres://postgres:postgres@localhost/jarga_test" MIX_ENV=test mix ecto.migrate --quiet
 echo "Test database ready"
 
-# ---- Write .env.test.local for test runs ----
-# .env.test is tracked in git and shared by all devs (for docker-compose on port 5433).
-# .env.test.local is gitignored and provides container-specific overrides.
+# ---- Override .env.test for embedded PostgreSQL ----
+# The tracked .env.test has DATABASE_URL pointing to docker-compose port 5433.
+# Inside the container, PostgreSQL runs on the standard port 5432.
+# Overwriting the file is safe — git reset --hard restores it on container restart.
 
-cat > /workspace/perme8/.env.test.local <<'ENVTEST'
-# Container-specific test overrides (not tracked in git)
-# Embedded PostgreSQL runs on port 5432, not 5433 like docker-compose
+cat > /workspace/perme8/.env.test <<'ENVTEST'
+# Test environment overrides (container version)
+# Embedded PostgreSQL runs on port 5432, not 5433 like docker-compose.
 DATABASE_URL=postgres://postgres:postgres@localhost/jarga_test
+
+# Fast debounce time for tests (1ms instead of 2000ms)
+PAGE_SAVE_DEBOUNCE_MS=1
 ENVTEST
-echo ".env.test.local written with DATABASE_URL for embedded PostgreSQL"
+echo ".env.test overwritten for embedded PostgreSQL (port 5432)"
 
 # ---- Clear build-time env vars so agent commands use their own defaults ----
 # MIX_ENV: mix test defaults to :test, mix compile defaults to :dev, etc.
-# DATABASE_URL: dev config falls back to localhost/jarga_dev (no port = 5432),
-#               test config is overridden by .env.test.local (localhost/jarga_test).
+# DATABASE_URL: dev config falls back to localhost/jarga_dev (port 5432).
+#               test config reads DATABASE_URL from .env.test (overwritten above).
 unset MIX_ENV
 unset DATABASE_URL
 

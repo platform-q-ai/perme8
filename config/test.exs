@@ -1,19 +1,19 @@
 import Config
 
-# Load .env.test and .env.test.local for test environment overrides.
-# .env.test is tracked in git (shared defaults, e.g. docker-compose port 5433).
-# .env.test.local is gitignored (machine-specific overrides, e.g. container port 5432).
-# .env.test.local is loaded second so it wins on conflicts.
-for env_file <- [".env.test", ".env.test.local"] do
-  if File.exists?(env_file) do
-    File.read!(env_file)
-    |> String.split("\n")
-    |> Enum.each(fn line ->
-      line = String.trim(line)
+# Load .env.test for test environment overrides (mirrors dev.exs .env loading).
+# Values act as defaults — pre-existing env vars (e.g. CI's DATABASE_URL) are
+# NOT overwritten. In the session container, the entrypoint overwrites the
+# .env.test file itself to point at the embedded PostgreSQL (port 5432).
+if File.exists?(".env.test") do
+  File.read!(".env.test")
+  |> String.split("\n")
+  |> Enum.each(fn line ->
+    line = String.trim(line)
 
-      unless String.starts_with?(line, "#") or line == "" do
-        case String.split(line, "=", parts: 2) do
-          [key, value] ->
+    unless String.starts_with?(line, "#") or line == "" do
+      case String.split(line, "=", parts: 2) do
+        [key, value] ->
+          unless System.get_env(key) do
             value = String.trim(value)
 
             value =
@@ -24,13 +24,13 @@ for env_file <- [".env.test", ".env.test.local"] do
               end
 
             System.put_env(key, value)
+          end
 
-          _ ->
-            :ok
-        end
+        _ ->
+          :ok
       end
-    end)
-  end
+    end
+  end)
 end
 
 # Set environment to test
