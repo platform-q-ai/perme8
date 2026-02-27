@@ -21,7 +21,7 @@ defmodule Identity.Domain.Scope do
   @doc """
   Creates a scope for the given user.
 
-  Accepts any user struct (Identity.Domain.Entities.User or Jarga.Accounts.Domain.Entities.User)
+  Accepts any user struct (e.g., Identity.Domain.Entities.User)
   as long as it has an `id` field. The workspace defaults to nil.
 
   Returns nil if no user is given.

@@ -5,12 +5,11 @@ defmodule Identity.Domain.Policies.WorkspacePermissionsPolicy do
   Defines what actions each role can perform on workspaces and membership.
   This is pure domain logic with no infrastructure dependencies.
 
-  Extracted from the original `Jarga.Workspaces.Application.Policies.PermissionsPolicy`,
-  covering only workspace-level permissions:
+  Defines workspace-level permission rules:
   - `:view_workspace`, `:edit_workspace`, `:delete_workspace`
   - `:invite_member`, `:change_member_role`, `:remove_member`
 
-  Project and document permissions are handled by `Jarga.Domain.Policies.DomainPermissionsPolicy`.
+  Project and document permissions are handled by their respective domain apps.
 
   ## Role Hierarchy
   - **Guest**: Can only view workspace

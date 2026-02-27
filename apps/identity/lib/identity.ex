@@ -69,7 +69,6 @@ defmodule Identity do
       Domain.Events.MemberRemoved,
       Domain.Events.WorkspaceInvitationNotified,
       # Infrastructure schemas exported for test fixtures and cross-app integration
-      # These are needed by Jarga.AccountsFixtures for creating test data
       Infrastructure.Schemas.UserSchema,
       Infrastructure.Schemas.UserTokenSchema,
       Infrastructure.Schemas.ApiKeySchema,

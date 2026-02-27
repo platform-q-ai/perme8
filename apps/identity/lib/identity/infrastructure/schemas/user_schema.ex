@@ -192,8 +192,7 @@ defmodule Identity.Infrastructure.Schemas.UserSchema do
     |> validate_password_format(opts)
   end
 
-  # Fallback for any struct with user-like fields (e.g., Jarga.Accounts.Domain.Entities.User)
-  # This enables compatibility during migration period
+  # Fallback for any struct with user-like fields
   def password_changeset(user_struct, attrs, opts) when is_struct(user_struct) do
     user_struct
     |> struct_to_schema()
