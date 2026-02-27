@@ -12,7 +12,8 @@ FROM hexpm/elixir:1.19.4-erlang-28.3.2-alpine-3.21.6
 # postgresql16+contrib: embedded per-session database (contrib provides citext extension)
 # build-base: make/gcc/musl-dev needed by bcrypt_elixir and lazy_html NIFs
 # unzip: required by bun installer
-RUN apk add --no-cache git bash openssl curl python3 github-cli ripgrep fd postgresql16 postgresql16-contrib build-base unzip
+# nodejs: required by esbuild/tailwind asset pipeline and npm test
+RUN apk add --no-cache git bash openssl curl python3 github-cli ripgrep fd postgresql16 postgresql16-contrib build-base unzip nodejs npm
 
 # Install Bun (JavaScript runtime/toolkit)
 RUN curl -fsSL https://bun.sh/install | bash \
