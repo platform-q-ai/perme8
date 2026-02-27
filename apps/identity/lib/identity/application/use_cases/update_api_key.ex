@@ -7,7 +7,7 @@ defmodule Identity.Application.UseCases.UpdateApiKey do
   This use case accepts the following dependencies via opts:
   - `:repo` - Ecto.Repo module (default: Identity.Repo)
   - `:api_key_repo` - ApiKeyRepository module (default: Infrastructure.Repositories.ApiKeyRepository)
-  - `:workspaces` - Workspaces context for validation (default: Jarga.Workspaces if available at runtime, nil otherwise)
+  - `:workspaces` - Workspaces context for validation (default: Identity)
   """
 
   alias Identity.Domain.Policies.ApiKeyPolicy
@@ -27,7 +27,7 @@ defmodule Identity.Application.UseCases.UpdateApiKey do
     - `opts` - Options:
       - `:repo` - Ecto.Repo (defaults to Identity.Repo)
       - `:api_key_repo` - ApiKeyRepository module (default: Infrastructure.Repositories.ApiKeyRepository)
-      - `:workspaces` - Workspaces context for validation (default: Jarga.Workspaces)
+      - `:workspaces` - Workspaces context for validation (default: Identity)
 
   ## Returns
 
@@ -85,12 +85,5 @@ defmodule Identity.Application.UseCases.UpdateApiKey do
     end
   end
 
-  # Returns the workspaces module at runtime if available, avoiding compile-time coupling
-  defp default_workspaces do
-    if Code.ensure_loaded?(Jarga.Workspaces) do
-      Jarga.Workspaces
-    else
-      nil
-    end
-  end
+  defp default_workspaces, do: Identity
 end

@@ -6,7 +6,7 @@ defmodule Identity.Application.UseCases.CreateApiKey do
 
   This use case accepts the following dependencies via opts:
   - `:repo` - Ecto.Repo module (default: Identity.Repo)
-  - `:workspaces` - Workspaces context module (default: Jarga.Workspaces if available at runtime, nil otherwise)
+  - `:workspaces` - Workspaces context module (default: Identity)
   - `:api_key_repo` - ApiKeyRepository module (default: Infrastructure.Repositories.ApiKeyRepository)
 
   ## Example
@@ -98,12 +98,5 @@ defmodule Identity.Application.UseCases.CreateApiKey do
     end
   end
 
-  # Returns the workspaces module at runtime if available, avoiding compile-time coupling
-  defp default_workspaces do
-    if Code.ensure_loaded?(Jarga.Workspaces) do
-      Jarga.Workspaces
-    else
-      nil
-    end
-  end
+  defp default_workspaces, do: Identity
 end

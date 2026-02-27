@@ -339,8 +339,6 @@ defmodule IdentityWeb.ApiKeysLive do
   def mount(_params, _session, socket) do
     current_user = current_user(socket)
 
-    # Get user's workspaces - this requires cross-app communication
-    # For now, use an empty list or call Jarga.Workspaces if available
     available_workspaces = get_user_workspaces(current_user)
 
     # Load user's API keys
@@ -657,16 +655,7 @@ defmodule IdentityWeb.ApiKeysLive do
   # Private helper functions
 
   defp get_user_workspaces(user) do
-    # Cross-app communication: call Jarga.Workspaces if available
-    # Uses apply/3 to avoid compile-time warning since Jarga.Workspaces
-    # is in a different app that may not be available during compilation
-    if Code.ensure_loaded?(Jarga.Workspaces) and
-         function_exported?(Jarga.Workspaces, :list_workspaces_for_user, 1) do
-      # credo:disable-for-next-line Credo.Check.Refactor.Apply
-      apply(Jarga.Workspaces, :list_workspaces_for_user, [user])
-    else
-      []
-    end
+    Identity.list_workspaces_for_user(user)
   end
 
   defp get_selected_workspaces(params) do
