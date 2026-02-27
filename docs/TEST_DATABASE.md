@@ -1,20 +1,24 @@
 # Test Database Setup
 
-This project uses PostgreSQL for testing. You can run it using Docker Compose.
+This project uses PostgreSQL for testing. A single PostgreSQL instance serves
+both the `jarga_dev` and `jarga_test` databases on port 5432.
 
 ## Quick Start
 
-### 1. Start the PostgreSQL database
+### 1. Start PostgreSQL
 
 ```bash
 docker-compose up -d
 ```
 
+This starts one PostgreSQL container that automatically creates both the
+`jarga_dev` (default) and `jarga_test` (via init script) databases.
+
 ### 2. Create and migrate the test database
 
 ```bash
-mix ecto.create
-mix ecto.migrate
+MIX_ENV=test mix ecto.create
+MIX_ENV=test mix ecto.migrate
 ```
 
 ### 3. Run the tests
@@ -52,13 +56,16 @@ docker-compose ps
 
 ## Database Configuration
 
-The test database is configured in `config/test.exs`:
+Both dev and test databases run on the same PostgreSQL instance:
 
-- **Database**: `jarga_test`
+- **Host**: `localhost`
+- **Port**: `5432`
 - **User**: `postgres`
 - **Password**: `postgres`
-- **Host**: `localhost`
-- **Port**: `5433` (docker-compose maps host 5433 → container 5432)
+- **Dev database**: `jarga_dev`
+- **Test database**: `jarga_test`
+
+The test `DATABASE_URL` is provided by `.env.test` and loaded by `config/test.exs`.
 
 ## Troubleshooting
 

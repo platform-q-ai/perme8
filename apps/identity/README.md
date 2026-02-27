@@ -209,4 +209,4 @@ mix boundary
 mix compile --warnings-as-errors
 ```
 
-Requires Docker for security tests (ZAP container) and Postgres running on `localhost:5432` (dev) / `localhost:5433` (test).
+Requires Docker for security tests (ZAP container) and Postgres running on `localhost:5432` (both dev and test databases).
