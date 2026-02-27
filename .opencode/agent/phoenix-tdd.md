@@ -103,6 +103,15 @@ You will be assigned a **specific phase** of work from the architect's implement
 
 **Prerequisites**: Phase 1 must be complete (domain and application layers exist)
 
+## Before You Start
+
+1. **Verify the correct app**: Consult the App Ownership rules in `AGENTS.md` and `docs/app_ownership.md`
+   to confirm you're working in the correct umbrella app for the feature's domain.
+2. **Verify the Repo**: Use the owning app's Repo (e.g., `Agents.Repo` for agents features).
+   Never import or alias another app's Repo.
+3. **Verify migration placement**: Migrations go in `apps/<owning_app>/priv/repo/migrations/`.
+4. **Verify feature file placement**: Feature files go in `apps/<owning_app_web>/test/features/`.
+
 ## How to Execute Your Phase
 
 1. **Read the architectural plan** - Find it at `docs/<app>/plans/<feature>-architectural-plan.md`
@@ -497,6 +506,15 @@ Test public behavior and outcomes, not private functions or internal implementat
 
 ### Multiple Assertions Testing Different Behaviors
 Keep tests focused - one behavior per test. Split into separate tests if testing different scenarios.
+
+### Using Another App's Repo
+Never import, alias, or call another app's Repo module. Each domain app owns its own Repo.
+If you need data from another app, call its public facade API.
+
+### Placing Artifacts in the Wrong App
+Always verify you are creating files in the correct owning app per `AGENTS.md` and `docs/app_ownership.md`.
+Migrations, schemas, events, and domain logic go in the domain app. LiveViews, controllers, and feature
+files go in the companion `_web`/`_api` app.
 
 ## Workflow Summary
 
