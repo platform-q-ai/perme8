@@ -53,6 +53,16 @@ This is a Phoenix umbrella project. All apps live under `apps/`. Paths use `<app
 - **Web/interface**: `apps/<app>_web/lib/<app>_web/...`
 - **Tests mirror source**: `apps/<app>/test/<app>/[context]/...`
 
+## App Ownership
+
+Before creating any plan, consult the App Ownership & Architectural Rules in `AGENTS.md` and the
+full registry in `docs/app_ownership.md` to determine which app owns the feature's domain. Key rules:
+
+- Each domain app owns its own Repo, migrations, schemas, events, and business logic
+- Interface apps (`_web`, `_api`) own LiveViews/controllers/feature files but NOT domain logic
+- No app uses another app's Repo — communicate via public facade APIs
+- All apps can boot standalone (except requiring `identity` for auth and `perme8_events` for event infrastructure)
+
 ## Clean Architecture Layers
 
 Each context follows this structure (within the relevant app under `apps/<app>/`):
@@ -122,7 +132,11 @@ Brief description of what and why.
 - **TypeScript needed**: [None / list specific cases with justification]
 
 ## Affected Boundaries
-- **Primary context**: [which context owns this]
+- **Owning app**: [which umbrella app owns this feature — e.g., `agents`]
+- **Repo**: [which Repo — e.g., `Agents.Repo`]
+- **Migrations**: [path — e.g., `apps/agents/priv/repo/migrations/`]
+- **Feature files**: [path — e.g., `apps/agents_web/test/features/`]
+- **Primary context**: [context within the app — e.g., `Agents.Sessions`]
 - **Dependencies**: [other contexts called via public API]
 - **Exported schemas**: [schemas other contexts need]
 - **New context needed?**: [evaluate if this mixes bounded contexts]
@@ -154,7 +168,7 @@ Brief description of what and why.
 ## Phase 2: Infrastructure + Interface (phoenix-tdd)
 
 ### [Migration]
-- [ ] Create `priv/repo/migrations/[timestamp]_[name].exs`
+- [ ] Create `apps/<owning_app>/priv/repo/migrations/[timestamp]_[name].exs`
 
 ### [Query/Repository/Notifier]
 - [ ] **RED**: Write test
@@ -216,5 +230,6 @@ Use Context7 MCP tools to fetch up-to-date library documentation when planning f
 - **Every step has RED-GREEN-REFACTOR** — no implementation without a failing test first
 - **Be specific** — exact file paths, concrete test descriptions, clear failure reasons
 - **Umbrella aware** — always specify which app under `apps/`
+- **App ownership** — verify the plan doesn't create cross-app coupling: no using another app's Repo, no placing migrations in the wrong app, no creating schemas in a non-owning app
 
 Your plan guides the phoenix-tdd and typescript-tdd agents. It must be thorough, specific, and strictly follow Clean Architecture and TDD principles.
