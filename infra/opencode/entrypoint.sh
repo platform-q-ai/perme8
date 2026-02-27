@@ -119,21 +119,56 @@ pg_ctl start -D "$PGDATA" -l "$PGDATA/logfile" -o "-k /tmp -h localhost"
 createuser -h localhost -s postgres 2>/dev/null || true
 
 # ---- Build the Elixir project ----
+#
+# IMPORTANT: DATABASE_URL and MIX_ENV are set per-command (not exported) so
+# they don't leak into the opencode session. If MIX_ENV=dev were exported,
+# `mix test` inside the agent session would inherit it and silently skip
+# the :test environment — meaning elixirc_paths would resolve to ["lib"]
+# instead of ["lib", "test/support"], causing modules like
+# ExoDashboardWeb.ConnCase to not be compiled.
 
 echo "Setting up Elixir project..."
 export DATABASE_URL="postgres://postgres:postgres@localhost/jarga_dev"
-export MIX_ENV=dev
 
 mix local.hex --force --if-missing
 mix local.rebar --force --if-missing
 mix deps.get
-mix compile
+MIX_ENV=dev mix compile
+MIX_ENV=test mix compile
 
-# ---- Set up the application database ----
+# ---- Set up the dev database ----
 
-echo "Setting up database..."
-mix ecto.create --quiet
-mix ecto.migrate --quiet
-echo "Database ready"
+echo "Setting up dev database..."
+MIX_ENV=dev mix ecto.create --quiet
+MIX_ENV=dev mix ecto.migrate --quiet
+echo "Dev database ready"
+
+# ---- Set up the test database ----
+# The embedded PostgreSQL runs on port 5432. config/test.exs falls back to
+# localhost:5433 (matching docker-compose's test service), so we override
+# DATABASE_URL to point at the local instance on 5432.
+
+echo "Setting up test database..."
+DATABASE_URL="postgres://postgres:postgres@localhost/jarga_test" MIX_ENV=test mix ecto.create --quiet
+DATABASE_URL="postgres://postgres:postgres@localhost/jarga_test" MIX_ENV=test mix ecto.migrate --quiet
+echo "Test database ready"
+
+# ---- Write .env.test.local for test runs ----
+# .env.test is tracked in git and shared by all devs (for docker-compose on port 5433).
+# .env.test.local is gitignored and provides container-specific overrides.
+
+cat > /workspace/perme8/.env.test.local <<'ENVTEST'
+# Container-specific test overrides (not tracked in git)
+# Embedded PostgreSQL runs on port 5432, not 5433 like docker-compose
+DATABASE_URL=postgres://postgres:postgres@localhost/jarga_test
+ENVTEST
+echo ".env.test.local written with DATABASE_URL for embedded PostgreSQL"
+
+# ---- Clear build-time env vars so agent commands use their own defaults ----
+# MIX_ENV: mix test defaults to :test, mix compile defaults to :dev, etc.
+# DATABASE_URL: dev config falls back to localhost/jarga_dev (no port = 5432),
+#               test config is overridden by .env.test.local (localhost/jarga_test).
+unset MIX_ENV
+unset DATABASE_URL
 
 exec opencode serve --hostname 0.0.0.0 --port 4096

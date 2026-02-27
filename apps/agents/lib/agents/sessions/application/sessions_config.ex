@@ -25,9 +25,32 @@ defmodule Agents.Sessions.Application.SessionsConfig do
     config()[:health_check_max_retries] || 30
   end
 
-  @doc "Returns the environment variables to pass to the container."
+  @doc """
+  Returns the environment variables to pass to the container.
+
+  Values that are `{:file, path}` tuples are resolved lazily — the file is
+  read and base64-encoded at call time, not at boot time.  This means
+  re-authenticated tokens (e.g. OPENCODE_AUTH) are picked up without
+  requiring a Phoenix restart.
+  """
   def container_env do
     Application.get_env(:agents, :sessions_env, %{})
+    |> Enum.into(%{}, fn
+      {key, {:file, path}} -> {key, read_and_encode(path)}
+      {key, value} -> {key, value}
+    end)
+  end
+
+  defp read_and_encode(path) do
+    case File.read(path) do
+      {:ok, contents} ->
+        Base.encode64(contents)
+
+      {:error, reason} ->
+        require Logger
+        Logger.warning("Failed to read #{path}: #{inspect(reason)}")
+        nil
+    end
   end
 
   @doc "Returns the interval in milliseconds for flushing output_parts to DB while a task is running."

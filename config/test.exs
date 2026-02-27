@@ -1,5 +1,38 @@
 import Config
 
+# Load .env.test and .env.test.local for test environment overrides.
+# .env.test is tracked in git (shared defaults, e.g. docker-compose port 5433).
+# .env.test.local is gitignored (machine-specific overrides, e.g. container port 5432).
+# .env.test.local is loaded second so it wins on conflicts.
+for env_file <- [".env.test", ".env.test.local"] do
+  if File.exists?(env_file) do
+    File.read!(env_file)
+    |> String.split("\n")
+    |> Enum.each(fn line ->
+      line = String.trim(line)
+
+      unless String.starts_with?(line, "#") or line == "" do
+        case String.split(line, "=", parts: 2) do
+          [key, value] ->
+            value = String.trim(value)
+
+            value =
+              if String.starts_with?(value, "'") and String.ends_with?(value, "'") do
+                String.slice(value, 1..-2//1)
+              else
+                value
+              end
+
+            System.put_env(key, value)
+
+          _ ->
+            :ok
+        end
+      end
+    end)
+  end
+end
+
 # Set environment to test
 config :jarga, :env, :test
 
