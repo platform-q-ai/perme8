@@ -2,8 +2,8 @@ defmodule IdentityWeb.Plugs.UserAuth do
   @moduledoc """
   Authentication and authorization plugs for user sessions.
 
-  This module can be imported by both IdentityWeb and JargaWeb routers
-  to share authentication functionality.
+  Provides authentication and authorization plugs that can be shared
+  across web apps.
   """
 
   use IdentityWeb, :verified_routes
@@ -13,9 +13,7 @@ defmodule IdentityWeb.Plugs.UserAuth do
 
   alias Identity.Domain.Scope
 
-  # Configurable redirect paths - these point to JargaWeb routes
   @logged_out_redirect_path "/"
-  @signed_in_redirect_path "/app"
 
   # Make the remember me cookie valid for 14 days. This should match
   # the session validity setting in UserToken.
@@ -299,15 +297,19 @@ defmodule IdentityWeb.Plugs.UserAuth do
   # the user was already logged in, redirect to app
   def signed_in_path(%Plug.Conn{assigns: %{current_scope: %Scope{user: user}}})
       when not is_nil(user) do
-    @signed_in_redirect_path
+    signed_in_redirect_path()
   end
 
   # Also accept any user-like struct directly in the scope
   def signed_in_path(%Plug.Conn{assigns: %{current_scope: %{user: %{id: _}}}}) do
-    @signed_in_redirect_path
+    signed_in_redirect_path()
   end
 
   def signed_in_path(_), do: @logged_out_redirect_path
+
+  defp signed_in_redirect_path do
+    Application.get_env(:identity, :signed_in_redirect_path, "/app")
+  end
 
   @doc """
   Plug for routes that require the user to be authenticated.

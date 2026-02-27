@@ -22,8 +22,8 @@ defmodule Identity.Infrastructure.Notifiers.WorkspaceNotifierTest do
                )
 
       assert email.to == [{"", "newuser@example.com"}]
-      assert email.from == {"Jarga", "contact@example.com"}
-      assert email.subject == "You've been invited to Test Workspace on Jarga"
+      assert email.from == {"Perme8", "noreply@perme8.app"}
+      assert email.subject == "You've been invited to Test Workspace on Perme8"
       assert email.text_body =~ "John Doe has invited you"
       assert email.text_body =~ "Test Workspace"
       assert email.text_body =~ signup_url
@@ -39,7 +39,7 @@ defmodule Identity.Infrastructure.Notifiers.WorkspaceNotifierTest do
       {:ok, email} =
         WorkspaceNotifier.deliver_invitation_to_new_user(email_addr, workspace, inviter, url)
 
-      assert email.subject == "You've been invited to My Awesome Workspace on Jarga"
+      assert email.subject == "You've been invited to My Awesome Workspace on Perme8"
     end
 
     test "sends to correct recipient" do
@@ -76,7 +76,7 @@ defmodule Identity.Infrastructure.Notifiers.WorkspaceNotifierTest do
                )
 
       assert email.to == [{"", existing_user.email}]
-      assert email.from == {"Jarga", "contact@example.com"}
+      assert email.from == {"Perme8", "noreply@perme8.app"}
       assert email.subject == "You've been invited to Collaboration Space"
       assert email.text_body =~ "Hi Bob"
       assert email.text_body =~ "Alice Johnson has invited you"
@@ -124,7 +124,7 @@ defmodule Identity.Infrastructure.Notifiers.WorkspaceNotifierTest do
       assert {:ok, email} = WorkspaceNotifier.notify_new_user(new_email, workspace, inviter)
 
       assert email.to == [{"", "newuser@example.com"}]
-      assert email.subject == "You've been invited to New Workspace on Jarga"
+      assert email.subject == "You've been invited to New Workspace on Perme8"
       assert email.text_body =~ "John Doe has invited you"
       # Verify signup URL was auto-built
       assert email.text_body =~ "/users/register"
