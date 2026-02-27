@@ -133,6 +133,11 @@ export DATABASE_URL="postgres://postgres:postgres@localhost/jarga_dev"
 mix local.hex --force --if-missing
 mix local.rebar --force --if-missing
 mix deps.get
+
+# Install npm dependencies for asset pipelines
+npm install --prefix apps/jarga_web/assets
+npm install --prefix apps/agents_web/assets
+
 MIX_ENV=dev mix compile
 MIX_ENV=test mix compile
 
