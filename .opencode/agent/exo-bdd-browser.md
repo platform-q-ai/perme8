@@ -108,6 +108,8 @@ When I click the {string} button               # Click button by text
 When I click the {string} link                 # Click link by text
 When I click the {string} element              # Click element by selector
 When I double-click {string}                   # Double-click by selector
+When I click the {string} button and wait for navigation  # Click button + wait for page navigation
+When I click the {string} link and wait for navigation    # Click link + wait for page navigation
 
 # Form Inputs
 When I fill {string} with {string}             # Fill input by selector with value
@@ -174,16 +176,146 @@ Then I store the value of {string} as {string}       # Store input element's val
 Then I store the URL as {string}                     # Store current URL
 ```
 
+### Session Steps
+
+Use these steps for multi-user testing. Each session has independent cookies, localStorage, and WebSocket connections:
+
+```gherkin
+# Multi-user sessions
+Given I open browser session {string}          # Create a new named browser session (own context + page)
+When I switch to browser session {string}      # Switch to an existing named session
+```
+
+## Authentication Scenarios
+
+When translating features that involve authenticated or protected functionality, include dedicated authentication scenarios. This section covers the canonical browser-side auth patterns.
+
+### Login Flow Pattern
+
+Test the login page itself -- navigating to the login URL, filling credentials, submitting, and asserting the redirect:
+
+```gherkin
+Scenario: Successful login
+  Given I navigate to "${baseUrl}/users/log-in"
+  And I wait for network idle
+  When I fill "#login_form_password_email" with "user@example.com"
+  And I fill "#login_form_password_password" with "password123"
+  And I click the "Log in and stay logged in" button and wait for navigation
+  Then the URL should contain "/dashboard"
+  And I should see "Welcome"
+```
+
+**Key points:**
+- Use `${baseUrl}` for navigation (auto-injected from config)
+- Use `${testEmail}` and `${testPassword}` config variables for credentials rather than hardcoding values
+- Use `I click the {string} button and wait for navigation` for login submission -- this waits for the redirect to complete before proceeding
+- Assert the redirect destination (URL) and visible content after login
+
+### Failed Login / Invalid Credentials
+
+```gherkin
+Scenario: Login with invalid credentials
+  Given I navigate to "${baseUrl}/users/log-in"
+  And I wait for network idle
+  When I fill "#login_form_password_email" with "wrong@example.com"
+  And I fill "#login_form_password_password" with "wrongpassword"
+  And I click the "Log in and stay logged in" button
+  And I wait for network idle
+  Then the URL should contain "/log-in"
+  And I should see "Invalid email or password"
+```
+
+### Background Login Pattern (Session Persistence)
+
+When testing authenticated pages (not the login page itself), use a `Background` block to log in once before each scenario. The session cookie persists across steps within the scenario:
+
+```gherkin
+Background:
+  Given I navigate to "${baseUrl}/users/log-in"
+  And I wait for network idle
+  When I fill "#login_form_password_email" with "${testEmail}"
+  And I fill "#login_form_password_password" with "${testPassword}"
+  And I click the "Log in and stay logged in" button and wait for navigation
+
+Scenario: Authenticated user views settings
+  Given I navigate to "${baseUrl}/users/settings"
+  And I wait for network idle
+  Then I should see "Account Settings"
+```
+
+**Key points:**
+- `${testEmail}` and `${testPassword}` come from the exo-bdd config `variables` section -- never hardcode credentials in feature files
+- The Background runs before every scenario, establishing an authenticated session
+- Subsequent steps in each scenario inherit the session cookie
+
+### Multi-User Testing (Browser Sessions)
+
+Use named browser sessions to test scenarios involving multiple users simultaneously. Each session has its own cookies and state:
+
+```gherkin
+Scenario: Two users collaborate in real-time
+  Given I open browser session "alice"
+  And I navigate to "${baseUrl}/users/log-in"
+  When I fill "#login_form_password_email" with "${aliceEmail}"
+  And I fill "#login_form_password_password" with "${alicePassword}"
+  And I click the "Log in and stay logged in" button and wait for navigation
+
+  When I open browser session "bob"
+  And I navigate to "${baseUrl}/users/log-in"
+  And I fill "#login_form_password_email" with "${bobEmail}"
+  And I fill "#login_form_password_password" with "${bobPassword}"
+  And I click the "Log in and stay logged in" button and wait for navigation
+
+  When I switch to browser session "alice"
+  Then I should see "Bob is online"
+```
+
+### Logout Flow
+
+```gherkin
+Scenario: User logs out
+  # (assumes Background login or prior login steps)
+  When I click the "Log out" button
+  And I wait for network idle
+  Then the URL should contain "/log-in"
+  And I should not see "Account Settings"
+```
+
+### Registration Flow
+
+```gherkin
+Scenario: New user registers
+  Given I navigate to "${baseUrl}/users/register"
+  And I wait for network idle
+  When I fill "#registration_form_email" with "newuser@example.com"
+  And I fill "#registration_form_password" with "SecurePass123!"
+  And I click the "Create account" button and wait for navigation
+  Then I should see "Welcome"
+```
+
+### Password Reset Flow
+
+```gherkin
+Scenario: User requests password reset
+  Given I navigate to "${baseUrl}/users/reset-password"
+  And I wait for network idle
+  When I fill "#reset_form_email" with "user@example.com"
+  And I click the "Send reset instructions" button
+  And I wait for network idle
+  Then I should see "If your email is in our system"
+```
+
 ## Translation Guidelines
 
 When converting a generic feature to browser-specific:
 
-1. **"User logs in"** becomes navigation to login page + fill email/password + click submit + assert redirect
+1. **"User logs in"** becomes navigation to login page + fill email/password + click submit (using `and wait for navigation`) + assert redirect
 2. **"User sees item X"** becomes `Then I should see "X"` or checking a specific selector
 3. **"User creates a resource"** becomes navigating to form, filling fields, submitting, and asserting success
 4. **"Validation error shown"** becomes asserting error message text is visible
 5. **"User is redirected to Y"** becomes `Then the URL should contain "Y"`
 6. **"List shows N items"** becomes `Then there should be {int} {string} elements`
+7. **If the feature involves any authenticated or protected functionality**, include authentication scenarios: successful login, invalid credentials, unauthorized access. Use the Background login pattern for scenarios that test authenticated pages. Use config variables (`${testEmail}`, `${testPassword}`) for credentials instead of hardcoded values. See the Authentication Scenarios section above for canonical patterns.
 
 ## Important Notes
 

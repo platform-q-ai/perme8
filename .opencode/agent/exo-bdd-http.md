@@ -198,6 +198,157 @@ Then I store response header {string} as {string}      # Store response header v
 Then I store response status as {string}               # Store status code in variable
 ```
 
+## Authentication Scenarios
+
+When translating features that involve authenticated or protected API functionality, include dedicated authentication scenarios. This section covers the canonical HTTP auth patterns.
+
+### Bearer Token Auth Pattern
+
+Use config variables for tokens rather than hardcoding values. Tokens are defined in the exo-bdd config's `variables` section and referenced with `${variableName}` syntax:
+
+```gherkin
+Background:
+  Given I set header "Content-Type" to "application/json"
+  And I set header "Accept" to "application/json"
+
+Scenario: Authenticated request with bearer token
+  Given I set bearer token to "${valid-admin-token}"
+  When I GET "/api/v1/resources"
+  Then the response status should be 200
+```
+
+**Key points:**
+- Always use `${variable-name}` references for tokens from the exo-bdd config `variables` -- never hardcode real token values in feature files
+- Set auth per-scenario (not in Background) when different scenarios test different auth states or roles
+- Use Background for common headers (`Content-Type`, `Accept`) that apply to all scenarios
+
+### Basic Auth Pattern
+
+```gherkin
+Scenario: Authenticated request with basic auth
+  Given I set basic auth with username "${apiUsername}" and password "${apiPassword}"
+  When I GET "/api/v1/profile"
+  Then the response status should be 200
+```
+
+### Unauthenticated Access (401)
+
+Omit the auth step entirely to simulate an unauthenticated request:
+
+```gherkin
+Scenario: Unauthenticated request is rejected
+  When I GET "/api/v1/resources"
+  Then the response status should be 401
+  And the response body path "$.error" should equal "unauthorized"
+```
+
+### Forbidden Access / Insufficient Permissions (403)
+
+Use a token with insufficient privileges:
+
+```gherkin
+Scenario: Guest cannot create resources
+  Given I set bearer token to "${valid-guest-token}"
+  When I POST to "/api/v1/resources" with body:
+    """
+    {"title": "New Resource"}
+    """
+  Then the response status should be 403
+  And the response body path "$.error" should equal "forbidden"
+```
+
+### Invalid / Expired / Revoked Token
+
+```gherkin
+Scenario: Invalid token is rejected
+  Given I set bearer token to "invalid-token-12345"
+  When I GET "/api/v1/resources"
+  Then the response status should be 401
+
+Scenario: Revoked token is rejected
+  Given I set bearer token to "${revoked-token}"
+  When I GET "/api/v1/resources"
+  Then the response status should be 401
+```
+
+### Token Obtained from Login Endpoint
+
+When the API provides a login endpoint, obtain a token and store it for subsequent requests:
+
+```gherkin
+Scenario: Login and use token for subsequent requests
+  When I POST to "/api/v1/auth/login" with body:
+    """
+    {"email": "admin@example.com", "password": "password123"}
+    """
+  Then the response status should be 200
+  And I store response body path "$.token" as "authToken"
+
+  Given I set bearer token to "${authToken}"
+  When I GET "/api/v1/resources"
+  Then the response status should be 200
+```
+
+### RBAC Patterns (Role-Based Access Control)
+
+Test each role separately to verify the permission matrix. Use descriptive config variable names that encode the role:
+
+```gherkin
+# Assumes config variables:
+#   valid-owner-token   -> full access
+#   valid-admin-token   -> admin access
+#   valid-member-token  -> member access
+#   valid-guest-token   -> read-only access
+
+Scenario: Owner can delete resources
+  Given I set bearer token to "${valid-owner-token}"
+  When I DELETE "/api/v1/resources/${resourceId}"
+  Then the response status should be 200
+
+Scenario: Member cannot delete resources
+  Given I set bearer token to "${valid-member-token}"
+  When I DELETE "/api/v1/resources/${resourceId}"
+  Then the response status should be 403
+
+Scenario: Guest has read-only access
+  Given I set bearer token to "${valid-guest-token}"
+  When I GET "/api/v1/resources"
+  Then the response status should be 200
+```
+
+**Key points:**
+- Use `# Assumes:` comments to document what each config variable token represents
+- Test the full permission matrix: each role x each operation
+- Assert that error responses do not leak sensitive information (check that `$.stack_trace`, `$.internal` etc. do not exist)
+
+### Config-Level Default Auth (`HttpAdapterConfig.auth`)
+
+The exo-bdd config supports a default `auth` option in the `http` adapter config that applies authentication to every request automatically:
+
+```typescript
+// In exo-bdd-*.config.ts
+http: {
+  baseURL: 'http://localhost:4000',
+  auth: {
+    type: 'bearer',
+    token: 'default-api-token',
+  },
+},
+```
+
+When `auth` is configured at the config level, scenarios do not need to set auth explicitly -- it is applied to all requests. Override per-scenario with `I set bearer token to {string}` when testing a different auth state. This is useful when most scenarios need the same auth and only a few test unauthenticated or differently-authenticated access.
+
+### Malformed Authorization Header
+
+Test non-standard auth formats by setting the header directly:
+
+```gherkin
+Scenario: Malformed authorization header is rejected
+  Given I set header "Authorization" to "NotBearer some-token"
+  When I GET "/api/v1/resources"
+  Then the response status should be 401
+```
+
 ## Translation Guidelines
 
 When converting a generic feature to HTTP-specific:
@@ -210,6 +361,7 @@ When converting a generic feature to HTTP-specific:
 6. **"Validation error"** becomes POST with invalid data + assert 422 + assert error message in body
 7. **"List with pagination"** becomes GET with query params + assert array length + assert pagination metadata
 8. **"User authenticates"** becomes POST credentials + store token from response + use token in subsequent requests
+9. **If the feature involves any authenticated or protected functionality**, include authentication scenarios: bearer token happy path, unauthenticated access (401), forbidden access (403), invalid/expired token. Use config variables (`${valid-admin-token}`, etc.) for tokens instead of hardcoded values. Test the full RBAC permission matrix when roles are involved. See the Authentication Scenarios section above for canonical patterns.
 
 ## Important Notes
 
