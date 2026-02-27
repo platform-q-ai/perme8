@@ -4,8 +4,8 @@ defmodule IdentityWeb.Plugs.ApiAuthPlugTest do
   alias IdentityWeb.Plugs.ApiAuthPlug
   alias Plug.Conn
 
-  import Jarga.AccountsFixtures
-  import Jarga.WorkspacesFixtures
+  import Identity.AccountsFixtures
+  import Identity.WorkspacesFixtures
 
   setup do
     user = user_fixture()

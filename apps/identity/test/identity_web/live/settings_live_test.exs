@@ -3,7 +3,7 @@ defmodule IdentityWeb.SettingsLiveTest do
 
   alias Identity
   import Phoenix.LiveViewTest
-  import Jarga.AccountsFixtures
+  import Identity.AccountsFixtures
 
   describe "Settings page" do
     test "renders settings page", %{conn: conn} do

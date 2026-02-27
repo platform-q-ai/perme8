@@ -2,7 +2,7 @@ defmodule IdentityWeb.RegistrationLiveTest do
   use IdentityWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
-  import Jarga.AccountsFixtures
+  import Identity.AccountsFixtures
 
   describe "Registration page" do
     test "renders registration page", %{conn: conn} do
