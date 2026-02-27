@@ -7,6 +7,7 @@ Feature: Perme8 Dashboard Browser UI
   Scenario: Dashboard landing page shows sidebar navigation with Features link active
     Given I navigate to "${baseUrl}/"
     And I wait for the page to load
+    And I wait for "[data-sidebar-features]" to be visible
     Then I should see "Perme8 Dashboard"
     And "[data-sidebar-features]" should be visible
     And "[data-sidebar-features] a" should have class "active"
@@ -14,6 +15,7 @@ Feature: Perme8 Dashboard Browser UI
   Scenario: Features tab displays the feature tree on landing
     Given I navigate to "${baseUrl}/"
     And I wait for the page to load
+    And I wait for "[data-sidebar-features]" to be visible
     And I wait for "[data-tab='features']" to be visible
     Then "[data-feature-tree]" should be visible
     And I wait for "[data-app]" to be visible
