@@ -270,6 +270,84 @@ defmodule Agents.Sessions.Infrastructure.Clients.OpencodeClientTest do
     end
   end
 
+  describe "set_auth/4" do
+    test "returns {:ok, true} on successful 200" do
+      http = fn :put, url, opts ->
+        assert url == "http://localhost:4096/auth/anthropic"
+        body = Keyword.get(opts, :json)
+        assert body["type"] == "api"
+        assert body["key"] == "sk-ant-test"
+        {:ok, %{status: 200, body: true}}
+      end
+
+      assert {:ok, true} =
+               OpencodeClient.set_auth(
+                 "http://localhost:4096",
+                 "anthropic",
+                 %{"type" => "api", "key" => "sk-ant-test"},
+                 http: http
+               )
+    end
+
+    test "returns error on non-200 status" do
+      http = fn :put, _url, _opts ->
+        {:ok, %{status: 400, body: %{"error" => "invalid credentials"}}}
+      end
+
+      assert {:error, {:http_error, 400, _}} =
+               OpencodeClient.set_auth(
+                 "http://localhost:4096",
+                 "anthropic",
+                 %{"type" => "api", "key" => "bad"},
+                 http: http
+               )
+    end
+
+    test "returns error on connection failure" do
+      http = fn :put, _url, _opts ->
+        {:error, %Req.TransportError{reason: :econnrefused}}
+      end
+
+      assert {:error, %Req.TransportError{}} =
+               OpencodeClient.set_auth(
+                 "http://localhost:4096",
+                 "anthropic",
+                 %{},
+                 http: http
+               )
+    end
+  end
+
+  describe "list_providers/2" do
+    test "returns provider data on 200" do
+      http = fn :get, url, _opts ->
+        assert url == "http://localhost:4096/provider"
+
+        {:ok,
+         %{
+           status: 200,
+           body: %{
+             "all" => [%{"id" => "anthropic"}, %{"id" => "openrouter"}],
+             "connected" => ["anthropic"],
+             "default" => %{}
+           }
+         }}
+      end
+
+      assert {:ok, %{"connected" => ["anthropic"]}} =
+               OpencodeClient.list_providers("http://localhost:4096", http: http)
+    end
+
+    test "returns error on failure" do
+      http = fn :get, _url, _opts ->
+        {:ok, %{status: 500, body: %{"error" => "internal"}}}
+      end
+
+      assert {:error, {:http_error, 500, _}} =
+               OpencodeClient.list_providers("http://localhost:4096", http: http)
+    end
+  end
+
   describe "subscribe_events/2" do
     test "spawns process that forwards SSE events" do
       test_pid = self()
