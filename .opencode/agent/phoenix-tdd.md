@@ -110,7 +110,7 @@ You will be assigned a **specific phase** of work from the architect's implement
 2. **Verify the Repo**: Use the owning app's Repo (e.g., `Agents.Repo` for agents features).
    Never import or alias another app's Repo.
 3. **Verify migration placement**: Migrations go in `apps/<owning_app>/priv/repo/migrations/`.
-4. **Verify feature file placement**: Feature files go in `apps/<owning_app_web>/test/features/`.
+4. **Verify feature file placement**: Feature files go in `apps/<owning_app>_web/test/features/`.
 
 ## How to Execute Your Phase
 
