@@ -23,9 +23,10 @@ Analyze feature requests and create actionable TDD implementation plans that mai
 Before creating any plan, read:
 
 1. `docs/umbrella_apps.md` — Umbrella project structure
-2. `docs/prompts/phoenix/PHOENIX_DESIGN_PRINCIPLES.md` — Clean Architecture layers and boundaries
-3. `docs/prompts/phoenix/PHOENIX_BEST_PRACTICES.md` — Phoenix conventions
-4. `docs/prompts/typescript/TYPESCRIPT_DESIGN_PRINCIPLES.md` — TypeScript architecture (only when LiveView is insufficient)
+2. `docs/app_ownership.md` — App ownership registry and standalone-app rules
+3. `docs/prompts/phoenix/PHOENIX_DESIGN_PRINCIPLES.md` — Clean Architecture layers and boundaries
+4. `docs/prompts/phoenix/PHOENIX_BEST_PRACTICES.md` — Phoenix conventions
+5. `docs/prompts/typescript/TYPESCRIPT_DESIGN_PRINCIPLES.md` — TypeScript architecture (only when LiveView is insufficient)
 
 ## Input
 
