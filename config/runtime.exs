@@ -71,6 +71,15 @@ if config_env() == :prod do
 
   config :identity, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
+  # Identity app config — base_url is used by notifiers to build email links
+  identity_host = System.get_env("IDENTITY_HOST") || host
+
+  config :identity,
+    base_url: "https://#{identity_host}",
+    app_name: System.get_env("IDENTITY_APP_NAME") || "Perme8",
+    mailer_from_email: System.get_env("IDENTITY_MAILER_FROM_EMAIL") || "noreply@perme8.app",
+    mailer_from_name: System.get_env("IDENTITY_MAILER_FROM_NAME") || "Perme8"
+
   config :identity, IdentityWeb.Endpoint,
     url: [host: host, port: 443, scheme: "https"],
     http: [
