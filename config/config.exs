@@ -226,7 +226,12 @@ config :phoenix, :json_library, Jason
 
 config :identity,
   ecto_repos: [Identity.Repo],
-  generators: [timestamp_type: :utc_datetime, binary_id: true]
+  generators: [timestamp_type: :utc_datetime, binary_id: true],
+  app_name: "Perme8",
+  mailer_from_email: "noreply@perme8.app",
+  mailer_from_name: "Perme8",
+  signed_in_redirect_path: "/app",
+  base_url: "http://localhost:4000"
 
 # Identity endpoint configuration
 config :identity, IdentityWeb.Endpoint,
