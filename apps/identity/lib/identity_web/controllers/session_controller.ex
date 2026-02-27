@@ -20,17 +20,7 @@ defmodule IdentityWeb.SessionController do
 
         # Create notifications for any pending workspace invitations
         # This ensures new users see invitations sent before they signed up
-        # Note: Uses apply/3 to avoid compile-time warning since Jarga.Workspaces
-        # is in a different app that may not be available during compilation
-        if Code.ensure_loaded?(Jarga.Workspaces) and
-             function_exported?(
-               Jarga.Workspaces,
-               :create_notifications_for_pending_invitations,
-               1
-             ) do
-          # credo:disable-for-next-line Credo.Check.Refactor.Apply
-          apply(Jarga.Workspaces, :create_notifications_for_pending_invitations, [user])
-        end
+        Identity.create_notifications_for_pending_invitations(user)
 
         conn
         |> put_flash(:info, info)
