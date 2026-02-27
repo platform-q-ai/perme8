@@ -301,16 +301,16 @@ github_app_pem =
       _ -> nil
     end
 
-opencode_auth =
+# OPENCODE_AUTH is read lazily at container start time (not boot time) so that
+# re-authenticated tokens are picked up without requiring a Phoenix restart.
+# See SessionsConfig.container_env/0 for the dynamic reader.
+opencode_auth_source =
   System.get_env("OPENCODE_AUTH") ||
-    case File.read(Path.expand("~/.local/share/opencode/auth.json")) do
-      {:ok, json} -> Base.encode64(json)
-      _ -> nil
-    end
+    {:file, Path.expand("~/.local/share/opencode/auth.json")}
 
 config :agents, :sessions_env, %{
   GITHUB_APP_PEM: github_app_pem,
-  OPENCODE_AUTH: opencode_auth,
+  OPENCODE_AUTH: opencode_auth_source,
   REPO_BRANCH: System.get_env("REPO_BRANCH")
 }
 

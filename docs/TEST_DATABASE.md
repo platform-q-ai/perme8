@@ -58,7 +58,7 @@ The test database is configured in `config/test.exs`:
 - **User**: `postgres`
 - **Password**: `postgres`
 - **Host**: `localhost`
-- **Port**: `5432`
+- **Port**: `5433` (docker-compose maps host 5433 → container 5432)
 
 ## Troubleshooting
 
