@@ -25,7 +25,7 @@ defmodule IdentityWeb.Plugs.UserAuthTest do
       conn = UserAuth.log_in_user(conn, user)
       assert token = get_session(conn, :user_token)
       assert get_session(conn, :live_socket_id) == "users_sessions:#{Base.url_encode64(token)}"
-      assert redirected_to(conn) == ~p"/"
+      assert redirected_to(conn) == "/"
       assert Identity.get_user_by_session_token(token)
     end
 
@@ -80,7 +80,7 @@ defmodule IdentityWeb.Plugs.UserAuthTest do
         |> assign(:current_scope, Scope.for_user(user))
         |> UserAuth.log_in_user(user)
 
-      assert redirected_to(conn) == ~p"/app"
+      assert redirected_to(conn) == "/app"
     end
 
     test "writes a cookie if remember_me was set in previous session", %{conn: conn, user: user} do
@@ -120,7 +120,7 @@ defmodule IdentityWeb.Plugs.UserAuthTest do
       refute get_session(conn, :user_token)
       refute conn.cookies[@remember_me_cookie]
       assert %{max_age: 0} = conn.resp_cookies[@remember_me_cookie]
-      assert redirected_to(conn) == ~p"/"
+      assert redirected_to(conn) == "/"
       refute Identity.get_user_by_session_token(user_token)
     end
 
@@ -139,7 +139,7 @@ defmodule IdentityWeb.Plugs.UserAuthTest do
       conn = conn |> fetch_cookies() |> UserAuth.log_out_user()
       refute get_session(conn, :user_token)
       assert %{max_age: 0} = conn.resp_cookies[@remember_me_cookie]
-      assert redirected_to(conn) == ~p"/"
+      assert redirected_to(conn) == "/"
     end
   end
 
@@ -391,16 +391,16 @@ defmodule IdentityWeb.Plugs.UserAuthTest do
   describe "signed_in_path/1" do
     test "returns /app when user is already authenticated", %{conn: conn, user: user} do
       conn = conn |> assign(:current_scope, Scope.for_user(user))
-      assert UserAuth.signed_in_path(conn) == ~p"/app"
+      assert UserAuth.signed_in_path(conn) == "/app"
     end
 
     test "returns / when user is not authenticated", %{conn: conn} do
       conn = conn |> assign(:current_scope, Scope.for_user(nil))
-      assert UserAuth.signed_in_path(conn) == ~p"/"
+      assert UserAuth.signed_in_path(conn) == "/"
     end
 
     test "returns / when current_scope is nil", %{conn: conn} do
-      assert UserAuth.signed_in_path(conn) == ~p"/"
+      assert UserAuth.signed_in_path(conn) == "/"
     end
   end
 end
