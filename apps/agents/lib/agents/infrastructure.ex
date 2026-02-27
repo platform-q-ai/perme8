@@ -16,12 +16,11 @@ defmodule Agents.Infrastructure do
     deps: [
       Agents.Domain,
       Agents.Application,
-      # Cross-context dependencies
+      # Cross-context dependencies (compile-time only; runtime-only
+      # cross-app calls go through gateways and are whitelisted via
+      # @compile {:no_warn_undefined, ...} in the gateway modules)
       Identity,
-      Identity.Repo,
-      EntityRelationshipManager,
-      Jarga.Projects,
-      Jarga.Documents
+      Identity.Repo
     ],
     exports: [
       # Schemas

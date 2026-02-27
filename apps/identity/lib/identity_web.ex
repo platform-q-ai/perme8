@@ -22,8 +22,6 @@ defmodule IdentityWeb do
     deps: [
       # Identity context (includes domain entities and policies)
       Identity,
-      # Cross-context dependencies (for workspace listing in API keys UI)
-      Jarga.Workspaces,
       # Shared infrastructure
       Identity.Repo
     ],
