@@ -8,7 +8,7 @@ defmodule IdentityWeb.Plugs.UserAuthTest do
 
   import Jarga.AccountsFixtures
 
-  @remember_me_cookie "_jarga_web_user_remember_me"
+  @remember_me_cookie "_identity_web_user_remember_me"
   @remember_me_cookie_max_age 60 * 60 * 24 * 14
 
   setup %{conn: conn} do
