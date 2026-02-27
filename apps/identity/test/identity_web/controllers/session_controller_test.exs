@@ -33,7 +33,7 @@ defmodule IdentityWeb.SessionControllerTest do
           }
         })
 
-      assert conn.resp_cookies["_jarga_web_user_remember_me"]
+      assert conn.resp_cookies["_identity_web_user_remember_me"]
       assert redirected_to(conn) == "/"
     end
 
