@@ -39,7 +39,7 @@ defmodule Perme8.Events.EventBusTest do
     TestProjectCreated.new(Map.merge(defaults, overrides))
   end
 
-  defp build_global_event(overrides \\ %{}) do
+  defp build_global_event(overrides) do
     defaults = %{
       aggregate_id: "global-1",
       actor_id: "user-456"
@@ -48,7 +48,7 @@ defmodule Perme8.Events.EventBusTest do
     TestGlobalEvent.new(Map.merge(defaults, overrides))
   end
 
-  defp build_user_scoped_event(overrides \\ %{}) do
+  defp build_user_scoped_event(overrides) do
     defaults = %{
       aggregate_id: "notif-123",
       actor_id: "user-456",

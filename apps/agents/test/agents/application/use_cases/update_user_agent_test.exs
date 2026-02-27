@@ -15,7 +15,7 @@ defmodule Agents.Application.UseCases.UpdateUserAgentTest do
       user = user_fixture()
       agent = agent_fixture(user)
 
-      assert {:ok, updated_agent} =
+      assert {:ok, _updated_agent} =
                UpdateUserAgent.execute(agent.id, user.id, %{name: "Updated Agent"},
                  event_bus: TestEventBus
                )
