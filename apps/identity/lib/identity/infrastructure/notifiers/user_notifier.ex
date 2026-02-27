@@ -30,11 +30,11 @@ defmodule Identity.Infrastructure.Notifiers.UserNotifier do
   end
 
   defp default_from_email do
-    Application.get_env(:jarga, :mailer_from_email, "noreply@jarga.app")
+    Application.get_env(:identity, :mailer_from_email, "noreply@perme8.app")
   end
 
   defp default_from_name do
-    Application.get_env(:jarga, :mailer_from_name, "Jarga")
+    Application.get_env(:identity, :mailer_from_name, "Perme8")
   end
 
   # Disables SendGrid click tracking for authentication emails
@@ -54,8 +54,8 @@ defmodule Identity.Infrastructure.Notifiers.UserNotifier do
 
   ## Options
 
-    * `:from_email` - Email address to send from (default: configured or "noreply@jarga.app")
-    * `:from_name` - Name to send from (default: configured or "Jarga")
+    * `:from_email` - Email address to send from (default: configured or "noreply@perme8.app")
+    * `:from_name` - Name to send from (default: configured or "Perme8")
 
   """
   @impl true
@@ -86,8 +86,8 @@ defmodule Identity.Infrastructure.Notifiers.UserNotifier do
 
   ## Options
 
-    * `:from_email` - Email address to send from (default: configured or "noreply@jarga.app")
-    * `:from_name` - Name to send from (default: configured or "Jarga")
+    * `:from_email` - Email address to send from (default: configured or "noreply@perme8.app")
+    * `:from_name` - Name to send from (default: configured or "Perme8")
 
   """
   @impl true
@@ -147,8 +147,8 @@ defmodule Identity.Infrastructure.Notifiers.UserNotifier do
 
   ## Options
 
-    * `:from_email` - Email address to send from (default: configured or "noreply@jarga.app")
-    * `:from_name` - Name to send from (default: configured or "Jarga")
+    * `:from_email` - Email address to send from (default: configured or "noreply@perme8.app")
+    * `:from_name` - Name to send from (default: configured or "Perme8")
 
   """
   @impl true

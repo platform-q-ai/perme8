@@ -16,7 +16,7 @@ defmodule Identity.Infrastructure.Notifiers.WorkspaceNotifier do
     email =
       new()
       |> to(recipient)
-      |> from({"Jarga", "contact@example.com"})
+      |> from({app_name(), default_from_email()})
       |> subject(subject)
       |> text_body(body)
 
@@ -34,15 +34,15 @@ defmodule Identity.Infrastructure.Notifiers.WorkspaceNotifier do
         %User{} = inviter,
         signup_url
       ) do
-    deliver(email, "You've been invited to #{workspace.name} on Jarga", """
+    deliver(email, "You've been invited to #{workspace.name} on #{app_name()}", """
 
     ==============================
 
     Hi,
 
-    #{inviter.first_name} #{inviter.last_name} has invited you to join the workspace "#{workspace.name}" on Jarga.
+    #{inviter.first_name} #{inviter.last_name} has invited you to join the workspace "#{workspace.name}" on #{app_name()}.
 
-    To accept this invitation, you'll need to create a Jarga account first. Sign up here:
+    To accept this invitation, you'll need to create a #{app_name()} account first. Sign up here:
 
     #{signup_url}
 
@@ -95,19 +95,18 @@ defmodule Identity.Infrastructure.Notifiers.WorkspaceNotifier do
     deliver_invitation_to_new_user(email, workspace, inviter, signup_url)
   end
 
-  defp build_workspace_url(workspace_id) do
-    base_url =
-      Application.get_env(:identity, :base_url) ||
-        Application.get_env(:jarga, :base_url, "http://localhost:4000")
+  defp app_name, do: Application.get_env(:identity, :app_name, "Perme8")
 
-    "#{base_url}/app/workspaces/#{workspace_id}"
+  defp default_from_email,
+    do: Application.get_env(:identity, :mailer_from_email, "noreply@perme8.app")
+
+  defp base_url, do: Application.get_env(:identity, :base_url, "http://localhost:4000")
+
+  defp build_workspace_url(workspace_id) do
+    "#{base_url()}/app/workspaces/#{workspace_id}"
   end
 
   defp build_signup_url do
-    base_url =
-      Application.get_env(:identity, :base_url) ||
-        Application.get_env(:jarga, :base_url, "http://localhost:4000")
-
-    "#{base_url}/users/register"
+    "#{base_url()}/users/register"
   end
 end
