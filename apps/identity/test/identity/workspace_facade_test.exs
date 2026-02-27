@@ -191,7 +191,7 @@ defmodule Identity.WorkspaceFacadeTest do
       user = user_fixture()
       workspace = workspace_fixture(user)
 
-      assert {:ok, updated} =
+      assert {:ok, _updated} =
                Identity.update_workspace(user, workspace.id, %{"name" => "Event Test"},
                  event_bus: TestEventBus
                )

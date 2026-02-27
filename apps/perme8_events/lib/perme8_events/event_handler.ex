@@ -70,7 +70,11 @@ defmodule Perme8.Events.EventHandler do
 
       @impl GenServer
       def handle_info(%{__struct__: _} = event, state) do
-        case handle_event(event) do
+        # Binding through identity/1 prevents the type checker from narrowing
+        # the return type of handle_event/1 into the case clauses, which would
+        # cause unreachable-clause warnings in handlers that only return :ok
+        # or only return {:error, _}.
+        case Function.identity(handle_event(event)) do
           :ok ->
             :ok
 
