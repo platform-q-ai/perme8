@@ -97,7 +97,7 @@ if [ ! -f "$PGDATA/PG_VERSION" ]; then
   cat >> "$PGDATA/postgresql.conf" <<'PGCONF'
 listen_addresses = 'localhost'
 port = 5432
-max_connections = 50
+max_connections = 200
 shared_buffers = 32MB
 work_mem = 4MB
 fsync = off
@@ -149,34 +149,18 @@ MIX_ENV=dev mix ecto.migrate --quiet
 echo "Dev database ready"
 
 # ---- Set up the test database ----
-# The embedded PostgreSQL runs on port 5432. config/test.exs falls back to
-# localhost:5433 (matching docker-compose's test service), so we override
-# DATABASE_URL to point at the local instance on 5432.
+# Everything runs on port 5432 — same as dev, just a different database name.
+# .env.test provides DATABASE_URL=localhost/jarga_test for test commands.
 
 echo "Setting up test database..."
-DATABASE_URL="postgres://postgres:postgres@localhost/jarga_test" MIX_ENV=test mix ecto.create --quiet
-DATABASE_URL="postgres://postgres:postgres@localhost/jarga_test" MIX_ENV=test mix ecto.migrate --quiet
+MIX_ENV=test mix ecto.create --quiet
+MIX_ENV=test mix ecto.migrate --quiet
 echo "Test database ready"
-
-# ---- Override .env.test for embedded PostgreSQL ----
-# The tracked .env.test has DATABASE_URL pointing to docker-compose port 5433.
-# Inside the container, PostgreSQL runs on the standard port 5432.
-# Overwriting the file is safe — git reset --hard restores it on container restart.
-
-cat > /workspace/perme8/.env.test <<'ENVTEST'
-# Test environment overrides (container version)
-# Embedded PostgreSQL runs on port 5432, not 5433 like docker-compose.
-DATABASE_URL=postgres://postgres:postgres@localhost/jarga_test
-
-# Fast debounce time for tests (1ms instead of 2000ms)
-PAGE_SAVE_DEBOUNCE_MS=1
-ENVTEST
-echo ".env.test overwritten for embedded PostgreSQL (port 5432)"
 
 # ---- Clear build-time env vars so agent commands use their own defaults ----
 # MIX_ENV: mix test defaults to :test, mix compile defaults to :dev, etc.
-# DATABASE_URL: dev config falls back to localhost/jarga_dev (port 5432).
-#               test config reads DATABASE_URL from .env.test (overwritten above).
+# DATABASE_URL: dev config falls back to localhost/jarga_dev,
+#               test config reads DATABASE_URL from .env.test.
 unset MIX_ENV
 unset DATABASE_URL
 

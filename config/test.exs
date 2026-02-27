@@ -2,8 +2,7 @@ import Config
 
 # Load .env.test for test environment overrides (mirrors dev.exs .env loading).
 # Values act as defaults — pre-existing env vars (e.g. CI's DATABASE_URL) are
-# NOT overwritten. In the session container, the entrypoint overwrites the
-# .env.test file itself to point at the embedded PostgreSQL (port 5432).
+# NOT overwritten.
 if File.exists?(".env.test") do
   File.read!(".env.test")
   |> String.split("\n")
