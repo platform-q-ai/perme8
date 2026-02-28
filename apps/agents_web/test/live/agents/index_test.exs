@@ -1,5 +1,5 @@
-defmodule JargaWeb.AppLive.Agents.IndexTest do
-  use JargaWeb.ConnCase, async: true
+defmodule AgentsWeb.AgentsLive.IndexTest do
+  use AgentsWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
   import Jarga.AccountsFixtures
@@ -33,7 +33,7 @@ defmodule JargaWeb.AppLive.Agents.IndexTest do
       user: user,
       agent: agent
     } do
-      {:ok, lv, html} = live(conn, ~p"/app/agents")
+      {:ok, lv, html} = live(conn, ~p"/agents")
 
       # Verify the initial agent is shown
       assert html =~ "My Agent"
@@ -63,7 +63,7 @@ defmodule JargaWeb.AppLive.Agents.IndexTest do
       user: user,
       agent: agent
     } do
-      {:ok, lv, _html} = live(conn, ~p"/app/agents")
+      {:ok, lv, _html} = live(conn, ~p"/agents")
 
       event =
         AgentDeleted.new(%{
@@ -84,7 +84,7 @@ defmodule JargaWeb.AppLive.Agents.IndexTest do
       user: user,
       agent: agent
     } do
-      {:ok, lv, _html} = live(conn, ~p"/app/agents")
+      {:ok, lv, _html} = live(conn, ~p"/agents")
 
       event =
         AgentAddedToWorkspace.new(%{
@@ -105,7 +105,7 @@ defmodule JargaWeb.AppLive.Agents.IndexTest do
       user: user,
       agent: agent
     } do
-      {:ok, lv, _html} = live(conn, ~p"/app/agents")
+      {:ok, lv, _html} = live(conn, ~p"/agents")
 
       event =
         AgentRemovedFromWorkspace.new(%{

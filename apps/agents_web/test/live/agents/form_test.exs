@@ -1,5 +1,5 @@
-defmodule JargaWeb.AppLive.Agents.FormTest do
-  use JargaWeb.ConnCase, async: true
+defmodule AgentsWeb.AgentsLive.FormTest do
+  use AgentsWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
   import Jarga.AccountsFixtures
@@ -29,7 +29,7 @@ defmodule JargaWeb.AppLive.Agents.FormTest do
     end
 
     test "handles AgentUpdated event by reloading agents", %{conn: conn, user: user, agent: agent} do
-      {:ok, lv, _html} = live(conn, ~p"/app/agents/#{agent.id}/edit")
+      {:ok, lv, _html} = live(conn, ~p"/agents/#{agent.id}/edit")
 
       event =
         AgentUpdated.new(%{
@@ -48,7 +48,7 @@ defmodule JargaWeb.AppLive.Agents.FormTest do
     end
 
     test "handles AgentDeleted event by reloading agents", %{conn: conn, user: user, agent: agent} do
-      {:ok, lv, _html} = live(conn, ~p"/app/agents/#{agent.id}/edit")
+      {:ok, lv, _html} = live(conn, ~p"/agents/#{agent.id}/edit")
 
       event =
         AgentDeleted.new(%{
@@ -69,7 +69,7 @@ defmodule JargaWeb.AppLive.Agents.FormTest do
       user: user,
       agent: agent
     } do
-      {:ok, lv, _html} = live(conn, ~p"/app/agents/#{agent.id}/edit")
+      {:ok, lv, _html} = live(conn, ~p"/agents/#{agent.id}/edit")
 
       event =
         AgentAddedToWorkspace.new(%{
@@ -90,7 +90,7 @@ defmodule JargaWeb.AppLive.Agents.FormTest do
       user: user,
       agent: agent
     } do
-      {:ok, lv, _html} = live(conn, ~p"/app/agents/#{agent.id}/edit")
+      {:ok, lv, _html} = live(conn, ~p"/agents/#{agent.id}/edit")
 
       event =
         AgentRemovedFromWorkspace.new(%{
@@ -138,7 +138,7 @@ defmodule JargaWeb.AppLive.Agents.FormTest do
     } do
       # This tests the bug fix where accessing /agents/:id/view directly
       # (not from within a workspace) would crash with KeyError
-      {:ok, _lv, html} = live(conn, ~p"/app/agents/#{shared_agent.id}/view")
+      {:ok, _lv, html} = live(conn, ~p"/agents/#{shared_agent.id}/view")
 
       # Should load successfully and show agent details
       assert html =~ "Shared Agent for Viewing"
@@ -162,7 +162,7 @@ defmodule JargaWeb.AppLive.Agents.FormTest do
         })
 
       # Visit edit page (not view page) - owner context
-      {:ok, lv, html} = live(conn, ~p"/app/agents/#{my_agent.id}/edit")
+      {:ok, lv, html} = live(conn, ~p"/agents/#{my_agent.id}/edit")
 
       # Verify read_only is NOT set
       refute :sys.get_state(lv.pid).socket.assigns[:read_only]

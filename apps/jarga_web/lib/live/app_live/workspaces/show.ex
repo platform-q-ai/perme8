@@ -218,13 +218,12 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
         <div>
           <div class="flex items-center justify-between mb-4">
             <h2 class="text-lg font-semibold">Agents</h2>
-            <.button
-              variant="primary"
-              size="sm"
-              navigate={~p"/app/agents/new"}
+            <.link
+              href={agents_web_url("/agents/new")}
+              class="btn btn-primary btn-sm"
             >
               <.icon name="hero-plus" class="size-4" /> New Agent
-            </.button>
+            </.link>
           </div>
 
           <%= if @my_agents == [] && @other_agents == [] do %>
@@ -238,9 +237,9 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
                       Add your agents to this workspace to collaborate
                     </p>
                   </div>
-                  <.button variant="primary" navigate={~p"/app/agents/new"}>
+                  <.link href={agents_web_url("/agents/new")} class="btn btn-primary">
                     Create Agent
-                  </.button>
+                  </.link>
                 </div>
               </div>
             </div>
@@ -266,8 +265,10 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
                           <td class="text-sm text-right">
                             <div class="flex justify-end gap-1">
                               <.link
-                                navigate={
-                                  ~p"/app/agents/#{agent.id}/edit?return_to=workspace&workspace_slug=#{@workspace.slug}"
+                                href={
+                                  agents_web_url(
+                                    "/agents/#{agent.id}/edit?return_to=workspace&workspace_slug=#{@workspace.slug}"
+                                  )
                                 }
                                 class="btn btn-sm btn-ghost"
                                 title="Edit agent"
@@ -305,8 +306,10 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
                           <td class="text-sm text-right">
                             <div class="flex justify-end gap-1">
                               <.link
-                                navigate={
-                                  ~p"/app/agents/#{agent.id}/view?return_to=workspace&workspace_slug=#{@workspace.slug}"
+                                href={
+                                  agents_web_url(
+                                    "/agents/#{agent.id}/view?return_to=workspace&workspace_slug=#{@workspace.slug}"
+                                  )
                                 }
                                 class="btn btn-sm btn-ghost"
                                 title="View agent details"
@@ -1099,4 +1102,9 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
 
   # Chat panel streaming messages (includes catch-all for unhandled messages)
   handle_chat_messages()
+
+  defp agents_web_url(path) do
+    base = Application.get_env(:jarga_web, :agents_web_url, "http://localhost:4014")
+    "#{base}#{path}"
+  end
 end
