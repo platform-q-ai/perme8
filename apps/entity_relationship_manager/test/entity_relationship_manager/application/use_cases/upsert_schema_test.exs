@@ -1,5 +1,5 @@
 defmodule EntityRelationshipManager.Application.UseCases.UpsertSchemaTest do
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
 
   import Mox
 
@@ -13,9 +13,13 @@ defmodule EntityRelationshipManager.Application.UseCases.UpsertSchemaTest do
 
   setup :verify_on_exit!
 
+  setup do
+    TestEventBus.start_global()
+    :ok
+  end
+
   describe "execute/3 - event emission" do
     test "emits SchemaCreated event when schema does not exist" do
-      ensure_test_event_bus_started()
       schema = schema_definition()
 
       attrs = %{
@@ -45,7 +49,6 @@ defmodule EntityRelationshipManager.Application.UseCases.UpsertSchemaTest do
     end
 
     test "emits SchemaUpdated event when schema already exists" do
-      ensure_test_event_bus_started()
 
       existing_schema = schema_definition()
       updated_schema = schema_definition(%{version: 2})
@@ -78,7 +81,6 @@ defmodule EntityRelationshipManager.Application.UseCases.UpsertSchemaTest do
     end
 
     test "does not emit event when validation fails" do
-      ensure_test_event_bus_started()
 
       attrs = %{
         entity_types: [
@@ -206,17 +208,6 @@ defmodule EntityRelationshipManager.Application.UseCases.UpsertSchemaTest do
 
       assert {:error, :version_conflict} =
                UpsertSchema.execute(workspace_id(), attrs, schema_repo: SchemaRepositoryMock)
-    end
-  end
-
-  defp ensure_test_event_bus_started do
-    case Process.whereis(TestEventBus) do
-      nil ->
-        {:ok, _pid} = TestEventBus.start_link([])
-        :ok
-
-      _pid ->
-        TestEventBus.reset()
     end
   end
 end

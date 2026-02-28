@@ -2,7 +2,7 @@ defmodule Jarga.Chat.Application.UseCases.SaveMessageTest do
   @moduledoc """
   Tests for SaveMessage use case.
   """
-  use Jarga.DataCase, async: false
+  use Jarga.DataCase, async: true
 
   import Jarga.ChatFixtures
 
@@ -13,10 +13,13 @@ defmodule Jarga.Chat.Application.UseCases.SaveMessageTest do
   alias Identity.Repo, as: Repo
   alias Perme8.Events.TestEventBus
 
+  setup do
+    TestEventBus.start_global()
+    :ok
+  end
+
   describe "execute/2 - event emission" do
     test "emits ChatMessageSent event via event_bus" do
-      ensure_test_event_bus_started()
-
       session = chat_session_fixture()
 
       assert {:ok, message} =
@@ -39,8 +42,6 @@ defmodule Jarga.Chat.Application.UseCases.SaveMessageTest do
     end
 
     test "does not emit event when message creation fails" do
-      ensure_test_event_bus_started()
-
       assert {:error, _changeset} =
                SaveMessage.execute(
                  %{role: "user", content: "No session"},
@@ -209,17 +210,6 @@ defmodule Jarga.Chat.Application.UseCases.SaveMessageTest do
                "Second message",
                "Third message"
              ]
-    end
-  end
-
-  defp ensure_test_event_bus_started do
-    case Process.whereis(TestEventBus) do
-      nil ->
-        {:ok, _pid} = TestEventBus.start_link([])
-        :ok
-
-      _pid ->
-        TestEventBus.reset()
     end
   end
 end

@@ -1,5 +1,5 @@
 defmodule EntityRelationshipManager.Application.UseCases.DeleteEntityTest do
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
 
   import Mox
 
@@ -13,9 +13,13 @@ defmodule EntityRelationshipManager.Application.UseCases.DeleteEntityTest do
 
   setup :verify_on_exit!
 
+  setup do
+    TestEventBus.start_global()
+    :ok
+  end
+
   describe "execute/3 - event emission" do
     test "emits EntityDeleted event via event_bus" do
-      ensure_test_event_bus_started()
       deleted = entity(%{deleted_at: ~U[2026-01-02 00:00:00Z]})
 
       GraphRepositoryMock
@@ -34,7 +38,6 @@ defmodule EntityRelationshipManager.Application.UseCases.DeleteEntityTest do
     end
 
     test "does not emit event when deletion fails" do
-      ensure_test_event_bus_started()
 
       GraphRepositoryMock
       |> expect(:soft_delete_entity, fn _ws_id, _id -> {:error, :not_found} end)
@@ -77,17 +80,6 @@ defmodule EntityRelationshipManager.Application.UseCases.DeleteEntityTest do
                DeleteEntity.execute(workspace_id(), "bad-id", graph_repo: GraphRepositoryMock)
 
       assert msg =~ "UUID"
-    end
-  end
-
-  defp ensure_test_event_bus_started do
-    case Process.whereis(TestEventBus) do
-      nil ->
-        {:ok, _pid} = TestEventBus.start_link([])
-        :ok
-
-      _pid ->
-        TestEventBus.reset()
     end
   end
 end

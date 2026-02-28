@@ -7,17 +7,15 @@ defmodule Identity.WorkspaceFacadeTest do
   alias Identity.Domain.Events.WorkspaceUpdated
   alias Perme8.Events.TestEventBus
 
-  defp ensure_test_event_bus_started do
-    case TestEventBus.start_link([]) do
-      {:ok, pid} -> Process.unlink(pid)
-      {:error, {:already_started, _pid}} -> :ok
-    end
-  end
-
   defp updated_events_for(workspace_id) do
     Enum.filter(TestEventBus.get_events(), fn event ->
       match?(%WorkspaceUpdated{}, event) && event.workspace_id == workspace_id
     end)
+  end
+
+  setup do
+    TestEventBus.start_global()
+    :ok
   end
 
   describe "list_workspaces_for_user/1" do
@@ -186,8 +184,6 @@ defmodule Identity.WorkspaceFacadeTest do
     end
 
     test "emits WorkspaceUpdated event on success" do
-      ensure_test_event_bus_started()
-
       user = user_fixture()
       workspace = workspace_fixture(user)
 
@@ -203,8 +199,6 @@ defmodule Identity.WorkspaceFacadeTest do
     end
 
     test "does not emit event on failure" do
-      ensure_test_event_bus_started()
-
       owner = user_fixture()
       workspace = workspace_fixture(owner)
       non_member = user_fixture()

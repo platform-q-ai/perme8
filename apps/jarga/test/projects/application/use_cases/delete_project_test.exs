@@ -1,5 +1,5 @@
 defmodule Jarga.Projects.UseCases.DeleteProjectTest do
-  use Jarga.DataCase, async: false
+  use Jarga.DataCase, async: true
 
   alias Jarga.Projects
   alias Jarga.Projects.Application.UseCases.DeleteProject
@@ -9,6 +9,11 @@ defmodule Jarga.Projects.UseCases.DeleteProjectTest do
   import Jarga.AccountsFixtures
   import Jarga.WorkspacesFixtures
   import Jarga.ProjectsFixtures
+
+  setup do
+    TestEventBus.start_global()
+    :ok
+  end
 
   describe "execute/2 - successful project deletion" do
     test "owner can delete their own project" do
@@ -185,8 +190,6 @@ defmodule Jarga.Projects.UseCases.DeleteProjectTest do
 
   describe "execute/2 - event emission" do
     test "emits ProjectDeleted event via event_bus" do
-      ensure_test_event_bus_started()
-
       owner = user_fixture()
       workspace = workspace_fixture(owner)
       project = project_fixture(owner, workspace)
@@ -212,8 +215,6 @@ defmodule Jarga.Projects.UseCases.DeleteProjectTest do
     end
 
     test "does not emit event when deletion fails (unauthorized)" do
-      ensure_test_event_bus_started()
-
       owner = user_fixture()
       non_member = user_fixture()
       workspace = workspace_fixture(owner)
@@ -229,17 +230,6 @@ defmodule Jarga.Projects.UseCases.DeleteProjectTest do
 
       assert {:error, _reason} = DeleteProject.execute(params, opts)
       assert [] = TestEventBus.get_events()
-    end
-  end
-
-  defp ensure_test_event_bus_started do
-    case Process.whereis(TestEventBus) do
-      nil ->
-        {:ok, _pid} = TestEventBus.start_link([])
-        :ok
-
-      _pid ->
-        TestEventBus.reset()
     end
   end
 end

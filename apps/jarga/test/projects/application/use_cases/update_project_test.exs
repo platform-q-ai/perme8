@@ -1,5 +1,5 @@
 defmodule Jarga.Projects.UseCases.UpdateProjectTest do
-  use Jarga.DataCase, async: false
+  use Jarga.DataCase, async: true
 
   alias Jarga.Projects.Application.UseCases.UpdateProject
   alias Jarga.Projects.Domain.Events.ProjectUpdated
@@ -9,10 +9,13 @@ defmodule Jarga.Projects.UseCases.UpdateProjectTest do
   import Jarga.WorkspacesFixtures
   import Jarga.ProjectsFixtures
 
+  setup do
+    TestEventBus.start_global()
+    :ok
+  end
+
   describe "execute/2 - event emission" do
     test "emits ProjectUpdated event via event_bus" do
-      ensure_test_event_bus_started()
-
       owner = user_fixture()
       workspace = workspace_fixture(owner)
       project = project_fixture(owner, workspace)
@@ -40,8 +43,6 @@ defmodule Jarga.Projects.UseCases.UpdateProjectTest do
     end
 
     test "does not emit event when update fails" do
-      ensure_test_event_bus_started()
-
       owner = user_fixture()
       workspace = workspace_fixture(owner)
       project = project_fixture(owner, workspace)
@@ -57,17 +58,6 @@ defmodule Jarga.Projects.UseCases.UpdateProjectTest do
 
       assert {:error, _changeset} = UpdateProject.execute(params, opts)
       assert [] = TestEventBus.get_events()
-    end
-  end
-
-  defp ensure_test_event_bus_started do
-    case Process.whereis(TestEventBus) do
-      nil ->
-        {:ok, _pid} = TestEventBus.start_link([])
-        :ok
-
-      _pid ->
-        TestEventBus.reset()
     end
   end
 end

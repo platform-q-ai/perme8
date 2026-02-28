@@ -1,5 +1,5 @@
 defmodule EntityRelationshipManager.Application.UseCases.CreateEntityTest do
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
 
   import Mox
 
@@ -13,9 +13,13 @@ defmodule EntityRelationshipManager.Application.UseCases.CreateEntityTest do
 
   setup :verify_on_exit!
 
+  setup do
+    TestEventBus.start_global()
+    :ok
+  end
+
   describe "execute/3 - event emission" do
     test "emits EntityCreated event via event_bus" do
-      ensure_test_event_bus_started()
       schema = schema_definition()
       created_entity = entity()
 
@@ -42,7 +46,6 @@ defmodule EntityRelationshipManager.Application.UseCases.CreateEntityTest do
     end
 
     test "does not emit event when creation fails" do
-      ensure_test_event_bus_started()
 
       SchemaRepositoryMock
       |> expect(:get_schema, fn _ws_id -> {:error, :not_found} end)
@@ -118,17 +121,6 @@ defmodule EntityRelationshipManager.Application.UseCases.CreateEntityTest do
                )
 
       assert is_binary(msg)
-    end
-  end
-
-  defp ensure_test_event_bus_started do
-    case Process.whereis(TestEventBus) do
-      nil ->
-        {:ok, _pid} = TestEventBus.start_link([])
-        :ok
-
-      _pid ->
-        TestEventBus.reset()
     end
   end
 end
