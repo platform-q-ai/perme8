@@ -9,8 +9,28 @@
 @plugin "../vendor/heroicons";
 @plugin "../vendor/daisyui" { themes: false; }
 @plugin "../vendor/daisyui-theme" {
-  name: "dark";
+  name: "light";
   default: true;
+  color-scheme: light;
+  --color-base-100: oklch(0.97 0.005 252);
+  --color-base-200: oklch(0.93 0.008 253);
+  --color-base-300: oklch(0.88 0.01 253);
+  --color-base-content: oklch(0.25 0.015 265);
+  --color-primary: oklch(0.5 0.22 250);
+  --color-primary-content: oklch(1 0 0);
+  --color-secondary: oklch(0.5 0.17 200);
+  --color-secondary-content: oklch(1 0 0);
+  --color-accent: oklch(0.55 0.17 150);
+  --color-accent-content: oklch(1 0 0);
+  --color-neutral: oklch(0.35 0.015 260);
+  --color-neutral-content: oklch(0.97 0.005 260);
+  --color-info: oklch(0.6 0.17 230);
+  --color-success: oklch(0.55 0.22 150);
+  --color-warning: oklch(0.7 0.17 80);
+  --color-error: oklch(0.55 0.22 25);
+}
+@plugin "../vendor/daisyui-theme" {
+  name: "dark";
   prefersdark: true;
   color-scheme: dark;
   --color-base-100: oklch(0.253267 0.015896 252.417568);

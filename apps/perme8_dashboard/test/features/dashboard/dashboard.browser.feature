@@ -96,8 +96,8 @@ Feature: Perme8 Dashboard Browser UI
     And I wait for the URL to contain "/users/log-in"
     Then I should see "Log in"
 
-  Scenario: Dashboard uses DaisyUI dark theme
+  Scenario: Dashboard theme follows device preference
     Given I navigate to "${baseUrl}/"
     And I wait for the page to load
-    Then "html" should have attribute "data-theme" with value "dark"
+    Then "html" should have attribute "data-theme"
     And "body" should have class "bg-base-100"

@@ -1,9 +1,18 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="csrf-token" content={get_csrf_token()} />
+    <script>
+      // Sync data-theme with device preference before first paint to prevent flash
+      (function() {
+        var mq = window.matchMedia("(prefers-color-scheme: dark)");
+        function apply(e) { document.documentElement.setAttribute("data-theme", e.matches ? "dark" : "light"); }
+        apply(mq);
+        mq.addEventListener("change", apply);
+      })();
+    </script>
     <.live_title default="Perme8 Dashboard">
       {assigns[:page_title]}
     </.live_title>

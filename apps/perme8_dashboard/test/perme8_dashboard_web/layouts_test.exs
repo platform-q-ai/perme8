@@ -7,9 +7,10 @@ defmodule Perme8DashboardWeb.LayoutsTest do
                     )
 
   describe "root layout (root.html.heex)" do
-    test "sets data-theme='dark' on html element" do
+    test "includes theme detection script that syncs data-theme with device preference" do
       content = File.read!(@root_layout_path)
-      assert content =~ ~s|data-theme="dark"|
+      assert content =~ ~s|prefers-color-scheme: dark|
+      assert content =~ ~s|data-theme|
     end
 
     test "sets bg-base-100 class on body element" do
