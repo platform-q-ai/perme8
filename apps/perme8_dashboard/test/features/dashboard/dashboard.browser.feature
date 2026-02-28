@@ -99,5 +99,5 @@ Feature: Perme8 Dashboard Browser UI
   Scenario: Dashboard theme follows device preference
     Given I navigate to "${baseUrl}/"
     And I wait for the page to load
-    Then "html" should have attribute "data-theme"
+    Then "html" should have attribute "data-theme" with value "light"
     And "body" should have class "bg-base-100"
