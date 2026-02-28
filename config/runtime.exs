@@ -60,6 +60,7 @@ if config_env() == :prod do
   agents_web_port = String.to_integer(System.get_env("AGENTS_WEB_PORT") || "4014")
 
   config :agents_web, :identity_url, System.get_env("IDENTITY_URL") || "https://#{host}"
+  config :agents_web, :jarga_web_url, System.get_env("JARGA_WEB_URL") || "https://#{host}"
 
   config :agents_web, AgentsWeb.Endpoint,
     url: [host: agents_web_host, port: 443, scheme: "https"],
@@ -231,6 +232,12 @@ if config_env() == :prod do
     else
       check_origins ++ ["https://#{jarga_host}", "//#{jarga_host}"]
     end
+
+  # AgentsWeb URL for cross-app agent management links
+  config :jarga_web,
+         :agents_web_url,
+         System.get_env("AGENTS_WEB_URL") ||
+           "https://#{System.get_env("AGENTS_WEB_HOST") || jarga_host}"
 
   config :jarga_web, JargaWeb.Endpoint,
     url: [host: jarga_host, port: 443, scheme: "https"],

@@ -9,14 +9,17 @@ defmodule AgentsWeb do
   use Boundary,
     deps: [
       Agents,
+      Agents.Domain,
       Agents.Sessions,
       Agents.Sessions.Domain,
       Identity,
       IdentityWeb,
       Jarga,
-      Jarga.Accounts
+      Jarga.Accounts,
+      Jarga.Workspaces,
+      Perme8.Events
     ],
-    exports: [Endpoint, Telemetry, SessionsLive.Index]
+    exports: [Endpoint, Telemetry, SessionsLive.Index, AgentsLive.Index, AgentsLive.Form]
 
   def static_paths do
     ~w(assets fonts images favicon.ico robots.txt)

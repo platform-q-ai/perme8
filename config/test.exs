@@ -91,12 +91,17 @@ config :notifications, env: :test
 # Test ports use the 5xxx range (mirroring dev 4xxx) to avoid conflicts.
 # AgentsWeb: dev 4014 → test 5014
 config :agents_web, :identity_url, "http://localhost:5001"
+# JargaWeb URL for cross-app back-links (e.g., workspace back navigation)
+config :agents_web, :jarga_web_url, "http://localhost:5000"
 
 config :agents_web, AgentsWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 5014],
   # Must match Identity's secret_key_base so the shared session cookie
   # (_identity_key) signed by Identity can be verified by agents_web.
   secret_key_base: "test_identity_secret_key_base_at_least_64_bytes_long_for_security"
+
+# AgentsWeb URL for cross-app agent management links
+config :jarga_web, :agents_web_url, "http://localhost:5014"
 
 # JargaWeb: dev 4000 → test 5000
 config :jarga_web, JargaWeb.Endpoint,
