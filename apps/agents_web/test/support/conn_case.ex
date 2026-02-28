@@ -16,7 +16,8 @@ defmodule AgentsWeb.ConnCase do
       Jarga.Accounts,
       Jarga.DataCase,
       Jarga.AccountsFixtures,
-      Agents.SessionsFixtures
+      Agents.SessionsFixtures,
+      Agents.AgentsFixtures
     ],
     exports: []
 

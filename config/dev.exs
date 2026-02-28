@@ -104,6 +104,8 @@ config :agents_api, AgentsApi.Endpoint,
 # AgentsWeb dev configuration (Sessions UI on port 4014)
 # Identity URL for login redirects (Identity runs on port 4001 in dev)
 config :agents_web, :identity_url, "http://localhost:4001"
+# JargaWeb URL for cross-app back-links (e.g., workspace back navigation)
+config :agents_web, :jarga_web_url, "http://localhost:4000"
 
 config :agents_web, AgentsWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4014],
@@ -123,9 +125,12 @@ config :agents_web, AgentsWeb.Endpoint,
     web_console_logger: true,
     patterns: [
       ~r"priv/static/(?!uploads/).*(js|css|png|jpeg|jpg|gif|svg)$",
-      ~r"lib/agents_web/(?:live|components|router)/?.*\.(ex|heex)$"
+      ~r"lib/(?:live|components|router)/?.*\.(ex|heex)$"
     ]
   ]
+
+# AgentsWeb URL for cross-app agent management links
+config :jarga_web, :agents_web_url, "http://localhost:4014"
 
 # For development, we disable any cache and enable
 # debugging and code reloading.
