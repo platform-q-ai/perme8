@@ -35,6 +35,9 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     :user_id,
     :flush_ref,
     :auth_refresh_ref,
+    :question_timeout_ref,
+    :pending_question_request_id,
+    :pending_question_data,
     status: :starting,
     health_retries: 0,
     # Track whether we've seen session go to "running" so we know
@@ -134,6 +137,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     base_url = "http://localhost:#{state.container_port}"
 
     result = state.opencode_client.reply_question(base_url, request_id, answers, [])
+    state = clear_pending_question(state)
     {:reply, result, state}
   end
 
@@ -142,6 +146,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     base_url = "http://localhost:#{state.container_port}"
 
     result = state.opencode_client.reject_question(base_url, request_id, [])
+    state = mark_question_rejected(state)
     {:reply, result, state}
   end
 
@@ -386,6 +391,26 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     {:noreply, %{state | auth_refresh_ref: auth_refresh_ref}}
   end
 
+  # ---- Question Timeout ----
+
+  @impl true
+  def handle_info(:question_timeout, state) do
+    case state.pending_question_request_id do
+      nil ->
+        {:noreply, state}
+
+      request_id ->
+        Logger.info(
+          "TaskRunner: auto-rejecting unanswered question #{request_id} for task #{state.task_id}"
+        )
+
+        base_url = "http://localhost:#{state.container_port}"
+        state.opencode_client.reject_question(base_url, request_id, [])
+        state = mark_question_rejected(state)
+        {:noreply, state}
+    end
+  end
+
   # ---- SSE Error ----
 
   @impl true
@@ -413,6 +438,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   def handle_info(:cancel, state) do
     cancel_flush_timer(state)
     cancel_auth_refresh_timer(state)
+    cancel_question_timeout(state)
 
     if state.session_id && state.container_port do
       base_url = "http://localhost:#{state.container_port}"
@@ -442,10 +468,12 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   defp handle_sdk_result(event, state) do
     case handle_sdk_event(event, state) do
       {:completed, new_state} ->
+        cancel_question_timeout(new_state)
         complete_task(new_state)
         {:stop, :normal, new_state}
 
       {:error, error_msg, new_state} ->
+        cancel_question_timeout(new_state)
         fail_task(new_state, error_msg)
         {:stop, :normal, new_state}
 
@@ -547,12 +575,56 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     end
   end
 
-  # Question requests — broadcast to LiveView for user interaction
-  defp handle_sdk_event(%{"type" => "question.asked"} = _event, state) do
-    # The full event (with properties containing id, sessionID, questions)
-    # is already broadcast via PubSub above. The LiveView will render the
-    # question UI. We return :question to the main handle_info.
-    {:question, state}
+  # Question requests with empty/missing questions — auto-reject immediately
+  defp handle_sdk_event(
+         %{"type" => "question.asked", "properties" => %{"questions" => []} = props},
+         state
+       ) do
+    auto_reject_empty_question(props["id"], state)
+  end
+
+  defp handle_sdk_event(
+         %{"type" => "question.asked", "properties" => %{"questions" => nil} = props},
+         state
+       ) do
+    auto_reject_empty_question(props["id"], state)
+  end
+
+  defp handle_sdk_event(
+         %{"type" => "question.asked", "properties" => props},
+         state
+       )
+       when not is_map_key(props, "questions") do
+    auto_reject_empty_question(props["id"], state)
+  end
+
+  # Question requests — persist to DB, set timeout, broadcast to LiveView
+  defp handle_sdk_event(%{"type" => "question.asked", "properties" => props} = _event, state) do
+    request_id = props["id"]
+
+    # Persist question to DB so it survives LiveView reconnections
+    question_data = %{
+      "request_id" => request_id,
+      "session_id" => props["sessionID"],
+      "questions" => props["questions"],
+      "asked_at" => DateTime.to_iso8601(DateTime.utc_now())
+    }
+
+    update_task_status(state, %{pending_question: question_data})
+
+    # Cancel any existing question timeout and schedule a new one
+    cancel_question_timeout(state)
+    timeout_ms = SessionsConfig.question_timeout_ms()
+    timeout_ref = Process.send_after(self(), :question_timeout, timeout_ms)
+
+    new_state = %{
+      state
+      | pending_question_request_id: request_id,
+        pending_question_data: question_data,
+        question_timeout_ref: timeout_ref
+    }
+
+    {:question, new_state}
   end
 
   # Text output from assistant — accumulate for DB caching, keyed by part ID
@@ -768,6 +840,56 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
       {:task_status_changed, task_id, status}
     )
   end
+
+  defp clear_pending_question(state) do
+    cancel_question_timeout(state)
+    update_task_status(state, %{pending_question: nil})
+
+    %{
+      state
+      | pending_question_request_id: nil,
+        pending_question_data: nil,
+        question_timeout_ref: nil
+    }
+  end
+
+  defp auto_reject_empty_question(request_id, state) do
+    if request_id do
+      Logger.info(
+        "TaskRunner: auto-rejecting empty question #{request_id} for task #{state.task_id}"
+      )
+
+      base_url = "http://localhost:#{state.container_port}"
+      state.opencode_client.reject_question(base_url, request_id, [])
+    end
+
+    {:continue, state}
+  end
+
+  # Mark the question as rejected in DB but keep the data so the UI
+  # can still display the card and let the user send an answer as a message
+  defp mark_question_rejected(state) do
+    cancel_question_timeout(state)
+
+    case state.pending_question_data do
+      %{} = pq ->
+        rejected_data = Map.put(pq, "rejected", true)
+        update_task_status(state, %{pending_question: rejected_data})
+
+      _ ->
+        :ok
+    end
+
+    %{
+      state
+      | pending_question_request_id: nil,
+        pending_question_data: nil,
+        question_timeout_ref: nil
+    }
+  end
+
+  defp cancel_question_timeout(%{question_timeout_ref: nil}), do: :ok
+  defp cancel_question_timeout(%{question_timeout_ref: ref}), do: Process.cancel_timer(ref)
 
   defp cancel_flush_timer(%{flush_ref: nil}), do: :ok
   defp cancel_flush_timer(%{flush_ref: ref}), do: Process.cancel_timer(ref)

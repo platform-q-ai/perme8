@@ -48,7 +48,8 @@ defmodule AgentsWeb.SessionsLive.Index do
      |> assign(:events, [])
      |> assign_session_state()
      |> assign(:form, to_form(%{"instruction" => ""}))
-     |> maybe_load_cached_output(current_task)}
+     |> maybe_load_cached_output(current_task)
+     |> maybe_load_pending_question(current_task)}
   end
 
   @impl true
@@ -115,7 +116,8 @@ defmodule AgentsWeb.SessionsLive.Index do
      |> assign(:events, [])
      |> assign_session_state()
      |> assign(:form, to_form(%{"instruction" => ""}))
-     |> maybe_load_cached_output(current_task)}
+     |> maybe_load_cached_output(current_task)
+     |> maybe_load_pending_question(current_task)}
   end
 
   @impl true
@@ -200,6 +202,30 @@ defmodule AgentsWeb.SessionsLive.Index do
       {nil, _} ->
         {:noreply, socket}
 
+      {%{rejected: true} = pending, %{id: task_id}} ->
+        # Question was already rejected — send answer as a follow-up message
+        answers = build_question_answers(pending)
+        message = format_question_answer_as_message(pending, answers)
+
+        socket =
+          case Sessions.send_message(task_id, message) do
+            :ok ->
+              assign(socket, :pending_question, nil)
+
+            {:error, :task_not_running} ->
+              # Session ended — put the answer in the input box so the user
+              # can resume the session with it
+              socket
+              |> assign(:pending_question, nil)
+              |> assign(:form, to_form(%{"instruction" => message}))
+              |> put_flash(
+                :info,
+                "Session ended. Your answer is in the input — submit to resume."
+              )
+          end
+
+        {:noreply, socket}
+
       {pending, %{id: task_id}} ->
         answers = build_question_answers(pending)
         Sessions.answer_question(task_id, pending.request_id, answers)
@@ -216,9 +242,15 @@ defmodule AgentsWeb.SessionsLive.Index do
       {nil, _} ->
         {:noreply, socket}
 
-      {pending, %{id: task_id}} ->
-        Sessions.reject_question(task_id, pending.request_id)
+      {%{rejected: true}, _} ->
+        # Already rejected — fully clear the card
         {:noreply, assign(socket, :pending_question, nil)}
+
+      {pending, %{id: task_id}} ->
+        # Reject via API so the agent unblocks, but keep the card
+        # visible so the user can still submit an answer as a message
+        Sessions.reject_question(task_id, pending.request_id)
+        {:noreply, assign(socket, :pending_question, %{pending | rejected: true})}
 
       _ ->
         {:noreply, socket}
@@ -240,7 +272,8 @@ defmodule AgentsWeb.SessionsLive.Index do
          |> assign(:current_task, task)
          |> assign(:events, [])
          |> assign_session_state()
-         |> maybe_load_cached_output(task)}
+         |> maybe_load_cached_output(task)
+         |> maybe_load_pending_question(task)}
 
       {:error, :not_found} ->
         {:noreply, put_flash(socket, :error, "Task not found")}
@@ -273,6 +306,18 @@ defmodule AgentsWeb.SessionsLive.Index do
       custom_trimmed = String.trim(custom)
       if custom_trimmed != "", do: selected ++ [custom_trimmed], else: selected
     end)
+  end
+
+  # Format the user's answer to a rejected question as a plain-text message
+  # that can be sent via send_message to continue the session.
+  defp format_question_answer_as_message(pending, answers) do
+    Enum.zip(pending.questions, answers)
+    |> Enum.map(fn {question, answer_list} ->
+      header = question["header"] || "Question"
+      selected = Enum.join(answer_list, ", ")
+      "Re: #{header} — #{selected}"
+    end)
+    |> Enum.join("\n")
   end
 
   defp run_or_resume_task(socket, instruction) do
@@ -556,13 +601,14 @@ defmodule AgentsWeb.SessionsLive.Index do
     handle_tool_event(socket, tool_id, tool_name, tool_status, detail)
   end
 
-  # Question from the AI assistant — show options to user
+  # Question from the AI assistant — show options to user.
+  # Ignore empty/malformed questions (auto-rejected by TaskRunner).
   defp process_event(
-         %{"type" => "question.asked", "properties" => properties},
+         %{"type" => "question.asked", "properties" => %{"questions" => questions} = properties},
          socket
-       ) do
+       )
+       when is_list(questions) and questions != [] do
     request_id = properties["id"]
-    questions = properties["questions"] || []
 
     # Initialize selected answers — one empty list per question
     initial_selections = Enum.map(questions, fn _q -> [] end)
@@ -572,7 +618,8 @@ defmodule AgentsWeb.SessionsLive.Index do
       session_id: properties["sessionID"],
       questions: questions,
       selected: initial_selections,
-      custom_text: Enum.map(questions, fn _q -> "" end)
+      custom_text: Enum.map(questions, fn _q -> "" end),
+      rejected: false
     }
 
     assign(socket, :pending_question, pending)
@@ -583,8 +630,13 @@ defmodule AgentsWeb.SessionsLive.Index do
     assign(socket, :pending_question, nil)
   end
 
+  # Question rejected — keep the card visible so the user can still
+  # submit an answer (which will be sent as a follow-up message)
   defp process_event(%{"type" => "question.rejected"}, socket) do
-    assign(socket, :pending_question, nil)
+    case socket.assigns.pending_question do
+      nil -> socket
+      pending -> assign(socket, :pending_question, %{pending | rejected: true})
+    end
   end
 
   defp process_event(_event, socket), do: socket
@@ -655,6 +707,84 @@ defmodule AgentsWeb.SessionsLive.Index do
   end
 
   defp maybe_load_cached_output(socket, _task), do: socket
+
+  # Restore pending question from DB on LiveView mount/reconnect.
+  # Primary path: read from the persisted pending_question column.
+  defp maybe_load_pending_question(socket, %{
+         pending_question: %{"request_id" => request_id, "questions" => questions} = pq
+       })
+       when is_binary(request_id) and is_list(questions) and questions != [] do
+    rejected = pq["rejected"] || false
+    restore_question_card(socket, questions, pq["session_id"], rejected)
+  end
+
+  # Fallback path: extract question data from cached output parts.
+  # Handles tasks created before the pending_question column existed,
+  # where the question data only lives in the tool output.
+  defp maybe_load_pending_question(socket, _task) do
+    case extract_question_from_output_parts(socket.assigns.output_parts) do
+      {:ok, questions} ->
+        restore_question_card(socket, questions, nil, true)
+
+      :none ->
+        socket
+    end
+  end
+
+  defp restore_question_card(socket, questions, session_id, rejected) do
+    initial_selections = Enum.map(questions, fn _q -> [] end)
+
+    pending = %{
+      request_id: nil,
+      session_id: session_id,
+      questions: questions,
+      selected: initial_selections,
+      custom_text: Enum.map(questions, fn _q -> "" end),
+      rejected: rejected
+    }
+
+    assign(socket, :pending_question, pending)
+  end
+
+  # Scan output parts for a question tool call and extract the questions
+  # from its input. The tool name is "mcp_question" or "questions".
+  defp extract_question_from_output_parts(parts) do
+    Enum.find_value(parts, :none, fn
+      {:tool, _id, name, _status, detail} when is_map(detail) ->
+        if question_tool?(name), do: extract_questions_from_detail(detail)
+
+      _ ->
+        nil
+    end)
+  end
+
+  defp extract_questions_from_detail(%{input: input}) when is_map(input) do
+    case input do
+      %{"questions" => questions} when is_list(questions) and questions != [] ->
+        {:ok, questions}
+
+      _ ->
+        nil
+    end
+  end
+
+  defp extract_questions_from_detail(%{input: input}) when is_binary(input) do
+    case Jason.decode(input) do
+      {:ok, %{"questions" => questions}} when is_list(questions) and questions != [] ->
+        {:ok, questions}
+
+      _ ->
+        nil
+    end
+  end
+
+  defp extract_questions_from_detail(_), do: nil
+
+  defp question_tool?(name) when is_binary(name) do
+    String.contains?(name, "question")
+  end
+
+  defp question_tool?(_), do: false
 
   # Try JSON decode first (structured output_parts from TaskRunner).
   # Fall back to plain text for legacy records.
@@ -1148,13 +1278,30 @@ defmodule AgentsWeb.SessionsLive.Index do
 
   # ---- Components ----
 
-  # Question card — renders the AI assistant's question with selectable options
+  # Question card — renders the AI assistant's question with selectable options.
+  # When rejected (dismissed/timed out), the card stays visible with muted styling.
+  # Submitting an answer to a rejected question sends it as a follow-up message.
   defp question_card(assigns) do
+    assigns = assign(assigns, :rejected, assigns.pending.rejected || false)
+
     ~H"""
-    <div class="mt-3 rounded-lg border-2 border-warning/40 bg-warning/5 p-4">
+    <div class={[
+      "mt-3 rounded-lg border-2 p-4",
+      if(@rejected, do: "border-base-300 bg-base-200/50", else: "border-warning/40 bg-warning/5")
+    ]}>
       <div class="flex items-center gap-2 mb-3">
-        <.icon name="hero-question-mark-circle" class="size-5 text-warning" />
-        <span class="font-semibold text-sm text-warning">Question from Assistant</span>
+        <.icon
+          name={if(@rejected, do: "hero-arrow-path", else: "hero-question-mark-circle")}
+          class={if(@rejected, do: "size-5 text-base-content/50", else: "size-5 text-warning")}
+        />
+        <span class={[
+          "font-semibold text-sm",
+          if(@rejected, do: "text-base-content/50", else: "text-warning")
+        ]}>
+          {if @rejected,
+            do: "Question dismissed — you can still respond",
+            else: "Question from Assistant"}
+        </span>
       </div>
 
       <form id="question-form" phx-change="update_question_form" phx-submit="submit_question_answer">
@@ -1207,14 +1354,15 @@ defmodule AgentsWeb.SessionsLive.Index do
             type="submit"
             class="btn btn-primary btn-sm"
           >
-            <.icon name="hero-check" class="size-4" /> Submit Answer
+            <.icon name="hero-check" class="size-4" />
+            {if @rejected, do: "Send as Message", else: "Submit Answer"}
           </button>
           <button
             type="button"
             phx-click="dismiss_question"
             class="btn btn-ghost btn-sm"
           >
-            Dismiss
+            {if @rejected, do: "Close", else: "Dismiss"}
           </button>
         </div>
       </form>

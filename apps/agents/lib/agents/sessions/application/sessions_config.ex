@@ -74,6 +74,17 @@ defmodule Agents.Sessions.Application.SessionsConfig do
     config()[:auth_refresh_interval_ms] || :timer.minutes(30)
   end
 
+  @doc """
+  Returns the timeout in milliseconds for pending questions.
+
+  If a question from the agent is not answered within this duration,
+  the TaskRunner will auto-reject it so the session doesn't block
+  indefinitely. Default: 5 minutes.
+  """
+  def question_timeout_ms do
+    config()[:question_timeout_ms] || :timer.minutes(5)
+  end
+
   @doc "Returns the PubSub server name for broadcasting task events."
   def pubsub do
     config()[:pubsub] || Perme8.Events.PubSub
