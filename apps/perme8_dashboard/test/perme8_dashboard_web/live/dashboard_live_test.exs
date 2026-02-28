@@ -90,11 +90,11 @@ defmodule Perme8DashboardWeb.Live.DashboardLiveTest do
       assert has_element?(view, "[data-feature-tree]")
     end
 
-    test "dark theme attributes present", %{conn: conn} do
+    test "theme attributes present", %{conn: conn} do
       {:ok, _view, html} = live(conn, "/")
 
-      assert html =~ ~s(data-theme="dark")
       assert html =~ "bg-base-100"
+      assert html =~ "prefers-color-scheme"
     end
   end
 
