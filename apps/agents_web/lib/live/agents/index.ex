@@ -1,11 +1,9 @@
-defmodule JargaWeb.AppLive.Agents.Index do
+defmodule AgentsWeb.AgentsLive.Index do
   @moduledoc """
   LiveView for managing user's personal agents (master agent list).
   """
 
-  use JargaWeb, :live_view
-
-  import JargaWeb.ChatLive.MessageHandlers
+  use AgentsWeb, :live_view
 
   alias Agents
 
@@ -17,7 +15,7 @@ defmodule JargaWeb.AppLive.Agents.Index do
   }
 
   alias Jarga.Workspaces
-  alias JargaWeb.Layouts
+  alias AgentsWeb.Layouts
 
   @impl true
   def mount(_params, _session, socket) do
@@ -76,7 +74,7 @@ defmodule JargaWeb.AppLive.Agents.Index do
             <:subtitle>Manage your personal agent library</:subtitle>
           </.header>
 
-          <.button variant="primary" navigate={~p"/app/agents/new"}>
+          <.button variant="primary" navigate={~p"/agents/new"}>
             <.icon name="hero-plus" class="size-4" /> New Agent
           </.button>
         </div>
@@ -92,7 +90,7 @@ defmodule JargaWeb.AppLive.Agents.Index do
                     Create your first agent to get started
                   </p>
                 </div>
-                <.link navigate={~p"/app/agents/new"} class="btn btn-primary">
+                <.link navigate={~p"/agents/new"} class="btn btn-primary">
                   Create Agent
                 </.link>
               </div>
@@ -116,7 +114,7 @@ defmodule JargaWeb.AppLive.Agents.Index do
                     <td class="text-sm text-right">
                       <div class="join">
                         <.link
-                          navigate={~p"/app/agents/#{agent.id}/edit"}
+                          navigate={~p"/agents/#{agent.id}/edit"}
                           class="btn btn-sm btn-ghost join-item"
                         >
                           <.icon name="hero-pencil" class="size-4" />
@@ -156,19 +154,13 @@ defmodule JargaWeb.AppLive.Agents.Index do
   @impl true
   def handle_info(%AgentRemovedFromWorkspace{}, socket), do: {:noreply, reload_agents(socket)}
 
-  # Chat panel streaming messages
-  handle_chat_messages()
+  # Catch-all for any other messages (e.g., PubSub events we don't handle)
+  @impl true
+  def handle_info(_msg, socket), do: {:noreply, socket}
 
   defp reload_agents(socket) do
     user = socket.assigns.current_scope.user
     agents = Agents.list_user_agents(user.id)
-
-    send_update(JargaWeb.ChatLive.Panel,
-      id: "global-chat-panel",
-      workspace_agents: agents,
-      from_pubsub: true
-    )
-
     assign(socket, :agents, agents)
   end
 end

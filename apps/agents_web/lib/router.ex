@@ -21,6 +21,14 @@ defmodule AgentsWeb.Router do
   scope "/", AgentsWeb do
     pipe_through([:browser, :require_authenticated_user])
 
+    live_session :agents,
+      on_mount: [{AgentsWeb.UserAuth, :require_authenticated}] do
+      live("/agents", AgentsLive.Index, :index)
+      live("/agents/new", AgentsLive.Form, :new)
+      live("/agents/:id/view", AgentsLive.Form, :view)
+      live("/agents/:id/edit", AgentsLive.Form, :edit)
+    end
+
     live_session :sessions,
       on_mount: [{AgentsWeb.UserAuth, :require_authenticated}] do
       live("/sessions", SessionsLive.Index, :index)

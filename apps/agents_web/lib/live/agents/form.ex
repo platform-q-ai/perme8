@@ -1,11 +1,9 @@
-defmodule JargaWeb.AppLive.Agents.Form do
+defmodule AgentsWeb.AgentsLive.Form do
   @moduledoc """
   LiveView for creating and editing user agents.
   """
 
-  use JargaWeb, :live_view
-
-  import JargaWeb.ChatLive.MessageHandlers
+  use AgentsWeb, :live_view
 
   alias Agents
 
@@ -17,7 +15,7 @@ defmodule JargaWeb.AppLive.Agents.Form do
   }
 
   alias Jarga.Workspaces
-  alias JargaWeb.Layouts
+  alias AgentsWeb.Layouts
 
   @impl true
   def mount(_params, _session, socket) do
@@ -109,7 +107,7 @@ defmodule JargaWeb.AppLive.Agents.Form do
         {:noreply,
          socket
          |> put_flash(:info, "Agent cloned successfully as '#{cloned_agent.name}'")
-         |> push_navigate(to: ~p"/app/agents/#{cloned_agent.id}/edit")}
+         |> push_navigate(to: ~p"/agents/#{cloned_agent.id}/edit")}
 
       {:error, :not_found} ->
         {:noreply, put_flash(socket, :error, "Agent not found")}
@@ -151,7 +149,7 @@ defmodule JargaWeb.AppLive.Agents.Form do
         {:noreply,
          socket
          |> put_flash(:info, "Agent created successfully")
-         |> push_navigate(to: ~p"/app/agents")}
+         |> push_navigate(to: ~p"/agents")}
 
       {:error, changeset} ->
         {:noreply, assign(socket, :form, to_form(changeset))}
@@ -170,7 +168,7 @@ defmodule JargaWeb.AppLive.Agents.Form do
         {:noreply,
          socket
          |> put_flash(:info, "Agent updated successfully")
-         |> push_navigate(to: ~p"/app/agents")}
+         |> push_navigate(to: ~p"/agents")}
 
       {:error, changeset} ->
         {:noreply, assign(socket, :form, to_form(changeset))}
@@ -326,7 +324,7 @@ defmodule JargaWeb.AppLive.Agents.Form do
   defp redirect_agent_not_found(socket) do
     socket
     |> put_flash(:error, "Agent not found")
-    |> push_navigate(to: ~p"/app/agents")
+    |> push_navigate(to: ~p"/agents")
   end
 
   defp setup_view_mode(socket, agent, user, return_to, workspace_slug) do
@@ -375,30 +373,30 @@ defmodule JargaWeb.AppLive.Agents.Form do
   end
 
   defp get_back_path("workspace", workspace_slug) when is_binary(workspace_slug) do
-    ~p"/app/workspaces/#{workspace_slug}"
+    jarga_url = Application.get_env(:agents_web, :jarga_web_url, "http://localhost:4000")
+    "#{jarga_url}/app/workspaces/#{workspace_slug}"
   end
 
-  defp get_back_path(_, _), do: ~p"/app/agents"
+  defp get_back_path(_, _), do: ~p"/agents"
 
   defp get_back_label("workspace"), do: "Back to Workspace"
   defp get_back_label(_), do: "Back to Agents"
 
   @impl true
-  def handle_info(%AgentUpdated{}, socket), do: {:noreply, reload_agents_for_chat_panel(socket)}
+  def handle_info(%AgentUpdated{}, socket), do: {:noreply, socket}
 
   @impl true
-  def handle_info(%AgentDeleted{}, socket), do: {:noreply, reload_agents_for_chat_panel(socket)}
+  def handle_info(%AgentDeleted{}, socket), do: {:noreply, socket}
 
   @impl true
-  def handle_info(%AgentAddedToWorkspace{}, socket),
-    do: {:noreply, reload_agents_for_chat_panel(socket)}
+  def handle_info(%AgentAddedToWorkspace{}, socket), do: {:noreply, socket}
 
   @impl true
-  def handle_info(%AgentRemovedFromWorkspace{}, socket),
-    do: {:noreply, reload_agents_for_chat_panel(socket)}
+  def handle_info(%AgentRemovedFromWorkspace{}, socket), do: {:noreply, socket}
 
-  # Chat panel streaming messages
-  handle_chat_messages()
+  # Catch-all for any other messages (e.g., PubSub events we don't handle)
+  @impl true
+  def handle_info(_msg, socket), do: {:noreply, socket}
 
   # Subscribe to workspace topic(s) for agent events (AgentUpdated, AgentDeleted, etc.)
   # Agent events are broadcast to workspace topics, not user topics.
@@ -413,18 +411,5 @@ defmodule JargaWeb.AppLive.Agents.Form do
       workspace ->
         Perme8.Events.subscribe("events:workspace:#{workspace.id}")
     end
-  end
-
-  defp reload_agents_for_chat_panel(socket) do
-    user = socket.assigns.current_scope.user
-    agents = Agents.list_user_agents(user.id)
-
-    send_update(JargaWeb.ChatLive.Panel,
-      id: "global-chat-panel",
-      workspace_agents: agents,
-      from_pubsub: true
-    )
-
-    socket
   end
 end
