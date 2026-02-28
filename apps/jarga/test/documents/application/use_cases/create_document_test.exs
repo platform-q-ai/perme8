@@ -1,6 +1,6 @@
 # credo:disable-for-this-file Jarga.Credo.Check.Architecture.NoDirectRepoInUseCases
 defmodule Jarga.Documents.UseCases.CreateDocumentTest do
-  use Jarga.DataCase, async: false
+  use Jarga.DataCase, async: true
 
   alias Jarga.Documents.Application.UseCases.CreateDocument
   alias Jarga.Documents.Domain.Events.DocumentCreated
@@ -11,6 +11,11 @@ defmodule Jarga.Documents.UseCases.CreateDocumentTest do
   import Jarga.AccountsFixtures
   import Jarga.WorkspacesFixtures
   import Jarga.ProjectsFixtures
+
+  setup do
+    TestEventBus.start_global()
+    :ok
+  end
 
   describe "execute/2 - successful document creation" do
     test "creates document when actor is workspace owner" do
@@ -216,8 +221,6 @@ defmodule Jarga.Documents.UseCases.CreateDocumentTest do
 
   describe "execute/2 - event emission" do
     test "emits DocumentCreated event via event_bus" do
-      ensure_test_event_bus_started()
-
       owner = user_fixture()
       workspace = workspace_fixture(owner)
       project = project_fixture(owner, workspace)
@@ -245,8 +248,6 @@ defmodule Jarga.Documents.UseCases.CreateDocumentTest do
     end
 
     test "emits DocumentCreated event with nil project_id when no project" do
-      ensure_test_event_bus_started()
-
       owner = user_fixture()
       workspace = workspace_fixture(owner)
 
@@ -267,8 +268,6 @@ defmodule Jarga.Documents.UseCases.CreateDocumentTest do
     end
 
     test "does not emit event when document creation fails" do
-      ensure_test_event_bus_started()
-
       owner = user_fixture()
       non_member = user_fixture()
       workspace = workspace_fixture(owner)
@@ -396,17 +395,6 @@ defmodule Jarga.Documents.UseCases.CreateDocumentTest do
         Repo.aggregate(DocumentSchema, :count)
 
       assert documents_after == documents_before + 1
-    end
-  end
-
-  defp ensure_test_event_bus_started do
-    case Process.whereis(TestEventBus) do
-      nil ->
-        {:ok, _pid} = TestEventBus.start_link([])
-        :ok
-
-      _pid ->
-        TestEventBus.reset()
     end
   end
 end

@@ -1,5 +1,5 @@
 defmodule Jarga.Projects.UseCases.CreateProjectTest do
-  use Jarga.DataCase, async: false
+  use Jarga.DataCase, async: true
 
   alias Jarga.Projects.Application.UseCases.CreateProject
   alias Jarga.Projects.Domain.Events.ProjectCreated
@@ -7,6 +7,11 @@ defmodule Jarga.Projects.UseCases.CreateProjectTest do
 
   import Jarga.AccountsFixtures
   import Jarga.WorkspacesFixtures
+
+  setup do
+    TestEventBus.start_global()
+    :ok
+  end
 
   describe "execute/2 - successful project creation" do
     test "creates project when actor is workspace owner" do
@@ -172,8 +177,6 @@ defmodule Jarga.Projects.UseCases.CreateProjectTest do
 
   describe "execute/2 - event emission" do
     test "emits ProjectCreated event via event_bus" do
-      ensure_test_event_bus_started()
-
       owner = user_fixture()
       workspace = workspace_fixture(owner)
 
@@ -200,8 +203,6 @@ defmodule Jarga.Projects.UseCases.CreateProjectTest do
     end
 
     test "does not emit event when project creation fails" do
-      ensure_test_event_bus_started()
-
       owner = user_fixture()
       workspace = workspace_fixture(owner)
 
@@ -215,17 +216,6 @@ defmodule Jarga.Projects.UseCases.CreateProjectTest do
 
       assert {:error, _changeset} = CreateProject.execute(params, opts)
       assert [] = TestEventBus.get_events()
-    end
-  end
-
-  defp ensure_test_event_bus_started do
-    case Process.whereis(TestEventBus) do
-      nil ->
-        {:ok, _pid} = TestEventBus.start_link([])
-        :ok
-
-      _pid ->
-        TestEventBus.reset()
     end
   end
 end

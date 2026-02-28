@@ -8,17 +8,15 @@ defmodule Identity.Application.UseCases.InviteMemberTest do
   import Identity.AccountsFixtures
   import Identity.WorkspacesFixtures
 
-  defp ensure_test_event_bus_started do
-    case TestEventBus.start_link([]) do
-      {:ok, pid} -> Process.unlink(pid)
-      {:error, {:already_started, _pid}} -> :ok
-    end
-  end
-
   defp invited_events_for(workspace_id) do
     Enum.filter(TestEventBus.get_events(), fn event ->
       match?(%MemberInvited{}, event) && event.workspace_id == workspace_id
     end)
+  end
+
+  setup do
+    TestEventBus.start_global()
+    :ok
   end
 
   describe "execute/2 - existing user" do
@@ -110,7 +108,6 @@ defmodule Identity.Application.UseCases.InviteMemberTest do
     end
 
     test "emits MemberInvited event via event_bus for existing users" do
-      ensure_test_event_bus_started()
       owner = user_fixture()
       workspace = workspace_fixture(owner)
       invitee = user_fixture()
@@ -176,7 +173,6 @@ defmodule Identity.Application.UseCases.InviteMemberTest do
     end
 
     test "does not emit MemberInvited event for non-existing users" do
-      ensure_test_event_bus_started()
       owner = user_fixture()
       workspace = workspace_fixture(owner)
 

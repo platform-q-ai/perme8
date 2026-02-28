@@ -1,5 +1,5 @@
 defmodule Agents.Application.UseCases.DeleteUserAgentTest do
-  use Agents.DataCase, async: false
+  use Agents.DataCase, async: true
 
   alias Agents.Application.UseCases.DeleteUserAgent
   alias Agents.Domain.Events.AgentDeleted
@@ -8,10 +8,13 @@ defmodule Agents.Application.UseCases.DeleteUserAgentTest do
   import Agents.Test.AccountsFixtures
   import Agents.AgentsFixtures
 
+  setup do
+    TestEventBus.start_global()
+    :ok
+  end
+
   describe "execute/3 - event emission" do
     test "emits AgentDeleted event via event_bus" do
-      ensure_test_event_bus_started()
-
       user = user_fixture()
       agent = agent_fixture(user)
 
@@ -28,25 +31,12 @@ defmodule Agents.Application.UseCases.DeleteUserAgentTest do
     end
 
     test "does not emit event when delete fails (not found)" do
-      ensure_test_event_bus_started()
-
       user = user_fixture()
 
       assert {:error, :not_found} =
                DeleteUserAgent.execute(Ecto.UUID.generate(), user.id, event_bus: TestEventBus)
 
       assert [] = TestEventBus.get_events()
-    end
-  end
-
-  defp ensure_test_event_bus_started do
-    case Process.whereis(TestEventBus) do
-      nil ->
-        {:ok, _pid} = TestEventBus.start_link([])
-        :ok
-
-      _pid ->
-        TestEventBus.reset()
     end
   end
 end

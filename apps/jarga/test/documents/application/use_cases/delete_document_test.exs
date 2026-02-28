@@ -1,6 +1,6 @@
 # credo:disable-for-this-file Jarga.Credo.Check.Architecture.NoDirectRepoInUseCases
 defmodule Jarga.Documents.Application.UseCases.DeleteDocumentTest do
-  use Jarga.DataCase, async: false
+  use Jarga.DataCase, async: true
 
   alias Jarga.Documents.Application.UseCases.DeleteDocument
   alias Jarga.Documents.Domain.Events.DocumentDeleted
@@ -10,6 +10,11 @@ defmodule Jarga.Documents.Application.UseCases.DeleteDocumentTest do
   import Jarga.AccountsFixtures
   import Jarga.WorkspacesFixtures
   import Jarga.DocumentsFixtures
+
+  setup do
+    TestEventBus.start_global()
+    :ok
+  end
 
   describe "execute/2 - successful document deletion" do
     test "owner can delete their own document" do
@@ -83,8 +88,6 @@ defmodule Jarga.Documents.Application.UseCases.DeleteDocumentTest do
 
   describe "execute/2 - event emission" do
     test "emits DocumentDeleted event via event_bus" do
-      ensure_test_event_bus_started()
-
       owner = user_fixture()
       workspace = workspace_fixture(owner)
       document = document_fixture(owner, workspace, nil, %{})
@@ -109,8 +112,6 @@ defmodule Jarga.Documents.Application.UseCases.DeleteDocumentTest do
     end
 
     test "does not emit event when deletion fails" do
-      ensure_test_event_bus_started()
-
       owner = user_fixture()
       _workspace = workspace_fixture(owner)
       fake_document_id = Ecto.UUID.generate()
@@ -225,17 +226,6 @@ defmodule Jarga.Documents.Application.UseCases.DeleteDocumentTest do
       }
 
       assert {:error, :forbidden} = DeleteDocument.execute(params)
-    end
-  end
-
-  defp ensure_test_event_bus_started do
-    case Process.whereis(TestEventBus) do
-      nil ->
-        {:ok, _pid} = TestEventBus.start_link([])
-        :ok
-
-      _pid ->
-        TestEventBus.reset()
     end
   end
 end

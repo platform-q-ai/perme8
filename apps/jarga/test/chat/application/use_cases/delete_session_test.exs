@@ -2,7 +2,7 @@ defmodule Jarga.Chat.Application.UseCases.DeleteSessionTest do
   @moduledoc """
   Tests for DeleteSession use case.
   """
-  use Jarga.DataCase, async: false
+  use Jarga.DataCase, async: true
 
   import Jarga.AccountsFixtures
   import Jarga.ChatFixtures
@@ -15,10 +15,13 @@ defmodule Jarga.Chat.Application.UseCases.DeleteSessionTest do
   alias Identity.Repo, as: Repo
   alias Perme8.Events.TestEventBus
 
+  setup do
+    TestEventBus.start_global()
+    :ok
+  end
+
   describe "execute/3 - event emission" do
     test "emits ChatSessionDeleted event via event_bus" do
-      ensure_test_event_bus_started()
-
       user = user_fixture()
       session = chat_session_fixture(user: user)
 
@@ -33,8 +36,6 @@ defmodule Jarga.Chat.Application.UseCases.DeleteSessionTest do
     end
 
     test "does not emit event when session not found" do
-      ensure_test_event_bus_started()
-
       user = user_fixture()
       fake_id = Ecto.UUID.generate()
 
@@ -104,17 +105,6 @@ defmodule Jarga.Chat.Application.UseCases.DeleteSessionTest do
       # Session2 and its message should still exist
       assert Repo.get(SessionSchema, session2.id) != nil
       assert Repo.get(MessageSchema, msg2.id) != nil
-    end
-  end
-
-  defp ensure_test_event_bus_started do
-    case Process.whereis(TestEventBus) do
-      nil ->
-        {:ok, _pid} = TestEventBus.start_link([])
-        :ok
-
-      _pid ->
-        TestEventBus.reset()
     end
   end
 end

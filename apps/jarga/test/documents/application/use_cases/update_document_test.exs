@@ -1,5 +1,5 @@
 defmodule Jarga.Documents.Application.UseCases.UpdateDocumentTest do
-  use Jarga.DataCase, async: false
+  use Jarga.DataCase, async: true
 
   alias Jarga.Documents.Application.UseCases.UpdateDocument
   alias Jarga.Documents.Domain.Events.DocumentPinnedChanged
@@ -10,6 +10,11 @@ defmodule Jarga.Documents.Application.UseCases.UpdateDocumentTest do
   import Jarga.AccountsFixtures
   import Jarga.WorkspacesFixtures
   import Jarga.DocumentsFixtures
+
+  setup do
+    TestEventBus.start_global()
+    :ok
+  end
 
   describe "execute/2 - successful document updates" do
     test "owner can update their own document" do
@@ -248,8 +253,6 @@ defmodule Jarga.Documents.Application.UseCases.UpdateDocumentTest do
 
   describe "execute/2 - event emission" do
     test "emits DocumentTitleChanged event when title changes" do
-      ensure_test_event_bus_started()
-
       owner = user_fixture()
       workspace = workspace_fixture(owner)
       document = document_fixture(owner, workspace, nil, %{})
@@ -273,8 +276,6 @@ defmodule Jarga.Documents.Application.UseCases.UpdateDocumentTest do
     end
 
     test "emits DocumentVisibilityChanged event when is_public changes" do
-      ensure_test_event_bus_started()
-
       owner = user_fixture()
       workspace = workspace_fixture(owner)
       document = document_fixture(owner, workspace, nil, %{is_public: false})
@@ -296,8 +297,6 @@ defmodule Jarga.Documents.Application.UseCases.UpdateDocumentTest do
     end
 
     test "emits DocumentPinnedChanged event when is_pinned changes" do
-      ensure_test_event_bus_started()
-
       owner = user_fixture()
       workspace = workspace_fixture(owner)
       document = document_fixture(owner, workspace, nil, %{is_pinned: false})
@@ -319,8 +318,6 @@ defmodule Jarga.Documents.Application.UseCases.UpdateDocumentTest do
     end
 
     test "does not emit events when no relevant fields change" do
-      ensure_test_event_bus_started()
-
       owner = user_fixture()
       workspace = workspace_fixture(owner)
       document = document_fixture(owner, workspace, nil, %{})
@@ -338,8 +335,6 @@ defmodule Jarga.Documents.Application.UseCases.UpdateDocumentTest do
     end
 
     test "emits multiple events when multiple fields change" do
-      ensure_test_event_bus_started()
-
       owner = user_fixture()
       workspace = workspace_fixture(owner)
       document = document_fixture(owner, workspace, nil, %{is_public: false, is_pinned: false})
@@ -376,17 +371,6 @@ defmodule Jarga.Documents.Application.UseCases.UpdateDocumentTest do
       }
 
       assert {:error, %Ecto.Changeset{}} = UpdateDocument.execute(params)
-    end
-  end
-
-  defp ensure_test_event_bus_started do
-    case Process.whereis(TestEventBus) do
-      nil ->
-        {:ok, _pid} = TestEventBus.start_link([])
-        :ok
-
-      _pid ->
-        TestEventBus.reset()
     end
   end
 end

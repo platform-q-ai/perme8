@@ -2,7 +2,7 @@ defmodule Jarga.Chat.Application.UseCases.CreateSessionTest do
   @moduledoc """
   Tests for CreateSession use case.
   """
-  use Jarga.DataCase, async: false
+  use Jarga.DataCase, async: true
 
   import Jarga.AccountsFixtures
   import Jarga.WorkspacesFixtures
@@ -16,10 +16,13 @@ defmodule Jarga.Chat.Application.UseCases.CreateSessionTest do
   alias Jarga.Chat.Domain.Events.ChatSessionStarted
   alias Perme8.Events.TestEventBus
 
+  setup do
+    TestEventBus.start_global()
+    :ok
+  end
+
   describe "execute/2 - event emission" do
     test "emits ChatSessionStarted event via event_bus" do
-      ensure_test_event_bus_started()
-
       user = user_fixture()
       workspace = workspace_fixture(user)
 
@@ -38,8 +41,6 @@ defmodule Jarga.Chat.Application.UseCases.CreateSessionTest do
     end
 
     test "does not emit event when session creation fails" do
-      ensure_test_event_bus_started()
-
       assert {:error, _changeset} =
                CreateSession.execute(%{}, event_bus: TestEventBus)
 
@@ -161,17 +162,6 @@ defmodule Jarga.Chat.Application.UseCases.CreateSessionTest do
         })
 
       assert session.title == "Custom Title"
-    end
-  end
-
-  defp ensure_test_event_bus_started do
-    case Process.whereis(TestEventBus) do
-      nil ->
-        {:ok, _pid} = TestEventBus.start_link([])
-        :ok
-
-      _pid ->
-        TestEventBus.reset()
     end
   end
 end

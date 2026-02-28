@@ -1,5 +1,5 @@
 defmodule Agents.Application.UseCases.SyncAgentWorkspacesTest do
-  use Agents.DataCase, async: false
+  use Agents.DataCase, async: true
 
   alias Agents.Application.UseCases.SyncAgentWorkspaces
   alias Agents.Domain.Events.AgentAddedToWorkspace
@@ -10,10 +10,13 @@ defmodule Agents.Application.UseCases.SyncAgentWorkspacesTest do
   import Agents.Test.WorkspacesFixtures
   import Agents.AgentsFixtures
 
+  setup do
+    TestEventBus.start_global()
+    :ok
+  end
+
   describe "execute/4 - event emission" do
     test "emits AgentAddedToWorkspace events for new workspaces" do
-      ensure_test_event_bus_started()
-
       user = user_fixture()
       workspace = workspace_fixture(user)
       agent = agent_fixture(user)
@@ -36,8 +39,6 @@ defmodule Agents.Application.UseCases.SyncAgentWorkspacesTest do
     end
 
     test "emits AgentRemovedFromWorkspace events when removing from workspaces" do
-      ensure_test_event_bus_started()
-
       user = user_fixture()
       workspace = workspace_fixture(user)
       agent = agent_fixture(user)
@@ -66,8 +67,6 @@ defmodule Agents.Application.UseCases.SyncAgentWorkspacesTest do
     end
 
     test "does not emit events when agent not found" do
-      ensure_test_event_bus_started()
-
       user = user_fixture()
 
       assert {:error, :not_found} =
@@ -76,17 +75,6 @@ defmodule Agents.Application.UseCases.SyncAgentWorkspacesTest do
                )
 
       assert [] = TestEventBus.get_events()
-    end
-  end
-
-  defp ensure_test_event_bus_started do
-    case Process.whereis(TestEventBus) do
-      nil ->
-        {:ok, _pid} = TestEventBus.start_link([])
-        :ok
-
-      _pid ->
-        TestEventBus.reset()
     end
   end
 end

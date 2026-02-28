@@ -1,5 +1,5 @@
 defmodule Agents.Application.UseCases.UpdateUserAgentTest do
-  use Agents.DataCase, async: false
+  use Agents.DataCase, async: true
 
   alias Agents.Application.UseCases.UpdateUserAgent
   alias Agents.Domain.Events.AgentUpdated
@@ -8,10 +8,13 @@ defmodule Agents.Application.UseCases.UpdateUserAgentTest do
   import Agents.Test.AccountsFixtures
   import Agents.AgentsFixtures
 
+  setup do
+    TestEventBus.start_global()
+    :ok
+  end
+
   describe "execute/4 - event emission" do
     test "emits AgentUpdated event via event_bus" do
-      ensure_test_event_bus_started()
-
       user = user_fixture()
       agent = agent_fixture(user)
 
@@ -30,8 +33,6 @@ defmodule Agents.Application.UseCases.UpdateUserAgentTest do
     end
 
     test "does not emit event when update fails (not found)" do
-      ensure_test_event_bus_started()
-
       user = user_fixture()
 
       assert {:error, :not_found} =
@@ -40,17 +41,6 @@ defmodule Agents.Application.UseCases.UpdateUserAgentTest do
                )
 
       assert [] = TestEventBus.get_events()
-    end
-  end
-
-  defp ensure_test_event_bus_started do
-    case Process.whereis(TestEventBus) do
-      nil ->
-        {:ok, _pid} = TestEventBus.start_link([])
-        :ok
-
-      _pid ->
-        TestEventBus.reset()
     end
   end
 end
