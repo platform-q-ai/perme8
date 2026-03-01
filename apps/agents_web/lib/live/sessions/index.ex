@@ -245,14 +245,39 @@ defmodule AgentsWeb.SessionsLive.Index do
                 :info,
                 "Session ended. Your answer is in the input — submit to resume."
               )
+
+            {:error, _reason} ->
+              socket
+              |> assign(:pending_question, nil)
+              |> put_flash(:error, "Failed to send message — please try again")
           end
 
         {:noreply, socket}
 
       {pending, %{id: task_id}} ->
         answers = build_question_answers(pending)
-        Sessions.answer_question(task_id, pending.request_id, answers)
-        {:noreply, assign(socket, :pending_question, nil)}
+
+        socket =
+          case Sessions.answer_question(task_id, pending.request_id, answers) do
+            :ok ->
+              assign(socket, :pending_question, nil)
+
+            {:error, :task_not_running} ->
+              message = format_question_answer_as_message(pending, answers)
+
+              socket
+              |> assign(:pending_question, nil)
+              |> assign(:form, to_form(%{"instruction" => message}))
+              |> put_flash(
+                :info,
+                "Session ended. Your answer is in the input — submit to resume."
+              )
+
+            {:error, _reason} ->
+              put_flash(socket, :error, "Failed to submit answer — please try again")
+          end
+
+        {:noreply, socket}
 
       _ ->
         {:noreply, socket}
@@ -775,7 +800,7 @@ defmodule AgentsWeb.SessionsLive.Index do
        })
        when is_binary(request_id) and is_list(questions) and questions != [] do
     rejected = pq["rejected"] || false
-    restore_question_card(socket, questions, pq["session_id"], rejected)
+    restore_question_card(socket, questions, pq["session_id"], request_id, rejected)
   end
 
   # Fallback path: extract question data from cached output parts.
@@ -784,18 +809,18 @@ defmodule AgentsWeb.SessionsLive.Index do
   defp maybe_load_pending_question(socket, _task) do
     case extract_question_from_output_parts(socket.assigns.output_parts) do
       {:ok, questions} ->
-        restore_question_card(socket, questions, nil, true)
+        restore_question_card(socket, questions, nil, nil, true)
 
       :none ->
         socket
     end
   end
 
-  defp restore_question_card(socket, questions, session_id, rejected) do
+  defp restore_question_card(socket, questions, session_id, request_id, rejected) do
     initial_selections = Enum.map(questions, fn _q -> [] end)
 
     pending = %{
-      request_id: nil,
+      request_id: request_id,
       session_id: session_id,
       questions: questions,
       selected: initial_selections,
@@ -841,7 +866,7 @@ defmodule AgentsWeb.SessionsLive.Index do
   defp extract_questions_from_detail(_), do: nil
 
   defp question_tool?(name) when is_binary(name) do
-    String.contains?(name, "question")
+    name in ["mcp_question", "questions"]
   end
 
   defp question_tool?(_), do: false
@@ -952,11 +977,13 @@ defmodule AgentsWeb.SessionsLive.Index do
 
   defp render_markdown(text), do: text
 
+  # Match known auth failure patterns from opencode containers.
+  # The primary error string is "Token refresh failed: 400" from the
+  # opencode OAuth refresh flow.
   defp auth_error?(error) when is_binary(error) do
     error =~ "Token refresh failed" or
-      (error =~ "token" and error =~ "expired") or
-      error =~ "401" or
-      error =~ "authentication" or
+      error =~ "token expired" or
+      error =~ "authentication failed" or
       error =~ "unauthorized"
   end
 
