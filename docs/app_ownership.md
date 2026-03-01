@@ -104,7 +104,7 @@ Domain events follow a simple rule: **events live in the emitting app**.
 | **jarga** (documents) | `DocumentCreated`, `DocumentDeleted`, `DocumentPinnedChanged`, `DocumentTitleChanged`, `DocumentVisibilityChanged` |
 | **jarga** (chat) | `ChatMessageSent`, `ChatSessionStarted`, `ChatSessionDeleted` |
 | **notifications** | `NotificationCreated`, `NotificationRead` |
-| **agents** | `AgentCreated`, `AgentUpdated`, `AgentDeleted`, `AgentAddedToWorkspace`, `AgentRemovedFromWorkspace` |
+| **agents** | `AgentCreated`, `AgentUpdated`, `AgentDeleted`, `AgentAddedToWorkspace`, `AgentRemovedFromWorkspace`, `TaskCreated`, `TaskCompleted`, `TaskFailed`, `TaskCancelled` |
 | **entity_relationship_manager** | `SchemaCreated`, `SchemaUpdated`, `EntityCreated`, `EntityUpdated`, `EntityDeleted`, `EdgeCreated`, `EdgeDeleted` |
 | **webhooks** | _(none yet)_ |
 
