@@ -65,16 +65,6 @@ defmodule Agents.Sessions.Application.SessionsConfig do
   end
 
   @doc """
-  Returns the interval in milliseconds between auth refresh cycles.
-
-  The auth refresher periodically pushes fresh credentials from the
-  host's auth.json to running opencode containers. Default: 30 minutes.
-  """
-  def auth_refresh_interval_ms do
-    config()[:auth_refresh_interval_ms] || :timer.minutes(30)
-  end
-
-  @doc """
   Returns the timeout in milliseconds for pending questions.
 
   If a question from the agent is not answered within this duration,
