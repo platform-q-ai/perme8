@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -eo pipefail
 
 BRANCH="${REPO_BRANCH:-main}"
 PEM_PATH="$HOME/.config/perme8/private-key.pem"
