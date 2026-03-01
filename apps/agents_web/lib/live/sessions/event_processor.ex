@@ -3,11 +3,14 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
   Processes task events and manages output state for the Sessions LiveView.
 
   Handles the event stream from running tasks (text output, tool calls,
-  reasoning, questions) and transforms socket assigns accordingly.
-  Also provides cached output decoding and streaming state management.
+  reasoning, questions, todo progress) and transforms socket assigns
+  accordingly. Also provides cached output decoding, streaming state
+  management, and todo restoration on reconnect.
   """
 
   import Phoenix.Component, only: [assign: 3]
+
+  alias Agents.Sessions.Domain.Entities.{TodoItem, TodoList}
 
   # ---- Public API ----
 
@@ -16,7 +19,7 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
 
   Handles all event types: session.updated, message.updated,
   message.part.updated (text/reasoning/tool variants), question.asked,
-  question.replied, question.rejected.
+  question.replied, question.rejected, todo.updated.
   """
   def process_event(%{"type" => "session.updated", "properties" => %{"info" => info}}, socket) do
     socket
@@ -173,12 +176,11 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
     end
   end
 
-  def process_event(%{"type" => "todo.updated", "properties" => properties}, socket) do
-    case parse_todo_items(properties) do
-      {:ok, todo_items} -> assign(socket, :todo_items, todo_items)
-      {:error, _reason} -> socket
-    end
-  end
+  # The "todo.updated" event is handled via the dedicated {:todo_updated, ...}
+  # PubSub message from TaskRunner, which carries pre-parsed items. Skipping
+  # here avoids double processing since the generic {:task_event, ...} broadcast
+  # also delivers this event.
+  def process_event(%{"type" => "todo.updated"}, socket), do: socket
 
   def process_event(_event, socket), do: socket
 
@@ -225,10 +227,8 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
   Restores todo items from persisted task state on LiveView mount/reconnect.
   """
   def maybe_load_todos(socket, %{todo_items: %{"items" => items}}) when is_list(items) do
-    case parse_todo_items(%{"todos" => items}) do
-      {:ok, todo_items} -> assign(socket, :todo_items, todo_items)
-      {:error, _reason} -> socket
-    end
+    todo_list = TodoList.from_maps(items)
+    assign(socket, :todo_items, todo_items_for_assigns(todo_list))
   end
 
   def maybe_load_todos(socket, _task), do: socket
@@ -365,50 +365,15 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
 
   defp question_tool?(_), do: false
 
-  defp parse_todo_items(%{"todos" => todos}) when is_list(todos) do
-    todo_items =
-      todos
-      |> Enum.with_index()
-      |> Enum.map(fn {todo, index} -> normalize_todo_item(todo, index) end)
+  @doc """
+  Converts a TodoList aggregate into the plain-map format used by LiveView assigns.
 
-    if Enum.all?(todo_items, &match?({:ok, _}, &1)) do
-      {:ok, Enum.map(todo_items, fn {:ok, item} -> item end)}
-    else
-      {:error, :invalid_payload}
-    end
-  end
-
-  defp parse_todo_items(_), do: {:error, :invalid_payload}
-
-  defp normalize_todo_item(todo, fallback_position) when is_map(todo) do
-    {:ok,
-     %{
-       id: map_value(todo, "id", :id, ""),
-       title: map_value(todo, "title", :title, map_value(todo, "content", :content, "")),
-       status: map_value(todo, "status", :status, "pending"),
-       position:
-         normalize_position(
-           map_value(todo, "position", :position, fallback_position),
-           fallback_position
-         )
-     }}
-  end
-
-  defp normalize_todo_item(_todo, _fallback_position), do: {:error, :invalid_todo_item}
-
-  defp normalize_position(position, _fallback) when is_integer(position), do: position
-
-  defp normalize_position(position, fallback) when is_binary(position) do
-    case Integer.parse(position) do
-      {value, ""} -> value
-      _ -> fallback
-    end
-  end
-
-  defp normalize_position(_position, fallback), do: fallback
-
-  defp map_value(map, string_key, atom_key, default) do
-    Map.get(map, string_key, Map.get(map, atom_key, default))
+  Each item becomes a map with atom keys suitable for template rendering.
+  """
+  def todo_items_for_assigns(%TodoList{items: items}) do
+    Enum.map(items, fn %TodoItem{} = item ->
+      %{id: item.id, title: item.title, status: item.status, position: item.position}
+    end)
   end
 
   defp decode_output_part(%{"type" => "text", "id" => id, "text" => text}) do

@@ -14,7 +14,9 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   Events from the opencode SDK SSE stream follow these types:
   - `"session.status"` - status changes (running → idle = completed)
   - `"message.part.updated"` - text/tool output streaming
+  - `"todo.updated"` - todo/step progress updates
   - `"permission.asked"` - tool permission requests (auto-approved)
+  - `"question.asked"` - questions requiring user input
   - `"session.error"` - session-level errors
   - `"server.connected"` - initial connection
   """
@@ -51,7 +53,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     # Track last flushed version to avoid redundant DB writes
     last_flushed_count: 0,
     todo_items: [],
-    last_flushed_todo_count: 0,
+    todo_version: 0,
+    last_flushed_todo_version: 0,
     # User message IDs — skip their parts from output cache (shown separately in UI)
     user_message_ids: MapSet.new(),
     # Dependency injection
@@ -361,17 +364,16 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   @impl true
   def handle_info(:flush_output, state) do
     current_count = length(state.output_parts)
-    current_todo_count = length(state.todo_items)
 
     state =
       if current_count > state.last_flushed_count or
-           current_todo_count > state.last_flushed_todo_count do
+           state.todo_version > state.last_flushed_todo_version do
         flush_output_to_db(state)
 
         %{
           state
           | last_flushed_count: current_count,
-            last_flushed_todo_count: current_todo_count
+            last_flushed_todo_version: state.todo_version
         }
       else
         state
@@ -637,7 +639,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     {:question, new_state}
   end
 
-  # Text output from assistant — accumulate for DB caching, keyed by part ID
+  # Step progress events — parse and broadcast to LiveView, cache in state
   defp handle_sdk_event(
          %{"type" => "todo.updated", "properties" => props},
          state
@@ -646,7 +648,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     case parse_todo_event(props) do
       {:ok, todo_items} ->
         broadcast_todo_update(state.task_id, todo_items, state.pubsub)
-        {:continue, %{state | todo_items: todo_items}}
+        {:continue, %{state | todo_items: todo_items, todo_version: state.todo_version + 1}}
 
       {:error, _reason} ->
         Logger.warning("TaskRunner: malformed todo.updated event for task #{state.task_id}")

@@ -27,8 +27,11 @@ defmodule AgentsWeb.SessionsLive.EventProcessorTodoTest do
   end
 
   describe "process_event/2 with todo.updated" do
-    test "updates :todo_items with normalized maps" do
-      socket = build_socket()
+    test "returns socket unchanged — todo.updated is handled via dedicated PubSub path" do
+      socket =
+        build_socket(%{
+          todo_items: [%{id: "existing", title: "Keep me", status: "completed", position: 0}]
+        })
 
       event = %{
         "type" => "todo.updated",
@@ -42,49 +45,17 @@ defmodule AgentsWeb.SessionsLive.EventProcessorTodoTest do
 
       result = EventProcessor.process_event(event, socket)
 
-      assert result.assigns.todo_items == [
-               %{id: "todo-1", title: "Plan implementation", status: "completed", position: 0},
-               %{id: "todo-2", title: "Wire LiveView", status: "in_progress", position: 1}
-             ]
+      # Should be unchanged — todo.updated is a no-op in process_event
+      assert result.assigns.todo_items == socket.assigns.todo_items
     end
 
-    test "replaces existing :todo_items on subsequent todo.updated events" do
-      socket =
-        build_socket(%{
-          todo_items: [
-            %{id: "old", title: "Old", status: "pending", position: 0}
-          ]
-        })
-
-      event = %{
-        "type" => "todo.updated",
-        "properties" => %{
-          "todos" => [
-            %{"id" => "new-1", "content" => "New todo", "status" => "pending"}
-          ]
-        }
-      }
-
-      result = EventProcessor.process_event(event, socket)
-
-      assert result.assigns.todo_items == [
-               %{id: "new-1", title: "New todo", status: "pending", position: 0}
-             ]
-    end
-
-    test "returns socket unchanged for malformed todo.updated payloads" do
-      socket =
-        build_socket(%{
-          todo_items: [
-            %{id: "existing", title: "Keep me", status: "completed", position: 0}
-          ]
-        })
+    test "does not crash on malformed todo.updated payloads" do
+      socket = build_socket()
 
       malformed = %{"type" => "todo.updated", "properties" => %{"todos" => "not-a-list"}}
 
       result = EventProcessor.process_event(malformed, socket)
-
-      assert result.assigns.todo_items == socket.assigns.todo_items
+      assert result.assigns.todo_items == []
     end
   end
 
@@ -116,7 +87,7 @@ defmodule AgentsWeb.SessionsLive.EventProcessorTodoTest do
             %{"id" => "todo-1", "title" => "Read file", "status" => "completed", "position" => 0},
             %{
               "id" => "todo-2",
-              "content" => "Write tests",
+              "title" => "Write tests",
               "status" => "in_progress",
               "position" => 1
             }
@@ -150,6 +121,26 @@ defmodule AgentsWeb.SessionsLive.EventProcessorTodoTest do
       assert item.status == "pending"
       assert item.id == "todo-1"
       assert item.title == "First"
+    end
+  end
+
+  describe "todo_items_for_assigns/1" do
+    test "converts TodoList to plain-map format" do
+      alias Agents.Sessions.Domain.Entities.{TodoItem, TodoList}
+
+      todo_list = %TodoList{
+        items: [
+          %TodoItem{id: "todo-1", title: "Plan", status: "completed", position: 0},
+          %TodoItem{id: "todo-2", title: "Build", status: "pending", position: 1}
+        ]
+      }
+
+      result = EventProcessor.todo_items_for_assigns(todo_list)
+
+      assert result == [
+               %{id: "todo-1", title: "Plan", status: "completed", position: 0},
+               %{id: "todo-2", title: "Build", status: "pending", position: 1}
+             ]
     end
   end
 end

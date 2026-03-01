@@ -52,10 +52,18 @@ defmodule AgentsWeb.SessionsLive.Components.ProgressBarTest do
           ]
         )
 
-      assert html =~ "is-pending"
-      assert html =~ "is-in-progress"
-      assert html =~ "is-completed"
-      assert html =~ "is-failed"
+      # Parse HTML and verify each step has the correct status class
+      {:ok, doc} = Floki.parse_document(html)
+
+      step_1 = Floki.find(doc, ~s([data-testid="todo-step-1"]))
+      step_2 = Floki.find(doc, ~s([data-testid="todo-step-2"]))
+      step_3 = Floki.find(doc, ~s([data-testid="todo-step-3"]))
+      step_4 = Floki.find(doc, ~s([data-testid="todo-step-4"]))
+
+      assert step_class(step_1) =~ "is-pending"
+      assert step_class(step_2) =~ "is-in-progress"
+      assert step_class(step_3) =~ "is-completed"
+      assert step_class(step_4) =~ "is-failed"
     end
 
     test "summary uses completed/total format" do
@@ -69,5 +77,9 @@ defmodule AgentsWeb.SessionsLive.Components.ProgressBarTest do
 
       assert html =~ "3/7 steps complete"
     end
+  end
+
+  defp step_class([{_tag, attrs, _children}]) do
+    attrs |> Enum.find(fn {k, _} -> k == "class" end) |> elem(1)
   end
 end
