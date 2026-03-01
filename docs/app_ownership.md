@@ -11,12 +11,12 @@ Each app has a single owner and a clear set of responsibilities. No two apps own
 | App | Type | Owns | Repo | Depends On |
 |-----|------|------|------|------------|
 | **identity** | Domain context | Users, auth, sessions, workspaces, memberships, roles, API keys | `Identity.Repo` | `perme8_events` |
-| **jarga** | Domain context | Projects, documents, notes, collaboration (Yjs), slugs, chat | `Jarga.Repo` | `identity`, `notifications`, `perme8_events` |
+| **jarga** | Domain context | Projects, documents, notes, collaboration (Yjs), slugs | `Jarga.Repo` | `identity`, `notifications`, `perme8_events` |
 | **agents** | Domain context | Agent definitions, LLM orchestration, perme8-mcp server, ToolProvider infrastructure, Sessions | `Agents.Repo` | `identity`, `perme8_events` |
 | **webhooks** | Domain context | Outbound/inbound webhooks, HMAC signing, audit logging | `Webhooks.Repo` | `identity`, `perme8_events` |
 | **entity_relationship_manager** | Domain context + API | Schema definitions, entities, edges, graph traversal | Needs own Repo (currently borrows `Jarga.Repo`) | `identity`, `perme8_events` |
 | **perme8_events** | Shared infrastructure | Eventbus facade (`Perme8.Events`), EventBus dispatcher, EventHandler behaviour, DomainEvent macro, PubSub server | None | Nothing (foundational) |
-| **jarga_web** | Interface (LiveView) | UI shell, mounts companion `_web` apps | None | `jarga`, `agents`, `identity`, `notifications`, `perme8_events` |
+| **jarga_web** | Interface (LiveView) | UI shell, mounts companion `_web` apps | None | `jarga`, `agents`, `chat`, `chat_web`, `identity`, `notifications`, `perme8_events` |
 | **jarga_api** | Interface (REST) | JSON API for workspaces, projects, documents | None | `jarga`, `identity` |
 | **agents_web** | Interface (LiveView) | Sessions UI, agent management UI | None | `agents`, `identity` |
 | **agents_api** | Interface (REST) | JSON API for agents | None | `agents`, `identity` |
@@ -24,7 +24,8 @@ Each app has a single owner and a clear set of responsibilities. No two apps own
 | **exo_dashboard** | Dev tool | BDD feature dashboard | None | Nothing |
 | **perme8_dashboard** | Dev tool | Unified dev-tool hub | None | `exo_dashboard`, `agents_web` |
 | **alkali** | Standalone | Static site generator | None | Nothing |
-| **chat** | Domain context | Chat sessions, messages, real-time messaging -- **planned, currently in `jarga`** | Needs own Repo | `identity`, `agents`, `perme8_events` |
+| **chat** | Domain context | Chat sessions, messages, real-time messaging | `Chat.Repo` | `identity`, `agents`, `perme8_events` |
+| **chat_web** | Interface (LiveView) | Chat panel UI, message components | None | `chat`, `identity`, `agents` |
 | **notifications** | Domain context | Notification creation, delivery, preferences, subscriptions | `Notifications.Repo` | `identity`, `perme8_events` |
 | **perme8_tools** | Dev tool | Mix tasks, linters | None | Nothing |
 
@@ -51,20 +52,18 @@ Most apps use `apps/<app>/lib/<app>/` as their root namespace (e.g., `apps/agent
 
 - `apps/jarga/lib/projects/` -- Projects context
 - `apps/jarga/lib/documents/` -- Documents context
-- `apps/jarga/lib/chat/` -- Chat context
-
 Each context has its own `domain/`, `application/`, and `infrastructure/` layers.
 
 ### Pending Changes
 
 - **perme8-mcp** -- The MCP server in `agents` is being renamed from `knowledge-mcp` to `perme8-mcp` with a `ToolProvider` abstraction in [#181](https://github.com/platform-q-ai/perme8/issues/181). The `agents` ownership description above reflects the target state.
-- **chat** -- Planned extraction from `jarga` (see [service evolution plan](docs/architecture/service_evolution_plan.md)). Currently lives in `apps/jarga/lib/chat/`. Until extracted, all chat code belongs in `jarga`.
 - **entity_relationship_manager** -- Currently borrows `Jarga.Repo`. Needs its own Repo as part of the Standalone App Principle enforcement.
 
 ### Completed Migrations
 
 - **perme8_events** -- Extracted in [#200](https://github.com/platform-q-ai/perme8/issues/200). EventBus, EventHandler, DomainEvent macro, and PubSub server now live in `apps/perme8_events/`.
 - **notifications** -- Extracted from `jarga` in [#38](https://github.com/platform-q-ai/perme8/issues/38). Now lives in `apps/notifications/` with its own `Notifications.Repo`.
+- **chat** -- Extracted from `jarga` in [#60](https://github.com/platform-q-ai/perme8/issues/60). Now lives in `apps/chat/` with its own `Chat.Repo`. Web layer in `apps/chat_web/`.
 
 ---
 
@@ -73,10 +72,10 @@ Each context has its own `domain/`, `application/`, and `infrastructure/` layers
 | Artifact | Location | Example |
 |----------|----------|---------|
 | Migrations | `apps/<owning_app>/priv/repo/migrations/` | `apps/agents/priv/repo/migrations/` |
-| Domain events | `apps/<owning_app>/lib/<app>/domain/events/` or `apps/<owning_app>/lib/<context>/domain/events/` | `apps/agents/lib/agents/domain/events/agent_created.ex`, `apps/jarga/lib/chat/domain/events/chat_message_sent.ex` |
+| Domain events | `apps/<owning_app>/lib/<app>/domain/events/` or `apps/<owning_app>/lib/<context>/domain/events/` | `apps/agents/lib/agents/domain/events/agent_created.ex`, `apps/chat/lib/chat/domain/events/chat_message_sent.ex` |
 | Entities | `apps/<owning_app>/lib/<context>/domain/entities/` | `apps/jarga/lib/documents/domain/entities/document.ex` |
 | Policies | `apps/<owning_app>/lib/<context>/domain/policies/` | `apps/jarga/lib/documents/domain/policies/document_access_policy.ex` |
-| Use cases | `apps/<owning_app>/lib/<app>/application/use_cases/` or `apps/<owning_app>/lib/<context>/application/use_cases/` | `apps/identity/lib/identity/application/use_cases/register_user.ex`, `apps/jarga/lib/chat/application/use_cases/create_session.ex` |
+| Use cases | `apps/<owning_app>/lib/<app>/application/use_cases/` or `apps/<owning_app>/lib/<context>/application/use_cases/` | `apps/identity/lib/identity/application/use_cases/register_user.ex`, `apps/chat/lib/chat/application/use_cases/create_session.ex` |
 | Behaviours (ports) | `apps/<owning_app>/lib/<app>/application/` or `apps/<owning_app>/lib/<context>/application/behaviours/` | `apps/agents/lib/agents/application/agent_repository.ex` |
 | Schemas | `apps/<owning_app>/lib/<app>/<context>/infrastructure/schemas/` or `apps/<owning_app>/lib/<context>/infrastructure/schemas/` | `apps/webhooks/lib/webhooks/infrastructure/schemas/webhook_schema.ex` |
 | Repositories | `apps/<owning_app>/lib/<context>/infrastructure/repositories/` | `apps/jarga/lib/documents/infrastructure/repositories/document_repository.ex` |
@@ -102,7 +101,7 @@ Domain events follow a simple rule: **events live in the emitting app**.
 | **identity** | `MemberInvited`, `MemberJoined`, `MemberRemoved`, `WorkspaceInvitationNotified`, `WorkspaceUpdated` |
 | **jarga** (projects) | `ProjectCreated`, `ProjectUpdated`, `ProjectArchived`, `ProjectDeleted` |
 | **jarga** (documents) | `DocumentCreated`, `DocumentDeleted`, `DocumentPinnedChanged`, `DocumentTitleChanged`, `DocumentVisibilityChanged` |
-| **jarga** (chat) | `ChatMessageSent`, `ChatSessionStarted`, `ChatSessionDeleted` |
+| **chat** | `ChatMessageSent`, `ChatSessionStarted`, `ChatSessionDeleted` |
 | **notifications** | `NotificationCreated`, `NotificationRead` |
 | **agents** | `AgentCreated`, `AgentUpdated`, `AgentDeleted`, `AgentAddedToWorkspace`, `AgentRemovedFromWorkspace`, `TaskCreated`, `TaskCompleted`, `TaskFailed`, `TaskCancelled` |
 | **entity_relationship_manager** | `SchemaCreated`, `SchemaUpdated`, `EntityCreated`, `EntityUpdated`, `EntityDeleted`, `EdgeCreated`, `EdgeDeleted` |
