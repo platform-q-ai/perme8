@@ -45,6 +45,7 @@ defmodule AgentsWeb.SessionsLive.Index do
      |> assign(:current_task, current_task)
      |> assign(:composing_new, false)
      |> assign(:container_stats, %{})
+     |> assign(:auth_refreshing, false)
      |> assign(:events, [])
      |> assign_session_state()
      |> assign(:form, to_form(%{"instruction" => ""}))
@@ -88,24 +89,19 @@ defmodule AgentsWeb.SessionsLive.Index do
   @impl true
   def handle_event("refresh_auth_and_resume", _params, socket) do
     case socket.assigns.current_task do
-      %{id: task_id} = _task when not is_nil(task_id) ->
+      %{id: task_id} when is_binary(task_id) ->
         user = socket.assigns.current_scope.user
 
-        case Sessions.refresh_auth_and_resume(task_id, user.id) do
-          {:ok, new_task} ->
-            Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "task:#{new_task.id}")
+        # Spawn async — refresh_auth_and_resume does blocking I/O
+        # (container restart + health polling) that can take up to 30s
+        Task.async(fn ->
+          Sessions.refresh_auth_and_resume(task_id, user.id)
+        end)
 
-            {:noreply,
-             socket
-             |> assign(:current_task, new_task)
-             |> assign(:events, [])
-             |> assign_session_state()
-             |> assign(:form, to_form(%{"instruction" => ""}))
-             |> reload_all(user.id)}
-
-          {:error, reason} ->
-            {:noreply, put_flash(socket, :error, task_error_message(reason))}
-        end
+        {:noreply,
+         socket
+         |> assign(:auth_refreshing, true)
+         |> put_flash(:info, "Refreshing auth and restarting container...")}
 
       _ ->
         {:noreply, socket}
@@ -462,6 +458,42 @@ defmodule AgentsWeb.SessionsLive.Index do
     stats = poll_running_session_stats(socket.assigns.sessions)
     schedule_stats_poll()
     {:noreply, assign(socket, :container_stats, stats)}
+  end
+
+  # Async refresh_auth_and_resume result
+  @impl true
+  def handle_info({ref, {:ok, new_task}}, socket) when is_reference(ref) do
+    Process.demonitor(ref, [:flush])
+
+    Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "task:#{new_task.id}")
+    user = socket.assigns.current_scope.user
+
+    {:noreply,
+     socket
+     |> assign(:current_task, new_task)
+     |> assign(:auth_refreshing, false)
+     |> assign(:events, [])
+     |> assign_session_state()
+     |> assign(:form, to_form(%{"instruction" => ""}))
+     |> clear_flash()
+     |> reload_all(user.id)}
+  end
+
+  @impl true
+  def handle_info({ref, {:error, reason}}, socket) when is_reference(ref) do
+    Process.demonitor(ref, [:flush])
+
+    {:noreply,
+     socket
+     |> assign(:auth_refreshing, false)
+     |> clear_flash()
+     |> put_flash(:error, task_error_message(reason))}
+  end
+
+  # Ignore DOWN messages from completed async tasks
+  @impl true
+  def handle_info({:DOWN, _ref, :process, _pid, :normal}, socket) do
+    {:noreply, socket}
   end
 
   @impl true
@@ -1158,9 +1190,14 @@ defmodule AgentsWeb.SessionsLive.Index do
               :if={auth_error?(@current_task.error) && resumable_task?(@current_task)}
               type="button"
               phx-click="refresh_auth_and_resume"
+              disabled={@auth_refreshing}
               class="btn btn-sm btn-warning"
             >
-              <.icon name="hero-arrow-path" class="size-4" /> Refresh Auth & Resume
+              <.icon
+                name={if(@auth_refreshing, do: "hero-arrow-path", else: "hero-arrow-path")}
+                class={["size-4", @auth_refreshing && "animate-spin"]}
+              />
+              {if @auth_refreshing, do: "Refreshing...", else: "Refresh Auth & Resume"}
             </button>
           </div>
 

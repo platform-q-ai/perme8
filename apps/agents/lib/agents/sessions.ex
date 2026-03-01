@@ -25,6 +25,7 @@ defmodule Agents.Sessions do
     CancelTask,
     DeleteTask,
     DeleteSession,
+    RefreshAuthAndResume,
     ResumeTask,
     GetTask,
     ListTasks
@@ -193,73 +194,17 @@ defmodule Agents.Sessions do
   Used when a task fails with a token expiry error — restarts the
   container, pushes fresh auth from the host's auth.json, then creates
   a new resume task.
+
+  **Warning:** This performs blocking I/O (container restart + health polling).
+  Call from an async context (e.g., spawned Task), not directly from a
+  LiveView handler.
   """
   @spec refresh_auth_and_resume(String.t(), String.t(), keyword()) ::
           {:ok, struct()} | {:error, term()}
   def refresh_auth_and_resume(task_id, user_id, opts \\ []) do
-    task_repo =
-      Keyword.get(
-        opts,
-        :task_repo,
-        Agents.Sessions.Infrastructure.Repositories.TaskRepository
-      )
-
-    container_provider =
-      Keyword.get(
-        opts,
-        :container_provider,
-        Agents.Sessions.Infrastructure.Adapters.DockerAdapter
-      )
-
-    opencode_client =
-      Keyword.get(
-        opts,
-        :opencode_client,
-        Agents.Sessions.Infrastructure.Clients.OpencodeClient
-      )
-
-    auth_refresher =
-      Keyword.get(
-        opts,
-        :auth_refresher,
-        Agents.Sessions.Application.Services.AuthRefresher
-      )
-
-    with {:ok, task} <- find_failed_task(task_id, user_id, task_repo),
-         {:ok, %{port: port}} <- container_provider.restart(task.container_id),
-         :ok <- wait_for_health(port, opencode_client),
-         {:ok, _providers} <-
-           auth_refresher.refresh_auth("http://localhost:#{port}", opencode_client) do
-      resume_task(task_id, %{instruction: task.instruction, user_id: user_id}, opts)
-    end
-  end
-
-  defp find_failed_task(task_id, user_id, task_repo) do
-    case task_repo.get_task_for_user(task_id, user_id) do
-      nil ->
-        {:error, :not_found}
-
-      %{status: "failed"} = task ->
-        {:ok, task}
-
-      _ ->
-        {:error, :not_resumable}
-    end
-  end
-
-  defp wait_for_health(port, opencode_client, retries \\ 30) do
-    if retries <= 0 do
-      {:error, :health_timeout}
-    else
-      case opencode_client.health("http://localhost:#{port}") do
-        :ok ->
-          :ok
-
-        {:error, _} ->
-          Process.sleep(1000)
-          wait_for_health(port, opencode_client, retries - 1)
-      end
-    end
+    opts = inject_task_runner_starter(opts)
+    opts = Keyword.put_new(opts, :resume_fn, &resume_task/3)
+    RefreshAuthAndResume.execute(task_id, user_id, opts)
   end
 
   # Wire the real TaskRunnerSupervisor starter

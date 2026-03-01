@@ -17,6 +17,7 @@ defmodule Agents.Sessions.Application do
       UseCases.CancelTask,
       UseCases.DeleteSession,
       UseCases.DeleteTask,
+      UseCases.RefreshAuthAndResume,
       UseCases.ResumeTask,
       UseCases.GetTask,
       UseCases.ListTasks,
