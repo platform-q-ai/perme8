@@ -6,6 +6,7 @@ defmodule JargaWeb.ChatLive.PanelTest do
   import Jarga.WorkspacesFixtures
   import Jarga.ProjectsFixtures
   import Jarga.DocumentsFixtures
+  import Jarga.Test.StepHelpers
 
   alias Agents
   alias Jarga.Chat
@@ -138,7 +139,7 @@ defmodule JargaWeb.ChatLive.PanelTest do
 
       # Wait for LLM response using polling instead of fixed sleep
       {found, html} =
-        Jarga.Test.StepHelpers.wait_for_text_in_view(view, "chat chat-start",
+        wait_for_text_in_view(view, "chat chat-start",
           timeout: 5_000,
           interval: 200
         )
@@ -195,7 +196,7 @@ defmodule JargaWeb.ChatLive.PanelTest do
 
       # Wait for the stream to start using polling instead of fixed sleep
       found =
-        Jarga.Test.StepHelpers.wait_until(
+        wait_until(
           fn ->
             html = Phoenix.LiveViewTest.render(view)
             html =~ "Thinking..." or html =~ "▊"
@@ -485,7 +486,7 @@ defmodule JargaWeb.ChatLive.PanelTest do
 
       # Wait for LLM response using polling instead of fixed sleep
       {found, html} =
-        Jarga.Test.StepHelpers.wait_for_text_in_view(view, "chat chat-start",
+        wait_for_text_in_view(view, "chat chat-start",
           timeout: 5_000,
           interval: 200
         )
@@ -514,7 +515,7 @@ defmodule JargaWeb.ChatLive.PanelTest do
 
       # Wait for loading indicator using polling instead of fixed sleep
       found =
-        Jarga.Test.StepHelpers.wait_until(
+        wait_until(
           fn ->
             html = Phoenix.LiveViewTest.render(view)
             html =~ ~r/(Thinking...|loading loading-dots)/
@@ -539,7 +540,7 @@ defmodule JargaWeb.ChatLive.PanelTest do
       |> render_submit(%{message: "Hello"})
 
       # Wait for first chunk to arrive using polling helper
-      Jarga.Test.StepHelpers.wait_until(
+      wait_until(
         fn ->
           html = render(view)
           html =~ "chat chat-start"
@@ -1289,7 +1290,7 @@ defmodule JargaWeb.ChatLive.PanelTest do
 
       # Wait for response using polling instead of fixed sleep
       {found, html} =
-        Jarga.Test.StepHelpers.wait_for_text_in_view(view, "Source:",
+        wait_for_text_in_view(view, "Source:",
           timeout: 5_000,
           interval: 200
         )
