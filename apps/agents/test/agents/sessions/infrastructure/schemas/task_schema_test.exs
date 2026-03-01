@@ -106,17 +106,17 @@ defmodule Agents.Sessions.Infrastructure.Schemas.TaskSchemaTest do
       refute changeset.valid?
     end
 
-    test "does not allow updating instruction", %{valid_attrs: attrs} do
+    test "allows updating instruction (for session resume)", %{valid_attrs: attrs} do
       {:ok, task} = %TaskSchema{} |> TaskSchema.changeset(attrs) |> Repo.insert()
 
       changeset =
         TaskSchema.status_changeset(task, %{
-          status: "running",
-          instruction: "Hacked instruction"
+          status: "pending",
+          instruction: "Follow-up instruction"
         })
 
-      # instruction should not be in the changes
-      refute Map.has_key?(changeset.changes, :instruction)
+      assert changeset.valid?
+      assert changeset.changes[:instruction] == "Follow-up instruction"
     end
   end
 end

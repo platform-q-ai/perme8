@@ -84,13 +84,14 @@ defmodule Agents.Sessions do
   @doc """
   Resumes a session with a follow-up instruction.
 
-  Creates a new task linked to the parent, reuses the same container
-  and opencode session.
+  Reuses the existing task record — updates its instruction and resets
+  status to "pending". The container and opencode session are restarted.
+  Todos and output history are preserved across the session lifetime.
   """
   @spec resume_task(String.t(), map(), keyword()) :: {:ok, struct()} | {:error, term()}
-  def resume_task(parent_task_id, attrs, opts \\ []) do
+  def resume_task(task_id, attrs, opts \\ []) do
     opts = inject_task_runner_starter(opts)
-    ResumeTask.execute(parent_task_id, attrs, opts)
+    ResumeTask.execute(task_id, attrs, opts)
   end
 
   @doc """

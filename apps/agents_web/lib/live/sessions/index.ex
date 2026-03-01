@@ -39,7 +39,6 @@ defmodule AgentsWeb.SessionsLive.Index do
      |> assign(:page_title, "Sessions")
      |> assign(:full_width, true)
      |> assign(:sessions, sessions)
-     |> assign(:tasks, tasks)
      |> assign(:active_container_id, active_container_id)
      |> assign(:current_task, current_task)
      |> assign(:composing_new, false)
@@ -131,7 +130,6 @@ defmodule AgentsWeb.SessionsLive.Index do
 
     {:noreply,
      socket
-     |> assign(:tasks, tasks)
      |> assign(:active_container_id, container_id)
      |> assign(:current_task, current_task)
      |> assign(:composing_new, false)
@@ -243,30 +241,6 @@ defmodule AgentsWeb.SessionsLive.Index do
   end
 
   @impl true
-  def handle_event("view_task", %{"task-id" => task_id}, socket) do
-    user = socket.assigns.current_scope.user
-
-    case Sessions.get_task(task_id, user.id) do
-      {:ok, task} ->
-        if active_task?(task) do
-          Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "task:#{task.id}")
-        end
-
-        {:noreply,
-         socket
-         |> assign(:current_task, task)
-         |> assign(:events, [])
-         |> assign_session_state()
-         |> EventProcessor.maybe_load_cached_output(task)
-         |> EventProcessor.maybe_load_pending_question(task)
-         |> EventProcessor.maybe_load_todos(task)}
-
-      {:error, :not_found} ->
-        {:noreply, put_flash(socket, :error, "Task not found")}
-    end
-  end
-
-  @impl true
   def handle_info({:task_event, task_id, event}, socket) do
     case socket.assigns.current_task do
       %{id: ^task_id} -> {:noreply, EventProcessor.process_event(event, socket)}
@@ -313,7 +287,6 @@ defmodule AgentsWeb.SessionsLive.Index do
       socket
       |> assign(:current_task, updated_task)
       |> assign(:active_container_id, cid)
-      |> do_update_task_in_list(task_id, status)
       |> reload_all(user.id)
 
     socket =
@@ -518,15 +491,9 @@ defmodule AgentsWeb.SessionsLive.Index do
     end
   end
 
-  defp do_update_task_in_list(socket, task_id, status) do
-    tasks = update_task_in_list(socket.assigns.tasks, task_id, status)
-    assign(socket, :tasks, tasks)
-  end
-
   defp reload_all(socket, user_id) do
     sessions = Sessions.list_sessions(user_id)
-    tasks = Sessions.list_tasks(user_id)
-    socket |> assign(:sessions, sessions) |> assign(:tasks, tasks)
+    assign(socket, :sessions, sessions)
   end
 
   defp subscribe_to_active_tasks(tasks) do

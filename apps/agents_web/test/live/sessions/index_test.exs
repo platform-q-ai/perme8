@@ -505,24 +505,5 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       assert html =~ "bg-success"
       assert html =~ "bg-error"
     end
-
-    test "shows task count per session", %{conn: conn, user: user} do
-      task_fixture(%{
-        user_id: user.id,
-        instruction: "First",
-        container_id: "c1",
-        status: "completed"
-      })
-
-      task_fixture(%{
-        user_id: user.id,
-        instruction: "Second",
-        container_id: "c1",
-        status: "completed"
-      })
-
-      {:ok, _lv, html} = live(conn, ~p"/sessions")
-      assert html =~ "2 tasks"
-    end
   end
 end

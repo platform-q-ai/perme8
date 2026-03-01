@@ -8,14 +8,14 @@ defmodule Agents.Sessions.Application.UseCases.ResumeTaskTest do
 
   setup :verify_on_exit!
 
-  @parent_task struct(TaskSchema, %{
-                 id: "parent-1",
-                 user_id: "user-1",
-                 status: "completed",
-                 container_id: "container-abc",
-                 session_id: "session-xyz",
-                 instruction: "original instruction"
-               })
+  @existing_task struct(TaskSchema, %{
+                   id: "task-1",
+                   user_id: "user-1",
+                   status: "completed",
+                   container_id: "container-abc",
+                   session_id: "session-xyz",
+                   instruction: "original instruction"
+                 })
 
   @default_opts [
     task_repo: Agents.Mocks.TaskRepositoryMock,
@@ -23,36 +23,31 @@ defmodule Agents.Sessions.Application.UseCases.ResumeTaskTest do
   ]
 
   describe "execute/3" do
-    test "creates a follow-up task linked to the parent" do
+    test "updates the existing task with new instruction and resets status" do
       Agents.Mocks.TaskRepositoryMock
-      |> expect(:get_task_for_user, fn "parent-1", "user-1" -> @parent_task end)
-      |> expect(:create_task, fn attrs ->
-        assert attrs.parent_task_id == "parent-1"
-        assert attrs.container_id == "container-abc"
-        assert attrs.session_id == "session-xyz"
+      |> expect(:get_task_for_user, fn "task-1", "user-1" -> @existing_task end)
+      |> expect(:update_task_status, fn task, attrs ->
+        assert task.id == "task-1"
         assert attrs.instruction == "Fix the tests"
-        assert attrs.user_id == "user-1"
+        assert attrs.status == "pending"
+        assert attrs.error == nil
+        assert attrs.pending_question == nil
+        assert attrs.started_at == nil
+        assert attrs.completed_at == nil
 
-        {:ok,
-         struct(TaskSchema, %{
-           id: "new-task-1",
-           instruction: attrs.instruction,
-           user_id: attrs.user_id,
-           parent_task_id: attrs.parent_task_id,
-           container_id: attrs.container_id,
-           session_id: attrs.session_id,
-           status: "pending"
-         })}
+        {:ok, struct(task, attrs)}
       end)
 
       assert {:ok, task} =
                ResumeTask.execute(
-                 "parent-1",
+                 "task-1",
                  %{instruction: "Fix the tests", user_id: "user-1"},
                  @default_opts
                )
 
-      assert task.parent_task_id == "parent-1"
+      assert task.id == "task-1"
+      assert task.instruction == "Fix the tests"
+      assert task.status == "pending"
       assert task.container_id == "container-abc"
       assert task.session_id == "session-xyz"
     end
@@ -61,9 +56,9 @@ defmodule Agents.Sessions.Application.UseCases.ResumeTaskTest do
       test_pid = self()
 
       Agents.Mocks.TaskRepositoryMock
-      |> expect(:get_task_for_user, fn "parent-1", "user-1" -> @parent_task end)
-      |> expect(:create_task, fn attrs ->
-        {:ok, struct(TaskSchema, Map.merge(%{id: "new-task-2", status: "pending"}, attrs))}
+      |> expect(:get_task_for_user, fn "task-1", "user-1" -> @existing_task end)
+      |> expect(:update_task_status, fn task, attrs ->
+        {:ok, struct(task, attrs)}
       end)
 
       starter = fn task_id, opts ->
@@ -75,12 +70,12 @@ defmodule Agents.Sessions.Application.UseCases.ResumeTaskTest do
 
       assert {:ok, _task} =
                ResumeTask.execute(
-                 "parent-1",
+                 "task-1",
                  %{instruction: "Follow up", user_id: "user-1"},
                  opts
                )
 
-      assert_receive {:runner_started, "new-task-2", runner_opts}
+      assert_receive {:runner_started, "task-1", runner_opts}
       assert runner_opts[:resume] == true
       assert runner_opts[:container_id] == "container-abc"
       assert runner_opts[:session_id] == "session-xyz"
@@ -89,61 +84,61 @@ defmodule Agents.Sessions.Application.UseCases.ResumeTaskTest do
     test "returns error when instruction is blank" do
       assert {:error, :instruction_required} =
                ResumeTask.execute(
-                 "parent-1",
+                 "task-1",
                  %{instruction: "", user_id: "user-1"},
                  @default_opts
                )
     end
 
-    test "returns error when parent task not found" do
+    test "returns error when task not found" do
       Agents.Mocks.TaskRepositoryMock
-      |> expect(:get_task_for_user, fn "parent-1", "user-1" -> nil end)
+      |> expect(:get_task_for_user, fn "task-1", "user-1" -> nil end)
 
       assert {:error, :not_found} =
                ResumeTask.execute(
-                 "parent-1",
+                 "task-1",
                  %{instruction: "Follow up", user_id: "user-1"},
                  @default_opts
                )
     end
 
-    test "returns error when parent task is still running" do
-      running_parent = struct(@parent_task, status: "running")
+    test "returns error when task is still running" do
+      running_task = struct(@existing_task, status: "running")
 
       Agents.Mocks.TaskRepositoryMock
-      |> expect(:get_task_for_user, fn "parent-1", "user-1" -> running_parent end)
+      |> expect(:get_task_for_user, fn "task-1", "user-1" -> running_task end)
 
       assert {:error, :not_resumable} =
                ResumeTask.execute(
-                 "parent-1",
+                 "task-1",
                  %{instruction: "Follow up", user_id: "user-1"},
                  @default_opts
                )
     end
 
-    test "returns error when parent has no container" do
-      no_container = struct(@parent_task, container_id: nil)
+    test "returns error when task has no container" do
+      no_container = struct(@existing_task, container_id: nil)
 
       Agents.Mocks.TaskRepositoryMock
-      |> expect(:get_task_for_user, fn "parent-1", "user-1" -> no_container end)
+      |> expect(:get_task_for_user, fn "task-1", "user-1" -> no_container end)
 
       assert {:error, :no_container} =
                ResumeTask.execute(
-                 "parent-1",
+                 "task-1",
                  %{instruction: "Follow up", user_id: "user-1"},
                  @default_opts
                )
     end
 
-    test "returns error when parent has no session" do
-      no_session = struct(@parent_task, session_id: nil)
+    test "returns error when task has no session" do
+      no_session = struct(@existing_task, session_id: nil)
 
       Agents.Mocks.TaskRepositoryMock
-      |> expect(:get_task_for_user, fn "parent-1", "user-1" -> no_session end)
+      |> expect(:get_task_for_user, fn "task-1", "user-1" -> no_session end)
 
       assert {:error, :no_session} =
                ResumeTask.execute(
-                 "parent-1",
+                 "task-1",
                  %{instruction: "Follow up", user_id: "user-1"},
                  @default_opts
                )

@@ -288,12 +288,12 @@ defmodule Agents.SessionsTest do
   end
 
   describe "resume_task/3" do
-    test "creates a new task linked to parent" do
+    test "updates the existing task with new instruction and resets status" do
       user = user_fixture()
       container_id = "container-resume"
       session_id = "session-resume"
 
-      parent =
+      task =
         task_fixture(%{
           user_id: user.id,
           instruction: "Original task",
@@ -304,19 +304,21 @@ defmodule Agents.SessionsTest do
 
       assert {:ok, %Task{} = resumed} =
                Sessions.resume_task(
-                 parent.id,
+                 task.id,
                  %{instruction: "Follow-up task", user_id: user.id},
                  task_runner_starter: fn _id, _opts -> {:ok, self()} end
                )
 
+      # Same task record, updated in place
+      assert resumed.id == task.id
       assert resumed.instruction == "Follow-up task"
-      assert resumed.parent_task_id == parent.id
+      assert resumed.status == "pending"
       assert resumed.container_id == container_id
       assert resumed.session_id == session_id
       assert resumed.user_id == user.id
     end
 
-    test "returns error for non-existent parent" do
+    test "returns error for non-existent task" do
       user = user_fixture()
 
       assert {:error, :not_found} =
@@ -327,10 +329,10 @@ defmodule Agents.SessionsTest do
                )
     end
 
-    test "returns error for active parent task" do
+    test "returns error for active task" do
       user = user_fixture()
 
-      parent =
+      task =
         task_fixture(%{
           user_id: user.id,
           instruction: "Still running",
@@ -341,16 +343,16 @@ defmodule Agents.SessionsTest do
 
       assert {:error, :not_resumable} =
                Sessions.resume_task(
-                 parent.id,
+                 task.id,
                  %{instruction: "Follow-up", user_id: user.id},
                  task_runner_starter: fn _id, _opts -> {:ok, self()} end
                )
     end
 
-    test "returns error for parent without container" do
+    test "returns error for task without container" do
       user = user_fixture()
 
-      parent =
+      task =
         task_fixture(%{
           user_id: user.id,
           instruction: "No container task",
@@ -359,7 +361,7 @@ defmodule Agents.SessionsTest do
 
       assert {:error, :no_container} =
                Sessions.resume_task(
-                 parent.id,
+                 task.id,
                  %{instruction: "Follow-up", user_id: user.id},
                  task_runner_starter: fn _id, _opts -> {:ok, self()} end
                )

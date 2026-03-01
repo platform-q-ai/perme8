@@ -74,12 +74,6 @@ defmodule AgentsWeb.SessionsLive.Helpers do
 
   def resumable_task?(_), do: false
 
-  @doc "Filters tasks belonging to a specific container."
-  def session_tasks(tasks, container_id) do
-    tasks
-    |> Enum.filter(&(&1.container_id == container_id))
-  end
-
   @doc "Finds the current task for a container (prefers running tasks)."
   def find_current_task(tasks, nil), do: Enum.find(tasks, &active_task?/1)
 
@@ -139,14 +133,6 @@ defmodule AgentsWeb.SessionsLive.Helpers do
       {:error, _} ->
         :error
     end
-  end
-
-  @doc "Updates a single task's status in the task list."
-  def update_task_in_list(tasks, task_id, status) do
-    Enum.map(tasks, fn
-      %{id: ^task_id} = task -> Map.put(task, :status, status)
-      task -> task
-    end)
   end
 
   @doc "Converts a title string to a lowercase hyphenated slug for data-testid values."
