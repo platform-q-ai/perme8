@@ -86,6 +86,33 @@ defmodule AgentsWeb.SessionsLive.Index do
   end
 
   @impl true
+  def handle_event("refresh_auth_and_resume", _params, socket) do
+    case socket.assigns.current_task do
+      %{id: task_id} = _task when not is_nil(task_id) ->
+        user = socket.assigns.current_scope.user
+
+        case Sessions.refresh_auth_and_resume(task_id, user.id) do
+          {:ok, new_task} ->
+            Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "task:#{new_task.id}")
+
+            {:noreply,
+             socket
+             |> assign(:current_task, new_task)
+             |> assign(:events, [])
+             |> assign_session_state()
+             |> assign(:form, to_form(%{"instruction" => ""}))
+             |> reload_all(user.id)}
+
+          {:error, reason} ->
+            {:noreply, put_flash(socket, :error, task_error_message(reason))}
+        end
+
+      _ ->
+        {:noreply, socket}
+    end
+  end
+
+  @impl true
   def handle_event("new_session", _params, socket) do
     {:noreply,
      socket
@@ -358,6 +385,7 @@ defmodule AgentsWeb.SessionsLive.Index do
   defp task_error_message(:not_resumable), do: "This session cannot be resumed"
   defp task_error_message(:no_container), do: "No container available for resume"
   defp task_error_message(:no_session), do: "No session available for resume"
+  defp task_error_message(:health_timeout), do: "Container failed to become healthy after restart"
   defp task_error_message(_), do: "Failed to create task"
 
   defp do_cancel_task(task, socket) do
@@ -892,6 +920,16 @@ defmodule AgentsWeb.SessionsLive.Index do
 
   defp render_markdown(text), do: text
 
+  defp auth_error?(error) when is_binary(error) do
+    error =~ "Token refresh failed" or
+      (error =~ "token" and error =~ "expired") or
+      error =~ "401" or
+      error =~ "authentication" or
+      error =~ "unauthorized"
+  end
+
+  defp auth_error?(_), do: false
+
   defp format_error(error) when is_binary(error), do: error
   defp format_error(%{"message" => msg}), do: msg
   defp format_error(%{"data" => %{"message" => msg}}), do: msg
@@ -1112,10 +1150,18 @@ defmodule AgentsWeb.SessionsLive.Index do
             class="mx-4 mt-3 alert alert-error"
           >
             <.icon name="hero-exclamation-triangle" class="size-5 shrink-0" />
-            <div>
+            <div class="flex-1">
               <h3 class="font-semibold">Task failed</h3>
               <p class="text-sm">{format_error(@current_task.error)}</p>
             </div>
+            <button
+              :if={auth_error?(@current_task.error) && resumable_task?(@current_task)}
+              type="button"
+              phx-click="refresh_auth_and_resume"
+              class="btn btn-sm btn-warning"
+            >
+              <.icon name="hero-arrow-path" class="size-4" /> Refresh Auth & Resume
+            </button>
           </div>
 
           <%!-- Output log --%>
