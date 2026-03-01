@@ -143,6 +143,9 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
               output_parts: existing_parts,
               last_flushed_count: length(existing_parts),
               todo_items: existing_todos,
+              # Start both versions at 1 if we restored todos, so the periodic
+              # flush sees them as "already flushed" and won't redundantly write
+              # the same data back. Version 0 means "nothing to flush yet".
               todo_version: if(existing_todos == [], do: 0, else: 1),
               last_flushed_todo_version: if(existing_todos == [], do: 0, else: 1)
           }
