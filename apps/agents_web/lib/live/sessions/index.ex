@@ -277,10 +277,20 @@ defmodule AgentsWeb.SessionsLive.Index do
   @impl true
   def handle_info({:todo_updated, task_id, todo_items}, socket) do
     case socket.assigns.current_task do
-      %{id: ^task_id} when is_list(todo_items) ->
+      %{id: ^task_id, container_id: container_id} when is_list(todo_items) ->
         todo_list = TodoList.from_maps(todo_items)
 
-        {:noreply, assign(socket, :todo_items, EventProcessor.todo_items_for_assigns(todo_list))}
+        sessions =
+          update_session_todo_items(
+            socket.assigns.sessions,
+            container_id,
+            TodoList.to_maps(todo_list)
+          )
+
+        {:noreply,
+         socket
+         |> assign(:todo_items, EventProcessor.todo_items_for_assigns(todo_list))
+         |> assign(:sessions, sessions)}
 
       _ ->
         {:noreply, socket}
@@ -527,5 +537,15 @@ defmodule AgentsWeb.SessionsLive.Index do
 
   defp schedule_stats_poll do
     Process.send_after(self(), :poll_container_stats, @stats_interval_ms)
+  end
+
+  defp update_session_todo_items(sessions, container_id, todo_maps) do
+    Enum.map(sessions, fn
+      %{container_id: ^container_id} = session ->
+        Map.put(session, :todo_items, %{"items" => todo_maps})
+
+      session ->
+        session
+    end)
   end
 end

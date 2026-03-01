@@ -26,7 +26,7 @@ defmodule AgentsWeb.SessionsLive.Components.ProgressBarTest do
       assert html =~ "1/2 steps complete"
     end
 
-    test "renders numbered step entries with required test ids and text" do
+    test "renders numbered step entries with required test ids and tooltip text" do
       html =
         render_component(&SessionComponents.progress_bar/1,
           todo_items: [
@@ -37,8 +37,17 @@ defmodule AgentsWeb.SessionsLive.Components.ProgressBarTest do
 
       assert html =~ ~s(data-testid="todo-step-1")
       assert html =~ ~s(data-testid="todo-step-2")
-      assert html =~ "1. First step"
-      assert html =~ "2. Second step"
+
+      # Step text is inside tooltip children; extract text content via Floki
+      {:ok, doc} = Floki.parse_document(html)
+
+      step_1_text = doc |> Floki.find(~s([data-testid="todo-step-1"])) |> Floki.text()
+      step_2_text = doc |> Floki.find(~s([data-testid="todo-step-2"])) |> Floki.text()
+
+      assert step_1_text =~ "1."
+      assert step_1_text =~ "First step"
+      assert step_2_text =~ "2."
+      assert step_2_text =~ "Second step"
     end
 
     test "applies status classes is-pending, is-in-progress, is-completed, is-failed" do

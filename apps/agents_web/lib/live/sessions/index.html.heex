@@ -42,6 +42,7 @@
                 <span>&middot;</span>
                 <span>{relative_time(session.latest_at)}</span>
               </div>
+              <.compact_progress_bar todo_items={session_todo_items(session)} />
               <.container_stats_bars
                 :if={Map.has_key?(@container_stats, session.container_id)}
                 stats={@container_stats[session.container_id]}
