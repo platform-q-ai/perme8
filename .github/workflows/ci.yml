@@ -434,6 +434,11 @@ jobs:
           cd ../../identity/assets && npm ci
           cd ../../agents_web/assets && npm ci
 
+      - name: Install Gherkin parser dependencies
+        if: matrix.app == 'exo-dashboard'
+        run: bun install
+        working-directory: apps/exo_dashboard/priv/gherkin_parser
+
       - name: Install Playwright browsers
         if: matrix.domain == 'browser'
         run: bunx playwright install --with-deps chromium
