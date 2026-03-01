@@ -77,6 +77,7 @@ fi
 
 if [ -d /workspace/pi ]; then
   echo "Installing Pi project configuration into repo..."
+  rm -rf /workspace/perme8/.pi
   cp -r /workspace/pi /workspace/perme8/.pi
 fi
 
