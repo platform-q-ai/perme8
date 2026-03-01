@@ -313,15 +313,27 @@ defmodule AgentsWeb.SessionsLive.Index do
     Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "task:#{new_task.id}")
     user = socket.assigns.current_scope.user
 
-    {:noreply,
-     socket
-     |> assign(:current_task, new_task)
-     |> assign(:auth_refreshing, false)
-     |> assign(:events, [])
-     |> assign_session_state()
-     |> assign(:form, to_form(%{"instruction" => ""}))
-     |> clear_flash()
-     |> reload_all(user.id)}
+    is_resume = match?(%{id: id} when id == new_task.id, socket.assigns.current_task)
+
+    socket =
+      socket
+      |> assign(:current_task, new_task)
+      |> assign(:auth_refreshing, false)
+      |> assign(:events, [])
+      |> assign(:form, to_form(%{"instruction" => ""}))
+      |> clear_flash()
+
+    socket =
+      if is_resume do
+        # Auth refresh resumes the same task — preserve output history
+        socket
+        |> assign(:output_parts, EventProcessor.freeze_streaming(socket.assigns.output_parts))
+        |> assign(:pending_question, nil)
+      else
+        assign_session_state(socket)
+      end
+
+    {:noreply, reload_all(socket, user.id)}
   end
 
   @impl true
@@ -434,15 +446,30 @@ defmodule AgentsWeb.SessionsLive.Index do
     user = socket.assigns.current_scope.user
     Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "task:#{task.id}")
 
-    {:noreply,
-     socket
-     |> assign(:current_task, task)
-     |> assign(:active_container_id, task.container_id || socket.assigns.active_container_id)
-     |> assign(:composing_new, false)
-     |> assign(:events, [])
-     |> assign_session_state()
-     |> assign(:form, to_form(%{"instruction" => ""}))
-     |> reload_all(user.id)}
+    is_resume = match?(%{id: id} when id == task.id, socket.assigns.current_task)
+
+    socket =
+      socket
+      |> assign(:current_task, task)
+      |> assign(:active_container_id, task.container_id || socket.assigns.active_container_id)
+      |> assign(:composing_new, false)
+      |> assign(:form, to_form(%{"instruction" => ""}))
+
+    socket =
+      if is_resume do
+        # Preserve existing output, todos, and questions — freeze any
+        # streaming parts since the previous run has ended.
+        socket
+        |> assign(:events, [])
+        |> assign(:output_parts, EventProcessor.freeze_streaming(socket.assigns.output_parts))
+        |> assign(:pending_question, nil)
+      else
+        socket
+        |> assign(:events, [])
+        |> assign_session_state()
+      end
+
+    {:noreply, reload_all(socket, user.id)}
   end
 
   defp handle_task_result({:error, reason}, socket) do
