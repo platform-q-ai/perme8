@@ -31,6 +31,7 @@ defmodule Agents.Sessions do
     ListTasks
   }
 
+  alias Agents.Sessions.Application.SessionsConfig
   alias Agents.Sessions.Infrastructure.TaskRunnerSupervisor
 
   @doc """
@@ -131,7 +132,7 @@ defmodule Agents.Sessions do
   """
   @spec default_image() :: String.t()
   def default_image do
-    Agents.Sessions.Application.SessionsConfig.image()
+    SessionsConfig.image()
   end
 
   @doc """
@@ -141,7 +142,7 @@ defmodule Agents.Sessions do
   """
   @spec available_images() :: [map()]
   def available_images do
-    Agents.Sessions.Application.SessionsConfig.available_images()
+    SessionsConfig.available_images()
   end
 
   @doc """
