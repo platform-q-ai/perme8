@@ -251,4 +251,144 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.QuestionTest do
                      5000
     end
   end
+
+  describe "empty question auto-rejection" do
+    defp start_runner_with_empty_question(task, question_props) do
+      test_pid = self()
+
+      Agents.Mocks.TaskRepositoryMock
+      |> stub(:get_task, fn _id -> task end)
+      |> stub(:update_task_status, fn _task, attrs ->
+        if Map.has_key?(attrs, :pending_question) do
+          send(test_pid, {:question_persisted, attrs.pending_question})
+        end
+
+        {:ok, task}
+      end)
+
+      Agents.Mocks.ContainerProviderMock
+      |> expect(:start, fn _image, _opts -> {:ok, %{container_id: "abc123", port: 4096}} end)
+      |> stub(:stop, fn _id -> :ok end)
+
+      Agents.Mocks.OpencodeClientMock
+      |> expect(:health, fn _url -> :ok end)
+      |> expect(:create_session, fn _url, _opts -> {:ok, %{"id" => "sess-1"}} end)
+      |> expect(:subscribe_events, fn _url, runner_pid ->
+        spawn(fn ->
+          Process.sleep(50)
+
+          send(runner_pid, {
+            :opencode_event,
+            %{
+              "type" => "session.status",
+              "properties" => %{"sessionID" => "sess-1", "status" => %{"type" => "busy"}}
+            }
+          })
+
+          Process.sleep(50)
+
+          send(runner_pid, {
+            :opencode_event,
+            %{"type" => "question.asked", "properties" => question_props}
+          })
+        end)
+
+        {:ok, self()}
+      end)
+      |> expect(:send_prompt_async, fn _url, "sess-1", _parts, _opts -> :ok end)
+    end
+
+    test "auto-rejects question with empty questions list", %{task: task} do
+      test_pid = self()
+
+      start_runner_with_empty_question(task, %{
+        "id" => "q-empty-1",
+        "sessionID" => "sess-1",
+        "questions" => []
+      })
+
+      Agents.Mocks.OpencodeClientMock
+      |> expect(:reject_question, fn _url, "q-empty-1", _opts ->
+        send(test_pid, :empty_question_rejected)
+        :ok
+      end)
+
+      {:ok, _pid} =
+        GenServer.start(
+          TaskRunner,
+          {task.id,
+           [
+             container_provider: Agents.Mocks.ContainerProviderMock,
+             opencode_client: Agents.Mocks.OpencodeClientMock,
+             task_repo: Agents.Mocks.TaskRepositoryMock,
+             pubsub: Perme8.Events.PubSub
+           ]}
+        )
+
+      assert_receive :empty_question_rejected, 5000
+      # Should NOT persist a pending question for empty questions
+      refute_receive {:question_persisted, _}, 500
+    end
+
+    test "auto-rejects question with nil questions", %{task: task} do
+      test_pid = self()
+
+      start_runner_with_empty_question(task, %{
+        "id" => "q-nil-1",
+        "sessionID" => "sess-1",
+        "questions" => nil
+      })
+
+      Agents.Mocks.OpencodeClientMock
+      |> expect(:reject_question, fn _url, "q-nil-1", _opts ->
+        send(test_pid, :nil_question_rejected)
+        :ok
+      end)
+
+      {:ok, _pid} =
+        GenServer.start(
+          TaskRunner,
+          {task.id,
+           [
+             container_provider: Agents.Mocks.ContainerProviderMock,
+             opencode_client: Agents.Mocks.OpencodeClientMock,
+             task_repo: Agents.Mocks.TaskRepositoryMock,
+             pubsub: Perme8.Events.PubSub
+           ]}
+        )
+
+      assert_receive :nil_question_rejected, 5000
+      refute_receive {:question_persisted, _}, 500
+    end
+
+    test "auto-rejects question with missing questions key", %{task: task} do
+      test_pid = self()
+
+      start_runner_with_empty_question(task, %{
+        "id" => "q-missing-1",
+        "sessionID" => "sess-1"
+      })
+
+      Agents.Mocks.OpencodeClientMock
+      |> expect(:reject_question, fn _url, "q-missing-1", _opts ->
+        send(test_pid, :missing_question_rejected)
+        :ok
+      end)
+
+      {:ok, _pid} =
+        GenServer.start(
+          TaskRunner,
+          {task.id,
+           [
+             container_provider: Agents.Mocks.ContainerProviderMock,
+             opencode_client: Agents.Mocks.OpencodeClientMock,
+             task_repo: Agents.Mocks.TaskRepositoryMock,
+             pubsub: Perme8.Events.PubSub
+           ]}
+        )
+
+      assert_receive :missing_question_rejected, 5000
+      refute_receive {:question_persisted, _}, 500
+    end
+  end
 end

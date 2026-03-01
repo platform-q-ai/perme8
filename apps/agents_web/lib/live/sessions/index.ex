@@ -1221,8 +1221,8 @@ defmodule AgentsWeb.SessionsLive.Index do
               class="btn btn-sm btn-warning"
             >
               <.icon
-                name={if(@auth_refreshing, do: "hero-arrow-path", else: "hero-arrow-path")}
-                class={["size-4", @auth_refreshing && "animate-spin"]}
+                name="hero-arrow-path"
+                class={if(@auth_refreshing, do: "size-4 animate-spin", else: "size-4")}
               />
               {if @auth_refreshing, do: "Refreshing...", else: "Refresh Auth & Resume"}
             </button>
