@@ -14,8 +14,8 @@ RUN curl -fsSL https://bun.sh/install | bash \
     && mv /root/.bun/bin/bun /usr/local/bin/bun \
     && ln -s /usr/local/bin/bun /usr/local/bin/bunx
 
-# Install Pi coding agent globally via npm
-RUN npm install -g @mariozechner/pi-coding-agent
+# Install Pi coding agent globally via npm (pinned for reproducible builds)
+RUN npm install -g @mariozechner/pi-coding-agent@0.55.3
 
 # Non-root user
 RUN adduser -D -g "" appuser
