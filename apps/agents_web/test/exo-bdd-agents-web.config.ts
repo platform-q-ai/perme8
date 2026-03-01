@@ -25,6 +25,9 @@ export default defineConfig({
     // Test user credentials (must match exo_seeds_web.exs)
     ownerEmail: 'alice@example.com',
     ownerPassword: 'hello world!',
+    // Member user with no sessions (for empty-state testing)
+    memberEmail: 'bob@example.com',
+    memberPassword: 'hello world!',
   },
   adapters: {
     browser: {

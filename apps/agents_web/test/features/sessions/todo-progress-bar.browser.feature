@@ -7,6 +7,8 @@ Feature: Agent Session Todo Progress Bar
   # Early-pipeline note:
   # These scenarios assume deterministic seeded sessions for each todo state
   # and stable test ids on session rows + todo progress UI.
+  # LiveView patches arrive via WebSocket; a short wait after network idle
+  # ensures the DOM has received the diff before assertions run.
 
   Background:
     Given I am on "${identityUrl}/users/log-in"
@@ -22,6 +24,7 @@ Feature: Agent Session Todo Progress Bar
     # Fixture session: has a todo list with planned steps.
     When I click "[data-testid='session-item-todo-initial']"
     And I wait for network idle
+    And I wait for 1 seconds
     Then "[data-testid='todo-progress']" should exist
     And "[data-testid='todo-progress-summary']" should contain text "steps complete"
     And there should be 4 "[data-testid^='todo-step-']" elements
@@ -30,6 +33,7 @@ Feature: Agent Session Todo Progress Bar
     # Fixture session: same todo list as initial state.
     When I click "[data-testid='session-item-todo-initial']"
     And I wait for network idle
+    And I wait for 1 seconds
     Then "[data-testid='todo-step-1']" should contain text "1."
     And "[data-testid='todo-step-1']" should contain text "Plan"
     And "[data-testid='todo-step-2']" should contain text "2."
@@ -39,6 +43,7 @@ Feature: Agent Session Todo Progress Bar
     # Fixture session: 3 of 7 todo steps are completed.
     When I click "[data-testid='session-item-todo-3-of-7-complete']"
     And I wait for network idle
+    And I wait for 1 seconds
     Then "[data-testid='todo-progress-summary']" should have text "3/7 steps complete"
     And "[data-testid='todo-step-1']" should have class "is-completed"
     And "[data-testid='todo-step-2']" should have class "is-completed"
@@ -48,6 +53,7 @@ Feature: Agent Session Todo Progress Bar
     # Fixture session: one step failed, others preserve their own states.
     When I click "[data-testid='session-item-todo-with-failed-step']"
     And I wait for network idle
+    And I wait for 1 seconds
     Then "[data-testid='todo-step-3']" should have class "is-failed"
     And "[data-testid='todo-step-1']" should have class "is-completed"
     And "[data-testid='todo-step-2']" should have class "is-in-progress"
@@ -57,6 +63,7 @@ Feature: Agent Session Todo Progress Bar
     # Fixture session: active session output exists but no todo list was created.
     When I click "[data-testid='session-item-no-todo']"
     And I wait for network idle
+    And I wait for 1 seconds
     Then "[data-testid='todo-progress']" should not exist
     And "#session-log" should exist
 
@@ -64,9 +71,14 @@ Feature: Agent Session Todo Progress Bar
     # Fixture session: mixed todo states with a visible progress summary.
     When I click "[data-testid='session-item-todo-3-of-7-complete']"
     And I wait for network idle
+    And I wait for 1 seconds
     And I store the text of "[data-testid='todo-progress-summary']" as "summaryBeforeReload"
     And I reload the page
     And I wait for network idle
+    # Re-select the session after reload since mount auto-selects the first session
+    When I click "[data-testid='session-item-todo-3-of-7-complete']"
+    And I wait for network idle
+    And I wait for 1 seconds
     Then "[data-testid='todo-progress-summary']" should have text "${summaryBeforeReload}"
     And "[data-testid='todo-step-1']" should have class "is-completed"
     And "[data-testid='todo-step-4']" should have class "is-pending"
@@ -75,6 +87,7 @@ Feature: Agent Session Todo Progress Bar
     # Fixture session: completed agent session with final todo outcomes.
     When I click "[data-testid='session-item-todo-session-completed']"
     And I wait for network idle
+    And I wait for 1 seconds
     Then "[data-testid='todo-progress']" should exist
     And "[data-testid='todo-progress-summary']" should contain text "steps complete"
     And I should not see "Working..."

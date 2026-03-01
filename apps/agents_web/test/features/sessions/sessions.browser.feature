@@ -20,8 +20,8 @@ Feature: Coding Sessions Management
   Background:
     Given I am on "${identityUrl}/users/log-in"
     And I wait for network idle
-    When I fill "#login_form_password_email" with "${ownerEmail}"
-    And I fill "#login_form_password_password" with "${ownerPassword}"
+    When I fill "#login_form_password_email" with "${memberEmail}"
+    And I fill "#login_form_password_password" with "${memberPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I wait for network idle
 
