@@ -1,7 +1,7 @@
 defmodule JargaWeb.UserLive.Settings do
   use JargaWeb, :live_view
 
-  import JargaWeb.ChatLive.MessageHandlers
+  import ChatWeb.ChatLive.MessageHandlers
 
   on_mount {JargaWeb.UserAuth, :require_sudo_mode}
 

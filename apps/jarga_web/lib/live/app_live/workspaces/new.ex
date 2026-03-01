@@ -5,7 +5,7 @@ defmodule JargaWeb.AppLive.Workspaces.New do
 
   use JargaWeb, :live_view
 
-  import JargaWeb.ChatLive.MessageHandlers
+  import ChatWeb.ChatLive.MessageHandlers
 
   alias Jarga.Workspaces
   alias JargaWeb.Layouts

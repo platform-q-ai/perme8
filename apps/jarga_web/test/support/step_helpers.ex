@@ -21,8 +21,8 @@ defmodule Jarga.Test.StepHelpers do
     deps: [
       Agents,
       Agents.AgentsFixtures,
-      Jarga.Chat,
-      Jarga.ChatFixtures,
+      Chat,
+      Chat.ChatFixtures,
       Jarga.WorkspacesFixtures
     ],
     exports: []
@@ -509,14 +509,14 @@ defmodule Jarga.Test.StepHelpers do
   def count_user_messages(user_id, opts \\ []) do
     limit = Keyword.get(opts, :limit, 5)
 
-    case Jarga.Chat.list_sessions(user_id, limit: limit) do
+    case Chat.list_sessions(user_id, limit: limit) do
       {:ok, sessions} -> Enum.reduce(sessions, 0, &count_session_messages/2)
       _ -> 0
     end
   end
 
   defp count_session_messages(session, acc) do
-    case Jarga.Chat.load_session(session.id) do
+    case Chat.load_session(session.id) do
       {:ok, loaded} -> acc + length(loaded.messages)
       _ -> acc
     end
@@ -535,14 +535,14 @@ defmodule Jarga.Test.StepHelpers do
   def has_messages_with_role?(user_id, role, opts \\ []) do
     limit = Keyword.get(opts, :limit, 5)
 
-    case Jarga.Chat.list_sessions(user_id, limit: limit) do
+    case Chat.list_sessions(user_id, limit: limit) do
       {:ok, sessions} -> Enum.any?(sessions, &session_has_role?(&1, role))
       _ -> false
     end
   end
 
   defp session_has_role?(session, role) do
-    case Jarga.Chat.load_session(session.id) do
+    case Chat.load_session(session.id) do
       {:ok, loaded} -> Enum.any?(loaded.messages, fn msg -> msg.role == role end)
       _ -> false
     end
@@ -561,7 +561,7 @@ defmodule Jarga.Test.StepHelpers do
   def find_message_role(user_id, message_content, opts \\ []) do
     limit = Keyword.get(opts, :limit, 5)
 
-    case Jarga.Chat.list_sessions(user_id, limit: limit) do
+    case Chat.list_sessions(user_id, limit: limit) do
       {:ok, sessions} ->
         Enum.find_value(sessions, &find_message_role_in_session(&1, message_content))
 
@@ -571,7 +571,7 @@ defmodule Jarga.Test.StepHelpers do
   end
 
   defp find_message_role_in_session(session, message_content) do
-    case Jarga.Chat.load_session(session.id) do
+    case Chat.load_session(session.id) do
       {:ok, loaded} -> find_role_by_content(loaded.messages, message_content)
       _ -> nil
     end
@@ -596,7 +596,7 @@ defmodule Jarga.Test.StepHelpers do
   def message_exists_with_role?(user_id, message_content, role, opts \\ []) do
     limit = Keyword.get(opts, :limit, 5)
 
-    case Jarga.Chat.list_sessions(user_id, limit: limit) do
+    case Chat.list_sessions(user_id, limit: limit) do
       {:ok, sessions} ->
         Enum.any?(sessions, &message_exists_in_session?(&1, message_content, role))
 
@@ -606,7 +606,7 @@ defmodule Jarga.Test.StepHelpers do
   end
 
   defp message_exists_in_session?(session, message_content, role) do
-    case Jarga.Chat.load_session(session.id) do
+    case Chat.load_session(session.id) do
       {:ok, loaded} ->
         Enum.any?(loaded.messages, fn msg ->
           msg.content == message_content && msg.role == role
@@ -630,7 +630,7 @@ defmodule Jarga.Test.StepHelpers do
   def verify_message_ordering!(user_id, opts \\ []) do
     limit = Keyword.get(opts, :limit, 5)
 
-    with {:ok, sessions} <- Jarga.Chat.list_sessions(user_id, limit: limit) do
+    with {:ok, sessions} <- Chat.list_sessions(user_id, limit: limit) do
       Enum.each(sessions, &verify_session_message_ordering!/1)
     end
 
@@ -638,7 +638,7 @@ defmodule Jarga.Test.StepHelpers do
   end
 
   defp verify_session_message_ordering!(session) do
-    with {:ok, loaded} <- Jarga.Chat.load_session(session.id) do
+    with {:ok, loaded} <- Chat.load_session(session.id) do
       timestamps = Enum.map(loaded.messages, fn msg -> msg.inserted_at end)
       sorted_timestamps = Enum.sort(timestamps, DateTime)
 
@@ -714,16 +714,16 @@ defmodule Jarga.Test.StepHelpers do
   """
   def create_and_display_message(view, user, workspace, session, role, content) do
     session =
-      session || Jarga.ChatFixtures.chat_session_fixture(%{user: user, workspace: workspace})
+      session || Chat.ChatFixtures.chat_session_fixture(%{user: user, workspace: workspace})
 
     message =
-      Jarga.ChatFixtures.chat_message_fixture(%{
+      Chat.ChatFixtures.chat_message_fixture(%{
         chat_session: session,
         role: role,
         content: content
       })
 
-    Phoenix.LiveView.send_update(view.pid, JargaWeb.ChatLive.Panel,
+    Phoenix.LiveView.send_update(view.pid, ChatWeb.ChatLive.Panel,
       id: "global-chat-panel",
       messages: [
         %{

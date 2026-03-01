@@ -48,7 +48,9 @@ defmodule JargaWeb.MixProject do
             {:jarga, :relaxed},
             {:agents, :relaxed},
             {:perme8_events, :relaxed},
-            {:notifications, :relaxed}
+            {:notifications, :relaxed},
+            {:chat, :relaxed},
+            {:chat_web, :relaxed}
           ]
         ]
       ],
@@ -80,6 +82,8 @@ defmodule JargaWeb.MixProject do
       {:jarga, in_umbrella: true},
       {:agents, in_umbrella: true},
       {:notifications, in_umbrella: true},
+      {:chat, in_umbrella: true},
+      {:chat_web, in_umbrella: true},
       {:jason, "~> 1.2"},
       {:bandit, "~> 1.5"},
       {:boundary, "~> 0.10", runtime: false},

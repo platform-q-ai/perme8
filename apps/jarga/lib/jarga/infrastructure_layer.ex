@@ -47,9 +47,7 @@ defmodule Jarga.InfrastructureLayer do
       # Agents (extracted to apps/agents/)
       Agents.Infrastructure.Repositories.AgentRepository,
       Agents.Infrastructure.Repositories.WorkspaceAgentRepository,
-      # Chat
-      Jarga.Chat.Infrastructure.Repositories.SessionRepository,
-      Jarga.Chat.Infrastructure.Repositories.MessageRepository,
+      # Chat — extracted to apps/chat/
       # Documents
       Jarga.Documents.Infrastructure.Repositories.DocumentRepository,
       Jarga.Documents.Infrastructure.Repositories.AuthorizationRepository,
@@ -79,9 +77,7 @@ defmodule Jarga.InfrastructureLayer do
       # Agents (extracted to apps/agents/)
       Agents.Infrastructure.Schemas.AgentSchema,
       Agents.Infrastructure.Schemas.WorkspaceAgentJoinSchema,
-      # Chat
-      Jarga.Chat.Infrastructure.Schemas.SessionSchema,
-      Jarga.Chat.Infrastructure.Schemas.MessageSchema,
+      # Chat — extracted to apps/chat/
       # Documents
       Jarga.Documents.Infrastructure.Schemas.DocumentSchema,
       Jarga.Documents.Infrastructure.Schemas.DocumentComponentSchema,
@@ -106,8 +102,7 @@ defmodule Jarga.InfrastructureLayer do
     [
       # Agents (extracted to apps/agents/)
       Agents.Infrastructure.Queries.AgentQueries,
-      # Chat
-      Jarga.Chat.Infrastructure.Queries.Queries,
+      # Chat — extracted to apps/chat/
       # Documents
       Jarga.Documents.Infrastructure.Queries.DocumentQueries,
       Jarga.Documents.Notes.Infrastructure.Queries.Queries,

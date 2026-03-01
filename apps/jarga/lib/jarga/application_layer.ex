@@ -69,14 +69,7 @@ defmodule Jarga.ApplicationLayer do
       Agents.Application.UseCases.SyncAgentWorkspaces,
       Agents.Application.UseCases.ValidateAgentParams,
       Agents.Application.UseCases.AgentQuery,
-      # Chat
-      Jarga.Chat.Application.UseCases.CreateSession,
-      Jarga.Chat.Application.UseCases.LoadSession,
-      Jarga.Chat.Application.UseCases.ListSessions,
-      Jarga.Chat.Application.UseCases.DeleteSession,
-      Jarga.Chat.Application.UseCases.SaveMessage,
-      Jarga.Chat.Application.UseCases.DeleteMessage,
-      Jarga.Chat.Application.UseCases.PrepareContext,
+      # Chat — extracted to apps/chat/
       # Documents
       Jarga.Documents.Application.UseCases.CreateDocument,
       Jarga.Documents.Application.UseCases.UpdateDocument,

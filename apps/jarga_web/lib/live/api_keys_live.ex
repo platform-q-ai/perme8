@@ -1,7 +1,7 @@
 defmodule JargaWeb.ApiKeysLive do
   use JargaWeb, :live_view
 
-  import JargaWeb.ChatLive.MessageHandlers
+  import ChatWeb.ChatLive.MessageHandlers
 
   alias Jarga.Accounts
 

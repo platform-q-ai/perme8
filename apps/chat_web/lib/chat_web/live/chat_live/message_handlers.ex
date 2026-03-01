@@ -1,4 +1,4 @@
-defmodule JargaWeb.ChatLive.MessageHandlers do
+defmodule ChatWeb.ChatLive.MessageHandlers do
   @moduledoc """
   Provides reusable message handlers for LiveViews that include the global chat panel.
 
@@ -9,7 +9,7 @@ defmodule JargaWeb.ChatLive.MessageHandlers do
 
       defmodule MyAppWeb.SomeLive do
         use MyAppWeb, :live_view
-        import JargaWeb.ChatLive.MessageHandlers
+        import ChatWeb.ChatLive.MessageHandlers
 
         # Your other callbacks...
 
@@ -22,19 +22,17 @@ defmodule JargaWeb.ChatLive.MessageHandlers do
   Defines handle_info callbacks for chat panel streaming messages and handle_event for agent selection.
 
   This macro injects the necessary handle_info/2 callbacks that forward
-  streaming messages from the LLM client to the global chat panel component,
-  notification events to the notification bell component, and handle_event/3
+  streaming messages from the LLM client to the global chat panel component and
+  handle_event/3
   for agent selection events from the JavaScript hook.
   """
   # credo:disable-for-next-line Credo.Check.Refactor.CyclomaticComplexity
   defmacro handle_chat_messages do
     quote do
-      alias Notifications.Domain.Events.NotificationCreated
-
       @impl true
       def handle_event("agent-selected", %{"agent_id" => agent_id}, socket) do
         # Forward agent selection to chat panel component
-        Phoenix.LiveView.send_update(JargaWeb.ChatLive.Panel,
+        Phoenix.LiveView.send_update(ChatWeb.ChatLive.Panel,
           id: "global-chat-panel",
           selected_agent_id: agent_id
         )
@@ -44,7 +42,7 @@ defmodule JargaWeb.ChatLive.MessageHandlers do
 
       @impl true
       def handle_info({:chunk, chunk}, socket) do
-        Phoenix.LiveView.send_update(JargaWeb.ChatLive.Panel,
+        Phoenix.LiveView.send_update(ChatWeb.ChatLive.Panel,
           id: "global-chat-panel",
           chunk: chunk
         )
@@ -54,7 +52,7 @@ defmodule JargaWeb.ChatLive.MessageHandlers do
 
       @impl true
       def handle_info({:done, full_response}, socket) do
-        Phoenix.LiveView.send_update(JargaWeb.ChatLive.Panel,
+        Phoenix.LiveView.send_update(ChatWeb.ChatLive.Panel,
           id: "global-chat-panel",
           done: full_response
         )
@@ -64,7 +62,7 @@ defmodule JargaWeb.ChatLive.MessageHandlers do
 
       @impl true
       def handle_info({:error, reason}, socket) do
-        Phoenix.LiveView.send_update(JargaWeb.ChatLive.Panel,
+        Phoenix.LiveView.send_update(ChatWeb.ChatLive.Panel,
           id: "global-chat-panel",
           error: reason
         )
@@ -81,7 +79,7 @@ defmodule JargaWeb.ChatLive.MessageHandlers do
       @impl true
       def handle_info({:llm_done, full_response}, socket) do
         # Test helper message - equivalent to :done
-        Phoenix.LiveView.send_update(JargaWeb.ChatLive.Panel,
+        Phoenix.LiveView.send_update(ChatWeb.ChatLive.Panel,
           id: "global-chat-panel",
           done: full_response
         )
@@ -92,7 +90,7 @@ defmodule JargaWeb.ChatLive.MessageHandlers do
       @impl true
       def handle_info({:llm_chunk, chunk}, socket) do
         # Test helper message - equivalent to :chunk
-        Phoenix.LiveView.send_update(JargaWeb.ChatLive.Panel,
+        Phoenix.LiveView.send_update(ChatWeb.ChatLive.Panel,
           id: "global-chat-panel",
           chunk: chunk
         )
@@ -103,20 +101,9 @@ defmodule JargaWeb.ChatLive.MessageHandlers do
       @impl true
       def handle_info({:llm_error, reason}, socket) do
         # Test helper message - equivalent to :error
-        Phoenix.LiveView.send_update(JargaWeb.ChatLive.Panel,
+        Phoenix.LiveView.send_update(ChatWeb.ChatLive.Panel,
           id: "global-chat-panel",
           error: reason
-        )
-
-        {:noreply, socket}
-      end
-
-      @impl true
-      def handle_info(%NotificationCreated{}, socket) do
-        # Notification received - update the NotificationBell LiveComponent
-        Phoenix.LiveView.send_update(JargaWeb.NotificationsLive.NotificationBell,
-          id: "notification-bell",
-          current_user: socket.assigns.current_scope.user
         )
 
         {:noreply, socket}
