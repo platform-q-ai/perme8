@@ -93,6 +93,7 @@ defmodule AgentsWeb.SessionsLive.Helpers do
 
   @doc "Maps a task error reason to a user-friendly message."
   def task_error_message(:instruction_required), do: "Instruction is required"
+  def task_error_message(:already_active), do: "This session is already running"
   def task_error_message(:not_resumable), do: "This session cannot be resumed"
   def task_error_message(:no_container), do: "No container available for resume"
   def task_error_message(:no_session), do: "No session available for resume"

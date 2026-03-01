@@ -341,7 +341,7 @@ defmodule Agents.SessionsTest do
           status: "running"
         })
 
-      assert {:error, :not_resumable} =
+      assert {:error, :already_active} =
                Sessions.resume_task(
                  task.id,
                  %{instruction: "Follow-up", user_id: user.id},

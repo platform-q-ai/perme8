@@ -32,6 +32,7 @@ defmodule Agents.Sessions.Application.UseCases.ResumeTask do
   - `{:ok, task}` - Domain entity on success
   - `{:error, :instruction_required}` - When instruction is blank
   - `{:error, :not_found}` - Task not found or not owned by user
+  - `{:error, :already_active}` - Task is already pending/starting/running (e.g. double-click)
   - `{:error, :not_resumable}` - Task is not in a terminal state
   - `{:error, :no_container}` - Task has no container to resume
   - `{:error, :no_session}` - Task has no opencode session to resume
@@ -66,6 +67,9 @@ defmodule Agents.Sessions.Application.UseCases.ResumeTask do
 
   defp validate_resumable(task) do
     cond do
+      task.status in ["pending", "starting", "running"] ->
+        {:error, :already_active}
+
       task.status not in ["completed", "failed", "cancelled"] ->
         {:error, :not_resumable}
 

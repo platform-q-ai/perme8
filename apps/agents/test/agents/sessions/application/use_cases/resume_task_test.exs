@@ -108,7 +108,21 @@ defmodule Agents.Sessions.Application.UseCases.ResumeTaskTest do
       Agents.Mocks.TaskRepositoryMock
       |> expect(:get_task_for_user, fn "task-1", "user-1" -> running_task end)
 
-      assert {:error, :not_resumable} =
+      assert {:error, :already_active} =
+               ResumeTask.execute(
+                 "task-1",
+                 %{instruction: "Follow up", user_id: "user-1"},
+                 @default_opts
+               )
+    end
+
+    test "returns error when task is pending (double-click guard)" do
+      pending_task = struct(@existing_task, status: "pending")
+
+      Agents.Mocks.TaskRepositoryMock
+      |> expect(:get_task_for_user, fn "task-1", "user-1" -> pending_task end)
+
+      assert {:error, :already_active} =
                ResumeTask.execute(
                  "task-1",
                  %{instruction: "Follow up", user_id: "user-1"},
