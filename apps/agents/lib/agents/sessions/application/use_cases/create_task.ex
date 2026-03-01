@@ -39,7 +39,7 @@ defmodule Agents.Sessions.Application.UseCases.CreateTask do
     with :ok <- validate_instruction(attrs),
          {:ok, schema} <- task_repo.create_task(attrs),
          :ok <- start_runner(schema.id, task_repo, opts) do
-      emit_task_created(schema, event_bus)
+      _ = emit_task_created(schema, event_bus)
       {:ok, Task.from_schema(schema)}
     end
   end
