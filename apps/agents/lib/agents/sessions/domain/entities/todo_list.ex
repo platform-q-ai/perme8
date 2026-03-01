@@ -28,27 +28,29 @@ defmodule Agents.Sessions.Domain.Entities.TodoList do
   """
   @spec from_sse_event(map()) :: {:ok, t()} | {:error, :invalid_payload}
   def from_sse_event(payload) when is_map(payload) do
-    with {:ok, todos} <- extract_todos(payload) do
-      items =
-        todos
-        |> Enum.with_index()
-        |> Enum.map(fn {todo, index} ->
-          TodoItem.new(%{
-            id: Map.get(todo, "id", Map.get(todo, :id, "")),
-            title:
-              Map.get(
-                todo,
-                "content",
-                Map.get(todo, :content, Map.get(todo, "title", Map.get(todo, :title, "")))
-              ),
-            status: Map.get(todo, "status", Map.get(todo, :status, "pending")),
-            position: index
-          })
-        end)
+    case extract_todos(payload) do
+      {:ok, todos} ->
+        items =
+          todos
+          |> Enum.with_index()
+          |> Enum.map(fn {todo, index} ->
+            TodoItem.new(%{
+              id: Map.get(todo, "id", Map.get(todo, :id, "")),
+              title:
+                Map.get(
+                  todo,
+                  "content",
+                  Map.get(todo, :content, Map.get(todo, "title", Map.get(todo, :title, "")))
+                ),
+              status: Map.get(todo, "status", Map.get(todo, :status, "pending")),
+              position: index
+            })
+          end)
 
-      {:ok, %__MODULE__{items: items}}
-    else
-      _ -> {:error, :invalid_payload}
+        {:ok, %__MODULE__{items: items}}
+
+      _ ->
+        {:error, :invalid_payload}
     end
   end
 
