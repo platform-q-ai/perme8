@@ -48,6 +48,22 @@ defmodule JargaWeb do
     ],
     exports: [Endpoint, Telemetry]
 
+  @doc """
+  Returns the full URL for an agents_web path by prepending the configured base URL.
+
+  Used in layouts and LiveViews to generate cross-app links to agents_web.
+
+  ## Examples
+
+      JargaWeb.agents_web_url("/agents")
+      #=> "http://localhost:4014/agents"
+
+  """
+  def agents_web_url(path) do
+    base = Application.get_env(:jarga_web, :agents_web_url, "http://localhost:4014")
+    "#{base}#{path}"
+  end
+
   def static_paths do
     ~w(assets fonts images favicon.ico favicon.svg favicon-96x96.png apple-touch-icon.png
        web-app-manifest-192x192.png web-app-manifest-512x512.png

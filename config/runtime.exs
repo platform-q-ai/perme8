@@ -234,10 +234,12 @@ if config_env() == :prod do
     end
 
   # AgentsWeb URL for cross-app agent management links
+  # Default to agents.#{jarga_host} subdomain — avoids self-referencing links
+  # when AGENTS_WEB_URL / AGENTS_WEB_HOST are not explicitly set.
   config :jarga_web,
          :agents_web_url,
          System.get_env("AGENTS_WEB_URL") ||
-           "https://#{System.get_env("AGENTS_WEB_HOST") || jarga_host}"
+           "https://#{System.get_env("AGENTS_WEB_HOST") || "agents.#{jarga_host}"}"
 
   config :jarga_web, JargaWeb.Endpoint,
     url: [host: jarga_host, port: 443, scheme: "https"],
