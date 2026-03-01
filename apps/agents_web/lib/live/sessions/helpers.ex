@@ -159,4 +159,23 @@ defmodule AgentsWeb.SessionsLive.Helpers do
     |> String.trim()
     |> String.replace(~r/\s+/, "-")
   end
+
+  @doc """
+  Extracts todo items from persisted session data for display in session cards.
+
+  The DB column stores `%{"items" => [%{"id" => ..., "title" => ..., "status" => ..., "position" => ...}, ...]}`.
+  Returns a list of maps with atom keys, or an empty list if no todos exist.
+  """
+  def session_todo_items(%{todo_items: %{"items" => items}}) when is_list(items) do
+    Enum.map(items, fn item ->
+      %{
+        id: item["id"],
+        title: item["title"],
+        status: item["status"],
+        position: item["position"]
+      }
+    end)
+  end
+
+  def session_todo_items(_session), do: []
 end

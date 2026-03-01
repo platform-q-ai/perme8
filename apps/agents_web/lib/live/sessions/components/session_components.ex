@@ -113,7 +113,10 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponents do
   # ---- Output Part Components ----
 
   @doc """
-  Renders a todo progress bar for session task steps.
+  Renders a horizontal todo progress bar for session task steps.
+
+  Each step is a colored segment in a horizontal bar. Hovering a segment
+  shows a tooltip with the step number, title, and status.
   """
   attr(:todo_items, :list, required: true)
 
@@ -122,29 +125,73 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponents do
     <section
       :if={@todo_items != []}
       data-testid="todo-progress"
-      class="mx-4 mt-3 rounded-xl border border-base-300 bg-base-100 p-3 shadow-sm"
+      class="mx-4 mt-3 rounded-xl border border-base-300 bg-base-100 px-3 py-2 shadow-sm"
     >
       <div
         data-testid="todo-progress-summary"
-        class="mb-2 text-xs font-semibold uppercase tracking-wide text-base-content/60"
+        class="mb-1.5 text-xs font-semibold uppercase tracking-wide text-base-content/60"
       >
         {completed_count(@todo_items)}/{length(@todo_items)} steps complete
       </div>
 
-      <div class="space-y-1.5">
+      <div class="flex gap-1 w-full">
         <%= for item <- @todo_items do %>
           <div
             data-testid={"todo-step-#{display_position(item)}"}
             class={[
-              "is-#{status_class(item.status)} rounded-md border px-2.5 py-1.5 text-sm transition-colors",
-              step_colors(item.status)
+              "is-#{status_class(item.status)} group relative flex-1 h-3 rounded-full transition-all duration-300 cursor-pointer",
+              segment_bg(item.status)
             ]}
           >
-            <span class="font-medium">{display_position(item)}. {item.title}</span>
+            <%!-- Tooltip on hover --%>
+            <div class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-20">
+              <div class={[
+                "whitespace-nowrap rounded-lg border px-2.5 py-1.5 text-xs font-medium shadow-lg",
+                tooltip_colors(item.status)
+              ]}>
+                <span class="font-semibold">{display_position(item)}.</span> {item.title}
+                <span class={[
+                  "ml-1.5 text-[0.6rem] uppercase tracking-wider",
+                  tooltip_status_text(item.status)
+                ]}>
+                  {format_status(item.status)}
+                </span>
+              </div>
+              <div class={[
+                "absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-x-4 border-x-transparent border-t-4",
+                tooltip_arrow(item.status)
+              ]}>
+              </div>
+            </div>
           </div>
         <% end %>
       </div>
     </section>
+    """
+  end
+
+  @doc """
+  Renders a compact horizontal progress bar for session list cards.
+
+  Shows a thin bar with colored segments -- no text, no tooltips.
+  """
+  attr(:todo_items, :list, required: true)
+
+  def compact_progress_bar(assigns) do
+    ~H"""
+    <div
+      :if={@todo_items != []}
+      data-testid="session-todo-progress"
+      class="flex gap-0.5 w-full mt-1"
+    >
+      <%= for item <- @todo_items do %>
+        <div class={[
+          "flex-1 h-1.5 rounded-full transition-all duration-300",
+          segment_bg(item.status)
+        ]}>
+        </div>
+      <% end %>
+    </div>
     """
   end
 
@@ -358,10 +405,34 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponents do
   defp status_class(status) when is_atom(status), do: status |> Atom.to_string() |> status_class()
   defp status_class(_), do: "pending"
 
-  defp step_colors("completed"), do: "border-success/40 bg-success/10 text-success"
-  defp step_colors("in_progress"), do: "border-info/40 bg-info/10 text-info"
-  defp step_colors("failed"), do: "border-error/40 bg-error/10 text-error"
-  defp step_colors(_), do: "border-base-300 bg-base-200/50 text-base-content/70"
+  # Segment background colors for horizontal progress bar
+  defp segment_bg("completed"), do: "bg-success"
+  defp segment_bg("in_progress"), do: "bg-info animate-pulse"
+  defp segment_bg("failed"), do: "bg-error"
+  defp segment_bg(_), do: "bg-base-300"
+
+  # Tooltip container colors
+  defp tooltip_colors("completed"), do: "border-success/40 bg-success/10 text-success"
+  defp tooltip_colors("in_progress"), do: "border-info/40 bg-info/10 text-info"
+  defp tooltip_colors("failed"), do: "border-error/40 bg-error/10 text-error"
+  defp tooltip_colors(_), do: "border-base-300 bg-base-200 text-base-content/80"
+
+  # Tooltip status label text color
+  defp tooltip_status_text("completed"), do: "text-success/70"
+  defp tooltip_status_text("in_progress"), do: "text-info/70"
+  defp tooltip_status_text("failed"), do: "text-error/70"
+  defp tooltip_status_text(_), do: "text-base-content/50"
+
+  # Tooltip arrow border-top color
+  defp tooltip_arrow("completed"), do: "border-t-success/40"
+  defp tooltip_arrow("in_progress"), do: "border-t-info/40"
+  defp tooltip_arrow("failed"), do: "border-t-error/40"
+  defp tooltip_arrow(_), do: "border-t-base-300"
+
+  # Human-readable status label for tooltips
+  defp format_status("in_progress"), do: "in progress"
+  defp format_status(status) when is_binary(status), do: status
+  defp format_status(_), do: "pending"
 
   # ---- Status Components ----
 

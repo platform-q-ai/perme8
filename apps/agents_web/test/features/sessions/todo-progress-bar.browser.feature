@@ -1,8 +1,8 @@
 @browser @sessions
 Feature: Agent Session Todo Progress Bar
   As a developer watching an agent session
-  I want to see a numbered progress bar showing the agent's planned steps
-  So that I understand what the agent intends to do and can track progress
+  I want to see a horizontal progress bar showing the agent's planned steps
+  So that I can quickly gauge progress and hover to see details, saving screen space
 
   # Early-pipeline note:
   # These scenarios assume deterministic seeded sessions for each todo state
@@ -20,7 +20,7 @@ Feature: Agent Session Todo Progress Bar
     And I navigate to "${baseUrl}/sessions"
     And I wait for network idle
 
-  Scenario: Progress bar appears when a session has a todo list
+  Scenario: Horizontal progress bar appears when a session has a todo list
     # Fixture session: has a todo list with planned steps.
     When I click "[data-testid='session-item-todo-initial']"
     And I wait for network idle
@@ -29,8 +29,9 @@ Feature: Agent Session Todo Progress Bar
     And "[data-testid='todo-progress-summary']" should contain text "steps complete"
     And there should be 4 "[data-testid^='todo-step-']" elements
 
-  Scenario: Progress bar shows numbered step names
+  Scenario: Step details are shown in tooltip on hover
     # Fixture session: same todo list as initial state.
+    # The horizontal segments contain tooltip text in the DOM.
     When I click "[data-testid='session-item-todo-initial']"
     And I wait for network idle
     And I wait for 1 seconds
@@ -91,6 +92,12 @@ Feature: Agent Session Todo Progress Bar
     Then "[data-testid='todo-progress']" should exist
     And "[data-testid='todo-progress-summary']" should contain text "steps complete"
     And I should not see "Working..."
+
+  Scenario: Session card shows compact todo progress bar
+    # Fixture session: has a todo list with completed and pending steps.
+    # The session list card should show a compact progress bar.
+    And I wait for 1 seconds
+    Then "[data-testid='session-todo-progress']" should exist
 
   @wip
   Scenario: Progress bar updates active step during live execution
