@@ -107,7 +107,7 @@ PGCONF
 fi
 
 echo "Starting PostgreSQL..."
-pg_ctl start -D "$PGDATA" -l "$PGDATA/logfile" -o "-k /tmp -h localhost"
+pg_ctl start -D "$PGDATA" -l "$PGDATA/logfile" -o "-k /tmp -h localhost" -w -t 30
 
 createuser -h localhost -s postgres 2>/dev/null || true
 
