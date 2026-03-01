@@ -21,6 +21,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   use GenServer, restart: :temporary
 
   alias Agents.Sessions.Application.SessionsConfig
+  alias Agents.Sessions.Domain.Events.{TaskCompleted, TaskFailed, TaskCancelled}
   alias Agents.Sessions.Infrastructure.Schemas.TaskSchema
 
   require Logger
@@ -53,7 +54,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     container_provider: nil,
     opencode_client: nil,
     task_repo: nil,
-    pubsub: nil
+    pubsub: nil,
+    event_bus: nil
   ]
 
   # ---- Public API ----
@@ -92,6 +94,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
       )
 
     pubsub = Keyword.get(opts, :pubsub, SessionsConfig.pubsub())
+    event_bus = Keyword.get(opts, :event_bus, Perme8.Events.EventBus)
 
     # Resume context — if resuming, we already have container_id and session_id
     resume? = Keyword.get(opts, :resume, false)
@@ -113,6 +116,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
           opencode_client: opencode_client,
           task_repo: task_repo,
           pubsub: pubsub,
+          event_bus: event_bus,
           health_retries: SessionsConfig.health_check_max_retries()
         }
 
@@ -433,6 +437,16 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     })
 
     broadcast_status(state.task_id, "cancelled", state.pubsub)
+
+    state.event_bus.emit(
+      TaskCancelled.new(%{
+        aggregate_id: state.task_id,
+        actor_id: state.user_id,
+        task_id: state.task_id,
+        user_id: state.user_id
+      })
+    )
+
     cleanup_container(state)
     {:stop, :normal, state}
   end
@@ -728,9 +742,11 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   defp fail_task(state, error) do
     cancel_flush_timer(state)
 
+    serialized_error = serialize_error(error)
+
     attrs = %{
       status: "failed",
-      error: serialize_error(error),
+      error: serialized_error,
       completed_at: DateTime.utc_now()
     }
 
@@ -739,6 +755,17 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
     update_task_status(state, attrs)
     broadcast_status(state.task_id, "failed", state.pubsub)
+
+    state.event_bus.emit(
+      TaskFailed.new(%{
+        aggregate_id: state.task_id,
+        actor_id: state.user_id,
+        task_id: state.task_id,
+        user_id: state.user_id,
+        error: serialized_error
+      })
+    )
+
     cleanup_container(state)
   end
 
@@ -755,6 +782,16 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
     update_task_status(state, attrs)
     broadcast_status(state.task_id, "completed", state.pubsub)
+
+    state.event_bus.emit(
+      TaskCompleted.new(%{
+        aggregate_id: state.task_id,
+        actor_id: state.user_id,
+        task_id: state.task_id,
+        user_id: state.user_id
+      })
+    )
+
     cleanup_container(state)
   end
 

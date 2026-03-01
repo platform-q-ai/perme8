@@ -131,5 +131,48 @@ defmodule Agents.Sessions.Application.UseCases.CreateTaskTest do
 
       assert %Agents.Sessions.Domain.Entities.Task{} = task
     end
+
+    test "emits TaskCreated domain event on success" do
+      Perme8.Events.TestEventBus.start_global()
+
+      task_schema = %{
+        id: "task-1",
+        instruction: "Write tests for the login flow",
+        user_id: "user-123",
+        status: "pending"
+      }
+
+      Agents.Mocks.TaskRepositoryMock
+      |> expect(:create_task, fn _attrs ->
+        {:ok, struct(Agents.Sessions.Infrastructure.Schemas.TaskSchema, task_schema)}
+      end)
+
+      assert {:ok, _task} =
+               CreateTask.execute(@valid_attrs,
+                 task_repo: Agents.Mocks.TaskRepositoryMock,
+                 task_runner_starter: fn _id, _opts -> {:ok, self()} end,
+                 event_bus: Perme8.Events.TestEventBus
+               )
+
+      events = Perme8.Events.TestEventBus.get_events()
+      assert [%Agents.Sessions.Domain.Events.TaskCreated{} = event] = events
+      assert event.task_id == "task-1"
+      assert event.user_id == "user-123"
+      assert event.instruction == "Write tests for the login flow"
+      assert event.aggregate_id == "task-1"
+      assert event.actor_id == "user-123"
+    end
+
+    test "does not emit event on validation failure" do
+      Perme8.Events.TestEventBus.start_global()
+
+      assert {:error, :instruction_required} =
+               CreateTask.execute(%{instruction: "", user_id: "user-123"},
+                 task_repo: Agents.Mocks.TaskRepositoryMock,
+                 event_bus: Perme8.Events.TestEventBus
+               )
+
+      assert Perme8.Events.TestEventBus.get_events() == []
+    end
   end
 end

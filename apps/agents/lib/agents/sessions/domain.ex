@@ -12,6 +12,10 @@ defmodule Agents.Sessions.Domain do
     deps: [],
     exports: [
       Entities.Task,
-      Policies.TaskPolicy
+      Policies.TaskPolicy,
+      Events.TaskCreated,
+      Events.TaskCompleted,
+      Events.TaskFailed,
+      Events.TaskCancelled
     ]
 end
