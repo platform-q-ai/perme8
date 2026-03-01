@@ -1,25 +1,31 @@
 defmodule Mix.Tasks.Docker.Build do
-  @shortdoc "Builds the perme8-opencode Docker image"
+  @shortdoc "Builds a perme8 Docker image (opencode or pi)"
 
   @moduledoc """
-  Builds the Docker image used by coding sessions.
+  Builds a Docker image used by coding sessions.
 
-  Runs `docker build` against `infra/opencode/Dockerfile` and tags the
-  resulting image as `perme8-opencode` (or a custom tag via `--tag`).
+  Runs `docker build` against the specified image's Dockerfile directory
+  and tags the resulting image accordingly.
 
   ## Usage
 
-      mix docker.build [options]
+      mix docker.build [image] [options]
+
+  ## Arguments
+
+    * `image` - Which image to build: `opencode` (default) or `pi`
 
   ## Options
 
-    * `--tag` / `-t` - Image tag (default: `perme8-opencode`)
+    * `--tag` / `-t` - Image tag (default: `perme8-<image>`)
     * `--no-cache` - Build without Docker layer cache
 
   ## Examples
 
       mix docker.build
-      mix docker.build --tag perme8-opencode:latest
+      mix docker.build opencode
+      mix docker.build pi
+      mix docker.build pi --tag perme8-pi:latest
       mix docker.build --no-cache
 
   ## Exit codes
@@ -31,18 +37,34 @@ defmodule Mix.Tasks.Docker.Build do
   use Mix.Task
   use Boundary, top_level?: true
 
-  @default_tag "perme8-opencode"
-  @dockerfile_path "infra/opencode"
+  @images %{
+    "opencode" => %{path: "infra/opencode", default_tag: "perme8-opencode"},
+    "pi" => %{path: "infra/pi", default_tag: "perme8-pi"}
+  }
+
   @switches [tag: :string, no_cache: :boolean]
   @aliases [t: :tag]
 
   @impl Mix.Task
   def run(args) do
-    {opts, _rest, _} = OptionParser.parse(args, switches: @switches, aliases: @aliases)
+    {opts, rest, _} = OptionParser.parse(args, switches: @switches, aliases: @aliases)
 
-    tag = Keyword.get(opts, :tag, @default_tag)
+    image_name = List.first(rest) || "opencode"
+
+    image_config =
+      case Map.get(@images, image_name) do
+        nil ->
+          valid = @images |> Map.keys() |> Enum.join(", ")
+          Mix.shell().error([:red, "Unknown image: #{image_name}. Valid images: #{valid}"])
+          exit({:shutdown, 1})
+
+        config ->
+          config
+      end
+
+    tag = Keyword.get(opts, :tag, image_config.default_tag)
     root = umbrella_root()
-    context = Path.join(root, @dockerfile_path)
+    context = Path.join(root, image_config.path)
 
     unless File.dir?(context) do
       Mix.shell().error([:red, "Dockerfile directory not found: #{context}"])
@@ -59,7 +81,7 @@ defmodule Mix.Tasks.Docker.Build do
       tag,
       :reset,
       :cyan,
-      " from #{@dockerfile_path}..."
+      " from #{image_config.path}..."
     ])
 
     case System.cmd("docker", cmd_args, cd: root, into: IO.stream(:stdio, :line)) do
