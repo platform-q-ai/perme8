@@ -3,7 +3,7 @@ defmodule Agents.Sessions.Domain do
   Domain layer boundary for the Sessions bounded context.
 
   Contains pure business logic with no external dependencies:
-  - Entities: Task
+  - Entities: Task, TodoItem, TodoList
   - Policies: TaskPolicy
   """
 
@@ -12,6 +12,8 @@ defmodule Agents.Sessions.Domain do
     deps: [],
     exports: [
       Entities.Task,
+      Entities.TodoItem,
+      Entities.TodoList,
       Policies.TaskPolicy,
       Events.TaskCreated,
       Events.TaskCompleted,
