@@ -3,9 +3,9 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponents do
   Reusable components for the Sessions LiveView.
 
   Contains display components for session status, output parts (text, reasoning,
-  tool calls), container stats, and question cards. Extracted from the main
-  `AgentsWeb.SessionsLive.Index` to keep the LiveView module focused on
-  event handling and state management.
+  tool calls), container stats, question cards, and todo progress bar. Extracted
+  from the main `AgentsWeb.SessionsLive.Index` to keep the LiveView module
+  focused on event handling and state management.
   """
   use Phoenix.Component
 
@@ -348,7 +348,7 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponents do
   defp tool_icon_name(_), do: "hero-wrench-screwdriver"
 
   defp completed_count(todo_items) do
-    Enum.count(todo_items, &(to_string(&1.status) == "completed"))
+    Enum.count(todo_items, &(&1.status == "completed"))
   end
 
   defp display_position(%{position: position}) when is_integer(position), do: position + 1

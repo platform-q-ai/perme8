@@ -40,7 +40,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.TodoTest do
       state = :sys.get_state(pid)
 
       assert state.todo_items == []
-      assert state.last_flushed_todo_count == 0
+      assert state.todo_version == 0
+      assert state.last_flushed_todo_version == 0
 
       stop_runner(pid)
     end

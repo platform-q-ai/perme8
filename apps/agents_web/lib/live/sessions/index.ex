@@ -7,6 +7,7 @@ defmodule AgentsWeb.SessionsLive.Index do
   import AgentsWeb.SessionsLive.Helpers
 
   alias Agents.Sessions
+  alias Agents.Sessions.Domain.Entities.TodoList
   alias AgentsWeb.SessionsLive.EventProcessor
 
   @stats_interval_ms 5_000
@@ -277,8 +278,9 @@ defmodule AgentsWeb.SessionsLive.Index do
   def handle_info({:todo_updated, task_id, todo_items}, socket) do
     case socket.assigns.current_task do
       %{id: ^task_id} when is_list(todo_items) ->
-        {:noreply,
-         EventProcessor.maybe_load_todos(socket, %{todo_items: %{"items" => todo_items}})}
+        todo_list = TodoList.from_maps(todo_items)
+
+        {:noreply, assign(socket, :todo_items, EventProcessor.todo_items_for_assigns(todo_list))}
 
       _ ->
         {:noreply, socket}
