@@ -50,7 +50,8 @@ defmodule AgentsWeb.SessionsLive.Index do
      |> assign_session_state()
      |> assign(:form, to_form(%{"instruction" => ""}))
      |> EventProcessor.maybe_load_cached_output(current_task)
-     |> EventProcessor.maybe_load_pending_question(current_task)}
+     |> EventProcessor.maybe_load_pending_question(current_task)
+     |> EventProcessor.maybe_load_todos(current_task)}
   end
 
   @impl true
@@ -137,7 +138,8 @@ defmodule AgentsWeb.SessionsLive.Index do
      |> assign_session_state()
      |> assign(:form, to_form(%{"instruction" => ""}))
      |> EventProcessor.maybe_load_cached_output(current_task)
-     |> EventProcessor.maybe_load_pending_question(current_task)}
+     |> EventProcessor.maybe_load_pending_question(current_task)
+     |> EventProcessor.maybe_load_todos(current_task)}
   end
 
   @impl true
@@ -255,7 +257,8 @@ defmodule AgentsWeb.SessionsLive.Index do
          |> assign(:events, [])
          |> assign_session_state()
          |> EventProcessor.maybe_load_cached_output(task)
-         |> EventProcessor.maybe_load_pending_question(task)}
+         |> EventProcessor.maybe_load_pending_question(task)
+         |> EventProcessor.maybe_load_todos(task)}
 
       {:error, :not_found} ->
         {:noreply, put_flash(socket, :error, "Task not found")}
@@ -267,6 +270,18 @@ defmodule AgentsWeb.SessionsLive.Index do
     case socket.assigns.current_task do
       %{id: ^task_id} -> {:noreply, EventProcessor.process_event(event, socket)}
       _ -> {:noreply, socket}
+    end
+  end
+
+  @impl true
+  def handle_info({:todo_updated, task_id, todo_items}, socket) do
+    case socket.assigns.current_task do
+      %{id: ^task_id} when is_list(todo_items) ->
+        {:noreply,
+         EventProcessor.maybe_load_todos(socket, %{todo_items: %{"items" => todo_items}})}
+
+      _ ->
+        {:noreply, socket}
     end
   end
 
@@ -350,7 +365,8 @@ defmodule AgentsWeb.SessionsLive.Index do
       session_summary: nil,
       output_parts: [],
       pending_question: nil,
-      user_message_ids: MapSet.new()
+      user_message_ids: MapSet.new(),
+      todo_items: []
     )
   end
 

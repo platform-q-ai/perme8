@@ -173,6 +173,13 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
     end
   end
 
+  def process_event(%{"type" => "todo.updated", "properties" => properties}, socket) do
+    case parse_todo_items(properties) do
+      {:ok, todo_items} -> assign(socket, :todo_items, todo_items)
+      {:error, _reason} -> socket
+    end
+  end
+
   def process_event(_event, socket), do: socket
 
   @doc """
@@ -213,6 +220,18 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
         socket
     end
   end
+
+  @doc """
+  Restores todo items from persisted task state on LiveView mount/reconnect.
+  """
+  def maybe_load_todos(socket, %{todo_items: %{"items" => items}}) when is_list(items) do
+    case parse_todo_items(%{"todos" => items}) do
+      {:ok, todo_items} -> assign(socket, :todo_items, todo_items)
+      {:error, _reason} -> socket
+    end
+  end
+
+  def maybe_load_todos(socket, _task), do: socket
 
   @doc """
   Returns true if any parts are currently streaming (text/reasoning) or running (tool).
@@ -345,6 +364,52 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
   end
 
   defp question_tool?(_), do: false
+
+  defp parse_todo_items(%{"todos" => todos}) when is_list(todos) do
+    todo_items =
+      todos
+      |> Enum.with_index()
+      |> Enum.map(fn {todo, index} -> normalize_todo_item(todo, index) end)
+
+    if Enum.all?(todo_items, &match?({:ok, _}, &1)) do
+      {:ok, Enum.map(todo_items, fn {:ok, item} -> item end)}
+    else
+      {:error, :invalid_payload}
+    end
+  end
+
+  defp parse_todo_items(_), do: {:error, :invalid_payload}
+
+  defp normalize_todo_item(todo, fallback_position) when is_map(todo) do
+    {:ok,
+     %{
+       id: map_value(todo, "id", :id, ""),
+       title: map_value(todo, "title", :title, map_value(todo, "content", :content, "")),
+       status: map_value(todo, "status", :status, "pending"),
+       position:
+         normalize_position(
+           map_value(todo, "position", :position, fallback_position),
+           fallback_position
+         )
+     }}
+  end
+
+  defp normalize_todo_item(_todo, _fallback_position), do: {:error, :invalid_todo_item}
+
+  defp normalize_position(position, _fallback) when is_integer(position), do: position
+
+  defp normalize_position(position, fallback) when is_binary(position) do
+    case Integer.parse(position) do
+      {value, ""} -> value
+      _ -> fallback
+    end
+  end
+
+  defp normalize_position(_position, fallback), do: fallback
+
+  defp map_value(map, string_key, atom_key, default) do
+    Map.get(map, string_key, Map.get(map, atom_key, default))
+  end
 
   defp decode_output_part(%{"type" => "text", "id" => id, "text" => text}) do
     {:text, id, text, :frozen}
