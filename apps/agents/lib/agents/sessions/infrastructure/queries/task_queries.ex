@@ -85,7 +85,13 @@ defmodule Agents.Sessions.Infrastructure.Queries.TaskQueries do
         image: fragment("(array_agg(? ORDER BY ? ASC))[1]", t.image, t.inserted_at),
         latest_at: max(t.inserted_at),
         created_at: min(t.inserted_at),
-        todo_items: fragment("(array_agg(? ORDER BY ? DESC))[1]", t.todo_items, t.inserted_at)
+        todo_items:
+          fragment(
+            "(array_agg(? ORDER BY ? DESC) FILTER (WHERE ? IS NOT NULL))[1]",
+            t.todo_items,
+            t.inserted_at,
+            t.todo_items
+          )
       },
       order_by: [desc: max(t.inserted_at)]
     )

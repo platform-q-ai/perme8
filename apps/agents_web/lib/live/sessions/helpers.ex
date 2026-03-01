@@ -167,12 +167,14 @@ defmodule AgentsWeb.SessionsLive.Helpers do
   Returns a list of maps with atom keys, or an empty list if no todos exist.
   """
   def session_todo_items(%{todo_items: %{"items" => items}}) when is_list(items) do
-    Enum.map(items, fn item ->
+    items
+    |> Enum.reject(&is_nil/1)
+    |> Enum.map(fn item ->
       %{
-        id: item["id"],
-        title: item["title"],
-        status: item["status"],
-        position: item["position"]
+        id: item["id"] || "",
+        title: item["title"] || "",
+        status: item["status"] || "pending",
+        position: item["position"] || 0
       }
     end)
   end

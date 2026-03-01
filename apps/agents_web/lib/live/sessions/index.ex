@@ -277,20 +277,28 @@ defmodule AgentsWeb.SessionsLive.Index do
   @impl true
   def handle_info({:todo_updated, task_id, todo_items}, socket) do
     case socket.assigns.current_task do
-      %{id: ^task_id, container_id: container_id} when is_list(todo_items) ->
+      %{id: ^task_id} = current when is_list(todo_items) ->
         todo_list = TodoList.from_maps(todo_items)
+        container_id = Map.get(current, :container_id)
 
-        sessions =
-          update_session_todo_items(
-            socket.assigns.sessions,
-            container_id,
-            TodoList.to_maps(todo_list)
-          )
+        socket =
+          assign(socket, :todo_items, EventProcessor.todo_items_for_assigns(todo_list))
 
-        {:noreply,
-         socket
-         |> assign(:todo_items, EventProcessor.todo_items_for_assigns(todo_list))
-         |> assign(:sessions, sessions)}
+        socket =
+          if container_id do
+            sessions =
+              update_session_todo_items(
+                socket.assigns.sessions,
+                container_id,
+                TodoList.to_maps(todo_list)
+              )
+
+            assign(socket, :sessions, sessions)
+          else
+            socket
+          end
+
+        {:noreply, socket}
 
       _ ->
         {:noreply, socket}

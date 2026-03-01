@@ -123,7 +123,7 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponents do
   def progress_bar(assigns) do
     ~H"""
     <section
-      :if={@todo_items != []}
+      :if={is_list(@todo_items) and @todo_items != []}
       data-testid="todo-progress"
       class="mx-4 mt-3 rounded-xl border border-base-300 bg-base-100 px-3 py-2 shadow-sm"
     >
@@ -180,7 +180,7 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponents do
   def compact_progress_bar(assigns) do
     ~H"""
     <div
-      :if={@todo_items != []}
+      :if={is_list(@todo_items) and @todo_items != []}
       data-testid="session-todo-progress"
       class="flex gap-0.5 w-full mt-1"
     >
