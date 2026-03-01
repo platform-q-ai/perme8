@@ -28,12 +28,11 @@ Feature: Chat Streaming Responses
     Then I should see "Thinking..."
 
   @wip
-  Scenario: Send button enabled during streaming when input has text
+  Scenario: Send button disabled during streaming
     When I fill "textarea#chat-input" with "Tell me about TDD"
     And I click the "Send" button
     And I wait for 1 seconds
-    When I fill "textarea#chat-input" with "Another message"
-    Then "#chat-message-form button[type='submit']" should be enabled
+    Then "#chat-message-form button[type='submit']" should be disabled
 
   @wip
   Scenario: Cancel button appears during streaming
