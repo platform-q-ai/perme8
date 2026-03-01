@@ -10,6 +10,7 @@ defmodule Agents.Sessions.Application.UseCases.DeleteTask do
 
   @default_task_repo Agents.Sessions.Infrastructure.Repositories.TaskRepository
 
+  @spec execute(String.t(), String.t(), keyword()) :: :ok | {:error, term()}
   def execute(task_id, user_id, opts \\ []) do
     task_repo = Keyword.get(opts, :task_repo, @default_task_repo)
 

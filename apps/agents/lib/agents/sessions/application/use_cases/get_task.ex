@@ -14,6 +14,8 @@ defmodule Agents.Sessions.Application.UseCases.GetTask do
   - `{:ok, task}` - Domain entity
   - `{:error, :not_found}` - Task not found or not owned by user
   """
+  @spec execute(String.t(), String.t(), keyword()) ::
+          {:ok, Agents.Sessions.Domain.Entities.Task.t()} | {:error, :not_found}
   def execute(task_id, user_id, opts \\ []) do
     task_repo = Keyword.get(opts, :task_repo, @default_task_repo)
 

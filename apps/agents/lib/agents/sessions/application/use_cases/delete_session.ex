@@ -14,6 +14,7 @@ defmodule Agents.Sessions.Application.UseCases.DeleteSession do
   @default_task_repo Agents.Sessions.Infrastructure.Repositories.TaskRepository
   @default_container_provider Agents.Sessions.Infrastructure.Adapters.DockerAdapter
 
+  @spec execute(String.t(), String.t(), keyword()) :: :ok | {:error, term()}
   def execute(container_id, user_id, opts \\ []) do
     task_repo = Keyword.get(opts, :task_repo, @default_task_repo)
     container_provider = Keyword.get(opts, :container_provider, @default_container_provider)

@@ -23,6 +23,7 @@ defmodule Agents.Sessions.Application.UseCases.CancelTask do
   - `{:error, :not_found}` - Task not found or not owned by user
   - `{:error, :not_cancellable}` - Task in a terminal state
   """
+  @spec execute(String.t(), String.t(), keyword()) :: :ok | {:error, term()}
   def execute(task_id, user_id, opts \\ []) do
     task_repo = Keyword.get(opts, :task_repo, @default_task_repo)
     cancel_fn = Keyword.get(opts, :task_runner_cancel, &default_cancel/1)

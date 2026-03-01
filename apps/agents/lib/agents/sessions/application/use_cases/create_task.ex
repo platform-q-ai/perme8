@@ -30,6 +30,8 @@ defmodule Agents.Sessions.Application.UseCases.CreateTask do
   - `{:error, :instruction_required}` - When instruction is blank
   - `{:error, changeset}` - On validation error
   """
+  @spec execute(map(), keyword()) ::
+          {:ok, Agents.Sessions.Domain.Entities.Task.t()} | {:error, term()}
   def execute(attrs, opts \\ []) do
     task_repo = Keyword.get(opts, :task_repo, @default_task_repo)
     event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
