@@ -1,0 +1,300 @@
+<div class="flex h-full">
+  <%!-- Left Panel: Session List --%>
+  <div class="w-72 shrink-0 border-r border-base-300 flex flex-col bg-base-100">
+    <div class="p-3 border-b border-base-300">
+      <button
+        type="button"
+        phx-click="new_session"
+        class="btn btn-primary btn-sm w-full"
+      >
+        <.icon name="hero-plus" class="size-4" /> New Session
+      </button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto">
+      <%= if @sessions == [] do %>
+        <div class="p-6 text-center text-base-content/50 text-sm">
+          <.icon name="hero-chat-bubble-left-right" class="size-8 mx-auto mb-2 opacity-40" />
+          <p>No sessions yet</p>
+        </div>
+      <% else %>
+        <ul class="menu menu-sm p-2 gap-1 w-full">
+          <li :for={session <- @sessions} class="w-full">
+            <div
+              class={[
+                "flex flex-col gap-0.5 w-full rounded-lg p-2",
+                session.container_id == @active_container_id && "active"
+              ]}
+              phx-click="select_session"
+              phx-value-container-id={session.container_id}
+            >
+              <div class="flex items-center justify-between w-full">
+                <span class="text-xs font-medium truncate flex-1 min-w-0">
+                  {truncate_instruction(session.title, 35)}
+                </span>
+                <.status_dot status={session.latest_status} />
+              </div>
+              <div class="flex items-center gap-2 text-[0.65rem] text-base-content/50 w-full">
+                <span>{session.task_count} task{if session.task_count != 1, do: "s"}</span>
+                <span>&middot;</span>
+                <span>{relative_time(session.latest_at)}</span>
+              </div>
+              <.container_stats_bars
+                :if={Map.has_key?(@container_stats, session.container_id)}
+                stats={@container_stats[session.container_id]}
+              />
+            </div>
+          </li>
+        </ul>
+      <% end %>
+    </div>
+  </div>
+
+  <%!-- Right Panel: Active Session Detail --%>
+  <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+    <%= if @active_container_id || @current_task || @composing_new do %>
+      <%!-- Session header --%>
+      <div class="px-4 py-3 border-b border-base-300 flex items-center justify-between bg-base-100 shrink-0">
+        <div class="flex items-center gap-2 min-w-0">
+          <.status_badge status={if @current_task, do: @current_task.status, else: "idle"} />
+          <h2 class="text-sm font-medium truncate">
+            {@session_title ||
+              if @current_task,
+                do: truncate_instruction(@current_task.instruction, 60),
+                else: "Session"}
+          </h2>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <span
+            :if={@session_model}
+            class="text-xs text-base-content/50 font-mono"
+          >
+            {@session_model}
+          </span>
+          <button
+            :if={@active_container_id && session_deletable?(@sessions, @active_container_id)}
+            type="button"
+            phx-click="delete_session"
+            phx-value-container-id={@active_container_id}
+            data-confirm="Delete this session and its container? This cannot be undone."
+            class="btn btn-ghost btn-xs text-error"
+            title="Delete session"
+          >
+            <.icon name="hero-trash" class="size-4" />
+          </button>
+        </div>
+      </div>
+
+      <%!-- Stats bar --%>
+      <div
+        :if={@session_tokens || @session_summary}
+        class="px-4 py-1.5 border-b border-base-300 flex flex-wrap gap-4 text-xs text-base-content/60 bg-base-100 shrink-0"
+      >
+        <div :if={@session_tokens} class="flex items-center gap-1">
+          <.icon name="hero-arrow-down-tray" class="size-3" />
+          <span>{format_token_count(@session_tokens["input"])} in</span>
+        </div>
+        <div :if={@session_tokens} class="flex items-center gap-1">
+          <.icon name="hero-arrow-up-tray" class="size-3" />
+          <span>{format_token_count(@session_tokens["output"])} out</span>
+        </div>
+        <div :if={@session_tokens && @session_tokens["cache"]} class="flex items-center gap-1">
+          <.icon name="hero-circle-stack" class="size-3" />
+          <span>{format_token_count(@session_tokens["cache"]["read"])} cached</span>
+        </div>
+        <div
+          :if={@session_summary && @session_summary["files"] && @session_summary["files"] > 0}
+          class="flex items-center gap-1"
+        >
+          <.icon name="hero-document-text" class="size-3" />
+          <span>
+            {Map.get(@session_summary, "files", 0)} files
+            <span class="text-success">+{Map.get(@session_summary, "additions", 0)}</span>
+            <span class="text-error">-{Map.get(@session_summary, "deletions", 0)}</span>
+          </span>
+        </div>
+      </div>
+
+      <%!-- Error alert --%>
+      <div
+        :if={@current_task && @current_task.status == "failed" && @current_task.error}
+        class="mx-4 mt-3 alert alert-error"
+      >
+        <.icon name="hero-exclamation-triangle" class="size-5 shrink-0" />
+        <div class="flex-1">
+          <h3 class="font-semibold">Task failed</h3>
+          <p class="text-sm">{format_error(@current_task.error)}</p>
+        </div>
+        <button
+          :if={auth_error?(@current_task.error) && resumable_task?(@current_task)}
+          type="button"
+          phx-click="refresh_auth_and_resume"
+          disabled={@auth_refreshing}
+          class="btn btn-sm btn-warning"
+        >
+          <.icon
+            name="hero-arrow-path"
+            class={if(@auth_refreshing, do: "size-4 animate-spin", else: "size-4")}
+          />
+          {if @auth_refreshing, do: "Refreshing...", else: "Refresh Auth & Resume"}
+        </button>
+      </div>
+
+      <%!-- Output log --%>
+      <div class="flex-1 overflow-y-auto p-4" id="session-log" phx-hook="SessionLog">
+        <%= if @current_task do %>
+          <%!-- User message --%>
+          <div class="flex gap-2 mb-3">
+            <div class="shrink-0 size-6 rounded-full bg-primary/10 flex items-center justify-center">
+              <.icon name="hero-user" class="size-3.5 text-primary" />
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="text-xs font-medium text-base-content/50 mb-0.5">You</div>
+              <div class="text-sm whitespace-pre-line break-words">
+                {String.trim(@current_task.instruction)}
+              </div>
+            </div>
+          </div>
+        <% end %>
+        <%= if @output_parts == [] && task_running?(@current_task) do %>
+          <div class="flex gap-2">
+            <div class="shrink-0 size-6 rounded-full bg-secondary/10 flex items-center justify-center">
+              <.icon name="hero-cpu-chip" class="size-3.5 text-secondary" />
+            </div>
+            <div class="flex items-center gap-2 text-base-content/50 text-sm">
+              <span class="loading loading-dots loading-xs"></span>
+              <span>Waiting for response...</span>
+            </div>
+          </div>
+        <% end %>
+        <%= if @output_parts == [] && !task_running?(@current_task) && @current_task == nil do %>
+          <div class="flex flex-col items-center justify-center h-full text-base-content/40">
+            <.icon name="hero-command-line" class="size-12 mb-3" />
+            <p class="text-sm">Enter an instruction below to start</p>
+          </div>
+        <% end %>
+        <%= if @output_parts != [] do %>
+          <div class="flex gap-2">
+            <div class="shrink-0 size-6 rounded-full bg-secondary/10 flex items-center justify-center mt-0.5">
+              <.icon name="hero-cpu-chip" class="size-3.5 text-secondary" />
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="text-xs font-medium text-base-content/50 mb-0.5">Assistant</div>
+              <%= for part <- @output_parts do %>
+                <.output_part part={part} />
+              <% end %>
+              <%!-- Show activity indicator when task is still running but all cached parts are frozen --%>
+              <div
+                :if={
+                  task_running?(@current_task) &&
+                    !EventProcessor.has_streaming_parts?(@output_parts)
+                }
+                class="flex items-center gap-2 text-base-content/40 text-xs py-1"
+              >
+                <span class="loading loading-dots loading-xs"></span>
+                <span>Working...</span>
+              </div>
+            </div>
+          </div>
+        <% end %>
+        <%!-- Pending question from assistant --%>
+        <.question_card
+          :if={@pending_question}
+          pending={@pending_question}
+        />
+      </div>
+
+      <%!-- Task history for this session --%>
+      <div
+        :if={@active_container_id && length(session_tasks(@tasks, @active_container_id)) > 1}
+        class="border-t border-base-300 shrink-0 max-h-40 overflow-y-auto"
+      >
+        <div class="px-4 py-2">
+          <h4 class="text-xs font-semibold text-base-content/60 mb-1">Task History</h4>
+          <div class="space-y-1">
+            <div
+              :for={task <- session_tasks(@tasks, @active_container_id)}
+              class={[
+                "flex items-center gap-2 text-xs p-1.5 rounded cursor-pointer hover:bg-base-200",
+                @current_task && @current_task.id == task.id && "bg-base-200"
+              ]}
+              phx-click="view_task"
+              phx-value-task-id={task.id}
+            >
+              <.status_dot status={task.status} />
+              <span class="truncate flex-1">{truncate_instruction(task.instruction, 45)}</span>
+              <span class="text-base-content/40 shrink-0">
+                {relative_time(task.inserted_at)}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <%!-- Input form --%>
+      <div class="border-t border-base-300 p-3 bg-base-100 shrink-0">
+        <form id="session-form" phx-submit="run_task" class="flex gap-2 items-end">
+          <div class="flex-1">
+            <textarea
+              name="instruction"
+              id="session-instruction"
+              phx-hook="SessionForm"
+              rows="2"
+              class="textarea textarea-bordered w-full text-sm leading-snug"
+              placeholder={
+                cond do
+                  task_running?(@current_task) ->
+                    "Send a message (queued until agent finishes)..."
+
+                  resumable_task?(@current_task) ->
+                    "Follow-up instruction..."
+
+                  true ->
+                    "Describe the coding task..."
+                end
+              }
+            >{@form["instruction"].value}</textarea>
+          </div>
+          <div class="flex gap-1 shrink-0">
+            <.button
+              :if={task_running?(@current_task)}
+              type="button"
+              variant="error"
+              size="sm"
+              phx-click="cancel_task"
+              id="cancel-task-btn"
+            >
+              <.icon name="hero-stop" class="size-4" />
+            </.button>
+            <.button
+              type="submit"
+              variant={if(task_running?(@current_task), do: "ghost", else: "primary")}
+              size="sm"
+            >
+              <%= cond do %>
+                <% task_running?(@current_task) -> %>
+                  <.icon name="hero-chat-bubble-left-ellipsis" class="size-4" />
+                <% resumable_task?(@current_task) -> %>
+                  <.icon name="hero-arrow-path" class="size-4" />
+                <% true -> %>
+                  <.icon name="hero-paper-airplane" class="size-4" />
+              <% end %>
+            </.button>
+          </div>
+        </form>
+      </div>
+    <% else %>
+      <%!-- Empty state — no session selected --%>
+      <div class="flex-1 flex flex-col items-center justify-center text-base-content/40 p-8">
+        <.icon name="hero-command-line" class="size-16 mb-4" />
+        <h3 class="text-lg font-semibold mb-2">No sessions yet</h3>
+        <p class="text-sm text-center max-w-sm mb-4">
+          Start a new coding session to run tasks in containers with opencode.
+        </p>
+        <button type="button" phx-click="new_session" class="btn btn-primary btn-sm">
+          <.icon name="hero-plus" class="size-4" /> New Session
+        </button>
+      </div>
+    <% end %>
+  </div>
+</div>
