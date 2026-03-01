@@ -1,4 +1,4 @@
-# Stage 1: minimal Elixir runtime on Alpine with Pi coding agent
+# Minimal Elixir runtime on Alpine with Pi coding agent
 FROM hexpm/elixir:1.19.4-erlang-28.3.2-alpine-3.21.6
 
 # git: repo operations, bash+openssl+curl+python3: get-token script
@@ -21,6 +21,8 @@ RUN npm install -g @mariozechner/pi-coding-agent@0.55.3
 RUN adduser -D -g "" appuser
 
 # Pre-create directories Pi expects at runtime
+# .pi/agent: Pi global config; .config/perme8: get-token + PEM;
+# .claude/skills: shared skills repo (cloned at startup); /tmp/pgdata: embedded PostgreSQL
 RUN mkdir -p /home/appuser/.pi/agent \
              /home/appuser/.config/perme8 \
              /home/appuser/.claude \
