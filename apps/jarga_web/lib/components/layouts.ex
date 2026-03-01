@@ -271,7 +271,7 @@ defmodule JargaWeb.Layouts do
 
     <%!-- Global Chat Panel (outside admin drawer) --%>
     <.live_component
-      module={JargaWeb.ChatLive.Panel}
+      module={ChatWeb.ChatLive.Panel}
       id="global-chat-panel"
       current_user={@current_scope.user}
       current_workspace={@workspace}

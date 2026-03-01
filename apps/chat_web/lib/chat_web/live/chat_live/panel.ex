@@ -1,17 +1,20 @@
-defmodule JargaWeb.ChatLive.Panel do
+defmodule ChatWeb.ChatLive.Panel do
   @moduledoc """
   Global chat panel LiveView component.
 
   Provides an always-accessible chat interface that can be toggled from any page.
   In PR #1, this chats with the current document content.
   Future PRs will add document chat functionality.
-  """
-  use JargaWeb, :live_component
 
-  import JargaWeb.ChatLive.Components.Message
+  Note: the `ChatPanel` JavaScript hook remains in `apps/jarga_web/assets/js/`
+  because chat_web is mounted in the shared JargaWeb endpoint.
+  """
+  use ChatWeb, :live_component
+
+  import ChatWeb.ChatLive.Components.Message
 
   alias Agents
-  alias Jarga.Chat
+  alias Chat
 
   @impl true
   def mount(socket) do
@@ -96,7 +99,7 @@ defmodule JargaWeb.ChatLive.Panel do
       # Load selected agent from user preferences
       selected_agent_id =
         if workspace_id && current_user do
-          Jarga.Accounts.get_selected_agent_id(current_user.id, workspace_id)
+          Identity.get_selected_agent_id(current_user.id, workspace_id)
         else
           nil
         end
@@ -120,7 +123,7 @@ defmodule JargaWeb.ChatLive.Panel do
       current_user = get_nested(socket.assigns, [:current_user])
 
       if workspace_id && current_user do
-        Jarga.Accounts.set_selected_agent_id(current_user.id, workspace_id, first_agent.id)
+        Identity.set_selected_agent_id(current_user.id, workspace_id, first_agent.id)
       end
 
       assign(socket, :selected_agent_id, first_agent.id)
@@ -298,7 +301,7 @@ defmodule JargaWeb.ChatLive.Panel do
     current_user = get_nested(socket.assigns, [:current_user])
 
     if workspace_id && current_user do
-      Jarga.Accounts.set_selected_agent_id(current_user.id, workspace_id, agent_id)
+      Identity.set_selected_agent_id(current_user.id, workspace_id, agent_id)
     end
 
     {:noreply, assign(socket, :selected_agent_id, agent_id)}

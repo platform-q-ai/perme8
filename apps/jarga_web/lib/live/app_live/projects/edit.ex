@@ -5,7 +5,7 @@ defmodule JargaWeb.AppLive.Projects.Edit do
 
   use JargaWeb, :live_view
 
-  import JargaWeb.ChatLive.MessageHandlers
+  import ChatWeb.ChatLive.MessageHandlers
   import JargaWeb.Live.PermissionsHelper
 
   alias Jarga.{Workspaces, Projects}

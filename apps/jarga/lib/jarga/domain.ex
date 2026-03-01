@@ -3,7 +3,7 @@ defmodule Jarga.Domain do
   Domain layer namespace for the Jarga application.
 
   Jarga uses a **Bounded Context** architecture where each context
-  (Agents, Chat, Documents, Notifications, Projects, Workspaces)
+  (Agents, Documents, Notifications, Projects, Workspaces)
   has its own domain, application, and infrastructure layers.
 
   Note: User identity and authentication is handled by the separate `Identity` app.
@@ -35,8 +35,8 @@ defmodule Jarga.Domain do
   - Entities: Agent, WorkspaceAgentJoin
   - Services: AgentCloner
 
-  ### Chat (`Jarga.Chat.Domain`)
-  - Entities: Session, Message
+  ### Chat — extracted to `apps/chat/`
+  - See `Chat.Domain` for chat entities and events
 
   ### Documents (`Jarga.Documents.Domain`)
   - Entities: Document, DocumentComponent
@@ -86,9 +86,7 @@ defmodule Jarga.Domain do
       # Agents (extracted to apps/agents/)
       Agents.Domain.Entities.Agent,
       Agents.Domain.Entities.WorkspaceAgentJoin,
-      # Chat
-      Jarga.Chat.Domain.Entities.Session,
-      Jarga.Chat.Domain.Entities.Message,
+      # Chat — extracted to apps/chat/
       # Documents
       Jarga.Documents.Domain.Entities.Document,
       Jarga.Documents.Domain.Entities.DocumentComponent,
@@ -163,14 +161,7 @@ defmodule Jarga.Domain do
         policies: [],
         services: [Agents.Domain.AgentCloner]
       },
-      chat: %{
-        entities: [
-          Jarga.Chat.Domain.Entities.Session,
-          Jarga.Chat.Domain.Entities.Message
-        ],
-        policies: [],
-        services: []
-      },
+      # chat — extracted to apps/chat/
       documents: %{
         entities: [
           Jarga.Documents.Domain.Entities.Document,

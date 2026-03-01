@@ -30,7 +30,8 @@ defmodule JargaWeb do
       Jarga.Notes,
       Agents,
       Agents.Domain,
-      Jarga.Chat,
+      Chat,
+      ChatWeb,
       Notifications,
       Notifications.Domain,
       # Shared infrastructure

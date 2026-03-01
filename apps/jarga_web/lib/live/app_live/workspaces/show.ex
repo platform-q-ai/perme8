@@ -6,7 +6,7 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
   use JargaWeb, :live_view
 
   import JargaWeb.Live.PermissionsHelper
-  import JargaWeb.ChatLive.MessageHandlers
+  import ChatWeb.ChatLive.MessageHandlers
 
   alias Jarga.{Workspaces, Projects, Documents}
   alias JargaWeb.Layouts
@@ -710,7 +710,7 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
   @impl true
   def handle_event("select_agent", %{"agent_id" => agent_id}, socket) do
     # Forward agent selection to the chat panel component
-    send_update(JargaWeb.ChatLive.Panel,
+    send_update(ChatWeb.ChatLive.Panel,
       id: "global-chat-panel",
       selected_agent_id: agent_id
     )
@@ -1086,7 +1086,7 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
     # Reload for chat panel (flat list with enabled only)
     agents = Agents.get_workspace_agents_list(workspace_id, user.id, enabled_only: true)
 
-    send_update(JargaWeb.ChatLive.Panel,
+    send_update(ChatWeb.ChatLive.Panel,
       id: "global-chat-panel",
       workspace_agents: agents,
       from_pubsub: true

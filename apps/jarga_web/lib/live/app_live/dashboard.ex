@@ -1,6 +1,6 @@
 defmodule JargaWeb.AppLive.Dashboard do
   use JargaWeb, :live_view
-  import JargaWeb.ChatLive.MessageHandlers
+  import ChatWeb.ChatLive.MessageHandlers
 
   alias Jarga.Workspaces
   alias JargaWeb.Layouts
@@ -176,7 +176,7 @@ defmodule JargaWeb.AppLive.Dashboard do
     user = socket.assigns.current_scope.user
     agents = Agents.list_user_agents(user.id)
 
-    send_update(JargaWeb.ChatLive.Panel,
+    send_update(ChatWeb.ChatLive.Panel,
       id: "global-chat-panel",
       workspace_agents: agents,
       from_pubsub: true
@@ -188,7 +188,7 @@ defmodule JargaWeb.AppLive.Dashboard do
   @impl true
   def handle_event("load_session", %{"session_id" => session_id}, socket) do
     # Forward to chat panel component
-    send_update(JargaWeb.ChatLive.Panel,
+    send_update(ChatWeb.ChatLive.Panel,
       id: "global-chat-panel",
       action: :load_session,
       session_id: session_id
@@ -200,7 +200,7 @@ defmodule JargaWeb.AppLive.Dashboard do
   @impl true
   def handle_event("restore_session", %{"session_id" => session_id}, socket) do
     # Forward to chat panel component
-    send_update(JargaWeb.ChatLive.Panel,
+    send_update(ChatWeb.ChatLive.Panel,
       id: "global-chat-panel",
       action: :restore_session,
       session_id: session_id

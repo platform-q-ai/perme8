@@ -1,12 +1,12 @@
-defmodule JargaWeb.ChatLive.Components.Message do
+defmodule ChatWeb.ChatLive.Components.Message do
   @moduledoc """
   Message component for displaying chat messages.
   """
   use Phoenix.Component
 
-  attr :message, :map, required: true
-  attr :show_insert, :boolean, default: false
-  attr :panel_target, :any, default: nil
+  attr(:message, :map, required: true)
+  attr(:show_insert, :boolean, default: false)
+  attr(:panel_target, :any, default: nil)
 
   def message(assigns) do
     # Pre-render markdown for assistant messages
@@ -80,9 +80,13 @@ defmodule JargaWeb.ChatLive.Components.Message do
       ]
     ]
 
-    case MDEx.to_html(content, opts) do
-      {:ok, html} -> html
-      {:error, _} -> content
+    if Code.ensure_loaded?(MDEx) and function_exported?(MDEx, :to_html, 2) do
+      case apply(MDEx, :to_html, [content, opts]) do
+        {:ok, html} -> html
+        {:error, _} -> content
+      end
+    else
+      content
     end
   end
 

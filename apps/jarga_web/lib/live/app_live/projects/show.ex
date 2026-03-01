@@ -5,7 +5,7 @@ defmodule JargaWeb.AppLive.Projects.Show do
 
   use JargaWeb, :live_view
 
-  import JargaWeb.ChatLive.MessageHandlers
+  import ChatWeb.ChatLive.MessageHandlers
   import JargaWeb.Live.PermissionsHelper
 
   alias Jarga.{Workspaces, Projects, Documents}
@@ -437,7 +437,7 @@ defmodule JargaWeb.AppLive.Projects.Show do
     user = socket.assigns.current_scope.user
     agents = Agents.get_workspace_agents_list(workspace_id, user.id, enabled_only: true)
 
-    send_update(JargaWeb.ChatLive.Panel,
+    send_update(ChatWeb.ChatLive.Panel,
       id: "global-chat-panel",
       workspace_agents: agents,
       from_pubsub: true
