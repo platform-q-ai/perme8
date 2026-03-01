@@ -84,7 +84,8 @@ defmodule Agents.Sessions.Application.UseCases.ResumeTask do
       user_id: attrs.user_id,
       parent_task_id: parent.id,
       container_id: parent.container_id,
-      session_id: parent.session_id
+      session_id: parent.session_id,
+      image: parent.image
     })
   end
 

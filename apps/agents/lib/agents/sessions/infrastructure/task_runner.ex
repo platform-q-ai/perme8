@@ -32,6 +32,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     :container_port,
     :session_id,
     :instruction,
+    :image,
     :user_id,
     :flush_ref,
     :question_timeout_ref,
@@ -113,6 +114,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
         state = %__MODULE__{
           task_id: task_id,
           instruction: task.instruction,
+          image: task.image || SessionsConfig.image(),
           user_id: task.user_id,
           container_provider: container_provider,
           opencode_client: opencode_client,
@@ -169,7 +171,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
   @impl true
   def handle_info(:start_container, state) do
-    image = SessionsConfig.image()
+    image = state.image || SessionsConfig.image()
 
     case state.container_provider.start(image, []) do
       {:ok, %{container_id: container_id, port: port}} ->
