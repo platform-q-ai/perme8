@@ -93,7 +93,8 @@ defmodule Agents.Sessions.Infrastructure.Schemas.TaskSchema do
   @doc """
   Creates a changeset for updating task status and related mutable fields.
 
-  Does NOT allow changing instruction or user_id.
+  Allows updating instruction (used by session resume) but does NOT
+  allow changing user_id.
   """
   def status_changeset(task, attrs) do
     task
