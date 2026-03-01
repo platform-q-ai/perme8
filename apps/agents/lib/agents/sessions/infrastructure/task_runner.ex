@@ -20,7 +20,6 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   """
   use GenServer, restart: :temporary
 
-  alias Agents.Sessions.Application.Services.AuthRefresher
   alias Agents.Sessions.Application.SessionsConfig
   alias Agents.Sessions.Infrastructure.Schemas.TaskSchema
 
@@ -34,7 +33,6 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     :instruction,
     :user_id,
     :flush_ref,
-    :auth_refresh_ref,
     :question_timeout_ref,
     :pending_question_request_id,
     :pending_question_data,
@@ -313,10 +311,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
         broadcast_status(state.task_id, "running", state.pubsub)
 
         flush_ref = schedule_output_flush()
-        auth_refresh_ref = schedule_auth_refresh()
 
-        {:noreply,
-         %{state | status: :running, flush_ref: flush_ref, auth_refresh_ref: auth_refresh_ref}}
+        {:noreply, %{state | status: :running, flush_ref: flush_ref}}
 
       {:error, reason} ->
         fail_task(state, "Prompt send failed: #{inspect(reason)}")
@@ -366,31 +362,6 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     {:noreply, %{state | flush_ref: flush_ref}}
   end
 
-  # ---- Periodic auth refresh ----
-
-  @impl true
-  def handle_info(:refresh_auth, state) do
-    base_url = "http://localhost:#{state.container_port}"
-
-    case AuthRefresher.refresh_auth(base_url, state.opencode_client) do
-      {:ok, providers} ->
-        if providers != [] do
-          Logger.info(
-            "TaskRunner: refreshed auth for #{length(providers)} provider(s) on task #{state.task_id}"
-          )
-        end
-
-      {:error, reason} ->
-        Logger.warning(
-          "TaskRunner: auth refresh failed for task #{state.task_id}: #{inspect(reason)}"
-        )
-    end
-
-    # Schedule the next refresh
-    auth_refresh_ref = schedule_auth_refresh()
-    {:noreply, %{state | auth_refresh_ref: auth_refresh_ref}}
-  end
-
   # ---- Question Timeout ----
 
   @impl true
@@ -437,7 +408,6 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   @impl true
   def handle_info(:cancel, state) do
     cancel_flush_timer(state)
-    cancel_auth_refresh_timer(state)
     cancel_question_timeout(state)
 
     if state.session_id && state.container_port do
@@ -745,7 +715,6 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
   defp fail_task(state, error) do
     cancel_flush_timer(state)
-    cancel_auth_refresh_timer(state)
 
     attrs = %{
       status: "failed",
@@ -763,7 +732,6 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
   defp complete_task(state) do
     cancel_flush_timer(state)
-    cancel_auth_refresh_timer(state)
 
     attrs = %{
       status: "completed",
@@ -894,17 +862,9 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   defp cancel_flush_timer(%{flush_ref: nil}), do: :ok
   defp cancel_flush_timer(%{flush_ref: ref}), do: Process.cancel_timer(ref)
 
-  defp cancel_auth_refresh_timer(%{auth_refresh_ref: nil}), do: :ok
-  defp cancel_auth_refresh_timer(%{auth_refresh_ref: ref}), do: Process.cancel_timer(ref)
-
   defp schedule_output_flush do
     interval = SessionsConfig.output_flush_interval_ms()
     Process.send_after(self(), :flush_output, interval)
-  end
-
-  defp schedule_auth_refresh do
-    interval = SessionsConfig.auth_refresh_interval_ms()
-    Process.send_after(self(), :refresh_auth, interval)
   end
 
   defp flush_output_to_db(state) do
