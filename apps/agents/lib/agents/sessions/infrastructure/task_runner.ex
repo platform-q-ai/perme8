@@ -134,18 +134,20 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   def handle_call({:answer_question, request_id, answers}, _from, state) do
     base_url = "http://localhost:#{state.container_port}"
 
-    result = state.opencode_client.reply_question(base_url, request_id, answers, [])
-    state = clear_pending_question(state)
-    {:reply, result, state}
+    case state.opencode_client.reply_question(base_url, request_id, answers, []) do
+      :ok -> {:reply, :ok, clear_pending_question(state)}
+      {:error, _} = error -> {:reply, error, state}
+    end
   end
 
   @impl true
   def handle_call({:reject_question, request_id}, _from, state) do
     base_url = "http://localhost:#{state.container_port}"
 
-    result = state.opencode_client.reject_question(base_url, request_id, [])
-    state = mark_question_rejected(state)
-    {:reply, result, state}
+    case state.opencode_client.reject_question(base_url, request_id, []) do
+      :ok -> {:reply, :ok, mark_question_rejected(state)}
+      {:error, _} = error -> {:reply, error, state}
+    end
   end
 
   @impl true
@@ -376,7 +378,17 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
         )
 
         base_url = "http://localhost:#{state.container_port}"
-        state.opencode_client.reject_question(base_url, request_id, [])
+
+        case state.opencode_client.reject_question(base_url, request_id, []) do
+          :ok ->
+            :ok
+
+          {:error, reason} ->
+            Logger.warning(
+              "TaskRunner: auto-reject failed for #{request_id} on task #{state.task_id}: #{inspect(reason)}"
+            )
+        end
+
         state = mark_question_rejected(state)
         {:noreply, state}
     end
@@ -828,7 +840,16 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
       )
 
       base_url = "http://localhost:#{state.container_port}"
-      state.opencode_client.reject_question(base_url, request_id, [])
+
+      case state.opencode_client.reject_question(base_url, request_id, []) do
+        :ok ->
+          :ok
+
+        {:error, reason} ->
+          Logger.warning(
+            "TaskRunner: auto-reject failed for #{request_id} on task #{state.task_id}: #{inspect(reason)}"
+          )
+      end
     end
 
     {:continue, state}
