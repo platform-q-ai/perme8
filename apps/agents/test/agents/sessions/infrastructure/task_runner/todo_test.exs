@@ -229,22 +229,23 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.TodoTest do
     |> expect(:health, fn _url -> :ok end)
     |> expect(:create_session, fn _url, _opts -> {:ok, %{"id" => "sess-1"}} end)
     |> expect(:subscribe_events, fn _url, runner_pid ->
-      spawn(fn ->
-        Enum.each(events, fn event ->
-          Process.sleep(30)
-          send(runner_pid, {:opencode_event, event})
-        end)
-
-        if complete? and events == [] do
-          send(runner_pid, {:opencode_event, session_status("busy")})
-          send(runner_pid, {:opencode_event, session_status("idle")})
-        end
-      end)
-
+      spawn(fn -> send_events(runner_pid, events, complete?) end)
       {:ok, self()}
     end)
     |> expect(:send_prompt_async, fn _url, "sess-1", _parts, _opts -> :ok end)
     |> stub(:abort_session, fn _url, _session_id -> {:ok, true} end)
+  end
+
+  defp send_events(runner_pid, events, complete?) do
+    Enum.each(events, fn event ->
+      Process.sleep(30)
+      send(runner_pid, {:opencode_event, event})
+    end)
+
+    if complete? and events == [] do
+      send(runner_pid, {:opencode_event, session_status("busy")})
+      send(runner_pid, {:opencode_event, session_status("idle")})
+    end
   end
 
   defp todo_event(todos) do
