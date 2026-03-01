@@ -21,6 +21,7 @@
         <ul class="menu menu-sm p-2 gap-1 w-full">
           <li :for={session <- @sessions} class="w-full">
             <div
+              data-testid={"session-item-#{slugify(session.title)}"}
               class={[
                 "flex flex-col gap-0.5 w-full rounded-lg p-2",
                 session.container_id == @active_container_id && "active"

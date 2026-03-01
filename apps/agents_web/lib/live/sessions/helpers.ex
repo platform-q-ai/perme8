@@ -148,4 +148,15 @@ defmodule AgentsWeb.SessionsLive.Helpers do
       task -> task
     end)
   end
+
+  @doc "Converts a title string to a lowercase hyphenated slug for data-testid values."
+  def slugify(nil), do: ""
+
+  def slugify(title) when is_binary(title) do
+    title
+    |> String.downcase()
+    |> String.replace(~r/[^a-z0-9\s-]/, "")
+    |> String.trim()
+    |> String.replace(~r/\s+/, "-")
+  end
 end

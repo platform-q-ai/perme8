@@ -482,6 +482,160 @@ long_instruction =
 IO.puts("[exo-seeds-web] Created session tasks for alice")
 
 # ---------------------------------------------------------------------------
+# 7b. Create session tasks with todo items (for todo-progress-bar browser tests)
+# ---------------------------------------------------------------------------
+# Each group of tasks shares a container_id so they appear as a "session".
+# The first task's instruction (by inserted_at ASC) becomes the session title,
+# which is slugified in the template to produce the data-testid value.
+# The todo_items field stores the persisted todo state as a map with an "items" key.
+
+# Helper to build the todo_items map from a list of {title, status} tuples
+build_todo_items = fn items ->
+  %{
+    "items" =>
+      items
+      |> Enum.with_index()
+      |> Enum.map(fn {{title, status}, index} ->
+        %{
+          "id" => Ecto.UUID.generate(),
+          "title" => title,
+          "status" => status,
+          "position" => index
+        }
+      end)
+  }
+end
+
+# Session: "Todo Initial" — 4 steps, all pending
+todo_initial_container = "todo-initial-#{Ecto.UUID.generate() |> String.slice(0..7)}"
+
+{:ok, todo_initial_task} =
+  %TaskSchema{}
+  |> TaskSchema.changeset(%{
+    user_id: alice.id,
+    instruction: "Todo Initial",
+    status: "running",
+    container_id: todo_initial_container
+  })
+  |> Jarga.Repo.insert()
+
+todo_initial_task
+|> TaskSchema.status_changeset(%{
+  todo_items:
+    build_todo_items.([
+      {"Plan architecture", "pending"},
+      {"Implement feature", "pending"},
+      {"Write tests", "pending"},
+      {"Deploy changes", "pending"}
+    ])
+})
+|> Jarga.Repo.update!()
+
+IO.puts("[exo-seeds-web] Created todo-initial session")
+
+# Session: "Todo 3 of 7 Complete" — 7 steps, 3 completed, rest pending
+todo_partial_container = "todo-partial-#{Ecto.UUID.generate() |> String.slice(0..7)}"
+
+{:ok, todo_partial_task} =
+  %TaskSchema{}
+  |> TaskSchema.changeset(%{
+    user_id: alice.id,
+    instruction: "Todo 3 of 7 Complete",
+    status: "running",
+    container_id: todo_partial_container
+  })
+  |> Jarga.Repo.insert()
+
+todo_partial_task
+|> TaskSchema.status_changeset(%{
+  todo_items:
+    build_todo_items.([
+      {"Gather requirements", "completed"},
+      {"Design schema", "completed"},
+      {"Create migration", "completed"},
+      {"Build context", "pending"},
+      {"Add LiveView", "pending"},
+      {"Write tests", "pending"},
+      {"Deploy", "pending"}
+    ])
+})
+|> Jarga.Repo.update!()
+
+IO.puts("[exo-seeds-web] Created todo-3-of-7-complete session")
+
+# Session: "Todo With Failed Step" — 4 steps with mixed statuses including failure
+todo_failed_container = "todo-failed-#{Ecto.UUID.generate() |> String.slice(0..7)}"
+
+{:ok, todo_failed_task} =
+  %TaskSchema{}
+  |> TaskSchema.changeset(%{
+    user_id: alice.id,
+    instruction: "Todo With Failed Step",
+    status: "running",
+    container_id: todo_failed_container
+  })
+  |> Jarga.Repo.insert()
+
+todo_failed_task
+|> TaskSchema.status_changeset(%{
+  todo_items:
+    build_todo_items.([
+      {"Setup environment", "completed"},
+      {"Run migrations", "in_progress"},
+      {"Deploy to staging", "failed"},
+      {"Verify deployment", "pending"}
+    ])
+})
+|> Jarga.Repo.update!()
+
+IO.puts("[exo-seeds-web] Created todo-with-failed-step session")
+
+# Session: "No Todo" — active session with no todo items
+no_todo_container = "no-todo-#{Ecto.UUID.generate() |> String.slice(0..7)}"
+
+{:ok, _no_todo_task} =
+  %TaskSchema{}
+  |> TaskSchema.changeset(%{
+    user_id: alice.id,
+    instruction: "No Todo",
+    status: "completed",
+    container_id: no_todo_container
+  })
+  |> Jarga.Repo.insert()
+
+IO.puts("[exo-seeds-web] Created no-todo session")
+
+# Session: "Todo Session Completed" — completed session with final todo state
+todo_completed_container = "todo-completed-#{Ecto.UUID.generate() |> String.slice(0..7)}"
+
+{:ok, todo_completed_task} =
+  %TaskSchema{}
+  |> TaskSchema.changeset(%{
+    user_id: alice.id,
+    instruction: "Todo Session Completed",
+    status: "completed",
+    container_id: todo_completed_container
+  })
+  |> Jarga.Repo.insert()
+
+todo_completed_task
+|> TaskSchema.status_changeset(%{
+  todo_items:
+    build_todo_items.([
+      {"Analyze requirements", "completed"},
+      {"Implement solution", "completed"},
+      {"Run test suite", "completed"},
+      {"Update documentation", "completed"},
+      {"Create PR", "completed"}
+    ])
+})
+|> Jarga.Repo.update!()
+
+IO.puts("[exo-seeds-web] Created todo-session-completed session")
+
+IO.puts("[exo-seeds-web] Created all todo progress bar fixture sessions")
+
+# ---------------------------------------------------------------------------
 # 8. Create notifications (for notifications browser tests)
 # ---------------------------------------------------------------------------
 
