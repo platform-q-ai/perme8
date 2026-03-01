@@ -21,6 +21,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   use GenServer, restart: :temporary
 
   alias Agents.Sessions.Application.SessionsConfig
+  alias Agents.Sessions.Domain.Entities.TodoList
   alias Agents.Sessions.Domain.Events.{TaskCompleted, TaskFailed, TaskCancelled}
   alias Agents.Sessions.Infrastructure.Schemas.TaskSchema
 
@@ -49,6 +50,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     output_parts: [],
     # Track last flushed version to avoid redundant DB writes
     last_flushed_count: 0,
+    todo_items: [],
+    last_flushed_todo_count: 0,
     # User message IDs — skip their parts from output cache (shown separately in UI)
     user_message_ids: MapSet.new(),
     # Dependency injection
@@ -358,11 +361,18 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   @impl true
   def handle_info(:flush_output, state) do
     current_count = length(state.output_parts)
+    current_todo_count = length(state.todo_items)
 
     state =
-      if current_count > state.last_flushed_count do
+      if current_count > state.last_flushed_count or
+           current_todo_count > state.last_flushed_todo_count do
         flush_output_to_db(state)
-        %{state | last_flushed_count: current_count}
+
+        %{
+          state
+          | last_flushed_count: current_count,
+            last_flushed_todo_count: current_todo_count
+        }
       else
         state
       end
@@ -629,6 +639,22 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
   # Text output from assistant — accumulate for DB caching, keyed by part ID
   defp handle_sdk_event(
+         %{"type" => "todo.updated", "properties" => props},
+         state
+       )
+       when is_map(props) do
+    case parse_todo_event(props) do
+      {:ok, todo_items} ->
+        broadcast_todo_update(state.task_id, todo_items, state.pubsub)
+        {:continue, %{state | todo_items: todo_items}}
+
+      {:error, _reason} ->
+        Logger.warning("TaskRunner: malformed todo.updated event for task #{state.task_id}")
+        {:continue, state}
+    end
+  end
+
+  defp handle_sdk_event(
          %{
            "type" => "message.part.updated",
            "properties" => %{"part" => %{"type" => "text", "text" => text} = part}
@@ -756,6 +782,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
     # Cache structured output parts (or plain text fallback) even on failure
     attrs = put_output_attrs(attrs, state)
+    attrs = put_todo_attrs(attrs, state)
 
     update_task_status(state, attrs)
     broadcast_status(state.task_id, "failed", state.pubsub)
@@ -783,6 +810,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
     # Cache structured output parts (or plain text fallback)
     attrs = put_output_attrs(attrs, state)
+    attrs = put_todo_attrs(attrs, state)
 
     update_task_status(state, attrs)
     broadcast_status(state.task_id, "completed", state.pubsub)
@@ -930,9 +958,37 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   end
 
   defp flush_output_to_db(state) do
-    case serialize_output_parts(state.output_parts) do
-      nil -> :ok
-      json -> update_task_status(state, %{output: json})
+    attrs = %{}
+
+    attrs =
+      case serialize_output_parts(state.output_parts) do
+        nil -> attrs
+        json -> Map.put(attrs, :output, json)
+      end
+
+    attrs = put_todo_attrs(attrs, state)
+
+    if attrs != %{} do
+      update_task_status(state, attrs)
     end
+  end
+
+  defp parse_todo_event(properties) when is_map(properties) do
+    case TodoList.from_sse_event(%{"properties" => properties}) do
+      {:ok, %TodoList{} = todo_list} -> {:ok, TodoList.to_maps(todo_list)}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp parse_todo_event(_), do: {:error, :invalid_payload}
+
+  defp broadcast_todo_update(task_id, todo_items, pubsub) do
+    Phoenix.PubSub.broadcast(pubsub, "task:#{task_id}", {:todo_updated, task_id, todo_items})
+  end
+
+  defp put_todo_attrs(attrs, %{todo_items: []}), do: attrs
+
+  defp put_todo_attrs(attrs, %{todo_items: todo_items}) when is_list(todo_items) do
+    Map.put(attrs, :todo_items, %{"items" => todo_items})
   end
 end
