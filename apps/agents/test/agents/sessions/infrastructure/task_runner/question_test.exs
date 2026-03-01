@@ -20,6 +20,20 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.QuestionTest do
     {:ok, task: task}
   end
 
+  defp maybe_complete_session(false, _runner_pid), do: :noop
+
+  defp maybe_complete_session(true, runner_pid) do
+    Process.sleep(100)
+
+    send(runner_pid, {
+      :opencode_event,
+      %{
+        "type" => "session.status",
+        "properties" => %{"sessionID" => "sess-1", "status" => %{"type" => "idle"}}
+      }
+    })
+  end
+
   defp start_runner_with_question(task, opts \\ []) do
     test_pid = self()
     question_event_delay = Keyword.get(opts, :question_event_delay, 50)
@@ -79,17 +93,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.QuestionTest do
           }
         })
 
-        if complete_after_question do
-          Process.sleep(100)
-
-          send(runner_pid, {
-            :opencode_event,
-            %{
-              "type" => "session.status",
-              "properties" => %{"sessionID" => "sess-1", "status" => %{"type" => "idle"}}
-            }
-          })
-        end
+        maybe_complete_session(complete_after_question, runner_pid)
       end)
 
       {:ok, self()}
