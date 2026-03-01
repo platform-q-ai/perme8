@@ -2,6 +2,7 @@
 name: exo-bdd-security
 description: Translates generic feature files into security-perspective BDD feature files using ZAP security adapter steps for vulnerability scanning, header checks, SSL validation, and alert assertions
 mode: subagent
+model: openai/gpt-5.3-codex
 tools:
   read: true
   write: true

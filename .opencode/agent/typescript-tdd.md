@@ -2,6 +2,7 @@
 name: typescript-tdd
 description: Implements TypeScript features using strict Test-Driven Development with TypeScript/Vitest, including LiveView hooks and Phoenix Channel clients, following the Red-Green-Refactor cycle
 mode: subagent
+model: openai/gpt-5.3-codex
 tools:
   read: true
   write: true

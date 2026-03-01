@@ -2,6 +2,7 @@
 name: exo-bdd-http
 description: Translates generic feature files into API-perspective BDD feature files using Playwright HTTP adapter steps for REST API testing, request building, and response assertions
 mode: subagent
+model: openai/gpt-5.3-codex
 tools:
   read: true
   write: true

@@ -2,6 +2,7 @@
 name: phoenix-tdd
 description: Implements Phoenix backend and LiveView features using strict Test-Driven Development with Phoenix/Elixir, following the Red-Green-Refactor cycle
 mode: subagent
+model: openai/gpt-5.3-codex
 tools:
   read: true
   write: true

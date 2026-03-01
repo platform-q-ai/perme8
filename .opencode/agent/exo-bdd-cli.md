@@ -2,6 +2,7 @@
 name: exo-bdd-cli
 description: Translates generic feature files into CLI-perspective BDD feature files using Bun CLI adapter steps for command-line testing, environment setup, and output assertions
 mode: subagent
+model: openai/gpt-5.3-codex
 tools:
   read: true
   write: true

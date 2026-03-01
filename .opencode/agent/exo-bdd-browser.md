@@ -2,6 +2,7 @@
 name: exo-bdd-browser
 description: Translates generic feature files into browser-perspective BDD feature files using Playwright browser adapter steps for UI testing, navigation, interactions, and visual assertions
 mode: subagent
+model: openai/gpt-5.3-codex
 tools:
   read: true
   write: true
