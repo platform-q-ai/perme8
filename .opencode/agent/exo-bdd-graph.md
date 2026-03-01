@@ -2,6 +2,7 @@
 name: exo-bdd-graph
 description: Translates generic feature files into architecture-perspective BDD feature files using Neo4j graph adapter steps for dependency analysis, layer validation, and structural assertions
 mode: subagent
+model: openai/gpt-5.3-codex
 tools:
   read: true
   write: true
