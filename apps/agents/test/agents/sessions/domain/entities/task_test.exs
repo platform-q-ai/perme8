@@ -67,6 +67,7 @@ defmodule Agents.Sessions.Domain.Entities.TaskTest do
         id: "task-123",
         instruction: "Write tests for the login flow",
         status: "running",
+        image: "perme8-opencode",
         container_id: "abc123",
         container_port: 4096,
         session_id: "sess-456",
@@ -87,6 +88,7 @@ defmodule Agents.Sessions.Domain.Entities.TaskTest do
       assert task.id == "task-123"
       assert task.instruction == "Write tests for the login flow"
       assert task.status == "running"
+      assert task.image == "perme8-opencode"
       assert task.container_id == "abc123"
       assert task.container_port == 4096
       assert task.session_id == "sess-456"
@@ -106,6 +108,7 @@ defmodule Agents.Sessions.Domain.Entities.TaskTest do
         id: "task-123",
         instruction: "Do something",
         status: "pending",
+        image: "perme8-opencode",
         container_id: nil,
         container_port: nil,
         session_id: nil,

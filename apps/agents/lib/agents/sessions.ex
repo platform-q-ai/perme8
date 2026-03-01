@@ -127,6 +127,35 @@ defmodule Agents.Sessions do
   end
 
   @doc """
+  Returns the default Docker image name for sessions.
+  """
+  @spec default_image() :: String.t()
+  def default_image do
+    Agents.Sessions.Application.SessionsConfig.image()
+  end
+
+  @doc """
+  Returns the list of available Docker images for sessions.
+
+  Each entry is a map with `:name` and `:label`.
+  """
+  @spec available_images() :: [map()]
+  def available_images do
+    Agents.Sessions.Application.SessionsConfig.available_images()
+  end
+
+  @doc """
+  Returns a human-readable label for a Docker image name.
+  """
+  @spec image_label(String.t()) :: String.t()
+  def image_label(image_name) do
+    case Enum.find(available_images(), &(&1.name == image_name)) do
+      %{label: label} -> label
+      _ -> image_name
+    end
+  end
+
+  @doc """
   Returns CPU and memory stats for a running container.
 
   ## Returns

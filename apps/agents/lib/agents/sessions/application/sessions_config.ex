@@ -5,9 +5,23 @@ defmodule Agents.Sessions.Application.SessionsConfig do
   Reads from `Application.get_env(:agents, :sessions)` and `:sessions_env`.
   """
 
-  @doc "Returns the Docker image name for opencode containers."
+  @doc "Returns the default Docker image name for containers."
   def image do
     config()[:image] || "perme8-opencode"
+  end
+
+  @doc """
+  Returns the list of available Docker images for sessions.
+
+  Each entry is a map with `:name` (the Docker image name) and
+  `:label` (a human-readable display name).
+  """
+  def available_images do
+    config()[:available_images] ||
+      [
+        %{name: "perme8-opencode", label: "OpenCode"},
+        %{name: "perme8-pi", label: "Pi"}
+      ]
   end
 
   @doc "Returns the health check polling interval in milliseconds."

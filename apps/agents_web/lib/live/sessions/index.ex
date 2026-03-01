@@ -30,6 +30,9 @@ defmodule AgentsWeb.SessionsLive.Index do
 
     current_task = find_current_task(tasks, active_container_id)
 
+    available_images = Sessions.available_images()
+    default_image = Sessions.default_image()
+
     {:ok,
      socket
      |> assign(:page_title, "Sessions")
@@ -42,6 +45,8 @@ defmodule AgentsWeb.SessionsLive.Index do
      |> assign(:container_stats, %{})
      |> assign(:auth_refreshing, false)
      |> assign(:events, [])
+     |> assign(:available_images, available_images)
+     |> assign(:selected_image, default_image)
      |> assign_session_state()
      |> assign(:form, to_form(%{"instruction" => ""}))
      |> EventProcessor.maybe_load_cached_output(current_task)
@@ -101,9 +106,15 @@ defmodule AgentsWeb.SessionsLive.Index do
      |> assign(:active_container_id, nil)
      |> assign(:current_task, nil)
      |> assign(:composing_new, true)
+     |> assign(:selected_image, Sessions.default_image())
      |> assign(:events, [])
      |> assign_session_state()
      |> assign(:form, to_form(%{"instruction" => ""}))}
+  end
+
+  @impl true
+  def handle_event("select_image", %{"image" => image}, socket) do
+    {:noreply, assign(socket, :selected_image, image)}
   end
 
   @impl true
@@ -410,7 +421,11 @@ defmodule AgentsWeb.SessionsLive.Index do
     if resumable_task?(current_task) do
       Sessions.resume_task(current_task.id, %{instruction: instruction, user_id: user.id})
     else
-      Sessions.create_task(%{instruction: instruction, user_id: user.id})
+      Sessions.create_task(%{
+        instruction: instruction,
+        user_id: user.id,
+        image: socket.assigns.selected_image
+      })
     end
   end
 

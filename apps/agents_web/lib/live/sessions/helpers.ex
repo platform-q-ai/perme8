@@ -92,6 +92,11 @@ defmodule AgentsWeb.SessionsLive.Helpers do
     Enum.find(session_tasks, &active_task?/1) || List.first(session_tasks)
   end
 
+  @doc "Returns a human-readable label for a Docker image name."
+  def image_label(image_name) do
+    Agents.Sessions.image_label(image_name)
+  end
+
   @doc "Maps a task error reason to a user-friendly message."
   def task_error_message(:instruction_required), do: "Instruction is required"
   def task_error_message(:not_resumable), do: "This session cannot be resumed"

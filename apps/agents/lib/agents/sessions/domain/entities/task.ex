@@ -12,6 +12,7 @@ defmodule Agents.Sessions.Domain.Entities.Task do
           id: String.t() | nil,
           instruction: String.t(),
           status: String.t(),
+          image: String.t(),
           container_id: String.t() | nil,
           container_port: integer() | nil,
           session_id: String.t() | nil,
@@ -41,7 +42,8 @@ defmodule Agents.Sessions.Domain.Entities.Task do
     :completed_at,
     :inserted_at,
     :updated_at,
-    status: "pending"
+    status: "pending",
+    image: "perme8-opencode"
   ]
 
   @doc """
@@ -69,6 +71,7 @@ defmodule Agents.Sessions.Domain.Entities.Task do
       id: schema.id,
       instruction: schema.instruction,
       status: schema.status,
+      image: schema.image,
       container_id: schema.container_id,
       container_port: schema.container_port,
       session_id: schema.session_id,

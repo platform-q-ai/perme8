@@ -82,6 +82,7 @@ defmodule Agents.Sessions.Infrastructure.Queries.TaskQueries do
         task_count: count(t.id),
         latest_status: fragment("(array_agg(? ORDER BY ? DESC))[1]", t.status, t.inserted_at),
         title: fragment("(array_agg(? ORDER BY ? ASC))[1]", t.instruction, t.inserted_at),
+        image: fragment("(array_agg(? ORDER BY ? ASC))[1]", t.image, t.inserted_at),
         latest_at: max(t.inserted_at),
         created_at: min(t.inserted_at)
       },

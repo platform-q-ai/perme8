@@ -17,6 +17,7 @@ defmodule Agents.Sessions.Infrastructure.Schemas.TaskSchema do
           id: Ecto.UUID.t(),
           instruction: String.t(),
           status: String.t(),
+          image: String.t(),
           container_id: String.t() | nil,
           container_port: integer() | nil,
           session_id: String.t() | nil,
@@ -39,6 +40,7 @@ defmodule Agents.Sessions.Infrastructure.Schemas.TaskSchema do
   schema "sessions_tasks" do
     field(:instruction, :string)
     field(:status, :string, default: "pending")
+    field(:image, :string, default: "perme8-opencode")
     field(:container_id, :string)
     field(:container_port, :integer)
     field(:session_id, :string)
@@ -70,6 +72,7 @@ defmodule Agents.Sessions.Infrastructure.Schemas.TaskSchema do
       :instruction,
       :user_id,
       :status,
+      :image,
       :container_id,
       :container_port,
       :session_id,
