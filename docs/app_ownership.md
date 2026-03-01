@@ -147,7 +147,7 @@ The following Claude skills consult this document when generating code or making
 | **CRUD Update** | Validates that target files are in the correct owning app during impact analysis; detects and fixes boundary violations as part of the change |
 | **CRUD Delete** | Scans for cross-app coupling (shared Repo usage, schema imports, facade calls, event subscribers) before removal; ensures clean removal leaves no orphaned cross-app references |
 | **Check Documentation** | Verifies this document is updated when domain ownership shifts or new apps are created |
-| **Review PR** | Checks for `app_ownership.md` staleness when reviewing changes |
-| **Finalize** | Verifies this document is current as part of the finalization quality gate |
+| **Review PR** | Checks for `app_ownership.md` staleness via its **Check Documentation** worker when reviewing changes |
+| **Finalize** | Verifies this document is current via its **Check Documentation** composition step as part of the finalization quality gate |
 
 **Keeping this document current is critical** -- skills reference it at invocation time, so stale entries lead to misplaced artifacts. The Check Documentation skill flags this document for update whenever domain ownership changes are detected.
