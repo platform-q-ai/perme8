@@ -47,51 +47,69 @@ defmodule Mix.Tasks.Docker.Build do
 
   @impl Mix.Task
   def run(args) do
+    case resolve_config(args) do
+      {:ok, config} ->
+        root = umbrella_root()
+        context = Path.join(root, config.image_path)
+
+        unless File.dir?(context) do
+          Mix.shell().error([:red, "Dockerfile directory not found: #{context}"])
+          exit({:shutdown, 1})
+        end
+
+        cmd_args = build_docker_args(config.tag, config.no_cache, context)
+
+        Mix.shell().info([
+          :cyan,
+          "Building Docker image ",
+          :bright,
+          config.tag,
+          :reset,
+          :cyan,
+          " from #{config.image_path}..."
+        ])
+
+        case System.cmd("docker", cmd_args, cd: root, into: IO.stream(:stdio, :line)) do
+          {_, 0} ->
+            Mix.shell().info([:green, "Image #{config.tag} built successfully"])
+
+          {_, code} ->
+            Mix.shell().error([:red, "docker build failed (exit code #{code})"])
+            exit({:shutdown, 1})
+        end
+
+      {:error, message} ->
+        Mix.shell().error([:red, message])
+        exit({:shutdown, 1})
+    end
+  end
+
+  @doc false
+  def resolve_config(args) do
     {opts, rest, _} = OptionParser.parse(args, switches: @switches, aliases: @aliases)
 
     image_name = List.first(rest) || "opencode"
 
-    image_config =
-      case Map.get(@images, image_name) do
-        nil ->
-          valid = @images |> Map.keys() |> Enum.join(", ")
-          Mix.shell().error([:red, "Unknown image: #{image_name}. Valid images: #{valid}"])
-          exit({:shutdown, 1})
+    case Map.get(@images, image_name) do
+      nil ->
+        valid = @images |> Map.keys() |> Enum.join(", ")
+        {:error, "Unknown image: #{image_name}. Valid images: #{valid}"}
 
-        config ->
-          config
-      end
-
-    tag = Keyword.get(opts, :tag, image_config.default_tag)
-    root = umbrella_root()
-    context = Path.join(root, image_config.path)
-
-    unless File.dir?(context) do
-      Mix.shell().error([:red, "Dockerfile directory not found: #{context}"])
-      exit({:shutdown, 1})
+      image_config ->
+        {:ok,
+         %{
+           image_name: image_name,
+           image_path: image_config.path,
+           tag: Keyword.get(opts, :tag, image_config.default_tag),
+           no_cache: Keyword.get(opts, :no_cache, false)
+         }}
     end
+  end
 
-    cache_flag = if Keyword.get(opts, :no_cache, false), do: ["--no-cache"], else: []
-    cmd_args = ["build", "-t", tag] ++ cache_flag ++ [context]
-
-    Mix.shell().info([
-      :cyan,
-      "Building Docker image ",
-      :bright,
-      tag,
-      :reset,
-      :cyan,
-      " from #{image_config.path}..."
-    ])
-
-    case System.cmd("docker", cmd_args, cd: root, into: IO.stream(:stdio, :line)) do
-      {_, 0} ->
-        Mix.shell().info([:green, "Image #{tag} built successfully"])
-
-      {_, code} ->
-        Mix.shell().error([:red, "docker build failed (exit code #{code})"])
-        exit({:shutdown, 1})
-    end
+  @doc false
+  def build_docker_args(tag, no_cache, context) do
+    cache_flag = if no_cache, do: ["--no-cache"], else: []
+    ["build", "-t", tag] ++ cache_flag ++ [context]
   end
 
   defp umbrella_root do
