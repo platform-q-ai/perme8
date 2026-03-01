@@ -69,10 +69,12 @@ config :identity, Identity.Repo,
   ownership_timeout: :infinity
 
 # Agents uses the same database as Jarga
+# pool_size 10: reduced from 15 to stay within Postgres max_connections (100)
+# when all repos boot in umbrella. Total: 15+15+10+15+5 = 60 connections.
 config :agents, Agents.Repo,
   url: database_url,
   pool: Ecto.Adapters.SQL.Sandbox,
-  pool_size: 15,
+  pool_size: 10,
   ownership_timeout: :infinity
 
 # Notifications uses the same database as Jarga
@@ -124,7 +126,7 @@ config :entity_relationship_manager,
 
 # Webhooks uses the same database as Jarga.
 # pool_size kept small (5) to stay within Postgres max_connections (100)
-# when all 6 repos boot in umbrella: 4×15 + 1×5 = 65 connections.
+# when all 5 repos boot in umbrella: 3×15 + 1×10 + 1×5 = 60 connections.
 config :webhooks, Webhooks.Repo,
   url: database_url,
   pool: Ecto.Adapters.SQL.Sandbox,
