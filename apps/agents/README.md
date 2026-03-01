@@ -94,7 +94,7 @@ Agents.Sessions.Infrastructure  -- TaskRunner, DockerAdapter, OpencodeClient, Ta
 Agents.Sessions.create_task(attrs)                       # Create and start a coding task
 Agents.Sessions.cancel_task(task_id, user_id)            # Cancel a running task
 Agents.Sessions.delete_task(task_id, user_id)            # Delete a session (removes container)
-Agents.Sessions.resume_task(parent_task_id, attrs)       # Send follow-up instruction to existing session
+Agents.Sessions.resume_task(task_id, attrs)               # Resume session with follow-up instruction
 Agents.Sessions.get_task(task_id, user_id)               # Get a task by ID (ownership-checked)
 Agents.Sessions.list_tasks(user_id)                      # List all tasks for a user
 ```
@@ -106,12 +106,12 @@ All functions accept an optional trailing `opts` keyword list for dependency inj
 | Module | Purpose |
 |--------|---------|
 | `Agents.Sessions` | Public facade for session operations |
-| `Agents.Sessions.Domain.Entities.Task` | Pure value object: instruction, status, container_id, output, parent_task_id |
+| `Agents.Sessions.Domain.Entities.Task` | Pure value object: instruction, status, container_id, output, todo_items |
 | `Agents.Sessions.Domain.Policies.TaskPolicy` | Status validation, cancellability, deletability, state transitions |
 | `Agents.Sessions.Application.UseCases.CreateTask` | Validates, persists, starts TaskRunner |
 | `Agents.Sessions.Application.UseCases.CancelTask` | Ownership check + cancellation via Registry |
 | `Agents.Sessions.Application.UseCases.DeleteTask` | Ownership + deletability check, removes container, deletes DB row |
-| `Agents.Sessions.Application.UseCases.ResumeTask` | Creates linked follow-up task, restarts container, sends to existing session |
+| `Agents.Sessions.Application.UseCases.ResumeTask` | Updates existing task with new instruction, restarts container, sends to existing session |
 | `Agents.Sessions.Application.Behaviours.TaskRepositoryBehaviour` | Port for task persistence |
 | `Agents.Sessions.Application.Behaviours.OpencodeClientBehaviour` | Port for opencode HTTP/SSE + retrieval |
 | `Agents.Sessions.Application.Behaviours.ContainerProviderBehaviour` | Port for container lifecycle (start, stop, remove, restart) |
@@ -130,9 +130,9 @@ All functions accept an optional trailing `opts` keyword list for dependency inj
 - Non-root `appuser` inside the container
 - Stopped on task completion, removed only on explicit delete
 
-**LiveView:** `AgentsWeb.SessionsLive.Index` (in `agents_web` app) -- instruction form, structured session panel (title, model, tokens, output), cancel/delete buttons, task history with status badges, resume capability.
+**LiveView:** `AgentsWeb.SessionsLive.Index` (in `agents_web` app) -- instruction form, structured session panel (title, model, tokens, output), cancel/delete buttons, resume capability. Each session is a single continuous task.
 
-**Migration:** `sessions_tasks` table in `jarga` repo with indexes on `user_id`, `status`, and composite `[:user_id, :status]`. Includes `output` (cached text), `parent_task_id` (resume chains), and `session_id` (opencode session reference).
+**Migration:** `sessions_tasks` table in `jarga` repo with indexes on `user_id`, `status`, and composite `[:user_id, :status]`. Includes `output` (cached structured parts), `todo_items` (persisted progress), and `session_id` (opencode session reference). Resume updates the existing task row in place.
 
 **Docker image:** `infra/opencode/Dockerfile` -- based on `hexpm/elixir` Alpine, installs opencode binary, runs as non-root `appuser`, exposes port 4096. Entrypoint generates GitHub App tokens, configures git as `perme8[bot]`, clones repos, and starts `opencode serve`.
 
