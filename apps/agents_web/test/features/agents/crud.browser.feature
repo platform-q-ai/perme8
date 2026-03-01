@@ -7,30 +7,31 @@ Feature: Agent CRUD Operations
   # Seed data: alice@example.com (owner) has two agents seeded:
   #   - "Code Helper" (SHARED, model: gpt-4o)
   #   - "Doc Writer" (SHARED, model: gpt-4o)
-  # The agent management pages live under /app/agents (LiveView).
+  # The agent management pages live under /agents on agents_web (LiveView).
   # Agent form uses Phoenix form with `as: :agent` so field IDs are agent_<field>.
-  # "New Agent" renders as a link (<a>) navigating to /app/agents/new.
+  # "New Agent" renders as a link (<a>) navigating to /agents/new.
   # Submit button text is "Save Agent".
   # Delete uses data-confirm (native browser dialog) — cannot be tested via standard steps.
 
   Background:
-    Given I am on "${baseUrl}/users/log-in"
+    Given I am on "${identityUrl}/users/log-in"
     And I wait for network idle
     When I fill "#login_form_password_email" with "${ownerEmail}"
     And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
+    And I wait for network idle
 
   # Agent Listing
 
   Scenario: View my agents list shows seeded agents
-    When I navigate to "${baseUrl}/app/agents"
+    When I navigate to "${baseUrl}/agents"
     And I wait for network idle
     Then I should see "My Agents"
     And I should see "Code Helper"
     And I should see "Doc Writer"
 
   Scenario: Agent list shows table with name and model columns
-    When I navigate to "${baseUrl}/app/agents"
+    When I navigate to "${baseUrl}/agents"
     And I wait for network idle
     Then "table.table-zebra" should exist
     And I should see "Name"
@@ -40,15 +41,15 @@ Feature: Agent CRUD Operations
   # Agent Creation
 
   Scenario: Navigate to new agent form
-    When I navigate to "${baseUrl}/app/agents"
+    When I navigate to "${baseUrl}/agents"
     And I wait for network idle
     And I click the "New Agent" link and wait for navigation
-    Then the URL should contain "/app/agents/new"
+    Then the URL should contain "/agents/new"
     And I should see "New Agent"
     And "#agent_name" should exist
 
   Scenario: Create a new agent with name only
-    When I navigate to "${baseUrl}/app/agents/new"
+    When I navigate to "${baseUrl}/agents/new"
     And I wait for network idle
     And I fill "#agent_name" with "My Test Agent"
     And I click the "Save Agent" button
@@ -57,7 +58,7 @@ Feature: Agent CRUD Operations
     And I should see "My Test Agent"
 
   Scenario: Create an agent with full configuration
-    When I navigate to "${baseUrl}/app/agents/new"
+    When I navigate to "${baseUrl}/agents/new"
     And I wait for network idle
     And I fill "#agent_name" with "Code Reviewer"
     And I fill "#agent_description" with "Reviews code for best practices"
@@ -72,7 +73,7 @@ Feature: Agent CRUD Operations
     And I should see "Code Reviewer"
 
   Scenario: Create agent without required name shows validation error
-    When I navigate to "${baseUrl}/app/agents/new"
+    When I navigate to "${baseUrl}/agents/new"
     And I wait for network idle
     And I clear "#agent_name"
     And I click the "Save Agent" button
@@ -80,7 +81,7 @@ Feature: Agent CRUD Operations
     Then I should see "can't be blank"
 
   Scenario: Create agent with invalid temperature shows validation error
-    When I navigate to "${baseUrl}/app/agents/new"
+    When I navigate to "${baseUrl}/agents/new"
     And I wait for network idle
     And I fill "#agent_name" with "Bad Temp Agent"
     And I clear "#agent_temperature"
@@ -90,7 +91,7 @@ Feature: Agent CRUD Operations
     Then I should see "must be less than or equal to 2"
 
   Scenario: Create agent with valid temperature succeeds
-    When I navigate to "${baseUrl}/app/agents/new"
+    When I navigate to "${baseUrl}/agents/new"
     And I wait for network idle
     And I fill "#agent_name" with "Valid Temp Agent"
     And I clear "#agent_temperature"
@@ -101,26 +102,26 @@ Feature: Agent CRUD Operations
     And I should see "Valid Temp Agent"
 
   Scenario: New agent defaults to Private visibility
-    When I navigate to "${baseUrl}/app/agents/new"
+    When I navigate to "${baseUrl}/agents/new"
     And I wait for network idle
     Then "#agent_visibility" should have value "PRIVATE"
 
   Scenario: New agent form has cancel link
-    When I navigate to "${baseUrl}/app/agents/new"
+    When I navigate to "${baseUrl}/agents/new"
     And I wait for network idle
     Then I should see "Cancel"
 
   Scenario: Cancel returns to agents list
-    When I navigate to "${baseUrl}/app/agents/new"
+    When I navigate to "${baseUrl}/agents/new"
     And I wait for network idle
     And I click the "Cancel" link and wait for navigation
-    Then the URL should contain "/app/agents"
+    Then the URL should contain "/agents"
     And I should see "My Agents"
 
   # Agent Updates
 
   Scenario: Edit seeded agent configuration
-    When I navigate to "${baseUrl}/app/agents"
+    When I navigate to "${baseUrl}/agents"
     And I wait for network idle
     # Click the edit (pencil) icon for the first agent in the table
     And I click "a.btn-ghost[href*='/edit']"
@@ -129,7 +130,7 @@ Feature: Agent CRUD Operations
     And "#agent_name" should exist
 
   Scenario: Update agent name and save
-    When I navigate to "${baseUrl}/app/agents"
+    When I navigate to "${baseUrl}/agents"
     And I wait for network idle
     And I click "a.btn-ghost[href*='/edit']"
     And I wait for network idle
@@ -142,15 +143,15 @@ Feature: Agent CRUD Operations
   # Agent Not Found
 
   Scenario: Handle agent not found gracefully
-    When I navigate to "${baseUrl}/app/agents/00000000-0000-0000-0000-000000000000/edit"
+    When I navigate to "${baseUrl}/agents/00000000-0000-0000-0000-000000000000/edit"
     And I wait for network idle
     Then I should see "Agent not found"
-    And the URL should contain "/app/agents"
+    And the URL should contain "/agents"
 
   # Agent Form Fields
 
   Scenario: Agent form has all expected fields
-    When I navigate to "${baseUrl}/app/agents/new"
+    When I navigate to "${baseUrl}/agents/new"
     And I wait for network idle
     Then "#agent_name" should exist
     And "#agent_description" should exist
@@ -160,13 +161,13 @@ Feature: Agent CRUD Operations
     And "#agent_visibility" should exist
 
   Scenario: Temperature field has correct attributes
-    When I navigate to "${baseUrl}/app/agents/new"
+    When I navigate to "${baseUrl}/agents/new"
     And I wait for network idle
     Then "#agent_temperature[type='number']" should exist
     And "#agent_temperature[step='0.1']" should exist
 
   Scenario: Visibility select has Private and Shared options
-    When I navigate to "${baseUrl}/app/agents/new"
+    When I navigate to "${baseUrl}/agents/new"
     And I wait for network idle
     Then "#agent_visibility option[value='PRIVATE']" should exist
     And "#agent_visibility option[value='SHARED']" should exist
