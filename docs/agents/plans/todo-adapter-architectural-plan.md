@@ -52,13 +52,13 @@ The implementation plan is designed to satisfy all scenarios in `todo-progress-b
 
 ---
 
-## Phase 1: Domain + Application (phoenix-tdd)
+## Phase 1: Domain + Application (phoenix-tdd) ✓
 
 Build the pure domain models and the behaviour port. All domain tests run `async: true` with no I/O.
 
 ### Step 1.1: TodoItem Domain Entity
 
-- [ ] ⏸ **RED**: Write test `apps/agents/test/agents/sessions/domain/entities/todo_item_test.exs`
+- [x] ⏸ **RED**: Write test `apps/agents/test/agents/sessions/domain/entities/todo_item_test.exs`
   - Tests:
     - `new/1` creates a TodoItem struct with required fields (id, title, status, position)
     - Default status is `"pending"`
@@ -71,17 +71,17 @@ Build the pure domain models and the behaviour port. All domain tests run `async
   - File: `apps/agents/test/agents/sessions/domain/entities/todo_item_test.exs`
   - Case: `use ExUnit.Case, async: true`
 
-- [ ] ⏸ **GREEN**: Implement `apps/agents/lib/agents/sessions/domain/entities/todo_item.ex`
+- [x] ⏸ **GREEN**: Implement `apps/agents/lib/agents/sessions/domain/entities/todo_item.ex`
   - Pure struct: `defstruct [:id, :title, :position, status: "pending"]`
   - `@type t :: %__MODULE__{id: String.t(), title: String.t(), status: String.t(), position: non_neg_integer()}`
   - Functions: `new/1`, `valid_statuses/0`, `completed?/1`, `terminal?/1`, `from_map/1`, `to_map/1`
   - No Ecto, no I/O
 
-- [ ] ⏸ **REFACTOR**: Ensure typespec coverage, add `@moduledoc`
+- [x] ⏸ **REFACTOR**: Ensure typespec coverage, add `@moduledoc`
 
 ### Step 1.2: TodoList Domain Entity
 
-- [ ] ⏸ **RED**: Write test `apps/agents/test/agents/sessions/domain/entities/todo_list_test.exs`
+- [x] ⏸ **RED**: Write test `apps/agents/test/agents/sessions/domain/entities/todo_list_test.exs`
   - Tests:
     - `new/1` creates a TodoList with a list of TodoItem structs
     - `from_sse_event/1` parses a raw SSE `todo.updated` event payload into a TodoList
@@ -99,25 +99,25 @@ Build the pure domain models and the behaviour port. All domain tests run `async
   - File: `apps/agents/test/agents/sessions/domain/entities/todo_list_test.exs`
   - Case: `use ExUnit.Case, async: true`
 
-- [ ] ⏸ **GREEN**: Implement `apps/agents/lib/agents/sessions/domain/entities/todo_list.ex`
+- [x] ⏸ **GREEN**: Implement `apps/agents/lib/agents/sessions/domain/entities/todo_list.ex`
   - Pure struct: `defstruct items: []`
   - `@type t :: %__MODULE__{items: [TodoItem.t()]}`
   - Functions: `new/1`, `from_sse_event/1`, `progress_percentage/1`, `completed_count/1`, `total_count/1`, `progress_summary/1`, `current_step/1`, `all_completed?/1`, `to_maps/1`, `from_maps/1`
   - `from_sse_event/1` must handle the opencode SSE payload shape. Based on the PRD, the `todo.updated` event has properties containing todo items with id, title, status. The exact shape may need refinement during implementation — log the catch-all events first if needed.
   - No Ecto, no I/O
 
-- [ ] ⏸ **REFACTOR**: Extract shared validation, ensure consistent error tuples
+- [x] ⏸ **REFACTOR**: Extract shared validation, ensure consistent error tuples
 
 ### Step 1.3: TodoAdapterBehaviour Port
 
-- [ ] ⏸ **RED**: Write test `apps/agents/test/agents/sessions/application/behaviours/todo_adapter_behaviour_test.exs`
+- [x] ⏸ **RED**: Write test `apps/agents/test/agents/sessions/application/behaviours/todo_adapter_behaviour_test.exs`
   - Tests:
     - Module defines the behaviour callbacks (compile-time check via `@callback` presence)
     - Verify Mox mock can be defined against the behaviour (ensures callbacks are well-formed)
   - File: `apps/agents/test/agents/sessions/application/behaviours/todo_adapter_behaviour_test.exs`
   - Case: `use ExUnit.Case, async: true`
 
-- [ ] ⏸ **GREEN**: Implement `apps/agents/lib/agents/sessions/application/behaviours/todo_adapter_behaviour.ex`
+- [x] ⏸ **GREEN**: Implement `apps/agents/lib/agents/sessions/application/behaviours/todo_adapter_behaviour.ex`
   - Callbacks:
     - `@callback parse_event(event :: map()) :: {:ok, TodoList.t()} | {:error, term()}`
     - `@callback get_todos(task_id :: String.t()) :: TodoList.t() | nil`
@@ -125,17 +125,17 @@ Build the pure domain models and the behaviour port. All domain tests run `async
     - `@callback clear_todos(task_id :: String.t()) :: :ok`
   - Types: `@type task_id :: String.t()`
 
-- [ ] ⏸ **REFACTOR**: Verify callbacks match PRD contract; add `@moduledoc` with usage docs
+- [x] ⏸ **REFACTOR**: Verify callbacks match PRD contract; add `@moduledoc` with usage docs
 
 ### Step 1.4: Register Mox Mock for TodoAdapterBehaviour
 
-- [ ] ⏸ Register `Agents.Mocks.TodoAdapterMock` in the test support configuration
+- [x] ⏸ Register `Agents.Mocks.TodoAdapterMock` in the test support configuration
   - Add `Mox.defmock(Agents.Mocks.TodoAdapterMock, for: Agents.Sessions.Application.Behaviours.TodoAdapterBehaviour)` to the existing mock setup file
   - File: Check existing pattern (likely `apps/agents/test/support/mocks.ex` or similar)
 
 ### Step 1.5: Update Domain Boundary Exports
 
-- [ ] ⏸ Update `apps/agents/lib/agents/sessions/domain.ex` to export `TodoItem` and `TodoList`:
+- [x] ⏸ Update `apps/agents/lib/agents/sessions/domain.ex` to export `TodoItem` and `TodoList`:
   ```elixir
   exports: [
     {Entities.Task, []},
@@ -147,26 +147,26 @@ Build the pure domain models and the behaviour port. All domain tests run `async
 
 ### Phase 1 Validation
 
-- [ ] ⏸ All domain entity tests pass (`mix test apps/agents/test/agents/sessions/domain/ --trace`)
-- [ ] ⏸ All tests run in milliseconds with no I/O
-- [ ] ⏸ No boundary violations (`mix boundary`)
+- [x] ⏸ All domain entity tests pass (`mix test apps/agents/test/agents/sessions/domain/ --trace`)
+- [x] ⏸ All tests run in milliseconds with no I/O
+- [x] ⏸ No boundary violations (`mix boundary`)
 
 ---
 
-## Phase 2: Infrastructure (phoenix-tdd)
+## Phase 2: Infrastructure (phoenix-tdd) ✓
 
 Wire up persistence (migration, schema changes) and TaskRunner integration.
 
 ### Step 2.1: Database Migration — Add `todo_items` Column
 
-- [ ] ⏸ Create migration `apps/agents/priv/repo/migrations/YYYYMMDDHHMMSS_add_todo_items_to_sessions_tasks.exs`
+- [x] ⏸ Create migration `apps/agents/priv/repo/migrations/YYYYMMDDHHMMSS_add_todo_items_to_sessions_tasks.exs`
   - Adds `todo_items` column of type `:map` (JSONB) to `sessions_tasks` table, default `nil`
   - This is a nullable column — tasks without todos simply have `nil`
   - No index needed (not queried by todo content)
 
 ### Step 2.2: TaskSchema — Add `todo_items` Field
 
-- [ ] ⏸ **RED**: Write test `apps/agents/test/agents/sessions/infrastructure/schemas/task_schema_todo_test.exs`
+- [x] ⏸ **RED**: Write test `apps/agents/test/agents/sessions/infrastructure/schemas/task_schema_todo_test.exs`
   - Tests:
     - `status_changeset/2` accepts a `todo_items` map field
     - `status_changeset/2` stores a list-of-maps value in `todo_items`
@@ -175,29 +175,29 @@ Wire up persistence (migration, schema changes) and TaskRunner integration.
   - File: `apps/agents/test/agents/sessions/infrastructure/schemas/task_schema_todo_test.exs`
   - Case: `use Agents.DataCase, async: true`
 
-- [ ] ⏸ **GREEN**: Update `apps/agents/lib/agents/sessions/infrastructure/schemas/task_schema.ex`
+- [x] ⏸ **GREEN**: Update `apps/agents/lib/agents/sessions/infrastructure/schemas/task_schema.ex`
   - Add `field(:todo_items, :map)` to the schema
   - Add `:todo_items` to the `status_changeset/2` cast list
   - Update the `@type t` to include `todo_items: map() | nil`
 
-- [ ] ⏸ **REFACTOR**: Verify existing changeset tests still pass; clean up typespec
+- [x] ⏸ **REFACTOR**: Verify existing changeset tests still pass; clean up typespec
 
 ### Step 2.3: Task Domain Entity — Add `todo_items` Field
 
-- [ ] ⏸ **RED**: Update test `apps/agents/test/agents/sessions/domain/entities/task_test.exs`
+- [x] ⏸ **RED**: Update test `apps/agents/test/agents/sessions/domain/entities/task_test.exs`
   - Add test: `new/1` accepts `todo_items` field (defaults to nil)
   - Add test: `from_schema/1` converts `todo_items` from schema to entity
 
-- [ ] ⏸ **GREEN**: Update `apps/agents/lib/agents/sessions/domain/entities/task.ex`
+- [x] ⏸ **GREEN**: Update `apps/agents/lib/agents/sessions/domain/entities/task.ex`
   - Add `todo_items: nil` to `defstruct`
   - Add `todo_items: map() | nil` to `@type t`
   - Add `todo_items: schema.todo_items` to `from_schema/1`
 
-- [ ] ⏸ **REFACTOR**: Clean up
+- [x] ⏸ **REFACTOR**: Clean up
 
 ### Step 2.4: TaskRunner — Add `todo_items` to GenServer State
 
-- [ ] ⏸ **RED**: Write test `apps/agents/test/agents/sessions/infrastructure/task_runner/todo_test.exs`
+- [x] ⏸ **RED**: Write test `apps/agents/test/agents/sessions/infrastructure/task_runner/todo_test.exs`
   - Tests:
     - TaskRunner initialises with `todo_items: []` in state
     - When a `todo.updated` SSE event arrives, TaskRunner caches parsed todo items in state
@@ -211,7 +211,7 @@ Wire up persistence (migration, schema changes) and TaskRunner integration.
   - Case: `use Agents.DataCase, async: false` (following existing TaskRunner test pattern)
   - Mocks: `TaskRepositoryMock`, `ContainerProviderMock`, `OpencodeClientMock`
 
-- [ ] ⏸ **GREEN**: Update `apps/agents/lib/agents/sessions/infrastructure/task_runner.ex`
+- [x] ⏸ **GREEN**: Update `apps/agents/lib/agents/sessions/infrastructure/task_runner.ex`
   - Add `todo_items: []` to the `defstruct` (line 29-59)
   - Add new `handle_sdk_event/2` clause before the catch-all (line 703) for `"todo.updated"` events:
     ```elixir
@@ -251,35 +251,35 @@ Wire up persistence (migration, schema changes) and TaskRunner integration.
     ```
   - Update `complete_task/1` and `fail_task/2` to include todo_items in final attrs via a `put_todo_attrs/2` helper (same pattern as `put_output_attrs/2`)
 
-- [ ] ⏸ **REFACTOR**: Extract todo parsing into a dedicated private module or keep inline if small. Ensure the catch-all event handler is still the last clause.
+- [x] ⏸ **REFACTOR**: Extract todo parsing into a dedicated private module or keep inline if small. Ensure the catch-all event handler is still the last clause.
 
 ### Step 2.5: TaskRunner — Track `todo_items` Flush State
 
-- [ ] ⏸ **RED**: Add test to `apps/agents/test/agents/sessions/infrastructure/task_runner/todo_test.exs`
+- [x] ⏸ **RED**: Add test to `apps/agents/test/agents/sessions/infrastructure/task_runner/todo_test.exs`
   - Tests:
     - `flush_output` only writes `todo_items` to DB when they've changed since last flush (add `last_flushed_todo_count: 0` to state, similar to `last_flushed_count` for output_parts)
     - Prevent redundant DB writes when todo state hasn't changed
 
-- [ ] ⏸ **GREEN**: Add `last_flushed_todo_count: 0` to TaskRunner struct. Update `handle_info(:flush_output, ...)` to track todo flush state.
+- [x] ⏸ **GREEN**: Add `last_flushed_todo_count: 0` to TaskRunner struct. Update `handle_info(:flush_output, ...)` to track todo flush state.
 
-- [ ] ⏸ **REFACTOR**: Clean up flush logic
+- [x] ⏸ **REFACTOR**: Clean up flush logic
 
 ### Phase 2 Validation
 
-- [ ] ⏸ All TaskRunner todo tests pass
-- [ ] ⏸ Existing TaskRunner tests still pass
-- [ ] ⏸ Migration runs cleanly (`mix ecto.migrate`)
-- [ ] ⏸ No boundary violations (`mix boundary`)
+- [x] ⏸ All TaskRunner todo tests pass
+- [x] ⏸ Existing TaskRunner tests still pass
+- [x] ⏸ Migration runs cleanly (`mix ecto.migrate`)
+- [x] ⏸ No boundary violations (`mix boundary`)
 
 ---
 
-## Phase 3: Interface — EventProcessor + LiveView + Component (phoenix-tdd)
+## Phase 3: Interface — EventProcessor + LiveView + Component (phoenix-tdd) ✓
 
 Wire up the LiveView to receive, display, and restore todo state.
 
 ### Step 3.1: EventProcessor — Handle `todo.updated` Events
 
-- [ ] ⏸ **RED**: Write test in `apps/agents_web/test/live/sessions/event_processor_todo_test.exs`
+- [x] **RED**: Write test in `apps/agents_web/test/live/sessions/event_processor_todo_test.exs`
   - Tests:
     - `process_event/2` with a `"todo.updated"` event type updates the `:todo_items` socket assign
     - The `:todo_items` assign is a list of maps with keys: `id`, `title`, `status`, `position`
@@ -289,7 +289,7 @@ Wire up the LiveView to receive, display, and restore todo state.
   - Case: `use ExUnit.Case, async: true` (EventProcessor is pure socket transformation, following existing pattern)
   - Setup: Create a mock socket with `Phoenix.LiveViewTest.Helpers` or plain assigns map
 
-- [ ] ⏸ **GREEN**: Update `apps/agents_web/lib/live/sessions/event_processor.ex`
+- [x] **GREEN**: Update `apps/agents_web/lib/live/sessions/event_processor.ex`
   - Add new `process_event/2` clause before the catch-all:
     ```elixir
     def process_event(%{"type" => "todo.updated", "properties" => props}, socket) do
@@ -301,18 +301,18 @@ Wire up the LiveView to receive, display, and restore todo state.
     ```
   - Add private `parse_todo_items/1` that extracts and normalises the todo list from properties
 
-- [ ] ⏸ **REFACTOR**: Ensure consistent error handling with other event clauses
+- [x] **REFACTOR**: Ensure consistent error handling with other event clauses
 
 ### Step 3.2: EventProcessor — `maybe_load_todos/2` for Reconnect
 
-- [ ] ⏸ **RED**: Add tests to `apps/agents_web/test/live/sessions/event_processor_todo_test.exs`
+- [x] **RED**: Add tests to `apps/agents_web/test/live/sessions/event_processor_todo_test.exs`
   - Tests:
     - `maybe_load_todos/2` with a task that has `todo_items` data restores `:todo_items` assign
     - `maybe_load_todos/2` with a task that has `nil` todo_items leaves `:todo_items` as `[]`
     - `maybe_load_todos/2` with `nil` task returns socket unchanged
     - `maybe_load_todos/2` correctly parses the persisted JSON `%{"items" => [...]}` format
 
-- [ ] ⏸ **GREEN**: Add `maybe_load_todos/2` to `apps/agents_web/lib/live/sessions/event_processor.ex`
+- [x] **GREEN**: Add `maybe_load_todos/2` to `apps/agents_web/lib/live/sessions/event_processor.ex`
   ```elixir
   def maybe_load_todos(socket, %{todo_items: %{"items" => items}}) when is_list(items) do
     parsed = Enum.map(items, &normalize_todo_item/1)
@@ -322,11 +322,11 @@ Wire up the LiveView to receive, display, and restore todo state.
   def maybe_load_todos(socket, _task), do: socket
   ```
 
-- [ ] ⏸ **REFACTOR**: Share parsing logic between `process_event` and `maybe_load_todos`
+- [x] **REFACTOR**: Share parsing logic between `process_event` and `maybe_load_todos`
 
 ### Step 3.3: LiveView — Add `:todo_items` Assign and PubSub Handler
 
-- [ ] ⏸ **RED**: Write test in `apps/agents_web/test/live/sessions/index_todo_test.exs`
+- [x] **RED**: Write test in `apps/agents_web/test/live/sessions/index_todo_test.exs`
   - Tests:
     - `:todo_items` assign is initialised to `[]` in `assign_session_state/1`
     - `handle_info({:todo_updated, task_id, items}, socket)` updates `:todo_items` assign when task_id matches current task
@@ -337,7 +337,7 @@ Wire up the LiveView to receive, display, and restore todo state.
   - File: `apps/agents_web/test/live/sessions/index_todo_test.exs`
   - Case: `use AgentsWeb.ConnCase, async: false`
 
-- [ ] ⏸ **GREEN**: Update `apps/agents_web/lib/live/sessions/index.ex`
+- [x] **GREEN**: Update `apps/agents_web/lib/live/sessions/index.ex`
   - Add `todo_items: []` to `assign_session_state/1` (around line 333-343)
   - Add `EventProcessor.maybe_load_todos(current_task)` call in `mount/3` (after `maybe_load_pending_question`)
   - Add `EventProcessor.maybe_load_todos(current_task)` call in `handle_event("select_session", ...)` (after `maybe_load_pending_question`)
@@ -354,11 +354,11 @@ Wire up the LiveView to receive, display, and restore todo state.
     ```
   - Place this clause before the catch-all `handle_info(_msg, socket)`
 
-- [ ] ⏸ **REFACTOR**: Ensure no duplication between EventProcessor SSE path and PubSub path for todo updates
+- [x] **REFACTOR**: Ensure no duplication between EventProcessor SSE path and PubSub path for todo updates
 
 ### Step 3.4: Progress Bar Component
 
-- [ ] ⏸ **RED**: Write test in `apps/agents_web/test/live/sessions/components/progress_bar_test.exs`
+- [x] **RED**: Write test in `apps/agents_web/test/live/sessions/components/progress_bar_test.exs`
   - Tests:
     - `progress_bar/1` renders nothing when `todo_items` is `[]`
     - `progress_bar/1` renders a container with `data-testid="todo-progress"` when items exist
@@ -373,7 +373,7 @@ Wire up the LiveView to receive, display, and restore todo state.
   - File: `apps/agents_web/test/live/sessions/components/progress_bar_test.exs`
   - Case: `use ExUnit.Case, async: true` (pure component rendering via `Phoenix.LiveViewTest.render_component/2`)
 
-- [ ] ⏸ **GREEN**: Add `progress_bar/1` to `apps/agents_web/lib/live/sessions/components/session_components.ex`
+- [x] **GREEN**: Add `progress_bar/1` to `apps/agents_web/lib/live/sessions/components/session_components.ex`
   - Attrs: `attr(:todo_items, :list, required: true)`
   - Template:
     ```heex
@@ -398,41 +398,41 @@ Wire up the LiveView to receive, display, and restore todo state.
     - `is-completed` — success/green with checkmark icon
     - `is-failed` — error/red with X icon
 
-- [ ] ⏸ **REFACTOR**: Polish styling (Tailwind classes), add status icons, ensure accessibility
+- [x] **REFACTOR**: Polish styling (Tailwind classes), add status icons, ensure accessibility
 
 ### Step 3.5: Wire Progress Bar into LiveView Template
 
-- [ ] ⏸ **RED**: Add integration test in `apps/agents_web/test/live/sessions/index_todo_test.exs`
+- [x] **RED**: Add integration test in `apps/agents_web/test/live/sessions/index_todo_test.exs`
   - Tests:
     - When a todo PubSub message arrives, the progress bar appears in the rendered HTML
     - Progress bar is visible between the session header and the output log
     - Progress bar is NOT rendered when `todo_items` is empty (BDD: "hidden when no todo list exists")
 
-- [ ] ⏸ **GREEN**: Update `apps/agents_web/lib/live/sessions/index.html.heex`
+- [x] **GREEN**: Update `apps/agents_web/lib/live/sessions/index.html.heex`
   - Add `<.progress_bar todo_items={@todo_items} />` between the stats bar section and the output log section (after line ~116, before line ~143)
   - Position: after the error alert div, before the `#session-log` div
 
-- [ ] ⏸ **REFACTOR**: Verify layout spacing, ensure progress bar doesn't break existing UI
+- [x] **REFACTOR**: Verify layout spacing, ensure progress bar doesn't break existing UI
 
 ### Step 3.6: Todo Items as Map Structs (normalize for template rendering)
 
-- [ ] ⏸ **RED**: Add test in `apps/agents_web/test/live/sessions/event_processor_todo_test.exs`
+- [x] **RED**: Add test in `apps/agents_web/test/live/sessions/event_processor_todo_test.exs`
   - Tests:
     - Todo items stored in `:todo_items` assign are maps with atom keys (`:id`, `:title`, `:status`, `:position`)
     - This allows template access like `item.position` and `item.status`
 
-- [ ] ⏸ **GREEN**: Ensure `parse_todo_items/1` in EventProcessor returns maps with atom keys (or use TodoItem structs directly if exported)
+- [x] **GREEN**: Ensure `parse_todo_items/1` in EventProcessor returns maps with atom keys (or use TodoItem structs directly if exported)
 
-- [ ] ⏸ **REFACTOR**: Decide between plain maps with atom keys vs TodoItem structs in the socket assign. TodoItem structs are cleaner but require the entity to be exported from the domain boundary.
+- [x] **REFACTOR**: Decide between plain maps with atom keys vs TodoItem structs in the socket assign. TodoItem structs are cleaner but require the entity to be exported from the domain boundary.
 
 ### Phase 3 Validation
 
-- [ ] ⏸ All EventProcessor todo tests pass
-- [ ] ⏸ All LiveView todo tests pass
-- [ ] ⏸ All component tests pass
-- [ ] ⏸ Existing EventProcessor tests still pass
-- [ ] ⏸ Existing LiveView tests still pass
-- [ ] ⏸ No boundary violations (`mix boundary`)
+- [x] All EventProcessor todo tests pass
+- [x] All LiveView todo tests pass
+- [x] All component tests pass
+- [x] Existing EventProcessor tests still pass
+- [x] Existing LiveView tests still pass
+- [x] No boundary violations (`mix boundary`)
 
 ---
 
