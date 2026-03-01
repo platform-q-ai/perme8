@@ -2,9 +2,12 @@ defmodule Agents.Sessions.Application.UseCases.ResumeTask do
   @moduledoc """
   Use case for resuming a session with a follow-up instruction.
 
-  Creates a new task linked to the parent task via `parent_task_id`,
-  inheriting the container and opencode session. The TaskRunner restarts
-  the stopped container and sends the new prompt to the existing session.
+  Reuses the existing task record — updates its instruction and resets
+  its status to "pending". The TaskRunner restarts the stopped container
+  and sends the new prompt to the existing opencode session.
+
+  This preserves todos, output history, and the task identity across
+  the entire session lifetime.
   """
 
   alias Agents.Sessions.Domain.Entities.Task
@@ -14,13 +17,13 @@ defmodule Agents.Sessions.Application.UseCases.ResumeTask do
   @default_task_repo Agents.Sessions.Infrastructure.Repositories.TaskRepository
 
   @doc """
-  Resumes a session by creating a follow-up task.
+  Resumes a session by updating the existing task with a new instruction.
 
   ## Parameters
-  - `parent_task_id` - ID of the completed task to resume from
+  - `task_id` - ID of the completed/failed/cancelled task to resume
   - `attrs` - Map with:
     - `:instruction` - (required) The follow-up instruction
-    - `:user_id` - (required) The user creating the task
+    - `:user_id` - (required) The user resuming the task
   - `opts` - Keyword list with:
     - `:task_repo` - Repository module
     - `:task_runner_starter` - Function to start a TaskRunner
@@ -28,23 +31,22 @@ defmodule Agents.Sessions.Application.UseCases.ResumeTask do
   ## Returns
   - `{:ok, task}` - Domain entity on success
   - `{:error, :instruction_required}` - When instruction is blank
-  - `{:error, :not_found}` - Parent task not found or not owned by user
-  - `{:error, :not_resumable}` - Parent task is not in a terminal state
-  - `{:error, :no_container}` - Parent task has no container to resume
-  - `{:error, :no_session}` - Parent task has no opencode session to resume
-  - `{:error, :concurrent_limit_reached}` - User already has an active task
+  - `{:error, :not_found}` - Task not found or not owned by user
+  - `{:error, :not_resumable}` - Task is not in a terminal state
+  - `{:error, :no_container}` - Task has no container to resume
+  - `{:error, :no_session}` - Task has no opencode session to resume
   """
   @spec execute(String.t(), map(), keyword()) ::
           {:ok, Agents.Sessions.Domain.Entities.Task.t()} | {:error, term()}
-  def execute(parent_task_id, attrs, opts \\ []) do
+  def execute(task_id, attrs, opts \\ []) do
     task_repo = Keyword.get(opts, :task_repo, @default_task_repo)
 
     with :ok <- validate_instruction(attrs),
-         {:ok, parent} <- find_parent(parent_task_id, attrs.user_id, task_repo),
-         :ok <- validate_resumable(parent),
-         {:ok, schema} <- create_resume_task(parent, attrs, task_repo),
-         :ok <- start_runner(schema.id, parent, task_repo, opts) do
-      {:ok, Task.from_schema(schema)}
+         {:ok, task} <- find_task(task_id, attrs.user_id, task_repo),
+         :ok <- validate_resumable(task),
+         {:ok, updated_schema} <- reset_task_for_resume(task, attrs, task_repo),
+         :ok <- start_runner(updated_schema.id, task, task_repo, opts) do
+      {:ok, Task.from_schema(updated_schema)}
     end
   end
 
@@ -55,22 +57,22 @@ defmodule Agents.Sessions.Application.UseCases.ResumeTask do
 
   defp validate_instruction(_), do: {:error, :instruction_required}
 
-  defp find_parent(parent_task_id, user_id, task_repo) do
-    case task_repo.get_task_for_user(parent_task_id, user_id) do
+  defp find_task(task_id, user_id, task_repo) do
+    case task_repo.get_task_for_user(task_id, user_id) do
       nil -> {:error, :not_found}
       task -> {:ok, task}
     end
   end
 
-  defp validate_resumable(parent) do
+  defp validate_resumable(task) do
     cond do
-      parent.status not in ["completed", "failed", "cancelled"] ->
+      task.status not in ["completed", "failed", "cancelled"] ->
         {:error, :not_resumable}
 
-      is_nil(parent.container_id) ->
+      is_nil(task.container_id) ->
         {:error, :no_container}
 
-      is_nil(parent.session_id) ->
+      is_nil(task.session_id) ->
         {:error, :no_session}
 
       true ->
@@ -78,18 +80,18 @@ defmodule Agents.Sessions.Application.UseCases.ResumeTask do
     end
   end
 
-  defp create_resume_task(parent, attrs, task_repo) do
-    task_repo.create_task(%{
+  defp reset_task_for_resume(task, attrs, task_repo) do
+    task_repo.update_task_status(task, %{
       instruction: attrs.instruction,
-      user_id: attrs.user_id,
-      parent_task_id: parent.id,
-      container_id: parent.container_id,
-      session_id: parent.session_id,
-      image: parent.image
+      status: "pending",
+      error: nil,
+      pending_question: nil,
+      started_at: nil,
+      completed_at: nil
     })
   end
 
-  defp start_runner(task_id, parent, task_repo, opts) do
+  defp start_runner(task_id, task, task_repo, opts) do
     case Keyword.get(opts, :task_runner_starter) do
       nil ->
         :ok
@@ -99,8 +101,8 @@ defmodule Agents.Sessions.Application.UseCases.ResumeTask do
         runner_opts =
           Keyword.merge(opts,
             resume: true,
-            container_id: parent.container_id,
-            session_id: parent.session_id
+            container_id: task.container_id,
+            session_id: task.session_id
           )
 
         case starter.(task_id, runner_opts) do

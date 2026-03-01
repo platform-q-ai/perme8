@@ -132,7 +132,21 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
         # Start the lifecycle — either resume or fresh start
         if resume? do
-          state = %{state | container_id: resume_container_id, session_id: resume_session_id}
+          # Restore cached output and todos from DB so they persist across resumes
+          existing_parts = restore_output_parts(task.output)
+          existing_todos = restore_todo_items(task.todo_items)
+
+          state = %{
+            state
+            | container_id: resume_container_id,
+              session_id: resume_session_id,
+              output_parts: existing_parts,
+              last_flushed_count: length(existing_parts),
+              todo_items: existing_todos,
+              todo_version: if(existing_todos == [], do: 0, else: 1),
+              last_flushed_todo_version: if(existing_todos == [], do: 0, else: 1)
+          }
+
           send(self(), :restart_container)
           {:ok, state}
         else
@@ -993,4 +1007,24 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   defp put_todo_attrs(attrs, %{todo_items: todo_items}) when is_list(todo_items) do
     Map.put(attrs, :todo_items, %{"items" => todo_items})
   end
+
+  # Restore previously cached output parts from DB on resume.
+  # The output column stores either a JSON array of structured parts
+  # or a plain text string. We decode back to the internal map format
+  # so new parts from the resumed session are appended correctly.
+  defp restore_output_parts(nil), do: []
+  defp restore_output_parts(""), do: []
+
+  defp restore_output_parts(output) when is_binary(output) do
+    case Jason.decode(output) do
+      {:ok, parts} when is_list(parts) -> parts
+      _ -> [%{"type" => "text", "id" => "cached-0", "text" => output}]
+    end
+  end
+
+  defp restore_output_parts(_), do: []
+
+  # Restore previously cached todo items from DB on resume.
+  defp restore_todo_items(%{"items" => items}) when is_list(items), do: items
+  defp restore_todo_items(_), do: []
 end

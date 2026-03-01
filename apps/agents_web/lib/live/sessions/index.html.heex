@@ -36,8 +36,6 @@
                 <.status_dot status={session.latest_status} />
               </div>
               <div class="flex items-center gap-2 text-[0.65rem] text-base-content/50 w-full">
-                <span>{session.task_count} task{if session.task_count != 1, do: "s"}</span>
-                <span>&middot;</span>
                 <span>{image_label(session.image)}</span>
                 <span>&middot;</span>
                 <span>{relative_time(session.latest_at)}</span>
@@ -216,33 +214,6 @@
           :if={@pending_question}
           pending={@pending_question}
         />
-      </div>
-
-      <%!-- Task history for this session --%>
-      <div
-        :if={@active_container_id && length(session_tasks(@tasks, @active_container_id)) > 1}
-        class="border-t border-base-300 shrink-0 max-h-40 overflow-y-auto"
-      >
-        <div class="px-4 py-2">
-          <h4 class="text-xs font-semibold text-base-content/60 mb-1">Task History</h4>
-          <div class="space-y-1">
-            <div
-              :for={task <- session_tasks(@tasks, @active_container_id)}
-              class={[
-                "flex items-center gap-2 text-xs p-1.5 rounded cursor-pointer hover:bg-base-200",
-                @current_task && @current_task.id == task.id && "bg-base-200"
-              ]}
-              phx-click="view_task"
-              phx-value-task-id={task.id}
-            >
-              <.status_dot status={task.status} />
-              <span class="truncate flex-1">{truncate_instruction(task.instruction, 45)}</span>
-              <span class="text-base-content/40 shrink-0">
-                {relative_time(task.inserted_at)}
-              </span>
-            </div>
-          </div>
-        </div>
       </div>
 
       <%!-- Input form --%>

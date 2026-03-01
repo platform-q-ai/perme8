@@ -99,6 +99,7 @@ defmodule Agents.Sessions.Infrastructure.Schemas.TaskSchema do
     task
     |> cast(attrs, [
       :status,
+      :instruction,
       :container_id,
       :container_port,
       :session_id,
