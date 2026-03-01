@@ -60,10 +60,12 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
   # ---- Public API ----
 
+  @spec start_link({String.t(), keyword()}) :: GenServer.on_start()
   def start_link({task_id, opts}) do
     GenServer.start_link(__MODULE__, {task_id, opts}, name: via_tuple(task_id))
   end
 
+  @spec via_tuple(String.t()) :: {:via, module(), {module(), String.t()}}
   def via_tuple(task_id) do
     {:via, Registry, {Agents.Sessions.TaskRegistry, task_id}}
   end

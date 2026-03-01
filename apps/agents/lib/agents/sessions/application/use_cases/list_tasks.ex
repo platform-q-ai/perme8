@@ -12,6 +12,7 @@ defmodule Agents.Sessions.Application.UseCases.ListTasks do
 
   Returns a list of domain entities.
   """
+  @spec execute(String.t(), keyword()) :: [Agents.Sessions.Domain.Entities.Task.t()]
   def execute(user_id, opts \\ []) do
     task_repo = Keyword.get(opts, :task_repo, @default_task_repo)
 

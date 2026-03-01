@@ -43,6 +43,8 @@ defmodule Agents.Sessions.Application.UseCases.RefreshAuthAndResume do
   - `{:error, :health_timeout}` - Container failed health check after restart
   - `{:error, term()}` - Container restart or auth refresh failure
   """
+  @spec execute(String.t(), String.t(), keyword()) ::
+          {:ok, Agents.Sessions.Domain.Entities.Task.t()} | {:error, term()}
   def execute(task_id, user_id, opts \\ []) do
     task_repo = Keyword.get(opts, :task_repo, @default_task_repo)
     container_provider = Keyword.get(opts, :container_provider, @default_container_provider)

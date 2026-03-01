@@ -34,6 +34,8 @@ defmodule Agents.Sessions.Application.UseCases.ResumeTask do
   - `{:error, :no_session}` - Parent task has no opencode session to resume
   - `{:error, :concurrent_limit_reached}` - User already has an active task
   """
+  @spec execute(String.t(), map(), keyword()) ::
+          {:ok, Agents.Sessions.Domain.Entities.Task.t()} | {:error, term()}
   def execute(parent_task_id, attrs, opts \\ []) do
     task_repo = Keyword.get(opts, :task_repo, @default_task_repo)
 
