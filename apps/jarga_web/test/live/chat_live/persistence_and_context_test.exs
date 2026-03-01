@@ -13,6 +13,7 @@ defmodule JargaWeb.ChatLive.PersistenceAndContextTest do
   import Jarga.ProjectsFixtures
   import Jarga.DocumentsFixtures
   import Jarga.NotesFixtures
+  import Jarga.Test.StepHelpers
 
   describe "TDD: Chat conversation persistence across navigation" do
     setup do
@@ -106,7 +107,7 @@ defmodule JargaWeb.ChatLive.PersistenceAndContextTest do
 
       # Wait for LLM response using polling instead of fixed sleep
       {found, _html} =
-        Jarga.Test.StepHelpers.wait_for_text_in_view(view, "Engineering Team",
+        wait_for_text_in_view(view, "Engineering Team",
           timeout: 5_000,
           interval: 200
         )
@@ -132,7 +133,7 @@ defmodule JargaWeb.ChatLive.PersistenceAndContextTest do
 
       # Wait for LLM response using polling instead of fixed sleep
       {found, _html} =
-        Jarga.Test.StepHelpers.wait_for_text_in_view(view, "Mobile App",
+        wait_for_text_in_view(view, "Mobile App",
           timeout: 5_000,
           interval: 200
         )
@@ -158,7 +159,7 @@ defmodule JargaWeb.ChatLive.PersistenceAndContextTest do
 
       # Wait for LLM response using polling instead of fixed sleep
       {found, _html} =
-        Jarga.Test.StepHelpers.wait_for_text_in_view(view, "API Documentation",
+        wait_for_text_in_view(view, "API Documentation",
           timeout: 5_000,
           interval: 200
         )
@@ -213,7 +214,7 @@ defmodule JargaWeb.ChatLive.PersistenceAndContextTest do
 
       # Wait for LLM response using polling instead of fixed sleep
       {found, html} =
-        Jarga.Test.StepHelpers.wait_for_text_in_view(view, "Engineering Team",
+        wait_for_text_in_view(view, "Engineering Team",
           timeout: 5_000,
           interval: 200
         )
@@ -268,7 +269,7 @@ defmodule JargaWeb.ChatLive.PersistenceAndContextTest do
 
       # Wait for LLM response using polling instead of fixed sleep
       {found, html} =
-        Jarga.Test.StepHelpers.wait_for_text_in_view(view, "chat chat-start",
+        wait_for_text_in_view(view, "chat chat-start",
           timeout: 5_000,
           interval: 200
         )
