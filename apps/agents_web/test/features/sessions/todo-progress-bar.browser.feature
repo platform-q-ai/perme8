@@ -72,14 +72,14 @@ Feature: Agent Session Todo Progress Bar
     When I click "[data-testid='session-item-todo-3-of-7-complete']"
     And I wait for network idle
     And I wait for 1 seconds
-    And I store the text of "[data-testid='todo-progress-summary']" as "summaryBeforeReload"
-    And I reload the page
+    Then "[data-testid='todo-progress-summary']" should contain text "3/7 steps complete"
+    When I reload the page
     And I wait for network idle
     # Re-select the session after reload since mount auto-selects the first session
     When I click "[data-testid='session-item-todo-3-of-7-complete']"
     And I wait for network idle
     And I wait for 1 seconds
-    Then "[data-testid='todo-progress-summary']" should have text "${summaryBeforeReload}"
+    Then "[data-testid='todo-progress-summary']" should contain text "3/7 steps complete"
     And "[data-testid='todo-step-1']" should have class "is-completed"
     And "[data-testid='todo-step-4']" should have class "is-pending"
 
