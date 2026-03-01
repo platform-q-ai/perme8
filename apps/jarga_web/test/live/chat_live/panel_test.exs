@@ -136,16 +136,14 @@ defmodule JargaWeb.ChatLive.PanelTest do
       |> element("#chat-message-form")
       |> render_submit(%{message: "What is 2+2?"})
 
-      # Wait for the LLM to respond by checking for assistant message in the view
-      # The :assistant_response message is now handled internally by the parent LiveView
-      # We verify the response by checking the rendered HTML
-      # Give LLM time to respond
-      Process.sleep(3_000)
+      # Wait for LLM response using polling instead of fixed sleep
+      {found, html} =
+        Jarga.Test.StepHelpers.wait_for_text_in_view(view, "chat chat-start",
+          timeout: 5_000,
+          interval: 200
+        )
 
-      html = render(view)
-
-      # Should show assistant response in chat bubbles (chat-start is for assistant)
-      assert html =~ "chat chat-start"
+      assert found, "Expected assistant response to appear"
       # The response should contain content (not just be empty)
       assert html =~ ~r/<div class="chat-bubble\s*">[^<]+<\/div>/
     end
@@ -195,13 +193,18 @@ defmodule JargaWeb.ChatLive.PanelTest do
       |> element("#chat-message-form")
       |> render_submit(%{message: "Tell me a story"})
 
-      # Should eventually show streaming message with cursor
-      # Wait a bit for the stream to start
-      Process.sleep(500)
+      # Wait for the stream to start using polling instead of fixed sleep
+      found =
+        Jarga.Test.StepHelpers.wait_until(
+          fn ->
+            html = Phoenix.LiveViewTest.render(view)
+            html =~ "Thinking..." or html =~ "▊"
+          end,
+          timeout: 2_000,
+          interval: 50
+        )
 
-      html = render(view)
-      # Check for either the thinking state or streaming content with cursor
-      assert html =~ "Thinking..." or html =~ "▊"
+      assert found, "Expected streaming indicator (Thinking... or cursor) to appear"
     end
 
     test "extracts document context correctly", %{conn: conn, user: user} do
@@ -480,13 +483,14 @@ defmodule JargaWeb.ChatLive.PanelTest do
       |> element("#chat-message-form")
       |> render_submit(%{message: "What page am I on?"})
 
-      # Wait for LLM response
-      Process.sleep(3_000)
+      # Wait for LLM response using polling instead of fixed sleep
+      {found, html} =
+        Jarga.Test.StepHelpers.wait_for_text_in_view(view, "chat chat-start",
+          timeout: 5_000,
+          interval: 200
+        )
 
-      html = render(view)
-
-      # Should show assistant response mentioning dashboard or welcome page
-      assert html =~ "chat chat-start"
+      assert found, "Expected assistant response to appear"
       # Response should reference the current context
       assert html =~ ~r/(dashboard|welcome|jarga)/i
     end
@@ -508,11 +512,18 @@ defmodule JargaWeb.ChatLive.PanelTest do
       |> element("#chat-message-form")
       |> render_submit(%{message: "Tell me about Jarga"})
 
-      # Should show loading indicator almost immediately
-      Process.sleep(100)
+      # Wait for loading indicator using polling instead of fixed sleep
+      found =
+        Jarga.Test.StepHelpers.wait_until(
+          fn ->
+            html = Phoenix.LiveViewTest.render(view)
+            html =~ ~r/(Thinking...|loading loading-dots)/
+          end,
+          timeout: 1_000,
+          interval: 20
+        )
 
-      html = render(view)
-      assert html =~ ~r/(Thinking...|loading loading-dots)/
+      assert found, "Expected loading indicator to appear"
     end
 
     @tag :evaluation
@@ -527,25 +538,15 @@ defmodule JargaWeb.ChatLive.PanelTest do
       |> element("#chat-message-form")
       |> render_submit(%{message: "Hello"})
 
-      # Wait for first chunk to arrive
-      max_wait = 3_000
-      wait_interval = 100
-      waited = 0
-
-      _html =
-        Stream.repeatedly(fn ->
-          if waited < max_wait do
-            Process.sleep(wait_interval)
-            render(view)
-          else
-            render(view)
-          end
-        end)
-        |> Enum.take_while(fn html ->
-          waited = waited + wait_interval
-          not (html =~ "chat chat-start") and waited < max_wait
-        end)
-        |> List.last()
+      # Wait for first chunk to arrive using polling helper
+      Jarga.Test.StepHelpers.wait_until(
+        fn ->
+          html = render(view)
+          html =~ "chat chat-start"
+        end,
+        timeout: 3_000,
+        interval: 100
+      )
 
       end_time = System.monotonic_time(:millisecond)
       time_to_first_chunk = end_time - start_time
@@ -1286,13 +1287,14 @@ defmodule JargaWeb.ChatLive.PanelTest do
       |> element("#chat-message-form")
       |> render_submit(%{message: "What is this page about?"})
 
-      # Wait for response
-      Process.sleep(3_000)
+      # Wait for response using polling instead of fixed sleep
+      {found, html} =
+        Jarga.Test.StepHelpers.wait_for_text_in_view(view, "Source:",
+          timeout: 5_000,
+          interval: 200
+        )
 
-      html = render(view)
-
-      # Should show source citation
-      assert html =~ "Source:"
+      assert found, "Expected source citation to appear"
       assert html =~ document.title
       # Should have a link to the page
       assert html =~ ~r/href=".*#{document.slug}"/
@@ -1753,9 +1755,8 @@ defmodule JargaWeb.ChatLive.PanelTest do
       # Panel starts in non-streaming state
       # Send a chunk directly - should be ignored since not streaming
       send(view.pid, {:chunk, "IGNORED_CHUNK_CONTENT"})
-      Process.sleep(50)
 
-      # The chunk should NOT appear (not in streaming mode)
+      # render/1 forces the LiveView to process pending messages
       html = render(view)
       refute html =~ "IGNORED_CHUNK_CONTENT"
     end
@@ -1767,9 +1768,8 @@ defmodule JargaWeb.ChatLive.PanelTest do
       # Panel starts in non-streaming state
       # Send done directly - should be ignored since not streaming
       send(view.pid, {:done, "IGNORED_DONE_RESPONSE"})
-      Process.sleep(50)
 
-      # Should NOT show the done response (not in streaming mode)
+      # render/1 forces the LiveView to process pending messages
       html = render(view)
       refute html =~ "IGNORED_DONE_RESPONSE"
     end
