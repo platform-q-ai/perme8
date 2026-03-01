@@ -34,3 +34,7 @@ Mox.defmock(Agents.Mocks.OpencodeClientMock,
 Mox.defmock(Agents.Mocks.TaskRepositoryMock,
   for: Agents.Sessions.Application.Behaviours.TaskRepositoryBehaviour
 )
+
+Mox.defmock(Agents.Mocks.TodoAdapterMock,
+  for: Agents.Sessions.Application.Behaviours.TodoAdapterBehaviour
+)
