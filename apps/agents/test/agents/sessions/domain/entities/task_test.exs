@@ -52,11 +52,26 @@ defmodule Agents.Sessions.Domain.Entities.TaskTest do
       assert Map.has_key?(task, :user_id)
       assert Map.has_key?(task, :error)
       assert Map.has_key?(task, :output)
+      assert Map.has_key?(task, :todo_items)
       assert Map.has_key?(task, :parent_task_id)
       assert Map.has_key?(task, :started_at)
       assert Map.has_key?(task, :completed_at)
       assert Map.has_key?(task, :inserted_at)
       assert Map.has_key?(task, :updated_at)
+    end
+
+    test "accepts todo_items and defaults to nil when omitted" do
+      with_todos =
+        Task.new(%{
+          user_id: "user-123",
+          instruction: "Test",
+          todo_items: %{"items" => [%{"id" => "todo-1"}]}
+        })
+
+      without_todos = Task.new(%{user_id: "user-123", instruction: "Test"})
+
+      assert with_todos.todo_items == %{"items" => [%{"id" => "todo-1"}]}
+      assert without_todos.todo_items == nil
     end
   end
 
@@ -74,6 +89,11 @@ defmodule Agents.Sessions.Domain.Entities.TaskTest do
         user_id: "user-789",
         error: nil,
         output: nil,
+        todo_items: %{
+          "items" => [
+            %{"id" => "todo-1", "title" => "Plan", "status" => "pending", "position" => 0}
+          ]
+        },
         parent_task_id: nil,
         pending_question: nil,
         started_at: ~U[2026-01-01 00:00:00.000000Z],
@@ -95,6 +115,13 @@ defmodule Agents.Sessions.Domain.Entities.TaskTest do
       assert task.user_id == "user-789"
       assert task.error == nil
       assert task.output == nil
+
+      assert task.todo_items == %{
+               "items" => [
+                 %{"id" => "todo-1", "title" => "Plan", "status" => "pending", "position" => 0}
+               ]
+             }
+
       assert task.parent_task_id == nil
       assert task.started_at == ~U[2026-01-01 00:00:00.000000Z]
       assert task.completed_at == nil
@@ -115,6 +142,7 @@ defmodule Agents.Sessions.Domain.Entities.TaskTest do
         user_id: "user-123",
         error: nil,
         output: nil,
+        todo_items: nil,
         parent_task_id: nil,
         pending_question: nil,
         started_at: nil,
@@ -130,6 +158,7 @@ defmodule Agents.Sessions.Domain.Entities.TaskTest do
       assert task.container_port == nil
       assert task.session_id == nil
       assert task.error == nil
+      assert task.todo_items == nil
     end
   end
 
