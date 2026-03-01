@@ -76,8 +76,12 @@ When adding a new feature or placing code:
 
 ### Review Skills
 
-- **Review PR** -- automated code review with 8 parallel specialist workers and inline comments on a GitHub PR.
+- **Review PR** -- automated code review with 9 parallel specialist workers (including documentation checks) and inline comments on a GitHub PR.
 - **Address PR Comments** -- reads and resolves review comments with fix commits and GitHub replies.
+
+### Documentation Skills
+
+- **Check Documentation** -- verifies code and project documentation are current for changes made. Checks `@moduledoc`, `@doc`, JSDoc on new public APIs, and ensures AGENTS.md, `docs/umbrella_apps.md`, READMEs, and `docs/app_ownership.md` are updated when structure changes. Operates in fix mode (Finalize) or review mode (Review PR).
 
 ### Testing Skills
 
