@@ -9,11 +9,13 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.DomainEventsTest do
   setup :set_mox_global
   setup :verify_on_exit!
 
+  alias Agents.Mocks.{ContainerProviderMock, OpencodeClientMock, TaskRepositoryMock}
   alias Agents.Test.AccountsFixtures
   alias Agents.SessionsFixtures
+  alias Perme8.Events.TestEventBus
 
   setup do
-    Perme8.Events.TestEventBus.start_global()
+    TestEventBus.start_global()
     user = AccountsFixtures.user_fixture()
     task = SessionsFixtures.task_fixture(%{user_id: user.id})
     Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "task:#{task.id}")
@@ -21,15 +23,15 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.DomainEventsTest do
   end
 
   test "emits TaskCompleted domain event when task completes", %{task: task, user: user} do
-    Agents.Mocks.TaskRepositoryMock
+    TaskRepositoryMock
     |> stub(:get_task, fn _id -> task end)
     |> stub(:update_task_status, fn _task, _attrs -> {:ok, task} end)
 
-    Agents.Mocks.ContainerProviderMock
+    ContainerProviderMock
     |> expect(:start, fn _image, _opts -> {:ok, %{container_id: "abc", port: 4096}} end)
     |> stub(:stop, fn _id -> :ok end)
 
-    Agents.Mocks.OpencodeClientMock
+    OpencodeClientMock
     |> expect(:health, fn _url -> :ok end)
     |> expect(:create_session, fn _url, _opts -> {:ok, %{"id" => "sess-1"}} end)
     |> expect(:subscribe_events, fn _url, runner_pid ->
@@ -66,22 +68,22 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.DomainEventsTest do
         TaskRunner,
         {task.id,
          [
-           container_provider: Agents.Mocks.ContainerProviderMock,
-           opencode_client: Agents.Mocks.OpencodeClientMock,
-           task_repo: Agents.Mocks.TaskRepositoryMock,
+           container_provider: ContainerProviderMock,
+           opencode_client: OpencodeClientMock,
+           task_repo: TaskRepositoryMock,
            pubsub: Perme8.Events.PubSub,
-           event_bus: Perme8.Events.TestEventBus
+           event_bus: TestEventBus
          ]}
       )
 
     # Allow the runner process to store events under our test process
-    Perme8.Events.TestEventBus.allow(Perme8.Events.TestEventBus, self(), pid)
+    TestEventBus.allow(TestEventBus, self(), pid)
 
     assert_receive {:task_status_changed, _, "completed"}, 5000
 
     Process.sleep(100)
 
-    events = Perme8.Events.TestEventBus.get_events()
+    events = TestEventBus.get_events()
     assert [%TaskCompleted{} = event] = events
     assert event.task_id == task.id
     assert event.user_id == user.id
@@ -90,15 +92,15 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.DomainEventsTest do
   end
 
   test "emits TaskFailed domain event when task fails", %{task: task, user: user} do
-    Agents.Mocks.TaskRepositoryMock
+    TaskRepositoryMock
     |> stub(:get_task, fn _id -> task end)
     |> stub(:update_task_status, fn _task, _attrs -> {:ok, task} end)
 
-    Agents.Mocks.ContainerProviderMock
+    ContainerProviderMock
     |> expect(:start, fn _image, _opts -> {:ok, %{container_id: "abc", port: 4096}} end)
     |> stub(:stop, fn _id -> :ok end)
 
-    Agents.Mocks.OpencodeClientMock
+    OpencodeClientMock
     |> expect(:health, fn _url -> :ok end)
     |> expect(:create_session, fn _url, _opts -> {:ok, %{"id" => "sess-1"}} end)
     |> expect(:subscribe_events, fn _url, runner_pid ->
@@ -123,21 +125,21 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.DomainEventsTest do
         TaskRunner,
         {task.id,
          [
-           container_provider: Agents.Mocks.ContainerProviderMock,
-           opencode_client: Agents.Mocks.OpencodeClientMock,
-           task_repo: Agents.Mocks.TaskRepositoryMock,
+           container_provider: ContainerProviderMock,
+           opencode_client: OpencodeClientMock,
+           task_repo: TaskRepositoryMock,
            pubsub: Perme8.Events.PubSub,
-           event_bus: Perme8.Events.TestEventBus
+           event_bus: TestEventBus
          ]}
       )
 
-    Perme8.Events.TestEventBus.allow(Perme8.Events.TestEventBus, self(), pid)
+    TestEventBus.allow(TestEventBus, self(), pid)
 
     assert_receive {:task_status_changed, _, "failed"}, 5000
 
     Process.sleep(100)
 
-    events = Perme8.Events.TestEventBus.get_events()
+    events = TestEventBus.get_events()
     assert [%TaskFailed{} = event] = events
     assert event.task_id == task.id
     assert event.user_id == user.id
@@ -145,15 +147,15 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.DomainEventsTest do
   end
 
   test "emits TaskCancelled domain event when task is cancelled", %{task: task, user: user} do
-    Agents.Mocks.TaskRepositoryMock
+    TaskRepositoryMock
     |> stub(:get_task, fn _id -> task end)
     |> stub(:update_task_status, fn _task, _attrs -> {:ok, task} end)
 
-    Agents.Mocks.ContainerProviderMock
+    ContainerProviderMock
     |> expect(:start, fn _image, _opts -> {:ok, %{container_id: "abc", port: 4096}} end)
     |> stub(:stop, fn _id -> :ok end)
 
-    Agents.Mocks.OpencodeClientMock
+    OpencodeClientMock
     |> expect(:health, fn _url -> :ok end)
     |> expect(:create_session, fn _url, _opts -> {:ok, %{"id" => "sess-1"}} end)
     |> expect(:subscribe_events, fn _url, _pid -> {:ok, self()} end)
@@ -165,15 +167,15 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.DomainEventsTest do
         TaskRunner,
         {task.id,
          [
-           container_provider: Agents.Mocks.ContainerProviderMock,
-           opencode_client: Agents.Mocks.OpencodeClientMock,
-           task_repo: Agents.Mocks.TaskRepositoryMock,
+           container_provider: ContainerProviderMock,
+           opencode_client: OpencodeClientMock,
+           task_repo: TaskRepositoryMock,
            pubsub: Perme8.Events.PubSub,
-           event_bus: Perme8.Events.TestEventBus
+           event_bus: TestEventBus
          ]}
       )
 
-    Perme8.Events.TestEventBus.allow(Perme8.Events.TestEventBus, self(), pid)
+    TestEventBus.allow(TestEventBus, self(), pid)
 
     # Wait for running state
     assert_receive {:task_status_changed, _, "running"}, 5000
@@ -185,7 +187,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.DomainEventsTest do
 
     Process.sleep(100)
 
-    events = Perme8.Events.TestEventBus.get_events()
+    events = TestEventBus.get_events()
     assert [%TaskCancelled{} = event] = events
     assert event.task_id == task.id
     assert event.user_id == user.id
