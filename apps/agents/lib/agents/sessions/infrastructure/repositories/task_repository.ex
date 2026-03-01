@@ -54,12 +54,6 @@ defmodule Agents.Sessions.Infrastructure.Repositories.TaskRepository do
   end
 
   @impl true
-  def running_task_count_for_user(user_id) do
-    TaskQueries.running_count_for_user(user_id)
-    |> Repo.one()
-  end
-
-  @impl true
   def delete_task(%TaskSchema{} = task) do
     Repo.delete(task)
   end

@@ -22,8 +22,6 @@ defmodule Agents.Sessions.Application.Behaviours.TaskRepositoryBehaviour do
 
   @callback list_tasks_for_user(user_id, opts :: keyword()) :: [task]
 
-  @callback running_task_count_for_user(user_id) :: non_neg_integer()
-
   @callback delete_task(task) :: {:ok, task} | {:error, Ecto.Changeset.t()}
 
   @callback list_tasks_for_container(String.t(), user_id) :: [task]

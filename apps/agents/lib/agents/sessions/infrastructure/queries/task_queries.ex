@@ -9,8 +9,6 @@ defmodule Agents.Sessions.Infrastructure.Queries.TaskQueries do
 
   alias Agents.Sessions.Infrastructure.Schemas.TaskSchema
 
-  @active_statuses ["pending", "starting", "running"]
-
   @doc """
   Returns the base query for tasks.
   """
@@ -57,17 +55,6 @@ defmodule Agents.Sessions.Infrastructure.Queries.TaskQueries do
   @spec limit(Ecto.Query.t(), non_neg_integer()) :: Ecto.Query.t()
   def limit(query \\ base(), max) do
     from(t in query, limit: ^max)
-  end
-
-  @doc """
-  Returns a query that counts active tasks (pending, starting, running) for a user.
-  """
-  @spec running_count_for_user(Ecto.UUID.t()) :: Ecto.Query.t()
-  def running_count_for_user(user_id) do
-    from(t in TaskSchema,
-      where: t.user_id == ^user_id and t.status in ^@active_statuses,
-      select: count(t.id)
-    )
   end
 
   @doc """

@@ -10,11 +10,6 @@ defmodule Agents.Sessions.Application.SessionsConfig do
     config()[:image] || "perme8-opencode"
   end
 
-  @doc "Returns the maximum number of concurrent tasks per user."
-  def max_concurrent_tasks do
-    config()[:max_concurrent_tasks] || 1
-  end
-
   @doc "Returns the health check polling interval in milliseconds."
   def health_check_interval_ms do
     config()[:health_check_interval_ms] || 1_000
