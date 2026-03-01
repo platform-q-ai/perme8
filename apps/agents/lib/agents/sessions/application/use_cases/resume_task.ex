@@ -101,6 +101,11 @@ defmodule Agents.Sessions.Application.UseCases.ResumeTask do
         :ok
 
       starter ->
+        # Stop any lingering TaskRunner from a previous run. This can happen
+        # when a completed/failed runner hasn't fully terminated before the
+        # user triggers a resume (race window on process shutdown).
+        stop_existing_runner(task_id)
+
         # Pass resume context so the TaskRunner knows to restart instead of create
         runner_opts =
           Keyword.merge(opts,
@@ -122,6 +127,20 @@ defmodule Agents.Sessions.Application.UseCases.ResumeTask do
             {:error, :runner_start_failed}
         end
     end
+  end
+
+  defp stop_existing_runner(task_id) do
+    case Registry.lookup(Agents.Sessions.TaskRegistry, task_id) do
+      [{pid, _}] ->
+        Logger.info("ResumeTask: stopping lingering runner #{inspect(pid)} for task #{task_id}")
+        GenServer.stop(pid, :normal, 5_000)
+
+      [] ->
+        :ok
+    end
+  rescue
+    # Process may have already exited between lookup and stop
+    _ -> :ok
   end
 
   defp mark_task_failed(task_id, task_repo, error) do
