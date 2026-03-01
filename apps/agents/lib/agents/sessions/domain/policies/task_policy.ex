@@ -28,17 +28,4 @@ defmodule Agents.Sessions.Domain.Policies.TaskPolicy do
   """
   def can_delete?(status) when status in @deletable_statuses, do: true
   def can_delete?(_), do: false
-
-  @doc """
-  Returns true if transitioning from `old_status` to `new_status` is allowed.
-  """
-  def valid_status_transition?("pending", "starting"), do: true
-  def valid_status_transition?("pending", "cancelled"), do: true
-  def valid_status_transition?("starting", "running"), do: true
-  def valid_status_transition?("starting", "failed"), do: true
-  def valid_status_transition?("starting", "cancelled"), do: true
-  def valid_status_transition?("running", "completed"), do: true
-  def valid_status_transition?("running", "failed"), do: true
-  def valid_status_transition?("running", "cancelled"), do: true
-  def valid_status_transition?(_, _), do: false
 end

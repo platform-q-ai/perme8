@@ -9,13 +9,6 @@ defmodule Agents.Sessions.Application.SessionsConfigTest do
     end
   end
 
-  describe "max_concurrent_tasks/0" do
-    test "returns configured limit" do
-      assert is_integer(SessionsConfig.max_concurrent_tasks())
-      assert SessionsConfig.max_concurrent_tasks() >= 1
-    end
-  end
-
   describe "health_check_interval_ms/0" do
     test "returns configured interval" do
       assert is_integer(SessionsConfig.health_check_interval_ms())

@@ -95,32 +95,4 @@ defmodule Agents.Sessions.Infrastructure.Queries.TaskQueriesTest do
                MapSet.new([task1.id, task2.id])
     end
   end
-
-  describe "running_count_for_user/1" do
-    test "counts tasks with active statuses" do
-      user = user_fixture()
-      create_task(user, %{instruction: "Pending", status: "pending"})
-      create_task(user, %{instruction: "Starting", status: "starting"})
-      create_task(user, %{instruction: "Running", status: "running"})
-      create_task(user, %{instruction: "Completed", status: "completed"})
-      create_task(user, %{instruction: "Failed", status: "failed"})
-
-      count =
-        TaskQueries.running_count_for_user(user.id)
-        |> Repo.one()
-
-      assert count == 3
-    end
-
-    test "returns 0 when no active tasks" do
-      user = user_fixture()
-      create_task(user, %{instruction: "Done", status: "completed"})
-
-      count =
-        TaskQueries.running_count_for_user(user.id)
-        |> Repo.one()
-
-      assert count == 0
-    end
-  end
 end

@@ -203,7 +203,6 @@ config :phoenix_live_view,
 # Agents Sessions: faster health checks for tests
 config :agents, :sessions,
   image: "perme8-opencode",
-  max_concurrent_tasks: 1,
   health_check_interval_ms: 100,
   health_check_max_retries: 5
 

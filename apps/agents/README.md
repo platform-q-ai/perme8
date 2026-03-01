@@ -226,7 +226,6 @@ config :agents, :mcp_http_port, 4007
 ```elixir
 config :agents, :sessions,
   opencode_image: "perme8/opencode:latest",
-  max_concurrent_tasks: 3,
   task_timeout_ms: 300_000,
   health_check_retries: 30,
   health_check_interval_ms: 1_000

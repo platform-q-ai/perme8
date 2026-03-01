@@ -135,22 +135,4 @@ defmodule Agents.Sessions.Infrastructure.Repositories.TaskRepositoryTest do
       assert hd(tasks).instruction == "My task"
     end
   end
-
-  describe "running_task_count_for_user/1" do
-    test "returns count of active tasks" do
-      user = user_fixture()
-      create_task(user, %{instruction: "Pending", status: "pending"})
-      create_task(user, %{instruction: "Running", status: "running"})
-      create_task(user, %{instruction: "Done", status: "completed"})
-
-      assert 2 == TaskRepository.running_task_count_for_user(user.id)
-    end
-
-    test "returns 0 when no active tasks" do
-      user = user_fixture()
-      create_task(user, %{instruction: "Done", status: "completed"})
-
-      assert 0 == TaskRepository.running_task_count_for_user(user.id)
-    end
-  end
 end
