@@ -15,7 +15,7 @@ Each app has a single owner and a clear set of responsibilities. No two apps own
 | **agents** | Domain context | Agent definitions, LLM orchestration, perme8-mcp server, ToolProvider infrastructure, Sessions | `Agents.Repo` | `identity`, `perme8_events` |
 | **webhooks** | Domain context | Outbound/inbound webhooks, HMAC signing, audit logging | `Webhooks.Repo` | `identity`, `perme8_events` |
 | **entity_relationship_manager** | Domain context + API | Schema definitions, entities, edges, graph traversal | Needs own Repo (currently borrows `Jarga.Repo`) | `identity`, `perme8_events` |
-| **perme8_events** | Shared infrastructure | Eventbus facade (`Perme8.Events`), EventBus dispatcher, EventHandler behaviour, DomainEvent macro, PubSub server -- **planned, see [#200](https://github.com/platform-q-ai/perme8/issues/200)** | None | Nothing (foundational) |
+| **perme8_events** | Shared infrastructure | Eventbus facade (`Perme8.Events`), EventBus dispatcher, EventHandler behaviour, DomainEvent macro, PubSub server | None | Nothing (foundational) |
 | **jarga_web** | Interface (LiveView) | UI shell, mounts companion `_web` apps | None | `jarga`, `agents`, `identity`, `notifications`, `perme8_events` |
 | **jarga_api** | Interface (REST) | JSON API for workspaces, projects, documents | None | `jarga`, `identity` |
 | **agents_web** | Interface (LiveView) | Sessions UI, agent management UI | None | `agents`, `identity` |
@@ -57,10 +57,14 @@ Each context has its own `domain/`, `application/`, and `infrastructure/` layers
 
 ### Pending Changes
 
-- **perme8_events** -- Being extracted from `jarga` and `identity` in [#200](https://github.com/platform-q-ai/perme8/issues/200). Until that lands, eventbus infrastructure still lives in `jarga` (runtime) and `identity` (DomainEvent macro). The dependency relationships above reflect the target state.
 - **perme8-mcp** -- The MCP server in `agents` is being renamed from `knowledge-mcp` to `perme8-mcp` with a `ToolProvider` abstraction in [#181](https://github.com/platform-q-ai/perme8/issues/181). The `agents` ownership description above reflects the target state.
 - **chat** -- Planned extraction from `jarga` (see [service evolution plan](docs/architecture/service_evolution_plan.md)). Currently lives in `apps/jarga/lib/chat/`. Until extracted, all chat code belongs in `jarga`.
-- **notifications** -- Extracted from `jarga` in [#38](https://github.com/platform-q-ai/perme8/issues/38). Now lives in `apps/notifications/`.
+- **entity_relationship_manager** -- Currently borrows `Jarga.Repo`. Needs its own Repo as part of the Standalone App Principle enforcement.
+
+### Completed Migrations
+
+- **perme8_events** -- Extracted in [#200](https://github.com/platform-q-ai/perme8/issues/200). EventBus, EventHandler, DomainEvent macro, and PubSub server now live in `apps/perme8_events/`.
+- **notifications** -- Extracted from `jarga` in [#38](https://github.com/platform-q-ai/perme8/issues/38). Now lives in `apps/notifications/` with its own `Notifications.Repo`.
 
 ---
 
@@ -129,3 +133,21 @@ The mounted app's **own functionality** (forms, interactions, data display, work
 | Navigating to agents from jarga shell | `apps/jarga_web/test/features/` | Navigation link works, agents UI mounts in shell |
 | BDD dashboard functionality | `apps/exo_dashboard/test/features/` | Feature browsing, run triggering, result display |
 | Navigating to exo dashboard tab | `apps/perme8_dashboard/test/features/` | Tab renders, dashboard mounts in hub |
+
+---
+
+## Skill Enforcement
+
+The following Claude skills consult this document when generating code or making file-placement decisions. If this registry is updated (new apps, changed ownership, moved boundaries), these skills automatically pick up the changes:
+
+| Skill | How It Uses This Document |
+|-------|--------------------------|
+| **Generate Exo-BDD Features** | Determines the owning app for feature file placement; detects mounting/integration apps and scopes test scenarios accordingly |
+| **CRUD Create** | Identifies the owning app, Repo, and file placement paths before delegating to architect/TDD agents; validates artifact placement before finalizing |
+| **CRUD Update** | Validates that target files are in the correct owning app during impact analysis; detects and fixes boundary violations as part of the change |
+| **CRUD Delete** | Scans for cross-app coupling (shared Repo usage, schema imports, facade calls, event subscribers) before removal; ensures clean removal leaves no orphaned cross-app references |
+| **Check Documentation** | Verifies this document is updated when domain ownership shifts or new apps are created |
+| **Review PR** | Checks for `app_ownership.md` staleness when reviewing changes |
+| **Finalize** | Verifies this document is current as part of the finalization quality gate |
+
+**Keeping this document current is critical** -- skills reference it at invocation time, so stale entries lead to misplaced artifacts. The Check Documentation skill flags this document for update whenever domain ownership changes are detected.
