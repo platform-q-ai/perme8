@@ -219,7 +219,7 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
           <div class="flex items-center justify-between mb-4">
             <h2 class="text-lg font-semibold">Agents</h2>
             <.link
-              href={agents_web_url("/agents/new")}
+              href={JargaWeb.agents_web_url("/agents/new")}
               class="btn btn-primary btn-sm"
             >
               <.icon name="hero-plus" class="size-4" /> New Agent
@@ -237,7 +237,7 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
                       Add your agents to this workspace to collaborate
                     </p>
                   </div>
-                  <.link href={agents_web_url("/agents/new")} class="btn btn-primary">
+                  <.link href={JargaWeb.agents_web_url("/agents/new")} class="btn btn-primary">
                     Create Agent
                   </.link>
                 </div>
@@ -266,7 +266,7 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
                             <div class="flex justify-end gap-1">
                               <.link
                                 href={
-                                  agents_web_url(
+                                  JargaWeb.agents_web_url(
                                     "/agents/#{agent.id}/edit?return_to=workspace&workspace_slug=#{@workspace.slug}"
                                   )
                                 }
@@ -307,7 +307,7 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
                             <div class="flex justify-end gap-1">
                               <.link
                                 href={
-                                  agents_web_url(
+                                  JargaWeb.agents_web_url(
                                     "/agents/#{agent.id}/view?return_to=workspace&workspace_slug=#{@workspace.slug}"
                                   )
                                 }
@@ -1102,9 +1102,4 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
 
   # Chat panel streaming messages (includes catch-all for unhandled messages)
   handle_chat_messages()
-
-  defp agents_web_url(path) do
-    base = Application.get_env(:jarga_web, :agents_web_url, "http://localhost:4014")
-    "#{base}#{path}"
-  end
 end

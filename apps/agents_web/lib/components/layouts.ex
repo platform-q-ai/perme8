@@ -140,6 +140,12 @@ defmodule AgentsWeb.Layouts do
                   <span>Sessions</span>
                 </.link>
               </li>
+              <li>
+                <.link href={identity_log_out_url()} method="delete" class="flex items-center gap-3">
+                  <.icon name="hero-arrow-right-on-rectangle" class="size-5" />
+                  <span>Log out</span>
+                </.link>
+              </li>
             </ul>
           </nav>
           
@@ -154,6 +160,11 @@ defmodule AgentsWeb.Layouts do
       </div>
     </div>
     """
+  end
+
+  defp identity_log_out_url do
+    identity_url = Application.get_env(:agents_web, :identity_url) || IdentityWeb.Endpoint.url()
+    identity_url <> "/users/log-out"
   end
 
   @doc """

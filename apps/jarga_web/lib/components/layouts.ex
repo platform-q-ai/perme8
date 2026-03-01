@@ -237,7 +237,7 @@ defmodule JargaWeb.Layouts do
                 </.link>
               </li>
               <li>
-                <.link href={agents_web_url("/agents")} class="flex items-center gap-3">
+                <.link href={JargaWeb.agents_web_url("/agents")} class="flex items-center gap-3">
                   <.icon name="hero-cpu-chip" class="size-5" />
                   <span>Agents</span>
                 </.link>
@@ -338,10 +338,5 @@ defmodule JargaWeb.Layouts do
       </button>
     </div>
     """
-  end
-
-  defp agents_web_url(path) do
-    base = Application.get_env(:jarga_web, :agents_web_url, "http://localhost:4014")
-    "#{base}#{path}"
   end
 end
