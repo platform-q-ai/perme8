@@ -7,10 +7,12 @@ defmodule Agents.Sessions.Application.UseCases.CreateTask do
   """
 
   alias Agents.Sessions.Domain.Entities.Task
+  alias Agents.Sessions.Domain.Events.TaskCreated
 
   require Logger
 
   @default_task_repo Agents.Sessions.Infrastructure.Repositories.TaskRepository
+  @default_event_bus Perme8.Events.EventBus
 
   @doc """
   Creates a new coding task.
@@ -30,10 +32,12 @@ defmodule Agents.Sessions.Application.UseCases.CreateTask do
   """
   def execute(attrs, opts \\ []) do
     task_repo = Keyword.get(opts, :task_repo, @default_task_repo)
+    event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
 
     with :ok <- validate_instruction(attrs),
          {:ok, schema} <- task_repo.create_task(attrs),
          :ok <- start_runner(schema.id, task_repo, opts) do
+      emit_task_created(schema, event_bus)
       {:ok, Task.from_schema(schema)}
     end
   end
@@ -71,5 +75,17 @@ defmodule Agents.Sessions.Application.UseCases.CreateTask do
       nil -> :ok
       task -> task_repo.update_task_status(task, %{status: "failed", error: error})
     end
+  end
+
+  defp emit_task_created(schema, event_bus) do
+    event_bus.emit(
+      TaskCreated.new(%{
+        aggregate_id: schema.id,
+        actor_id: schema.user_id,
+        task_id: schema.id,
+        user_id: schema.user_id,
+        instruction: schema.instruction
+      })
+    )
   end
 end
