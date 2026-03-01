@@ -30,6 +30,13 @@ defmodule Agents.Sessions.Application.SessionsConfigTest do
     end
   end
 
+  describe "question_timeout_ms/0" do
+    test "returns configured timeout" do
+      assert is_integer(SessionsConfig.question_timeout_ms())
+      assert SessionsConfig.question_timeout_ms() > 0
+    end
+  end
+
   describe "container_env/0" do
     test "returns a map" do
       assert is_map(SessionsConfig.container_env())
