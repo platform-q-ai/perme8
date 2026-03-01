@@ -113,6 +113,42 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponents do
   # ---- Output Part Components ----
 
   @doc """
+  Renders a todo progress bar for session task steps.
+  """
+  attr(:todo_items, :list, required: true)
+
+  def progress_bar(assigns) do
+    ~H"""
+    <section
+      :if={@todo_items != []}
+      data-testid="todo-progress"
+      class="mx-4 mt-3 rounded-xl border border-base-300 bg-base-100 p-3 shadow-sm"
+    >
+      <div
+        data-testid="todo-progress-summary"
+        class="mb-2 text-xs font-semibold uppercase tracking-wide text-base-content/60"
+      >
+        {completed_count(@todo_items)}/{length(@todo_items)} steps complete
+      </div>
+
+      <div class="space-y-1.5">
+        <%= for item <- @todo_items do %>
+          <div
+            data-testid={"todo-step-#{display_position(item)}"}
+            class={[
+              "is-#{status_class(item.status)} rounded-md border px-2.5 py-1.5 text-sm transition-colors",
+              step_colors(item.status)
+            ]}
+          >
+            <span class="font-medium">{display_position(item)}. {item.title}</span>
+          </div>
+        <% end %>
+      </div>
+    </section>
+    """
+  end
+
+  @doc """
   Renders a single output part (text, reasoning, or tool call).
 
   Accepts a tuple as the `part` assign:
@@ -310,6 +346,22 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponents do
   defp tool_icon_name("grep"), do: "hero-magnifying-glass"
   defp tool_icon_name("list"), do: "hero-list-bullet"
   defp tool_icon_name(_), do: "hero-wrench-screwdriver"
+
+  defp completed_count(todo_items) do
+    Enum.count(todo_items, &(to_string(&1.status) == "completed"))
+  end
+
+  defp display_position(%{position: position}) when is_integer(position), do: position + 1
+  defp display_position(_item), do: 1
+
+  defp status_class(status) when is_binary(status), do: String.replace(status, "_", "-")
+  defp status_class(status) when is_atom(status), do: status |> Atom.to_string() |> status_class()
+  defp status_class(_), do: "pending"
+
+  defp step_colors("completed"), do: "border-success/40 bg-success/10 text-success"
+  defp step_colors("in_progress"), do: "border-info/40 bg-info/10 text-info"
+  defp step_colors("failed"), do: "border-error/40 bg-error/10 text-error"
+  defp step_colors(_), do: "border-base-300 bg-base-200/50 text-base-content/70"
 
   # ---- Status Components ----
 

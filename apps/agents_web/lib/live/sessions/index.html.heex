@@ -150,6 +150,8 @@
         </button>
       </div>
 
+      <.progress_bar todo_items={@todo_items} />
+
       <%!-- Output log --%>
       <div class="flex-1 overflow-y-auto p-4" id="session-log" phx-hook="SessionLog">
         <%= if @current_task do %>
