@@ -226,58 +226,10 @@ defmodule AgentsWeb.SessionsLive.Index do
         {:noreply, socket}
 
       {%{rejected: true} = pending, %{id: task_id}} ->
-        # Question was already rejected — send answer as a follow-up message
-        answers = build_question_answers(pending)
-        message = format_question_answer_as_message(pending, answers)
-
-        socket =
-          case Sessions.send_message(task_id, message) do
-            :ok ->
-              assign(socket, :pending_question, nil)
-
-            {:error, :task_not_running} ->
-              # Session ended — put the answer in the input box so the user
-              # can resume the session with it
-              socket
-              |> assign(:pending_question, nil)
-              |> assign(:form, to_form(%{"instruction" => message}))
-              |> put_flash(
-                :info,
-                "Session ended. Your answer is in the input — submit to resume."
-              )
-
-            {:error, _reason} ->
-              socket
-              |> assign(:pending_question, nil)
-              |> put_flash(:error, "Failed to send message — please try again")
-          end
-
-        {:noreply, socket}
+        {:noreply, submit_rejected_question(socket, pending, task_id)}
 
       {pending, %{id: task_id}} ->
-        answers = build_question_answers(pending)
-
-        socket =
-          case Sessions.answer_question(task_id, pending.request_id, answers) do
-            :ok ->
-              assign(socket, :pending_question, nil)
-
-            {:error, :task_not_running} ->
-              message = format_question_answer_as_message(pending, answers)
-
-              socket
-              |> assign(:pending_question, nil)
-              |> assign(:form, to_form(%{"instruction" => message}))
-              |> put_flash(
-                :info,
-                "Session ended. Your answer is in the input — submit to resume."
-              )
-
-            {:error, _reason} ->
-              put_flash(socket, :error, "Failed to submit answer — please try again")
-          end
-
-        {:noreply, socket}
+        {:noreply, submit_active_question(socket, pending, task_id)}
 
       _ ->
         {:noreply, socket}
@@ -360,12 +312,54 @@ defmodule AgentsWeb.SessionsLive.Index do
   # that can be sent via send_message to continue the session.
   defp format_question_answer_as_message(pending, answers) do
     Enum.zip(pending.questions, answers)
-    |> Enum.map(fn {question, answer_list} ->
+    |> Enum.map_join("\n", fn {question, answer_list} ->
       header = question["header"] || "Question"
       selected = Enum.join(answer_list, ", ")
       "Re: #{header} — #{selected}"
     end)
-    |> Enum.join("\n")
+  end
+
+  # Rejected question — send the answer as a follow-up chat message
+  defp submit_rejected_question(socket, pending, task_id) do
+    answers = build_question_answers(pending)
+    message = format_question_answer_as_message(pending, answers)
+
+    case Sessions.send_message(task_id, message) do
+      :ok ->
+        assign(socket, :pending_question, nil)
+
+      {:error, :task_not_running} ->
+        socket
+        |> assign(:pending_question, nil)
+        |> assign(:form, to_form(%{"instruction" => message}))
+        |> put_flash(:info, "Session ended. Your answer is in the input — submit to resume.")
+
+      {:error, _reason} ->
+        socket
+        |> assign(:pending_question, nil)
+        |> put_flash(:error, "Failed to send message — please try again")
+    end
+  end
+
+  # Active question — answer via the question API
+  defp submit_active_question(socket, pending, task_id) do
+    answers = build_question_answers(pending)
+
+    case Sessions.answer_question(task_id, pending.request_id, answers) do
+      :ok ->
+        assign(socket, :pending_question, nil)
+
+      {:error, :task_not_running} ->
+        message = format_question_answer_as_message(pending, answers)
+
+        socket
+        |> assign(:pending_question, nil)
+        |> assign(:form, to_form(%{"instruction" => message}))
+        |> put_flash(:info, "Session ended. Your answer is in the input — submit to resume.")
+
+      {:error, _reason} ->
+        put_flash(socket, :error, "Failed to submit answer — please try again")
+    end
   end
 
   defp run_or_resume_task(socket, instruction) do
