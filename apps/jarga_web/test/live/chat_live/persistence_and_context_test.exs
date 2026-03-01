@@ -104,13 +104,14 @@ defmodule JargaWeb.ChatLive.PersistenceAndContextTest do
       |> element("#chat-message-form")
       |> render_submit(%{message: "What is the name of the workspace I'm viewing?"})
 
-      # Wait for LLM response
-      Process.sleep(3_000)
+      # Wait for LLM response using polling instead of fixed sleep
+      {found, _html} =
+        Jarga.Test.StepHelpers.wait_for_text_in_view(view, "Engineering Team",
+          timeout: 5_000,
+          interval: 200
+        )
 
-      html = render(view)
-
-      # Response should mention the workspace name
-      assert html =~ ~r/Engineering Team/i
+      assert found, "Expected LLM response mentioning 'Engineering Team'"
     end
 
     @tag :evaluation
@@ -129,13 +130,14 @@ defmodule JargaWeb.ChatLive.PersistenceAndContextTest do
       |> element("#chat-message-form")
       |> render_submit(%{message: "What project am I looking at?"})
 
-      # Wait for LLM response
-      Process.sleep(3_000)
+      # Wait for LLM response using polling instead of fixed sleep
+      {found, _html} =
+        Jarga.Test.StepHelpers.wait_for_text_in_view(view, "Mobile App",
+          timeout: 5_000,
+          interval: 200
+        )
 
-      html = render(view)
-
-      # Response should mention the project name
-      assert html =~ ~r/Mobile App/i
+      assert found, "Expected LLM response mentioning 'Mobile App'"
     end
 
     @tag :evaluation
@@ -154,13 +156,14 @@ defmodule JargaWeb.ChatLive.PersistenceAndContextTest do
       |> element("#chat-message-form")
       |> render_submit(%{message: "What page am I on?"})
 
-      # Wait for LLM response
-      Process.sleep(3_000)
+      # Wait for LLM response using polling instead of fixed sleep
+      {found, _html} =
+        Jarga.Test.StepHelpers.wait_for_text_in_view(view, "API Documentation",
+          timeout: 5_000,
+          interval: 200
+        )
 
-      html = render(view)
-
-      # Response should mention the page title
-      assert html =~ ~r/API Documentation/i
+      assert found, "Expected LLM response mentioning 'API Documentation'"
     end
 
     test "context includes page title for all pages", %{conn: conn, user: user} do
@@ -208,13 +211,14 @@ defmodule JargaWeb.ChatLive.PersistenceAndContextTest do
         message: "Tell me about where I am. Include the workspace, project, and my email."
       })
 
-      # Wait for LLM response
-      Process.sleep(3_000)
+      # Wait for LLM response using polling instead of fixed sleep
+      {found, html} =
+        Jarga.Test.StepHelpers.wait_for_text_in_view(view, "Engineering Team",
+          timeout: 5_000,
+          interval: 200
+        )
 
-      html = render(view)
-
-      # Response should include all context elements
-      assert html =~ ~r/Engineering Team/i
+      assert found, "Expected LLM response mentioning 'Engineering Team'"
       assert html =~ ~r/Mobile App/i
       assert html =~ user.email
     end
@@ -262,13 +266,14 @@ defmodule JargaWeb.ChatLive.PersistenceAndContextTest do
       |> element("#chat-message-form")
       |> render_submit(%{message: "What authentication method is described on this page?"})
 
-      # Wait for LLM response
-      Process.sleep(3_000)
+      # Wait for LLM response using polling instead of fixed sleep
+      {found, html} =
+        Jarga.Test.StepHelpers.wait_for_text_in_view(view, "chat chat-start",
+          timeout: 5_000,
+          interval: 200
+        )
 
-      html = render(view)
-
-      # Verify page content was sent (check that we got a response and it's an assistant message)
-      assert html =~ "chat chat-start", "Should have received an assistant response"
+      assert found, "Should have received an assistant response"
 
       # The key test: verify source citation is present, proving context was used
       assert html =~ "Source:",

@@ -7,6 +7,42 @@ defmodule JargaWeb.NotificationsLive.NotificationBellTest do
   alias Jarga.Workspaces
   alias Notifications
 
+  # Poll until condition is true or timeout (default 1s, interval 50ms)
+  defp wait_for(condition_fn, opts \\ []) do
+    timeout = Keyword.get(opts, :timeout, 1_000)
+    interval = Keyword.get(opts, :interval, 50)
+    deadline = System.monotonic_time(:millisecond) + timeout
+    do_wait_for(condition_fn, interval, deadline)
+  end
+
+  defp do_wait_for(condition_fn, interval, deadline) do
+    if condition_fn.() do
+      true
+    else
+      if System.monotonic_time(:millisecond) >= deadline do
+        false
+      else
+        Process.sleep(interval)
+        do_wait_for(condition_fn, interval, deadline)
+      end
+    end
+  end
+
+  # Poll until the notification bell HTML matches the expected pattern
+  defp wait_for_notification_bell(view, expected, opts \\ []) do
+    wait_for(
+      fn ->
+        html = element(view, "#notification-bell") |> render()
+
+        case expected do
+          %Regex{} = regex -> html =~ regex
+          text when is_binary(text) -> html =~ text
+        end
+      end,
+      opts
+    )
+  end
+
   setup do
     # Create test users
     {:ok, owner} =
@@ -59,13 +95,9 @@ defmodule JargaWeb.NotificationsLive.NotificationBellTest do
           role: "member"
         })
 
-      # The component should update automatically via handle_info
-      # Wait a bit for the async update
-      :timer.sleep(200)
-
-      # Check that the notification bell component now shows the unread badge
-      notification_bell_html = element(view, "#notification-bell") |> render()
-      assert notification_bell_html =~ ~r/bg-error.*rounded-full/
+      # Poll for the notification badge to appear instead of fixed sleep
+      assert wait_for_notification_bell(view, ~r/bg-error.*rounded-full/),
+             "Expected notification badge to appear"
     end
 
     test "receives new notification via PubSub and updates bell", %{
@@ -89,12 +121,8 @@ defmodule JargaWeb.NotificationsLive.NotificationBellTest do
           role: "member"
         })
 
-      # The component should update automatically via handle_info
-      :timer.sleep(200)
-
-      # Check that the bell shows the unread count
-      notification_bell_html = element(view, "#notification-bell") |> render()
-      assert notification_bell_html =~ ~r/bg-error.*rounded-full/
+      # Poll for the notification badge to appear instead of fixed sleep
+      assert wait_for_notification_bell(view, ~r/bg-error.*rounded-full/)
 
       # Open the dropdown to see the notification
       view
@@ -127,11 +155,8 @@ defmodule JargaWeb.NotificationsLive.NotificationBellTest do
           role: "member"
         })
 
-      :timer.sleep(200)
-      notification_bell_html = element(view, "#notification-bell") |> render()
-
-      # Should show count of 1
-      assert notification_bell_html =~ "1"
+      assert wait_for_notification_bell(view, "1"),
+             "Expected notification count of 1"
 
       # Send second notification
       {:ok, workspace2} =
@@ -148,11 +173,8 @@ defmodule JargaWeb.NotificationsLive.NotificationBellTest do
           role: "admin"
         })
 
-      :timer.sleep(200)
-      notification_bell_html = element(view, "#notification-bell") |> render()
-
-      # Should show count of 2
-      assert notification_bell_html =~ "2"
+      assert wait_for_notification_bell(view, "2"),
+             "Expected notification count of 2"
     end
   end
 
@@ -304,13 +326,12 @@ defmodule JargaWeb.NotificationsLive.NotificationBellTest do
       |> element("#notification-accept-btn-#{notification.id}")
       |> render_click()
 
-      # Give it time to process
-      :timer.sleep(100)
-
-      # The notification should have been processed successfully
-      # Verify that a workspace member exists for this user
-      members = Jarga.Workspaces.list_members(workspace.id)
-      assert Enum.any?(members, fn m -> m.user_id == invitee.id and not is_nil(m.joined_at) end)
+      # Poll for the membership to be created instead of fixed sleep
+      assert wait_for(fn ->
+               members = Jarga.Workspaces.list_members(workspace.id)
+               Enum.any?(members, fn m -> m.user_id == invitee.id and not is_nil(m.joined_at) end)
+             end),
+             "Expected workspace membership to be created"
     end
 
     test "declines workspace invitation", %{
@@ -371,11 +392,12 @@ defmodule JargaWeb.NotificationsLive.NotificationBellTest do
       conn = log_in_user(conn, invitee)
       {:ok, view, _html} = live(conn, ~p"/app")
 
-      :timer.sleep(100)
-
-      # Should show 99+ when count exceeds 99
-      html = render(view)
-      assert html =~ "99+"
+      # Poll for the 99+ badge to appear instead of fixed sleep
+      assert wait_for(fn ->
+               html = render(view)
+               html =~ "99+"
+             end),
+             "Expected 99+ badge to appear"
     end
 
     test "closes dropdown when clicking away", %{
@@ -445,11 +467,12 @@ defmodule JargaWeb.NotificationsLive.NotificationBellTest do
       |> element("#notification-accept-btn-#{notification.id}")
       |> render_click()
 
-      :timer.sleep(150)
-
-      # Verify the workspace membership was created (invitation accepted)
-      members = Jarga.Workspaces.list_members(workspace.id)
-      assert Enum.any?(members, fn m -> m.user_id == invitee.id and not is_nil(m.joined_at) end)
+      # Poll for the membership to be created instead of fixed sleep
+      assert wait_for(fn ->
+               members = Jarga.Workspaces.list_members(workspace.id)
+               Enum.any?(members, fn m -> m.user_id == invitee.id and not is_nil(m.joined_at) end)
+             end),
+             "Expected workspace membership to be created"
 
       # Verify notification was marked as read
       updated_notification = Notifications.get_notification(notification.id, invitee.id)

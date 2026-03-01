@@ -87,9 +87,9 @@ defmodule JargaWeb.AppLive.Documents.ShowAITest do
       # Send chunk message directly to view process
       send(view.pid, {:agent_chunk, "node_123", "Hello "})
 
-      # View should handle without crashing
+      # render/1 forces the LiveView to process pending messages
+      render(view)
       assert Process.alive?(view.pid)
-      Process.sleep(10)
     end
 
     test "handles {:agent_done, node_id, response} message", %{
@@ -106,8 +106,8 @@ defmodule JargaWeb.AppLive.Documents.ShowAITest do
       # Send done message
       send(view.pid, {:agent_done, "node_123", "Complete response"})
 
+      render(view)
       assert Process.alive?(view.pid)
-      Process.sleep(10)
     end
 
     test "handles {:agent_error, node_id, reason} message", %{
@@ -124,8 +124,8 @@ defmodule JargaWeb.AppLive.Documents.ShowAITest do
       # Send error message
       send(view.pid, {:agent_error, "node_123", "API timeout"})
 
+      render(view)
       assert Process.alive?(view.pid)
-      Process.sleep(10)
     end
 
     test "handles multiple chunks in sequence", %{
@@ -139,15 +139,15 @@ defmodule JargaWeb.AppLive.Documents.ShowAITest do
       {:ok, view, _html} =
         live(conn, ~p"/app/workspaces/#{workspace.slug}/documents/#{document.slug}")
 
-      # Send multiple chunks
+      # Send multiple chunks - render between each to ensure sequential processing
       send(view.pid, {:agent_chunk, "node_456", "Hello "})
-      Process.sleep(5)
+      render(view)
       send(view.pid, {:agent_chunk, "node_456", "World"})
-      Process.sleep(5)
+      render(view)
       send(view.pid, {:agent_done, "node_456", "Hello World"})
 
+      render(view)
       assert Process.alive?(view.pid)
-      Process.sleep(10)
     end
 
     test "handles messages for multiple nodes independently", %{
@@ -167,8 +167,8 @@ defmodule JargaWeb.AppLive.Documents.ShowAITest do
       send(view.pid, {:agent_done, "node_1", "Response 1"})
       send(view.pid, {:agent_done, "node_2", "Response 2"})
 
+      render(view)
       assert Process.alive?(view.pid)
-      Process.sleep(20)
     end
   end
 
@@ -191,10 +191,8 @@ defmodule JargaWeb.AppLive.Documents.ShowAITest do
       # Send query started message
       send(view.pid, {:agent_query_started, node_id, query_pid})
 
-      # Give the view time to process
-      Process.sleep(10)
-
-      # View should still be alive and have tracked the PID
+      # render/1 forces the LiveView to process pending messages
+      render(view)
       assert Process.alive?(view.pid)
 
       # Cleanup
@@ -226,15 +224,15 @@ defmodule JargaWeb.AppLive.Documents.ShowAITest do
 
       # First, track the query
       send(view.pid, {:agent_query_started, node_id, query_pid})
-      Process.sleep(10)
+      render(view)
 
       # Now cancel it via event
       view
       |> element("#editor-container")
       |> render_hook("agent_cancel", %{"node_id" => node_id})
 
-      # Give time for cancellation to process
-      Process.sleep(20)
+      # Brief wait for the cancel message to be delivered to the spawned process
+      Process.sleep(10)
 
       # View should still be alive
       assert Process.alive?(view.pid)
@@ -279,11 +277,11 @@ defmodule JargaWeb.AppLive.Documents.ShowAITest do
 
       # Track the query
       send(view.pid, {:agent_query_started, node_id, query_pid})
-      Process.sleep(10)
+      render(view)
 
       # Send completion message
       send(view.pid, {:agent_done, node_id, "Complete response"})
-      Process.sleep(10)
+      render(view)
 
       # View should still be alive
       assert Process.alive?(view.pid)
@@ -308,11 +306,11 @@ defmodule JargaWeb.AppLive.Documents.ShowAITest do
 
       # Track the query
       send(view.pid, {:agent_query_started, node_id, query_pid})
-      Process.sleep(10)
+      render(view)
 
       # Send error message
       send(view.pid, {:agent_error, node_id, "Query failed"})
-      Process.sleep(10)
+      render(view)
 
       # View should still be alive
       assert Process.alive?(view.pid)
@@ -340,15 +338,15 @@ defmodule JargaWeb.AppLive.Documents.ShowAITest do
       send(view.pid, {:agent_query_started, "node_1", pid1})
       send(view.pid, {:agent_query_started, "node_2", pid2})
       send(view.pid, {:agent_query_started, "node_3", pid3})
-      Process.sleep(20)
+      render(view)
 
       # Complete one query
       send(view.pid, {:agent_done, "node_1", "Response 1"})
-      Process.sleep(10)
+      render(view)
 
       # Error on another
       send(view.pid, {:agent_error, "node_2", "Error 2"})
-      Process.sleep(10)
+      render(view)
 
       # View should still be alive
       assert Process.alive?(view.pid)
@@ -384,14 +382,15 @@ defmodule JargaWeb.AppLive.Documents.ShowAITest do
 
       send(view.pid, {:agent_query_started, "node_cancel", pid1})
       send(view.pid, {:agent_query_started, "node_keep", pid2})
-      Process.sleep(10)
+      render(view)
 
       # Cancel only the first one
       view
       |> element("#editor-container")
       |> render_hook("agent_cancel", %{"node_id" => "node_cancel"})
 
-      Process.sleep(20)
+      # Brief wait for the cancel message to be delivered to the spawned process
+      Process.sleep(10)
 
       # First query should be cancelled
       refute Process.alive?(pid1)
@@ -460,9 +459,9 @@ defmodule JargaWeb.AppLive.Documents.ShowAITest do
         "node_id" => "node_123"
       })
 
-      # View should handle without crashing
+      # render forces the LiveView to process pending messages
+      render(view)
       assert Process.alive?(view.pid)
-      Process.sleep(20)
     end
 
     test "handles agent not found error", %{
@@ -484,9 +483,8 @@ defmodule JargaWeb.AppLive.Documents.ShowAITest do
         "node_id" => "node_456"
       })
 
-      # View should handle error gracefully
+      render(view)
       assert Process.alive?(view.pid)
-      Process.sleep(20)
     end
 
     test "handles agent disabled error", %{
@@ -511,9 +509,8 @@ defmodule JargaWeb.AppLive.Documents.ShowAITest do
         "node_id" => "node_789"
       })
 
-      # View should handle error gracefully
+      render(view)
       assert Process.alive?(view.pid)
-      Process.sleep(20)
     end
 
     test "handles invalid command format", %{
@@ -535,9 +532,8 @@ defmodule JargaWeb.AppLive.Documents.ShowAITest do
         "node_id" => "node_invalid"
       })
 
-      # View should handle error gracefully
+      render(view)
       assert Process.alive?(view.pid)
-      Process.sleep(20)
     end
 
     test "successfully initiates streaming and receives chunks", %{
@@ -560,10 +556,7 @@ defmodule JargaWeb.AppLive.Documents.ShowAITest do
         "node_id" => "node_stream"
       })
 
-      # Give time for async processing
-      Process.sleep(50)
-
-      # View should still be alive and able to receive streaming messages
+      render(view)
       assert Process.alive?(view.pid)
     end
   end
@@ -607,8 +600,8 @@ defmodule JargaWeb.AppLive.Documents.ShowAITest do
       |> render_click()
 
       # View should still work
+      render(view)
       assert Process.alive?(view.pid)
-      Process.sleep(10)
     end
   end
 
@@ -652,20 +645,19 @@ defmodule JargaWeb.AppLive.Documents.ShowAITest do
         "node_id" => "test_node_123"
       })
 
-      Process.sleep(50)
+      # Brief wait for async agent query to start
+      Process.sleep(20)
 
-      # Simulate LLM streaming back chunks
+      # Simulate LLM streaming back chunks - render between each to process
       send(lv_pid, {:agent_chunk, "test_node_123", "A PRD is a "})
-      Process.sleep(10)
+      render(view)
       send(lv_pid, {:agent_chunk, "test_node_123", "Product Requirements "})
-      Process.sleep(10)
+      render(view)
       send(lv_pid, {:agent_chunk, "test_node_123", "Document."})
-      Process.sleep(10)
+      render(view)
       send(lv_pid, {:agent_done, "test_node_123", "A PRD is a Product Requirements Document."})
 
-      Process.sleep(50)
-
-      # Verify view handled all messages
+      render(view)
       assert Process.alive?(view.pid)
     end
 
@@ -690,13 +682,13 @@ defmodule JargaWeb.AppLive.Documents.ShowAITest do
         "node_id" => "error_node_456"
       })
 
-      Process.sleep(50)
+      # Brief wait for async agent query to start
+      Process.sleep(20)
 
       # Simulate LLM error
       send(lv_pid, {:agent_error, "error_node_456", "API rate limit exceeded"})
 
-      Process.sleep(50)
-
+      render(view)
       assert Process.alive?(view.pid)
     end
 
@@ -723,9 +715,9 @@ defmodule JargaWeb.AppLive.Documents.ShowAITest do
         "node_id" => "disabled_node"
       })
 
-      Process.sleep(50)
-
-      # Should handle error gracefully
+      # Brief wait for async processing, then render
+      Process.sleep(20)
+      render(view)
       assert Process.alive?(view.pid)
     end
 
@@ -751,11 +743,11 @@ defmodule JargaWeb.AppLive.Documents.ShowAITest do
         "node_id" => "case_node"
       })
 
-      Process.sleep(50)
-
-      send(lv_pid, {:agent_done, "case_node", "Response"})
+      # Brief wait for async agent query to start
       Process.sleep(20)
 
+      send(lv_pid, {:agent_done, "case_node", "Response"})
+      render(view)
       assert Process.alive?(view.pid)
     end
 
@@ -786,11 +778,11 @@ defmodule JargaWeb.AppLive.Documents.ShowAITest do
         "node_id" => "context_node"
       })
 
-      Process.sleep(50)
-
-      send(lv_pid, {:agent_done, "context_node", "Summary"})
+      # Brief wait for async agent query to start
       Process.sleep(20)
 
+      send(lv_pid, {:agent_done, "context_node", "Summary"})
+      render(view)
       assert Process.alive?(view.pid)
     end
   end

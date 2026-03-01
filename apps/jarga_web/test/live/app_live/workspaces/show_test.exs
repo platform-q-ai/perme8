@@ -641,9 +641,6 @@ defmodule JargaWeb.AppLive.Workspaces.ShowTest do
       # Add guest to workspace
       {:ok, _} = invite_and_accept_member(owner, workspace.id, guest.email, :guest)
 
-      # Wait for invite to process
-      :timer.sleep(50)
-
       %{conn: log_in_user(conn, guest), workspace: workspace, guest: guest}
     end
 
@@ -822,8 +819,6 @@ defmodule JargaWeb.AppLive.Workspaces.ShowTest do
       # Add member to workspace
       {:ok, _} = invite_and_accept_member(owner, workspace.id, member_user.email, :member)
 
-      :timer.sleep(50)
-
       %{conn: log_in_user(conn, owner), owner: owner, workspace: workspace, member: member_user}
     end
 
@@ -851,8 +846,6 @@ defmodule JargaWeb.AppLive.Workspaces.ShowTest do
 
       # Add member to workspace
       {:ok, _} = invite_and_accept_member(owner, workspace.id, member_user.email, :member)
-
-      :timer.sleep(50)
 
       %{conn: log_in_user(conn, owner), owner: owner, workspace: workspace, member: member_user}
     end
