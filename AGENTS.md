@@ -39,6 +39,8 @@ git push "https://x-access-token:${TOKEN}@github.com/platform-q-ai/perme8.git" <
 
 For the full ownership registry, file placement tables, and domain event rules, see [`docs/app_ownership.md`](docs/app_ownership.md). That document is the authoritative reference -- if it conflicts with other docs, it wins.
 
+Code-generating skills (CRUD Create, CRUD Update, CRUD Delete, Generate Exo-BDD Features) and documentation skills (Check Documentation) consult `docs/app_ownership.md` at invocation time to determine file placement, Repo usage, and boundary validation. See the Skill Enforcement table in that document for details.
+
 ### Standalone App Principle
 
 > Every domain app must boot and function without other domain apps (except `identity` for auth and `perme8_events` for event infrastructure). No shared Repos. No cross-app schema references. Communicate via domain events or public facade APIs.
