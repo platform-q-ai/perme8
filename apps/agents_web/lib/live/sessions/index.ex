@@ -43,7 +43,7 @@ defmodule AgentsWeb.SessionsLive.Index do
      |> assign(:current_task, current_task)
      |> assign(:composing_new, false)
      |> assign(:container_stats, %{})
-     |> assign(:auth_refreshing, false)
+     |> assign(:auth_refreshing, %{})
      |> assign(:events, [])
      |> assign(:available_images, available_images)
      |> assign(:selected_image, default_image)
