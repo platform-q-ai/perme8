@@ -41,8 +41,10 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     :question_timeout_ref,
     :pending_question_request_id,
     :pending_question_data,
+    :sse_pid,
     status: :starting,
     health_retries: 0,
+    sse_reconnecting: false,
     # Track whether we've seen session go to "running" so we know
     # that a transition to "idle" means completion
     was_running: false,
@@ -152,6 +154,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
               todo_version: if(existing_todos == [], do: 0, else: 1),
               last_flushed_todo_version: if(existing_todos == [], do: 0, else: 1)
           }
+
+          state = maybe_cache_resume_prompt_message(state, prompt_instruction)
 
           send(self(), :restart_container)
           {:ok, state}
@@ -303,8 +307,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     case state.opencode_client.health(base_url) do
       :ok ->
         # Resume path: session already exists, just subscribe and send prompt
-        case state.opencode_client.subscribe_events(base_url, self()) do
-          {:ok, _pid} ->
+        case subscribe_to_events(state) do
+          {:ok, state} ->
             send(self(), :send_prompt)
             {:noreply, %{state | status: :prompting}}
 
@@ -328,14 +332,16 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
     case state.opencode_client.create_session(base_url, []) do
       {:ok, %{"id" => session_id}} ->
+        state = %{state | session_id: session_id}
+
         # Persist session_id to DB for resume and message retrieval
         update_task_status(state, %{session_id: session_id})
 
         # Subscribe to SSE events
-        case state.opencode_client.subscribe_events(base_url, self()) do
-          {:ok, _pid} ->
+        case subscribe_to_events(state) do
+          {:ok, state} ->
             send(self(), :send_prompt)
-            {:noreply, %{state | session_id: session_id, status: :prompting}}
+            {:noreply, %{state | status: :prompting}}
 
           {:error, reason} ->
             fail_task(state, "SSE subscription failed: #{inspect(reason)}")
@@ -461,14 +467,35 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   # ---- SSE Process Down ----
 
   @impl true
-  def handle_info({:DOWN, _ref, :process, _pid, reason}, state) when reason != :normal do
-    fail_task(state, "SSE process crashed: #{inspect(reason)}")
-    {:stop, :normal, state}
+  def handle_info({:DOWN, _ref, :process, pid, reason}, state) when reason != :normal do
+    if current_sse_process?(state, pid) do
+      fail_task(state, "SSE process crashed: #{inspect(reason)}")
+      {:stop, :normal, state}
+    else
+      {:noreply, state}
+    end
   end
 
   @impl true
-  def handle_info({:DOWN, _ref, :process, _pid, :normal}, state) do
-    {:noreply, state}
+  def handle_info({:DOWN, _ref, :process, pid, :normal}, state) do
+    if should_reconnect_sse?(state, pid) do
+      send(self(), :reconnect_sse)
+      {:noreply, %{state | sse_pid: nil, sse_reconnecting: true}}
+    else
+      {:noreply, state}
+    end
+  end
+
+  @impl true
+  def handle_info(:reconnect_sse, state) do
+    case subscribe_to_events(state) do
+      {:ok, state} ->
+        {:noreply, state}
+
+      {:error, reason} ->
+        fail_task(state, "SSE reconnection failed: #{inspect(reason)}")
+        {:stop, :normal, state}
+    end
   end
 
   # ---- Cancellation ----
@@ -629,6 +656,16 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   end
 
   defp cache_queued_user_message(state, _message), do: state
+
+  defp maybe_cache_resume_prompt_message(state, message) when is_binary(message) do
+    if String.trim(message) == "" do
+      state
+    else
+      cache_queued_user_message(state, message)
+    end
+  end
+
+  defp maybe_cache_resume_prompt_message(state, _message), do: state
 
   defp promote_pending_user_part(parts, text, part_id) do
     case Enum.find_index(parts, fn
@@ -867,6 +904,28 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   defp extract_tool_name(%{"permission" => perm}) when is_binary(perm), do: perm
   defp extract_tool_name(%{"name" => name}) when is_binary(name), do: name
   defp extract_tool_name(_), do: "unknown"
+
+  defp subscribe_to_events(state) do
+    base_url = "http://localhost:#{state.container_port}"
+
+    case state.opencode_client.subscribe_events(base_url, self()) do
+      {:ok, pid} -> {:ok, %{state | sse_pid: pid, sse_reconnecting: false}}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp should_reconnect_sse?(state, pid) do
+    current_sse_process?(state, pid) and
+      not state.sse_reconnecting and
+      task_active_for_sse_reconnect?(state)
+  end
+
+  defp current_sse_process?(%{sse_pid: pid}, pid) when is_pid(pid), do: true
+  defp current_sse_process?(_, _), do: false
+
+  defp task_active_for_sse_reconnect?(state) do
+    state.session_id && state.container_port && state.status in [:prompting, :running]
+  end
 
   defp update_task_status(state, attrs) do
     case state.task_repo.get_task(state.task_id) do
