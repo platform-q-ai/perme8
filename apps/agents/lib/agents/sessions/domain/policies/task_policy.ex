@@ -6,8 +6,17 @@ defmodule Agents.Sessions.Domain.Policies.TaskPolicy do
   All functions are pure and deterministic.
   """
 
-  @valid_statuses ["pending", "starting", "running", "completed", "failed", "cancelled"]
-  @cancellable_statuses ["pending", "starting", "running"]
+  @valid_statuses [
+    "pending",
+    "starting",
+    "running",
+    "completed",
+    "failed",
+    "cancelled",
+    "queued",
+    "awaiting_feedback"
+  ]
+  @cancellable_statuses ["pending", "starting", "running", "queued", "awaiting_feedback"]
   @deletable_statuses ["completed", "failed", "cancelled"]
 
   @doc """

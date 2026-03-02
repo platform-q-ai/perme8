@@ -80,4 +80,34 @@ defmodule Agents.Sessions.Infrastructure.Repositories.TaskRepository do
     TaskQueries.sessions_for_user(user_id)
     |> Repo.all()
   end
+
+  @impl true
+  def count_running_tasks(user_id) do
+    TaskQueries.count_running(user_id)
+    |> Repo.one()
+  end
+
+  @impl true
+  def list_queued_tasks(user_id) do
+    TaskQueries.queued_for_user(user_id)
+    |> Repo.all()
+  end
+
+  @impl true
+  def list_awaiting_feedback_tasks(user_id) do
+    TaskQueries.awaiting_feedback_for_user(user_id)
+    |> Repo.all()
+  end
+
+  @impl true
+  def get_next_queued_task(user_id) do
+    TaskQueries.next_queued(user_id)
+    |> Repo.one()
+  end
+
+  @impl true
+  def get_max_queue_position(user_id) do
+    TaskQueries.max_queue_position(user_id)
+    |> Repo.one()
+  end
 end

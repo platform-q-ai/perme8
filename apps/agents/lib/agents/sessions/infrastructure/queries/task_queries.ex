@@ -66,6 +66,65 @@ defmodule Agents.Sessions.Infrastructure.Queries.TaskQueries do
   end
 
   @doc """
+  Counts active tasks (status "pending", "starting", or "running") for a user.
+
+  These are tasks that occupy a concurrency slot — they have been created
+  and are in the pipeline to run or currently running.
+  """
+  @spec count_running(Ecto.Query.t(), Ecto.UUID.t()) :: Ecto.Query.t()
+  def count_running(query \\ base(), user_id) do
+    from(t in query,
+      where: t.user_id == ^user_id and t.status in ["pending", "starting", "running"],
+      select: count(t.id)
+    )
+  end
+
+  @doc """
+  Returns queued tasks for a user ordered by queue_position ascending.
+  """
+  @spec queued_for_user(Ecto.Query.t(), Ecto.UUID.t()) :: Ecto.Query.t()
+  def queued_for_user(query \\ base(), user_id) do
+    from(t in query,
+      where: t.user_id == ^user_id and t.status == "queued",
+      order_by: [asc: t.queue_position, asc: t.queued_at]
+    )
+  end
+
+  @doc """
+  Returns awaiting_feedback tasks for a user.
+  """
+  @spec awaiting_feedback_for_user(Ecto.Query.t(), Ecto.UUID.t()) :: Ecto.Query.t()
+  def awaiting_feedback_for_user(query \\ base(), user_id) do
+    from(t in query,
+      where: t.user_id == ^user_id and t.status == "awaiting_feedback",
+      order_by: [asc: t.inserted_at]
+    )
+  end
+
+  @doc """
+  Returns the next queued task (lowest queue_position) for a user.
+  """
+  @spec next_queued(Ecto.Query.t(), Ecto.UUID.t()) :: Ecto.Query.t()
+  def next_queued(query \\ base(), user_id) do
+    from(t in query,
+      where: t.user_id == ^user_id and t.status == "queued",
+      order_by: [asc: t.queue_position, asc: t.queued_at],
+      limit: 1
+    )
+  end
+
+  @doc """
+  Returns the maximum queue_position for a user's queued tasks.
+  """
+  @spec max_queue_position(Ecto.Query.t(), Ecto.UUID.t()) :: Ecto.Query.t()
+  def max_queue_position(query \\ base(), user_id) do
+    from(t in query,
+      where: t.user_id == ^user_id and t.status == "queued",
+      select: max(t.queue_position)
+    )
+  end
+
+  @doc """
   Returns sessions grouped by container_id for a user.
 
   Each session is represented as a map with the container_id,

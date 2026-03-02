@@ -54,6 +54,8 @@ defmodule Agents.Sessions.Domain.Entities.TaskTest do
       assert Map.has_key?(task, :output)
       assert Map.has_key?(task, :todo_items)
       assert Map.has_key?(task, :parent_task_id)
+      assert Map.has_key?(task, :queue_position)
+      assert Map.has_key?(task, :queued_at)
       assert Map.has_key?(task, :started_at)
       assert Map.has_key?(task, :completed_at)
       assert Map.has_key?(task, :inserted_at)
@@ -96,6 +98,8 @@ defmodule Agents.Sessions.Domain.Entities.TaskTest do
         },
         parent_task_id: nil,
         pending_question: nil,
+        queue_position: 2,
+        queued_at: ~U[2026-01-01 00:00:00.000000Z],
         started_at: ~U[2026-01-01 00:00:00.000000Z],
         completed_at: nil,
         inserted_at: ~U[2026-01-01 00:00:00.000000Z],
@@ -123,6 +127,8 @@ defmodule Agents.Sessions.Domain.Entities.TaskTest do
              }
 
       assert task.parent_task_id == nil
+      assert task.queue_position == 2
+      assert task.queued_at == ~U[2026-01-01 00:00:00.000000Z]
       assert task.started_at == ~U[2026-01-01 00:00:00.000000Z]
       assert task.completed_at == nil
       assert task.inserted_at == ~U[2026-01-01 00:00:00.000000Z]
@@ -145,6 +151,8 @@ defmodule Agents.Sessions.Domain.Entities.TaskTest do
         todo_items: nil,
         parent_task_id: nil,
         pending_question: nil,
+        queue_position: nil,
+        queued_at: nil,
         started_at: nil,
         completed_at: nil,
         inserted_at: ~U[2026-01-01 00:00:00.000000Z],
@@ -159,6 +167,8 @@ defmodule Agents.Sessions.Domain.Entities.TaskTest do
       assert task.session_id == nil
       assert task.error == nil
       assert task.todo_items == nil
+      assert task.queue_position == nil
+      assert task.queued_at == nil
     end
   end
 
@@ -173,10 +183,39 @@ defmodule Agents.Sessions.Domain.Entities.TaskTest do
       assert "completed" in statuses
       assert "failed" in statuses
       assert "cancelled" in statuses
+      assert "queued" in statuses
+      assert "awaiting_feedback" in statuses
     end
 
-    test "returns exactly 6 statuses" do
-      assert length(Task.valid_statuses()) == 6
+    test "returns exactly 8 statuses" do
+      assert length(Task.valid_statuses()) == 8
+    end
+  end
+
+  describe "queue fields" do
+    test "queue_position defaults to nil" do
+      task = Task.new(%{user_id: "user-123", instruction: "Test"})
+      assert task.queue_position == nil
+    end
+
+    test "queued_at defaults to nil" do
+      task = Task.new(%{user_id: "user-123", instruction: "Test"})
+      assert task.queued_at == nil
+    end
+
+    test "accepts queue_position and queued_at" do
+      now = DateTime.utc_now()
+
+      task =
+        Task.new(%{
+          user_id: "user-123",
+          instruction: "Test",
+          queue_position: 3,
+          queued_at: now
+        })
+
+      assert task.queue_position == 3
+      assert task.queued_at == now
     end
   end
 end

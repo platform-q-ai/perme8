@@ -22,6 +22,8 @@ defmodule Agents.Sessions.Domain.Entities.Task do
           todo_items: map() | nil,
           parent_task_id: String.t() | nil,
           pending_question: map() | nil,
+          queue_position: integer() | nil,
+          queued_at: DateTime.t() | nil,
           started_at: DateTime.t() | nil,
           completed_at: DateTime.t() | nil,
           inserted_at: DateTime.t() | nil,
@@ -40,6 +42,8 @@ defmodule Agents.Sessions.Domain.Entities.Task do
     :todo_items,
     :parent_task_id,
     :pending_question,
+    :queue_position,
+    :queued_at,
     :started_at,
     :completed_at,
     :inserted_at,
@@ -83,6 +87,8 @@ defmodule Agents.Sessions.Domain.Entities.Task do
       todo_items: schema.todo_items,
       parent_task_id: schema.parent_task_id,
       pending_question: schema.pending_question,
+      queue_position: schema.queue_position,
+      queued_at: schema.queued_at,
       started_at: schema.started_at,
       completed_at: schema.completed_at,
       inserted_at: schema.inserted_at,
@@ -94,6 +100,15 @@ defmodule Agents.Sessions.Domain.Entities.Task do
   Returns list of valid status values.
   """
   def valid_statuses do
-    ["pending", "starting", "running", "completed", "failed", "cancelled"]
+    [
+      "pending",
+      "starting",
+      "running",
+      "completed",
+      "failed",
+      "cancelled",
+      "queued",
+      "awaiting_feedback"
+    ]
   end
 end

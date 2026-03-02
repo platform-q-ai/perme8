@@ -5,7 +5,16 @@ defmodule Agents.Sessions.Domain.Policies.TaskPolicyTest do
 
   describe "valid_status?/1" do
     test "returns true for all valid statuses" do
-      for status <- ["pending", "starting", "running", "completed", "failed", "cancelled"] do
+      for status <- [
+            "pending",
+            "starting",
+            "running",
+            "completed",
+            "failed",
+            "cancelled",
+            "queued",
+            "awaiting_feedback"
+          ] do
         assert TaskPolicy.valid_status?(status), "expected #{status} to be valid"
       end
     end
@@ -23,6 +32,8 @@ defmodule Agents.Sessions.Domain.Policies.TaskPolicyTest do
       assert TaskPolicy.can_cancel?("pending")
       assert TaskPolicy.can_cancel?("starting")
       assert TaskPolicy.can_cancel?("running")
+      assert TaskPolicy.can_cancel?("queued")
+      assert TaskPolicy.can_cancel?("awaiting_feedback")
     end
 
     test "returns false for non-cancellable statuses" do
@@ -43,6 +54,8 @@ defmodule Agents.Sessions.Domain.Policies.TaskPolicyTest do
       refute TaskPolicy.can_delete?("pending")
       refute TaskPolicy.can_delete?("starting")
       refute TaskPolicy.can_delete?("running")
+      refute TaskPolicy.can_delete?("queued")
+      refute TaskPolicy.can_delete?("awaiting_feedback")
     end
   end
 end

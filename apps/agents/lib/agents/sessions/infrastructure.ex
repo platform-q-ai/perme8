@@ -22,6 +22,8 @@ defmodule Agents.Sessions.Infrastructure do
       Schemas.TaskSchema,
       Repositories.TaskRepository,
       Queries.TaskQueries,
-      TaskRunnerSupervisor
+      TaskRunnerSupervisor,
+      QueueManager,
+      QueueManagerSupervisor
     ]
 end
