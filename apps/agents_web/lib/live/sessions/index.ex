@@ -122,7 +122,8 @@ defmodule AgentsWeb.SessionsLive.Index do
     case Integer.parse(limit_str) do
       {limit, ""} when limit >= 1 and limit <= 5 ->
         Sessions.set_concurrency_limit(user.id, limit)
-        {:noreply, assign(socket, :queue_state, load_queue_state(user.id))}
+        # Queue state will be updated via PubSub broadcast from QueueManager
+        {:noreply, socket}
 
       _ ->
         {:noreply, socket}
@@ -367,8 +368,12 @@ defmodule AgentsWeb.SessionsLive.Index do
   def handle_info({:DOWN, _ref, :process, _pid, :normal}, socket), do: {:noreply, socket}
 
   @impl true
-  def handle_info({:queue_updated, _user_id, queue_state}, socket) do
-    {:noreply, assign(socket, :queue_state, queue_state)}
+  def handle_info({:queue_updated, user_id, queue_state}, socket) do
+    if user_id == socket.assigns.current_scope.user.id do
+      {:noreply, assign(socket, :queue_state, queue_state)}
+    else
+      {:noreply, socket}
+    end
   end
 
   @impl true

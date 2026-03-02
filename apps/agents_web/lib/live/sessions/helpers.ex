@@ -104,9 +104,7 @@ defmodule AgentsWeb.SessionsLive.Helpers do
   @doc "Polls container stats for all active sessions."
   def poll_running_session_stats(sessions) do
     sessions
-    |> Enum.filter(
-      &(&1.latest_status in ["running", "starting", "pending", "queued", "awaiting_feedback"])
-    )
+    |> Enum.filter(&(&1.latest_status in ["running", "starting", "pending"]))
     |> Enum.reduce(%{}, fn session, acc ->
       case fetch_container_stats(session.container_id) do
         {:ok, stats_map} -> Map.put(acc, session.container_id, stats_map)
