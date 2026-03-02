@@ -263,32 +263,24 @@
               <p class="text-sm">Enter an instruction below to start</p>
             </div>
           <% end %>
-          <%= if @output_parts != [] do %>
-            <div class="flex gap-2">
-              <div class="shrink-0 size-6 rounded-full bg-secondary/10 flex items-center justify-center mt-0.5">
-                <.icon name="hero-cpu-chip" class="size-3.5 text-secondary" />
-              </div>
-              <div class="flex-1 min-w-0">
-                <div class="text-xs font-medium text-base-content/50 mb-0.5">Assistant</div>
-                <%= for part <- @output_parts do %>
-                  <.output_part part={part} />
-                <% end %>
-                <%!-- Show activity indicator when task is still running but all cached parts are frozen --%>
-                <div
-                  :if={
-                    task_running?(@current_task) &&
-                      !EventProcessor.has_streaming_parts?(@output_parts)
-                  }
-                  class="flex items-center gap-2 text-base-content/40 text-xs py-1"
-                >
-                  <span class="loading loading-dots loading-xs"></span>
-                  <span>Working...</span>
-                </div>
-              </div>
-            </div>
+          <%= for part <- @output_parts do %>
+            <.chat_part part={part} />
           <% end %>
           <%!-- Queued user messages awaiting processing --%>
           <.queued_message :for={msg <- @queued_messages} message={msg} />
+
+          <%!-- Show activity indicator when task is still running but all cached parts are frozen --%>
+          <div
+            :if={
+              task_running?(@current_task) &&
+                @output_parts != [] &&
+                !EventProcessor.has_streaming_parts?(@output_parts)
+            }
+            class="flex items-center gap-2 text-base-content/40 text-xs py-1"
+          >
+            <span class="loading loading-dots loading-xs"></span>
+            <span>Working...</span>
+          </div>
           <%!-- Pending question from assistant --%>
           <.question_card
             :if={@pending_question}
