@@ -33,7 +33,6 @@ defmodule Agents.SessionsFixtures do
       |> TaskSchema.changeset(changeset_attrs)
       |> Repo.insert()
 
-    # todo_items is only on status_changeset, so apply as a separate update
     task =
       if attrs[:todo_items] do
         {:ok, updated} =

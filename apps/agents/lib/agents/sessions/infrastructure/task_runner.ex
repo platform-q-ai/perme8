@@ -53,10 +53,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     # Track last flushed version to avoid redundant DB writes
     last_flushed_count: 0,
     todo_items: [],
-    # Todos restored from a prior run on resume. Kept separate so they
-    # can be prepended to every todo.updated event from the current run
-    # without interfering with within-run replacement semantics.
-    prior_run_todos: [],
+    prior_resume_items: [],
     todo_version: 0,
     last_flushed_todo_version: 0,
     # User message IDs — skip their parts from output cache (shown separately in UI)
@@ -136,7 +133,6 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
         # Start the lifecycle — either resume or fresh start
         if resume? do
-          # Restore cached output and todos from DB so they persist across resumes
           existing_parts = restore_output_parts(task.output)
           existing_todos = restore_todo_items(task.todo_items)
 
@@ -147,10 +143,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
               output_parts: existing_parts,
               last_flushed_count: length(existing_parts),
               todo_items: existing_todos,
-              prior_run_todos: existing_todos,
-              # Start both versions at 1 if we restored todos, so the periodic
-              # flush sees them as "already flushed" and won't redundantly write
-              # the same data back. Version 0 means "nothing to flush yet".
+              prior_resume_items: existing_todos,
               todo_version: if(existing_todos == [], do: 0, else: 1),
               last_flushed_todo_version: if(existing_todos == [], do: 0, else: 1)
           }
@@ -661,20 +654,18 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     {:question, new_state}
   end
 
-  # Step progress events — parse and broadcast to LiveView, cache in state.
-  # On resume, new todo events only contain the current run's todos. We prepend
-  # prior_run_todos (set once during init) so completed items from earlier runs
-  # remain visible without interfering with within-run replacement semantics.
+  # Step progress events — parse and broadcast to LiveView, cache in state
   defp handle_sdk_event(
          %{"type" => "todo.updated", "properties" => props},
          state
        )
        when is_map(props) do
     case parse_todo_event(props) do
-      {:ok, current_run_todos} ->
-        combined = merge_prior_run_todos(state.prior_run_todos, current_run_todos)
-        broadcast_todo_update(state.task_id, combined, state.pubsub)
-        {:continue, %{state | todo_items: combined, todo_version: state.todo_version + 1}}
+      {:ok, todo_items} ->
+        merged_items = merge_prior_resume_items(state.prior_resume_items, todo_items)
+        broadcast_todo_update(state.task_id, merged_items, state.pubsub)
+
+        {:continue, %{state | todo_items: merged_items, todo_version: state.todo_version + 1}}
 
       {:error, _reason} ->
         Logger.warning("TaskRunner: malformed todo.updated event for task #{state.task_id}")
@@ -1020,24 +1011,19 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     Map.put(attrs, :todo_items, %{"items" => todo_items})
   end
 
-  # Merge prior-run todos with the current run's todo list. Prior-run items
-  # are prepended but any whose ID appears in the current run are excluded
-  # (deduped) so we don't show the same item twice if the agent reuses IDs
-  # or the SDK sends cumulative lists.
-  defp merge_prior_run_todos([], current_run_todos), do: current_run_todos
+  defp merge_prior_resume_items([], current_items), do: current_items
 
-  defp merge_prior_run_todos(prior, current_run_todos) do
-    current_ids = MapSet.new(current_run_todos, & &1["id"])
-    unique_prior = Enum.reject(prior, &(&1["id"] in current_ids))
+  defp merge_prior_resume_items(prior_items, current_items) do
+    current_ids = MapSet.new(current_items, & &1["id"])
+    kept_prior = Enum.reject(prior_items, &(&1["id"] in current_ids))
+    offset = length(kept_prior)
 
-    offset = length(unique_prior)
-
-    shifted =
-      Enum.map(current_run_todos, fn item ->
+    shifted_current =
+      Enum.map(current_items, fn item ->
         Map.update(item, "position", offset, &(&1 + offset))
       end)
 
-    unique_prior ++ shifted
+    kept_prior ++ shifted_current
   end
 
   # Restore previously cached output parts from DB on resume.
@@ -1056,7 +1042,6 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
   defp restore_output_parts(_), do: []
 
-  # Restore previously cached todo items from DB on resume.
   defp restore_todo_items(%{"items" => items}) when is_list(items), do: items
   defp restore_todo_items(_), do: []
 end

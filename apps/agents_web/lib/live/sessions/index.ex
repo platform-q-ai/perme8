@@ -32,7 +32,7 @@ defmodule AgentsWeb.SessionsLive.Index do
      |> assign(:page_title, "Sessions")
      |> assign(:full_width, true)
      |> assign(:sessions, sessions)
-     |> assign(:tasks, tasks)
+     |> assign(:tasks_snapshot, tasks)
      |> assign(:composing_new, false)
      |> assign(:active_session_tab, "chat")
      |> assign(:container_stats, %{})
@@ -70,10 +70,8 @@ defmodule AgentsWeb.SessionsLive.Index do
         send_message_to_running_task(socket, instruction)
 
       true ->
-        is_resume = resumable_task?(socket.assigns.current_task)
-
         socket =
-          if is_resume do
+          if resumable_task?(socket.assigns.current_task) do
             assign(socket, :pending_user_message, instruction)
           else
             socket
@@ -158,6 +156,7 @@ defmodule AgentsWeb.SessionsLive.Index do
      |> assign(:events, [])
      |> assign_session_state()
      |> assign(:form, to_form(%{"instruction" => ""}))
+     |> push_patch(to: ~p"/sessions")
      |> push_event("focus_input", %{})}
   end
 
@@ -190,7 +189,6 @@ defmodule AgentsWeb.SessionsLive.Index do
 
   @impl true
   def handle_event("select_session", %{"container-id" => container_id}, socket) do
-    # Push URL param so the selection survives page navigation/refresh
     {:noreply,
      socket
      |> assign(:composing_new, false)
@@ -303,17 +301,16 @@ defmodule AgentsWeb.SessionsLive.Index do
   def handle_info({:task_event, task_id, event}, socket) do
     case socket.assigns.current_task do
       %{id: ^task_id} ->
-        socket = EventProcessor.process_event(event, socket)
+        next_socket = EventProcessor.process_event(event, socket)
 
-        # Clear pending user message once real output starts arriving
-        socket =
-          if socket.assigns[:pending_user_message] && socket.assigns.output_parts != [] do
-            assign(socket, :pending_user_message, nil)
+        next_socket =
+          if next_socket.assigns.pending_user_message && next_socket.assigns.output_parts != [] do
+            assign(next_socket, :pending_user_message, nil)
           else
-            socket
+            next_socket
           end
 
-        {:noreply, socket}
+        {:noreply, next_socket}
 
       _ ->
         {:noreply, socket}
@@ -607,8 +604,6 @@ defmodule AgentsWeb.SessionsLive.Index do
 
     socket =
       if is_resume do
-        # Preserve existing output, todos, and questions — freeze any
-        # streaming parts since the previous run has ended.
         socket
         |> assign(:events, [])
         |> assign(:output_parts, EventProcessor.freeze_streaming(socket.assigns.output_parts))
