@@ -164,9 +164,9 @@ defmodule AgentsWeb.SessionsLive.IndexTodoTest do
 
       {progress_index, _} = :binary.match(html, ~s(data-testid="todo-progress"))
       {log_index, _} = :binary.match(html, ~s(id="session-log"))
-      {form_index, _} = :binary.match(html, ~s(id="session-form"))
+      {input_index, _} = :binary.match(html, ~s(id="session-instruction"))
       assert progress_index > log_index
-      assert progress_index < form_index
+      assert progress_index < input_index
     end
 
     test "does not render progress bar when todo_items is empty", %{conn: conn, user: user} do
