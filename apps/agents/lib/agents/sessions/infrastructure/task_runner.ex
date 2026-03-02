@@ -110,6 +110,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     resume? = Keyword.get(opts, :resume, false)
     resume_container_id = Keyword.get(opts, :container_id)
     resume_session_id = Keyword.get(opts, :session_id)
+    prompt_instruction = Keyword.get(opts, :prompt_instruction)
 
     # Load task from DB to get instruction and user_id
     case task_repo.get_task(task_id) do
@@ -120,7 +121,11 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
       task ->
         state = %__MODULE__{
           task_id: task_id,
-          instruction: task.instruction,
+          instruction:
+            if(resume? and is_binary(prompt_instruction),
+              do: prompt_instruction,
+              else: task.instruction
+            ),
           image: task.image || SessionsConfig.image(),
           user_id: task.user_id,
           container_provider: container_provider,
