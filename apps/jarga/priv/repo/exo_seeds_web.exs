@@ -636,6 +636,115 @@ IO.puts("[exo-seeds-web] Created todo-session-completed session")
 IO.puts("[exo-seeds-web] Created all todo progress bar fixture sessions")
 
 # ---------------------------------------------------------------------------
+# 7c. Create session tasks with duration and file stats
+#     (for session-card-stats browser tests)
+# ---------------------------------------------------------------------------
+
+# Session: "Completed With Duration" — completed session with started_at/completed_at (5m apart)
+completed_dur_container = "completed-dur-#{Ecto.UUID.generate() |> String.slice(0..7)}"
+
+{:ok, completed_dur_task} =
+  %TaskSchema{}
+  |> TaskSchema.changeset(%{
+    user_id: alice.id,
+    instruction: "Completed With Duration",
+    status: "completed",
+    container_id: completed_dur_container
+  })
+  |> Jarga.Repo.insert()
+
+five_min_ago = DateTime.add(DateTime.utc_now(), -300, :second) |> DateTime.truncate(:second)
+just_now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+completed_dur_task
+|> TaskSchema.status_changeset(%{
+  started_at: five_min_ago,
+  completed_at: just_now
+})
+|> Jarga.Repo.update!()
+
+IO.puts("[exo-seeds-web] Created completed-with-duration session")
+
+# Session: "Failed With Duration" — failed session with started_at/completed_at
+failed_dur_container = "failed-dur-#{Ecto.UUID.generate() |> String.slice(0..7)}"
+
+{:ok, failed_dur_task} =
+  %TaskSchema{}
+  |> TaskSchema.changeset(%{
+    user_id: alice.id,
+    instruction: "Failed With Duration",
+    status: "failed",
+    container_id: failed_dur_container
+  })
+  |> Jarga.Repo.insert()
+
+three_min_ago = DateTime.add(DateTime.utc_now(), -180, :second) |> DateTime.truncate(:second)
+
+failed_dur_task
+|> TaskSchema.status_changeset(%{
+  started_at: three_min_ago,
+  completed_at: just_now
+})
+|> Jarga.Repo.update!()
+
+IO.puts("[exo-seeds-web] Created failed-with-duration session")
+
+# Session: "Pending No Duration" — pending session with no started_at
+pending_no_dur_container = "pending-no-dur-#{Ecto.UUID.generate() |> String.slice(0..7)}"
+
+{:ok, _pending_no_dur_task} =
+  %TaskSchema{}
+  |> TaskSchema.changeset(%{
+    user_id: alice.id,
+    instruction: "Pending No Duration",
+    status: "pending",
+    container_id: pending_no_dur_container
+  })
+  |> Jarga.Repo.insert()
+
+IO.puts("[exo-seeds-web] Created pending-no-duration session")
+
+# Session: "Completed With File Stats" — completed session with session_summary + duration
+file_stats_container = "file-stats-#{Ecto.UUID.generate() |> String.slice(0..7)}"
+
+{:ok, file_stats_task} =
+  %TaskSchema{}
+  |> TaskSchema.changeset(%{
+    user_id: alice.id,
+    instruction: "Completed With File Stats",
+    status: "completed",
+    container_id: file_stats_container
+  })
+  |> Jarga.Repo.insert()
+
+file_stats_task
+|> TaskSchema.status_changeset(%{
+  started_at: five_min_ago,
+  completed_at: just_now,
+  session_summary: %{"files" => 3, "additions" => 42, "deletions" => 18}
+})
+|> Jarga.Repo.update!()
+
+IO.puts("[exo-seeds-web] Created completed-with-file-stats session")
+
+# Session: "No File Stats" — completed session with no session_summary
+no_file_stats_container = "no-file-stats-#{Ecto.UUID.generate() |> String.slice(0..7)}"
+
+{:ok, _no_file_stats_task} =
+  %TaskSchema{}
+  |> TaskSchema.changeset(%{
+    user_id: alice.id,
+    instruction: "No File Stats",
+    status: "completed",
+    container_id: no_file_stats_container
+  })
+  |> Jarga.Repo.insert()
+
+IO.puts("[exo-seeds-web] Created no-file-stats session")
+
+IO.puts("[exo-seeds-web] Created all session-card-stats fixture sessions")
+
+# ---------------------------------------------------------------------------
 # 8. Create notifications (for notifications browser tests)
 # ---------------------------------------------------------------------------
 
