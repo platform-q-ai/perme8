@@ -26,14 +26,14 @@
       </button>
     </div>
 
-    <div class="flex-1 overflow-y-auto">
+    <div class="flex-1 overflow-y-auto flex flex-col">
       <%= if @sessions == [] do %>
         <div class="p-6 text-center text-base-content/50 text-sm">
           <.icon name="hero-chat-bubble-left-right" class="size-8 mx-auto mb-2 opacity-40" />
           <p>No sessions yet</p>
         </div>
       <% else %>
-        <ul class="menu menu-sm p-2 gap-1 w-full">
+        <ul class="menu menu-sm p-2 gap-1 w-full mt-auto">
           <li :for={session <- @sessions} class="w-full">
             <div
               data-testid={"session-item-#{slugify(session.title)}"}
