@@ -29,6 +29,8 @@ defmodule AgentsWeb.SessionsLive.Index do
     available_images = Sessions.available_images()
     default_image = Sessions.default_image()
 
+    sessions = merge_unassigned_active_tasks(sessions, tasks)
+
     {:ok,
      socket
      |> assign(:page_title, "Sessions")
@@ -75,7 +77,7 @@ defmodule AgentsWeb.SessionsLive.Index do
       true ->
         socket =
           if resumable_task?(socket.assigns.current_task) do
-            assign(socket, :pending_user_message, instruction)
+            append_optimistic_user_message(socket, instruction)
           else
             socket
           end
@@ -159,7 +161,7 @@ defmodule AgentsWeb.SessionsLive.Index do
      |> assign(:events, [])
      |> assign_session_state()
      |> assign(:form, to_form(%{"instruction" => ""}))
-     |> push_patch(to: ~p"/sessions")
+     |> push_patch(to: ~p"/sessions?#{%{new: true}}")
      |> push_event("focus_input", %{})}
   end
 
@@ -304,16 +306,7 @@ defmodule AgentsWeb.SessionsLive.Index do
   def handle_info({:task_event, task_id, event}, socket) do
     case socket.assigns.current_task do
       %{id: ^task_id} ->
-        next_socket = EventProcessor.process_event(event, socket)
-
-        next_socket =
-          if next_socket.assigns.pending_user_message && next_socket.assigns.output_parts != [] do
-            assign(next_socket, :pending_user_message, nil)
-          else
-            next_socket
-          end
-
-        {:noreply, next_socket}
+        {:noreply, EventProcessor.process_event(event, socket)}
 
       _ ->
         {:noreply, socket}
@@ -513,7 +506,7 @@ defmodule AgentsWeb.SessionsLive.Index do
       session_summary: nil,
       output_parts: [],
       pending_question: nil,
-      pending_user_message: nil,
+      optimistic_user_messages: [],
       user_message_ids: MapSet.new(),
       todo_items: [],
       queued_messages: []
@@ -532,11 +525,17 @@ defmodule AgentsWeb.SessionsLive.Index do
         {:noreply,
          socket
          |> assign(:queued_messages, socket.assigns.queued_messages ++ [queued_msg])
-         |> assign(:form, to_form(%{"instruction" => ""}))}
+         |> assign(:form, to_form(%{"instruction" => ""}))
+         |> push_event("scroll_to_bottom", %{})}
 
       {:error, _reason} ->
         {:noreply, put_flash(socket, :error, "Failed to send message")}
     end
+  end
+
+  defp append_optimistic_user_message(socket, message) do
+    updated = socket.assigns.optimistic_user_messages ++ [String.trim(message)]
+    assign(socket, :optimistic_user_messages, updated)
   end
 
   defp toggle_selection(current, label, true = _multiple) do
@@ -616,7 +615,7 @@ defmodule AgentsWeb.SessionsLive.Index do
     socket =
       socket
       |> assign(:current_task, task)
-      |> assign(:active_container_id, task.container_id || socket.assigns.active_container_id)
+      |> assign(:active_container_id, task.container_id)
       |> assign(:composing_new, false)
       |> assign(:form, to_form(%{"instruction" => ""}))
 
@@ -629,7 +628,6 @@ defmodule AgentsWeb.SessionsLive.Index do
       else
         socket
         |> assign(:events, [])
-        |> assign(:pending_user_message, nil)
         |> assign_session_state()
       end
 
@@ -641,10 +639,7 @@ defmodule AgentsWeb.SessionsLive.Index do
   end
 
   defp handle_task_result({:error, reason}, socket) do
-    {:noreply,
-     socket
-     |> assign(:pending_user_message, nil)
-     |> put_flash(:error, task_error_message(reason))}
+    {:noreply, put_flash(socket, :error, task_error_message(reason))}
   end
 
   defp do_cancel_task(task, socket) do
@@ -691,6 +686,8 @@ defmodule AgentsWeb.SessionsLive.Index do
 
   defp reload_all(socket, user_id) do
     sessions = Sessions.list_sessions(user_id)
+    tasks = Sessions.list_tasks(user_id)
+    sessions = merge_unassigned_active_tasks(sessions, tasks)
 
     sessions =
       case {socket.assigns[:todo_items], socket.assigns[:active_container_id]} do
@@ -714,6 +711,31 @@ defmodule AgentsWeb.SessionsLive.Index do
     socket
     |> assign(:sessions, sessions)
     |> assign(:queue_state, load_queue_state(user_id))
+  end
+
+  defp merge_unassigned_active_tasks(sessions, tasks) do
+    unassigned =
+      tasks
+      |> Enum.filter(&active_task?/1)
+      |> Enum.filter(&is_nil(&1.container_id))
+      |> Enum.map(fn task ->
+        %{
+          container_id: "task:" <> task.id,
+          task_count: 1,
+          latest_status: task.status,
+          latest_task_id: task.id,
+          latest_error: task.error,
+          title: task.instruction,
+          image: task.image,
+          latest_at: task.inserted_at,
+          created_at: task.inserted_at,
+          todo_items: task.todo_items || %{"items" => []}
+        }
+      end)
+
+    # Keep newest-first ordering across real + unassigned sessions
+    (sessions ++ unassigned)
+    |> Enum.sort_by(& &1.latest_at, {:desc, NaiveDateTime})
   end
 
   defp load_queue_state(user_id) do
