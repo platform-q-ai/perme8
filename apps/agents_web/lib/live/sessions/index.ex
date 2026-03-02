@@ -54,36 +54,11 @@ defmodule AgentsWeb.SessionsLive.Index do
 
   @impl true
   def handle_params(params, _url, socket) do
-    tab = params["tab"] || "chat"
-    valid_tabs = Enum.map(session_tabs(), & &1.id)
-    active_tab = if tab in valid_tabs, do: tab, else: "chat"
-
     sessions = socket.assigns.sessions
-
-    tasks =
-      socket.assigns[:tasks_snapshot] || Sessions.list_tasks(socket.assigns.current_scope.user.id)
-
-    selected_container_id =
-      cond do
-        params["new"] == "true" ->
-          nil
-
-        params["container"] && Enum.any?(sessions, &(&1.container_id == params["container"])) ->
-          params["container"]
-
-        true ->
-          case sessions do
-            [first | _] -> first.container_id
-            [] -> nil
-          end
-      end
-
-    current_task =
-      if params["new"] == "true" do
-        nil
-      else
-        find_current_task(tasks, selected_container_id)
-      end
+    active_tab = resolve_active_tab(params)
+    tasks = tasks_snapshot_or_reload(socket)
+    selected_container_id = resolve_selected_container_id(params, sessions)
+    current_task = resolve_current_task(params, tasks, selected_container_id)
 
     {:noreply,
      socket
@@ -99,6 +74,38 @@ defmodule AgentsWeb.SessionsLive.Index do
      |> EventProcessor.maybe_load_todos(current_task)
      |> push_event("scroll_to_bottom", %{})
      |> push_event("focus_input", %{})}
+  end
+
+  defp resolve_active_tab(params) do
+    tab = params["tab"] || "chat"
+    valid_tabs = Enum.map(session_tabs(), & &1.id)
+    if tab in valid_tabs, do: tab, else: "chat"
+  end
+
+  defp tasks_snapshot_or_reload(socket) do
+    socket.assigns[:tasks_snapshot] || Sessions.list_tasks(socket.assigns.current_scope.user.id)
+  end
+
+  defp resolve_selected_container_id(%{"new" => "true"}, _sessions), do: nil
+
+  defp resolve_selected_container_id(%{"container" => container_id}, sessions)
+       when is_binary(container_id) do
+    if Enum.any?(sessions, &(&1.container_id == container_id)) do
+      container_id
+    else
+      default_container_id(sessions)
+    end
+  end
+
+  defp resolve_selected_container_id(_params, sessions), do: default_container_id(sessions)
+
+  defp default_container_id([first | _]), do: first.container_id
+  defp default_container_id([]), do: nil
+
+  defp resolve_current_task(%{"new" => "true"}, _tasks, _selected_container_id), do: nil
+
+  defp resolve_current_task(_params, tasks, selected_container_id) do
+    find_current_task(tasks, selected_container_id)
   end
 
   @doc false
