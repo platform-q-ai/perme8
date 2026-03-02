@@ -165,13 +165,21 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   # ---- Question handling (called by LiveView via GenServer.call) ----
 
   @impl true
-  def handle_call({:answer_question, request_id, answers}, _from, state) do
+  def handle_call({:answer_question, request_id, answers, message}, _from, state) do
     base_url = "http://localhost:#{state.container_port}"
 
     case state.opencode_client.reply_question(base_url, request_id, answers, []) do
-      :ok -> {:reply, :ok, clear_pending_question(state)}
-      {:error, _} = error -> {:reply, error, state}
+      :ok ->
+        state = cache_answer_message(state, request_id, message, answers)
+        {:reply, :ok, clear_pending_question(state)}
+
+      {:error, _} = error ->
+        {:reply, error, state}
     end
+  end
+
+  def handle_call({:answer_question, request_id, answers}, from, state) do
+    handle_call({:answer_question, request_id, answers, nil}, from, state)
   end
 
   @impl true
@@ -190,6 +198,14 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     parts = [%{"type" => "text", "text" => message}]
 
     result = state.opencode_client.send_prompt_async(base_url, state.session_id, parts, [])
+
+    state =
+      if result == :ok do
+        cache_queued_user_message(state, message)
+      else
+        state
+      end
+
     {:reply, result, state}
   end
 
@@ -590,11 +606,46 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     part_id = if is_binary(msg_id), do: "user-" <> msg_id, else: nil
 
     entry = %{"type" => "user", "id" => part_id, "text" => text}
-    parts = upsert_output_part(state.output_parts, part_id, entry)
+    {parts, matched?} = promote_pending_user_part(state.output_parts, text, part_id)
+    parts = if matched?, do: parts, else: upsert_output_part(parts, part_id, entry)
     %{state | output_parts: parts}
   end
 
   defp cache_user_message_part(_event, state), do: state
+
+  defp cache_queued_user_message(state, message) when is_binary(message) do
+    text = String.trim(message)
+
+    if text == "" do
+      state
+    else
+      pending_id = "queued-user-#{System.unique_integer([:positive])}"
+      entry = %{"type" => "user", "id" => pending_id, "text" => text, "pending" => true}
+      output_parts = upsert_output_part(state.output_parts, pending_id, entry)
+      state = %{state | output_parts: output_parts}
+      flush_output_to_db(state)
+      state
+    end
+  end
+
+  defp cache_queued_user_message(state, _message), do: state
+
+  defp promote_pending_user_part(parts, text, part_id) do
+    case Enum.find_index(parts, fn
+           %{"type" => "user", "pending" => true, "text" => pending_text} ->
+             String.trim(to_string(pending_text || "")) == String.trim(text)
+
+           _ ->
+             false
+         end) do
+      nil ->
+        {parts, false}
+
+      idx ->
+        replacement = %{"type" => "user", "id" => part_id, "text" => text}
+        {List.replace_at(parts, idx, replacement), true}
+    end
+  end
 
   # ---- Private: SDK Event Handling ----
 
@@ -1013,6 +1064,40 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
         question_timeout_ref: nil
     }
   end
+
+  defp cache_answer_message(state, request_id, message, answers) do
+    text =
+      case message do
+        msg when is_binary(msg) ->
+          String.trim(msg)
+
+        _ ->
+          format_answers_for_cache(answers)
+      end
+
+    if String.trim(text) == "" do
+      state
+    else
+      part_id = "user-answer-#{request_id}"
+      entry = %{"type" => "user", "id" => part_id, "text" => text}
+      output_parts = upsert_output_part(state.output_parts, part_id, entry)
+      state = %{state | output_parts: output_parts}
+      flush_output_to_db(state)
+      state
+    end
+  end
+
+  defp format_answers_for_cache(answers) when is_list(answers) do
+    answers
+    |> Enum.with_index(1)
+    |> Enum.map_join("\n", fn {answer_list, idx} ->
+      cleaned = Enum.reject(answer_list, &(&1 in [nil, ""]))
+      if cleaned == [], do: nil, else: "Answer #{idx}: #{Enum.join(cleaned, ", ")}"
+    end)
+    |> String.trim()
+  end
+
+  defp format_answers_for_cache(_), do: ""
 
   defp cancel_question_timeout(%{question_timeout_ref: nil}), do: :ok
   defp cancel_question_timeout(%{question_timeout_ref: ref}), do: Process.cancel_timer(ref)

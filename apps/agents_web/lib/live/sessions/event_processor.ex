@@ -488,6 +488,10 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
     {:reasoning, id, text, :frozen}
   end
 
+  defp decode_output_part(%{"type" => "user", "id" => id, "text" => text, "pending" => true}) do
+    {:user_pending, id, text}
+  end
+
   defp decode_output_part(%{"type" => "user", "id" => id, "text" => text}) do
     {:user, id, text}
   end
