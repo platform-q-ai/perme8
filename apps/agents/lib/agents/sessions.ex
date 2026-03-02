@@ -191,10 +191,11 @@ defmodule Agents.Sessions do
   `answers` is a list of lists of strings — one list of selected labels
   per question. E.g. `[["Option A"], ["Option B", "Option C"]]`
   """
-  @spec answer_question(String.t(), String.t(), [[String.t()]]) :: :ok | {:error, term()}
-  def answer_question(task_id, request_id, answers) do
+  @spec answer_question(String.t(), String.t(), [[String.t()]], String.t() | nil) ::
+          :ok | {:error, term()}
+  def answer_question(task_id, request_id, answers, message \\ nil) do
     case Registry.lookup(Agents.Sessions.TaskRegistry, task_id) do
-      [{pid, _}] -> GenServer.call(pid, {:answer_question, request_id, answers})
+      [{pid, _}] -> GenServer.call(pid, {:answer_question, request_id, answers, message})
       [] -> {:error, :task_not_running}
     end
   end

@@ -610,19 +610,27 @@ defmodule AgentsWeb.SessionsLive.Index do
     message = format_question_answer_as_message(pending, build_question_answers(pending))
 
     Sessions.send_message(task_id, message)
-    |> handle_question_result(socket, pending, "Failed to send message — please try again")
+    |> handle_question_result_basic(socket, pending, "Failed to send message — please try again")
   end
 
   defp submit_active_question(socket, pending, task_id) do
-    Sessions.answer_question(task_id, pending.request_id, build_question_answers(pending))
-    |> handle_question_result(socket, pending, "Failed to submit answer — please try again")
+    answers = build_question_answers(pending)
+    message = format_question_answer_as_message(pending, answers)
+
+    Sessions.answer_question(task_id, pending.request_id, answers, message)
+    |> handle_question_result_with_message(
+      socket,
+      pending,
+      "Failed to submit answer — please try again",
+      message
+    )
   end
 
-  defp handle_question_result(:ok, socket, _pending, _error_msg) do
+  defp handle_question_result_basic(:ok, socket, _pending, _error_msg) do
     assign(socket, :pending_question, nil)
   end
 
-  defp handle_question_result({:error, :task_not_running}, socket, pending, _error_msg) do
+  defp handle_question_result_basic({:error, :task_not_running}, socket, pending, _error_msg) do
     message = format_question_answer_as_message(pending, build_question_answers(pending))
 
     socket
@@ -631,8 +639,45 @@ defmodule AgentsWeb.SessionsLive.Index do
     |> put_flash(:info, "Session ended. Your answer is in the input — submit to resume.")
   end
 
-  defp handle_question_result({:error, _}, socket, _pending, error_msg) do
+  defp handle_question_result_basic({:error, _}, socket, _pending, error_msg) do
     socket |> assign(:pending_question, nil) |> put_flash(:error, error_msg)
+  end
+
+  defp handle_question_result_with_message(:ok, socket, _pending, _error_msg, message) do
+    socket
+    |> append_confirmed_user_message(message)
+    |> assign(:pending_question, nil)
+  end
+
+  defp handle_question_result_with_message(
+         {:error, :task_not_running},
+         socket,
+         pending,
+         _error_msg,
+         _message
+       ) do
+    message = format_question_answer_as_message(pending, build_question_answers(pending))
+
+    socket
+    |> assign(:pending_question, nil)
+    |> assign(:form, to_form(%{"instruction" => message}))
+    |> put_flash(:info, "Session ended. Your answer is in the input — submit to resume.")
+  end
+
+  defp handle_question_result_with_message({:error, _}, socket, _pending, error_msg, _message) do
+    socket |> assign(:pending_question, nil) |> put_flash(:error, error_msg)
+  end
+
+  defp append_confirmed_user_message(socket, message) do
+    trimmed = String.trim(message)
+
+    if trimmed == "" do
+      socket
+    else
+      part_id = "user-confirmed-#{System.unique_integer([:positive])}"
+      parts = socket.assigns.output_parts ++ [{:user, part_id, trimmed}]
+      assign(socket, :output_parts, parts)
+    end
   end
 
   defp run_or_resume_task(socket, instruction) do

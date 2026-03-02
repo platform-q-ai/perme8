@@ -89,6 +89,9 @@
         </ul>
       <% end %>
     </div>
+
+    <%!-- Queue panel --%>
+    <.queue_panel queue_state={@queue_state} />
   </div>
 
   <%!-- Right Panel: Active Session Detail --%>
@@ -149,9 +152,6 @@
         class="flex-1 flex flex-col min-h-0 overflow-hidden"
         data-testid="chat-log"
       >
-        <%!-- Queue panel --%>
-        <.queue_panel queue_state={@queue_state} />
-
         <%!-- Stats bar --%>
         <div
           :if={@session_tokens || @session_summary}
@@ -215,8 +215,6 @@
           </button>
         </div>
 
-        <.progress_bar todo_items={@todo_items} />
-
         <%!-- Output log --%>
         <div class="flex-1 overflow-y-auto p-4" id="session-log" phx-hook="SessionLog">
           <%= if @current_task do %>
@@ -274,6 +272,8 @@
             pending={@pending_question}
           />
         </div>
+
+        <.progress_bar todo_items={@todo_items} />
 
         <%!-- Input form --%>
         <div class="border-t border-base-300 p-3 bg-base-100 shrink-0">

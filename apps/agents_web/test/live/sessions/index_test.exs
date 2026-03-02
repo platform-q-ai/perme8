@@ -26,6 +26,16 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
     def handle_call({:send_message, _message}, _from, state) do
       {:reply, :ok, state}
     end
+
+    @impl true
+    def handle_call({:answer_question, _request_id, _answers, _message}, _from, state) do
+      {:reply, :ok, state}
+    end
+
+    @impl true
+    def handle_call({:answer_question, _request_id, _answers}, _from, state) do
+      {:reply, :ok, state}
+    end
   end
 
   describe "mount and rendering" do
@@ -250,6 +260,51 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       assert html =~ "Persist this follow-up"
       assert html =~ "Assistant reply"
       refute html =~ "Awaiting response..."
+    end
+
+    test "question tool submit appends answer to conversation history", %{conn: conn, user: user} do
+      task =
+        task_fixture(%{
+          user_id: user.id,
+          instruction: "Initial instruction",
+          container_id: "c1",
+          status: "running"
+        })
+
+      start_supervised!({FakeTaskRunner, task.id})
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      send(lv.pid, {
+        :task_event,
+        task.id,
+        %{
+          "type" => "question.asked",
+          "properties" => %{
+            "id" => "req-1",
+            "sessionID" => "sess-1",
+            "questions" => [
+              %{
+                "header" => "Deploy",
+                "question" => "Ship now?",
+                "options" => [%{"label" => "Yes", "description" => "Deploy"}],
+                "multiple" => false
+              }
+            ]
+          }
+        }
+      })
+
+      lv
+      |> element("button[phx-value-question-index='0'][phx-value-label='Yes']")
+      |> render_click()
+
+      lv
+      |> form("#question-form", %{"custom_answer" => %{"0" => ""}})
+      |> render_submit()
+
+      html = render(lv)
+      assert html =~ "Re: Deploy — Yes"
     end
 
     test "follow-up stays between prior and subsequent assistant outputs", %{
