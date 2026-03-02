@@ -286,6 +286,63 @@ defmodule Agents.SessionsTest do
       assert runner_opts[:container_id] == "container-123"
       assert runner_opts[:session_id] == "session-123"
     end
+
+    test "marks orphaned active tasks as failed when linkage is missing" do
+      user = user_fixture()
+
+      task =
+        task_fixture(%{
+          user_id: user.id,
+          instruction: "orphaned pending task",
+          status: "pending",
+          container_id: nil,
+          session_id: nil
+        })
+
+      assert {:error, :task_not_running} = Sessions.send_message(task.id, "follow up")
+
+      assert {:ok, refreshed} = Sessions.get_task(task.id, user.id)
+      assert refreshed.status == "failed"
+      assert refreshed.error == "Runner linkage missing"
+    end
+
+    test "does not restart cancelled tasks even when linkage exists" do
+      task_id = Ecto.UUID.generate()
+      test_pid = self()
+
+      task_repo = %{
+        get_task: fn ^task_id ->
+          %{
+            id: task_id,
+            instruction: "cancelled task",
+            status: "cancelled",
+            container_id: "container-cancelled",
+            session_id: "session-cancelled"
+          }
+        end
+      }
+
+      starter = fn started_task_id, runner_opts ->
+        send(test_pid, {:runner_started, started_task_id, runner_opts})
+        {:ok, self()}
+      end
+
+      {:module, repo_mod, _, _} =
+        defmodule :"Agents.SessionsTest.MockTaskRepoCancelled.#{System.unique_integer([:positive])}" do
+          def set_impl(fun), do: :persistent_term.put({__MODULE__, :get_task}, fun)
+          def get_task(task_id), do: :persistent_term.get({__MODULE__, :get_task}).(task_id)
+        end
+
+      repo_mod.set_impl(task_repo.get_task)
+
+      assert {:error, :task_not_running} =
+               Sessions.send_message(task_id, "follow up",
+                 task_repo: repo_mod,
+                 task_runner_starter: starter
+               )
+
+      refute_receive {:runner_started, ^task_id, _runner_opts}
+    end
   end
 
   describe "delete_session/3" do

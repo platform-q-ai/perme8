@@ -13,6 +13,8 @@ defmodule AgentsWeb.SessionsLive.EventProcessorTest do
       session_summary: nil,
       output_parts: [],
       pending_question: nil,
+      confirmed_user_messages: [],
+      optimistic_user_messages: [],
       user_message_ids: MapSet.new()
     }
   end
@@ -138,6 +140,52 @@ defmodule AgentsWeb.SessionsLive.EventProcessorTest do
 
       result = EventProcessor.process_event(event, socket)
       assert result.assigns.output_parts == []
+    end
+
+    test "supports lower-camel messageId for user parts" do
+      socket =
+        build_socket(%{
+          user_message_ids: MapSet.new(["msg-2"]),
+          optimistic_user_messages: ["Queued follow-up"]
+        })
+
+      event = %{
+        "type" => "message.part.updated",
+        "properties" => %{
+          "part" => %{
+            "id" => "part-2",
+            "type" => "text",
+            "text" => "Queued follow-up",
+            "messageId" => "msg-2"
+          }
+        }
+      }
+
+      result = EventProcessor.process_event(event, socket)
+
+      assert result.assigns.output_parts == []
+      assert result.assigns.optimistic_user_messages == []
+      assert result.assigns.confirmed_user_messages == [%{id: "msg-2", text: "Queued follow-up"}]
+    end
+  end
+
+  describe "maybe_load_cached_output/2" do
+    test "restores persisted user follow-up messages from cached output" do
+      output =
+        Jason.encode!([
+          %{"type" => "text", "id" => "a-1", "text" => "Assistant output"},
+          %{"type" => "user", "id" => "user-msg-1", "text" => "Applied follow-up"}
+        ])
+
+      socket = build_socket()
+
+      result = EventProcessor.maybe_load_cached_output(socket, %{output: output})
+
+      assert result.assigns.output_parts == [{:text, "a-1", "Assistant output", :frozen}]
+
+      assert result.assigns.confirmed_user_messages == [
+               %{id: "user-msg-1", text: "Applied follow-up"}
+             ]
     end
   end
 
