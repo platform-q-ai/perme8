@@ -19,6 +19,49 @@ defmodule ChatTest do
       assert {:error, :not_found} = Chat.load_session(session.id)
     end
 
+    test "load_session with custom message_limit" do
+      session = chat_session_fixture(%{title: "Paginated"})
+
+      for i <- 1..5 do
+        Chat.save_message(%{
+          chat_session_id: session.id,
+          role: "user",
+          content: "msg #{i}"
+        })
+      end
+
+      assert {:ok, loaded} = Chat.load_session(session.id, message_limit: 3)
+      assert loaded.id == session.id
+      assert length(loaded.messages) == 3
+    end
+
+    test "load_older_messages returns paginated messages" do
+      session = chat_session_fixture(%{title: "Scroll"})
+
+      messages =
+        for i <- 1..5 do
+          {:ok, msg} =
+            Chat.save_message(%{
+              chat_session_id: session.id,
+              role: "user",
+              content: "msg #{i}"
+            })
+
+          msg
+        end
+
+      # Use the last message as cursor to load older ones
+      cursor = List.last(messages)
+
+      assert {:ok, older, _has_more?} = Chat.load_older_messages(session.id, cursor.id)
+      assert length(older) == 4
+      # All returned messages should be at or before the cursor timestamp
+      # (same-second collisions are expected with :utc_datetime precision)
+      assert Enum.all?(older, fn m -> m.inserted_at <= cursor.inserted_at end)
+      # None of the returned messages should be the cursor itself
+      refute Enum.any?(older, fn m -> m.id == cursor.id end)
+    end
+
     test "save_message and delete_message" do
       session = chat_session_fixture(%{title: "With message"})
 
