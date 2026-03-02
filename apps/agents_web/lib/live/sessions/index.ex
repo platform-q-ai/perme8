@@ -35,6 +35,8 @@ defmodule AgentsWeb.SessionsLive.Index do
      |> assign(:full_width, true)
      |> assign(:sessions, sessions)
      |> assign(:tasks_snapshot, tasks)
+     |> assign(:active_container_id, nil)
+     |> assign(:current_task, nil)
      |> assign(:composing_new, false)
      |> assign(:active_session_tab, "chat")
      |> assign(:container_stats, %{})
@@ -52,7 +54,48 @@ defmodule AgentsWeb.SessionsLive.Index do
     tab = params["tab"] || "chat"
     valid_tabs = Enum.map(session_tabs(), & &1.id)
     active_tab = if tab in valid_tabs, do: tab, else: "chat"
-    {:noreply, assign(socket, :active_session_tab, active_tab)}
+
+    sessions = socket.assigns.sessions
+
+    tasks =
+      socket.assigns[:tasks_snapshot] || Sessions.list_tasks(socket.assigns.current_scope.user.id)
+
+    selected_container_id =
+      cond do
+        params["new"] == "true" ->
+          nil
+
+        params["container"] && Enum.any?(sessions, &(&1.container_id == params["container"])) ->
+          params["container"]
+
+        true ->
+          case sessions do
+            [first | _] -> first.container_id
+            [] -> nil
+          end
+      end
+
+    current_task =
+      if params["new"] == "true" do
+        nil
+      else
+        find_current_task(tasks, selected_container_id)
+      end
+
+    {:noreply,
+     socket
+     |> assign(:active_session_tab, active_tab)
+     |> assign(:active_container_id, selected_container_id)
+     |> assign(:current_task, current_task)
+     |> assign(:composing_new, selected_container_id == nil)
+     |> assign(:tasks_snapshot, nil)
+     |> assign(:confirmed_user_messages, [])
+     |> assign(:optimistic_user_messages, [])
+     |> EventProcessor.maybe_load_cached_output(current_task)
+     |> EventProcessor.maybe_load_pending_question(current_task)
+     |> EventProcessor.maybe_load_todos(current_task)
+     |> push_event("scroll_to_bottom", %{})
+     |> push_event("focus_input", %{})}
   end
 
   @doc false
