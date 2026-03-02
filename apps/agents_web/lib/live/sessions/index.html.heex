@@ -135,11 +135,14 @@
       </div>
 
       <%!-- Tab bar --%>
-      <.tab_bar active_tab={@active_tab} tabs={AgentsWeb.SessionsLive.Index.session_tabs()} />
+      <.tab_bar
+        active_tab={@active_session_tab}
+        tabs={AgentsWeb.SessionsLive.Index.session_tabs()}
+      />
 
       <%!-- Chat tab panel --%>
       <div
-        :if={@active_tab == "chat"}
+        :if={@active_session_tab == "chat"}
         role="tabpanel"
         id="tabpanel-chat"
         aria-labelledby="tab-chat"
