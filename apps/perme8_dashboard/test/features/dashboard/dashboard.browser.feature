@@ -4,17 +4,17 @@ Feature: Perme8 Dashboard Browser UI
   I want a unified dashboard application that serves as the central dev-tool hub
   So that I can access the Exo BDD feature browser and future tools through a consistent tabbed interface
 
-  Scenario: Dashboard landing page shows sidebar navigation with Features link active
+  Scenario: Dashboard landing page shows tab navigation with Features tab active
     Given I navigate to "${baseUrl}/"
     And I wait for the page to load
-    And I wait for "[data-sidebar-features]" to be visible
-    Then "[data-sidebar-features]" should be visible
-    And "[data-sidebar-features] a" should have class "active"
+    And I wait for "[data-tab='features']" to be visible
+    Then "[data-tab='features']" should be visible
+    And "[data-tab='features']" should have class "tab-active"
 
   Scenario: Features tab displays the feature tree on landing
     Given I navigate to "${baseUrl}/"
     And I wait for the page to load
-    And I wait for "[data-sidebar-features]" to be visible
+    And I wait for "[data-tab='features']" to be visible
     And I wait for "[data-feature-tree]" to be visible
     Then "[data-feature-tree]" should be visible
     And I wait for "[data-app]" to be visible
@@ -85,11 +85,11 @@ Feature: Perme8 Dashboard Browser UI
     And I wait for "[data-app]" to be visible
     Then "[data-feature-tree]" should be visible
 
-  Scenario: Sidebar navigation includes Sessions link
+  Scenario: Tab navigation includes Sessions tab
     Given I navigate to "${baseUrl}/"
     And I wait for the page to load
-    Then "[data-sidebar-features]" should be visible
-    And "[data-sidebar-sessions]" should be visible
+    Then "[data-tab='features']" should be visible
+    And "[data-tab='sessions']" should be visible
 
   Scenario: Clicking Sessions tab redirects to login when unauthenticated
     Given I navigate to "${baseUrl}/sessions"
