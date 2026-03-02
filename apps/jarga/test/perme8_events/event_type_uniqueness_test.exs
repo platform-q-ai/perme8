@@ -30,10 +30,10 @@ defmodule Perme8.Events.EventTypeUniquenessTest do
     Agents.Domain.Events.AgentDeleted,
     Agents.Domain.Events.AgentAddedToWorkspace,
     Agents.Domain.Events.AgentRemovedFromWorkspace,
-    # Chat (3)
-    Jarga.Chat.Domain.Events.ChatSessionStarted,
-    Jarga.Chat.Domain.Events.ChatMessageSent,
-    Jarga.Chat.Domain.Events.ChatSessionDeleted,
+    # Chat (3) — extracted to apps/chat/
+    Chat.Domain.Events.ChatSessionStarted,
+    Chat.Domain.Events.ChatMessageSent,
+    Chat.Domain.Events.ChatSessionDeleted,
     # Notifications (2) — extracted to apps/notifications/, NotificationActionTaken removed
     Notifications.Domain.Events.NotificationCreated,
     Notifications.Domain.Events.NotificationRead,
