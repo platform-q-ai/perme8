@@ -622,6 +622,7 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponents do
   running count, queued tasks, and awaiting-feedback tasks.
   """
   attr(:queue_state, :map, required: true)
+  attr(:user_id, :string, required: true)
 
   def queue_panel(assigns) do
     ~H"""
@@ -641,7 +642,10 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponents do
           <span class="text-xs text-base-content/50">Limit:</span>
           <form phx-change="update_concurrency_limit" class="inline">
             <select
+              id={"concurrency-limit-select-#{@user_id}"}
               name="concurrency_limit"
+              phx-hook="ConcurrencyLimit"
+              data-user-id={@user_id}
               class="select select-bordered select-xs w-14"
               data-testid="concurrency-limit-select"
             >
@@ -656,8 +660,8 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponents do
       <div class="flex items-center gap-3 text-xs">
         <div class="flex items-center gap-1">
           <span class="inline-block size-2 rounded-full bg-info animate-pulse"></span>
-          <span class="text-base-content/60">
-            {@queue_state.running}/{@queue_state.concurrency_limit} running
+          <span class="text-base-content/70 font-medium">
+            {@queue_state.running}/{@queue_state.concurrency_limit} concurrent slots used
           </span>
         </div>
         <div :if={length(@queue_state.queued) > 0} class="flex items-center gap-1">
