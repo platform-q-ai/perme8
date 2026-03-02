@@ -249,9 +249,8 @@ defmodule Agents.Sessions do
   """
   @spec get_queue_state(String.t()) :: map()
   def get_queue_state(user_id) do
-    with {:ok, _pid} <- QueueManagerSupervisor.ensure_started(user_id) do
-      QueueManager.get_queue_state(user_id)
-    else
+    case QueueManagerSupervisor.ensure_started(user_id) do
+      {:ok, _pid} -> QueueManager.get_queue_state(user_id)
       {:error, _reason} -> default_queue_state()
     end
   end
@@ -261,9 +260,8 @@ defmodule Agents.Sessions do
   """
   @spec get_concurrency_limit(String.t()) :: non_neg_integer()
   def get_concurrency_limit(user_id) do
-    with {:ok, _pid} <- QueueManagerSupervisor.ensure_started(user_id) do
-      QueueManager.get_concurrency_limit(user_id)
-    else
+    case QueueManagerSupervisor.ensure_started(user_id) do
+      {:ok, _pid} -> QueueManager.get_concurrency_limit(user_id)
       {:error, _reason} -> SessionsConfig.default_concurrency_limit()
     end
   end
@@ -290,15 +288,13 @@ defmodule Agents.Sessions do
   end
 
   defp inject_queue_checker(opts) do
-    if Keyword.has_key?(opts, :queue_checker) do
-      opts
-    else
-      Keyword.put(opts, :queue_checker, fn user_id ->
-        case QueueManagerSupervisor.ensure_started(user_id) do
-          {:ok, _pid} -> QueueManager.check_concurrency(user_id)
-          {:error, _reason} -> :ok
-        end
-      end)
+    Keyword.put_new(opts, :queue_checker, &default_queue_checker/1)
+  end
+
+  defp default_queue_checker(user_id) do
+    case QueueManagerSupervisor.ensure_started(user_id) do
+      {:ok, _pid} -> QueueManager.check_concurrency(user_id)
+      {:error, _reason} -> :ok
     end
   end
 
