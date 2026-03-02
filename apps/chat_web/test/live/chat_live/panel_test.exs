@@ -1,16 +1,16 @@
-defmodule JargaWeb.ChatLive.PanelTest do
-  use JargaWeb.ConnCase, async: true
+defmodule ChatWeb.ChatLive.PanelTest do
+  use ChatWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
   import Jarga.AccountsFixtures
   import Jarga.WorkspacesFixtures
   import Jarga.ProjectsFixtures
   import Jarga.DocumentsFixtures
-  import Jarga.Test.StepHelpers
+  import Chat.Test.StepHelpers
 
   alias Agents
-  alias Jarga.Chat
-  alias JargaWeb.ChatLive.Components.Message
+  alias Chat
+  alias ChatWeb.ChatLive.Components.Message
 
   describe "Panel component" do
     setup do
@@ -304,7 +304,7 @@ defmodule JargaWeb.ChatLive.PanelTest do
       conn: conn,
       user: user
     } do
-      import Jarga.ChatFixtures
+      import Chat.ChatFixtures
 
       conn = log_in_user(conn, user)
 
@@ -571,7 +571,7 @@ defmodule JargaWeb.ChatLive.PanelTest do
       conn = log_in_user(conn, user)
 
       # Create a session with messages in the database
-      import Jarga.ChatFixtures
+      import Chat.ChatFixtures
       session = chat_session_fixture(user: user, title: "Previous Chat")
       _msg1 = chat_message_fixture(chat_session: session, role: "user", content: "Hello")
       _msg2 = chat_message_fixture(chat_session: session, role: "assistant", content: "Hi there!")
@@ -592,7 +592,7 @@ defmodule JargaWeb.ChatLive.PanelTest do
       conn = log_in_user(conn, user)
 
       # Create a session for a different user
-      import Jarga.ChatFixtures
+      import Chat.ChatFixtures
       other_user = user_fixture(%{email: "other@example.com"})
       other_session = chat_session_fixture(user: other_user, title: "Other User's Chat")
 
@@ -663,7 +663,7 @@ defmodule JargaWeb.ChatLive.PanelTest do
       conn = log_in_user(conn, user)
 
       # Create a session with messages
-      import Jarga.ChatFixtures
+      import Chat.ChatFixtures
       session = chat_session_fixture(user: user, title: "Old Conversation")
       _msg1 = chat_message_fixture(chat_session: session, content: "Test message 1")
       _msg2 = chat_message_fixture(chat_session: session, content: "Test message 2")
@@ -770,12 +770,12 @@ defmodule JargaWeb.ChatLive.PanelTest do
     test "handles delete_session for already deleted session", %{conn: conn, user: user} do
       conn = log_in_user(conn, user)
 
-      import Jarga.ChatFixtures
+      import Chat.ChatFixtures
       session = chat_session_fixture(user: user)
       session_id = session.id
 
       # Delete the session via context
-      {:ok, _} = Jarga.Chat.delete_session(session_id, user.id)
+      {:ok, _} = Chat.delete_session(session_id, user.id)
 
       {:ok, view, _html} = live(conn, ~p"/app")
 
@@ -807,7 +807,7 @@ defmodule JargaWeb.ChatLive.PanelTest do
     test "clear_session_if_active handles non-matching session", %{conn: conn, user: user} do
       conn = log_in_user(conn, user)
 
-      import Jarga.ChatFixtures
+      import Chat.ChatFixtures
       session1 = chat_session_fixture(user: user, title: "Session 1")
       session2 = chat_session_fixture(user: user, title: "Session 2")
 
@@ -872,7 +872,7 @@ defmodule JargaWeb.ChatLive.PanelTest do
     } do
       conn = log_in_user(conn, user)
 
-      import Jarga.ChatFixtures
+      import Chat.ChatFixtures
       session = chat_session_fixture(user: user)
 
       # Create messages with different content
@@ -905,7 +905,7 @@ defmodule JargaWeb.ChatLive.PanelTest do
       # Already tested in "restore_session ignores sessions from other users"
       # but good to be explicit about the security check
 
-      import Jarga.ChatFixtures
+      import Chat.ChatFixtures
       other_user = user_fixture(%{email: "hacker@example.com"})
       other_session = chat_session_fixture(user: other_user)
 
@@ -1007,7 +1007,7 @@ defmodule JargaWeb.ChatLive.PanelTest do
     end
 
     test "handles session with no messages", %{conn: conn, user: user} do
-      import Jarga.ChatFixtures
+      import Chat.ChatFixtures
 
       # Create session with no messages
       session = chat_session_fixture(user: user, title: "Empty Session")
@@ -1063,7 +1063,7 @@ defmodule JargaWeb.ChatLive.PanelTest do
     end
 
     test "chat session auto-restores from database on mount", %{conn: conn, user: user} do
-      import Jarga.ChatFixtures
+      import Chat.ChatFixtures
 
       # Create a session in the database first
       session = chat_session_fixture(user: user, title: "Previous Chat")
@@ -1125,7 +1125,7 @@ defmodule JargaWeb.ChatLive.PanelTest do
       conn: conn,
       user: user
     } do
-      import Jarga.ChatFixtures
+      import Chat.ChatFixtures
 
       conn = log_in_user(conn, user)
       {:ok, view, _html} = live(conn, ~p"/app")
@@ -1181,7 +1181,7 @@ defmodule JargaWeb.ChatLive.PanelTest do
 
     test "different users see their own sessions only", %{conn: conn, user: user} do
       # Create another user with a session
-      import Jarga.ChatFixtures
+      import Chat.ChatFixtures
       other_user = user_fixture(%{email: "other@example.com"})
       other_session = chat_session_fixture(user: other_user, title: "Other User's Chat")
 

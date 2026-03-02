@@ -1,9 +1,9 @@
-defmodule JargaWeb.ChatLive.Components.MessageTest do
-  use JargaWeb.ConnCase, async: true
+defmodule ChatWeb.ChatLive.Components.MessageTest do
+  use ChatWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
 
-  alias JargaWeb.ChatLive.Components.Message
+  alias ChatWeb.ChatLive.Components.Message
 
   describe "message/1 component" do
     test "renders basic message structure" do

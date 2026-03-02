@@ -53,6 +53,12 @@ config :agents, Agents.Repo,
   show_sensitive_data_on_connection_error: true,
   pool_size: 10
 
+# Chat uses the same database as Jarga
+config :chat, Chat.Repo,
+  url: database_url,
+  show_sensitive_data_on_connection_error: true,
+  pool_size: 10
+
 # Notifications uses the same database as Jarga
 config :notifications, Notifications.Repo,
   url: database_url,
