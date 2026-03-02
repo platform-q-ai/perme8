@@ -1304,7 +1304,7 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       assert html =~ ~s(data-slot-state="used")
     end
 
-    test "attention sessions render at top ordered completed to cancelled", %{
+    test "completed and cancelled render in top list while failed exited sessions stay below", %{
       conn: conn,
       user: user
     } do
@@ -1320,6 +1320,13 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
         instruction: "Completed attention",
         container_id: "c-completed-attention",
         status: "completed"
+      })
+
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Failed exited",
+        container_id: "c-failed-exited",
+        status: "failed"
       })
 
       task_fixture(%{
@@ -1343,15 +1350,23 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
         |> List.first()
         |> elem(0)
 
+      failed_pos =
+        html
+        |> :binary.matches(~s(data-testid="session-item-failed-exited"))
+        |> List.first()
+        |> elem(0)
+
       running_pos =
         html
         |> :binary.matches(~s(data-testid="session-item-running-progress"))
         |> List.first()
         |> elem(0)
 
-      refute html =~ ~s(data-testid="session-item-failed-attention")
       assert completed_pos < cancelled_pos
-      assert cancelled_pos < running_pos
+      assert cancelled_pos < failed_pos
+      assert failed_pos < running_pos
+      assert html =~ ~s(data-testid="session-item-failed-exited")
+      assert html =~ "bg-warning/10"
     end
 
     test "queued sessions render above concurrency rule", %{conn: conn, user: user} do

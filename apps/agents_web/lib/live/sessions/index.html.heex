@@ -49,6 +49,12 @@
           @sessions
           |> Enum.filter(&(&1.latest_status == "queued"))
           |> Enum.sort_by(&(-latest_at_unix(&1))) %>
+        <% exited_sessions =
+          @sessions
+          |> Enum.filter(
+            &(&1.latest_status == "failed" && !is_nil(&1.container_id) && &1.container_id != "")
+          )
+          |> Enum.sort_by(&(-latest_at_unix(&1))) %>
         <% in_progress_sessions =
           @sessions
           |> Enum.filter(&(&1.latest_status in ["pending", "starting", "running"]))
@@ -132,7 +138,10 @@
         </ul>
 
         <ul
-          :if={queued_sessions != [] || in_progress_sessions != [] || empty_slot_count > 0}
+          :if={
+            queued_sessions != [] || exited_sessions != [] || in_progress_sessions != [] ||
+              empty_slot_count > 0
+          }
           class="menu menu-sm p-2 gap-1 w-full mt-auto"
         >
           <li :for={session <- queued_sessions} class="w-full">
@@ -160,6 +169,60 @@
                 <span>{relative_time(session.latest_at)}</span>
               </div>
               <.compact_progress_bar todo_items={session_todo_items(session)} />
+            </div>
+          </li>
+
+          <li :for={session <- exited_sessions} class="w-full">
+            <div
+              data-testid={"session-item-#{slugify(session.title)}"}
+              data-slot-state="exited"
+              class={[
+                "flex flex-col gap-0.5 w-full rounded-lg p-2 min-h-16 border border-warning/40 bg-warning/10",
+                session.container_id == @active_container_id && "active"
+              ]}
+              phx-click="select_session"
+              phx-value-container-id={session.container_id}
+            >
+              <div class="flex items-center justify-between w-full">
+                <span class="text-xs font-medium truncate flex-1 min-w-0">
+                  {truncate_instruction(session.title, 35)}
+                </span>
+                <div class="flex items-center gap-1">
+                  <button
+                    :if={
+                      session.latest_status == "failed" && auth_error?(session.latest_error) &&
+                        session.latest_task_id
+                    }
+                    type="button"
+                    phx-click="refresh_auth_and_resume"
+                    phx-value-task-id={session.latest_task_id}
+                    disabled={auth_refreshing?(@auth_refreshing, session.latest_task_id)}
+                    class="btn btn-ghost btn-xs p-0 min-h-0 h-auto"
+                    title="Refresh auth & resume"
+                  >
+                    <.icon
+                      name="hero-arrow-path"
+                      class={
+                        if(auth_refreshing?(@auth_refreshing, session.latest_task_id),
+                          do: "size-3.5 text-warning animate-spin",
+                          else: "size-3.5 text-warning"
+                        )
+                      }
+                    />
+                  </button>
+                  <.status_dot status={session.latest_status} />
+                </div>
+              </div>
+              <div class="flex items-center gap-2 text-[0.65rem] text-base-content/50 w-full">
+                <span>{image_label(session.image)}</span>
+                <span>&middot;</span>
+                <span>{relative_time(session.latest_at)}</span>
+              </div>
+              <.compact_progress_bar todo_items={session_todo_items(session)} />
+              <.container_stats_bars
+                :if={Map.has_key?(@container_stats, session.container_id)}
+                stats={@container_stats[session.container_id]}
+              />
             </div>
           </li>
 

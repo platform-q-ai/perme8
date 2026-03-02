@@ -50,7 +50,8 @@ Feature: Coding Sessions Management
     And I wait for network idle
     Then "textarea#sidebar-new-session-instruction[placeholder='Start a new session...']" should exist
 
-  Scenario: Empty state still offers explicit New Session action
+  Scenario: Empty state still shows sidebar quick-start textarea
     When I navigate to "${baseUrl}/sessions"
     And I wait for network idle
-    Then I should see "New Session"
+    Then "form#sidebar-new-session-form" should exist
+    And "textarea#sidebar-new-session-instruction" should exist
