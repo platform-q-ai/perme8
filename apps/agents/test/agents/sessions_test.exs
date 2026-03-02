@@ -243,6 +243,49 @@ defmodule Agents.SessionsTest do
       assert {:error, :task_not_running} =
                Sessions.send_message(task_id, "hello")
     end
+
+    test "restarts runner in resume mode when registry process is missing" do
+      task_id = Ecto.UUID.generate()
+      test_pid = self()
+
+      task_repo = %{
+        get_task: fn ^task_id ->
+          %{
+            id: task_id,
+            instruction: "Original task",
+            container_id: "container-123",
+            session_id: "session-123"
+          }
+        end
+      }
+
+      starter = fn started_task_id, runner_opts ->
+        send(test_pid, {:runner_started, started_task_id, runner_opts})
+        {:ok, self()}
+      end
+
+      # Lightweight mock module with only get_task/1 expected by send_message fallback
+      {:module, repo_mod, _, _} =
+        defmodule :"Agents.SessionsTest.MockTaskRepo.#{System.unique_integer([:positive])}" do
+          def set_impl(fun), do: :persistent_term.put({__MODULE__, :get_task}, fun)
+          def get_task(task_id), do: :persistent_term.get({__MODULE__, :get_task}).(task_id)
+        end
+
+      repo_mod.set_impl(task_repo.get_task)
+
+      assert :ok =
+               Sessions.send_message(task_id, "follow up",
+                 task_repo: repo_mod,
+                 task_runner_starter: starter
+               )
+
+      assert_receive {:runner_started, ^task_id, runner_opts}
+      assert runner_opts[:resume] == true
+      assert runner_opts[:instruction] == "Original task"
+      assert runner_opts[:prompt_instruction] == "follow up"
+      assert runner_opts[:container_id] == "container-123"
+      assert runner_opts[:session_id] == "session-123"
+    end
   end
 
   describe "delete_session/3" do
@@ -288,7 +331,7 @@ defmodule Agents.SessionsTest do
   end
 
   describe "resume_task/3" do
-    test "updates the existing task with new instruction and resets status" do
+    test "preserves original instruction and resets status" do
       user = user_fixture()
       container_id = "container-resume"
       session_id = "session-resume"
@@ -311,7 +354,7 @@ defmodule Agents.SessionsTest do
 
       # Same task record, updated in place
       assert resumed.id == task.id
-      assert resumed.instruction == "Follow-up task"
+      assert resumed.instruction == "Original task"
       assert resumed.status == "pending"
       assert resumed.container_id == container_id
       assert resumed.session_id == session_id
