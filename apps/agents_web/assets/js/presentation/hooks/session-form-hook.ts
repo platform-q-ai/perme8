@@ -46,6 +46,14 @@ export class SessionFormHook extends ViewHook<HTMLTextAreaElement> {
       }
     }
     this.el.addEventListener('keydown', this.handleKeydown)
+
+    // Server can push "focus_input" to grab focus (e.g. on session switch)
+    this.handleEvent('focus_input', () => {
+      this.el.focus()
+    })
+
+    // Auto-focus on mount
+    this.el.focus()
   }
 
   /**

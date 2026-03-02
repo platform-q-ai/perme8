@@ -26,11 +26,25 @@ defmodule Agents.SessionsFixtures do
       |> maybe_put(:container_id, attrs[:container_id])
       |> maybe_put(:session_id, attrs[:session_id])
       |> maybe_put(:output, attrs[:output])
+      |> maybe_put(:image, attrs[:image])
 
     {:ok, task} =
       %TaskSchema{}
       |> TaskSchema.changeset(changeset_attrs)
       |> Repo.insert()
+
+    # todo_items is only on status_changeset, so apply as a separate update
+    task =
+      if attrs[:todo_items] do
+        {:ok, updated} =
+          task
+          |> TaskSchema.status_changeset(%{todo_items: attrs[:todo_items]})
+          |> Repo.update()
+
+        updated
+      else
+        task
+      end
 
     task
   end

@@ -453,6 +453,79 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       assert html =~ "Task failed"
       assert html =~ "Container start failed: timeout"
     end
+
+    test "todo_updated events update the session card progress bar", %{conn: conn, user: user} do
+      task = task_fixture(%{user_id: user.id, status: "running", container_id: "c1"})
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      # Send todo update via PubSub (as TaskRunner does)
+      todo_items = [
+        %{"id" => "t1", "title" => "Plan", "status" => "completed", "position" => 0},
+        %{"id" => "t2", "title" => "Code", "status" => "in_progress", "position" => 1}
+      ]
+
+      send(lv.pid, {:todo_updated, task.id, todo_items})
+
+      html = render(lv)
+      # Both items should appear in the main detail area
+      assert html =~ "Plan"
+      assert html =~ "Code"
+    end
+
+    test "live todo state survives reload_all after status change", %{conn: conn, user: user} do
+      task = task_fixture(%{user_id: user.id, status: "running", container_id: "c1"})
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      # Send live todo update
+      todo_items = [
+        %{"id" => "t1", "title" => "Research", "status" => "completed", "position" => 0},
+        %{"id" => "t2", "title" => "Implement", "status" => "in_progress", "position" => 1}
+      ]
+
+      send(lv.pid, {:todo_updated, task.id, todo_items})
+      render(lv)
+
+      # Now trigger a status change which calls reload_all
+      # (reload_all re-fetches sessions from DB, which may have stale todos)
+      Repo.get!(TaskSchema, task.id)
+      |> Ecto.Changeset.change(status: "completed")
+      |> Repo.update!()
+
+      send(lv.pid, {:task_status_changed, task.id, "completed"})
+
+      html = render(lv)
+      # The live todo items should still be visible after reload
+      assert html =~ "Research"
+      assert html =~ "Implement"
+    end
+
+    test "waiting for response indicator shows while output is empty", %{
+      conn: conn,
+      user: user
+    } do
+      task = task_fixture(%{user_id: user.id, status: "running", container_id: "c1"})
+
+      {:ok, lv, html} = live(conn, ~p"/sessions")
+      assert html =~ "Waiting for response"
+
+      # Once output arrives, the waiting indicator should disappear
+      send(
+        lv.pid,
+        {:task_event, task.id,
+         %{
+           "type" => "message.part.updated",
+           "properties" => %{
+             "part" => %{"id" => "part-1", "type" => "text", "text" => "Working on it..."}
+           }
+         }}
+      )
+
+      html = render(lv)
+      assert html =~ "Working on it..."
+      refute html =~ "Waiting for response"
+    end
   end
 
   describe "session management" do
@@ -484,6 +557,62 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
         |> render_click()
 
       assert html =~ "Session A task"
+    end
+
+    test "container URL param selects the correct session on mount", %{conn: conn, user: user} do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Session A task",
+        container_id: "c-a",
+        status: "completed"
+      })
+
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Session B task",
+        container_id: "c-b",
+        status: "completed"
+      })
+
+      # Navigate directly to session A via URL param (not the most recent)
+      {:ok, _lv, html} = live(conn, ~p"/sessions?container=c-a")
+      assert html =~ "Session A task"
+    end
+
+    test "selecting a session updates the URL with container param", %{conn: conn, user: user} do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Session A task",
+        container_id: "c-a",
+        status: "completed"
+      })
+
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Session B task",
+        container_id: "c-b",
+        status: "completed"
+      })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      lv
+      |> element(~s([phx-click="select_session"][phx-value-container-id="c-a"]))
+      |> render_click()
+
+      assert_patch(lv, ~p"/sessions?container=c-a")
+    end
+
+    test "invalid container param falls back to most recent session", %{conn: conn, user: user} do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Only session",
+        container_id: "c-1",
+        status: "completed"
+      })
+
+      {:ok, _lv, html} = live(conn, ~p"/sessions?container=nonexistent")
+      assert html =~ "Only session"
     end
 
     test "renders status dots in session list", %{conn: conn, user: user} do
