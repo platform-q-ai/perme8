@@ -24,14 +24,6 @@ defmodule AgentsWeb.SessionsLive.Index do
       schedule_stats_poll()
     end
 
-    active_container_id =
-      case sessions do
-        [first | _] -> first.container_id
-        [] -> nil
-      end
-
-    current_task = find_current_task(tasks, active_container_id)
-
     available_images = Sessions.available_images()
     default_image = Sessions.default_image()
 
@@ -40,8 +32,7 @@ defmodule AgentsWeb.SessionsLive.Index do
      |> assign(:page_title, "Sessions")
      |> assign(:full_width, true)
      |> assign(:sessions, sessions)
-     |> assign(:active_container_id, active_container_id)
-     |> assign(:current_task, current_task)
+     |> assign(:tasks, tasks)
      |> assign(:composing_new, false)
      |> assign(:active_session_tab, "chat")
      |> assign(:container_stats, %{})
@@ -51,10 +42,7 @@ defmodule AgentsWeb.SessionsLive.Index do
      |> assign(:selected_image, default_image)
      |> assign(:queue_state, load_queue_state(user.id))
      |> assign_session_state()
-     |> assign(:form, to_form(%{"instruction" => ""}))
-     |> EventProcessor.maybe_load_cached_output(current_task)
-     |> EventProcessor.maybe_load_pending_question(current_task)
-     |> EventProcessor.maybe_load_todos(current_task)}
+     |> assign(:form, to_form(%{"instruction" => ""}))}
   end
 
   @impl true
@@ -82,6 +70,15 @@ defmodule AgentsWeb.SessionsLive.Index do
         send_message_to_running_task(socket, instruction)
 
       true ->
+        is_resume = resumable_task?(socket.assigns.current_task)
+
+        socket =
+          if is_resume do
+            assign(socket, :pending_user_message, instruction)
+          else
+            socket
+          end
+
         socket
         |> run_or_resume_task(instruction)
         |> handle_task_result(socket)
@@ -160,7 +157,8 @@ defmodule AgentsWeb.SessionsLive.Index do
      |> assign(:selected_image, Sessions.default_image())
      |> assign(:events, [])
      |> assign_session_state()
-     |> assign(:form, to_form(%{"instruction" => ""}))}
+     |> assign(:form, to_form(%{"instruction" => ""}))
+     |> push_event("focus_input", %{})}
   end
 
   @impl true
@@ -192,25 +190,14 @@ defmodule AgentsWeb.SessionsLive.Index do
 
   @impl true
   def handle_event("select_session", %{"container-id" => container_id}, socket) do
-    user = socket.assigns.current_scope.user
-    tasks = Sessions.list_tasks(user.id)
-    current_task = find_current_task(tasks, container_id)
-
-    if current_task && active_task?(current_task) do
-      Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "task:#{current_task.id}")
-    end
-
+    # Push URL param so the selection survives page navigation/refresh
     {:noreply,
      socket
-     |> assign(:active_container_id, container_id)
-     |> assign(:current_task, current_task)
      |> assign(:composing_new, false)
      |> assign(:events, [])
      |> assign_session_state()
      |> assign(:form, to_form(%{"instruction" => ""}))
-     |> EventProcessor.maybe_load_cached_output(current_task)
-     |> EventProcessor.maybe_load_pending_question(current_task)
-     |> EventProcessor.maybe_load_todos(current_task)}
+     |> push_patch(to: ~p"/sessions?#{%{container: container_id}}")}
   end
 
   @impl true
@@ -315,8 +302,21 @@ defmodule AgentsWeb.SessionsLive.Index do
   @impl true
   def handle_info({:task_event, task_id, event}, socket) do
     case socket.assigns.current_task do
-      %{id: ^task_id} -> {:noreply, EventProcessor.process_event(event, socket)}
-      _ -> {:noreply, socket}
+      %{id: ^task_id} ->
+        socket = EventProcessor.process_event(event, socket)
+
+        # Clear pending user message once real output starts arriving
+        socket =
+          if socket.assigns[:pending_user_message] && socket.assigns.output_parts != [] do
+            assign(socket, :pending_user_message, nil)
+          else
+            socket
+          end
+
+        {:noreply, socket}
+
+      _ ->
+        {:noreply, socket}
     end
   end
 
@@ -498,6 +498,7 @@ defmodule AgentsWeb.SessionsLive.Index do
       session_summary: nil,
       output_parts: [],
       pending_question: nil,
+      pending_user_message: nil,
       user_message_ids: MapSet.new(),
       todo_items: [],
       queued_messages: []
@@ -615,14 +616,22 @@ defmodule AgentsWeb.SessionsLive.Index do
       else
         socket
         |> assign(:events, [])
+        |> assign(:pending_user_message, nil)
         |> assign_session_state()
       end
 
-    {:noreply, reload_all(socket, user.id)}
+    {:noreply,
+     socket
+     |> reload_all(user.id)
+     |> push_event("scroll_to_bottom", %{})
+     |> push_event("focus_input", %{})}
   end
 
   defp handle_task_result({:error, reason}, socket) do
-    {:noreply, put_flash(socket, :error, task_error_message(reason))}
+    {:noreply,
+     socket
+     |> assign(:pending_user_message, nil)
+     |> put_flash(:error, task_error_message(reason))}
   end
 
   defp do_cancel_task(task, socket) do
@@ -669,6 +678,25 @@ defmodule AgentsWeb.SessionsLive.Index do
 
   defp reload_all(socket, user_id) do
     sessions = Sessions.list_sessions(user_id)
+
+    sessions =
+      case {socket.assigns[:todo_items], socket.assigns[:active_container_id]} do
+        {todos, cid} when is_list(todos) and todos != [] and not is_nil(cid) ->
+          todo_maps =
+            Enum.map(todos, fn item ->
+              %{
+                "id" => item[:id],
+                "title" => item[:title],
+                "status" => item[:status],
+                "position" => item[:position]
+              }
+            end)
+
+          update_session_todo_items(sessions, cid, todo_maps)
+
+        _ ->
+          sessions
+      end
 
     socket
     |> assign(:sessions, sessions)
