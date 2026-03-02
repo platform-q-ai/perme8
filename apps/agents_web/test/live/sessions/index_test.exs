@@ -150,7 +150,7 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
 
       html = render(lv)
       assert html =~ "Follow-up message"
-      assert html =~ "Waiting for response"
+      assert html =~ "Awaiting response..."
     end
 
     test "follow-up message renders at the bottom of the chat log", %{conn: conn, user: user} do
@@ -250,6 +250,83 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       assert html =~ "Persist this follow-up"
       assert html =~ "Assistant reply"
       refute html =~ "Awaiting response..."
+    end
+
+    test "follow-up stays between prior and subsequent assistant outputs", %{
+      conn: conn,
+      user: user
+    } do
+      task =
+        task_fixture(%{
+          user_id: user.id,
+          instruction: "Initial instruction",
+          container_id: "c1",
+          status: "running"
+        })
+
+      start_supervised!({FakeTaskRunner, task.id})
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      send(lv.pid, {
+        :task_event,
+        task.id,
+        %{
+          "type" => "message.part.updated",
+          "properties" => %{
+            "part" => %{"id" => "asst-1", "type" => "text", "text" => "Assistant before"}
+          }
+        }
+      })
+
+      lv
+      |> form("#session-form", %{"instruction" => "User follow-up"})
+      |> render_submit()
+
+      send(lv.pid, {
+        :task_event,
+        task.id,
+        %{
+          "type" => "message.updated",
+          "properties" => %{"info" => %{"role" => "user", "id" => "user-msg-3"}}
+        }
+      })
+
+      send(lv.pid, {
+        :task_event,
+        task.id,
+        %{
+          "type" => "message.part.updated",
+          "properties" => %{
+            "part" => %{
+              "id" => "user-part-3",
+              "type" => "text",
+              "messageID" => "user-msg-3",
+              "text" => "User follow-up"
+            }
+          }
+        }
+      })
+
+      send(lv.pid, {
+        :task_event,
+        task.id,
+        %{
+          "type" => "message.part.updated",
+          "properties" => %{
+            "part" => %{"id" => "asst-2", "type" => "text", "text" => "Assistant after"}
+          }
+        }
+      })
+
+      html = render(lv)
+
+      before_pos = html |> :binary.matches("Assistant before") |> List.last() |> elem(0)
+      followup_pos = html |> :binary.matches("User follow-up") |> List.last() |> elem(0)
+      after_pos = html |> :binary.matches("Assistant after") |> List.last() |> elem(0)
+
+      assert before_pos < followup_pos
+      assert followup_pos < after_pos
     end
 
     test "follow-up message is restored after reload from cached output", %{
