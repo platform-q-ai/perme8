@@ -134,210 +134,226 @@
         </div>
       </div>
 
-      <%!-- Queue panel --%>
-      <.queue_panel queue_state={@queue_state} />
+      <%!-- Tab bar --%>
+      <.tab_bar active_tab={@active_tab} tabs={AgentsWeb.SessionsLive.Index.session_tabs()} />
 
-      <%!-- Stats bar --%>
+      <%!-- Chat tab panel --%>
       <div
-        :if={@session_tokens || @session_summary}
-        class="px-4 py-1.5 border-b border-base-300 flex flex-wrap gap-4 text-xs text-base-content/60 bg-base-100 shrink-0"
+        :if={@active_tab == "chat"}
+        role="tabpanel"
+        id="tabpanel-chat"
+        aria-labelledby="tab-chat"
+        class="flex-1 flex flex-col min-h-0 overflow-hidden"
+        data-testid="chat-log"
       >
-        <div :if={@session_tokens} class="flex items-center gap-1">
-          <.icon name="hero-arrow-down-tray" class="size-3" />
-          <span>{format_token_count(@session_tokens["input"])} in</span>
-        </div>
-        <div :if={@session_tokens} class="flex items-center gap-1">
-          <.icon name="hero-arrow-up-tray" class="size-3" />
-          <span>{format_token_count(@session_tokens["output"])} out</span>
-        </div>
-        <div :if={@session_tokens && @session_tokens["cache"]} class="flex items-center gap-1">
-          <.icon name="hero-circle-stack" class="size-3" />
-          <span>{format_token_count(@session_tokens["cache"]["read"])} cached</span>
-        </div>
+        <%!-- Queue panel --%>
+        <.queue_panel queue_state={@queue_state} />
+
+        <%!-- Stats bar --%>
         <div
-          :if={@session_summary && @session_summary["files"] && @session_summary["files"] > 0}
-          class="flex items-center gap-1"
+          :if={@session_tokens || @session_summary}
+          class="px-4 py-1.5 border-b border-base-300 flex flex-wrap gap-4 text-xs text-base-content/60 bg-base-100 shrink-0"
         >
-          <.icon name="hero-document-text" class="size-3" />
-          <span>
-            {Map.get(@session_summary, "files", 0)} files
-            <span class="text-success">+{Map.get(@session_summary, "additions", 0)}</span>
-            <span class="text-error">-{Map.get(@session_summary, "deletions", 0)}</span>
-          </span>
+          <div :if={@session_tokens} class="flex items-center gap-1">
+            <.icon name="hero-arrow-down-tray" class="size-3" />
+            <span>{format_token_count(@session_tokens["input"])} in</span>
+          </div>
+          <div :if={@session_tokens} class="flex items-center gap-1">
+            <.icon name="hero-arrow-up-tray" class="size-3" />
+            <span>{format_token_count(@session_tokens["output"])} out</span>
+          </div>
+          <div :if={@session_tokens && @session_tokens["cache"]} class="flex items-center gap-1">
+            <.icon name="hero-circle-stack" class="size-3" />
+            <span>{format_token_count(@session_tokens["cache"]["read"])} cached</span>
+          </div>
+          <div
+            :if={@session_summary && @session_summary["files"] && @session_summary["files"] > 0}
+            class="flex items-center gap-1"
+          >
+            <.icon name="hero-document-text" class="size-3" />
+            <span>
+              {Map.get(@session_summary, "files", 0)} files
+              <span class="text-success">+{Map.get(@session_summary, "additions", 0)}</span>
+              <span class="text-error">-{Map.get(@session_summary, "deletions", 0)}</span>
+            </span>
+          </div>
         </div>
-      </div>
 
-      <%!-- Error alert --%>
-      <div
-        :if={@current_task && @current_task.status == "failed" && @current_task.error}
-        class="mx-4 mt-3 alert alert-error"
-      >
-        <.icon name="hero-exclamation-triangle" class="size-5 shrink-0" />
-        <div class="flex-1">
-          <h3 class="font-semibold">Task failed</h3>
-          <p class="text-sm">{format_error(@current_task.error)}</p>
-        </div>
-        <button
-          :if={auth_error?(@current_task.error) && resumable_task?(@current_task)}
-          type="button"
-          phx-click="refresh_auth_and_resume"
-          phx-value-task-id={@current_task.id}
-          disabled={auth_refreshing?(@auth_refreshing, @current_task.id)}
-          class="btn btn-sm btn-warning"
-        >
-          <.icon
-            name="hero-arrow-path"
-            class={
-              if(auth_refreshing?(@auth_refreshing, @current_task.id),
-                do: "size-4 animate-spin",
-                else: "size-4"
-              )
-            }
-          />
-          {if auth_refreshing?(@auth_refreshing, @current_task.id),
-            do: "Refreshing...",
-            else: "Refresh Auth & Resume"}
-        </button>
-      </div>
-
-      <.progress_bar todo_items={@todo_items} />
-
-      <%!-- Output log --%>
-      <div class="flex-1 overflow-y-auto p-4" id="session-log" phx-hook="SessionLog">
-        <%= if @current_task do %>
-          <%!-- User message --%>
-          <div class="flex gap-2 mb-3">
-            <div class="shrink-0 size-6 rounded-full bg-primary/10 flex items-center justify-center">
-              <.icon name="hero-user" class="size-3.5 text-primary" />
-            </div>
-            <div class="flex-1 min-w-0">
-              <div class="text-xs font-medium text-base-content/50 mb-0.5">You</div>
-              <div class="text-sm whitespace-pre-line break-words">
-                {String.trim(@current_task.instruction)}
-              </div>
-            </div>
-          </div>
-        <% end %>
-        <%= if @output_parts == [] && task_running?(@current_task) do %>
-          <div class="flex gap-2">
-            <div class="shrink-0 size-6 rounded-full bg-secondary/10 flex items-center justify-center">
-              <.icon name="hero-cpu-chip" class="size-3.5 text-secondary" />
-            </div>
-            <div class="flex items-center gap-2 text-base-content/50 text-sm">
-              <span class="loading loading-dots loading-xs"></span>
-              <span>Waiting for response...</span>
-            </div>
-          </div>
-        <% end %>
-        <%= if @output_parts == [] && !task_running?(@current_task) && @current_task == nil do %>
-          <div class="flex flex-col items-center justify-center h-full text-base-content/40">
-            <.icon name="hero-command-line" class="size-12 mb-3" />
-            <p class="text-sm">Enter an instruction below to start</p>
-          </div>
-        <% end %>
-        <%= if @output_parts != [] do %>
-          <div class="flex gap-2">
-            <div class="shrink-0 size-6 rounded-full bg-secondary/10 flex items-center justify-center mt-0.5">
-              <.icon name="hero-cpu-chip" class="size-3.5 text-secondary" />
-            </div>
-            <div class="flex-1 min-w-0">
-              <div class="text-xs font-medium text-base-content/50 mb-0.5">Assistant</div>
-              <%= for part <- @output_parts do %>
-                <.output_part part={part} />
-              <% end %>
-              <%!-- Show activity indicator when task is still running but all cached parts are frozen --%>
-              <div
-                :if={
-                  task_running?(@current_task) &&
-                    !EventProcessor.has_streaming_parts?(@output_parts)
-                }
-                class="flex items-center gap-2 text-base-content/40 text-xs py-1"
-              >
-                <span class="loading loading-dots loading-xs"></span>
-                <span>Working...</span>
-              </div>
-            </div>
-          </div>
-        <% end %>
-        <%!-- Pending question from assistant --%>
-        <.question_card
-          :if={@pending_question}
-          pending={@pending_question}
-        />
-      </div>
-
-      <%!-- Input form --%>
-      <div class="border-t border-base-300 p-3 bg-base-100 shrink-0">
-        <%!-- Image picker (only shown when composing a new session) --%>
+        <%!-- Error alert --%>
         <div
-          :if={@composing_new && !@current_task}
-          class="flex items-center gap-2 mb-2"
+          :if={@current_task && @current_task.status == "failed" && @current_task.error}
+          class="mx-4 mt-3 alert alert-error"
         >
-          <span class="text-xs text-base-content/60 shrink-0">Image:</span>
-          <div class="flex gap-1.5">
-            <button
-              :for={img <- @available_images}
-              type="button"
-              phx-click="select_image"
-              phx-value-image={img.name}
-              class={[
-                "btn btn-xs",
-                if(@selected_image == img.name, do: "btn-primary", else: "btn-ghost btn-outline")
-              ]}
-            >
-              {img.label}
-            </button>
-          </div>
-        </div>
-        <form id="session-form" phx-submit="run_task" class="flex gap-2 items-end">
+          <.icon name="hero-exclamation-triangle" class="size-5 shrink-0" />
           <div class="flex-1">
-            <textarea
-              name="instruction"
-              id="session-instruction"
-              phx-hook="SessionForm"
-              rows="2"
-              class="textarea textarea-bordered w-full text-sm leading-snug"
-              placeholder={
-                cond do
-                  task_running?(@current_task) ->
-                    "Send a message (queued until agent finishes)..."
-
-                  resumable_task?(@current_task) ->
-                    "Follow-up instruction..."
-
-                  true ->
-                    "Describe the coding task..."
-                end
+            <h3 class="font-semibold">Task failed</h3>
+            <p class="text-sm">{format_error(@current_task.error)}</p>
+          </div>
+          <button
+            :if={auth_error?(@current_task.error) && resumable_task?(@current_task)}
+            type="button"
+            phx-click="refresh_auth_and_resume"
+            phx-value-task-id={@current_task.id}
+            disabled={auth_refreshing?(@auth_refreshing, @current_task.id)}
+            class="btn btn-sm btn-warning"
+          >
+            <.icon
+              name="hero-arrow-path"
+              class={
+                if(auth_refreshing?(@auth_refreshing, @current_task.id),
+                  do: "size-4 animate-spin",
+                  else: "size-4"
+                )
               }
-            >{@form["instruction"].value}</textarea>
+            />
+            {if auth_refreshing?(@auth_refreshing, @current_task.id),
+              do: "Refreshing...",
+              else: "Refresh Auth & Resume"}
+          </button>
+        </div>
+
+        <.progress_bar todo_items={@todo_items} />
+
+        <%!-- Output log --%>
+        <div class="flex-1 overflow-y-auto p-4" id="session-log" phx-hook="SessionLog">
+          <%= if @current_task do %>
+            <%!-- User message --%>
+            <div class="flex gap-2 mb-3">
+              <div class="shrink-0 size-6 rounded-full bg-primary/10 flex items-center justify-center">
+                <.icon name="hero-user" class="size-3.5 text-primary" />
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="text-xs font-medium text-base-content/50 mb-0.5">You</div>
+                <div class="text-sm whitespace-pre-line break-words">
+                  {String.trim(@current_task.instruction)}
+                </div>
+              </div>
+            </div>
+          <% end %>
+          <%= if @output_parts == [] && task_running?(@current_task) do %>
+            <div class="flex gap-2">
+              <div class="shrink-0 size-6 rounded-full bg-secondary/10 flex items-center justify-center">
+                <.icon name="hero-cpu-chip" class="size-3.5 text-secondary" />
+              </div>
+              <div class="flex items-center gap-2 text-base-content/50 text-sm">
+                <span class="loading loading-dots loading-xs"></span>
+                <span>Waiting for response...</span>
+              </div>
+            </div>
+          <% end %>
+          <%= if @output_parts == [] && !task_running?(@current_task) && @current_task == nil do %>
+            <div class="flex flex-col items-center justify-center h-full text-base-content/40">
+              <.icon name="hero-command-line" class="size-12 mb-3" />
+              <p class="text-sm">Enter an instruction below to start</p>
+            </div>
+          <% end %>
+          <%= if @output_parts != [] do %>
+            <div class="flex gap-2">
+              <div class="shrink-0 size-6 rounded-full bg-secondary/10 flex items-center justify-center mt-0.5">
+                <.icon name="hero-cpu-chip" class="size-3.5 text-secondary" />
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="text-xs font-medium text-base-content/50 mb-0.5">Assistant</div>
+                <%= for part <- @output_parts do %>
+                  <.output_part part={part} />
+                <% end %>
+                <%!-- Show activity indicator when task is still running but all cached parts are frozen --%>
+                <div
+                  :if={
+                    task_running?(@current_task) &&
+                      !EventProcessor.has_streaming_parts?(@output_parts)
+                  }
+                  class="flex items-center gap-2 text-base-content/40 text-xs py-1"
+                >
+                  <span class="loading loading-dots loading-xs"></span>
+                  <span>Working...</span>
+                </div>
+              </div>
+            </div>
+          <% end %>
+          <%!-- Pending question from assistant --%>
+          <.question_card
+            :if={@pending_question}
+            pending={@pending_question}
+          />
+        </div>
+
+        <%!-- Input form --%>
+        <div class="border-t border-base-300 p-3 bg-base-100 shrink-0">
+          <%!-- Image picker (only shown when composing a new session) --%>
+          <div
+            :if={@composing_new && !@current_task}
+            class="flex items-center gap-2 mb-2"
+          >
+            <span class="text-xs text-base-content/60 shrink-0">Image:</span>
+            <div class="flex gap-1.5">
+              <button
+                :for={img <- @available_images}
+                type="button"
+                phx-click="select_image"
+                phx-value-image={img.name}
+                class={[
+                  "btn btn-xs",
+                  if(@selected_image == img.name,
+                    do: "btn-primary",
+                    else: "btn-ghost btn-outline"
+                  )
+                ]}
+              >
+                {img.label}
+              </button>
+            </div>
           </div>
-          <div class="flex gap-1 shrink-0">
-            <.button
-              :if={task_running?(@current_task)}
-              type="button"
-              variant="error"
-              size="sm"
-              phx-click="cancel_task"
-              id="cancel-task-btn"
-            >
-              <.icon name="hero-stop" class="size-4" />
-            </.button>
-            <.button
-              type="submit"
-              variant={if(task_running?(@current_task), do: "ghost", else: "primary")}
-              size="sm"
-            >
-              <%= cond do %>
-                <% task_running?(@current_task) -> %>
-                  <.icon name="hero-chat-bubble-left-ellipsis" class="size-4" />
-                <% resumable_task?(@current_task) -> %>
-                  <.icon name="hero-arrow-path" class="size-4" />
-                <% true -> %>
-                  <.icon name="hero-paper-airplane" class="size-4" />
-              <% end %>
-            </.button>
-          </div>
-        </form>
+          <form id="session-form" phx-submit="run_task" class="flex gap-2 items-end">
+            <div class="flex-1">
+              <textarea
+                name="instruction"
+                id="session-instruction"
+                phx-hook="SessionForm"
+                rows="2"
+                class="textarea textarea-bordered w-full text-sm leading-snug"
+                placeholder={
+                  cond do
+                    task_running?(@current_task) ->
+                      "Send a message (queued until agent finishes)..."
+
+                    resumable_task?(@current_task) ->
+                      "Follow-up instruction..."
+
+                    true ->
+                      "Describe the coding task..."
+                  end
+                }
+              >{@form["instruction"].value}</textarea>
+            </div>
+            <div class="flex gap-1 shrink-0">
+              <.button
+                :if={task_running?(@current_task)}
+                type="button"
+                variant="error"
+                size="sm"
+                phx-click="cancel_task"
+                id="cancel-task-btn"
+              >
+                <.icon name="hero-stop" class="size-4" />
+              </.button>
+              <.button
+                type="submit"
+                variant={if(task_running?(@current_task), do: "ghost", else: "primary")}
+                size="sm"
+              >
+                <%= cond do %>
+                  <% task_running?(@current_task) -> %>
+                    <.icon name="hero-chat-bubble-left-ellipsis" class="size-4" />
+                  <% resumable_task?(@current_task) -> %>
+                    <.icon name="hero-arrow-path" class="size-4" />
+                  <% true -> %>
+                    <.icon name="hero-paper-airplane" class="size-4" />
+                <% end %>
+              </.button>
+            </div>
+          </form>
+        </div>
       </div>
     <% else %>
       <%!-- Empty state — no session selected --%>

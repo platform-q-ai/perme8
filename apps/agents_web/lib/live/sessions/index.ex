@@ -43,6 +43,7 @@ defmodule AgentsWeb.SessionsLive.Index do
      |> assign(:active_container_id, active_container_id)
      |> assign(:current_task, current_task)
      |> assign(:composing_new, false)
+     |> assign(:active_tab, "chat")
      |> assign(:container_stats, %{})
      |> assign(:auth_refreshing, %{})
      |> assign(:events, [])
@@ -57,7 +58,17 @@ defmodule AgentsWeb.SessionsLive.Index do
   end
 
   @impl true
-  def handle_params(_params, _url, socket), do: {:noreply, socket}
+  def handle_params(params, _url, socket) do
+    tab = params["tab"] || "chat"
+    valid_tabs = Enum.map(session_tabs(), & &1.id)
+    active_tab = if tab in valid_tabs, do: tab, else: "chat"
+    {:noreply, assign(socket, :active_tab, active_tab)}
+  end
+
+  @doc false
+  def session_tabs do
+    [%{id: "chat", label: "Chat"}]
+  end
 
   @impl true
   def handle_event("run_task", %{"instruction" => instruction}, socket) do
@@ -150,6 +161,13 @@ defmodule AgentsWeb.SessionsLive.Index do
      |> assign(:events, [])
      |> assign_session_state()
      |> assign(:form, to_form(%{"instruction" => ""}))}
+  end
+
+  @impl true
+  def handle_event("switch_tab", %{"tab" => tab}, socket) do
+    valid_tabs = Enum.map(session_tabs(), & &1.id)
+    tab = if tab in valid_tabs, do: tab, else: "chat"
+    {:noreply, push_patch(socket, to: ~p"/sessions?#{%{tab: tab}}")}
   end
 
   @impl true
