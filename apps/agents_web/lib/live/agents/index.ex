@@ -14,7 +14,6 @@ defmodule AgentsWeb.AgentsLive.Index do
     AgentRemovedFromWorkspace
   }
 
-  alias Jarga.Workspaces
   alias AgentsWeb.Layouts
 
   @impl true
@@ -23,7 +22,7 @@ defmodule AgentsWeb.AgentsLive.Index do
       # Subscribe to workspace topic(s) for agent events (AgentUpdated, AgentDeleted, etc.)
       # Agent events are broadcast to workspace topics, not user topics.
       user = socket.assigns.current_scope.user
-      workspaces = Workspaces.list_workspaces_for_user(user)
+      workspaces = Identity.list_workspaces_for_user(user)
 
       Enum.each(workspaces, fn workspace ->
         Perme8.Events.subscribe("events:workspace:#{workspace.id}")

@@ -16,7 +16,6 @@ defmodule AgentsWeb do
       IdentityWeb,
       Jarga,
       Jarga.Accounts,
-      Jarga.Workspaces,
       Perme8.Events
     ],
     exports: [Endpoint, Telemetry, SessionsLive.Index, AgentsLive.Index, AgentsLive.Form]
