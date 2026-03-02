@@ -59,6 +59,22 @@ defmodule Agents.Sessions.Domain.Entities.TodoListTest do
 
       assert Enum.map(items, & &1.position) == [0, 1, 2]
     end
+
+    test "parses alternate items payload shape" do
+      payload = %{
+        "type" => "todo.updated",
+        "properties" => %{
+          "items" => [
+            %{"id" => "todo-1", "title" => "Plan", "status" => "completed"},
+            %{"id" => "todo-2", "title" => "Build", "status" => "in_progress"}
+          ]
+        }
+      }
+
+      assert {:ok, %TodoList{} = todo_list} = TodoList.from_sse_event(payload)
+      assert Enum.map(todo_list.items, & &1.title) == ["Plan", "Build"]
+      assert Enum.map(todo_list.items, & &1.position) == [0, 1]
+    end
   end
 
   describe "progress helpers" do
