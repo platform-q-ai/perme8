@@ -364,14 +364,24 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
   end
 
   defp ignore_empty_running_tool_part?(part, state, status) do
-    status in ["pending", "running"] and
-      blank?(part["tool"]) and
+    running_tool_status?(status) and
+      blank_tool_identity?(part) and
+      empty_tool_state?(state)
+  end
+
+  defp running_tool_status?(status), do: status in ["pending", "running"]
+
+  defp blank_tool_identity?(part) do
+    blank?(part["tool"]) and
       blank?(part["name"]) and
       blank?(part["id"]) and
       blank?(part["toolCallID"]) and
       blank?(part["toolCallId"]) and
-      blank?(part["callID"]) and
-      is_nil(state["input"]) and
+      blank?(part["callID"])
+  end
+
+  defp empty_tool_state?(state) do
+    is_nil(state["input"]) and
       is_nil(state["title"]) and
       is_nil(state["output"]) and
       is_nil(state["error"])
