@@ -454,12 +454,17 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponents do
       @status == "running" && "badge-info animate-pulse",
       @status == "completed" && "badge-success",
       @status == "failed" && "badge-error",
-      @status == "cancelled" && "badge-ghost"
+      @status == "cancelled" && "badge-ghost",
+      @status == "queued" && "badge-neutral",
+      @status == "awaiting_feedback" && "badge-warning animate-pulse"
     ]}>
-      {@status}
+      {format_badge_label(@status)}
     </span>
     """
   end
+
+  defp format_badge_label("awaiting_feedback"), do: "awaiting feedback"
+  defp format_badge_label(status), do: status
 
   @doc "Renders a small colored dot for session/task status."
   attr(:status, :string, required: true)
@@ -473,11 +478,125 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponents do
       @status == "running" && "bg-info animate-pulse",
       @status == "completed" && "bg-success",
       @status == "failed" && "bg-error",
-      @status == "cancelled" && "bg-base-content/30"
+      @status == "cancelled" && "bg-base-content/30",
+      @status == "queued" && "bg-neutral",
+      @status == "awaiting_feedback" && "bg-warning animate-pulse"
     ]}>
     </span>
     """
   end
+
+  # ---- Queue Panel ----
+
+  @doc """
+  Renders the build queue status panel showing concurrency limit,
+  running count, queued tasks, and awaiting-feedback tasks.
+  """
+  attr(:queue_state, :map, required: true)
+
+  def queue_panel(assigns) do
+    ~H"""
+    <div
+      :if={@queue_state}
+      data-testid="queue-panel"
+      class="px-4 py-2 border-b border-base-300 bg-base-100 shrink-0"
+    >
+      <div class="flex items-center justify-between mb-1.5">
+        <div class="flex items-center gap-2">
+          <.icon name="hero-queue-list" class="size-4 text-base-content/50" />
+          <span class="text-xs font-semibold text-base-content/60 uppercase tracking-wider">
+            Build Queue
+          </span>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <span class="text-xs text-base-content/50">Limit:</span>
+          <form phx-change="update_concurrency_limit" class="inline">
+            <select
+              name="concurrency_limit"
+              class="select select-bordered select-xs w-14"
+              data-testid="concurrency-limit-select"
+            >
+              <%= for n <- 1..5 do %>
+                <option value={n} selected={n == @queue_state.concurrency_limit}>{n}</option>
+              <% end %>
+            </select>
+          </form>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3 text-xs">
+        <div class="flex items-center gap-1">
+          <span class="inline-block size-2 rounded-full bg-info animate-pulse"></span>
+          <span class="text-base-content/60">
+            {@queue_state.running}/{@queue_state.concurrency_limit} running
+          </span>
+        </div>
+        <div :if={length(@queue_state.queued) > 0} class="flex items-center gap-1">
+          <span class="inline-block size-2 rounded-full bg-neutral"></span>
+          <span class="text-base-content/60">
+            {length(@queue_state.queued)} queued
+          </span>
+        </div>
+        <div :if={length(@queue_state.awaiting_feedback) > 0} class="flex items-center gap-1">
+          <span class="inline-block size-2 rounded-full bg-warning animate-pulse"></span>
+          <span class="text-base-content/60">
+            {length(@queue_state.awaiting_feedback)} awaiting feedback
+          </span>
+        </div>
+      </div>
+
+      <%!-- Awaiting feedback tasks highlighted --%>
+      <div
+        :if={length(@queue_state.awaiting_feedback) > 0}
+        class="mt-2 space-y-1"
+      >
+        <div
+          :for={task <- @queue_state.awaiting_feedback}
+          class="flex items-center gap-2 rounded-lg border border-warning/30 bg-warning/5 px-2 py-1 text-xs cursor-pointer"
+          phx-click="select_session"
+          phx-value-container-id={task.container_id}
+          data-testid={"awaiting-feedback-#{task.id}"}
+        >
+          <.icon name="hero-question-mark-circle" class="size-3.5 text-warning shrink-0" />
+          <span class="truncate flex-1 text-base-content/80">
+            {truncate_instruction(task.instruction)}
+          </span>
+          <.status_badge status="awaiting_feedback" />
+        </div>
+      </div>
+
+      <%!-- Queued tasks --%>
+      <div
+        :if={length(@queue_state.queued) > 0}
+        class="mt-2 space-y-1"
+      >
+        <div
+          :for={task <- @queue_state.queued}
+          class="flex items-center gap-2 rounded-lg border border-base-300 bg-base-200/30 px-2 py-1 text-xs"
+          data-testid={"queued-task-#{task.id}"}
+        >
+          <span class="text-base-content/40 font-mono w-4 text-center shrink-0">
+            #{task.queue_position}
+          </span>
+          <span class="truncate flex-1 text-base-content/60">
+            {truncate_instruction(task.instruction)}
+          </span>
+          <.status_badge status="queued" />
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  defp truncate_instruction(instruction) when is_binary(instruction) do
+    if String.length(instruction) > 50 do
+      String.slice(instruction, 0, 50) <> "..."
+    else
+      instruction
+    end
+  end
+
+  defp truncate_instruction(_), do: ""
 
   # ---- Container Stats ----
 
