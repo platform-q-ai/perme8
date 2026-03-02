@@ -129,7 +129,8 @@ defmodule Agents.Sessions.Infrastructure.Queries.TaskQueries do
 
   Each session is represented as a map with the container_id,
   the latest task's status, the first task's instruction (as title),
-  task count, and timestamps.
+  task count, timestamps, duration source fields (started_at, completed_at),
+  and the latest task's session_summary.
   """
   @spec sessions_for_user(Ecto.UUID.t()) :: Ecto.Query.t()
   def sessions_for_user(user_id) do
@@ -147,7 +148,19 @@ defmodule Agents.Sessions.Infrastructure.Queries.TaskQueries do
         image: fragment("(array_agg(? ORDER BY ? ASC))[1]", t.image, t.inserted_at),
         latest_at: max(t.inserted_at),
         created_at: min(t.inserted_at),
-        todo_items: fragment("(array_agg(? ORDER BY ? DESC))[1]", t.todo_items, t.inserted_at)
+        started_at: min(t.started_at),
+        completed_at:
+          type(
+            fragment("(array_agg(? ORDER BY ? DESC))[1]", t.completed_at, t.inserted_at),
+            :utc_datetime
+          ),
+        todo_items: fragment("(array_agg(? ORDER BY ? DESC))[1]", t.todo_items, t.inserted_at),
+        session_summary:
+          fragment(
+            "(array_agg(? ORDER BY ? DESC))[1]",
+            t.session_summary,
+            t.inserted_at
+          )
       },
       order_by: [desc: max(t.inserted_at)]
     )

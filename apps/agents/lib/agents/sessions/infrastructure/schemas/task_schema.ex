@@ -25,6 +25,7 @@ defmodule Agents.Sessions.Infrastructure.Schemas.TaskSchema do
           error: String.t() | nil,
           output: String.t() | nil,
           todo_items: map() | nil,
+          session_summary: map() | nil,
           parent_task_id: Ecto.UUID.t() | nil,
           pending_question: map() | nil,
           queue_position: integer() | nil,
@@ -51,6 +52,7 @@ defmodule Agents.Sessions.Infrastructure.Schemas.TaskSchema do
     field(:error, :string)
     field(:output, :string)
     field(:todo_items, :map)
+    field(:session_summary, :map)
     field(:parent_task_id, Ecto.UUID)
     field(:pending_question, :map)
     field(:queue_position, :integer)
@@ -113,6 +115,7 @@ defmodule Agents.Sessions.Infrastructure.Schemas.TaskSchema do
       :error,
       :output,
       :todo_items,
+      :session_summary,
       :pending_question,
       :queue_position,
       :queued_at,

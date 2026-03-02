@@ -91,7 +91,8 @@ defmodule Agents.Sessions.Application.UseCases.ResumeTask do
       error: nil,
       pending_question: nil,
       started_at: nil,
-      completed_at: nil
+      completed_at: nil,
+      session_summary: nil
     })
   end
 

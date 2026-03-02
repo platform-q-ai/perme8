@@ -181,6 +181,137 @@ defmodule Agents.Sessions.Infrastructure.Queries.TaskQueriesTest do
       assert hd(sessions).latest_error == nil
     end
 
+    test "includes started_at as min(started_at) across session tasks" do
+      user = user_fixture()
+      earlier = ~U[2025-01-01 00:00:00Z]
+      later = ~U[2025-01-01 00:01:00Z]
+
+      # First task started earlier
+      task1 =
+        create_task(user, %{instruction: "First task", container_id: "c1", status: "completed"})
+        |> force_inserted_at(earlier)
+
+      Repo.query!(
+        "UPDATE sessions_tasks SET started_at = $1 WHERE id = $2",
+        [~U[2025-01-01 00:00:10Z], Ecto.UUID.dump!(task1.id)]
+      )
+
+      # Second task started later
+      task2 =
+        create_task(user, %{instruction: "Second task", container_id: "c1", status: "completed"})
+        |> force_inserted_at(later)
+
+      Repo.query!(
+        "UPDATE sessions_tasks SET started_at = $1 WHERE id = $2",
+        [~U[2025-01-01 00:01:10Z], Ecto.UUID.dump!(task2.id)]
+      )
+
+      sessions = TaskQueries.sessions_for_user(user.id) |> Repo.all()
+      assert length(sessions) == 1
+      # started_at should be the earliest started_at across all tasks
+      assert hd(sessions).started_at == ~U[2025-01-01 00:00:10Z]
+    end
+
+    test "includes completed_at from the latest task" do
+      user = user_fixture()
+      earlier = ~U[2025-01-01 00:00:00Z]
+      later = ~U[2025-01-01 00:01:00Z]
+
+      task1 =
+        create_task(user, %{instruction: "First task", container_id: "c1", status: "completed"})
+        |> force_inserted_at(earlier)
+
+      Repo.query!(
+        "UPDATE sessions_tasks SET completed_at = $1 WHERE id = $2",
+        [~U[2025-01-01 00:05:00Z], Ecto.UUID.dump!(task1.id)]
+      )
+
+      task2 =
+        create_task(user, %{instruction: "Second task", container_id: "c1", status: "completed"})
+        |> force_inserted_at(later)
+
+      Repo.query!(
+        "UPDATE sessions_tasks SET completed_at = $1 WHERE id = $2",
+        [~U[2025-01-01 00:10:00Z], Ecto.UUID.dump!(task2.id)]
+      )
+
+      sessions = TaskQueries.sessions_for_user(user.id) |> Repo.all()
+      assert length(sessions) == 1
+      # completed_at should be from the latest task (most recent inserted_at)
+      assert hd(sessions).completed_at == ~U[2025-01-01 00:10:00Z]
+    end
+
+    test "completed_at is nil when the latest task is still running" do
+      user = user_fixture()
+      earlier = ~U[2025-01-01 00:00:00Z]
+      later = ~U[2025-01-01 00:01:00Z]
+
+      task1 =
+        create_task(user, %{instruction: "First task", container_id: "c1", status: "completed"})
+        |> force_inserted_at(earlier)
+
+      Repo.query!(
+        "UPDATE sessions_tasks SET started_at = $1, completed_at = $2 WHERE id = $3",
+        [~U[2025-01-01 00:00:10Z], ~U[2025-01-01 00:05:00Z], Ecto.UUID.dump!(task1.id)]
+      )
+
+      task2 =
+        create_task(user, %{instruction: "Running task", container_id: "c1", status: "running"})
+        |> force_inserted_at(later)
+
+      Repo.query!(
+        "UPDATE sessions_tasks SET started_at = $1 WHERE id = $2",
+        [~U[2025-01-01 00:01:10Z], Ecto.UUID.dump!(task2.id)]
+      )
+
+      sessions = TaskQueries.sessions_for_user(user.id) |> Repo.all()
+      assert length(sessions) == 1
+      session = hd(sessions)
+      assert session.started_at == ~U[2025-01-01 00:00:10Z]
+      # Latest task has no completed_at
+      assert session.completed_at == nil
+    end
+
+    test "includes session_summary from the latest task" do
+      user = user_fixture()
+      earlier = ~U[2025-01-01 00:00:00Z]
+      later = ~U[2025-01-01 00:01:00Z]
+
+      task1 =
+        create_task(user, %{instruction: "First task", container_id: "c1", status: "completed"})
+        |> force_inserted_at(earlier)
+
+      task1
+      |> TaskSchema.status_changeset(%{
+        session_summary: %{"files" => 1, "additions" => 5, "deletions" => 2}
+      })
+      |> Repo.update!()
+
+      task2 =
+        create_task(user, %{instruction: "Second task", container_id: "c1", status: "completed"})
+        |> force_inserted_at(later)
+
+      task2
+      |> TaskSchema.status_changeset(%{
+        session_summary: %{"files" => 3, "additions" => 42, "deletions" => 18}
+      })
+      |> Repo.update!()
+
+      sessions = TaskQueries.sessions_for_user(user.id) |> Repo.all()
+      assert length(sessions) == 1
+      # session_summary should be from the latest task
+      assert hd(sessions).session_summary == %{"files" => 3, "additions" => 42, "deletions" => 18}
+    end
+
+    test "session_summary is nil when no tasks have it" do
+      user = user_fixture()
+      create_task(user, %{instruction: "Task", container_id: "c1", status: "completed"})
+
+      sessions = TaskQueries.sessions_for_user(user.id) |> Repo.all()
+      assert length(sessions) == 1
+      assert hd(sessions).session_summary == nil
+    end
+
     test "groups by container_id and returns distinct sessions" do
       user = user_fixture()
       create_task(user, %{instruction: "Session 1", container_id: "c1", status: "completed"})

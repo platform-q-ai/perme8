@@ -117,7 +117,8 @@ defmodule Agents.Sessions do
   Lists sessions (grouped by container_id) for a user.
 
   Returns a list of maps with :container_id, :title, :task_count,
-  :latest_status, :latest_at, :created_at.
+  :latest_status, :latest_at, :created_at, :started_at, :completed_at,
+  and :session_summary.
   """
   @spec list_sessions(String.t(), keyword()) :: [map()]
   def list_sessions(user_id, opts \\ []) do

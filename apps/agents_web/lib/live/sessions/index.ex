@@ -11,6 +11,7 @@ defmodule AgentsWeb.SessionsLive.Index do
   alias AgentsWeb.SessionsLive.EventProcessor
 
   @stats_interval_ms 5_000
+  @duration_tick_ms 1_000
 
   @impl true
   def mount(_params, _session, socket) do
@@ -22,6 +23,7 @@ defmodule AgentsWeb.SessionsLive.Index do
       subscribe_to_active_tasks(tasks)
       Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "queue:user:#{user.id}")
       schedule_stats_poll()
+      schedule_duration_tick()
     end
 
     active_container_id =
@@ -45,6 +47,7 @@ defmodule AgentsWeb.SessionsLive.Index do
      |> assign(:composing_new, false)
      |> assign(:active_session_tab, "chat")
      |> assign(:container_stats, %{})
+     |> assign(:duration_now, DateTime.utc_now())
      |> assign(:auth_refreshing, %{})
      |> assign(:events, [])
      |> assign(:available_images, available_images)
@@ -388,6 +391,17 @@ defmodule AgentsWeb.SessionsLive.Index do
     {:noreply, assign(socket, :container_stats, stats)}
   end
 
+  @impl true
+  def handle_info(:tick_session_durations, socket) do
+    has_running =
+      Enum.any?(socket.assigns.sessions, fn s ->
+        s.started_at != nil and s.completed_at == nil
+      end)
+
+    if has_running, do: schedule_duration_tick()
+    {:noreply, assign(socket, :duration_now, DateTime.utc_now())}
+  end
+
   # Tagged async result from per-session auth refresh (success)
   @impl true
   def handle_info({ref, {task_id, {:ok, new_task}}}, socket)
@@ -698,6 +712,10 @@ defmodule AgentsWeb.SessionsLive.Index do
 
   defp schedule_stats_poll do
     Process.send_after(self(), :poll_container_stats, @stats_interval_ms)
+  end
+
+  defp schedule_duration_tick do
+    Process.send_after(self(), :tick_session_durations, @duration_tick_ms)
   end
 
   defp update_session_todo_items(sessions, container_id, todo_maps) do
