@@ -871,10 +871,29 @@ defmodule AgentsWeb.SessionsLive.Index do
         }
       end)
 
-    # Keep newest-first ordering across real + unassigned sessions
-    (sessions ++ unassigned)
-    |> Enum.sort_by(& &1.latest_at, {:desc, NaiveDateTime})
+    sessions
+    |> Kernel.++(unassigned)
+    |> sort_sessions_for_sidebar()
   end
+
+  defp sort_sessions_for_sidebar(sessions) do
+    Enum.sort_by(sessions, fn session ->
+      {running_session?(session), -latest_at_unix(session)}
+    end)
+  end
+
+  defp running_session?(%{latest_status: status}) do
+    status in ["pending", "starting", "running", "queued", "awaiting_feedback"]
+  end
+
+  defp running_session?(_), do: false
+
+  defp latest_at_unix(%{latest_at: %DateTime{} = dt}), do: DateTime.to_unix(dt, :microsecond)
+
+  defp latest_at_unix(%{latest_at: %NaiveDateTime{} = dt}),
+    do: NaiveDateTime.to_gregorian_seconds(dt)
+
+  defp latest_at_unix(_), do: 0
 
   defp load_queue_state(user_id) do
     Sessions.get_queue_state(user_id)

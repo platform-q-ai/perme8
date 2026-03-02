@@ -109,6 +109,43 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       {:ok, _lv, html} = live(conn, ~p"/sessions")
       assert html =~ "Second task"
     end
+
+    test "places running sessions at the bottom of sidebar list", %{conn: conn, user: user} do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Completed session",
+        container_id: "c1",
+        status: "completed"
+      })
+
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Running session",
+        container_id: "c2",
+        status: "running"
+      })
+
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Failed session",
+        container_id: "c3",
+        status: "failed"
+      })
+
+      {:ok, _lv, html} = live(conn, ~p"/sessions")
+
+      running_pos =
+        html |> :binary.matches("session-item-running-session") |> List.first() |> elem(0)
+
+      completed_pos =
+        html |> :binary.matches("session-item-completed-session") |> List.first() |> elem(0)
+
+      failed_pos =
+        html |> :binary.matches("session-item-failed-session") |> List.first() |> elem(0)
+
+      assert running_pos > completed_pos
+      assert running_pos > failed_pos
+    end
   end
 
   describe "form submission" do
