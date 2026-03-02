@@ -54,10 +54,16 @@ git config --global user.name "perme8[bot]"
 git config --global user.email "262472400+perme8[bot]@users.noreply.github.com"
 
 # ---- Write opencode auth from env var ----
+# Only seed auth.json on first boot. On restarts, preserve the existing file
+# so that tokens refreshed at runtime (by opencode) survive container restarts.
 
 mkdir -p "$HOME/.local/share/opencode" "$HOME/.local/state"
-echo "$OPENCODE_AUTH" | base64 -d > "$HOME/.local/share/opencode/auth.json"
-echo "opencode auth.json written"
+if [ ! -f "$HOME/.local/share/opencode/auth.json" ]; then
+  echo "$OPENCODE_AUTH" | base64 -d > "$HOME/.local/share/opencode/auth.json"
+  echo "opencode auth.json seeded from OPENCODE_AUTH env var"
+else
+  echo "opencode auth.json already exists, preserving (tokens may have been refreshed)"
+fi
 
 # ---- Clone repos (skip on container restart when dirs already exist) ----
 

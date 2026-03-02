@@ -84,20 +84,57 @@ defmodule AgentsWeb.SessionsLive.Index do
   end
 
   @impl true
-  def handle_event("refresh_auth_and_resume", _params, socket) do
-    case socket.assigns.current_task do
-      %{id: task_id} when is_binary(task_id) ->
+  def handle_event("refresh_auth_and_resume", params, socket) do
+    task_id = params["task-id"] || (socket.assigns.current_task && socket.assigns.current_task.id)
+
+    cond do
+      is_nil(task_id) ->
+        {:noreply, socket}
+
+      Map.has_key?(socket.assigns.auth_refreshing, task_id) ->
+        # Already refreshing this session
+        {:noreply, socket}
+
+      true ->
         user = socket.assigns.current_scope.user
-        Task.async(fn -> Sessions.refresh_auth_and_resume(task_id, user.id) end)
+
+        async =
+          Task.async(fn -> {task_id, Sessions.refresh_auth_and_resume(task_id, user.id)} end)
 
         {:noreply,
          socket
-         |> assign(:auth_refreshing, true)
+         |> assign(
+           :auth_refreshing,
+           Map.put(socket.assigns.auth_refreshing, task_id, async.ref)
+         )
          |> put_flash(:info, "Refreshing auth and restarting container...")}
-
-      _ ->
-        {:noreply, socket}
     end
+  end
+
+  @impl true
+  def handle_event("refresh_all_auth", _params, socket) do
+    user = socket.assigns.current_scope.user
+    tasks = Sessions.list_tasks(user.id)
+
+    refreshable =
+      Enum.filter(tasks, fn t ->
+        t.status == "failed" and auth_error?(t.error) and resumable_task?(t) and
+          not Map.has_key?(socket.assigns.auth_refreshing, t.id)
+      end)
+
+    socket =
+      Enum.reduce(refreshable, socket, fn t, acc ->
+        async = Task.async(fn -> {t.id, Sessions.refresh_auth_and_resume(t.id, user.id)} end)
+        assign(acc, :auth_refreshing, Map.put(acc.assigns.auth_refreshing, t.id, async.ref))
+      end)
+
+    flash_msg =
+      case length(refreshable) do
+        0 -> "No sessions need auth refresh"
+        n -> "Refreshing auth for #{n} session(s)..."
+      end
+
+    {:noreply, put_flash(socket, :info, flash_msg)}
   end
 
   @impl true
@@ -307,6 +344,55 @@ defmodule AgentsWeb.SessionsLive.Index do
     {:noreply, assign(socket, :container_stats, stats)}
   end
 
+  # Tagged async result from per-session auth refresh (success)
+  @impl true
+  def handle_info({ref, {task_id, {:ok, new_task}}}, socket)
+      when is_reference(ref) and is_binary(task_id) do
+    Process.demonitor(ref, [:flush])
+    Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "task:#{new_task.id}")
+    user = socket.assigns.current_scope.user
+
+    socket =
+      assign(socket, :auth_refreshing, Map.delete(socket.assigns.auth_refreshing, task_id))
+
+    # Only update the detail pane if this is the currently viewed session
+    socket =
+      if match?(%{id: ^task_id}, socket.assigns.current_task) do
+        is_resume = match?(%{id: id} when id == new_task.id, socket.assigns.current_task)
+
+        socket =
+          socket
+          |> assign(:current_task, new_task)
+          |> assign(:events, [])
+          |> assign(:form, to_form(%{"instruction" => ""}))
+
+        if is_resume do
+          socket
+          |> assign(:output_parts, EventProcessor.freeze_streaming(socket.assigns.output_parts))
+          |> assign(:pending_question, nil)
+        else
+          assign_session_state(socket)
+        end
+      else
+        socket
+      end
+
+    {:noreply, reload_all(socket, user.id)}
+  end
+
+  # Tagged async result from per-session auth refresh (error)
+  @impl true
+  def handle_info({ref, {task_id, {:error, reason}}}, socket)
+      when is_reference(ref) and is_binary(task_id) do
+    Process.demonitor(ref, [:flush])
+
+    {:noreply,
+     socket
+     |> assign(:auth_refreshing, Map.delete(socket.assigns.auth_refreshing, task_id))
+     |> put_flash(:error, "Session refresh failed: #{task_error_message(reason)}")}
+  end
+
+  # Untagged async result (from run_or_resume_task — not auth refresh)
   @impl true
   def handle_info({ref, {:ok, new_task}}, socket) when is_reference(ref) do
     Process.demonitor(ref, [:flush])
@@ -318,14 +404,12 @@ defmodule AgentsWeb.SessionsLive.Index do
     socket =
       socket
       |> assign(:current_task, new_task)
-      |> assign(:auth_refreshing, false)
       |> assign(:events, [])
       |> assign(:form, to_form(%{"instruction" => ""}))
       |> clear_flash()
 
     socket =
       if is_resume do
-        # Auth refresh resumes the same task — preserve output history
         socket
         |> assign(:output_parts, EventProcessor.freeze_streaming(socket.assigns.output_parts))
         |> assign(:pending_question, nil)
@@ -342,7 +426,6 @@ defmodule AgentsWeb.SessionsLive.Index do
 
     {:noreply,
      socket
-     |> assign(:auth_refreshing, false)
      |> clear_flash()
      |> put_flash(:error, task_error_message(reason))}
   end

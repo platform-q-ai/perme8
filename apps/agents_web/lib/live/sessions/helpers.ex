@@ -91,6 +91,20 @@ defmodule AgentsWeb.SessionsLive.Helpers do
     Agents.Sessions.image_label(image_name)
   end
 
+  @doc "Returns true if a specific task is currently being auth-refreshed."
+  def auth_refreshing?(auth_refreshing, task_id) when is_map(auth_refreshing) do
+    Map.has_key?(auth_refreshing, task_id)
+  end
+
+  def auth_refreshing?(_, _), do: false
+
+  @doc "Returns true if any sessions have auth errors and are refreshable."
+  def has_auth_refresh_candidates?(sessions) do
+    Enum.any?(sessions, fn s ->
+      s.latest_status == "failed" and auth_error?(Map.get(s, :latest_error))
+    end)
+  end
+
   @doc "Maps a task error reason to a user-friendly message."
   def task_error_message(:instruction_required), do: "Instruction is required"
   def task_error_message(:already_active), do: "This session is already running"
