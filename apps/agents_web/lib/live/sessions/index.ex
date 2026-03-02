@@ -139,6 +139,24 @@ defmodule AgentsWeb.SessionsLive.Index do
   end
 
   @impl true
+  def handle_event("run_new_task", %{"instruction" => instruction}, socket) do
+    instruction = String.trim(instruction)
+
+    if instruction == "" do
+      {:noreply, put_flash(socket, :error, "Instruction is required")}
+    else
+      user = socket.assigns.current_scope.user
+
+      Sessions.create_task(%{
+        instruction: instruction,
+        user_id: user.id,
+        image: socket.assigns.selected_image || Sessions.default_image()
+      })
+      |> handle_task_result(socket)
+    end
+  end
+
+  @impl true
   def handle_event("cancel_task", _params, socket) do
     case socket.assigns.current_task do
       nil -> {:noreply, socket}

@@ -49,9 +49,10 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       assert html =~ "Sessions"
     end
 
-    test "renders New Session button", %{conn: conn} do
+    test "renders sidebar new session textarea", %{conn: conn} do
       {:ok, _lv, html} = live(conn, ~p"/sessions")
-      assert html =~ "New Session"
+      assert html =~ "sidebar-new-session-form"
+      assert html =~ "Start a new session..."
     end
 
     test "renders empty state when no sessions exist", %{conn: conn} do
@@ -125,13 +126,6 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
         status: "running"
       })
 
-      task_fixture(%{
-        user_id: user.id,
-        instruction: "Failed session",
-        container_id: "c3",
-        status: "failed"
-      })
-
       {:ok, _lv, html} = live(conn, ~p"/sessions")
 
       running_pos =
@@ -140,11 +134,7 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       completed_pos =
         html |> :binary.matches("session-item-completed-session") |> List.first() |> elem(0)
 
-      failed_pos =
-        html |> :binary.matches("session-item-failed-session") |> List.first() |> elem(0)
-
       assert running_pos > completed_pos
-      assert running_pos > failed_pos
     end
   end
 
@@ -1176,7 +1166,10 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       assert html =~ "Only session"
     end
 
-    test "clicking New Session clears active session detail pane", %{conn: conn, user: user} do
+    test "sidebar quick-start form is visible while viewing an existing session", %{
+      conn: conn,
+      user: user
+    } do
       task_fixture(%{
         user_id: user.id,
         instruction: "Long running task",
@@ -1184,20 +1177,13 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
         status: "running"
       })
 
-      {:ok, lv, _html} = live(conn, ~p"/sessions")
+      {:ok, _lv, html} = live(conn, ~p"/sessions")
 
-      html =
-        lv
-        |> element(~s([phx-click="new_session"]))
-        |> render_click()
-
-      assert_patch(lv, ~p"/sessions?#{%{new: true}}")
-      assert html =~ "Enter an instruction below to start"
-      assert html =~ "Image:"
-      refute html =~ "Waiting for response"
+      assert html =~ "sidebar-new-session-form"
+      assert html =~ "sidebar-new-session-instruction"
     end
 
-    test "new session remains blank after clicking New Session even with existing sessions", %{
+    test "submitting empty sidebar quick-start instruction does not change selected session", %{
       conn: conn,
       user: user
     } do
@@ -1211,12 +1197,12 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       {:ok, lv, _html} = live(conn, ~p"/sessions")
 
       lv
-      |> element(~s([phx-click="new_session"]))
-      |> render_click()
+      |> form("#sidebar-new-session-form", %{"instruction" => "   "})
+      |> render_submit()
 
       html = render(lv)
-      assert html =~ "Enter an instruction below to start"
-      assert html =~ "Image:"
+      assert html =~ "sidebar-new-session-form"
+      assert html =~ "Existing session"
     end
 
     test "renders empty concurrency slot cards in session list", %{conn: conn, user: user} do
@@ -1297,14 +1283,14 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
 
       task_fixture(%{
         user_id: user.id,
-        instruction: "Failed session",
+        instruction: "Running session",
         container_id: "c2",
-        status: "failed"
+        status: "running"
       })
 
       {:ok, _lv, html} = live(conn, ~p"/sessions")
       assert html =~ "bg-success"
-      assert html =~ "bg-error"
+      assert html =~ "bg-info"
     end
 
     test "running session cards are marked as used slots", %{conn: conn, user: user} do
@@ -1334,13 +1320,6 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
 
       task_fixture(%{
         user_id: user.id,
-        instruction: "Failed attention",
-        container_id: "c-failed-attention",
-        status: "failed"
-      })
-
-      task_fixture(%{
-        user_id: user.id,
         instruction: "Completed attention",
         container_id: "c-completed-attention",
         status: "completed"
@@ -1361,12 +1340,6 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
         |> List.first()
         |> elem(0)
 
-      failed_pos =
-        html
-        |> :binary.matches(~s(data-testid="session-item-failed-attention"))
-        |> List.first()
-        |> elem(0)
-
       cancelled_pos =
         html
         |> :binary.matches(~s(data-testid="session-item-cancelled-attention"))
@@ -1379,8 +1352,8 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
         |> List.first()
         |> elem(0)
 
-      assert completed_pos < failed_pos
-      assert failed_pos < cancelled_pos
+      refute html =~ ~s(data-testid="session-item-failed-attention")
+      assert completed_pos < cancelled_pos
       assert cancelled_pos < running_pos
     end
 
