@@ -64,7 +64,7 @@ defmodule AgentsWeb.SessionsLive.EventProcessorTest do
         "properties" => %{
           "info" => %{
             "role" => "assistant",
-            "modelID" => "claude-opus-4-6",
+            "modelID" => "gpt-5.3-codex",
             "tokens" => %{"input" => 5200, "output" => 150},
             "cost" => 0.05
           }
@@ -72,7 +72,7 @@ defmodule AgentsWeb.SessionsLive.EventProcessorTest do
       }
 
       result = EventProcessor.process_event(event, socket)
-      assert result.assigns.session_model == "claude-opus-4-6"
+      assert result.assigns.session_model == "gpt-5.3-codex"
       assert result.assigns.session_tokens == %{"input" => 5200, "output" => 150}
       assert result.assigns.session_cost == 0.05
     end

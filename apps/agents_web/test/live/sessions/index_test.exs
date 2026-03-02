@@ -149,8 +149,8 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
         "properties" => %{
           "info" => %{
             "role" => "assistant",
-            "modelID" => "claude-opus-4-6",
-            "providerID" => "anthropic",
+            "modelID" => "gpt-5.3-codex",
+            "providerID" => "openai",
             "tokens" => %{
               "input" => 5200,
               "output" => 150,
@@ -164,7 +164,7 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       send(lv.pid, {:task_event, task.id, event})
 
       html = render(lv)
-      assert html =~ "claude-opus-4-6"
+      assert html =~ "gpt-5.3-codex"
       assert html =~ "5.2k in"
       assert html =~ "150 out"
       assert html =~ "13.0k cached"

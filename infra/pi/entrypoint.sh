@@ -146,6 +146,6 @@ unset DATABASE_URL
 # Pi communicates via stdin/stdout JSON protocol.
 # The runtime adapter spawns this container and talks to Pi over stdio.
 # --no-session: ephemeral mode (session managed externally)
-# --model: use Claude Opus 4 via Anthropic API
+# --model: use GPT-5.3 Codex via OpenAI API
 
-exec pi --mode rpc --no-session --model anthropic/claude-opus-4-6
+exec pi --mode rpc --no-session --model openai/gpt-5.3-codex
