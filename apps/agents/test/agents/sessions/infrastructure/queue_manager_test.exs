@@ -109,6 +109,73 @@ defmodule Agents.Sessions.Infrastructure.QueueManagerTest do
     end
   end
 
+  describe "notify_task_queued/2" do
+    test "warms only top queued cold tasks and skips already exited containers" do
+      user = user_fixture()
+      _running1 = create_task(user, %{status: "running"})
+      _running2 = create_task(user, %{status: "running"})
+      _running3 = create_task(user, %{status: "running"})
+
+      first = create_task(user, %{status: "queued", queue_position: 1, container_id: nil})
+
+      _second =
+        create_task(user, %{status: "queued", queue_position: 2, container_id: "exited-2"})
+
+      third = create_task(user, %{status: "queued", queue_position: 3, container_id: nil})
+
+      test_pid = self()
+
+      {:module, container_provider_mod, _, _} =
+        defmodule :"Agents.Sessions.QueueManagerTest.MockContainerProvider.#{System.unique_integer([:positive])}" do
+          def set_test_pid(pid), do: :persistent_term.put({__MODULE__, :test_pid}, pid)
+
+          def start(_image, _opts) do
+            send(:persistent_term.get({__MODULE__, :test_pid}), :container_started)
+            {:ok, %{container_id: "warmed-1", port: 4096}}
+          end
+
+          def stop(container_id, _opts \\ []) do
+            send(
+              :persistent_term.get({__MODULE__, :test_pid}),
+              {:container_stopped, container_id}
+            )
+
+            :ok
+          end
+
+          def status(container_id, _opts \\ [])
+          def status("exited-2", _opts), do: {:ok, :stopped}
+          def status(_container_id, _opts), do: {:ok, :not_found}
+
+          def remove(_container_id, _opts \\ []), do: :ok
+          def restart(_container_id, _opts \\ []), do: {:ok, %{port: 4096}}
+
+          def stats(_container_id, _opts \\ []),
+            do: {:ok, %{cpu_percent: 0.0, memory_usage: 0, memory_limit: 0}}
+        end
+
+      container_provider_mod.set_test_pid(test_pid)
+
+      assert {:ok, _pid} =
+               QueueManagerSupervisor.ensure_started(user.id,
+                 concurrency_limit: 3,
+                 container_provider: container_provider_mod,
+                 task_runner_starter: fn _task_id, _opts -> {:ok, self()} end
+               )
+
+      assert :ok = QueueManager.notify_task_queued(user.id, first.id)
+
+      assert_receive :container_started
+      assert_receive {:container_stopped, "warmed-1"}
+
+      updated_first = Repo.get!(TaskSchema, first.id)
+      updated_third = Repo.get!(TaskSchema, third.id)
+
+      assert updated_first.container_id == "warmed-1"
+      assert is_nil(updated_third.container_id)
+    end
+  end
+
   describe "notify_task_failed/2" do
     test "promotes next queued task when a task fails" do
       user = user_fixture()

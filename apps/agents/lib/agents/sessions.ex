@@ -54,7 +54,16 @@ defmodule Agents.Sessions do
     opts = inject_task_runner_starter(opts)
     opts = inject_queue_checker(opts)
     opts = inject_concurrency_lock(opts)
-    CreateTask.execute(attrs, opts)
+
+    case CreateTask.execute(attrs, opts) do
+      {:ok, %{status: "queued", id: task_id} = task} ->
+        user_id = attrs[:user_id] || attrs["user_id"]
+        _ = notify_task_queued(user_id, task_id)
+        {:ok, task}
+
+      other ->
+        other
+    end
   end
 
   @doc """
@@ -377,6 +386,27 @@ defmodule Agents.Sessions do
     :ok
   end
 
+  @doc """
+  Notifies queue management when a new task is queued.
+
+  Triggers prewarming for top queued sessions so they are faster to start
+  when promoted into an available concurrency slot.
+  """
+  @spec notify_task_queued(String.t(), String.t(), keyword()) :: :ok
+  def notify_task_queued(user_id, task_id, opts \\ []) do
+    queue_manager_supervisor =
+      Keyword.get(opts, :queue_manager_supervisor, QueueManagerSupervisor)
+
+    queue_manager = Keyword.get(opts, :queue_manager, QueueManager)
+    ensure_opts = Keyword.get(opts, :queue_manager_opts, default_queue_manager_opts())
+
+    with {:ok, _pid} <- safe_ensure_queue_manager(queue_manager_supervisor, user_id, ensure_opts) do
+      _ = safe_notify_task_queued(queue_manager, user_id, task_id)
+    end
+
+    :ok
+  end
+
   defp default_queue_state do
     %{
       running: 0,
@@ -416,6 +446,14 @@ defmodule Agents.Sessions do
 
   defp safe_notify_terminal(queue_manager, user_id, task_id, :cancelled) do
     queue_manager.notify_task_cancelled(user_id, task_id)
+  rescue
+    _ -> :ok
+  catch
+    :exit, _ -> :ok
+  end
+
+  defp safe_notify_task_queued(queue_manager, user_id, task_id) do
+    queue_manager.notify_task_queued(user_id, task_id)
   rescue
     _ -> :ok
   catch

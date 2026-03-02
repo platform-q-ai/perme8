@@ -147,9 +147,11 @@
           <li :for={session <- queued_sessions} class="w-full">
             <div
               data-testid={"session-item-#{slugify(session.title)}"}
-              data-slot-state="idle"
+              data-slot-state={if(is_nil(session.container_id), do: "cold", else: "warm")}
               class={[
-                "flex flex-col gap-0.5 w-full rounded-lg p-2 min-h-16 border border-transparent",
+                "flex flex-col gap-0.5 w-full rounded-lg p-2 min-h-16",
+                is_nil(session.container_id) && "border border-base-content/25 bg-base-content/10",
+                !is_nil(session.container_id) && "border border-transparent",
                 session.container_id == @active_container_id && "active"
               ]}
               phx-click="select_session"
@@ -160,7 +162,7 @@
                   {truncate_instruction(session.title, 35)}
                 </span>
                 <div class="flex items-center gap-1">
-                  <.status_dot status={session.latest_status} />
+                  <.status_dot status={session.latest_status} cold={is_nil(session.container_id)} />
                 </div>
               </div>
               <div class="flex items-center gap-2 text-[0.65rem] text-base-content/50 w-full">

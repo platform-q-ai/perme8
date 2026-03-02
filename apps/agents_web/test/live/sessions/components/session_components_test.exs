@@ -64,6 +64,11 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponentsTest do
       html = render_component(&SessionComponents.status_dot/1, status: "cancelled")
       assert html =~ "bg-base-content/30"
     end
+
+    test "renders grey dot for cold queued status" do
+      html = render_component(&SessionComponents.status_dot/1, status: "queued", cold: true)
+      assert html =~ "bg-base-content/35"
+    end
   end
 
   describe "output_part/1 — text variants" do
