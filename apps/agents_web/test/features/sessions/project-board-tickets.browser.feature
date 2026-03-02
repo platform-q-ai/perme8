@@ -1,54 +1,48 @@
 @browser @sessions
 Feature: Project board tickets in the sessions sidebar
   As a delivery-focused team member
-  I want the top section of the sessions sidebar to show GitHub project tickets
-  So that I can pick work directly from Backlog and Ready items
+  I want the sessions sidebar to include GitHub project tickets below my sessions
+  So that I can see available Backlog and Ready work alongside my session history
 
-  Scenario: Unauthenticated user is prompted to log in before viewing sessions
-    Given I navigate to "${baseUrl}/sessions"
-    And I wait for network idle
-    Then the URL should contain "/log-in"
-
-  Scenario: Sessions sidebar shows project board tickets instead of top sessions
-    Given I navigate to "${baseUrl}/users/log-in"
-    And I wait for network idle
-    When I fill "#login_form_password_email" with "${testEmail}"
-    And I fill "#login_form_password_password" with "${testPassword}"
-    And I click the "Log in and stay logged in" button and wait for navigation
+  Background:
+    Given I am logged in
     And I navigate to "${baseUrl}/sessions"
     And I wait for network idle
-    Then I should see "Backlog"
-    And I should see "Ready"
-    And I should not see "Completed"
-    And I should not see "Cancelled"
 
-  Scenario: Each ticket shows key metadata in the list
-    Given I navigate to "${baseUrl}/sessions"
-    And I wait for network idle
-    Then I should see "#"
-    And I should see "Title"
-    And I should see "Priority"
-    And I should see "Status"
-    And I should see "Labels"
+  Scenario: Ticket list appears below completed and cancelled sessions
+    Then I should see a "Tickets" section in the sidebar
+    And the "Tickets" section should appear below the sessions list
+    And existing completed and cancelled sessions should still be visible above
 
-  Scenario: Ticket row includes associated session state when present
-    Given I navigate to "${baseUrl}/sessions"
-    And I wait for network idle
-    Then I should see "Session status"
-    And I should see "No active session"
+  Scenario: Only Backlog and Ready tickets are displayed
+    Then the ticket list should contain items with status "Backlog"
+    And the ticket list should contain items with status "Ready"
+    And the ticket list should not contain items with status "In progress"
+    And the ticket list should not contain items with status "Done"
 
-  Scenario: Ticket list refreshes when project board changes
-    Given I navigate to "${baseUrl}/sessions"
-    And I wait for network idle
-    When I reload the page
-    And I wait for network idle
-    Then I should see "Backlog"
-    And I should see "Ready"
+  Scenario: Each ticket shows issue number, title, priority, status, and labels
+    Then each ticket card should display the issue number prefixed with "#"
+    And each ticket card should display the issue title
+    And each ticket card should display a priority badge
+    And each ticket card should display a status badge
+    And each ticket card should display any associated labels
 
-  Scenario: Opening ticket-linked work keeps session detail view functional
-    Given I navigate to "${baseUrl}/sessions"
-    And I wait for network idle
-    When I click the "Open" button
-    And I wait for network idle
-    Then I should see "Session"
-    And I should see "Chat"
+  Scenario: Ticket card shows associated session state when a session exists
+    Given a session exists that is linked to a project ticket
+    Then that ticket card should show the session status indicator
+    And tickets without a linked session should show no session indicator
+
+  Scenario: Ticket list updates automatically via polling
+    When new tickets are added to the project board with Backlog status
+    Then the ticket list should update to include the new tickets
+    And no manual page refresh should be required
+
+  Scenario: Clicking a ticket does not break the session detail view
+    When I click on a ticket in the sidebar
+    Then the session detail panel should remain functional
+    And the chat tab should still be accessible
+
+  Scenario: Existing session list sections are not affected
+    Then the in-progress sessions section should still appear at the bottom
+    And the queue panel should still appear at the bottom
+    And the quick-start form should still appear at the top
