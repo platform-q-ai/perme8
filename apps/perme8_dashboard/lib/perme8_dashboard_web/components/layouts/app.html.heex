@@ -1,65 +1,32 @@
 <% # Tab configuration: {key, label, path}
 # active_tab is set by the SetActiveTab on_mount hook.
 tabs = [{:features, "Features", ~p"/"}, {:sessions, "Sessions", ~p"/sessions"}]
-active_tab = assigns[:active_tab] || :features
-
-# Icon mapping for sidebar navigation (keyed by tab key)
-tab_icons = %{features: "hero-squares-2x2", sessions: "hero-chat-bubble-left-right"} %>
-<div class="drawer lg:drawer-open h-screen overflow-hidden">
-  <input id="dashboard-drawer" type="checkbox" class="drawer-toggle" />
-  <div class="drawer-content flex flex-col min-w-0 h-full overflow-hidden">
-    <!-- Mobile header (hidden on desktop where sidebar is always open) -->
-    <div class="navbar bg-base-100 border-b border-base-300 sticky top-0 z-10 lg:hidden">
-      <div class="flex-none">
-        <label for="dashboard-drawer" class="btn btn-square btn-ghost">
-          <.icon name="hero-bars-3" class="size-6" />
-        </label>
-      </div>
-      <div class="flex-1">
-        <span class="text-lg font-semibold">Perme8 Dashboard</span>
-      </div>
+active_tab = assigns[:active_tab] || :features %>
+<div class="flex flex-col h-screen overflow-hidden">
+  <!-- Tab navigation bar -->
+  <header class="bg-base-100 border-b border-base-300 sticky top-0 z-10">
+    <div class="flex items-center gap-4 px-4 py-2">
+      <.link navigate={~p"/"} class="flex items-center gap-2 shrink-0">
+        <.icon name="hero-beaker" class="size-6 text-primary" />
+        <span class="text-lg font-bold hidden sm:inline">Perme8 Dashboard</span>
+      </.link>
+      <Perme8DashboardWeb.TabComponents.tab_bar tabs={tabs} active_tab={active_tab} />
     </div>
-    <!-- Page content -->
-    <main class={[
-      "flex-1 flex flex-col",
-      if(assigns[:full_width], do: "overflow-hidden", else: "p-4 lg:p-8 overflow-y-auto")
-    ]}>
-      <%= if assigns[:full_width] do %>
-        {@inner_content}
-      <% else %>
-        <div class="w-full max-w-5xl mx-auto">
-          {@inner_content}
-        </div>
-      <% end %>
-    </main>
-
-    <.flash_group flash={@flash} />
-  </div>
+  </header>
   
-<!-- Sidebar -->
-  <div class="drawer-side z-20">
-    <label for="dashboard-drawer" aria-label="close sidebar" class="drawer-overlay"></label>
-    <aside class="bg-base-200 min-h-full w-64 p-4 flex flex-col">
-      <div class="px-4 py-6">
-        <.link navigate={~p"/"} class="flex items-center gap-3">
-          <.icon name="hero-beaker" class="size-8 text-primary" />
-          <span class="text-2xl font-bold">Perme8 Dashboard</span>
-        </.link>
+<!-- Page content -->
+  <main class={[
+    "flex-1 flex flex-col",
+    if(assigns[:full_width], do: "overflow-hidden", else: "p-4 lg:p-8 overflow-y-auto")
+  ]}>
+    <%= if assigns[:full_width] do %>
+      {@inner_content}
+    <% else %>
+      <div class="w-full max-w-5xl mx-auto">
+        {@inner_content}
       </div>
+    <% end %>
+  </main>
 
-      <nav class="flex-1 py-4">
-        <ul class="menu gap-1 w-full">
-          <li :for={{key, label, path} <- tabs} class="w-full" {%{"data-sidebar-#{key}" => true}}>
-            <.link
-              navigate={path}
-              class={["flex items-center gap-3 w-full", key == active_tab && "active"]}
-            >
-              <.icon name={tab_icons[key] || "hero-squares-2x2"} class="size-5" />
-              <span>{label}</span>
-            </.link>
-          </li>
-        </ul>
-      </nav>
-    </aside>
-  </div>
+  <.flash_group flash={@flash} />
 </div>
