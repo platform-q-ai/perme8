@@ -37,11 +37,11 @@ Then visit `http://localhost:4012`.
 The dashboard is a pure interface app with no domain logic. It provides:
 
 - **Root layout** -- HTML skeleton with DaisyUI dark theme
-- **App layout** -- Drawer sidebar with branding + tabbed content area
+- **App layout** -- Header with branding + tab bar navigation + content area
 - **Tab navigation** -- Data-driven `tab_bar` component accepting `{key, label, path}` tuples
 - **Router** -- Mounts exo_dashboard LiveViews in its own `live_session` with perme8_dashboard layouts
 
-Exo dashboard views render their content (feature tree, feature detail) inside the perme8_dashboard layout. The exo_dashboard app retains its own endpoint for standalone use but no longer has drawer/sidebar chrome.
+Exo dashboard views render their content (feature tree, feature detail) inside the perme8_dashboard layout. The exo_dashboard app retains its own endpoint for standalone use without the dashboard shell.
 
 ## Testing
 
