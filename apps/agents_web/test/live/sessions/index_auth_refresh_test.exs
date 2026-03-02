@@ -121,7 +121,7 @@ defmodule AgentsWeb.SessionsLive.IndexAuthRefreshTest do
       %{conn: log_in_user(conn, user), user: user}
     end
 
-    test "shows refresh icon in sidebar for auth-failed sessions", %{conn: conn, user: user} do
+    test "shows global refresh action for auth-failed sessions", %{conn: conn, user: user} do
       task_fixture(%{
         user_id: user.id,
         instruction: "Auth failed task",
@@ -132,8 +132,7 @@ defmodule AgentsWeb.SessionsLive.IndexAuthRefreshTest do
       })
 
       {:ok, _lv, html} = live(conn, ~p"/sessions")
-      # The sidebar should have a refresh button with the task-id
-      assert html =~ "Refresh auth &amp; resume"
+      assert html =~ "Refresh All Auth"
     end
 
     test "does not show refresh icon for non-auth-failed sessions", %{conn: conn, user: user} do
@@ -216,8 +215,8 @@ defmodule AgentsWeb.SessionsLive.IndexAuthRefreshTest do
       send(lv.pid, {make_ref(), {"some-task-id", {:error, :health_timeout}}})
 
       html = render(lv)
-      # The refresh button should still be present and enabled (not in refreshing state)
-      assert html =~ "Refresh auth &amp; resume"
+      # The global refresh action should still be present and enabled
+      assert html =~ "Refresh All Auth"
       # The "Refreshing..." text should NOT appear (proves state was cleared)
       refute html =~ "Refreshing..."
     end

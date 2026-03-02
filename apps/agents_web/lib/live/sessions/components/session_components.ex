@@ -199,7 +199,7 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponents do
     <section
       :if={@todo_items != []}
       data-testid="todo-progress"
-      class="mx-4 mt-3 rounded-xl border border-base-300 bg-base-100 px-3 py-2 shadow-sm"
+      class="mb-2"
     >
       <div
         data-testid="todo-progress-summary"
