@@ -398,7 +398,11 @@
         </div>
 
         <%!-- Output log --%>
-        <div class="flex-1 overflow-y-auto p-4" id="session-log" phx-hook="SessionLog">
+        <div
+          class="flex-1 overflow-y-auto overflow-x-hidden p-4"
+          id="session-log"
+          phx-hook="SessionLog"
+        >
           <%= if @current_task do %>
             <%!-- User message --%>
             <div class="flex gap-2 mb-3">
@@ -455,8 +459,6 @@
           />
         </div>
 
-        <.progress_bar todo_items={@todo_items} />
-
         <%!-- Input form --%>
         <div class="border-t border-base-300 p-3 bg-base-100 shrink-0">
           <%!-- Image picker (only shown when composing a new session) --%>
@@ -485,6 +487,8 @@
           </div>
           <form id="session-form" phx-submit="run_task" class="flex gap-2 items-end">
             <div class="flex-1">
+              <.progress_bar todo_items={@todo_items} />
+
               <textarea
                 name="instruction"
                 id="session-instruction"
