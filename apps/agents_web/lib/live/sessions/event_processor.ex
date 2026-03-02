@@ -423,46 +423,6 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
     assign(socket, :pending_question, pending)
   end
 
-  # Scan output parts for a question tool call and extract the questions
-  # from its input. The tool name is "mcp_question" or "questions".
-  defp extract_question_from_output_parts(parts) do
-    Enum.find_value(parts, :none, fn
-      {:tool, _id, name, _status, detail} when is_map(detail) ->
-        if question_tool?(name), do: extract_questions_from_detail(detail)
-
-      _ ->
-        nil
-    end)
-  end
-
-  defp extract_questions_from_detail(%{input: input}) when is_map(input) do
-    case input do
-      %{"questions" => questions} when is_list(questions) and questions != [] ->
-        {:ok, questions}
-
-      _ ->
-        nil
-    end
-  end
-
-  defp extract_questions_from_detail(%{input: input}) when is_binary(input) do
-    case Jason.decode(input) do
-      {:ok, %{"questions" => questions}} when is_list(questions) and questions != [] ->
-        {:ok, questions}
-
-      _ ->
-        nil
-    end
-  end
-
-  defp extract_questions_from_detail(_), do: nil
-
-  defp question_tool?(name) when is_binary(name) do
-    name in ["mcp_question", "questions"]
-  end
-
-  defp question_tool?(_), do: false
-
   # Extract text content from a user message event for queued message matching.
   defp extract_user_message_content(%{"content" => content}) when is_binary(content), do: content
 
