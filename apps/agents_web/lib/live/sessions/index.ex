@@ -43,7 +43,7 @@ defmodule AgentsWeb.SessionsLive.Index do
      |> assign(:active_container_id, active_container_id)
      |> assign(:current_task, current_task)
      |> assign(:composing_new, false)
-     |> assign(:active_tab, "chat")
+     |> assign(:active_session_tab, "chat")
      |> assign(:container_stats, %{})
      |> assign(:auth_refreshing, %{})
      |> assign(:events, [])
@@ -62,7 +62,7 @@ defmodule AgentsWeb.SessionsLive.Index do
     tab = params["tab"] || "chat"
     valid_tabs = Enum.map(session_tabs(), & &1.id)
     active_tab = if tab in valid_tabs, do: tab, else: "chat"
-    {:noreply, assign(socket, :active_tab, active_tab)}
+    {:noreply, assign(socket, :active_session_tab, active_tab)}
   end
 
   @doc false
