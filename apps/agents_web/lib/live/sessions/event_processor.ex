@@ -203,11 +203,8 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
   """
   def maybe_load_cached_output(socket, %{output: output})
       when is_binary(output) and output != "" do
-    {parts, user_messages} = decode_cached_output_with_user_messages(output)
-
-    socket
-    |> assign(:output_parts, parts)
-    |> assign(:confirmed_user_messages, user_messages)
+    parts = decode_cached_output(output)
+    assign(socket, :output_parts, parts)
   end
 
   def maybe_load_cached_output(socket, _task), do: socket
@@ -284,30 +281,6 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
     end
   end
 
-  defp decode_cached_output_with_user_messages(output) do
-    case Jason.decode(output) do
-      {:ok, parts} when is_list(parts) ->
-        {user_parts, non_user_parts} = Enum.split_with(parts, &(&1["type"] == "user"))
-
-        decoded_parts =
-          non_user_parts |> Enum.map(&decode_output_part/1) |> Enum.reject(&is_nil/1)
-
-        user_messages =
-          user_parts
-          |> Enum.map(fn part ->
-            text = String.trim(part["text"] || "")
-            id = part["id"] || "user-part-#{System.unique_integer([:positive])}"
-            %{id: id, text: text}
-          end)
-          |> Enum.reject(&(&1.text == ""))
-
-        {decoded_parts, user_messages}
-
-      _ ->
-        {decode_cached_output(output), []}
-    end
-  end
-
   # ---- Private helpers ----
 
   defp handle_tool_event(socket, tool_id, tool_name, status, new_detail) do
@@ -343,25 +316,34 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
 
     trimmed = String.trim(text)
 
-    confirmed =
-      socket.assigns
-      |> Map.get(:confirmed_user_messages, [])
-      |> upsert_confirmed_user_message(message_id, trimmed)
+    {parts, matched?} =
+      promote_pending_user_part(socket.assigns.output_parts, trimmed, message_id)
+
+    parts =
+      if matched? do
+        parts
+      else
+        upsert_part(parts, {:user, message_id, trimmed})
+      end
 
     optimistic =
-      socket.assigns
-      |> Map.get(:optimistic_user_messages, [])
-      |> drop_first_matching_optimistic(trimmed)
+      drop_first_matching_optimistic(
+        Map.get(socket.assigns, :optimistic_user_messages, []),
+        trimmed
+      )
 
     socket
-    |> assign(:confirmed_user_messages, confirmed)
+    |> assign(:output_parts, parts)
     |> assign(:optimistic_user_messages, optimistic)
   end
 
-  defp upsert_confirmed_user_message(messages, id, text) do
-    case Enum.find_index(messages, &(&1.id == id)) do
-      nil -> messages ++ [%{id: id, text: text}]
-      idx -> List.replace_at(messages, idx, %{id: id, text: text})
+  defp promote_pending_user_part(parts, text, message_id) do
+    case Enum.find_index(parts, fn
+           {:user_pending, _id, pending_text} -> String.trim(pending_text) == text
+           _ -> false
+         end) do
+      nil -> {parts, false}
+      idx -> {List.replace_at(parts, idx, {:user, message_id, text}), true}
     end
   end
 
@@ -490,6 +472,10 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
 
   defp decode_output_part(%{"type" => "reasoning", "id" => id, "text" => text}) do
     {:reasoning, id, text, :frozen}
+  end
+
+  defp decode_output_part(%{"type" => "user", "id" => id, "text" => text}) do
+    {:user, id, text}
   end
 
   defp decode_output_part(

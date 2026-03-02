@@ -270,6 +270,61 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponents do
   end
 
   @doc """
+  Renders a single chat timeline part with role-specific chrome.
+
+  User parts are shown as user bubbles, while assistant/tool/reasoning
+  parts use assistant styling and delegate body rendering to output_part/1.
+  """
+  attr(:part, :any, required: true)
+
+  def chat_part(%{part: {:user, _id, text}} = assigns) do
+    assigns = assign(assigns, :text, text)
+
+    ~H"""
+    <div class="flex gap-2 mb-3">
+      <div class="shrink-0 size-6 rounded-full bg-primary/10 flex items-center justify-center">
+        <.icon name="hero-user" class="size-3.5 text-primary" />
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="text-xs font-medium text-base-content/50 mb-0.5">You</div>
+        <div class="text-sm whitespace-pre-line break-words">{@text}</div>
+      </div>
+    </div>
+    """
+  end
+
+  def chat_part(%{part: {:user_pending, _id, text}} = assigns) do
+    assigns = assign(assigns, :text, text)
+
+    ~H"""
+    <div class="flex gap-2 mb-3">
+      <div class="shrink-0 size-6 rounded-full bg-primary/10 flex items-center justify-center">
+        <.icon name="hero-user" class="size-3.5 text-primary" />
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="text-xs font-medium text-base-content/50 mb-0.5">You</div>
+        <div class="text-sm whitespace-pre-line break-words">{@text}</div>
+        <div class="text-[11px] text-base-content/40 mt-0.5">Awaiting response...</div>
+      </div>
+    </div>
+    """
+  end
+
+  def chat_part(assigns) do
+    ~H"""
+    <div class="flex gap-2 mb-3">
+      <div class="shrink-0 size-6 rounded-full bg-secondary/10 flex items-center justify-center mt-0.5">
+        <.icon name="hero-cpu-chip" class="size-3.5 text-secondary" />
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="text-xs font-medium text-base-content/50 mb-0.5">Assistant</div>
+        <.output_part part={@part} />
+      </div>
+    </div>
+    """
+  end
+
+  @doc """
   Renders a single output part (text, reasoning, or tool call).
 
   Accepts a tuple as the `part` assign:
