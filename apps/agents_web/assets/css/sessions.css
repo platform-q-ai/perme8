@@ -1,7 +1,12 @@
 /* Session Output Markdown Styles */
 
 .session-markdown {
-  @apply leading-relaxed;
+  @apply leading-relaxed max-w-full;
+  overflow-wrap: anywhere;
+}
+
+.session-markdown * {
+  max-width: 100%;
 }
 
 .session-markdown p {
@@ -21,15 +26,23 @@
 }
 
 .session-markdown code {
-  @apply bg-white/10 px-1 py-0.5 rounded text-[0.875em];
+  @apply bg-white/10 px-1 py-0.5 rounded text-[0.875em] break-all;
 }
 
 .session-markdown pre {
-  @apply bg-white/5 p-3 rounded-md overflow-x-auto mb-3;
+  @apply bg-white/5 p-3 rounded-md mb-3 whitespace-pre-wrap break-words;
 }
 
 .session-markdown pre code {
-  @apply bg-transparent p-0 text-sm;
+  @apply bg-transparent p-0 text-sm whitespace-pre-wrap break-words;
+}
+
+.session-markdown img,
+.session-markdown video,
+.session-markdown iframe,
+.session-markdown svg {
+  max-width: 100%;
+  height: auto;
 }
 
 .session-markdown ul,
@@ -101,12 +114,13 @@
 }
 
 .session-markdown table {
-  @apply w-full mb-3 border-collapse;
+  @apply w-full mb-3 border-collapse table-fixed;
 }
 
 .session-markdown th,
 .session-markdown td {
   @apply border border-base-content/20 px-3 py-1.5 text-left;
+  overflow-wrap: anywhere;
 }
 
 .session-markdown th {
