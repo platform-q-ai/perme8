@@ -326,12 +326,15 @@ jobs:
               apps_to_test = apps_needing_tests()
               # If nothing changed that we track, run everything (safety net)
               if not apps_to_test:
-                  selected = ALL_COMBOS
+                  selected = [c for c in ALL_COMBOS if c["domain"] != "security"]
                   selective = "false"
               else:
+                  # Exclude security combos on branches -- they only run on main
+                  non_security = [c for c in ALL_COMBOS if c["domain"] != "security"]
+
                   # Select combos for changed apps
-                  required = [c for c in ALL_COMBOS if c["app"] in apps_to_test]
-                  unrelated = [c for c in ALL_COMBOS if c["app"] not in apps_to_test]
+                  required = [c for c in non_security if c["app"] in apps_to_test]
+                  unrelated = [c for c in non_security if c["app"] not in apps_to_test]
 
                   # Randomly sample ~10% of unrelated combos (seeded for reproducibility)
                   seed = int(hashlib.sha256(run_id.encode()).hexdigest(), 16)
