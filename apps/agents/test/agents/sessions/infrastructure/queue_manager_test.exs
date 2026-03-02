@@ -109,6 +109,133 @@ defmodule Agents.Sessions.Infrastructure.QueueManagerTest do
     end
   end
 
+  describe "notify_task_failed/2" do
+    test "promotes next queued task when a task fails" do
+      user = user_fixture()
+      queued = create_task(user, %{status: "queued", queue_position: 1})
+      test_pid = self()
+
+      assert {:ok, _pid} =
+               QueueManagerSupervisor.ensure_started(user.id,
+                 concurrency_limit: 2,
+                 task_runner_starter: fn task_id, _opts ->
+                   send(test_pid, {:started_runner, task_id})
+                   {:ok, self()}
+                 end
+               )
+
+      QueueManager.notify_task_failed(user.id, "some-failed-task-id")
+
+      queued_id = queued.id
+      assert_receive {:started_runner, ^queued_id}
+
+      updated = Repo.get!(TaskSchema, queued.id)
+      assert updated.status == "pending"
+    end
+  end
+
+  describe "notify_task_cancelled/2" do
+    test "promotes next queued task when a task is cancelled" do
+      user = user_fixture()
+      queued = create_task(user, %{status: "queued", queue_position: 1})
+      test_pid = self()
+
+      assert {:ok, _pid} =
+               QueueManagerSupervisor.ensure_started(user.id,
+                 concurrency_limit: 2,
+                 task_runner_starter: fn task_id, _opts ->
+                   send(test_pid, {:started_runner, task_id})
+                   {:ok, self()}
+                 end
+               )
+
+      QueueManager.notify_task_cancelled(user.id, "some-cancelled-task-id")
+
+      queued_id = queued.id
+      assert_receive {:started_runner, ^queued_id}
+
+      updated = Repo.get!(TaskSchema, queued.id)
+      assert updated.status == "pending"
+    end
+  end
+
+  describe "notify_question_asked/2" do
+    test "moves running task to awaiting_feedback and promotes next queued task" do
+      user = user_fixture()
+      running = create_task(user, %{status: "running"})
+      queued = create_task(user, %{status: "queued", queue_position: 1})
+      test_pid = self()
+
+      assert {:ok, _pid} =
+               QueueManagerSupervisor.ensure_started(user.id,
+                 concurrency_limit: 1,
+                 task_runner_starter: fn task_id, _opts ->
+                   send(test_pid, {:started_runner, task_id})
+                   {:ok, self()}
+                 end
+               )
+
+      QueueManager.notify_question_asked(user.id, running.id)
+
+      updated_running = Repo.get!(TaskSchema, running.id)
+      assert updated_running.status == "awaiting_feedback"
+
+      queued_id = queued.id
+      assert_receive {:started_runner, ^queued_id}
+    end
+
+    test "does not deprioritise completed tasks" do
+      user = user_fixture()
+      completed = create_task(user, %{status: "completed"})
+
+      assert {:ok, _pid} =
+               QueueManagerSupervisor.ensure_started(user.id,
+                 concurrency_limit: 2,
+                 task_runner_starter: fn _task_id, _opts -> {:ok, self()} end
+               )
+
+      QueueManager.notify_question_asked(user.id, completed.id)
+
+      updated = Repo.get!(TaskSchema, completed.id)
+      assert updated.status == "completed"
+    end
+  end
+
+  describe "notify_feedback_provided/2" do
+    test "requeues awaiting_feedback task and promotes if capacity available" do
+      user = user_fixture()
+      awaiting = create_task(user, %{status: "awaiting_feedback"})
+
+      assert {:ok, _pid} =
+               QueueManagerSupervisor.ensure_started(user.id,
+                 concurrency_limit: 2,
+                 task_runner_starter: fn _task_id, _opts -> {:ok, self()} end
+               )
+
+      QueueManager.notify_feedback_provided(user.id, awaiting.id)
+
+      updated = Repo.get!(TaskSchema, awaiting.id)
+      # Task is requeued then immediately promoted since under limit
+      assert updated.status == "pending"
+    end
+
+    test "does not requeue tasks not in awaiting_feedback status" do
+      user = user_fixture()
+      running = create_task(user, %{status: "running"})
+
+      assert {:ok, _pid} =
+               QueueManagerSupervisor.ensure_started(user.id,
+                 concurrency_limit: 2,
+                 task_runner_starter: fn _task_id, _opts -> {:ok, self()} end
+               )
+
+      QueueManager.notify_feedback_provided(user.id, running.id)
+
+      updated = Repo.get!(TaskSchema, running.id)
+      assert updated.status == "running"
+    end
+  end
+
   describe "set_concurrency_limit/2" do
     test "updates limit and triggers promotion when capacity is available" do
       user = user_fixture()
