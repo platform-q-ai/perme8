@@ -6,8 +6,10 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
   use GenServer
 
   alias Agents.Sessions.Application.SessionsConfig
-  alias Agents.Sessions.Domain.Events.TaskPromoted
+  alias Agents.Sessions.Domain.Events.{TaskDeprioritised, TaskPromoted}
   alias Agents.Sessions.Infrastructure.Repositories.TaskRepository
+
+  require Logger
 
   @type state :: %{
           user_id: String.t(),
@@ -93,11 +95,17 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
   end
 
   @impl true
-  def handle_call({:set_concurrency_limit, limit}, _from, state) do
+  def handle_call({:set_concurrency_limit, limit}, _from, state)
+      when is_integer(limit) and limit >= 1 and limit <= 10 do
     state = %{state | concurrency_limit: limit}
     state = promote_next_task(state)
     broadcast_queue_updated(state)
     {:reply, :ok, state}
+  end
+
+  @impl true
+  def handle_call({:set_concurrency_limit, _limit}, _from, state) do
+    {:reply, {:error, :invalid_limit}, state}
   end
 
   @impl true
@@ -137,26 +145,55 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
     {:reply, :ok, state}
   end
 
+  @deprioritisable_statuses ["pending", "starting", "running"]
+
   defp maybe_move_to_awaiting_feedback(state, task_id) do
     case state.task_repo.get_task_for_user(task_id, state.user_id) do
-      nil -> :ok
-      task -> state.task_repo.update_task_status(task, %{status: "awaiting_feedback"})
+      nil ->
+        Logger.warning("QueueManager: task #{task_id} not found for awaiting_feedback transition")
+
+      %{status: status} = task when status in @deprioritisable_statuses ->
+        case state.task_repo.update_task_status(task, %{status: "awaiting_feedback"}) do
+          {:ok, _updated} ->
+            emit_task_deprioritised(state, task)
+
+          {:error, reason} ->
+            Logger.warning(
+              "QueueManager: failed to deprioritise task #{task_id}: #{inspect(reason)}"
+            )
+        end
+
+      %{status: status} ->
+        Logger.debug(
+          "QueueManager: skipping deprioritise for task #{task_id} in status #{status}"
+        )
     end
   end
+
+  @requeueable_statuses ["awaiting_feedback"]
 
   defp maybe_requeue_after_feedback(state, task_id) do
     case state.task_repo.get_task_for_user(task_id, state.user_id) do
       nil ->
-        :ok
+        Logger.warning("QueueManager: task #{task_id} not found for requeue after feedback")
 
-      task ->
+      %{status: status} = task when status in @requeueable_statuses ->
         queue_position = (state.task_repo.get_max_queue_position(state.user_id) || 0) + 1
 
-        state.task_repo.update_task_status(task, %{
-          status: "queued",
-          queue_position: queue_position,
-          queued_at: DateTime.utc_now()
-        })
+        case state.task_repo.update_task_status(task, %{
+               status: "queued",
+               queue_position: queue_position,
+               queued_at: DateTime.utc_now()
+             }) do
+          {:ok, _updated} ->
+            :ok
+
+          {:error, reason} ->
+            Logger.warning("QueueManager: failed to requeue task #{task_id}: #{inspect(reason)}")
+        end
+
+      %{status: status} ->
+        Logger.debug("QueueManager: skipping requeue for task #{task_id} in status #{status}")
     end
   end
 
@@ -188,7 +225,8 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
         emit_task_promoted(state, updated_task)
         state
 
-      _ ->
+      {:error, reason} ->
+        Logger.warning("QueueManager: failed to promote task #{task.id}: #{inspect(reason)}")
         state
     end
   end
@@ -204,11 +242,46 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
     )
   end
 
+  defp emit_task_deprioritised(state, task) do
+    queue_position = task.queue_position || 0
+
+    state.event_bus.emit(
+      TaskDeprioritised.new(%{
+        aggregate_id: task.id,
+        actor_id: state.user_id,
+        task_id: task.id,
+        user_id: state.user_id,
+        queue_position: queue_position
+      })
+    )
+  end
+
   defp maybe_start_runner(%{task_runner_starter: nil}, _task_id), do: :ok
 
   defp maybe_start_runner(state, task_id) do
-    _ = state.task_runner_starter.(task_id, [])
-    :ok
+    case state.task_runner_starter.(task_id, []) do
+      {:ok, _pid} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.error(
+          "QueueManager: failed to start runner for promoted task #{task_id}: #{inspect(reason)}"
+        )
+
+        # Revert the task back to queued so it can be retried
+        case state.task_repo.get_task(task_id) do
+          nil ->
+            :ok
+
+          task ->
+            state.task_repo.update_task_status(task, %{
+              status: "failed",
+              error: "Runner failed to start: #{inspect(reason)}"
+            })
+        end
+
+        :error
+    end
   end
 
   defp broadcast_queue_updated(state) do
@@ -231,19 +304,25 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
   defp safe_count_running(state) do
     state.task_repo.count_running_tasks(state.user_id)
   rescue
-    _ -> 0
+    e ->
+      Logger.warning("QueueManager count_running failed: #{Exception.message(e)}")
+      0
   end
 
   defp safe_list_queued(state) do
     state.task_repo.list_queued_tasks(state.user_id)
   rescue
-    _ -> []
+    e ->
+      Logger.warning("QueueManager list_queued failed: #{Exception.message(e)}")
+      []
   end
 
   defp safe_list_awaiting_feedback(state) do
     state.task_repo.list_awaiting_feedback_tasks(state.user_id)
   rescue
-    _ -> []
+    e ->
+      Logger.warning("QueueManager list_awaiting_feedback failed: #{Exception.message(e)}")
+      []
   end
 
   defp via_tuple(user_id) do
