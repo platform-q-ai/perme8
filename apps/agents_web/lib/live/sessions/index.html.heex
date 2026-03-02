@@ -2,13 +2,16 @@
   <%!-- Left Panel: Session List --%>
   <div class="w-72 shrink-0 border-r border-base-300 flex flex-col bg-base-100">
     <div class="p-3 border-b border-base-300 flex flex-col gap-1.5">
-      <button
-        type="button"
-        phx-click="new_session"
-        class="btn btn-primary btn-sm w-full"
-      >
-        <.icon name="hero-plus" class="size-4" /> New Session
-      </button>
+      <form id="sidebar-new-session-form" phx-submit="run_new_task" class="w-full">
+        <textarea
+          id="sidebar-new-session-instruction"
+          name="instruction"
+          rows="2"
+          phx-hook="SessionForm"
+          class="textarea textarea-bordered w-full text-sm leading-snug"
+          placeholder="Start a new session..."
+        ></textarea>
+      </form>
       <button
         :if={has_auth_refresh_candidates?(@sessions)}
         type="button"
@@ -33,46 +36,31 @@
           <p>No sessions yet</p>
         </div>
       <% else %>
-        <% running_sessions =
-          Enum.filter(@sessions, &(&1.latest_status in ["pending", "starting", "running"])) %>
-        <% attention_sessions =
+        <% completed_sessions =
           @sessions
-          |> Enum.filter(&(&1.latest_status in ["completed", "failed", "cancelled"]))
-          |> Enum.sort_by(fn session ->
-            rank =
-              case session.latest_status do
-                "completed" -> 0
-                "failed" -> 1
-                "cancelled" -> 2
-                _ -> 9
-              end
-
-            {rank, -latest_at_unix(session)}
-          end) %>
-        <% queued_sessions = Enum.filter(@sessions, &(&1.latest_status == "queued")) %>
-        <% other_non_running_sessions =
+          |> Enum.filter(&(&1.latest_status == "completed"))
+          |> Enum.sort_by(&(-latest_at_unix(&1))) %>
+        <% cancelled_sessions =
           @sessions
-          |> Enum.reject(
-            &(&1.latest_status in [
-                "completed",
-                "failed",
-                "cancelled",
-                "queued",
-                "pending",
-                "starting",
-                "running"
-              ])
-          ) %>
-        <% non_running_sessions =
-          attention_sessions ++ other_non_running_sessions ++ queued_sessions %>
+          |> Enum.filter(&(&1.latest_status == "cancelled"))
+          |> Enum.sort_by(&(-latest_at_unix(&1))) %>
+        <% top_sessions = completed_sessions ++ cancelled_sessions %>
+        <% queued_sessions =
+          @sessions
+          |> Enum.filter(&(&1.latest_status == "queued"))
+          |> Enum.sort_by(&(-latest_at_unix(&1))) %>
+        <% in_progress_sessions =
+          @sessions
+          |> Enum.filter(&(&1.latest_status in ["pending", "starting", "running"]))
+          |> Enum.sort_by(&(-latest_at_unix(&1))) %>
         <% empty_slot_count =
           if(@queue_state,
             do: max(@queue_state.concurrency_limit - @queue_state.running, 0),
             else: 0
           ) %>
 
-        <ul class="menu menu-sm p-2 gap-1 w-full mt-auto">
-          <li :for={session <- non_running_sessions} class="w-full">
+        <ul :if={top_sessions != []} class="menu menu-sm p-2 gap-1 w-full">
+          <li :for={session <- top_sessions} class="w-full">
             <div
               data-testid={"session-item-#{slugify(session.title)}"}
               data-slot-state={
@@ -141,9 +129,42 @@
               />
             </div>
           </li>
+        </ul>
+
+        <ul
+          :if={queued_sessions != [] || in_progress_sessions != [] || empty_slot_count > 0}
+          class="menu menu-sm p-2 gap-1 w-full mt-auto"
+        >
+          <li :for={session <- queued_sessions} class="w-full">
+            <div
+              data-testid={"session-item-#{slugify(session.title)}"}
+              data-slot-state="idle"
+              class={[
+                "flex flex-col gap-0.5 w-full rounded-lg p-2 min-h-16 border border-transparent",
+                session.container_id == @active_container_id && "active"
+              ]}
+              phx-click="select_session"
+              phx-value-container-id={session.container_id}
+            >
+              <div class="flex items-center justify-between w-full">
+                <span class="text-xs font-medium truncate flex-1 min-w-0">
+                  {truncate_instruction(session.title, 35)}
+                </span>
+                <div class="flex items-center gap-1">
+                  <.status_dot status={session.latest_status} />
+                </div>
+              </div>
+              <div class="flex items-center gap-2 text-[0.65rem] text-base-content/50 w-full">
+                <span>{image_label(session.image)}</span>
+                <span>&middot;</span>
+                <span>{relative_time(session.latest_at)}</span>
+              </div>
+              <.compact_progress_bar todo_items={session_todo_items(session)} />
+            </div>
+          </li>
 
           <li
-            :if={@queue_state && (empty_slot_count > 0 || running_sessions != [])}
+            :if={@queue_state && (empty_slot_count > 0 || in_progress_sessions != [])}
             class="w-full"
           >
             <div data-testid="queue-limit-rule" class="mx-1 my-1 border-t border-success/50">
@@ -165,7 +186,7 @@
             </div>
           </li>
 
-          <li :for={session <- running_sessions} class="w-full">
+          <li :for={session <- in_progress_sessions} class="w-full">
             <div
               data-testid={"session-item-#{slugify(session.title)}"}
               data-slot-state={
@@ -376,6 +397,8 @@
           </button>
         </div>
 
+        <.progress_bar todo_items={@todo_items} />
+
         <%!-- Output log --%>
         <div class="flex-1 overflow-y-auto p-4" id="session-log" phx-hook="SessionLog">
           <%= if @current_task do %>
@@ -433,8 +456,6 @@
             pending={@pending_question}
           />
         </div>
-
-        <.progress_bar todo_items={@todo_items} />
 
         <%!-- Input form --%>
         <div class="border-t border-base-300 p-3 bg-base-100 shrink-0">
