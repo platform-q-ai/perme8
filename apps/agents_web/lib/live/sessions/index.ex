@@ -381,6 +381,10 @@ defmodule AgentsWeb.SessionsLive.Index do
           socket
       end
 
+    # Restart duration tick when a session begins running (it self-stops when
+    # no running sessions exist, so we need to re-schedule here).
+    if status == "running", do: schedule_duration_tick()
+
     {:noreply, socket}
   end
 

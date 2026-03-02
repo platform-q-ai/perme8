@@ -232,7 +232,8 @@ defmodule AgentsWeb.SessionsLive.Helpers do
   def format_file_stats(nil), do: nil
   def format_file_stats(%{"files" => 0}), do: nil
 
-  def format_file_stats(%{"files" => files, "additions" => adds, "deletions" => dels}) do
+  def format_file_stats(%{"files" => files, "additions" => adds, "deletions" => dels})
+      when is_integer(files) and is_integer(adds) and is_integer(dels) do
     file_label = if files == 1, do: "file", else: "files"
     "#{files} #{file_label} +#{adds} -#{dels}"
   end

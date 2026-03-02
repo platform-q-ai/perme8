@@ -74,30 +74,23 @@
                   <.status_dot status={session.latest_status} />
                 </div>
               </div>
+              <% duration =
+                format_duration(session.started_at, session.completed_at, @duration_now) %>
+              <% file_stats = format_file_stats(session.session_summary) %>
               <div class="flex items-center gap-2 text-[0.65rem] text-base-content/50 w-full">
                 <span>{image_label(session.image)}</span>
                 <span>&middot;</span>
                 <span>{relative_time(session.latest_at)}</span>
-                <span
-                  :if={
-                    format_duration(session.started_at, session.completed_at, @duration_now) !=
-                      nil
-                  }
-                  data-testid="session-duration"
-                >
-                  &middot; {format_duration(
-                    session.started_at,
-                    session.completed_at,
-                    @duration_now
-                  )}
+                <span :if={duration != nil} data-testid="session-duration">
+                  &middot; {duration}
                 </span>
               </div>
               <div
-                :if={format_file_stats(session.session_summary) != nil}
+                :if={file_stats != nil}
                 class="text-[0.6rem] text-base-content/40 w-full"
                 data-testid="session-file-stats"
               >
-                {format_file_stats(session.session_summary)}
+                {file_stats}
               </div>
               <.compact_progress_bar todo_items={session_todo_items(session)} />
               <.container_stats_bars
