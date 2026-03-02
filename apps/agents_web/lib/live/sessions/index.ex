@@ -535,8 +535,14 @@ defmodule AgentsWeb.SessionsLive.Index do
   end
 
   defp append_optimistic_user_message(socket, message) do
-    updated = socket.assigns.optimistic_user_messages ++ [String.trim(message)]
-    assign(socket, :optimistic_user_messages, updated)
+    trimmed = String.trim(message)
+    optimistic_id = "optimistic-#{System.unique_integer([:positive])}"
+    updated = socket.assigns.optimistic_user_messages ++ [trimmed]
+    parts = socket.assigns.output_parts ++ [{:user_pending, optimistic_id, trimmed}]
+
+    socket
+    |> assign(:optimistic_user_messages, updated)
+    |> assign(:output_parts, parts)
   end
 
   defp toggle_selection(current, label, true = _multiple) do
