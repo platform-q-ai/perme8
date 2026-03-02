@@ -79,12 +79,18 @@ defmodule AgentsWeb.SessionsLive.Helpers do
   def find_current_task(tasks, nil), do: Enum.find(tasks, &active_task?/1)
 
   def find_current_task(tasks, container_id) do
-    session_tasks =
-      tasks
-      |> Enum.filter(&(&1.container_id == container_id))
+    case String.split(container_id, ":", parts: 2) do
+      ["task", task_id] ->
+        Enum.find(tasks, &(&1.id == task_id))
 
-    # Prefer running task, otherwise latest
-    Enum.find(session_tasks, &active_task?/1) || List.first(session_tasks)
+      _ ->
+        session_tasks =
+          tasks
+          |> Enum.filter(&(&1.container_id == container_id))
+
+        # Prefer running task, otherwise latest
+        Enum.find(session_tasks, &active_task?/1) || List.first(session_tasks)
+    end
   end
 
   @doc "Returns a human-readable label for a Docker image name."
