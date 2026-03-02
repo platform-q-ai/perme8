@@ -282,4 +282,106 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.EventsTest do
     assert_receive :permission_replied, 5000
     assert_receive {:task_status_changed, _, "completed"}, 5000
   end
+
+  test "persists user follow-up parts with lower-camel messageId in cached output", %{task: task} do
+    test_pid = self()
+
+    Agents.Mocks.TaskRepositoryMock
+    |> stub(:get_task, fn _id -> task end)
+    |> stub(:update_task_status, fn _task, attrs ->
+      if is_binary(attrs[:output]) do
+        send(test_pid, {:output_flushed, attrs.output})
+      end
+
+      {:ok, task}
+    end)
+
+    Agents.Mocks.ContainerProviderMock
+    |> expect(:start, fn _image, _opts -> {:ok, %{container_id: "abc123", port: 4096}} end)
+    |> stub(:stop, fn _id -> :ok end)
+
+    Agents.Mocks.OpencodeClientMock
+    |> expect(:health, fn _url -> :ok end)
+    |> expect(:create_session, fn _url, _opts -> {:ok, %{"id" => "sess-1"}} end)
+    |> expect(:subscribe_events, fn _url, runner_pid ->
+      spawn(fn ->
+        Process.sleep(50)
+
+        send(runner_pid, {
+          :opencode_event,
+          %{
+            "type" => "message.updated",
+            "properties" => %{"info" => %{"role" => "user", "id" => "user-msg-1"}}
+          }
+        })
+
+        send(runner_pid, {
+          :opencode_event,
+          %{
+            "type" => "message.part.updated",
+            "properties" => %{
+              "part" => %{
+                "id" => "user-part-1",
+                "type" => "text",
+                "text" => "Applied follow-up",
+                "messageId" => "user-msg-1"
+              }
+            }
+          }
+        })
+
+        send(runner_pid, {
+          :opencode_event,
+          %{
+            "type" => "message.part.updated",
+            "properties" => %{
+              "part" => %{"id" => "asst-1", "type" => "text", "text" => "Assistant reply"}
+            }
+          }
+        })
+
+        send(runner_pid, {
+          :opencode_event,
+          %{
+            "type" => "session.status",
+            "properties" => %{"sessionID" => "sess-1", "status" => %{"type" => "busy"}}
+          }
+        })
+
+        Process.sleep(20)
+
+        send(runner_pid, {
+          :opencode_event,
+          %{
+            "type" => "session.status",
+            "properties" => %{"sessionID" => "sess-1", "status" => %{"type" => "idle"}}
+          }
+        })
+      end)
+
+      {:ok, self()}
+    end)
+    |> expect(:send_prompt_async, fn _url, "sess-1", _parts, _opts -> :ok end)
+
+    {:ok, _pid} =
+      GenServer.start(
+        TaskRunner,
+        {task.id,
+         [
+           container_provider: Agents.Mocks.ContainerProviderMock,
+           opencode_client: Agents.Mocks.OpencodeClientMock,
+           task_repo: Agents.Mocks.TaskRepositoryMock,
+           pubsub: Perme8.Events.PubSub
+         ]}
+      )
+
+    assert_receive {:output_flushed, output_json}, 5000
+    assert_receive {:task_status_changed, _, "completed"}, 5000
+
+    assert {:ok, output_parts} = Jason.decode(output_json)
+
+    assert Enum.any?(output_parts, fn part ->
+             part["type"] == "user" and part["text"] == "Applied follow-up"
+           end)
+  end
 end

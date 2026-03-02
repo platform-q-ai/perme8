@@ -229,22 +229,39 @@ defmodule Agents.Sessions do
     opts = inject_task_runner_starter(opts)
     starter = Keyword.fetch!(opts, :task_runner_starter)
 
-    with %{container_id: cid, session_id: sid, instruction: instruction} <-
-           task_repo.get_task(task_id),
-         true <- is_binary(cid) and cid != "",
-         true <- is_binary(sid) and sid != "",
-         {:ok, _pid} <-
-           starter.(task_id,
-             resume: true,
-             instruction: instruction,
-             prompt_instruction: message,
-             container_id: cid,
-             session_id: sid
-           ) do
-      :ok
-    else
-      _ -> {:error, :task_not_running}
+    case task_repo.get_task(task_id) do
+      %{status: status} when status in ["cancelled"] ->
+        {:error, :task_not_running}
+
+      %{container_id: cid, session_id: sid, instruction: instruction}
+      when is_binary(cid) and cid != "" and is_binary(sid) and sid != "" ->
+        case starter.(task_id,
+               resume: true,
+               instruction: instruction,
+               prompt_instruction: message,
+               container_id: cid,
+               session_id: sid
+             ) do
+          {:ok, _pid} -> :ok
+          _ -> {:error, :task_not_running}
+        end
+
+      %{status: status} = task
+      when status in ["pending", "starting", "running", "awaiting_feedback"] ->
+        _ = maybe_mark_runner_linkage_missing(task_repo, task)
+        {:error, :task_not_running}
+
+      _ ->
+        {:error, :task_not_running}
     end
+  end
+
+  defp maybe_mark_runner_linkage_missing(task_repo, task) do
+    if function_exported?(task_repo, :update_task_status, 2) do
+      task_repo.update_task_status(task, %{status: "failed", error: "Runner linkage missing"})
+    end
+  rescue
+    _ -> :ok
   end
 
   @doc """
