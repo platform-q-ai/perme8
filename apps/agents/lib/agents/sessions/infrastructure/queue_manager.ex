@@ -7,6 +7,7 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
 
   alias Agents.Sessions.Application.SessionsConfig
   alias Agents.Sessions.Domain.Events.{TaskDeprioritised, TaskPromoted}
+  alias Agents.Sessions.Infrastructure.Adapters.DockerAdapter
   alias Agents.Sessions.Infrastructure.Repositories.TaskRepository
 
   require Logger
@@ -17,6 +18,7 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
           task_repo: module(),
           event_bus: module(),
           task_runner_starter: (String.t(), keyword() -> {:ok, pid()} | {:error, term()}) | nil,
+          container_provider: module(),
           pubsub: module()
         }
 
@@ -61,6 +63,10 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
     GenServer.call(via_tuple(user_id), {:notify_feedback_provided, task_id})
   end
 
+  def notify_task_queued(user_id, task_id) do
+    GenServer.call(via_tuple(user_id), {:notify_task_queued, task_id})
+  end
+
   @impl true
   def init(opts) do
     user_id = Keyword.fetch!(opts, :user_id)
@@ -73,6 +79,7 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
        task_repo: Keyword.get(opts, :task_repo, TaskRepository),
        event_bus: Keyword.get(opts, :event_bus, Perme8.Events.EventBus),
        task_runner_starter: Keyword.get(opts, :task_runner_starter),
+       container_provider: Keyword.get(opts, :container_provider, DockerAdapter),
        pubsub: Keyword.get(opts, :pubsub, SessionsConfig.pubsub())
      }}
   end
@@ -99,6 +106,7 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
       when is_integer(limit) and limit >= 1 and limit <= 10 do
     state = %{state | concurrency_limit: limit}
     state = promote_next_task(state)
+    warm_top_queued_tasks(state)
     broadcast_queue_updated(state)
     {:reply, :ok, state}
   end
@@ -111,6 +119,7 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
   @impl true
   def handle_call({:notify_task_completed, _task_id}, _from, state) do
     state = promote_next_task(state)
+    warm_top_queued_tasks(state)
     broadcast_queue_updated(state)
     {:reply, :ok, state}
   end
@@ -118,6 +127,7 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
   @impl true
   def handle_call({:notify_task_failed, _task_id}, _from, state) do
     state = promote_next_task(state)
+    warm_top_queued_tasks(state)
     broadcast_queue_updated(state)
     {:reply, :ok, state}
   end
@@ -125,6 +135,7 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
   @impl true
   def handle_call({:notify_task_cancelled, _task_id}, _from, state) do
     state = promote_next_task(state)
+    warm_top_queued_tasks(state)
     broadcast_queue_updated(state)
     {:reply, :ok, state}
   end
@@ -133,6 +144,7 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
   def handle_call({:notify_question_asked, task_id}, _from, state) do
     maybe_move_to_awaiting_feedback(state, task_id)
     state = promote_next_task(state)
+    warm_top_queued_tasks(state)
     broadcast_queue_updated(state)
     {:reply, :ok, state}
   end
@@ -141,6 +153,14 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
   def handle_call({:notify_feedback_provided, task_id}, _from, state) do
     maybe_requeue_after_feedback(state, task_id)
     state = promote_next_task(state)
+    warm_top_queued_tasks(state)
+    broadcast_queue_updated(state)
+    {:reply, :ok, state}
+  end
+
+  @impl true
+  def handle_call({:notify_task_queued, _task_id}, _from, state) do
+    warm_top_queued_tasks(state)
     broadcast_queue_updated(state)
     {:reply, :ok, state}
   end
@@ -323,6 +343,69 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
     e ->
       Logger.warning("QueueManager list_awaiting_feedback failed: #{Exception.message(e)}")
       []
+  end
+
+  @warm_queue_count 2
+
+  defp warm_top_queued_tasks(state) do
+    state
+    |> safe_list_queued()
+    |> Enum.take(@warm_queue_count)
+    |> Enum.each(&maybe_warm_task(state, &1))
+
+    :ok
+  end
+
+  defp maybe_warm_task(state, %{container_id: nil} = task) do
+    warm_task_container(state, task)
+  end
+
+  defp maybe_warm_task(state, %{container_id: container_id} = task)
+       when is_binary(container_id) do
+    case state.container_provider.status(container_id) do
+      {:ok, :stopped} ->
+        :ok
+
+      {:ok, :running} ->
+        :ok
+
+      {:ok, :not_found} ->
+        warm_task_container(state, task)
+
+      {:error, reason} ->
+        Logger.debug(
+          "QueueManager: skipping warm check for task #{task.id}, status error: #{inspect(reason)}"
+        )
+
+        :ok
+    end
+  end
+
+  defp warm_task_container(state, task) do
+    image = task.image || SessionsConfig.image()
+
+    case state.container_provider.start(image, []) do
+      {:ok, %{container_id: container_id}} ->
+        case state.task_repo.update_task_status(task, %{
+               container_id: container_id,
+               container_port: nil
+             }) do
+          {:ok, _updated_task} ->
+            :ok
+
+          {:error, reason} ->
+            Logger.debug(
+              "QueueManager: failed to persist warmed container for task #{task.id}: #{inspect(reason)}"
+            )
+        end
+
+        _ = state.container_provider.stop(container_id)
+        :ok
+
+      {:error, reason} ->
+        Logger.debug("QueueManager: failed to warm task #{task.id}: #{inspect(reason)}")
+        :ok
+    end
   end
 
   defp via_tuple(user_id) do
