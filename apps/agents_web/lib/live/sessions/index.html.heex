@@ -95,6 +95,9 @@
         </div>
       </div>
 
+      <%!-- Queue panel --%>
+      <.queue_panel queue_state={@queue_state} />
+
       <%!-- Stats bar --%>
       <div
         :if={@session_tokens || @session_summary}

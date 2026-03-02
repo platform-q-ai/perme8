@@ -52,7 +52,8 @@ defmodule AgentsWeb.SessionsLive.Helpers do
   def auth_error?(_), do: false
 
   @doc "Returns true if the task is in an active (non-terminal) state."
-  def active_task?(%{status: status}), do: status in ["pending", "starting", "running"]
+  def active_task?(%{status: status}),
+    do: status in ["pending", "starting", "running", "queued", "awaiting_feedback"]
 
   @doc "Returns true if the task is currently running."
   def task_running?(nil), do: false
@@ -103,7 +104,9 @@ defmodule AgentsWeb.SessionsLive.Helpers do
   @doc "Polls container stats for all active sessions."
   def poll_running_session_stats(sessions) do
     sessions
-    |> Enum.filter(&(&1.latest_status in ["running", "starting", "pending"]))
+    |> Enum.filter(
+      &(&1.latest_status in ["running", "starting", "pending", "queued", "awaiting_feedback"])
+    )
     |> Enum.reduce(%{}, fn session, acc ->
       case fetch_container_stats(session.container_id) do
         {:ok, stats_map} -> Map.put(acc, session.container_id, stats_map)

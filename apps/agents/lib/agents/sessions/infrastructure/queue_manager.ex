@@ -77,7 +77,7 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
 
   @impl true
   def handle_call(:check_concurrency, _from, state) do
-    running_count = state.task_repo.count_running_tasks(state.user_id)
+    running_count = safe_count_running(state)
     result = if running_count >= state.concurrency_limit, do: :at_limit, else: :ok
     {:reply, result, state}
   end
@@ -161,7 +161,7 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
   end
 
   defp promote_next_task(state) do
-    running_count = state.task_repo.count_running_tasks(state.user_id)
+    running_count = safe_count_running(state)
 
     if running_count >= state.concurrency_limit do
       state
@@ -213,11 +213,29 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
 
   defp queue_state(state) do
     %{
-      running: state.task_repo.count_running_tasks(state.user_id),
-      queued: state.task_repo.list_queued_tasks(state.user_id),
-      awaiting_feedback: state.task_repo.list_awaiting_feedback_tasks(state.user_id),
+      running: safe_count_running(state),
+      queued: safe_list_queued(state),
+      awaiting_feedback: safe_list_awaiting_feedback(state),
       concurrency_limit: state.concurrency_limit
     }
+  end
+
+  defp safe_count_running(state) do
+    state.task_repo.count_running_tasks(state.user_id)
+  rescue
+    _ -> 0
+  end
+
+  defp safe_list_queued(state) do
+    state.task_repo.list_queued_tasks(state.user_id)
+  rescue
+    _ -> []
+  end
+
+  defp safe_list_awaiting_feedback(state) do
+    state.task_repo.list_awaiting_feedback_tasks(state.user_id)
+  rescue
+    _ -> []
   end
 
   defp via_tuple(user_id) do

@@ -20,6 +20,7 @@ defmodule AgentsWeb.SessionsLive.Index do
 
     if connected?(socket) do
       subscribe_to_active_tasks(tasks)
+      Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "queue:user:#{user.id}")
       schedule_stats_poll()
     end
 
@@ -47,6 +48,7 @@ defmodule AgentsWeb.SessionsLive.Index do
      |> assign(:events, [])
      |> assign(:available_images, available_images)
      |> assign(:selected_image, default_image)
+     |> assign(:queue_state, load_queue_state(user.id))
      |> assign_session_state()
      |> assign(:form, to_form(%{"instruction" => ""}))
      |> EventProcessor.maybe_load_cached_output(current_task)
@@ -111,6 +113,20 @@ defmodule AgentsWeb.SessionsLive.Index do
      |> assign(:events, [])
      |> assign_session_state()
      |> assign(:form, to_form(%{"instruction" => ""}))}
+  end
+
+  @impl true
+  def handle_event("update_concurrency_limit", %{"concurrency_limit" => limit_str}, socket) do
+    user = socket.assigns.current_scope.user
+
+    case Integer.parse(limit_str) do
+      {limit, ""} when limit >= 1 and limit <= 5 ->
+        Sessions.set_concurrency_limit(user.id, limit)
+        {:noreply, assign(socket, :queue_state, load_queue_state(user.id))}
+
+      _ ->
+        {:noreply, socket}
+    end
   end
 
   @impl true
@@ -351,6 +367,11 @@ defmodule AgentsWeb.SessionsLive.Index do
   def handle_info({:DOWN, _ref, :process, _pid, :normal}, socket), do: {:noreply, socket}
 
   @impl true
+  def handle_info({:queue_updated, _user_id, queue_state}, socket) do
+    {:noreply, assign(socket, :queue_state, queue_state)}
+  end
+
+  @impl true
   def handle_info(_msg, socket), do: {:noreply, socket}
 
   defp assign_session_state(socket) do
@@ -520,7 +541,25 @@ defmodule AgentsWeb.SessionsLive.Index do
 
   defp reload_all(socket, user_id) do
     sessions = Sessions.list_sessions(user_id)
-    assign(socket, :sessions, sessions)
+
+    socket
+    |> assign(:sessions, sessions)
+    |> assign(:queue_state, load_queue_state(user_id))
+  end
+
+  defp load_queue_state(user_id) do
+    Sessions.get_queue_state(user_id)
+  catch
+    :exit, _reason -> default_queue_state()
+  end
+
+  defp default_queue_state do
+    %{
+      running: 0,
+      queued: [],
+      awaiting_feedback: [],
+      concurrency_limit: 2
+    }
   end
 
   defp subscribe_to_active_tasks(tasks) do
