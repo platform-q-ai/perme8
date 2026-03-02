@@ -1,9 +1,9 @@
-defmodule JargaWeb.ChatLive.MessageHandlersTest do
+defmodule ChatWeb.ChatLive.MessageHandlersTest do
   @moduledoc """
   Tests that the handle_chat_messages/0 macro generates correct
   handle_info/2 callbacks, including structured event patterns.
   """
-  use JargaWeb.ConnCase, async: true
+  use ChatWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
   import Jarga.AccountsFixtures

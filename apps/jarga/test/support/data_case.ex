@@ -15,10 +15,10 @@ defmodule Jarga.DataCase do
   """
 
   # Test support module - top-level boundary for test infrastructure
-  # Needs access to Notifications facade (for subscriber setup) and Notifications.Repo (for sandbox)
+  # Needs access to Notifications facade (for subscriber setup), Chat.Repo and Notifications.Repo (for sandbox)
   use Boundary,
     top_level?: true,
-    deps: [Jarga.Repo, Jarga.Test.SandboxHelper, Notifications, Notifications.Repo],
+    deps: [Jarga.Repo, Jarga.Test.SandboxHelper, Chat.Repo, Notifications, Notifications.Repo],
     exports: []
 
   use ExUnit.CaseTemplate
@@ -55,6 +55,7 @@ defmodule Jarga.DataCase do
     :ok = Sandbox.checkout(Jarga.Repo)
     :ok = Sandbox.checkout(Identity.Repo)
     :ok = Sandbox.checkout(Agents.Repo)
+    :ok = Sandbox.checkout(Chat.Repo)
     :ok = Sandbox.checkout(Notifications.Repo)
 
     # CRITICAL: Allow all repos to share data by allowing cross-process access
@@ -64,6 +65,7 @@ defmodule Jarga.DataCase do
     Sandbox.allow(Jarga.Repo, self(), self())
     Sandbox.allow(Identity.Repo, self(), self())
     Sandbox.allow(Agents.Repo, self(), self())
+    Sandbox.allow(Chat.Repo, self(), self())
     Sandbox.allow(Notifications.Repo, self(), self())
 
     unless tags[:async] do
@@ -71,6 +73,7 @@ defmodule Jarga.DataCase do
       Sandbox.mode(Jarga.Repo, {:shared, self()})
       Sandbox.mode(Identity.Repo, {:shared, self()})
       Sandbox.mode(Agents.Repo, {:shared, self()})
+      Sandbox.mode(Chat.Repo, {:shared, self()})
       Sandbox.mode(Notifications.Repo, {:shared, self()})
     end
 
@@ -78,6 +81,7 @@ defmodule Jarga.DataCase do
       Sandbox.checkin(Jarga.Repo)
       Sandbox.checkin(Identity.Repo)
       Sandbox.checkin(Agents.Repo)
+      Sandbox.checkin(Chat.Repo)
       Sandbox.checkin(Notifications.Repo)
     end)
 

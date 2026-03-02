@@ -44,7 +44,10 @@ defmodule ChatWeb.MixProject do
       {:phoenix_html, "~> 4.1"},
       {:phoenix_live_view, "~> 1.1.0"},
       {:boundary, "~> 0.10", runtime: false},
-      {:lazy_html, ">= 0.1.0", only: :test}
+      {:lazy_html, ">= 0.1.0", only: :test},
+      # Test deps: LiveView integration tests need fixtures and sandbox setup
+      {:jarga, in_umbrella: true, only: :test},
+      {:notifications, in_umbrella: true, only: :test}
     ]
   end
 end

@@ -1,11 +1,11 @@
-defmodule JargaWeb.ChatLive.PersistenceAndContextTest do
+defmodule ChatWeb.ChatLive.PersistenceAndContextTest do
   @moduledoc """
   TDD tests for chat conversation persistence and page context retrieval.
 
   These tests define the expected behavior before implementation.
   """
   # async: false for database persistence tests
-  use JargaWeb.ConnCase, async: false
+  use ChatWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
   import Jarga.AccountsFixtures
@@ -13,7 +13,7 @@ defmodule JargaWeb.ChatLive.PersistenceAndContextTest do
   import Jarga.ProjectsFixtures
   import Jarga.DocumentsFixtures
   import Jarga.NotesFixtures
-  import Jarga.Test.StepHelpers
+  import Chat.Test.StepHelpers
 
   describe "TDD: Chat conversation persistence across navigation" do
     setup do

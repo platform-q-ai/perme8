@@ -77,6 +77,13 @@ config :agents, Agents.Repo,
   pool_size: 10,
   ownership_timeout: :infinity
 
+# Chat uses the same database as Jarga
+config :chat, Chat.Repo,
+  url: database_url,
+  pool: Ecto.Adapters.SQL.Sandbox,
+  pool_size: 10,
+  ownership_timeout: :infinity
+
 # Notifications uses the same database as Jarga
 # pool_size 15 required: jarga-web browser tests (exo-bdd) run concurrent
 # scenarios that each load the notification bell component via LiveView,
