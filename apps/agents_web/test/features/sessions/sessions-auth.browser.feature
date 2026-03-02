@@ -39,7 +39,7 @@ Feature: Cross-App Authentication for Sessions
     When I navigate to "${baseUrl}/sessions"
     And I wait for network idle
     Then the URL should contain "/sessions"
-    And I should see "New Session"
+    And "form#sidebar-new-session-form" should exist
 
   # ---------------------------------------------------------------------------
   # Failed Login

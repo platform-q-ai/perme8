@@ -32,7 +32,7 @@ All routes require authentication.
 
 | Method | Path | Handler | Description |
 |--------|------|---------|-------------|
-| GET | `/sessions` | `SessionsLive.Index` | Sessions LiveView -- instruction form, event log, task history |
+| GET | `/sessions` | `SessionsLive.Index` | Sessions LiveView -- sidebar quick-start, chat log, task history |
 
 ## LiveViews
 
@@ -40,9 +40,11 @@ All routes require authentication.
 
 Main sessions interface for running coding tasks in ephemeral opencode containers.
 
-- Instruction form (Enter to submit, Shift+Enter for newline)
+- Sidebar quick-start textarea for launching new sessions
+- Session chat input form (Enter to submit, Shift+Enter for newline)
 - Real-time event log streamed via PubSub from TaskRunner
 - Markdown rendering of agent output
+- Todo progress bar rendered above the chat textarea when todo updates exist
 - Task history with colour-coded status badges
 - Cancel / delete / resume actions
 
@@ -51,7 +53,8 @@ Main sessions interface for running coding tasks in ephemeral opencode container
 | Hook | File | Purpose |
 |------|------|---------|
 | `SessionLog` | `assets/js/presentation/hooks/session-log-hook.ts` | Auto-scrolls event log using MutationObserver |
-| `SubmitForm` | `assets/js/presentation/hooks/session-form-hook.ts` | Enter-to-submit, Shift+Enter-for-newline |
+| `SessionForm` | `assets/js/presentation/hooks/session-form-hook.ts` | Enter-to-submit, Shift+Enter-for-newline |
+| `ConcurrencyLimit` | `assets/js/presentation/hooks/concurrency-limit-hook.ts` | Synchronizes queue concurrency selector with LiveView events |
 
 ## Dependencies
 
