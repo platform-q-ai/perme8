@@ -11,6 +11,50 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponents do
 
   import AgentsWeb.CoreComponents
 
+  # ---- Tab Bar ----
+
+  @doc """
+  Renders an accessible tab bar for the session detail panel.
+
+  Each tab is a `role="tab"` button inside a `role="tablist"` container.
+  The active tab gets `aria-selected="true"`. Clicking a tab emits a
+  `"switch_tab"` event with the tab id.
+
+  ## Assigns
+
+    * `:active_tab` - the id of the currently active tab (string)
+    * `:tabs` - list of `%{id: string, label: string}` maps
+  """
+  attr(:active_tab, :string, required: true)
+  attr(:tabs, :list, required: true)
+
+  def tab_bar(assigns) do
+    ~H"""
+    <div role="tablist" class="flex border-b border-base-300 bg-base-100 shrink-0 px-2 gap-1">
+      <button
+        :for={tab <- @tabs}
+        role="tab"
+        type="button"
+        data-tab-id={tab.id}
+        aria-selected={to_string(tab.id == @active_tab)}
+        aria-controls={"tabpanel-#{tab.id}"}
+        phx-click="switch_tab"
+        phx-value-tab={tab.id}
+        class={[
+          "px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors",
+          if(tab.id == @active_tab,
+            do: "border-primary text-primary",
+            else:
+              "border-transparent text-base-content/50 hover:text-base-content/80 hover:border-base-300"
+          )
+        ]}
+      >
+        {tab.label}
+      </button>
+    </div>
+    """
+  end
+
   # ---- Question Card ----
 
   @doc """
