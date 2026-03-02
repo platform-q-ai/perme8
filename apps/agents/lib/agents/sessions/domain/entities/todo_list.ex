@@ -127,6 +127,10 @@ defmodule Agents.Sessions.Domain.Entities.TodoList do
 
   @spec extract_todos(map()) :: {:ok, [map()]} | :error
   defp extract_todos(%{"properties" => %{"todos" => todos}}) when is_list(todos), do: {:ok, todos}
+  defp extract_todos(%{"properties" => %{"items" => items}}) when is_list(items), do: {:ok, items}
+  defp extract_todos(%{"todos" => todos}) when is_list(todos), do: {:ok, todos}
+  defp extract_todos(%{"items" => items}) when is_list(items), do: {:ok, items}
   defp extract_todos(%{properties: %{todos: todos}}) when is_list(todos), do: {:ok, todos}
+  defp extract_todos(%{properties: %{items: items}}) when is_list(items), do: {:ok, items}
   defp extract_todos(_payload), do: :error
 end
