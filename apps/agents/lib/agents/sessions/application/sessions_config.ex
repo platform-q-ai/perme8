@@ -84,6 +84,11 @@ defmodule Agents.Sessions.Application.SessionsConfig do
     config()[:question_timeout_ms] || :timer.minutes(5)
   end
 
+  @doc "Returns the default concurrency limit for task queuing."
+  def default_concurrency_limit do
+    config()[:default_concurrency_limit] || 2
+  end
+
   @doc "Returns the PubSub server name for broadcasting task events."
   def pubsub do
     config()[:pubsub] || Perme8.Events.PubSub

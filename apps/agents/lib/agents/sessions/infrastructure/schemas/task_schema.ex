@@ -27,6 +27,8 @@ defmodule Agents.Sessions.Infrastructure.Schemas.TaskSchema do
           todo_items: map() | nil,
           parent_task_id: Ecto.UUID.t() | nil,
           pending_question: map() | nil,
+          queue_position: integer() | nil,
+          queued_at: DateTime.t() | nil,
           started_at: DateTime.t() | nil,
           completed_at: DateTime.t() | nil,
           inserted_at: DateTime.t(),
@@ -51,6 +53,8 @@ defmodule Agents.Sessions.Infrastructure.Schemas.TaskSchema do
     field(:todo_items, :map)
     field(:parent_task_id, Ecto.UUID)
     field(:pending_question, :map)
+    field(:queue_position, :integer)
+    field(:queued_at, :utc_datetime)
     field(:started_at, :utc_datetime)
     field(:completed_at, :utc_datetime)
 
@@ -81,6 +85,8 @@ defmodule Agents.Sessions.Infrastructure.Schemas.TaskSchema do
       :error,
       :output,
       :parent_task_id,
+      :queue_position,
+      :queued_at,
       :started_at,
       :completed_at
     ])
@@ -108,6 +114,8 @@ defmodule Agents.Sessions.Infrastructure.Schemas.TaskSchema do
       :output,
       :todo_items,
       :pending_question,
+      :queue_position,
+      :queued_at,
       :started_at,
       :completed_at
     ])

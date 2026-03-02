@@ -32,6 +32,8 @@ defmodule Agents.Sessions do
   }
 
   alias Agents.Sessions.Application.SessionsConfig
+  alias Agents.Sessions.Infrastructure.QueueManager
+  alias Agents.Sessions.Infrastructure.QueueManagerSupervisor
   alias Agents.Sessions.Infrastructure.TaskRunnerSupervisor
 
   @doc """
@@ -236,6 +238,38 @@ defmodule Agents.Sessions do
     opts = inject_task_runner_starter(opts)
     opts = Keyword.put_new(opts, :resume_fn, &resume_task/3)
     RefreshAuthAndResume.execute(task_id, user_id, opts)
+  end
+
+  @doc """
+  Returns the current queue state for a user.
+
+  Ensures the QueueManager is started for the user.
+  Returns a map with `:running`, `:queued`, `:awaiting_feedback`, and `:concurrency_limit`.
+  """
+  @spec get_queue_state(String.t()) :: map()
+  def get_queue_state(user_id) do
+    {:ok, _pid} = QueueManagerSupervisor.ensure_started(user_id)
+    QueueManager.get_queue_state(user_id)
+  end
+
+  @doc """
+  Returns the concurrency limit for a user.
+  """
+  @spec get_concurrency_limit(String.t()) :: non_neg_integer()
+  def get_concurrency_limit(user_id) do
+    {:ok, _pid} = QueueManagerSupervisor.ensure_started(user_id)
+    QueueManager.get_concurrency_limit(user_id)
+  end
+
+  @doc """
+  Sets the concurrency limit for a user.
+
+  May trigger promotion of queued tasks if the new limit allows more concurrency.
+  """
+  @spec set_concurrency_limit(String.t(), non_neg_integer()) :: :ok
+  def set_concurrency_limit(user_id, limit) do
+    {:ok, _pid} = QueueManagerSupervisor.ensure_started(user_id)
+    QueueManager.set_concurrency_limit(user_id, limit)
   end
 
   # Wire the real TaskRunnerSupervisor starter

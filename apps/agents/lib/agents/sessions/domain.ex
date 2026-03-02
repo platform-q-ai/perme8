@@ -15,9 +15,13 @@ defmodule Agents.Sessions.Domain do
       Entities.TodoItem,
       Entities.TodoList,
       Policies.TaskPolicy,
+      Policies.QueuePolicy,
       Events.TaskCreated,
       Events.TaskCompleted,
       Events.TaskFailed,
-      Events.TaskCancelled
+      Events.TaskCancelled,
+      Events.TaskQueued,
+      Events.TaskDeprioritised,
+      Events.TaskPromoted
     ]
 end

@@ -15,7 +15,9 @@ defmodule Agents.OTPApp do
         Agents.Repo,
         Hermes.Server.Registry,
         {Registry, keys: :unique, name: Agents.Sessions.TaskRegistry},
-        Agents.Sessions.Infrastructure.TaskRunnerSupervisor
+        {Registry, keys: :unique, name: Agents.Sessions.QueueRegistry},
+        Agents.Sessions.Infrastructure.TaskRunnerSupervisor,
+        Agents.Sessions.Infrastructure.QueueManagerSupervisor
       ] ++ mcp_children() ++ mcp_http_children()
 
     opts = [strategy: :one_for_one, name: Agents.Supervisor]
