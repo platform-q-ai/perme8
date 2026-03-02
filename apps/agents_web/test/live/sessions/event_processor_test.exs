@@ -123,7 +123,7 @@ defmodule AgentsWeb.SessionsLive.EventProcessorTest do
       assert result.assigns.output_parts == []
     end
 
-    test "skips parts belonging to user messages" do
+    test "converts user message parts into chat user timeline entries" do
       socket = build_socket(%{user_message_ids: MapSet.new(["msg-1"])})
 
       event = %{
@@ -139,7 +139,7 @@ defmodule AgentsWeb.SessionsLive.EventProcessorTest do
       }
 
       result = EventProcessor.process_event(event, socket)
-      assert result.assigns.output_parts == []
+      assert result.assigns.output_parts == [{:user, "msg-1", "User typed this"}]
     end
 
     test "supports lower-camel messageId for user parts" do
@@ -163,9 +163,8 @@ defmodule AgentsWeb.SessionsLive.EventProcessorTest do
 
       result = EventProcessor.process_event(event, socket)
 
-      assert result.assigns.output_parts == []
+      assert result.assigns.output_parts == [{:user, "msg-2", "Queued follow-up"}]
       assert result.assigns.optimistic_user_messages == []
-      assert result.assigns.confirmed_user_messages == [%{id: "msg-2", text: "Queued follow-up"}]
     end
   end
 
@@ -181,10 +180,9 @@ defmodule AgentsWeb.SessionsLive.EventProcessorTest do
 
       result = EventProcessor.maybe_load_cached_output(socket, %{output: output})
 
-      assert result.assigns.output_parts == [{:text, "a-1", "Assistant output", :frozen}]
-
-      assert result.assigns.confirmed_user_messages == [
-               %{id: "user-msg-1", text: "Applied follow-up"}
+      assert result.assigns.output_parts == [
+               {:text, "a-1", "Assistant output", :frozen},
+               {:user, "user-msg-1", "Applied follow-up"}
              ]
     end
   end
