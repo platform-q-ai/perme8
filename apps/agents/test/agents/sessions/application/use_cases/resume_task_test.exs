@@ -34,6 +34,7 @@ defmodule Agents.Sessions.Application.UseCases.ResumeTaskTest do
         assert attrs.pending_question == nil
         assert attrs.started_at == nil
         assert attrs.completed_at == nil
+        assert attrs.session_summary == nil
 
         {:ok, struct(task, attrs)}
       end)

@@ -745,6 +745,16 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     {:continue, %{state | output_parts: parts}}
   end
 
+  # session.updated — persist session summary (files changed, additions, deletions)
+  defp handle_sdk_event(
+         %{"type" => "session.updated", "properties" => %{"info" => %{"summary" => summary}}},
+         state
+       )
+       when is_map(summary) do
+    update_task_status(state, %{session_summary: summary})
+    {:continue, state}
+  end
+
   # All other events (server.connected, tool result, etc.)
   # are broadcast via PubSub but don't change runner state
   defp handle_sdk_event(_event, state) do

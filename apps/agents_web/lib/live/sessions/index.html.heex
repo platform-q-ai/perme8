@@ -78,6 +78,26 @@
                 <span>{image_label(session.image)}</span>
                 <span>&middot;</span>
                 <span>{relative_time(session.latest_at)}</span>
+                <span
+                  :if={
+                    format_duration(session.started_at, session.completed_at, @duration_now) !=
+                      nil
+                  }
+                  data-testid="session-duration"
+                >
+                  &middot; {format_duration(
+                    session.started_at,
+                    session.completed_at,
+                    @duration_now
+                  )}
+                </span>
+              </div>
+              <div
+                :if={format_file_stats(session.session_summary) != nil}
+                class="text-[0.6rem] text-base-content/40 w-full"
+                data-testid="session-file-stats"
+              >
+                {format_file_stats(session.session_summary)}
               </div>
               <.compact_progress_bar todo_items={session_todo_items(session)} />
               <.container_stats_bars

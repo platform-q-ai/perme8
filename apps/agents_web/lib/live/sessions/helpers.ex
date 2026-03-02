@@ -180,4 +180,62 @@ defmodule AgentsWeb.SessionsLive.Helpers do
   end
 
   def session_todo_items(_session), do: []
+
+  @doc """
+  Formats duration between two DateTimes as a human-readable string.
+
+  For running sessions (completed_at is nil), uses `now` as the end time.
+  Returns nil if started_at is nil (session hasn't started).
+
+  ## Examples
+
+      iex> format_duration(~U[2026-01-01 00:00:00Z], ~U[2026-01-01 00:05:30Z])
+      "5m 30s"
+
+      iex> format_duration(~U[2026-01-01 00:00:00Z], nil, ~U[2026-01-01 01:05:00Z])
+      "1h 5m"
+  """
+  def format_duration(started_at, completed_at \\ nil, now \\ nil)
+  def format_duration(nil, _completed_at, _now), do: nil
+
+  def format_duration(started_at, completed_at, now) do
+    end_time = completed_at || now || DateTime.utc_now()
+    diff = max(DateTime.diff(end_time, started_at, :second), 0)
+    format_seconds(diff)
+  end
+
+  defp format_seconds(seconds) when seconds < 60, do: "#{seconds}s"
+
+  defp format_seconds(seconds) when seconds < 3600 do
+    m = div(seconds, 60)
+    s = rem(seconds, 60)
+    "#{m}m #{s}s"
+  end
+
+  defp format_seconds(seconds) when seconds < 86_400 do
+    h = div(seconds, 3600)
+    m = div(rem(seconds, 3600), 60)
+    "#{h}h #{m}m"
+  end
+
+  defp format_seconds(seconds) do
+    d = div(seconds, 86_400)
+    h = div(rem(seconds, 86_400), 3600)
+    "#{d}d #{h}h"
+  end
+
+  @doc """
+  Formats file change summary for display.
+
+  Returns a string like "3 files +42 -18" or nil if no summary is available.
+  """
+  def format_file_stats(nil), do: nil
+  def format_file_stats(%{"files" => 0}), do: nil
+
+  def format_file_stats(%{"files" => files, "additions" => adds, "deletions" => dels}) do
+    file_label = if files == 1, do: "file", else: "files"
+    "#{files} #{file_label} +#{adds} -#{dels}"
+  end
+
+  def format_file_stats(_), do: nil
 end

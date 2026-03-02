@@ -53,6 +53,7 @@ defmodule Agents.Sessions.Domain.Entities.TaskTest do
       assert Map.has_key?(task, :error)
       assert Map.has_key?(task, :output)
       assert Map.has_key?(task, :todo_items)
+      assert Map.has_key?(task, :session_summary)
       assert Map.has_key?(task, :parent_task_id)
       assert Map.has_key?(task, :queue_position)
       assert Map.has_key?(task, :queued_at)
@@ -96,6 +97,7 @@ defmodule Agents.Sessions.Domain.Entities.TaskTest do
             %{"id" => "todo-1", "title" => "Plan", "status" => "pending", "position" => 0}
           ]
         },
+        session_summary: %{"files" => 3, "additions" => 42, "deletions" => 18},
         parent_task_id: nil,
         pending_question: nil,
         queue_position: 2,
@@ -126,6 +128,7 @@ defmodule Agents.Sessions.Domain.Entities.TaskTest do
                ]
              }
 
+      assert task.session_summary == %{"files" => 3, "additions" => 42, "deletions" => 18}
       assert task.parent_task_id == nil
       assert task.queue_position == 2
       assert task.queued_at == ~U[2026-01-01 00:00:00.000000Z]
@@ -149,6 +152,7 @@ defmodule Agents.Sessions.Domain.Entities.TaskTest do
         error: nil,
         output: nil,
         todo_items: nil,
+        session_summary: nil,
         parent_task_id: nil,
         pending_question: nil,
         queue_position: nil,
@@ -167,6 +171,7 @@ defmodule Agents.Sessions.Domain.Entities.TaskTest do
       assert task.session_id == nil
       assert task.error == nil
       assert task.todo_items == nil
+      assert task.session_summary == nil
       assert task.queue_position == nil
       assert task.queued_at == nil
     end
