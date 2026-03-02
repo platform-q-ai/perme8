@@ -81,7 +81,7 @@ defmodule ChatWeb.ChatLive.Components.Message do
     ]
 
     if Code.ensure_loaded?(MDEx) and function_exported?(MDEx, :to_html, 2) do
-      case apply(MDEx, :to_html, [content, opts]) do
+      case MDEx.to_html(content, opts) do
         {:ok, html} -> html
         {:error, _} -> content
       end
