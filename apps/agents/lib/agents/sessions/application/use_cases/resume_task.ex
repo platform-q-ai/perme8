@@ -2,8 +2,9 @@ defmodule Agents.Sessions.Application.UseCases.ResumeTask do
   @moduledoc """
   Use case for resuming a session with a follow-up instruction.
 
-  Reuses the existing task record — updates its instruction and resets
-  its status to "pending". The TaskRunner restarts the stopped container
+  Reuses the existing task record and resets its status to "pending".
+  The original instruction is preserved as the session title/context.
+  The TaskRunner restarts the stopped container
   and sends the new prompt to the existing opencode session.
 
   This preserves todos, output history, and the task identity across
@@ -46,7 +47,7 @@ defmodule Agents.Sessions.Application.UseCases.ResumeTask do
          {:ok, task} <- find_task(task_id, attrs.user_id, task_repo),
          :ok <- validate_resumable(task),
          {:ok, updated_schema} <- reset_task_for_resume(task, attrs, task_repo),
-         :ok <- start_runner(updated_schema.id, task, task_repo, opts) do
+         :ok <- start_runner(updated_schema.id, task, attrs.instruction, task_repo, opts) do
       {:ok, Task.from_schema(updated_schema)}
     end
   end
@@ -84,9 +85,8 @@ defmodule Agents.Sessions.Application.UseCases.ResumeTask do
     end
   end
 
-  defp reset_task_for_resume(task, attrs, task_repo) do
+  defp reset_task_for_resume(task, _attrs, task_repo) do
     task_repo.update_task_status(task, %{
-      instruction: attrs.instruction,
       status: "pending",
       error: nil,
       pending_question: nil,
@@ -95,7 +95,7 @@ defmodule Agents.Sessions.Application.UseCases.ResumeTask do
     })
   end
 
-  defp start_runner(task_id, task, task_repo, opts) do
+  defp start_runner(task_id, task, prompt_instruction, task_repo, opts) do
     case Keyword.get(opts, :task_runner_starter) do
       nil ->
         :ok
@@ -110,6 +110,8 @@ defmodule Agents.Sessions.Application.UseCases.ResumeTask do
         runner_opts =
           Keyword.merge(opts,
             resume: true,
+            instruction: task.instruction,
+            prompt_instruction: prompt_instruction,
             container_id: task.container_id,
             session_id: task.session_id
           )

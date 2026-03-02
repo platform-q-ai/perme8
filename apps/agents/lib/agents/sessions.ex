@@ -87,8 +87,10 @@ defmodule Agents.Sessions do
   @doc """
   Resumes a session with a follow-up instruction.
 
-  Reuses the existing task record — updates its instruction and resets
-  status to "pending". The container and opencode session are restarted.
+  Reuses the existing task record and resets status to "pending".
+  The original instruction remains the session title/context, while the
+  follow-up instruction is sent as the resumed prompt.
+  The container and opencode session are restarted.
   Todos and output history are preserved across the session lifetime.
   """
   @spec resume_task(String.t(), map(), keyword()) :: {:ok, struct()} | {:error, term()}
