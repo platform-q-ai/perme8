@@ -27,6 +27,21 @@ defmodule Chat.Infrastructure.Queries.Queries do
     from(s in query, preload: [messages: ^messages_ordered()])
   end
 
+  @doc """
+  Preloads only the most recent N messages for a session.
+  Messages are fetched in descending order by the preload subquery;
+  the caller should re-sort ascending for display.
+  """
+  def with_paginated_messages(query \\ session_base(), limit) do
+    latest_messages =
+      from(m in MessageSchema,
+        order_by: [desc: m.inserted_at],
+        limit: ^limit
+      )
+
+    from(s in query, preload: [messages: ^latest_messages])
+  end
+
   def ordered_by_recent(query \\ session_base()) do
     from(s in query, order_by: [desc: s.updated_at, desc: s.inserted_at])
   end
@@ -49,6 +64,34 @@ defmodule Chat.Infrastructure.Queries.Queries do
     )
   end
 
+  @doc """
+  Returns sessions with message count and first message preview in a single query.
+  Eliminates the N+1 pattern of fetching previews per session.
+  """
+  def with_message_count_and_preview(query \\ session_base()) do
+    first_message_subquery =
+      from(m in MessageSchema,
+        distinct: m.chat_session_id,
+        order_by: [asc: m.inserted_at],
+        select: %{chat_session_id: m.chat_session_id, content: m.content}
+      )
+
+    from(s in query,
+      left_join: m in assoc(s, :messages),
+      left_join: fm in subquery(first_message_subquery),
+      on: fm.chat_session_id == s.id,
+      group_by: [s.id, fm.content],
+      select: %{
+        id: s.id,
+        title: s.title,
+        inserted_at: s.inserted_at,
+        updated_at: s.updated_at,
+        message_count: count(m.id),
+        preview: fm.content
+      }
+    )
+  end
+
   def message_base do
     from(m in MessageSchema)
   end
@@ -67,6 +110,32 @@ defmodule Chat.Infrastructure.Queries.Queries do
       order_by: [asc: m.inserted_at],
       limit: 1,
       select: m.content
+    )
+  end
+
+  @doc """
+  Returns messages for a session before a given cursor, ordered by most recent first.
+  Fetches `limit` messages older than `before_id`.
+
+  Uses a cross join to the cursor message to compare timestamps. Messages with
+  the same timestamp as the cursor (but different ID) are included to handle
+  second-precision timestamp collisions.
+  """
+  def messages_before(session_id, before_id, limit) do
+    cursor_query =
+      from(c in MessageSchema,
+        where: c.id == ^before_id,
+        select: %{inserted_at: c.inserted_at}
+      )
+
+    from(m in MessageSchema,
+      join: cursor in subquery(cursor_query),
+      on: true,
+      where: m.chat_session_id == ^session_id,
+      where: m.id != ^before_id,
+      where: m.inserted_at <= cursor.inserted_at,
+      order_by: [desc: m.inserted_at],
+      limit: ^limit
     )
   end
 

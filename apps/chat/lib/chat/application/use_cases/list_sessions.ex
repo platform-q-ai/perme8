@@ -1,6 +1,9 @@
 defmodule Chat.Application.UseCases.ListSessions do
   @moduledoc """
   Lists chat sessions for a user with metadata.
+
+  Uses a single batched query to fetch session previews,
+  eliminating the N+1 query pattern.
   """
 
   @default_session_repository Chat.Infrastructure.Repositories.SessionRepository
@@ -14,19 +17,14 @@ defmodule Chat.Application.UseCases.ListSessions do
 
     sessions =
       user_id
-      |> session_repository.list_user_sessions(limit)
-      |> Enum.map(&add_preview(&1, session_repository))
+      |> session_repository.list_user_sessions_with_preview(limit)
+      |> Enum.map(&truncate_session_preview/1)
 
     {:ok, sessions}
   end
 
-  defp add_preview(session, session_repository) do
-    preview =
-      session.id
-      |> session_repository.get_first_message_content()
-      |> truncate_preview()
-
-    Map.put(session, :preview, preview)
+  defp truncate_session_preview(session) do
+    Map.update(session, :preview, nil, &truncate_preview/1)
   end
 
   defp truncate_preview(nil), do: nil

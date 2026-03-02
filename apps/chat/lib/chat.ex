@@ -30,8 +30,12 @@ defmodule Chat do
 
   defdelegate create_session(attrs), to: CreateSession, as: :execute
   defdelegate list_sessions(user_id, opts \\ []), to: ListSessions, as: :execute
-  defdelegate load_session(session_id), to: LoadSession, as: :execute
+  defdelegate load_session(session_id, opts \\ []), to: LoadSession, as: :execute
   defdelegate delete_session(session_id, user_id), to: DeleteSession, as: :execute
+
+  defdelegate load_older_messages(session_id, before_id, opts \\ []),
+    to: LoadSession,
+    as: :load_older_messages
 
   defdelegate save_message(attrs), to: SaveMessage, as: :execute
   defdelegate delete_message(message_id, user_id), to: DeleteMessage, as: :execute
