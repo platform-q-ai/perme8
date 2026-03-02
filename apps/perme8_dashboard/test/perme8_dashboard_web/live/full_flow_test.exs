@@ -112,7 +112,7 @@ defmodule Perme8DashboardWeb.Live.FullFlowTest do
       {:ok, view, html} = live(conn, "/")
 
       assert html =~ "Perme8 Dashboard"
-      assert has_element?(view, "[data-sidebar-features] a.active")
+      assert has_element?(view, "[data-tab='features'].tab-active")
       assert has_element?(view, "[data-feature-tree]")
       assert has_element?(view, "[data-app='jarga_web']")
       assert has_element?(view, "[data-app='identity']")

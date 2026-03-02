@@ -22,14 +22,9 @@ defmodule Perme8DashboardWeb.AppLayoutSessionsTabTest do
       assert content =~ ~s(~p"/sessions")
     end
 
-    test "contains hero-chat-bubble-left-right icon for sessions" do
+    test "uses tab_bar component for navigation" do
       content = File.read!(@app_layout_path)
-      assert content =~ "hero-chat-bubble-left-right"
-    end
-
-    test "sidebar navigation includes data-sidebar-sessions attribute" do
-      content = File.read!(@app_layout_path)
-      assert content =~ "data-sidebar-"
+      assert content =~ "tab_bar"
     end
 
     test "features tab is still present" do
