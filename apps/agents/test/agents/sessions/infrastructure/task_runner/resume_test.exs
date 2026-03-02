@@ -382,9 +382,9 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.ResumeTest do
     |> stub(:stop, fn _id -> :ok end)
 
     Agents.Mocks.OpencodeClientMock
-    |> expect(:health, fn _url -> :ok end)
-    |> expect(:subscribe_events, fn _url, _pid -> {:ok, self()} end)
-    |> expect(:send_prompt_async, fn _url, "existing-session", _parts, _opts -> :ok end)
+    |> stub(:health, fn _url -> :ok end)
+    |> stub(:subscribe_events, fn _url, _pid -> {:ok, self()} end)
+    |> stub(:send_prompt_async, fn _url, "existing-session", _parts, _opts -> :ok end)
 
     resume_opts =
       @default_opts ++
@@ -395,7 +395,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.ResumeTest do
           prompt_instruction: "Follow-up after reconnect"
         ]
 
-    {:ok, _pid} = GenServer.start(TaskRunner, {task.id, resume_opts})
+    {:ok, pid} = GenServer.start(TaskRunner, {task.id, resume_opts})
 
     assert_receive {:output_flushed, output_json}, 5000
     assert {:ok, output_parts} = Jason.decode(output_json)
@@ -405,6 +405,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.ResumeTest do
                part["text"] == "Follow-up after reconnect" and
                part["pending"] == true
            end)
+
+    GenServer.stop(pid, :normal, 1000)
   end
 
   defp session_status(status) do
