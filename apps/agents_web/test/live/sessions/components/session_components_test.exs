@@ -151,6 +151,45 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponentsTest do
     end
   end
 
+  describe "queued_message/1" do
+    test "renders queued message with data-testid" do
+      msg = %{id: "q-1", content: "fix the bug", queued_at: ~U[2026-03-01 00:00:00Z]}
+      html = render_component(&SessionComponents.queued_message/1, message: msg)
+      assert html =~ ~s(data-testid="queued-message-q-1")
+    end
+
+    test "renders Queued badge" do
+      msg = %{id: "q-1", content: "fix the bug", queued_at: ~U[2026-03-01 00:00:00Z]}
+      html = render_component(&SessionComponents.queued_message/1, message: msg)
+      assert html =~ "Queued"
+      assert html =~ "badge"
+    end
+
+    test "renders message content trimmed" do
+      msg = %{id: "q-1", content: "  hello world  ", queued_at: ~U[2026-03-01 00:00:00Z]}
+      html = render_component(&SessionComponents.queued_message/1, message: msg)
+      assert html =~ "hello world"
+    end
+
+    test "renders with muted opacity class" do
+      msg = %{id: "q-1", content: "fix", queued_at: ~U[2026-03-01 00:00:00Z]}
+      html = render_component(&SessionComponents.queued_message/1, message: msg)
+      assert html =~ "opacity-60"
+    end
+
+    test "renders user avatar icon" do
+      msg = %{id: "q-1", content: "fix", queued_at: ~U[2026-03-01 00:00:00Z]}
+      html = render_component(&SessionComponents.queued_message/1, message: msg)
+      assert html =~ "hero-user"
+    end
+
+    test "renders You label" do
+      msg = %{id: "q-1", content: "test", queued_at: ~U[2026-03-01 00:00:00Z]}
+      html = render_component(&SessionComponents.queued_message/1, message: msg)
+      assert html =~ "You"
+    end
+  end
+
   describe "container_stats_bars/1" do
     test "renders CPU and memory bars" do
       html =

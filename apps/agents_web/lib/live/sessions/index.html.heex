@@ -274,6 +274,8 @@
               </div>
             </div>
           <% end %>
+          <%!-- Queued user messages awaiting processing --%>
+          <.queued_message :for={msg <- @queued_messages} message={msg} />
           <%!-- Pending question from assistant --%>
           <.question_card
             :if={@pending_question}
