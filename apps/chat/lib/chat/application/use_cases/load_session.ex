@@ -8,10 +8,13 @@ defmodule Chat.Application.UseCases.LoadSession do
 
   @default_session_repository Chat.Infrastructure.Repositories.SessionRepository
   @default_message_limit 50
+  @max_message_limit 200
 
   def execute(session_id, opts \\ []) do
     session_repository = Keyword.get(opts, :session_repository, @default_session_repository)
-    message_limit = Keyword.get(opts, :message_limit, @default_message_limit)
+
+    message_limit =
+      opts |> Keyword.get(:message_limit, @default_message_limit) |> min(@max_message_limit)
 
     pagination_opts = [message_limit: message_limit]
 
@@ -29,10 +32,16 @@ defmodule Chat.Application.UseCases.LoadSession do
 
   Uses the "limit + 1" trick: fetches one extra message to detect if more exist,
   then returns only the requested number.
+
+  **Important:** This function does not verify session ownership. When wiring
+  to a LiveView event handler, the caller MUST check that the current user
+  owns the session (see `verify_session_ownership/2` in Panel).
   """
   def load_older_messages(session_id, before_id, opts \\ []) do
     session_repository = Keyword.get(opts, :session_repository, @default_session_repository)
-    message_limit = Keyword.get(opts, :message_limit, @default_message_limit)
+
+    message_limit =
+      opts |> Keyword.get(:message_limit, @default_message_limit) |> min(@max_message_limit)
 
     messages =
       session_repository.load_messages(session_id,

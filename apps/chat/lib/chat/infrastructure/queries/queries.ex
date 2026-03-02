@@ -31,6 +31,9 @@ defmodule Chat.Infrastructure.Queries.Queries do
   Preloads only the most recent N messages for a session.
   Messages are fetched in descending order by the preload subquery;
   the caller should re-sort ascending for display.
+
+  **Important:** The LIMIT in the preload subquery applies globally, not
+  per-session. Only compose with single-session queries (e.g. `by_id/1`).
   """
   def with_paginated_messages(query \\ session_base(), limit) do
     latest_messages =
