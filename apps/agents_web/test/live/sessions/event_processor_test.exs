@@ -168,6 +168,25 @@ defmodule AgentsWeb.SessionsLive.EventProcessorTest do
     end
   end
 
+  describe "process_event/2 — message.part.updated (tool)" do
+    test "ignores empty running tool parts with no identity/details" do
+      socket = build_socket()
+
+      event = %{
+        "type" => "message.part.updated",
+        "properties" => %{
+          "part" => %{
+            "type" => "tool",
+            "state" => %{"status" => "running"}
+          }
+        }
+      }
+
+      result = EventProcessor.process_event(event, socket)
+      assert result.assigns.output_parts == []
+    end
+  end
+
   describe "maybe_load_cached_output/2" do
     test "restores persisted user follow-up messages from cached output" do
       output =
@@ -184,6 +203,28 @@ defmodule AgentsWeb.SessionsLive.EventProcessorTest do
                {:text, "a-1", "Assistant output", :frozen},
                {:user, "user-msg-1", "Applied follow-up"}
              ]
+    end
+
+    test "ignores empty cached tool entries" do
+      output = Jason.encode!([%{"type" => "tool", "name" => "", "status" => "running"}])
+
+      socket = build_socket()
+      result = EventProcessor.maybe_load_cached_output(socket, %{output: output})
+
+      assert result.assigns.output_parts == []
+    end
+  end
+
+  describe "maybe_load_pending_question/2" do
+    test "does not resurrect question card when user already replied in output" do
+      question_tool =
+        {:tool, "tool-q-1", "questions", :done,
+         %{input: %{"questions" => [%{"header" => "H", "question" => "Q", "options" => []}]}}}
+
+      socket = build_socket(%{output_parts: [question_tool, {:user, "u-1", "Answer sent"}]})
+
+      result = EventProcessor.maybe_load_pending_question(socket, %{pending_question: nil})
+      assert result.assigns.pending_question == nil
     end
   end
 
@@ -414,6 +455,16 @@ defmodule AgentsWeb.SessionsLive.EventProcessorTest do
       parts = EventProcessor.decode_cached_output(json)
       assert [{:tool, "tool-1", "bash", :done, detail}] = parts
       assert detail.input == "ls"
+    end
+
+    test "treats cached running tool parts as done" do
+      json =
+        Jason.encode!([
+          %{"type" => "tool", "id" => "tool-1", "name" => "bash", "status" => "running"}
+        ])
+
+      parts = EventProcessor.decode_cached_output(json)
+      assert [{:tool, "tool-1", "bash", :done, _detail}] = parts
     end
 
     test "falls back to plain text for non-JSON output" do

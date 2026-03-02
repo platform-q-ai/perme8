@@ -33,12 +33,60 @@
           <p>No sessions yet</p>
         </div>
       <% else %>
+        <% running_sessions =
+          Enum.filter(@sessions, &(&1.latest_status in ["pending", "starting", "running"])) %>
+        <% attention_sessions =
+          @sessions
+          |> Enum.filter(&(&1.latest_status in ["completed", "failed", "cancelled"]))
+          |> Enum.sort_by(fn session ->
+            rank =
+              case session.latest_status do
+                "completed" -> 0
+                "failed" -> 1
+                "cancelled" -> 2
+                _ -> 9
+              end
+
+            {rank, -latest_at_unix(session)}
+          end) %>
+        <% queued_sessions = Enum.filter(@sessions, &(&1.latest_status == "queued")) %>
+        <% other_non_running_sessions =
+          @sessions
+          |> Enum.reject(
+            &(&1.latest_status in [
+                "completed",
+                "failed",
+                "cancelled",
+                "queued",
+                "pending",
+                "starting",
+                "running"
+              ])
+          ) %>
+        <% non_running_sessions =
+          attention_sessions ++ other_non_running_sessions ++ queued_sessions %>
+        <% empty_slot_count =
+          if(@queue_state,
+            do: max(@queue_state.concurrency_limit - @queue_state.running, 0),
+            else: 0
+          ) %>
+
         <ul class="menu menu-sm p-2 gap-1 w-full mt-auto">
-          <li :for={session <- @sessions} class="w-full">
+          <li :for={session <- non_running_sessions} class="w-full">
             <div
               data-testid={"session-item-#{slugify(session.title)}"}
+              data-slot-state={
+                if(session.latest_status in ["pending", "starting", "running"],
+                  do: "used",
+                  else: "idle"
+                )
+              }
               class={[
-                "flex flex-col gap-0.5 w-full rounded-lg p-2",
+                "flex flex-col gap-0.5 w-full rounded-lg p-2 min-h-16",
+                session.latest_status in ["pending", "starting", "running"] &&
+                  "border border-success/40 bg-success/10",
+                session.latest_status not in ["pending", "starting", "running"] &&
+                  "border border-transparent",
                 session.container_id == @active_container_id && "active"
               ]}
               phx-click="select_session"
@@ -49,6 +97,106 @@
                   {truncate_instruction(session.title, 35)}
                 </span>
                 <div class="flex items-center gap-1">
+                  <span
+                    :if={session.latest_status == "completed"}
+                    class="inline-flex items-center"
+                    title="Session completed — review output"
+                  >
+                    <.icon name="hero-bell-alert" class="size-3.5 text-warning" />
+                  </span>
+                  <button
+                    :if={
+                      session.latest_status == "failed" && auth_error?(session.latest_error) &&
+                        session.latest_task_id
+                    }
+                    type="button"
+                    phx-click="refresh_auth_and_resume"
+                    phx-value-task-id={session.latest_task_id}
+                    disabled={auth_refreshing?(@auth_refreshing, session.latest_task_id)}
+                    class="btn btn-ghost btn-xs p-0 min-h-0 h-auto"
+                    title="Refresh auth & resume"
+                  >
+                    <.icon
+                      name="hero-arrow-path"
+                      class={
+                        if(auth_refreshing?(@auth_refreshing, session.latest_task_id),
+                          do: "size-3.5 text-warning animate-spin",
+                          else: "size-3.5 text-warning"
+                        )
+                      }
+                    />
+                  </button>
+                  <.status_dot status={session.latest_status} />
+                </div>
+              </div>
+              <div class="flex items-center gap-2 text-[0.65rem] text-base-content/50 w-full">
+                <span>{image_label(session.image)}</span>
+                <span>&middot;</span>
+                <span>{relative_time(session.latest_at)}</span>
+              </div>
+              <.compact_progress_bar todo_items={session_todo_items(session)} />
+              <.container_stats_bars
+                :if={Map.has_key?(@container_stats, session.container_id)}
+                stats={@container_stats[session.container_id]}
+              />
+            </div>
+          </li>
+
+          <li
+            :if={@queue_state && (empty_slot_count > 0 || running_sessions != [])}
+            class="w-full"
+          >
+            <div data-testid="queue-limit-rule" class="mx-1 my-1 border-t border-success/50">
+            </div>
+          </li>
+
+          <li
+            :for={slot <- 1..empty_slot_count}
+            :if={@queue_state && @queue_state.concurrency_limit > @queue_state.running}
+            class="w-full"
+          >
+            <div
+              data-testid={"empty-concurrency-slot-#{slot}"}
+              data-slot-state="empty"
+              class="flex items-center gap-2 w-full rounded-lg p-2 min-h-16 border border-success/40 border-dashed bg-success/5"
+            >
+              <.icon name="hero-plus-circle" class="size-3.5 text-success/70" />
+              <span class="text-xs text-base-content/55">Empty concurrency slot</span>
+            </div>
+          </li>
+
+          <li :for={session <- running_sessions} class="w-full">
+            <div
+              data-testid={"session-item-#{slugify(session.title)}"}
+              data-slot-state={
+                if(session.latest_status in ["pending", "starting", "running"],
+                  do: "used",
+                  else: "idle"
+                )
+              }
+              class={[
+                "flex flex-col gap-0.5 w-full rounded-lg p-2 min-h-16",
+                session.latest_status in ["pending", "starting", "running"] &&
+                  "border border-success/40 bg-success/10",
+                session.latest_status not in ["pending", "starting", "running"] &&
+                  "border border-transparent",
+                session.container_id == @active_container_id && "active"
+              ]}
+              phx-click="select_session"
+              phx-value-container-id={session.container_id}
+            >
+              <div class="flex items-center justify-between w-full">
+                <span class="text-xs font-medium truncate flex-1 min-w-0">
+                  {truncate_instruction(session.title, 35)}
+                </span>
+                <div class="flex items-center gap-1">
+                  <span
+                    :if={session.latest_status == "completed"}
+                    class="inline-flex items-center"
+                    title="Session completed — review output"
+                  >
+                    <.icon name="hero-bell-alert" class="size-3.5 text-warning" />
+                  </span>
                   <button
                     :if={
                       session.latest_status == "failed" && auth_error?(session.latest_error) &&
@@ -104,7 +252,7 @@
     </div>
 
     <%!-- Queue panel --%>
-    <.queue_panel queue_state={@queue_state} />
+    <.queue_panel queue_state={@queue_state} user_id={@current_scope.user.id} />
   </div>
 
   <%!-- Right Panel: Active Session Detail --%>

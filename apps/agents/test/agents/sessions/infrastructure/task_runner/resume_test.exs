@@ -362,6 +362,51 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.ResumeTest do
     assert String.contains?(error, "SSE subscription failed on resume")
   end
 
+  test "resume with prompt_instruction persists pending user message before reconnect", %{
+    task: task
+  } do
+    test_pid = self()
+
+    Agents.Mocks.TaskRepositoryMock
+    |> stub(:get_task, fn _id -> task end)
+    |> stub(:update_task_status, fn _task, attrs ->
+      if is_binary(attrs[:output]) do
+        send(test_pid, {:output_flushed, attrs.output})
+      end
+
+      {:ok, task}
+    end)
+
+    Agents.Mocks.ContainerProviderMock
+    |> expect(:restart, fn "existing-container" -> {:ok, %{port: 5000}} end)
+    |> stub(:stop, fn _id -> :ok end)
+
+    Agents.Mocks.OpencodeClientMock
+    |> expect(:health, fn _url -> :ok end)
+    |> expect(:subscribe_events, fn _url, _pid -> {:ok, self()} end)
+    |> expect(:send_prompt_async, fn _url, "existing-session", _parts, _opts -> :ok end)
+
+    resume_opts =
+      @default_opts ++
+        [
+          resume: true,
+          container_id: "existing-container",
+          session_id: "existing-session",
+          prompt_instruction: "Follow-up after reconnect"
+        ]
+
+    {:ok, _pid} = GenServer.start(TaskRunner, {task.id, resume_opts})
+
+    assert_receive {:output_flushed, output_json}, 5000
+    assert {:ok, output_parts} = Jason.decode(output_json)
+
+    assert Enum.any?(output_parts, fn part ->
+             part["type"] == "user" and
+               part["text"] == "Follow-up after reconnect" and
+               part["pending"] == true
+           end)
+  end
+
   defp session_status(status) do
     %{
       "type" => "session.status",

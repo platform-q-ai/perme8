@@ -6,13 +6,16 @@
 
 import { SessionLogHook } from './presentation/hooks/session-log-hook'
 import { SessionFormHook } from './presentation/hooks/session-form-hook'
+import { ConcurrencyLimitHook } from './presentation/hooks/concurrency-limit-hook'
 
 export {
   SessionLogHook as SessionLog,
-  SessionFormHook as SessionForm
+  SessionFormHook as SessionForm,
+  ConcurrencyLimitHook as ConcurrencyLimit
 }
 
 export default {
   SessionLog: SessionLogHook,
-  SessionForm: SessionFormHook
+  SessionForm: SessionFormHook,
+  ConcurrencyLimit: ConcurrencyLimitHook
 }

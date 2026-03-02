@@ -134,25 +134,29 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
         },
         socket
       ) do
-    tool_name = part["tool"] || part["name"] || "tool"
-    tool_id = stable_tool_part_id(part, tool_name)
+    if ignore_empty_running_tool_part?(part, state, status) do
+      socket
+    else
+      tool_name = part["tool"] || part["name"] || "tool"
+      tool_id = stable_tool_part_id(part, tool_name)
 
-    detail = %{
-      input: state["input"],
-      title: state["title"],
-      output: state["output"],
-      error: state["error"]
-    }
+      detail = %{
+        input: state["input"],
+        title: state["title"],
+        output: state["output"],
+        error: state["error"]
+      }
 
-    tool_status =
-      case status do
-        s when s in ["pending", "running"] -> :running
-        "completed" -> :done
-        "error" -> :error
-        _ -> :running
-      end
+      tool_status =
+        case status do
+          s when s in ["pending", "running"] -> :running
+          "completed" -> :done
+          "error" -> :error
+          _ -> :running
+        end
 
-    handle_tool_event(socket, tool_id, tool_name, tool_status, detail)
+      handle_tool_event(socket, tool_id, tool_name, tool_status, detail)
+    end
   end
 
   # Question from the AI assistant — show options to user.
@@ -227,18 +231,9 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
     restore_question_card(socket, questions, pq["session_id"], request_id, rejected)
   end
 
-  # Fallback path: extract question data from cached output parts.
-  # Handles tasks created before the pending_question column existed,
-  # where the question data only lives in the tool output.
-  def maybe_load_pending_question(socket, _task) do
-    case extract_question_from_output_parts(socket.assigns.output_parts) do
-      {:ok, questions} ->
-        restore_question_card(socket, questions, nil, nil, true)
-
-      :none ->
-        socket
-    end
-  end
+  # Do not restore from cached tool output. Only persisted pending_question
+  # should control question-card visibility to avoid resurrecting stale prompts.
+  def maybe_load_pending_question(socket, _task), do: socket
 
   @doc """
   Restores todo items from persisted task state on LiveView mount/reconnect.
@@ -361,12 +356,30 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
   end
 
   defp stable_tool_part_id(part, tool_name) do
-    part["id"] || part["toolCallID"] || part["toolCallId"] ||
+    part["id"] || part["toolCallID"] || part["toolCallId"] || part["callID"] ||
       "tool-" <>
         Integer.to_string(
           :erlang.phash2({tool_name, part["messageID"] || part["messageId"] || ""})
         )
   end
+
+  defp ignore_empty_running_tool_part?(part, state, status) do
+    status in ["pending", "running"] and
+      blank?(part["tool"]) and
+      blank?(part["name"]) and
+      blank?(part["id"]) and
+      blank?(part["toolCallID"]) and
+      blank?(part["toolCallId"]) and
+      blank?(part["callID"]) and
+      is_nil(state["input"]) and
+      is_nil(state["title"]) and
+      is_nil(state["output"]) and
+      is_nil(state["error"])
+  end
+
+  defp blank?(nil), do: true
+  defp blank?(""), do: true
+  defp blank?(_), do: false
 
   defp maybe_assign(socket, _key, nil), do: socket
   defp maybe_assign(socket, key, value), do: assign(socket, key, value)
@@ -499,22 +512,30 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
   defp decode_output_part(
          %{"type" => "tool", "id" => id, "name" => name, "status" => status} = entry
        ) do
-    detail = %{
-      input: entry["input"],
-      title: entry["title"],
-      output: entry["output"],
-      error: entry["error"]
-    }
+    if ignore_empty_cached_tool?(name, entry) do
+      nil
+    else
+      detail = %{
+        input: entry["input"],
+        title: entry["title"],
+        output: entry["output"],
+        error: entry["error"]
+      }
 
-    {:tool, id, name, safe_tool_status(status), detail}
+      {:tool, id, name, safe_cached_tool_status(status), detail}
+    end
   end
 
   # Legacy format without id
   defp decode_output_part(%{"type" => "tool", "name" => name, "status" => status}) do
-    synthetic_id = "tool-" <> Integer.to_string(:erlang.phash2({name, status}))
+    if ignore_empty_cached_tool?(name, %{}) do
+      nil
+    else
+      synthetic_id = "tool-" <> Integer.to_string(:erlang.phash2({name, status}))
 
-    {:tool, synthetic_id, name, safe_tool_status(status),
-     %{input: nil, title: nil, output: nil, error: nil}}
+      {:tool, synthetic_id, name, safe_cached_tool_status(status),
+       %{input: nil, title: nil, output: nil, error: nil}}
+    end
   end
 
   defp decode_output_part(_), do: nil
@@ -523,4 +544,15 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
   defp safe_tool_status("done"), do: :done
   defp safe_tool_status("error"), do: :error
   defp safe_tool_status(_), do: :done
+
+  # Cached output is a snapshot and may contain stale running states if
+  # the stream disconnected. Render cached tools as terminal by default.
+  defp safe_cached_tool_status("running"), do: :done
+  defp safe_cached_tool_status("pending"), do: :done
+  defp safe_cached_tool_status(status), do: safe_tool_status(status)
+
+  defp ignore_empty_cached_tool?(name, entry) do
+    blank?(name) and is_nil(entry["input"]) and is_nil(entry["title"]) and is_nil(entry["output"]) and
+      is_nil(entry["error"])
+  end
 end
