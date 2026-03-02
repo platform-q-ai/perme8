@@ -166,34 +166,42 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
     if running_count >= state.concurrency_limit do
       state
     else
-      case state.task_repo.get_next_queued_task(state.user_id) do
-        nil ->
-          state
-
-        task ->
-          with {:ok, updated_task} <-
-                 state.task_repo.update_task_status(task, %{
-                   status: "pending",
-                   queue_position: nil,
-                   queued_at: nil
-                 }) do
-            maybe_start_runner(state, updated_task.id)
-
-            state.event_bus.emit(
-              TaskPromoted.new(%{
-                aggregate_id: updated_task.id,
-                actor_id: state.user_id,
-                task_id: updated_task.id,
-                user_id: state.user_id
-              })
-            )
-
-            state
-          else
-            _ -> state
-          end
-      end
+      do_promote_next(state)
     end
+  end
+
+  defp do_promote_next(state) do
+    case state.task_repo.get_next_queued_task(state.user_id) do
+      nil -> state
+      task -> promote_task(state, task)
+    end
+  end
+
+  defp promote_task(state, task) do
+    case state.task_repo.update_task_status(task, %{
+           status: "pending",
+           queue_position: nil,
+           queued_at: nil
+         }) do
+      {:ok, updated_task} ->
+        maybe_start_runner(state, updated_task.id)
+        emit_task_promoted(state, updated_task)
+        state
+
+      _ ->
+        state
+    end
+  end
+
+  defp emit_task_promoted(state, task) do
+    state.event_bus.emit(
+      TaskPromoted.new(%{
+        aggregate_id: task.id,
+        actor_id: state.user_id,
+        task_id: task.id,
+        user_id: state.user_id
+      })
+    )
   end
 
   defp maybe_start_runner(%{task_runner_starter: nil}, _task_id), do: :ok

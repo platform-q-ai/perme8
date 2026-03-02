@@ -1,4 +1,9 @@
 defmodule Agents.Sessions.Infrastructure.QueueManagerSupervisor do
+  @moduledoc """
+  DynamicSupervisor for per-user QueueManager processes.
+
+  Ensures at most one QueueManager is running per user via the QueueRegistry.
+  """
   use DynamicSupervisor
 
   def start_link(init_arg) do
