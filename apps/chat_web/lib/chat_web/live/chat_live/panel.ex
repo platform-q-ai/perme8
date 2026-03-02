@@ -24,7 +24,9 @@ defmodule ChatWeb.ChatLive.Panel do
      # Desktop (≥1024px): opens by default
      # Mobile (<1024px): closed by default
      |> assign(:collapsed, true)
-     |> assign(:messages, [])
+     |> stream(:messages, [])
+     |> assign(:message_list, [])
+     |> assign(:has_messages, false)
      |> assign(:current_message, "")
      |> assign(:streaming, false)
      |> assign(:stream_buffer, "")
@@ -190,7 +192,7 @@ defmodule ChatWeb.ChatLive.Panel do
 
       socket
       |> assign(:current_session_id, db_session.id)
-      |> assign(:messages, ui_messages)
+      |> replace_messages(ui_messages)
       |> push_event("scroll_to_bottom", %{})
     else
       _ -> socket
@@ -253,7 +255,7 @@ defmodule ChatWeb.ChatLive.Panel do
     send(self(), {:assistant_response, content})
 
     socket
-    |> assign(:messages, socket.assigns.messages ++ [assistant_message])
+    |> append_message(assistant_message)
     |> assign(:streaming, false)
     |> assign(:stream_buffer, "")
     |> push_event("scroll_to_bottom", %{})
@@ -319,7 +321,7 @@ defmodule ChatWeb.ChatLive.Panel do
       {:noreply,
        socket
        |> assign(:current_session_id, session.id)
-       |> assign(:messages, ui_messages)}
+       |> replace_messages(ui_messages)}
     else
       {:error, :not_found} ->
         {:noreply, push_event(socket, "clear_session", %{})}
@@ -350,7 +352,7 @@ defmodule ChatWeb.ChatLive.Panel do
   def handle_event("clear_chat", _params, socket) do
     {:noreply,
      socket
-     |> assign(:messages, [])
+     |> replace_messages([])
      |> assign(:current_message, "")
      |> assign(:stream_buffer, "")}
   end
@@ -372,7 +374,7 @@ defmodule ChatWeb.ChatLive.Panel do
         socket
         |> assign(:streaming, false)
         |> assign(:stream_buffer, "")
-        |> assign(:messages, socket.assigns.messages ++ [partial_message])
+        |> append_message(partial_message)
       else
         socket
         |> assign(:streaming, false)
@@ -386,7 +388,7 @@ defmodule ChatWeb.ChatLive.Panel do
   def handle_event("new_conversation", _params, socket) do
     {:noreply,
      socket
-     |> assign(:messages, [])
+     |> replace_messages([])
      |> assign(:current_message, "")
      |> assign(:stream_buffer, "")
      |> assign(:current_session_id, nil)
@@ -417,7 +419,12 @@ defmodule ChatWeb.ChatLive.Panel do
 
   @impl true
   def handle_event("show_chat", _params, socket) do
-    {:noreply, assign(socket, :view_mode, :chat)}
+    # Re-send stream data since the stream container was removed from DOM
+    # while in conversations view
+    {:noreply,
+     socket
+     |> assign(:view_mode, :chat)
+     |> stream(:messages, socket.assigns.message_list, reset: true)}
   end
 
   @impl true
@@ -431,7 +438,7 @@ defmodule ChatWeb.ChatLive.Panel do
       {:noreply,
        socket
        |> assign(:current_session_id, session.id)
-       |> assign(:messages, ui_messages)
+       |> replace_messages(ui_messages)
        |> assign(:view_mode, :chat)
        |> push_event("save_session", %{session_id: session.id})
        |> push_event("scroll_to_bottom", %{})}
@@ -470,13 +477,7 @@ defmodule ChatWeb.ChatLive.Panel do
 
     case Chat.delete_message(message_id, user_id) do
       {:ok, _} ->
-        # Remove message from UI
-        updated_messages =
-          Enum.reject(socket.assigns.messages, fn msg ->
-            Map.get(msg, :id) == message_id
-          end)
-
-        {:noreply, assign(socket, :messages, updated_messages)}
+        {:noreply, delete_message_from_state(socket, message_id)}
 
       {:error, :not_found} ->
         send(self(), {:put_flash, :error, "Message not found"})
@@ -485,6 +486,54 @@ defmodule ChatWeb.ChatLive.Panel do
   end
 
   # Private helper functions
+
+  # Stream helper: replaces all messages in the stream and message_list
+  defp replace_messages(socket, messages) do
+    messages = ensure_message_ids(messages)
+
+    socket
+    |> stream(:messages, messages, reset: true)
+    |> assign(:message_list, messages)
+    |> assign(:has_messages, messages != [])
+  end
+
+  # Stream helper: appends a single message to the stream and message_list
+  defp append_message(socket, message) do
+    message = ensure_message_id(message)
+
+    socket
+    |> stream_insert(:messages, message)
+    |> assign(:message_list, socket.assigns.message_list ++ [message])
+    |> assign(:has_messages, true)
+  end
+
+  # Stream helper: removes a message from stream and message_list by id
+  defp delete_message_from_state(socket, message_id) do
+    # Find the message to get its stream-compatible form for deletion
+    message = Enum.find(socket.assigns.message_list, fn msg -> msg.id == message_id end)
+    updated_list = Enum.reject(socket.assigns.message_list, fn msg -> msg.id == message_id end)
+
+    socket =
+      if message do
+        stream_delete(socket, :messages, message)
+      else
+        socket
+      end
+
+    socket
+    |> assign(:message_list, updated_list)
+    |> assign(:has_messages, updated_list != [])
+  end
+
+  # Ensures all messages in a list have unique :id fields (required for streams)
+  defp ensure_message_ids(messages) do
+    Enum.map(messages, &ensure_message_id/1)
+  end
+
+  # Ensures a single message has a unique :id field
+  defp ensure_message_id(%{id: nil} = message), do: %{message | id: Ecto.UUID.generate()}
+  defp ensure_message_id(%{id: _} = message), do: message
+  defp ensure_message_id(message), do: Map.put_new(message, :id, Ecto.UUID.generate())
 
   defp verify_session_ownership(session, current_user_id) do
     if session.user_id == current_user_id do
@@ -525,7 +574,7 @@ defmodule ChatWeb.ChatLive.Panel do
     if socket.assigns.current_session_id == session_id do
       socket
       |> assign(:current_session_id, nil)
-      |> assign(:messages, [])
+      |> replace_messages([])
       |> push_event("clear_session", %{})
     else
       socket
@@ -640,12 +689,12 @@ defmodule ChatWeb.ChatLive.Panel do
     {:ok, document_context} = Chat.prepare_chat_context(socket.assigns)
     {:ok, system_message} = build_system_message(selected_agent, document_context)
 
-    updated_messages = socket.assigns.messages ++ [user_message]
-    llm_messages = [system_message | updated_messages]
+    # Append to message_list for LLM context, then build LLM messages
+    socket = append_message(socket, user_message)
+    llm_messages = [system_message | socket.assigns.message_list]
     llm_opts = build_llm_options(selected_agent)
 
     socket
-    |> assign(:messages, updated_messages)
     |> assign(:current_message, "")
     |> assign(:streaming, true)
     |> assign(:stream_buffer, "")
