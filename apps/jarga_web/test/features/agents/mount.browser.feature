@@ -21,4 +21,4 @@ Feature: Agents UI mount verification
     When I navigate to "${baseUrl}/app"
     And I wait for network idle
     Then I should see "Agents"
-    And the element "a[href*='/agents']" should be visible
+    And "a[href*='/agents']" should be visible
