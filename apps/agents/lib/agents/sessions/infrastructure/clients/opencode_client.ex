@@ -192,7 +192,17 @@ defmodule Agents.Sessions.Infrastructure.Clients.OpencodeClient do
 
   # ---- Private: Production SSE ----
 
+  # Max retries and delay for initial SSE connection. After a container
+  # restart the health endpoint may respond before the SSE endpoint is
+  # ready, so we retry transient connection errors (econnrefused, etc.).
+  @sse_connect_max_retries 5
+  @sse_connect_retry_delay_ms 1_000
+
   defp sse_connect(url, caller_pid) do
+    sse_connect_with_retry(url, caller_pid, @sse_connect_max_retries)
+  end
+
+  defp sse_connect_with_retry(url, caller_pid, retries_left) do
     Process.put(:sse_buffer, "")
 
     into_fun = fn {:data, chunk}, {_req, resp} ->
@@ -210,6 +220,13 @@ defmodule Agents.Sessions.Infrastructure.Clients.OpencodeClient do
     case Req.get(url, into: into_fun, receive_timeout: :infinity) do
       {:ok, _} ->
         :ok
+
+      {:error, %Req.TransportError{reason: reason}}
+      when reason in [:econnrefused, :timeout, :closed] and retries_left > 0 ->
+        Logger.info("SSE connect to #{url} got #{reason}, retrying (#{retries_left} left)")
+
+        Process.sleep(@sse_connect_retry_delay_ms)
+        sse_connect_with_retry(url, caller_pid, retries_left - 1)
 
       {:error, reason} ->
         send(caller_pid, {:opencode_error, reason})
