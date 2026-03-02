@@ -34,6 +34,7 @@ defmodule Agents.Sessions do
   alias Agents.Sessions.Application.SessionsConfig
   alias Agents.Sessions.Infrastructure.QueueManager
   alias Agents.Sessions.Infrastructure.QueueManagerSupervisor
+  alias Agents.Sessions.Infrastructure.Repositories.TaskRepository
   alias Agents.Sessions.Infrastructure.TaskRunnerSupervisor
 
   @doc """
@@ -216,11 +217,34 @@ defmodule Agents.Sessions do
   The message is queued by opencode and processed after the agent finishes
   its current work. Does not interrupt or abort the current operation.
   """
-  @spec send_message(String.t(), String.t()) :: :ok | {:error, term()}
-  def send_message(task_id, message) do
+  @spec send_message(String.t(), String.t(), keyword()) :: :ok | {:error, term()}
+  def send_message(task_id, message, opts \\ []) do
     case Registry.lookup(Agents.Sessions.TaskRegistry, task_id) do
       [{pid, _}] -> GenServer.call(pid, {:send_message, message})
-      [] -> {:error, :task_not_running}
+      [] -> restart_runner_and_send(task_id, message, opts)
+    end
+  end
+
+  defp restart_runner_and_send(task_id, message, opts) do
+    task_repo = Keyword.get(opts, :task_repo, TaskRepository)
+    opts = inject_task_runner_starter(opts)
+    starter = Keyword.fetch!(opts, :task_runner_starter)
+
+    with %{container_id: cid, session_id: sid, instruction: instruction} <-
+           task_repo.get_task(task_id),
+         true <- is_binary(cid) and cid != "",
+         true <- is_binary(sid) and sid != "",
+         {:ok, _pid} <-
+           starter.(task_id,
+             resume: true,
+             instruction: instruction,
+             prompt_instruction: message,
+             container_id: cid,
+             session_id: sid
+           ) do
+      :ok
+    else
+      _ -> {:error, :task_not_running}
     end
   end
 
