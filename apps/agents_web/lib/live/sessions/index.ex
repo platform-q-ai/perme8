@@ -506,6 +506,7 @@ defmodule AgentsWeb.SessionsLive.Index do
       session_summary: nil,
       output_parts: [],
       pending_question: nil,
+      confirmed_user_messages: [],
       optimistic_user_messages: [],
       user_message_ids: MapSet.new(),
       todo_items: [],
@@ -595,14 +596,14 @@ defmodule AgentsWeb.SessionsLive.Index do
     user = socket.assigns.current_scope.user
     current_task = socket.assigns.current_task
 
-    if resumable_task?(current_task) do
-      Sessions.resume_task(current_task.id, %{instruction: instruction, user_id: user.id})
-    else
+    if socket.assigns.composing_new || is_nil(current_task) do
       Sessions.create_task(%{
         instruction: instruction,
         user_id: user.id,
         image: socket.assigns.selected_image
       })
+    else
+      Sessions.resume_task(current_task.id, %{instruction: instruction, user_id: user.id})
     end
   end
 
