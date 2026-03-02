@@ -76,7 +76,7 @@ Feature: Queued Messages in Sessions
   # Form behaviour during running task
   # ---------------------------------------------------------------------------
 
-  Scenario: Sidebar quick-start form is visible without New Session click
+  Scenario: Sidebar quick-start form is visible without extra action
     Given I navigate to "${baseUrl}/sessions"
     And I wait for network idle
     Then "form#sidebar-new-session-form" should exist

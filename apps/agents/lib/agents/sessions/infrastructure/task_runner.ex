@@ -65,7 +65,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     opencode_client: nil,
     task_repo: nil,
     pubsub: nil,
-    event_bus: nil
+    event_bus: nil,
+    queue_terminal_notifier: nil
   ]
 
   # ---- Public API ----
@@ -108,6 +109,9 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     pubsub = Keyword.get(opts, :pubsub, SessionsConfig.pubsub())
     event_bus = Keyword.get(opts, :event_bus, Perme8.Events.EventBus)
 
+    queue_terminal_notifier =
+      Keyword.get(opts, :queue_terminal_notifier, fn _, _, _ -> :ok end)
+
     # Resume context — if resuming, we already have container_id and session_id
     resume? = Keyword.get(opts, :resume, false)
     resume_container_id = Keyword.get(opts, :container_id)
@@ -135,6 +139,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
           task_repo: task_repo,
           pubsub: pubsub,
           event_bus: event_bus,
+          queue_terminal_notifier: queue_terminal_notifier,
           health_retries: SessionsConfig.health_check_max_retries()
         }
 
@@ -525,6 +530,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
         user_id: state.user_id
       })
     )
+
+    notify_queue_terminal(state, :cancelled)
 
     cleanup_container(state)
     {:stop, :normal, state}
@@ -975,6 +982,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
       })
     )
 
+    notify_queue_terminal(state, :failed)
+
     cleanup_container(state)
   end
 
@@ -1002,7 +1011,27 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
       })
     )
 
+    notify_queue_terminal(state, :completed)
+
     cleanup_container(state)
+  end
+
+  defp notify_queue_terminal(state, status) when status in [:completed, :failed, :cancelled] do
+    state.queue_terminal_notifier.(state.user_id, state.task_id, status)
+  rescue
+    error ->
+      Logger.warning(
+        "TaskRunner: queue terminal notify failed for task #{state.task_id}: #{inspect(error)}"
+      )
+
+      :ok
+  catch
+    :exit, reason ->
+      Logger.warning(
+        "TaskRunner: queue terminal notify exited for task #{state.task_id}: #{inspect(reason)}"
+      )
+
+      :ok
   end
 
   # Prefer structured output_parts (JSON); fall back to plain output_text

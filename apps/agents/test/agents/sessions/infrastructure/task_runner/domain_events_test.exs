@@ -23,6 +23,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.DomainEventsTest do
   end
 
   test "emits TaskCompleted domain event when task completes", %{task: task, user: user} do
+    test_pid = self()
+
     TaskRepositoryMock
     |> stub(:get_task, fn _id -> task end)
     |> stub(:update_task_status, fn _task, _attrs -> {:ok, task} end)
@@ -72,7 +74,11 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.DomainEventsTest do
            opencode_client: OpencodeClientMock,
            task_repo: TaskRepositoryMock,
            pubsub: Perme8.Events.PubSub,
-           event_bus: TestEventBus
+           event_bus: TestEventBus,
+           queue_terminal_notifier: fn user_id, task_id, status ->
+             send(test_pid, {:queue_notified, user_id, task_id, status})
+             :ok
+           end
          ]}
       )
 
@@ -80,6 +86,9 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.DomainEventsTest do
     TestEventBus.allow(TestEventBus, self(), pid)
 
     assert_receive {:task_status_changed, _, "completed"}, 5000
+    user_id = user.id
+    task_id = task.id
+    assert_receive {:queue_notified, ^user_id, ^task_id, :completed}, 5000
 
     Process.sleep(100)
 
@@ -92,6 +101,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.DomainEventsTest do
   end
 
   test "emits TaskFailed domain event when task fails", %{task: task, user: user} do
+    test_pid = self()
+
     TaskRepositoryMock
     |> stub(:get_task, fn _id -> task end)
     |> stub(:update_task_status, fn _task, _attrs -> {:ok, task} end)
@@ -129,13 +140,20 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.DomainEventsTest do
            opencode_client: OpencodeClientMock,
            task_repo: TaskRepositoryMock,
            pubsub: Perme8.Events.PubSub,
-           event_bus: TestEventBus
+           event_bus: TestEventBus,
+           queue_terminal_notifier: fn user_id, task_id, status ->
+             send(test_pid, {:queue_notified, user_id, task_id, status})
+             :ok
+           end
          ]}
       )
 
     TestEventBus.allow(TestEventBus, self(), pid)
 
     assert_receive {:task_status_changed, _, "failed"}, 5000
+    user_id = user.id
+    task_id = task.id
+    assert_receive {:queue_notified, ^user_id, ^task_id, :failed}, 5000
 
     Process.sleep(100)
 
@@ -147,6 +165,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.DomainEventsTest do
   end
 
   test "emits TaskCancelled domain event when task is cancelled", %{task: task, user: user} do
+    test_pid = self()
+
     TaskRepositoryMock
     |> stub(:get_task, fn _id -> task end)
     |> stub(:update_task_status, fn _task, _attrs -> {:ok, task} end)
@@ -171,7 +191,11 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.DomainEventsTest do
            opencode_client: OpencodeClientMock,
            task_repo: TaskRepositoryMock,
            pubsub: Perme8.Events.PubSub,
-           event_bus: TestEventBus
+           event_bus: TestEventBus,
+           queue_terminal_notifier: fn user_id, task_id, status ->
+             send(test_pid, {:queue_notified, user_id, task_id, status})
+             :ok
+           end
          ]}
       )
 
@@ -184,6 +208,9 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.DomainEventsTest do
     send(pid, :cancel)
 
     assert_receive {:task_status_changed, _, "cancelled"}, 5000
+    user_id = user.id
+    task_id = task.id
+    assert_receive {:queue_notified, ^user_id, ^task_id, :cancelled}, 5000
 
     Process.sleep(100)
 

@@ -34,6 +34,7 @@ defmodule Agents.Sessions do
   alias Agents.Sessions.Application.SessionsConfig
   alias Agents.Sessions.Infrastructure.QueueManager
   alias Agents.Sessions.Infrastructure.QueueManagerSupervisor
+  alias Agents.Repo
   alias Agents.Sessions.Infrastructure.Repositories.TaskRepository
   alias Agents.Sessions.Infrastructure.TaskRunnerSupervisor
 
@@ -52,6 +53,7 @@ defmodule Agents.Sessions do
   def create_task(attrs, opts \\ []) do
     opts = inject_task_runner_starter(opts)
     opts = inject_queue_checker(opts)
+    opts = inject_concurrency_lock(opts)
     CreateTask.execute(attrs, opts)
   end
 
@@ -315,7 +317,7 @@ defmodule Agents.Sessions do
   """
   @spec get_queue_state(String.t()) :: map()
   def get_queue_state(user_id) do
-    case QueueManagerSupervisor.ensure_started(user_id) do
+    case ensure_queue_manager_started(user_id) do
       {:ok, _pid} -> QueueManager.get_queue_state(user_id)
       {:error, _reason} -> default_queue_state()
     end
@@ -326,7 +328,7 @@ defmodule Agents.Sessions do
   """
   @spec get_concurrency_limit(String.t()) :: non_neg_integer()
   def get_concurrency_limit(user_id) do
-    case QueueManagerSupervisor.ensure_started(user_id) do
+    case ensure_queue_manager_started(user_id) do
       {:ok, _pid} -> QueueManager.get_concurrency_limit(user_id)
       {:error, _reason} -> SessionsConfig.default_concurrency_limit()
     end
@@ -339,9 +341,40 @@ defmodule Agents.Sessions do
   """
   @spec set_concurrency_limit(String.t(), non_neg_integer()) :: :ok | {:error, term()}
   def set_concurrency_limit(user_id, limit) do
-    with {:ok, _pid} <- QueueManagerSupervisor.ensure_started(user_id) do
+    with {:ok, _pid} <- ensure_queue_manager_started(user_id) do
       QueueManager.set_concurrency_limit(user_id, limit)
     end
+  end
+
+  @doc """
+  Notifies queue management when a task reaches a terminal status.
+
+  Used by TaskRunner terminal paths to trigger promotion of queued tasks
+  when a concurrency slot opens up.
+  """
+  @spec notify_task_terminal_status(
+          String.t(),
+          String.t(),
+          :completed | :failed | :cancelled,
+          keyword()
+        ) ::
+          :ok
+  def notify_task_terminal_status(user_id, task_id, status, opts \\ [])
+
+  def notify_task_terminal_status(user_id, task_id, status, opts)
+      when status in [:completed, :failed, :cancelled] do
+    queue_manager_supervisor =
+      Keyword.get(opts, :queue_manager_supervisor, QueueManagerSupervisor)
+
+    queue_manager = Keyword.get(opts, :queue_manager, QueueManager)
+
+    ensure_opts = Keyword.get(opts, :queue_manager_opts, default_queue_manager_opts())
+
+    with {:ok, _pid} <- safe_ensure_queue_manager(queue_manager_supervisor, user_id, ensure_opts) do
+      _ = safe_notify_terminal(queue_manager, user_id, task_id, status)
+    end
+
+    :ok
   end
 
   defp default_queue_state do
@@ -353,15 +386,91 @@ defmodule Agents.Sessions do
     }
   end
 
+  defp safe_ensure_queue_manager(queue_manager_supervisor, user_id, ensure_opts) do
+    if function_exported?(queue_manager_supervisor, :ensure_started, 2) do
+      queue_manager_supervisor.ensure_started(user_id, ensure_opts)
+    else
+      queue_manager_supervisor.ensure_started(user_id)
+    end
+  rescue
+    _ -> {:error, :queue_manager_unavailable}
+  catch
+    :exit, _ -> {:error, :queue_manager_unavailable}
+  end
+
+  defp safe_notify_terminal(queue_manager, user_id, task_id, :completed) do
+    queue_manager.notify_task_completed(user_id, task_id)
+  rescue
+    _ -> :ok
+  catch
+    :exit, _ -> :ok
+  end
+
+  defp safe_notify_terminal(queue_manager, user_id, task_id, :failed) do
+    queue_manager.notify_task_failed(user_id, task_id)
+  rescue
+    _ -> :ok
+  catch
+    :exit, _ -> :ok
+  end
+
+  defp safe_notify_terminal(queue_manager, user_id, task_id, :cancelled) do
+    queue_manager.notify_task_cancelled(user_id, task_id)
+  rescue
+    _ -> :ok
+  catch
+    :exit, _ -> :ok
+  end
+
   defp inject_queue_checker(opts) do
     Keyword.put_new(opts, :queue_checker, &default_queue_checker/1)
   end
 
+  defp inject_concurrency_lock(opts) do
+    Keyword.put_new(opts, :concurrency_lock, &with_create_task_lock/2)
+  end
+
+  defp with_create_task_lock(user_id, fun) do
+    lock_key = :erlang.phash2("sessions:create_task:#{user_id}", 2_147_483_647)
+
+    Repo.transaction(fn ->
+      Ecto.Adapters.SQL.query!(Repo, "SELECT pg_advisory_xact_lock($1)", [lock_key])
+
+      case fun.() do
+        {:error, _reason} = error -> Repo.rollback(error)
+        other -> other
+      end
+    end)
+    |> case do
+      {:ok, result} -> result
+      {:error, error} -> error
+    end
+  end
+
   defp default_queue_checker(user_id) do
-    case QueueManagerSupervisor.ensure_started(user_id) do
+    case ensure_queue_manager_started(user_id) do
       {:ok, _pid} -> QueueManager.check_concurrency(user_id)
       {:error, _reason} -> :ok
     end
+  end
+
+  defp ensure_queue_manager_started(user_id) do
+    safe_ensure_queue_manager(QueueManagerSupervisor, user_id, default_queue_manager_opts())
+  end
+
+  defp default_queue_manager_opts do
+    [
+      task_runner_starter: fn task_id, runner_opts ->
+        runner_opts =
+          Keyword.put_new(
+            runner_opts,
+            :queue_terminal_notifier,
+            &notify_task_terminal_status/3
+          )
+
+        TaskRunnerSupervisor.start_child(task_id, runner_opts)
+      end
+    ]
   end
 
   # Wire the real TaskRunnerSupervisor starter
@@ -370,6 +479,13 @@ defmodule Agents.Sessions do
       opts
     else
       Keyword.put(opts, :task_runner_starter, fn task_id, runner_opts ->
+        runner_opts =
+          Keyword.put_new(
+            runner_opts,
+            :queue_terminal_notifier,
+            &notify_task_terminal_status/3
+          )
+
         TaskRunnerSupervisor.start_child(task_id, runner_opts)
       end)
     end

@@ -84,6 +84,41 @@ defmodule Agents.Sessions.Application.UseCases.CreateTaskTest do
       assert_receive {:started, "task-1"}
     end
 
+    test "wraps queue decision and creation in concurrency lock callback" do
+      task_schema = %{
+        id: "task-1",
+        instruction: "Write tests",
+        user_id: "user-123",
+        status: "pending"
+      }
+
+      test_pid = self()
+
+      TaskRepositoryMock
+      |> expect(:create_task, fn _attrs ->
+        send(test_pid, :created)
+        {:ok, struct(TaskSchema, task_schema)}
+      end)
+
+      lock = fn user_id, fun ->
+        send(test_pid, {:lock_entered, user_id})
+        result = fun.()
+        send(test_pid, :lock_exited)
+        result
+      end
+
+      assert {:ok, _task} =
+               CreateTask.execute(@valid_attrs,
+                 task_repo: TaskRepositoryMock,
+                 task_runner_starter: fn _task_id, _opts -> {:ok, self()} end,
+                 concurrency_lock: lock
+               )
+
+      assert_receive {:lock_entered, "user-123"}
+      assert_receive :created
+      assert_receive :lock_exited
+    end
+
     test "returns error when runner start fails" do
       task_schema = %{
         id: "task-1",

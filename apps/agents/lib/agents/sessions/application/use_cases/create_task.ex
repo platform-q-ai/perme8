@@ -44,15 +44,18 @@ defmodule Agents.Sessions.Application.UseCases.CreateTask do
     task_repo = Keyword.get(opts, :task_repo, @default_task_repo)
     event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
     queue_checker = Keyword.get(opts, :queue_checker, @default_queue_checker)
+    concurrency_lock = Keyword.get(opts, :concurrency_lock, &no_concurrency_lock/2)
 
     with :ok <- validate_instruction(attrs) do
       user_id = attrs[:user_id] || attrs["user_id"]
 
-      if should_queue?(user_id, queue_checker) do
-        create_queued_task(attrs, user_id, task_repo, event_bus)
-      else
-        create_and_start_task(attrs, task_repo, event_bus, opts)
-      end
+      concurrency_lock.(user_id, fn ->
+        if should_queue?(user_id, queue_checker) do
+          create_queued_task(attrs, user_id, task_repo, event_bus)
+        else
+          create_and_start_task(attrs, task_repo, event_bus, opts)
+        end
+      end)
     end
   end
 
@@ -153,4 +156,6 @@ defmodule Agents.Sessions.Application.UseCases.CreateTask do
       })
     )
   end
+
+  defp no_concurrency_lock(_user_id, fun), do: fun.()
 end

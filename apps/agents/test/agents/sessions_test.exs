@@ -514,4 +514,68 @@ defmodule Agents.SessionsTest do
                )
     end
   end
+
+  describe "notify_task_terminal_status/4" do
+    test "ensures queue manager and forwards completed notifications" do
+      user = user_fixture()
+      task = task_fixture(%{user_id: user.id, status: "completed"})
+      test_pid = self()
+
+      {:module, supervisor_mod, _, _} =
+        defmodule :"Agents.SessionsTest.MockQueueSupervisor.#{System.unique_integer([:positive])}" do
+          def set_test_pid(pid), do: :persistent_term.put({__MODULE__, :test_pid}, pid)
+
+          def ensure_started(user_id) do
+            send(:persistent_term.get({__MODULE__, :test_pid}), {:queue_manager_ensured, user_id})
+            {:ok, self()}
+          end
+        end
+
+      {:module, queue_manager_mod, _, _} =
+        defmodule :"Agents.SessionsTest.MockQueueManager.#{System.unique_integer([:positive])}" do
+          def set_test_pid(pid), do: :persistent_term.put({__MODULE__, :test_pid}, pid)
+
+          def notify_task_completed(user_id, task_id) do
+            send(
+              :persistent_term.get({__MODULE__, :test_pid}),
+              {:queue_notified, :completed, user_id, task_id}
+            )
+
+            :ok
+          end
+
+          def notify_task_failed(_user_id, _task_id), do: :ok
+          def notify_task_cancelled(_user_id, _task_id), do: :ok
+        end
+
+      supervisor_mod.set_test_pid(test_pid)
+      queue_manager_mod.set_test_pid(test_pid)
+
+      assert :ok =
+               Sessions.notify_task_terminal_status(user.id, task.id, :completed,
+                 queue_manager_supervisor: supervisor_mod,
+                 queue_manager: queue_manager_mod
+               )
+
+      user_id = user.id
+      task_id = task.id
+      assert_receive {:queue_manager_ensured, ^user_id}
+      assert_receive {:queue_notified, :completed, ^user_id, ^task_id}
+    end
+
+    test "returns :ok when queue manager supervisor is unavailable" do
+      user = user_fixture()
+      task = task_fixture(%{user_id: user.id, status: "failed"})
+
+      {:module, supervisor_mod, _, _} =
+        defmodule :"Agents.SessionsTest.MockQueueSupervisorUnavailable.#{System.unique_integer([:positive])}" do
+          def ensure_started(_user_id), do: raise("queue manager unavailable")
+        end
+
+      assert :ok =
+               Sessions.notify_task_terminal_status(user.id, task.id, :failed,
+                 queue_manager_supervisor: supervisor_mod
+               )
+    end
+  end
 end
