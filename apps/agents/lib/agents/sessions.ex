@@ -228,31 +228,52 @@ defmodule Agents.Sessions do
     task_repo = Keyword.get(opts, :task_repo, TaskRepository)
     opts = inject_task_runner_starter(opts)
     starter = Keyword.fetch!(opts, :task_runner_starter)
+    task = task_repo.get_task(task_id)
 
-    case task_repo.get_task(task_id) do
-      %{status: status} when status in ["cancelled"] ->
-        {:error, :task_not_running}
+    restart_runner_for_task(task, task_id, message, task_repo, starter)
+  end
 
-      %{container_id: cid, session_id: sid, instruction: instruction}
-      when is_binary(cid) and cid != "" and is_binary(sid) and sid != "" ->
-        case starter.(task_id,
-               resume: true,
-               instruction: instruction,
-               prompt_instruction: message,
-               container_id: cid,
-               session_id: sid
-             ) do
-          {:ok, _pid} -> :ok
-          _ -> {:error, :task_not_running}
-        end
+  defp restart_runner_for_task(%{status: "cancelled"}, _task_id, _message, _task_repo, _starter) do
+    {:error, :task_not_running}
+  end
 
-      %{status: status} = task
-      when status in ["pending", "starting", "running", "awaiting_feedback"] ->
-        _ = maybe_mark_runner_linkage_missing(task_repo, task)
-        {:error, :task_not_running}
+  defp restart_runner_for_task(
+         %{container_id: cid, session_id: sid, instruction: instruction},
+         task_id,
+         message,
+         _task_repo,
+         starter
+       )
+       when is_binary(cid) and cid != "" and is_binary(sid) and sid != "" do
+    start_resumed_runner(starter, task_id, instruction, message, cid, sid)
+  end
 
-      _ ->
-        {:error, :task_not_running}
+  defp restart_runner_for_task(
+         %{status: status} = task,
+         _task_id,
+         _message,
+         task_repo,
+         _starter
+       )
+       when status in ["pending", "starting", "running", "awaiting_feedback"] do
+    _ = maybe_mark_runner_linkage_missing(task_repo, task)
+    {:error, :task_not_running}
+  end
+
+  defp restart_runner_for_task(_task, _task_id, _message, _task_repo, _starter) do
+    {:error, :task_not_running}
+  end
+
+  defp start_resumed_runner(starter, task_id, instruction, message, cid, sid) do
+    case starter.(task_id,
+           resume: true,
+           instruction: instruction,
+           prompt_instruction: message,
+           container_id: cid,
+           session_id: sid
+         ) do
+      {:ok, _pid} -> :ok
+      _ -> {:error, :task_not_running}
     end
   end
 
