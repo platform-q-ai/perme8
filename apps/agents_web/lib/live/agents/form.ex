@@ -14,7 +14,6 @@ defmodule AgentsWeb.AgentsLive.Form do
     AgentRemovedFromWorkspace
   }
 
-  alias Jarga.Workspaces
   alias AgentsWeb.Layouts
 
   @impl true
@@ -73,7 +72,7 @@ defmodule AgentsWeb.AgentsLive.Form do
 
     # Load user's workspaces
     user = socket.assigns.current_scope.user
-    workspaces = Workspaces.list_workspaces_for_user(user)
+    workspaces = Identity.list_workspaces_for_user(user)
     return_to = Map.get(params, "return_to", "agents")
     workspace_slug = Map.get(params, "workspace_slug")
 
@@ -329,7 +328,7 @@ defmodule AgentsWeb.AgentsLive.Form do
 
   defp setup_view_mode(socket, agent, user, return_to, workspace_slug) do
     agent_attrs = build_agent_attrs(agent)
-    workspaces = Workspaces.list_workspaces_for_user(user)
+    workspaces = Identity.list_workspaces_for_user(user)
     selected_workspace_ids = Agents.get_agent_workspace_ids(agent.id)
 
     socket
@@ -346,7 +345,7 @@ defmodule AgentsWeb.AgentsLive.Form do
 
   defp setup_edit_mode(socket, agent, user, return_to, workspace_slug) do
     agent_attrs = build_agent_attrs(agent)
-    workspaces = Workspaces.list_workspaces_for_user(user)
+    workspaces = Identity.list_workspaces_for_user(user)
     selected_workspace_ids = Agents.get_agent_workspace_ids(agent.id)
 
     socket
@@ -405,7 +404,7 @@ defmodule AgentsWeb.AgentsLive.Form do
       nil ->
         # No workspace context — subscribe to all user's workspaces
         user = socket.assigns.current_scope.user
-        workspaces = Workspaces.list_workspaces_for_user(user)
+        workspaces = Identity.list_workspaces_for_user(user)
         Enum.each(workspaces, fn ws -> Perme8.Events.subscribe("events:workspace:#{ws.id}") end)
 
       workspace ->
