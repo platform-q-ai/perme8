@@ -346,6 +346,11 @@ jobs:
                   selected = required + sampled
                   selective = "true"
 
+          # Security exo-bdd coverage runs only on merge to main (push to main),
+          # not on branch/PR CI runs.
+          if not is_main:
+              selected = [c for c in selected if c["domain"] != "security"]
+
           # Output the matrix as JSON
           matrix = {"include": selected}
           matrix_json = json.dumps(matrix, separators=(",", ":"))
