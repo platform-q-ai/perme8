@@ -446,6 +446,54 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       refute html =~ "Awaiting response..."
     end
 
+    test "pending follow-up survives navigating away and back while session is restarting", %{
+      conn: conn,
+      user: user
+    } do
+      restarting_output =
+        Jason.encode!([
+          %{"type" => "text", "id" => "asst-1", "text" => "Resuming container..."},
+          %{
+            "type" => "user",
+            "id" => "queued-user-1",
+            "text" => "Please keep this",
+            "pending" => true
+          }
+        ])
+
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Restarting session",
+        container_id: "c-resume",
+        status: "starting",
+        output: restarting_output
+      })
+
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Other session",
+        container_id: "c-other",
+        status: "completed"
+      })
+
+      {:ok, lv, html} = live(conn, ~p"/sessions?container=c-resume")
+
+      assert html =~ "Please keep this"
+      assert html =~ "Awaiting response..."
+
+      lv
+      |> element(~s([phx-click="select_session"][phx-value-container-id="c-other"]))
+      |> render_click()
+
+      html =
+        lv
+        |> element(~s([phx-click="select_session"][phx-value-container-id="c-resume"]))
+        |> render_click()
+
+      assert html =~ "Please keep this"
+      assert html =~ "Awaiting response..."
+    end
+
     test "multiple applied follow-up messages remain visible after assistant continues", %{
       conn: conn,
       user: user
@@ -1171,6 +1219,74 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       assert html =~ "Image:"
     end
 
+    test "renders empty concurrency slot cards in session list", %{conn: conn, user: user} do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Running session",
+        container_id: "c-running",
+        status: "running"
+      })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      send(lv.pid, {
+        :queue_updated,
+        user.id,
+        %{running: 1, queued: [], awaiting_feedback: [], concurrency_limit: 3}
+      })
+
+      html = render(lv)
+
+      assert html =~ ~s(data-testid="empty-concurrency-slot-1")
+      assert html =~ ~s(data-testid="empty-concurrency-slot-2")
+      assert length(:binary.matches(html, ~s(data-slot-state="empty"))) == 2
+
+      empty_pos =
+        html
+        |> :binary.matches(~s(data-testid="empty-concurrency-slot-1"))
+        |> List.first()
+        |> elem(0)
+
+      running_pos =
+        html
+        |> :binary.matches(~s(data-testid="session-item-running-session"))
+        |> List.first()
+        |> elem(0)
+
+      assert empty_pos < running_pos
+    end
+
+    test "queue concurrency updates rerender empty slot cards", %{conn: conn, user: user} do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Running session",
+        container_id: "c-running",
+        status: "running"
+      })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      send(lv.pid, {
+        :queue_updated,
+        user.id,
+        %{running: 1, queued: [], awaiting_feedback: [], concurrency_limit: 2}
+      })
+
+      html = render(lv)
+      assert html =~ ~s(data-testid="empty-concurrency-slot-1")
+      refute html =~ ~s(data-testid="empty-concurrency-slot-2")
+
+      send(lv.pid, {
+        :queue_updated,
+        user.id,
+        %{running: 2, queued: [], awaiting_feedback: [], concurrency_limit: 4}
+      })
+
+      html = render(lv)
+      assert html =~ ~s(data-testid="empty-concurrency-slot-2")
+      assert length(:binary.matches(html, ~s(data-slot-state="empty"))) == 2
+    end
+
     test "renders status dots in session list", %{conn: conn, user: user} do
       task_fixture(%{
         user_id: user.id,
@@ -1189,6 +1305,158 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       {:ok, _lv, html} = live(conn, ~p"/sessions")
       assert html =~ "bg-success"
       assert html =~ "bg-error"
+    end
+
+    test "running session cards are marked as used slots", %{conn: conn, user: user} do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Running slot",
+        container_id: "c-running-slot",
+        status: "running"
+      })
+
+      {:ok, _lv, html} = live(conn, ~p"/sessions")
+
+      assert html =~ ~s(data-testid="session-item-running-slot")
+      assert html =~ ~s(data-slot-state="used")
+    end
+
+    test "attention sessions render at top ordered completed to cancelled", %{
+      conn: conn,
+      user: user
+    } do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Cancelled attention",
+        container_id: "c-cancelled-attention",
+        status: "cancelled"
+      })
+
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Failed attention",
+        container_id: "c-failed-attention",
+        status: "failed"
+      })
+
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Completed attention",
+        container_id: "c-completed-attention",
+        status: "completed"
+      })
+
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Running progress",
+        container_id: "c-running-progress",
+        status: "running"
+      })
+
+      {:ok, _lv, html} = live(conn, ~p"/sessions")
+
+      completed_pos =
+        html
+        |> :binary.matches(~s(data-testid="session-item-completed-attention"))
+        |> List.first()
+        |> elem(0)
+
+      failed_pos =
+        html
+        |> :binary.matches(~s(data-testid="session-item-failed-attention"))
+        |> List.first()
+        |> elem(0)
+
+      cancelled_pos =
+        html
+        |> :binary.matches(~s(data-testid="session-item-cancelled-attention"))
+        |> List.first()
+        |> elem(0)
+
+      running_pos =
+        html
+        |> :binary.matches(~s(data-testid="session-item-running-progress"))
+        |> List.first()
+        |> elem(0)
+
+      assert completed_pos < failed_pos
+      assert failed_pos < cancelled_pos
+      assert cancelled_pos < running_pos
+    end
+
+    test "queued sessions render above concurrency rule", %{conn: conn, user: user} do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Queued session",
+        container_id: "c-queued-session",
+        status: "queued"
+      })
+
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Running session",
+        container_id: "c-running-session",
+        status: "running"
+      })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      send(lv.pid, {
+        :queue_updated,
+        user.id,
+        %{running: 1, queued: [], awaiting_feedback: [], concurrency_limit: 2}
+      })
+
+      html = render(lv)
+
+      queued_pos =
+        html
+        |> :binary.matches(~s(data-testid="session-item-queued-session"))
+        |> List.first()
+        |> elem(0)
+
+      rule_pos =
+        html
+        |> :binary.matches(~s(data-testid="queue-limit-rule"))
+        |> List.first()
+        |> elem(0)
+
+      assert queued_pos < rule_pos
+    end
+
+    test "renders queue limit rule above the slot at concurrency threshold", %{
+      conn: conn,
+      user: user
+    } do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Running slot",
+        container_id: "c-running-slot",
+        status: "running"
+      })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      send(lv.pid, {
+        :queue_updated,
+        user.id,
+        %{running: 1, queued: [], awaiting_feedback: [], concurrency_limit: 2}
+      })
+
+      html = render(lv)
+
+      assert length(:binary.matches(html, ~s(data-testid="queue-limit-rule"))) == 1
+
+      rule_pos =
+        html |> :binary.matches(~s(data-testid="queue-limit-rule")) |> List.first() |> elem(0)
+
+      running_pos =
+        html
+        |> :binary.matches(~s(data-testid="session-item-running-slot"))
+        |> List.first()
+        |> elem(0)
+
+      assert rule_pos < running_pos
     end
 
     test "delete session button is hidden for running sessions", %{conn: conn, user: user} do
