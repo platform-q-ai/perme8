@@ -4,6 +4,7 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
   import Phoenix.LiveViewTest
   import Jarga.AccountsFixtures
   import Agents.SessionsFixtures
+  import Ecto.Query
 
   alias Agents.Sessions.Infrastructure.Schemas.TaskSchema
   alias Agents.Repo
@@ -190,6 +191,85 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       followup_pos = html |> :binary.matches("Follow-up message") |> List.last() |> elem(0)
 
       assert followup_pos > assistant_pos
+    end
+
+    test "follow-up message persists after assistant response updates", %{conn: conn, user: user} do
+      task =
+        task_fixture(%{
+          user_id: user.id,
+          instruction: "Initial instruction",
+          container_id: "c1",
+          status: "running"
+        })
+
+      start_supervised!({FakeTaskRunner, task.id})
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      lv
+      |> form("#session-form", %{"instruction" => "Persist this follow-up"})
+      |> render_submit()
+
+      send(lv.pid, {
+        :task_event,
+        task.id,
+        %{
+          "type" => "message.updated",
+          "properties" => %{"info" => %{"role" => "user", "id" => "user-msg-1"}}
+        }
+      })
+
+      send(lv.pid, {
+        :task_event,
+        task.id,
+        %{
+          "type" => "message.part.updated",
+          "properties" => %{
+            "part" => %{
+              "id" => "user-part-1",
+              "type" => "text",
+              "messageID" => "user-msg-1",
+              "text" => "Persist this follow-up"
+            }
+          }
+        }
+      })
+
+      send(lv.pid, {
+        :task_event,
+        task.id,
+        %{
+          "type" => "message.part.updated",
+          "properties" => %{
+            "part" => %{"id" => "asst-part-1", "type" => "text", "text" => "Assistant reply"}
+          }
+        }
+      })
+
+      html = render(lv)
+      assert html =~ "Persist this follow-up"
+      assert html =~ "Assistant reply"
+      refute html =~ "Awaiting response..."
+    end
+
+    test "submitting on a cancelled non-resumable session does not create a new session", %{
+      conn: conn,
+      user: user
+    } do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Cancelled run",
+        container_id: "c1",
+        status: "cancelled"
+      })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      lv
+      |> form("#session-form", %{"instruction" => "Try again"})
+      |> render_submit()
+
+      assert Repo.aggregate(from(t in TaskSchema, where: t.user_id == ^user.id), :count, :id) == 1
     end
 
     test "optimistic follow-up message is not duplicated across rerenders", %{

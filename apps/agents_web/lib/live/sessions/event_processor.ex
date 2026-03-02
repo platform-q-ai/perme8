@@ -69,7 +69,7 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
       )
       when text != "" do
     if user_message_part?(part, socket) do
-      socket
+      append_confirmed_user_message(socket, part, text)
     else
       part_id = part["id"] || "text-default"
       parts = upsert_part(socket.assigns.output_parts, {:text, part_id, text, :streaming})
@@ -298,6 +298,39 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
   end
 
   defp user_message_part?(_part, _socket), do: false
+
+  defp append_confirmed_user_message(socket, part, text) do
+    message_id = part["id"] || "user-part-#{System.unique_integer([:positive])}"
+    trimmed = String.trim(text)
+
+    confirmed =
+      socket.assigns
+      |> Map.get(:confirmed_user_messages, [])
+      |> upsert_confirmed_user_message(message_id, trimmed)
+
+    optimistic =
+      socket.assigns
+      |> Map.get(:optimistic_user_messages, [])
+      |> drop_first_matching_optimistic(trimmed)
+
+    socket
+    |> assign(:confirmed_user_messages, confirmed)
+    |> assign(:optimistic_user_messages, optimistic)
+  end
+
+  defp upsert_confirmed_user_message(messages, id, text) do
+    case Enum.find_index(messages, &(&1.id == id)) do
+      nil -> messages ++ [%{id: id, text: text}]
+      idx -> List.replace_at(messages, idx, %{id: id, text: text})
+    end
+  end
+
+  defp drop_first_matching_optimistic(messages, text) do
+    case Enum.find_index(messages, &(String.trim(&1) == text)) do
+      nil -> messages
+      idx -> List.delete_at(messages, idx)
+    end
+  end
 
   defp maybe_assign(socket, _key, nil), do: socket
   defp maybe_assign(socket, key, value), do: assign(socket, key, value)
