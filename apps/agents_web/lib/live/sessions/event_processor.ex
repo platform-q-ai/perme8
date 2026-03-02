@@ -46,17 +46,23 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
   def process_event(
         %{
           "type" => "message.updated",
-          "properties" => %{"info" => %{"role" => "user", "id" => msg_id} = info}
+          "properties" => %{"info" => %{"role" => "user"} = info}
         },
         socket
-      )
-      when is_binary(msg_id) do
-    ids = MapSet.put(socket.assigns.user_message_ids, msg_id)
+      ) do
     content = extract_user_message_content(info)
 
-    socket
-    |> assign(:user_message_ids, ids)
-    |> remove_matching_queued_message(content)
+    socket =
+      case info["id"] || info["messageID"] || info["messageId"] do
+        msg_id when is_binary(msg_id) ->
+          ids = MapSet.put(socket.assigns.user_message_ids, msg_id)
+          assign(socket, :user_message_ids, ids)
+
+        _ ->
+          socket
+      end
+
+    remove_matching_queued_message(socket, content)
   end
 
   # Text output — keyed by part ID so multiple messages accumulate
@@ -197,8 +203,11 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
   """
   def maybe_load_cached_output(socket, %{output: output})
       when is_binary(output) and output != "" do
-    parts = decode_cached_output(output)
-    assign(socket, :output_parts, parts)
+    {parts, user_messages} = decode_cached_output_with_user_messages(output)
+
+    socket
+    |> assign(:output_parts, parts)
+    |> assign(:confirmed_user_messages, user_messages)
   end
 
   def maybe_load_cached_output(socket, _task), do: socket
@@ -275,6 +284,30 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
     end
   end
 
+  defp decode_cached_output_with_user_messages(output) do
+    case Jason.decode(output) do
+      {:ok, parts} when is_list(parts) ->
+        {user_parts, non_user_parts} = Enum.split_with(parts, &(&1["type"] == "user"))
+
+        decoded_parts =
+          non_user_parts |> Enum.map(&decode_output_part/1) |> Enum.reject(&is_nil/1)
+
+        user_messages =
+          user_parts
+          |> Enum.map(fn part ->
+            text = String.trim(part["text"] || "")
+            id = part["id"] || "user-part-#{System.unique_integer([:positive])}"
+            %{id: id, text: text}
+          end)
+          |> Enum.reject(&(&1.text == ""))
+
+        {decoded_parts, user_messages}
+
+      _ ->
+        {decode_cached_output(output), []}
+    end
+  end
+
   # ---- Private helpers ----
 
   defp handle_tool_event(socket, tool_id, tool_name, status, new_detail) do
@@ -297,10 +330,17 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
     MapSet.member?(socket.assigns.user_message_ids, msg_id)
   end
 
+  defp user_message_part?(%{"messageId" => msg_id}, socket) when is_binary(msg_id) do
+    MapSet.member?(socket.assigns.user_message_ids, msg_id)
+  end
+
   defp user_message_part?(_part, _socket), do: false
 
   defp append_confirmed_user_message(socket, part, text) do
-    message_id = part["id"] || "user-part-#{System.unique_integer([:positive])}"
+    message_id =
+      part["messageID"] || part["messageId"] || part["id"] ||
+        "user-part-#{System.unique_integer([:positive])}"
+
     trimmed = String.trim(text)
 
     confirmed =

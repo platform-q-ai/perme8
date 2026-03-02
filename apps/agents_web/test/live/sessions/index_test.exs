@@ -252,6 +252,124 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       refute html =~ "Awaiting response..."
     end
 
+    test "follow-up message is restored after reload from cached output", %{
+      conn: conn,
+      user: user
+    } do
+      output =
+        Jason.encode!([
+          %{"type" => "text", "id" => "asst-1", "text" => "Assistant reply"},
+          %{"type" => "user", "id" => "user-msg-1", "text" => "Applied follow-up"}
+        ])
+
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Initial instruction",
+        container_id: "c1",
+        status: "completed",
+        output: output
+      })
+
+      {:ok, _lv, html} = live(conn, ~p"/sessions")
+
+      assert html =~ "Applied follow-up"
+      assert html =~ "Assistant reply"
+      refute html =~ "Awaiting response..."
+    end
+
+    test "multiple applied follow-up messages remain visible after assistant continues", %{
+      conn: conn,
+      user: user
+    } do
+      task =
+        task_fixture(%{
+          user_id: user.id,
+          instruction: "Initial instruction",
+          container_id: "c1",
+          status: "running"
+        })
+
+      start_supervised!({FakeTaskRunner, task.id})
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      lv
+      |> form("#session-form", %{"instruction" => "First queued follow-up"})
+      |> render_submit()
+
+      lv
+      |> form("#session-form", %{"instruction" => "Second queued follow-up"})
+      |> render_submit()
+
+      send(lv.pid, {
+        :task_event,
+        task.id,
+        %{
+          "type" => "message.updated",
+          "properties" => %{"info" => %{"role" => "user", "id" => "user-msg-1"}}
+        }
+      })
+
+      send(lv.pid, {
+        :task_event,
+        task.id,
+        %{
+          "type" => "message.part.updated",
+          "properties" => %{
+            "part" => %{
+              "id" => "user-part-shared",
+              "type" => "text",
+              "messageID" => "user-msg-1",
+              "text" => "First queued follow-up"
+            }
+          }
+        }
+      })
+
+      send(lv.pid, {
+        :task_event,
+        task.id,
+        %{
+          "type" => "message.updated",
+          "properties" => %{"info" => %{"role" => "user", "id" => "user-msg-2"}}
+        }
+      })
+
+      send(lv.pid, {
+        :task_event,
+        task.id,
+        %{
+          "type" => "message.part.updated",
+          "properties" => %{
+            "part" => %{
+              "id" => "user-part-shared",
+              "type" => "text",
+              "messageID" => "user-msg-2",
+              "text" => "Second queued follow-up"
+            }
+          }
+        }
+      })
+
+      send(lv.pid, {
+        :task_event,
+        task.id,
+        %{
+          "type" => "message.part.updated",
+          "properties" => %{
+            "part" => %{"id" => "asst-part-1", "type" => "text", "text" => "Assistant continues"}
+          }
+        }
+      })
+
+      html = render(lv)
+
+      assert html =~ "First queued follow-up"
+      assert html =~ "Second queued follow-up"
+      assert html =~ "Assistant continues"
+      refute html =~ "Awaiting response..."
+    end
+
     test "submitting on a cancelled non-resumable session does not create a new session", %{
       conn: conn,
       user: user
