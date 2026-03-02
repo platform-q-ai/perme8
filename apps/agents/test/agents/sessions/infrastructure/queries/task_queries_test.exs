@@ -19,6 +19,17 @@ defmodule Agents.Sessions.Infrastructure.Queries.TaskQueriesTest do
     |> Repo.insert!()
   end
 
+  # Force a specific inserted_at timestamp on a task record.
+  # Ecto timestamps are managed fields, so we use a raw SQL update.
+  defp force_inserted_at(%TaskSchema{id: id} = task, %DateTime{} = dt) do
+    Repo.query!(
+      "UPDATE sessions_tasks SET inserted_at = $1 WHERE id = $2",
+      [dt, Ecto.UUID.dump!(id)]
+    )
+
+    %{task | inserted_at: dt}
+  end
+
   describe "base/0" do
     test "returns a queryable" do
       query = TaskQueries.base()
@@ -73,6 +84,121 @@ defmodule Agents.Sessions.Infrastructure.Queries.TaskQueriesTest do
 
       assert length(results) == 1
       assert hd(results).id == task.id
+    end
+  end
+
+  describe "sessions_for_user/1" do
+    test "includes latest_task_id for each session" do
+      user = user_fixture()
+      task = create_task(user, %{instruction: "Session task", container_id: "c1"})
+
+      sessions =
+        TaskQueries.sessions_for_user(user.id)
+        |> Repo.all()
+
+      assert length(sessions) == 1
+      session = hd(sessions)
+      assert session.latest_task_id == task.id
+    end
+
+    test "latest_task_id is the most recently inserted task" do
+      user = user_fixture()
+      earlier = ~U[2025-01-01 00:00:00Z]
+      later = ~U[2025-01-01 00:01:00Z]
+
+      _old_task =
+        create_task(user, %{instruction: "Old task", container_id: "c1", status: "completed"})
+        |> force_inserted_at(earlier)
+
+      new_task =
+        create_task(user, %{instruction: "New task", container_id: "c1", status: "failed"})
+        |> force_inserted_at(later)
+
+      sessions =
+        TaskQueries.sessions_for_user(user.id)
+        |> Repo.all()
+
+      assert length(sessions) == 1
+      assert hd(sessions).latest_task_id == new_task.id
+    end
+
+    test "includes latest_error for each session" do
+      user = user_fixture()
+
+      create_task(user, %{
+        instruction: "Failed task",
+        container_id: "c1",
+        status: "failed",
+        error: "Token refresh failed: 400"
+      })
+
+      sessions =
+        TaskQueries.sessions_for_user(user.id)
+        |> Repo.all()
+
+      assert length(sessions) == 1
+      assert hd(sessions).latest_error == "Token refresh failed: 400"
+    end
+
+    test "latest_error is nil when latest task has no error" do
+      user = user_fixture()
+      create_task(user, %{instruction: "Completed task", container_id: "c1", status: "completed"})
+
+      sessions =
+        TaskQueries.sessions_for_user(user.id)
+        |> Repo.all()
+
+      assert length(sessions) == 1
+      assert hd(sessions).latest_error == nil
+    end
+
+    test "latest_error reflects the most recent task, not earlier failures" do
+      user = user_fixture()
+      earlier = ~U[2025-01-01 00:00:00Z]
+      later = ~U[2025-01-01 00:01:00Z]
+
+      create_task(user, %{
+        instruction: "Failed task",
+        container_id: "c1",
+        status: "failed",
+        error: "Token refresh failed: 400"
+      })
+      |> force_inserted_at(earlier)
+
+      create_task(user, %{
+        instruction: "Recovered task",
+        container_id: "c1",
+        status: "completed"
+      })
+      |> force_inserted_at(later)
+
+      sessions =
+        TaskQueries.sessions_for_user(user.id)
+        |> Repo.all()
+
+      assert length(sessions) == 1
+      # Latest task is the completed one, so error should be nil
+      assert hd(sessions).latest_error == nil
+    end
+
+    test "groups by container_id and returns distinct sessions" do
+      user = user_fixture()
+      create_task(user, %{instruction: "Session 1", container_id: "c1", status: "completed"})
+
+      create_task(user, %{
+        instruction: "Session 2",
+        container_id: "c2",
+        status: "failed",
+        error: "auth error"
+      })
+
+      sessions =
+        TaskQueries.sessions_for_user(user.id)
+        |> Repo.all()
+
+      assert length(sessions) == 2
+      container_ids = Enum.map(sessions, & &1.container_id) |> MapSet.new()
+      assert container_ids == MapSet.new(["c1", "c2"])
     end
   end
 

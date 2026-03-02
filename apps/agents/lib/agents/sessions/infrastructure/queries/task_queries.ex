@@ -81,7 +81,8 @@ defmodule Agents.Sessions.Infrastructure.Queries.TaskQueries do
         container_id: t.container_id,
         task_count: count(t.id),
         latest_status: fragment("(array_agg(? ORDER BY ? DESC))[1]", t.status, t.inserted_at),
-        latest_task_id: fragment("(array_agg(? ORDER BY ? DESC))[1]", t.id, t.inserted_at),
+        latest_task_id:
+          fragment("(array_agg(CAST(? AS text) ORDER BY ? DESC))[1]", t.id, t.inserted_at),
         latest_error: fragment("(array_agg(? ORDER BY ? DESC))[1]", t.error, t.inserted_at),
         title: fragment("(array_agg(? ORDER BY ? ASC))[1]", t.instruction, t.inserted_at),
         image: fragment("(array_agg(? ORDER BY ? ASC))[1]", t.image, t.inserted_at),
