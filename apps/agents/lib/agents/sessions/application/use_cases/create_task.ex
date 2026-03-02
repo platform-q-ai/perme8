@@ -10,13 +10,12 @@ defmodule Agents.Sessions.Application.UseCases.CreateTask do
   alias Agents.Sessions.Domain.Entities.Task
   alias Agents.Sessions.Domain.Events.{TaskCreated, TaskQueued}
   alias Agents.Sessions.Domain.Policies.QueuePolicy
-  alias Agents.Sessions.Infrastructure.QueueManagerSupervisor
 
   require Logger
 
   @default_task_repo Agents.Sessions.Infrastructure.Repositories.TaskRepository
   @default_event_bus Perme8.Events.EventBus
-  @default_queue_manager Agents.Sessions.Infrastructure.QueueManager
+  @default_queue_checker nil
 
   @doc """
   Creates a new coding task.
@@ -44,12 +43,12 @@ defmodule Agents.Sessions.Application.UseCases.CreateTask do
   def execute(attrs, opts \\ []) do
     task_repo = Keyword.get(opts, :task_repo, @default_task_repo)
     event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
-    queue_manager = Keyword.get(opts, :queue_manager, @default_queue_manager)
+    queue_checker = Keyword.get(opts, :queue_checker, @default_queue_checker)
 
     with :ok <- validate_instruction(attrs) do
       user_id = attrs[:user_id] || attrs["user_id"]
 
-      if should_queue?(user_id, task_repo, queue_manager) do
+      if should_queue?(user_id, queue_checker) do
         create_queued_task(attrs, user_id, task_repo, event_bus)
       else
         create_and_start_task(attrs, task_repo, event_bus, opts)
@@ -57,17 +56,13 @@ defmodule Agents.Sessions.Application.UseCases.CreateTask do
     end
   end
 
-  defp should_queue?(user_id, task_repo, queue_manager) do
-    case QueueManagerSupervisor.ensure_started(user_id) do
-      {:ok, _pid} ->
-        case queue_manager.check_concurrency(user_id) do
-          :at_limit -> true
-          :ok -> false
-        end
+  defp should_queue?(_user_id, nil), do: false
 
-      {:error, _reason} ->
-        # If QueueManager can't start, don't block task creation
-        false
+  defp should_queue?(user_id, queue_checker) when is_function(queue_checker, 1) do
+    case queue_checker.(user_id) do
+      :at_limit -> true
+      :ok -> false
+      _ -> false
     end
   end
 

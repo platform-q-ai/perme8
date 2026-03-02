@@ -50,6 +50,7 @@ defmodule Agents.Sessions do
   @spec create_task(map(), keyword()) :: {:ok, struct()} | {:error, term()}
   def create_task(attrs, opts \\ []) do
     opts = inject_task_runner_starter(opts)
+    opts = inject_queue_checker(opts)
     CreateTask.execute(attrs, opts)
   end
 
@@ -248,8 +249,11 @@ defmodule Agents.Sessions do
   """
   @spec get_queue_state(String.t()) :: map()
   def get_queue_state(user_id) do
-    {:ok, _pid} = QueueManagerSupervisor.ensure_started(user_id)
-    QueueManager.get_queue_state(user_id)
+    with {:ok, _pid} <- QueueManagerSupervisor.ensure_started(user_id) do
+      QueueManager.get_queue_state(user_id)
+    else
+      {:error, _reason} -> default_queue_state()
+    end
   end
 
   @doc """
@@ -257,8 +261,11 @@ defmodule Agents.Sessions do
   """
   @spec get_concurrency_limit(String.t()) :: non_neg_integer()
   def get_concurrency_limit(user_id) do
-    {:ok, _pid} = QueueManagerSupervisor.ensure_started(user_id)
-    QueueManager.get_concurrency_limit(user_id)
+    with {:ok, _pid} <- QueueManagerSupervisor.ensure_started(user_id) do
+      QueueManager.get_concurrency_limit(user_id)
+    else
+      {:error, _reason} -> SessionsConfig.default_concurrency_limit()
+    end
   end
 
   @doc """
@@ -266,10 +273,33 @@ defmodule Agents.Sessions do
 
   May trigger promotion of queued tasks if the new limit allows more concurrency.
   """
-  @spec set_concurrency_limit(String.t(), non_neg_integer()) :: :ok
+  @spec set_concurrency_limit(String.t(), non_neg_integer()) :: :ok | {:error, term()}
   def set_concurrency_limit(user_id, limit) do
-    {:ok, _pid} = QueueManagerSupervisor.ensure_started(user_id)
-    QueueManager.set_concurrency_limit(user_id, limit)
+    with {:ok, _pid} <- QueueManagerSupervisor.ensure_started(user_id) do
+      QueueManager.set_concurrency_limit(user_id, limit)
+    end
+  end
+
+  defp default_queue_state do
+    %{
+      running: 0,
+      queued: [],
+      awaiting_feedback: [],
+      concurrency_limit: SessionsConfig.default_concurrency_limit()
+    }
+  end
+
+  defp inject_queue_checker(opts) do
+    if Keyword.has_key?(opts, :queue_checker) do
+      opts
+    else
+      Keyword.put(opts, :queue_checker, fn user_id ->
+        case QueueManagerSupervisor.ensure_started(user_id) do
+          {:ok, _pid} -> QueueManager.check_concurrency(user_id)
+          {:error, _reason} -> :ok
+        end
+      end)
+    end
   end
 
   # Wire the real TaskRunnerSupervisor starter
