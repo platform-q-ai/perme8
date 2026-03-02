@@ -55,6 +55,15 @@ export class SessionLogHook extends ViewHook {
     })
 
     this.observer.observe(this.el, { childList: true, subtree: true })
+
+    // Server can push "scroll_to_bottom" to force-scroll (e.g. on session switch)
+    this.handleEvent('scroll_to_bottom', () => {
+      this.isAtBottom = true
+      this.el.scrollTop = this.el.scrollHeight
+    })
+
+    // Scroll to bottom on initial mount
+    this.el.scrollTop = this.el.scrollHeight
   }
 
   /**
