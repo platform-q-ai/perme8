@@ -142,7 +142,7 @@ defmodule AgentsWeb.SessionsLive.IndexTodoTest do
       %{conn: log_in_user(conn, user), user: user}
     end
 
-    test "shows progress bar when todo updates arrive and places it before output log", %{
+    test "shows progress bar when todo updates arrive and places it above input", %{
       conn: conn,
       user: user
     } do
@@ -164,7 +164,9 @@ defmodule AgentsWeb.SessionsLive.IndexTodoTest do
 
       {progress_index, _} = :binary.match(html, ~s(data-testid="todo-progress"))
       {log_index, _} = :binary.match(html, ~s(id="session-log"))
-      assert progress_index < log_index
+      {form_index, _} = :binary.match(html, ~s(id="session-form"))
+      assert progress_index > log_index
+      assert progress_index < form_index
     end
 
     test "does not render progress bar when todo_items is empty", %{conn: conn, user: user} do
