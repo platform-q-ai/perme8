@@ -85,43 +85,186 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.SseCrashTest do
   end
 
   test "SSE process exit with :normal reason does NOT fail the task", %{task: task} do
+    test_pid = self()
+
     Agents.Mocks.TaskRepositoryMock
     |> stub(:get_task, fn _id -> task end)
-    |> stub(:update_task_status, fn _task, _attrs -> {:ok, task} end)
+    |> stub(:update_task_status, fn _task, attrs ->
+      if attrs[:status] == "failed" do
+        send(test_pid, {:failed, attrs.error})
+      end
+
+      if attrs[:status] == "completed" do
+        send(test_pid, {:completed_update, attrs})
+      end
+
+      {:ok, task}
+    end)
 
     Agents.Mocks.ContainerProviderMock
     |> expect(:start, fn _image, _opts -> {:ok, %{container_id: "abc123", port: 4096}} end)
     |> stub(:stop, fn _id -> :ok end)
 
+    reconnect_calls = :atomics.new(1, [])
+
     Agents.Mocks.OpencodeClientMock
     |> expect(:health, fn _url -> :ok end)
     |> expect(:create_session, fn _url, _opts -> {:ok, %{"id" => "sess-1"}} end)
-    |> expect(:subscribe_events, fn _url, runner_pid ->
-      # Send a normal DOWN after a short delay
-      spawn(fn ->
-        Process.sleep(100)
-        send(runner_pid, {:DOWN, make_ref(), :process, self(), :normal})
-      end)
+    |> expect(:subscribe_events, 2, fn _url, runner_pid ->
+      attempt = :atomics.add_get(reconnect_calls, 1, 1)
 
-      {:ok, self()}
+      case attempt do
+        1 ->
+          sse_pid = spawn(fn -> Process.sleep(:infinity) end)
+
+          spawn(fn ->
+            Process.sleep(20)
+
+            send(runner_pid, {
+              :opencode_event,
+              %{
+                "type" => "session.status",
+                "properties" => %{"sessionID" => "sess-1", "status" => %{"type" => "busy"}}
+              }
+            })
+
+            send(runner_pid, {
+              :opencode_event,
+              %{
+                "type" => "message.part.updated",
+                "properties" => %{
+                  "part" => %{"id" => "txt-1", "type" => "text", "text" => "before reconnect"}
+                }
+              }
+            })
+
+            Process.sleep(20)
+            send(runner_pid, {:DOWN, make_ref(), :process, sse_pid, :normal})
+          end)
+
+          {:ok, sse_pid}
+
+        2 ->
+          sse_pid = spawn(fn -> Process.sleep(:infinity) end)
+
+          spawn(fn ->
+            Process.sleep(20)
+
+            send(runner_pid, {
+              :opencode_event,
+              %{
+                "type" => "todo.updated",
+                "properties" => %{
+                  "todos" => [
+                    %{"id" => "todo-2", "content" => "Resume stream", "status" => "completed"}
+                  ]
+                }
+              }
+            })
+
+            send(runner_pid, {
+              :opencode_event,
+              %{
+                "type" => "message.part.updated",
+                "properties" => %{
+                  "part" => %{"id" => "txt-2", "type" => "text", "text" => "after reconnect"}
+                }
+              }
+            })
+
+            send(runner_pid, {
+              :opencode_event,
+              %{
+                "type" => "session.status",
+                "properties" => %{"sessionID" => "sess-1", "status" => %{"type" => "idle"}}
+              }
+            })
+          end)
+
+          {:ok, sse_pid}
+      end
     end)
     |> expect(:send_prompt_async, fn _url, "sess-1", _parts, _opts -> :ok end)
 
-    {:ok, pid} =
+    {:ok, _pid} =
       GenServer.start(
         TaskRunner,
         {task.id, @default_opts}
       )
 
     assert_receive {:task_status_changed, _, "running"}, 5000
+    assert_receive {:task_status_changed, _, "completed"}, 5000
 
-    # Give time for the :normal DOWN to be processed
-    Process.sleep(200)
+    assert_receive {:completed_update, attrs}, 5000
+    assert is_binary(attrs.output)
+    assert %{"items" => [todo]} = attrs.todo_items
+    assert todo["id"] == "todo-2"
 
-    # The process should still be alive since :normal exits are ignored
+    assert {:ok, parts} = Jason.decode(attrs.output)
+
+    assert Enum.any?(parts, fn part ->
+             part["type"] == "text" and part["text"] == "after reconnect"
+           end)
+
+    refute_receive {:failed, _}, 200
+    assert :atomics.get(reconnect_calls, 1) == 2
+  end
+
+  test "normal SSE DOWN while active does not fail immediately", %{task: task} do
+    test_pid = self()
+
+    Agents.Mocks.TaskRepositoryMock
+    |> stub(:get_task, fn _id -> task end)
+    |> stub(:update_task_status, fn _task, attrs ->
+      if attrs[:status] == "failed" do
+        send(test_pid, {:failed, attrs.error})
+      end
+
+      {:ok, task}
+    end)
+
+    Agents.Mocks.ContainerProviderMock
+    |> expect(:start, fn _image, _opts -> {:ok, %{container_id: "abc123", port: 4096}} end)
+    |> stub(:stop, fn _id -> :ok end)
+
+    reconnect_calls = :atomics.new(1, [])
+
+    Agents.Mocks.OpencodeClientMock
+    |> expect(:health, fn _url -> :ok end)
+    |> expect(:create_session, fn _url, _opts -> {:ok, %{"id" => "sess-1"}} end)
+    |> expect(:subscribe_events, 2, fn _url, runner_pid ->
+      attempt = :atomics.add_get(reconnect_calls, 1, 1)
+      sse_pid = spawn(fn -> Process.sleep(:infinity) end)
+
+      if attempt == 1 do
+        spawn(fn ->
+          Process.sleep(30)
+
+          send(runner_pid, {
+            :opencode_event,
+            %{
+              "type" => "session.status",
+              "properties" => %{"sessionID" => "sess-1", "status" => %{"type" => "busy"}}
+            }
+          })
+
+          send(runner_pid, {:DOWN, make_ref(), :process, sse_pid, :normal})
+        end)
+      end
+
+      {:ok, sse_pid}
+    end)
+    |> expect(:send_prompt_async, fn _url, "sess-1", _parts, _opts -> :ok end)
+    |> stub(:abort_session, fn _url, _session_id -> {:ok, true} end)
+
+    {:ok, pid} = GenServer.start(TaskRunner, {task.id, @default_opts})
+
+    assert_receive {:task_status_changed, _, "running"}, 5000
+    refute_receive {:failed, _}, 200
+    assert :atomics.get(reconnect_calls, 1) == 2
+
     assert Process.alive?(pid)
 
-    # Clean up by sending cancel
     send(pid, :cancel)
     Process.sleep(100)
   end
