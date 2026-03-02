@@ -76,9 +76,8 @@ Feature: Queued Messages in Sessions
   # Form behaviour during running task
   # ---------------------------------------------------------------------------
 
-  Scenario: Placeholder text indicates message will be queued during running task
+  Scenario: Sidebar quick-start form is visible without New Session click
     Given I navigate to "${baseUrl}/sessions"
     And I wait for network idle
-    And I click the "New Session" button
-    And I wait for 1 seconds
-    Then "textarea#session-instruction[placeholder='Describe the coding task...']" should exist
+    Then "form#sidebar-new-session-form" should exist
+    And "textarea#sidebar-new-session-instruction[placeholder='Start a new session...']" should exist

@@ -6,8 +6,9 @@ Feature: Coding Sessions Management
 
   # The Sessions page lives at /sessions on the agents_web endpoint.
   # It uses a split-pane layout: session list on the left, session detail
-  # on the right. When no sessions exist, an empty state is shown with a
-  # "New Session" button and guidance text.
+  # on the right. The sidebar always includes a quick-start textarea for
+  # creating new sessions. When no sessions exist, an empty state is shown
+  # in the detail panel.
   #
   # Authentication is handled via the Identity app — the browser logs in on
   # Identity's endpoint and the session cookie (_identity_key) is shared with
@@ -29,10 +30,11 @@ Feature: Coding Sessions Management
   # Page Structure
   # ---------------------------------------------------------------------------
 
-  Scenario: Sessions page renders New Session button
+  Scenario: Sessions page renders sidebar quick-start form
     When I navigate to "${baseUrl}/sessions"
     And I wait for network idle
-    Then I should see "New Session"
+    Then "form#sidebar-new-session-form" should exist
+    And "textarea#sidebar-new-session-instruction" should exist
 
   Scenario: Sessions page shows empty state when no sessions exist
     When I navigate to "${baseUrl}/sessions"
@@ -40,20 +42,15 @@ Feature: Coding Sessions Management
     Then I should see "No sessions yet"
 
   # ---------------------------------------------------------------------------
-  # Instruction Form (visible after clicking New Session)
+  # Instruction Forms
   # ---------------------------------------------------------------------------
 
-  Scenario: New Session shows instruction form with textarea
+  Scenario: Sidebar quick-start textarea has placeholder text
     When I navigate to "${baseUrl}/sessions"
     And I wait for network idle
-    And I click the "New Session" button
-    And I wait for 1 seconds
-    Then "form#session-form" should exist
-    And "textarea#session-instruction" should exist
+    Then "textarea#sidebar-new-session-instruction[placeholder='Start a new session...']" should exist
 
-  Scenario: Instruction textarea has placeholder text
+  Scenario: Empty state still offers explicit New Session action
     When I navigate to "${baseUrl}/sessions"
     And I wait for network idle
-    And I click the "New Session" button
-    And I wait for 1 seconds
-    Then "textarea#session-instruction[placeholder='Describe the coding task...']" should exist
+    Then I should see "New Session"
