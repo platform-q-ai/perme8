@@ -8,6 +8,25 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
   alias Agents.Sessions.Infrastructure.Schemas.TaskSchema
   alias Agents.Repo
 
+  defmodule FakeTaskRunner do
+    use GenServer
+
+    def start_link(task_id) do
+      GenServer.start_link(__MODULE__, task_id)
+    end
+
+    @impl true
+    def init(task_id) do
+      Registry.register(Agents.Sessions.TaskRegistry, task_id, %{})
+      {:ok, %{task_id: task_id}}
+    end
+
+    @impl true
+    def handle_call({:send_message, _message}, _from, state) do
+      {:reply, :ok, state}
+    end
+  end
+
   describe "mount and rendering" do
     setup %{conn: conn} do
       user = user_fixture()
@@ -47,6 +66,18 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       {:ok, _lv, html} = live(conn, ~p"/sessions")
       assert html =~ "Write tests for login"
       assert html =~ "Refactor auth module"
+    end
+
+    test "shows active task without container in session list", %{conn: conn, user: user} do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Fresh session starting",
+        status: "running"
+      })
+
+      {:ok, _lv, html} = live(conn, ~p"/sessions")
+
+      assert html =~ "session-item-fresh-session-starting"
     end
 
     test "selects most recent session by default", %{conn: conn, user: user} do
@@ -94,6 +125,98 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       # Should still show the existing session, not a "Waiting for response..." indicator
       assert html =~ "Some task"
       refute html =~ "Waiting for response"
+    end
+
+    test "sending a follow-up message to a running task appends it immediately", %{
+      conn: conn,
+      user: user
+    } do
+      task =
+        task_fixture(%{
+          user_id: user.id,
+          instruction: "Initial instruction",
+          container_id: "c1",
+          status: "running"
+        })
+
+      start_supervised!({FakeTaskRunner, task.id})
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      lv
+      |> form("#session-form", %{"instruction" => "Follow-up message"})
+      |> render_submit()
+
+      html = render(lv)
+      assert html =~ "Follow-up message"
+      assert html =~ "Waiting for response"
+    end
+
+    test "follow-up message renders at the bottom of the chat log", %{conn: conn, user: user} do
+      task =
+        task_fixture(%{
+          user_id: user.id,
+          instruction: "Initial instruction",
+          container_id: "c1",
+          status: "running"
+        })
+
+      start_supervised!({FakeTaskRunner, task.id})
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      send(lv.pid, {
+        :task_event,
+        task.id,
+        %{
+          "type" => "message.part.updated",
+          "properties" => %{
+            "part" => %{"id" => "part-1", "type" => "text", "text" => "Earlier assistant output"}
+          }
+        }
+      })
+
+      lv
+      |> form("#session-form", %{"instruction" => "Follow-up message"})
+      |> render_submit()
+
+      html = render(lv)
+      assert html =~ "Earlier assistant output"
+      assert html =~ "Follow-up message"
+
+      assistant_pos =
+        html |> :binary.matches("Earlier assistant output") |> List.last() |> elem(0)
+
+      followup_pos = html |> :binary.matches("Follow-up message") |> List.last() |> elem(0)
+
+      assert followup_pos > assistant_pos
+    end
+
+    test "optimistic follow-up message is not duplicated across rerenders", %{
+      conn: conn,
+      user: user
+    } do
+      task =
+        task_fixture(%{
+          user_id: user.id,
+          instruction: "Initial instruction",
+          container_id: "c1",
+          status: "running"
+        })
+
+      start_supervised!({FakeTaskRunner, task.id})
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      lv
+      |> form("#session-form", %{"instruction" => "One follow-up"})
+      |> render_submit()
+
+      # Trigger a rerender path that reloads sessions
+      send(lv.pid, {:task_status_changed, task.id, "running"})
+
+      html = render(lv)
+      assert length(Regex.scan(~r/One follow-up/, html)) == 1
     end
   end
 
@@ -615,6 +738,49 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       assert html =~ "Only session"
     end
 
+    test "clicking New Session clears active session detail pane", %{conn: conn, user: user} do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Long running task",
+        container_id: "c-running",
+        status: "running"
+      })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      html =
+        lv
+        |> element(~s([phx-click="new_session"]))
+        |> render_click()
+
+      assert_patch(lv, ~p"/sessions?#{%{new: true}}")
+      assert html =~ "Enter an instruction below to start"
+      assert html =~ "Image:"
+      refute html =~ "Waiting for response"
+    end
+
+    test "new session remains blank after clicking New Session even with existing sessions", %{
+      conn: conn,
+      user: user
+    } do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Existing session",
+        container_id: "c-existing",
+        status: "completed"
+      })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      lv
+      |> element(~s([phx-click="new_session"]))
+      |> render_click()
+
+      html = render(lv)
+      assert html =~ "Enter an instruction below to start"
+      assert html =~ "Image:"
+    end
+
     test "renders status dots in session list", %{conn: conn, user: user} do
       task_fixture(%{
         user_id: user.id,
@@ -633,6 +799,30 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       {:ok, _lv, html} = live(conn, ~p"/sessions")
       assert html =~ "bg-success"
       assert html =~ "bg-error"
+    end
+
+    test "delete session button is hidden for running sessions", %{conn: conn, user: user} do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Running session",
+        container_id: "c-running",
+        status: "running"
+      })
+
+      {:ok, _lv, html} = live(conn, ~p"/sessions")
+      refute html =~ "title=\"Delete session\""
+    end
+
+    test "delete session button is shown for completed sessions", %{conn: conn, user: user} do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Completed session",
+        container_id: "c-completed",
+        status: "completed"
+      })
+
+      {:ok, _lv, html} = live(conn, ~p"/sessions")
+      assert html =~ "title=\"Delete session\""
     end
   end
 end
