@@ -466,5 +466,12 @@ defmodule AgentsWeb.SessionsLive.EventProcessorTest do
       parts = [{:text, "t-1", "hello", :frozen}]
       assert ^parts = EventProcessor.freeze_streaming(parts)
     end
+
+    test "marks running tool parts as done" do
+      parts = [{:tool, "tool-1", "bash", :running, %{input: "ls"}}]
+
+      assert EventProcessor.freeze_streaming(parts) ==
+               [{:tool, "tool-1", "bash", :done, %{input: "ls"}}]
+    end
   end
 end
