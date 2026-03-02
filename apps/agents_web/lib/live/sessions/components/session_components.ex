@@ -110,7 +110,37 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponents do
     """
   end
 
-  # ---- Output Part Components ----
+  # ---- Queued Message ----
+
+  @doc """
+  Renders a queued user message with muted styling and a "Queued" badge.
+
+  Shown in the output log when the user sends a follow-up message while
+  the agent is still processing. The message is visually dimmed to
+  distinguish it from delivered messages.
+  """
+  attr(:message, :map, required: true)
+
+  def queued_message(assigns) do
+    ~H"""
+    <div data-testid={"queued-message-#{@message.id}"} class="flex gap-2 mb-3 opacity-60">
+      <div class="shrink-0 size-6 rounded-full bg-primary/10 flex items-center justify-center">
+        <.icon name="hero-user" class="size-3.5 text-primary" />
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-2 mb-0.5">
+          <span class="text-xs font-medium text-base-content/50">You</span>
+          <span class="badge badge-xs badge-ghost text-[0.6rem]">Queued</span>
+        </div>
+        <div class="text-sm whitespace-pre-line break-words text-base-content/60">
+          {String.trim(@message.content)}
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  # ---- Todo Progress Bar ----
 
   @doc """
   Renders a todo progress bar for session task steps.
@@ -147,6 +177,8 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponents do
     </section>
     """
   end
+
+  # ---- Output Part Components ----
 
   @doc """
   Renders a single output part (text, reasoning, or tool call).

@@ -210,6 +210,10 @@
             </div>
           </div>
         <% end %>
+        <%!-- Queued messages (pending delivery to agent) --%>
+        <%= for msg <- @queued_messages do %>
+          <.queued_message message={msg} />
+        <% end %>
         <%!-- Pending question from assistant --%>
         <.question_card
           :if={@pending_question}

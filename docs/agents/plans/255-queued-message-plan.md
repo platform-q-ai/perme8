@@ -24,8 +24,8 @@ When a user sends a message while the agent is still processing (task is running
 
 ## Design Decisions
 
-1. **Cancel task with queued messages**: Clear all queued messages (cancel = abort everything)
-2. **Task completion/failure**: Clear remaining queued messages (terminal state = fresh slate)
+1. **Cancel task with queued messages**: Preserve queued messages (user may resume the session with those messages still relevant)
+2. **Task completion/failure**: Clear remaining queued messages (terminal state = fresh slate; cancel is excluded — see #1)
 3. **New session / select session / delete session**: Clear queued messages (switching context)
 4. **Cleanup trigger**: When EventProcessor receives `message.updated` with `role=user`, match by content against `queued_messages` and remove the first matching entry
 5. **Data structure**: `queued_messages: []` — list of `%{id: uuid, content: string, queued_at: DateTime}`
@@ -35,7 +35,7 @@ When a user sends a message while the agent is still processing (task is running
 
 | File | Change |
 |------|--------|
-| `apps/agents_web/lib/live/sessions/index.ex` | Add `queued_messages` assign in `assign_session_state/1` and `mount/1`; modify `send_message_to_running_task/2` to append queued message; clear queued messages on cancel/completion/failure/new_session/select_session/delete_session |
+| `apps/agents_web/lib/live/sessions/index.ex` | Add `queued_messages` assign in `assign_session_state/1` and `mount/1`; modify `send_message_to_running_task/2` to append queued message; clear queued messages on completion/failure/new_session/select_session/delete_session (NOT on cancel) |
 | `apps/agents_web/lib/live/sessions/index.html.heex` | Render queued messages after output_parts section |
 | `apps/agents_web/lib/live/sessions/event_processor.ex` | Accept `queued_messages` in base assigns; on `message.updated` with `role=user`, match and remove from `queued_messages` |
 | `apps/agents_web/lib/live/sessions/components/session_components.ex` | Add `queued_message/1` component |
@@ -233,45 +233,61 @@ When a user sends a message while the agent is still processing (task is running
 
 ---
 
-## Phase 4: Cleanup — Clear queued messages on terminal events
+## Phase 4: Cleanup — Clear queued messages on terminal events (except cancel)
 
-> When the task completes, fails, is cancelled, or the session changes, queued messages must be cleared.
+> When the task completes, fails, or the session changes, queued messages must be cleared. Cancelled tasks preserve queued messages so the user can resume with them.
 
 ### Step 4.1: Clear queued messages on task completion/failure
 
-- [ ] ⏸ **RED**: Add tests to `apps/agents_web/test/live/sessions/index_test.exs`
+- [x] **RED**: Add tests to `apps/agents_web/test/live/sessions/index_test.exs`
   ```
   describe "queued messages — cleanup on terminal status" do
     test "queued messages are cleared when task_status_changed to completed"
     test "queued messages are cleared when task_status_changed to failed"
-    test "queued messages are cleared when task_status_changed to cancelled"
+    test "queued messages are NOT cleared when task_status_changed to cancelled"
   end
   ```
   - Setup: create a running task, mount LiveView, inject a queued message into assigns via `send(lv.pid, ...)`
   - Send `{:task_status_changed, task.id, "completed"}` message
   - Assert queued messages section is no longer rendered
+  - Send `{:task_status_changed, task.id, "cancelled"}` message
+  - Assert queued messages are still visible
 
-- [ ] ⏸ **GREEN**: Modify `apps/agents_web/lib/live/sessions/index.ex`
-  - In the `handle_info({:task_status_changed, ...})` handler, within the `if status in ["completed", "failed", "cancelled"]` block, add:
+- [x] **GREEN**: Modify `apps/agents_web/lib/live/sessions/index.ex`
+  - In the `handle_info({:task_status_changed, ...})` handler, clear queued messages only for `"completed"` and `"failed"` (NOT `"cancelled"`):
     ```elixir
-    |> assign(:queued_messages, [])
+    socket =
+      cond do
+        status in ["completed", "failed"] ->
+          socket
+          |> assign(:output_parts, EventProcessor.freeze_streaming(socket.assigns.output_parts))
+          |> assign(:pending_question, nil)
+          |> assign(:queued_messages, [])
+
+        status == "cancelled" ->
+          socket
+          |> assign(:output_parts, EventProcessor.freeze_streaming(socket.assigns.output_parts))
+          |> assign(:pending_question, nil)
+
+        true ->
+          socket
+      end
     ```
 
-- [ ] ⏸ **REFACTOR**: Clean up
+- [x] **REFACTOR**: Clean up
 
-### Step 4.2: Clear queued messages on cancel_task
+### Step 4.2: Verify queued messages persist on cancel_task
 
-- [ ] ⏸ **RED**: Add test to `apps/agents_web/test/live/sessions/index_test.exs`
+- [x] **RED**: Add test to `apps/agents_web/test/live/sessions/index_test.exs`
   ```
-  describe "queued messages — cleanup on cancel" do
-    test "queued messages are cleared when user cancels task"
+  describe "queued messages — persist on cancel" do
+    test "queued messages are NOT cleared when user cancels task"
   end
   ```
 
-- [ ] ⏸ **GREEN**: Modify `do_cancel_task/2` in `apps/agents_web/lib/live/sessions/index.ex`
-  - Add `|> assign(:queued_messages, [])` in the success path
+- [x] **GREEN**: No implementation change needed in `do_cancel_task/2` — queued_messages are left untouched by default.
 
-- [ ] ⏸ **REFACTOR**: Clean up
+- [x] **REFACTOR**: Verify the test passes without any cancel-related clearing logic
 
 ### Step 4.3: Clear queued messages on session transitions (already covered by assign_session_state)
 

@@ -307,12 +307,21 @@ defmodule AgentsWeb.SessionsLive.Index do
       |> reload_all(user.id)
 
     socket =
-      if status in ["completed", "failed", "cancelled"],
-        do:
+      cond do
+        status in ["completed", "failed"] ->
           socket
           |> assign(:output_parts, EventProcessor.freeze_streaming(socket.assigns.output_parts))
-          |> assign(:pending_question, nil),
-        else: socket
+          |> assign(:pending_question, nil)
+          |> assign(:queued_messages, [])
+
+        status == "cancelled" ->
+          socket
+          |> assign(:output_parts, EventProcessor.freeze_streaming(socket.assigns.output_parts))
+          |> assign(:pending_question, nil)
+
+        true ->
+          socket
+      end
 
     {:noreply, socket}
   end
@@ -368,14 +377,27 @@ defmodule AgentsWeb.SessionsLive.Index do
       output_parts: [],
       pending_question: nil,
       user_message_ids: MapSet.new(),
-      todo_items: []
+      todo_items: [],
+      queued_messages: []
     )
   end
 
   defp send_message_to_running_task(socket, instruction) do
     case Sessions.send_message(socket.assigns.current_task.id, instruction) do
-      :ok -> {:noreply, assign(socket, :form, to_form(%{"instruction" => ""}))}
-      {:error, _reason} -> {:noreply, put_flash(socket, :error, "Failed to send message")}
+      :ok ->
+        queued_msg = %{
+          id: Ecto.UUID.generate(),
+          content: instruction,
+          queued_at: DateTime.utc_now()
+        }
+
+        {:noreply,
+         socket
+         |> assign(:queued_messages, socket.assigns.queued_messages ++ [queued_msg])
+         |> assign(:form, to_form(%{"instruction" => ""}))}
+
+      {:error, _reason} ->
+        {:noreply, put_flash(socket, :error, "Failed to send message")}
     end
   end
 

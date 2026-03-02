@@ -59,16 +59,18 @@ Feature: Queued Messages in Sessions
     And I should see "Second queued message"
 
   @wip
-  Scenario: Queued messages cleared when task is cancelled
+  Scenario: Queued messages persist when task is cancelled
     Given I navigate to "${baseUrl}/sessions"
     And I wait for network idle
-    When I fill "textarea#session-instruction" with "Message to be discarded"
+    When I fill "textarea#session-instruction" with "Message still visible after cancel"
     And I click "form#session-form button[type='submit']"
     And I wait for 1 seconds
-    Then I should see "Message to be discarded"
+    Then I should see "Message still visible after cancel"
+    And I should see "Queued"
     When I click "#cancel-task-btn"
     And I wait for 1 seconds
-    Then I should not see "Queued"
+    Then I should see "Message still visible after cancel"
+    And I should see "Queued"
 
   # ---------------------------------------------------------------------------
   # Form behaviour during running task

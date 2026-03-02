@@ -224,6 +224,119 @@ defmodule AgentsWeb.SessionsLive.EventProcessorTest do
     end
   end
 
+  describe "process_event/2 — message.updated (user) queued message cleanup" do
+    test "removes matching queued message by content when user message.updated arrives" do
+      socket =
+        build_socket(%{
+          queued_messages: [
+            %{id: "q-1", content: "fix the bug", queued_at: ~U[2026-03-01 00:00:00Z]}
+          ]
+        })
+
+      event = %{
+        "type" => "message.updated",
+        "properties" => %{
+          "info" => %{"role" => "user", "id" => "msg-1", "content" => "fix the bug"}
+        }
+      }
+
+      result = EventProcessor.process_event(event, socket)
+      assert result.assigns.queued_messages == []
+    end
+
+    test "removes only the first matching queued message (preserves later duplicates)" do
+      socket =
+        build_socket(%{
+          queued_messages: [
+            %{id: "q-1", content: "fix the bug", queued_at: ~U[2026-03-01 00:00:00Z]},
+            %{id: "q-2", content: "fix the bug", queued_at: ~U[2026-03-01 00:01:00Z]}
+          ]
+        })
+
+      event = %{
+        "type" => "message.updated",
+        "properties" => %{
+          "info" => %{"role" => "user", "id" => "msg-1", "content" => "fix the bug"}
+        }
+      }
+
+      result = EventProcessor.process_event(event, socket)
+      assert [%{id: "q-2"}] = result.assigns.queued_messages
+    end
+
+    test "leaves queued_messages unchanged when no content match" do
+      socket =
+        build_socket(%{
+          queued_messages: [
+            %{id: "q-1", content: "fix the bug", queued_at: ~U[2026-03-01 00:00:00Z]}
+          ]
+        })
+
+      event = %{
+        "type" => "message.updated",
+        "properties" => %{
+          "info" => %{"role" => "user", "id" => "msg-1", "content" => "something else"}
+        }
+      }
+
+      result = EventProcessor.process_event(event, socket)
+      assert [%{id: "q-1"}] = result.assigns.queued_messages
+    end
+
+    test "leaves queued_messages unchanged when queued_messages is empty" do
+      socket = build_socket(%{queued_messages: []})
+
+      event = %{
+        "type" => "message.updated",
+        "properties" => %{
+          "info" => %{"role" => "user", "id" => "msg-1", "content" => "fix the bug"}
+        }
+      }
+
+      result = EventProcessor.process_event(event, socket)
+      assert result.assigns.queued_messages == []
+    end
+
+    test "handles queued_messages assign not present (backward compat)" do
+      # base_assigns does not include queued_messages
+      socket = build_socket()
+
+      event = %{
+        "type" => "message.updated",
+        "properties" => %{
+          "info" => %{"role" => "user", "id" => "msg-1", "content" => "fix the bug"}
+        }
+      }
+
+      result = EventProcessor.process_event(event, socket)
+      # Should not crash; user_message_ids still tracked
+      assert MapSet.member?(result.assigns.user_message_ids, "msg-1")
+    end
+
+    test "matches content from parts array format" do
+      socket =
+        build_socket(%{
+          queued_messages: [
+            %{id: "q-1", content: "fix the bug", queued_at: ~U[2026-03-01 00:00:00Z]}
+          ]
+        })
+
+      event = %{
+        "type" => "message.updated",
+        "properties" => %{
+          "info" => %{
+            "role" => "user",
+            "id" => "msg-1",
+            "parts" => [%{"text" => "fix the bug"}]
+          }
+        }
+      }
+
+      result = EventProcessor.process_event(event, socket)
+      assert result.assigns.queued_messages == []
+    end
+  end
+
   describe "decode_cached_output/1" do
     test "decodes JSON array of text parts" do
       json =

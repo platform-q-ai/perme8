@@ -40,17 +40,23 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
     |> maybe_assign(:session_cost, info["cost"])
   end
 
-  # Track user message IDs so we can skip their parts in output
+  # Track user message IDs so we can skip their parts in output.
+  # Also clean up any matching queued message when the user message
+  # is processed by opencode (content match).
   def process_event(
         %{
           "type" => "message.updated",
-          "properties" => %{"info" => %{"role" => "user", "id" => msg_id}}
+          "properties" => %{"info" => %{"role" => "user", "id" => msg_id} = info}
         },
         socket
       )
       when is_binary(msg_id) do
     ids = MapSet.put(socket.assigns.user_message_ids, msg_id)
-    assign(socket, :user_message_ids, ids)
+    content = extract_user_message_content(info)
+
+    socket
+    |> assign(:user_message_ids, ids)
+    |> remove_matching_queued_message(content)
   end
 
   # Text output — keyed by part ID so multiple messages accumulate
@@ -364,6 +370,30 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
   end
 
   defp question_tool?(_), do: false
+
+  # Extract text content from a user message event for queued message matching.
+  defp extract_user_message_content(%{"content" => content}) when is_binary(content), do: content
+
+  defp extract_user_message_content(%{"parts" => [%{"text" => text} | _]})
+       when is_binary(text),
+       do: text
+
+  defp extract_user_message_content(_), do: nil
+
+  # Remove the first queued message whose content matches the given text.
+  defp remove_matching_queued_message(socket, nil), do: socket
+
+  defp remove_matching_queued_message(socket, content) do
+    queued = Map.get(socket.assigns, :queued_messages, [])
+    if queued == [], do: socket, else: do_remove_matching(socket, queued, String.trim(content))
+  end
+
+  defp do_remove_matching(socket, queued, trimmed) do
+    case Enum.find_index(queued, fn msg -> String.trim(msg.content) == trimmed end) do
+      nil -> socket
+      idx -> assign(socket, :queued_messages, List.delete_at(queued, idx))
+    end
+  end
 
   @doc """
   Converts a TodoList aggregate into the plain-map format used by LiveView assigns.

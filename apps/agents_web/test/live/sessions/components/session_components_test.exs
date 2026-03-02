@@ -151,6 +151,67 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponentsTest do
     end
   end
 
+  describe "queued_message/1" do
+    test "renders message content" do
+      html =
+        render_component(&SessionComponents.queued_message/1,
+          message: %{id: "q-1", content: "fix the bug", queued_at: ~U[2026-03-01 00:00:00Z]}
+        )
+
+      assert html =~ "fix the bug"
+    end
+
+    test "renders Queued indicator" do
+      html =
+        render_component(&SessionComponents.queued_message/1,
+          message: %{id: "q-1", content: "fix the bug", queued_at: ~U[2026-03-01 00:00:00Z]}
+        )
+
+      assert html =~ "Queued"
+    end
+
+    test "renders with muted styling (opacity)" do
+      html =
+        render_component(&SessionComponents.queued_message/1,
+          message: %{id: "q-1", content: "fix the bug", queued_at: ~U[2026-03-01 00:00:00Z]}
+        )
+
+      assert html =~ "opacity-60"
+    end
+
+    test "renders user avatar icon" do
+      html =
+        render_component(&SessionComponents.queued_message/1,
+          message: %{id: "q-1", content: "fix the bug", queued_at: ~U[2026-03-01 00:00:00Z]}
+        )
+
+      assert html =~ "hero-user"
+    end
+
+    test "has data-testid attribute for testing" do
+      html =
+        render_component(&SessionComponents.queued_message/1,
+          message: %{id: "q-1", content: "fix the bug", queued_at: ~U[2026-03-01 00:00:00Z]}
+        )
+
+      assert html =~ ~s(data-testid="queued-message-q-1")
+    end
+
+    test "trims whitespace from content" do
+      html =
+        render_component(&SessionComponents.queued_message/1,
+          message: %{
+            id: "q-1",
+            content: "  padded content  ",
+            queued_at: ~U[2026-03-01 00:00:00Z]
+          }
+        )
+
+      assert html =~ "padded content"
+      refute html =~ "  padded content  "
+    end
+  end
+
   describe "container_stats_bars/1" do
     test "renders CPU and memory bars" do
       html =
