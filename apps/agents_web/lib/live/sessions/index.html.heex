@@ -1,13 +1,28 @@
 <div class="flex h-full">
   <%!-- Left Panel: Session List --%>
   <div class="w-72 shrink-0 border-r border-base-300 flex flex-col bg-base-100">
-    <div class="p-3 border-b border-base-300">
+    <div class="p-3 border-b border-base-300 flex flex-col gap-1.5">
       <button
         type="button"
         phx-click="new_session"
         class="btn btn-primary btn-sm w-full"
       >
         <.icon name="hero-plus" class="size-4" /> New Session
+      </button>
+      <button
+        :if={has_auth_refresh_candidates?(@sessions)}
+        type="button"
+        phx-click="refresh_all_auth"
+        disabled={@auth_refreshing != %{}}
+        class="btn btn-warning btn-sm btn-outline w-full"
+      >
+        <.icon
+          name="hero-arrow-path"
+          class={if(@auth_refreshing != %{}, do: "size-4 animate-spin", else: "size-4")}
+        />
+        {if @auth_refreshing != %{},
+          do: "Refreshing #{map_size(@auth_refreshing)}...",
+          else: "Refresh All Auth"}
       </button>
     </div>
 
@@ -33,7 +48,31 @@
                 <span class="text-xs font-medium truncate flex-1 min-w-0">
                   {truncate_instruction(session.title, 35)}
                 </span>
-                <.status_dot status={session.latest_status} />
+                <div class="flex items-center gap-1">
+                  <button
+                    :if={
+                      session.latest_status == "failed" && auth_error?(session.latest_error) &&
+                        session.latest_task_id
+                    }
+                    type="button"
+                    phx-click="refresh_auth_and_resume"
+                    phx-value-task-id={session.latest_task_id}
+                    disabled={auth_refreshing?(@auth_refreshing, session.latest_task_id)}
+                    class="btn btn-ghost btn-xs p-0 min-h-0 h-auto"
+                    title="Refresh auth & resume"
+                  >
+                    <.icon
+                      name="hero-arrow-path"
+                      class={
+                        if(auth_refreshing?(@auth_refreshing, session.latest_task_id),
+                          do: "size-3.5 text-warning animate-spin",
+                          else: "size-3.5 text-warning"
+                        )
+                      }
+                    />
+                  </button>
+                  <.status_dot status={session.latest_status} />
+                </div>
               </div>
               <div class="flex items-center gap-2 text-[0.65rem] text-base-content/50 w-full">
                 <span>{image_label(session.image)}</span>
@@ -139,14 +178,22 @@
           :if={auth_error?(@current_task.error) && resumable_task?(@current_task)}
           type="button"
           phx-click="refresh_auth_and_resume"
-          disabled={@auth_refreshing}
+          phx-value-task-id={@current_task.id}
+          disabled={auth_refreshing?(@auth_refreshing, @current_task.id)}
           class="btn btn-sm btn-warning"
         >
           <.icon
             name="hero-arrow-path"
-            class={if(@auth_refreshing, do: "size-4 animate-spin", else: "size-4")}
+            class={
+              if(auth_refreshing?(@auth_refreshing, @current_task.id),
+                do: "size-4 animate-spin",
+                else: "size-4"
+              )
+            }
           />
-          {if @auth_refreshing, do: "Refreshing...", else: "Refresh Auth & Resume"}
+          {if auth_refreshing?(@auth_refreshing, @current_task.id),
+            do: "Refreshing...",
+            else: "Refresh Auth & Resume"}
         </button>
       </div>
 
