@@ -370,10 +370,10 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     # Track user message IDs so we can filter their parts from output cache
     state = track_user_message_id(event, state)
 
-    # Skip caching parts that belong to user messages
-    # (the instruction is shown separately in the UI)
-    if skip_user_message_part?(event, state) do
-      {:noreply, state}
+    # Cache user message parts explicitly so follow-up prompts persist
+    # across reconnects/reloads in the UI.
+    if user_message_part?(event, state) do
+      {:noreply, cache_user_message_part(event, state)}
     else
       handle_sdk_result(event, state)
     end
@@ -539,17 +539,22 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   defp track_user_message_id(
          %{
            "type" => "message.updated",
-           "properties" => %{"info" => %{"role" => "user", "id" => msg_id}}
+           "properties" => %{"info" => %{"role" => "user"} = info}
          },
          state
-       )
-       when is_binary(msg_id) do
-    %{state | user_message_ids: MapSet.put(state.user_message_ids, msg_id)}
+       ) do
+    case info["id"] || info["messageID"] || info["messageId"] do
+      msg_id when is_binary(msg_id) ->
+        %{state | user_message_ids: MapSet.put(state.user_message_ids, msg_id)}
+
+      _ ->
+        state
+    end
   end
 
   defp track_user_message_id(_event, state), do: state
 
-  defp skip_user_message_part?(
+  defp user_message_part?(
          %{
            "type" => "message.part.updated",
            "properties" => %{"part" => %{"messageID" => msg_id}}
@@ -560,7 +565,36 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     MapSet.member?(state.user_message_ids, msg_id)
   end
 
-  defp skip_user_message_part?(_event, _state), do: false
+  defp user_message_part?(
+         %{
+           "type" => "message.part.updated",
+           "properties" => %{"part" => %{"messageId" => msg_id}}
+         },
+         state
+       )
+       when is_binary(msg_id) do
+    MapSet.member?(state.user_message_ids, msg_id)
+  end
+
+  defp user_message_part?(_event, _state), do: false
+
+  defp cache_user_message_part(
+         %{
+           "type" => "message.part.updated",
+           "properties" => %{"part" => %{"type" => "text", "text" => text} = part}
+         },
+         state
+       )
+       when is_binary(text) and text != "" do
+    msg_id = part["messageID"] || part["messageId"] || part["id"]
+    part_id = if is_binary(msg_id), do: "user-" <> msg_id, else: nil
+
+    entry = %{"type" => "user", "id" => part_id, "text" => text}
+    parts = upsert_output_part(state.output_parts, part_id, entry)
+    %{state | output_parts: parts}
+  end
+
+  defp cache_user_message_part(_event, state), do: state
 
   # ---- Private: SDK Event Handling ----
 
