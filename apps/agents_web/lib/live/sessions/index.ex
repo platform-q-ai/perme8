@@ -303,7 +303,12 @@ defmodule AgentsWeb.SessionsLive.Index do
   def handle_info({:task_event, task_id, event}, socket) do
     case socket.assigns.current_task do
       %{id: ^task_id} ->
-        {:noreply, EventProcessor.process_event(event, socket)}
+        socket =
+          event
+          |> EventProcessor.process_event(socket)
+          |> maybe_sync_status_from_session_event(event, task_id)
+
+        {:noreply, socket}
 
       _ ->
         {:noreply, socket}
@@ -670,6 +675,38 @@ defmodule AgentsWeb.SessionsLive.Index do
 
       _ ->
         Map.put(task, :status, status)
+    end
+  end
+
+  defp maybe_sync_status_from_session_event(
+         socket,
+         %{"type" => "session.status"} = event,
+         task_id
+       ) do
+    status_type = get_in(event, ["properties", "status", "type"])
+
+    case status_type do
+      "idle" ->
+        maybe_refresh_task_from_db(socket, task_id)
+
+      _ ->
+        socket
+    end
+  end
+
+  defp maybe_sync_status_from_session_event(socket, _event, _task_id), do: socket
+
+  defp maybe_refresh_task_from_db(socket, task_id) do
+    user = socket.assigns.current_scope.user
+
+    case Sessions.get_task(task_id, user.id) do
+      {:ok, task} ->
+        socket
+        |> assign(:current_task, task)
+        |> reload_all(user.id)
+
+      _ ->
+        socket
     end
   end
 

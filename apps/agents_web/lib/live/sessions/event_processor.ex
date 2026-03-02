@@ -106,7 +106,10 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
         socket
       ) do
     detail = %{input: part["input"] || part["args"], title: nil, output: nil, error: nil}
-    handle_tool_event(socket, part["id"], part["name"] || "tool", :running, detail)
+
+    tool_name = part["name"] || "tool"
+    tool_id = stable_tool_part_id(part, tool_name)
+    handle_tool_event(socket, tool_id, tool_name, :running, detail)
   end
 
   def process_event(
@@ -116,7 +119,9 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
         },
         socket
       ) do
-    handle_tool_event(socket, part["id"], part["name"] || "tool", :done, %{})
+    tool_name = part["name"] || "tool"
+    tool_id = stable_tool_part_id(part, tool_name)
+    handle_tool_event(socket, tool_id, tool_name, :done, %{})
   end
 
   # SDK-style tool part with state object — the rich format
@@ -130,7 +135,7 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
         socket
       ) do
     tool_name = part["tool"] || part["name"] || "tool"
-    tool_id = part["id"]
+    tool_id = stable_tool_part_id(part, tool_name)
 
     detail = %{
       input: state["input"],
@@ -264,6 +269,7 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
     Enum.map(parts, fn
       {:text, id, text, :streaming} -> {:text, id, text, :frozen}
       {:reasoning, id, text, :streaming} -> {:reasoning, id, text, :frozen}
+      {:tool, id, name, :running, detail} -> {:tool, id, name, :done, detail}
       other -> other
     end)
   end
@@ -352,6 +358,14 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
       nil -> messages
       idx -> List.delete_at(messages, idx)
     end
+  end
+
+  defp stable_tool_part_id(part, tool_name) do
+    part["id"] || part["toolCallID"] || part["toolCallId"] ||
+      "tool-" <>
+        Integer.to_string(
+          :erlang.phash2({tool_name, part["messageID"] || part["messageId"] || ""})
+        )
   end
 
   defp maybe_assign(socket, _key, nil), do: socket
@@ -493,7 +507,9 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
 
   # Legacy format without id
   defp decode_output_part(%{"type" => "tool", "name" => name, "status" => status}) do
-    {:tool, nil, name, safe_tool_status(status),
+    synthetic_id = "tool-" <> Integer.to_string(:erlang.phash2({name, status}))
+
+    {:tool, synthetic_id, name, safe_tool_status(status),
      %{input: nil, title: nil, output: nil, error: nil}}
   end
 

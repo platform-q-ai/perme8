@@ -537,6 +537,29 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       assert html =~ "Fix login bug"
     end
 
+    test "session.status idle refreshes task status from DB", %{conn: conn, user: user} do
+      task = task_fixture(%{user_id: user.id, status: "running", container_id: "c1"})
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      Repo.update_all(
+        from(t in TaskSchema, where: t.id == ^task.id),
+        set: [status: "completed"]
+      )
+
+      send(lv.pid, {
+        :task_event,
+        task.id,
+        %{
+          "type" => "session.status",
+          "properties" => %{"sessionID" => "sess-1", "status" => %{"type" => "idle"}}
+        }
+      })
+
+      html = render(lv)
+      assert html =~ "completed"
+    end
+
     test "receiving assistant message.updated shows model and tokens", %{conn: conn, user: user} do
       task = task_fixture(%{user_id: user.id, status: "running", container_id: "c1"})
 
