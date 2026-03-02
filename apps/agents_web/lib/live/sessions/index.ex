@@ -717,8 +717,7 @@ defmodule AgentsWeb.SessionsLive.Index do
   defp merge_unassigned_active_tasks(sessions, tasks) do
     unassigned =
       tasks
-      |> Enum.filter(&active_task?/1)
-      |> Enum.filter(&is_nil(&1.container_id))
+      |> Enum.filter(&(active_task?(&1) and is_nil(&1.container_id)))
       |> Enum.map(fn task ->
         %{
           container_id: "task:" <> task.id,
