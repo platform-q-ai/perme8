@@ -5,7 +5,7 @@ defmodule Chat do
 
   use Boundary,
     top_level?: true,
-    deps: [Chat.Domain, Chat.Application, Chat.Infrastructure, Chat.Repo],
+    deps: [Chat.Domain, Chat.Application],
     exports: [
       {Domain.Entities.Session, []},
       {Domain.Entities.Message, []},
