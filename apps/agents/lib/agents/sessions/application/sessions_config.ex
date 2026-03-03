@@ -94,6 +94,36 @@ defmodule Agents.Sessions.Application.SessionsConfig do
     config()[:pubsub] || Perme8.Events.PubSub
   end
 
+  @doc "Returns whether GitHub ticket sync is enabled."
+  def github_sync_enabled? do
+    config()[:github_sync_enabled] != false
+  end
+
+  @doc "Returns the GitHub org login for ProjectV2 queries."
+  def github_project_org do
+    config()[:github_project_org] || "platform-q-ai"
+  end
+
+  @doc "Returns the GitHub ProjectV2 number to sync from."
+  def github_project_number do
+    config()[:github_project_number] || 7
+  end
+
+  @doc "Returns project statuses that should appear in the ticket list."
+  def github_ticket_statuses do
+    config()[:github_ticket_statuses] || ["Backlog", "Ready"]
+  end
+
+  @doc "Returns GitHub sync polling interval in milliseconds."
+  def github_poll_interval_ms do
+    config()[:github_poll_interval_ms] || 15_000
+  end
+
+  @doc "Returns the GitHub token used for GraphQL project queries."
+  def github_token do
+    config()[:github_token] || System.get_env("GH_TOKEN")
+  end
+
   defp config do
     Application.get_env(:agents, :sessions, [])
   end

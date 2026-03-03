@@ -34,8 +34,9 @@ defmodule Agents.Sessions do
   alias Agents.Sessions.Application.SessionsConfig
   alias Agents.Sessions.Infrastructure.QueueManager
   alias Agents.Sessions.Infrastructure.QueueManagerSupervisor
-  alias Agents.Repo
   alias Agents.Sessions.Infrastructure.Repositories.TaskRepository
+  alias Agents.Sessions.Infrastructure.TicketSyncServer
+  alias Agents.Repo
   alias Agents.Sessions.Infrastructure.TaskRunnerSupervisor
   alias Ecto.Adapters.SQL
 
@@ -157,6 +158,40 @@ defmodule Agents.Sessions do
       )
 
     task_repo.list_sessions_for_user(user_id, opts)
+  end
+
+  @doc """
+  Lists GitHub project tickets enriched with per-user session state.
+
+  Tickets come from the in-memory sync server, then each ticket is matched
+  against the user's recent tasks by issue number reference in instruction
+  text (for example: "#306" or "ticket 306").
+  """
+  @spec list_project_tickets(String.t(), keyword()) :: [map()]
+  def list_project_tickets(user_id, opts \\ []) do
+    tasks = Keyword.get_lazy(opts, :tasks, fn -> list_tasks(user_id, opts) end)
+    tickets = Keyword.get(opts, :tickets, TicketSyncServer.list_tickets())
+
+    task_by_ticket_number =
+      tasks
+      |> Enum.reduce(%{}, fn task, acc ->
+        case extract_ticket_number(task.instruction) do
+          nil -> acc
+          number -> Map.put_new(acc, number, task)
+        end
+      end)
+
+    Enum.map(tickets, fn ticket ->
+      task = Map.get(task_by_ticket_number, ticket.number)
+
+      Map.merge(ticket, %{
+        associated_task_id: task && task.id,
+        associated_container_id: task && task.container_id,
+        session_state: task_status_to_session_state(task && task.status),
+        task_status: task && task.status,
+        task_error: task && task.error
+      })
+    end)
   end
 
   @doc """
@@ -565,4 +600,24 @@ defmodule Agents.Sessions do
       end)
     end
   end
+
+  @doc false
+  @spec extract_ticket_number(term()) :: integer() | nil
+  def extract_ticket_number(instruction) when is_binary(instruction) do
+    case Regex.run(~r/(?:^|\s)(?:#|ticket\s+)(\d+)\b/i, instruction) do
+      [_, value] -> String.to_integer(value)
+      _ -> nil
+    end
+  end
+
+  def extract_ticket_number(_), do: nil
+
+  defp task_status_to_session_state(nil), do: "idle"
+
+  defp task_status_to_session_state(status)
+       when status in ["pending", "starting", "running", "queued", "awaiting_feedback"],
+       do: "running"
+
+  defp task_status_to_session_state("completed"), do: "completed"
+  defp task_status_to_session_state(_), do: "paused"
 end

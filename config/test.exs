@@ -218,7 +218,8 @@ config :phoenix_live_view,
 config :agents, :sessions,
   image: "perme8-opencode",
   health_check_interval_ms: 100,
-  health_check_max_retries: 5
+  health_check_max_retries: 5,
+  github_sync_enabled: false
 
 # Agents MCP: Use streamable_http transport in tests with start: true
 config :agents, :mcp_transport, {:streamable_http, start: true}
