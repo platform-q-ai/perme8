@@ -202,20 +202,33 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   end
 
   @impl true
-  def handle_call({:send_message, message}, _from, state) do
+  def handle_call({:send_message, message, opts}, _from, state) do
     base_url = "http://localhost:#{state.container_port}"
     parts = [%{"type" => "text", "text" => message}]
+
+    command_payload =
+      %{
+        "correlation_key" => Keyword.get(opts, :correlation_key),
+        "command_type" => Keyword.get(opts, :command_type),
+        "sent_at" => Keyword.get(opts, :sent_at)
+      }
+      |> Enum.reject(fn {_k, v} -> is_nil(v) end)
+      |> Map.new()
 
     result = state.opencode_client.send_prompt_async(base_url, state.session_id, parts, [])
 
     state =
       if result == :ok do
-        cache_queued_user_message(state, message)
+        cache_queued_user_message(state, message, command_payload)
       else
         state
       end
 
     {:reply, result, state}
+  end
+
+  def handle_call({:send_message, message}, from, state) do
+    handle_call({:send_message, message, []}, from, state)
   end
 
   # ---- Container Start ----
@@ -655,14 +668,29 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
   defp cache_user_message_part(_event, state), do: state
 
-  defp cache_queued_user_message(state, message) when is_binary(message) do
+  defp cache_queued_user_message(state, message, command_payload \\ %{})
+
+  defp cache_queued_user_message(state, message, command_payload) when is_binary(message) do
     text = String.trim(message)
 
     if text == "" do
       state
     else
-      pending_id = "queued-user-#{System.unique_integer([:positive])}"
-      entry = %{"type" => "user", "id" => pending_id, "text" => text, "pending" => true}
+      correlation_key = Map.get(command_payload, "correlation_key")
+
+      pending_id =
+        if is_binary(correlation_key) and correlation_key != "" do
+          "queued-user-#{correlation_key}"
+        else
+          "queued-user-#{System.unique_integer([:positive])}"
+        end
+
+      entry =
+        %{"type" => "user", "id" => pending_id, "text" => text, "pending" => true}
+        |> maybe_put_payload_field("correlation_key", Map.get(command_payload, "correlation_key"))
+        |> maybe_put_payload_field("command_type", Map.get(command_payload, "command_type"))
+        |> maybe_put_payload_field("sent_at", Map.get(command_payload, "sent_at"))
+
       output_parts = upsert_output_part(state.output_parts, pending_id, entry)
       state = %{state | output_parts: output_parts}
       flush_output_to_db(state)
@@ -670,7 +698,11 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     end
   end
 
-  defp cache_queued_user_message(state, _message), do: state
+  defp cache_queued_user_message(state, _message, _command_payload), do: state
+
+  defp maybe_put_payload_field(entry, _key, nil), do: entry
+  defp maybe_put_payload_field(entry, _key, ""), do: entry
+  defp maybe_put_payload_field(entry, key, value), do: Map.put(entry, key, value)
 
   defp maybe_cache_resume_prompt_message(state, message) when is_binary(message) do
     if String.trim(message) == "" do

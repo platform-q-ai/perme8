@@ -166,23 +166,53 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponents do
   attr(:message, :map, required: true)
 
   def queued_message(assigns) do
+    status = Map.get(assigns.message, :status, "pending")
+    badge = queued_message_badge(status)
+    status_text = queued_message_status_text(status)
+
+    assigns =
+      assigns
+      |> assign(:status, status)
+      |> assign(:badge, badge)
+      |> assign(:status_text, status_text)
+
     ~H"""
-    <div data-testid={"queued-message-#{@message.id}"} class="flex gap-2 mb-3 opacity-60">
+    <div
+      data-testid={"queued-message-#{@message.id}"}
+      class={[
+        "flex gap-2 mb-3",
+        @status in ["pending"] && "opacity-60",
+        @status in ["rolled_back"] && "opacity-80"
+      ]}
+    >
       <div class="shrink-0 size-6 rounded-full bg-primary/10 flex items-center justify-center">
         <.icon name="hero-user" class="size-3.5 text-primary" />
       </div>
       <div class="flex-1 min-w-0">
         <div class="flex items-center gap-2 mb-0.5">
           <span class="text-xs font-medium text-base-content/50">You</span>
-          <span class="badge badge-xs badge-ghost text-[0.6rem]">Queued</span>
+          <span class={[@badge, "badge badge-xs text-[0.6rem]"]}>
+            {queued_message_label(@status)}
+          </span>
         </div>
         <div class="text-sm whitespace-pre-line break-words text-base-content/60">
           {String.trim(@message.content)}
         </div>
+        <div :if={@status_text} class="text-[11px] text-base-content/40 mt-0.5">{@status_text}</div>
       </div>
     </div>
     """
   end
+
+  defp queued_message_label("rolled_back"), do: "Failed"
+  defp queued_message_label(_), do: "Queued"
+
+  defp queued_message_badge("rolled_back"), do: "badge-error"
+  defp queued_message_badge(_), do: "badge-ghost"
+
+  defp queued_message_status_text("rolled_back"), do: "Rolled back before backend acceptance"
+  defp queued_message_status_text("pending"), do: nil
+  defp queued_message_status_text(_), do: nil
 
   # ---- Output Part Components ----
 
