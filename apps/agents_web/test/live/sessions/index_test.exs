@@ -1458,7 +1458,7 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       assert html =~ ~s(data-testid="empty-warm-slot-2")
     end
 
-    test "queued session with real container renders as warm even outside warm queue window", %{
+    test "queued session with real container keeps queued styling outside warm queue window", %{
       conn: conn,
       user: user
     } do
@@ -1488,7 +1488,7 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
 
       assert html =~ ~s(data-testid="session-item-warm-outside-queue-window")
       assert html =~ ~s(phx-value-task-id="#{task.id}")
-      assert html =~ "border border-warning/35 bg-warning/8"
+      assert html =~ "border border-base-content/20 bg-base-content/8"
     end
 
     test "cold queued sessions render with grey card styling", %{conn: conn, user: user} do
@@ -1502,7 +1502,7 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       {:ok, _lv, html} = live(conn, ~p"/sessions")
 
       assert html =~ ~s(data-testid="session-item-cold-queued-session")
-      assert html =~ ~s(data-slot-state="cold")
+      assert html =~ ~s(data-slot-state="queued")
       assert html =~ "bg-base-content/8"
     end
 

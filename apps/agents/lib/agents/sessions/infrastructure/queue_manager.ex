@@ -18,6 +18,7 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
           warm_cache_limit: non_neg_integer(),
           heartbeat_interval_ms: pos_integer(),
           warmup_scheduled: boolean(),
+          warming_task_ids: MapSet.t(String.t()),
           task_repo: module(),
           event_bus: module(),
           task_runner_starter: (String.t(), keyword() -> {:ok, pid()} | {:error, term()}) | nil,
@@ -89,6 +90,7 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
       warm_cache_limit: Keyword.get(opts, :warm_cache_limit, 2),
       heartbeat_interval_ms: Keyword.get(opts, :heartbeat_interval_ms, 5_000),
       warmup_scheduled: false,
+      warming_task_ids: MapSet.new(),
       task_repo: Keyword.get(opts, :task_repo, TaskRepository),
       event_bus: Keyword.get(opts, :event_bus, Perme8.Events.EventBus),
       task_runner_starter: Keyword.get(opts, :task_runner_starter),
@@ -114,7 +116,7 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
   def handle_info(:warm_top_queued, state) do
     warm_top_queued_tasks(state)
 
-    state = %{state | warmup_scheduled: false}
+    state = %{state | warmup_scheduled: false, warming_task_ids: MapSet.new()}
     broadcast_queue_updated(state)
 
     {:noreply, state}
@@ -417,12 +419,20 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
   end
 
   defp queue_state(state) do
+    warm_task_ids =
+      state
+      |> safe_list_queued()
+      |> Enum.take(state.warm_cache_limit)
+      |> Enum.map(& &1.id)
+
     %{
       running: safe_count_running(state),
       queued: safe_list_queued(state),
       awaiting_feedback: safe_list_awaiting_feedback(state),
       concurrency_limit: state.concurrency_limit,
-      warm_cache_limit: state.warm_cache_limit
+      warm_cache_limit: state.warm_cache_limit,
+      warm_task_ids: warm_task_ids,
+      warming_task_ids: MapSet.to_list(state.warming_task_ids)
     }
   end
 
@@ -590,9 +600,25 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
   defp maybe_schedule_warmup(%{warmup_scheduled: true} = state), do: state
 
   defp maybe_schedule_warmup(state) do
+    warming_task_ids =
+      state
+      |> safe_list_queued()
+      |> Enum.take(state.warm_cache_limit)
+      |> Enum.filter(&needs_warm?/1)
+      |> Enum.map(& &1.id)
+      |> MapSet.new()
+
     Process.send(self(), :warm_top_queued, [])
-    %{state | warmup_scheduled: true}
+    %{state | warmup_scheduled: true, warming_task_ids: warming_task_ids}
   end
+
+  defp needs_warm?(%{container_id: nil}), do: true
+
+  defp needs_warm?(%{container_id: container_id}) when is_binary(container_id) do
+    String.starts_with?(container_id, "task:")
+  end
+
+  defp needs_warm?(_), do: false
 
   defp via_tuple(user_id) do
     {:via, Registry, {Agents.Sessions.QueueRegistry, user_id}}
