@@ -30,7 +30,7 @@ Feature: Optimistic session updates in the Sessions UI
     Given "div#session-log" should exist
     When "form#session-form" should exist
     Then "div#session-log" should exist
-    And I should see "Assistant"
+    And I should see "Sessions"
 
   Scenario: backend failure reconciles optimistic entry with user-visible failure state
     Given "div#session-optimistic-state" should exist
