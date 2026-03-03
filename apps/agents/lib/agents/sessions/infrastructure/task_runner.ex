@@ -229,7 +229,9 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
         update_task_status(state, %{
           status: "starting",
           container_id: container_id,
-          container_port: port
+          container_port: port,
+          completed_at: nil,
+          error: nil
         })
 
         broadcast_status(state.task_id, "starting", state.pubsub)
@@ -258,7 +260,9 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
       {:ok, %{port: port}} ->
         update_task_status(state, %{
           status: "starting",
-          container_port: port
+          container_port: port,
+          completed_at: nil,
+          error: nil
         })
 
         broadcast_status(state.task_id, "starting", state.pubsub)
@@ -368,7 +372,9 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
       :ok ->
         update_task_status(state, %{
           status: "running",
-          started_at: DateTime.utc_now()
+          started_at: DateTime.utc_now(),
+          completed_at: nil,
+          error: nil
         })
 
         broadcast_status(state.task_id, "running", state.pubsub)

@@ -312,6 +312,9 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
            status: "pending",
            queue_position: nil,
            queued_at: nil,
+           started_at: nil,
+           completed_at: nil,
+           error: nil,
            pending_question: clear_resume_prompt(task.pending_question)
          }) do
       {:ok, updated_task} ->
