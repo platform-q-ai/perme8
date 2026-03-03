@@ -85,6 +85,7 @@ describe('PlaywrightBrowserAdapter', () => {
     mockBrowser.newContext.mockClear()
     mockBrowser.close.mockClear()
     mockLaunch.mockClear()
+    delete process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
 
     adapter = new PlaywrightBrowserAdapter(defaultConfig)
   })
@@ -94,6 +95,17 @@ describe('PlaywrightBrowserAdapter', () => {
 
     expect(mockLaunch).toHaveBeenCalledTimes(1)
     expect(mockLaunch).toHaveBeenCalledWith({ headless: true })
+  })
+
+  test('initialize uses PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH when set', async () => {
+    process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH = '/usr/bin/chromium-browser'
+
+    await adapter.initialize()
+
+    expect(mockLaunch).toHaveBeenCalledWith({
+      headless: true,
+      executablePath: '/usr/bin/chromium-browser',
+    })
   })
 
   test('initialize creates context with viewport', async () => {
