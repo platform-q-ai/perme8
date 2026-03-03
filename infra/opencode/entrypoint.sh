@@ -170,6 +170,14 @@ mix deps.get
 npm install --prefix apps/jarga_web/assets
 npm install --prefix apps/agents_web/assets
 
+# Install exo-bdd runner dependencies once (provides cucumber-js)
+if [ ! -x tools/exo-bdd/node_modules/.bin/cucumber-js ]; then
+  echo "Installing exo-bdd dependencies..."
+  bun install --cwd tools/exo-bdd
+else
+  echo "exo-bdd dependencies already installed"
+fi
+
 MIX_ENV=dev mix compile
 MIX_ENV=test mix compile
 
