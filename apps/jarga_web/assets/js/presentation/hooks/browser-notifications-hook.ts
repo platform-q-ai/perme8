@@ -1,7 +1,6 @@
 import { ViewHook } from 'phoenix_live_view'
 
 const DISMISSED_KEY = 'browser-notifications-dismissed'
-const REQUESTED_KEY = 'browser-notifications-requested'
 
 type BrowserNotificationPayload = {
   title?: string
@@ -13,7 +12,6 @@ export class BrowserNotificationsHook extends ViewHook {
   private promptEl: HTMLElement | null = null
 
   mounted(): void {
-    this.maybeRequestPermission()
     this.maybeRenderPrompt()
 
     this.handleEvent('browser_notification', (payload: BrowserNotificationPayload) => {
@@ -23,20 +21,6 @@ export class BrowserNotificationsHook extends ViewHook {
 
   destroyed(): void {
     this.removePrompt()
-  }
-
-  private maybeRequestPermission(): void {
-    if (!this.supportsBrowserNotifications()) return
-    if (Notification.permission === 'denied') return
-
-    const requested = window.localStorage.getItem(REQUESTED_KEY)
-    if (requested === 'true') return
-
-    window.localStorage.setItem(REQUESTED_KEY, 'true')
-
-    Notification.requestPermission().then(() => {
-      this.maybeRenderPrompt()
-    })
   }
 
   private maybeRenderPrompt(): void {
