@@ -46,6 +46,7 @@ defmodule AgentsWeb.SessionsLive.Index do
      |> assign(:current_task, nil)
      |> assign(:composing_new, false)
      |> assign(:active_session_tab, "chat")
+     |> assign(:sidebar_list_tab, "sessions")
      |> assign(:container_stats, %{})
      |> assign(:duration_now, DateTime.utc_now())
      |> assign(:auth_refreshing, %{})
@@ -275,6 +276,12 @@ defmodule AgentsWeb.SessionsLive.Index do
     valid_tabs = Enum.map(session_tabs(), & &1.id)
     tab = if tab in valid_tabs, do: tab, else: "chat"
     {:noreply, push_patch(socket, to: ~p"/sessions?#{%{tab: tab}}")}
+  end
+
+  @impl true
+  def handle_event("switch_sidebar_list_tab", %{"tab" => tab}, socket) do
+    tab = if tab in ["sessions", "tickets"], do: tab, else: "sessions"
+    {:noreply, assign(socket, :sidebar_list_tab, tab)}
   end
 
   @impl true
