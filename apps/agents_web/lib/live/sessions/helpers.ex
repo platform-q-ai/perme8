@@ -295,7 +295,7 @@ defmodule AgentsWeb.SessionsLive.Helpers do
   def format_file_stats(_), do: nil
 
   @doc "Returns CSS classes for ticket priority badge."
-  def ticket_priority_class("Need"), do: "badge-error"
+  def ticket_priority_class("Need"), do: "badge-error text-white"
   def ticket_priority_class("Want"), do: "badge-warning"
   def ticket_priority_class("Nice to have"), do: "badge-ghost"
   def ticket_priority_class(_), do: "badge-ghost"
@@ -304,6 +304,14 @@ defmodule AgentsWeb.SessionsLive.Helpers do
   def ticket_status_class("Backlog"), do: "badge-outline"
   def ticket_status_class("Ready"), do: "badge-info"
   def ticket_status_class(_), do: "badge-ghost"
+
+  @doc "Returns CSS classes for ticket size badge."
+  def ticket_size_class("XL"), do: "badge-error text-white"
+  def ticket_size_class("L"), do: "badge-warning"
+  def ticket_size_class("M"), do: "badge-info"
+  def ticket_size_class("S"), do: "badge-success"
+  def ticket_size_class("XS"), do: "badge-ghost"
+  def ticket_size_class(_), do: "badge-outline"
 
   @doc "Returns CSS classes for associated session state badge."
   def ticket_session_state_class("running"), do: "badge-success"
@@ -327,6 +335,14 @@ defmodule AgentsWeb.SessionsLive.Helpers do
       "ux" -> "badge-info"
       "backend" -> "badge-secondary"
       "api" -> "badge-secondary"
+      "agents" -> "badge-primary"
+      "agents_web" -> "badge-primary"
+      "agents_api" -> "badge-primary"
+      "identity" -> "badge-secondary"
+      "jarga" -> "badge-accent"
+      "chat" -> "badge-info"
+      "webhooks" -> "badge-warning"
+      "perme8_tools" -> "badge-neutral"
       "docs" -> "badge-accent"
       "documentation" -> "badge-accent"
       "chore" -> "badge-ghost"

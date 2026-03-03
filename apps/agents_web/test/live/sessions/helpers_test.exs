@@ -203,6 +203,7 @@ defmodule AgentsWeb.SessionsLive.HelpersTest do
       assert Helpers.ticket_label_class("refactor") == "badge-warning"
       assert Helpers.ticket_label_class("backend") == "badge-secondary"
       assert Helpers.ticket_label_class("frontend") == "badge-info"
+      assert Helpers.ticket_label_class("agents") == "badge-primary"
     end
 
     test "normalizes casing and whitespace" do
@@ -211,8 +212,19 @@ defmodule AgentsWeb.SessionsLive.HelpersTest do
     end
 
     test "falls back to outline for unknown labels" do
-      assert Helpers.ticket_label_class("agents") == "badge-outline"
+      assert Helpers.ticket_label_class("something-custom") == "badge-outline"
       assert Helpers.ticket_label_class(nil) == "badge-outline"
+    end
+  end
+
+  describe "ticket_size_class/1" do
+    test "maps sizes to consistent badge classes" do
+      assert Helpers.ticket_size_class("XL") == "badge-error text-white"
+      assert Helpers.ticket_size_class("L") == "badge-warning"
+      assert Helpers.ticket_size_class("M") == "badge-info"
+      assert Helpers.ticket_size_class("S") == "badge-success"
+      assert Helpers.ticket_size_class("XS") == "badge-ghost"
+      assert Helpers.ticket_size_class(nil) == "badge-outline"
     end
   end
 end
