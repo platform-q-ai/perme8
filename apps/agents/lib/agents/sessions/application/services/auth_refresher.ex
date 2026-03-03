@@ -34,9 +34,13 @@ defmodule Agents.Sessions.Application.Services.AuthRefresher do
   Reads the host's `auth.json`, parses each provider, and calls
   `PUT /auth/:provider_id` on the opencode server.
 
-  Returns `{:ok, refreshed_providers}` with a list of provider IDs
-  that were successfully refreshed, or `{:error, reason}` if the
-  auth.json could not be read or parsed.
+  Returns `{:ok, refreshed_providers}` when all providers refresh
+  successfully.
+
+  Returns `{:error, {:auth_refresh_failed, failures}}` when one or more
+  providers fail to refresh. Each failure item contains `%{provider, reason}`.
+
+  Returns `{:error, reason}` if auth.json cannot be read or parsed.
 
   ## Options
 
@@ -69,7 +73,17 @@ defmodule Agents.Sessions.Application.Services.AuthRefresher do
         end)
 
       refreshed = for {:ok, id} <- results, do: id
-      {:ok, refreshed}
+
+      failures =
+        for {:error, provider_id, reason} <- results do
+          %{provider: provider_id, reason: reason}
+        end
+
+      if failures == [] do
+        {:ok, refreshed}
+      else
+        {:error, {:auth_refresh_failed, failures}}
+      end
     else
       {:error, reason} ->
         Logger.warning("AuthRefresher: failed to read auth.json: #{inspect(reason)}")

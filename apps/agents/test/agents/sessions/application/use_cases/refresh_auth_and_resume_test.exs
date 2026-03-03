@@ -23,6 +23,19 @@ defmodule Agents.Sessions.Application.UseCases.RefreshAuthAndResumeTest do
     end
   end
 
+  defmodule DetailedFailAuthRefresher do
+    def refresh_auth(_base_url, _client, _opts \\ []) do
+      {:error,
+       {:auth_refresh_failed,
+        [
+          %{
+            provider: "openai",
+            reason: {:http_error, 400, %{"error" => "invalid_grant"}}
+          }
+        ]}}
+    end
+  end
+
   setup do
     user = AccountsFixtures.user_fixture()
 
@@ -40,6 +53,7 @@ defmodule Agents.Sessions.Application.UseCases.RefreshAuthAndResumeTest do
     |> stub(:get_task_for_user, fn task_id, uid ->
       if task_id == task.id and uid == user.id, do: task, else: nil
     end)
+    |> stub(:update_task_status, fn _task, _attrs -> {:ok, task} end)
 
     {:ok, task: task, user: user}
   end
@@ -145,6 +159,33 @@ defmodule Agents.Sessions.Application.UseCases.RefreshAuthAndResumeTest do
                  container_provider: Agents.Mocks.ContainerProviderMock,
                  opencode_client: Agents.Mocks.OpencodeClientMock,
                  auth_refresher: FailingAuthRefresher,
+                 resume_fn: fn _, _, _ -> {:ok, %{}} end
+               )
+    end
+
+    test "persists detailed auth refresh error from provider failure", %{task: task, user: user} do
+      Agents.Mocks.ContainerProviderMock
+      |> expect(:restart, fn "container-123" -> {:ok, %{port: 5000}} end)
+
+      Agents.Mocks.OpencodeClientMock
+      |> expect(:health, fn "http://localhost:5000" -> :ok end)
+
+      Agents.Mocks.TaskRepositoryMock
+      |> expect(:update_task_status, fn _task, attrs ->
+        assert attrs.status == "failed"
+        assert attrs.error =~ "Auth refresh failed"
+        assert attrs.error =~ "openai"
+        assert attrs.error =~ "HTTP 400"
+        assert attrs.error =~ "invalid_grant"
+        {:ok, task}
+      end)
+
+      assert {:error, {:auth_refresh_failed, _failures}} =
+               RefreshAuthAndResume.execute(task.id, user.id,
+                 task_repo: Agents.Mocks.TaskRepositoryMock,
+                 container_provider: Agents.Mocks.ContainerProviderMock,
+                 opencode_client: Agents.Mocks.OpencodeClientMock,
+                 auth_refresher: DetailedFailAuthRefresher,
                  resume_fn: fn _, _, _ -> {:ok, %{}} end
                )
     end
