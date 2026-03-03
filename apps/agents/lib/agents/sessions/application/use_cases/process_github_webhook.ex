@@ -94,19 +94,6 @@ defmodule Agents.Sessions.Application.UseCases.ProcessGithubWebhook do
     end
   end
 
-  defp build_instruction("merge_group", payload, bot_identity) do
-    if payload["action"] == "checks_requested" do
-      merge_group = payload["merge_group"] || %{}
-      head_sha = merge_group["head_sha"] || "unknown"
-      base_ref = merge_group["base_ref"] || "unknown"
-
-      {:ok,
-       "Handle merge queue rebase and CI readiness for #{GithubWebhookConfig.repo()} (base: #{base_ref}, head: #{head_sha}) using #{bot_identity} identity."}
-    else
-      {:ok, :ignored}
-    end
-  end
-
   defp build_instruction(_event, _payload, _bot_identity), do: {:ok, :ignored}
 
   defp queue_task(instruction, event, bot_identity, opts) do
