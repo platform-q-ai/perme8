@@ -586,4 +586,57 @@ defmodule Agents.SessionsTest do
                )
     end
   end
+
+  describe "ticket sync projection" do
+    test "extract_ticket_number/1 handles hashtag and ticket prefixes" do
+      assert Sessions.extract_ticket_number("Implement #306 in the session panel") == 306
+      assert Sessions.extract_ticket_number("please work on ticket 412 next") == 412
+      assert Sessions.extract_ticket_number("no ticket ref") == nil
+    end
+
+    test "list_project_tickets/2 enriches tickets with associated session state" do
+      user = user_fixture()
+
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Work on #306 from backlog",
+        container_id: "container-306",
+        status: "running"
+      })
+
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "ship ticket 410 fixes",
+        container_id: "container-410",
+        status: "completed"
+      })
+
+      tickets = [
+        %{
+          number: 306,
+          title: "Ticket 306",
+          status: "Backlog",
+          priority: "Need",
+          labels: ["agents"]
+        },
+        %{number: 410, title: "Ticket 410", status: "Ready", priority: "Want", labels: []},
+        %{number: 999, title: "Unlinked", status: "Backlog", priority: nil, labels: []}
+      ]
+
+      result = Sessions.list_project_tickets(user.id, tickets: tickets)
+
+      ticket_306 = Enum.find(result, &(&1.number == 306))
+      ticket_410 = Enum.find(result, &(&1.number == 410))
+      ticket_999 = Enum.find(result, &(&1.number == 999))
+
+      assert ticket_306.session_state == "running"
+      assert ticket_306.associated_container_id == "container-306"
+
+      assert ticket_410.session_state == "completed"
+      assert ticket_410.associated_container_id == "container-410"
+
+      assert ticket_999.session_state == "idle"
+      assert ticket_999.associated_container_id == nil
+    end
+  end
 end

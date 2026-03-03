@@ -211,7 +211,12 @@ config :notifications,
 config :agents, :sessions,
   image: "perme8-opencode",
   health_check_interval_ms: 2_000,
-  health_check_max_retries: 180
+  health_check_max_retries: 180,
+  github_sync_enabled: true,
+  github_project_org: "platform-q-ai",
+  github_project_number: 7,
+  github_ticket_statuses: ["Backlog", "Ready"],
+  github_poll_interval_ms: 15_000
 
 # MCP tool providers: modules implementing ToolProvider behaviour
 config :agents, :mcp_tool_providers, [
