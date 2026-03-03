@@ -4,6 +4,7 @@ defmodule AgentsApi.GithubWebhookController do
   """
 
   use AgentsApi, :controller
+  require Logger
 
   alias AgentsApi.GithubWebhookConfig
 
@@ -39,14 +40,18 @@ defmodule AgentsApi.GithubWebhookController do
           |> render(:error, message: "Invalid payload")
 
         {:error, {:task_creation_failed, reason}} ->
+          Logger.error("GitHub webhook task creation failed: #{inspect(reason)}")
+
           conn
           |> put_status(:unprocessable_entity)
-          |> render(:error, message: "Failed to queue task: #{inspect(reason)}")
+          |> render(:error, message: "Failed to queue task")
 
         {:error, reason} ->
+          Logger.error("GitHub webhook processing failed: #{inspect(reason)}")
+
           conn
           |> put_status(:unprocessable_entity)
-          |> render(:error, message: "Webhook processing failed: #{inspect(reason)}")
+          |> render(:error, message: "Webhook processing failed")
       end
     else
       {:error, :missing_webhook_secret} ->
