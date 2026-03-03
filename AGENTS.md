@@ -33,6 +33,10 @@ The token is short-lived (9 minutes). Re-generate if a command fails with a 401.
 
 Automated review workflows must skip events where the sender/reviewer identity is `platformqbot` to avoid review loops.
 
+Repository workflow note:
+- `.github/workflows/automated-pr-review.yml` runs PR review actions as `platformqbot[bot]` and skips PRs opened/authored by `platformqbot[bot]`.
+- PR comment-addressing and follow-up replies continue to run as `perme8[bot]`.
+
 Review-bot token generation requires:
 - `GITHUB_REVIEW_APP_ID` (reviewer app id)
 - `GITHUB_REVIEW_APP_PEM` (base64-encoded reviewer app private key)
