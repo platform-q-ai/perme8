@@ -225,6 +225,9 @@ jobs:
       matrix: ${{ steps.compute.outputs.matrix }}
       selective: ${{ steps.compute.outputs.selective }}
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - id: compute
         name: Build selective matrix
         env:
@@ -245,10 +248,9 @@ jobs:
           CHANGED_WEBHOOKS: ${{ needs.changes.outputs.webhooks }}
           CHANGED_WEBHOOKS_API: ${{ needs.changes.outputs.webhooks_api }}
           IS_MAIN: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
-          RUN_ID: ${{ github.run_id }}
         run: |
           python3 - <<'PYEOF'
-          import os, json, hashlib
+          import os, json
 
           # All valid app/domain combos with their metadata
           ALL_COMBOS = [
@@ -273,77 +275,64 @@ jobs:
               {"app": "webhooks-api",     "domain": "security", "config_name": "webhooks-api",            "timeout": 15},
           ]
 
-          # Dependency tree: if a dependency changes, all dependents need testing
-          # identity <- agents, agents-api, agents-web, jarga, jarga_api, erm (and transitively jarga_web)
-          # agents <- agents-api, agents-web, jarga, jarga_web
-          # erm <- agents
-          # jarga <- jarga_web, jarga_api, erm
-          def apps_needing_tests():
-              """Return set of app names (matrix-style) that need testing."""
+          def changed_apps():
+              """Return set of app names (matrix-style) with direct or mapped changes."""
               changed = os.environ
-              needs_test = set()
+              apps = set()
 
-              # Direct changes
+              # Direct app mappings
               if changed.get("CHANGED_ALKALI") == "true":
-                  needs_test.add("alkali")
+                  apps.add("alkali")
               if changed.get("CHANGED_IDENTITY") == "true":
-                  needs_test.update(["identity", "agents", "agents-api", "agents-web", "jarga-api", "erm", "jarga-web"])
+                  apps.add("identity")
               if changed.get("CHANGED_AGENTS") == "true":
-                  needs_test.update(["agents", "agents-api", "agents-web", "jarga-web"])
+                  apps.add("agents")
               if changed.get("CHANGED_AGENTS_API") == "true":
-                  needs_test.add("agents-api")
+                  apps.add("agents-api")
               if changed.get("CHANGED_AGENTS_WEB") == "true":
-                  needs_test.add("agents-web")
-              if changed.get("CHANGED_JARGA") == "true":
-                  needs_test.update(["jarga-web", "jarga-api", "erm"])
-              if changed.get("CHANGED_JARGA_API") == "true":
-                  needs_test.add("jarga-api")
-              if changed.get("CHANGED_JARGA_WEB") == "true":
-                  needs_test.add("jarga-web")
-              if changed.get("CHANGED_ERM") == "true":
-                  needs_test.update(["erm", "agents"])
-              if changed.get("CHANGED_EXO_DASHBOARD") == "true":
-                  needs_test.update(["exo-dashboard", "perme8-dashboard"])
-              if changed.get("CHANGED_PERME8_DASHBOARD") == "true":
-                  needs_test.add("perme8-dashboard")
-              if changed.get("CHANGED_WEBHOOKS") == "true":
-                  needs_test.add("webhooks-api")
-              if changed.get("CHANGED_WEBHOOKS_API") == "true":
-                  needs_test.add("webhooks-api")
+                  apps.add("agents-web")
 
-              return needs_test
+              # jarga/webhooks are source apps without direct exo-bdd 360 combos.
+              # Map them to their exo-bdd surface apps.
+              if changed.get("CHANGED_JARGA") == "true":
+                  apps.update(["jarga-web", "jarga-api", "erm"])
+              if changed.get("CHANGED_JARGA_API") == "true":
+                  apps.add("jarga-api")
+              if changed.get("CHANGED_JARGA_WEB") == "true":
+                  apps.add("jarga-web")
+              if changed.get("CHANGED_ERM") == "true":
+                  apps.add("erm")
+              if changed.get("CHANGED_EXO_DASHBOARD") == "true":
+                  apps.add("exo-dashboard")
+              if changed.get("CHANGED_PERME8_DASHBOARD") == "true":
+                  apps.add("perme8-dashboard")
+              if changed.get("CHANGED_WEBHOOKS") == "true":
+                  apps.add("webhooks-api")
+              if changed.get("CHANGED_WEBHOOKS_API") == "true":
+                  apps.add("webhooks-api")
+
+              return apps
 
           is_main = os.environ.get("IS_MAIN") == "true"
           shared_changed = os.environ.get("CHANGED_SHARED") == "true"
           exo_bdd_changed = os.environ.get("CHANGED_EXO_BDD") == "true"
-          run_id = os.environ.get("RUN_ID", "0")
 
           # On main branch, shared config changes, or exo-bdd framework changes: run everything
           if is_main or shared_changed or exo_bdd_changed:
               selected = ALL_COMBOS
               selective = "false"
           else:
-              apps_to_test = apps_needing_tests()
-              # If nothing changed that we track, run everything (safety net)
+              apps_to_test = changed_apps()
+              # If nothing changed that we track, run all non-security combos as safety net.
               if not apps_to_test:
                   selected = [c for c in ALL_COMBOS if c["domain"] != "security"]
                   selective = "false"
               else:
-                  # Exclude security combos on branches -- they only run on main
-                  non_security = [c for c in ALL_COMBOS if c["domain"] != "security"]
-
-                  # Select combos for changed apps
-                  required = [c for c in non_security if c["app"] in apps_to_test]
-                  unrelated = [c for c in non_security if c["app"] not in apps_to_test]
-
-                  # Randomly sample ~10% of unrelated combos (seeded for reproducibility)
-                  seed = int(hashlib.sha256(run_id.encode()).hexdigest(), 16)
-                  import random
-                  rng = random.Random(seed)
-                  sample_count = max(1, round(len(unrelated) * 0.1)) if unrelated else 0
-                  sampled = rng.sample(unrelated, min(sample_count, len(unrelated))) if unrelated else []
-
-                  selected = required + sampled
+                  selected = [
+                      c
+                      for c in ALL_COMBOS
+                      if c["app"] in apps_to_test and c["domain"] != "security"
+                  ]
                   selective = "true"
 
           # Security exo-bdd coverage runs only on merge to main (push to main),
