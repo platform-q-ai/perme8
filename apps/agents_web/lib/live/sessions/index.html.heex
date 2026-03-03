@@ -54,17 +54,23 @@
       </div>
 
       <%= if @sidebar_list_tab == "tickets" do %>
+        <% sorted_tickets =
+          Enum.sort_by(@tickets, fn ticket ->
+            {if(ticket.status == "Ready", do: 0, else: 1), ticket.number}
+          end) %>
         <%= if @tickets == [] do %>
           <div class="px-3 pb-3 text-base-content/50 text-xs">
             No Backlog or Ready tickets
           </div>
         <% else %>
           <ul class="menu menu-sm px-2 pb-2 gap-1 w-full">
-            <li :for={ticket <- @tickets} class="w-full">
+            <li :for={ticket <- sorted_tickets} class="w-full">
               <div
                 data-testid={"ticket-item-#{ticket.number}"}
                 class={[
-                  "flex flex-col gap-1 w-full rounded-lg p-2",
+                  "flex flex-col gap-1 w-full rounded-lg p-2 min-h-16 transition-colors duration-700 ease-out border",
+                  ticket.status == "Ready" && "border-success/40 bg-success/10",
+                  ticket.status != "Ready" && "border-base-content/20 bg-base-content/8",
                   ticket.number == @active_ticket_number && "active"
                 ]}
                 phx-click="select_ticket"
@@ -81,14 +87,8 @@
                   <span class={["badge badge-xs", ticket_priority_class(ticket.priority)]}>
                     {ticket.priority || "Unprioritized"}
                   </span>
-                  <span class={["badge badge-xs", ticket_status_class(ticket.status)]}>
-                    {ticket.status || "Unknown"}
-                  </span>
-                  <span class={[
-                    "badge badge-xs",
-                    ticket_session_state_class(ticket.session_state)
-                  ]}>
-                    {ticket.session_state || "idle"}
+                  <span class="badge badge-xs badge-outline">
+                    {ticket.size || "Unsized"}
                   </span>
                 </div>
 
