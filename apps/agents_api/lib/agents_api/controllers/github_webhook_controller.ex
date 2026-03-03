@@ -85,9 +85,8 @@ defmodule AgentsApi.GithubWebhookController do
 
   defp verify_signature(conn, raw_body) do
     with {:ok, secret} <- fetch_secret(),
-         {:ok, signature} <- fetch_signature(conn),
-         :ok <- valid_signature(secret, raw_body, signature) do
-      :ok
+         {:ok, signature} <- fetch_signature(conn) do
+      valid_signature(secret, raw_body, signature)
     end
   end
 
