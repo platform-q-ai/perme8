@@ -7,6 +7,7 @@ defmodule JargaWeb.NotificationsLive.OnMount do
   """
 
   alias Notifications.Domain.Events.NotificationCreated
+  alias Notifications
 
   import Phoenix.LiveView
 
@@ -22,15 +23,9 @@ defmodule JargaWeb.NotificationsLive.OnMount do
 
         # Attach handle_info callback to forward notification events to the component
         attach_hook(socket, :handle_notification_updates, :handle_info, fn
-          %NotificationCreated{}, socket ->
+          %NotificationCreated{} = event, socket ->
             # Forward the update to the NotificationBell component with force_reload
-            send_update(JargaWeb.NotificationsLive.NotificationBell,
-              id: "notification-bell-topbar",
-              current_user: socket.assigns.current_scope.user,
-              force_reload: true
-            )
-
-            {:cont, socket}
+            {:cont, handle_notification_created(event, socket)}
 
           _other, socket ->
             {:cont, socket}
@@ -40,5 +35,33 @@ defmodule JargaWeb.NotificationsLive.OnMount do
       end
 
     {:cont, socket}
+  end
+
+  defp handle_notification_created(event, socket) do
+    user = socket.assigns.current_scope.user
+
+    send_update(JargaWeb.NotificationsLive.NotificationBell,
+      id: "notification-bell-topbar",
+      current_user: user,
+      force_reload: true
+    )
+
+    event_payload =
+      case Notifications.get_notification(event.notification_id, user.id) do
+        notification when not is_nil(notification) ->
+          %{
+            title: notification.title,
+            body: notification.body,
+            type: notification.type
+          }
+
+        _ ->
+          nil
+      end
+
+    case event_payload do
+      nil -> socket
+      payload -> push_event(socket, "browser_notification", payload)
+    end
   end
 end

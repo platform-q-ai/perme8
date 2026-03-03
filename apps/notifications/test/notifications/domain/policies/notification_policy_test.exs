@@ -55,6 +55,12 @@ defmodule Notifications.Domain.Policies.NotificationPolicyTest do
       assert NotificationPolicy.valid_type?("workspace_invitation") == true
     end
 
+    test "returns true for task notification types" do
+      assert NotificationPolicy.valid_type?("task_completed") == true
+      assert NotificationPolicy.valid_type?("task_failed") == true
+      assert NotificationPolicy.valid_type?("task_cancelled") == true
+    end
+
     test "returns false for unknown type" do
       assert NotificationPolicy.valid_type?("unknown") == false
     end

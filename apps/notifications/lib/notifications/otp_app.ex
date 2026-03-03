@@ -29,21 +29,12 @@ defmodule Notifications.OTPApp do
   to start subscribers for integration tests where the Notifications
   OTP app has subscribers disabled in test mode.
 
-  Returns the subscriber PID (either existing or newly started).
+  Returns a list of subscriber PIDs (either existing or newly started).
   """
   def ensure_subscribers_started do
-    alias Notifications.Infrastructure.Subscribers.WorkspaceInvitationSubscriber
-
-    case Process.whereis(WorkspaceInvitationSubscriber) do
-      nil ->
-        case WorkspaceInvitationSubscriber.start_link([]) do
-          {:ok, pid} -> pid
-          {:error, {:already_started, pid}} -> pid
-        end
-
-      pid ->
-        pid
-    end
+    Notifications.Infrastructure.Subscribers
+    |> subscribers()
+    |> Enum.map(&ensure_subscriber_started/1)
   end
 
   # PubSub subscribers are started in non-test environments.
@@ -54,9 +45,30 @@ defmodule Notifications.OTPApp do
     enable_in_test = Application.get_env(:notifications, :enable_pubsub_in_test, false)
 
     if env != :test or enable_in_test do
-      [Notifications.Infrastructure.Subscribers.WorkspaceInvitationSubscriber]
+      Notifications.Infrastructure.Subscribers
+      |> subscribers()
     else
       []
+    end
+  end
+
+  defp subscribers(_namespace) do
+    [
+      Notifications.Infrastructure.Subscribers.WorkspaceInvitationSubscriber,
+      Notifications.Infrastructure.Subscribers.TaskCompletionSubscriber
+    ]
+  end
+
+  defp ensure_subscriber_started(subscriber) do
+    case Process.whereis(subscriber) do
+      nil ->
+        case subscriber.start_link([]) do
+          {:ok, pid} -> pid
+          {:error, {:already_started, pid}} -> pid
+        end
+
+      pid ->
+        pid
     end
   end
 end

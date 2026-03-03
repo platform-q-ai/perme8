@@ -179,3 +179,27 @@ self.addEventListener('message', (event) => {
     );
   }
 });
+
+// Push notifications (future web-push integration)
+self.addEventListener('push', (event) => {
+  let payload = {}
+
+  try {
+    payload = event.data ? event.data.json() : {}
+  } catch (_error) {
+    payload = {
+      title: 'Jarga notification',
+      body: event.data ? event.data.text() : ''
+    }
+  }
+
+  const title = payload.title || 'Jarga notification'
+  const options = {
+    body: payload.body || '',
+    icon: payload.icon || '/web-app-manifest-192x192.png',
+    badge: payload.badge || '/web-app-manifest-192x192.png',
+    data: payload.data || {}
+  }
+
+  event.waitUntil(self.registration.showNotification(title, options))
+})

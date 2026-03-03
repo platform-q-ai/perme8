@@ -156,6 +156,7 @@ defmodule JargaWeb.Layouts do
             <% end %>
           </div>
           <div class="flex-none flex items-center gap-2">
+            <div id="browser-notifications-hook" phx-hook="BrowserNotifications"></div>
             <.live_component
               module={JargaWeb.NotificationsLive.NotificationBell}
               id="notification-bell-topbar"

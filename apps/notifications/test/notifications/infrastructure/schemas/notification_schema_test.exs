@@ -40,6 +40,18 @@ defmodule Notifications.Infrastructure.Schemas.NotificationSchemaTest do
       assert changeset.valid?
     end
 
+    test "accepts valid task notification types" do
+      for type <- ["task_completed", "task_failed", "task_cancelled"] do
+        attrs = %{
+          user_id: Ecto.UUID.generate(),
+          type: type,
+          title: "Task status"
+        }
+
+        assert NotificationSchema.create_changeset(attrs).valid?
+      end
+    end
+
     test "defaults read to false and data to empty map" do
       attrs = %{
         user_id: Ecto.UUID.generate(),
