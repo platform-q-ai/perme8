@@ -1407,6 +1407,7 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       assert failed_pos < running_pos
       assert html =~ ~s(data-testid="session-item-failed-exited")
       assert html =~ "bg-warning/10"
+      assert html =~ "bg-violet-500/10"
       assert html =~ "bg-error/10"
     end
 
