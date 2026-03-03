@@ -563,9 +563,9 @@
           id="session-log"
           phx-hook="SessionLog"
         >
-          <%= if @current_task do %>
+          <%= if show_initial_instruction?(@current_task, @output_parts) do %>
             <%!-- User message --%>
-            <div class="flex gap-2 mb-3">
+            <div class="flex gap-2 mb-3" data-testid="session-initial-instruction">
               <div class="shrink-0 size-6 rounded-full bg-primary/10 flex items-center justify-center">
                 <.icon name="hero-user" class="size-3.5 text-primary" />
               </div>

@@ -215,6 +215,26 @@ defmodule AgentsWeb.SessionsLive.Helpers do
 
   def session_todo_items(_session), do: []
 
+  @doc "Returns true when the inline initial user instruction bubble should be shown."
+  def show_initial_instruction?(nil, _output_parts), do: false
+
+  def show_initial_instruction?(%{instruction: instruction}, output_parts)
+      when is_list(output_parts) do
+    instruction_text = String.trim(instruction || "")
+
+    if instruction_text == "" do
+      false
+    else
+      not Enum.any?(output_parts, fn
+        {:user, _id, text} -> String.trim(text || "") == instruction_text
+        {:user_pending, _id, text} -> String.trim(text || "") == instruction_text
+        _ -> false
+      end)
+    end
+  end
+
+  def show_initial_instruction?(_task, _output_parts), do: false
+
   @doc """
   Formats duration between two DateTimes as a human-readable string.
 
