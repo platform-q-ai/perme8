@@ -1464,12 +1464,33 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
     test "switching detail tabs preserves selected container in URL", %{conn: conn, user: user} do
       task_fixture(%{
         user_id: user.id,
-        instruction: "Container context persists",
+        instruction: "Container context persists for #123",
         container_id: "c-keep",
         status: "completed"
       })
 
       {:ok, lv, _html} = live(conn, ~p"/sessions?container=c-keep")
+
+      :sys.replace_state(Agents.Sessions.Infrastructure.TicketSyncServer, fn state ->
+        %{
+          state
+          | tickets: [
+              %{
+                number: 123,
+                title: "Linked ticket",
+                body: "Ticket body",
+                status: "Ready",
+                priority: "Need",
+                size: "M",
+                labels: [],
+                url: nil,
+                associated_container_id: nil
+              }
+            ]
+        }
+      end)
+
+      send(lv.pid, {:tickets_synced, []})
 
       lv
       |> element(~s(button[data-tab-id="ticket"]))
@@ -1478,7 +1499,76 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       assert_patch(lv, ~p"/sessions?container=c-keep&tab=ticket")
 
       html = render(lv)
-      assert html =~ "Container context persists"
+      assert html =~ "Container context persists for #123"
+    end
+
+    test "hides ticket tab for sessions without an assigned ticket", %{conn: conn, user: user} do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "General coding session",
+        container_id: "c-no-ticket",
+        status: "completed"
+      })
+
+      {:ok, _lv, html} = live(conn, ~p"/sessions?container=c-no-ticket")
+
+      assert html =~ ~s(data-tab-id="chat")
+      refute html =~ ~s(data-tab-id="ticket")
+    end
+
+    test "selecting session infers ticket number from session instruction when association is missing",
+         %{
+           conn: conn,
+           user: user
+         } do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Continue work on #123",
+        container_id: "c-ticket-session",
+        status: "completed"
+      })
+
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Another session",
+        container_id: "c-other-session",
+        status: "completed"
+      })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      :sys.replace_state(Agents.Sessions.Infrastructure.TicketSyncServer, fn state ->
+        %{
+          state
+          | tickets: [
+              %{
+                number: 123,
+                title: "Ticket selected from session context",
+                body: "Details from ticket",
+                status: "Ready",
+                priority: "Need",
+                size: "M",
+                labels: [],
+                url: nil,
+                associated_container_id: nil
+              }
+            ]
+        }
+      end)
+
+      send(lv.pid, {:tickets_synced, []})
+
+      lv
+      |> element(~s([phx-click="select_session"][phx-value-container-id="c-ticket-session"]))
+      |> render_click()
+
+      html =
+        lv
+        |> element(~s(button[data-tab-id="ticket"]))
+        |> render_click()
+
+      assert html =~ ~s(data-testid="ticket-context-panel")
+      assert html =~ "Ticket selected from session context"
     end
 
     test "invalid container param falls back to most recent session", %{conn: conn, user: user} do

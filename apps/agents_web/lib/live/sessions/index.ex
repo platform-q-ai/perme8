@@ -63,15 +63,26 @@ defmodule AgentsWeb.SessionsLive.Index do
   @impl true
   def handle_params(params, _url, socket) do
     sessions = socket.assigns.sessions
-    active_tab = resolve_active_tab(params)
     tasks = tasks_snapshot_or_reload(socket)
     selected_container_id = resolve_selected_container_id(params, sessions)
     current_task = resolve_current_task(params, tasks, selected_container_id)
+
+    active_ticket_number =
+      resolve_active_ticket_number(
+        params,
+        selected_container_id,
+        sessions,
+        socket.assigns.tickets,
+        socket.assigns.active_ticket_number
+      )
+
+    active_tab = resolve_active_tab(params, is_integer(active_ticket_number))
 
     {:noreply,
      socket
      |> assign(:active_session_tab, active_tab)
      |> assign(:active_container_id, selected_container_id)
+     |> assign(:active_ticket_number, active_ticket_number)
      |> assign(:current_task, current_task)
      |> assign(:composing_new, selected_container_id == nil)
      |> assign(:tasks_snapshot, nil)
@@ -84,11 +95,34 @@ defmodule AgentsWeb.SessionsLive.Index do
      |> push_event("focus_input", %{})}
   end
 
-  defp resolve_active_tab(params) do
+  defp resolve_active_tab(params, has_ticket_tab?) do
     tab = params["tab"] || "chat"
-    valid_tabs = Enum.map(session_tabs(), & &1.id)
+    valid_tabs = Enum.map(if(has_ticket_tab?, do: session_tabs(), else: [%{id: "chat"}]), & &1.id)
     if tab in valid_tabs, do: tab, else: "chat"
   end
+
+  defp resolve_active_ticket_number(
+         %{"new" => "true"},
+         _selected_container_id,
+         _sessions,
+         _tickets,
+         current
+       ) do
+    current
+  end
+
+  defp resolve_active_ticket_number(_params, selected_container_id, sessions, tickets, _current)
+       when is_binary(selected_container_id) and selected_container_id != "" do
+    find_ticket_number_for_selected_session(sessions, tickets, selected_container_id)
+  end
+
+  defp resolve_active_ticket_number(
+         _params,
+         _selected_container_id,
+         _sessions,
+         _tickets,
+         current
+       ), do: current
 
   defp tasks_snapshot_or_reload(socket) do
     socket.assigns[:tasks_snapshot] || Sessions.list_tasks(socket.assigns.current_scope.user.id)
@@ -329,7 +363,12 @@ defmodule AgentsWeb.SessionsLive.Index do
 
   @impl true
   def handle_event("select_session", %{"container-id" => container_id}, socket) do
-    active_ticket_number = find_ticket_number_for_container(socket.assigns.tickets, container_id)
+    active_ticket_number =
+      find_ticket_number_for_selected_session(
+        socket.assigns.sessions,
+        socket.assigns.tickets,
+        container_id
+      )
 
     {:noreply,
      socket
@@ -1346,6 +1385,30 @@ defmodule AgentsWeb.SessionsLive.Index do
     case Enum.find(tickets, &(&1.associated_container_id == container_id)) do
       %{number: number} -> number
       _ -> nil
+    end
+  end
+
+  defp find_ticket_number_for_selected_session(sessions, tickets, container_id) do
+    case find_ticket_number_for_container(tickets, container_id) do
+      number when is_integer(number) ->
+        number
+
+      _ ->
+        sessions
+        |> Enum.find(&(&1.container_id == container_id))
+        |> case do
+          %{title: title} when is_binary(title) ->
+            case Sessions.extract_ticket_number(title) do
+              number when is_integer(number) and number > 0 ->
+                if Enum.any?(tickets, &(&1.number == number)), do: number, else: nil
+
+              _ ->
+                nil
+            end
+
+          _ ->
+            nil
+        end
     end
   end
 
