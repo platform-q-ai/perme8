@@ -12,37 +12,40 @@ defmodule Agents.Sessions.Application.UseCases.ProcessGithubWebhook do
 
     with :ok <- validate_enabled(),
          :ok <- validate_repo(payload),
-         {:ok, instruction} <- build_instruction(event, payload, bot_identity),
-         :ok <- validate_automation_user() do
+         {:ok, instruction} <- build_instruction(event, payload, bot_identity) do
       case instruction do
         :ignored ->
           {:ok, :ignored}
 
         _ ->
-          create_task_fn = Keyword.get(opts, :create_task_fn)
+          with :ok <- validate_automation_user() do
+            create_task_fn = Keyword.get(opts, :create_task_fn)
 
-          if is_function(create_task_fn, 1) do
-            attrs = %{
-              instruction: instruction,
-              user_id: GithubWebhookConfig.automation_user_id(),
-              image: GithubWebhookConfig.image()
-            }
+            if is_function(create_task_fn, 1) do
+              attrs = %{
+                instruction: instruction,
+                user_id: GithubWebhookConfig.automation_user_id(),
+                image: GithubWebhookConfig.image()
+              }
 
-            case create_task_fn.(attrs) do
-              {:ok, task} ->
-                {:ok,
-                 {:queued,
-                  %{
-                    task_id: task.id,
-                    event: event,
-                    bot_identity: bot_identity
-                  }}}
+              case create_task_fn.(attrs) do
+                {:ok, task} ->
+                  {:ok,
+                   {:queued,
+                    %{
+                      task_id: task.id,
+                      event: event,
+                      bot_identity: bot_identity
+                    }}}
 
-              {:error, reason} ->
-                {:error, {:task_creation_failed, reason}}
+                {:error, reason} ->
+                  {:error, {:task_creation_failed, reason}}
+              end
+            else
+              {:error, :missing_create_task_fn}
             end
           else
-            {:error, :missing_create_task_fn}
+            error -> error
           end
       end
     else
