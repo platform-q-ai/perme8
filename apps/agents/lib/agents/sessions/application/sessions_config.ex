@@ -121,7 +121,7 @@ defmodule Agents.Sessions.Application.SessionsConfig do
 
   @doc "Returns the GitHub token used for GraphQL project queries."
   def github_token do
-    config()[:github_token] || System.get_env("GH_TOKEN")
+    config()[:github_token]
   end
 
   defp config do

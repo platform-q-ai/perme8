@@ -18,10 +18,13 @@ defmodule AgentsWeb.SessionsLive.Index do
     user = socket.assigns.current_scope.user
     sessions = Sessions.list_sessions(user.id)
     tasks = Sessions.list_tasks(user.id)
+    tickets = Sessions.list_project_tickets(user.id, tasks: tasks)
+    active_ticket_number = next_active_ticket_number(tickets, nil)
 
     if connected?(socket) do
       subscribe_to_active_tasks(tasks)
       Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "queue:user:#{user.id}")
+      Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "sessions:tickets")
       schedule_stats_poll()
       schedule_duration_tick()
     end
@@ -36,6 +39,8 @@ defmodule AgentsWeb.SessionsLive.Index do
      |> assign(:page_title, "Sessions")
      |> assign(:full_width, true)
      |> assign(:sessions, sessions)
+     |> assign(:tickets, tickets)
+     |> assign(:active_ticket_number, active_ticket_number)
      |> assign(:tasks_snapshot, tasks)
      |> assign(:active_container_id, nil)
      |> assign(:current_task, nil)
@@ -276,13 +281,46 @@ defmodule AgentsWeb.SessionsLive.Index do
 
   @impl true
   def handle_event("select_session", %{"container-id" => container_id}, socket) do
+    active_ticket_number = find_ticket_number_for_container(socket.assigns.tickets, container_id)
+
     {:noreply,
      socket
+     |> assign(:active_ticket_number, active_ticket_number)
      |> assign(:composing_new, false)
      |> assign(:events, [])
      |> assign_session_state()
      |> assign(:form, to_form(%{"instruction" => ""}))
      |> push_patch(to: ~p"/sessions?#{%{container: container_id}}")}
+  end
+
+  @impl true
+  def handle_event("select_ticket", %{"number" => number_str}, socket) do
+    number = String.to_integer(number_str)
+    ticket = Enum.find(socket.assigns.tickets, &(&1.number == number))
+    container_id = ticket && ticket.associated_container_id
+
+    if is_binary(container_id) do
+      {:noreply,
+       socket
+       |> assign(:active_ticket_number, number)
+       |> assign(:composing_new, false)
+       |> assign(:events, [])
+       |> assign_session_state()
+       |> assign(:form, to_form(%{"instruction" => ""}))
+       |> push_patch(to: ~p"/sessions?#{%{container: container_id}}")}
+    else
+      {:noreply,
+       socket
+       |> assign(:active_ticket_number, number)
+       |> assign(:active_container_id, nil)
+       |> assign(:current_task, nil)
+       |> assign(:composing_new, true)
+       |> assign(:events, [])
+       |> assign_session_state()
+       |> assign(:form, to_form(%{"instruction" => ""}))
+       |> push_patch(to: ~p"/sessions?#{%{new: true}}")
+       |> push_event("focus_input", %{})}
+    end
   end
 
   @impl true
@@ -615,6 +653,12 @@ defmodule AgentsWeb.SessionsLive.Index do
   end
 
   @impl true
+  def handle_info({:tickets_synced, _tickets}, socket) do
+    user = socket.assigns.current_scope.user
+    {:noreply, reload_all(socket, user.id)}
+  end
+
+  @impl true
   def handle_info(_msg, socket), do: {:noreply, socket}
 
   defp assign_session_state(socket) do
@@ -729,6 +773,8 @@ defmodule AgentsWeb.SessionsLive.Index do
     current_task = socket.assigns.current_task
 
     if socket.assigns.composing_new || is_nil(current_task) do
+      instruction = ensure_ticket_reference(instruction, socket.assigns.active_ticket_number)
+
       Sessions.create_task(%{
         instruction: instruction,
         user_id: user.id,
@@ -852,7 +898,11 @@ defmodule AgentsWeb.SessionsLive.Index do
   defp reload_all(socket, user_id, queue_state_override \\ nil) do
     sessions = Sessions.list_sessions(user_id)
     tasks = Sessions.list_tasks(user_id)
+    tickets = Sessions.list_project_tickets(user_id, tasks: tasks)
     sessions = merge_unassigned_active_tasks(sessions, tasks)
+
+    active_ticket_number =
+      next_active_ticket_number(tickets, socket.assigns[:active_ticket_number])
 
     sessions =
       case {socket.assigns[:todo_items], socket.assigns[:active_container_id]} do
@@ -875,7 +925,25 @@ defmodule AgentsWeb.SessionsLive.Index do
 
     socket
     |> assign(:sessions, sessions)
+    |> assign(:tickets, tickets)
+    |> assign(:active_ticket_number, active_ticket_number)
     |> assign(:queue_state, queue_state_override || load_queue_state(user_id))
+  end
+
+  defp find_ticket_number_for_container(tickets, container_id) do
+    case Enum.find(tickets, &(&1.associated_container_id == container_id)) do
+      %{number: number} -> number
+      _ -> nil
+    end
+  end
+
+  defp next_active_ticket_number([], _current), do: nil
+
+  defp next_active_ticket_number(tickets, current) do
+    case Enum.find(tickets, &(&1.number == current)) do
+      %{number: number} -> number
+      _ -> tickets |> List.first() |> then(&(&1 && &1.number))
+    end
   end
 
   defp merge_unassigned_active_tasks(sessions, tasks) do
@@ -961,5 +1029,15 @@ defmodule AgentsWeb.SessionsLive.Index do
       session ->
         session
     end)
+  end
+
+  defp ensure_ticket_reference(instruction, nil), do: instruction
+
+  defp ensure_ticket_reference(instruction, ticket_number) do
+    if Sessions.extract_ticket_number(instruction) do
+      instruction
+    else
+      "##{ticket_number} #{instruction}"
+    end
   end
 end

@@ -339,6 +339,8 @@ config :agents, :sessions_env, %{
   REPO_BRANCH: System.get_env("REPO_BRANCH")
 }
 
+config :agents, :sessions, github_token: System.get_env("GH_TOKEN")
+
 # Configure OpenRouter for LLM chat (consumed by Agents.Infrastructure.Services.LlmClient)
 config :agents, :openrouter,
   api_key: System.get_env("OPENROUTER_API_KEY"),

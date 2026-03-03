@@ -30,6 +30,65 @@
     </div>
 
     <div class="flex-1 overflow-y-auto flex flex-col">
+      <div class="px-3 pt-3 pb-1">
+        <p class="text-[0.65rem] font-semibold uppercase tracking-wide text-base-content/55">
+          Tickets
+        </p>
+      </div>
+
+      <%= if @tickets == [] do %>
+        <div class="px-3 pb-3 text-base-content/50 text-xs">
+          No Backlog or Ready tickets
+        </div>
+      <% else %>
+        <ul class="menu menu-sm px-2 pb-2 gap-1 w-full">
+          <li :for={ticket <- @tickets} class="w-full">
+            <div
+              data-testid={"ticket-item-#{ticket.number}"}
+              class={[
+                "flex flex-col gap-1 w-full rounded-lg p-2",
+                ticket.number == @active_ticket_number && "active"
+              ]}
+              phx-click="select_ticket"
+              phx-value-number={ticket.number}
+            >
+              <div class="flex items-center justify-between w-full">
+                <span class="text-xs font-medium truncate flex-1 min-w-0">
+                  #{ticket.number} {truncate_instruction(ticket.title, 28)}
+                </span>
+                <.status_dot status={ticket.task_status || "idle"} />
+              </div>
+
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span class={["badge badge-xs", ticket_priority_class(ticket.priority)]}>
+                  {ticket.priority || "Unprioritized"}
+                </span>
+                <span class={["badge badge-xs", ticket_status_class(ticket.status)]}>
+                  {ticket.status || "Unknown"}
+                </span>
+                <span class={["badge badge-xs", ticket_session_state_class(ticket.session_state)]}>
+                  {ticket.session_state || "idle"}
+                </span>
+              </div>
+
+              <div :if={ticket.labels != []} class="flex flex-wrap gap-1">
+                <span :for={label <- ticket.labels} class="badge badge-xs badge-outline">
+                  {label}
+                </span>
+              </div>
+            </div>
+          </li>
+        </ul>
+      <% end %>
+
+      <div class="mx-3 my-1 border-t border-base-300"></div>
+
+      <div class="px-3 pb-1">
+        <p class="text-[0.65rem] font-semibold uppercase tracking-wide text-base-content/55">
+          Sessions
+        </p>
+      </div>
+
       <%= if @sessions == [] do %>
         <div class="p-6 text-center text-base-content/50 text-sm">
           <.icon name="hero-chat-bubble-left-right" class="size-8 mx-auto mb-2 opacity-40" />
@@ -424,6 +483,8 @@
     <.queue_panel queue_state={@queue_state} user_id={@current_scope.user.id} />
   </div>
 
+  <% selected_ticket = Enum.find(@tickets, &(&1.number == @active_ticket_number)) %>
+
   <%!-- Right Panel: Active Session Detail --%>
   <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
     <%= if @active_container_id || @current_task || @composing_new do %>
@@ -435,7 +496,9 @@
             {@session_title ||
               if @current_task,
                 do: truncate_instruction(@current_task.instruction, 60),
-                else: "Session"}
+                else:
+                  (selected_ticket && "##{selected_ticket.number} #{selected_ticket.title}") ||
+                    "Session"}
           </h2>
         </div>
         <div class="flex items-center gap-2 shrink-0">
