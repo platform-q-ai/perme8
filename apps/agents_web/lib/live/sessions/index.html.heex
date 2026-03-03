@@ -78,7 +78,7 @@
               <div
                 data-testid={"ticket-item-#{ticket.number}"}
                 class={[
-                  "flex flex-col gap-1 w-full rounded-lg p-2 min-h-16 transition-colors duration-700 ease-out border",
+                  "flex flex-col items-start gap-1 w-full rounded-lg p-2 min-h-16 transition-colors duration-700 ease-out border",
                   ticket.status == "Ready" && "border-success/40 bg-success/10",
                   ticket.status != "Ready" && "border-base-content/20 bg-base-content/8",
                   ticket.number == @active_ticket_number && "active"
@@ -86,14 +86,17 @@
                 phx-click="select_ticket"
                 phx-value-number={ticket.number}
               >
-                <div class="flex items-center justify-between w-full">
-                  <span class="text-xs font-medium truncate flex-1 min-w-0">
-                    {truncate_instruction(ticket.title, 34)}
+                <div class="flex items-start justify-between w-full gap-2">
+                  <span
+                    class="text-xs font-medium flex-1 min-w-0 overflow-hidden"
+                    style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;"
+                  >
+                    {ticket.title}
                   </span>
                   <.status_dot status={ticket.task_status || "idle"} />
                 </div>
 
-                <div class="flex items-center gap-1.5 flex-wrap">
+                <div class="flex w-full items-start justify-start gap-1.5 flex-wrap">
                   <span class={["badge badge-xs", ticket_priority_class(ticket.priority)]}>
                     {ticket.priority || "Unprioritized"}
                   </span>
@@ -102,8 +105,14 @@
                   </span>
                 </div>
 
-                <div :if={ticket.labels != []} class="flex flex-wrap gap-1">
-                  <span :for={label <- ticket.labels} class="badge badge-xs badge-outline">
+                <div
+                  :if={ticket.labels != []}
+                  class="flex w-full items-start justify-start flex-wrap gap-1"
+                >
+                  <span
+                    :for={label <- ticket.labels}
+                    class={["badge badge-xs", ticket_label_class(label)]}
+                  >
                     {label}
                   </span>
                 </div>
@@ -734,9 +743,11 @@
             <div class="text-lg font-semibold mb-2">{selected_ticket.title}</div>
             <div class="text-xs text-base-content/60 mb-3">
               #{selected_ticket.number}
-              <span :if={selected_ticket.status}> &middot;    {selected_ticket.status}</span>
-              <span :if={selected_ticket.priority}> &middot;    {selected_ticket.priority}</span>
-              <span :if={selected_ticket.size}> &middot;    {selected_ticket.size}</span>
+              <span :if={selected_ticket.status}> &middot;        {selected_ticket.status}</span>
+              <span :if={selected_ticket.priority}>
+                &middot; {selected_ticket.priority}
+              </span>
+              <span :if={selected_ticket.size}> &middot;        {selected_ticket.size}</span>
             </div>
             <div class="session-markdown text-sm text-base-content/90">
               {render_markdown(selected_ticket.body || "No ticket description provided.")}

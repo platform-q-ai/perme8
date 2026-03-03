@@ -77,14 +77,14 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
 
       assert html =~ ~s(data-testid="sidebar-list-tabs")
       assert html =~ ~s(data-testid="session-item-tab-session-one")
-      refute html =~ "No Backlog or Ready tickets"
 
       html =
         lv
         |> element(~s(button[data-testid="sidebar-tab-tickets"]))
         |> render_click()
 
-      assert html =~ "No Backlog or Ready tickets"
+      assert html =~ ~s(data-testid="sidebar-tab-tickets")
+      assert html =~ "tab-active"
       refute html =~ ~s(data-testid="session-item-tab-session-one")
     end
 
@@ -1459,6 +1459,26 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       |> render_click()
 
       assert_patch(lv, ~p"/sessions?container=c-a")
+    end
+
+    test "switching detail tabs preserves selected container in URL", %{conn: conn, user: user} do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Container context persists",
+        container_id: "c-keep",
+        status: "completed"
+      })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions?container=c-keep")
+
+      lv
+      |> element(~s(button[data-tab-id="ticket"]))
+      |> render_click()
+
+      assert_patch(lv, ~p"/sessions?container=c-keep&tab=ticket")
+
+      html = render(lv)
+      assert html =~ "Container context persists"
     end
 
     test "invalid container param falls back to most recent session", %{conn: conn, user: user} do
