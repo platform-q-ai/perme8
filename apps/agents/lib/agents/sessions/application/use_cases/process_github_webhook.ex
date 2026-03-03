@@ -18,33 +18,8 @@ defmodule Agents.Sessions.Application.UseCases.ProcessGithubWebhook do
           {:ok, :ignored}
 
         _ ->
-          with :ok <- validate_automation_user() do
-            create_task_fn = Keyword.get(opts, :create_task_fn)
-
-            if is_function(create_task_fn, 1) do
-              attrs = %{
-                instruction: instruction,
-                user_id: GithubWebhookConfig.automation_user_id(),
-                image: GithubWebhookConfig.image()
-              }
-
-              case create_task_fn.(attrs) do
-                {:ok, task} ->
-                  {:ok,
-                   {:queued,
-                    %{
-                      task_id: task.id,
-                      event: event,
-                      bot_identity: bot_identity
-                    }}}
-
-                {:error, reason} ->
-                  {:error, {:task_creation_failed, reason}}
-              end
-            else
-              {:error, :missing_create_task_fn}
-            end
-          else
+          case validate_automation_user() do
+            :ok -> queue_task(instruction, event, bot_identity, opts)
             error -> error
           end
       end
@@ -133,6 +108,34 @@ defmodule Agents.Sessions.Application.UseCases.ProcessGithubWebhook do
   end
 
   defp build_instruction(_event, _payload, _bot_identity), do: {:ok, :ignored}
+
+  defp queue_task(instruction, event, bot_identity, opts) do
+    create_task_fn = Keyword.get(opts, :create_task_fn)
+
+    if is_function(create_task_fn, 1) do
+      attrs = %{
+        instruction: instruction,
+        user_id: GithubWebhookConfig.automation_user_id(),
+        image: GithubWebhookConfig.image()
+      }
+
+      case create_task_fn.(attrs) do
+        {:ok, task} ->
+          {:ok,
+           {:queued,
+            %{
+              task_id: task.id,
+              event: event,
+              bot_identity: bot_identity
+            }}}
+
+        {:error, reason} ->
+          {:error, {:task_creation_failed, reason}}
+      end
+    else
+      {:error, :missing_create_task_fn}
+    end
+  end
 
   defp automation_sender?(payload, bot_identity) do
     case get_in(payload, ["sender", "login"]) do
