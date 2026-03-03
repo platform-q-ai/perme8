@@ -49,13 +49,16 @@ defmodule Agents.Sessions.Application.UseCases.CreateTask do
     with :ok <- validate_instruction(attrs) do
       user_id = attrs[:user_id] || attrs["user_id"]
 
-      concurrency_lock.(user_id, fn ->
-        if should_queue?(user_id, queue_checker) do
-          create_queued_task(attrs, user_id, task_repo, event_bus)
-        else
-          create_and_start_task(attrs, task_repo, event_bus, opts)
-        end
-      end)
+      result =
+        concurrency_lock.(user_id, fn ->
+          if should_queue?(user_id, queue_checker) do
+            create_queued_task(attrs, user_id, task_repo, event_bus)
+          else
+            create_pending_task(attrs, task_repo)
+          end
+        end)
+
+      maybe_start_created_task(result, task_repo, event_bus, opts)
     end
   end
 
@@ -90,13 +93,24 @@ defmodule Agents.Sessions.Application.UseCases.CreateTask do
     end
   end
 
-  defp create_and_start_task(attrs, task_repo, event_bus, opts) do
-    with {:ok, schema} <- task_repo.create_task(attrs),
-         :ok <- start_runner(schema.id, task_repo, opts) do
-      _ = emit_task_created(schema, event_bus)
-      {:ok, Task.from_schema(schema)}
+  defp create_pending_task(attrs, task_repo) do
+    case task_repo.create_task(attrs) do
+      {:ok, schema} -> {:ok, Task.from_schema(schema)}
+      error -> error
     end
   end
+
+  defp maybe_start_created_task({:ok, %{status: "queued"} = task}, _task_repo, _event_bus, _opts),
+    do: {:ok, task}
+
+  defp maybe_start_created_task({:ok, task}, task_repo, event_bus, opts) do
+    with :ok <- start_runner(task.id, task_repo, opts) do
+      _ = emit_task_created(task, event_bus)
+      {:ok, task}
+    end
+  end
+
+  defp maybe_start_created_task(other, _task_repo, _event_bus, _opts), do: other
 
   defp validate_instruction(%{instruction: instruction})
        when is_binary(instruction) and instruction != "" do
@@ -133,14 +147,14 @@ defmodule Agents.Sessions.Application.UseCases.CreateTask do
     end
   end
 
-  defp emit_task_created(schema, event_bus) do
+  defp emit_task_created(task, event_bus) do
     event_bus.emit(
       TaskCreated.new(%{
-        aggregate_id: schema.id,
-        actor_id: schema.user_id,
-        task_id: schema.id,
-        user_id: schema.user_id,
-        instruction: schema.instruction
+        aggregate_id: task.id,
+        actor_id: task.user_id,
+        task_id: task.id,
+        user_id: task.user_id,
+        instruction: task.instruction
       })
     )
   end
