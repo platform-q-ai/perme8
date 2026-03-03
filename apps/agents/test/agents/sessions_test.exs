@@ -97,6 +97,14 @@ defmodule Agents.SessionsTest do
       assert {:error, :not_found} = Sessions.get_task(task.id, user.id)
     end
 
+    test "deletes a queued task" do
+      user = user_fixture()
+      task = task_fixture(%{user_id: user.id, status: "queued"})
+
+      assert :ok = Sessions.delete_task(task.id, user.id)
+      assert {:error, :not_found} = Sessions.get_task(task.id, user.id)
+    end
+
     test "returns error for running task" do
       user = user_fixture()
       task = task_fixture(%{user_id: user.id, status: "running"})

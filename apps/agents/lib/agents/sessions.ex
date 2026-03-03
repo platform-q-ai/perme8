@@ -108,7 +108,19 @@ defmodule Agents.Sessions do
   @spec resume_task(String.t(), map(), keyword()) :: {:ok, struct()} | {:error, term()}
   def resume_task(task_id, attrs, opts \\ []) do
     opts = inject_task_runner_starter(opts)
-    ResumeTask.execute(task_id, attrs, opts)
+
+    opts = inject_queue_checker(opts)
+    opts = inject_concurrency_lock(opts)
+
+    case ResumeTask.execute(task_id, attrs, opts) do
+      {:ok, %{status: "queued", id: queued_task_id} = task} ->
+        user_id = attrs[:user_id] || attrs["user_id"]
+        _ = notify_task_queued(user_id, queued_task_id)
+        {:ok, task}
+
+      other ->
+        other
+    end
   end
 
   @doc """
@@ -322,7 +334,8 @@ defmodule Agents.Sessions do
   Returns the current queue state for a user.
 
   Ensures the QueueManager is started for the user.
-  Returns a map with `:running`, `:queued`, `:awaiting_feedback`, and `:concurrency_limit`.
+  Returns a map with `:running`, `:queued`, `:awaiting_feedback`, `:concurrency_limit`, and
+  `:warm_cache_limit`.
   """
   @spec get_queue_state(String.t()) :: map()
   def get_queue_state(user_id) do
@@ -352,6 +365,27 @@ defmodule Agents.Sessions do
   def set_concurrency_limit(user_id, limit) do
     with {:ok, _pid} <- ensure_queue_manager_started(user_id) do
       QueueManager.set_concurrency_limit(user_id, limit)
+    end
+  end
+
+  @doc """
+  Returns how many queued cold sessions will be prewarmed.
+  """
+  @spec get_warm_cache_limit(String.t()) :: non_neg_integer()
+  def get_warm_cache_limit(user_id) do
+    case ensure_queue_manager_started(user_id) do
+      {:ok, _pid} -> QueueManager.get_warm_cache_limit(user_id)
+      {:error, _reason} -> 2
+    end
+  end
+
+  @doc """
+  Sets how many queued cold sessions should be prewarmed.
+  """
+  @spec set_warm_cache_limit(String.t(), non_neg_integer()) :: :ok | {:error, term()}
+  def set_warm_cache_limit(user_id, limit) do
+    with {:ok, _pid} <- ensure_queue_manager_started(user_id) do
+      QueueManager.set_warm_cache_limit(user_id, limit)
     end
   end
 
@@ -412,7 +446,8 @@ defmodule Agents.Sessions do
       running: 0,
       queued: [],
       awaiting_feedback: [],
-      concurrency_limit: SessionsConfig.default_concurrency_limit()
+      concurrency_limit: SessionsConfig.default_concurrency_limit(),
+      warm_cache_limit: 2
     }
   end
 
@@ -475,12 +510,13 @@ defmodule Agents.Sessions do
       Ecto.Adapters.SQL.query!(Repo, "SELECT pg_advisory_xact_lock($1)", [lock_key])
 
       case fun.() do
-        {:error, _reason} = error -> Repo.rollback(error)
+        {:error, reason} -> Repo.rollback(reason)
         other -> other
       end
     end)
     |> case do
       {:ok, result} -> result
+      {:error, {:error, reason}} -> {:error, reason}
       {:error, error} -> error
     end
   end
@@ -488,7 +524,7 @@ defmodule Agents.Sessions do
   defp default_queue_checker(user_id) do
     case ensure_queue_manager_started(user_id) do
       {:ok, _pid} -> QueueManager.check_concurrency(user_id)
-      {:error, _reason} -> :ok
+      {:error, _reason} -> :at_limit
     end
   end
 

@@ -84,6 +84,29 @@ defmodule Agents.Sessions.Application.UseCases.ResumeTaskTest do
       assert runner_opts[:session_id] == "session-xyz"
     end
 
+    test "queues resume when concurrency is at limit" do
+      Agents.Mocks.TaskRepositoryMock
+      |> expect(:get_task_for_user, fn "task-1", "user-1" -> @existing_task end)
+      |> expect(:get_max_queue_position, fn "user-1" -> 2 end)
+      |> expect(:update_task_status, fn task, attrs ->
+        assert task.id == "task-1"
+        assert attrs.status == "queued"
+        assert attrs.queue_position == 3
+        assert %{"resume_prompt" => "Follow up"} = attrs.pending_question
+        assert attrs.error == nil
+        {:ok, struct(task, attrs)}
+      end)
+
+      assert {:ok, task} =
+               ResumeTask.execute(
+                 "task-1",
+                 %{instruction: "Follow up", user_id: "user-1"},
+                 Keyword.put(@default_opts, :queue_checker, fn _ -> :at_limit end)
+               )
+
+      assert task.status == "queued"
+    end
+
     test "returns error when instruction is blank" do
       assert {:error, :instruction_required} =
                ResumeTask.execute(

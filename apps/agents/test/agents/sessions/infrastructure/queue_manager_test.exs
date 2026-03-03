@@ -107,6 +107,50 @@ defmodule Agents.Sessions.Infrastructure.QueueManagerTest do
       assert updated.status == "pending"
       assert updated.queue_position == nil
     end
+
+    test "promotes queued resume tasks with resume runner opts" do
+      user = user_fixture()
+
+      queued_resume =
+        create_task(user, %{
+          status: "queued",
+          queue_position: 1,
+          container_id: "resume-container",
+          session_id: "resume-session",
+          instruction: "Original task instruction"
+        })
+
+      queued_resume =
+        queued_resume
+        |> TaskSchema.status_changeset(%{
+          pending_question: %{"resume_prompt" => "Follow-up prompt"}
+        })
+        |> Repo.update!()
+
+      test_pid = self()
+
+      assert {:ok, _pid} =
+               QueueManagerSupervisor.ensure_started(user.id,
+                 concurrency_limit: 2,
+                 task_runner_starter: fn task_id, opts ->
+                   send(test_pid, {:started_runner, task_id, opts})
+                   {:ok, self()}
+                 end
+               )
+
+      QueueManager.notify_task_completed(user.id, queued_resume.id)
+
+      queued_id = queued_resume.id
+      assert_receive {:started_runner, ^queued_id, opts}
+      assert opts[:resume] == true
+      assert opts[:prompt_instruction] == "Follow-up prompt"
+      assert opts[:container_id] == "resume-container"
+      assert opts[:session_id] == "resume-session"
+
+      updated = Repo.get!(TaskSchema, queued_resume.id)
+      assert updated.status == "pending"
+      assert updated.pending_question == nil
+    end
   end
 
   describe "notify_task_queued/2" do

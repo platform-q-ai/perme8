@@ -655,6 +655,24 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponents do
               <% end %>
             </select>
           </form>
+
+          <span class="text-xs text-base-content/50 ml-2">Warm:</span>
+          <form phx-change="update_warm_cache_limit" class="inline">
+            <select
+              id={"warm-cache-limit-select-#{@user_id}"}
+              name="warm_cache_limit"
+              phx-hook="WarmCacheLimit"
+              data-user-id={@user_id}
+              class="select select-bordered select-xs w-14"
+              data-testid="warm-cache-limit-select"
+            >
+              <%= for n <- 0..5 do %>
+                <option value={n} selected={n == Map.get(@queue_state, :warm_cache_limit, 2)}>
+                  {n}
+                </option>
+              <% end %>
+            </select>
+          </form>
         </div>
       </div>
 
