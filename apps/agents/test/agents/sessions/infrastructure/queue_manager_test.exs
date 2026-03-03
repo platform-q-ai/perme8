@@ -72,6 +72,61 @@ defmodule Agents.Sessions.Infrastructure.QueueManagerTest do
       assert Enum.map(state.queued, & &1.id) == [queued.id]
       assert Enum.map(state.awaiting_feedback, & &1.id) == [awaiting.id]
     end
+
+    test "returns warm_task_ids from top queued positions up to warm cache limit" do
+      user = user_fixture()
+
+      first = create_task(user, %{status: "queued", queue_position: 1})
+      second = create_task(user, %{status: "queued", queue_position: 2})
+      _third = create_task(user, %{status: "queued", queue_position: 3})
+
+      assert {:ok, _pid} =
+               QueueManagerSupervisor.ensure_started(user.id,
+                 concurrency_limit: 1,
+                 warm_cache_limit: 2,
+                 task_runner_starter: fn _task_id, _opts -> {:ok, self()} end
+               )
+
+      state = QueueManager.get_queue_state(user.id)
+
+      assert state.warm_cache_limit == 2
+      assert state.warm_task_ids == [first.id, second.id]
+    end
+  end
+
+  describe "queue processor rules" do
+    test "promotes queued tasks up to concurrency limit in queue order" do
+      user = user_fixture()
+
+      first = create_task(user, %{status: "queued", queue_position: 1})
+      second = create_task(user, %{status: "queued", queue_position: 2})
+      third = create_task(user, %{status: "queued", queue_position: 3})
+
+      test_pid = self()
+
+      assert {:ok, _pid} =
+               QueueManagerSupervisor.ensure_started(user.id,
+                 concurrency_limit: 2,
+                 task_runner_starter: fn task_id, _opts ->
+                   send(test_pid, {:started_runner, task_id})
+                   {:ok, self()}
+                 end
+               )
+
+      assert :ok = QueueManager.notify_task_queued(user.id, first.id)
+
+      first_id = first.id
+      second_id = second.id
+      third_id = third.id
+
+      assert_receive {:started_runner, ^first_id}
+      assert_receive {:started_runner, ^second_id}
+      refute_receive {:started_runner, ^third_id}, 100
+
+      assert Repo.get!(TaskSchema, first.id).status == "pending"
+      assert Repo.get!(TaskSchema, second.id).status == "pending"
+      assert Repo.get!(TaskSchema, third.id).status == "queued"
+    end
   end
 
   describe "notify_task_completed/2" do

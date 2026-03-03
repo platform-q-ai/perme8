@@ -1545,6 +1545,7 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       assert html =~ ~s(data-testid="session-item-cold-queued-session")
       assert html =~ ~s(data-slot-state="queued")
       assert html =~ "bg-base-content/8"
+      assert html =~ "bg-base-content/35"
     end
 
     test "warm-lane queued session shows warming animation until real container exists", %{
@@ -1579,6 +1580,8 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       assert html =~ ~s(data-slot-state="warming")
       assert html =~ "Warming..."
       assert html =~ "animate-pulse"
+      assert html =~ "bg-neutral"
+      refute html =~ "bg-base-content/35"
     end
 
     test "warm-lane queued session clears warming animation once container is real", %{
@@ -1612,6 +1615,44 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       assert html =~ ~s(data-testid="session-item-warmed-queued-session")
       assert html =~ ~s(data-slot-state="warm")
       refute html =~ "Warming..."
+      assert html =~ "bg-neutral"
+      refute html =~ "bg-base-content/35"
+    end
+
+    test "warm-task and warming-task ids from queue state keep warming indicator visible", %{
+      conn: conn,
+      user: user
+    } do
+      task =
+        task_fixture(%{
+          user_id: user.id,
+          instruction: "Warm via queue state ids",
+          status: "queued",
+          container_id: nil
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      send(lv.pid, {
+        :queue_updated,
+        user.id,
+        %{
+          running: 0,
+          queued: [],
+          awaiting_feedback: [],
+          concurrency_limit: 2,
+          warm_cache_limit: 1,
+          warm_task_ids: [task.id],
+          warming_task_ids: [task.id]
+        }
+      })
+
+      html = render(lv)
+
+      assert html =~ ~s(data-testid="session-item-warm-via-queue-state-ids")
+      assert html =~ ~s(data-slot-state="warming")
+      assert html =~ "Warming..."
+      assert html =~ "animate-pulse"
     end
 
     test "renders queue limit rule above the slot at concurrency threshold", %{
