@@ -5,7 +5,7 @@ defmodule Agents.Sessions.Application.UseCases.CreateTaskTest do
 
   alias Agents.Mocks.TaskRepositoryMock
   alias Agents.Sessions.Application.UseCases.CreateTask
-  alias Agents.Sessions.Domain.Events.TaskCreated
+  alias Agents.Sessions.Domain.Events.TaskQueued
   alias Agents.Sessions.Infrastructure.Schemas.TaskSchema
   alias Perme8.Events.TestEventBus
 
@@ -22,20 +22,22 @@ defmodule Agents.Sessions.Application.UseCases.CreateTaskTest do
         id: "task-1",
         instruction: "Write tests",
         user_id: "user-123",
-        status: "pending"
+        status: "queued",
+        queue_position: 1
       }
 
       TaskRepositoryMock
+      |> expect(:get_max_queue_position, fn "user-123" -> nil end)
       |> expect(:create_task, fn attrs ->
         assert attrs.instruction == "Write tests for the login flow"
         assert attrs.user_id == "user-123"
+        assert attrs.status == "queued"
         {:ok, struct(TaskSchema, task_schema)}
       end)
 
       assert {:ok, task} =
                CreateTask.execute(@valid_attrs,
-                 task_repo: TaskRepositoryMock,
-                 task_runner_starter: fn _task_id, _opts -> {:ok, self()} end
+                 task_repo: TaskRepositoryMock
                )
 
       assert task.id == "task-1"
@@ -55,46 +57,19 @@ defmodule Agents.Sessions.Application.UseCases.CreateTaskTest do
                )
     end
 
-    test "starts TaskRunner after successful creation" do
-      task_schema = %{
-        id: "task-1",
-        instruction: "Write tests",
-        user_id: "user-123",
-        status: "pending"
-      }
-
-      test_pid = self()
-
-      TaskRepositoryMock
-      |> expect(:create_task, fn _attrs ->
-        {:ok, struct(TaskSchema, task_schema)}
-      end)
-
-      starter = fn task_id, _opts ->
-        send(test_pid, {:started, task_id})
-        {:ok, self()}
-      end
-
-      assert {:ok, _task} =
-               CreateTask.execute(@valid_attrs,
-                 task_repo: TaskRepositoryMock,
-                 task_runner_starter: starter
-               )
-
-      assert_receive {:started, "task-1"}
-    end
-
     test "wraps queue decision and creation in concurrency lock callback" do
       task_schema = %{
         id: "task-1",
         instruction: "Write tests",
         user_id: "user-123",
-        status: "pending"
+        status: "queued",
+        queue_position: 1
       }
 
       test_pid = self()
 
       TaskRepositoryMock
+      |> expect(:get_max_queue_position, fn "user-123" -> nil end)
       |> expect(:create_task, fn _attrs ->
         send(test_pid, :created)
         {:ok, struct(TaskSchema, task_schema)}
@@ -110,7 +85,6 @@ defmodule Agents.Sessions.Application.UseCases.CreateTaskTest do
       assert {:ok, _task} =
                CreateTask.execute(@valid_attrs,
                  task_repo: TaskRepositoryMock,
-                 task_runner_starter: fn _task_id, _opts -> {:ok, self()} end,
                  concurrency_lock: lock
                )
 
@@ -119,34 +93,13 @@ defmodule Agents.Sessions.Application.UseCases.CreateTaskTest do
       assert_receive :lock_exited
     end
 
-    test "returns error when runner start fails" do
-      task_schema = %{
-        id: "task-1",
-        instruction: "Write tests",
-        user_id: "user-123",
-        status: "pending"
-      }
-
-      schema = struct(TaskSchema, task_schema)
-
-      TaskRepositoryMock
-      |> expect(:create_task, fn _attrs -> {:ok, schema} end)
-      |> expect(:get_task, fn "task-1" -> schema end)
-      |> expect(:update_task_status, fn _task, %{status: "failed"} -> {:ok, schema} end)
-
-      assert {:error, :runner_start_failed} =
-               CreateTask.execute(@valid_attrs,
-                 task_repo: TaskRepositoryMock,
-                 task_runner_starter: fn _task_id, _opts -> {:error, :already_started} end
-               )
-    end
-
     test "returns domain entity" do
       task_schema = %{
         id: "task-1",
         instruction: "Write tests",
         user_id: "user-123",
-        status: "pending",
+        status: "queued",
+        queue_position: 1,
         container_id: nil,
         container_port: nil,
         session_id: nil,
@@ -158,30 +111,32 @@ defmodule Agents.Sessions.Application.UseCases.CreateTaskTest do
       }
 
       TaskRepositoryMock
+      |> expect(:get_max_queue_position, fn "user-123" -> nil end)
       |> expect(:create_task, fn _attrs ->
         {:ok, struct(TaskSchema, task_schema)}
       end)
 
       assert {:ok, task} =
                CreateTask.execute(@valid_attrs,
-                 task_repo: TaskRepositoryMock,
-                 task_runner_starter: fn _id, _opts -> {:ok, self()} end
+                 task_repo: TaskRepositoryMock
                )
 
       assert %Agents.Sessions.Domain.Entities.Task{} = task
     end
 
-    test "emits TaskCreated domain event on success" do
+    test "emits TaskQueued domain event on success" do
       TestEventBus.start_global()
 
       task_schema = %{
         id: "task-1",
         instruction: "Write tests for the login flow",
         user_id: "user-123",
-        status: "pending"
+        status: "queued",
+        queue_position: 1
       }
 
       TaskRepositoryMock
+      |> expect(:get_max_queue_position, fn "user-123" -> nil end)
       |> expect(:create_task, fn _attrs ->
         {:ok, struct(TaskSchema, task_schema)}
       end)
@@ -189,17 +144,16 @@ defmodule Agents.Sessions.Application.UseCases.CreateTaskTest do
       assert {:ok, _task} =
                CreateTask.execute(@valid_attrs,
                  task_repo: TaskRepositoryMock,
-                 task_runner_starter: fn _id, _opts -> {:ok, self()} end,
                  event_bus: TestEventBus
                )
 
       events = TestEventBus.get_events()
-      assert [%TaskCreated{} = event] = events
+      assert [%TaskQueued{} = event] = events
       assert event.task_id == "task-1"
       assert event.user_id == "user-123"
-      assert event.instruction == "Write tests for the login flow"
       assert event.aggregate_id == "task-1"
       assert event.actor_id == "user-123"
+      assert event.queue_position == 1
     end
 
     test "does not emit event on validation failure" do
