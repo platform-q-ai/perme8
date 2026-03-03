@@ -20,12 +20,16 @@ export class PlaywrightBrowserAdapter implements BrowserPort {
   constructor(readonly config: BrowserAdapterConfig) {}
 
   async initialize(): Promise<void> {
+    const baseLaunchOptions = {
+      headless: this.config.headless ?? true,
+    }
+
     const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
 
-    this.browser = await chromium.launch({
-      headless: this.config.headless ?? true,
-      ...(executablePath ? { executablePath } : {}),
-    })
+    this.browser =
+      (await tryLaunchChromium(executablePath, baseLaunchOptions)) ||
+      (await tryLaunchChromiumWithFallback(baseLaunchOptions))
+
     this.defaultContext = await this.browser.newContext({
       viewport: this.config.viewport,
       baseURL: this.config.baseURL,
@@ -273,4 +277,44 @@ export class PlaywrightBrowserAdapter implements BrowserPort {
     await this.defaultContext.close()
     await this.browser.close()
   }
+}
+
+async function tryLaunchChromium(
+  executablePath: string | undefined,
+  baseLaunchOptions: { headless: boolean },
+): Promise<Browser | null> {
+  if (!executablePath) return null
+
+  return await chromium.launch({
+    ...baseLaunchOptions,
+    executablePath,
+  })
+}
+
+async function tryLaunchChromiumWithFallback(baseLaunchOptions: { headless: boolean }): Promise<Browser> {
+  try {
+    return await chromium.launch(baseLaunchOptions)
+  } catch (error) {
+    if (!isSpawnENOENT(error)) throw error
+
+    for (const path of ['/usr/bin/chromium-browser', '/usr/bin/chromium']) {
+      try {
+        return await chromium.launch({
+          ...baseLaunchOptions,
+          executablePath: path,
+        })
+      } catch (retryError) {
+        if (!isSpawnENOENT(retryError)) throw retryError
+      }
+    }
+
+    throw error
+  }
+}
+
+function isSpawnENOENT(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false
+
+  const maybeCode = (error as { code?: unknown }).code
+  return maybeCode == 'ENOENT'
 }
