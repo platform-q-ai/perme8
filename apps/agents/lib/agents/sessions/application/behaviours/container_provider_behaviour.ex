@@ -29,4 +29,6 @@ defmodule Agents.Sessions.Application.Behaviours.ContainerProviderBehaviour do
   @callback stats(container_id :: String.t()) ::
               {:ok, %{cpu_percent: float(), memory_usage: integer(), memory_limit: integer()}}
               | {:error, term()}
+
+  @callback prepare_fresh_start(container_id :: String.t()) :: :ok | {:error, term()}
 end

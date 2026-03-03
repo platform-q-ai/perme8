@@ -126,4 +126,89 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.InitTest do
     assert_receive {:failed, error}, 5000
     assert String.contains?(error, "Container start failed")
   end
+
+  test "prewarmed fresh container runs preparation and auth refresh before first prompt", %{
+    task: task
+  } do
+    test_pid = self()
+
+    {:module, auth_refresher_mod, _, _} =
+      defmodule :"Agents.Sessions.TaskRunnerInitTest.AuthRefresherMock.#{System.unique_integer([:positive])}" do
+        def set_test_pid(pid), do: :persistent_term.put({__MODULE__, :test_pid}, pid)
+
+        def refresh_auth(base_url, _opencode_client) do
+          send(:persistent_term.get({__MODULE__, :test_pid}), {:auth_refreshed, base_url})
+          {:ok, ["openai"]}
+        end
+      end
+
+    auth_refresher_mod.set_test_pid(test_pid)
+
+    Agents.Mocks.TaskRepositoryMock
+    |> stub(:get_task, fn _id -> task end)
+    |> stub(:update_task_status, fn _task, attrs ->
+      if attrs[:status] do
+        send(test_pid, {:status_updated, attrs.status})
+      end
+
+      {:ok, task}
+    end)
+
+    Agents.Mocks.ContainerProviderMock
+    |> expect(:restart, fn "warmed-container" -> {:ok, %{port: 4096}} end)
+    |> expect(:prepare_fresh_start, fn "warmed-container" ->
+      send(test_pid, :fresh_start_prepared)
+      :ok
+    end)
+    |> stub(:stop, fn _id -> :ok end)
+
+    Agents.Mocks.OpencodeClientMock
+    |> stub(:health, fn _url -> :ok end)
+    |> expect(:create_session, fn _url, _opts -> {:ok, %{"id" => "fresh-session"}} end)
+    |> expect(:subscribe_events, fn _url, runner_pid ->
+      spawn(fn ->
+        Process.sleep(50)
+
+        send(
+          runner_pid,
+          {:opencode_event,
+           %{"type" => "session.status", "properties" => %{"status" => %{"type" => "busy"}}}}
+        )
+
+        Process.sleep(50)
+
+        send(
+          runner_pid,
+          {:opencode_event,
+           %{"type" => "session.status", "properties" => %{"status" => %{"type" => "idle"}}}}
+        )
+      end)
+
+      {:ok, self()}
+    end)
+    |> expect(:send_prompt_async, fn _url, "fresh-session", _parts, _opts ->
+      send(test_pid, :prompt_sent)
+      :ok
+    end)
+
+    {:ok, _pid} =
+      GenServer.start(
+        TaskRunner,
+        {task.id,
+         [
+           container_provider: Agents.Mocks.ContainerProviderMock,
+           opencode_client: Agents.Mocks.OpencodeClientMock,
+           task_repo: Agents.Mocks.TaskRepositoryMock,
+           auth_refresher: auth_refresher_mod,
+           prewarmed_container_id: "warmed-container",
+           fresh_warm_container: true,
+           pubsub: Perme8.Events.PubSub
+         ]}
+      )
+
+    assert_receive {:status_updated, "starting"}, 5000
+    assert_receive :fresh_start_prepared, 5000
+    assert_receive {:auth_refreshed, "http://localhost:4096"}, 5000
+    assert_receive :prompt_sent, 5000
+  end
 end
