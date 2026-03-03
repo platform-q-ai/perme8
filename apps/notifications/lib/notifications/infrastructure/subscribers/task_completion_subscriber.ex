@@ -26,7 +26,13 @@ defmodule Notifications.Infrastructure.Subscribers.TaskCompletionSubscriber do
   @impl Perme8.Events.EventHandler
   def handle_event(_event), do: :ok
 
-  defp create_task_notification(event, type, title, error) do
+  defp create_task_notification(
+         %{target_user_id: user_id} = event,
+         type,
+         title,
+         error
+       )
+       when is_binary(user_id) and user_id != "" do
     instruction = truncate_instruction(event.instruction)
 
     data =
@@ -46,7 +52,7 @@ defmodule Notifications.Infrastructure.Subscribers.TaskCompletionSubscriber do
       end
 
     params = %{
-      user_id: event.target_user_id,
+      user_id: user_id,
       type: type,
       title: title,
       body: body,
@@ -58,6 +64,8 @@ defmodule Notifications.Infrastructure.Subscribers.TaskCompletionSubscriber do
       {:error, reason} -> {:error, reason}
     end
   end
+
+  defp create_task_notification(_event, _type, _title, _error), do: :ok
 
   defp maybe_put_error(data, value) when is_binary(value) and value != "" do
     Map.put(data, "error", value)
