@@ -65,6 +65,29 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       assert html =~ "No sessions yet"
     end
 
+    test "sidebar tabs toggle between sessions and tickets lists", %{conn: conn, user: user} do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Tab session one",
+        container_id: "c-tab-session-one",
+        status: "completed"
+      })
+
+      {:ok, lv, html} = live(conn, ~p"/sessions")
+
+      assert html =~ ~s(data-testid="sidebar-list-tabs")
+      assert html =~ ~s(data-testid="session-item-tab-session-one")
+      refute html =~ "No Backlog or Ready tickets"
+
+      html =
+        lv
+        |> element(~s(button[data-testid="sidebar-tab-tickets"]))
+        |> render_click()
+
+      assert html =~ "No Backlog or Ready tickets"
+      refute html =~ ~s(data-testid="session-item-tab-session-one")
+    end
+
     test "loads and displays sessions in left panel on mount", %{conn: conn, user: user} do
       task_fixture(%{
         user_id: user.id,
