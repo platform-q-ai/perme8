@@ -34,7 +34,6 @@ defmodule Agents do
     deps: [
       Agents.Domain,
       Agents.Application,
-      Agents.Sessions,
       Agents.Infrastructure,
       Agents.Repo
     ],
@@ -326,13 +325,6 @@ defmodule Agents do
     # Send cancel signal to the query process
     send(query_pid, {:cancel, node_id})
     :ok
-  end
-
-  @doc "Processes a GitHub webhook payload and queues automation tasks when relevant."
-  @spec process_github_webhook(String.t(), map(), keyword()) ::
-          {:ok, {:queued, map()}} | {:ok, :ignored} | {:error, term()}
-  def process_github_webhook(event, payload, opts \\ []) do
-    Agents.Sessions.process_github_webhook(event, payload, opts)
   end
 
   # ---------------------------------------------------------------------------

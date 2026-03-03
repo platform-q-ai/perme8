@@ -21,7 +21,6 @@ defmodule Agents.Sessions do
     ]
 
   alias Agents.Sessions.Application.UseCases.{
-    ProcessGithubWebhook,
     CreateTask,
     CancelTask,
     DeleteTask,
@@ -600,14 +599,6 @@ defmodule Agents.Sessions do
         TaskRunnerSupervisor.start_child(task_id, runner_opts)
       end)
     end
-  end
-
-  @doc false
-  @spec process_github_webhook(String.t(), map(), keyword()) ::
-          {:ok, {:queued, map()}} | {:ok, :ignored} | {:error, term()}
-  def process_github_webhook(event, payload, opts \\ []) do
-    opts = Keyword.put_new(opts, :create_task_fn, &create_task/1)
-    ProcessGithubWebhook.execute(event, payload, opts)
   end
 
   @doc false

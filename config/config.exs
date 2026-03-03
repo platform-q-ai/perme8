@@ -218,11 +218,6 @@ config :agents, :sessions,
   github_ticket_statuses: ["Backlog", "Ready"],
   github_poll_interval_ms: 15_000
 
-config :agents, :github_webhook,
-  enabled: false,
-  repo: "platform-q-ai/perme8",
-  bot_identity: "perme8[bot]"
-
 # MCP tool providers: modules implementing ToolProvider behaviour
 config :agents, :mcp_tool_providers, [
   Agents.Infrastructure.Mcp.ToolProviders.KnowledgeToolProvider,
