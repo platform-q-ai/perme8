@@ -21,6 +21,6 @@ Feature: GitHub ticket sync sidebar in Sessions
   Scenario: Auth refresh bulk action is hidden without failed auth tickets
     Then "button[phx-click='refresh_all_auth']" should not exist
 
-  Scenario: Session detail empty state is still visible when no ticket is selected
-    Then I should see "No sessions yet"
-    And I should see "Start a new coding session to run tasks in containers with opencode."
+  Scenario: Sidebar section headers are visible for ticket-driven workflow
+    Then I should see "Tickets"
+    And I should see "Sessions"
