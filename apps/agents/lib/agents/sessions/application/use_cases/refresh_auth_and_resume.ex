@@ -87,10 +87,9 @@ defmodule Agents.Sessions.Application.UseCases.RefreshAuthAndResume do
   defp format_refresh_error({:auth_refresh_failed, failures}) when is_list(failures) do
     details =
       failures
-      |> Enum.map(fn %{provider: provider, reason: reason} ->
+      |> Enum.map_join("; ", fn %{provider: provider, reason: reason} ->
         "#{provider}: #{format_auth_refresh_reason(reason)}"
       end)
-      |> Enum.join("; ")
 
     if details == "", do: "Auth refresh failed", else: "Auth refresh failed (#{details})"
   end
