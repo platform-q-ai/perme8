@@ -617,12 +617,30 @@ defmodule Agents.SessionsTest do
         %{
           number: 306,
           title: "Ticket 306",
+          body: "Implement queue-first create flow",
           status: "Backlog",
           priority: "Need",
+          size: "M",
           labels: ["agents"]
         },
-        %{number: 410, title: "Ticket 410", status: "Ready", priority: "Want", labels: []},
-        %{number: 999, title: "Unlinked", status: "Backlog", priority: nil, labels: []}
+        %{
+          number: 410,
+          title: "Ticket 410",
+          body: "Ship the browser feature files",
+          status: "Ready",
+          priority: "Want",
+          size: "S",
+          labels: []
+        },
+        %{
+          number: 999,
+          title: "Unlinked",
+          body: nil,
+          status: "Backlog",
+          priority: nil,
+          size: nil,
+          labels: []
+        }
       ]
 
       result = Sessions.list_project_tickets(user.id, tickets: tickets)
@@ -633,9 +651,13 @@ defmodule Agents.SessionsTest do
 
       assert ticket_306.session_state == "running"
       assert ticket_306.associated_container_id == "container-306"
+      assert ticket_306.body == "Implement queue-first create flow"
+      assert ticket_306.size == "M"
 
       assert ticket_410.session_state == "completed"
       assert ticket_410.associated_container_id == "container-410"
+      assert ticket_410.body == "Ship the browser feature files"
+      assert ticket_410.size == "S"
 
       assert ticket_999.session_state == "idle"
       assert ticket_999.associated_container_id == nil

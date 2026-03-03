@@ -88,6 +88,94 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       refute html =~ ~s(data-testid="session-item-tab-session-one")
     end
 
+    test "ticket detail tab shows selected ticket content", %{conn: conn, user: user} do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Continue work on #123",
+        container_id: "c-ticket-123",
+        status: "queued"
+      })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      :sys.replace_state(Agents.Sessions.Infrastructure.TicketSyncServer, fn state ->
+        %{
+          state
+          | tickets: [
+              %{
+                number: 123,
+                title: "Ticket details are visible",
+                body: "Acceptance criteria:\n- Item one\n- Item two",
+                status: "Ready",
+                priority: "Need",
+                size: "M",
+                labels: [],
+                url: nil
+              }
+            ]
+        }
+      end)
+
+      send(lv.pid, {:tickets_synced, []})
+
+      lv
+      |> element(~s(button[data-testid="sidebar-tab-tickets"]))
+      |> render_click()
+
+      lv
+      |> element(~s([data-testid="ticket-item-123"]))
+      |> render_click()
+
+      html =
+        lv
+        |> element(~s(button[data-tab-id="ticket"]))
+        |> render_click()
+
+      assert html =~ ~s(data-testid="ticket-context-panel")
+      assert html =~ "Ticket details are visible"
+      assert html =~ "Acceptance criteria:"
+      assert html =~ "Item one"
+      assert html =~ "Item two"
+    end
+
+    test "selecting ticket without associated session defaults to ticket tab", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      :sys.replace_state(Agents.Sessions.Infrastructure.TicketSyncServer, fn state ->
+        %{
+          state
+          | tickets: [
+              %{
+                number: 321,
+                title: "No linked session yet",
+                body: "Ticket details",
+                status: "Ready",
+                priority: "Want",
+                size: "S",
+                labels: [],
+                url: nil
+              }
+            ]
+        }
+      end)
+
+      send(lv.pid, {:tickets_synced, []})
+
+      lv
+      |> element(~s(button[data-testid="sidebar-tab-tickets"]))
+      |> render_click()
+
+      html =
+        lv
+        |> element(~s([data-testid="ticket-item-321"]))
+        |> render_click()
+
+      assert html =~ ~s(aria-controls="tabpanel-ticket")
+      assert html =~ ~s(aria-selected="true")
+      assert html =~ ~s(data-testid="ticket-context-panel")
+      assert html =~ "No linked session yet"
+    end
+
     test "loads and displays sessions in left panel on mount", %{conn: conn, user: user} do
       task_fixture(%{
         user_id: user.id,
