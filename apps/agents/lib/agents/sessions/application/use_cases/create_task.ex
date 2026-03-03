@@ -2,27 +2,21 @@ defmodule Agents.Sessions.Application.UseCases.CreateTask do
   @moduledoc """
   Use case for creating a new coding task.
 
-  Validates the instruction, checks the queue concurrency limit,
-  creates the task in the database, and either starts a TaskRunner
-  immediately or queues the task if the concurrency limit is reached.
+  Validates the instruction, then enqueues the task in the database.
+  Queue orchestration is responsible for warming and promotion into processing.
   """
 
   alias Agents.Sessions.Domain.Entities.Task
-  alias Agents.Sessions.Domain.Events.{TaskCreated, TaskQueued}
+  alias Agents.Sessions.Domain.Events.TaskQueued
   alias Agents.Sessions.Domain.Policies.QueuePolicy
-
-  require Logger
 
   @default_task_repo Agents.Sessions.Infrastructure.Repositories.TaskRepository
   @default_event_bus Perme8.Events.EventBus
-  @default_queue_checker nil
 
   @doc """
   Creates a new coding task.
 
-  Checks the user's concurrency limit. If capacity is available, the task
-  is created in "pending" status and a TaskRunner is started. If the limit
-  is reached, the task is created in "queued" status with a queue position.
+  Task creation always inserts in "queued" status with a queue position.
 
   ## Parameters
   - `attrs` - Map with:
@@ -43,32 +37,14 @@ defmodule Agents.Sessions.Application.UseCases.CreateTask do
   def execute(attrs, opts \\ []) do
     task_repo = Keyword.get(opts, :task_repo, @default_task_repo)
     event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
-    queue_checker = Keyword.get(opts, :queue_checker, @default_queue_checker)
     concurrency_lock = Keyword.get(opts, :concurrency_lock, &no_concurrency_lock/2)
 
     with :ok <- validate_instruction(attrs) do
       user_id = attrs[:user_id] || attrs["user_id"]
 
-      result =
-        concurrency_lock.(user_id, fn ->
-          if should_queue?(user_id, queue_checker) do
-            create_queued_task(attrs, user_id, task_repo, event_bus)
-          else
-            create_pending_task(attrs, task_repo)
-          end
-        end)
-
-      maybe_start_created_task(result, task_repo, event_bus, opts)
-    end
-  end
-
-  defp should_queue?(_user_id, nil), do: false
-
-  defp should_queue?(user_id, queue_checker) when is_function(queue_checker, 1) do
-    case queue_checker.(user_id) do
-      :at_limit -> true
-      :ok -> false
-      _ -> true
+      concurrency_lock.(user_id, fn ->
+        create_queued_task(attrs, user_id, task_repo, event_bus)
+      end)
     end
   end
 
@@ -93,71 +69,12 @@ defmodule Agents.Sessions.Application.UseCases.CreateTask do
     end
   end
 
-  defp create_pending_task(attrs, task_repo) do
-    case task_repo.create_task(attrs) do
-      {:ok, schema} -> {:ok, Task.from_schema(schema)}
-      error -> error
-    end
-  end
-
-  defp maybe_start_created_task({:ok, %{status: "queued"} = task}, _task_repo, _event_bus, _opts),
-    do: {:ok, task}
-
-  defp maybe_start_created_task({:ok, task}, task_repo, event_bus, opts) do
-    with :ok <- start_runner(task.id, task_repo, opts) do
-      _ = emit_task_created(task, event_bus)
-      {:ok, task}
-    end
-  end
-
-  defp maybe_start_created_task(other, _task_repo, _event_bus, _opts), do: other
-
   defp validate_instruction(%{instruction: instruction})
        when is_binary(instruction) and instruction != "" do
     :ok
   end
 
   defp validate_instruction(_), do: {:error, :instruction_required}
-
-  defp start_runner(task_id, task_repo, opts) do
-    case Keyword.get(opts, :task_runner_starter) do
-      nil ->
-        :ok
-
-      starter ->
-        case starter.(task_id, opts) do
-          {:ok, _pid} ->
-            :ok
-
-          {:error, reason} ->
-            Logger.error(
-              "CreateTask: failed to start runner for task #{task_id}: #{inspect(reason)}"
-            )
-
-            mark_task_failed(task_id, task_repo, "Runner failed to start: #{inspect(reason)}")
-            {:error, :runner_start_failed}
-        end
-    end
-  end
-
-  defp mark_task_failed(task_id, task_repo, error) do
-    case task_repo.get_task(task_id) do
-      nil -> :ok
-      task -> task_repo.update_task_status(task, %{status: "failed", error: error})
-    end
-  end
-
-  defp emit_task_created(task, event_bus) do
-    event_bus.emit(
-      TaskCreated.new(%{
-        aggregate_id: task.id,
-        actor_id: task.user_id,
-        task_id: task.id,
-        user_id: task.user_id,
-        instruction: task.instruction
-      })
-    )
-  end
 
   defp emit_task_queued(schema, queue_position, event_bus) do
     event_bus.emit(

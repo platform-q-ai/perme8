@@ -215,6 +215,7 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
 
   @impl true
   def handle_call({:notify_task_queued, _task_id}, _from, state) do
+    state = promote_next_task(state)
     state = maybe_schedule_warmup(state)
     broadcast_queue_updated(state)
     {:reply, :ok, state}
@@ -278,14 +279,27 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
     if running_count >= state.concurrency_limit do
       state
     else
-      do_promote_next(state)
+      do_promote_to_capacity(state, running_count)
     end
   end
 
-  defp do_promote_next(state) do
+  defp do_promote_to_capacity(state, running_count) do
+    if running_count >= state.concurrency_limit do
+      state
+    else
+      do_promote_next(state, running_count)
+    end
+  end
+
+  defp do_promote_next(state, running_count) do
     case state.task_repo.get_next_queued_task(state.user_id) do
-      nil -> state
-      task -> promote_task(state, task)
+      nil ->
+        state
+
+      task ->
+        state
+        |> promote_task(task)
+        |> do_promote_to_capacity(running_count + 1)
     end
   end
 
