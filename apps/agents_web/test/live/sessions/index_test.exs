@@ -1566,6 +1566,7 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       assert failed_pos < running_pos
       assert html =~ ~s(data-testid="session-item-failed-exited")
       assert html =~ "bg-warning/10"
+      assert html =~ "bg-violet-500/10"
       assert html =~ "bg-error/10"
     end
 
@@ -1708,7 +1709,7 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       assert html =~ "bg-base-content/35"
     end
 
-    test "warm-lane queued session shows warming animation until real container exists", %{
+    test "queued session in warm slot remains cold until warming starts", %{
       conn: conn,
       user: user
     } do
@@ -1731,6 +1732,41 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
           awaiting_feedback: [],
           concurrency_limit: 2,
           warm_cache_limit: 1
+        }
+      })
+
+      html = render(lv)
+
+      assert html =~ ~s(data-testid="session-item-warming-queued-session")
+      assert html =~ ~s(data-slot-state="warm")
+      refute html =~ "Warming..."
+      assert html =~ "bg-base-content/35"
+    end
+
+    test "warm-lane queued session shows warming animation when queue marks it warming", %{
+      conn: conn,
+      user: user
+    } do
+      task =
+        task_fixture(%{
+          user_id: user.id,
+          instruction: "Warming queued session",
+          status: "queued",
+          container_id: nil
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      send(lv.pid, {
+        :queue_updated,
+        user.id,
+        %{
+          running: 0,
+          queued: [%{id: task.id}],
+          awaiting_feedback: [],
+          concurrency_limit: 2,
+          warm_cache_limit: 1,
+          warming_task_ids: [task.id]
         }
       })
 
@@ -1777,6 +1813,27 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       refute html =~ "Warming..."
       assert html =~ "border border-warning/40 bg-warning/10"
       refute html =~ "bg-base-content/35"
+    end
+
+    test "deletes queued session from chat header trash action", %{conn: conn, user: user} do
+      task =
+        task_fixture(%{
+          user_id: user.id,
+          instruction: "Delete queued from header",
+          status: "queued",
+          container_id: "c-delete-queued"
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions?container=c-delete-queued")
+
+      lv
+      |> element(~s(button[phx-click="delete_queued_task"][phx-value-task-id="#{task.id}"]))
+      |> render_click()
+
+      assert Repo.get(TaskSchema, task.id) == nil
+
+      html = render(lv)
+      refute html =~ "Delete queued from header"
     end
 
     test "warm-task and warming-task ids from queue state keep warming indicator visible", %{
