@@ -23,6 +23,11 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
     end
 
     @impl true
+    def handle_call({:send_message, _message, _opts}, _from, state) do
+      {:reply, :ok, state}
+    end
+
+    @impl true
     def handle_call({:send_message, _message}, _from, state) do
       {:reply, :ok, state}
     end
@@ -645,6 +650,57 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
 
       html = render(lv)
       assert length(Regex.scan(~r/One follow-up/, html)) == 1
+    end
+
+    test "hydrates optimistic queue entries from hook payload", %{conn: conn, user: user} do
+      task =
+        task_fixture(%{
+          user_id: user.id,
+          instruction: "Initial instruction",
+          container_id: "c-hydrate",
+          status: "running"
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions?container=c-hydrate")
+
+      entries = [
+        %{
+          "id" => "corr-1",
+          "correlation_key" => "corr-1",
+          "content" => "Hydrated follow-up",
+          "status" => "pending",
+          "queued_at" => DateTime.utc_now() |> DateTime.to_iso8601()
+        }
+      ]
+
+      lv
+      |> element("#session-optimistic-state")
+      |> render_hook("hydrate_optimistic_queue", %{"task_id" => task.id, "entries" => entries})
+
+      html = render(lv)
+      assert html =~ "Hydrated follow-up"
+      assert html =~ "Queued"
+    end
+
+    test "failed optimistic send is rendered as rolled back", %{conn: conn, user: user} do
+      _task =
+        task_fixture(%{
+          user_id: user.id,
+          instruction: "Initial instruction",
+          container_id: "c-fail",
+          status: "running"
+        })
+
+      # no runner registered -> Sessions.send_message returns task_not_running
+      {:ok, lv, _html} = live(conn, ~p"/sessions?container=c-fail")
+
+      lv
+      |> form("#session-form", %{"instruction" => "Will fail"})
+      |> render_submit()
+
+      html = render(lv)
+      assert html =~ "Will fail"
+      assert html =~ "Rolled back before backend acceptance"
     end
   end
 
