@@ -14,26 +14,35 @@ Feature: Optimistic session updates in the Sessions UI
     And I navigate to "${baseUrl}/sessions"
     And I wait for network idle
 
-  Scenario: user sees optimistic pending entry immediately after submitting follow-up input
+  Scenario: optimistic new session appears in sidebar immediately
     Given "div#session-optimistic-state" should exist
-    When "form#session-form" should exist
-    Then "textarea#session-instruction" should exist
-    And I should see "Sessions"
+    And "form#sidebar-new-session-form" should exist
+    When I fill "textarea#sidebar-new-session-instruction" with "Optimistic sidebar enqueue"
+    And I click "form#sidebar-new-session-form"
+    Then "[data-slot-state='optimistic-queued']" should be visible
+    And I should see "Syncing..."
 
   Scenario: optimistic entry survives a full browser reload
     Given "div#session-optimistic-state" should exist
+    And "form#sidebar-new-session-form" should exist
+    When I fill "textarea#sidebar-new-session-instruction" with "Reload optimistic enqueue"
+    And I click "form#sidebar-new-session-form"
+    And "[data-slot-state='optimistic-queued']" should be visible
     When I reload the page
     Then "div#session-optimistic-state" should exist
-    And "textarea#session-instruction" should exist
+    And "[data-slot-state='optimistic-queued']" should be visible
 
-  Scenario: backend success reconciles optimistic entry to confirmed
+  Scenario: backend reconciliation removes optimistic placeholder
     Given "div#session-log" should exist
-    When "form#session-form" should exist
-    Then "div#session-log" should exist
-    And I should see "Sessions"
+    And "form#sidebar-new-session-form" should exist
+    When I fill "textarea#sidebar-new-session-instruction" with "Reconcile optimistic enqueue"
+    And I click "form#sidebar-new-session-form"
+    And "[data-slot-state='optimistic-queued']" should be visible
+    When I wait for 2 seconds
+    Then "[data-slot-state='optimistic-queued']" should not exist
 
-  Scenario: backend failure reconciles optimistic entry with user-visible failure state
-    Given "div#session-optimistic-state" should exist
-    When "form#session-form" should exist
-    Then "textarea#session-instruction" should exist
-    And "div#session-log" should exist
+  Scenario: initial user instruction is rendered exactly once in chat timeline
+    Given "div#session-log" should exist
+    When I wait for 1 seconds
+    Then "[data-testid='session-initial-instruction']" should exist
+    And "#session-log [data-testid='session-initial-instruction'] ~ [data-testid='session-initial-instruction']" should not exist

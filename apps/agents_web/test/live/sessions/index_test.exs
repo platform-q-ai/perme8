@@ -682,6 +682,109 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       assert html =~ "Queued"
     end
 
+    test "hydrates optimistic new-session placeholders from hook payload", %{
+      conn: conn,
+      user: user
+    } do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Existing session",
+        container_id: "existing-c1",
+        status: "completed"
+      })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      entries = [
+        %{
+          "id" => "new-1",
+          "instruction" => "Build optimistic placeholder",
+          "image" => "perme8-opencode",
+          "status" => "queued",
+          "queued_at" => DateTime.utc_now() |> DateTime.to_iso8601()
+        }
+      ]
+
+      lv
+      |> element("#session-optimistic-state")
+      |> render_hook("hydrate_optimistic_new_sessions", %{"entries" => entries})
+
+      html = render(lv)
+      assert html =~ ~s(data-testid="optimistic-session-item-build-optimistic-placeholder")
+      assert html =~ "Syncing..."
+    end
+
+    test "new-session placeholder is removed after server acknowledgement", %{
+      conn: conn,
+      user: user
+    } do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Existing session",
+        container_id: "existing-c2",
+        status: "completed"
+      })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      entries = [
+        %{
+          "id" => "new-ack-1",
+          "instruction" => "Queue acknowledged task",
+          "image" => "perme8-opencode",
+          "status" => "queued",
+          "queued_at" => DateTime.utc_now() |> DateTime.to_iso8601()
+        }
+      ]
+
+      lv
+      |> element("#session-optimistic-state")
+      |> render_hook("hydrate_optimistic_new_sessions", %{"entries" => entries})
+
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Queue acknowledged task",
+        status: "queued",
+        container_id: nil
+      })
+
+      send(lv.pid, {:new_task_created, "new-ack-1", {:ok, %{id: "task-ack"}}})
+
+      html = render(lv)
+      refute html =~ ~s(data-testid="optimistic-session-item-queue-acknowledged-task")
+      assert html =~ ~s(data-testid="session-item-queue-acknowledged-task")
+    end
+
+    test "new-session placeholder rolls back on create failure", %{conn: conn, user: user} do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Existing session",
+        container_id: "existing-c3",
+        status: "completed"
+      })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      entries = [
+        %{
+          "id" => "new-fail-1",
+          "instruction" => "Failing queued task",
+          "image" => "perme8-opencode",
+          "status" => "queued",
+          "queued_at" => DateTime.utc_now() |> DateTime.to_iso8601()
+        }
+      ]
+
+      lv
+      |> element("#session-optimistic-state")
+      |> render_hook("hydrate_optimistic_new_sessions", %{"entries" => entries})
+
+      send(lv.pid, {:new_task_created, "new-fail-1", {:error, :instruction_required}})
+
+      html = render(lv)
+      refute html =~ ~s(data-testid="optimistic-session-item-failing-queued-task")
+    end
+
     test "failed optimistic send is rendered as rolled back", %{conn: conn, user: user} do
       _task =
         task_fixture(%{

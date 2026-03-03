@@ -18,20 +18,21 @@ defmodule Agents.Sessions.Application.UseCases.ResumeTaskTest do
                  })
 
   @default_opts [
-    task_repo: Agents.Mocks.TaskRepositoryMock,
-    task_runner_starter: nil
+    task_repo: Agents.Mocks.TaskRepositoryMock
   ]
 
   describe "execute/3" do
-    test "preserves original instruction and resets status for resume" do
+    test "preserves original instruction and requeues for resume" do
       Agents.Mocks.TaskRepositoryMock
       |> expect(:get_task_for_user, fn "task-1", "user-1" -> @existing_task end)
+      |> expect(:get_max_queue_position, fn "user-1" -> 2 end)
       |> expect(:update_task_status, fn task, attrs ->
         assert task.id == "task-1"
         refute Map.has_key?(attrs, :instruction)
-        assert attrs.status == "pending"
+        assert attrs.status == "queued"
+        assert attrs.queue_position == 3
+        assert %{"resume_prompt" => "Fix the tests"} = attrs.pending_question
         assert attrs.error == nil
-        assert attrs.pending_question == nil
         assert attrs.started_at == nil
         assert attrs.completed_at == nil
         assert attrs.session_summary == nil
@@ -48,43 +49,12 @@ defmodule Agents.Sessions.Application.UseCases.ResumeTaskTest do
 
       assert task.id == "task-1"
       assert task.instruction == "original instruction"
-      assert task.status == "pending"
+      assert task.status == "queued"
       assert task.container_id == "container-abc"
       assert task.session_id == "session-xyz"
     end
 
-    test "starts a TaskRunner with resume context" do
-      test_pid = self()
-
-      Agents.Mocks.TaskRepositoryMock
-      |> expect(:get_task_for_user, fn "task-1", "user-1" -> @existing_task end)
-      |> expect(:update_task_status, fn task, attrs ->
-        {:ok, struct(task, attrs)}
-      end)
-
-      starter = fn task_id, opts ->
-        send(test_pid, {:runner_started, task_id, opts})
-        {:ok, :fake_pid}
-      end
-
-      opts = Keyword.put(@default_opts, :task_runner_starter, starter)
-
-      assert {:ok, _task} =
-               ResumeTask.execute(
-                 "task-1",
-                 %{instruction: "Follow up", user_id: "user-1"},
-                 opts
-               )
-
-      assert_receive {:runner_started, "task-1", runner_opts}
-      assert runner_opts[:resume] == true
-      assert runner_opts[:instruction] == "original instruction"
-      assert runner_opts[:prompt_instruction] == "Follow up"
-      assert runner_opts[:container_id] == "container-abc"
-      assert runner_opts[:session_id] == "session-xyz"
-    end
-
-    test "queues resume when concurrency is at limit" do
+    test "queues resume with next queue position" do
       Agents.Mocks.TaskRepositoryMock
       |> expect(:get_task_for_user, fn "task-1", "user-1" -> @existing_task end)
       |> expect(:get_max_queue_position, fn "user-1" -> 2 end)
@@ -101,7 +71,7 @@ defmodule Agents.Sessions.Application.UseCases.ResumeTaskTest do
                ResumeTask.execute(
                  "task-1",
                  %{instruction: "Follow up", user_id: "user-1"},
-                 Keyword.put(@default_opts, :queue_checker, fn _ -> :at_limit end)
+                 @default_opts
                )
 
       assert task.status == "queued"

@@ -112,6 +112,7 @@
           @sessions
           |> Enum.filter(&(&1.latest_status == "queued"))
           |> Enum.sort_by(&(-latest_at_unix(&1))) %>
+        <% optimistic_queued_sessions = @optimistic_new_sessions || [] %>
         <% warm_limit = if(@queue_state, do: Map.get(@queue_state, :warm_cache_limit, 2), else: 0) %>
         <% warm_candidate_ids =
           if @queue_state do
@@ -260,9 +261,36 @@
         </ul>
 
         <ul
-          :if={queued_sessions != [] || in_progress_sessions != [] || empty_slot_count > 0}
+          :if={
+            optimistic_queued_sessions != [] || queued_sessions != [] ||
+              in_progress_sessions != [] ||
+              empty_slot_count > 0
+          }
           class="menu menu-sm p-2 gap-1 w-full mt-auto"
         >
+          <li :for={session <- optimistic_queued_sessions} class="w-full">
+            <div
+              data-testid={"optimistic-session-item-#{slugify(session.instruction)}"}
+              data-slot-state="optimistic-queued"
+              class="flex flex-col gap-0.5 w-full rounded-lg p-2 min-h-16 border border-info/35 bg-info/10"
+            >
+              <div class="flex items-center justify-between w-full">
+                <span class="text-xs font-medium truncate flex-1 min-w-0">
+                  {truncate_instruction(session.instruction, 35)}
+                </span>
+                <div class="flex items-center gap-1">
+                  <span class="badge badge-xs badge-info badge-outline">Syncing...</span>
+                  <.status_dot status="queued" />
+                </div>
+              </div>
+              <div class="flex items-center gap-2 text-[0.65rem] text-base-content/50 w-full">
+                <span>{image_label(session.image)}</span>
+                <span>&middot;</span>
+                <span>{relative_time(session.queued_at)}</span>
+              </div>
+            </div>
+          </li>
+
           <li :for={session <- overflow_queued_sessions} class="w-full">
             <div
               data-testid={"session-item-#{slugify(session.title)}"}

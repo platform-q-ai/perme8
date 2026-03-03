@@ -396,7 +396,7 @@ defmodule Agents.SessionsTest do
   end
 
   describe "resume_task/3" do
-    test "preserves original instruction and resets status" do
+    test "preserves original instruction and requeues session" do
       user = user_fixture()
       container_id = "container-resume"
       session_id = "session-resume"
@@ -420,7 +420,7 @@ defmodule Agents.SessionsTest do
       # Same task record, updated in place
       assert resumed.id == task.id
       assert resumed.instruction == "Original task"
-      assert resumed.status == "pending"
+      assert resumed.status == "queued"
       assert resumed.container_id == container_id
       assert resumed.session_id == session_id
       assert resumed.user_id == user.id
