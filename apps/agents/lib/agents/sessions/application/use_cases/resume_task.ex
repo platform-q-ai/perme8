@@ -2,10 +2,9 @@ defmodule Agents.Sessions.Application.UseCases.ResumeTask do
   @moduledoc """
   Use case for resuming a session with a follow-up instruction.
 
-  Reuses the existing task record and resets its status to "pending".
+  Reuses the existing task record and moves it back to "queued".
   The original instruction is preserved as the session title/context.
-  The TaskRunner restarts the stopped container
-  and sends the new prompt to the existing opencode session.
+  Queue orchestration owns promotion and TaskRunner startup.
 
   This preserves todos, output history, and the task identity across
   the entire session lifetime.
@@ -13,8 +12,6 @@ defmodule Agents.Sessions.Application.UseCases.ResumeTask do
 
   alias Agents.Sessions.Domain.Entities.Task
   alias Agents.Sessions.Domain.Policies.QueuePolicy
-
-  require Logger
 
   @default_task_repo Agents.Sessions.Infrastructure.Repositories.TaskRepository
 
@@ -28,13 +25,12 @@ defmodule Agents.Sessions.Application.UseCases.ResumeTask do
     - `:user_id` - (required) The user resuming the task
   - `opts` - Keyword list with:
     - `:task_repo` - Repository module
-    - `:task_runner_starter` - Function to start a TaskRunner
 
   ## Returns
   - `{:ok, task}` - Domain entity on success
   - `{:error, :instruction_required}` - When instruction is blank
   - `{:error, :not_found}` - Task not found or not owned by user
-  - `{:error, :already_active}` - Task is already pending/starting/running (e.g. double-click)
+   - `{:error, :already_active}` - Task is already pending/starting/running/queued
   - `{:error, :not_resumable}` - Task is not in a terminal state
   - `{:error, :no_container}` - Task has no container to resume
   - `{:error, :no_session}` - Task has no opencode session to resume
@@ -43,32 +39,14 @@ defmodule Agents.Sessions.Application.UseCases.ResumeTask do
           {:ok, Agents.Sessions.Domain.Entities.Task.t()} | {:error, term()}
   def execute(task_id, attrs, opts \\ []) do
     task_repo = Keyword.get(opts, :task_repo, @default_task_repo)
-    queue_checker = Keyword.get(opts, :queue_checker)
     concurrency_lock = Keyword.get(opts, :concurrency_lock, &no_concurrency_lock/2)
 
     with :ok <- validate_instruction(attrs),
          {:ok, task} <- find_task(task_id, attrs.user_id, task_repo),
          :ok <- validate_resumable(task) do
       concurrency_lock.(attrs.user_id, fn ->
-        if should_queue?(attrs.user_id, queue_checker) do
-          queue_task_for_resume(task, attrs, task_repo)
-        else
-          with {:ok, updated_schema} <- reset_task_for_resume(task, attrs, task_repo),
-               :ok <- start_runner(updated_schema.id, task, attrs.instruction, task_repo, opts) do
-            {:ok, Task.from_schema(updated_schema)}
-          end
-        end
+        queue_task_for_resume(task, attrs, task_repo)
       end)
-    end
-  end
-
-  defp should_queue?(_user_id, nil), do: false
-
-  defp should_queue?(user_id, queue_checker) when is_function(queue_checker, 1) do
-    case queue_checker.(user_id) do
-      :ok -> false
-      :at_limit -> true
-      _ -> true
     end
   end
 
@@ -121,74 +99,6 @@ defmodule Agents.Sessions.Application.UseCases.ResumeTask do
 
       true ->
         :ok
-    end
-  end
-
-  defp reset_task_for_resume(task, _attrs, task_repo) do
-    task_repo.update_task_status(task, %{
-      status: "pending",
-      error: nil,
-      pending_question: nil,
-      started_at: nil,
-      completed_at: nil,
-      session_summary: nil
-    })
-  end
-
-  defp start_runner(task_id, task, prompt_instruction, task_repo, opts) do
-    case Keyword.get(opts, :task_runner_starter) do
-      nil ->
-        :ok
-
-      starter ->
-        # Stop any lingering TaskRunner from a previous run. This can happen
-        # when a completed/failed runner hasn't fully terminated before the
-        # user triggers a resume (race window on process shutdown).
-        stop_existing_runner(task_id)
-
-        # Pass resume context so the TaskRunner knows to restart instead of create
-        runner_opts =
-          Keyword.merge(opts,
-            resume: true,
-            instruction: task.instruction,
-            prompt_instruction: prompt_instruction,
-            container_id: task.container_id,
-            session_id: task.session_id
-          )
-
-        case starter.(task_id, runner_opts) do
-          {:ok, _pid} ->
-            :ok
-
-          {:error, reason} ->
-            Logger.error(
-              "ResumeTask: failed to start runner for task #{task_id}: #{inspect(reason)}"
-            )
-
-            mark_task_failed(task_id, task_repo, "Runner failed to start: #{inspect(reason)}")
-            {:error, :runner_start_failed}
-        end
-    end
-  end
-
-  defp stop_existing_runner(task_id) do
-    case Registry.lookup(Agents.Sessions.TaskRegistry, task_id) do
-      [{pid, _}] ->
-        Logger.info("ResumeTask: stopping lingering runner #{inspect(pid)} for task #{task_id}")
-        GenServer.stop(pid, :normal, 5_000)
-
-      [] ->
-        :ok
-    end
-  rescue
-    # Process may have already exited between lookup and stop
-    _ -> :ok
-  end
-
-  defp mark_task_failed(task_id, task_repo, error) do
-    case task_repo.get_task(task_id) do
-      nil -> :ok
-      task -> task_repo.update_task_status(task, %{status: "failed", error: error})
     end
   end
 

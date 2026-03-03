@@ -52,6 +52,7 @@ defmodule AgentsWeb.SessionsLive.Index do
      |> assign(:events, [])
      |> assign(:available_images, available_images)
      |> assign(:selected_image, default_image)
+     |> assign(:optimistic_new_sessions, [])
      |> assign(:queue_state, load_queue_state(user.id))
      |> assign_session_state()
      |> assign(:form, to_form(%{"instruction" => ""}))}
@@ -151,13 +152,38 @@ defmodule AgentsWeb.SessionsLive.Index do
       {:noreply, put_flash(socket, :error, "Instruction is required")}
     else
       user = socket.assigns.current_scope.user
+      image = socket.assigns.selected_image || Sessions.default_image()
+      client_id = Ecto.UUID.generate()
+      queued_at = DateTime.utc_now()
 
-      Sessions.create_task(%{
+      optimistic_entry = %{
+        id: client_id,
         instruction: instruction,
-        user_id: user.id,
-        image: socket.assigns.selected_image || Sessions.default_image()
-      })
-      |> handle_task_result(socket)
+        image: image,
+        status: "queued",
+        queued_at: queued_at
+      }
+
+      parent = self()
+
+      Task.start(fn ->
+        result =
+          Sessions.create_task(%{
+            instruction: instruction,
+            user_id: user.id,
+            image: image
+          })
+
+        send(parent, {:new_task_created, client_id, result})
+      end)
+
+      {:noreply,
+       socket
+       |> assign(
+         :optimistic_new_sessions,
+         merge_optimistic_new_sessions(socket.assigns.optimistic_new_sessions, [optimistic_entry])
+       )
+       |> broadcast_optimistic_new_sessions_snapshot()}
     end
   end
 
@@ -468,6 +494,30 @@ defmodule AgentsWeb.SessionsLive.Index do
   def handle_event("hydrate_optimistic_queue", _params, socket), do: {:noreply, socket}
 
   @impl true
+  def handle_event(
+        "hydrate_optimistic_new_sessions",
+        %{"entries" => entries},
+        socket
+      )
+      when is_list(entries) do
+    hydrated =
+      entries
+      |> Enum.map(&normalize_hydrated_new_session_entry/1)
+      |> Enum.reject(&is_nil/1)
+
+    {:noreply,
+     socket
+     |> assign(
+       :optimistic_new_sessions,
+       merge_optimistic_new_sessions(socket.assigns.optimistic_new_sessions, hydrated)
+     )
+     |> broadcast_optimistic_new_sessions_snapshot()}
+  end
+
+  @impl true
+  def handle_event("hydrate_optimistic_new_sessions", _params, socket), do: {:noreply, socket}
+
+  @impl true
   def handle_info({:task_event, task_id, event}, socket) do
     case socket.assigns.current_task do
       %{id: ^task_id} ->
@@ -638,6 +688,32 @@ defmodule AgentsWeb.SessionsLive.Index do
 
   # Untagged async result (from run_or_resume_task — not auth refresh)
   @impl true
+  def handle_info({:new_task_created, client_id, {:ok, _task}}, socket) do
+    user = socket.assigns.current_scope.user
+
+    {:noreply,
+     socket
+     |> assign(
+       :optimistic_new_sessions,
+       remove_optimistic_new_session(socket.assigns.optimistic_new_sessions, client_id)
+     )
+     |> broadcast_optimistic_new_sessions_snapshot()
+     |> reload_all(user.id)}
+  end
+
+  @impl true
+  def handle_info({:new_task_created, client_id, {:error, reason}}, socket) do
+    {:noreply,
+     socket
+     |> assign(
+       :optimistic_new_sessions,
+       remove_optimistic_new_session(socket.assigns.optimistic_new_sessions, client_id)
+     )
+     |> broadcast_optimistic_new_sessions_snapshot()
+     |> put_flash(:error, task_error_message(reason))}
+  end
+
+  @impl true
   def handle_info({ref, {:ok, new_task}}, socket) when is_reference(ref) do
     Process.demonitor(ref, [:flush])
     Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "task:#{new_task.id}")
@@ -786,6 +862,46 @@ defmodule AgentsWeb.SessionsLive.Index do
 
   defp parse_hydrated_datetime(_), do: DateTime.utc_now()
 
+  defp normalize_hydrated_new_session_entry(entry) when is_map(entry) do
+    id = entry["id"]
+    instruction = entry["instruction"]
+
+    if is_binary(id) and is_binary(instruction) do
+      %{
+        id: id,
+        instruction: instruction,
+        image: entry["image"] || Sessions.default_image(),
+        status: entry["status"] || "queued",
+        queued_at: parse_hydrated_datetime(entry["queued_at"])
+      }
+    else
+      nil
+    end
+  end
+
+  defp normalize_hydrated_new_session_entry(_), do: nil
+
+  defp merge_optimistic_new_sessions(existing, incoming) do
+    (existing ++ incoming)
+    |> Enum.reduce(%{}, fn entry, acc ->
+      case entry[:id] do
+        id when is_binary(id) -> Map.put(acc, id, entry)
+        _ -> acc
+      end
+    end)
+    |> Map.values()
+    |> Enum.sort_by(fn entry ->
+      case entry[:queued_at] do
+        %DateTime{} = dt -> DateTime.to_unix(dt, :microsecond)
+        _ -> 0
+      end
+    end)
+  end
+
+  defp remove_optimistic_new_session(entries, client_id) do
+    Enum.reject(entries, &(&1.id == client_id))
+  end
+
   defp merge_queued_messages(existing, incoming) do
     (existing ++ incoming)
     |> Enum.reduce(%{}, fn msg, acc ->
@@ -835,6 +951,27 @@ defmodule AgentsWeb.SessionsLive.Index do
   end
 
   defp clear_optimistic_queue_snapshot(socket, _task_id), do: socket
+
+  defp broadcast_optimistic_new_sessions_snapshot(socket) do
+    payload = %{
+      user_id: socket.assigns.current_scope.user.id,
+      entries: serialize_optimistic_new_sessions(socket.assigns.optimistic_new_sessions)
+    }
+
+    push_event(socket, "optimistic_new_sessions_set", payload)
+  end
+
+  defp serialize_optimistic_new_sessions(entries) do
+    Enum.map(entries, fn entry ->
+      %{
+        id: entry[:id],
+        instruction: entry[:instruction],
+        image: entry[:image],
+        status: entry[:status] || "queued",
+        queued_at: serialize_queued_datetime(entry[:queued_at])
+      }
+    end)
+  end
 
   defp serialize_queued_messages(messages) do
     Enum.map(messages, fn msg ->
