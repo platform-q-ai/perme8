@@ -108,6 +108,24 @@ describe('PlaywrightBrowserAdapter', () => {
     })
   })
 
+  test('initialize falls back to system chromium on ENOENT', async () => {
+    mockLaunch
+      .mockImplementationOnce(() => {
+        const error = new Error('spawn chrome-headless-shell ENOENT') as Error & { code?: string }
+        error.code = 'ENOENT'
+        return Promise.reject(error)
+      })
+      .mockImplementationOnce(() => Promise.resolve(mockBrowser as any))
+
+    await adapter.initialize()
+
+    expect(mockLaunch).toHaveBeenNthCalledWith(1, { headless: true })
+    expect(mockLaunch).toHaveBeenNthCalledWith(2, {
+      headless: true,
+      executablePath: '/usr/bin/chromium-browser',
+    })
+  })
+
   test('initialize creates context with viewport', async () => {
     await adapter.initialize()
 
