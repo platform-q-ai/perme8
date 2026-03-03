@@ -8,7 +8,7 @@ defmodule Agents.SessionsTest do
   import Agents.SessionsFixtures
 
   describe "create_task/2" do
-    test "creates a task and returns domain entity" do
+    test "creates a queued task and returns domain entity" do
       user = user_fixture()
 
       assert {:ok, %Task{} = task} =
@@ -18,7 +18,7 @@ defmodule Agents.SessionsTest do
                )
 
       assert task.instruction == "Write tests"
-      assert task.status == "pending"
+      assert task.status == "queued"
       assert task.user_id == user.id
     end
 

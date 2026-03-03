@@ -37,6 +37,7 @@ defmodule Agents.Sessions do
   alias Agents.Repo
   alias Agents.Sessions.Infrastructure.Repositories.TaskRepository
   alias Agents.Sessions.Infrastructure.TaskRunnerSupervisor
+  alias Ecto.Adapters.SQL
 
   @doc """
   Creates a new coding task.
@@ -507,7 +508,7 @@ defmodule Agents.Sessions do
     lock_key = :erlang.phash2("sessions:create_task:#{user_id}", 2_147_483_647)
 
     Repo.transaction(fn ->
-      Ecto.Adapters.SQL.query!(Repo, "SELECT pg_advisory_xact_lock($1)", [lock_key])
+      SQL.query!(Repo, "SELECT pg_advisory_xact_lock($1)", [lock_key])
 
       case fun.() do
         {:error, reason} -> Repo.rollback(reason)

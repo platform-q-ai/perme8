@@ -153,6 +153,23 @@ defmodule AgentsWeb.SessionsLive.HelpersTest do
     end
   end
 
+  describe "task_error_message/1" do
+    test "formats auth refresh provider failures with HTTP body details" do
+      reason =
+        {:auth_refresh_failed,
+         [
+           %{provider: "openai", reason: {:http_error, 400, %{"error" => "invalid_grant"}}}
+         ]}
+
+      message = Helpers.task_error_message(reason)
+
+      assert message =~ "Auth refresh failed"
+      assert message =~ "openai"
+      assert message =~ "HTTP 400"
+      assert message =~ "invalid_grant"
+    end
+  end
+
   describe "format_file_stats/1" do
     test "returns nil for nil summary" do
       assert Helpers.format_file_stats(nil) == nil

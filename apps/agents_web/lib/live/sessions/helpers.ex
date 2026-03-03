@@ -119,8 +119,35 @@ defmodule AgentsWeb.SessionsLive.Helpers do
   def task_error_message(:no_container), do: "No container available for resume"
   def task_error_message(:no_session), do: "No session available for resume"
   def task_error_message(:health_timeout), do: "Container failed to become healthy after restart"
+
+  def task_error_message({:auth_refresh_failed, failures}) when is_list(failures) do
+    details =
+      Enum.map_join(failures, "; ", fn %{provider: provider, reason: reason} ->
+        "#{provider}: #{format_auth_refresh_reason(reason)}"
+      end)
+
+    if details == "" do
+      "Auth refresh failed"
+    else
+      "Auth refresh failed (#{details})"
+    end
+  end
+
   def task_error_message({:error, reason}), do: task_error_message(reason)
   def task_error_message(_), do: "Failed to create task"
+
+  defp format_auth_refresh_reason({:http_error, status, body}) do
+    body_text =
+      cond do
+        is_binary(body) -> body
+        is_map(body) -> Jason.encode!(body)
+        true -> inspect(body)
+      end
+
+    "HTTP #{status}: #{String.slice(body_text, 0, 180)}"
+  end
+
+  defp format_auth_refresh_reason(reason), do: inspect(reason)
 
   @doc "Polls container stats for all active sessions."
   def poll_running_session_stats(sessions) do
