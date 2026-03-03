@@ -326,6 +326,13 @@ github_app_pem =
       _ -> nil
     end
 
+github_review_app_pem =
+  System.get_env("GITHUB_REVIEW_APP_PEM") ||
+    case File.read(Path.expand("~/.config/perme8/review-private-key.pem")) do
+      {:ok, pem} -> Base.encode64(pem)
+      _ -> nil
+    end
+
 # OPENCODE_AUTH is read lazily at container start time (not boot time) so that
 # re-authenticated tokens are picked up without requiring a Phoenix restart.
 # See SessionsConfig.container_env/0 for the dynamic reader.
@@ -335,6 +342,9 @@ opencode_auth_source =
 
 config :agents, :sessions_env, %{
   GITHUB_APP_PEM: github_app_pem,
+  GITHUB_REVIEW_APP_PEM: github_review_app_pem,
+  GITHUB_REVIEW_APP_ID: System.get_env("GITHUB_REVIEW_APP_ID"),
+  GITHUB_REVIEW_APP_OWNER: System.get_env("GITHUB_REVIEW_APP_OWNER", "platform-q-ai"),
   OPENCODE_AUTH: opencode_auth_source,
   REPO_BRANCH: System.get_env("REPO_BRANCH")
 }

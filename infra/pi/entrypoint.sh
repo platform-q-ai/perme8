@@ -3,6 +3,7 @@ set -eo pipefail
 
 BRANCH="${REPO_BRANCH:-main}"
 PEM_PATH="$HOME/.config/perme8/private-key.pem"
+REVIEW_PEM_PATH="$HOME/.config/perme8/review-private-key.pem"
 GET_TOKEN="$HOME/.config/perme8/get-token"
 
 # ---- Validate required env vars ----
@@ -17,11 +18,31 @@ if [ -z "$ANTHROPIC_API_KEY" ]; then
   exit 1
 fi
 
+if [ -n "${GITHUB_REVIEW_APP_PEM:-}" ] && [ -z "${GITHUB_REVIEW_APP_ID:-}" ]; then
+  echo "error: GITHUB_REVIEW_APP_ID is required when GITHUB_REVIEW_APP_PEM is set" >&2
+  exit 1
+fi
+
+if [ -z "${GITHUB_REVIEW_APP_PEM:-}" ] && [ -n "${GITHUB_REVIEW_APP_ID:-}" ]; then
+  echo "error: GITHUB_REVIEW_APP_PEM is required when GITHUB_REVIEW_APP_ID is set" >&2
+  exit 1
+fi
+
 # ---- Write PEM from env var ----
 
 echo "$GITHUB_APP_PEM" | base64 -d > "$PEM_PATH"
 chmod 600 "$PEM_PATH"
 echo "GitHub App PEM written to $PEM_PATH"
+
+if [ -n "${GITHUB_REVIEW_APP_PEM:-}" ]; then
+  echo "$GITHUB_REVIEW_APP_PEM" | base64 -d > "$REVIEW_PEM_PATH"
+  chmod 600 "$REVIEW_PEM_PATH"
+  export GITHUB_REVIEW_APP_PRIVATE_KEY_PATH="$REVIEW_PEM_PATH"
+  export GITHUB_REVIEW_APP_OWNER="${GITHUB_REVIEW_APP_OWNER:-platform-q-ai}"
+  echo "Review bot PEM written to $REVIEW_PEM_PATH"
+else
+  echo "warn: review bot credentials not configured; automated PR review runs cannot request changes"
+fi
 
 # ---- Generate GitHub token ----
 

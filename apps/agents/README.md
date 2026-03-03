@@ -134,7 +134,7 @@ All functions accept an optional trailing `opts` keyword list for dependency inj
 
 **Migration:** `sessions_tasks` table in `jarga` repo with indexes on `user_id`, `status`, and composite `[:user_id, :status]`. Includes `output` (cached structured parts), `todo_items` (persisted progress), and `session_id` (opencode session reference). Resume updates the existing task row in place.
 
-**Docker image:** `infra/opencode/Dockerfile` -- based on `hexpm/elixir` Alpine, installs opencode binary, runs as non-root `appuser`, exposes port 4096. Entrypoint generates GitHub App tokens, configures git as `perme8[bot]`, clones repos, and starts `opencode serve`.
+**Docker image:** `infra/opencode/Dockerfile` -- based on `hexpm/elixir` Alpine, installs opencode binary, runs as non-root `appuser`, exposes port 4096. Entrypoint provisions bot credentials (`perme8[bot]` for commits/issues and optional `platformqbot[bot]` for review automation), configures git as `perme8[bot]`, clones repos, and starts `opencode serve`.
 
 ## Domain Events
 

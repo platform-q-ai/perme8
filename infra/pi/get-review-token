@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ -z "${GITHUB_REVIEW_APP_ID:-}" ]]; then
+  echo "ERROR: GITHUB_REVIEW_APP_ID is required for review bot tokens" >&2
+  exit 1
+fi
+
+GITHUB_APP_ID="$GITHUB_REVIEW_APP_ID" \
+GITHUB_APP_PRIVATE_KEY_PATH="${GITHUB_REVIEW_APP_PRIVATE_KEY_PATH:-$HOME/.config/perme8/review-private-key.pem}" \
+GITHUB_APP_OWNER="${GITHUB_REVIEW_APP_OWNER:-platform-q-ai}" \
+  exec "$HOME/.config/perme8/get-token"

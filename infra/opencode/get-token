@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 #
-# get-token — Generate a short-lived GitHub App installation access token
-#              for the Perme8 GitHub App.
+# get-token — Generate a short-lived GitHub App installation access token.
 #
 # Usage:
 #   ~/.config/perme8/get-token          # prints the token to stdout
@@ -11,9 +10,14 @@
 #
 set -euo pipefail
 
-APP_ID="2896166"
-PRIVATE_KEY="$HOME/.config/perme8/private-key.pem"
-OWNER="platform-q-ai"
+APP_ID="${GITHUB_APP_ID:-2896166}"
+PRIVATE_KEY="${GITHUB_APP_PRIVATE_KEY_PATH:-$HOME/.config/perme8/private-key.pem}"
+OWNER="${GITHUB_APP_OWNER:-platform-q-ai}"
+
+if [[ ! -r "$PRIVATE_KEY" ]]; then
+  echo "ERROR: Private key is not readable at $PRIVATE_KEY" >&2
+  exit 1
+fi
 
 # --- Helpers ----------------------------------------------------------------
 
