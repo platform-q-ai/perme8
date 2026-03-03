@@ -280,7 +280,7 @@ defmodule Agents.Sessions do
   @spec send_message(String.t(), String.t(), keyword()) :: :ok | {:error, term()}
   def send_message(task_id, message, opts \\ []) do
     case Registry.lookup(Agents.Sessions.TaskRegistry, task_id) do
-      [{pid, _}] -> GenServer.call(pid, {:send_message, message})
+      [{pid, _}] -> GenServer.call(pid, {:send_message, message, opts})
       [] -> restart_runner_and_send(task_id, message, opts)
     end
   end

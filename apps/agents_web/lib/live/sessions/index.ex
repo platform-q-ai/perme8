@@ -439,13 +439,45 @@ defmodule AgentsWeb.SessionsLive.Index do
   end
 
   @impl true
+  def handle_event(
+        "hydrate_optimistic_queue",
+        %{"task_id" => task_id, "entries" => entries},
+        socket
+      )
+      when is_binary(task_id) and is_list(entries) do
+    current_task_id = socket.assigns.current_task && socket.assigns.current_task.id
+
+    if current_task_id == task_id do
+      hydrated =
+        entries
+        |> Enum.map(&normalize_hydrated_queue_entry/1)
+        |> Enum.reject(&is_nil/1)
+
+      merged = merge_queued_messages(socket.assigns.queued_messages, hydrated)
+
+      {:noreply,
+       socket
+       |> assign(:queued_messages, merged)
+       |> broadcast_optimistic_queue_snapshot()}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  @impl true
+  def handle_event("hydrate_optimistic_queue", _params, socket), do: {:noreply, socket}
+
+  @impl true
   def handle_info({:task_event, task_id, event}, socket) do
     case socket.assigns.current_task do
       %{id: ^task_id} ->
+        previous_queue = Map.get(socket.assigns, :queued_messages, [])
+
         socket =
           event
           |> EventProcessor.process_event(socket)
           |> maybe_sync_status_from_session_event(event, task_id)
+          |> maybe_sync_optimistic_queue_snapshot(previous_queue)
 
         {:noreply, socket}
 
@@ -519,11 +551,13 @@ defmodule AgentsWeb.SessionsLive.Index do
           |> assign(:output_parts, EventProcessor.freeze_streaming(socket.assigns.output_parts))
           |> assign(:pending_question, nil)
           |> assign(:queued_messages, [])
+          |> clear_optimistic_queue_snapshot(task_id)
 
         status == "cancelled" ->
           socket
           |> assign(:output_parts, EventProcessor.freeze_streaming(socket.assigns.output_parts))
           |> assign(:pending_question, nil)
+          |> clear_optimistic_queue_snapshot(task_id)
 
         true ->
           socket
@@ -679,24 +713,143 @@ defmodule AgentsWeb.SessionsLive.Index do
   end
 
   defp send_message_to_running_task(socket, instruction) do
-    case Sessions.send_message(socket.assigns.current_task.id, instruction) do
-      :ok ->
-        queued_msg = %{
-          id: Ecto.UUID.generate(),
-          content: instruction,
-          queued_at: DateTime.utc_now()
-        }
+    correlation_key = Ecto.UUID.generate()
+    queued_at = DateTime.utc_now()
 
+    queued_msg = %{
+      id: correlation_key,
+      correlation_key: correlation_key,
+      content: instruction,
+      status: "pending",
+      queued_at: queued_at
+    }
+
+    case Sessions.send_message(
+           socket.assigns.current_task.id,
+           instruction,
+           correlation_key: correlation_key,
+           command_type: "follow_up_message",
+           sent_at: DateTime.to_iso8601(queued_at)
+         ) do
+      :ok ->
         {:noreply,
          socket
-         |> assign(:queued_messages, socket.assigns.queued_messages ++ [queued_msg])
+         |> assign(
+           :queued_messages,
+           merge_queued_messages(socket.assigns.queued_messages, [queued_msg])
+         )
+         |> broadcast_optimistic_queue_snapshot()
          |> assign(:form, to_form(%{"instruction" => ""}))
          |> push_event("scroll_to_bottom", %{})}
 
       {:error, _reason} ->
-        {:noreply, put_flash(socket, :error, "Failed to send message")}
+        rolled_back = %{queued_msg | status: "rolled_back"}
+
+        {:noreply,
+         socket
+         |> assign(
+           :queued_messages,
+           merge_queued_messages(socket.assigns.queued_messages, [rolled_back])
+         )
+         |> broadcast_optimistic_queue_snapshot()
+         |> put_flash(:error, "Failed to send message")}
     end
   end
+
+  defp normalize_hydrated_queue_entry(entry) when is_map(entry) do
+    id = entry["id"] || entry["correlation_key"]
+    content = entry["content"]
+
+    if is_binary(id) and is_binary(content) do
+      %{
+        id: id,
+        correlation_key: entry["correlation_key"] || id,
+        content: content,
+        status: entry["status"] || "pending",
+        queued_at: parse_hydrated_datetime(entry["queued_at"])
+      }
+    else
+      nil
+    end
+  end
+
+  defp normalize_hydrated_queue_entry(_), do: nil
+
+  defp parse_hydrated_datetime(nil), do: DateTime.utc_now()
+
+  defp parse_hydrated_datetime(value) when is_binary(value) do
+    case DateTime.from_iso8601(value) do
+      {:ok, dt, _offset} -> dt
+      _ -> DateTime.utc_now()
+    end
+  end
+
+  defp parse_hydrated_datetime(_), do: DateTime.utc_now()
+
+  defp merge_queued_messages(existing, incoming) do
+    (existing ++ incoming)
+    |> Enum.reduce(%{}, fn msg, acc ->
+      key = msg[:correlation_key] || msg[:id] || "fallback-#{msg[:content]}"
+      Map.put(acc, key, msg)
+    end)
+    |> Map.values()
+    |> Enum.sort_by(fn msg ->
+      case msg[:queued_at] do
+        %DateTime{} = dt -> DateTime.to_unix(dt, :microsecond)
+        _ -> 0
+      end
+    end)
+  end
+
+  defp maybe_sync_optimistic_queue_snapshot(socket, previous_queue) do
+    current_queue = Map.get(socket.assigns, :queued_messages, [])
+
+    if previous_queue != current_queue do
+      broadcast_optimistic_queue_snapshot(socket)
+    else
+      socket
+    end
+  end
+
+  defp broadcast_optimistic_queue_snapshot(socket) do
+    case socket.assigns.current_task do
+      %{id: task_id} ->
+        payload = %{
+          user_id: socket.assigns.current_scope.user.id,
+          task_id: task_id,
+          entries: serialize_queued_messages(socket.assigns.queued_messages)
+        }
+
+        push_event(socket, "optimistic_queue_set", payload)
+
+      _ ->
+        socket
+    end
+  end
+
+  defp clear_optimistic_queue_snapshot(socket, task_id) when is_binary(task_id) do
+    push_event(socket, "optimistic_queue_clear", %{
+      user_id: socket.assigns.current_scope.user.id,
+      task_id: task_id
+    })
+  end
+
+  defp clear_optimistic_queue_snapshot(socket, _task_id), do: socket
+
+  defp serialize_queued_messages(messages) do
+    Enum.map(messages, fn msg ->
+      %{
+        id: msg[:id],
+        correlation_key: msg[:correlation_key],
+        content: msg[:content],
+        status: msg[:status] || "pending",
+        queued_at: serialize_queued_datetime(msg[:queued_at])
+      }
+    end)
+  end
+
+  defp serialize_queued_datetime(%DateTime{} = dt), do: DateTime.to_iso8601(dt)
+  defp serialize_queued_datetime(_), do: DateTime.utc_now() |> DateTime.to_iso8601()
 
   defp append_optimistic_user_message(socket, message) do
     trimmed = String.trim(message)
