@@ -115,13 +115,18 @@
         <% warm_limit = if(@queue_state, do: Map.get(@queue_state, :warm_cache_limit, 2), else: 0) %>
         <% warm_candidate_ids =
           if @queue_state do
-            @queue_state.queued
-            |> Enum.take(warm_limit)
-            |> Enum.map(& &1.id)
+            (Map.get(@queue_state, :warm_task_ids) ||
+               @queue_state.queued
+               |> Enum.take(warm_limit)
+               |> Enum.map(& &1.id))
             |> MapSet.new()
           else
             MapSet.new()
           end %>
+        <% warming_task_ids =
+          if @queue_state,
+            do: MapSet.new(Map.get(@queue_state, :warming_task_ids, [])),
+            else: MapSet.new() %>
         <% warm_primary_sessions =
           Enum.filter(queued_sessions, fn session ->
             is_binary(session.latest_task_id) and
@@ -137,7 +142,8 @@
         end %>
         <% warming_session? = fn session ->
           is_binary(session.latest_task_id) and
-            MapSet.member?(warm_primary_ids, session.latest_task_id) and
+            (MapSet.member?(warming_task_ids, session.latest_task_id) or
+               MapSet.member?(warm_primary_ids, session.latest_task_id)) and
             not has_real_container?.(session)
         end %>
         <% overflow_queued_sessions =
@@ -289,7 +295,7 @@
                   </button>
                   <.status_dot
                     status={session.latest_status}
-                    cold={true}
+                    cold={!has_real_container?.(session)}
                   />
                 </div>
               </div>
@@ -326,7 +332,8 @@
               data-slot-state={if(warming_session?.(session), do: "warming", else: "warm")}
               class={[
                 "flex flex-col gap-0.5 w-full rounded-lg p-2 min-h-16 transition-colors duration-700 ease-out",
-                "border border-base-content/20 bg-base-content/8",
+                warming_session?.(session) && "border border-warning/55 bg-warning/15",
+                !warming_session?.(session) && "border border-warning/40 bg-warning/10",
                 warming_session?.(session) && "animate-pulse",
                 !is_nil(session.container_id) && session.container_id == @active_container_id &&
                   "active"
@@ -351,7 +358,7 @@
                   >
                     <.icon name="hero-x-mark" class="size-3.5 text-base-content/45" />
                   </button>
-                  <.status_dot status={session.latest_status} cold={true} />
+                  <.status_dot status={session.latest_status} cold={false} />
                 </div>
               </div>
               <div class="flex items-center gap-2 text-[0.65rem] text-base-content/50 w-full">

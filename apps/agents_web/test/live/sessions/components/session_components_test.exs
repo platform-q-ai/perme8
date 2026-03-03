@@ -69,6 +69,12 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponentsTest do
       html = render_component(&SessionComponents.status_dot/1, status: "queued", cold: true)
       assert html =~ "bg-base-content/35"
     end
+
+    test "renders neutral dot for warm queued status" do
+      html = render_component(&SessionComponents.status_dot/1, status: "queued", cold: false)
+      assert html =~ "bg-neutral"
+      refute html =~ "bg-base-content/35"
+    end
   end
 
   describe "output_part/1 — text variants" do
