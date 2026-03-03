@@ -2,7 +2,10 @@
 
 ## GitHub Identity & Authentication
 
-All agent operations (commits, PRs, issues, project board updates) MUST be attributed to the `perme8[bot]` GitHub App identity.
+Perme8 uses two GitHub App identities:
+
+- `perme8[bot]` for commits, PR creation/updates, issues, project board updates, and PR comment-addressing replies.
+- `platformqbot[bot]` for automated PR reviews that may submit `REQUEST_CHANGES`.
 
 ### Git Commits
 
@@ -12,13 +15,28 @@ Local git config is set to the bot identity — no extra steps needed:
 
 ### GitHub API / `gh` CLI Operations
 
-Set `GH_TOKEN` before any `gh` command so PRs, issues, and project updates are attributed to `perme8[bot]`:
+Use the right token for the operation:
+
+- `perme8[bot]` operations (default for most workflows):
 
 ```bash
 export GH_TOKEN=$(~/.config/perme8/get-token)
 ```
 
+- `platformqbot[bot]` automated PR review operations:
+
+```bash
+export GH_TOKEN=$(~/.config/perme8/get-review-token)
+```
+
 The token is short-lived (9 minutes). Re-generate if a command fails with a 401.
+
+Automated review workflows must skip events where the sender/reviewer identity is `platformqbot` to avoid review loops.
+
+Review-bot token generation requires:
+- `GITHUB_REVIEW_APP_ID` (reviewer app id)
+- `GITHUB_REVIEW_APP_PEM` (base64-encoded reviewer app private key)
+- optional `GITHUB_REVIEW_APP_OWNER` (defaults to `platform-q-ai`)
 
 ### Pushing Code
 

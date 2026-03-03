@@ -38,6 +38,8 @@ WORKDIR /workspace
 COPY opencode.json /workspace/opencode.json
 COPY entrypoint.sh /workspace/entrypoint.sh
 COPY get-token /home/appuser/.config/perme8/get-token
+COPY get-review-token /home/appuser/.config/perme8/get-review-token
+RUN chmod +x /workspace/entrypoint.sh /home/appuser/.config/perme8/get-token /home/appuser/.config/perme8/get-review-token
 RUN chown -R appuser:appuser /workspace /home/appuser/.local /home/appuser/.config /home/appuser/.claude /tmp/pgdata
 
 USER appuser
