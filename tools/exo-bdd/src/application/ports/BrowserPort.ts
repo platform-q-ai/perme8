@@ -24,6 +24,7 @@ export interface BrowserPort {
   click(selector: string): Promise<void>
   forceClick(selector: string): Promise<void>
   doubleClick(selector: string): Promise<void>
+  dragAndDrop(sourceSelector: string, targetSelector: string): Promise<void>
   fill(selector: string, value: string): Promise<void>
   clear(selector: string): Promise<void>
   selectOption(selector: string, value: string): Promise<void>

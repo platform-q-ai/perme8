@@ -54,31 +54,8 @@
 
     <div class="flex-1 overflow-hidden flex flex-col">
       <%= if @sidebar_list_tab == "tickets" do %>
-        <% priority_rank = fn
-          "Need" -> 0
-          "Want" -> 1
-          "Nice to have" -> 2
-          _ -> 3
-        end %>
-        <% ticket_sort_key = fn ticket ->
-          {
-            if(
-              is_binary(ticket.associated_container_id) and ticket.associated_container_id != "",
-              do: 0,
-              else: 1
-            ),
-            priority_rank.(ticket.priority),
-            ticket.number
-          }
-        end %>
-        <% ready_tickets =
-          @tickets
-          |> Enum.filter(&(&1.status == "Ready"))
-          |> Enum.sort_by(ticket_sort_key) %>
-        <% backlog_tickets =
-          @tickets
-          |> Enum.filter(&(&1.status != "Ready"))
-          |> Enum.sort_by(ticket_sort_key) %>
+        <% ready_tickets = Enum.filter(@tickets, &(&1.status == "Ready")) %>
+        <% backlog_tickets = Enum.filter(@tickets, &(&1.status != "Ready")) %>
         <%= if @tickets == [] do %>
           <div class="px-3 pb-3 text-base-content/50 text-xs">
             No Backlog or Ready tickets

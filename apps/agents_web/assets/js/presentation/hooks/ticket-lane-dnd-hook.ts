@@ -18,6 +18,10 @@ export const TicketLaneDndHook = {
       event.preventDefault()
     })
 
+    this.el.addEventListener('dragenter', (event: DragEvent) => {
+      event.preventDefault()
+    })
+
     this.el.addEventListener('drop', (event: DragEvent) => {
       event.preventDefault()
 
@@ -76,8 +80,9 @@ export const TicketLaneDndHook = {
         if (!number) return
 
         event.dataTransfer?.setData(DRAG_TYPE, number)
+        event.dataTransfer?.setData('text/plain', number)
         event.dataTransfer?.setData('application/x-ticket-lane', lane)
-        event.dataTransfer!.effectAllowed = 'move'
+        if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move'
       })
     })
   }

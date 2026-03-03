@@ -59,6 +59,14 @@ export async function doubleClickSelector(context: InteractionContext, selector:
   await context.browser.doubleClick(context.interpolate(selector))
 }
 
+export async function dragSelectorTo(
+  context: InteractionContext,
+  sourceSelector: string,
+  targetSelector: string,
+): Promise<void> {
+  await context.browser.dragAndDrop(context.interpolate(sourceSelector), context.interpolate(targetSelector))
+}
+
 // Form Inputs
 export async function fillField(context: InteractionContext, selector: string, value: string): Promise<void> {
   await context.browser.fill(context.interpolate(selector), context.interpolate(value))
@@ -189,6 +197,10 @@ When<TestWorld>('I click {string} at position {int},{int}', async function (sele
 
 When<TestWorld>('I double-click {string}', async function (selector: string) {
   await doubleClickSelector(this, selector)
+})
+
+When<TestWorld>('I drag {string} to {string}', async function (sourceSelector: string, targetSelector: string) {
+  await dragSelectorTo(this, sourceSelector, targetSelector)
 })
 
 // Form Inputs
