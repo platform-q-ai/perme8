@@ -75,9 +75,19 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.EventsTest do
   test "broadcasts events via PubSub and detects completion via session.status idle", %{
     task: task
   } do
+    test_pid = self()
+
     Agents.Mocks.TaskRepositoryMock
     |> stub(:get_task, fn _id -> task end)
-    |> stub(:update_task_status, fn _task, _attrs -> {:ok, task} end)
+    |> stub(:update_task_status, fn _task, attrs ->
+      case attrs do
+        %{status: "starting"} -> send(test_pid, {:task_update_starting, attrs})
+        %{status: "running"} -> send(test_pid, {:task_update_running, attrs})
+        _ -> :ok
+      end
+
+      {:ok, task}
+    end)
 
     Agents.Mocks.ContainerProviderMock
     |> expect(:start, fn _image, _opts -> {:ok, %{container_id: "abc123", port: 4096}} end)
@@ -140,7 +150,11 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.EventsTest do
       )
 
     assert_receive {:task_status_changed, _, "starting"}, 5000
+    assert_receive {:task_update_starting, starting_attrs}, 5000
+    assert starting_attrs.completed_at == nil
     assert_receive {:task_status_changed, _, "running"}, 5000
+    assert_receive {:task_update_running, running_attrs}, 5000
+    assert running_attrs.completed_at == nil
     assert_receive {:task_event, _, %{"type" => "session.status"}}, 5000
     assert_receive {:task_event, _, %{"type" => "message.part.updated"}}, 5000
     assert_receive {:task_status_changed, _, "completed"}, 5000

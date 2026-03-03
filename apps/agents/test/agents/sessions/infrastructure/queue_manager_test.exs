@@ -127,6 +127,33 @@ defmodule Agents.Sessions.Infrastructure.QueueManagerTest do
       assert Repo.get!(TaskSchema, second.id).status == "pending"
       assert Repo.get!(TaskSchema, third.id).status == "queued"
     end
+
+    test "promotion clears stale lifecycle timestamps from previously completed task" do
+      user = user_fixture()
+
+      queued =
+        create_task(user, %{status: "queued", queue_position: 1})
+        |> TaskSchema.status_changeset(%{
+          started_at: ~U[2026-03-01 00:00:00Z],
+          completed_at: ~U[2026-03-01 00:10:00Z],
+          error: "old error"
+        })
+        |> Repo.update!()
+
+      assert {:ok, _pid} =
+               QueueManagerSupervisor.ensure_started(user.id,
+                 concurrency_limit: 1,
+                 task_runner_starter: fn _task_id, _opts -> {:ok, self()} end
+               )
+
+      assert :ok = QueueManager.notify_task_queued(user.id, queued.id)
+
+      updated = Repo.get!(TaskSchema, queued.id)
+      assert updated.status == "pending"
+      assert is_nil(updated.started_at)
+      assert is_nil(updated.completed_at)
+      assert is_nil(updated.error)
+    end
   end
 
   describe "notify_task_completed/2" do
