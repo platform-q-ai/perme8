@@ -1,0 +1,62 @@
+name: Automated PR Review
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    name: Review with platformqbot
+    if: >-
+      github.event.pull_request.draft == false &&
+      github.actor != 'platformqbot[bot]' &&
+      github.event.pull_request.user.login != 'platformqbot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate review-bot token
+        id: review_token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.GITHUB_REVIEW_APP_ID }}
+          private-key: ${{ secrets.GITHUB_REVIEW_APP_PEM }}
+          owner: platform-q-ai
+
+      - name: Decide review outcome
+        id: decision
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          if [[ "$PR_TITLE" =~ ^(feat|fix|refactor|chore|docs|spike|deprecate):\  ]]; then
+            echo "event=COMMENT" >> "$GITHUB_OUTPUT"
+            {
+              echo "body<<EOF"
+              echo "Automated review completed by platformqbot."
+              echo "No blocking policy violations found."
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
+          else
+            echo "event=REQUEST_CHANGES" >> "$GITHUB_OUTPUT"
+            {
+              echo "body<<EOF"
+              echo "Please use a conventional title prefix: feat:, fix:, refactor:, chore:, docs:, spike:, or deprecate:."
+              echo "This check is enforced by the automated reviewer identity (platformqbot)."
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Submit review as platformqbot
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ steps.review_token.outputs.token }}
+          script: |
+            await github.rest.pulls.createReview({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              body: `${{ steps.decision.outputs.body }}`,
+              event: `${{ steps.decision.outputs.event }}`
+            });
