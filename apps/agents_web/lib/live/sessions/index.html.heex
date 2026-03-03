@@ -163,10 +163,19 @@
                   <.status_dot status={session.latest_status} />
                 </div>
               </div>
+              <% duration =
+                format_duration(
+                  Map.get(session, :started_at),
+                  Map.get(session, :completed_at),
+                  @duration_now
+                ) %>
               <div class="flex items-center gap-2 text-[0.65rem] text-base-content/50 w-full">
                 <span>{image_label(session.image)}</span>
                 <span>&middot;</span>
                 <span>{relative_time(session.latest_at)}</span>
+                <span :if={duration != nil} data-testid="session-duration">
+                  &middot; {duration}
+                </span>
               </div>
               <.compact_progress_bar todo_items={session_todo_items(session)} />
               <.container_stats_bars
@@ -526,6 +535,18 @@
               do: "Refreshing...",
               else: "Refresh Auth & Resume"}
           </button>
+        </div>
+
+        <%!-- Cancelled alert --%>
+        <div
+          :if={@current_task && @current_task.status == "cancelled"}
+          class="mx-4 mt-3 alert alert-warning"
+        >
+          <.icon name="hero-no-symbol" class="size-5 shrink-0" />
+          <div class="flex-1">
+            <h3 class="font-semibold">Session cancelled</h3>
+            <p class="text-sm">This session was cancelled and is no longer running.</p>
+          </div>
         </div>
 
         <%!-- Output log --%>
