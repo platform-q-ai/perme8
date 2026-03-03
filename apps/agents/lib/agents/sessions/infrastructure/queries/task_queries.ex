@@ -148,7 +148,11 @@ defmodule Agents.Sessions.Infrastructure.Queries.TaskQueries do
         image: fragment("(array_agg(? ORDER BY ? ASC))[1]", t.image, t.inserted_at),
         latest_at: max(t.inserted_at),
         created_at: min(t.inserted_at),
-        started_at: min(t.started_at),
+        started_at:
+          type(
+            fragment("(array_agg(? ORDER BY ? DESC))[1]", t.started_at, t.inserted_at),
+            :utc_datetime
+          ),
         completed_at:
           type(
             fragment("(array_agg(? ORDER BY ? DESC))[1]", t.completed_at, t.inserted_at),

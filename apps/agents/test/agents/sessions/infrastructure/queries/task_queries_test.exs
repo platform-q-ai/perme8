@@ -181,7 +181,7 @@ defmodule Agents.Sessions.Infrastructure.Queries.TaskQueriesTest do
       assert hd(sessions).latest_error == nil
     end
 
-    test "includes started_at as min(started_at) across session tasks" do
+    test "includes started_at from the latest task" do
       user = user_fixture()
       earlier = ~U[2025-01-01 00:00:00Z]
       later = ~U[2025-01-01 00:01:00Z]
@@ -208,8 +208,8 @@ defmodule Agents.Sessions.Infrastructure.Queries.TaskQueriesTest do
 
       sessions = TaskQueries.sessions_for_user(user.id) |> Repo.all()
       assert length(sessions) == 1
-      # started_at should be the earliest started_at across all tasks
-      assert hd(sessions).started_at == ~U[2025-01-01 00:00:10Z]
+      # started_at should come from the latest task (most recent inserted_at)
+      assert hd(sessions).started_at == ~U[2025-01-01 00:01:10Z]
     end
 
     test "includes completed_at from the latest task" do
@@ -267,7 +267,7 @@ defmodule Agents.Sessions.Infrastructure.Queries.TaskQueriesTest do
       sessions = TaskQueries.sessions_for_user(user.id) |> Repo.all()
       assert length(sessions) == 1
       session = hd(sessions)
-      assert session.started_at == ~U[2025-01-01 00:00:10Z]
+      assert session.started_at == ~U[2025-01-01 00:01:10Z]
       # Latest task has no completed_at
       assert session.completed_at == nil
     end
