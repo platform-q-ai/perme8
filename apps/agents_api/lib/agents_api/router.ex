@@ -20,7 +20,6 @@ defmodule AgentsApi.Router do
 
     get("/health", HealthController, :show)
     get("/openapi", OpenApiController, :show)
-    post("/github/webhooks", GithubWebhookController, :receive)
   end
 
   scope "/api", AgentsApi do

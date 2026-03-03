@@ -339,25 +339,7 @@ config :agents, :sessions_env, %{
   REPO_BRANCH: System.get_env("REPO_BRANCH")
 }
 
-default_sessions_image =
-  if config_env() == :prod,
-    do: "ghcr.io/platform-q-ai/perme8-opencode:latest",
-    else: "perme8-opencode"
-
-config :agents, :sessions,
-  github_token: System.get_env("GH_TOKEN"),
-  image: System.get_env("AGENTS_SESSIONS_IMAGE", default_sessions_image)
-
-github_webhook_automation_enabled =
-  System.get_env("GITHUB_WEBHOOK_AUTOMATION_ENABLED") in ["1", "true", "TRUE"]
-
-config :agents, :github_webhook,
-  enabled: github_webhook_automation_enabled,
-  secret: System.get_env("GITHUB_WEBHOOK_SECRET"),
-  automation_user_id: System.get_env("GITHUB_WEBHOOK_AUTOMATION_USER_ID"),
-  repo: System.get_env("GITHUB_WEBHOOK_REPO", "platform-q-ai/perme8"),
-  image: System.get_env("GITHUB_WEBHOOK_IMAGE", System.get_env("AGENTS_SESSIONS_IMAGE")),
-  bot_identity: "perme8[bot]"
+config :agents, :sessions, github_token: System.get_env("GH_TOKEN")
 
 # Configure OpenRouter for LLM chat (consumed by Agents.Infrastructure.Services.LlmClient)
 config :agents, :openrouter,
