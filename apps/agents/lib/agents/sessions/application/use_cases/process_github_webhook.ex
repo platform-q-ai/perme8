@@ -98,7 +98,7 @@ defmodule Agents.Sessions.Application.UseCases.ProcessGithubWebhook do
   end
 
   defp build_instruction("pull_request_review_comment", payload, bot_identity) do
-    if payload["action"] == "created" do
+    if payload["action"] == "created" and not automation_sender?(payload, bot_identity) do
       with {:ok, number} <- pull_request_number(payload) do
         {:ok,
          "Address PR comments for ##{number} in #{GithubWebhookConfig.repo()} based on new review comment, using #{bot_identity} identity."}
@@ -133,6 +133,17 @@ defmodule Agents.Sessions.Application.UseCases.ProcessGithubWebhook do
   end
 
   defp build_instruction(_event, _payload, _bot_identity), do: {:ok, :ignored}
+
+  defp automation_sender?(payload, bot_identity) do
+    case get_in(payload, ["sender", "login"]) do
+      login when is_binary(login) ->
+        normalized = String.downcase(login)
+        normalized in [String.downcase(bot_identity), "app/perme8"]
+
+      _ ->
+        false
+    end
+  end
 
   defp pull_request_number(%{"pull_request" => %{"number" => number}}) when is_integer(number),
     do: {:ok, number}

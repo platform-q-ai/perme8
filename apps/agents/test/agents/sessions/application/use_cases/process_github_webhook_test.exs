@@ -63,6 +63,39 @@ defmodule Agents.Sessions.Application.UseCases.ProcessGithubWebhookTest do
              )
   end
 
+  test "ignores pull_request_review_comment events from automation identities" do
+    payload = %{
+      "action" => "created",
+      "repository" => %{"full_name" => "platform-q-ai/perme8"},
+      "pull_request" => %{"number" => 280},
+      "sender" => %{"login" => "perme8[bot]"}
+    }
+
+    assert {:ok, :ignored} =
+             ProcessGithubWebhook.execute("pull_request_review_comment", payload,
+               create_task_fn: fn _ -> flunk("should not queue task") end
+             )
+  end
+
+  test "queues pull_request_review_comment events from human reviewers" do
+    payload = %{
+      "action" => "created",
+      "repository" => %{"full_name" => "platform-q-ai/perme8"},
+      "pull_request" => %{"number" => 280},
+      "sender" => %{"login" => "perme8"}
+    }
+
+    create_task_fn = fn attrs ->
+      assert attrs.instruction =~ "Address PR comments"
+      {:ok, %{id: "task-3"}}
+    end
+
+    assert {:ok, {:queued, %{task_id: "task-3", event: "pull_request_review_comment"}}} =
+             ProcessGithubWebhook.execute("pull_request_review_comment", payload,
+               create_task_fn: create_task_fn
+             )
+  end
+
   test "ignores unsupported actions" do
     payload = %{
       "action" => "edited",
