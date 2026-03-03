@@ -269,7 +269,9 @@
               data-slot-state="queued"
               class={[
                 "flex flex-col gap-0.5 w-full rounded-lg p-2 min-h-16 transition-colors duration-700 ease-out",
-                "border border-base-content/20 bg-base-content/8",
+                has_real_container?.(session) && "border border-warning/40 bg-warning/10",
+                !has_real_container?.(session) &&
+                  "border border-base-content/20 bg-base-content/8",
                 !is_nil(session.container_id) && session.container_id == @active_container_id &&
                   "active"
               ]}
@@ -333,7 +335,10 @@
               class={[
                 "flex flex-col gap-0.5 w-full rounded-lg p-2 min-h-16 transition-colors duration-700 ease-out",
                 warming_session?.(session) && "border border-warning/55 bg-warning/15",
-                !warming_session?.(session) && "border border-warning/40 bg-warning/10",
+                !warming_session?.(session) && has_real_container?.(session) &&
+                  "border border-warning/40 bg-warning/10",
+                !warming_session?.(session) && !has_real_container?.(session) &&
+                  "border border-base-content/20 bg-base-content/8",
                 warming_session?.(session) && "animate-pulse",
                 !is_nil(session.container_id) && session.container_id == @active_container_id &&
                   "active"
@@ -358,7 +363,10 @@
                   >
                     <.icon name="hero-x-mark" class="size-3.5 text-base-content/45" />
                   </button>
-                  <.status_dot status={session.latest_status} cold={false} />
+                  <.status_dot
+                    status={session.latest_status}
+                    cold={!has_real_container?.(session) and !warming_session?.(session)}
+                  />
                 </div>
               </div>
               <div class="flex items-center gap-2 text-[0.65rem] text-base-content/50 w-full">
