@@ -169,6 +169,7 @@
                   Map.get(session, :completed_at),
                   @duration_now
                 ) %>
+              <% file_stats = format_file_stats(Map.get(session, :session_summary)) %>
               <div class="flex items-center gap-2 text-[0.65rem] text-base-content/50 w-full">
                 <span>{image_label(session.image)}</span>
                 <span>&middot;</span>
@@ -176,6 +177,13 @@
                 <span :if={duration != nil} data-testid="session-duration">
                   &middot; {duration}
                 </span>
+              </div>
+              <div
+                :if={file_stats != nil}
+                class="text-[0.6rem] text-base-content/40 w-full"
+                data-testid="session-file-stats"
+              >
+                {file_stats}
               </div>
               <.compact_progress_bar todo_items={session_todo_items(session)} />
               <.container_stats_bars
