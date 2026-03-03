@@ -124,10 +124,6 @@
           else
             MapSet.new()
           end %>
-        <% warming_task_ids =
-          if @queue_state,
-            do: MapSet.new(Map.get(@queue_state, :warming_task_ids, [])),
-            else: MapSet.new() %>
         <% warm_primary_sessions =
           Enum.filter(queued_sessions, fn session ->
             is_binary(session.latest_task_id) and
