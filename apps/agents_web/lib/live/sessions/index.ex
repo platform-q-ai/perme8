@@ -933,7 +933,9 @@ defmodule AgentsWeb.SessionsLive.Index do
       queued: [],
       awaiting_feedback: [],
       concurrency_limit: 2,
-      warm_cache_limit: 2
+      warm_cache_limit: 2,
+      warm_task_ids: [],
+      warming_task_ids: []
     }
   end
 

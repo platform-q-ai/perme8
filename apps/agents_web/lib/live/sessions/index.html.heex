@@ -63,10 +63,6 @@
           else
             MapSet.new()
           end %>
-        <% has_real_container? = fn session ->
-          is_binary(session.container_id) and
-            not String.starts_with?(session.container_id, "task:")
-        end %>
         <% warm_primary_sessions =
           Enum.filter(queued_sessions, fn session ->
             is_binary(session.latest_task_id) and
@@ -76,6 +72,15 @@
           warm_primary_sessions
           |> Enum.map(& &1.latest_task_id)
           |> MapSet.new() %>
+        <% has_real_container? = fn session ->
+          is_binary(session.container_id) and
+            not String.starts_with?(session.container_id, "task:")
+        end %>
+        <% warming_session? = fn session ->
+          is_binary(session.latest_task_id) and
+            MapSet.member?(warm_primary_ids, session.latest_task_id) and
+            not has_real_container?.(session)
+        end %>
         <% overflow_queued_sessions =
           Enum.reject(queued_sessions, fn session ->
             is_binary(session.latest_task_id) and
@@ -172,12 +177,10 @@
           <li :for={session <- overflow_queued_sessions} class="w-full">
             <div
               data-testid={"session-item-#{slugify(session.title)}"}
-              data-slot-state={if(has_real_container?.(session), do: "warm", else: "cold")}
+              data-slot-state="queued"
               class={[
                 "flex flex-col gap-0.5 w-full rounded-lg p-2 min-h-16 transition-colors duration-700 ease-out",
-                has_real_container?.(session) && "border border-warning/35 bg-warning/8",
-                !has_real_container?.(session) &&
-                  "border border-base-content/20 bg-base-content/8",
+                "border border-base-content/20 bg-base-content/8",
                 !is_nil(session.container_id) && session.container_id == @active_container_id &&
                   "active"
               ]}
@@ -203,7 +206,7 @@
                   </button>
                   <.status_dot
                     status={session.latest_status}
-                    cold={!has_real_container?.(session)}
+                    cold={true}
                   />
                 </div>
               </div>
@@ -237,10 +240,11 @@
           <li :for={session <- warm_primary_sessions} class="w-full">
             <div
               data-testid={"session-item-#{slugify(session.title)}"}
-              data-slot-state="warm"
+              data-slot-state={if(warming_session?.(session), do: "warming", else: "warm")}
               class={[
                 "flex flex-col gap-0.5 w-full rounded-lg p-2 min-h-16 transition-colors duration-700 ease-out",
-                "border border-warning/35 bg-warning/8",
+                "border border-base-content/20 bg-base-content/8",
+                warming_session?.(session) && "animate-pulse",
                 !is_nil(session.container_id) && session.container_id == @active_container_id &&
                   "active"
               ]}
@@ -264,13 +268,19 @@
                   >
                     <.icon name="hero-x-mark" class="size-3.5 text-base-content/45" />
                   </button>
-                  <.status_dot status={session.latest_status} cold={false} />
+                  <.status_dot status={session.latest_status} cold={true} />
                 </div>
               </div>
               <div class="flex items-center gap-2 text-[0.65rem] text-base-content/50 w-full">
                 <span>{image_label(session.image)}</span>
                 <span>&middot;</span>
                 <span>{relative_time(session.latest_at)}</span>
+                <span
+                  :if={warming_session?.(session)}
+                  class="inline-flex items-center gap-1 text-warning"
+                >
+                  <.icon name="hero-arrow-path" class="size-3 animate-spin" /> Warming...
+                </span>
               </div>
               <.compact_progress_bar todo_items={session_todo_items(session)} />
             </div>
