@@ -63,6 +63,11 @@
         <% sorted_tickets =
           Enum.sort_by(@tickets, fn ticket ->
             {
+              if(
+                is_binary(ticket.associated_container_id) and ticket.associated_container_id != "",
+                do: 0,
+                else: 1
+              ),
               if(ticket.status == "Ready", do: 0, else: 1),
               priority_rank.(ticket.priority),
               ticket.number
@@ -743,11 +748,11 @@
             <div class="text-lg font-semibold mb-2">{selected_ticket.title}</div>
             <div class="text-xs text-base-content/60 mb-3">
               #{selected_ticket.number}
-              <span :if={selected_ticket.status}> &middot;        {selected_ticket.status}</span>
+              <span :if={selected_ticket.status}> &middot;         {selected_ticket.status}</span>
               <span :if={selected_ticket.priority}>
                 &middot; {selected_ticket.priority}
               </span>
-              <span :if={selected_ticket.size}> &middot;        {selected_ticket.size}</span>
+              <span :if={selected_ticket.size}> &middot;         {selected_ticket.size}</span>
             </div>
             <div class="session-markdown text-sm text-base-content/90">
               {render_markdown(selected_ticket.body || "No ticket description provided.")}

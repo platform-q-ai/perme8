@@ -25,10 +25,10 @@ defmodule Agents.Sessions.Infrastructure.Clients.GithubProjectClient do
   }
 
   @query """
-  query($org: String!, $projectNumber: Int!) {
+  query($org: String!, $projectNumber: Int!, $after: String) {
     organization(login: $org) {
       projectV2(number: $projectNumber) {
-        items(first: 100) {
+        items(first: 100, after: $after) {
           nodes {
             content {
               ... on Issue {
@@ -58,6 +58,10 @@ defmodule Agents.Sessions.Infrastructure.Clients.GithubProjectClient do
                 name
               }
             }
+          }
+          pageInfo {
+            hasNextPage
+            endCursor
           }
         }
       }
@@ -106,11 +110,16 @@ defmodule Agents.Sessions.Infrastructure.Clients.GithubProjectClient do
     project_number = Keyword.fetch!(opts, :project_number)
     statuses = MapSet.new(Keyword.get(opts, :statuses, ["Backlog", "Ready"]))
 
+    fetch_pages(token, org, project_number, statuses, nil, [])
+  end
+
+  defp fetch_pages(token, org, project_number, statuses, after_cursor, acc) do
     body = %{
       query: @query,
       variables: %{
         org: org,
-        projectNumber: project_number
+        projectNumber: project_number,
+        after: after_cursor
       }
     }
 
@@ -123,15 +132,26 @@ defmodule Agents.Sessions.Infrastructure.Clients.GithubProjectClient do
            ]
          ) do
       {:ok, %{status: 200, body: %{"data" => data}}} ->
-        tickets =
-          data
-          |> get_in(["organization", "projectV2", "items", "nodes"])
+        items = get_in(data, ["organization", "projectV2", "items"]) || %{}
+
+        page_tickets =
+          items
+          |> Map.get("nodes", [])
           |> List.wrap()
           |> Enum.map(&parse_ticket_node/1)
           |> Enum.reject(&is_nil/1)
           |> Enum.filter(fn ticket -> MapSet.member?(statuses, ticket.status) end)
 
-        {:ok, tickets}
+        page_info = Map.get(items, "pageInfo", %{})
+        has_next_page = Map.get(page_info, "hasNextPage", false)
+        next_cursor = Map.get(page_info, "endCursor")
+        next_acc = acc ++ page_tickets
+
+        if has_next_page and is_binary(next_cursor) and next_cursor != "" do
+          fetch_pages(token, org, project_number, statuses, next_cursor, next_acc)
+        else
+          {:ok, next_acc}
+        end
 
       {:ok, %{status: status, body: body}} ->
         {:error, {:unexpected_status, status, body}}
