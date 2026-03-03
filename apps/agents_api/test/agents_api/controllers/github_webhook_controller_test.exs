@@ -86,6 +86,40 @@ defmodule AgentsApi.GithubWebhookControllerTest do
     assert %{"status" => "ignored"} = response
   end
 
+  test "returns stable message for task creation failures", %{conn: conn} do
+    Application.put_env(:agents_api, :github_webhook_processor, __MODULE__.TaskFailureProcessor)
+
+    payload = %{"repository" => %{"full_name" => "platform-q-ai/perme8"}}
+    body = Jason.encode!(payload)
+
+    response =
+      conn
+      |> put_req_header("content-type", "application/json")
+      |> put_req_header("x-github-event", "pull_request")
+      |> put_req_header("x-hub-signature-256", signature_for(body))
+      |> post("/api/github/webhooks", body)
+      |> json_response(422)
+
+    assert %{"error" => "Failed to queue task"} = response
+  end
+
+  test "returns stable message for generic processing failures", %{conn: conn} do
+    Application.put_env(:agents_api, :github_webhook_processor, __MODULE__.FailureProcessor)
+
+    payload = %{"repository" => %{"full_name" => "platform-q-ai/perme8"}}
+    body = Jason.encode!(payload)
+
+    response =
+      conn
+      |> put_req_header("content-type", "application/json")
+      |> put_req_header("x-github-event", "pull_request")
+      |> put_req_header("x-hub-signature-256", signature_for(body))
+      |> post("/api/github/webhooks", body)
+      |> json_response(422)
+
+    assert %{"error" => "Webhook processing failed"} = response
+  end
+
   defp signature_for(body) do
     digest = :crypto.mac(:hmac, :sha256, @secret, body) |> Base.encode16(case: :lower)
     "sha256=#{digest}"
@@ -99,5 +133,14 @@ defmodule AgentsApi.GithubWebhookControllerTest do
 
   defmodule IgnoreProcessor do
     def process(_event, _payload), do: {:ok, :ignored}
+  end
+
+  defmodule TaskFailureProcessor do
+    def process(_event, _payload),
+      do: {:error, {:task_creation_failed, %{details: "secret info"}}}
+  end
+
+  defmodule FailureProcessor do
+    def process(_event, _payload), do: {:error, {:unexpected, "secret info"}}
   end
 end
