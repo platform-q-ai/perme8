@@ -82,14 +82,19 @@ defmodule Agents.Sessions.Application.Services.AuthRefresherTest do
                )
     end
 
-    test "returns partial results when some providers fail" do
-      assert {:ok, ["anthropic"]} =
+    test "returns provider-level failures with error details when some providers fail" do
+      assert {:error, {:auth_refresh_failed, failures}} =
                AuthRefresher.refresh_auth(
                  "http://localhost:4096",
                  PartialFailClient,
                  auth_json_path: :valid_path,
                  file_reader: FakeFile
                )
+
+      assert Enum.any?(failures, fn failure ->
+               failure.provider == "openrouter" and
+                 failure.reason == {:http_error, 500, %{"error" => "internal"}}
+             end)
     end
 
     test "returns error when auth.json is missing" do

@@ -65,12 +65,39 @@ else
   echo "opencode auth.json already exists, preserving (tokens may have been refreshed)"
 fi
 
-# ---- Clone repos (skip on container restart when dirs already exist) ----
+# ---- Refresh OpenAI auth internally before starting server ----
+# Do not re-copy auth from host on restart. Instead, try to refresh using the
+# container's own auth state so resumed sessions use fresh tokens.
+
+if python3 - <<'PY'
+import json
+from pathlib import Path
+
+auth_path = Path.home() / ".local/share/opencode/auth.json"
+try:
+    providers = json.loads(auth_path.read_text())
+except Exception:
+    raise SystemExit(1)
+
+openai = providers.get("openai")
+if isinstance(openai, dict) and openai.get("type") == "oauth":
+    raise SystemExit(0)
+raise SystemExit(1)
+PY
+then
+  echo "Refreshing OpenAI OAuth token inside container..."
+  if opencode models openai >/tmp/opencode-openai-refresh.log 2>&1; then
+    echo "OpenAI auth refresh check completed"
+  else
+    echo "warn: OpenAI auth refresh check failed; continuing with existing auth"
+  fi
+fi
+
+# ---- Clone repos (first boot only; preserve checkout on restart) ----
 
 if [ -d /workspace/perme8 ]; then
-  echo "Repo already cloned, pulling latest (branch: $BRANCH)..."
+  echo "Repo already cloned, preserving existing checkout"
   cd /workspace/perme8
-  git fetch origin "$BRANCH" --depth 1 && git reset --hard "origin/$BRANCH" || echo "warn: git pull failed, using existing checkout"
 else
   echo "Cloning perme8 (branch: $BRANCH)..."
   git clone --depth 1 --branch "$BRANCH" "https://github.com/platform-q-ai/perme8.git" /workspace/perme8
@@ -78,9 +105,8 @@ else
 fi
 
 if [ -d "$HOME/.claude/skills" ]; then
-  echo "Skills already cloned, pulling latest..."
+  echo "Skills already cloned, preserving existing checkout"
   cd "$HOME/.claude/skills"
-  git fetch origin --depth 1 && git reset --hard origin/main || echo "warn: skills pull failed, using existing checkout"
   cd /workspace/perme8
 else
   echo "Cloning skills into ~/.claude/skills/..."

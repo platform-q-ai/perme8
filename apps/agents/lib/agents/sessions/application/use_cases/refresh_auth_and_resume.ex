@@ -55,15 +55,60 @@ defmodule Agents.Sessions.Application.UseCases.RefreshAuthAndResume do
       Keyword.get(opts, :resume_fn) ||
         raise ArgumentError, "RefreshAuthAndResume requires :resume_fn option"
 
-    with {:ok, task} <- find_failed_task(task_id, user_id, task_repo),
-         :ok <- ensure_container_id(task),
-         {:ok, %{port: port}} <- container_provider.restart(task.container_id),
-         :ok <- wait_for_health(port, opencode_client),
-         {:ok, _providers} <-
-           auth_refresher.refresh_auth("http://localhost:#{port}", opencode_client) do
-      resume_fn.(task_id, %{instruction: task.instruction, user_id: user_id}, opts)
+    with {:ok, task} <- find_failed_task(task_id, user_id, task_repo) do
+      result =
+        with :ok <- ensure_container_id(task),
+             {:ok, %{port: port}} <- container_provider.restart(task.container_id),
+             :ok <- wait_for_health(port, opencode_client),
+             {:ok, _providers} <-
+               auth_refresher.refresh_auth("http://localhost:#{port}", opencode_client) do
+          resume_fn.(task_id, %{instruction: task.instruction, user_id: user_id}, opts)
+        end
+
+      maybe_persist_refresh_failure(task_repo, task, result)
+      result
     end
   end
+
+  defp maybe_persist_refresh_failure(_task_repo, _task, {:ok, _}), do: :ok
+
+  defp maybe_persist_refresh_failure(task_repo, task, {:error, reason}) do
+    message = format_refresh_error(reason)
+
+    _ =
+      task_repo.update_task_status(task, %{
+        status: "failed",
+        error: message
+      })
+
+    :ok
+  end
+
+  defp format_refresh_error({:auth_refresh_failed, failures}) when is_list(failures) do
+    details =
+      failures
+      |> Enum.map(fn %{provider: provider, reason: reason} ->
+        "#{provider}: #{format_auth_refresh_reason(reason)}"
+      end)
+      |> Enum.join("; ")
+
+    if details == "", do: "Auth refresh failed", else: "Auth refresh failed (#{details})"
+  end
+
+  defp format_refresh_error(reason), do: "Auth refresh failed: #{inspect(reason)}"
+
+  defp format_auth_refresh_reason({:http_error, status, body}) do
+    body_text =
+      cond do
+        is_binary(body) -> body
+        is_map(body) -> Jason.encode!(body)
+        true -> inspect(body)
+      end
+
+    "HTTP #{status}: #{String.slice(body_text, 0, 180)}"
+  end
+
+  defp format_auth_refresh_reason(reason), do: inspect(reason)
 
   defp find_failed_task(task_id, user_id, task_repo) do
     case task_repo.get_task_for_user(task_id, user_id) do
