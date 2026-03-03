@@ -52,6 +52,11 @@ defmodule Agents.Sessions.Infrastructure.Clients.GithubProjectClient do
                 name
               }
             }
+            sizeField: fieldValueByName(name: "Size") {
+              ... on ProjectV2ItemFieldSingleSelectValue {
+                name
+              }
+            }
           }
         }
       }
@@ -65,6 +70,7 @@ defmodule Agents.Sessions.Infrastructure.Clients.GithubProjectClient do
           url: String.t() | nil,
           status: String.t() | nil,
           priority: String.t() | nil,
+          size: String.t() | nil,
           labels: [String.t()]
         }
 
@@ -141,6 +147,7 @@ defmodule Agents.Sessions.Infrastructure.Clients.GithubProjectClient do
       url: issue["url"],
       status: get_in(node, ["statusField", "name"]),
       priority: get_in(node, ["priorityField", "name"]),
+      size: get_in(node, ["sizeField", "name"]),
       labels:
         issue
         |> get_in(["labels", "nodes"])
