@@ -21,6 +21,7 @@ defmodule Agents.Sessions.Application do
       UseCases.ResumeTask,
       UseCases.GetTask,
       UseCases.ListTasks,
+      UseCases.ProcessGithubWebhook,
       SessionsConfig
     ]
 end

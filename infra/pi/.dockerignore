@@ -1,0 +1,6 @@
+*
+!Dockerfile
+!entrypoint.sh
+!get-token
+!pi/
+!pi/**
