@@ -198,6 +198,12 @@ defmodule Agents.Sessions do
     end)
   end
 
+  @doc "Reorders a synced project ticket and optionally moves it to a new board status."
+  @spec reorder_project_ticket(integer(), String.t() | nil, [integer()]) :: :ok | {:error, term()}
+  def reorder_project_ticket(ticket_number, target_status, ordered_ticket_numbers) do
+    TicketSyncServer.reorder_ticket(ticket_number, target_status, ordered_ticket_numbers)
+  end
+
   @doc """
   Updates a persisted ticket locally and schedules reconciliation to GitHub.
   """

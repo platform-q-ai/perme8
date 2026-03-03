@@ -28,9 +28,22 @@ defmodule Agents.Sessions.Infrastructure.TicketSyncServer do
     :exit, _ -> []
   end
 
+  @spec reorder_ticket(integer(), String.t() | nil, [integer()]) :: :ok | {:error, term()}
+  def reorder_ticket(ticket_number, target_status, ordered_ticket_numbers)
+      when is_integer(ticket_number) and is_list(ordered_ticket_numbers) do
+    GenServer.call(
+      __MODULE__,
+      {:reorder_ticket, ticket_number, target_status, ordered_ticket_numbers}
+    )
+  catch
+    :exit, _ -> {:error, :sync_server_unavailable}
+  end
+
   @impl true
   def init(opts) do
     state = %{
+      tickets: [],
+      ticket_index: %{},
       client: Keyword.get(opts, :client, GithubProjectClient),
       ticket_repo: Keyword.get(opts, :ticket_repo, ProjectTicketRepository),
       poll_interval_ms: SessionsConfig.github_poll_interval_ms(),
@@ -50,6 +63,19 @@ defmodule Agents.Sessions.Infrastructure.TicketSyncServer do
     {:reply, tickets, state}
   rescue
     _ -> {:reply, [], state}
+  end
+
+  @impl true
+  def handle_call({:reorder_ticket, ticket_number, target_status, ordered_numbers}, _from, state) do
+    result = do_reorder_ticket(state, ticket_number, target_status, ordered_numbers)
+
+    next_state =
+      case result do
+        :ok -> poll_tickets(state)
+        _ -> state
+      end
+
+    {:reply, result, next_state}
   end
 
   @impl true
@@ -77,7 +103,7 @@ defmodule Agents.Sessions.Infrastructure.TicketSyncServer do
           state.ticket_repo.list_by_statuses(SessionsConfig.github_ticket_statuses())
 
         Phoenix.PubSub.broadcast(state.pubsub, @topic, {:tickets_synced, persisted_tickets})
-        state
+        %{state | tickets: tickets, ticket_index: build_ticket_index(tickets)}
 
       {:error, :missing_token} ->
         Logger.debug("Skipping GitHub ticket sync: missing GH token")
@@ -110,5 +136,57 @@ defmodule Agents.Sessions.Infrastructure.TicketSyncServer do
     end)
   rescue
     reason -> Logger.warning("Ticket reconciliation failed: #{inspect(reason)}")
+  end
+
+  defp do_reorder_ticket(state, ticket_number, target_status, ordered_numbers) do
+    with %{item_id: item_id} = ticket <- Map.get(state.ticket_index, ticket_number),
+         project_id when is_binary(project_id) <- ticket[:project_id],
+         status_field_id <- ticket[:status_field_id],
+         status_option_ids <- ticket[:status_option_ids] || %{} do
+      after_item_id = resolve_after_item_id(state.ticket_index, ordered_numbers, ticket_number)
+      target_option_id = resolve_target_status_option_id(status_option_ids, target_status)
+
+      opts = [
+        token: SessionsConfig.github_token(),
+        project_id: project_id,
+        item_id: item_id,
+        after_item_id: after_item_id,
+        status_field_id: status_field_id,
+        target_status_option_id: target_option_id
+      ]
+
+      state.client.update_ticket_order_and_status(opts)
+    else
+      nil -> {:error, :ticket_not_found}
+      _ -> {:error, :missing_project_metadata}
+    end
+  end
+
+  defp build_ticket_index(tickets) do
+    Enum.reduce(tickets, %{}, fn ticket, acc ->
+      case ticket[:number] do
+        number when is_integer(number) -> Map.put(acc, number, ticket)
+        _ -> acc
+      end
+    end)
+  end
+
+  defp resolve_after_item_id(index, ordered_numbers, ticket_number) do
+    preceding =
+      ordered_numbers
+      |> Enum.take_while(&(&1 != ticket_number))
+      |> List.last()
+
+    case Map.get(index, preceding) do
+      %{item_id: item_id} when is_binary(item_id) -> item_id
+      _ -> nil
+    end
+  end
+
+  defp resolve_target_status_option_id(_status_option_ids, nil), do: nil
+
+  defp resolve_target_status_option_id(status_option_ids, target_status)
+       when is_binary(target_status) do
+    Map.get(status_option_ids, target_status)
   end
 end

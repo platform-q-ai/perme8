@@ -1,6 +1,29 @@
 <div class="flex h-full">
   <%!-- Left Panel: Session List --%>
-  <div class="w-72 shrink-0 border-r border-base-300 flex flex-col bg-base-100">
+  <div class="w-[36rem] shrink-0 border-r border-base-300 flex flex-col bg-base-100">
+    <div class="px-3 pt-3 pb-2 border-b border-base-300 bg-base-100">
+      <div class="tabs tabs-boxed tabs-xs grid grid-cols-2" data-testid="sidebar-list-tabs">
+        <button
+          type="button"
+          phx-click="switch_sidebar_list_tab"
+          phx-value-tab="sessions"
+          data-testid="sidebar-tab-sessions"
+          class={["tab font-medium", @sidebar_list_tab == "sessions" && "tab-active"]}
+        >
+          Sessions
+        </button>
+        <button
+          type="button"
+          phx-click="switch_sidebar_list_tab"
+          phx-value-tab="tickets"
+          data-testid="sidebar-tab-tickets"
+          class={["tab font-medium", @sidebar_list_tab == "tickets" && "tab-active"]}
+        >
+          Tickets
+        </button>
+      </div>
+    </div>
+
     <div class="p-3 border-b border-base-300 flex flex-col gap-1.5">
       <form id="sidebar-new-session-form" phx-submit="run_new_task" class="w-full">
         <textarea
@@ -29,30 +52,7 @@
       </button>
     </div>
 
-    <div class="flex-1 overflow-y-auto flex flex-col">
-      <div class="px-3 pt-3 pb-2 sticky top-0 z-10 bg-base-100/95 backdrop-blur-sm">
-        <div class="tabs tabs-boxed tabs-xs grid grid-cols-2" data-testid="sidebar-list-tabs">
-          <button
-            type="button"
-            phx-click="switch_sidebar_list_tab"
-            phx-value-tab="sessions"
-            data-testid="sidebar-tab-sessions"
-            class={["tab font-medium", @sidebar_list_tab == "sessions" && "tab-active"]}
-          >
-            Sessions
-          </button>
-          <button
-            type="button"
-            phx-click="switch_sidebar_list_tab"
-            phx-value-tab="tickets"
-            data-testid="sidebar-tab-tickets"
-            class={["tab font-medium", @sidebar_list_tab == "tickets" && "tab-active"]}
-          >
-            Tickets
-          </button>
-        </div>
-      </div>
-
+    <div class="flex-1 overflow-hidden flex flex-col">
       <%= if @sidebar_list_tab == "tickets" do %>
         <% priority_rank = fn
           "Need" -> 0
@@ -60,78 +60,183 @@
           "Nice to have" -> 2
           _ -> 3
         end %>
-        <% sorted_tickets =
-          Enum.sort_by(@tickets, fn ticket ->
-            {
-              if(
-                is_binary(ticket.associated_container_id) and ticket.associated_container_id != "",
-                do: 0,
-                else: 1
-              ),
-              if(ticket.status == "Ready", do: 0, else: 1),
-              priority_rank.(ticket.priority),
-              ticket.number
-            }
-          end) %>
+        <% ticket_sort_key = fn ticket ->
+          {
+            if(
+              is_binary(ticket.associated_container_id) and ticket.associated_container_id != "",
+              do: 0,
+              else: 1
+            ),
+            priority_rank.(ticket.priority),
+            ticket.number
+          }
+        end %>
+        <% ready_tickets =
+          @tickets
+          |> Enum.filter(&(&1.status == "Ready"))
+          |> Enum.sort_by(ticket_sort_key) %>
+        <% backlog_tickets =
+          @tickets
+          |> Enum.filter(&(&1.status != "Ready"))
+          |> Enum.sort_by(ticket_sort_key) %>
         <%= if @tickets == [] do %>
           <div class="px-3 pb-3 text-base-content/50 text-xs">
             No Backlog or Ready tickets
           </div>
         <% else %>
-          <ul class="menu menu-sm px-2 pb-2 gap-1 w-full">
-            <li :for={ticket <- sorted_tickets} class="w-full">
-              <div
-                data-testid={"ticket-item-#{ticket.number}"}
-                class={[
-                  "flex flex-col items-start gap-1 w-full rounded-lg p-2 min-h-16 transition-colors duration-700 ease-out border",
-                  ticket.status == "Ready" && "border-success/40 bg-success/10",
-                  ticket.status != "Ready" && "border-base-content/20 bg-base-content/8",
-                  ticket.number == @active_ticket_number && "active"
-                ]}
-                phx-click="select_ticket"
-                phx-value-number={ticket.number}
-              >
-                <div class="flex items-start justify-between w-full gap-2">
-                  <div class="flex flex-col items-start gap-1 flex-1 min-w-0">
-                    <span class="badge badge-xs badge-info whitespace-nowrap shrink-0">
-                      {ticket.number}
-                    </span>
-                    <span
-                      class="text-xs font-medium flex-1 min-w-0 overflow-hidden mt-0.5 mb-0.5"
-                      style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;"
-                    >
-                      {ticket.title}
-                    </span>
-                  </div>
-                  <.status_dot status={ticket.task_status || "idle"} />
-                </div>
-
-                <div class="flex w-full items-start justify-start gap-1.5 flex-wrap">
-                  <span class={[
-                    "badge badge-xs whitespace-nowrap",
-                    ticket_priority_class(ticket.priority)
-                  ]}>
-                    {ticket.priority || "Unprioritized"}
-                  </span>
-                  <span class={[
-                    "badge badge-xs whitespace-nowrap",
-                    ticket_size_class(ticket.size)
-                  ]}>
-                    {ticket.size || "Unsized"}
-                  </span>
-                  <span
-                    :for={label <- ticket.labels || []}
-                    class={[
-                      "badge badge-xs whitespace-nowrap",
-                      ticket_label_class(label)
-                    ]}
-                  >
-                    {label}
-                  </span>
-                </div>
+          <div class="flex-1 min-h-0 grid grid-cols-2 gap-2 p-2 w-full h-full items-stretch">
+            <div class="min-w-0 h-full min-h-0 relative overflow-hidden flex flex-col">
+              <div class="pointer-events-none select-none absolute inset-0 flex items-start justify-center pt-2">
+                <span
+                  class="text-[3.75rem] font-black uppercase tracking-[0.14em]"
+                  style="writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg); color: rgba(0,0,0,0.22); text-shadow: 0 1px 1px rgba(0,0,0,0.15);"
+                >
+                  BACKLOG
+                </span>
               </div>
-            </li>
-          </ul>
+              <ul
+                id="ticket-lane-backlog"
+                class="p-1 w-full flex-1 min-h-0 overflow-y-auto overflow-x-hidden flex flex-col gap-1 rounded-xl border border-base-300/70 bg-base-200/35 shadow-inner shadow-base-content/5 relative z-10"
+                style="display:flex;flex-direction:column;"
+                phx-hook="TicketLaneDnd"
+                data-ticket-lane="Backlog"
+              >
+                <li
+                  :for={ticket <- backlog_tickets}
+                  class="w-full"
+                  data-ticket-item
+                >
+                  <div
+                    data-testid={"ticket-item-#{ticket.number}"}
+                    data-ticket-card
+                    data-ticket-number={ticket.number}
+                    class={[
+                      "flex cursor-grab active:cursor-grabbing flex-col items-start gap-1 w-full rounded-lg p-2 min-h-16 transition-colors duration-700 ease-out border",
+                      "border-base-content/20 bg-base-content/8",
+                      ticket.number == @active_ticket_number && "active"
+                    ]}
+                    phx-click="select_ticket"
+                    phx-value-number={ticket.number}
+                  >
+                    <div class="flex items-start justify-between w-full gap-2">
+                      <div class="flex flex-col items-start gap-1 flex-1 min-w-0">
+                        <span class="badge badge-xs badge-info whitespace-nowrap shrink-0">
+                          {ticket.number}
+                        </span>
+                        <span
+                          class="text-xs font-medium flex-1 min-w-0 overflow-hidden mt-0.5 mb-0.5"
+                          style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;"
+                        >
+                          {ticket.title}
+                        </span>
+                      </div>
+                      <.status_dot status={ticket.task_status || "idle"} />
+                    </div>
+
+                    <div class="flex w-full items-start justify-start gap-1.5 flex-wrap">
+                      <span class={[
+                        "badge badge-xs whitespace-nowrap",
+                        ticket_priority_class(ticket.priority)
+                      ]}>
+                        {ticket.priority || "Unprioritized"}
+                      </span>
+                      <span class={[
+                        "badge badge-xs whitespace-nowrap",
+                        ticket_size_class(ticket.size)
+                      ]}>
+                        {ticket.size || "Unsized"}
+                      </span>
+                      <span
+                        :for={label <- ticket.labels || []}
+                        class={[
+                          "badge badge-xs whitespace-nowrap",
+                          ticket_label_class(label)
+                        ]}
+                      >
+                        {label}
+                      </span>
+                    </div>
+                  </div>
+                </li>
+              </ul>
+            </div>
+
+            <div class="min-w-0 h-full min-h-0 relative overflow-hidden flex flex-col">
+              <div class="pointer-events-none select-none absolute inset-0 flex items-start justify-center pt-2">
+                <span
+                  class="text-[3.75rem] font-black uppercase tracking-[0.14em]"
+                  style="writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(0deg); color: rgba(0,0,0,0.22); text-shadow: 0 1px 1px rgba(0,0,0,0.15);"
+                >
+                  READY
+                </span>
+              </div>
+              <ul
+                id="ticket-lane-ready"
+                class="p-1 w-full flex-1 min-h-0 overflow-y-auto overflow-x-hidden flex flex-col gap-1 rounded-xl border border-success/35 bg-success/10 shadow-inner shadow-success/10 relative z-10"
+                style="display:flex;flex-direction:column;"
+                phx-hook="TicketLaneDnd"
+                data-ticket-lane="Ready"
+              >
+                <li
+                  :for={ticket <- ready_tickets}
+                  class="w-full"
+                  data-ticket-item
+                >
+                  <div
+                    data-testid={"ticket-item-#{ticket.number}"}
+                    data-ticket-card
+                    data-ticket-number={ticket.number}
+                    class={[
+                      "flex cursor-grab active:cursor-grabbing flex-col items-start gap-1 w-full rounded-lg p-2 min-h-16 transition-colors duration-700 ease-out border",
+                      "border-success/40 bg-success/10",
+                      ticket.number == @active_ticket_number && "active"
+                    ]}
+                    phx-click="select_ticket"
+                    phx-value-number={ticket.number}
+                  >
+                    <div class="flex items-start justify-between w-full gap-2">
+                      <div class="flex flex-col items-start gap-1 flex-1 min-w-0">
+                        <span class="badge badge-xs badge-info whitespace-nowrap shrink-0">
+                          {ticket.number}
+                        </span>
+                        <span
+                          class="text-xs font-medium flex-1 min-w-0 overflow-hidden mt-0.5 mb-0.5"
+                          style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;"
+                        >
+                          {ticket.title}
+                        </span>
+                      </div>
+                      <.status_dot status={ticket.task_status || "idle"} />
+                    </div>
+
+                    <div class="flex w-full items-start justify-start gap-1.5 flex-wrap">
+                      <span class={[
+                        "badge badge-xs whitespace-nowrap",
+                        ticket_priority_class(ticket.priority)
+                      ]}>
+                        {ticket.priority || "Unprioritized"}
+                      </span>
+                      <span class={[
+                        "badge badge-xs whitespace-nowrap",
+                        ticket_size_class(ticket.size)
+                      ]}>
+                        {ticket.size || "Unsized"}
+                      </span>
+                      <span
+                        :for={label <- ticket.labels || []}
+                        class={[
+                          "badge badge-xs whitespace-nowrap",
+                          ticket_label_class(label)
+                        ]}
+                      >
+                        {label}
+                      </span>
+                    </div>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
         <% end %>
       <% else %>
         <%= if @sessions == [] do %>
@@ -152,7 +257,7 @@
             @sessions
             |> Enum.filter(&(&1.latest_status == "cancelled"))
             |> Enum.sort_by(&(-latest_at_unix(&1))) %>
-          <% top_sessions = failed_sessions ++ completed_sessions ++ cancelled_sessions %>
+          <% triage_sessions = completed_sessions ++ cancelled_sessions %>
           <% queued_sessions =
             @sessions
             |> Enum.filter(&(&1.latest_status == "queued"))
@@ -186,6 +291,15 @@
             is_binary(session.container_id) and
               not String.starts_with?(session.container_id, "task:")
           end %>
+          <% ticket_for_session = fn session ->
+            direct = Enum.find(@tickets, &(&1.associated_container_id == session.container_id))
+
+            direct ||
+              case Agents.Sessions.extract_ticket_number(session.title) do
+                number when is_integer(number) -> Enum.find(@tickets, &(&1.number == number))
+                _ -> nil
+              end
+          end %>
           <% warming_session? = fn session ->
             is_binary(session.latest_task_id) and
               MapSet.member?(warming_task_ids, session.latest_task_id) and
@@ -207,315 +321,542 @@
               else: 0
             ) %>
 
-          <ul :if={top_sessions != []} class="menu menu-sm p-2 gap-1 w-full">
-            <li :for={session <- top_sessions} class="w-full">
-              <div
-                data-testid={"session-item-#{slugify(session.title)}"}
-                data-slot-state={
-                  if(session.latest_status in ["pending", "starting", "running"],
-                    do: "used",
-                    else: "idle"
-                  )
-                }
-                class={[
-                  "flex flex-col gap-0.5 w-full rounded-lg p-2 min-h-16",
-                  session.latest_status == "failed" && "border border-warning/40 bg-warning/10",
-                  session.latest_status == "completed" &&
-                    "border border-violet-400/40 bg-violet-500/10",
-                  session.latest_status == "cancelled" && "border border-error/35 bg-error/10",
-                  session.latest_status in ["pending", "starting", "running"] &&
-                    "border border-success/40 bg-success/10",
-                  session.latest_status not in [
-                    "failed",
-                    "completed",
-                    "cancelled",
-                    "pending",
-                    "starting",
-                    "running"
-                  ] &&
-                    "border border-transparent",
-                  session.container_id == @active_container_id && "active"
-                ]}
-                phx-click="select_session"
-                phx-value-container-id={session.container_id}
-              >
-                <div class="flex items-center justify-between w-full">
-                  <span class="text-xs font-medium truncate flex-1 min-w-0">
-                    {truncate_instruction(session.title, 35)}
-                  </span>
-                  <div class="flex items-center gap-1">
-                    <span
-                      :if={session.latest_status == "completed"}
-                      class="inline-flex items-center"
-                      title="Session completed — review output"
-                    >
-                      <.icon name="hero-bell-alert" class="size-3.5 text-warning" />
-                    </span>
-                    <button
-                      :if={
-                        session.latest_status == "failed" && auth_error?(session.latest_error) &&
-                          session.latest_task_id
-                      }
-                      type="button"
-                      phx-click="refresh_auth_and_resume"
-                      phx-value-task-id={session.latest_task_id}
-                      disabled={auth_refreshing?(@auth_refreshing, session.latest_task_id)}
-                      class="btn btn-ghost btn-xs p-0 min-h-0 h-auto"
-                      title="Refresh auth & resume"
-                    >
-                      <.icon
-                        name="hero-arrow-path"
-                        class={
-                          if(auth_refreshing?(@auth_refreshing, session.latest_task_id),
-                            do: "size-3.5 text-warning animate-spin",
-                            else: "size-3.5 text-warning"
-                          )
-                        }
-                      />
-                    </button>
-                    <.status_dot status={session.latest_status} />
-                  </div>
-                </div>
-                <% duration =
-                  format_duration(
-                    Map.get(session, :started_at),
-                    Map.get(session, :completed_at),
-                    @duration_now
-                  ) %>
-                <% file_stats = format_file_stats(Map.get(session, :session_summary)) %>
-                <div class="flex items-center gap-2 text-[0.65rem] text-base-content/50 w-full">
-                  <span>{image_label(session.image)}</span>
-                  <span>&middot;</span>
-                  <span>{relative_time(session.latest_at)}</span>
-                  <span :if={duration != nil} data-testid="session-duration">
-                    &middot; {duration}
-                  </span>
-                </div>
-                <div
-                  :if={file_stats != nil}
-                  class="text-[0.6rem] text-base-content/40 w-full"
-                  data-testid="session-file-stats"
+          <div class="flex-1 min-h-0 grid grid-cols-2 gap-2 p-2 w-full h-full items-stretch">
+            <div class="min-w-0 h-full min-h-0 pr-1 relative overflow-hidden flex flex-col">
+              <div class="pointer-events-none select-none absolute inset-0 flex items-start justify-center pt-1">
+                <span
+                  class="text-[6.25rem] font-black italic uppercase tracking-[0.12em]"
+                  style="writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg) scaleX(1.08) scaleY(0.94); color: rgba(0,0,0,0.09); text-shadow: 0 1px 1px rgba(0,0,0,0.08);"
                 >
-                  {file_stats}
-                </div>
-                <.compact_progress_bar todo_items={session_todo_items(session)} />
-                <.container_stats_bars
-                  :if={Map.has_key?(@container_stats, session.container_id)}
-                  stats={@container_stats[session.container_id]}
-                />
+                  TRIAGE
+                </span>
               </div>
-            </li>
-          </ul>
-
-          <ul
-            :if={queued_sessions != [] || in_progress_sessions != [] || empty_slot_count > 0}
-            class="menu menu-sm p-2 gap-1 w-full mt-auto"
-          >
-            <li :for={session <- overflow_queued_sessions} class="w-full">
-              <div
-                data-testid={"session-item-#{slugify(session.title)}"}
-                data-slot-state="queued"
-                class={[
-                  "flex flex-col gap-0.5 w-full rounded-lg p-2 min-h-16 transition-colors duration-700 ease-out",
-                  has_real_container?.(session) && "border border-warning/40 bg-warning/10",
-                  !has_real_container?.(session) &&
-                    "border border-base-content/20 bg-base-content/8",
-                  !is_nil(session.container_id) && session.container_id == @active_container_id &&
-                    "active"
-                ]}
-                phx-click="select_session"
-                phx-value-container-id={session.container_id}
+              <ul
+                class="p-1 w-full flex-1 min-h-0 overflow-y-auto overflow-x-hidden flex flex-col gap-1 rounded-xl border border-base-300/70 bg-base-200/35 shadow-inner shadow-base-content/5"
+                style="display:flex;flex-direction:column;"
               >
-                <div class="flex items-center justify-between w-full">
-                  <span class="text-xs font-medium truncate flex-1 min-w-0">
-                    {truncate_instruction(session.title, 35)}
-                  </span>
-                  <div class="flex items-center gap-1">
-                    <.status_dot
-                      status={session.latest_status}
-                      cold={!has_real_container?.(session)}
-                    />
-                  </div>
-                </div>
-                <div class="flex items-center gap-2 text-[0.65rem] text-base-content/50 w-full">
-                  <span>{image_label(session.image)}</span>
-                  <span>&middot;</span>
-                  <span>{relative_time(session.latest_at)}</span>
-                </div>
-                <.compact_progress_bar todo_items={session_todo_items(session)} />
-              </div>
-            </li>
-
-            <li :if={@queue_state} class="w-full">
-              <div data-testid="queue-warm-rule" class="mx-1 mt-1 border-t border-warning/45">
-              </div>
-            </li>
-
-            <li
-              :for={slot <- if(empty_warm_slot_count > 0, do: 1..empty_warm_slot_count, else: [])}
-              class="w-full"
-            >
-              <div
-                data-testid={"empty-warm-slot-#{slot}"}
-                data-slot-state="warm-empty"
-                class="flex items-center gap-2 w-full rounded-lg p-2 min-h-16 border border-warning/40 border-dashed bg-warning/5"
-              >
-                <.icon name="hero-fire" class="size-3.5 text-warning/70" />
-                <span class="text-xs text-base-content/55">Empty warm slot</span>
-              </div>
-            </li>
-
-            <li :for={session <- warm_primary_sessions} class="w-full">
-              <div
-                data-testid={"session-item-#{slugify(session.title)}"}
-                data-slot-state={if(warming_session?.(session), do: "warming", else: "warm")}
-                class={[
-                  "flex flex-col gap-0.5 w-full rounded-lg p-2 min-h-16 transition-colors duration-700 ease-out",
-                  warming_session?.(session) && "border border-warning/55 bg-warning/15",
-                  !warming_session?.(session) && has_real_container?.(session) &&
-                    "border border-warning/40 bg-warning/10",
-                  !warming_session?.(session) && !has_real_container?.(session) &&
-                    "border border-base-content/20 bg-base-content/8",
-                  warming_session?.(session) && "animate-pulse",
-                  !is_nil(session.container_id) && session.container_id == @active_container_id &&
-                    "active"
-                ]}
-                phx-click="select_session"
-                phx-value-container-id={session.container_id}
-              >
-                <div class="flex items-center justify-between w-full">
-                  <span class="text-xs font-medium truncate flex-1 min-w-0">
-                    {truncate_instruction(session.title, 35)}
-                  </span>
-                  <div class="flex items-center gap-1">
-                    <.status_dot
-                      status={session.latest_status}
-                      cold={!has_real_container?.(session) and !warming_session?.(session)}
-                    />
-                  </div>
-                </div>
-                <div class="flex items-center gap-2 text-[0.65rem] text-base-content/50 w-full">
-                  <span>{image_label(session.image)}</span>
-                  <span>&middot;</span>
-                  <span>{relative_time(session.latest_at)}</span>
-                  <span
-                    :if={warming_session?.(session)}
-                    class="inline-flex items-center gap-1 text-warning"
+                <li :for={session <- triage_sessions} class="w-full">
+                  <% ticket = ticket_for_session.(session) %>
+                  <div
+                    data-testid={"session-item-#{slugify(session.title)}"}
+                    data-slot-state={
+                      if(session.latest_status in ["pending", "starting", "running"],
+                        do: "used",
+                        else: "idle"
+                      )
+                    }
+                    class={[
+                      "flex flex-col gap-0.5 w-full rounded-lg p-2 min-h-16",
+                      session.latest_status == "failed" &&
+                        "border border-warning/40 bg-warning/10",
+                      session.latest_status == "completed" &&
+                        "border border-violet-400/40 bg-violet-500/10",
+                      session.latest_status == "cancelled" && "border border-error/35 bg-error/10",
+                      session.latest_status in ["pending", "starting", "running"] &&
+                        "border border-success/40 bg-success/10",
+                      session.latest_status not in [
+                        "failed",
+                        "completed",
+                        "cancelled",
+                        "pending",
+                        "starting",
+                        "running"
+                      ] &&
+                        "border border-transparent",
+                      session.container_id == @active_container_id && "active"
+                    ]}
+                    phx-click="select_session"
+                    phx-value-container-id={session.container_id}
                   >
-                    <.icon name="hero-arrow-path" class="size-3 animate-spin" /> Warming...
-                  </span>
-                </div>
-                <.compact_progress_bar todo_items={session_todo_items(session)} />
-              </div>
-            </li>
-
-            <li :if={@queue_state} class="w-full">
-              <div data-testid="queue-limit-rule" class="mx-1 my-1 border-t border-success/50">
-              </div>
-            </li>
-
-            <li
-              :for={slot <- 1..empty_slot_count}
-              :if={@queue_state && @queue_state.concurrency_limit > @queue_state.running}
-              class="w-full"
-            >
-              <div
-                data-testid={"empty-concurrency-slot-#{slot}"}
-                data-slot-state="empty"
-                class="flex items-center gap-2 w-full rounded-lg p-2 min-h-16 border border-success/40 border-dashed bg-success/5"
-              >
-                <.icon name="hero-plus-circle" class="size-3.5 text-success/70" />
-                <span class="text-xs text-base-content/55">Empty concurrency slot</span>
-              </div>
-            </li>
-
-            <li :for={session <- in_progress_sessions} class="w-full">
-              <div
-                data-testid={"session-item-#{slugify(session.title)}"}
-                data-slot-state={
-                  if(session.latest_status in ["pending", "starting", "running"],
-                    do: "used",
-                    else: "idle"
-                  )
-                }
-                class={[
-                  "flex flex-col gap-0.5 w-full rounded-lg p-2 min-h-16",
-                  session.latest_status in ["pending", "starting", "running"] &&
-                    "border border-success/40 bg-success/10",
-                  session.latest_status not in ["pending", "starting", "running"] &&
-                    "border border-transparent",
-                  session.container_id == @active_container_id && "active"
-                ]}
-                phx-click="select_session"
-                phx-value-container-id={session.container_id}
-              >
-                <div class="flex items-center justify-between w-full">
-                  <span class="text-xs font-medium truncate flex-1 min-w-0">
-                    {truncate_instruction(session.title, 35)}
-                  </span>
-                  <div class="flex items-center gap-1">
-                    <span
-                      :if={session.latest_status == "completed"}
-                      class="inline-flex items-center"
-                      title="Session completed — review output"
+                    <div class="flex items-center justify-between w-full">
+                      <span class="text-xs font-medium truncate flex-1 min-w-0">
+                        {truncate_instruction(
+                          if(ticket, do: ticket.title, else: session.title),
+                          35
+                        )}
+                      </span>
+                      <div class="flex items-center gap-1">
+                        <span
+                          :if={session.latest_status == "completed"}
+                          class="inline-flex items-center"
+                          title="Session completed — review output"
+                        >
+                          <.icon name="hero-bell-alert" class="size-3.5 text-warning" />
+                        </span>
+                        <button
+                          :if={
+                            session.latest_status == "failed" && auth_error?(session.latest_error) &&
+                              session.latest_task_id
+                          }
+                          type="button"
+                          phx-click="refresh_auth_and_resume"
+                          phx-value-task-id={session.latest_task_id}
+                          disabled={auth_refreshing?(@auth_refreshing, session.latest_task_id)}
+                          class="btn btn-ghost btn-xs p-0 min-h-0 h-auto"
+                          title="Refresh auth & resume"
+                        >
+                          <.icon
+                            name="hero-arrow-path"
+                            class={
+                              if(auth_refreshing?(@auth_refreshing, session.latest_task_id),
+                                do: "size-3.5 text-warning animate-spin",
+                                else: "size-3.5 text-warning"
+                              )
+                            }
+                          />
+                        </button>
+                        <.status_dot status={session.latest_status} />
+                      </div>
+                    </div>
+                    <% duration =
+                      format_duration(
+                        Map.get(session, :started_at),
+                        Map.get(session, :completed_at),
+                        @duration_now
+                      ) %>
+                    <% file_stats = format_file_stats(Map.get(session, :session_summary)) %>
+                    <div class="flex items-center gap-2 text-[0.65rem] text-base-content/50 w-full">
+                      <span>{image_label(session.image)}</span>
+                      <span>&middot;</span>
+                      <span>{relative_time(session.latest_at)}</span>
+                      <span :if={duration != nil} data-testid="session-duration">
+                        &middot; {duration}
+                      </span>
+                    </div>
+                    <div
+                      :if={ticket}
+                      class="flex w-full items-start justify-start gap-1 flex-wrap"
                     >
-                      <.icon name="hero-bell-alert" class="size-3.5 text-warning" />
-                    </span>
-                    <button
-                      :if={
-                        session.latest_status == "failed" && auth_error?(session.latest_error) &&
-                          session.latest_task_id
-                      }
-                      type="button"
-                      phx-click="refresh_auth_and_resume"
-                      phx-value-task-id={session.latest_task_id}
-                      disabled={auth_refreshing?(@auth_refreshing, session.latest_task_id)}
-                      class="btn btn-ghost btn-xs p-0 min-h-0 h-auto"
-                      title="Refresh auth & resume"
+                      <span class="badge badge-xs badge-info whitespace-nowrap">
+                        {ticket.number}
+                      </span>
+                      <span class={[
+                        "badge badge-xs whitespace-nowrap",
+                        ticket_priority_class(ticket.priority)
+                      ]}>
+                        {ticket.priority || "Unprioritized"}
+                      </span>
+                      <span class={[
+                        "badge badge-xs whitespace-nowrap",
+                        ticket_size_class(ticket.size)
+                      ]}>
+                        {ticket.size || "Unsized"}
+                      </span>
+                      <span
+                        :for={label <- ticket.labels || []}
+                        class={["badge badge-xs whitespace-nowrap", ticket_label_class(label)]}
+                      >
+                        {label}
+                      </span>
+                    </div>
+                    <div
+                      :if={file_stats != nil}
+                      class="text-[0.6rem] text-base-content/40 w-full"
+                      data-testid="session-file-stats"
                     >
-                      <.icon
-                        name="hero-arrow-path"
-                        class={
-                          if(auth_refreshing?(@auth_refreshing, session.latest_task_id),
-                            do: "size-3.5 text-warning animate-spin",
-                            else: "size-3.5 text-warning"
-                          )
-                        }
-                      />
-                    </button>
-                    <.status_dot status={session.latest_status} />
+                      {file_stats}
+                    </div>
+                    <.compact_progress_bar todo_items={session_todo_items(session)} />
+                    <.container_stats_bars
+                      :if={Map.has_key?(@container_stats, session.container_id)}
+                      stats={@container_stats[session.container_id]}
+                    />
                   </div>
-                </div>
-                <% duration =
-                  format_duration(
-                    Map.get(session, :started_at),
-                    Map.get(session, :completed_at),
-                    @duration_now
-                  ) %>
-                <% file_stats = format_file_stats(Map.get(session, :session_summary)) %>
-                <div class="flex items-center gap-2 text-[0.65rem] text-base-content/50 w-full">
-                  <span>{image_label(session.image)}</span>
-                  <span>&middot;</span>
-                  <span>{relative_time(session.latest_at)}</span>
-                  <span :if={duration != nil} data-testid="session-duration">
-                    &middot; {duration}
-                  </span>
-                </div>
-                <div
-                  :if={file_stats != nil}
-                  class="text-[0.6rem] text-base-content/40 w-full"
-                  data-testid="session-file-stats"
+                </li>
+              </ul>
+            </div>
+
+            <div class="min-w-0 h-full min-h-0 pl-1 flex flex-col justify-end relative overflow-hidden">
+              <div class="pointer-events-none select-none absolute inset-0 flex items-end justify-center pb-1">
+                <span
+                  class="text-[9.375rem] font-black uppercase tracking-[0.12em]"
+                  style="writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg) scaleX(1.08) scaleY(0.94); color: rgba(0,0,0,0.11); text-shadow: 0 1px 1px rgba(0,0,0,0.08);"
                 >
-                  {file_stats}
-                </div>
-                <.compact_progress_bar todo_items={session_todo_items(session)} />
-                <.container_stats_bars
-                  :if={Map.has_key?(@container_stats, session.container_id)}
-                  stats={@container_stats[session.container_id]}
-                />
+                  BUILD
+                </span>
               </div>
-            </li>
-          </ul>
+              <ul
+                class="p-1 w-full flex-1 min-h-0 overflow-y-auto overflow-x-hidden flex flex-col justify-end gap-1 rounded-xl border border-base-300/70 bg-base-200/35 shadow-inner shadow-base-content/5 relative z-10"
+                style="display:flex;flex-direction:column;"
+              >
+                <li :for={session <- failed_sessions} class="w-full">
+                  <% ticket = ticket_for_session.(session) %>
+                  <div
+                    data-testid={"session-item-#{slugify(session.title)}"}
+                    data-slot-state="failed"
+                    class={[
+                      "flex flex-col gap-0.5 w-full rounded-lg p-2 min-h-16 border border-warning/40 bg-warning/10",
+                      session.container_id == @active_container_id && "active"
+                    ]}
+                    phx-click="select_session"
+                    phx-value-container-id={session.container_id}
+                  >
+                    <div class="flex items-center justify-between w-full">
+                      <span class="text-xs font-medium truncate flex-1 min-w-0">
+                        {truncate_instruction(
+                          if(ticket, do: ticket.title, else: session.title),
+                          35
+                        )}
+                      </span>
+                      <div class="flex items-center gap-1">
+                        <button
+                          :if={auth_error?(session.latest_error) && session.latest_task_id}
+                          type="button"
+                          phx-click="refresh_auth_and_resume"
+                          phx-value-task-id={session.latest_task_id}
+                          disabled={auth_refreshing?(@auth_refreshing, session.latest_task_id)}
+                          class="btn btn-ghost btn-xs p-0 min-h-0 h-auto"
+                          title="Refresh auth & resume"
+                        >
+                          <.icon
+                            name="hero-arrow-path"
+                            class={
+                              if(auth_refreshing?(@auth_refreshing, session.latest_task_id),
+                                do: "size-3.5 text-warning animate-spin",
+                                else: "size-3.5 text-warning"
+                              )
+                            }
+                          />
+                        </button>
+                        <.status_dot status={session.latest_status} />
+                      </div>
+                    </div>
+                    <div class="flex items-center gap-2 text-[0.65rem] text-base-content/50 w-full">
+                      <span>{image_label(session.image)}</span>
+                      <span>&middot;</span>
+                      <span>{relative_time(session.latest_at)}</span>
+                    </div>
+                    <div
+                      :if={ticket}
+                      class="flex w-full items-start justify-start gap-1 flex-wrap"
+                    >
+                      <span class="badge badge-xs badge-info whitespace-nowrap">
+                        {ticket.number}
+                      </span>
+                      <span class={[
+                        "badge badge-xs whitespace-nowrap",
+                        ticket_priority_class(ticket.priority)
+                      ]}>
+                        {ticket.priority || "Unprioritized"}
+                      </span>
+                      <span class={[
+                        "badge badge-xs whitespace-nowrap",
+                        ticket_size_class(ticket.size)
+                      ]}>
+                        {ticket.size || "Unsized"}
+                      </span>
+                      <span
+                        :for={label <- ticket.labels || []}
+                        class={["badge badge-xs whitespace-nowrap", ticket_label_class(label)]}
+                      >
+                        {label}
+                      </span>
+                    </div>
+                    <.compact_progress_bar todo_items={session_todo_items(session)} />
+                  </div>
+                </li>
+
+                <li :for={session <- overflow_queued_sessions} class="w-full">
+                  <% ticket = ticket_for_session.(session) %>
+                  <div
+                    data-testid={"session-item-#{slugify(session.title)}"}
+                    data-slot-state="queued"
+                    class={[
+                      "flex flex-col gap-0.5 w-full rounded-lg p-2 min-h-16 transition-colors duration-700 ease-out",
+                      has_real_container?.(session) && "border border-warning/40 bg-warning/10",
+                      !has_real_container?.(session) &&
+                        "border border-base-content/20 bg-base-content/8",
+                      !is_nil(session.container_id) &&
+                        session.container_id == @active_container_id &&
+                        "active"
+                    ]}
+                    phx-click="select_session"
+                    phx-value-container-id={session.container_id}
+                  >
+                    <div class="flex items-center justify-between w-full">
+                      <span class="text-xs font-medium truncate flex-1 min-w-0">
+                        {truncate_instruction(
+                          if(ticket, do: ticket.title, else: session.title),
+                          35
+                        )}
+                      </span>
+                      <div class="flex items-center gap-1">
+                        <.status_dot
+                          status={session.latest_status}
+                          cold={!has_real_container?.(session)}
+                        />
+                      </div>
+                    </div>
+                    <div class="flex items-center gap-2 text-[0.65rem] text-base-content/50 w-full">
+                      <span>{image_label(session.image)}</span>
+                      <span>&middot;</span>
+                      <span>{relative_time(session.latest_at)}</span>
+                    </div>
+                    <div
+                      :if={ticket}
+                      class="flex w-full items-start justify-start gap-1 flex-wrap"
+                    >
+                      <span class="badge badge-xs badge-info whitespace-nowrap">
+                        {ticket.number}
+                      </span>
+                      <span class={[
+                        "badge badge-xs whitespace-nowrap",
+                        ticket_priority_class(ticket.priority)
+                      ]}>
+                        {ticket.priority || "Unprioritized"}
+                      </span>
+                      <span class={[
+                        "badge badge-xs whitespace-nowrap",
+                        ticket_size_class(ticket.size)
+                      ]}>
+                        {ticket.size || "Unsized"}
+                      </span>
+                      <span
+                        :for={label <- ticket.labels || []}
+                        class={["badge badge-xs whitespace-nowrap", ticket_label_class(label)]}
+                      >
+                        {label}
+                      </span>
+                    </div>
+                    <.compact_progress_bar todo_items={session_todo_items(session)} />
+                  </div>
+                </li>
+
+                <li :if={@queue_state} class="w-full">
+                  <div data-testid="queue-warm-rule" class="mx-1 mt-1 border-t border-warning/45">
+                  </div>
+                </li>
+
+                <li
+                  :for={
+                    slot <- if(empty_warm_slot_count > 0, do: 1..empty_warm_slot_count, else: [])
+                  }
+                  class="w-full"
+                >
+                  <div
+                    data-testid={"empty-warm-slot-#{slot}"}
+                    data-slot-state="warm-empty"
+                    class="flex items-center gap-2 w-full rounded-lg p-2 min-h-16 border border-warning/40 border-dashed bg-warning/5"
+                  >
+                    <.icon name="hero-fire" class="size-3.5 text-warning/70" />
+                    <span class="text-xs text-base-content/55">Empty warm slot</span>
+                  </div>
+                </li>
+
+                <li :for={session <- warm_primary_sessions} class="w-full">
+                  <% ticket = ticket_for_session.(session) %>
+                  <div
+                    data-testid={"session-item-#{slugify(session.title)}"}
+                    data-slot-state={if(warming_session?.(session), do: "warming", else: "warm")}
+                    class={[
+                      "flex flex-col gap-0.5 w-full rounded-lg p-2 min-h-16 transition-colors duration-700 ease-out",
+                      warming_session?.(session) && "border border-warning/55 bg-warning/15",
+                      !warming_session?.(session) && has_real_container?.(session) &&
+                        "border border-warning/40 bg-warning/10",
+                      !warming_session?.(session) && !has_real_container?.(session) &&
+                        "border border-base-content/20 bg-base-content/8",
+                      warming_session?.(session) && "animate-pulse",
+                      !is_nil(session.container_id) &&
+                        session.container_id == @active_container_id &&
+                        "active"
+                    ]}
+                    phx-click="select_session"
+                    phx-value-container-id={session.container_id}
+                  >
+                    <div class="flex items-center justify-between w-full">
+                      <span class="text-xs font-medium truncate flex-1 min-w-0">
+                        {truncate_instruction(
+                          if(ticket, do: ticket.title, else: session.title),
+                          35
+                        )}
+                      </span>
+                      <div class="flex items-center gap-1">
+                        <.status_dot
+                          status={session.latest_status}
+                          cold={!has_real_container?.(session) and !warming_session?.(session)}
+                        />
+                      </div>
+                    </div>
+                    <div class="flex items-center gap-2 text-[0.65rem] text-base-content/50 w-full">
+                      <span>{image_label(session.image)}</span>
+                      <span>&middot;</span>
+                      <span>{relative_time(session.latest_at)}</span>
+                      <span
+                        :if={warming_session?.(session)}
+                        class="inline-flex items-center gap-1 text-warning"
+                      >
+                        <.icon name="hero-arrow-path" class="size-3 animate-spin" /> Warming...
+                      </span>
+                    </div>
+                    <div
+                      :if={ticket}
+                      class="flex w-full items-start justify-start gap-1 flex-wrap"
+                    >
+                      <span class="badge badge-xs badge-info whitespace-nowrap">
+                        {ticket.number}
+                      </span>
+                      <span class={[
+                        "badge badge-xs whitespace-nowrap",
+                        ticket_priority_class(ticket.priority)
+                      ]}>
+                        {ticket.priority || "Unprioritized"}
+                      </span>
+                      <span class={[
+                        "badge badge-xs whitespace-nowrap",
+                        ticket_size_class(ticket.size)
+                      ]}>
+                        {ticket.size || "Unsized"}
+                      </span>
+                      <span
+                        :for={label <- ticket.labels || []}
+                        class={["badge badge-xs whitespace-nowrap", ticket_label_class(label)]}
+                      >
+                        {label}
+                      </span>
+                    </div>
+                    <.compact_progress_bar todo_items={session_todo_items(session)} />
+                  </div>
+                </li>
+
+                <li :if={@queue_state} class="w-full">
+                  <div data-testid="queue-limit-rule" class="mx-1 my-1 border-t border-success/50">
+                  </div>
+                </li>
+
+                <li
+                  :for={slot <- 1..empty_slot_count}
+                  :if={@queue_state && @queue_state.concurrency_limit > @queue_state.running}
+                  class="w-full"
+                >
+                  <div
+                    data-testid={"empty-concurrency-slot-#{slot}"}
+                    data-slot-state="empty"
+                    class="flex items-center gap-2 w-full rounded-lg p-2 min-h-16 border border-success/40 border-dashed bg-success/5"
+                  >
+                    <.icon name="hero-plus-circle" class="size-3.5 text-success/70" />
+                    <span class="text-xs text-base-content/55">Empty concurrency slot</span>
+                  </div>
+                </li>
+
+                <li :for={session <- in_progress_sessions} class="w-full">
+                  <% ticket = ticket_for_session.(session) %>
+                  <div
+                    data-testid={"session-item-#{slugify(session.title)}"}
+                    data-slot-state={
+                      if(session.latest_status in ["pending", "starting", "running"],
+                        do: "used",
+                        else: "idle"
+                      )
+                    }
+                    class={[
+                      "flex flex-col gap-0.5 w-full rounded-lg p-2 min-h-16",
+                      session.latest_status in ["pending", "starting", "running"] &&
+                        "border border-success/40 bg-success/10",
+                      session.latest_status not in ["pending", "starting", "running"] &&
+                        "border border-transparent",
+                      session.container_id == @active_container_id && "active"
+                    ]}
+                    phx-click="select_session"
+                    phx-value-container-id={session.container_id}
+                  >
+                    <div class="flex items-center justify-between w-full">
+                      <span class="text-xs font-medium truncate flex-1 min-w-0">
+                        {truncate_instruction(
+                          if(ticket, do: ticket.title, else: session.title),
+                          35
+                        )}
+                      </span>
+                      <div class="flex items-center gap-1">
+                        <span
+                          :if={session.latest_status == "completed"}
+                          class="inline-flex items-center"
+                          title="Session completed — review output"
+                        >
+                          <.icon name="hero-bell-alert" class="size-3.5 text-warning" />
+                        </span>
+                        <button
+                          :if={
+                            session.latest_status == "failed" && auth_error?(session.latest_error) &&
+                              session.latest_task_id
+                          }
+                          type="button"
+                          phx-click="refresh_auth_and_resume"
+                          phx-value-task-id={session.latest_task_id}
+                          disabled={auth_refreshing?(@auth_refreshing, session.latest_task_id)}
+                          class="btn btn-ghost btn-xs p-0 min-h-0 h-auto"
+                          title="Refresh auth & resume"
+                        >
+                          <.icon
+                            name="hero-arrow-path"
+                            class={
+                              if(auth_refreshing?(@auth_refreshing, session.latest_task_id),
+                                do: "size-3.5 text-warning animate-spin",
+                                else: "size-3.5 text-warning"
+                              )
+                            }
+                          />
+                        </button>
+                        <.status_dot status={session.latest_status} />
+                      </div>
+                    </div>
+                    <% duration =
+                      format_duration(
+                        Map.get(session, :started_at),
+                        Map.get(session, :completed_at),
+                        @duration_now
+                      ) %>
+                    <% file_stats = format_file_stats(Map.get(session, :session_summary)) %>
+                    <div class="flex items-center gap-2 text-[0.65rem] text-base-content/50 w-full">
+                      <span>{image_label(session.image)}</span>
+                      <span>&middot;</span>
+                      <span>{relative_time(session.latest_at)}</span>
+                      <span :if={duration != nil} data-testid="session-duration">
+                        &middot; {duration}
+                      </span>
+                    </div>
+                    <div
+                      :if={ticket}
+                      class="flex w-full items-start justify-start gap-1 flex-wrap"
+                    >
+                      <span class="badge badge-xs badge-info whitespace-nowrap">
+                        {ticket.number}
+                      </span>
+                      <span class={[
+                        "badge badge-xs whitespace-nowrap",
+                        ticket_priority_class(ticket.priority)
+                      ]}>
+                        {ticket.priority || "Unprioritized"}
+                      </span>
+                      <span class={[
+                        "badge badge-xs whitespace-nowrap",
+                        ticket_size_class(ticket.size)
+                      ]}>
+                        {ticket.size || "Unsized"}
+                      </span>
+                      <span
+                        :for={label <- ticket.labels || []}
+                        class={["badge badge-xs whitespace-nowrap", ticket_label_class(label)]}
+                      >
+                        {label}
+                      </span>
+                    </div>
+                    <div
+                      :if={file_stats != nil}
+                      class="text-[0.6rem] text-base-content/40 w-full"
+                      data-testid="session-file-stats"
+                    >
+                      {file_stats}
+                    </div>
+                    <.compact_progress_bar todo_items={session_todo_items(session)} />
+                    <.container_stats_bars
+                      :if={Map.has_key?(@container_stats, session.container_id)}
+                      stats={@container_stats[session.container_id]}
+                    />
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
         <% end %>
       <% end %>
     </div>

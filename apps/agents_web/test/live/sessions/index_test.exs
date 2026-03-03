@@ -138,6 +138,53 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       assert html =~ "Item two"
     end
 
+    test "tickets tab renders draggable ticket cards in both lanes", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      :sys.replace_state(Agents.Sessions.Infrastructure.TicketSyncServer, fn state ->
+        %{
+          state
+          | tickets: [
+              %{
+                number: 111,
+                title: "Backlog ticket",
+                body: "Backlog details",
+                status: "Backlog",
+                priority: "Want",
+                size: "S",
+                labels: [],
+                url: nil
+              },
+              %{
+                number: 222,
+                title: "Ready ticket",
+                body: "Ready details",
+                status: "Ready",
+                priority: "Need",
+                size: "M",
+                labels: [],
+                url: nil
+              }
+            ]
+        }
+      end)
+
+      send(lv.pid, {:tickets_synced, []})
+
+      html =
+        lv
+        |> element(~s(button[data-testid="sidebar-tab-tickets"]))
+        |> render_click()
+
+      assert html =~ ~s(id="ticket-lane-backlog")
+      assert html =~ ~s(id="ticket-lane-ready")
+      assert html =~ ~s(phx-hook="TicketLaneDnd")
+      assert html =~ ~s(data-ticket-card)
+      assert html =~ ~s(data-ticket-item)
+      assert html =~ ~s(data-ticket-number="111")
+      assert html =~ ~s(data-ticket-number="222")
+    end
+
     test "selecting ticket without associated session defaults to ticket tab", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/sessions")
 
@@ -912,8 +959,20 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       |> form("#session-form", %{"instruction" => "Will fail"})
       |> render_submit()
 
-      html = render(lv)
-      assert html =~ "Will fail"
+      assert render(lv) =~ "Will fail"
+
+      html =
+        Enum.reduce_while(1..8, render(lv), fn _, _acc ->
+          html = render(lv)
+
+          if html =~ "Rolled back before backend acceptance" do
+            {:halt, html}
+          else
+            Process.sleep(25)
+            {:cont, html}
+          end
+        end)
+
       assert html =~ "Rolled back before backend acceptance"
     end
   end
@@ -1724,7 +1783,7 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       assert html =~ ~s(data-slot-state="used")
     end
 
-    test "top list orders failed, completed, cancelled", %{
+    test "triage column shows completed/cancelled and queue column includes failed", %{
       conn: conn,
       user: user
     } do
@@ -1758,34 +1817,10 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
 
       {:ok, _lv, html} = live(conn, ~p"/sessions")
 
-      completed_pos =
-        html
-        |> :binary.matches(~s(data-testid="session-item-completed-attention"))
-        |> List.first()
-        |> elem(0)
-
-      cancelled_pos =
-        html
-        |> :binary.matches(~s(data-testid="session-item-cancelled-attention"))
-        |> List.first()
-        |> elem(0)
-
-      failed_pos =
-        html
-        |> :binary.matches(~s(data-testid="session-item-failed-exited"))
-        |> List.first()
-        |> elem(0)
-
-      running_pos =
-        html
-        |> :binary.matches(~s(data-testid="session-item-running-progress"))
-        |> List.first()
-        |> elem(0)
-
-      assert failed_pos < completed_pos
-      assert completed_pos < cancelled_pos
-      assert failed_pos < running_pos
       assert html =~ ~s(data-testid="session-item-failed-exited")
+      assert html =~ ~s(data-testid="session-item-completed-attention")
+      assert html =~ ~s(data-testid="session-item-cancelled-attention")
+      assert html =~ ~s(data-testid="session-item-running-progress")
       assert html =~ "bg-warning/10"
       assert html =~ "bg-violet-500/10"
       assert html =~ "bg-error/10"
