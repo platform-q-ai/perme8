@@ -527,7 +527,9 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
         aggregate_id: state.task_id,
         actor_id: state.user_id,
         task_id: state.task_id,
-        user_id: state.user_id
+        user_id: state.user_id,
+        target_user_id: state.user_id,
+        instruction: state.instruction
       })
     )
 
@@ -978,6 +980,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
         actor_id: state.user_id,
         task_id: state.task_id,
         user_id: state.user_id,
+        target_user_id: state.user_id,
+        instruction: state.instruction,
         error: serialized_error
       })
     )
@@ -1007,7 +1011,9 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
         aggregate_id: state.task_id,
         actor_id: state.user_id,
         task_id: state.task_id,
-        user_id: state.user_id
+        user_id: state.user_id,
+        target_user_id: state.user_id,
+        instruction: state.instruction
       })
     )
 

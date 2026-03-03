@@ -22,6 +22,7 @@ defmodule Notifications.Infrastructure do
       Schemas.NotificationSchema,
       Repositories.NotificationRepository,
       Queries.NotificationQueries,
-      Subscribers.WorkspaceInvitationSubscriber
+      Subscribers.WorkspaceInvitationSubscriber,
+      Subscribers.TaskCompletionSubscriber
     ]
 end

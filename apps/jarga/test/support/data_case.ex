@@ -96,10 +96,10 @@ defmodule Jarga.DataCase do
   defp enable_pubsub_subscribers do
     # Use the Notifications public facade to start subscribers.
     # This avoids reaching into Notifications internals from Jarga.
-    subscriber_pid = Notifications.ensure_subscribers_started()
+    subscriber_pids = Notifications.ensure_subscribers_started()
 
-    # Allow the subscriber to access the database
-    SandboxHelper.allow_process(subscriber_pid)
+    # Allow subscribers to access the database
+    Enum.each(subscriber_pids, &SandboxHelper.allow_process/1)
   end
 
   @doc """

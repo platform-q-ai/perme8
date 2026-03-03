@@ -7,7 +7,9 @@ defmodule Agents.Sessions.Domain.Events.TaskCompletedTest do
     aggregate_id: "task-123",
     actor_id: "user-123",
     task_id: "task-123",
-    user_id: "user-123"
+    user_id: "user-123",
+    target_user_id: "user-123",
+    instruction: "Implement a feature"
   }
 
   describe "event_type/0" do
@@ -32,6 +34,8 @@ defmodule Agents.Sessions.Domain.Events.TaskCompletedTest do
       assert event.aggregate_type == "task"
       assert event.task_id == "task-123"
       assert event.user_id == "user-123"
+      assert event.target_user_id == "user-123"
+      assert event.instruction == "Implement a feature"
     end
 
     test "auto-generates event_id and occurred_at" do

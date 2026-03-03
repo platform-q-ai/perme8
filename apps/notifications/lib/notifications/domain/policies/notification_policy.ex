@@ -7,7 +7,7 @@ defmodule Notifications.Domain.Policies.NotificationPolicy do
 
   alias Notifications.Domain.Entities.Notification
 
-  @valid_types ["workspace_invitation"]
+  @valid_types ["workspace_invitation", "task_completed", "task_failed", "task_cancelled"]
 
   @doc """
   Returns true when the notification belongs to the given user.

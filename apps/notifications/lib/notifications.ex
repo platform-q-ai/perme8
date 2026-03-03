@@ -183,7 +183,7 @@ defmodule Notifications do
   to start subscribers for integration tests where the Notifications
   OTP app has subscribers disabled in test mode.
 
-  Returns the subscriber PID (either existing or newly started).
+  Returns a list of subscriber PIDs (either existing or newly started).
   """
   def ensure_subscribers_started do
     Notifications.OTPApp.ensure_subscribers_started()

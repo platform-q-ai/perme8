@@ -98,6 +98,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.DomainEventsTest do
     assert event.user_id == user.id
     assert event.aggregate_id == task.id
     assert event.actor_id == user.id
+    assert event.target_user_id == user.id
+    assert event.instruction == task.instruction
   end
 
   test "emits TaskFailed domain event when task fails", %{task: task, user: user} do
@@ -161,6 +163,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.DomainEventsTest do
     assert [%TaskFailed{} = event] = events
     assert event.task_id == task.id
     assert event.user_id == user.id
+    assert event.target_user_id == user.id
+    assert event.instruction == task.instruction
     assert event.error == "Model rate limit exceeded"
   end
 
@@ -218,5 +222,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.DomainEventsTest do
     assert [%TaskCancelled{} = event] = events
     assert event.task_id == task.id
     assert event.user_id == user.id
+    assert event.target_user_id == user.id
+    assert event.instruction == task.instruction
   end
 end

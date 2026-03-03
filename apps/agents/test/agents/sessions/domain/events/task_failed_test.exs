@@ -8,6 +8,8 @@ defmodule Agents.Sessions.Domain.Events.TaskFailedTest do
     actor_id: "user-123",
     task_id: "task-123",
     user_id: "user-123",
+    target_user_id: "user-123",
+    instruction: "Implement a feature",
     error: "Container start failed"
   }
 
@@ -33,6 +35,8 @@ defmodule Agents.Sessions.Domain.Events.TaskFailedTest do
       assert event.aggregate_type == "task"
       assert event.task_id == "task-123"
       assert event.user_id == "user-123"
+      assert event.target_user_id == "user-123"
+      assert event.instruction == "Implement a feature"
       assert event.error == "Container start failed"
     end
 
@@ -49,7 +53,8 @@ defmodule Agents.Sessions.Domain.Events.TaskFailedTest do
           aggregate_id: "task-123",
           actor_id: "user-123",
           task_id: "task-123",
-          user_id: "user-123"
+          user_id: "user-123",
+          target_user_id: "user-123"
         })
 
       assert event.error == nil
