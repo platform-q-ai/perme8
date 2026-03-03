@@ -54,9 +54,19 @@
       </div>
 
       <%= if @sidebar_list_tab == "tickets" do %>
+        <% priority_rank = fn
+          "Need" -> 0
+          "Want" -> 1
+          "Nice to have" -> 2
+          _ -> 3
+        end %>
         <% sorted_tickets =
           Enum.sort_by(@tickets, fn ticket ->
-            {if(ticket.status == "Ready", do: 0, else: 1), ticket.number}
+            {
+              if(ticket.status == "Ready", do: 0, else: 1),
+              priority_rank.(ticket.priority),
+              ticket.number
+            }
           end) %>
         <%= if @tickets == [] do %>
           <div class="px-3 pb-3 text-base-content/50 text-xs">
@@ -78,7 +88,7 @@
               >
                 <div class="flex items-center justify-between w-full">
                   <span class="text-xs font-medium truncate flex-1 min-w-0">
-                    #{ticket.number} {truncate_instruction(ticket.title, 28)}
+                    {truncate_instruction(ticket.title, 34)}
                   </span>
                   <.status_dot status={ticket.task_status || "idle"} />
                 </div>
@@ -514,7 +524,7 @@
               if @current_task,
                 do: truncate_instruction(@current_task.instruction, 60),
                 else:
-                  (selected_ticket && "##{selected_ticket.number} #{selected_ticket.title}") ||
+                  (selected_ticket && selected_ticket.title) ||
                     "Session"}
           </h2>
         </div>
@@ -710,85 +720,113 @@
             pending={@pending_question}
           />
         </div>
+      </div>
 
-        <%!-- Input form --%>
-        <div class="border-t border-base-300 p-3 bg-base-100 shrink-0">
-          <%!-- Image picker (only shown when composing a new session) --%>
-          <div
-            :if={@composing_new && !@current_task}
-            class="flex items-center gap-2 mb-2"
-          >
-            <span class="text-xs text-base-content/60 shrink-0">Image:</span>
-            <div class="flex gap-1.5">
-              <button
-                :for={img <- @available_images}
-                type="button"
-                phx-click="select_image"
-                phx-value-image={img.name}
-                class={[
-                  "btn btn-xs",
-                  if(@selected_image == img.name,
-                    do: "btn-primary",
-                    else: "btn-ghost btn-outline"
-                  )
-                ]}
-              >
-                {img.label}
-              </button>
+      <div
+        :if={@active_session_tab == "ticket"}
+        role="tabpanel"
+        id="tabpanel-ticket"
+        aria-labelledby="tab-ticket"
+        class="flex-1 min-h-0 overflow-y-auto p-4"
+      >
+        <%= if selected_ticket do %>
+          <div class="max-w-3xl" data-testid="ticket-context-panel">
+            <div class="text-lg font-semibold mb-2">{selected_ticket.title}</div>
+            <div class="text-xs text-base-content/60 mb-3">
+              #{selected_ticket.number}
+              <span :if={selected_ticket.status}> &middot;    {selected_ticket.status}</span>
+              <span :if={selected_ticket.priority}> &middot;    {selected_ticket.priority}</span>
+              <span :if={selected_ticket.size}> &middot;    {selected_ticket.size}</span>
+            </div>
+            <div class="session-markdown text-sm text-base-content/90">
+              {render_markdown(selected_ticket.body || "No ticket description provided.")}
             </div>
           </div>
-          <form id="session-form" phx-submit="run_task" class="flex gap-2 items-end">
-            <div class="flex-1">
-              <.progress_bar todo_items={@todo_items} />
+        <% else %>
+          <div class="flex flex-col items-center justify-center h-full text-base-content/40">
+            <.icon name="hero-document-text" class="size-12 mb-3" />
+            <p class="text-sm">Select a ticket to view details</p>
+          </div>
+        <% end %>
+      </div>
 
-              <textarea
-                name="instruction"
-                id="session-instruction"
-                phx-hook="SessionForm"
-                rows="2"
-                class="textarea textarea-bordered w-full text-sm leading-snug"
-                placeholder={
-                  cond do
-                    task_running?(@current_task) ->
-                      "Send a message (queued until agent finishes)..."
-
-                    resumable_task?(@current_task) ->
-                      "Follow-up instruction..."
-
-                    true ->
-                      "Describe the coding task..."
-                  end
-                }
-              >{@form["instruction"].value}</textarea>
-            </div>
-            <div class="flex gap-1 shrink-0">
-              <.button
-                :if={task_running?(@current_task)}
-                type="button"
-                variant="error"
-                size="sm"
-                phx-click="cancel_task"
-                id="cancel-task-btn"
-              >
-                <.icon name="hero-stop" class="size-4" />
-              </.button>
-              <.button
-                type="submit"
-                variant={if(task_running?(@current_task), do: "ghost", else: "primary")}
-                size="sm"
-              >
-                <%= cond do %>
-                  <% task_running?(@current_task) -> %>
-                    <.icon name="hero-chat-bubble-left-ellipsis" class="size-4" />
-                  <% resumable_task?(@current_task) -> %>
-                    <.icon name="hero-arrow-path" class="size-4" />
-                  <% true -> %>
-                    <.icon name="hero-paper-airplane" class="size-4" />
-                <% end %>
-              </.button>
-            </div>
-          </form>
+      <%!-- Input form stays visible across tabs --%>
+      <div class="border-t border-base-300 p-3 bg-base-100 shrink-0">
+        <%!-- Image picker (only shown when composing a new session) --%>
+        <div
+          :if={@composing_new && !@current_task}
+          class="flex items-center gap-2 mb-2"
+        >
+          <span class="text-xs text-base-content/60 shrink-0">Image:</span>
+          <div class="flex gap-1.5">
+            <button
+              :for={img <- @available_images}
+              type="button"
+              phx-click="select_image"
+              phx-value-image={img.name}
+              class={[
+                "btn btn-xs",
+                if(@selected_image == img.name,
+                  do: "btn-primary",
+                  else: "btn-ghost btn-outline"
+                )
+              ]}
+            >
+              {img.label}
+            </button>
+          </div>
         </div>
+        <form id="session-form" phx-submit="run_task" class="flex gap-2 items-end">
+          <div class="flex-1">
+            <.progress_bar todo_items={@todo_items} />
+
+            <textarea
+              name="instruction"
+              id="session-instruction"
+              phx-hook="SessionForm"
+              rows="2"
+              class="textarea textarea-bordered w-full text-sm leading-snug"
+              placeholder={
+                cond do
+                  task_running?(@current_task) ->
+                    "Send a message (queued until agent finishes)..."
+
+                  resumable_task?(@current_task) ->
+                    "Follow-up instruction..."
+
+                  true ->
+                    "Describe the coding task..."
+                end
+              }
+            >{@form["instruction"].value}</textarea>
+          </div>
+          <div class="flex gap-1 shrink-0">
+            <.button
+              :if={task_running?(@current_task)}
+              type="button"
+              variant="error"
+              size="sm"
+              phx-click="cancel_task"
+              id="cancel-task-btn"
+            >
+              <.icon name="hero-stop" class="size-4" />
+            </.button>
+            <.button
+              type="submit"
+              variant={if(task_running?(@current_task), do: "ghost", else: "primary")}
+              size="sm"
+            >
+              <%= cond do %>
+                <% task_running?(@current_task) -> %>
+                  <.icon name="hero-chat-bubble-left-ellipsis" class="size-4" />
+                <% resumable_task?(@current_task) -> %>
+                  <.icon name="hero-arrow-path" class="size-4" />
+                <% true -> %>
+                  <.icon name="hero-paper-airplane" class="size-4" />
+              <% end %>
+            </.button>
+          </div>
+        </form>
       </div>
     <% else %>
       <%!-- Empty state — no session selected --%>

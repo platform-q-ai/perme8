@@ -34,6 +34,7 @@ defmodule Agents.Sessions.Infrastructure.Clients.GithubProjectClient do
               ... on Issue {
                 number
                 title
+                body
                 url
                 labels(first: 10) {
                   nodes {
@@ -67,6 +68,7 @@ defmodule Agents.Sessions.Infrastructure.Clients.GithubProjectClient do
   @type ticket :: %{
           number: integer(),
           title: String.t(),
+          body: String.t() | nil,
           url: String.t() | nil,
           status: String.t() | nil,
           priority: String.t() | nil,
@@ -144,6 +146,7 @@ defmodule Agents.Sessions.Infrastructure.Clients.GithubProjectClient do
     %{
       number: number,
       title: title,
+      body: issue["body"],
       url: issue["url"],
       status: get_in(node, ["statusField", "name"]),
       priority: get_in(node, ["priorityField", "name"]),

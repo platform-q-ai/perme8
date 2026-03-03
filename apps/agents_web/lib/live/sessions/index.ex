@@ -118,7 +118,10 @@ defmodule AgentsWeb.SessionsLive.Index do
 
   @doc false
   def session_tabs do
-    [%{id: "chat", label: "Chat"}]
+    [
+      %{id: "chat", label: "Chat"},
+      %{id: "ticket", label: "Ticket"}
+    ]
   end
 
   @impl true
@@ -357,7 +360,7 @@ defmodule AgentsWeb.SessionsLive.Index do
        |> assign(:events, [])
        |> assign_session_state()
        |> assign(:form, to_form(%{"instruction" => ""}))
-       |> push_patch(to: ~p"/sessions?#{%{new: true}}")
+       |> push_patch(to: ~p"/sessions?#{%{new: true, tab: "ticket"}}")
        |> push_event("focus_input", %{})}
     end
   end
