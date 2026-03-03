@@ -1002,6 +1002,20 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       assert html =~ "Container start failed: timeout"
     end
 
+    test "shows cancelled alert when viewing cancelled task", %{conn: conn, user: user} do
+      task_fixture(%{
+        user_id: user.id,
+        status: "cancelled",
+        container_id: "c1",
+        error: nil
+      })
+
+      {:ok, _lv, html} = live(conn, ~p"/sessions")
+
+      assert html =~ "Session cancelled"
+      assert html =~ "This session was cancelled and is no longer running."
+    end
+
     test "todo_updated events update the session card progress bar", %{conn: conn, user: user} do
       task = task_fixture(%{user_id: user.id, status: "running", container_id: "c1"})
 
