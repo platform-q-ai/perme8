@@ -632,13 +632,7 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponents do
       data-testid="queue-panel"
       class="px-4 py-2 border-b border-base-300 bg-base-100 shrink-0"
     >
-      <div class="flex items-center justify-between mb-1.5">
-        <div class="flex items-center gap-2">
-          <.icon name="hero-queue-list" class="size-4 text-base-content/50" />
-          <span class="text-xs font-semibold text-base-content/60 uppercase tracking-wider">
-            Build Queue
-          </span>
-        </div>
+      <div class="flex items-center justify-end">
         <div class="flex items-center gap-1.5">
           <span class="text-xs text-base-content/50">Limit:</span>
           <form phx-change="update_concurrency_limit" class="inline">
@@ -673,15 +667,6 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponents do
               <% end %>
             </select>
           </form>
-        </div>
-      </div>
-
-      <div class="flex items-center gap-3 text-xs">
-        <div class="flex items-center gap-1">
-          <span class="inline-block size-2 rounded-full bg-info animate-pulse"></span>
-          <span class="text-base-content/70 font-medium">
-            {@queue_state.running}/{@queue_state.concurrency_limit} concurrent slots used
-          </span>
         </div>
       </div>
     </div>

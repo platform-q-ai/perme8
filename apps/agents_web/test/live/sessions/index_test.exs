@@ -433,6 +433,32 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       refute html =~ "Awaiting response..."
     end
 
+    test "does not duplicate initial instruction when output already contains matching user message",
+         %{
+           conn: conn,
+           user: user
+         } do
+      output =
+        Jason.encode!([
+          %{"type" => "user", "id" => "user-msg-1", "text" => "Repeat me"},
+          %{"type" => "text", "id" => "asst-1", "text" => "Continuing now"}
+        ])
+
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Repeat me",
+        container_id: "c-repeat",
+        status: "completed",
+        output: output
+      })
+
+      {:ok, _lv, html} = live(conn, ~p"/sessions?container=c-repeat")
+
+      refute html =~ ~s(data-testid="session-initial-instruction")
+      assert html =~ "Repeat me"
+      assert html =~ "Continuing now"
+    end
+
     test "pending follow-up survives navigating away and back while session is restarting", %{
       conn: conn,
       user: user
