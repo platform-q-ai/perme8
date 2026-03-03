@@ -122,7 +122,8 @@ defmodule AgentsWeb.SessionsLive.Index do
          _sessions,
          _tickets,
          current
-       ), do: current
+       ),
+       do: current
 
   defp tasks_snapshot_or_reload(socket) do
     socket.assigns[:tasks_snapshot] || Sessions.list_tasks(socket.assigns.current_scope.user.id)
@@ -325,6 +326,28 @@ defmodule AgentsWeb.SessionsLive.Index do
   def handle_event("switch_sidebar_list_tab", %{"tab" => tab}, socket) do
     tab = if tab in ["sessions", "tickets"], do: tab, else: "sessions"
     {:noreply, assign(socket, :sidebar_list_tab, tab)}
+  end
+
+  @impl true
+  def handle_event(
+        "reorder_tickets",
+        %{"moved_number" => moved, "ordered_numbers" => ordered} = params,
+        socket
+      ) do
+    target_status = Map.get(params, "target_status")
+
+    with {moved_number, ""} <- Integer.parse(to_string(moved)),
+         ordered_numbers <- normalize_ordered_ticket_numbers(ordered),
+         :ok <- Sessions.reorder_project_ticket(moved_number, target_status, ordered_numbers) do
+      user = socket.assigns.current_scope.user
+      {:noreply, reload_all(socket, user.id)}
+    else
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, "Failed to reorder ticket: #{inspect(reason)}")}
+
+      _ ->
+        {:noreply, put_flash(socket, :error, "Failed to reorder ticket")}
+    end
   end
 
   @impl true
@@ -853,7 +876,52 @@ defmodule AgentsWeb.SessionsLive.Index do
   end
 
   @impl true
+  def handle_info(
+        {:dispatch_follow_up_message, task_id, instruction, correlation_key, queued_at},
+        socket
+      ) do
+    caller = self()
+
+    Task.start(fn ->
+      result =
+        Sessions.send_message(
+          task_id,
+          instruction,
+          correlation_key: correlation_key,
+          command_type: "follow_up_message",
+          sent_at: DateTime.to_iso8601(queued_at)
+        )
+
+      send(caller, {:follow_up_send_result, correlation_key, result})
+    end)
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info({:follow_up_send_result, _correlation_key, :ok}, socket), do: {:noreply, socket}
+
+  @impl true
+  def handle_info({:follow_up_send_result, correlation_key, {:error, _reason}}, socket) do
+    {:noreply,
+     socket
+     |> assign(
+       :queued_messages,
+       mark_queued_message_status(socket.assigns.queued_messages, correlation_key, "rolled_back")
+     )
+     |> broadcast_optimistic_queue_snapshot()
+     |> put_flash(:error, "Failed to send message")}
+  end
+
+  @impl true
   def handle_info(_msg, socket), do: {:noreply, socket}
+
+  defp mark_queued_message_status(messages, correlation_key, status) do
+    Enum.map(messages, fn msg ->
+      key = msg[:correlation_key] || msg[:id]
+      if key == correlation_key, do: Map.put(msg, :status, status), else: msg
+    end)
+  end
 
   defp delete_queued_task_by_id(task_id, user_id) do
     case Sessions.get_task(task_id, user_id) do
@@ -936,36 +1004,21 @@ defmodule AgentsWeb.SessionsLive.Index do
       queued_at: queued_at
     }
 
-    case Sessions.send_message(
-           socket.assigns.current_task.id,
-           instruction,
-           correlation_key: correlation_key,
-           command_type: "follow_up_message",
-           sent_at: DateTime.to_iso8601(queued_at)
-         ) do
-      :ok ->
-        {:noreply,
-         socket
-         |> assign(
-           :queued_messages,
-           merge_queued_messages(socket.assigns.queued_messages, [queued_msg])
-         )
-         |> broadcast_optimistic_queue_snapshot()
-         |> assign(:form, to_form(%{"instruction" => ""}))
-         |> push_event("scroll_to_bottom", %{})}
+    send(
+      self(),
+      {:dispatch_follow_up_message, socket.assigns.current_task.id, instruction, correlation_key,
+       queued_at}
+    )
 
-      {:error, _reason} ->
-        rolled_back = %{queued_msg | status: "rolled_back"}
-
-        {:noreply,
-         socket
-         |> assign(
-           :queued_messages,
-           merge_queued_messages(socket.assigns.queued_messages, [rolled_back])
-         )
-         |> broadcast_optimistic_queue_snapshot()
-         |> put_flash(:error, "Failed to send message")}
-    end
+    {:noreply,
+     socket
+     |> assign(
+       :queued_messages,
+       merge_queued_messages(socket.assigns.queued_messages, [queued_msg])
+     )
+     |> broadcast_optimistic_queue_snapshot()
+     |> assign(:form, to_form(%{"instruction" => ""}))
+     |> push_event("scroll_to_bottom", %{})}
   end
 
   defp normalize_hydrated_queue_entry(entry) when is_map(entry) do
@@ -1037,6 +1090,15 @@ defmodule AgentsWeb.SessionsLive.Index do
   defp remove_optimistic_new_session(entries, client_id) do
     Enum.reject(entries, &(&1.id == client_id))
   end
+
+  defp normalize_ordered_ticket_numbers(values) when is_list(values) do
+    values
+    |> Enum.map(&Integer.parse(to_string(&1)))
+    |> Enum.filter(&match?({_, ""}, &1))
+    |> Enum.map(fn {n, _} -> n end)
+  end
+
+  defp normalize_ordered_ticket_numbers(_), do: []
 
   defp merge_queued_messages(existing, incoming) do
     (existing ++ incoming)

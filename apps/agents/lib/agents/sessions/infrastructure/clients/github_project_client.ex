@@ -28,8 +28,22 @@ defmodule Agents.Sessions.Infrastructure.Clients.GithubProjectClient do
   query($org: String!, $projectNumber: Int!, $after: String) {
     organization(login: $org) {
       projectV2(number: $projectNumber) {
+        id
+        fields(first: 50) {
+          nodes {
+            ... on ProjectV2SingleSelectField {
+              id
+              name
+              options {
+                id
+                name
+              }
+            }
+          }
+        }
         items(first: 100, after: $after) {
           nodes {
+            id
             content {
               ... on Issue {
                 number
@@ -46,6 +60,7 @@ defmodule Agents.Sessions.Infrastructure.Clients.GithubProjectClient do
             statusField: fieldValueByName(name: "Status") {
               ... on ProjectV2ItemFieldSingleSelectValue {
                 name
+                optionId
               }
             }
             priorityField: fieldValueByName(name: "Priority") {
@@ -69,6 +84,35 @@ defmodule Agents.Sessions.Infrastructure.Clients.GithubProjectClient do
   }
   """
 
+  @update_position_mutation """
+  mutation($projectId: ID!, $itemId: ID!, $afterId: ID) {
+    updateProjectV2ItemPosition(input: {projectId: $projectId, itemId: $itemId, afterId: $afterId}) {
+      items(first: 1) {
+        nodes {
+          id
+        }
+      }
+    }
+  }
+  """
+
+  @update_status_mutation """
+  mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
+    updateProjectV2ItemFieldValue(
+      input: {
+        projectId: $projectId,
+        itemId: $itemId,
+        fieldId: $fieldId,
+        value: {singleSelectOptionId: $optionId}
+      }
+    ) {
+      projectV2Item {
+        id
+      }
+    }
+  }
+  """
+
   @type ticket :: %{
           number: integer(),
           title: String.t(),
@@ -77,7 +121,9 @@ defmodule Agents.Sessions.Infrastructure.Clients.GithubProjectClient do
           status: String.t() | nil,
           priority: String.t() | nil,
           size: String.t() | nil,
-          labels: [String.t()]
+          labels: [String.t()],
+          item_id: String.t() | nil,
+          status_option_id: String.t() | nil
         }
 
   @spec fetch_tickets(keyword()) :: {:ok, [ticket()]} | {:error, term()}
@@ -105,12 +151,73 @@ defmodule Agents.Sessions.Infrastructure.Clients.GithubProjectClient do
     end
   end
 
+  @spec update_ticket_order_and_status(keyword()) :: :ok | {:error, term()}
+  def update_ticket_order_and_status(opts) do
+    token = Keyword.get(opts, :token)
+
+    if is_binary(token) and token != "" do
+      do_update_ticket_order_and_status(token, opts)
+    else
+      {:error, :missing_token}
+    end
+  end
+
   defp do_fetch_tickets(token, opts) do
     org = Keyword.fetch!(opts, :org)
     project_number = Keyword.fetch!(opts, :project_number)
     statuses = MapSet.new(Keyword.get(opts, :statuses, ["Backlog", "Ready"]))
 
     fetch_pages(token, org, project_number, statuses, nil, [])
+  end
+
+  defp do_update_ticket_order_and_status(token, opts) do
+    project_id = Keyword.fetch!(opts, :project_id)
+    item_id = Keyword.fetch!(opts, :item_id)
+    after_item_id = Keyword.get(opts, :after_item_id)
+    status_field_id = Keyword.get(opts, :status_field_id)
+    target_status_option_id = Keyword.get(opts, :target_status_option_id)
+
+    with :ok <-
+           maybe_update_ticket_status(
+             token,
+             project_id,
+             item_id,
+             status_field_id,
+             target_status_option_id
+           ),
+         :ok <- update_ticket_position(token, project_id, item_id, after_item_id) do
+      :ok
+    end
+  end
+
+  defp maybe_update_ticket_status(_token, _project_id, _item_id, _field_id, nil), do: :ok
+  defp maybe_update_ticket_status(_token, _project_id, _item_id, nil, _option_id), do: :ok
+
+  defp maybe_update_ticket_status(token, project_id, item_id, field_id, option_id) do
+    body = %{
+      query: @update_status_mutation,
+      variables: %{
+        projectId: project_id,
+        itemId: item_id,
+        fieldId: field_id,
+        optionId: option_id
+      }
+    }
+
+    graphql_post(token, body)
+  end
+
+  defp update_ticket_position(token, project_id, item_id, after_item_id) do
+    body = %{
+      query: @update_position_mutation,
+      variables: %{
+        projectId: project_id,
+        itemId: item_id,
+        afterId: after_item_id
+      }
+    }
+
+    graphql_post(token, body)
   end
 
   defp fetch_pages(token, org, project_number, statuses, after_cursor, acc) do
@@ -125,20 +232,18 @@ defmodule Agents.Sessions.Infrastructure.Clients.GithubProjectClient do
 
     case Req.post(@graphql_url,
            json: body,
-           headers: [
-             {"authorization", "Bearer #{token}"},
-             {"content-type", "application/json"},
-             {"user-agent", "perme8-agents"}
-           ]
+           headers: base_headers(token)
          ) do
       {:ok, %{status: 200, body: %{"data" => data}}} ->
-        items = get_in(data, ["organization", "projectV2", "items"]) || %{}
+        project = get_in(data, ["organization", "projectV2"]) || %{}
+        items = Map.get(project, "items", %{})
+        metadata = extract_project_metadata(project)
 
         page_tickets =
           items
           |> Map.get("nodes", [])
           |> List.wrap()
-          |> Enum.map(&parse_ticket_node/1)
+          |> Enum.map(&parse_ticket_node(&1, metadata))
           |> Enum.reject(&is_nil/1)
           |> Enum.filter(fn ticket -> MapSet.member?(statuses, ticket.status) end)
 
@@ -161,7 +266,10 @@ defmodule Agents.Sessions.Infrastructure.Clients.GithubProjectClient do
     end
   end
 
-  defp parse_ticket_node(%{"content" => %{"number" => number, "title" => title} = issue} = node)
+  defp parse_ticket_node(
+         %{"content" => %{"number" => number, "title" => title} = issue} = node,
+         metadata
+       )
        when is_integer(number) and is_binary(title) do
     %{
       number: number,
@@ -169,8 +277,13 @@ defmodule Agents.Sessions.Infrastructure.Clients.GithubProjectClient do
       body: issue["body"],
       url: issue["url"],
       status: get_in(node, ["statusField", "name"]),
+      status_option_id: get_in(node, ["statusField", "optionId"]),
       priority: get_in(node, ["priorityField", "name"]),
       size: get_in(node, ["sizeField", "name"]),
+      item_id: node["id"],
+      project_id: metadata.project_id,
+      status_field_id: metadata.status_field_id,
+      status_option_ids: metadata.status_option_ids,
       labels:
         issue
         |> get_in(["labels", "nodes"])
@@ -180,7 +293,32 @@ defmodule Agents.Sessions.Infrastructure.Clients.GithubProjectClient do
     }
   end
 
-  defp parse_ticket_node(_), do: nil
+  defp parse_ticket_node(_, _metadata), do: nil
+
+  defp extract_project_metadata(project) do
+    status_field =
+      project
+      |> get_in(["fields", "nodes"])
+      |> List.wrap()
+      |> Enum.find(fn field -> field["name"] == "Status" end)
+
+    status_option_ids =
+      status_field
+      |> Map.get("options", [])
+      |> List.wrap()
+      |> Enum.reduce(%{}, fn option, acc ->
+        case {option["name"], option["id"]} do
+          {name, id} when is_binary(name) and is_binary(id) -> Map.put(acc, name, id)
+          _ -> acc
+        end
+      end)
+
+    %{
+      project_id: project["id"],
+      status_field_id: status_field && status_field["id"],
+      status_option_ids: status_option_ids
+    }
+  end
 
   defp do_push_ticket_update(token, ticket, opts) do
     org = Keyword.fetch!(opts, :org)
@@ -284,34 +422,34 @@ defmodule Agents.Sessions.Infrastructure.Clients.GithubProjectClient do
         {:error, {:unsupported_option, field_id, value}}
 
       option_id ->
-        mutation = """
-        mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
-          updateProjectV2ItemFieldValue(input: {
-            projectId: $projectId,
-            itemId: $itemId,
-            fieldId: $fieldId,
-            value: { singleSelectOptionId: $optionId }
-          }) {
-            projectV2Item { id }
+        graphql_post(token, %{
+          query: @update_status_mutation,
+          variables: %{
+            projectId: "PVT_kwDOAY59zs4BPTB1",
+            itemId: item_id,
+            fieldId: field_id,
+            optionId: option_id
           }
-        }
-        """
+        })
+    end
+  end
 
-        variables = %{
-          projectId: "PVT_kwDOAY59zs4BPTB1",
-          itemId: item_id,
-          fieldId: field_id,
-          optionId: option_id
-        }
+  defp graphql_post(token, body) do
+    case Req.post(@graphql_url,
+           json: body,
+           headers: base_headers(token)
+         ) do
+      {:ok, %{status: 200, body: %{"errors" => errors}}} when is_list(errors) and errors != [] ->
+        {:error, {:graphql_errors, errors}}
 
-        case Req.post(@graphql_url,
-               json: %{query: mutation, variables: variables},
-               headers: base_headers(token)
-             ) do
-          {:ok, %{status: 200}} -> :ok
-          {:ok, %{status: status, body: body}} -> {:error, {:unexpected_status, status, body}}
-          {:error, reason} -> {:error, reason}
-        end
+      {:ok, %{status: 200}} ->
+        :ok
+
+      {:ok, %{status: status, body: body}} ->
+        {:error, {:unexpected_status, status, body}}
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
