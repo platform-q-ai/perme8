@@ -185,6 +185,107 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       assert html =~ ~s(data-ticket-number="222")
     end
 
+    test "tickets keep lane order from sync state instead of priority sorting", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      :sys.replace_state(Agents.Sessions.Infrastructure.TicketSyncServer, fn state ->
+        %{
+          state
+          | tickets: [
+              %{
+                number: 301,
+                title: "Backlog first",
+                body: nil,
+                status: "Backlog",
+                priority: "Nice to have",
+                size: "S",
+                labels: [],
+                url: nil
+              },
+              %{
+                number: 101,
+                title: "Backlog second",
+                body: nil,
+                status: "Backlog",
+                priority: "Need",
+                size: "M",
+                labels: [],
+                url: nil
+              }
+            ]
+        }
+      end)
+
+      send(lv.pid, {:tickets_synced, []})
+
+      html =
+        lv
+        |> element(~s(button[data-testid="sidebar-tab-tickets"]))
+        |> render_click()
+
+      first_pos = html |> :binary.matches(~s(data-ticket-number="301")) |> List.first() |> elem(0)
+
+      second_pos =
+        html |> :binary.matches(~s(data-ticket-number="101")) |> List.first() |> elem(0)
+
+      assert first_pos < second_pos
+    end
+
+    test "reorder_tickets applies optimistic lane move when backend sync fails", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      :sys.replace_state(Agents.Sessions.Infrastructure.TicketSyncServer, fn state ->
+        %{
+          state
+          | tickets: [
+              %{
+                number: 111,
+                title: "Backlog ticket",
+                body: nil,
+                status: "Backlog",
+                priority: "Want",
+                size: "S",
+                labels: [],
+                url: nil
+              },
+              %{
+                number: 222,
+                title: "Ready ticket",
+                body: nil,
+                status: "Ready",
+                priority: "Need",
+                size: "M",
+                labels: [],
+                url: nil
+              }
+            ]
+        }
+      end)
+
+      send(lv.pid, {:tickets_synced, []})
+
+      lv
+      |> element(~s(button[data-testid="sidebar-tab-tickets"]))
+      |> render_click()
+
+      html =
+        lv
+        |> element("#ticket-lane-ready")
+        |> render_hook("reorder_tickets", %{
+          "moved_number" => "111",
+          "source_status" => "Backlog",
+          "target_status" => "Ready",
+          "ordered_numbers" => ["222", "111"]
+        })
+
+      ready_lane_start =
+        html |> :binary.matches(~s(id="ticket-lane-ready")) |> List.first() |> elem(0)
+
+      moved_pos = html |> :binary.matches(~s(data-ticket-number="111")) |> List.last() |> elem(0)
+
+      assert moved_pos > ready_lane_start
+    end
+
     test "selecting ticket without associated session defaults to ticket tab", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/sessions")
 

@@ -133,6 +133,10 @@ export class PlaywrightBrowserAdapter implements BrowserPort {
     await this.guardPage().dblclick(selector)
   }
 
+  async dragAndDrop(sourceSelector: string, targetSelector: string): Promise<void> {
+    await this.guardPage().dragAndDrop(sourceSelector, targetSelector)
+  }
+
   async fill(selector: string, value: string): Promise<void> {
     await this.guardPage().fill(selector, value)
   }

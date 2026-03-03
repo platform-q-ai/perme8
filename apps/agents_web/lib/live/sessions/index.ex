@@ -337,16 +337,34 @@ defmodule AgentsWeb.SessionsLive.Index do
     target_status = Map.get(params, "target_status")
 
     with {moved_number, ""} <- Integer.parse(to_string(moved)),
-         ordered_numbers <- normalize_ordered_ticket_numbers(ordered),
-         :ok <- Sessions.reorder_project_ticket(moved_number, target_status, ordered_numbers) do
-      user = socket.assigns.current_scope.user
-      {:noreply, reload_all(socket, user.id)}
-    else
-      {:error, reason} ->
-        {:noreply, put_flash(socket, :error, "Failed to reorder ticket: #{inspect(reason)}")}
+         ordered_numbers <- normalize_ordered_ticket_numbers(ordered) do
+      optimistic_socket =
+        assign(
+          socket,
+          :tickets,
+          apply_local_ticket_reorder(
+            socket.assigns.tickets,
+            moved_number,
+            target_status,
+            ordered_numbers
+          )
+        )
 
-      _ ->
-        {:noreply, put_flash(socket, :error, "Failed to reorder ticket")}
+      case Sessions.reorder_project_ticket(moved_number, target_status, ordered_numbers) do
+        :ok ->
+          user = socket.assigns.current_scope.user
+          {:noreply, reload_all(optimistic_socket, user.id)}
+
+        {:error, reason} ->
+          {:noreply,
+           put_flash(
+             optimistic_socket,
+             :error,
+             "Ticket moved locally, but GitHub sync failed: #{inspect(reason)}"
+           )}
+      end
+    else
+      _ -> {:noreply, put_flash(socket, :error, "Failed to reorder ticket")}
     end
   end
 
@@ -1099,6 +1117,55 @@ defmodule AgentsWeb.SessionsLive.Index do
   end
 
   defp normalize_ordered_ticket_numbers(_), do: []
+
+  defp apply_local_ticket_reorder(tickets, moved_number, target_status, ordered_numbers) do
+    case Enum.find(tickets, &(&1.number == moved_number)) do
+      nil ->
+        tickets
+
+      moved_ticket ->
+        destination_status =
+          if is_binary(target_status) and target_status != "" do
+            target_status
+          else
+            moved_ticket.status
+          end
+
+        moved_ticket = %{moved_ticket | status: destination_status}
+        remaining_tickets = Enum.reject(tickets, &(&1.number == moved_number))
+
+        destination_lane =
+          Enum.filter(remaining_tickets, &(&1.status == destination_status))
+
+        destination_lookup =
+          Enum.reduce(destination_lane, %{moved_number => moved_ticket}, fn ticket, acc ->
+            Map.put(acc, ticket.number, ticket)
+          end)
+
+        ordered_destination_lane =
+          ordered_numbers
+          |> Enum.uniq()
+          |> Enum.map(&Map.get(destination_lookup, &1))
+          |> Enum.reject(&is_nil/1)
+
+        listed_numbers = MapSet.new(Enum.map(ordered_destination_lane, & &1.number))
+
+        ordered_destination_lane =
+          if MapSet.member?(listed_numbers, moved_number) do
+            ordered_destination_lane
+          else
+            ordered_destination_lane ++ [moved_ticket]
+          end
+
+        destination_lane_remainder =
+          Enum.reject(destination_lane, &MapSet.member?(listed_numbers, &1.number))
+
+        untouched_tickets =
+          Enum.reject(remaining_tickets, &(&1.status == destination_status))
+
+        untouched_tickets ++ ordered_destination_lane ++ destination_lane_remainder
+    end
+  end
 
   defp merge_queued_messages(existing, incoming) do
     (existing ++ incoming)
