@@ -23,6 +23,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   use GenServer, restart: :temporary
 
   alias Agents.Sessions.Application.SessionsConfig
+  alias Agents.Sessions.Application.Services.AuthRefresher
   alias Agents.Sessions.Domain.Entities.TodoList
   alias Agents.Sessions.Domain.Events.{TaskCompleted, TaskFailed, TaskCancelled}
   alias Agents.Sessions.Infrastructure.Schemas.TaskSchema
@@ -42,6 +43,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     :pending_question_request_id,
     :pending_question_data,
     :sse_pid,
+    :auth_refresher,
+    :fresh_warm_container,
     status: :starting,
     health_retries: 0,
     sse_reconnecting: false,
@@ -116,7 +119,10 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     resume? = Keyword.get(opts, :resume, false)
     resume_container_id = Keyword.get(opts, :container_id)
     resume_session_id = Keyword.get(opts, :session_id)
+    prewarmed_container_id = Keyword.get(opts, :prewarmed_container_id)
+    fresh_warm_container = Keyword.get(opts, :fresh_warm_container, false)
     prompt_instruction = Keyword.get(opts, :prompt_instruction)
+    auth_refresher = Keyword.get(opts, :auth_refresher, AuthRefresher)
 
     # Load task from DB to get instruction and user_id
     case task_repo.get_task(task_id) do
@@ -139,6 +145,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
           task_repo: task_repo,
           pubsub: pubsub,
           event_bus: event_bus,
+          auth_refresher: auth_refresher,
+          fresh_warm_container: fresh_warm_container,
           queue_terminal_notifier: queue_terminal_notifier,
           health_retries: SessionsConfig.health_check_max_retries()
         }
@@ -165,8 +173,14 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
           send(self(), :restart_container)
           {:ok, state}
         else
-          send(self(), :start_container)
-          {:ok, state}
+          if is_binary(prewarmed_container_id) and prewarmed_container_id != "" do
+            state = %{state | container_id: prewarmed_container_id}
+            send(self(), :restart_prewarmed_container)
+            {:ok, state}
+          else
+            send(self(), :start_container)
+            {:ok, state}
+          end
         end
     end
   end
@@ -290,6 +304,29 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     end
   end
 
+  @impl true
+  def handle_info(:restart_prewarmed_container, state) do
+    case state.container_provider.restart(state.container_id) do
+      {:ok, %{port: port}} ->
+        update_task_status(state, %{
+          status: "starting",
+          container_port: port,
+          completed_at: nil,
+          error: nil
+        })
+
+        broadcast_status(state.task_id, "starting", state.pubsub)
+
+        new_state = %{state | container_port: port, status: :health_check}
+        send(self(), :wait_for_health_fresh)
+        {:noreply, new_state}
+
+      {:error, reason} ->
+        fail_task(state, "Container restart failed: #{inspect(reason)}")
+        {:stop, :normal, state}
+    end
+  end
+
   # ---- Health Check ----
 
   @impl true
@@ -343,6 +380,49 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
         interval = SessionsConfig.health_check_interval_ms()
         Process.send_after(self(), :wait_for_health_resume, interval)
         {:noreply, %{state | health_retries: state.health_retries - 1}}
+    end
+  end
+
+  @impl true
+  def handle_info(:wait_for_health_fresh, %{health_retries: 0} = state) do
+    fail_task(state, "Health check timed out on fresh warm container")
+    {:stop, :normal, state}
+  end
+
+  @impl true
+  def handle_info(:wait_for_health_fresh, state) do
+    base_url = "http://localhost:#{state.container_port}"
+
+    case state.opencode_client.health(base_url) do
+      :ok ->
+        send(self(), :prepare_fresh_start)
+        {:noreply, %{state | status: :preparing_fresh_start}}
+
+      {:error, _reason} ->
+        interval = SessionsConfig.health_check_interval_ms()
+        Process.send_after(self(), :wait_for_health_fresh, interval)
+        {:noreply, %{state | health_retries: state.health_retries - 1}}
+    end
+  end
+
+  @impl true
+  def handle_info(:prepare_fresh_start, %{fresh_warm_container: false} = state) do
+    send(self(), :create_session)
+    {:noreply, %{state | status: :creating_session}}
+  end
+
+  @impl true
+  def handle_info(:prepare_fresh_start, state) do
+    base_url = "http://localhost:#{state.container_port}"
+
+    with :ok <- state.container_provider.prepare_fresh_start(state.container_id),
+         {:ok, _providers} <- state.auth_refresher.refresh_auth(base_url, state.opencode_client) do
+      send(self(), :create_session)
+      {:noreply, %{state | status: :creating_session}}
+    else
+      {:error, reason} ->
+        fail_task(state, "Fresh warm start preparation failed: #{inspect(reason)}")
+        {:stop, :normal, state}
     end
   end
 

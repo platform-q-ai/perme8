@@ -118,6 +118,29 @@ defmodule Agents.Sessions.Infrastructure.Adapters.DockerAdapter do
     end
   end
 
+  @impl true
+  def prepare_fresh_start(container_id, opts \\ []) do
+    system_cmd = Keyword.get(opts, :system_cmd, &System.cmd/3)
+
+    command =
+      [
+        "set -e",
+        "if [ -d /workspace/perme8/.git ]; then git -C /workspace/perme8 pull --ff-only origin ${REPO_BRANCH:-main}; fi",
+        "if [ -d \"$HOME/.claude/skills/.git\" ]; then git -C \"$HOME/.claude/skills\" pull --ff-only origin main || git -C \"$HOME/.claude/skills\" pull --ff-only origin master; fi"
+      ]
+      |> Enum.join(" && ")
+
+    case system_cmd.("docker", ["exec", container_id, "bash", "-lc", command],
+           stderr_to_stdout: true
+         ) do
+      {_output, 0} ->
+        :ok
+
+      {output, exit_code} ->
+        {:error, {:docker_prepare_fresh_start_failed, exit_code, String.trim(output)}}
+    end
+  end
+
   @port_retries 5
   @port_retry_interval_ms 500
 

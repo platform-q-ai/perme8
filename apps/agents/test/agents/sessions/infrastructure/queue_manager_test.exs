@@ -15,12 +15,26 @@ defmodule Agents.Sessions.Infrastructure.QueueManagerTest do
     default_attrs = %{
       instruction: "Queue task",
       user_id: user.id,
-      status: "pending"
+      status: "pending",
+      container_id: nil
     }
+
+    attrs = maybe_put_warm_container_id(attrs)
 
     %TaskSchema{}
     |> TaskSchema.changeset(Map.merge(default_attrs, attrs))
     |> Repo.insert!()
+  end
+
+  defp maybe_put_warm_container_id(attrs) do
+    status = attrs[:status] || attrs["status"]
+    has_container_id = Map.has_key?(attrs, :container_id) or Map.has_key?(attrs, "container_id")
+
+    if status == "queued" and not has_container_id do
+      Map.put(attrs, :container_id, "warm-#{System.unique_integer([:positive])}")
+    else
+      attrs
+    end
   end
 
   describe "check_concurrency/1" do
@@ -95,6 +109,40 @@ defmodule Agents.Sessions.Infrastructure.QueueManagerTest do
   end
 
   describe "queue processor rules" do
+    test "does not promote cold queued tasks before warm readiness" do
+      user = user_fixture()
+
+      cold = create_task(user, %{status: "queued", queue_position: 1, container_id: nil})
+
+      {:module, container_provider_mod, _, _} =
+        defmodule :"Agents.Sessions.QueueManagerTest.NoopContainerProvider.#{System.unique_integer([:positive])}" do
+          def start(_image, _opts), do: {:error, :warmup_disabled}
+          def stop(_container_id, _opts \\ []), do: :ok
+          def status(_container_id, _opts \\ []), do: {:ok, :not_found}
+          def remove(_container_id, _opts \\ []), do: :ok
+          def restart(_container_id, _opts \\ []), do: {:ok, %{port: 4096}}
+
+          def stats(_container_id, _opts \\ []),
+            do: {:ok, %{cpu_percent: 0.0, memory_usage: 0, memory_limit: 0}}
+
+          def prepare_fresh_start(_container_id, _opts \\ []), do: :ok
+        end
+
+      assert {:ok, _pid} =
+               QueueManagerSupervisor.ensure_started(user.id,
+                 concurrency_limit: 1,
+                 warm_cache_limit: 0,
+                 container_provider: container_provider_mod,
+                 task_runner_starter: fn _task_id, _opts -> {:ok, self()} end
+               )
+
+      assert :ok = QueueManager.notify_task_queued(user.id, cold.id)
+
+      updated = Repo.get!(TaskSchema, cold.id)
+      assert updated.status == "queued"
+      assert updated.queue_position == 1
+    end
+
     test "promotes queued tasks up to concurrency limit in queue order" do
       user = user_fixture()
 
@@ -397,7 +445,7 @@ defmodule Agents.Sessions.Infrastructure.QueueManagerTest do
   describe "notify_feedback_provided/2" do
     test "requeues awaiting_feedback task and promotes if capacity available" do
       user = user_fixture()
-      awaiting = create_task(user, %{status: "awaiting_feedback"})
+      awaiting = create_task(user, %{status: "awaiting_feedback", container_id: "warm-feedback"})
 
       assert {:ok, _pid} =
                QueueManagerSupervisor.ensure_started(user.id,

@@ -116,7 +116,12 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
   def handle_info(:warm_top_queued, state) do
     warm_top_queued_tasks(state)
 
-    state = %{state | warmup_scheduled: false, warming_task_ids: MapSet.new()}
+    state =
+      state
+      |> Map.put(:warmup_scheduled, false)
+      |> Map.put(:warming_task_ids, MapSet.new())
+      |> promote_next_task()
+
     broadcast_queue_updated(state)
 
     {:noreply, state}
@@ -299,9 +304,13 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
         state
 
       task ->
-        state
-        |> promote_task(task)
-        |> do_promote_to_capacity(running_count + 1)
+        if warm_ready_for_promotion?(task) do
+          state
+          |> promote_task(task)
+          |> do_promote_to_capacity(running_count + 1)
+        else
+          state
+        end
     end
   end
 
@@ -396,6 +405,14 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
       prompt_instruction: prompt_instruction,
       container_id: cid,
       session_id: sid
+    ]
+  end
+
+  defp runner_opts_for(%{container_id: cid, session_id: nil}, _resume_prompt)
+       when is_binary(cid) and cid != "" do
+    [
+      prewarmed_container_id: cid,
+      fresh_warm_container: true
     ]
   end
 
@@ -538,7 +555,7 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
   defp warm_top_queued_tasks(state) do
     state
     |> safe_list_queued()
-    |> Enum.take(state.warm_cache_limit)
+    |> Enum.take(warm_target_count(state))
     |> Enum.each(&maybe_warm_task(state, &1))
 
     :ok
@@ -606,13 +623,17 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
     warming_task_ids =
       state
       |> safe_list_queued()
-      |> Enum.take(state.warm_cache_limit)
+      |> Enum.take(warm_target_count(state))
       |> Enum.filter(&needs_warm?/1)
       |> Enum.map(& &1.id)
       |> MapSet.new()
 
-    Process.send(self(), :warm_top_queued, [])
-    %{state | warmup_scheduled: true, warming_task_ids: warming_task_ids}
+    if MapSet.size(warming_task_ids) == 0 do
+      state
+    else
+      Process.send(self(), :warm_top_queued, [])
+      %{state | warmup_scheduled: true, warming_task_ids: warming_task_ids}
+    end
   end
 
   defp needs_warm?(%{container_id: nil}), do: true
@@ -622,6 +643,17 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
   end
 
   defp needs_warm?(_), do: false
+
+  defp warm_ready_for_promotion?(%{container_id: container_id}) when is_binary(container_id) do
+    not String.starts_with?(container_id, "task:")
+  end
+
+  defp warm_ready_for_promotion?(_), do: false
+
+  defp warm_target_count(state) do
+    available_slots = max(state.concurrency_limit - safe_count_running(state), 0)
+    max(state.warm_cache_limit, available_slots)
+  end
 
   defp via_tuple(user_id) do
     {:via, Registry, {Agents.Sessions.QueueRegistry, user_id}}
