@@ -379,11 +379,39 @@ defmodule AgentsWeb.SessionsLive.Index do
   end
 
   @impl true
-  def handle_event("delete_queued_task", %{"task-id" => task_id}, socket) do
+  def handle_event("delete_queued_task", params, socket) do
     user = socket.assigns.current_scope.user
 
-    case Sessions.delete_task(task_id, user.id) do
+    task_id = Map.get(params, "task-id")
+    container_id = Map.get(params, "container-id")
+
+    delete_result =
+      cond do
+        is_binary(container_id) and container_id != "" and
+            not String.starts_with?(container_id, "task:") ->
+          Sessions.delete_session(container_id, user.id)
+
+        is_binary(task_id) and task_id != "" ->
+          delete_queued_task_by_id(task_id, user.id)
+
+        true ->
+          {:error, :not_found}
+      end
+
+    case delete_result do
       :ok ->
+        socket =
+          if socket.assigns.active_container_id == container_id or
+               (socket.assigns.current_task && socket.assigns.current_task.id == task_id) do
+            socket
+            |> assign(:active_container_id, nil)
+            |> assign(:current_task, nil)
+            |> assign(:events, [])
+            |> assign_session_state()
+          else
+            socket
+          end
+
         {:noreply,
          socket
          |> reload_all(user.id)
@@ -794,6 +822,19 @@ defmodule AgentsWeb.SessionsLive.Index do
 
   @impl true
   def handle_info(_msg, socket), do: {:noreply, socket}
+
+  defp delete_queued_task_by_id(task_id, user_id) do
+    case Sessions.get_task(task_id, user_id) do
+      {:ok, task} when is_binary(task.container_id) and task.container_id != "" ->
+        Sessions.delete_session(task.container_id, user_id)
+
+      {:ok, _task} ->
+        Sessions.delete_task(task_id, user_id)
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
 
   defp assign_session_state(socket) do
     assign(socket,

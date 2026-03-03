@@ -137,14 +137,17 @@
           warm_primary_sessions
           |> Enum.map(& &1.latest_task_id)
           |> MapSet.new() %>
+        <% warming_task_ids =
+          if @queue_state,
+            do: MapSet.new(Map.get(@queue_state, :warming_task_ids, [])),
+            else: MapSet.new() %>
         <% has_real_container? = fn session ->
           is_binary(session.container_id) and
             not String.starts_with?(session.container_id, "task:")
         end %>
         <% warming_session? = fn session ->
           is_binary(session.latest_task_id) and
-            (MapSet.member?(warming_task_ids, session.latest_task_id) or
-               MapSet.member?(warm_primary_ids, session.latest_task_id)) and
+            MapSet.member?(warming_task_ids, session.latest_task_id) and
             not has_real_container?.(session)
         end %>
         <% overflow_queued_sessions =
@@ -176,11 +179,14 @@
               class={[
                 "flex flex-col gap-0.5 w-full rounded-lg p-2 min-h-16",
                 session.latest_status == "failed" && "border border-warning/40 bg-warning/10",
+                session.latest_status == "completed" &&
+                  "border border-violet-400/40 bg-violet-500/10",
                 session.latest_status == "cancelled" && "border border-error/35 bg-error/10",
                 session.latest_status in ["pending", "starting", "running"] &&
                   "border border-success/40 bg-success/10",
                 session.latest_status not in [
                   "failed",
+                  "completed",
                   "cancelled",
                   "pending",
                   "starting",
@@ -311,18 +317,6 @@
                   {truncate_instruction(session.title, 35)}
                 </span>
                 <div class="flex items-center gap-1">
-                  <button
-                    :if={session.latest_task_id}
-                    type="button"
-                    phx-click="delete_queued_task"
-                    phx-value-task-id={session.latest_task_id}
-                    data-confirm="Remove this queued session?"
-                    onclick="event.stopPropagation()"
-                    class="btn btn-ghost btn-xs p-0 min-h-0 h-auto"
-                    title="Remove queued session"
-                  >
-                    <.icon name="hero-x-mark" class="size-3.5 text-base-content/45" />
-                  </button>
                   <.status_dot
                     status={session.latest_status}
                     cold={!has_real_container?.(session)}
@@ -379,18 +373,6 @@
                   {truncate_instruction(session.title, 35)}
                 </span>
                 <div class="flex items-center gap-1">
-                  <button
-                    :if={session.latest_task_id}
-                    type="button"
-                    phx-click="delete_queued_task"
-                    phx-value-task-id={session.latest_task_id}
-                    data-confirm="Remove this queued session?"
-                    onclick="event.stopPropagation()"
-                    class="btn btn-ghost btn-xs p-0 min-h-0 h-auto"
-                    title="Remove queued session"
-                  >
-                    <.icon name="hero-x-mark" class="size-3.5 text-base-content/45" />
-                  </button>
                   <.status_dot
                     status={session.latest_status}
                     cold={!has_real_container?.(session) and !warming_session?.(session)}
@@ -575,6 +557,18 @@
             data-confirm="Delete this session and its container? This cannot be undone."
             class="btn btn-ghost btn-xs text-error"
             title="Delete session"
+          >
+            <.icon name="hero-trash" class="size-4" />
+          </button>
+          <button
+            :if={@current_task && @current_task.status == "queued"}
+            type="button"
+            phx-click="delete_queued_task"
+            phx-value-task-id={@current_task.id}
+            phx-value-container-id={@active_container_id}
+            data-confirm="Remove this queued session?"
+            class="btn btn-ghost btn-xs text-error"
+            title="Delete queued session"
           >
             <.icon name="hero-trash" class="size-4" />
           </button>
