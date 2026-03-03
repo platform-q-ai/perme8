@@ -369,6 +369,12 @@ defmodule AgentsWeb.SessionsLive.Index do
   end
 
   @impl true
+  def handle_event("switch_sidebar_list_tab", %{"tab" => tab}, socket) do
+    tab = if tab in ["sessions", "tickets"], do: tab, else: "sessions"
+    {:noreply, assign(socket, :sidebar_list_tab, tab)}
+  end
+
+  @impl true
   def handle_event("update_concurrency_limit", %{"concurrency_limit" => limit_str}, socket) do
     user = socket.assigns.current_scope.user
 
