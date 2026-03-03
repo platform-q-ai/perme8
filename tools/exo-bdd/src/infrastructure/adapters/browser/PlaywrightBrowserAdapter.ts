@@ -20,7 +20,12 @@ export class PlaywrightBrowserAdapter implements BrowserPort {
   constructor(readonly config: BrowserAdapterConfig) {}
 
   async initialize(): Promise<void> {
-    this.browser = await chromium.launch({ headless: this.config.headless ?? true })
+    const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
+
+    this.browser = await chromium.launch({
+      headless: this.config.headless ?? true,
+      ...(executablePath ? { executablePath } : {}),
+    })
     this.defaultContext = await this.browser.newContext({
       viewport: this.config.viewport,
       baseURL: this.config.baseURL,

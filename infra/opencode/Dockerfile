@@ -13,7 +13,8 @@ FROM hexpm/elixir:1.19.4-erlang-28.3.2-alpine-3.21.6
 # build-base: make/gcc/musl-dev needed by bcrypt_elixir and lazy_html NIFs
 # unzip: required by bun installer
 # nodejs: required by esbuild/tailwind asset pipeline and npm test
-RUN apk add --no-cache git bash openssl curl python3 github-cli ripgrep fd postgresql16 postgresql16-contrib build-base unzip nodejs npm
+# chromium + runtime libs: required for Playwright browser adapter tests
+RUN apk add --no-cache git bash openssl curl python3 github-cli ripgrep fd postgresql16 postgresql16-contrib build-base unzip nodejs npm chromium nss freetype harfbuzz ca-certificates ttf-freefont
 
 # Install Bun (JavaScript runtime/toolkit)
 RUN curl -fsSL https://bun.sh/install | bash \
@@ -40,5 +41,6 @@ COPY get-token /home/appuser/.config/perme8/get-token
 RUN chown -R appuser:appuser /workspace /home/appuser/.local /home/appuser/.config /home/appuser/.claude /tmp/pgdata
 
 USER appuser
+ENV PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium-browser
 EXPOSE 4096
 ENTRYPOINT ["/workspace/entrypoint.sh"]
