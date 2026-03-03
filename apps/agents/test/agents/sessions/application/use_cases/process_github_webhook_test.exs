@@ -73,6 +73,25 @@ defmodule Agents.Sessions.Application.UseCases.ProcessGithubWebhookTest do
     assert {:ok, :ignored} = ProcessGithubWebhook.execute("pull_request", payload)
   end
 
+  test "ignores unsupported actions even when automation user id is missing" do
+    Application.put_env(:agents, :github_webhook,
+      enabled: true,
+      secret: "test-secret",
+      automation_user_id: nil,
+      repo: "platform-q-ai/perme8",
+      image: "ghcr.io/platform-q-ai/perme8-opencode:latest",
+      bot_identity: "perme8[bot]"
+    )
+
+    payload = %{
+      "action" => "edited",
+      "repository" => %{"full_name" => "platform-q-ai/perme8"},
+      "pull_request" => %{"number" => 280, "head" => %{"ref" => "feat/test"}}
+    }
+
+    assert {:ok, :ignored} = ProcessGithubWebhook.execute("pull_request", payload)
+  end
+
   test "ignores events for other repositories" do
     payload = %{
       "action" => "opened",
