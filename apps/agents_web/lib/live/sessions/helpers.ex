@@ -57,7 +57,7 @@ defmodule AgentsWeb.SessionsLive.Helpers do
 
   @doc "Returns true if the task is currently running."
   def task_running?(nil), do: false
-  def task_running?(task), do: active_task?(task)
+  def task_running?(%{status: status}), do: status in ["pending", "starting", "running"]
 
   @doc "Returns true if the session can be deleted (task is in terminal state)."
   def session_deletable?(sessions, container_id) do
@@ -119,6 +119,7 @@ defmodule AgentsWeb.SessionsLive.Helpers do
   def task_error_message(:no_container), do: "No container available for resume"
   def task_error_message(:no_session), do: "No session available for resume"
   def task_error_message(:health_timeout), do: "Container failed to become healthy after restart"
+  def task_error_message({:error, reason}), do: task_error_message(reason)
   def task_error_message(_), do: "Failed to create task"
 
   @doc "Polls container stats for all active sessions."

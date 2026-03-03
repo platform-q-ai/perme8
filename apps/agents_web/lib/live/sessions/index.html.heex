@@ -36,6 +36,10 @@
           <p>No sessions yet</p>
         </div>
       <% else %>
+        <% failed_sessions =
+          @sessions
+          |> Enum.filter(&(&1.latest_status == "failed"))
+          |> Enum.sort_by(&(-latest_at_unix(&1))) %>
         <% completed_sessions =
           @sessions
           |> Enum.filter(&(&1.latest_status == "completed"))
@@ -44,17 +48,40 @@
           @sessions
           |> Enum.filter(&(&1.latest_status == "cancelled"))
           |> Enum.sort_by(&(-latest_at_unix(&1))) %>
-        <% top_sessions = completed_sessions ++ cancelled_sessions %>
+        <% top_sessions = failed_sessions ++ completed_sessions ++ cancelled_sessions %>
         <% queued_sessions =
           @sessions
           |> Enum.filter(&(&1.latest_status == "queued"))
           |> Enum.sort_by(&(-latest_at_unix(&1))) %>
-        <% exited_sessions =
-          @sessions
-          |> Enum.filter(
-            &(&1.latest_status == "failed" && !is_nil(&1.container_id) && &1.container_id != "")
-          )
-          |> Enum.sort_by(&(-latest_at_unix(&1))) %>
+        <% warm_limit = if(@queue_state, do: Map.get(@queue_state, :warm_cache_limit, 2), else: 0) %>
+        <% warm_candidate_ids =
+          if @queue_state do
+            @queue_state.queued
+            |> Enum.take(warm_limit)
+            |> Enum.map(& &1.id)
+            |> MapSet.new()
+          else
+            MapSet.new()
+          end %>
+        <% has_real_container? = fn session ->
+          is_binary(session.container_id) and
+            not String.starts_with?(session.container_id, "task:")
+        end %>
+        <% warm_primary_sessions =
+          Enum.filter(queued_sessions, fn session ->
+            is_binary(session.latest_task_id) and
+              MapSet.member?(warm_candidate_ids, session.latest_task_id)
+          end) %>
+        <% warm_primary_ids =
+          warm_primary_sessions
+          |> Enum.map(& &1.latest_task_id)
+          |> MapSet.new() %>
+        <% overflow_queued_sessions =
+          Enum.reject(queued_sessions, fn session ->
+            is_binary(session.latest_task_id) and
+              MapSet.member?(warm_primary_ids, session.latest_task_id)
+          end) %>
+        <% empty_warm_slot_count = max(warm_limit - length(warm_primary_sessions), 0) %>
         <% in_progress_sessions =
           @sessions
           |> Enum.filter(&(&1.latest_status in ["pending", "starting", "running"]))
@@ -77,9 +104,10 @@
               }
               class={[
                 "flex flex-col gap-0.5 w-full rounded-lg p-2 min-h-16",
+                session.latest_status == "failed" && "border border-warning/40 bg-warning/10",
                 session.latest_status in ["pending", "starting", "running"] &&
                   "border border-success/40 bg-success/10",
-                session.latest_status not in ["pending", "starting", "running"] &&
+                session.latest_status not in ["failed", "pending", "starting", "running"] &&
                   "border border-transparent",
                 session.container_id == @active_container_id && "active"
               ]}
@@ -138,49 +166,20 @@
         </ul>
 
         <ul
-          :if={
-            queued_sessions != [] || exited_sessions != [] || in_progress_sessions != [] ||
-              empty_slot_count > 0
-          }
+          :if={queued_sessions != [] || in_progress_sessions != [] || empty_slot_count > 0}
           class="menu menu-sm p-2 gap-1 w-full mt-auto"
         >
-          <li :for={session <- queued_sessions} class="w-full">
+          <li :for={session <- overflow_queued_sessions} class="w-full">
             <div
               data-testid={"session-item-#{slugify(session.title)}"}
-              data-slot-state={if(is_nil(session.container_id), do: "cold", else: "warm")}
+              data-slot-state={if(has_real_container?.(session), do: "warm", else: "cold")}
               class={[
-                "flex flex-col gap-0.5 w-full rounded-lg p-2 min-h-16",
-                is_nil(session.container_id) && "border border-base-content/25 bg-base-content/10",
-                !is_nil(session.container_id) && "border border-transparent",
-                session.container_id == @active_container_id && "active"
-              ]}
-              phx-click="select_session"
-              phx-value-container-id={session.container_id}
-            >
-              <div class="flex items-center justify-between w-full">
-                <span class="text-xs font-medium truncate flex-1 min-w-0">
-                  {truncate_instruction(session.title, 35)}
-                </span>
-                <div class="flex items-center gap-1">
-                  <.status_dot status={session.latest_status} cold={is_nil(session.container_id)} />
-                </div>
-              </div>
-              <div class="flex items-center gap-2 text-[0.65rem] text-base-content/50 w-full">
-                <span>{image_label(session.image)}</span>
-                <span>&middot;</span>
-                <span>{relative_time(session.latest_at)}</span>
-              </div>
-              <.compact_progress_bar todo_items={session_todo_items(session)} />
-            </div>
-          </li>
-
-          <li :for={session <- exited_sessions} class="w-full">
-            <div
-              data-testid={"session-item-#{slugify(session.title)}"}
-              data-slot-state="exited"
-              class={[
-                "flex flex-col gap-0.5 w-full rounded-lg p-2 min-h-16 border border-warning/40 bg-warning/10",
-                session.container_id == @active_container_id && "active"
+                "flex flex-col gap-0.5 w-full rounded-lg p-2 min-h-16 transition-colors duration-700 ease-out",
+                has_real_container?.(session) && "border border-warning/35 bg-warning/8",
+                !has_real_container?.(session) &&
+                  "border border-base-content/20 bg-base-content/8",
+                !is_nil(session.container_id) && session.container_id == @active_container_id &&
+                  "active"
               ]}
               phx-click="select_session"
               phx-value-container-id={session.container_id}
@@ -191,28 +190,21 @@
                 </span>
                 <div class="flex items-center gap-1">
                   <button
-                    :if={
-                      session.latest_status == "failed" && auth_error?(session.latest_error) &&
-                        session.latest_task_id
-                    }
+                    :if={session.latest_task_id}
                     type="button"
-                    phx-click="refresh_auth_and_resume"
+                    phx-click="delete_queued_task"
                     phx-value-task-id={session.latest_task_id}
-                    disabled={auth_refreshing?(@auth_refreshing, session.latest_task_id)}
+                    data-confirm="Remove this queued session?"
+                    onclick="event.stopPropagation()"
                     class="btn btn-ghost btn-xs p-0 min-h-0 h-auto"
-                    title="Refresh auth & resume"
+                    title="Remove queued session"
                   >
-                    <.icon
-                      name="hero-arrow-path"
-                      class={
-                        if(auth_refreshing?(@auth_refreshing, session.latest_task_id),
-                          do: "size-3.5 text-warning animate-spin",
-                          else: "size-3.5 text-warning"
-                        )
-                      }
-                    />
+                    <.icon name="hero-x-mark" class="size-3.5 text-base-content/45" />
                   </button>
-                  <.status_dot status={session.latest_status} />
+                  <.status_dot
+                    status={session.latest_status}
+                    cold={!has_real_container?.(session)}
+                  />
                 </div>
               </div>
               <div class="flex items-center gap-2 text-[0.65rem] text-base-content/50 w-full">
@@ -221,17 +213,70 @@
                 <span>{relative_time(session.latest_at)}</span>
               </div>
               <.compact_progress_bar todo_items={session_todo_items(session)} />
-              <.container_stats_bars
-                :if={Map.has_key?(@container_stats, session.container_id)}
-                stats={@container_stats[session.container_id]}
-              />
             </div>
           </li>
 
+          <li :if={@queue_state} class="w-full">
+            <div data-testid="queue-warm-rule" class="mx-1 mt-1 border-t border-warning/45"></div>
+          </li>
+
           <li
-            :if={@queue_state && (empty_slot_count > 0 || in_progress_sessions != [])}
+            :for={slot <- if(empty_warm_slot_count > 0, do: 1..empty_warm_slot_count, else: [])}
             class="w-full"
           >
+            <div
+              data-testid={"empty-warm-slot-#{slot}"}
+              data-slot-state="warm-empty"
+              class="flex items-center gap-2 w-full rounded-lg p-2 min-h-16 border border-warning/40 border-dashed bg-warning/5"
+            >
+              <.icon name="hero-fire" class="size-3.5 text-warning/70" />
+              <span class="text-xs text-base-content/55">Empty warm slot</span>
+            </div>
+          </li>
+
+          <li :for={session <- warm_primary_sessions} class="w-full">
+            <div
+              data-testid={"session-item-#{slugify(session.title)}"}
+              data-slot-state="warm"
+              class={[
+                "flex flex-col gap-0.5 w-full rounded-lg p-2 min-h-16 transition-colors duration-700 ease-out",
+                "border border-warning/35 bg-warning/8",
+                !is_nil(session.container_id) && session.container_id == @active_container_id &&
+                  "active"
+              ]}
+              phx-click="select_session"
+              phx-value-container-id={session.container_id}
+            >
+              <div class="flex items-center justify-between w-full">
+                <span class="text-xs font-medium truncate flex-1 min-w-0">
+                  {truncate_instruction(session.title, 35)}
+                </span>
+                <div class="flex items-center gap-1">
+                  <button
+                    :if={session.latest_task_id}
+                    type="button"
+                    phx-click="delete_queued_task"
+                    phx-value-task-id={session.latest_task_id}
+                    data-confirm="Remove this queued session?"
+                    onclick="event.stopPropagation()"
+                    class="btn btn-ghost btn-xs p-0 min-h-0 h-auto"
+                    title="Remove queued session"
+                  >
+                    <.icon name="hero-x-mark" class="size-3.5 text-base-content/45" />
+                  </button>
+                  <.status_dot status={session.latest_status} cold={false} />
+                </div>
+              </div>
+              <div class="flex items-center gap-2 text-[0.65rem] text-base-content/50 w-full">
+                <span>{image_label(session.image)}</span>
+                <span>&middot;</span>
+                <span>{relative_time(session.latest_at)}</span>
+              </div>
+              <.compact_progress_bar todo_items={session_todo_items(session)} />
+            </div>
+          </li>
+
+          <li :if={@queue_state} class="w-full">
             <div data-testid="queue-limit-rule" class="mx-1 my-1 border-t border-success/50">
             </div>
           </li>
@@ -309,8 +354,12 @@
                 </div>
               </div>
               <% duration =
-                format_duration(session.started_at, session.completed_at, @duration_now) %>
-              <% file_stats = format_file_stats(session.session_summary) %>
+                format_duration(
+                  Map.get(session, :started_at),
+                  Map.get(session, :completed_at),
+                  @duration_now
+                ) %>
+              <% file_stats = format_file_stats(Map.get(session, :session_summary)) %>
               <div class="flex items-center gap-2 text-[0.65rem] text-base-content/50 w-full">
                 <span>{image_label(session.image)}</span>
                 <span>&middot;</span>

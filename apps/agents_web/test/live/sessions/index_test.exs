@@ -1304,7 +1304,7 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       assert html =~ ~s(data-slot-state="used")
     end
 
-    test "completed and cancelled render in top list while failed exited sessions stay below", %{
+    test "top list orders failed, completed, cancelled", %{
       conn: conn,
       user: user
     } do
@@ -1362,8 +1362,8 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
         |> List.first()
         |> elem(0)
 
+      assert failed_pos < completed_pos
       assert completed_pos < cancelled_pos
-      assert cancelled_pos < failed_pos
       assert failed_pos < running_pos
       assert html =~ ~s(data-testid="session-item-failed-exited")
       assert html =~ "bg-warning/10"
@@ -1407,6 +1407,103 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
         |> elem(0)
 
       assert queued_pos < rule_pos
+    end
+
+    test "renders warm divider above concurrency limit divider when queue exists", %{
+      conn: conn,
+      user: user
+    } do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Queued session",
+        container_id: "c-queued-session",
+        status: "queued"
+      })
+
+      {:ok, _lv, html} = live(conn, ~p"/sessions")
+
+      assert html =~ ~s(data-testid="queue-warm-rule")
+
+      {warm_pos, _} = :binary.match(html, ~s(data-testid="queue-warm-rule"))
+      {limit_pos, _} = :binary.match(html, ~s(data-testid="queue-limit-rule"))
+
+      assert warm_pos < limit_pos
+    end
+
+    test "renders empty warm slots based on warm cache limit", %{conn: conn, user: user} do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Warm queued session",
+        container_id: "warmed-container",
+        status: "queued"
+      })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      send(lv.pid, {
+        :queue_updated,
+        user.id,
+        %{
+          running: 0,
+          queued: [],
+          awaiting_feedback: [],
+          concurrency_limit: 2,
+          warm_cache_limit: 3
+        }
+      })
+
+      html = render(lv)
+
+      assert html =~ ~s(data-testid="empty-warm-slot-1")
+      assert html =~ ~s(data-testid="empty-warm-slot-2")
+    end
+
+    test "queued session with real container renders as warm even outside warm queue window", %{
+      conn: conn,
+      user: user
+    } do
+      task =
+        task_fixture(%{
+          user_id: user.id,
+          instruction: "Warm outside queue window",
+          status: "queued",
+          container_id: "real-warm-container"
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      send(lv.pid, {
+        :queue_updated,
+        user.id,
+        %{
+          running: 0,
+          queued: [],
+          awaiting_feedback: [],
+          concurrency_limit: 2,
+          warm_cache_limit: 0
+        }
+      })
+
+      html = render(lv)
+
+      assert html =~ ~s(data-testid="session-item-warm-outside-queue-window")
+      assert html =~ ~s(phx-value-task-id="#{task.id}")
+      assert html =~ "border border-warning/35 bg-warning/8"
+    end
+
+    test "cold queued sessions render with grey card styling", %{conn: conn, user: user} do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Cold queued session",
+        status: "queued",
+        container_id: nil
+      })
+
+      {:ok, _lv, html} = live(conn, ~p"/sessions")
+
+      assert html =~ ~s(data-testid="session-item-cold-queued-session")
+      assert html =~ ~s(data-slot-state="cold")
+      assert html =~ "bg-base-content/8"
     end
 
     test "renders queue limit rule above the slot at concurrency threshold", %{

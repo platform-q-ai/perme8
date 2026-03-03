@@ -44,17 +44,17 @@ defmodule Agents.Sessions.Domain.Policies.TaskPolicyTest do
   end
 
   describe "can_delete?/1" do
-    test "returns true for terminal statuses" do
+    test "returns true for terminal and queued statuses" do
       assert TaskPolicy.can_delete?("completed")
       assert TaskPolicy.can_delete?("failed")
       assert TaskPolicy.can_delete?("cancelled")
+      assert TaskPolicy.can_delete?("queued")
     end
 
     test "returns false for active statuses" do
       refute TaskPolicy.can_delete?("pending")
       refute TaskPolicy.can_delete?("starting")
       refute TaskPolicy.can_delete?("running")
-      refute TaskPolicy.can_delete?("queued")
       refute TaskPolicy.can_delete?("awaiting_feedback")
     end
   end

@@ -256,6 +256,20 @@ defmodule AgentsWeb.SessionsLive.Index do
   end
 
   @impl true
+  def handle_event("update_warm_cache_limit", %{"warm_cache_limit" => limit_str}, socket) do
+    user = socket.assigns.current_scope.user
+
+    case Integer.parse(limit_str) do
+      {limit, ""} when limit >= 0 and limit <= 5 ->
+        Sessions.set_warm_cache_limit(user.id, limit)
+        {:noreply, socket}
+
+      _ ->
+        {:noreply, socket}
+    end
+  end
+
+  @impl true
   def handle_event("select_image", %{"image" => image}, socket) do
     {:noreply, assign(socket, :selected_image, image)}
   end
@@ -291,6 +305,22 @@ defmodule AgentsWeb.SessionsLive.Index do
 
       {:error, _reason} ->
         {:noreply, put_flash(socket, :error, "Failed to delete session")}
+    end
+  end
+
+  @impl true
+  def handle_event("delete_queued_task", %{"task-id" => task_id}, socket) do
+    user = socket.assigns.current_scope.user
+
+    case Sessions.delete_task(task_id, user.id) do
+      :ok ->
+        {:noreply,
+         socket
+         |> reload_all(user.id)
+         |> put_flash(:info, "Queued session removed")}
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, task_error_message(reason))}
     end
   end
 
@@ -578,7 +608,7 @@ defmodule AgentsWeb.SessionsLive.Index do
   @impl true
   def handle_info({:queue_updated, user_id, queue_state}, socket) do
     if user_id == socket.assigns.current_scope.user.id do
-      {:noreply, assign(socket, :queue_state, queue_state)}
+      {:noreply, reload_all(socket, user_id, queue_state)}
     else
       {:noreply, socket}
     end
@@ -819,7 +849,7 @@ defmodule AgentsWeb.SessionsLive.Index do
     end
   end
 
-  defp reload_all(socket, user_id) do
+  defp reload_all(socket, user_id, queue_state_override \\ nil) do
     sessions = Sessions.list_sessions(user_id)
     tasks = Sessions.list_tasks(user_id)
     sessions = merge_unassigned_active_tasks(sessions, tasks)
@@ -845,7 +875,7 @@ defmodule AgentsWeb.SessionsLive.Index do
 
     socket
     |> assign(:sessions, sessions)
-    |> assign(:queue_state, load_queue_state(user_id))
+    |> assign(:queue_state, queue_state_override || load_queue_state(user_id))
   end
 
   defp merge_unassigned_active_tasks(sessions, tasks) do
@@ -902,7 +932,8 @@ defmodule AgentsWeb.SessionsLive.Index do
       running: 0,
       queued: [],
       awaiting_feedback: [],
-      concurrency_limit: 2
+      concurrency_limit: 2,
+      warm_cache_limit: 2
     }
   end
 

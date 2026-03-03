@@ -17,7 +17,7 @@ defmodule Agents.Sessions.Domain.Policies.TaskPolicy do
     "awaiting_feedback"
   ]
   @cancellable_statuses ["pending", "starting", "running", "queued", "awaiting_feedback"]
-  @deletable_statuses ["completed", "failed", "cancelled"]
+  @deletable_statuses ["completed", "failed", "cancelled", "queued"]
 
   @doc """
   Returns true if the given status is a valid task status.
@@ -33,7 +33,7 @@ defmodule Agents.Sessions.Domain.Policies.TaskPolicy do
 
   @doc """
   Returns true if the task can be deleted from the given status.
-  Only terminal statuses (completed, failed, cancelled) are deletable.
+  Terminal statuses and queued tasks are deletable.
   """
   def can_delete?(status) when status in @deletable_statuses, do: true
   def can_delete?(_), do: false

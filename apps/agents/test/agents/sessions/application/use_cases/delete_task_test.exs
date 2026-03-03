@@ -59,6 +59,22 @@ defmodule Agents.Sessions.Application.UseCases.DeleteTaskTest do
       assert :ok = DeleteTask.execute("task-1", "user-1", @default_opts)
     end
 
+    test "deletes a queued task" do
+      task =
+        struct(TaskSchema, %{
+          id: "task-1",
+          user_id: "user-1",
+          status: "queued",
+          container_id: nil
+        })
+
+      Agents.Mocks.TaskRepositoryMock
+      |> expect(:get_task_for_user, fn "task-1", "user-1" -> task end)
+      |> expect(:delete_task, fn ^task -> {:ok, task} end)
+
+      assert :ok = DeleteTask.execute("task-1", "user-1", @default_opts)
+    end
+
     test "handles task with no container_id" do
       task =
         struct(TaskSchema, %{

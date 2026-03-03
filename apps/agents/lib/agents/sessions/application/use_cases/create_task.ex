@@ -65,7 +65,7 @@ defmodule Agents.Sessions.Application.UseCases.CreateTask do
     case queue_checker.(user_id) do
       :at_limit -> true
       :ok -> false
-      _ -> false
+      _ -> true
     end
   end
 
