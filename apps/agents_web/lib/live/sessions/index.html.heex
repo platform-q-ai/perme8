@@ -110,9 +110,16 @@
               class={[
                 "flex flex-col gap-0.5 w-full rounded-lg p-2 min-h-16",
                 session.latest_status == "failed" && "border border-warning/40 bg-warning/10",
+                session.latest_status == "cancelled" && "border border-error/35 bg-error/10",
                 session.latest_status in ["pending", "starting", "running"] &&
                   "border border-success/40 bg-success/10",
-                session.latest_status not in ["failed", "pending", "starting", "running"] &&
+                session.latest_status not in [
+                  "failed",
+                  "cancelled",
+                  "pending",
+                  "starting",
+                  "running"
+                ] &&
                   "border border-transparent",
                 session.container_id == @active_container_id && "active"
               ]}

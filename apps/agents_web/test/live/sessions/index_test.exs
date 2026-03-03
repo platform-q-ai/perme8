@@ -1367,6 +1367,7 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       assert failed_pos < running_pos
       assert html =~ ~s(data-testid="session-item-failed-exited")
       assert html =~ "bg-warning/10"
+      assert html =~ "bg-error/10"
     end
 
     test "queued sessions render above concurrency rule", %{conn: conn, user: user} do
