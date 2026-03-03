@@ -1506,6 +1506,73 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       assert html =~ "bg-base-content/8"
     end
 
+    test "warm-lane queued session shows warming animation until real container exists", %{
+      conn: conn,
+      user: user
+    } do
+      task =
+        task_fixture(%{
+          user_id: user.id,
+          instruction: "Warming queued session",
+          status: "queued",
+          container_id: nil
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      send(lv.pid, {
+        :queue_updated,
+        user.id,
+        %{
+          running: 0,
+          queued: [%{id: task.id}],
+          awaiting_feedback: [],
+          concurrency_limit: 2,
+          warm_cache_limit: 1
+        }
+      })
+
+      html = render(lv)
+
+      assert html =~ ~s(data-testid="session-item-warming-queued-session")
+      assert html =~ ~s(data-slot-state="warming")
+      assert html =~ "Warming..."
+      assert html =~ "animate-pulse"
+    end
+
+    test "warm-lane queued session clears warming animation once container is real", %{
+      conn: conn,
+      user: user
+    } do
+      task =
+        task_fixture(%{
+          user_id: user.id,
+          instruction: "Warmed queued session",
+          status: "queued",
+          container_id: "real-warmed-container"
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      send(lv.pid, {
+        :queue_updated,
+        user.id,
+        %{
+          running: 0,
+          queued: [%{id: task.id}],
+          awaiting_feedback: [],
+          concurrency_limit: 2,
+          warm_cache_limit: 1
+        }
+      })
+
+      html = render(lv)
+
+      assert html =~ ~s(data-testid="session-item-warmed-queued-session")
+      assert html =~ ~s(data-slot-state="warm")
+      refute html =~ "Warming..."
+    end
+
     test "renders queue limit rule above the slot at concurrency threshold", %{
       conn: conn,
       user: user
