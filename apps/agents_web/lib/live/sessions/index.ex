@@ -278,7 +278,13 @@ defmodule AgentsWeb.SessionsLive.Index do
   def handle_event("switch_tab", %{"tab" => tab}, socket) do
     valid_tabs = Enum.map(session_tabs(), & &1.id)
     tab = if tab in valid_tabs, do: tab, else: "chat"
-    {:noreply, push_patch(socket, to: ~p"/sessions?#{%{tab: tab}}")}
+
+    params =
+      %{"tab" => tab}
+      |> maybe_put_container(socket.assigns.active_container_id)
+      |> maybe_put_new(socket.assigns.composing_new)
+
+    {:noreply, push_patch(socket, to: ~p"/sessions?#{params}")}
   end
 
   @impl true
@@ -851,6 +857,16 @@ defmodule AgentsWeb.SessionsLive.Index do
       socket
     end
   end
+
+  defp maybe_put_container(params, container_id)
+       when is_binary(container_id) and container_id != "" do
+    Map.put(params, "container", container_id)
+  end
+
+  defp maybe_put_container(params, _container_id), do: params
+
+  defp maybe_put_new(params, true), do: Map.put(params, "new", true)
+  defp maybe_put_new(params, _), do: params
 
   defp assign_session_state(socket) do
     assign(socket,

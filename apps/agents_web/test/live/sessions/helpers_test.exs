@@ -194,4 +194,25 @@ defmodule AgentsWeb.SessionsLive.HelpersTest do
       assert Helpers.format_file_stats("invalid") == nil
     end
   end
+
+  describe "ticket_label_class/1" do
+    test "maps known high-signal labels to daisyUI classes" do
+      assert Helpers.ticket_label_class("bug") == "badge-error"
+      assert Helpers.ticket_label_class("feature") == "badge-success"
+      assert Helpers.ticket_label_class("docs") == "badge-accent"
+      assert Helpers.ticket_label_class("refactor") == "badge-warning"
+      assert Helpers.ticket_label_class("backend") == "badge-secondary"
+      assert Helpers.ticket_label_class("frontend") == "badge-info"
+    end
+
+    test "normalizes casing and whitespace" do
+      assert Helpers.ticket_label_class("  SECURITY ") == "badge-error"
+      assert Helpers.ticket_label_class(" Documentation") == "badge-accent"
+    end
+
+    test "falls back to outline for unknown labels" do
+      assert Helpers.ticket_label_class("agents") == "badge-outline"
+      assert Helpers.ticket_label_class(nil) == "badge-outline"
+    end
+  end
 end

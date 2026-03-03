@@ -310,4 +310,32 @@ defmodule AgentsWeb.SessionsLive.Helpers do
   def ticket_session_state_class("completed"), do: "badge-primary"
   def ticket_session_state_class("paused"), do: "badge-warning"
   def ticket_session_state_class(_), do: "badge-ghost"
+
+  @doc "Returns CSS classes for GitHub label badges."
+  def ticket_label_class(label) when is_binary(label) do
+    case String.downcase(String.trim(label)) do
+      "bug" -> "badge-error"
+      "fix" -> "badge-error"
+      "urgent" -> "badge-error"
+      "critical" -> "badge-error"
+      "security" -> "badge-error"
+      "feature" -> "badge-success"
+      "enhancement" -> "badge-success"
+      "improvement" -> "badge-success"
+      "frontend" -> "badge-info"
+      "ui" -> "badge-info"
+      "ux" -> "badge-info"
+      "backend" -> "badge-secondary"
+      "api" -> "badge-secondary"
+      "docs" -> "badge-accent"
+      "documentation" -> "badge-accent"
+      "chore" -> "badge-ghost"
+      "maintenance" -> "badge-ghost"
+      "refactor" -> "badge-warning"
+      "blocked" -> "badge-warning"
+      _ -> "badge-outline"
+    end
+  end
+
+  def ticket_label_class(_), do: "badge-outline"
 end
