@@ -2,13 +2,18 @@
   <%!-- Left Panel: Session List --%>
   <div class="w-[36rem] shrink-0 border-r border-base-300 flex flex-col bg-base-100">
     <div class="px-3 pt-3 pb-2 border-b border-base-300 bg-base-100">
-      <div class="tabs tabs-boxed tabs-xs grid grid-cols-2" data-testid="sidebar-list-tabs">
+      <div class="tabs tabs-lift tabs-sm w-full" data-testid="sidebar-list-tabs" role="tablist">
         <button
           type="button"
           phx-click="switch_sidebar_list_tab"
           phx-value-tab="sessions"
           data-testid="sidebar-tab-sessions"
-          class={["tab font-medium", @sidebar_list_tab == "sessions" && "tab-active"]}
+          role="tab"
+          aria-selected={to_string(@sidebar_list_tab == "sessions")}
+          class={[
+            "tab flex-1 font-medium",
+            @sidebar_list_tab == "sessions" && "tab-active"
+          ]}
         >
           Sessions
         </button>
@@ -17,7 +22,12 @@
           phx-click="switch_sidebar_list_tab"
           phx-value-tab="tickets"
           data-testid="sidebar-tab-tickets"
-          class={["tab font-medium", @sidebar_list_tab == "tickets" && "tab-active"]}
+          role="tab"
+          aria-selected={to_string(@sidebar_list_tab == "tickets")}
+          class={[
+            "tab flex-1 font-medium",
+            @sidebar_list_tab == "tickets" && "tab-active"
+          ]}
         >
           Tickets
         </button>
