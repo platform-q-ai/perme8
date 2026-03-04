@@ -15,6 +15,7 @@ defmodule Agents.Sessions.Infrastructure.Schemas.ProjectTicketSchema do
           title: String.t(),
           status: String.t() | nil,
           priority: String.t() | nil,
+          size: String.t() | nil,
           labels: [String.t()],
           url: String.t() | nil,
           sync_state: String.t(),
@@ -31,6 +32,7 @@ defmodule Agents.Sessions.Infrastructure.Schemas.ProjectTicketSchema do
     field(:title, :string)
     field(:status, :string)
     field(:priority, :string)
+    field(:size, :string)
     field(:labels, {:array, :string}, default: [])
     field(:url, :string)
     field(:sync_state, :string, default: "synced")
@@ -50,6 +52,7 @@ defmodule Agents.Sessions.Infrastructure.Schemas.ProjectTicketSchema do
       :title,
       :status,
       :priority,
+      :size,
       :labels,
       :url,
       :sync_state,

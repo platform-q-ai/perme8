@@ -36,6 +36,7 @@ defmodule Agents.Sessions do
   alias Agents.Sessions.Infrastructure.QueueManagerSupervisor
   alias Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository
   alias Agents.Sessions.Infrastructure.Repositories.TaskRepository
+  alias Agents.Sessions.Infrastructure.TicketSyncServer
   alias Agents.Repo
   alias Agents.Sessions.Infrastructure.TaskRunnerSupervisor
   alias Ecto.Adapters.SQL
