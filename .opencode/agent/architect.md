@@ -2,7 +2,7 @@
 name: architect
 description: Analyzes feature requests and creates comprehensive TDD implementation plans spanning full stack architecture
 mode: subagent
-model: openai/gpt-5.3-codex
+model: anthropic/claude-opus-4.6
 tools:
   read: true
   grep: true
