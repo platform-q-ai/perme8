@@ -101,7 +101,7 @@
                     data-ticket-card
                     data-ticket-number={ticket.number}
                     class={[
-                      "flex cursor-grab active:cursor-grabbing flex-col items-start gap-1 w-full rounded-lg p-2 min-h-16 transition-colors duration-700 ease-out border",
+                      "flex cursor-grab active:cursor-grabbing flex-col items-start gap-1 w-full rounded-lg p-2 min-h-16 border transition-all duration-150 hover:-translate-y-px hover:shadow-md hover:ring-1 hover:ring-base-content/20",
                       "border-base-content/20 bg-base-content/8",
                       ticket.number == @active_ticket_number && "active"
                     ]}
@@ -177,7 +177,7 @@
                     data-ticket-card
                     data-ticket-number={ticket.number}
                     class={[
-                      "flex cursor-grab active:cursor-grabbing flex-col items-start gap-1 w-full rounded-lg p-2 min-h-16 transition-colors duration-700 ease-out border",
+                      "flex cursor-grab active:cursor-grabbing flex-col items-start gap-1 w-full rounded-lg p-2 min-h-16 border transition-all duration-150 hover:-translate-y-px hover:shadow-md hover:ring-1 hover:ring-base-content/20",
                       "border-success/40 bg-success/10",
                       ticket.number == @active_ticket_number && "active"
                     ]}
@@ -284,8 +284,25 @@
           <% ticket_for_session = fn session ->
             direct = Enum.find(@tickets, &(&1.associated_container_id == session.container_id))
 
+            task_instruction =
+              (@tasks_snapshot || [])
+              |> Enum.find(&(&1.id == session.latest_task_id))
+              |> case do
+                %{instruction: instruction} when is_binary(instruction) -> instruction
+                _ -> nil
+              end
+
+            inferred_number =
+              [session.title, task_instruction]
+              |> Enum.find_value(fn text ->
+                case Agents.Sessions.extract_ticket_number(text) do
+                  number when is_integer(number) and number > 0 -> number
+                  _ -> nil
+                end
+              end)
+
             direct ||
-              case Agents.Sessions.extract_ticket_number(session.title) do
+              case inferred_number do
                 number when is_integer(number) -> Enum.find(@tickets, &(&1.number == number))
                 _ -> nil
               end
@@ -336,7 +353,7 @@
                       )
                     }
                     class={[
-                      "flex flex-col gap-0.5 w-full rounded-lg p-2 min-h-16",
+                      "flex cursor-pointer flex-col gap-0.5 w-full rounded-lg p-2 min-h-16 transition-all duration-150 hover:-translate-y-px hover:shadow-md hover:ring-1 hover:ring-base-content/20",
                       session.latest_status == "failed" &&
                         "border border-warning/40 bg-warning/10",
                       session.latest_status == "completed" &&
@@ -475,7 +492,7 @@
                     data-testid={"session-item-#{slugify(session.title)}"}
                     data-slot-state="failed"
                     class={[
-                      "flex flex-col gap-0.5 w-full rounded-lg p-2 min-h-16 border border-warning/40 bg-warning/10",
+                      "flex cursor-pointer flex-col gap-0.5 w-full rounded-lg p-2 min-h-16 border border-warning/40 bg-warning/10 transition-all duration-150 hover:-translate-y-px hover:shadow-md hover:ring-1 hover:ring-base-content/20",
                       session.container_id == @active_container_id && "active"
                     ]}
                     phx-click="select_session"
@@ -552,7 +569,7 @@
                     data-testid={"session-item-#{slugify(session.title)}"}
                     data-slot-state="queued"
                     class={[
-                      "flex flex-col gap-0.5 w-full rounded-lg p-2 min-h-16 transition-colors duration-700 ease-out",
+                      "flex cursor-pointer flex-col gap-0.5 w-full rounded-lg p-2 min-h-16 transition-all duration-150 hover:-translate-y-px hover:shadow-md hover:ring-1 hover:ring-base-content/20",
                       has_real_container?.(session) && "border border-warning/40 bg-warning/10",
                       !has_real_container?.(session) &&
                         "border border-base-content/20 bg-base-content/8",
@@ -639,7 +656,7 @@
                     data-testid={"session-item-#{slugify(session.title)}"}
                     data-slot-state={if(warming_session?.(session), do: "warming", else: "warm")}
                     class={[
-                      "flex flex-col gap-0.5 w-full rounded-lg p-2 min-h-16 transition-colors duration-700 ease-out",
+                      "flex cursor-pointer flex-col gap-0.5 w-full rounded-lg p-2 min-h-16 transition-all duration-150 hover:-translate-y-px hover:shadow-md hover:ring-1 hover:ring-base-content/20",
                       warming_session?.(session) && "border border-warning/55 bg-warning/15",
                       !warming_session?.(session) && has_real_container?.(session) &&
                         "border border-warning/40 bg-warning/10",
@@ -739,7 +756,7 @@
                       )
                     }
                     class={[
-                      "flex flex-col gap-0.5 w-full rounded-lg p-2 min-h-16",
+                      "flex cursor-pointer flex-col gap-0.5 w-full rounded-lg p-2 min-h-16 transition-all duration-150 hover:-translate-y-px hover:shadow-md hover:ring-1 hover:ring-base-content/20",
                       session.latest_status in ["pending", "starting", "running"] &&
                         "border border-success/40 bg-success/10",
                       session.latest_status not in ["pending", "starting", "running"] &&
@@ -1142,6 +1159,13 @@
         <form id="session-form" phx-submit="run_task" class="flex gap-2 items-end">
           <div class="flex-1">
             <.progress_bar todo_items={@todo_items} />
+
+            <input
+              :if={@active_session_tab == "ticket" && is_integer(@active_ticket_number)}
+              type="hidden"
+              name="ticket_number"
+              value={@active_ticket_number}
+            />
 
             <div id="session-instruction-wrap" phx-update="ignore">
               <textarea

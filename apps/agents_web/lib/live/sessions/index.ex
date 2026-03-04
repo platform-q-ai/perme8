@@ -160,8 +160,9 @@ defmodule AgentsWeb.SessionsLive.Index do
   end
 
   @impl true
-  def handle_event("run_task", %{"instruction" => instruction}, socket) do
+  def handle_event("run_task", %{"instruction" => instruction} = params, socket) do
     instruction = String.trim(instruction)
+    ticket_number = parse_ticket_number_param(params)
 
     cond do
       instruction == "" ->
@@ -179,7 +180,7 @@ defmodule AgentsWeb.SessionsLive.Index do
           end
 
         socket
-        |> run_or_resume_task(instruction)
+        |> run_or_resume_task(instruction, ticket_number)
         |> handle_task_result(socket)
     end
   end
@@ -441,7 +442,7 @@ defmodule AgentsWeb.SessionsLive.Index do
        |> assign(:events, [])
        |> assign_session_state()
        |> assign(:form, to_form(%{"instruction" => ""}))
-       |> push_patch(to: ~p"/sessions?#{%{container: container_id}}")}
+       |> push_patch(to: ~p"/sessions?#{%{container: container_id, tab: "ticket"}}")}
     else
       {:noreply,
        socket
@@ -1354,12 +1355,12 @@ defmodule AgentsWeb.SessionsLive.Index do
     socket |> assign(:pending_question, nil) |> put_flash(:error, error_msg)
   end
 
-  defp run_or_resume_task(socket, instruction) do
+  defp run_or_resume_task(socket, instruction, ticket_number) do
     user = socket.assigns.current_scope.user
     current_task = socket.assigns.current_task
 
     if socket.assigns.composing_new || is_nil(current_task) do
-      instruction = ensure_ticket_reference(instruction, socket.assigns.active_ticket_number)
+      instruction = ensure_ticket_reference(instruction, ticket_number)
 
       Sessions.create_task(%{
         instruction: instruction,
@@ -1640,6 +1641,15 @@ defmodule AgentsWeb.SessionsLive.Index do
         session
     end)
   end
+
+  defp parse_ticket_number_param(%{"ticket_number" => value}) when is_binary(value) do
+    case Integer.parse(value) do
+      {number, ""} when number > 0 -> number
+      _ -> nil
+    end
+  end
+
+  defp parse_ticket_number_param(_), do: nil
 
   defp ensure_ticket_reference(instruction, nil), do: instruction
 
