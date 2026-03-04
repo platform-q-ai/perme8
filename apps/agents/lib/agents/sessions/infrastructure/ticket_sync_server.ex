@@ -71,12 +71,7 @@ defmodule Agents.Sessions.Infrastructure.TicketSyncServer do
 
     case state.client.fetch_tickets(opts) do
       {:ok, tickets} ->
-        Enum.each(tickets, fn ticket ->
-          case state.ticket_repo.sync_remote_ticket(ticket) do
-            {:ok, _} -> :ok
-            {:error, reason} -> Logger.warning("Ticket upsert failed: #{inspect(reason)}")
-          end
-        end)
+        Enum.each(tickets, &sync_remote_ticket(state, &1))
 
         persisted_tickets =
           state.ticket_repo.list_by_statuses(SessionsConfig.github_ticket_statuses())
@@ -91,6 +86,13 @@ defmodule Agents.Sessions.Infrastructure.TicketSyncServer do
       {:error, reason} ->
         Logger.warning("GitHub ticket sync failed: #{inspect(reason)}")
         state
+    end
+  end
+
+  defp sync_remote_ticket(state, ticket) do
+    case state.ticket_repo.sync_remote_ticket(ticket) do
+      {:ok, _} -> :ok
+      {:error, reason} -> Logger.warning("Ticket upsert failed: #{inspect(reason)}")
     end
   end
 
