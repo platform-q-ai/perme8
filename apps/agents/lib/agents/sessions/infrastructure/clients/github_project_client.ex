@@ -177,10 +177,10 @@ defmodule Agents.Sessions.Infrastructure.Clients.GithubProjectClient do
 
   defp project_item_id(token, org, project_number, issue_number) do
     query = """
-    query($org: String!, $projectNumber: Int!) {
+    query($org: String!, $projectNumber: Int!, $after: String) {
       organization(login: $org) {
         projectV2(number: $projectNumber) {
-          items(first: 100) {
+          items(first: 100, after: $after) {
             nodes {
               id
               content {
@@ -189,29 +189,51 @@ defmodule Agents.Sessions.Infrastructure.Clients.GithubProjectClient do
                 }
               }
             }
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
           }
         }
       }
     }
     """
 
-    variables = %{org: org, projectNumber: project_number}
+    find_project_item_id(token, query, %{org: org, projectNumber: project_number}, issue_number)
+  end
 
+  defp find_project_item_id(token, query, variables, issue_number) do
     case Req.post(@graphql_url,
            json: %{query: query, variables: variables},
            headers: base_headers(token)
          ) do
       {:ok, %{status: 200, body: %{"data" => data}}} ->
+        items = get_in(data, ["organization", "projectV2", "items"])
+
         item_id =
-          data
-          |> get_in(["organization", "projectV2", "items", "nodes"])
+          items
+          |> get_in(["nodes"])
           |> List.wrap()
           |> Enum.find_value(fn
             %{"content" => %{"number" => ^issue_number}, "id" => item_id} -> item_id
             _ -> nil
           end)
 
-        if is_binary(item_id), do: {:ok, item_id}, else: {:error, :project_item_not_found}
+        cond do
+          is_binary(item_id) ->
+            {:ok, item_id}
+
+          get_in(items, ["pageInfo", "hasNextPage"]) == true ->
+            find_project_item_id(
+              token,
+              query,
+              Map.put(variables, :after, get_in(items, ["pageInfo", "endCursor"])),
+              issue_number
+            )
+
+          true ->
+            {:error, :project_item_not_found}
+        end
 
       {:ok, %{status: status, body: body}} ->
         {:error, {:unexpected_status, status, body}}
