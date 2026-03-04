@@ -123,7 +123,9 @@ defmodule Agents.Sessions.Infrastructure.Adapters.DockerAdapter do
     system_cmd = Keyword.get(opts, :system_cmd, &System.cmd/3)
 
     repo_branch =
-      opts |> Keyword.get(:repo_branch, System.get_env("REPO_BRANCH")) |> safe_repo_branch()
+      opts
+      |> Keyword.get(:repo_branch, Application.get_env(:agents, :repo_branch, "main"))
+      |> safe_repo_branch()
 
     command = fresh_start_command(repo_branch)
 
