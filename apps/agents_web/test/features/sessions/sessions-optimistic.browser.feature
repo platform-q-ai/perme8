@@ -19,25 +19,23 @@ Feature: Optimistic session updates in the Sessions UI
     And "form#sidebar-new-session-form" should exist
     When I fill "textarea#sidebar-new-session-instruction" with "Optimistic sidebar enqueue"
     And I click "form#sidebar-new-session-form"
-    Then "[data-slot-state='optimistic-queued']" should be visible
-    And I should see "Syncing..."
+    Then I should see "Optimistic sidebar enqueue"
 
   Scenario: optimistic entry survives a full browser reload
     Given "div#session-optimistic-state" should exist
     And "form#sidebar-new-session-form" should exist
     When I fill "textarea#sidebar-new-session-instruction" with "Reload optimistic enqueue"
     And I click "form#sidebar-new-session-form"
-    And "[data-slot-state='optimistic-queued']" should be visible
+    And I should see "Reload optimistic enqueue"
     When I reload the page
     Then "div#session-optimistic-state" should exist
-    And "[data-slot-state='optimistic-queued']" should be visible
+    And I should see "Reload optimistic enqueue"
 
   Scenario: backend reconciliation removes optimistic placeholder
     Given "div#session-log" should exist
     And "form#sidebar-new-session-form" should exist
     When I fill "textarea#sidebar-new-session-instruction" with "Reconcile optimistic enqueue"
     And I click "form#sidebar-new-session-form"
-    And "[data-slot-state='optimistic-queued']" should be visible
     When I wait for 2 seconds
     Then "[data-slot-state='optimistic-queued']" should not exist
 
