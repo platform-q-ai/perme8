@@ -252,15 +252,27 @@
             @sessions
             |> Enum.filter(&(&1.latest_status == "queued"))
             |> Enum.sort_by(&(-latest_at_unix(&1))) %>
+          <% optimistic_queued_sessions =
+            @optimistic_new_sessions
+            |> Enum.sort_by(fn entry ->
+              case entry[:queued_at] do
+                %DateTime{} = dt -> -DateTime.to_unix(dt, :microsecond)
+                _ -> 0
+              end
+            end) %>
           <% warm_limit =
             if(@queue_state, do: Map.get(@queue_state, :warm_cache_limit, 2), else: 0) %>
+          <% warming_task_ids =
+            if @queue_state,
+              do: MapSet.new(Map.get(@queue_state, :warming_task_ids, [])),
+              else: MapSet.new() %>
+          <% has_real_container? = fn session ->
+            is_binary(session.container_id) and
+              not String.starts_with?(session.container_id, "task:")
+          end %>
           <% warm_candidate_ids =
             if @queue_state do
-              (Map.get(@queue_state, :warm_task_ids) ||
-                 @queue_state.queued
-                 |> Enum.take(warm_limit)
-                 |> Enum.map(& &1.id))
-              |> MapSet.new()
+              @sticky_warm_task_ids || MapSet.new()
             else
               MapSet.new()
             end %>
@@ -273,14 +285,6 @@
             warm_primary_sessions
             |> Enum.map(& &1.latest_task_id)
             |> MapSet.new() %>
-          <% warming_task_ids =
-            if @queue_state,
-              do: MapSet.new(Map.get(@queue_state, :warming_task_ids, [])),
-              else: MapSet.new() %>
-          <% has_real_container? = fn session ->
-            is_binary(session.container_id) and
-              not String.starts_with?(session.container_id, "task:")
-          end %>
           <% ticket_for_session = fn session ->
             direct = Enum.find(@tickets, &(&1.associated_container_id == session.container_id))
 
@@ -626,6 +630,29 @@
                       </span>
                     </div>
                     <.compact_progress_bar todo_items={session_todo_items(session)} />
+                  </div>
+                </li>
+
+                <li :for={session <- optimistic_queued_sessions} class="w-full">
+                  <div
+                    data-testid={"optimistic-session-item-#{slugify(session.instruction)}"}
+                    data-slot-state="optimistic-queued"
+                    class="flex flex-col gap-0.5 w-full rounded-lg p-2 min-h-16 border border-info/35 bg-info/10"
+                  >
+                    <div class="flex items-center justify-between w-full">
+                      <span class="text-xs font-medium truncate flex-1 min-w-0">
+                        {truncate_instruction(session.instruction, 35)}
+                      </span>
+                      <div class="flex items-center gap-1">
+                        <span class="badge badge-xs badge-info badge-outline">Syncing...</span>
+                        <.status_dot status="queued" />
+                      </div>
+                    </div>
+                    <div class="flex items-center gap-2 text-[0.65rem] text-base-content/50 w-full">
+                      <span>{image_label(session.image)}</span>
+                      <span>&middot;</span>
+                      <span>{relative_time(session.queued_at)}</span>
+                    </div>
                   </div>
                 </li>
 

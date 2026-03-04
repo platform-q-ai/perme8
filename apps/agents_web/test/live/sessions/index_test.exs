@@ -1139,7 +1139,18 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
         }
       })
 
-      html = render(lv)
+      html =
+        Enum.reduce_while(1..12, render(lv), fn _, _acc ->
+          html = render(lv)
+
+          if html =~ "completed" do
+            {:halt, html}
+          else
+            Process.sleep(25)
+            {:cont, html}
+          end
+        end)
+
       assert html =~ "completed"
     end
 
@@ -2170,6 +2181,41 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       refute html =~ "Warming..."
       assert html =~ "border border-warning/40 bg-warning/10"
       refute html =~ "bg-base-content/35"
+    end
+
+    test "warmed queued session stays in warm lane when queue warm ids are empty", %{
+      conn: conn,
+      user: user
+    } do
+      task =
+        task_fixture(%{
+          user_id: user.id,
+          instruction: "Warmed session persists in lane",
+          status: "queued",
+          container_id: "real-warmed-persisted-container"
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      send(lv.pid, {
+        :queue_updated,
+        user.id,
+        %{
+          running: 0,
+          queued: [],
+          awaiting_feedback: [],
+          concurrency_limit: 2,
+          warm_cache_limit: 1,
+          warm_task_ids: [],
+          warming_task_ids: []
+        }
+      })
+
+      html = render(lv)
+
+      assert html =~ ~s(data-testid="session-item-warmed-session-persists-in-lane")
+      assert html =~ ~s(phx-value-task-id="#{task.id}")
+      assert html =~ ~s(data-slot-state="warm")
     end
 
     test "deletes queued session from chat header trash action", %{conn: conn, user: user} do
