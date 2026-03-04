@@ -116,8 +116,9 @@ Feature: Notification Management
     # User A (charlie) should see badge with count 3
     Then "[data-testid='notification-bell']" should be visible
     And "[data-testid='notification-badge']" should contain text "3"
-    # Log out via the sidebar link and log in as a different user (diana, user B)
-    When I navigate to "${baseUrl}/users/log-in"
+    # Open a separate browser session and log in as a different user (diana, user B)
+    When I open browser session "guest-user"
+    And I navigate to "${baseUrl}/users/log-in"
     And I wait for network idle
     And I fill "#login_form_password_email" with "${guestEmail}"
     And I fill "#login_form_password_password" with "${guestPassword}"
