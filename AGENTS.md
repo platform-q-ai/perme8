@@ -74,35 +74,78 @@ When adding a new feature or placing code:
 5. **Never use another app's Repo** -- if you need data from another app, call its public API.
 6. **Domain events live in the emitting app** -- the app that produces the event defines the struct and publishes it. Event infrastructure lives in `perme8_events`.
 
-## Skills
+## Agents and Skills
 
-### Orchestration Skills
+This repo uses two layers of automation:
 
-- **Pick Up Ticket** -- picks up a GitHub issue, classifies the work type (feature, bug, refactor, spike, removal), and routes to the appropriate CRUD workflow. Manages board status and finalization. Use `/pick-up-ticket`.
-- **Create Issue** -- orchestrates fully-populated GitHub issue creation with project board fields (Status, Priority, Size, Iteration, App/Tool) and parent linking. Use `/create-issue`.
+- **Subagents** are focused workers used through the Task tool (research, planning, implementation, BDD translation).
+- **Skills** are reusable workflows that chain multiple steps and often delegate to subagents.
 
-### CRUD Skills
+Use this rule of thumb:
 
-- **CRUD Create** -- implements new features from a ticket or direct description. Triages scope (Full/Medium/Micro). Creates the implementation branch upfront, generates BDD feature files, opens a draft PR for user review, then continues with architecture and implementation on the same branch after approval. The draft PR is marked ready for review once implementation is complete.
-- **CRUD Read** -- handles research spikes and exploration. Strictly read-only. Posts findings as a comment on the ticket.
-- **CRUD Update** -- modifies existing functionality (bug fix, refactor, chore, docs). Runs impact analysis, regression baseline, and TDD. For user-facing changes, opens a draft PR with BDD feature files for review before implementation.
-- **CRUD Delete** -- removes or deprecates features. Scans dependencies, determines migration strategy, and executes staged removal.
+1. Use a **skill** when the request matches an end-to-end workflow (ticket pickup, CRUD flows, execute plan, PR review, finalize).
+2. Use a **subagent** when you need a specific unit of work (explore codebase, produce PRD, architect a plan, implement via TDD, translate BDD).
+3. For complex work, **compose them**: skill orchestrates, subagents execute specialized steps.
 
-### Workflow Skills
+### Subagents (Task Tool)
 
-- **Execute Plan** -- implements an existing architectural plan end-to-end with commits, CI, review. Supports receiving an existing branch and draft PR from the calling skill (skips branch/PR creation, marks the draft PR as ready when done), or creating its own branch and PR from scratch.
-- **Finalize** -- reusable finalization and quality gate: pre-commit validation, test coverage verification, PRD reconciliation, documentation checks, and follow-up issue creation. Use `/finalize`.
-- **Commit and PR** -- git workflow: branch, incremental commits, pre-commit checks, push, PR creation, CI monitoring.
+- **general** -- broad multi-step execution and research; good default when no specialist is clearly better.
+- **explore** -- fast codebase discovery (files, symbols, flows). Use for read-only investigations and impact analysis.
+- **prd** -- interviews and structures requirements into a PRD for downstream planning.
+- **architect** -- converts requirements/PRD into a phased TDD implementation plan.
+- **phoenix-tdd** -- implements Elixir/Phoenix/LiveView changes using strict Red-Green-Refactor.
+- **typescript-tdd** -- implements TypeScript/Vitest (including LiveView hooks and channel clients) using strict TDD.
+- **exo-bdd-browser** -- translates scenarios into browser-focused Playwright BDD features.
+- **exo-bdd-http** -- translates scenarios into HTTP/API-focused Playwright BDD features.
+- **exo-bdd-security** -- translates scenarios into security-focused BDD features (ZAP adapter).
+- **exo-bdd-cli** -- translates scenarios into CLI-focused BDD features (Bun CLI adapter).
+- **exo-bdd-graph** -- translates scenarios into architecture/dependency graph BDD features (Neo4j adapter).
 
-### Review Skills
+### Skill Catalog (Workflow Layer)
 
-- **Review PR** -- automated code review with 9 parallel specialist workers (including documentation checks) and inline comments on a GitHub PR.
-- **Address PR Comments** -- reads and resolves review comments with fix commits and GitHub replies.
+#### Orchestration
 
-### Documentation Skills
+- **Pick Up Ticket** -- starts from a GitHub issue, classifies work type, routes to the right CRUD workflow, and manages board progress to completion. Use when asked to "work on" an existing ticket.
+- **Create Issue** -- creates a new GitHub issue and populates required project board fields (status, priority, size, iteration, app/tool, parent links).
+- **update-project** -- updates board metadata/state for an existing issue without running a full delivery workflow.
 
-- **Check Documentation** -- verifies code and project documentation are current for changes made. Checks `@moduledoc`, `@doc`, JSDoc on new public APIs, and ensures AGENTS.md, `docs/umbrella_apps.md`, READMEs, and `docs/app_ownership.md` are updated when structure changes. Operates in fix mode (Finalize) or review mode (Review PR).
+#### CRUD Workflows
 
-### Testing Skills
+- **CRUD Create** -- full new-feature workflow with ownership checks, branch creation, BDD generation, draft PR, architecture, and implementation.
+- **CRUD Read** -- read-only research/spike workflow; no code changes, no branch/PR, reports findings.
+- **CRUD Update** -- bug fix/refactor/chore/docs workflow with impact analysis, regression baseline, and implementation path based on scope.
+- **CRUD Delete** -- deprecation/removal workflow with dependency scan, staged teardown, and cleanup.
 
-- **Generate Exo-BDD Features** -- generates domain-specific BDD feature files (browser, HTTP, security) from a PRD. Supports early-pipeline mode (before architect, business-language steps) and post-plan mode (after architect, concrete implementation details).
+#### Planning and Delivery
+
+- **Execute Plan** -- executes an existing phased plan end-to-end (implementation, commits, PR lifecycle, CI, review loop).
+- **Commit and PR** -- handles branch/commit/push/PR mechanics when implementation is already done or managed elsewhere.
+- **Finalize** -- runs quality gates before handoff: tests/checks, documentation sync, acceptance reconciliation, and follow-up issues.
+
+#### Review and Feedback
+
+- **Review PR** -- performs automated multi-specialist PR review and posts inline feedback.
+- **Address PR Comments** -- resolves review comments, commits fixes, replies on GitHub, and rechecks CI.
+
+#### Documentation and Testing
+
+- **Check Documentation** -- verifies and fixes docs/API docs impacted by changes (`@moduledoc`, `@doc`, JSDoc, AGENTS/readmes/ownership docs).
+- **Generate Exo-BDD Features** -- creates browser/http/security BDD feature files from a PRD (early-pipeline or post-plan mode).
+- **Run Tests** -- executes Exo-BDD and unit/integration test suites across umbrella apps with troubleshooting guidance.
+
+### Recommended Usage Patterns
+
+- **New feature from idea/ticket:** `CRUD Create` -> `Execute Plan` -> `Finalize`.
+- **Bug fix or refactor:** `CRUD Update` (and `Finalize` for handoff quality checks).
+- **Research-only request:** `CRUD Read` (delegates to `explore`).
+- **Plan-first request:** `prd` -> `architect` -> `Execute Plan`.
+- **PR quality loop:** `Review PR` -> `Address PR Comments` -> `Finalize`.
+- **BDD-first delivery:** `Generate Exo-BDD Features`, then implement with `phoenix-tdd`/`typescript-tdd` as appropriate.
+
+### Guardrails for Agent/Skill Use
+
+- Always consult `docs/app_ownership.md` before placing code, generating plans, or creating feature files.
+- Prefer workflow skills for lifecycle consistency (board updates, branch/PR hygiene, CI handling).
+- Use specialist subagents over `general` when the task clearly matches a specialty.
+- Keep `CRUD Read` strictly read-only.
+- Route GitHub operations through `gh` with the correct token identity described above.
