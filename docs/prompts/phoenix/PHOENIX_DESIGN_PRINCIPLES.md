@@ -981,6 +981,150 @@ end
 - Inject `event_bus: Perme8.Events.TestEventBus` in tests to capture emitted events
 - See `docs/prompts/architect/PUBSUB_TESTING_GUIDE.md` for the full testing guide
 
+### 11. Optimistic, Event-Driven UI
+
+**All LiveView interfaces MUST be optimistic and event-driven.**
+
+These are the two foundational UI principles for this project:
+
+#### Principle 1: Optimistic Updates
+
+When a user performs an action (submit a form, click a button, drag an item), the LiveView
+**immediately** reflects the expected outcome in assigns/streams *before* the server-side
+use case completes. If the use case later fails, the LiveView rolls back the optimistic
+change and shows an error.
+
+**Why:** Users should never stare at a spinner or feel lag. The UI assumes success and
+corrects on failure.
+
+**Pattern:**
+
+```elixir
+def handle_event("create_item", params, socket) do
+  # 1. Build an optimistic representation
+  temp_item = %{id: "temp-#{System.unique_integer()}", name: params["name"], status: :pending}
+
+  # 2. Immediately update the UI (optimistic)
+  socket = stream_insert(socket, :items, temp_item, at: 0)
+
+  # 3. Fire the actual operation (async or inline)
+  case MyContext.create_item(params, user: socket.assigns.current_user) do
+    {:ok, real_item} ->
+      # Replace the temp item with the real one (or let PubSub handle it)
+      {:noreply, stream_insert(socket, :items, real_item, at: 0)}
+
+    {:error, changeset} ->
+      # 4. Roll back the optimistic insert and show an error
+      socket =
+        socket
+        |> stream_delete(:items, temp_item)
+        |> put_flash(:error, "Could not create item")
+
+      {:noreply, socket}
+  end
+end
+```
+
+**When to use optimistic updates:**
+- ✅ Creating, updating, or deleting items in a list/stream
+- ✅ Toggling state (checkboxes, status changes, favorites)
+- ✅ Reordering or moving items
+- ✅ Any action where the expected outcome is predictable
+
+**When optimistic updates are NOT needed:**
+- ❌ Initial page load / mount (just fetch data normally)
+- ❌ Navigation / redirects
+- ❌ Complex multi-step wizards where the next step depends on server validation
+
+#### Principle 2: Event-Driven State
+
+LiveViews do NOT poll or re-fetch data on a timer. All external state changes arrive
+through PubSub domain events. The LiveView subscribes in `mount/3` (when `connected?/1`)
+and reacts in `handle_info/2`.
+
+**Why:** Multiple users may be viewing the same workspace. When one user creates a project,
+all other users see it appear in real time without refreshing.
+
+**Pattern:**
+
+```elixir
+def mount(_params, _session, socket) do
+  if connected?(socket) do
+    Perme8.Events.subscribe("events:workspace:#{socket.assigns.workspace_id}")
+  end
+
+  {:ok, socket}
+end
+
+def handle_info(%ProjectCreated{} = event, socket) do
+  # React to the domain event -- update streams/assigns
+  {:noreply, stream_insert(socket, :projects, event.project)}
+end
+
+def handle_info(%ProjectDeleted{} = event, socket) do
+  {:noreply, stream_delete_by_dom_id(socket, :projects, "projects-#{event.project_id}")}
+end
+```
+
+**Rules:**
+- ✅ Subscribe in `mount/3` only when `connected?/1` is true
+- ✅ Pattern-match on domain event structs in `handle_info/2`
+- ✅ Use `stream_insert/3`, `stream_delete/3` to update collections
+- ✅ Use assign updates for singular values
+- ❌ Never poll or use `:timer.send_interval` for data that has domain events
+- ❌ Never re-fetch the entire dataset when a single item changes
+
+#### Combining Both Principles
+
+In practice, optimistic updates and event-driven state work together:
+
+1. **User acts** → LiveView optimistically updates the UI
+2. **Use case succeeds** → emits a domain event
+3. **PubSub delivers the event** → LiveView's `handle_info/2` replaces the optimistic placeholder with real data (or is a no-op if the data matches)
+4. **Other users' LiveViews** → receive the same event and update their UI
+
+If the use case fails, the originating LiveView rolls back the optimistic change. Other
+users never saw the optimistic state, so no rollback is needed for them.
+
+#### Testing Optimistic + Event-Driven UI
+
+```elixir
+# Test optimistic update appears immediately
+test "item appears immediately on create", %{conn: conn} do
+  {:ok, view, _html} = live(conn, ~p"/items")
+
+  view
+  |> form("#new-item-form", item: %{name: "New Item"})
+  |> render_submit()
+
+  # The item should appear optimistically (before PubSub event)
+  assert has_element?(view, "[data-item-name='New Item']")
+end
+
+# Test event-driven update from another user
+test "item appears when PubSub event received", %{conn: conn} do
+  {:ok, view, _html} = live(conn, ~p"/items")
+
+  # Simulate a domain event from another user
+  send(view.pid, %ItemCreated{item: %{id: "123", name: "Remote Item"}})
+
+  assert has_element?(view, "[data-item-name='Remote Item']")
+end
+
+# Test rollback on failure
+test "optimistic update rolls back on error", %{conn: conn} do
+  {:ok, view, _html} = live(conn, ~p"/items")
+
+  # Trigger an action that will fail server-side
+  view
+  |> form("#new-item-form", item: %{name: ""})
+  |> render_submit()
+
+  # Optimistic item should not persist; error flash shown
+  assert has_element?(view, "[role='alert']")
+end
+```
+
 ---
 
 ## Summary: Clean Architecture Checklist
@@ -1024,6 +1168,11 @@ When reviewing or writing code, check these principles:
 - [ ] Dependencies injected, not hardcoded
 - [ ] Domain events emitted after transaction commits (never inside `Repo.transact`)
 - [ ] Configuration injected via opts, not `System.get_env`
+
+### Interface Layer (Optimistic, Event-Driven UI)
+- [ ] LiveView UI is optimistic -- update assigns/streams immediately on user action, before awaiting server confirmation
+- [ ] LiveView UI is event-driven -- all state changes from other users/processes arrive via PubSub `handle_info/2`
+- [ ] Rollback path exists for every optimistic update (handle failure in the use-case callback or `handle_info`)
 
 **When in doubt, ask:**
 1. Can I test this without a database? (Domain should be yes)
