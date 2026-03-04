@@ -205,6 +205,12 @@ defmodule Agents.Sessions do
     TicketSyncServer.reorder_ticket(ticket_number, target_status, ordered_ticket_numbers)
   end
 
+  @doc "Persists triage ticket ordering to the database."
+  @spec reorder_triage_tickets([integer()]) :: :ok
+  def reorder_triage_tickets(ordered_ticket_numbers) do
+    ProjectTicketRepository.reorder_positions(ordered_ticket_numbers)
+  end
+
   @doc """
   Updates a persisted ticket locally and schedules reconciliation to GitHub.
   """

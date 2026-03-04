@@ -292,11 +292,6 @@
               </li>
 
               <%!-- Triage tickets divider and draggable ticket list --%>
-              <% triage_ordered_tickets =
-                AgentsWeb.SessionsLive.Index.sort_tickets_by_triage_order(
-                  @tickets,
-                  @triage_ticket_order
-                ) %>
               <li :if={@tickets != []} class="w-full">
                 <div class="mx-1 mt-2 mb-1 border-t border-info/35 flex items-center gap-1.5 pt-1.5">
                   <.icon name="hero-ticket" class="size-3 text-info/60" />
@@ -309,7 +304,7 @@
                 </div>
               </li>
               <li
-                :for={ticket <- triage_ordered_tickets}
+                :for={ticket <- @tickets}
                 class="w-full"
                 data-triage-ticket-item
               >
