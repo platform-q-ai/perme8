@@ -237,4 +237,25 @@ defmodule Agents.Sessions.Infrastructure.Adapters.DockerAdapterTest do
       assert {:ok, :not_found} = DockerAdapter.status("nonexistent", system_cmd: mock_cmd)
     end
   end
+
+  describe "prepare_fresh_start/2" do
+    test "falls back to main branch when repo_branch is unsafe" do
+      test_pid = self()
+
+      mock_cmd = fn "docker", ["exec", "abc123", "bash", "-lc", command], _opts ->
+        send(test_pid, {:command, command})
+        {"", 0}
+      end
+
+      assert :ok =
+               DockerAdapter.prepare_fresh_start("abc123",
+                 system_cmd: mock_cmd,
+                 repo_branch: "main; rm -rf /"
+               )
+
+      assert_receive {:command, command}
+      assert String.contains?(command, "origin 'main'")
+      refute String.contains?(command, "rm -rf")
+    end
+  end
 end

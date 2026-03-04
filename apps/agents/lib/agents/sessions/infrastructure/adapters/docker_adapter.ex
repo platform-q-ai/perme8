@@ -122,10 +122,13 @@ defmodule Agents.Sessions.Infrastructure.Adapters.DockerAdapter do
   def prepare_fresh_start(container_id, opts \\ []) do
     system_cmd = Keyword.get(opts, :system_cmd, &System.cmd/3)
 
+    repo_branch =
+      opts |> Keyword.get(:repo_branch, System.get_env("REPO_BRANCH")) |> safe_repo_branch()
+
     command =
       [
         "set -e",
-        "if [ -d /workspace/perme8/.git ]; then git -C /workspace/perme8 pull --ff-only origin ${REPO_BRANCH:-main}; fi",
+        "if [ -d /workspace/perme8/.git ]; then git -C /workspace/perme8 pull --ff-only origin '#{repo_branch}'; fi",
         "if [ -d \"$HOME/.claude/skills/.git\" ]; then git -C \"$HOME/.claude/skills\" pull --ff-only origin main || git -C \"$HOME/.claude/skills\" pull --ff-only origin master; fi"
       ]
       |> Enum.join(" && ")
@@ -140,6 +143,20 @@ defmodule Agents.Sessions.Infrastructure.Adapters.DockerAdapter do
         {:error, {:docker_prepare_fresh_start_failed, exit_code, String.trim(output)}}
     end
   end
+
+  @safe_git_ref ~r/^[A-Za-z0-9._\/-]+$/
+
+  defp safe_repo_branch(branch) when is_binary(branch) do
+    candidate = String.trim(branch)
+
+    if candidate != "" and Regex.match?(@safe_git_ref, candidate) do
+      candidate
+    else
+      "main"
+    end
+  end
+
+  defp safe_repo_branch(_), do: "main"
 
   @port_retries 5
   @port_retry_interval_ms 500
