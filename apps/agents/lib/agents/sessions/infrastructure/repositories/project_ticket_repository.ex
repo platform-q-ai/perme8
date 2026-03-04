@@ -31,15 +31,12 @@ defmodule Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository do
   def sync_remote_ticket(attrs, opts \\ []) do
     now = Keyword.get(opts, :synced_at, DateTime.utc_now() |> DateTime.truncate(:second))
 
-    attrs =
-      attrs
-      |> normalize_remote_attrs()
-      |> Map.put(:sync_state, "synced")
-      |> Map.put(:last_synced_at, now)
-      |> Map.put(:last_sync_error, nil)
+    remote_attrs = normalize_remote_attrs(attrs)
+    number = remote_attrs.number
+    ticket = Repo.get_by(ProjectTicketSchema, number: number)
+    attrs = merge_remote_attrs(ticket, remote_attrs, now)
 
-    number = attrs.number
-    ticket = Repo.get_by(ProjectTicketSchema, number: number) || %ProjectTicketSchema{}
+    ticket = ticket || %ProjectTicketSchema{}
 
     ticket
     |> ProjectTicketSchema.changeset(attrs)
@@ -103,5 +100,31 @@ defmodule Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository do
     attrs
     |> Map.take([:title, :status, :priority, :labels, :url])
     |> Map.update(:labels, [], &List.wrap/1)
+  end
+
+  defp merge_remote_attrs(nil, remote_attrs, now) do
+    remote_attrs
+    |> Map.put(:sync_state, "synced")
+    |> Map.put(:last_synced_at, now)
+    |> Map.put(:last_sync_error, nil)
+  end
+
+  defp merge_remote_attrs(%ProjectTicketSchema{} = ticket, remote_attrs, now) do
+    if ticket.sync_state in ["pending_push", "sync_error"] do
+      remote_attrs
+      |> Map.put(:title, ticket.title)
+      |> Map.put(:status, ticket.status)
+      |> Map.put(:priority, ticket.priority)
+      |> Map.put(:labels, ticket.labels)
+      |> Map.put(:url, ticket.url)
+      |> Map.put(:sync_state, ticket.sync_state)
+      |> Map.put(:last_synced_at, ticket.last_synced_at)
+      |> Map.put(:last_sync_error, ticket.last_sync_error)
+    else
+      remote_attrs
+      |> Map.put(:sync_state, "synced")
+      |> Map.put(:last_synced_at, now)
+      |> Map.put(:last_sync_error, nil)
+    end
   end
 end
