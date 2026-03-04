@@ -14,7 +14,9 @@ jobs:
     if: >-
       github.event.pull_request.draft == false &&
       github.actor != 'platformqbot[bot]' &&
-      github.event.pull_request.user.login != 'platformqbot[bot]'
+      github.event.pull_request.user.login != 'platformqbot[bot]' &&
+      secrets.GITHUB_REVIEW_APP_ID != '' &&
+      secrets.GITHUB_REVIEW_APP_PEM != ''
     runs-on: ubuntu-latest
     steps:
       - name: Generate review-bot token

@@ -20,28 +20,9 @@ defmodule Notifications.Infrastructure.Subscribers.DomainEventNotificationSubscr
 
   @impl Perme8.Events.EventHandler
   def handle_event(%{event_type: event_type} = event) when is_binary(event_type) do
-    case DomainEventNotificationRegistry.mapping_for(event_type) do
-      nil ->
-        :ok
-
-      mapping ->
-        event
-        |> recipient_ids(mapping.recipient_strategy)
-        |> Enum.reduce_while(:ok, fn recipient_id, _acc ->
-          params = %{
-            user_id: recipient_id,
-            type: mapping.type,
-            title: mapping.title,
-            body: DomainEventNotificationRegistry.build_body(event_type, event),
-            data: DomainEventNotificationRegistry.build_data(event_type, event)
-          }
-
-          case @create_notification_use_case.execute(params) do
-            {:ok, _notification} -> {:cont, :ok}
-            {:error, reason} -> {:halt, {:error, reason}}
-          end
-        end)
-    end
+    event_type
+    |> DomainEventNotificationRegistry.mapping_for()
+    |> notify_recipients(event_type, event)
   end
 
   @impl Perme8.Events.EventHandler
@@ -71,6 +52,29 @@ defmodule Notifications.Infrastructure.Subscribers.DomainEventNotificationSubscr
   end
 
   defp recipient_ids(_event, _), do: []
+
+  defp notify_recipients(nil, _event_type, _event), do: :ok
+
+  defp notify_recipients(mapping, event_type, event) do
+    event
+    |> recipient_ids(mapping.recipient_strategy)
+    |> Enum.reduce_while(:ok, fn recipient_id, _acc ->
+      case create_notification(recipient_id, mapping, event_type, event) do
+        {:ok, _notification} -> {:cont, :ok}
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
+  end
+
+  defp create_notification(recipient_id, mapping, event_type, event) do
+    @create_notification_use_case.execute(%{
+      user_id: recipient_id,
+      type: mapping.type,
+      title: mapping.title,
+      body: DomainEventNotificationRegistry.build_body(event_type, event),
+      data: DomainEventNotificationRegistry.build_data(event_type, event)
+    })
+  end
 
   defp fetch(data, key) when is_map(data) do
     Map.get(data, key) || Map.get(data, to_string(key))
