@@ -268,6 +268,25 @@ defmodule AgentsWeb.SessionsLive.Index do
   end
 
   @impl true
+  def handle_event("restart_session", _params, socket) do
+    current_task = socket.assigns.current_task
+
+    if resumable_task?(current_task) do
+      # Resend the last user message from the chat history so the agent
+      # picks up exactly where it left off — no extra "Continue" noise.
+      instruction =
+        last_user_message(socket.assigns.output_parts) ||
+          current_task.instruction
+
+      socket
+      |> run_or_resume_task(instruction, nil)
+      |> handle_task_result(socket)
+    else
+      {:noreply, socket}
+    end
+  end
+
+  @impl true
   def handle_event("refresh_all_auth", _params, socket) do
     user = socket.assigns.current_scope.user
     tasks = Sessions.list_tasks(user.id)

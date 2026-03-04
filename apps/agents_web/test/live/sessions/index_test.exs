@@ -2405,4 +2405,66 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       assert Process.alive?(lv.pid)
     end
   end
+
+  describe "restart session button" do
+    setup %{conn: conn} do
+      user = user_fixture()
+      %{conn: log_in_user(conn, user), user: user}
+    end
+
+    test "shows restart button on failed resumable session", %{conn: conn, user: user} do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Fix the bug",
+        container_id: "c-restart-1",
+        session_id: "sess-restart-1",
+        status: "failed",
+        error: "Something went wrong"
+      })
+
+      {:ok, _lv, html} = live(conn, ~p"/sessions?container=c-restart-1")
+
+      assert html =~ "Task failed"
+      assert html =~ "data-testid=\"restart-session-btn\""
+      assert html =~ "Restart"
+    end
+
+    test "shows restart button on cancelled resumable session", %{conn: conn, user: user} do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Build the feature",
+        container_id: "c-restart-2",
+        session_id: "sess-restart-2",
+        status: "cancelled"
+      })
+
+      {:ok, _lv, html} = live(conn, ~p"/sessions?container=c-restart-2")
+
+      assert html =~ "Session cancelled"
+      assert html =~ "data-testid=\"restart-session-btn\""
+      assert html =~ "Restart"
+    end
+
+    test "does not show restart button on non-resumable failed session", %{
+      conn: conn,
+      user: user
+    } do
+      # A task with container_id but no session_id is not resumable
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Do something",
+        container_id: "c-no-resume",
+        session_id: nil,
+        status: "failed",
+        error: "Container start failed"
+      })
+
+      start_supervised!({FakeTaskRunner, nil})
+
+      {:ok, _lv, html} = live(conn, ~p"/sessions?container=c-no-resume")
+
+      assert html =~ "Task failed"
+      refute html =~ "data-testid=\"restart-session-btn\""
+    end
+  end
 end

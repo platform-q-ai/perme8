@@ -227,4 +227,44 @@ defmodule AgentsWeb.SessionsLive.HelpersTest do
       assert Helpers.ticket_size_class(nil) == "badge-outline"
     end
   end
+
+  describe "last_user_message/1" do
+    test "returns the text of the last user message" do
+      parts = [
+        {:user, "u1", "First message"},
+        {:text, "t1", "Response", :frozen},
+        {:user, "u2", "Second message"},
+        {:text, "t2", "Another response", :frozen}
+      ]
+
+      assert Helpers.last_user_message(parts) == "Second message"
+    end
+
+    test "returns pending user message text" do
+      parts = [
+        {:user, "u1", "First message"},
+        {:text, "t1", "Response", :frozen},
+        {:user_pending, "u2", "Pending follow-up"}
+      ]
+
+      assert Helpers.last_user_message(parts) == "Pending follow-up"
+    end
+
+    test "returns nil when no user messages exist" do
+      parts = [
+        {:text, "t1", "Some text", :frozen},
+        {:tool, "tool1", "read_file", "completed", nil}
+      ]
+
+      assert Helpers.last_user_message(parts) == nil
+    end
+
+    test "returns nil for empty list" do
+      assert Helpers.last_user_message([]) == nil
+    end
+
+    test "returns nil for non-list input" do
+      assert Helpers.last_user_message(nil) == nil
+    end
+  end
 end

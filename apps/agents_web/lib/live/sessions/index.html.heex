@@ -1046,27 +1046,38 @@
             <h3 class="font-semibold">Task failed</h3>
             <p class="text-sm">{format_error(@current_task.error)}</p>
           </div>
-          <button
-            :if={auth_error?(@current_task.error) && resumable_task?(@current_task)}
-            type="button"
-            phx-click="refresh_auth_and_resume"
-            phx-value-task-id={@current_task.id}
-            disabled={auth_refreshing?(@auth_refreshing, @current_task.id)}
-            class="btn btn-sm btn-warning"
-          >
-            <.icon
-              name="hero-arrow-path"
-              class={
-                if(auth_refreshing?(@auth_refreshing, @current_task.id),
-                  do: "size-4 animate-spin",
-                  else: "size-4"
-                )
-              }
-            />
-            {if auth_refreshing?(@auth_refreshing, @current_task.id),
-              do: "Refreshing...",
-              else: "Refresh Auth & Resume"}
-          </button>
+          <div class="flex gap-1.5">
+            <button
+              :if={auth_error?(@current_task.error) && resumable_task?(@current_task)}
+              type="button"
+              phx-click="refresh_auth_and_resume"
+              phx-value-task-id={@current_task.id}
+              disabled={auth_refreshing?(@auth_refreshing, @current_task.id)}
+              class="btn btn-sm btn-warning"
+            >
+              <.icon
+                name="hero-arrow-path"
+                class={
+                  if(auth_refreshing?(@auth_refreshing, @current_task.id),
+                    do: "size-4 animate-spin",
+                    else: "size-4"
+                  )
+                }
+              />
+              {if auth_refreshing?(@auth_refreshing, @current_task.id),
+                do: "Refreshing...",
+                else: "Refresh Auth & Resume"}
+            </button>
+            <button
+              :if={resumable_task?(@current_task)}
+              type="button"
+              phx-click="restart_session"
+              class="btn btn-sm btn-ghost"
+              data-testid="restart-session-btn"
+            >
+              <.icon name="hero-arrow-path" class="size-4" /> Restart
+            </button>
+          </div>
         </div>
 
         <%!-- Cancelled alert --%>
@@ -1079,6 +1090,15 @@
             <h3 class="font-semibold">Session cancelled</h3>
             <p class="text-sm">This session was cancelled and is no longer running.</p>
           </div>
+          <button
+            :if={resumable_task?(@current_task)}
+            type="button"
+            phx-click="restart_session"
+            class="btn btn-sm btn-ghost"
+            data-testid="restart-session-btn"
+          >
+            <.icon name="hero-arrow-path" class="size-4" /> Restart
+          </button>
         </div>
 
         <%!-- Output log --%>
