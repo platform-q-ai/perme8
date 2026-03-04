@@ -9,7 +9,7 @@ import { SessionFormHook } from './presentation/hooks/session-form-hook'
 import { SessionOptimisticStateHook } from './presentation/hooks/session-optimistic-state-hook'
 import { ConcurrencyLimitHook } from './presentation/hooks/concurrency-limit-hook'
 import { WarmCacheLimitHook } from './presentation/hooks/warm-cache-limit-hook'
-import { TicketLaneDndHook } from './presentation/hooks/ticket-lane-dnd-hook'
+import { TriageLaneDndHook } from './presentation/hooks/triage-lane-dnd-hook'
 import { DurationTimerHook } from './presentation/hooks/duration-timer-hook'
 
 export {
@@ -18,7 +18,7 @@ export {
   SessionOptimisticStateHook as SessionOptimisticState,
   ConcurrencyLimitHook as ConcurrencyLimit,
   WarmCacheLimitHook as WarmCacheLimit,
-  TicketLaneDndHook as TicketLaneDnd,
+  TriageLaneDndHook as TriageLaneDnd,
   DurationTimerHook as DurationTimer
 }
 
@@ -28,6 +28,6 @@ export default {
   SessionOptimisticState: SessionOptimisticStateHook,
   ConcurrencyLimit: ConcurrencyLimitHook,
   WarmCacheLimit: WarmCacheLimitHook,
-  TicketLaneDnd: TicketLaneDndHook,
+  TriageLaneDnd: TriageLaneDndHook,
   DurationTimer: DurationTimerHook
 }

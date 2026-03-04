@@ -43,7 +43,6 @@ defmodule AgentsWeb.SessionsLive.Index do
      |> assign(:current_task, nil)
      |> assign(:composing_new, false)
      |> assign(:active_session_tab, "chat")
-     |> assign(:sidebar_list_tab, "sessions")
      |> assign(:container_stats, %{})
      |> assign(:auth_refreshing, %{})
      |> assign(:events, [])
@@ -54,6 +53,7 @@ defmodule AgentsWeb.SessionsLive.Index do
      |> assign(:queue_state, queue_state)
      |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)
      |> assign(:refreshing_task_ids, MapSet.new())
+     |> assign(:triage_ticket_order, [])
      |> assign_session_state()
      |> assign(:form, to_form(%{"instruction" => ""}))}
   end
@@ -341,48 +341,17 @@ defmodule AgentsWeb.SessionsLive.Index do
   end
 
   @impl true
-  def handle_event("switch_sidebar_list_tab", %{"tab" => tab}, socket) do
-    tab = if tab in ["sessions", "tickets"], do: tab, else: "sessions"
-    {:noreply, assign(socket, :sidebar_list_tab, tab)}
-  end
-
-  @impl true
   def handle_event(
-        "reorder_tickets",
-        %{"moved_number" => moved, "ordered_numbers" => ordered} = params,
+        "reorder_triage_tickets",
+        %{"ordered_numbers" => ordered},
         socket
       ) do
-    target_status = Map.get(params, "target_status")
+    ordered_numbers =
+      ordered
+      |> normalize_ordered_ticket_numbers()
+      |> Enum.uniq()
 
-    with {moved_number, ""} <- Integer.parse(to_string(moved)),
-         ordered_numbers <- normalize_ordered_ticket_numbers(ordered) do
-      optimistic_socket =
-        assign(
-          socket,
-          :tickets,
-          apply_local_ticket_reorder(
-            socket.assigns.tickets,
-            moved_number,
-            target_status,
-            ordered_numbers
-          )
-        )
-
-      case Sessions.reorder_project_ticket(moved_number, target_status, ordered_numbers) do
-        :ok ->
-          {:noreply, optimistic_socket}
-
-        {:error, reason} ->
-          {:noreply,
-           put_flash(
-             optimistic_socket,
-             :error,
-             "Ticket moved locally, but GitHub sync failed: #{inspect(reason)}"
-           )}
-      end
-    else
-      _ -> {:noreply, put_flash(socket, :error, "Failed to reorder ticket")}
-    end
+    {:noreply, assign(socket, :triage_ticket_order, ordered_numbers)}
   end
 
   @impl true
@@ -1255,52 +1224,21 @@ defmodule AgentsWeb.SessionsLive.Index do
 
   defp normalize_ordered_ticket_numbers(_), do: []
 
-  defp apply_local_ticket_reorder(tickets, moved_number, target_status, ordered_numbers) do
-    case Enum.find(tickets, &(&1.number == moved_number)) do
-      nil ->
-        tickets
+  @doc false
+  def sort_tickets_by_triage_order(tickets, triage_ticket_order) do
+    if triage_ticket_order == [] do
+      tickets
+    else
+      order_map =
+        triage_ticket_order
+        |> Enum.with_index()
+        |> Map.new()
 
-      moved_ticket ->
-        destination_status =
-          if is_binary(target_status) and target_status != "" do
-            target_status
-          else
-            moved_ticket.status
-          end
+      {ordered, unordered} =
+        Enum.split_with(tickets, &Map.has_key?(order_map, &1.number))
 
-        moved_ticket = %{moved_ticket | status: destination_status}
-        remaining_tickets = Enum.reject(tickets, &(&1.number == moved_number))
-
-        destination_lane =
-          Enum.filter(remaining_tickets, &(&1.status == destination_status))
-
-        destination_lookup =
-          Enum.reduce(destination_lane, %{moved_number => moved_ticket}, fn ticket, acc ->
-            Map.put(acc, ticket.number, ticket)
-          end)
-
-        ordered_destination_lane =
-          ordered_numbers
-          |> Enum.uniq()
-          |> Enum.map(&Map.get(destination_lookup, &1))
-          |> Enum.reject(&is_nil/1)
-
-        listed_numbers = MapSet.new(Enum.map(ordered_destination_lane, & &1.number))
-
-        ordered_destination_lane =
-          if MapSet.member?(listed_numbers, moved_number) do
-            ordered_destination_lane
-          else
-            ordered_destination_lane ++ [moved_ticket]
-          end
-
-        destination_lane_remainder =
-          Enum.reject(destination_lane, &MapSet.member?(listed_numbers, &1.number))
-
-        untouched_tickets =
-          Enum.reject(remaining_tickets, &(&1.status == destination_status))
-
-        untouched_tickets ++ ordered_destination_lane ++ destination_lane_remainder
+      sorted_ordered = Enum.sort_by(ordered, &Map.get(order_map, &1.number, 999_999))
+      sorted_ordered ++ unordered
     end
   end
 

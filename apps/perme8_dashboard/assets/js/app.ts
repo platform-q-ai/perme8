@@ -9,7 +9,7 @@ import topbar from "../vendor/topbar.cjs";
 import { SessionLogHook } from "../../../agents_web/assets/js/presentation/hooks/session-log-hook";
 import { SessionFormHook } from "../../../agents_web/assets/js/presentation/hooks/session-form-hook";
 import { SessionOptimisticStateHook } from "../../../agents_web/assets/js/presentation/hooks/session-optimistic-state-hook";
-import { TicketLaneDndHook } from "../../../agents_web/assets/js/presentation/hooks/ticket-lane-dnd-hook";
+import { TriageLaneDndHook } from "../../../agents_web/assets/js/presentation/hooks/triage-lane-dnd-hook";
 import { DurationTimerHook } from "../../../agents_web/assets/js/presentation/hooks/duration-timer-hook";
 import { ConcurrencyLimitHook } from "../../../agents_web/assets/js/presentation/hooks/concurrency-limit-hook";
 import { WarmCacheLimitHook } from "../../../agents_web/assets/js/presentation/hooks/warm-cache-limit-hook";
@@ -48,7 +48,7 @@ const Hooks = {
   SessionLog: SessionLogHook,
   SessionForm: SessionFormHook,
   SessionOptimisticState: SessionOptimisticStateHook,
-  TicketLaneDnd: TicketLaneDndHook,
+  TriageLaneDnd: TriageLaneDndHook,
   DurationTimer: DurationTimerHook,
   ConcurrencyLimit: ConcurrencyLimitHook,
   WarmCacheLimit: WarmCacheLimitHook,
