@@ -83,8 +83,7 @@ defmodule AgentsWeb.SessionsLive.Index do
      |> assign(:current_task, current_task)
      |> assign(:composing_new, selected_container_id == nil)
      |> assign(:tasks_snapshot, nil)
-     |> assign(:confirmed_user_messages, [])
-     |> assign(:optimistic_user_messages, [])
+     |> assign_session_state()
      |> EventProcessor.maybe_load_cached_output(current_task)
      |> EventProcessor.maybe_load_pending_question(current_task)
      |> EventProcessor.maybe_load_todos(current_task)
@@ -658,10 +657,14 @@ defmodule AgentsWeb.SessionsLive.Index do
         socket
       )
       when is_list(entries) do
+    sessions = socket.assigns.sessions
+
     hydrated =
       entries
       |> Enum.map(&normalize_hydrated_new_session_entry/1)
       |> Enum.reject(&is_nil/1)
+      |> Enum.reject(&stale_optimistic_entry?/1)
+      |> Enum.reject(&already_has_real_session?(&1, sessions))
 
     {:noreply,
      socket
@@ -1253,6 +1256,26 @@ defmodule AgentsWeb.SessionsLive.Index do
   defp remove_optimistic_new_session(entries, client_id) do
     Enum.reject(entries, &(&1.id == client_id))
   end
+
+  # An optimistic entry is stale if it was queued more than 2 minutes ago.
+  # At that point the backend has either succeeded (real session exists) or
+  # failed (the DOWN handler should have cleaned up).
+  @optimistic_stale_seconds 120
+  defp stale_optimistic_entry?(%{queued_at: %DateTime{} = queued_at}) do
+    DateTime.diff(DateTime.utc_now(), queued_at, :second) > @optimistic_stale_seconds
+  end
+
+  defp stale_optimistic_entry?(_), do: true
+
+  # An optimistic entry already has a real session if any existing session's
+  # title matches the entry's instruction text.
+  defp already_has_real_session?(%{instruction: instruction}, sessions)
+       when is_binary(instruction) do
+    trimmed = String.trim(instruction)
+    Enum.any?(sessions, fn session -> String.trim(session.title || "") == trimmed end)
+  end
+
+  defp already_has_real_session?(_, _), do: false
 
   defp normalize_ordered_ticket_numbers(values) when is_list(values) do
     values

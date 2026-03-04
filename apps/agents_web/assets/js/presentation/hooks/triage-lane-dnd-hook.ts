@@ -5,14 +5,26 @@
  * Sends `reorder_triage_tickets` events to the LiveView with the new
  * ordered list of ticket numbers. Position is managed entirely in the
  * LiveView assign — no GitHub sync is performed.
+ *
+ * Uses a pointer-movement threshold (DRAG_THRESHOLD_PX) before enabling
+ * the native drag so that simple clicks are never swallowed by the
+ * browser's drag subsystem.
  */
 
 const DRAG_TYPE = 'application/x-triage-ticket-number'
-const CLICK_SUPPRESS_MS = 200
+const DRAG_THRESHOLD_PX = 6
 
 type DndState = {
   draggedCard: HTMLElement | null
   draggedItem: HTMLElement | null
+}
+
+type PendingDrag = {
+  card: HTMLElement
+  startX: number
+  startY: number
+  onMove: (e: PointerEvent) => void
+  onUp: (e: PointerEvent) => void
 }
 
 function collectTicketOrder(el: HTMLElement): string[] {
@@ -27,7 +39,8 @@ function cardContainer(card: HTMLElement): HTMLElement | null {
 
 export const TriageLaneDndHook = {
   dndState: { draggedCard: null, draggedItem: null } as DndState,
-  suppressClickUntil: 0,
+  pendingDrag: null as PendingDrag | null,
+  isDragging: false,
 
   mounted() {
     this.bindTriageTicketCards()
@@ -83,7 +96,6 @@ export const TriageLaneDndHook = {
       }
 
       const orderedNumbers = collectTicketOrder(this.el)
-      this.suppressClickUntil = Date.now() + CLICK_SUPPRESS_MS
 
       this.pushEvent('reorder_triage_tickets', {
         ordered_numbers: orderedNumbers,
@@ -92,6 +104,7 @@ export const TriageLaneDndHook = {
       if (draggedCard) draggedCard.classList.remove('opacity-70')
       this.dndState.draggedCard = null
       this.dndState.draggedItem = null
+      this.isDragging = false
     })
   },
 
@@ -99,9 +112,18 @@ export const TriageLaneDndHook = {
     this.bindTriageTicketCards()
   },
 
+  cleanupPendingDrag() {
+    if (this.pendingDrag) {
+      document.removeEventListener('pointermove', this.pendingDrag.onMove)
+      document.removeEventListener('pointerup', this.pendingDrag.onUp)
+      this.pendingDrag = null
+    }
+  },
+
   bindTriageTicketCards() {
     this.el.querySelectorAll<HTMLElement>('[data-triage-ticket-card]').forEach((card) => {
-      card.draggable = true
+      // Cards start NOT draggable — we enable it only after threshold
+      card.draggable = false
 
       if (card.dataset.triageDndBound === 'true') return
       card.dataset.triageDndBound = 'true'
@@ -109,13 +131,46 @@ export const TriageLaneDndHook = {
       card.addEventListener(
         'click',
         (event: MouseEvent) => {
-          if (Date.now() < this.suppressClickUntil) {
+          if (this.isDragging) {
             event.preventDefault()
             event.stopPropagation()
+            this.isDragging = false
           }
         },
         true
       )
+
+      card.addEventListener('pointerdown', (event: PointerEvent) => {
+        // Only primary button
+        if (event.button !== 0) return
+
+        this.cleanupPendingDrag()
+
+        const startX = event.clientX
+        const startY = event.clientY
+
+        const onMove = (moveEvent: PointerEvent) => {
+          const dx = moveEvent.clientX - startX
+          const dy = moveEvent.clientY - startY
+
+          if (Math.abs(dx) + Math.abs(dy) >= DRAG_THRESHOLD_PX) {
+            // Threshold exceeded — enable native drag and clean up
+            card.draggable = true
+            this.isDragging = true
+            this.cleanupPendingDrag()
+          }
+        }
+
+        const onUp = () => {
+          // Mouse released without meeting threshold — it's a click
+          this.cleanupPendingDrag()
+          // draggable stays false so the next click won't be swallowed
+        }
+
+        this.pendingDrag = { card, startX, startY, onMove, onUp }
+        document.addEventListener('pointermove', onMove)
+        document.addEventListener('pointerup', onUp)
+      })
 
       card.addEventListener('dragstart', (event: DragEvent) => {
         const number = card.dataset.ticketNumber
@@ -133,8 +188,10 @@ export const TriageLaneDndHook = {
 
       card.addEventListener('dragend', () => {
         card.classList.remove('opacity-70')
+        card.draggable = false
         this.dndState.draggedCard = null
         this.dndState.draggedItem = null
+        this.isDragging = false
       })
     })
   },

@@ -785,6 +785,74 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       refute html =~ ~s(data-testid="optimistic-session-item-failing-queued-task")
     end
 
+    test "stale optimistic new-session entries are discarded on hydration", %{
+      conn: conn,
+      user: user
+    } do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Existing session",
+        container_id: "existing-c-stale",
+        status: "completed"
+      })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      # Entry queued 5 minutes ago — should be considered stale (threshold is 2 min)
+      stale_time =
+        DateTime.utc_now() |> DateTime.add(-300, :second) |> DateTime.to_iso8601()
+
+      entries = [
+        %{
+          "id" => "stale-1",
+          "instruction" => "Stale queued task",
+          "image" => "perme8-opencode",
+          "status" => "queued",
+          "queued_at" => stale_time
+        }
+      ]
+
+      lv
+      |> element("#session-optimistic-state")
+      |> render_hook("hydrate_optimistic_new_sessions", %{"entries" => entries})
+
+      html = render(lv)
+      refute html =~ "Stale queued task"
+      refute html =~ "Syncing..."
+    end
+
+    test "optimistic new-session entries matching an existing session are discarded on hydration",
+         %{conn: conn, user: user} do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Already created session",
+        container_id: "existing-c-dup",
+        status: "completed"
+      })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      # Fresh entry but its instruction matches a real session title
+      entries = [
+        %{
+          "id" => "dup-1",
+          "instruction" => "Already created session",
+          "image" => "perme8-opencode",
+          "status" => "queued",
+          "queued_at" => DateTime.utc_now() |> DateTime.to_iso8601()
+        }
+      ]
+
+      lv
+      |> element("#session-optimistic-state")
+      |> render_hook("hydrate_optimistic_new_sessions", %{"entries" => entries})
+
+      html = render(lv)
+      # The real session card should exist but NOT the optimistic "Syncing..." one
+      refute html =~ "Syncing..."
+      refute html =~ ~s(data-testid="optimistic-session-item-already-created-session")
+    end
+
     test "failed optimistic send is rendered as rolled back", %{conn: conn, user: user} do
       _task =
         task_fixture(%{
@@ -1347,6 +1415,48 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       # Navigate directly to session A via URL param (not the most recent)
       {:ok, _lv, html} = live(conn, ~p"/sessions?container=c-a")
       assert html =~ "Session A task"
+    end
+
+    test "switching sessions clears queued messages from the previous session", %{
+      conn: conn,
+      user: user
+    } do
+      running_task =
+        task_fixture(%{
+          user_id: user.id,
+          instruction: "Running session",
+          container_id: "c-running",
+          status: "running"
+        })
+
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Other session",
+        container_id: "c-other",
+        status: "completed"
+      })
+
+      start_supervised!({FakeTaskRunner, running_task.id})
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions?container=c-running")
+
+      # Send a follow-up to the running task — creates a queued message
+      lv
+      |> form("#session-form", %{"instruction" => "Queued follow-up"})
+      |> render_submit()
+
+      html = render(lv)
+      assert html =~ "Queued follow-up"
+      assert html =~ "Queued"
+
+      # Switch to a different session
+      lv
+      |> element(~s([phx-click="select_session"][phx-value-container-id="c-other"]))
+      |> render_click()
+
+      html = render(lv)
+      # Queued message from previous session should NOT appear
+      refute html =~ "Queued follow-up"
     end
 
     test "selecting a session updates the URL with container param", %{conn: conn, user: user} do
