@@ -20,6 +20,7 @@ defmodule AgentsWeb.SessionsLive.Index do
     tasks = Sessions.list_tasks(user.id)
     tickets = Sessions.list_project_tickets(user.id, tasks: tasks)
     active_ticket_number = next_active_ticket_number(tickets, nil)
+    queue_state = load_queue_state(user.id)
 
     if connected?(socket) do
       subscribe_to_active_tasks(tasks)
@@ -33,6 +34,7 @@ defmodule AgentsWeb.SessionsLive.Index do
     default_image = Sessions.default_image()
 
     sessions = merge_unassigned_active_tasks(sessions, tasks)
+    sticky_warm_task_ids = derive_sticky_warm_task_ids(sessions, queue_state, MapSet.new())
 
     {:ok,
      socket
@@ -55,7 +57,9 @@ defmodule AgentsWeb.SessionsLive.Index do
      |> assign(:selected_image, default_image)
      |> assign(:optimistic_new_sessions, [])
      |> assign(:new_task_monitors, %{})
-     |> assign(:queue_state, load_queue_state(user.id))
+     |> assign(:queue_state, queue_state)
+     |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)
+     |> assign(:refreshing_task_ids, MapSet.new())
      |> assign_session_state()
      |> assign(:form, to_form(%{"instruction" => ""}))}
   end
@@ -353,8 +357,7 @@ defmodule AgentsWeb.SessionsLive.Index do
 
       case Sessions.reorder_project_ticket(moved_number, target_status, ordered_numbers) do
         :ok ->
-          user = socket.assigns.current_scope.user
-          {:noreply, reload_all(optimistic_socket, user.id)}
+          {:noreply, optimistic_socket}
 
         {:error, reason} ->
           {:noreply,
@@ -367,12 +370,6 @@ defmodule AgentsWeb.SessionsLive.Index do
     else
       _ -> {:noreply, put_flash(socket, :error, "Failed to reorder ticket")}
     end
-  end
-
-  @impl true
-  def handle_event("switch_sidebar_list_tab", %{"tab" => tab}, socket) do
-    tab = if tab in ["sessions", "tickets"], do: tab, else: "sessions"
-    {:noreply, assign(socket, :sidebar_list_tab, tab)}
   end
 
   @impl true
@@ -464,6 +461,8 @@ defmodule AgentsWeb.SessionsLive.Index do
 
     case Sessions.delete_session(container_id, user.id) do
       :ok ->
+        sessions = Enum.reject(socket.assigns.sessions, &(&1.container_id == container_id))
+
         socket =
           if socket.assigns.active_container_id == container_id,
             do:
@@ -474,7 +473,18 @@ defmodule AgentsWeb.SessionsLive.Index do
               |> assign_session_state(),
             else: socket
 
-        {:noreply, socket |> reload_all(user.id) |> put_flash(:info, "Session deleted")}
+        sticky_warm_task_ids =
+          derive_sticky_warm_task_ids(
+            sessions,
+            socket.assigns[:queue_state] || default_queue_state(),
+            socket.assigns[:sticky_warm_task_ids] || MapSet.new()
+          )
+
+        {:noreply,
+         socket
+         |> assign(:sessions, sessions)
+         |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)
+         |> put_flash(:info, "Session deleted")}
 
       {:error, _reason} ->
         {:noreply, put_flash(socket, :error, "Failed to delete session")}
@@ -492,9 +502,22 @@ defmodule AgentsWeb.SessionsLive.Index do
       :ok ->
         socket = clear_deleted_selection(socket, task_id, container_id)
 
+        sessions =
+          Enum.reject(socket.assigns.sessions, fn session ->
+            session.container_id == container_id or session.latest_task_id == task_id
+          end)
+
+        sticky_warm_task_ids =
+          derive_sticky_warm_task_ids(
+            sessions,
+            socket.assigns[:queue_state] || default_queue_state(),
+            socket.assigns[:sticky_warm_task_ids] || MapSet.new()
+          )
+
         {:noreply,
          socket
-         |> reload_all(user.id)
+         |> assign(:sessions, sessions)
+         |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)
          |> put_flash(:info, "Queued session removed")}
 
       {:error, reason} ->
@@ -700,13 +723,30 @@ defmodule AgentsWeb.SessionsLive.Index do
         else: socket.assigns.active_container_id
       )
 
-    user = socket.assigns.current_scope.user
+    sessions =
+      if is_map(updated_task) do
+        upsert_session_from_task(socket.assigns.sessions, updated_task)
+      else
+        socket.assigns.sessions
+      end
+
+    sticky_warm_task_ids =
+      derive_sticky_warm_task_ids(
+        sessions,
+        socket.assigns[:queue_state] || default_queue_state(),
+        socket.assigns[:sticky_warm_task_ids] || MapSet.new()
+      )
+
+    tasks_snapshot = upsert_task_snapshot(socket.assigns[:tasks_snapshot], updated_task)
 
     socket =
       socket
       |> assign(:current_task, updated_task)
       |> assign(:active_container_id, cid)
-      |> reload_all(user.id)
+      |> assign(:sessions, sessions)
+      |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)
+      |> assign(:tasks_snapshot, tasks_snapshot)
+      |> request_task_refresh(task_id)
 
     socket =
       cond do
@@ -758,7 +798,6 @@ defmodule AgentsWeb.SessionsLive.Index do
       when is_reference(ref) and is_binary(task_id) do
     Process.demonitor(ref, [:flush])
     Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "task:#{new_task.id}")
-    user = socket.assigns.current_scope.user
 
     socket =
       assign(socket, :auth_refreshing, Map.delete(socket.assigns.auth_refreshing, task_id))
@@ -785,7 +824,20 @@ defmodule AgentsWeb.SessionsLive.Index do
         socket
       end
 
-    {:noreply, reload_all(socket, user.id)}
+    sessions = upsert_session_from_task(socket.assigns.sessions, new_task)
+
+    sticky_warm_task_ids =
+      derive_sticky_warm_task_ids(
+        sessions,
+        socket.assigns[:queue_state] || default_queue_state(),
+        socket.assigns[:sticky_warm_task_ids] || MapSet.new()
+      )
+
+    {:noreply,
+     socket
+     |> assign(:sessions, sessions)
+     |> assign(:tasks_snapshot, upsert_task_snapshot(socket.assigns[:tasks_snapshot], new_task))
+     |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)}
   end
 
   # Tagged async result from per-session auth refresh (error)
@@ -802,8 +854,19 @@ defmodule AgentsWeb.SessionsLive.Index do
 
   # Untagged async result (from run_or_resume_task — not auth refresh)
   @impl true
-  def handle_info({:new_task_created, client_id, {:ok, _task}}, socket) do
+  def handle_info({:new_task_created, client_id, {:ok, task}}, socket) do
     user = socket.assigns.current_scope.user
+    optimistic_entry = Enum.find(socket.assigns.optimistic_new_sessions, &(&1.id == client_id))
+    task = resolve_new_task_ack_task(task, user.id, optimistic_entry)
+
+    sessions = upsert_session_from_task(socket.assigns.sessions, task)
+
+    sticky_warm_task_ids =
+      derive_sticky_warm_task_ids(
+        sessions,
+        socket.assigns[:queue_state] || default_queue_state(),
+        socket.assigns[:sticky_warm_task_ids] || MapSet.new()
+      )
 
     {:noreply,
      socket
@@ -813,7 +876,9 @@ defmodule AgentsWeb.SessionsLive.Index do
        remove_optimistic_new_session(socket.assigns.optimistic_new_sessions, client_id)
      )
      |> broadcast_optimistic_new_sessions_snapshot()
-     |> reload_all(user.id)}
+     |> assign(:sessions, sessions)
+     |> assign(:tasks_snapshot, upsert_task_snapshot(socket.assigns[:tasks_snapshot], task))
+     |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)}
   end
 
   @impl true
@@ -833,8 +898,6 @@ defmodule AgentsWeb.SessionsLive.Index do
   def handle_info({ref, {:ok, new_task}}, socket) when is_reference(ref) do
     Process.demonitor(ref, [:flush])
     Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "task:#{new_task.id}")
-    user = socket.assigns.current_scope.user
-
     is_resume = match?(%{id: id} when id == new_task.id, socket.assigns.current_task)
 
     socket =
@@ -853,7 +916,20 @@ defmodule AgentsWeb.SessionsLive.Index do
         assign_session_state(socket)
       end
 
-    {:noreply, reload_all(socket, user.id)}
+    sessions = upsert_session_from_task(socket.assigns.sessions, new_task)
+
+    sticky_warm_task_ids =
+      derive_sticky_warm_task_ids(
+        sessions,
+        socket.assigns[:queue_state] || default_queue_state(),
+        socket.assigns[:sticky_warm_task_ids] || MapSet.new()
+      )
+
+    {:noreply,
+     socket
+     |> assign(:sessions, sessions)
+     |> assign(:tasks_snapshot, upsert_task_snapshot(socket.assigns[:tasks_snapshot], new_task))
+     |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)}
   end
 
   @impl true
@@ -888,7 +964,17 @@ defmodule AgentsWeb.SessionsLive.Index do
   @impl true
   def handle_info({:queue_updated, user_id, queue_state}, socket) do
     if user_id == socket.assigns.current_scope.user.id do
-      {:noreply, reload_all(socket, user_id, queue_state)}
+      sticky_warm_task_ids =
+        derive_sticky_warm_task_ids(
+          socket.assigns.sessions,
+          queue_state,
+          socket.assigns[:sticky_warm_task_ids] || MapSet.new()
+        )
+
+      {:noreply,
+       socket
+       |> assign(:queue_state, queue_state)
+       |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)}
     else
       {:noreply, socket}
     end
@@ -897,7 +983,50 @@ defmodule AgentsWeb.SessionsLive.Index do
   @impl true
   def handle_info({:tickets_synced, _tickets}, socket) do
     user = socket.assigns.current_scope.user
-    {:noreply, reload_all(socket, user.id)}
+    tickets = Sessions.list_project_tickets(user.id, tasks: socket.assigns[:tasks_snapshot] || [])
+
+    active_ticket_number =
+      next_active_ticket_number(tickets, socket.assigns[:active_ticket_number])
+
+    {:noreply,
+     socket |> assign(:tickets, tickets) |> assign(:active_ticket_number, active_ticket_number)}
+  end
+
+  @impl true
+  def handle_info({:task_refreshed, task_id, {:ok, task}}, socket) do
+    refreshing = MapSet.delete(socket.assigns[:refreshing_task_ids] || MapSet.new(), task_id)
+    sessions = upsert_session_from_task(socket.assigns.sessions, task)
+
+    sticky_warm_task_ids =
+      derive_sticky_warm_task_ids(
+        sessions,
+        socket.assigns[:queue_state] || default_queue_state(),
+        socket.assigns[:sticky_warm_task_ids] || MapSet.new()
+      )
+
+    current_task =
+      case socket.assigns.current_task do
+        %{id: ^task_id} -> task
+        other -> other
+      end
+
+    {:noreply,
+     socket
+     |> assign(:refreshing_task_ids, refreshing)
+     |> assign(:current_task, current_task)
+     |> assign(:sessions, sessions)
+     |> assign(:tasks_snapshot, upsert_task_snapshot(socket.assigns[:tasks_snapshot], task))
+     |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)}
+  end
+
+  @impl true
+  def handle_info({:task_refreshed, task_id, _}, socket) do
+    {:noreply,
+     assign(
+       socket,
+       :refreshing_task_ids,
+       MapSet.delete(socket.assigns[:refreshing_task_ids] || MapSet.new(), task_id)
+     )}
   end
 
   @impl true
@@ -1373,7 +1502,6 @@ defmodule AgentsWeb.SessionsLive.Index do
   end
 
   defp handle_task_result({:ok, task}, socket) do
-    user = socket.assigns.current_scope.user
     Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "task:#{task.id}")
 
     is_resume = match?(%{id: id} when id == task.id, socket.assigns.current_task)
@@ -1397,9 +1525,20 @@ defmodule AgentsWeb.SessionsLive.Index do
         |> assign_session_state()
       end
 
+    sessions = upsert_session_from_task(socket.assigns.sessions, task)
+
+    sticky_warm_task_ids =
+      derive_sticky_warm_task_ids(
+        sessions,
+        socket.assigns[:queue_state] || default_queue_state(),
+        socket.assigns[:sticky_warm_task_ids] || MapSet.new()
+      )
+
     {:noreply,
      socket
-     |> reload_all(user.id)
+     |> assign(:sessions, sessions)
+     |> assign(:tasks_snapshot, upsert_task_snapshot(socket.assigns[:tasks_snapshot], task))
+     |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)
      |> push_event("scroll_to_bottom", %{})
      |> push_event("focus_input", %{})}
   end
@@ -1419,10 +1558,24 @@ defmodule AgentsWeb.SessionsLive.Index do
             _ -> Map.put(task, :status, "cancelled")
           end
 
+        sessions = upsert_session_from_task(socket.assigns.sessions, updated)
+
+        sticky_warm_task_ids =
+          derive_sticky_warm_task_ids(
+            sessions,
+            socket.assigns[:queue_state] || default_queue_state(),
+            socket.assigns[:sticky_warm_task_ids] || MapSet.new()
+          )
+
         {:noreply,
          socket
          |> assign(:current_task, updated)
-         |> reload_all(user.id)
+         |> assign(:sessions, sessions)
+         |> assign(
+           :tasks_snapshot,
+           upsert_task_snapshot(socket.assigns[:tasks_snapshot], updated)
+         )
+         |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)
          |> put_flash(:info, "Task cancelled")}
 
       {:error, _reason} ->
@@ -1436,18 +1589,9 @@ defmodule AgentsWeb.SessionsLive.Index do
     do: task
 
   defp maybe_update_task_status(task, task_id, status, socket) do
-    user = socket.assigns.current_scope.user
-
-    case Sessions.get_task(task_id, user.id) do
-      {:ok, %{error: error} = refreshed} when status == "failed" and not is_nil(error) ->
-        refreshed
-
-      {:ok, refreshed} ->
-        refreshed
-
-      _ ->
-        Map.put(task, :status, status)
-    end
+    _socket = socket
+    _task_id = task_id
+    Map.put(task, :status, status)
   end
 
   defp maybe_sync_status_from_session_event(
@@ -1459,7 +1603,7 @@ defmodule AgentsWeb.SessionsLive.Index do
 
     case status_type do
       "idle" ->
-        maybe_refresh_task_from_db(socket, task_id)
+        request_task_refresh(socket, task_id)
 
       _ ->
         socket
@@ -1468,54 +1612,86 @@ defmodule AgentsWeb.SessionsLive.Index do
 
   defp maybe_sync_status_from_session_event(socket, _event, _task_id), do: socket
 
-  defp maybe_refresh_task_from_db(socket, task_id) do
-    user = socket.assigns.current_scope.user
+  defp request_task_refresh(socket, task_id) when is_binary(task_id) do
+    refreshing = socket.assigns[:refreshing_task_ids] || MapSet.new()
 
-    case Sessions.get_task(task_id, user.id) do
-      {:ok, task} ->
-        socket
-        |> assign(:current_task, task)
-        |> reload_all(user.id)
+    if MapSet.member?(refreshing, task_id) do
+      socket
+    else
+      user_id = socket.assigns.current_scope.user.id
+      caller = self()
 
-      _ ->
-        socket
+      Task.start(fn ->
+        send(caller, {:task_refreshed, task_id, Sessions.get_task(task_id, user_id)})
+      end)
+
+      assign(socket, :refreshing_task_ids, MapSet.put(refreshing, task_id))
     end
   end
 
-  defp reload_all(socket, user_id, queue_state_override \\ nil) do
-    sessions = Sessions.list_sessions(user_id)
-    tasks = Sessions.list_tasks(user_id)
-    tickets = Sessions.list_project_tickets(user_id, tasks: tasks)
-    sessions = merge_unassigned_active_tasks(sessions, tasks)
+  defp request_task_refresh(socket, _task_id), do: socket
 
-    active_ticket_number =
-      next_active_ticket_number(tickets, socket.assigns[:active_ticket_number])
+  defp derive_sticky_warm_task_ids(sessions, queue_state, previous_sticky) do
+    queued_session_ids =
+      sessions
+      |> Enum.filter(&(&1.latest_status == "queued"))
+      |> Enum.map(& &1.latest_task_id)
+      |> Enum.filter(&is_binary/1)
+      |> MapSet.new()
 
-    sessions =
-      case {socket.assigns[:todo_items], socket.assigns[:active_container_id]} do
-        {todos, cid} when is_list(todos) and todos != [] and not is_nil(cid) ->
-          todo_maps =
-            Enum.map(todos, fn item ->
-              %{
-                "id" => item[:id],
-                "title" => item[:title],
-                "status" => item[:status],
-                "position" => item[:position]
-              }
-            end)
+    queued_real_container_ids =
+      sessions
+      |> Enum.filter(&(&1.latest_status == "queued" and has_real_container?(&1)))
+      |> Enum.map(& &1.latest_task_id)
+      |> Enum.filter(&is_binary/1)
+      |> MapSet.new()
 
-          update_session_todo_items(sessions, cid, todo_maps)
+    warm_limit = Map.get(queue_state || %{}, :warm_cache_limit, 0)
 
-        _ ->
-          sessions
+    queue_window_ids =
+      queue_state
+      |> Map.get(:queued, [])
+      |> Enum.take(warm_limit)
+      |> Enum.map(& &1.id)
+      |> Enum.filter(&is_binary/1)
+
+    queue_signaled_ids =
+      (Map.get(queue_state || %{}, :warm_task_ids, []) || []) ++
+        (Map.get(queue_state || %{}, :warming_task_ids, []) || []) ++ queue_window_ids
+
+    queue_signaled_ids = queue_signaled_ids |> Enum.filter(&is_binary/1) |> MapSet.new()
+
+    previous_still_queued =
+      previous_sticky
+      |> MapSet.new()
+      |> MapSet.intersection(queued_session_ids)
+
+    queue_signaled_ids
+    |> MapSet.union(previous_still_queued)
+    |> MapSet.union(queued_real_container_ids)
+  end
+
+  defp has_real_container?(%{container_id: container_id}) when is_binary(container_id) do
+    container_id != "" and not String.starts_with?(container_id, "task:")
+  end
+
+  defp has_real_container?(_), do: false
+
+  defp upsert_task_snapshot(tasks, nil), do: tasks
+
+  defp upsert_task_snapshot(tasks, task) when is_list(tasks) do
+    {matches, rest} = Enum.split_with(tasks, &(&1.id == task.id))
+
+    merged =
+      case matches do
+        [existing | _] -> Map.merge(existing, task)
+        [] -> task
       end
 
-    socket
-    |> assign(:sessions, sessions)
-    |> assign(:tickets, tickets)
-    |> assign(:active_ticket_number, active_ticket_number)
-    |> assign(:queue_state, queue_state_override || load_queue_state(user_id))
+    [merged | rest]
   end
+
+  defp upsert_task_snapshot(_tasks, task), do: [task]
 
   defp find_ticket_number_for_container(tickets, container_id) do
     case Enum.find(tickets, &(&1.associated_container_id == container_id)) do
@@ -1640,6 +1816,101 @@ defmodule AgentsWeb.SessionsLive.Index do
       session ->
         session
     end)
+  end
+
+  defp upsert_session_from_task(sessions, task) do
+    task_id = Map.get(task, :id)
+    task_container_id = Map.get(task, :container_id)
+
+    derived_container_id =
+      task_container_id || (is_binary(task_id) && "task:" <> task_id) || "task:unknown"
+
+    session_update = %{
+      container_id: derived_container_id,
+      task_count: 1,
+      latest_status: Map.get(task, :status, "queued"),
+      latest_task_id: task_id,
+      latest_error: Map.get(task, :error),
+      title: Map.get(task, :instruction, "New session"),
+      image: Map.get(task, :image, Sessions.default_image()),
+      latest_at: Map.get(task, :updated_at) || Map.get(task, :inserted_at) || DateTime.utc_now(),
+      created_at: Map.get(task, :inserted_at) || DateTime.utc_now(),
+      started_at: Map.get(task, :started_at),
+      completed_at: Map.get(task, :completed_at),
+      session_summary: Map.get(task, :session_summary),
+      todo_items: Map.get(task, :todo_items) || %{"items" => []}
+    }
+
+    {existing, rest} =
+      Enum.split_with(sessions, fn session ->
+        (is_binary(task_container_id) and task_container_id != "" and
+           session.container_id == task_container_id) ||
+          session.latest_task_id == task_id
+      end)
+
+    merged =
+      case existing do
+        [first | _] -> Map.merge(first, session_update)
+        [] -> session_update
+      end
+
+    sort_sessions_for_sidebar([merged | rest])
+  end
+
+  defp hydrate_task_for_session(task, user_id) when is_map(task) do
+    task_id = Map.get(task, :id)
+
+    complete? =
+      is_binary(task_id) and
+        (is_binary(Map.get(task, :instruction)) or is_binary(Map.get(task, :container_id)))
+
+    cond do
+      complete? ->
+        task
+
+      is_binary(task_id) and match?({:ok, _}, Ecto.UUID.cast(task_id)) ->
+        case Sessions.get_task(task_id, user_id) do
+          {:ok, persisted} -> persisted
+          _ -> task
+        end
+
+      true ->
+        task
+    end
+  end
+
+  defp hydrate_task_for_session(task, _user_id), do: task
+
+  defp resolve_new_task_ack_task(task, user_id, optimistic_entry) do
+    hydrated = hydrate_task_for_session(task, user_id)
+
+    cond do
+      is_binary(Map.get(hydrated, :instruction)) ->
+        hydrated
+
+      is_map(optimistic_entry) and is_binary(optimistic_entry[:instruction]) ->
+        find_task_by_instruction(user_id, optimistic_entry[:instruction]) || hydrated
+
+      true ->
+        hydrated
+    end
+  end
+
+  defp find_task_by_instruction(user_id, instruction) do
+    user_id
+    |> Sessions.list_tasks()
+    |> Enum.filter(&(&1.instruction == instruction))
+    |> Enum.sort_by(
+      fn task ->
+        case task.inserted_at do
+          %DateTime{} = dt -> DateTime.to_unix(dt, :microsecond)
+          %NaiveDateTime{} = dt -> NaiveDateTime.to_gregorian_seconds(dt)
+          _ -> 0
+        end
+      end,
+      :desc
+    )
+    |> List.first()
   end
 
   defp parse_ticket_number_param(%{"ticket_number" => value}) when is_binary(value) do
