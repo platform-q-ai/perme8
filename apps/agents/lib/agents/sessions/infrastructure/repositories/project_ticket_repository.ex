@@ -89,6 +89,7 @@ defmodule Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository do
       number: attrs[:number] || attrs["number"],
       external_id: attrs[:external_id] || attrs["external_id"],
       title: attrs[:title] || attrs["title"],
+      body: attrs[:body] || attrs["body"],
       status: attrs[:status] || attrs["status"],
       priority: attrs[:priority] || attrs["priority"],
       size: attrs[:size] || attrs["size"],

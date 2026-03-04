@@ -358,6 +358,8 @@
                     }
                     class={[
                       "flex cursor-pointer flex-col gap-0.5 w-full rounded-lg p-2 min-h-16 transition-all duration-150 hover:-translate-y-px hover:shadow-md hover:ring-1 hover:ring-base-content/20",
+                      session.container_id == @active_container_id &&
+                        "ring-2 ring-primary/60 shadow-sm shadow-primary/10",
                       session.latest_status == "failed" &&
                         "border border-warning/40 bg-warning/10",
                       session.latest_status == "completed" &&
@@ -373,8 +375,7 @@
                         "starting",
                         "running"
                       ] &&
-                        "border border-transparent",
-                      session.container_id == @active_container_id && "active"
+                        "border border-transparent"
                     ]}
                     phx-click="select_session"
                     phx-value-container-id={session.container_id}
@@ -419,19 +420,28 @@
                         <.status_dot status={session.latest_status} />
                       </div>
                     </div>
-                    <% duration =
-                      format_duration(
-                        Map.get(session, :started_at),
-                        Map.get(session, :completed_at),
-                        @duration_now
-                      ) %>
                     <% file_stats = format_file_stats(Map.get(session, :session_summary)) %>
                     <div class="flex items-center gap-2 text-[0.65rem] text-base-content/50 w-full">
                       <span>{image_label(session.image)}</span>
                       <span>&middot;</span>
                       <span>{relative_time(session.latest_at)}</span>
-                      <span :if={duration != nil} data-testid="session-duration">
-                        &middot; {duration}
+                      <span
+                        :if={Map.get(session, :started_at) != nil}
+                        data-testid="session-duration"
+                      >
+                        &middot;
+                        <span
+                          id={"duration-sessions-#{session.container_id}"}
+                          phx-hook="DurationTimer"
+                          data-started-at={
+                            Map.get(session, :started_at) &&
+                              DateTime.to_iso8601(session.started_at)
+                          }
+                          data-completed-at={
+                            Map.get(session, :completed_at) &&
+                              DateTime.to_iso8601(session.completed_at)
+                          }
+                        />
                       </span>
                     </div>
                     <div
@@ -497,7 +507,8 @@
                     data-slot-state="failed"
                     class={[
                       "flex cursor-pointer flex-col gap-0.5 w-full rounded-lg p-2 min-h-16 border border-warning/40 bg-warning/10 transition-all duration-150 hover:-translate-y-px hover:shadow-md hover:ring-1 hover:ring-base-content/20",
-                      session.container_id == @active_container_id && "active"
+                      session.container_id == @active_container_id &&
+                        "ring-2 ring-primary/60 shadow-sm shadow-primary/10"
                     ]}
                     phx-click="select_session"
                     phx-value-container-id={session.container_id}
@@ -784,11 +795,12 @@
                     }
                     class={[
                       "flex cursor-pointer flex-col gap-0.5 w-full rounded-lg p-2 min-h-16 transition-all duration-150 hover:-translate-y-px hover:shadow-md hover:ring-1 hover:ring-base-content/20",
+                      session.container_id == @active_container_id &&
+                        "ring-2 ring-primary/60 shadow-sm shadow-primary/10",
                       session.latest_status in ["pending", "starting", "running"] &&
                         "border border-success/40 bg-success/10",
                       session.latest_status not in ["pending", "starting", "running"] &&
-                        "border border-transparent",
-                      session.container_id == @active_container_id && "active"
+                        "border border-transparent"
                     ]}
                     phx-click="select_session"
                     phx-value-container-id={session.container_id}
@@ -833,19 +845,28 @@
                         <.status_dot status={session.latest_status} />
                       </div>
                     </div>
-                    <% duration =
-                      format_duration(
-                        Map.get(session, :started_at),
-                        Map.get(session, :completed_at),
-                        @duration_now
-                      ) %>
                     <% file_stats = format_file_stats(Map.get(session, :session_summary)) %>
                     <div class="flex items-center gap-2 text-[0.65rem] text-base-content/50 w-full">
                       <span>{image_label(session.image)}</span>
                       <span>&middot;</span>
                       <span>{relative_time(session.latest_at)}</span>
-                      <span :if={duration != nil} data-testid="session-duration">
-                        &middot; {duration}
+                      <span
+                        :if={Map.get(session, :started_at) != nil}
+                        data-testid="session-duration"
+                      >
+                        &middot;
+                        <span
+                          id={"duration-tickets-#{session.container_id}"}
+                          phx-hook="DurationTimer"
+                          data-started-at={
+                            Map.get(session, :started_at) &&
+                              DateTime.to_iso8601(session.started_at)
+                          }
+                          data-completed-at={
+                            Map.get(session, :completed_at) &&
+                              DateTime.to_iso8601(session.completed_at)
+                          }
+                        />
                       </span>
                     </div>
                     <div

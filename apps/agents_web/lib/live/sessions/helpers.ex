@@ -149,42 +149,6 @@ defmodule AgentsWeb.SessionsLive.Helpers do
 
   defp format_auth_refresh_reason(reason), do: inspect(reason)
 
-  @doc "Polls container stats for all active sessions."
-  def poll_running_session_stats(sessions) do
-    sessions
-    |> Enum.filter(&(&1.latest_status in ["running", "starting", "pending"]))
-    |> Enum.reduce(%{}, fn session, acc ->
-      case fetch_container_stats(session.container_id) do
-        {:ok, stats_map} -> Map.put(acc, session.container_id, stats_map)
-        :error -> acc
-      end
-    end)
-  end
-
-  @doc "Fetches and normalizes container stats."
-  def fetch_container_stats(container_id) do
-    alias Agents.Sessions
-
-    case Sessions.get_container_stats(container_id) do
-      {:ok, stats} ->
-        mem_percent =
-          if stats.memory_limit > 0,
-            do: Float.round(stats.memory_usage / stats.memory_limit * 100, 1),
-            else: 0.0
-
-        {:ok,
-         %{
-           cpu_percent: stats.cpu_percent,
-           memory_percent: mem_percent,
-           memory_usage: stats.memory_usage,
-           memory_limit: stats.memory_limit
-         }}
-
-      {:error, _} ->
-        :error
-    end
-  end
-
   @doc "Converts a title string to a lowercase hyphenated slug for data-testid values."
   def slugify(nil), do: ""
 

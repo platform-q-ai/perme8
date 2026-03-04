@@ -439,6 +439,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
         })
 
         broadcast_status(state.task_id, "running", state.pubsub)
+        broadcast_container_stats(state)
 
         flush_ref = schedule_output_flush()
 
@@ -492,6 +493,9 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
       else
         state
       end
+
+    # Push container stats to subscribers (event-driven, replaces LiveView polling)
+    broadcast_container_stats(state)
 
     # Schedule the next flush if we're still running
     flush_ref = schedule_output_flush()
@@ -1263,6 +1267,36 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
       {:task_status_changed, task_id, status}
     )
   end
+
+  defp broadcast_container_stats(state) when is_binary(state.container_id) do
+    case state.container_provider.stats(state.container_id) do
+      {:ok, stats} ->
+        mem_percent =
+          if stats.memory_limit > 0,
+            do: Float.round(stats.memory_usage / stats.memory_limit * 100, 1),
+            else: 0.0
+
+        payload = %{
+          cpu_percent: stats.cpu_percent,
+          memory_percent: mem_percent,
+          memory_usage: stats.memory_usage,
+          memory_limit: stats.memory_limit
+        }
+
+        Phoenix.PubSub.broadcast(
+          state.pubsub,
+          "task:#{state.task_id}",
+          {:container_stats_updated, state.task_id, state.container_id, payload}
+        )
+
+      {:error, _} ->
+        :ok
+    end
+  rescue
+    _ -> :ok
+  end
+
+  defp broadcast_container_stats(_state), do: :ok
 
   defp clear_pending_question(state) do
     cancel_question_timeout(state)

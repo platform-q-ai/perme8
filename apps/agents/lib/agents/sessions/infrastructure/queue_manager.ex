@@ -16,7 +16,6 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
           user_id: String.t(),
           concurrency_limit: integer(),
           warm_cache_limit: non_neg_integer(),
-          heartbeat_interval_ms: pos_integer(),
           warmup_scheduled: boolean(),
           warming_task_ids: MapSet.t(String.t()),
           task_repo: module(),
@@ -88,7 +87,6 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
       concurrency_limit:
         Keyword.get(opts, :concurrency_limit, SessionsConfig.default_concurrency_limit()),
       warm_cache_limit: Keyword.get(opts, :warm_cache_limit, 2),
-      heartbeat_interval_ms: Keyword.get(opts, :heartbeat_interval_ms, 5_000),
       warmup_scheduled: false,
       warming_task_ids: MapSet.new(),
       task_repo: Keyword.get(opts, :task_repo, TaskRepository),
@@ -98,18 +96,7 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
       pubsub: Keyword.get(opts, :pubsub, SessionsConfig.pubsub())
     }
 
-    schedule_heartbeat(state)
     {:ok, state}
-  end
-
-  @impl true
-  def handle_info(:heartbeat, state) do
-    state = enforce_concurrency_limit(state)
-    state = promote_next_task(state)
-    state = maybe_schedule_warmup(state)
-    broadcast_queue_updated(state)
-    schedule_heartbeat(state)
-    {:noreply, state}
   end
 
   @impl true
@@ -153,6 +140,7 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
   def handle_call({:set_concurrency_limit, limit}, _from, state)
       when is_integer(limit) and limit >= 1 and limit <= 10 do
     state = %{state | concurrency_limit: limit}
+    state = enforce_concurrency_limit(state)
     state = promote_next_task(state)
     state = maybe_schedule_warmup(state)
     broadcast_queue_updated(state)
@@ -612,10 +600,6 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
         Logger.debug("QueueManager: failed to warm task #{task.id}: #{inspect(reason)}")
         :ok
     end
-  end
-
-  defp schedule_heartbeat(state) do
-    Process.send_after(self(), :heartbeat, state.heartbeat_interval_ms)
   end
 
   defp maybe_schedule_warmup(%{warmup_scheduled: true} = state), do: state
