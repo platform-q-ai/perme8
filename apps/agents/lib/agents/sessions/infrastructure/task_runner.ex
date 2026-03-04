@@ -337,18 +337,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
   @impl true
   def handle_info(:wait_for_health, state) do
-    base_url = "http://localhost:#{state.container_port}"
-
-    case state.opencode_client.health(base_url) do
-      :ok ->
-        send(self(), :create_session)
-        {:noreply, %{state | status: :creating_session}}
-
-      {:error, _reason} ->
-        interval = SessionsConfig.health_check_interval_ms()
-        Process.send_after(self(), :wait_for_health, interval)
-        {:noreply, %{state | health_retries: state.health_retries - 1}}
-    end
+    continue_after_health(state, :wait_for_health, :create_session, :creating_session)
   end
 
   # ---- Resume Health Check (skips session creation) ----
@@ -391,18 +380,12 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
   @impl true
   def handle_info(:wait_for_health_fresh, state) do
-    base_url = "http://localhost:#{state.container_port}"
-
-    case state.opencode_client.health(base_url) do
-      :ok ->
-        send(self(), :prepare_fresh_start)
-        {:noreply, %{state | status: :preparing_fresh_start}}
-
-      {:error, _reason} ->
-        interval = SessionsConfig.health_check_interval_ms()
-        Process.send_after(self(), :wait_for_health_fresh, interval)
-        {:noreply, %{state | health_retries: state.health_retries - 1}}
-    end
+    continue_after_health(
+      state,
+      :wait_for_health_fresh,
+      :prepare_fresh_start,
+      :preparing_fresh_start
+    )
   end
 
   @impl true
@@ -1052,6 +1035,21 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     case state.opencode_client.subscribe_events(base_url, self()) do
       {:ok, pid} -> {:ok, %{state | sse_pid: pid, sse_reconnecting: false}}
       {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp continue_after_health(state, retry_event, next_event, next_status) do
+    base_url = "http://localhost:#{state.container_port}"
+
+    case state.opencode_client.health(base_url) do
+      :ok ->
+        send(self(), next_event)
+        {:noreply, %{state | status: next_status}}
+
+      {:error, _reason} ->
+        interval = SessionsConfig.health_check_interval_ms()
+        Process.send_after(self(), retry_event, interval)
+        {:noreply, %{state | health_retries: state.health_retries - 1}}
     end
   end
 
