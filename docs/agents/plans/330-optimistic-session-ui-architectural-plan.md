@@ -13,7 +13,7 @@
 
 ## Overview
 
-Implement deterministic optimistic follow-up handling for Sessions so users see immediate pending entries, backend receives explicit async command payloads with correlation keys, reload/reconnect restores in-flight intent, and backend acknowledgements reconcile each entry to confirmed/retried/rolled back without duplicates.
+Implement deterministic optimistic session interactions so users see immediate UI feedback for follow-up sends, sidebar CRUD actions, and session selection/chat loading. Backend receives explicit async command payloads with correlation keys, reload/reconnect restores in-flight intent, and backend acknowledgements reconcile each entry to confirmed/retried/rolled back without duplicates while patching missing server messages into cached chat output.
 
 ## UI Strategy
 
@@ -22,6 +22,8 @@ Implement deterministic optimistic follow-up handling for Sessions so users see 
   - `localStorage` persistence/restore of optimistic client queue across full browser reload
   - per-user/per-task storage isolation and hydration handoff to LiveView
   - hook-level reconnect hydration trigger
+  - per-user/per-session cached chat transcript snapshot with incremental server patching
+  - optimistic session sidebar state for create/delete/select interactions with rollback on failure
 
 ## Affected Boundaries
 
@@ -36,6 +38,17 @@ Implement deterministic optimistic follow-up handling for Sessions so users see 
 - **Exported schemas**: `Agents.Sessions.Domain.Entities.Task` (existing export; extended fields only)
 - **New context needed?**: No; stays within `Agents.Sessions` bounded context
 
+## System Coherence Guardrails
+
+- **Single source of truth**: backend task/session state in `agents` remains authoritative; optimistic UI/cache is a latency-hiding projection only.
+- **Deterministic merge contract**: same merge policy must be used across hook, LiveView, and event processor (message id -> correlation key -> timestamp tie-break).
+- **Monotonic state transitions**: optimistic command and sidebar item states may only move forward (no oscillation) except explicit rollback path on backend rejection.
+- **One event identity model**: all optimistic submits include correlation key; all server acknowledgements/events map to a stable identity key before render.
+- **Bounded cache scope**: cache keys are namespaced by user + workspace + session/task; purge on identity change/logout.
+- **Recovery invariants**: on reconnect/reload, hydrate from cache first, then reconcile with server snapshot/deltas; server terminal states always win.
+- **UI consistency rule**: sidebar and detail pane must reconcile from the same session snapshot generation to prevent split-brain rendering.
+- **No duplicated business rules**: domain/application validation stays in `agents`; `agents_web` only handles projection, hydration, and rendering orchestration.
+
 ## Accepted BDD Alignment
 
 - Immediate optimistic pending entry: LiveView append + hook persistence on submit
@@ -44,6 +57,8 @@ Implement deterministic optimistic follow-up handling for Sessions so users see 
 - Deterministic reconcile success/failure: correlation-keyed state machine (`pending -> confirmed` or `pending -> retriable/rolled_back`)
 - Reconnect/reload deterministic behavior: LiveView + hook hydration tests and TaskRunner acknowledgement tests
 - Security posture: auth/ownership validation + malformed correlation key rejection + per-user durable storage namespace
+- Optimistic sidebar CRUD behavior: create/delete/select state updates immediately with deterministic rollback and user-visible error state when backend rejects
+- Optimistic session-open behavior: selecting a session renders cached chat output immediately, then patches in missing/updated server messages without replacing stable local state
 
 ---
 
@@ -141,6 +156,30 @@ Implement deterministic optimistic follow-up handling for Sessions so users see 
   - Add explicit payload fields (`correlation_key`, `command_type`, timestamps) to submit/retry events
 - [ ] ⏸ **REFACTOR**: keep render functions thin; push transition logic into helpers/event processor
 
+### Optimistic Sidebar CRUD Interaction
+
+- [ ] ⏸ **RED**: Extend LiveView tests for optimistic create/delete/select in `apps/agents_web/test/live/sessions/index_test.exs`
+  - Cases: create placeholder row shown immediately, delete row removed immediately, select switches detail pane immediately, backend failure restores prior state with flash
+- [ ] ⏸ **GREEN**: Implement optimistic sidebar reducers and rollback paths in
+  - `apps/agents_web/lib/live/sessions/index.ex`
+  - `apps/agents_web/lib/live/sessions/helpers.ex`
+  - keep all business validation in `agents` use cases
+- [ ] ⏸ **REFACTOR**: isolate optimistic sidebar transitions into pure helper functions to keep event handlers small
+
+### Optimistic Session Output Cache + Server Patch
+
+- [ ] ⏸ **RED**: Add tests for cached transcript hydration + patching
+  - `apps/agents_web/test/live/sessions/index_test.exs`
+  - `apps/agents_web/test/live/sessions/event_processor_test.exs`
+  - `apps/agents_web/assets/js/presentation/hooks/session-log.spec.ts` (or nearest hook test file)
+  - Cases: cached transcript shown on select/reload, server delta fills missing messages, duplicate messages deduped by id/correlation, out-of-order patches merged deterministically
+- [ ] ⏸ **GREEN**: Implement per-user/per-session transcript cache and patch flow in
+  - `apps/agents_web/assets/js/infrastructure/storage/` (new cache adapter)
+  - `apps/agents_web/assets/js/application/use-cases/` (merge + prune use cases)
+  - `apps/agents_web/lib/live/sessions/event_processor.ex` (server delta reconciliation)
+  - `apps/agents_web/lib/live/sessions/index.ex` (hydrate on select; request authoritative sync)
+- [ ] ⏸ **REFACTOR**: centralize transcript merge policy (id-first, correlation fallback, timestamp tie-break) to avoid duplicate logic across hook + LiveView
+
 ### Security + Ownership Enforcement
 
 - [ ] ⏸ **RED**: Add tests for forbidden and malformed payload paths
@@ -213,6 +252,10 @@ Implement deterministic optimistic follow-up handling for Sessions so users see 
   - `apps/agents_web/test/features/sessions/sessions-optimistic.browser.feature`
   - `apps/agents_web/test/features/sessions/sessions-optimistic.security.feature`
 - [ ] ⏸ **REFACTOR**: remove brittle selectors; rely on deterministic DOM ids/data-testid for status assertions
+- [ ] ⏸ **RED/GREEN**: Add/extend browser scenarios for optimistic CRUD + cached transcript patching
+  - session row appears/disappears optimistically
+  - selecting session shows cached messages instantly
+  - missing server messages patch into view without full log flicker
 
 ### Phase 4 Validation
 
@@ -235,3 +278,4 @@ Implement deterministic optimistic follow-up handling for Sessions so users see 
 - **Reload/reconnect divergence risk**: server snapshot and local durable state may conflict; define deterministic merge precedence (server terminal states win)
 - **Security leakage risk**: local durable state could leak across users on shared browser; enforce user+task namespacing and purge on identity change/logout
 - **Boundary creep risk**: avoid pushing business transition rules into LiveView/hook; keep state transitions in `agents` domain/application modules
+- **Cache staleness risk**: cached transcript may diverge from authoritative backend stream; mitigate by rendering cache as immediate bootstrap, then applying deterministic server patch and staleness TTL
