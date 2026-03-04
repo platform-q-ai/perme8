@@ -39,4 +39,70 @@ defmodule Agents.Sessions.Infrastructure.ProjectTicketRepositoryTest do
     assert refreshed.sync_state == "sync_error"
     assert refreshed.last_sync_error =~ "boom"
   end
+
+  test "sync_remote_ticket/1 does not overwrite pending_push local edits" do
+    {:ok, local_ticket} =
+      %ProjectTicketSchema{}
+      |> ProjectTicketSchema.changeset(%{
+        number: 700,
+        title: "Local Title",
+        status: "In progress",
+        priority: "Want",
+        labels: ["local"],
+        sync_state: "pending_push"
+      })
+      |> Repo.insert()
+
+    assert {:ok, synced_ticket} =
+             ProjectTicketRepository.sync_remote_ticket(%{
+               number: 700,
+               title: "Remote Title",
+               status: "Backlog",
+               priority: "Need",
+               labels: ["remote"]
+             })
+
+    assert synced_ticket.id == local_ticket.id
+
+    refreshed = Repo.get!(ProjectTicketSchema, local_ticket.id)
+    assert refreshed.title == "Local Title"
+    assert refreshed.status == "In progress"
+    assert refreshed.priority == "Want"
+    assert refreshed.labels == ["local"]
+    assert refreshed.sync_state == "pending_push"
+  end
+
+  test "sync_remote_ticket/1 does not overwrite sync_error local edits" do
+    {:ok, local_ticket} =
+      %ProjectTicketSchema{}
+      |> ProjectTicketSchema.changeset(%{
+        number: 701,
+        title: "Local Error Title",
+        status: "In review",
+        priority: "Nice to have",
+        labels: ["local-error"],
+        sync_state: "sync_error",
+        last_sync_error: "push failed"
+      })
+      |> Repo.insert()
+
+    assert {:ok, synced_ticket} =
+             ProjectTicketRepository.sync_remote_ticket(%{
+               number: 701,
+               title: "Remote Title",
+               status: "Backlog",
+               priority: "Need",
+               labels: ["remote"]
+             })
+
+    assert synced_ticket.id == local_ticket.id
+
+    refreshed = Repo.get!(ProjectTicketSchema, local_ticket.id)
+    assert refreshed.title == "Local Error Title"
+    assert refreshed.status == "In review"
+    assert refreshed.priority == "Nice to have"
+    assert refreshed.labels == ["local-error"]
+    assert refreshed.sync_state == "sync_error"
+    assert refreshed.last_sync_error == "push failed"
+  end
 end
