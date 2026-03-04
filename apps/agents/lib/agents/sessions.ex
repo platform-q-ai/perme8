@@ -220,6 +220,25 @@ defmodule Agents.Sessions do
   end
 
   @doc """
+  Closes a project ticket: removes it from the local database and closes the
+  issue on GitHub (board status set to "Done" + issue state set to closed).
+
+  The GitHub close runs asynchronously via the TicketSyncServer so the UI
+  is not blocked.
+  """
+  @spec close_project_ticket(integer()) :: :ok | {:error, :not_found}
+  def close_project_ticket(number) when is_integer(number) do
+    case ProjectTicketRepository.delete_by_number(number) do
+      {:ok, _ticket} ->
+        TicketSyncServer.close_ticket(number)
+        :ok
+
+      {:error, :not_found} ->
+        {:error, :not_found}
+    end
+  end
+
+  @doc """
   Returns the default Docker image name for sessions.
   """
   @spec default_image() :: String.t()

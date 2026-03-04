@@ -449,6 +449,34 @@ defmodule AgentsWeb.SessionsLive.Index do
   end
 
   @impl true
+  def handle_event("close_ticket", %{"number" => number_str}, socket) do
+    number = String.to_integer(number_str)
+
+    # Optimistically remove the ticket from the UI
+    tickets = Enum.reject(socket.assigns.tickets, &(&1.number == number))
+
+    active_ticket_number =
+      if socket.assigns.active_ticket_number == number,
+        do: nil,
+        else: socket.assigns.active_ticket_number
+
+    # Switch back to chat tab if we just closed the viewed ticket
+    tab =
+      if socket.assigns.active_ticket_number == number and
+           socket.assigns.active_session_tab == "ticket",
+         do: "chat",
+         else: socket.assigns.active_session_tab
+
+    Sessions.close_project_ticket(number)
+
+    {:noreply,
+     socket
+     |> assign(:tickets, tickets)
+     |> assign(:active_ticket_number, active_ticket_number)
+     |> assign(:active_session_tab, tab)}
+  end
+
+  @impl true
   def handle_event("delete_session", %{"container-id" => container_id}, socket) do
     user = socket.assigns.current_scope.user
 

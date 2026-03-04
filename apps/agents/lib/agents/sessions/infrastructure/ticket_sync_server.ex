@@ -39,6 +39,16 @@ defmodule Agents.Sessions.Infrastructure.TicketSyncServer do
     :exit, _ -> {:error, :sync_server_unavailable}
   end
 
+  @doc """
+  Closes a ticket on GitHub asynchronously (sets board status to "Done" and
+  closes the issue). This is fire-and-forget — the local DB record should
+  already be deleted before calling this.
+  """
+  @spec close_ticket(integer()) :: :ok
+  def close_ticket(issue_number) when is_integer(issue_number) do
+    GenServer.cast(__MODULE__, {:close_ticket, issue_number})
+  end
+
   @impl true
   def init(opts) do
     state = %{
@@ -76,6 +86,26 @@ defmodule Agents.Sessions.Infrastructure.TicketSyncServer do
       end
 
     {:reply, result, next_state}
+  end
+
+  @impl true
+  def handle_cast({:close_ticket, issue_number}, state) do
+    opts = [
+      token: SessionsConfig.github_token(),
+      org: SessionsConfig.github_project_org(),
+      project_number: SessionsConfig.github_project_number(),
+      repo: "perme8"
+    ]
+
+    case state.client.close_issue(issue_number, opts) do
+      :ok ->
+        Logger.info("Closed issue ##{issue_number} on GitHub")
+
+      {:error, reason} ->
+        Logger.warning("Failed to close issue ##{issue_number} on GitHub: #{inspect(reason)}")
+    end
+
+    {:noreply, state}
   end
 
   @impl true

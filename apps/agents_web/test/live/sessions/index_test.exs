@@ -2208,4 +2208,111 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       refute html =~ "data-testid=\"restart-session-btn\""
     end
   end
+
+  describe "close ticket" do
+    setup %{conn: conn} do
+      user = user_fixture()
+      %{conn: log_in_user(conn, user), user: user}
+    end
+
+    test "close_ticket event removes ticket from triage lane", %{conn: conn, user: user} do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Work on #555",
+        container_id: "c-close-test",
+        status: "completed"
+      })
+
+      # Insert ticket into DB
+      {:ok, _ticket} =
+        Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository.sync_remote_ticket(%{
+          number: 555,
+          title: "Ticket to close",
+          status: "Backlog",
+          priority: "Need",
+          size: "M",
+          labels: []
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      # Trigger ticket reload so the LiveView picks up the DB ticket
+      send(lv.pid, {:tickets_synced, []})
+      html = render(lv)
+      assert html =~ "Ticket to close"
+      assert html =~ ~s(data-testid="triage-ticket-item-555")
+
+      # Select the ticket to view its detail panel
+      lv
+      |> element(~s([phx-click="select_ticket"][phx-value-number="555"]))
+      |> render_click()
+
+      html =
+        lv
+        |> element(~s(button[data-tab-id="ticket"]))
+        |> render_click()
+
+      assert html =~ ~s(data-testid="close-ticket-btn")
+
+      # Close the ticket
+      html =
+        lv
+        |> element(~s([data-testid="close-ticket-btn"]))
+        |> render_click()
+
+      # Ticket should be removed from the triage lane
+      refute html =~ "Ticket to close"
+      refute html =~ ~s(data-testid="triage-ticket-item-555")
+
+      # Ticket should be removed from the database
+      assert Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository.list_by_statuses(
+               [
+                 "Backlog"
+               ]
+             ) == []
+    end
+
+    test "close_ticket switches to chat tab when viewing the closed ticket", %{
+      conn: conn,
+      user: user
+    } do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Work on #556",
+        container_id: "c-close-tab",
+        status: "completed"
+      })
+
+      {:ok, _ticket} =
+        Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository.sync_remote_ticket(%{
+          number: 556,
+          title: "Ticket for tab switch",
+          status: "Backlog",
+          priority: "Need",
+          size: "M",
+          labels: []
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+      send(lv.pid, {:tickets_synced, []})
+
+      # Select and view ticket
+      lv
+      |> element(~s([phx-click="select_ticket"][phx-value-number="556"]))
+      |> render_click()
+
+      lv
+      |> element(~s(button[data-tab-id="ticket"]))
+      |> render_click()
+
+      # Close the ticket — should switch back to chat tab
+      html =
+        lv
+        |> element(~s([data-testid="close-ticket-btn"]))
+        |> render_click()
+
+      # The ticket detail panel should no longer be visible
+      refute html =~ ~s(data-testid="ticket-context-panel")
+    end
+  end
 end

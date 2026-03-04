@@ -209,4 +209,177 @@ defmodule Agents.Sessions.Infrastructure.ProjectTicketRepositoryTest do
 
     assert ticket.position == 0
   end
+
+  test "list_by_statuses/1 orders by priority when positions are equal" do
+    for {number, priority} <- [
+          {60, "Nice to have"},
+          {61, "Need"},
+          {62, "Want"},
+          {63, nil}
+        ] do
+      %ProjectTicketSchema{}
+      |> ProjectTicketSchema.changeset(%{
+        number: number,
+        title: "Ticket #{number}",
+        status: "Backlog",
+        priority: priority,
+        labels: []
+      })
+      |> Repo.insert!()
+    end
+
+    tickets = ProjectTicketRepository.list_by_statuses(["Backlog"])
+    numbers = Enum.map(tickets, & &1.number)
+
+    # Need (61) > Want (62) > Nice to have (60) > nil (63)
+    assert numbers == [61, 62, 60, 63]
+  end
+
+  test "list_by_statuses/1 orders by size when position and priority are equal" do
+    for {number, size} <- [
+          {70, "XS"},
+          {71, "XL"},
+          {72, "M"},
+          {73, "L"},
+          {74, "S"},
+          {75, nil}
+        ] do
+      %ProjectTicketSchema{}
+      |> ProjectTicketSchema.changeset(%{
+        number: number,
+        title: "Ticket #{number}",
+        status: "Backlog",
+        priority: "Need",
+        size: size,
+        labels: []
+      })
+      |> Repo.insert!()
+    end
+
+    tickets = ProjectTicketRepository.list_by_statuses(["Backlog"])
+    numbers = Enum.map(tickets, & &1.number)
+
+    # XL (71) > L (73) > M (72) > S (74) > XS (70) > nil (75)
+    assert numbers == [71, 73, 72, 74, 70, 75]
+  end
+
+  test "list_by_statuses/1 orders by inserted_at desc when position, priority, and size are equal" do
+    # Insert two tickets with same position, priority, size but different timestamps
+    {:ok, older} =
+      %ProjectTicketSchema{}
+      |> ProjectTicketSchema.changeset(%{
+        number: 80,
+        title: "Older ticket",
+        status: "Backlog",
+        priority: "Need",
+        size: "M",
+        labels: []
+      })
+      |> Repo.insert()
+
+    # Ensure a different inserted_at by updating the older one's timestamp
+    Repo.query!("UPDATE sessions_project_tickets SET inserted_at = $1 WHERE id = $2", [
+      ~U[2025-01-01 00:00:00Z],
+      older.id
+    ])
+
+    {:ok, _newer} =
+      %ProjectTicketSchema{}
+      |> ProjectTicketSchema.changeset(%{
+        number: 81,
+        title: "Newer ticket",
+        status: "Backlog",
+        priority: "Need",
+        size: "M",
+        labels: []
+      })
+      |> Repo.insert()
+
+    tickets = ProjectTicketRepository.list_by_statuses(["Backlog"])
+    numbers = Enum.map(tickets, & &1.number)
+
+    # Newer (81) before older (80) because inserted_at DESC
+    assert numbers == [81, 80]
+  end
+
+  test "list_by_statuses/1 full ordering cascade: position > priority > size > inserted_at" do
+    # Position 0, Need, XL — should be first
+    %ProjectTicketSchema{}
+    |> ProjectTicketSchema.changeset(%{
+      number: 90,
+      title: "Pos0 Need XL",
+      status: "Backlog",
+      priority: "Need",
+      size: "XL",
+      position: 0,
+      labels: []
+    })
+    |> Repo.insert!()
+
+    # Position 0, Need, S — same position/priority, smaller size
+    %ProjectTicketSchema{}
+    |> ProjectTicketSchema.changeset(%{
+      number: 91,
+      title: "Pos0 Need S",
+      status: "Backlog",
+      priority: "Need",
+      size: "S",
+      position: 0,
+      labels: []
+    })
+    |> Repo.insert!()
+
+    # Position 0, Nice to have, XL — same position, lower priority
+    %ProjectTicketSchema{}
+    |> ProjectTicketSchema.changeset(%{
+      number: 92,
+      title: "Pos0 NiceToHave XL",
+      status: "Backlog",
+      priority: "Nice to have",
+      size: "XL",
+      position: 0,
+      labels: []
+    })
+    |> Repo.insert!()
+
+    # Position 1, Need, XL — higher position number, so comes after position 0
+    %ProjectTicketSchema{}
+    |> ProjectTicketSchema.changeset(%{
+      number: 93,
+      title: "Pos1 Need XL",
+      status: "Backlog",
+      priority: "Need",
+      size: "XL",
+      position: 1,
+      labels: []
+    })
+    |> Repo.insert!()
+
+    tickets = ProjectTicketRepository.list_by_statuses(["Backlog"])
+    numbers = Enum.map(tickets, & &1.number)
+
+    # Position 0 group: Need/XL (90), Need/S (91), NiceToHave/XL (92)
+    # Position 1 group: Need/XL (93)
+    assert numbers == [90, 91, 92, 93]
+  end
+
+  test "delete_by_number/1 removes an existing ticket" do
+    %ProjectTicketSchema{}
+    |> ProjectTicketSchema.changeset(%{
+      number: 100,
+      title: "Ticket to delete",
+      status: "Backlog",
+      labels: []
+    })
+    |> Repo.insert!()
+
+    assert {:ok, deleted} = ProjectTicketRepository.delete_by_number(100)
+    assert deleted.number == 100
+
+    assert ProjectTicketRepository.list_by_statuses(["Backlog"]) == []
+  end
+
+  test "delete_by_number/1 returns error for non-existent ticket" do
+    assert {:error, :not_found} = ProjectTicketRepository.delete_by_number(99999)
+  end
 end

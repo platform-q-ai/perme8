@@ -10,11 +10,36 @@ defmodule Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository do
 
   @default_statuses ["Backlog", "Ready"]
 
+  @priority_order_fragment """
+  CASE priority
+    WHEN 'Need' THEN 0
+    WHEN 'Want' THEN 1
+    WHEN 'Nice to have' THEN 2
+    ELSE 3
+  END
+  """
+
+  @size_order_fragment """
+  CASE size
+    WHEN 'XL' THEN 0
+    WHEN 'L' THEN 1
+    WHEN 'M' THEN 2
+    WHEN 'S' THEN 3
+    WHEN 'XS' THEN 4
+    ELSE 5
+  END
+  """
+
   @spec list_by_statuses([String.t()]) :: [ProjectTicketSchema.t()]
   def list_by_statuses(statuses \\ @default_statuses) do
     ProjectTicketSchema
     |> where([ticket], ticket.status in ^statuses)
-    |> order_by([ticket], asc: ticket.position, asc: ticket.number)
+    |> order_by([ticket],
+      asc: ticket.position,
+      asc: fragment(@priority_order_fragment),
+      asc: fragment(@size_order_fragment),
+      desc: ticket.inserted_at
+    )
     |> Repo.all()
   end
 
@@ -35,6 +60,18 @@ defmodule Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository do
     end)
 
     :ok
+  end
+
+  @doc """
+  Deletes a ticket by its issue number.
+  Returns `{:ok, ticket}` if the ticket existed, `{:error, :not_found}` otherwise.
+  """
+  @spec delete_by_number(integer()) :: {:ok, ProjectTicketSchema.t()} | {:error, :not_found}
+  def delete_by_number(number) when is_integer(number) do
+    case Repo.get_by(ProjectTicketSchema, number: number) do
+      nil -> {:error, :not_found}
+      ticket -> Repo.delete(ticket)
+    end
   end
 
   @spec list_pending_push() :: [ProjectTicketSchema.t()]
