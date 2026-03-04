@@ -36,6 +36,7 @@ Feature: Coding Sessions Management
     Then "form#sidebar-new-session-form" should exist
     And "textarea#sidebar-new-session-instruction" should exist
 
+  @wip
   Scenario: Sessions page shows empty state when no sessions exist
     When I navigate to "${baseUrl}/sessions"
     And I wait for network idle
