@@ -211,4 +211,47 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.InitTest do
     assert_receive {:auth_refreshed, "http://localhost:4096"}, 5000
     assert_receive :prompt_sent, 5000
   end
+
+  test "fresh warm preparation failure does not leak raw command output", %{task: task} do
+    test_pid = self()
+
+    Agents.Mocks.TaskRepositoryMock
+    |> stub(:get_task, fn _id -> task end)
+    |> stub(:update_task_status, fn _task, attrs ->
+      if attrs[:status] == "failed" do
+        send(test_pid, {:failed, attrs.error})
+      end
+
+      {:ok, task}
+    end)
+
+    Agents.Mocks.ContainerProviderMock
+    |> expect(:restart, fn "warmed-container" -> {:ok, %{port: 4096}} end)
+    |> expect(:prepare_fresh_start, fn "warmed-container" ->
+      {:error, {:docker_prepare_fresh_start_failed, 128, "token=SECRET"}}
+    end)
+    |> stub(:stop, fn _id -> :ok end)
+
+    Agents.Mocks.OpencodeClientMock
+    |> stub(:health, fn _url -> :ok end)
+
+    {:ok, _pid} =
+      GenServer.start(
+        TaskRunner,
+        {task.id,
+         [
+           container_provider: Agents.Mocks.ContainerProviderMock,
+           opencode_client: Agents.Mocks.OpencodeClientMock,
+           task_repo: Agents.Mocks.TaskRepositoryMock,
+           prewarmed_container_id: "warmed-container",
+           fresh_warm_container: true,
+           pubsub: Perme8.Events.PubSub
+         ]}
+      )
+
+    assert_receive {:failed, error}, 5000
+    assert error =~ "Fresh warm start preparation failed"
+    assert error =~ "exit 128"
+    refute error =~ "SECRET"
+  end
 end

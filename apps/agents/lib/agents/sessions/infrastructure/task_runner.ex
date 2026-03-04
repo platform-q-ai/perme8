@@ -421,7 +421,11 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
       {:noreply, %{state | status: :creating_session}}
     else
       {:error, reason} ->
-        fail_task(state, "Fresh warm start preparation failed: #{inspect(reason)}")
+        fail_task(
+          state,
+          "Fresh warm start preparation failed: #{sanitize_fresh_start_reason(reason)}"
+        )
+
         {:stop, :normal, state}
     end
   end
@@ -1198,6 +1202,14 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   defp serialize_output_parts(parts) do
     Jason.encode!(parts)
   end
+
+  defp sanitize_fresh_start_reason({:docker_prepare_fresh_start_failed, exit_code, _output}) do
+    "container repo sync failed (exit #{exit_code})"
+  end
+
+  defp sanitize_fresh_start_reason({:auth_refresh_failed, _provider}), do: "auth refresh failed"
+
+  defp sanitize_fresh_start_reason(_), do: "internal preparation error"
 
   defp serialize_error(error) when is_binary(error), do: error
 
