@@ -53,6 +53,7 @@ defmodule AgentsWeb.SessionsLive.Index do
      |> assign(:available_images, available_images)
      |> assign(:selected_image, default_image)
      |> assign(:optimistic_new_sessions, [])
+     |> assign(:new_task_monitors, %{})
      |> assign(:queue_state, load_queue_state(user.id))
      |> assign_session_state()
      |> assign(:form, to_form(%{"instruction" => ""}))}
@@ -166,19 +167,24 @@ defmodule AgentsWeb.SessionsLive.Index do
 
       parent = self()
 
-      Task.start(fn ->
-        result =
-          Sessions.create_task(%{
-            instruction: instruction,
-            user_id: user.id,
-            image: image
-          })
+      {_pid, monitor_ref} =
+        spawn_monitor(fn ->
+          result =
+            Sessions.create_task(%{
+              instruction: instruction,
+              user_id: user.id,
+              image: image
+            })
 
-        send(parent, {:new_task_created, client_id, result})
-      end)
+          send(parent, {:new_task_created, client_id, result})
+        end)
 
       {:noreply,
        socket
+       |> assign(
+         :new_task_monitors,
+         Map.put(socket.assigns.new_task_monitors, monitor_ref, client_id)
+       )
        |> assign(
          :optimistic_new_sessions,
          merge_optimistic_new_sessions(socket.assigns.optimistic_new_sessions, [optimistic_entry])
@@ -693,6 +699,7 @@ defmodule AgentsWeb.SessionsLive.Index do
 
     {:noreply,
      socket
+     |> clear_new_task_monitor(client_id)
      |> assign(
        :optimistic_new_sessions,
        remove_optimistic_new_session(socket.assigns.optimistic_new_sessions, client_id)
@@ -705,6 +712,7 @@ defmodule AgentsWeb.SessionsLive.Index do
   def handle_info({:new_task_created, client_id, {:error, reason}}, socket) do
     {:noreply,
      socket
+     |> clear_new_task_monitor(client_id)
      |> assign(
        :optimistic_new_sessions,
        remove_optimistic_new_session(socket.assigns.optimistic_new_sessions, client_id)
@@ -751,7 +759,23 @@ defmodule AgentsWeb.SessionsLive.Index do
   end
 
   @impl true
-  def handle_info({:DOWN, _ref, :process, _pid, :normal}, socket), do: {:noreply, socket}
+  def handle_info({:DOWN, ref, :process, _pid, reason}, socket) do
+    case Map.pop(socket.assigns.new_task_monitors, ref) do
+      {nil, _monitors} ->
+        {:noreply, socket}
+
+      {client_id, monitors} ->
+        {:noreply,
+         socket
+         |> assign(:new_task_monitors, monitors)
+         |> assign(
+           :optimistic_new_sessions,
+           remove_optimistic_new_session(socket.assigns.optimistic_new_sessions, client_id)
+         )
+         |> broadcast_optimistic_new_sessions_snapshot()
+         |> maybe_flash_new_task_down(reason)}
+    end
+  end
 
   @impl true
   def handle_info({:queue_updated, user_id, queue_state}, socket) do
@@ -951,6 +975,31 @@ defmodule AgentsWeb.SessionsLive.Index do
   end
 
   defp clear_optimistic_queue_snapshot(socket, _task_id), do: socket
+
+  defp clear_new_task_monitor(socket, client_id) do
+    {monitor_ref, _existing} =
+      Enum.find(socket.assigns.new_task_monitors, {nil, nil}, fn {_ref, tracked_client_id} ->
+        tracked_client_id == client_id
+      end)
+
+    if is_reference(monitor_ref) do
+      Process.demonitor(monitor_ref, [:flush])
+
+      assign(
+        socket,
+        :new_task_monitors,
+        Map.delete(socket.assigns.new_task_monitors, monitor_ref)
+      )
+    else
+      socket
+    end
+  end
+
+  defp maybe_flash_new_task_down(socket, :normal), do: socket
+
+  defp maybe_flash_new_task_down(socket, reason) do
+    put_flash(socket, :error, "Session creation failed: #{inspect(reason)}")
+  end
 
   defp broadcast_optimistic_new_sessions_snapshot(socket) do
     payload = %{
