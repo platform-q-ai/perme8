@@ -481,6 +481,7 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
   end
 
   @active_statuses ["pending", "starting", "running"]
+  @warming_placeholder_prefix "task:"
 
   defp enforce_concurrency_limit(state) do
     running_count = safe_count_running(state)
@@ -639,13 +640,13 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
   defp needs_warm?(%{container_id: nil}), do: true
 
   defp needs_warm?(%{container_id: container_id}) when is_binary(container_id) do
-    String.starts_with?(container_id, "task:")
+    warm_placeholder_container_id?(container_id)
   end
 
   defp needs_warm?(_), do: false
 
   defp warm_ready_for_promotion?(%{container_id: container_id}) when is_binary(container_id) do
-    not String.starts_with?(container_id, "task:")
+    not warm_placeholder_container_id?(container_id)
   end
 
   defp warm_ready_for_promotion?(_), do: false
@@ -653,6 +654,10 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
   defp warm_target_count(state) do
     available_slots = max(state.concurrency_limit - safe_count_running(state), 0)
     max(state.warm_cache_limit, available_slots)
+  end
+
+  defp warm_placeholder_container_id?(container_id) do
+    String.starts_with?(container_id, @warming_placeholder_prefix)
   end
 
   defp via_tuple(user_id) do
