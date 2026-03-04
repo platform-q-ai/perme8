@@ -1,3 +1,4 @@
+@wip
 Feature: Secure warm-start preparation for fresh containers
   As a platform operator
   I want fresh warm containers to prepare repos and auth before first task start
