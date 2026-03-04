@@ -125,13 +125,7 @@ defmodule Agents.Sessions.Infrastructure.Adapters.DockerAdapter do
     repo_branch =
       opts |> Keyword.get(:repo_branch, System.get_env("REPO_BRANCH")) |> safe_repo_branch()
 
-    command =
-      [
-        "set -e",
-        "if [ -d /workspace/perme8/.git ]; then git -C /workspace/perme8 pull --ff-only origin '#{repo_branch}'; fi",
-        "if [ -d \"$HOME/.claude/skills/.git\" ]; then git -C \"$HOME/.claude/skills\" pull --ff-only origin main || git -C \"$HOME/.claude/skills\" pull --ff-only origin master; fi"
-      ]
-      |> Enum.join(" && ")
+    command = fresh_start_command(repo_branch)
 
     case system_cmd.("docker", ["exec", container_id, "bash", "-lc", command],
            stderr_to_stdout: true
@@ -157,6 +151,23 @@ defmodule Agents.Sessions.Infrastructure.Adapters.DockerAdapter do
   end
 
   defp safe_repo_branch(_), do: "main"
+
+  defp fresh_start_command(repo_branch) do
+    [
+      "set -e",
+      workspace_repo_sync_command(repo_branch),
+      skills_repo_sync_command()
+    ]
+    |> Enum.join(" && ")
+  end
+
+  defp workspace_repo_sync_command(repo_branch) do
+    "if [ -d /workspace/perme8/.git ]; then git -C /workspace/perme8 pull --ff-only origin '#{repo_branch}'; fi"
+  end
+
+  defp skills_repo_sync_command do
+    "if [ -d \"$HOME/.claude/skills/.git\" ]; then git -C \"$HOME/.claude/skills\" pull --ff-only origin main || git -C \"$HOME/.claude/skills\" pull --ff-only origin master; fi"
+  end
 
   @port_retries 5
   @port_retry_interval_ms 500
