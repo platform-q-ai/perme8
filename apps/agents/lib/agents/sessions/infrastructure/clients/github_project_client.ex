@@ -113,6 +113,27 @@ defmodule Agents.Sessions.Infrastructure.Clients.GithubProjectClient do
   }
   """
 
+  @close_issue_mutation """
+  mutation($issueId: ID!) {
+    closeIssue(input: {issueId: $issueId}) {
+      issue {
+        id
+        state
+      }
+    }
+  }
+  """
+
+  @issue_id_query """
+  query($owner: String!, $repo: String!, $number: Int!) {
+    repository(owner: $owner, name: $repo) {
+      issue(number: $number) {
+        id
+      }
+    }
+  }
+  """
+
   @type ticket :: %{
           number: integer(),
           title: String.t(),
@@ -159,6 +180,72 @@ defmodule Agents.Sessions.Infrastructure.Clients.GithubProjectClient do
       do_update_ticket_order_and_status(token, opts)
     else
       {:error, :missing_token}
+    end
+  end
+
+  @doc """
+  Closes a GitHub issue by number.
+
+  Sets the board status to "Done" and closes the actual issue via the
+  `closeIssue` GraphQL mutation.
+  """
+  @spec close_issue(integer(), keyword()) :: :ok | {:error, term()}
+  def close_issue(issue_number, opts \\ []) do
+    token = Keyword.get(opts, :token)
+
+    if is_binary(token) and token != "" do
+      do_close_issue(token, issue_number, opts)
+    else
+      {:error, :missing_token}
+    end
+  end
+
+  defp do_close_issue(token, issue_number, opts) do
+    org = Keyword.get(opts, :org, "platform-q-ai")
+    repo = Keyword.get(opts, :repo, "perme8")
+    project_number = Keyword.get(opts, :project_number)
+
+    # 1. Set board status to "Done" if we have project context
+    if project_number do
+      with {:ok, item_id} <- project_item_id(token, org, project_number, issue_number) do
+        maybe_update_single_select(
+          token,
+          item_id,
+          @project_status_field_id,
+          "Done",
+          @status_option_ids
+        )
+      end
+    end
+
+    # 2. Close the actual GitHub issue
+    with {:ok, issue_id} <- fetch_issue_id(token, org, repo, issue_number) do
+      graphql_post(token, %{
+        query: @close_issue_mutation,
+        variables: %{issueId: issue_id}
+      })
+    end
+  end
+
+  defp fetch_issue_id(token, owner, repo, issue_number) do
+    case Req.post(@graphql_url,
+           json: %{
+             query: @issue_id_query,
+             variables: %{owner: owner, name: repo, number: issue_number}
+           },
+           headers: base_headers(token)
+         ) do
+      {:ok, %{status: 200, body: %{"data" => data}}} ->
+        case get_in(data, ["repository", "issue", "id"]) do
+          id when is_binary(id) -> {:ok, id}
+          _ -> {:error, :issue_not_found}
+        end
+
+      {:ok, %{status: status, body: body}} ->
+        {:error, {:unexpected_status, status, body}}
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 

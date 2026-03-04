@@ -1063,7 +1063,20 @@
       >
         <%= if selected_ticket do %>
           <div class="max-w-3xl" data-testid="ticket-context-panel">
-            <div class="text-lg font-semibold mb-2">{selected_ticket.title}</div>
+            <div class="flex items-start justify-between gap-2 mb-2">
+              <div class="text-lg font-semibold">{selected_ticket.title}</div>
+              <button
+                type="button"
+                phx-click="close_ticket"
+                phx-value-number={selected_ticket.number}
+                data-confirm={"Close ticket ##{selected_ticket.number}? This will close the issue on GitHub."}
+                data-testid="close-ticket-btn"
+                class="btn btn-xs btn-ghost text-error hover:bg-error/10 shrink-0"
+                title="Close ticket"
+              >
+                <.icon name="hero-x-circle-mini" class="size-4" /> Close
+              </button>
+            </div>
             <div class="text-xs text-base-content/60 mb-3">
               #{selected_ticket.number}
               <span :if={selected_ticket.status}>
