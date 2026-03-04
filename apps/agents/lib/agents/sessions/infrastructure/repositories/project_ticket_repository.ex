@@ -91,6 +91,7 @@ defmodule Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository do
       title: attrs[:title] || attrs["title"],
       status: attrs[:status] || attrs["status"],
       priority: attrs[:priority] || attrs["priority"],
+      size: attrs[:size] || attrs["size"],
       labels: List.wrap(attrs[:labels] || attrs["labels"]),
       url: attrs[:url] || attrs["url"]
     }
@@ -98,7 +99,7 @@ defmodule Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository do
 
   defp normalize_local_attrs(attrs) do
     attrs
-    |> Map.take([:title, :status, :priority, :labels, :url])
+    |> Map.take([:title, :status, :priority, :size, :labels, :url])
     |> Map.update(:labels, [], &List.wrap/1)
   end
 
@@ -115,6 +116,7 @@ defmodule Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository do
       |> Map.put(:title, ticket.title)
       |> Map.put(:status, ticket.status)
       |> Map.put(:priority, ticket.priority)
+      |> Map.put(:size, ticket.size)
       |> Map.put(:labels, ticket.labels)
       |> Map.put(:url, ticket.url)
       |> Map.put(:sync_state, ticket.sync_state)
