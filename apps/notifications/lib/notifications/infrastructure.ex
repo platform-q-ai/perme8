@@ -23,6 +23,8 @@ defmodule Notifications.Infrastructure do
       Repositories.NotificationRepository,
       Queries.NotificationQueries,
       Subscribers.WorkspaceInvitationSubscriber,
-      Subscribers.TaskCompletionSubscriber
+      Subscribers.TaskCompletionSubscriber,
+      Subscribers.DomainEventNotificationRegistry,
+      Subscribers.DomainEventNotificationSubscriber
     ]
 end
