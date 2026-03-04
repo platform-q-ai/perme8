@@ -129,7 +129,12 @@ defmodule Agents.Sessions.Infrastructure.Adapters.DockerAdapter do
 
     command = fresh_start_command(repo_branch)
 
-    case system_cmd.("docker", ["exec", container_id, "bash", "-lc", command],
+    # GIT_TERMINAL_PROMPT=0 prevents git from hanging on missing credentials.
+    # core.askPass is persisted in gitconfig by the entrypoint, but
+    # GIT_TERMINAL_PROMPT is env-only so we pass it explicitly.
+    case system_cmd.(
+           "docker",
+           ["exec", "-e", "GIT_TERMINAL_PROMPT=0", container_id, "bash", "-lc", command],
            stderr_to_stdout: true
          ) do
       {_output, 0} ->
