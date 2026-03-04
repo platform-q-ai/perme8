@@ -34,8 +34,8 @@ defmodule Agents.Sessions do
   alias Agents.Sessions.Application.SessionsConfig
   alias Agents.Sessions.Infrastructure.QueueManager
   alias Agents.Sessions.Infrastructure.QueueManagerSupervisor
+  alias Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository
   alias Agents.Sessions.Infrastructure.Repositories.TaskRepository
-  alias Agents.Sessions.Infrastructure.TicketSyncServer
   alias Agents.Repo
   alias Agents.Sessions.Infrastructure.TaskRunnerSupervisor
   alias Ecto.Adapters.SQL
@@ -161,16 +161,20 @@ defmodule Agents.Sessions do
   end
 
   @doc """
-  Lists GitHub project tickets enriched with per-user session state.
+  Lists persisted project tickets enriched with per-user session state.
 
-  Tickets come from the in-memory sync server, then each ticket is matched
-  against the user's recent tasks by issue number reference in instruction
-  text (for example: "#306" or "ticket 306").
+  Tickets are loaded from the agents DB, then each ticket is matched against
+  the user's recent tasks by issue number reference in instruction text
+  (for example: "#306" or "ticket 306").
   """
   @spec list_project_tickets(String.t(), keyword()) :: [map()]
   def list_project_tickets(user_id, opts \\ []) do
     tasks = Keyword.get_lazy(opts, :tasks, fn -> list_tasks(user_id, opts) end)
-    tickets = Keyword.get(opts, :tickets, TicketSyncServer.list_tickets())
+
+    tickets =
+      Keyword.get_lazy(opts, :tickets, fn ->
+        ProjectTicketRepository.list_by_statuses(SessionsConfig.github_ticket_statuses())
+      end)
 
     task_by_ticket_number =
       tasks
@@ -192,6 +196,14 @@ defmodule Agents.Sessions do
         task_error: task && task.error
       })
     end)
+  end
+
+  @doc """
+  Updates a persisted ticket locally and schedules reconciliation to GitHub.
+  """
+  @spec update_project_ticket(integer(), map()) :: {:ok, struct()} | {:error, term()}
+  def update_project_ticket(number, attrs) when is_integer(number) and is_map(attrs) do
+    ProjectTicketRepository.update_local_ticket(number, attrs)
   end
 
   @doc """
