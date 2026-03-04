@@ -30,6 +30,8 @@ export default defineConfig({
     guestPassword: 'hello world!',
     nonMemberEmail: 'eve@example.com',
     nonMemberPassword: 'hello world!',
+    inviteeEmail: 'grace@example.com',
+    inviteePassword: 'hello world!',
     // Throwaway member for removal tests (must match exo_seeds_web.exs)
     removableMemberEmail: 'frank@example.com',
     removableMemberPassword: 'hello world!',

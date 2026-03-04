@@ -171,6 +171,13 @@ eve =
     last_name: "Tester"
   })
 
+grace =
+  create_confirmed_user.(%{
+    email: "grace@example.com",
+    first_name: "Grace",
+    last_name: "Tester"
+  })
+
 frank =
   create_confirmed_user.(%{
     email: "frank@example.com",
@@ -178,7 +185,7 @@ frank =
     last_name: "Tester"
   })
 
-IO.puts("[exo-seeds-web] Created users: alice, bob, charlie, diana, eve, frank")
+IO.puts("[exo-seeds-web] Created users: alice, bob, charlie, diana, eve, grace, frank")
 
 # ---------------------------------------------------------------------------
 # 2. Create workspaces
@@ -229,6 +236,17 @@ add_member_directly.(product_team.id, charlie, :member)
 add_member_directly.(product_team.id, diana, :guest)
 add_member_directly.(product_team.id, frank, :member)
 # eve is NOT added — she is a non-member
+
+# Create pending invitation for grace (used by notification accept flow)
+%WorkspaceMemberSchema{}
+|> WorkspaceMemberSchema.changeset(%{
+  workspace_id: product_team.id,
+  email: grace.email,
+  role: :member,
+  invited_by: alice.id,
+  invited_at: DateTime.utc_now() |> DateTime.truncate(:second)
+})
+|> Identity.Repo.insert!()
 
 IO.puts(
   "[exo-seeds-web] Added workspace memberships (bob=admin, charlie=member, diana=guest, frank=member)"
@@ -750,8 +768,6 @@ IO.puts("[exo-seeds-web] Created all session-card-stats fixture sessions")
 
 alias Notifications.Infrastructure.Schemas.NotificationSchema
 
-now = DateTime.utc_now() |> DateTime.truncate(:second)
-
 # Charlie (member) gets 3 unread notifications
 for i <- 1..3 do
   NotificationSchema.create_changeset(%{
@@ -780,10 +796,10 @@ end
 
 IO.puts("[exo-seeds-web] Created 105 unread notifications for alice (99+ badge test)")
 
-# Eve (non-member) gets a workspace invitation notification for accept/decline tests
+# Grace (invite-only user) gets a workspace invitation notification for accept/decline tests
 # Use the actual product_team workspace ID so accept_invitation works
 NotificationSchema.create_changeset(%{
-  user_id: eve.id,
+  user_id: grace.id,
   type: "workspace_invitation",
   title: "Join Product Team",
   body: "Alice invited you to join Product Team",
@@ -791,7 +807,7 @@ NotificationSchema.create_changeset(%{
 })
 |> Notifications.Repo.insert!()
 
-IO.puts("[exo-seeds-web] Created workspace invitation notification for eve")
+IO.puts("[exo-seeds-web] Created workspace invitation notification for grace")
 
 # Diana (guest) gets 2 unread notifications (for user-scoping test: different from charlie)
 for i <- 1..2 do

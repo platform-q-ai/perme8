@@ -38,6 +38,7 @@ Feature: Workspace Member Management
   # Invite Members
   # ---------------------------------------------------------------------------
 
+  @invite_member_modal
   Scenario: Admin invites new member via modal
     # Log in as admin
     Given I navigate to "${baseUrl}/users/log-in"
@@ -45,7 +46,7 @@ Feature: Workspace Member Management
     When I fill "#login_form_password_email" with "${adminEmail}"
     And I fill "#login_form_password_password" with "${adminPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
-    # Navigate to workspace and open kebab menu then members modal
+    # Navigate to Product Team workspace and open members modal
     And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
     And I wait for network idle
     And I click "button[aria-label='Actions menu']"

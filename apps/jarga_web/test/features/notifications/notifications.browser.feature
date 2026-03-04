@@ -117,9 +117,7 @@ Feature: Notification Management
     Then "[data-testid='notification-bell']" should be visible
     And "[data-testid='notification-badge']" should contain text "3"
     # Log out via the sidebar link and log in as a different user (diana, user B)
-    When I click the "Log out" link and wait for navigation
-    And I wait for network idle
-    And I navigate to "${baseUrl}/users/log-in"
+    When I navigate to "${baseUrl}/users/log-in"
     And I wait for network idle
     And I fill "#login_form_password_email" with "${guestEmail}"
     And I fill "#login_form_password_password" with "${guestPassword}"
@@ -169,7 +167,7 @@ Feature: Notification Management
     # Open the dropdown and click the mark-as-read button (blue dot) on the first unread notification
     When I click "[data-testid='notification-bell']"
     And I wait for "[data-testid='notification-dropdown']" to be visible
-    And I click "[data-testid='notification-item'][data-notification-status='unread'] >> nth=0"
+    And I click "[data-testid='mark-read-button'] >> nth=0"
     And I wait for 2 seconds
     # Charlie had 3 unread; after marking one as read, 2 remain
     Then "[data-testid='notification-badge']" should contain text "2"
@@ -197,29 +195,57 @@ Feature: Notification Management
   # Workspace Invitation Actions (require full invitation flow — deferred)
   # ---------------------------------------------------------------------------
 
-  @wip
-  Scenario: Accept workspace invitation from notification
-    # Log in as a user who has a pending workspace invitation notification
+  @invite_created_via_ui
+  Scenario: Workspace invite is created from UI invite flow
+    # Owner invites Eve to the Engineering workspace via UI
     Given I navigate to "${baseUrl}/users/log-in"
     And I wait for network idle
-    When I fill "#login_form_password_email" with "${nonMemberEmail}"
-    And I fill "#login_form_password_password" with "${nonMemberPassword}"
+    When I fill "#login_form_password_email" with "${ownerEmail}"
+    And I fill "#login_form_password_password" with "${ownerPassword}"
     And I click the "Log in and stay logged in" button and wait for navigation
     And I wait for network idle
-    # Open the notification dropdown
+    And I navigate to "${baseUrl}/app/workspaces/engineering"
+    And I wait for network idle
+    And I click "button[aria-label='Actions menu']"
+    And I wait for 1 seconds
+    And I click the "Manage Members" button
+    And I wait for ".modal.modal-open" to be visible
+    And I fill "[name='email']" with "${nonMemberEmail}"
+    And I select "member" from "[name='role']"
+    And I click the "Invite" button
+    And I wait for network idle
+    Then I should see "Invitation sent via email"
+    And I should see "${nonMemberEmail}"
+
+  @invite_notification
+  Scenario: Invited user joins workspace from actionable notification
+    # Seed data includes a pending invitation for grace@example.com to Product Team
+    Given I navigate to "${baseUrl}/users/log-in"
+    And I wait for network idle
+    When I fill "#login_form_password_email" with "${inviteeEmail}"
+    And I fill "#login_form_password_password" with "${inviteePassword}"
+    And I click the "Log in and stay logged in" button and wait for navigation
+    And I wait for network idle
+    # Before accepting, Eve cannot access the invited workspace directly
+    When I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
+    And I wait for network idle
+    Then I should see "Workspace not found"
+    # Notification bell should show an unread indicator (dot/badge)
+    And "[data-testid='notification-bell']" should be visible
+    And "[data-testid='notification-badge']" should be visible
     When I click "[data-testid='notification-bell']"
     And I wait for "[data-testid='notification-dropdown']" to be visible
-    # Find the workspace invitation notification and click Accept
-    And I wait for "[data-testid='notification-invitation']" to be visible
-    And I click "[data-testid='notification-invitation'] [data-testid='accept-invitation']"
+    Then "[data-testid='notification-invitation']" should be visible
+    And "[data-testid='notification-invitation'] [data-testid='accept-invitation']" should be visible
+    # Accepting the invite should grant access to the workspace
+    When I click "[data-testid='notification-invitation'] [data-testid='accept-invitation'] >> nth=0"
     And I wait for network idle
-    # The invitation should be accepted: notification marked as read, workspace accessible
-    Then I should see "Invitation accepted"
-    And "[data-testid='notification-invitation'] [data-testid='accept-invitation']" should not exist
-    # Navigate to workspaces to verify the workspace now appears in the list
-    When I navigate to "${baseUrl}/app/workspaces"
+    # Wait for LiveView to process acceptance and refresh invitation actions
+    And I wait for "[data-testid='notification-invitation'] [data-testid='accept-invitation']" to be hidden
+    When I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
     And I wait for network idle
-    Then I should see "Product Team"
+    Then the URL should contain "/app/workspaces/${productTeamSlug}"
+    And I should see "Product Team"
 
   @wip
   Scenario: Decline workspace invitation from notification

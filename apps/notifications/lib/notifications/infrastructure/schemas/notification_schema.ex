@@ -75,7 +75,21 @@ defmodule Notifications.Infrastructure.Schemas.NotificationSchema do
   end
 
   # Supported notification types
-  @valid_types ~w[workspace_invitation task_completed task_failed task_cancelled]
+  @valid_types ~w[
+    workspace_invitation
+    task_completed
+    task_failed
+    task_cancelled
+    workspace_member_joined
+    workspace_member_removed
+    project_created
+    project_updated
+    project_deleted
+    project_archived
+    document_created
+    document_updated
+    document_deleted
+  ]
 
   defp validate_notification_type(changeset) do
     validate_inclusion(changeset, :type, @valid_types)

@@ -61,6 +61,18 @@ defmodule Notifications.Domain.Policies.NotificationPolicyTest do
       assert NotificationPolicy.valid_type?("task_cancelled") == true
     end
 
+    test "returns true for domain event notification types" do
+      assert NotificationPolicy.valid_type?("workspace_member_joined") == true
+      assert NotificationPolicy.valid_type?("workspace_member_removed") == true
+      assert NotificationPolicy.valid_type?("project_created") == true
+      assert NotificationPolicy.valid_type?("project_updated") == true
+      assert NotificationPolicy.valid_type?("project_deleted") == true
+      assert NotificationPolicy.valid_type?("project_archived") == true
+      assert NotificationPolicy.valid_type?("document_created") == true
+      assert NotificationPolicy.valid_type?("document_updated") == true
+      assert NotificationPolicy.valid_type?("document_deleted") == true
+    end
+
     test "returns false for unknown type" do
       assert NotificationPolicy.valid_type?("unknown") == false
     end

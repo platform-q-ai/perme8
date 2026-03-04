@@ -120,9 +120,6 @@ defmodule JargaWeb.NotificationsLive.NotificationBell do
       data-notification-id={@notification.id}
       data-testid="notification-item"
       data-notification-status={if @notification.read, do: "read", else: "unread"}
-      phx-click={if !@notification.read, do: "mark_read"}
-      phx-value-notification-id={if !@notification.read, do: @notification.id}
-      phx-target={if !@notification.read, do: @myself}
       class={"px-4 py-3 border-b border-base-300 hover:bg-base-200 cursor-pointer #{if !@notification.read, do: "bg-base-200/50"}"}
     >
       <div class="flex items-start gap-3">
@@ -244,7 +241,7 @@ defmodule JargaWeb.NotificationsLive.NotificationBell do
         {:noreply, put_flash(socket, :error, "Notification not found")}
 
       notification ->
-        workspace_id = notification.data["workspace_id"]
+        workspace_id = notification.data["workspace_id"] || notification.data[:workspace_id]
 
         case Identity.accept_invitation_by_workspace(workspace_id, user.id) do
           {:ok, _workspace_member} ->
@@ -273,7 +270,7 @@ defmodule JargaWeb.NotificationsLive.NotificationBell do
         {:noreply, put_flash(socket, :error, "Notification not found")}
 
       notification ->
-        workspace_id = notification.data["workspace_id"]
+        workspace_id = notification.data["workspace_id"] || notification.data[:workspace_id]
 
         case Identity.decline_invitation_by_workspace(workspace_id, user.id) do
           :ok ->

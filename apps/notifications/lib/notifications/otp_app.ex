@@ -55,7 +55,8 @@ defmodule Notifications.OTPApp do
   defp subscribers(_namespace) do
     [
       Notifications.Infrastructure.Subscribers.WorkspaceInvitationSubscriber,
-      Notifications.Infrastructure.Subscribers.TaskCompletionSubscriber
+      Notifications.Infrastructure.Subscribers.TaskCompletionSubscriber,
+      Notifications.Infrastructure.Subscribers.DomainEventNotificationSubscriber
     ]
   end
 
