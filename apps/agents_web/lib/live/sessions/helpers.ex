@@ -75,6 +75,19 @@ defmodule AgentsWeb.SessionsLive.Helpers do
 
   def resumable_task?(_), do: false
 
+  @doc "Extracts the text of the last user message from output_parts."
+  def last_user_message(output_parts) when is_list(output_parts) do
+    output_parts
+    |> Enum.reverse()
+    |> Enum.find_value(fn
+      {:user, _id, text} -> text
+      {:user_pending, _id, text} -> text
+      _ -> nil
+    end)
+  end
+
+  def last_user_message(_), do: nil
+
   @doc "Finds the current task for a container (prefers running tasks)."
   def find_current_task(tasks, nil), do: Enum.find(tasks, &active_task?/1)
 
