@@ -164,16 +164,14 @@ defmodule Agents.Sessions.Infrastructure.Clients.GithubProjectClient do
              @project_status_field_id,
              ticket.status,
              @status_option_ids
-           ),
-         :ok <-
-           maybe_update_single_select(
-             token,
-             item_id,
-             @project_priority_field_id,
-             ticket.priority,
-             @priority_option_ids
            ) do
-      :ok
+      maybe_update_single_select(
+        token,
+        item_id,
+        @project_priority_field_id,
+        ticket.priority,
+        @priority_option_ids
+      )
     end
   end
 
@@ -208,8 +206,9 @@ defmodule Agents.Sessions.Infrastructure.Clients.GithubProjectClient do
           data
           |> get_in(["organization", "projectV2", "items", "nodes"])
           |> List.wrap()
-          |> Enum.find_value(fn node ->
-            if get_in(node, ["content", "number"]) == issue_number, do: node["id"], else: nil
+          |> Enum.find_value(fn
+            %{"content" => %{"number" => ^issue_number}, "id" => item_id} -> item_id
+            _ -> nil
           end)
 
         if is_binary(item_id), do: {:ok, item_id}, else: {:error, :project_item_not_found}
