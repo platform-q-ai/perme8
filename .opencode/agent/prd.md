@@ -2,7 +2,7 @@
 name: prd
 description: Interviews users to gather comprehensive product requirements and creates a structured PRD to brief the architect agent
 mode: subagent
-model: anthropic/claude-opus-4.6
+model: anthropic/claude-opus-4-6
 tools:
   read: true
   grep: true
