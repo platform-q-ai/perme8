@@ -44,17 +44,15 @@ else
   echo "warn: review bot credentials not configured; automated PR review runs cannot request changes"
 fi
 
-# ---- Generate GitHub token ----
-
-GITHUB_TOKEN=$("$GET_TOKEN")
-export GITHUB_TOKEN
-echo "GitHub installation token generated"
-
 # ---- Configure GIT_ASKPASS for token-based auth ----
 # Uses GIT_ASKPASS so the token is never persisted in .git/config.
 # The get-token script regenerates short-lived tokens on each git operation.
 # GIT_ASKPASS is invoked with a prompt argument; we check whether git is
 # asking for the username or the password and respond accordingly.
+#
+# NOTE: GIT_ASKPASS and GIT_TERMINAL_PROMPT are persisted in gitconfig
+# (not just exported) so they survive docker exec / bash -lc sessions
+# which don't inherit entrypoint env vars.
 
 GIT_ASKPASS_SCRIPT="$HOME/.config/perme8/git-askpass"
 cat > "$GIT_ASKPASS_SCRIPT" <<'ASKPASS'
@@ -69,10 +67,16 @@ chmod +x "$GIT_ASKPASS_SCRIPT"
 export GIT_ASKPASS="$GIT_ASKPASS_SCRIPT"
 export GIT_TERMINAL_PROMPT=0
 
-# ---- Configure git identity (perme8[bot]) ----
+# ---- Configure git identity and persist askpass ----
 
 git config --global user.name "perme8[bot]"
 git config --global user.email "262472400+perme8[bot]@users.noreply.github.com"
+git config --global core.askPass "$GIT_ASKPASS_SCRIPT"
+
+# GIT_TERMINAL_PROMPT is env-only (no gitconfig equivalent).
+# Persist it so docker exec / bash -lc sessions inherit it.
+grep -q GIT_TERMINAL_PROMPT "$HOME/.bashrc" 2>/dev/null || \
+  echo 'export GIT_TERMINAL_PROMPT=0' >> "$HOME/.bashrc"
 
 # ---- Write opencode auth from env var ----
 # Only seed auth.json on first boot. On restarts, preserve the existing file

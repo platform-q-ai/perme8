@@ -242,7 +242,9 @@ defmodule Agents.Sessions.Infrastructure.Adapters.DockerAdapterTest do
     test "falls back to main branch when repo_branch is unsafe" do
       test_pid = self()
 
-      mock_cmd = fn "docker", ["exec", "abc123", "bash", "-lc", command], _opts ->
+      mock_cmd = fn "docker",
+                    ["exec", "-e", "GIT_TERMINAL_PROMPT=0", "abc123", "bash", "-lc", command],
+                    _opts ->
         send(test_pid, {:command, command})
         {"", 0}
       end
