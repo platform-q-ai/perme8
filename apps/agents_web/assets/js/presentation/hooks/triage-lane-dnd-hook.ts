@@ -1,4 +1,13 @@
-const DRAG_TYPE = 'application/x-ticket-number'
+/**
+ * TriageLaneDnd — local-only drag-and-drop for ticket cards in the triage lane.
+ *
+ * Only operates on elements marked with `data-triage-ticket-card`.
+ * Sends `reorder_triage_tickets` events to the LiveView with the new
+ * ordered list of ticket numbers. Position is managed entirely in the
+ * LiveView assign — no GitHub sync is performed.
+ */
+
+const DRAG_TYPE = 'application/x-triage-ticket-number'
 const CLICK_SUPPRESS_MS = 200
 
 type DndState = {
@@ -6,49 +15,52 @@ type DndState = {
   draggedItem: HTMLElement | null
 }
 
-function collectLaneOrder(el: HTMLElement): string[] {
-  return Array.from(el.querySelectorAll<HTMLElement>('[data-ticket-card]')).map((node) =>
-    node.dataset.ticketNumber || ''
+function collectTicketOrder(el: HTMLElement): string[] {
+  return Array.from(el.querySelectorAll<HTMLElement>('[data-triage-ticket-card]')).map(
+    (node) => node.dataset.ticketNumber || ''
   )
 }
 
 function cardContainer(card: HTMLElement): HTMLElement | null {
-  return card.closest<HTMLElement>('[data-ticket-item]')
+  return card.closest<HTMLElement>('[data-triage-ticket-item]')
 }
 
-export const TicketLaneDndHook = {
+export const TriageLaneDndHook = {
   dndState: { draggedCard: null, draggedItem: null } as DndState,
   suppressClickUntil: 0,
 
   mounted() {
-    this.bindTicketCards()
+    this.bindTriageTicketCards()
 
     this.el.addEventListener('dragover', (event: DragEvent) => {
+      if (!event.dataTransfer?.types.includes(DRAG_TYPE)) return
       event.preventDefault()
       if (event.dataTransfer) event.dataTransfer.dropEffect = 'move'
     })
 
     this.el.addEventListener('dragenter', (event: DragEvent) => {
+      if (!event.dataTransfer?.types.includes(DRAG_TYPE)) return
       event.preventDefault()
     })
 
     this.el.addEventListener('drop', (event: DragEvent) => {
+      const movedNumber = event.dataTransfer?.getData(DRAG_TYPE)
+      if (!movedNumber) return
+
       event.preventDefault()
       event.stopPropagation()
 
-      const movedNumber = event.dataTransfer?.getData(DRAG_TYPE)
-      const sourceLane = event.dataTransfer?.getData('application/x-ticket-lane')
-      const targetLane = this.el.dataset.ticketLane || ''
-
-      if (!movedNumber) return
-
       const draggedCard =
         this.dndState.draggedCard ||
-        document.querySelector<HTMLElement>(`[data-ticket-card][data-ticket-number="${movedNumber}"]`)
+        this.el.querySelector<HTMLElement>(
+          `[data-triage-ticket-card][data-ticket-number="${movedNumber}"]`
+        )
       const dragged = this.dndState.draggedItem || (draggedCard && cardContainer(draggedCard))
       if (!dragged) return
 
-      const dropTargetCard = (event.target as HTMLElement)?.closest<HTMLElement>('[data-ticket-card]')
+      const dropTargetCard = (event.target as HTMLElement)?.closest<HTMLElement>(
+        '[data-triage-ticket-card]'
+      )
       const dropTarget = dropTargetCard && cardContainer(dropTargetCard)
 
       if (dropTarget && dropTarget !== dragged) {
@@ -60,18 +72,21 @@ export const TicketLaneDndHook = {
         } else {
           dropTarget.parentElement?.insertBefore(dragged, dropTarget.nextElementSibling)
         }
-      } else {
-        this.el.appendChild(dragged)
+      } else if (!dropTarget) {
+        // Dropped on empty area at the end — append
+        const lastTicketItem = Array.from(
+          this.el.querySelectorAll<HTMLElement>('[data-triage-ticket-item]')
+        ).pop()
+        if (lastTicketItem && lastTicketItem !== dragged) {
+          lastTicketItem.parentElement?.insertBefore(dragged, lastTicketItem.nextElementSibling)
+        }
       }
 
-      const orderedNumbers = collectLaneOrder(this.el)
+      const orderedNumbers = collectTicketOrder(this.el)
       this.suppressClickUntil = Date.now() + CLICK_SUPPRESS_MS
 
-      this.pushEvent('reorder_tickets', {
-        moved_number: movedNumber,
-        source_status: sourceLane,
-        target_status: targetLane,
-        ordered_numbers: orderedNumbers
+      this.pushEvent('reorder_triage_tickets', {
+        ordered_numbers: orderedNumbers,
       })
 
       if (draggedCard) draggedCard.classList.remove('opacity-70')
@@ -81,17 +96,15 @@ export const TicketLaneDndHook = {
   },
 
   updated() {
-    this.bindTicketCards()
+    this.bindTriageTicketCards()
   },
 
-  bindTicketCards() {
-    const lane = this.el.dataset.ticketLane || ''
-
-    this.el.querySelectorAll<HTMLElement>('[data-ticket-card]').forEach((card) => {
+  bindTriageTicketCards() {
+    this.el.querySelectorAll<HTMLElement>('[data-triage-ticket-card]').forEach((card) => {
       card.draggable = true
 
-      if (card.dataset.dndBound === 'true') return
-      card.dataset.dndBound = 'true'
+      if (card.dataset.triageDndBound === 'true') return
+      card.dataset.triageDndBound = 'true'
 
       card.addEventListener(
         'click',
@@ -115,7 +128,6 @@ export const TicketLaneDndHook = {
 
         event.dataTransfer?.setData(DRAG_TYPE, number)
         event.dataTransfer?.setData('text/plain', number)
-        event.dataTransfer?.setData('application/x-ticket-lane', lane)
         if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move'
       })
 
@@ -125,5 +137,5 @@ export const TicketLaneDndHook = {
         this.dndState.draggedItem = null
       })
     })
-  }
+  },
 }
