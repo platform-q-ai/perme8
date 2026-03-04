@@ -53,7 +53,6 @@ defmodule AgentsWeb.SessionsLive.Index do
      |> assign(:queue_state, queue_state)
      |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)
      |> assign(:refreshing_task_ids, MapSet.new())
-     |> assign(:triage_ticket_order, [])
      |> assign_session_state()
      |> assign(:form, to_form(%{"instruction" => ""}))}
   end
@@ -351,7 +350,19 @@ defmodule AgentsWeb.SessionsLive.Index do
       |> normalize_ordered_ticket_numbers()
       |> Enum.uniq()
 
-    {:noreply, assign(socket, :triage_ticket_order, ordered_numbers)}
+    # Persist positions to the database
+    Sessions.reorder_triage_tickets(ordered_numbers)
+
+    # Apply optimistic reorder to the in-memory ticket list
+    reordered =
+      Enum.sort_by(socket.assigns.tickets, fn ticket ->
+        case Enum.find_index(ordered_numbers, &(&1 == ticket.number)) do
+          nil -> 999_999
+          idx -> idx
+        end
+      end)
+
+    {:noreply, assign(socket, :tickets, reordered)}
   end
 
   @impl true
@@ -1223,24 +1234,6 @@ defmodule AgentsWeb.SessionsLive.Index do
   end
 
   defp normalize_ordered_ticket_numbers(_), do: []
-
-  @doc false
-  def sort_tickets_by_triage_order(tickets, triage_ticket_order) do
-    if triage_ticket_order == [] do
-      tickets
-    else
-      order_map =
-        triage_ticket_order
-        |> Enum.with_index()
-        |> Map.new()
-
-      {ordered, unordered} =
-        Enum.split_with(tickets, &Map.has_key?(order_map, &1.number))
-
-      sorted_ordered = Enum.sort_by(ordered, &Map.get(order_map, &1.number, 999_999))
-      sorted_ordered ++ unordered
-    end
-  end
 
   defp merge_queued_messages(existing, incoming) do
     (existing ++ incoming)

@@ -14,8 +14,27 @@ defmodule Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository do
   def list_by_statuses(statuses \\ @default_statuses) do
     ProjectTicketSchema
     |> where([ticket], ticket.status in ^statuses)
-    |> order_by([ticket], asc: ticket.number)
+    |> order_by([ticket], asc: ticket.position, asc: ticket.number)
     |> Repo.all()
+  end
+
+  @doc """
+  Updates the position of each ticket to match the given ordered list of ticket numbers.
+  Tickets not in the list keep their existing position.
+  """
+  @spec reorder_positions([integer()]) :: :ok
+  def reorder_positions(ordered_numbers) when is_list(ordered_numbers) do
+    Repo.transaction(fn ->
+      ordered_numbers
+      |> Enum.with_index()
+      |> Enum.each(fn {number, index} ->
+        ProjectTicketSchema
+        |> where([t], t.number == ^number)
+        |> Repo.update_all(set: [position: index])
+      end)
+    end)
+
+    :ok
   end
 
   @spec list_pending_push() :: [ProjectTicketSchema.t()]
@@ -112,22 +131,26 @@ defmodule Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository do
   end
 
   defp merge_remote_attrs(%ProjectTicketSchema{} = ticket, remote_attrs, now) do
-    if ticket.sync_state in ["pending_push", "sync_error"] do
-      remote_attrs
-      |> Map.put(:title, ticket.title)
-      |> Map.put(:status, ticket.status)
-      |> Map.put(:priority, ticket.priority)
-      |> Map.put(:size, ticket.size)
-      |> Map.put(:labels, ticket.labels)
-      |> Map.put(:url, ticket.url)
-      |> Map.put(:sync_state, ticket.sync_state)
-      |> Map.put(:last_synced_at, ticket.last_synced_at)
-      |> Map.put(:last_sync_error, ticket.last_sync_error)
-    else
-      remote_attrs
-      |> Map.put(:sync_state, "synced")
-      |> Map.put(:last_synced_at, now)
-      |> Map.put(:last_sync_error, nil)
-    end
+    base =
+      if ticket.sync_state in ["pending_push", "sync_error"] do
+        remote_attrs
+        |> Map.put(:title, ticket.title)
+        |> Map.put(:status, ticket.status)
+        |> Map.put(:priority, ticket.priority)
+        |> Map.put(:size, ticket.size)
+        |> Map.put(:labels, ticket.labels)
+        |> Map.put(:url, ticket.url)
+        |> Map.put(:sync_state, ticket.sync_state)
+        |> Map.put(:last_synced_at, ticket.last_synced_at)
+        |> Map.put(:last_sync_error, ticket.last_sync_error)
+      else
+        remote_attrs
+        |> Map.put(:sync_state, "synced")
+        |> Map.put(:last_synced_at, now)
+        |> Map.put(:last_sync_error, nil)
+      end
+
+    # Always preserve the locally-set position
+    Map.put(base, :position, ticket.position)
   end
 end

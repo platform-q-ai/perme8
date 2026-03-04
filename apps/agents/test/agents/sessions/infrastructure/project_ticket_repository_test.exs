@@ -147,4 +147,66 @@ defmodule Agents.Sessions.Infrastructure.ProjectTicketRepositoryTest do
     assert changeset.valid?
     assert Ecto.Changeset.get_change(changeset, :body) == "Some body content"
   end
+
+  test "reorder_positions/1 persists ticket positions in order" do
+    for {number, title} <- [{10, "Ticket 10"}, {20, "Ticket 20"}, {30, "Ticket 30"}] do
+      %ProjectTicketSchema{}
+      |> ProjectTicketSchema.changeset(%{
+        number: number,
+        title: title,
+        status: "Backlog",
+        labels: []
+      })
+      |> Repo.insert!()
+    end
+
+    assert :ok = ProjectTicketRepository.reorder_positions([30, 10, 20])
+
+    tickets = ProjectTicketRepository.list_by_statuses(["Backlog"])
+    numbers = Enum.map(tickets, & &1.number)
+
+    assert numbers == [30, 10, 20]
+  end
+
+  test "reorder_positions/1 preserves positions across remote sync" do
+    for {number, title} <- [{40, "Ticket 40"}, {50, "Ticket 50"}] do
+      %ProjectTicketSchema{}
+      |> ProjectTicketSchema.changeset(%{
+        number: number,
+        title: title,
+        status: "Ready",
+        labels: []
+      })
+      |> Repo.insert!()
+    end
+
+    # Set custom order: 50 before 40
+    ProjectTicketRepository.reorder_positions([50, 40])
+
+    # Simulate a remote sync — position should be preserved
+    {:ok, _} =
+      ProjectTicketRepository.sync_remote_ticket(%{
+        number: 40,
+        title: "Updated Ticket 40",
+        status: "Ready",
+        labels: []
+      })
+
+    tickets = ProjectTicketRepository.list_by_statuses(["Ready"])
+    numbers = Enum.map(tickets, & &1.number)
+
+    assert numbers == [50, 40]
+  end
+
+  test "new tickets from remote sync default to position 0" do
+    {:ok, ticket} =
+      ProjectTicketRepository.sync_remote_ticket(%{
+        number: 999,
+        title: "Brand new ticket",
+        status: "Backlog",
+        labels: []
+      })
+
+    assert ticket.position == 0
+  end
 end
