@@ -36,14 +36,17 @@
 
     <div class="p-3 border-b border-base-300 flex flex-col gap-1.5">
       <form id="sidebar-new-session-form" phx-submit="run_new_task" class="w-full">
-        <textarea
-          id="sidebar-new-session-instruction"
-          name="instruction"
-          rows="2"
-          phx-hook="SessionForm"
-          class="textarea textarea-bordered w-full text-sm leading-snug"
-          placeholder="Start a new session..."
-        ></textarea>
+        <div id="sidebar-new-session-input-wrap" phx-update="ignore">
+          <textarea
+            id="sidebar-new-session-instruction"
+            name="instruction"
+            rows="2"
+            phx-hook="SessionForm"
+            data-draft-key="sidebar-new-session"
+            class="textarea textarea-bordered w-full text-sm leading-snug"
+            placeholder="Start a new session..."
+          ></textarea>
+        </div>
       </form>
       <button
         :if={has_auth_refresh_candidates?(@sessions)}
@@ -1140,25 +1143,32 @@
           <div class="flex-1">
             <.progress_bar todo_items={@todo_items} />
 
-            <textarea
-              name="instruction"
-              id="session-instruction"
-              phx-hook="SessionForm"
-              rows="2"
-              class="textarea textarea-bordered w-full text-sm leading-snug"
-              placeholder={
-                cond do
-                  task_running?(@current_task) ->
-                    "Send a message (queued until agent finishes)..."
+            <div id="session-instruction-wrap" phx-update="ignore">
+              <textarea
+                name="instruction"
+                id="session-instruction"
+                phx-hook="SessionForm"
+                data-draft-key={
+                  if @active_container_id,
+                    do: "session:#{@active_container_id}",
+                    else: if(@current_task, do: "task:#{@current_task.id}", else: "session:new")
+                }
+                rows="2"
+                class="textarea textarea-bordered w-full text-sm leading-snug"
+                placeholder={
+                  cond do
+                    task_running?(@current_task) ->
+                      "Send a message (queued until agent finishes)..."
 
-                  resumable_task?(@current_task) ->
-                    "Follow-up instruction..."
+                    resumable_task?(@current_task) ->
+                      "Follow-up instruction..."
 
-                  true ->
-                    "Describe the coding task..."
-                end
-              }
-            >{@form["instruction"].value}</textarea>
+                    true ->
+                      "Describe the coding task..."
+                  end
+                }
+              >{@form["instruction"].value}</textarea>
+            </div>
           </div>
           <div class="flex gap-1 shrink-0">
             <.button
