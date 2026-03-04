@@ -3,9 +3,9 @@ defmodule Agents.Sessions.Infrastructure do
   Infrastructure layer boundary for the Sessions bounded context.
 
   Contains implementation details for persistence and external services:
-  - Schemas: TaskSchema
+  - Schemas: TaskSchema, ProjectTicketSchema
   - Queries: TaskQueries
-  - Repositories: TaskRepository
+  - Repositories: TaskRepository, ProjectTicketRepository
   - Adapters: DockerAdapter
   - Clients: OpencodeClient
   - TaskRunner, TaskRunnerSupervisor
@@ -20,7 +20,9 @@ defmodule Agents.Sessions.Infrastructure do
     ],
     exports: [
       Schemas.TaskSchema,
+      Schemas.ProjectTicketSchema,
       Repositories.TaskRepository,
+      Repositories.ProjectTicketRepository,
       Queries.TaskQueries,
       TaskRunnerSupervisor,
       QueueManager,

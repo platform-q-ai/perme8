@@ -3,6 +3,8 @@ defmodule Agents.SessionsTest do
 
   alias Agents.Sessions
   alias Agents.Sessions.Domain.Entities.Task
+  alias Agents.Sessions.Infrastructure.Schemas.ProjectTicketSchema
+  alias Agents.Repo
 
   import Agents.Test.AccountsFixtures
   import Agents.SessionsFixtures
@@ -638,5 +640,65 @@ defmodule Agents.SessionsTest do
       assert ticket_999.session_state == "idle"
       assert ticket_999.associated_container_id == nil
     end
+
+    test "list_project_tickets/1 reads persisted tickets from DB" do
+      user = user_fixture()
+
+      insert_project_ticket(%{
+        number: 306,
+        title: "Ticket 306",
+        status: "Backlog",
+        labels: ["agents"]
+      })
+
+      insert_project_ticket(%{number: 410, title: "Ticket 410", status: "Ready", labels: []})
+      insert_project_ticket(%{number: 999, title: "Hidden", status: "Done", labels: []})
+
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Work on #306 from backlog",
+        container_id: "container-306",
+        status: "running"
+      })
+
+      result = Sessions.list_project_tickets(user.id)
+
+      assert Enum.map(result, & &1.number) == [306, 410]
+      assert Enum.find(result, &(&1.number == 306)).session_state == "running"
+      assert Enum.find(result, &(&1.number == 410)).session_state == "idle"
+    end
+
+    test "update_project_ticket/2 marks ticket for GitHub reconciliation" do
+      insert_project_ticket(%{
+        number: 306,
+        title: "Ticket 306",
+        status: "Backlog",
+        labels: ["agents"]
+      })
+
+      assert {:ok, updated} = Sessions.update_project_ticket(306, %{status: "Ready"})
+      assert updated.status == "Ready"
+      assert updated.sync_state == "pending_push"
+    end
+  end
+
+  defp insert_project_ticket(attrs) do
+    attrs =
+      %{
+        number: attrs[:number],
+        title: attrs[:title] || "Ticket #{attrs[:number]}",
+        status: attrs[:status] || "Backlog",
+        priority: attrs[:priority],
+        labels: attrs[:labels] || [],
+        url: attrs[:url] || "https://github.com/platform-q-ai/perme8/issues/#{attrs[:number]}",
+        sync_state: attrs[:sync_state] || "synced"
+      }
+
+    {:ok, ticket} =
+      %ProjectTicketSchema{}
+      |> ProjectTicketSchema.changeset(attrs)
+      |> Repo.insert()
+
+    ticket
   end
 end

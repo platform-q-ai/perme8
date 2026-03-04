@@ -12,6 +12,7 @@ defmodule Agents.Sessions.Infrastructure.TicketSyncServer do
 
   alias Agents.Sessions.Application.SessionsConfig
   alias Agents.Sessions.Infrastructure.Clients.GithubProjectClient
+  alias Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository
 
   @topic "sessions:tickets"
 
@@ -30,8 +31,8 @@ defmodule Agents.Sessions.Infrastructure.TicketSyncServer do
   @impl true
   def init(opts) do
     state = %{
-      tickets: [],
       client: Keyword.get(opts, :client, GithubProjectClient),
+      ticket_repo: Keyword.get(opts, :ticket_repo, ProjectTicketRepository),
       poll_interval_ms: SessionsConfig.github_poll_interval_ms(),
       pubsub: SessionsConfig.pubsub()
     }
@@ -44,7 +45,12 @@ defmodule Agents.Sessions.Infrastructure.TicketSyncServer do
   end
 
   @impl true
-  def handle_call(:list_tickets, _from, state), do: {:reply, state.tickets, state}
+  def handle_call(:list_tickets, _from, state) do
+    tickets = state.ticket_repo.list_by_statuses(SessionsConfig.github_ticket_statuses())
+    {:reply, tickets, state}
+  rescue
+    _ -> {:reply, [], state}
+  end
 
   @impl true
   def handle_info(:poll, state) do
@@ -61,10 +67,22 @@ defmodule Agents.Sessions.Infrastructure.TicketSyncServer do
       statuses: SessionsConfig.github_ticket_statuses()
     ]
 
+    reconcile_local_changes(state, opts)
+
     case state.client.fetch_tickets(opts) do
       {:ok, tickets} ->
-        Phoenix.PubSub.broadcast(state.pubsub, @topic, {:tickets_synced, tickets})
-        %{state | tickets: tickets}
+        Enum.each(tickets, fn ticket ->
+          case state.ticket_repo.sync_remote_ticket(ticket) do
+            {:ok, _} -> :ok
+            {:error, reason} -> Logger.warning("Ticket upsert failed: #{inspect(reason)}")
+          end
+        end)
+
+        persisted_tickets =
+          state.ticket_repo.list_by_statuses(SessionsConfig.github_ticket_statuses())
+
+        Phoenix.PubSub.broadcast(state.pubsub, @topic, {:tickets_synced, persisted_tickets})
+        state
 
       {:error, :missing_token} ->
         Logger.debug("Skipping GitHub ticket sync: missing GH token")
@@ -74,5 +92,21 @@ defmodule Agents.Sessions.Infrastructure.TicketSyncServer do
         Logger.warning("GitHub ticket sync failed: #{inspect(reason)}")
         state
     end
+  end
+
+  defp reconcile_local_changes(state, opts) do
+    state.ticket_repo.list_pending_push()
+    |> Enum.each(fn ticket ->
+      case state.client.push_ticket_update(ticket, opts) do
+        :ok ->
+          state.ticket_repo.mark_sync_success(ticket)
+
+        {:error, reason} ->
+          Logger.warning("Ticket push sync failed for ##{ticket.number}: #{inspect(reason)}")
+          state.ticket_repo.mark_sync_error(ticket, reason)
+      end
+    end)
+  rescue
+    reason -> Logger.warning("Ticket reconciliation failed: #{inspect(reason)}")
   end
 end
