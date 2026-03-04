@@ -151,37 +151,18 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
           health_retries: SessionsConfig.health_check_max_retries()
         }
 
-        # Start the lifecycle — either resume or fresh start
-        if resume? do
-          existing_parts = restore_output_parts(task.output)
-          existing_todos = restore_todo_items(task.todo_items)
+        state =
+          initialize_lifecycle(
+            state,
+            task,
+            resume?,
+            prompt_instruction,
+            resume_container_id,
+            resume_session_id,
+            prewarmed_container_id
+          )
 
-          state = %{
-            state
-            | container_id: resume_container_id,
-              session_id: resume_session_id,
-              output_parts: existing_parts,
-              last_flushed_count: length(existing_parts),
-              todo_items: existing_todos,
-              prior_resume_items: existing_todos,
-              todo_version: if(existing_todos == [], do: 0, else: 1),
-              last_flushed_todo_version: if(existing_todos == [], do: 0, else: 1)
-          }
-
-          state = maybe_cache_resume_prompt_message(state, prompt_instruction)
-
-          send(self(), :restart_container)
-          {:ok, state}
-        else
-          if is_binary(prewarmed_container_id) and prewarmed_container_id != "" do
-            state = %{state | container_id: prewarmed_container_id}
-            send(self(), :restart_prewarmed_container)
-            {:ok, state}
-          else
-            send(self(), :start_container)
-            {:ok, state}
-          end
-        end
+        {:ok, state}
     end
   end
 
@@ -1051,6 +1032,58 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
         Process.send_after(self(), retry_event, interval)
         {:noreply, %{state | health_retries: state.health_retries - 1}}
     end
+  end
+
+  defp initialize_lifecycle(
+         state,
+         task,
+         true,
+         prompt_instruction,
+         resume_container_id,
+         resume_session_id,
+         _prewarmed_container_id
+       ) do
+    existing_parts = restore_output_parts(task.output)
+    existing_todos = restore_todo_items(task.todo_items)
+
+    state = %{
+      state
+      | container_id: resume_container_id,
+        session_id: resume_session_id,
+        output_parts: existing_parts,
+        last_flushed_count: length(existing_parts),
+        todo_items: existing_todos,
+        prior_resume_items: existing_todos,
+        todo_version: if(existing_todos == [], do: 0, else: 1),
+        last_flushed_todo_version: if(existing_todos == [], do: 0, else: 1)
+    }
+
+    state = maybe_cache_resume_prompt_message(state, prompt_instruction)
+    send(self(), :restart_container)
+    state
+  end
+
+  defp initialize_lifecycle(
+         state,
+         _task,
+         false,
+         _prompt_instruction,
+         _resume_container_id,
+         _resume_session_id,
+         prewarmed_container_id
+       ) do
+    maybe_start_from_prewarmed(state, prewarmed_container_id)
+  end
+
+  defp maybe_start_from_prewarmed(state, prewarmed_container_id)
+       when is_binary(prewarmed_container_id) and prewarmed_container_id != "" do
+    send(self(), :restart_prewarmed_container)
+    %{state | container_id: prewarmed_container_id}
+  end
+
+  defp maybe_start_from_prewarmed(state, _prewarmed_container_id) do
+    send(self(), :start_container)
+    state
   end
 
   defp should_reconnect_sse?(state, pid) do
