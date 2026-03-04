@@ -105,4 +105,46 @@ defmodule Agents.Sessions.Infrastructure.ProjectTicketRepositoryTest do
     assert refreshed.sync_state == "sync_error"
     assert refreshed.last_sync_error == "push failed"
   end
+
+  test "sync_remote_ticket/1 persists the body field from remote data" do
+    body_text = "## Description\nThis is the ticket body with **markdown**."
+
+    assert {:ok, ticket} =
+             ProjectTicketRepository.sync_remote_ticket(%{
+               number: 800,
+               title: "Ticket with body",
+               body: body_text,
+               status: "Backlog",
+               labels: []
+             })
+
+    assert ticket.body == body_text
+
+    refreshed = Repo.get!(ProjectTicketSchema, ticket.id)
+    assert refreshed.body == body_text
+  end
+
+  test "sync_remote_ticket/1 handles nil body gracefully" do
+    assert {:ok, ticket} =
+             ProjectTicketRepository.sync_remote_ticket(%{
+               number: 801,
+               title: "Ticket without body",
+               status: "Backlog",
+               labels: []
+             })
+
+    assert ticket.body == nil
+  end
+
+  test "changeset accepts body field" do
+    changeset =
+      ProjectTicketSchema.changeset(%ProjectTicketSchema{}, %{
+        number: 900,
+        title: "Schema body test",
+        body: "Some body content"
+      })
+
+    assert changeset.valid?
+    assert Ecto.Changeset.get_change(changeset, :body) == "Some body content"
+  end
 end

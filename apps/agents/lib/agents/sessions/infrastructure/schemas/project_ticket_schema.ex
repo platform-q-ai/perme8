@@ -13,6 +13,7 @@ defmodule Agents.Sessions.Infrastructure.Schemas.ProjectTicketSchema do
           number: integer(),
           external_id: String.t() | nil,
           title: String.t(),
+          body: String.t() | nil,
           status: String.t() | nil,
           priority: String.t() | nil,
           size: String.t() | nil,
@@ -30,6 +31,7 @@ defmodule Agents.Sessions.Infrastructure.Schemas.ProjectTicketSchema do
     field(:number, :integer)
     field(:external_id, :string)
     field(:title, :string)
+    field(:body, :string)
     field(:status, :string)
     field(:priority, :string)
     field(:size, :string)
@@ -50,6 +52,7 @@ defmodule Agents.Sessions.Infrastructure.Schemas.ProjectTicketSchema do
       :number,
       :external_id,
       :title,
+      :body,
       :status,
       :priority,
       :size,

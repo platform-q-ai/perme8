@@ -501,5 +501,74 @@ defmodule Agents.Sessions.Infrastructure.QueueManagerTest do
       queued_id = queued.id
       assert_receive {:started_runner, ^queued_id}
     end
+
+    test "enforce_concurrency_limit requeues excess running tasks when limit is lowered" do
+      TestEventBus.start_global()
+
+      user = user_fixture()
+      running1 = create_task(user, %{status: "running"})
+      running2 = create_task(user, %{status: "running"})
+      running3 = create_task(user, %{status: "running"})
+
+      {:module, noop_container_mod, _, _} =
+        defmodule :"Agents.Sessions.QueueManagerTest.NoopContainerForEnforce.#{System.unique_integer([:positive])}" do
+          def start(_image, _opts), do: {:error, :warmup_disabled}
+          def stop(_container_id, _opts \\ []), do: :ok
+          def status(_container_id, _opts \\ []), do: {:ok, :not_found}
+          def remove(_container_id, _opts \\ []), do: :ok
+          def restart(_container_id, _opts \\ []), do: {:ok, %{port: 4096}}
+
+          def stats(_container_id, _opts \\ []),
+            do: {:ok, %{cpu_percent: 0.0, memory_usage: 0, memory_limit: 0}}
+
+          def prepare_fresh_start(_container_id, _opts \\ []), do: :ok
+        end
+
+      Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "queue:user:#{user.id}")
+
+      assert {:ok, _pid} =
+               QueueManagerSupervisor.ensure_started(user.id,
+                 concurrency_limit: 3,
+                 event_bus: TestEventBus,
+                 pubsub: Perme8.Events.PubSub,
+                 container_provider: noop_container_mod,
+                 task_runner_starter: fn _task_id, _opts -> {:ok, self()} end
+               )
+
+      # Lower limit from 3 to 1 — should requeue 2 youngest active tasks
+      assert :ok = QueueManager.set_concurrency_limit(user.id, 1)
+      assert QueueManager.get_concurrency_limit(user.id) == 1
+
+      assert_receive {:queue_updated, _, _queue_state}
+
+      # Check that exactly 2 tasks were requeued (the youngest two)
+      tasks =
+        [running1.id, running2.id, running3.id]
+        |> Enum.map(&Repo.get!(TaskSchema, &1))
+
+      queued_tasks = Enum.filter(tasks, &(&1.status == "queued"))
+      active_tasks = Enum.filter(tasks, &(&1.status in ["running", "pending", "starting"]))
+
+      # 2 should be requeued, 1 should remain active
+      assert length(queued_tasks) == 2
+      assert length(active_tasks) == 1
+    end
+
+    test "enforce_concurrency_limit is a no-op when within limit" do
+      user = user_fixture()
+      running = create_task(user, %{status: "running"})
+
+      assert {:ok, _pid} =
+               QueueManagerSupervisor.ensure_started(user.id,
+                 concurrency_limit: 2,
+                 task_runner_starter: fn _task_id, _opts -> {:ok, self()} end
+               )
+
+      # Raise limit — nothing should be requeued
+      assert :ok = QueueManager.set_concurrency_limit(user.id, 3)
+
+      updated = Repo.get!(TaskSchema, running.id)
+      assert updated.status == "running"
+    end
   end
 end

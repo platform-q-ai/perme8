@@ -10,6 +10,7 @@ import { SessionOptimisticStateHook } from './presentation/hooks/session-optimis
 import { ConcurrencyLimitHook } from './presentation/hooks/concurrency-limit-hook'
 import { WarmCacheLimitHook } from './presentation/hooks/warm-cache-limit-hook'
 import { TicketLaneDndHook } from './presentation/hooks/ticket-lane-dnd-hook'
+import { DurationTimerHook } from './presentation/hooks/duration-timer-hook'
 
 export {
   SessionLogHook as SessionLog,
@@ -17,7 +18,8 @@ export {
   SessionOptimisticStateHook as SessionOptimisticState,
   ConcurrencyLimitHook as ConcurrencyLimit,
   WarmCacheLimitHook as WarmCacheLimit,
-  TicketLaneDndHook as TicketLaneDnd
+  TicketLaneDndHook as TicketLaneDnd,
+  DurationTimerHook as DurationTimer
 }
 
 export default {
@@ -26,5 +28,6 @@ export default {
   SessionOptimisticState: SessionOptimisticStateHook,
   ConcurrencyLimit: ConcurrencyLimitHook,
   WarmCacheLimit: WarmCacheLimitHook,
-  TicketLaneDnd: TicketLaneDndHook
+  TicketLaneDnd: TicketLaneDndHook,
+  DurationTimer: DurationTimerHook
 }
