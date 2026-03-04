@@ -571,6 +571,20 @@ The context module acts as a **thin facade** over internal layers. It's the publ
 - Test the public API behavior
 - Integration tests that verify the full stack works together
 
+## Optimistic, Event-Driven UI (MANDATORY)
+
+**Every LiveView you build MUST follow these two principles:**
+
+1. **Optimistic updates** -- When a user performs an action, update assigns/streams *immediately* to reflect the expected outcome. Do NOT wait for the use case to complete before updating the UI. If the use case fails, roll back the optimistic change and show an error.
+
+2. **Event-driven state** -- LiveViews subscribe to PubSub domain events in `mount/3` (when `connected?/1`) and react to external state changes in `handle_info/2`. Never poll or re-fetch entire datasets. When another user creates/updates/deletes something, your LiveView learns about it through a domain event and updates its streams/assigns accordingly.
+
+**The two work together:** the acting user sees an optimistic update instantly; all other users see the change when the domain event arrives via PubSub.
+
+**Testing:** Test both paths -- (a) optimistic UI appears immediately after user action, (b) `handle_info/2` updates UI when a domain event is sent to `view.pid`, (c) rollback on failure.
+
+See `docs/prompts/phoenix/PHOENIX_DESIGN_PRINCIPLES.md` section "11. Optimistic, Event-Driven UI" for full patterns and code examples.
+
 ## Remember
 
 - **NEVER write implementation before test** - This is the cardinal rule
@@ -581,6 +595,7 @@ The context module acts as a **thin facade** over internal layers. It's the publ
 - **Update progress** - Keep the architectural plan up to date
 - **Build bottom-up** - Domain → Application → Infrastructure → Interface
 - **Keep LiveView thin** - Delegate to context functions
+- **UI is optimistic and event-driven** - Update immediately, react to PubSub events, roll back on failure
 - **You handle the full UI** - Phoenix LiveView is your complete UI framework
 - **Umbrella awareness** - Always work within the correct app under `apps/`
 
