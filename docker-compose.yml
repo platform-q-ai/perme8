@@ -18,5 +18,30 @@ services:
       timeout: 5s
       retries: 5
 
+  pg_backup:
+    image: postgres:16-alpine
+    container_name: jarga_pg_backup
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGHOST: postgres
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: jarga_dev
+      BACKUP_RETAIN: 24
+    volumes:
+      - postgres_backups:/backups
+      - ./infra/docker/pg-backup.sh:/usr/local/bin/pg-backup.sh:ro
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo "0 * * * * /usr/local/bin/pg-backup.sh" | crontab -
+        echo "pg_backup: running initial backup..."
+        /usr/local/bin/pg-backup.sh
+        echo "pg_backup: cron scheduled (hourly). Waiting..."
+        crond -f -l 2
+
 volumes:
   postgres_data:
+  postgres_backups:
