@@ -292,3 +292,116 @@ Feature: Agents REST API
     Then the response status should be 404
     And the response body should be valid JSON
     And the response body path "$.error" should equal "Agent not found"
+
+  # ===========================================================================
+  # Agent Query — POST /api/agents/:id/query
+  # ===========================================================================
+
+  Scenario: Query agent successfully
+    # Step 1: Create an agent
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I POST to "/api/agents" with body:
+      """
+      {"name": "Queryable Agent"}
+      """
+    Then the response status should be 201
+    And I store response body path "$.data.id" as "agentId"
+    # Step 2: Query the agent
+    Given I set header "Content-Type" to "application/json"
+    And I set header "Accept" to "application/json"
+    And I set bearer token to "${valid-doc-key-product-team}"
+    When I POST to "/api/agents/${agentId}/query" with body:
+      """
+      {"question": "What can you do?"}
+      """
+    Then the response status should be 200
+    And the response body should be valid JSON
+    And the response body path "$.data.response" should exist
+
+  Scenario: Query agent without authentication is rejected
+    When I POST to "/api/agents/00000000-0000-0000-0000-000000000000/query" with body:
+      """
+      {"question": "Hello?"}
+      """
+    Then the response status should be 401
+    And the response body should be valid JSON
+    And the response body path "$.error" should equal "Invalid or revoked API key"
+
+  Scenario: Query non-existent agent returns 404
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I POST to "/api/agents/00000000-0000-0000-0000-000000000000/query" with body:
+      """
+      {"question": "Are you there?"}
+      """
+    Then the response status should be 404
+    And the response body should be valid JSON
+    And the response body path "$.error" should equal "Agent not found"
+
+  Scenario: Query agent with missing question returns 422
+    # Step 1: Create an agent
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I POST to "/api/agents" with body:
+      """
+      {"name": "Missing Question Agent"}
+      """
+    Then the response status should be 201
+    And I store response body path "$.data.id" as "agentId"
+    # Step 2: Query with missing question
+    Given I set header "Content-Type" to "application/json"
+    And I set header "Accept" to "application/json"
+    And I set bearer token to "${valid-doc-key-product-team}"
+    When I POST to "/api/agents/${agentId}/query" with body:
+      """
+      {}
+      """
+    Then the response status should be 422
+    And the response body should be valid JSON
+    And the response body path "$.error" should equal "question is required"
+
+  Scenario: Query agent with empty question string returns 422
+    # Step 1: Create an agent
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I POST to "/api/agents" with body:
+      """
+      {"name": "Empty Question Agent"}
+      """
+    Then the response status should be 201
+    And I store response body path "$.data.id" as "agentId"
+    # Step 2: Query with empty question
+    Given I set header "Content-Type" to "application/json"
+    And I set header "Accept" to "application/json"
+    And I set bearer token to "${valid-doc-key-product-team}"
+    When I POST to "/api/agents/${agentId}/query" with body:
+      """
+      {"question": ""}
+      """
+    Then the response status should be 422
+    And the response body should be valid JSON
+    And the response body path "$.error" should equal "question is required"
+
+  Scenario: Query agent with optional context
+    # Step 1: Create an agent
+    Given I set bearer token to "${valid-doc-key-product-team}"
+    When I POST to "/api/agents" with body:
+      """
+      {"name": "Context Agent"}
+      """
+    Then the response status should be 201
+    And I store response body path "$.data.id" as "agentId"
+    # Step 2: Query with question and context
+    Given I set header "Content-Type" to "application/json"
+    And I set header "Accept" to "application/json"
+    And I set bearer token to "${valid-doc-key-product-team}"
+    When I POST to "/api/agents/${agentId}/query" with body:
+      """
+      {
+        "question": "Summarize this request",
+        "context": {
+          "topic": "product-roadmap",
+          "priority": "high"
+        }
+      }
+      """
+    Then the response status should be 200
+    And the response body should be valid JSON
+    And the response body path "$.data.response" should exist
