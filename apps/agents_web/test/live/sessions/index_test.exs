@@ -1491,27 +1491,17 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
         status: "completed"
       })
 
+      {:ok, _ticket} =
+        Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository.sync_remote_ticket(%{
+          number: 123,
+          title: "Linked ticket",
+          status: "Ready",
+          priority: "Need",
+          size: "M",
+          labels: []
+        })
+
       {:ok, lv, _html} = live(conn, ~p"/sessions?container=c-keep")
-
-      :sys.replace_state(Agents.Sessions.Infrastructure.TicketSyncServer, fn state ->
-        %{
-          state
-          | tickets: [
-              %{
-                number: 123,
-                title: "Linked ticket",
-                body: "Ticket body",
-                status: "Ready",
-                priority: "Need",
-                size: "M",
-                labels: [],
-                url: nil,
-                associated_container_id: nil
-              }
-            ]
-        }
-      end)
-
       send(lv.pid, {:tickets_synced, []})
 
       lv
@@ -1538,7 +1528,7 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       refute html =~ ~s(data-tab-id="ticket")
     end
 
-    test "selecting session infers ticket number from session instruction when association is missing",
+    test "selecting ticket card navigates to session and shows ticket tab",
          %{
            conn: conn,
            user: user
@@ -1557,31 +1547,22 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
         status: "completed"
       })
 
+      {:ok, _ticket} =
+        Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository.sync_remote_ticket(%{
+          number: 123,
+          title: "Ticket selected from session context",
+          status: "Ready",
+          priority: "Need",
+          size: "M",
+          labels: []
+        })
+
       {:ok, lv, _html} = live(conn, ~p"/sessions")
-
-      :sys.replace_state(Agents.Sessions.Infrastructure.TicketSyncServer, fn state ->
-        %{
-          state
-          | tickets: [
-              %{
-                number: 123,
-                title: "Ticket selected from session context",
-                body: "Details from ticket",
-                status: "Ready",
-                priority: "Need",
-                size: "M",
-                labels: [],
-                url: nil,
-                associated_container_id: nil
-              }
-            ]
-        }
-      end)
-
       send(lv.pid, {:tickets_synced, []})
 
+      # Ticket card is in triage (completed session). Click the ticket card.
       lv
-      |> element(~s([phx-click="select_session"][phx-value-container-id="c-ticket-session"]))
+      |> element(~s([phx-click="select_ticket"][phx-value-number="123"]))
       |> render_click()
 
       html =
@@ -2516,6 +2497,389 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       # The LiveView should still be alive and rendering
       html = render(lv)
       assert html =~ "Ticket to start"
+    end
+  end
+
+  describe "ticket card real-time session state updates" do
+    setup %{conn: conn} do
+      user = user_fixture()
+      %{conn: log_in_user(conn, user), user: user}
+    end
+
+    test "ticket card status dot updates when task status changes to running", %{
+      conn: conn,
+      user: user
+    } do
+      task =
+        task_fixture(%{
+          user_id: user.id,
+          instruction: "pick up ticket #700 using the relevant skill",
+          container_id: "c-ticket-700",
+          status: "pending"
+        })
+
+      {:ok, _ticket} =
+        Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository.sync_remote_ticket(%{
+          number: 700,
+          title: "Live update ticket",
+          status: "Backlog",
+          priority: "Need",
+          size: "M",
+          labels: []
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+      send(lv.pid, {:tickets_synced, []})
+
+      # Subscribe and simulate task status changing to running
+      Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "task:#{task.id}")
+      send(lv.pid, {:task_status_changed, task.id, "running"})
+
+      html = render(lv)
+
+      # The ticket card should NOT show the play button (session is active)
+      refute html =~ ~s(data-testid="start-ticket-session-700")
+
+      # The ticket should move from triage to build lane when running
+      refute html =~ ~s(data-testid="triage-ticket-item-700")
+      assert html =~ ~s(data-testid="build-ticket-item-700")
+    end
+
+    test "ticket card shows play button again after task completes", %{
+      conn: conn,
+      user: user
+    } do
+      task =
+        task_fixture(%{
+          user_id: user.id,
+          instruction: "pick up ticket #701 using the relevant skill",
+          container_id: "c-ticket-701",
+          status: "running"
+        })
+
+      {:ok, _ticket} =
+        Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository.sync_remote_ticket(%{
+          number: 701,
+          title: "Completing ticket",
+          status: "Backlog",
+          priority: "Need",
+          size: "M",
+          labels: []
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+      send(lv.pid, {:tickets_synced, []})
+
+      # Initially the play button should be hidden (task is running)
+      html = render(lv)
+      refute html =~ ~s(data-testid="start-ticket-session-701")
+
+      # Now simulate task completing
+      send(lv.pid, {:task_status_changed, task.id, "completed"})
+
+      html = render(lv)
+      # Play button should reappear after completion
+      assert html =~ ~s(data-testid="start-ticket-session-701")
+    end
+
+    test "ticket card shows play button again after task fails", %{
+      conn: conn,
+      user: user
+    } do
+      task =
+        task_fixture(%{
+          user_id: user.id,
+          instruction: "pick up ticket #702 using the relevant skill",
+          container_id: "c-ticket-702",
+          status: "running"
+        })
+
+      {:ok, _ticket} =
+        Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository.sync_remote_ticket(%{
+          number: 702,
+          title: "Failing ticket",
+          status: "Backlog",
+          priority: "Need",
+          size: "M",
+          labels: []
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+      send(lv.pid, {:tickets_synced, []})
+
+      # Initially hidden (task is running)
+      refute render(lv) =~ ~s(data-testid="start-ticket-session-702")
+
+      # Simulate task failure
+      send(lv.pid, {:task_status_changed, task.id, "failed"})
+
+      html = render(lv)
+      assert html =~ ~s(data-testid="start-ticket-session-702")
+    end
+
+    test "ticket card shows play button again after task is cancelled", %{
+      conn: conn,
+      user: user
+    } do
+      task =
+        task_fixture(%{
+          user_id: user.id,
+          instruction: "pick up ticket #703 using the relevant skill",
+          container_id: "c-ticket-703",
+          status: "running"
+        })
+
+      {:ok, _ticket} =
+        Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository.sync_remote_ticket(%{
+          number: 703,
+          title: "Cancelled ticket",
+          status: "Backlog",
+          priority: "Need",
+          size: "M",
+          labels: []
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+      send(lv.pid, {:tickets_synced, []})
+
+      # Initially hidden
+      refute render(lv) =~ ~s(data-testid="start-ticket-session-703")
+
+      # Simulate task cancellation
+      send(lv.pid, {:task_status_changed, task.id, "cancelled"})
+
+      html = render(lv)
+      assert html =~ ~s(data-testid="start-ticket-session-703")
+    end
+  end
+
+  describe "ticket-centric build lane lifecycle" do
+    setup %{conn: conn} do
+      user = user_fixture()
+      %{conn: log_in_user(conn, user), user: user}
+    end
+
+    test "idle ticket shows in triage lane, not build lane", %{conn: conn, user: user} do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Existing session",
+        container_id: "c-idle",
+        status: "completed"
+      })
+
+      {:ok, _ticket} =
+        Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository.sync_remote_ticket(%{
+          number: 800,
+          title: "Idle triage ticket",
+          status: "Backlog",
+          priority: "Need",
+          size: "M",
+          labels: []
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+      send(lv.pid, {:tickets_synced, []})
+
+      html = render(lv)
+      # Ticket should appear in triage lane
+      assert html =~ ~s(data-testid="triage-ticket-item-800")
+      # Ticket should NOT appear in build lane
+      refute html =~ ~s(data-testid="build-ticket-item-800")
+    end
+
+    test "running ticket moves from triage to build lane", %{conn: conn, user: user} do
+      task =
+        task_fixture(%{
+          user_id: user.id,
+          instruction: "pick up ticket #801 using the relevant skill",
+          container_id: "c-ticket-801",
+          status: "running"
+        })
+
+      {:ok, _ticket} =
+        Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository.sync_remote_ticket(%{
+          number: 801,
+          title: "Running build ticket",
+          status: "Backlog",
+          priority: "Need",
+          size: "M",
+          labels: []
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+      send(lv.pid, {:tickets_synced, []})
+
+      html = render(lv)
+      # Ticket should appear in build lane, not triage
+      assert html =~ ~s(data-testid="build-ticket-item-801")
+      refute html =~ ~s(data-testid="triage-ticket-item-801")
+      # Play button should not be shown
+      refute html =~ ~s(data-testid="start-ticket-session-801")
+
+      # Verify the build lane card has the running status (used slot)
+      assert html =~ ~s(data-slot-state="used")
+
+      _task = task
+    end
+
+    test "completed ticket returns to triage lane with session data", %{conn: conn, user: user} do
+      task =
+        task_fixture(%{
+          user_id: user.id,
+          instruction: "pick up ticket #802 using the relevant skill",
+          container_id: "c-ticket-802",
+          status: "running"
+        })
+
+      {:ok, _ticket} =
+        Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository.sync_remote_ticket(%{
+          number: 802,
+          title: "Completing build ticket",
+          status: "Backlog",
+          priority: "Need",
+          size: "M",
+          labels: []
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+      send(lv.pid, {:tickets_synced, []})
+
+      # Initially in build lane
+      html = render(lv)
+      assert html =~ ~s(data-testid="build-ticket-item-802")
+      refute html =~ ~s(data-testid="triage-ticket-item-802")
+
+      # Simulate task completing
+      send(lv.pid, {:task_status_changed, task.id, "completed"})
+
+      html = render(lv)
+      # Now should be back in triage
+      assert html =~ ~s(data-testid="triage-ticket-item-802")
+      refute html =~ ~s(data-testid="build-ticket-item-802")
+      # Play button should reappear
+      assert html =~ ~s(data-testid="start-ticket-session-802")
+    end
+
+    test "failed ticket returns to triage lane", %{conn: conn, user: user} do
+      task =
+        task_fixture(%{
+          user_id: user.id,
+          instruction: "pick up ticket #803 using the relevant skill",
+          container_id: "c-ticket-803",
+          status: "running"
+        })
+
+      {:ok, _ticket} =
+        Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository.sync_remote_ticket(%{
+          number: 803,
+          title: "Failing build ticket",
+          status: "Backlog",
+          priority: "Need",
+          size: "M",
+          labels: []
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+      send(lv.pid, {:tickets_synced, []})
+
+      # Initially in build lane
+      assert render(lv) =~ ~s(data-testid="build-ticket-item-803")
+
+      # Simulate task failure
+      send(lv.pid, {:task_status_changed, task.id, "failed"})
+
+      html = render(lv)
+      assert html =~ ~s(data-testid="triage-ticket-item-803")
+      refute html =~ ~s(data-testid="build-ticket-item-803")
+    end
+
+    test "queued ticket shows in build lane queue zone", %{conn: conn, user: user} do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "pick up ticket #804 using the relevant skill",
+        container_id: "c-ticket-804",
+        status: "queued"
+      })
+
+      {:ok, _ticket} =
+        Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository.sync_remote_ticket(%{
+          number: 804,
+          title: "Queued build ticket",
+          status: "Backlog",
+          priority: "Need",
+          size: "M",
+          labels: []
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+      send(lv.pid, {:tickets_synced, []})
+
+      html = render(lv)
+      assert html =~ ~s(data-testid="build-ticket-item-804")
+      refute html =~ ~s(data-testid="triage-ticket-item-804")
+    end
+
+    test "close_ticket removes ticket from UI and destroys session", %{conn: conn, user: user} do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "pick up ticket #805 using the relevant skill",
+        container_id: "c-ticket-805",
+        status: "completed"
+      })
+
+      {:ok, _ticket} =
+        Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository.sync_remote_ticket(%{
+          number: 805,
+          title: "Ticket to close",
+          status: "Backlog",
+          priority: "Need",
+          size: "M",
+          labels: []
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+      send(lv.pid, {:tickets_synced, []})
+
+      html = render(lv)
+      assert html =~ ~s(data-testid="triage-ticket-item-805")
+      # Session card should also be visible (non-ticket triage session)
+      assert html =~ "c-ticket-805"
+
+      # Select the ticket to view it
+      lv
+      |> element(~s([phx-click="select_ticket"][phx-value-number="805"]))
+      |> render_click()
+
+      # Close the ticket
+      lv
+      |> element(~s([data-testid="close-ticket-btn"]))
+      |> render_click()
+
+      html = render(lv)
+      # Ticket should be completely removed
+      refute html =~ ~s(data-testid="triage-ticket-item-805")
+      refute html =~ ~s(data-testid="build-ticket-item-805")
+      # Session should also be removed
+      refute html =~ "c-ticket-805"
+    end
+
+    test "non-ticket sessions still show in build lane independently", %{
+      conn: conn,
+      user: user
+    } do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "A freeform coding task",
+        container_id: "c-freeform",
+        status: "running"
+      })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      html = render(lv)
+      # Non-ticket session should appear as a regular session card
+      assert html =~ ~s(data-testid="session-item-a-freeform-coding-task")
+      assert html =~ "A freeform coding task"
     end
   end
 end

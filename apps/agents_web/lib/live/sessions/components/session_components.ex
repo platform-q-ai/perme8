@@ -41,7 +41,7 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponents do
         phx-click="switch_tab"
         phx-value-tab={tab.id}
         class={[
-          "px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors",
+          "px-16 py-2 text-sm font-medium border-b-2 -mb-px transition-colors",
           if(tab.id == @active_tab,
             do: "border-primary text-primary",
             else:
