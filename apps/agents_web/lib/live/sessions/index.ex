@@ -476,6 +476,15 @@ defmodule AgentsWeb.SessionsLive.Index do
   end
 
   @impl true
+  def handle_event("start_ticket_session", %{"number" => number_str}, socket) do
+    number = String.to_integer(number_str)
+    instruction = "pick up ticket ##{number} using the relevant skill"
+
+    # Delegate to the existing run_new_task handler
+    handle_event("run_new_task", %{"instruction" => instruction}, socket)
+  end
+
+  @impl true
   def handle_event("delete_session", %{"container-id" => container_id}, socket) do
     user = socket.assigns.current_scope.user
 
@@ -995,7 +1004,14 @@ defmodule AgentsWeb.SessionsLive.Index do
   @impl true
   def handle_info({:tickets_synced, _tickets}, socket) do
     user = socket.assigns.current_scope.user
-    tickets = Sessions.list_project_tickets(user.id, tasks: socket.assigns[:tasks_snapshot] || [])
+
+    ticket_opts =
+      case socket.assigns[:tasks_snapshot] do
+        tasks when is_list(tasks) and tasks != [] -> [tasks: tasks]
+        _ -> []
+      end
+
+    tickets = Sessions.list_project_tickets(user.id, ticket_opts)
 
     active_ticket_number =
       next_active_ticket_number(tickets, socket.assigns[:active_ticket_number])

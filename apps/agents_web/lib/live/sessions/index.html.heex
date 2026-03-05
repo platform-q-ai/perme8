@@ -313,58 +313,77 @@
                   data-triage-ticket-card
                   data-ticket-number={ticket.number}
                   class={[
-                    "flex cursor-grab active:cursor-grabbing flex-col items-start gap-1 w-full rounded-lg p-2 min-h-12 border transition-all duration-150 hover:-translate-y-px hover:shadow-md hover:ring-1 hover:ring-base-content/20",
+                    "flex cursor-grab active:cursor-grabbing w-full rounded-lg min-h-12 border transition-all duration-150 hover:-translate-y-px hover:shadow-md hover:ring-1 hover:ring-base-content/20 overflow-hidden",
                     "border-info/25 bg-info/5",
                     ticket.number == @active_ticket_number &&
                       "ring-2 ring-primary/60 shadow-sm shadow-primary/10"
                   ]}
-                  phx-click="select_ticket"
-                  phx-value-number={ticket.number}
                 >
-                  <div class="flex items-start justify-between w-full gap-2">
-                    <div class="flex flex-col items-start gap-1 flex-1 min-w-0">
-                      <span class="badge badge-xs badge-info whitespace-nowrap shrink-0">
-                        {ticket.number}
+                  <%!-- Ticket content area (clickable to select) --%>
+                  <div
+                    class="flex-1 min-w-0 flex flex-col items-start gap-1 p-2"
+                    phx-click="select_ticket"
+                    phx-value-number={ticket.number}
+                  >
+                    <div class="flex items-start justify-between w-full gap-2">
+                      <div class="flex flex-col items-start gap-1 flex-1 min-w-0">
+                        <span class="badge badge-xs badge-info whitespace-nowrap shrink-0">
+                          {ticket.number}
+                        </span>
+                        <span
+                          class="text-xs font-medium flex-1 min-w-0 overflow-hidden mt-0.5 mb-0.5"
+                          style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;"
+                        >
+                          {ticket.title}
+                        </span>
+                      </div>
+                      <.status_dot status={ticket.task_status || "idle"} />
+                    </div>
+
+                    <div class="flex w-full items-start justify-start gap-1.5 flex-wrap">
+                      <span class={[
+                        "badge badge-xs whitespace-nowrap",
+                        ticket_priority_class(ticket.priority)
+                      ]}>
+                        {ticket.priority || "Unprioritized"}
+                      </span>
+                      <span class={[
+                        "badge badge-xs whitespace-nowrap",
+                        ticket_size_class(ticket.size)
+                      ]}>
+                        {ticket.size || "Unsized"}
+                      </span>
+                      <span class={[
+                        "badge badge-xs whitespace-nowrap",
+                        ticket_status_class(ticket.status)
+                      ]}>
+                        {ticket.status || "Unknown"}
                       </span>
                       <span
-                        class="text-xs font-medium flex-1 min-w-0 overflow-hidden mt-0.5 mb-0.5"
-                        style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;"
+                        :for={label <- ticket.labels || []}
+                        class={[
+                          "badge badge-xs whitespace-nowrap",
+                          ticket_label_class(label)
+                        ]}
                       >
-                        {ticket.title}
+                        {label}
                       </span>
                     </div>
-                    <.status_dot status={ticket.task_status || "idle"} />
                   </div>
 
-                  <div class="flex w-full items-start justify-start gap-1.5 flex-wrap">
-                    <span class={[
-                      "badge badge-xs whitespace-nowrap",
-                      ticket_priority_class(ticket.priority)
-                    ]}>
-                      {ticket.priority || "Unprioritized"}
-                    </span>
-                    <span class={[
-                      "badge badge-xs whitespace-nowrap",
-                      ticket_size_class(ticket.size)
-                    ]}>
-                      {ticket.size || "Unsized"}
-                    </span>
-                    <span class={[
-                      "badge badge-xs whitespace-nowrap",
-                      ticket_status_class(ticket.status)
-                    ]}>
-                      {ticket.status || "Unknown"}
-                    </span>
-                    <span
-                      :for={label <- ticket.labels || []}
-                      class={[
-                        "badge badge-xs whitespace-nowrap",
-                        ticket_label_class(label)
-                      ]}
-                    >
-                      {label}
-                    </span>
-                  </div>
+                  <%!-- Play button strip (1/20th width, right edge) --%>
+                  <button
+                    :if={ticket.task_status in [nil, "completed", "failed", "cancelled"]}
+                    type="button"
+                    phx-click="start_ticket_session"
+                    phx-value-number={ticket.number}
+                    data-testid={"start-ticket-session-#{ticket.number}"}
+                    class="flex items-center justify-center shrink-0 text-success/50 hover:text-success hover:bg-success/10 transition-colors cursor-pointer border-l border-info/20"
+                    style="width: 5%;"
+                    title="Start session for this ticket"
+                  >
+                    <.icon name="hero-play-solid" class="size-3" />
+                  </button>
                 </div>
               </li>
             </ul>
