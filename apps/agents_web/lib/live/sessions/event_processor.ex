@@ -223,6 +223,12 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
 
   Primary path: read from the persisted pending_question column.
   """
+  # Skip loading pending questions for terminal tasks — the question is no
+  # longer actionable once the session has ended.
+  def maybe_load_pending_question(socket, %{status: status})
+      when status in ["completed", "failed", "cancelled"],
+      do: socket
+
   def maybe_load_pending_question(socket, %{
         pending_question: %{"request_id" => request_id, "questions" => questions} = pq
       })

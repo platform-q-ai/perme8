@@ -845,8 +845,14 @@ defmodule AgentsWeb.SessionsLive.Index do
       |> assign(:tickets, tickets)
       |> request_task_refresh(task_id)
 
+    # Only modify current session UI state (output_parts, pending_question,
+    # queued_messages) when the status change is for the currently viewed task.
+    # Non-current task completions should not wipe the active session's UI.
     socket =
       cond do
+        !is_current_task ->
+          clear_optimistic_queue_snapshot(socket, task_id)
+
         status in ["completed", "failed"] ->
           socket
           |> assign(:output_parts, EventProcessor.freeze_streaming(socket.assigns.output_parts))
