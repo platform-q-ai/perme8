@@ -315,6 +315,7 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
            pending_question: clear_resume_prompt(task.pending_question)
          }) do
       {:ok, updated_task} ->
+        broadcast_task_status(state, updated_task.id, "pending")
         maybe_start_runner(state, updated_task, resume_prompt)
         emit_task_promoted(state, updated_task)
         state
@@ -423,6 +424,14 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
       state.pubsub,
       "queue:user:#{state.user_id}",
       {:queue_updated, state.user_id, queue_state(state)}
+    )
+  end
+
+  defp broadcast_task_status(state, task_id, status) do
+    Phoenix.PubSub.broadcast(
+      state.pubsub,
+      "task:#{task_id}",
+      {:task_status_changed, task_id, status}
     )
   end
 
