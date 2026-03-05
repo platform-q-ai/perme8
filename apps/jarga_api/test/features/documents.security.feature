@@ -186,7 +186,7 @@ Feature: Document API Security Baseline
   # Maps to: All API responses -- every scenario that returns JSON should include
   #          proper security headers to prevent MIME-sniffing, clickjacking, etc.
   # NOTE: checkSecurityHeaders sends a GET request, so we test against endpoints
-  #       that have GET routes. The SecurityHeadersPlug is applied at the pipeline
+  #       that have GET routes. The Perme8.Plugs.SecurityHeaders plug is applied at the pipeline
   #       level, so it covers all HTTP methods on all routed endpoints uniformly.
   # ---------------------------------------------------------------------------
 

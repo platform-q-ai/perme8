@@ -168,7 +168,7 @@ Feature: Project API Security Baseline
   # Maps to: All API responses -- every scenario that returns JSON should include
   #          proper security headers to prevent MIME-sniffing, clickjacking, etc.
   # NOTE: checkSecurityHeaders sends a GET request, so we test against endpoints
-  #       that have GET routes. The SecurityHeadersPlug is applied at the pipeline
+  #       that have GET routes. The Perme8.Plugs.SecurityHeaders plug is applied at the pipeline
   #       level, so it covers all HTTP methods on all routed endpoints uniformly.
   # ---------------------------------------------------------------------------
 
@@ -183,7 +183,7 @@ Feature: Project API Security Baseline
   # NOTE: The original second security headers scenario tested ${baseUrl}/api/workspaces/product-team
   # which is a workspace endpoint (already covered in workspaces.security.feature).
   # It was removed because checkSecurityHeaders sends a bare GET without auth,
-  # and all project endpoints require API key authentication. The SecurityHeadersPlug
+  # and all project endpoints require API key authentication. The Perme8.Plugs.SecurityHeaders plug
   # is applied at the pipeline level, so the single projectShowEndpoint test above
   # is sufficient to verify headers are set for project API responses.
 
