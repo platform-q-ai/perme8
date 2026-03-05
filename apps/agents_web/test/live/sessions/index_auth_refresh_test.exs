@@ -10,7 +10,11 @@ defmodule AgentsWeb.SessionsLive.IndexAuthRefreshTest do
   - Async results correctly update per-task state
   """
 
-  use AgentsWeb.ConnCase, async: true
+  # Cannot be async because the task_status_changed handler triggers
+  # QueueManager and task refresh processes that need DB access via the
+  # Ecto sandbox. In async mode, those spawned processes cannot see the
+  # test's sandbox checkout, causing intermittent failures.
+  use AgentsWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
   import Jarga.AccountsFixtures
@@ -235,12 +239,17 @@ defmodule AgentsWeb.SessionsLive.IndexAuthRefreshTest do
 
       {:ok, lv, _html} = live(conn, ~p"/sessions")
 
-      # Simulate failure with auth error
-      Repo.get!(TaskSchema, task.id)
-      |> Ecto.Changeset.change(status: "failed", error: "Token refresh failed: 401")
-      |> Repo.update!()
+      # Update the DB with the auth failure error
+      updated =
+        Repo.get!(TaskSchema, task.id)
+        |> Ecto.Changeset.change(status: "failed", error: "Token refresh failed: 401")
+        |> Repo.update!()
 
+      # task_status_changed only carries task_id + status (not the error field).
+      # The error shows up after the async task refresh completes, so we send
+      # both messages to simulate the full flow without relying on async DB fetch.
       send(lv.pid, {:task_status_changed, task.id, "failed"})
+      send(lv.pid, {:task_refreshed, task.id, {:ok, updated}})
 
       html = render(lv)
       assert html =~ "Task failed"
