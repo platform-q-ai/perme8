@@ -1,20 +1,25 @@
 defmodule Agents.Test.AccountsFixtures do
   @moduledoc """
-  Test helpers for creating user entities via the `Identity` context.
+  Test helpers for creating user records for Agents tests.
 
-  This module replicates the user fixture logic from Jarga.AccountsFixtures
-  using only the Identity public API, avoiding cross-app test support dependencies.
+  Creates user records via raw SQL through `Identity.Repo` so they are visible
+  to both the Identity facade (which queries through `Identity.Repo`) and
+  Agents production code (which no longer has FK constraints to the users table,
+  so `Agents.Repo` doesn't need to see the user row to insert agents).
+
+  Follows the raw-SQL pattern from Notifications.Test.Fixtures.AccountsFixtures
+  but uses `Identity.Repo` instead of `Agents.Repo` because the Identity facade
+  is called at runtime.
   """
 
-  # Test fixture module - top-level boundary for test data creation
+  # Test fixture module - top-level boundary for test data creation.
+  # Uses Identity.Repo for user inserts so the Identity facade can see them.
+  # This is a test-only boundary dep -- production Agents.Infrastructure does
+  # NOT depend on Identity.Repo.
   use Boundary,
     top_level?: true,
-    deps: [Identity, Identity.Repo],
+    deps: [Identity.Repo],
     exports: []
-
-  alias Identity.Application.Services.PasswordService
-  alias Identity.Domain.Entities.User
-  alias Identity.Infrastructure.Schemas.UserSchema
 
   def unique_user_email, do: "user#{System.unique_integer([:positive])}@example.com"
   def valid_user_password, do: "hello world!"
@@ -22,57 +27,34 @@ defmodule Agents.Test.AccountsFixtures do
   def valid_user_attributes(attrs \\ %{}) do
     Enum.into(attrs, %{
       email: unique_user_email(),
-      password: valid_user_password(),
       first_name: "Test",
       last_name: "User"
     })
   end
 
-  def unconfirmed_user_fixture(attrs \\ %{}) do
-    user_attrs = valid_user_attributes(attrs)
-    password = Map.get(user_attrs, :password, valid_user_password())
+  @doc """
+  Creates a minimal confirmed user directly in the database via Identity.Repo.
 
-    # Register without password first
-    {:ok, user} =
-      user_attrs
-      |> Map.delete(:password)
-      |> Identity.register_user()
-
-    # Then directly set hashed_password in database using PasswordService
-    hashed_password = PasswordService.hash_password(password)
-
-    # Update user directly in database (test helper)
-    update_user_directly(user, hashed_password: hashed_password)
-  end
-
+  Returns a map with `:id` and `:email` fields -- enough for agent tests.
+  Uses raw SQL insert to avoid depending on Identity schemas.
+  """
   def user_fixture(attrs \\ %{}) do
-    user = unconfirmed_user_fixture(attrs)
+    attrs = valid_user_attributes(attrs)
+    id = Map.get(attrs, :id, Ecto.UUID.generate())
+    email = Map.get(attrs, :email, unique_user_email())
+    first_name = Map.get(attrs, :first_name, "Test")
+    last_name = Map.get(attrs, :last_name, "User")
+    now_utc = DateTime.utc_now() |> DateTime.truncate(:second)
+    now_naive = DateTime.to_naive(now_utc)
 
-    token =
-      extract_user_token(fn url ->
-        Identity.deliver_login_instructions(user, url)
-      end)
+    Identity.Repo.query!(
+      """
+      INSERT INTO users (id, email, first_name, last_name, confirmed_at, date_created, status)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      """,
+      [Ecto.UUID.dump!(id), email, first_name, last_name, now_utc, now_naive, "active"]
+    )
 
-    {:ok, {user, _expired_tokens}} =
-      Identity.login_user_by_magic_link(token)
-
-    user
-  end
-
-  def extract_user_token(fun) do
-    {:ok, captured_email} = fun.(&"[TOKEN]#{&1}[TOKEN]")
-    [_, token | _] = String.split(captured_email.text_body, "[TOKEN]")
-    token
-  end
-
-  # Private helper - updates user directly in database
-  defp update_user_directly(%User{} = user, attrs) do
-    updated_schema =
-      user
-      |> UserSchema.to_schema()
-      |> Ecto.Changeset.change(attrs)
-      |> Identity.Repo.update!()
-
-    User.from_schema(updated_schema)
+    %{id: id, email: email, first_name: first_name, last_name: last_name}
   end
 end

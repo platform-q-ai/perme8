@@ -1,5 +1,5 @@
 defmodule Agents.Application.UseCases.GetUserAgentTest do
-  use Jarga.DataCase, async: true
+  use Agents.DataCase, async: true
 
   alias Agents.Application.UseCases.GetUserAgent
   alias Agents.Infrastructure.Schemas.AgentSchema
@@ -9,7 +9,7 @@ defmodule Agents.Application.UseCases.GetUserAgentTest do
     user = AccountsFixtures.user_fixture()
 
     {:ok, agent} =
-      Identity.Repo.insert(
+      Agents.Repo.insert(
         AgentSchema.changeset(%AgentSchema{}, %{
           user_id: user.id,
           name: "Test Agent"

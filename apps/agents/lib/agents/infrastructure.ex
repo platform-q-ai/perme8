@@ -16,11 +16,11 @@ defmodule Agents.Infrastructure do
     deps: [
       Agents.Domain,
       Agents.Application,
+      Agents.Repo,
       # Cross-context dependencies (compile-time only; runtime-only
       # cross-app calls go through gateways and are whitelisted via
       # @compile {:no_warn_undefined, ...} in the gateway modules)
-      Identity,
-      Identity.Repo
+      Identity
     ],
     exports: [
       # Schemas

@@ -37,9 +37,11 @@ defmodule Agents.DataCase do
   @doc """
   Sets up the sandbox based on the test tags.
 
-  Checks out both Agents.Repo (sessions) and Identity.Repo (agents CRUD,
-  user fixtures) since both share the same database and agents tests
-  exercise code that uses either repo.
+  Agents.Repo handles all Agents-owned data (agents, workspace_agents, sessions).
+  Identity.Repo is also checked out because some Agents production code calls the
+  Identity facade (e.g. `Identity.get_user!/1`) which internally uses Identity.Repo.
+  Test fixtures create users/workspaces via raw SQL through Agents.Repo, so no
+  boundary dependency on Identity.Repo is needed.
   """
   def setup_sandbox(tags) do
     :ok = Sandbox.checkout(Agents.Repo)
