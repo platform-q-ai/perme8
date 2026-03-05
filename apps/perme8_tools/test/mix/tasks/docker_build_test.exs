@@ -27,11 +27,19 @@ defmodule Mix.Tasks.Docker.BuildTest do
       assert config.tag == "perme8-pi"
     end
 
+    test "accepts opencode-light as argument" do
+      assert {:ok, config} = Build.resolve_config(["opencode-light"])
+      assert config.image_name == "opencode-light"
+      assert config.image_path == "infra/opencode-light"
+      assert config.tag == "perme8-opencode-light"
+    end
+
     test "rejects unknown image names" do
       assert {:error, message} = Build.resolve_config(["unknown"])
       assert message =~ "Unknown image: unknown"
       assert message =~ "opencode"
       assert message =~ "pi"
+      assert message =~ "opencode-light"
     end
 
     test "--tag overrides default tag" do

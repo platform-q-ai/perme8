@@ -17,6 +17,7 @@ defmodule Agents.Sessions.Domain do
       Entities.QueueSnapshot,
       Entities.LaneEntry,
       Policies.TaskPolicy,
+      Policies.ImagePolicy,
       Policies.QueuePolicy,
       Policies.QueueEngine,
       Policies.RetryPolicy,

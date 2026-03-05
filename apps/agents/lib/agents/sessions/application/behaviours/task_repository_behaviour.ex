@@ -32,6 +32,8 @@ defmodule Agents.Sessions.Application.Behaviours.TaskRepositoryBehaviour do
 
   @callback count_running_tasks(user_id) :: non_neg_integer()
 
+  @callback count_running_heavyweight_tasks(user_id) :: non_neg_integer()
+
   @callback list_queued_tasks(user_id) :: [task]
 
   @callback list_awaiting_feedback_tasks(user_id) :: [task]

@@ -6,6 +6,7 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
   use GenServer
 
   alias Agents.Sessions.Application.SessionsConfig
+  alias Agents.Sessions.Domain.Policies.ImagePolicy
   alias Agents.Sessions.Domain.Events.{TaskDeprioritised, TaskPromoted}
   alias Agents.Sessions.Infrastructure.Adapters.DockerAdapter
   alias Agents.Sessions.Infrastructure.Repositories.TaskRepository
@@ -269,6 +270,12 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
   end
 
   defp promote_next_task(state) do
+    state
+    |> promote_heavyweight_tasks()
+    |> promote_light_image_tasks()
+  end
+
+  defp promote_heavyweight_tasks(state) do
     running_count = safe_count_running(state)
 
     if running_count >= state.concurrency_limit do
@@ -276,6 +283,18 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
     else
       do_promote_to_capacity(state, running_count)
     end
+  end
+
+  defp promote_light_image_tasks(state) do
+    state.task_repo.list_queued_tasks(state.user_id)
+    |> Enum.filter(fn task -> ImagePolicy.bypasses_queue?(task.image) end)
+    |> Enum.reduce(state, fn task, acc ->
+      if warm_ready_for_promotion?(task) do
+        promote_task(acc, task)
+      else
+        acc
+      end
+    end)
   end
 
   defp do_promote_to_capacity(state, running_count) do
@@ -454,7 +473,7 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
   end
 
   defp safe_count_running(state) do
-    state.task_repo.count_running_tasks(state.user_id)
+    state.task_repo.count_running_heavyweight_tasks(state.user_id)
   rescue
     e ->
       Logger.warning("QueueManager count_running failed: #{Exception.message(e)}")
@@ -526,6 +545,7 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
   defp youngest_active_task(state) do
     state.task_repo.list_tasks_for_user(state.user_id, limit: 200)
     |> Enum.filter(&(&1.status in @active_statuses))
+    |> Enum.reject(&ImagePolicy.bypasses_queue?(&1.image))
     |> Enum.sort_by(&latest_timestamp/1, :desc)
     |> List.first()
   rescue

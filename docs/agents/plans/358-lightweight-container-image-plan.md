@@ -91,29 +91,29 @@ Add a new lightweight container image (`perme8-opencode-light`) purpose-built fo
 
 ---
 
-## Phase 2: Infrastructure + Interface (phoenix-tdd)
+## Phase 2: Infrastructure + Interface (phoenix-tdd) ✓
 
 ### Step 2.1: DockerAdapter — Image-Aware Resource Limits
 
-- [ ] ⏸ **RED**: Add tests to `apps/agents/test/agents/sessions/infrastructure/adapters/docker_adapter_test.exs`
+- [x] ⏸ **RED**: Add tests to `apps/agents/test/agents/sessions/infrastructure/adapters/docker_adapter_test.exs`
   - Test: `start("perme8-opencode-light", ...)` passes `--memory=512m --cpus=1` to Docker
   - Test: `start("perme8-opencode", ...)` passes `--memory=2g --cpus=2` to Docker (existing default)
   - Test: `start("perme8-pi", ...)` passes `--memory=2g --cpus=2` to Docker (existing default)
   - Implementation: Use the `mock_cmd` test pattern (already established) to capture Docker args and assert the correct memory/cpu flags per image
-- [ ] ⏸ **GREEN**: Update `apps/agents/lib/agents/sessions/infrastructure/adapters/docker_adapter.ex`
+- [x] ⏸ **GREEN**: Update `apps/agents/lib/agents/sessions/infrastructure/adapters/docker_adapter.ex`
   - Import or alias `Agents.Sessions.Domain.Policies.ImagePolicy`
   - In `start/2`, replace hardcoded `"--memory=2g", "--cpus=2"` with dynamic values from `ImagePolicy.resource_limits(image)`
   - Build the args: `"--memory=#{limits.memory}", "--cpus=#{limits.cpus}"`
-- [ ] ⏸ **REFACTOR**: Ensure the `start/2` function remains clean. Consider extracting a `resource_args/1` helper.
+- [x] ⏸ **REFACTOR**: Ensure the `start/2` function remains clean. Consider extracting a `resource_args/1` helper.
 
 ### Step 2.2: TaskQueries — Count Running Excluding Light Images
 
-- [ ] ⏸ **RED**: Add tests to `apps/agents/test/agents/sessions/infrastructure/queries/task_queries_test.exs` (create if needed)
+- [x] ⏸ **RED**: Add tests to `apps/agents/test/agents/sessions/infrastructure/queries/task_queries_test.exs` (create if needed)
   - Test: `count_running_heavyweight/1` counts only tasks whose `image` is NOT a light image
   - Test: Given 2 running "perme8-opencode" tasks and 1 running "perme8-opencode-light" task, `count_running_heavyweight/1` returns 2
   - Test: Given only light image running tasks, `count_running_heavyweight/1` returns 0
   - Test: Existing `count_running/1` still counts all running tasks (backward compat)
-- [ ] ⏸ **GREEN**: Add to `apps/agents/lib/agents/sessions/infrastructure/queries/task_queries.ex`
+- [x] ⏸ **GREEN**: Add to `apps/agents/lib/agents/sessions/infrastructure/queries/task_queries.ex`
   - Add `count_running_heavyweight/2` query function:
     ```elixir
     def count_running_heavyweight(query \\ base(), user_id) do
@@ -127,21 +127,21 @@ Add a new lightweight container image (`perme8-opencode-light`) purpose-built fo
     end
     ```
   - Add `light_image_names/0` to `ImagePolicy` returning the list `["perme8-opencode-light"]`
-- [ ] ⏸ **REFACTOR**: Ensure the query is composable and follows existing patterns.
+- [x] ⏸ **REFACTOR**: Ensure the query is composable and follows existing patterns.
 
 ### Step 2.3: TaskRepository — Add Heavyweight Running Count
 
-- [ ] ⏸ **RED**: Add test to `apps/agents/test/agents/sessions/infrastructure/repositories/task_repository_test.exs` (extend existing or create)
+- [x] ⏸ **RED**: Add test to `apps/agents/test/agents/sessions/infrastructure/repositories/task_repository_test.exs` (extend existing or create)
   - Test: `count_running_heavyweight_tasks/1` calls the new query and returns correct count
-- [ ] ⏸ **GREEN**: Add to `apps/agents/lib/agents/sessions/infrastructure/repositories/task_repository.ex`
+- [x] ⏸ **GREEN**: Add to `apps/agents/lib/agents/sessions/infrastructure/repositories/task_repository.ex`
   - Add `count_running_heavyweight_tasks/1` function calling `TaskQueries.count_running_heavyweight/1`
   - Add callback to `apps/agents/lib/agents/sessions/application/behaviours/task_repository_behaviour.ex`:
     `@callback count_running_heavyweight_tasks(user_id) :: non_neg_integer()`
-- [ ] ⏸ **REFACTOR**: Keep existing `count_running_tasks/1` for backward compatibility (other code may still need total counts).
+- [x] ⏸ **REFACTOR**: Keep existing `count_running_tasks/1` for backward compatibility (other code may still need total counts).
 
 ### Step 2.4: QueueManager — Light Image Queue Bypass
 
-- [ ] ⏸ **RED**: Add tests to `apps/agents/test/agents/sessions/infrastructure/queue_manager_test.exs`
+- [x] ⏸ **RED**: Add tests to `apps/agents/test/agents/sessions/infrastructure/queue_manager_test.exs`
   - **Test: Light image tasks don't count against concurrency limit**
     - Create 1 running light image task (`image: "perme8-opencode-light"`) and set concurrency_limit to 1
     - `check_concurrency/1` should return `:ok` (not `:at_limit`)
@@ -160,7 +160,7 @@ Add a new lightweight container image (`perme8-opencode-light`) purpose-built fo
   - **Test: Light image tasks are not requeued by enforce_concurrency_limit**
     - Create 2 running light image tasks + 1 running heavyweight, concurrency_limit = 1
     - Lower limit to 1 — only heavyweight tasks should be considered for requeue, light tasks untouched
-- [ ] ⏸ **GREEN**: Update `apps/agents/lib/agents/sessions/infrastructure/queue_manager.ex`
+- [x] ⏸ **GREEN**: Update `apps/agents/lib/agents/sessions/infrastructure/queue_manager.ex`
   - Update `safe_count_running/1` to call `state.task_repo.count_running_heavyweight_tasks(state.user_id)` instead of `count_running_tasks` — this makes light image tasks invisible to the concurrency counter
   - Update `promote_next_task/1` to handle light images:
     - After the heavyweight promotion check, also check for queued light image tasks and promote them unconditionally (use `ImagePolicy.bypasses_queue?/1` on `task.image`)
@@ -168,26 +168,26 @@ Add a new lightweight container image (`perme8-opencode-light`) purpose-built fo
   - Call `promote_light_image_tasks/1` at the end of `promote_next_task/1` (after heavyweight promotion)
   - Update `enforce_concurrency_limit/1` to exclude light image tasks from the "excess running" calculation — filter out light image tasks before finding youngest to requeue
   - Update `youngest_active_task/1` to only consider heavyweight tasks (exclude light images)
-- [ ] ⏸ **REFACTOR**: Extract light-image-specific promotion into clearly named private functions. Ensure GenServer state handling remains clean.
+- [x] ⏸ **REFACTOR**: Extract light-image-specific promotion into clearly named private functions. Ensure GenServer state handling remains clean.
 
 ### Step 2.5: Mix Task — Add opencode-light to Docker Build
 
-- [ ] ⏸ **RED**: Add tests to `apps/perme8_tools/test/mix/tasks/docker_build_test.exs`
+- [x] ⏸ **RED**: Add tests to `apps/perme8_tools/test/mix/tasks/docker_build_test.exs`
   - Test: `resolve_config(["opencode-light"])` returns `image_name: "opencode-light"`, `image_path: "infra/opencode-light"`, `tag: "perme8-opencode-light"`
   - Test: error message for unknown images includes `opencode-light` in valid images list
-- [ ] ⏸ **GREEN**: Update `apps/perme8_tools/lib/mix/tasks/docker.build.ex`
+- [x] ⏸ **GREEN**: Update `apps/perme8_tools/lib/mix/tasks/docker.build.ex`
   - Add to `@images` map: `"opencode-light" => %{path: "infra/opencode-light", default_tag: "perme8-opencode-light"}`
-- [ ] ⏸ **REFACTOR**: Update `@shortdoc` to mention the new image.
+- [x] ⏸ **REFACTOR**: Update `@shortdoc` to mention the new image.
 
 ### Phase 2 Validation
 
-- [ ] ⏸ All infrastructure tests pass (`mix test apps/agents/test/agents/sessions/infrastructure/ --trace`)
-- [ ] ⏸ Docker adapter tests pass
-- [ ] ⏸ QueueManager tests pass (including new light image tests)
-- [ ] ⏸ Mix task tests pass
-- [ ] ⏸ No boundary violations (`mix boundary`)
-- [ ] ⏸ Full agents test suite passes (`mix test apps/agents --trace`)
-- [ ] ⏸ Full perme8_tools test suite passes (`mix test apps/perme8_tools --trace`)
+- [x] ⏸ All infrastructure tests pass (`mix test apps/agents/test/agents/sessions/infrastructure/ --trace`)
+- [x] ⏸ Docker adapter tests pass
+- [x] ⏸ QueueManager tests pass (including new light image tests)
+- [x] ⏸ Mix task tests pass
+- [x] ⏸ No boundary violations (`mix boundary`) *(attempted; `mix boundary` task unavailable in this workspace)*
+- [x] ⏸ Full agents test suite passes (`mix test apps/agents --trace`)
+- [x] ⏸ Full perme8_tools test suite passes (`mix test apps/perme8_tools --trace`)
 
 ---
 

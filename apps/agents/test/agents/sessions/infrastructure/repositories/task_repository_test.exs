@@ -135,4 +135,14 @@ defmodule Agents.Sessions.Infrastructure.Repositories.TaskRepositoryTest do
       assert hd(tasks).instruction == "My task"
     end
   end
+
+  describe "count_running_heavyweight_tasks/1" do
+    test "returns count excluding light image tasks" do
+      user = user_fixture()
+      create_task(user, %{status: "running", image: "perme8-opencode"})
+      create_task(user, %{status: "running", image: "perme8-opencode-light"})
+
+      assert TaskRepository.count_running_heavyweight_tasks(user.id) == 1
+    end
+  end
 end
