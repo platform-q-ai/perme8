@@ -119,6 +119,7 @@ Use this rule of thumb:
 
 - **Execute Plan** -- executes an existing phased plan end-to-end (implementation, commits, PR lifecycle, CI, review loop).
 - **Commit and PR** -- handles branch/commit/push/PR mechanics when implementation is already done or managed elsewhere.
+- **Handle Merge Conflict** -- resolves merge conflicts on a PR branch by understanding the PR's purpose, linked ticket, and PRD. Analyses both sides of each conflict to determine intent and recency, and produces a resolution preserving all new functionality in the codebase's current style.
 - **Finalize** -- runs quality gates before handoff: tests/checks, documentation sync, acceptance reconciliation, and follow-up issues.
 
 #### Review and Feedback
@@ -139,6 +140,7 @@ Use this rule of thumb:
 - **Research-only request:** `CRUD Read` (delegates to `explore`).
 - **Plan-first request:** `prd` -> `architect` -> `Execute Plan`.
 - **PR quality loop:** `Review PR` -> `Address PR Comments` -> `Finalize`.
+- **PR with merge conflicts:** `Handle Merge Conflict` (then resume the normal PR flow).
 - **BDD-first delivery:** `Generate Exo-BDD Features`, then implement with `phoenix-tdd`/`typescript-tdd` as appropriate.
 
 ### Guardrails for Agent/Skill Use
