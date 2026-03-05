@@ -790,20 +790,40 @@ defmodule AgentsWeb.SessionsLive.Index do
 
   @impl true
   def handle_info({:task_status_changed, task_id, status}, socket) do
-    updated_task = maybe_update_task_status(socket.assigns.current_task, task_id, status, socket)
+    current_task = socket.assigns.current_task
+    is_current_task = is_map(current_task) and current_task.id == task_id
+
+    updated_current_task =
+      if is_current_task do
+        Map.put(current_task, :status, status)
+      else
+        current_task
+      end
+
+    # Build a minimal task map for the changed task to update sessions/snapshot
+    changed_task =
+      if is_current_task do
+        updated_current_task
+      else
+        # Find the task in the snapshot and update its status
+        snapshot_task =
+          (socket.assigns[:tasks_snapshot] || [])
+          |> Enum.find(&(&1.id == task_id))
+
+        if snapshot_task do
+          Map.put(snapshot_task, :status, status)
+        else
+          %{id: task_id, status: status}
+        end
+      end
 
     cid =
-      if(updated_task && updated_task.container_id,
-        do: updated_task.container_id,
+      if(is_current_task && updated_current_task && updated_current_task.container_id,
+        do: updated_current_task.container_id,
         else: socket.assigns.active_container_id
       )
 
-    sessions =
-      if is_map(updated_task) do
-        upsert_session_from_task(socket.assigns.sessions, updated_task)
-      else
-        socket.assigns.sessions
-      end
+    sessions = upsert_session_from_task(socket.assigns.sessions, changed_task)
 
     sticky_warm_task_ids =
       derive_sticky_warm_task_ids(
@@ -812,12 +832,12 @@ defmodule AgentsWeb.SessionsLive.Index do
         socket.assigns[:sticky_warm_task_ids] || MapSet.new()
       )
 
-    tasks_snapshot = upsert_task_snapshot(socket.assigns[:tasks_snapshot], updated_task)
+    tasks_snapshot = upsert_task_snapshot(socket.assigns[:tasks_snapshot], changed_task)
     tickets = re_enrich_tickets(socket.assigns.tickets, tasks_snapshot)
 
     socket =
       socket
-      |> assign(:current_task, updated_task)
+      |> assign(:current_task, updated_current_task)
       |> assign(:active_container_id, cid)
       |> assign(:sessions, sessions)
       |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)
@@ -1045,10 +1065,17 @@ defmodule AgentsWeb.SessionsLive.Index do
           socket.assigns[:sticky_warm_task_ids] || MapSet.new()
         )
 
+      tickets =
+        re_enrich_tickets(
+          socket.assigns.tickets,
+          socket.assigns[:tasks_snapshot] || []
+        )
+
       {:noreply,
        socket
        |> assign(:queue_state, queue_state)
-       |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)}
+       |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)
+       |> assign(:tickets, tickets)}
     else
       {:noreply, socket}
     end
@@ -1650,17 +1677,6 @@ defmodule AgentsWeb.SessionsLive.Index do
       {:error, _reason} ->
         {:noreply, put_flash(socket, :error, "Failed to cancel task")}
     end
-  end
-
-  defp maybe_update_task_status(nil, _task_id, _status, _socket), do: nil
-
-  defp maybe_update_task_status(%{id: id} = task, task_id, _status, _socket) when id != task_id,
-    do: task
-
-  defp maybe_update_task_status(task, task_id, status, socket) do
-    _socket = socket
-    _task_id = task_id
-    Map.put(task, :status, status)
   end
 
   defp maybe_sync_status_from_session_event(
