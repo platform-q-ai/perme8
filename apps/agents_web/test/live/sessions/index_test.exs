@@ -2425,4 +2425,97 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       refute html =~ ~s(data-testid="ticket-context-panel")
     end
   end
+
+  describe "start ticket session" do
+    setup %{conn: conn} do
+      user = user_fixture()
+      %{conn: log_in_user(conn, user), user: user}
+    end
+
+    test "play button is shown on idle ticket cards", %{conn: conn, user: user} do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Existing session",
+        container_id: "c-play-idle",
+        status: "completed"
+      })
+
+      {:ok, _ticket} =
+        Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository.sync_remote_ticket(%{
+          number: 600,
+          title: "Idle ticket",
+          status: "Backlog",
+          priority: "Need",
+          size: "M",
+          labels: []
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+      send(lv.pid, {:tickets_synced, []})
+
+      html = render(lv)
+      assert html =~ ~s(data-testid="start-ticket-session-600")
+    end
+
+    test "play button is hidden on tickets with running sessions", %{conn: conn, user: user} do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Work on #601",
+        container_id: "c-play-running",
+        status: "running"
+      })
+
+      {:ok, _ticket} =
+        Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository.sync_remote_ticket(%{
+          number: 601,
+          title: "Running ticket",
+          status: "Backlog",
+          priority: "Need",
+          size: "M",
+          labels: []
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+      send(lv.pid, {:tickets_synced, []})
+
+      html = render(lv)
+      refute html =~ ~s(data-testid="start-ticket-session-601")
+    end
+
+    test "clicking play button triggers session creation without error", %{
+      conn: conn,
+      user: user
+    } do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Existing session",
+        container_id: "c-play-start",
+        status: "completed"
+      })
+
+      {:ok, _ticket} =
+        Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository.sync_remote_ticket(%{
+          number: 602,
+          title: "Ticket to start",
+          status: "Backlog",
+          priority: "Need",
+          size: "M",
+          labels: []
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+      send(lv.pid, {:tickets_synced, []})
+
+      # Clicking the play button should not crash the LiveView — it delegates
+      # to run_new_task with the ticket instruction. The spawned process may
+      # fail in the test sandbox but the LiveView survives.
+      lv
+      |> element(~s([data-testid="start-ticket-session-602"]))
+      |> render_click()
+
+      # The LiveView should still be alive and rendering
+      html = render(lv)
+      assert html =~ "Ticket to start"
+    end
+  end
 end
