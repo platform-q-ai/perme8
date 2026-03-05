@@ -25,6 +25,7 @@ defmodule EntityRelationshipManager.SchemaController do
 
   def update(conn, params) do
     workspace_id = conn.assigns.workspace_id
+    actor_id = conn.assigns.current_user.id
 
     attrs = %{
       entity_types: params["entity_types"] || [],
@@ -32,7 +33,7 @@ defmodule EntityRelationshipManager.SchemaController do
       version: params["version"]
     }
 
-    case EntityRelationshipManager.upsert_schema(workspace_id, attrs) do
+    case EntityRelationshipManager.upsert_schema(workspace_id, attrs, actor_id) do
       {:ok, schema} ->
         conn
         |> put_status(:ok)

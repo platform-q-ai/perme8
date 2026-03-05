@@ -10,6 +10,7 @@ defmodule EntityRelationshipManager.EdgeController do
 
   def create(conn, params) do
     workspace_id = conn.assigns.workspace_id
+    actor_id = conn.assigns.current_user.id
 
     attrs = %{
       type: params["type"],
@@ -18,7 +19,7 @@ defmodule EntityRelationshipManager.EdgeController do
       properties: params["properties"] || %{}
     }
 
-    case EntityRelationshipManager.create_edge(workspace_id, attrs) do
+    case EntityRelationshipManager.create_edge(workspace_id, attrs, actor_id) do
       {:ok, edge} ->
         conn
         |> put_status(:created)
@@ -106,8 +107,9 @@ defmodule EntityRelationshipManager.EdgeController do
 
   def delete(conn, %{"id" => id}) do
     workspace_id = conn.assigns.workspace_id
+    actor_id = conn.assigns.current_user.id
 
-    case EntityRelationshipManager.delete_edge(workspace_id, id) do
+    case EntityRelationshipManager.delete_edge(workspace_id, id, actor_id) do
       {:ok, edge} ->
         conn
         |> put_status(:ok)

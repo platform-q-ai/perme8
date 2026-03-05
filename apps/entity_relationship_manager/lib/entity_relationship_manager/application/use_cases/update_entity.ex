@@ -23,7 +23,7 @@ defmodule EntityRelationshipManager.Application.UseCases.UpdateEntity do
   """
   @default_event_bus Perme8.Events.EventBus
 
-  def execute(workspace_id, entity_id, properties, opts \\ []) do
+  def execute(workspace_id, entity_id, properties, actor_id, opts \\ []) do
     schema_repo = Keyword.get(opts, :schema_repo, RepoConfig.schema_repo())
     graph_repo = Keyword.get(opts, :graph_repo, RepoConfig.graph_repo())
     event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
@@ -33,7 +33,7 @@ defmodule EntityRelationshipManager.Application.UseCases.UpdateEntity do
          {:ok, existing} <- graph_repo.get_entity(workspace_id, entity_id, []),
          :ok <- validate_properties(schema, existing.type, properties),
          {:ok, updated} <- graph_repo.update_entity(workspace_id, entity_id, properties) do
-      emit_entity_updated_event(updated, workspace_id, properties, event_bus)
+      emit_entity_updated_event(updated, workspace_id, properties, actor_id, event_bus)
       {:ok, updated}
     end
   end
@@ -50,12 +50,11 @@ defmodule EntityRelationshipManager.Application.UseCases.UpdateEntity do
     SchemaValidationPolicy.validate_entity_against_schema(entity, schema, type)
   end
 
-  # Part 2: thread actor_id from controller layer for audit trail attribution
-  defp emit_entity_updated_event(entity, workspace_id, changes, event_bus) do
+  defp emit_entity_updated_event(entity, workspace_id, changes, actor_id, event_bus) do
     event =
       EntityUpdated.new(%{
         aggregate_id: entity.id,
-        actor_id: nil,
+        actor_id: actor_id,
         entity_id: entity.id,
         workspace_id: workspace_id,
         changes: changes

@@ -18,7 +18,7 @@ defmodule EntityRelationshipManager.Application.UseCases.CreateEntityTest do
     :ok
   end
 
-  describe "execute/3 - event emission" do
+  describe "execute/4 - event emission" do
     test "emits EntityCreated event via event_bus" do
       schema = schema_definition()
       created_entity = entity()
@@ -33,6 +33,7 @@ defmodule EntityRelationshipManager.Application.UseCases.CreateEntityTest do
                CreateEntity.execute(
                  workspace_id(),
                  %{type: "Person", properties: %{"name" => "Alice"}},
+                 valid_uuid(),
                  schema_repo: SchemaRepositoryMock,
                  graph_repo: GraphRepositoryMock,
                  event_bus: TestEventBus
@@ -43,10 +44,10 @@ defmodule EntityRelationshipManager.Application.UseCases.CreateEntityTest do
       assert event.workspace_id == workspace_id()
       assert event.entity_type == "Person"
       assert event.aggregate_id == created_entity.id
+      assert event.actor_id == valid_uuid()
     end
 
     test "does not emit event when creation fails" do
-
       SchemaRepositoryMock
       |> expect(:get_schema, fn _ws_id -> {:error, :not_found} end)
 
@@ -54,6 +55,7 @@ defmodule EntityRelationshipManager.Application.UseCases.CreateEntityTest do
                CreateEntity.execute(
                  workspace_id(),
                  %{type: "Person", properties: %{"name" => "Alice"}},
+                 valid_uuid(),
                  schema_repo: SchemaRepositoryMock,
                  graph_repo: GraphRepositoryMock,
                  event_bus: TestEventBus
@@ -70,6 +72,7 @@ defmodule EntityRelationshipManager.Application.UseCases.CreateEntityTest do
                CreateEntity.execute(
                  workspace_id(),
                  %{type: "Person", properties: %{"name" => "Alice"}},
+                 valid_uuid(),
                  schema_repo: SchemaRepositoryMock,
                  graph_repo: GraphRepositoryMock
                )
@@ -85,6 +88,7 @@ defmodule EntityRelationshipManager.Application.UseCases.CreateEntityTest do
                CreateEntity.execute(
                  workspace_id(),
                  %{type: "NonExistent", properties: %{}},
+                 valid_uuid(),
                  schema_repo: SchemaRepositoryMock,
                  graph_repo: GraphRepositoryMock
                )
@@ -103,6 +107,7 @@ defmodule EntityRelationshipManager.Application.UseCases.CreateEntityTest do
                CreateEntity.execute(
                  workspace_id(),
                  %{type: "Person", properties: %{}},
+                 valid_uuid(),
                  schema_repo: SchemaRepositoryMock,
                  graph_repo: GraphRepositoryMock
                )
@@ -116,6 +121,7 @@ defmodule EntityRelationshipManager.Application.UseCases.CreateEntityTest do
                CreateEntity.execute(
                  workspace_id(),
                  %{type: "123invalid", properties: %{}},
+                 valid_uuid(),
                  schema_repo: SchemaRepositoryMock,
                  graph_repo: GraphRepositoryMock
                )

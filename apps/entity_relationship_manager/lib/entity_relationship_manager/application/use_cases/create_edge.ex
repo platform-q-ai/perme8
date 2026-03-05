@@ -29,7 +29,7 @@ defmodule EntityRelationshipManager.Application.UseCases.CreateEdge do
   """
   @default_event_bus Perme8.Events.EventBus
 
-  def execute(workspace_id, attrs, opts \\ []) do
+  def execute(workspace_id, attrs, actor_id, opts \\ []) do
     schema_repo = Keyword.get(opts, :schema_repo, RepoConfig.schema_repo())
     graph_repo = Keyword.get(opts, :graph_repo, RepoConfig.graph_repo())
     event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
@@ -46,7 +46,7 @@ defmodule EntityRelationshipManager.Application.UseCases.CreateEdge do
          :ok <- validate_edge(schema, type, properties),
          {:ok, edge} <-
            graph_repo.create_edge(workspace_id, type, source_id, target_id, properties) do
-      emit_edge_created_event(edge, workspace_id, source_id, target_id, type, event_bus)
+      emit_edge_created_event(edge, workspace_id, source_id, target_id, type, actor_id, event_bus)
       {:ok, edge}
     end
   end
@@ -63,12 +63,19 @@ defmodule EntityRelationshipManager.Application.UseCases.CreateEdge do
     SchemaValidationPolicy.validate_edge_against_schema(edge, schema, type)
   end
 
-  # Part 2: thread actor_id from controller layer for audit trail attribution
-  defp emit_edge_created_event(edge, workspace_id, source_id, target_id, type, event_bus) do
+  defp emit_edge_created_event(
+         edge,
+         workspace_id,
+         source_id,
+         target_id,
+         type,
+         actor_id,
+         event_bus
+       ) do
     event =
       EdgeCreated.new(%{
         aggregate_id: edge.id,
-        actor_id: nil,
+        actor_id: actor_id,
         edge_id: edge.id,
         workspace_id: workspace_id,
         source_id: source_id,
