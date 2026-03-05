@@ -92,14 +92,17 @@
           end)
         end %>
 
-        <%!-- Non-ticket sessions: triage (completed/cancelled) and build --%>
+        <%!-- Non-ticket sessions: triage (completed/cancelled/awaiting_feedback) and build --%>
         <% non_ticket_triage_sessions =
           @sessions
           |> Enum.filter(fn s ->
-            s.latest_status in ["completed", "cancelled"] and
+            s.latest_status in ["completed", "cancelled", "awaiting_feedback"] and
               is_nil(ticket_for_session.(s))
           end)
-          |> Enum.sort_by(&(-latest_at_unix(&1))) %>
+          |> Enum.sort_by(fn s ->
+            priority = if s.latest_status == "awaiting_feedback", do: 0, else: 1
+            {priority, -latest_at_unix(s)}
+          end) %>
 
         <% non_ticket_failed_sessions =
           @sessions

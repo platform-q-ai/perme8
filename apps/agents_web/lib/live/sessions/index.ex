@@ -82,7 +82,7 @@ defmodule AgentsWeb.SessionsLive.Index do
      |> assign(:active_ticket_number, active_ticket_number)
      |> assign(:current_task, current_task)
      |> assign(:composing_new, selected_container_id == nil)
-     |> assign(:tasks_snapshot, nil)
+     |> assign(:tasks_snapshot, tasks)
      |> assign_session_state()
      |> EventProcessor.maybe_load_cached_output(current_task)
      |> EventProcessor.maybe_load_pending_question(current_task)
@@ -1959,11 +1959,48 @@ defmodule AgentsWeb.SessionsLive.Index do
 
     merged =
       case existing do
-        [first | _] -> Map.merge(first, session_update)
-        [] -> session_update
+        [first | _] ->
+          # Only overwrite fields that the task actually provides.
+          # This prevents minimal task maps (e.g. from a status-only update)
+          # from clobbering real session data with defaults.
+          safe_update = drop_default_fields(session_update, task)
+          Map.merge(first, safe_update)
+
+        [] ->
+          session_update
       end
 
     sort_sessions_for_sidebar([merged | rest])
+  end
+
+  # When the task map is minimal (status-only update), only carry forward
+  # the fields it actually has — don't let build_session_from_task defaults
+  # overwrite real session data.
+  defp drop_default_fields(session_update, task) do
+    fields_to_keep =
+      [:latest_status, :latest_task_id, :latest_error, :latest_at]
+
+    # Only include container_id if the task actually has one
+    fields_to_keep =
+      if is_binary(Map.get(task, :container_id)) and Map.get(task, :container_id) != "",
+        do: [:container_id | fields_to_keep],
+        else: fields_to_keep
+
+    # Only include title/image/timestamps if the task has real instruction data
+    fields_to_keep =
+      if Map.has_key?(task, :instruction),
+        do: [
+          :title,
+          :image,
+          :created_at,
+          :started_at,
+          :completed_at,
+          :session_summary,
+          :todo_items | fields_to_keep
+        ],
+        else: fields_to_keep
+
+    Map.take(session_update, fields_to_keep)
   end
 
   defp build_session_from_task(task, task_id, task_container_id) do
