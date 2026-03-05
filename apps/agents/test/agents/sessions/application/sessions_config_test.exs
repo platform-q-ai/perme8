@@ -53,4 +53,23 @@ defmodule Agents.Sessions.Application.SessionsConfigTest do
       assert SessionsConfig.default_warm_cache_limit() == 2
     end
   end
+
+  describe "available_images/0" do
+    test "includes OpenCode Light image" do
+      images = SessionsConfig.available_images()
+      assert Enum.any?(images, &(&1.name == "perme8-opencode-light"))
+    end
+
+    test "includes all three standard images" do
+      images = SessionsConfig.available_images()
+      names = Enum.map(images, & &1.name)
+      assert "perme8-opencode" in names
+      assert "perme8-opencode-light" in names
+      assert "perme8-pi" in names
+    end
+
+    test "returns list of 3 images" do
+      assert length(SessionsConfig.available_images()) == 3
+    end
+  end
 end
