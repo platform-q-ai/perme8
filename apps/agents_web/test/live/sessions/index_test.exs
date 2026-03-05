@@ -7,6 +7,7 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
   import Ecto.Query
 
   alias Agents.Sessions.Infrastructure.Schemas.TaskSchema
+  alias Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository
   alias Agents.Repo
 
   defmodule FakeTaskRunner do
@@ -1492,7 +1493,7 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       })
 
       {:ok, _ticket} =
-        Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository.sync_remote_ticket(%{
+        ProjectTicketRepository.sync_remote_ticket(%{
           number: 123,
           title: "Linked ticket",
           status: "Ready",
@@ -1548,7 +1549,7 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       })
 
       {:ok, _ticket} =
-        Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository.sync_remote_ticket(%{
+        ProjectTicketRepository.sync_remote_ticket(%{
           number: 123,
           title: "Ticket selected from session context",
           status: "Ready",
@@ -2316,7 +2317,7 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
 
       # Insert ticket into DB
       {:ok, _ticket} =
-        Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository.sync_remote_ticket(%{
+        ProjectTicketRepository.sync_remote_ticket(%{
           number: 555,
           title: "Ticket to close",
           status: "Backlog",
@@ -2356,11 +2357,9 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       refute html =~ ~s(data-testid="triage-ticket-item-555")
 
       # Ticket should be removed from the database
-      assert Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository.list_by_statuses(
-               [
-                 "Backlog"
-               ]
-             ) == []
+      assert ProjectTicketRepository.list_by_statuses([
+               "Backlog"
+             ]) == []
     end
 
     test "close_ticket switches to chat tab when viewing the closed ticket", %{
@@ -2375,7 +2374,7 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       })
 
       {:ok, _ticket} =
-        Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository.sync_remote_ticket(%{
+        ProjectTicketRepository.sync_remote_ticket(%{
           number: 556,
           title: "Ticket for tab switch",
           status: "Backlog",
@@ -2422,7 +2421,7 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       })
 
       {:ok, _ticket} =
-        Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository.sync_remote_ticket(%{
+        ProjectTicketRepository.sync_remote_ticket(%{
           number: 600,
           title: "Idle ticket",
           status: "Backlog",
@@ -2447,7 +2446,7 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       })
 
       {:ok, _ticket} =
-        Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository.sync_remote_ticket(%{
+        ProjectTicketRepository.sync_remote_ticket(%{
           number: 601,
           title: "Running ticket",
           status: "Backlog",
@@ -2475,7 +2474,7 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       })
 
       {:ok, _ticket} =
-        Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository.sync_remote_ticket(%{
+        ProjectTicketRepository.sync_remote_ticket(%{
           number: 602,
           title: "Ticket to start",
           status: "Backlog",
@@ -2519,7 +2518,7 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
         })
 
       {:ok, _ticket} =
-        Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository.sync_remote_ticket(%{
+        ProjectTicketRepository.sync_remote_ticket(%{
           number: 700,
           title: "Live update ticket",
           status: "Backlog",
@@ -2558,7 +2557,7 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
         })
 
       {:ok, _ticket} =
-        Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository.sync_remote_ticket(%{
+        ProjectTicketRepository.sync_remote_ticket(%{
           number: 701,
           title: "Completing ticket",
           status: "Backlog",
@@ -2595,7 +2594,7 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
         })
 
       {:ok, _ticket} =
-        Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository.sync_remote_ticket(%{
+        ProjectTicketRepository.sync_remote_ticket(%{
           number: 702,
           title: "Failing ticket",
           status: "Backlog",
@@ -2630,7 +2629,7 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
         })
 
       {:ok, _ticket} =
-        Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository.sync_remote_ticket(%{
+        ProjectTicketRepository.sync_remote_ticket(%{
           number: 703,
           title: "Cancelled ticket",
           status: "Backlog",
@@ -2668,7 +2667,7 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       })
 
       {:ok, _ticket} =
-        Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository.sync_remote_ticket(%{
+        ProjectTicketRepository.sync_remote_ticket(%{
           number: 800,
           title: "Idle triage ticket",
           status: "Backlog",
@@ -2697,7 +2696,7 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
         })
 
       {:ok, _ticket} =
-        Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository.sync_remote_ticket(%{
+        ProjectTicketRepository.sync_remote_ticket(%{
           number: 801,
           title: "Running build ticket",
           status: "Backlog",
@@ -2732,7 +2731,7 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
         })
 
       {:ok, _ticket} =
-        Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository.sync_remote_ticket(%{
+        ProjectTicketRepository.sync_remote_ticket(%{
           number: 802,
           title: "Completing build ticket",
           status: "Backlog",
@@ -2770,7 +2769,7 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
         })
 
       {:ok, _ticket} =
-        Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository.sync_remote_ticket(%{
+        ProjectTicketRepository.sync_remote_ticket(%{
           number: 803,
           title: "Failing build ticket",
           status: "Backlog",
@@ -2802,7 +2801,7 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       })
 
       {:ok, _ticket} =
-        Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository.sync_remote_ticket(%{
+        ProjectTicketRepository.sync_remote_ticket(%{
           number: 804,
           title: "Queued build ticket",
           status: "Backlog",
@@ -2828,7 +2827,7 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       })
 
       {:ok, _ticket} =
-        Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository.sync_remote_ticket(%{
+        ProjectTicketRepository.sync_remote_ticket(%{
           number: 805,
           title: "Ticket to close",
           status: "Backlog",

@@ -8,6 +8,11 @@ defmodule Agents.OTPApp do
   """
   use Application
 
+  alias Agents.Sessions.Infrastructure.OrphanRecovery
+  alias Agents.Sessions.Infrastructure.QueueManagerSupervisor
+  alias Agents.Sessions.Infrastructure.TaskRunnerSupervisor
+  alias Agents.Sessions.Infrastructure.TicketSyncServer
+
   @impl true
   def start(_type, _args) do
     children =
@@ -18,10 +23,10 @@ defmodule Agents.OTPApp do
         {Registry, keys: :unique, name: Agents.Sessions.QueueRegistry},
         # Recover tasks orphaned by a previous server restart before starting
         # the session infrastructure (TaskRunnerSupervisor, QueueManager, etc.).
-        {Task, fn -> Agents.Sessions.Infrastructure.OrphanRecovery.recover_orphaned_tasks() end},
-        Agents.Sessions.Infrastructure.TaskRunnerSupervisor,
-        Agents.Sessions.Infrastructure.QueueManagerSupervisor,
-        Agents.Sessions.Infrastructure.TicketSyncServer
+        {Task, fn -> OrphanRecovery.recover_orphaned_tasks() end},
+        TaskRunnerSupervisor,
+        QueueManagerSupervisor,
+        TicketSyncServer
       ] ++ mcp_children() ++ mcp_http_children()
 
     opts = [strategy: :one_for_one, name: Agents.Supervisor]

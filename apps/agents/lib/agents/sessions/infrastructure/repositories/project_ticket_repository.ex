@@ -155,18 +155,15 @@ defmodule Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository do
     end
   end
 
+  @remote_attr_keys ~w(number external_id title body status priority size labels url)a
+
   defp normalize_remote_attrs(attrs) do
-    %{
-      number: attrs[:number] || attrs["number"],
-      external_id: attrs[:external_id] || attrs["external_id"],
-      title: attrs[:title] || attrs["title"],
-      body: attrs[:body] || attrs["body"],
-      status: attrs[:status] || attrs["status"],
-      priority: attrs[:priority] || attrs["priority"],
-      size: attrs[:size] || attrs["size"],
-      labels: List.wrap(attrs[:labels] || attrs["labels"]),
-      url: attrs[:url] || attrs["url"]
-    }
+    normalized =
+      Map.new(@remote_attr_keys, fn key ->
+        {key, attrs[key] || attrs[Atom.to_string(key)]}
+      end)
+
+    Map.update!(normalized, :labels, &List.wrap/1)
   end
 
   defp normalize_local_attrs(attrs) do

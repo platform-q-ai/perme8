@@ -271,9 +271,8 @@ defmodule Agents.Sessions.Infrastructure.Clients.GithubProjectClient do
              item_id,
              status_field_id,
              target_status_option_id
-           ),
-         :ok <- update_ticket_position(token, project_id, item_id, after_item_id) do
-      :ok
+           ) do
+      update_ticket_position(token, project_id, item_id, after_item_id)
     end
   end
 
