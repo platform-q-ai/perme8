@@ -42,6 +42,7 @@ IO.puts("[exo-seeds-web] Cleaning previous seed data...")
 
 Ecto.Adapters.SQL.query!(Identity.Repo, "TRUNCATE notifications CASCADE", [])
 Ecto.Adapters.SQL.query!(Identity.Repo, "TRUNCATE sessions_tasks CASCADE", [])
+Ecto.Adapters.SQL.query!(Identity.Repo, "TRUNCATE sessions_project_tickets CASCADE", [])
 Ecto.Adapters.SQL.query!(Identity.Repo, "TRUNCATE api_keys CASCADE", [])
 Ecto.Adapters.SQL.query!(Identity.Repo, "TRUNCATE chat_messages CASCADE", [])
 Ecto.Adapters.SQL.query!(Identity.Repo, "TRUNCATE chat_sessions CASCADE", [])
@@ -763,7 +764,45 @@ IO.puts("[exo-seeds-web] Created no-file-stats session")
 IO.puts("[exo-seeds-web] Created all session-card-stats fixture sessions")
 
 # ---------------------------------------------------------------------------
-# 8. Create notifications (for notifications browser tests)
+# 8. Create project tickets (for ticket-sync browser tests)
+# ---------------------------------------------------------------------------
+
+alias Agents.Sessions.Infrastructure.Schemas.ProjectTicketSchema
+
+%ProjectTicketSchema{}
+|> ProjectTicketSchema.changeset(%{
+  number: 101,
+  title: "Implement user authentication",
+  body: "Add login and registration flows",
+  status: "Ready",
+  priority: "Need",
+  size: "M",
+  labels: ["feature"],
+  position: 1,
+  sync_state: "synced",
+  last_synced_at: DateTime.utc_now() |> DateTime.truncate(:second)
+})
+|> Jarga.Repo.insert!()
+
+%ProjectTicketSchema{}
+|> ProjectTicketSchema.changeset(%{
+  number: 102,
+  title: "Fix dashboard layout",
+  body: "Sidebar overlaps content on mobile",
+  status: "Backlog",
+  priority: "Want",
+  size: "S",
+  labels: ["bug"],
+  position: 2,
+  sync_state: "synced",
+  last_synced_at: DateTime.utc_now() |> DateTime.truncate(:second)
+})
+|> Jarga.Repo.insert!()
+
+IO.puts("[exo-seeds-web] Created 2 project tickets for ticket-sync tests")
+
+# ---------------------------------------------------------------------------
+# 9. Create notifications (for notifications browser tests)
 # ---------------------------------------------------------------------------
 
 alias Notifications.Infrastructure.Schemas.NotificationSchema

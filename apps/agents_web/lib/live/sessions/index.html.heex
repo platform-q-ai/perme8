@@ -256,6 +256,24 @@
                     <span>{image_label(session.image)}</span>
                     <span>&middot;</span>
                     <span>{relative_time(session.latest_at)}</span>
+                    <span
+                      :if={Map.get(session, :started_at) != nil}
+                      data-testid="session-duration"
+                    >
+                      &middot;
+                      <span
+                        id={"duration-triage-#{session.container_id}"}
+                        phx-hook="DurationTimer"
+                        data-started-at={
+                          Map.get(session, :started_at) &&
+                            DateTime.to_iso8601(session.started_at)
+                        }
+                        data-completed-at={
+                          Map.get(session, :completed_at) &&
+                            DateTime.to_iso8601(session.completed_at)
+                        }
+                      />
+                    </span>
                   </div>
                   <div
                     :if={file_stats != nil}
@@ -447,6 +465,24 @@
                     <span>{image_label(session.image)}</span>
                     <span>&middot;</span>
                     <span>{relative_time(session.latest_at)}</span>
+                    <span
+                      :if={Map.get(session, :started_at) != nil}
+                      data-testid="session-duration"
+                    >
+                      &middot;
+                      <span
+                        id={"duration-failed-#{session.container_id}"}
+                        phx-hook="DurationTimer"
+                        data-started-at={
+                          Map.get(session, :started_at) &&
+                            DateTime.to_iso8601(session.started_at)
+                        }
+                        data-completed-at={
+                          Map.get(session, :completed_at) &&
+                            DateTime.to_iso8601(session.completed_at)
+                        }
+                      />
+                    </span>
                   </div>
                   <.compact_progress_bar todo_items={session_todo_items(session)} />
                 </div>
