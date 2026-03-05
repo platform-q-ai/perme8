@@ -4,7 +4,7 @@
 
 Perme8 uses two GitHub App identities:
 
-- `perme8[bot]` for commits, PR creation/updates, issues, project board updates, and PR comment-addressing replies.
+- `perme8[bot]` for commits, PR creation/updates, issues, and PR comment-addressing replies.
 - `platformqbot[bot]` for automated PR reviews that may submit `REQUEST_CHANGES`.
 
 ### Git Commits
@@ -105,9 +105,8 @@ Use this rule of thumb:
 
 #### Orchestration
 
-- **Pick Up Ticket** -- starts from a GitHub issue, classifies work type, routes to the right CRUD workflow, and manages board progress to completion. Use when asked to "work on" an existing ticket.
-- **Create Issue** -- creates a new GitHub issue and populates required project board fields (status, priority, size, iteration, app/tool, parent links).
-- **update-project** -- updates board metadata/state for an existing issue without running a full delivery workflow.
+- **Pick Up Ticket** -- starts from a GitHub issue, classifies work type, and routes to the right CRUD workflow. Use when asked to "work on" an existing ticket.
+- **Create Issue** -- creates a new GitHub issue with the appropriate app label.
 
 #### CRUD Workflows
 
@@ -145,7 +144,7 @@ Use this rule of thumb:
 ### Guardrails for Agent/Skill Use
 
 - Always consult `docs/app_ownership.md` before placing code, generating plans, or creating feature files.
-- Prefer workflow skills for lifecycle consistency (board updates, branch/PR hygiene, CI handling).
+- Prefer workflow skills for lifecycle consistency (branch/PR hygiene, CI handling).
 - Use specialist subagents over `general` when the task clearly matches a specialty.
 - Keep `CRUD Read` strictly read-only.
 - Route GitHub operations through `gh` with the correct token identity described above.
