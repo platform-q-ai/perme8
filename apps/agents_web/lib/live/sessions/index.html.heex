@@ -48,8 +48,9 @@
           |> Enum.sort_by(fn t ->
             cond do
               t.task_status == "awaiting_feedback" -> {0, t.number}
-              t.task_status == "completed" -> {1, t.number}
-              true -> {2, t.number}
+              t.task_status == "failed" -> {1, t.number}
+              t.task_status == "completed" -> {2, t.number}
+              true -> {3, t.number}
             end
           end) %>
         <% active_tickets =
@@ -318,10 +319,16 @@
                   data-ticket-number={ticket.number}
                   class={[
                     "flex cursor-grab active:cursor-grabbing w-full rounded-lg min-h-12 border transition-all duration-150 hover:-translate-y-px hover:shadow-md hover:ring-1 hover:ring-base-content/20 overflow-hidden",
-                    if(ticket.task_status == "awaiting_feedback",
-                      do: "border-warning/40 bg-warning/10",
-                      else: "border-info/25 bg-info/5"
-                    ),
+                    cond do
+                      ticket.task_status == "awaiting_feedback" ->
+                        "border-warning/40 bg-warning/10"
+
+                      ticket.task_status == "failed" ->
+                        "border-error/40 bg-error/10"
+
+                      true ->
+                        "border-info/25 bg-info/5"
+                    end,
                     ticket.number == @active_ticket_number &&
                       "ring-2 ring-primary/60 shadow-sm shadow-primary/10"
                   ]}
