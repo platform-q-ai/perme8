@@ -18,7 +18,7 @@ defmodule EntityRelationshipManager.Application.UseCases.CreateEdgeTest do
     :ok
   end
 
-  describe "execute/3 - event emission" do
+  describe "execute/4 - event emission" do
     test "emits EdgeCreated event via event_bus" do
       schema = schema_definition()
       created_edge = edge()
@@ -38,6 +38,7 @@ defmodule EntityRelationshipManager.Application.UseCases.CreateEdgeTest do
                    target_id: valid_uuid2(),
                    properties: %{"role" => "Engineer"}
                  },
+                 valid_uuid(),
                  schema_repo: SchemaRepositoryMock,
                  graph_repo: GraphRepositoryMock,
                  event_bus: TestEventBus
@@ -50,10 +51,10 @@ defmodule EntityRelationshipManager.Application.UseCases.CreateEdgeTest do
       assert event.target_id == valid_uuid2()
       assert event.edge_type == "WORKS_AT"
       assert event.aggregate_id == created_edge.id
+      assert event.actor_id == valid_uuid()
     end
 
     test "does not emit event when creation fails" do
-
       SchemaRepositoryMock
       |> expect(:get_schema, fn _ws_id -> {:error, :not_found} end)
 
@@ -66,6 +67,7 @@ defmodule EntityRelationshipManager.Application.UseCases.CreateEdgeTest do
                    target_id: valid_uuid2(),
                    properties: %{}
                  },
+                 valid_uuid(),
                  schema_repo: SchemaRepositoryMock,
                  graph_repo: GraphRepositoryMock,
                  event_bus: TestEventBus
@@ -87,6 +89,7 @@ defmodule EntityRelationshipManager.Application.UseCases.CreateEdgeTest do
                    target_id: valid_uuid2(),
                    properties: %{}
                  },
+                 valid_uuid(),
                  schema_repo: SchemaRepositoryMock,
                  graph_repo: GraphRepositoryMock
                )
@@ -107,6 +110,7 @@ defmodule EntityRelationshipManager.Application.UseCases.CreateEdgeTest do
                    target_id: valid_uuid2(),
                    properties: %{}
                  },
+                 valid_uuid(),
                  schema_repo: SchemaRepositoryMock,
                  graph_repo: GraphRepositoryMock
                )
@@ -124,6 +128,7 @@ defmodule EntityRelationshipManager.Application.UseCases.CreateEdgeTest do
                    target_id: valid_uuid2(),
                    properties: %{}
                  },
+                 valid_uuid(),
                  schema_repo: SchemaRepositoryMock,
                  graph_repo: GraphRepositoryMock
                )
@@ -151,6 +156,7 @@ defmodule EntityRelationshipManager.Application.UseCases.CreateEdgeTest do
                    target_id: valid_uuid2(),
                    properties: %{}
                  },
+                 valid_uuid(),
                  schema_repo: SchemaRepositoryMock,
                  graph_repo: GraphRepositoryMock
                )
@@ -166,6 +172,7 @@ defmodule EntityRelationshipManager.Application.UseCases.CreateEdgeTest do
                    target_id: valid_uuid2(),
                    properties: %{}
                  },
+                 valid_uuid(),
                  schema_repo: SchemaRepositoryMock,
                  graph_repo: GraphRepositoryMock
                )
@@ -181,6 +188,7 @@ defmodule EntityRelationshipManager.Application.UseCases.CreateEdgeTest do
                    target_id: "not-a-uuid",
                    properties: %{}
                  },
+                 valid_uuid(),
                  schema_repo: SchemaRepositoryMock,
                  graph_repo: GraphRepositoryMock
                )
@@ -203,6 +211,7 @@ defmodule EntityRelationshipManager.Application.UseCases.CreateEdgeTest do
                    target_id: valid_uuid2(),
                    properties: %{"role" => 123}
                  },
+                 valid_uuid(),
                  schema_repo: SchemaRepositoryMock,
                  graph_repo: GraphRepositoryMock
                )

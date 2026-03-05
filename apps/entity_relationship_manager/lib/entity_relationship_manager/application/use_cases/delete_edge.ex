@@ -16,23 +16,22 @@ defmodule EntityRelationshipManager.Application.UseCases.DeleteEdge do
 
   Returns `{:ok, edge}` on success.
   """
-  def execute(workspace_id, edge_id, opts \\ []) do
+  def execute(workspace_id, edge_id, actor_id, opts \\ []) do
     graph_repo = Keyword.get(opts, :graph_repo, RepoConfig.graph_repo())
     event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
 
     with :ok <- InputSanitizationPolicy.validate_uuid(edge_id),
          {:ok, deleted_edge} <- graph_repo.soft_delete_edge(workspace_id, edge_id) do
-      emit_edge_deleted_event(deleted_edge, workspace_id, event_bus)
+      emit_edge_deleted_event(deleted_edge, workspace_id, actor_id, event_bus)
       {:ok, deleted_edge}
     end
   end
 
-  # Part 2: thread actor_id from controller layer for audit trail attribution
-  defp emit_edge_deleted_event(edge, workspace_id, event_bus) do
+  defp emit_edge_deleted_event(edge, workspace_id, actor_id, event_bus) do
     event =
       EdgeDeleted.new(%{
         aggregate_id: edge.id,
-        actor_id: nil,
+        actor_id: actor_id,
         edge_id: edge.id,
         workspace_id: workspace_id
       })

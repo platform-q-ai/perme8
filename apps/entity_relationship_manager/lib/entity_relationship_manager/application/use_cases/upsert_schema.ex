@@ -31,7 +31,7 @@ defmodule EntityRelationshipManager.Application.UseCases.UpsertSchema do
 
   Returns `{:ok, schema}` on success, `{:error, errors}` on validation failure.
   """
-  def execute(workspace_id, attrs, opts \\ []) do
+  def execute(workspace_id, attrs, actor_id, opts \\ []) do
     schema_repo = Keyword.get(opts, :schema_repo, RepoConfig.schema_repo())
     event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
 
@@ -48,7 +48,7 @@ defmodule EntityRelationshipManager.Application.UseCases.UpsertSchema do
 
         case schema_repo.upsert_schema(workspace_id, attrs) do
           {:ok, schema} ->
-            emit_schema_event(schema, workspace_id, is_create, event_bus)
+            emit_schema_event(schema, workspace_id, is_create, actor_id, event_bus)
             {:ok, schema}
 
           error ->
@@ -116,12 +116,11 @@ defmodule EntityRelationshipManager.Application.UseCases.UpsertSchema do
 
   defp atom_keyed?(_), do: false
 
-  # Part 2: thread actor_id from controller layer for audit trail attribution
-  defp emit_schema_event(schema, workspace_id, true = _is_create, event_bus) do
+  defp emit_schema_event(schema, workspace_id, true = _is_create, actor_id, event_bus) do
     event =
       SchemaCreated.new(%{
         aggregate_id: schema.id,
-        actor_id: nil,
+        actor_id: actor_id,
         schema_id: schema.id,
         workspace_id: workspace_id
       })
@@ -129,11 +128,11 @@ defmodule EntityRelationshipManager.Application.UseCases.UpsertSchema do
     event_bus.emit(event)
   end
 
-  defp emit_schema_event(schema, workspace_id, false = _is_update, event_bus) do
+  defp emit_schema_event(schema, workspace_id, false = _is_update, actor_id, event_bus) do
     event =
       SchemaUpdated.new(%{
         aggregate_id: schema.id,
-        actor_id: nil,
+        actor_id: actor_id,
         schema_id: schema.id,
         workspace_id: workspace_id
       })

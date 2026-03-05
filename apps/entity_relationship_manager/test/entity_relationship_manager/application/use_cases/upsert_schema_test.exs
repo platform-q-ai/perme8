@@ -18,7 +18,7 @@ defmodule EntityRelationshipManager.Application.UseCases.UpsertSchemaTest do
     :ok
   end
 
-  describe "execute/3 - event emission" do
+  describe "execute/4 - event emission" do
     test "emits SchemaCreated event when schema does not exist" do
       schema = schema_definition()
 
@@ -37,7 +37,7 @@ defmodule EntityRelationshipManager.Application.UseCases.UpsertSchemaTest do
       |> expect(:upsert_schema, fn _ws_id, _attrs -> {:ok, schema} end)
 
       assert {:ok, ^schema} =
-               UpsertSchema.execute(workspace_id(), attrs,
+               UpsertSchema.execute(workspace_id(), attrs, valid_uuid(),
                  schema_repo: SchemaRepositoryMock,
                  event_bus: TestEventBus
                )
@@ -46,10 +46,10 @@ defmodule EntityRelationshipManager.Application.UseCases.UpsertSchemaTest do
       assert event.schema_id == schema.id
       assert event.workspace_id == workspace_id()
       assert event.aggregate_id == schema.id
+      assert event.actor_id == valid_uuid()
     end
 
     test "emits SchemaUpdated event when schema already exists" do
-
       existing_schema = schema_definition()
       updated_schema = schema_definition(%{version: 2})
 
@@ -69,7 +69,7 @@ defmodule EntityRelationshipManager.Application.UseCases.UpsertSchemaTest do
       |> expect(:upsert_schema, fn _ws_id, _attrs -> {:ok, updated_schema} end)
 
       assert {:ok, ^updated_schema} =
-               UpsertSchema.execute(workspace_id(), attrs,
+               UpsertSchema.execute(workspace_id(), attrs, valid_uuid(),
                  schema_repo: SchemaRepositoryMock,
                  event_bus: TestEventBus
                )
@@ -78,10 +78,10 @@ defmodule EntityRelationshipManager.Application.UseCases.UpsertSchemaTest do
       assert event.schema_id == updated_schema.id
       assert event.workspace_id == workspace_id()
       assert event.aggregate_id == updated_schema.id
+      assert event.actor_id == valid_uuid()
     end
 
     test "does not emit event when validation fails" do
-
       attrs = %{
         entity_types: [
           %{
@@ -94,7 +94,7 @@ defmodule EntityRelationshipManager.Application.UseCases.UpsertSchemaTest do
       }
 
       assert {:error, _errors} =
-               UpsertSchema.execute(workspace_id(), attrs,
+               UpsertSchema.execute(workspace_id(), attrs, valid_uuid(),
                  schema_repo: SchemaRepositoryMock,
                  event_bus: TestEventBus
                )
@@ -103,7 +103,7 @@ defmodule EntityRelationshipManager.Application.UseCases.UpsertSchemaTest do
     end
   end
 
-  describe "execute/3" do
+  describe "execute/4" do
     test "upserts a valid schema" do
       schema = schema_definition()
 
@@ -126,7 +126,9 @@ defmodule EntityRelationshipManager.Application.UseCases.UpsertSchemaTest do
       end)
 
       assert {:ok, ^schema} =
-               UpsertSchema.execute(workspace_id(), attrs, schema_repo: SchemaRepositoryMock)
+               UpsertSchema.execute(workspace_id(), attrs, valid_uuid(),
+                 schema_repo: SchemaRepositoryMock
+               )
     end
 
     test "returns validation errors for invalid schema structure" do
@@ -143,7 +145,9 @@ defmodule EntityRelationshipManager.Application.UseCases.UpsertSchemaTest do
       }
 
       assert {:error, errors} =
-               UpsertSchema.execute(workspace_id(), attrs, schema_repo: SchemaRepositoryMock)
+               UpsertSchema.execute(workspace_id(), attrs, valid_uuid(),
+                 schema_repo: SchemaRepositoryMock
+               )
 
       assert is_list(errors)
       assert Enum.any?(errors, &String.contains?(&1, "duplicate entity type"))
@@ -158,7 +162,9 @@ defmodule EntityRelationshipManager.Application.UseCases.UpsertSchemaTest do
       }
 
       assert {:error, errors} =
-               UpsertSchema.execute(workspace_id(), attrs, schema_repo: SchemaRepositoryMock)
+               UpsertSchema.execute(workspace_id(), attrs, valid_uuid(),
+                 schema_repo: SchemaRepositoryMock
+               )
 
       assert is_list(errors)
       assert Enum.any?(errors, &String.contains?(&1, "invalid property type"))
@@ -186,7 +192,9 @@ defmodule EntityRelationshipManager.Application.UseCases.UpsertSchemaTest do
       end)
 
       assert {:ok, _} =
-               UpsertSchema.execute(workspace_id(), attrs, schema_repo: SchemaRepositoryMock)
+               UpsertSchema.execute(workspace_id(), attrs, valid_uuid(),
+                 schema_repo: SchemaRepositoryMock
+               )
     end
 
     test "returns error when repo fails" do
@@ -207,7 +215,9 @@ defmodule EntityRelationshipManager.Application.UseCases.UpsertSchemaTest do
       end)
 
       assert {:error, :version_conflict} =
-               UpsertSchema.execute(workspace_id(), attrs, schema_repo: SchemaRepositoryMock)
+               UpsertSchema.execute(workspace_id(), attrs, valid_uuid(),
+                 schema_repo: SchemaRepositoryMock
+               )
     end
   end
 end

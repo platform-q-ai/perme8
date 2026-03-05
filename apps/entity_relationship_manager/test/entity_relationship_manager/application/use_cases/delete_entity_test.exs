@@ -18,7 +18,7 @@ defmodule EntityRelationshipManager.Application.UseCases.DeleteEntityTest do
     :ok
   end
 
-  describe "execute/3 - event emission" do
+  describe "execute/4 - event emission" do
     test "emits EntityDeleted event via event_bus" do
       deleted = entity(%{deleted_at: ~U[2026-01-02 00:00:00Z]})
 
@@ -26,7 +26,7 @@ defmodule EntityRelationshipManager.Application.UseCases.DeleteEntityTest do
       |> expect(:soft_delete_entity, fn _ws_id, _id -> {:ok, deleted, 3} end)
 
       assert {:ok, ^deleted, 3} =
-               DeleteEntity.execute(workspace_id(), valid_uuid(),
+               DeleteEntity.execute(workspace_id(), valid_uuid(), valid_uuid(),
                  graph_repo: GraphRepositoryMock,
                  event_bus: TestEventBus
                )
@@ -35,15 +35,15 @@ defmodule EntityRelationshipManager.Application.UseCases.DeleteEntityTest do
       assert event.entity_id == deleted.id
       assert event.workspace_id == workspace_id()
       assert event.aggregate_id == deleted.id
+      assert event.actor_id == valid_uuid()
     end
 
     test "does not emit event when deletion fails" do
-
       GraphRepositoryMock
       |> expect(:soft_delete_entity, fn _ws_id, _id -> {:error, :not_found} end)
 
       assert {:error, :not_found} =
-               DeleteEntity.execute(workspace_id(), valid_uuid(),
+               DeleteEntity.execute(workspace_id(), valid_uuid(), valid_uuid(),
                  graph_repo: GraphRepositoryMock,
                  event_bus: TestEventBus
                )
@@ -52,7 +52,7 @@ defmodule EntityRelationshipManager.Application.UseCases.DeleteEntityTest do
     end
   end
 
-  describe "execute/3" do
+  describe "execute/4" do
     test "soft-deletes entity and returns deleted edge count" do
       deleted = entity(%{deleted_at: ~U[2026-01-02 00:00:00Z]})
 
@@ -64,7 +64,9 @@ defmodule EntityRelationshipManager.Application.UseCases.DeleteEntityTest do
       end)
 
       assert {:ok, ^deleted, 3} =
-               DeleteEntity.execute(workspace_id(), valid_uuid(), graph_repo: GraphRepositoryMock)
+               DeleteEntity.execute(workspace_id(), valid_uuid(), valid_uuid(),
+                 graph_repo: GraphRepositoryMock
+               )
     end
 
     test "returns error when entity not found" do
@@ -72,12 +74,16 @@ defmodule EntityRelationshipManager.Application.UseCases.DeleteEntityTest do
       |> expect(:soft_delete_entity, fn _ws_id, _id -> {:error, :not_found} end)
 
       assert {:error, :not_found} =
-               DeleteEntity.execute(workspace_id(), valid_uuid(), graph_repo: GraphRepositoryMock)
+               DeleteEntity.execute(workspace_id(), valid_uuid(), valid_uuid(),
+                 graph_repo: GraphRepositoryMock
+               )
     end
 
     test "returns error for invalid UUID" do
       assert {:error, msg} =
-               DeleteEntity.execute(workspace_id(), "bad-id", graph_repo: GraphRepositoryMock)
+               DeleteEntity.execute(workspace_id(), "bad-id", valid_uuid(),
+                 graph_repo: GraphRepositoryMock
+               )
 
       assert msg =~ "UUID"
     end

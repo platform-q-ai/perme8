@@ -80,15 +80,15 @@ defmodule EntityRelationshipManager do
   end
 
   @doc "Creates or updates a workspace's schema definition."
-  def upsert_schema(workspace_id, attrs, opts \\ []) do
-    UseCases.UpsertSchema.execute(workspace_id, attrs, opts)
+  def upsert_schema(workspace_id, attrs, actor_id, opts \\ []) do
+    UseCases.UpsertSchema.execute(workspace_id, attrs, actor_id, opts)
   end
 
   # Entity CRUD
 
   @doc "Creates an entity in the workspace graph."
-  def create_entity(workspace_id, attrs, opts \\ []) do
-    UseCases.CreateEntity.execute(workspace_id, attrs, opts)
+  def create_entity(workspace_id, attrs, actor_id, opts \\ []) do
+    UseCases.CreateEntity.execute(workspace_id, attrs, actor_id, opts)
   end
 
   @doc "Retrieves an entity by ID."
@@ -102,20 +102,20 @@ defmodule EntityRelationshipManager do
   end
 
   @doc "Updates an entity's properties."
-  def update_entity(workspace_id, entity_id, attrs, opts \\ []) do
-    UseCases.UpdateEntity.execute(workspace_id, entity_id, attrs, opts)
+  def update_entity(workspace_id, entity_id, attrs, actor_id, opts \\ []) do
+    UseCases.UpdateEntity.execute(workspace_id, entity_id, attrs, actor_id, opts)
   end
 
   @doc "Soft-deletes an entity by ID."
-  def delete_entity(workspace_id, entity_id, opts \\ []) do
-    UseCases.DeleteEntity.execute(workspace_id, entity_id, opts)
+  def delete_entity(workspace_id, entity_id, actor_id, opts \\ []) do
+    UseCases.DeleteEntity.execute(workspace_id, entity_id, actor_id, opts)
   end
 
   # Edge CRUD
 
   @doc "Creates an edge (relationship) in the workspace graph."
-  def create_edge(workspace_id, attrs, opts \\ []) do
-    UseCases.CreateEdge.execute(workspace_id, attrs, opts)
+  def create_edge(workspace_id, attrs, actor_id, opts \\ []) do
+    UseCases.CreateEdge.execute(workspace_id, attrs, actor_id, opts)
   end
 
   @doc "Retrieves an edge by ID."
@@ -134,8 +134,8 @@ defmodule EntityRelationshipManager do
   end
 
   @doc "Soft-deletes an edge by ID."
-  def delete_edge(workspace_id, edge_id, opts \\ []) do
-    UseCases.DeleteEdge.execute(workspace_id, edge_id, opts)
+  def delete_edge(workspace_id, edge_id, actor_id, opts \\ []) do
+    UseCases.DeleteEdge.execute(workspace_id, edge_id, actor_id, opts)
   end
 
   # Traversal
