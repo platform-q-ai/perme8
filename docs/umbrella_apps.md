@@ -7,6 +7,7 @@ Umbrella applications are a way to organize multiple Elixir applications within 
 | App | Type | Port (dev / test) | Description |
 |-----|------|-------------------|-------------|
 | `perme8_events` | Elixir (shared infra) | -- | Domain events, PubSub event bus, event handler behaviour |
+| `perme8_plugs` | Elixir (shared infra) | -- | Shared Plug modules (SecurityHeaders with :liveview/:api profiles) |
 | `identity` | Phoenix (auth) | 4001 / 4003 | Users, authentication, workspaces, memberships, roles, API keys |
 | `jarga` | Ecto (domain) | -- | Projects, documents, notes, chat, notifications |
 | `agents` | Elixir + Bandit | -- / 4007 | Agent definitions, LLM orchestration, perme8-mcp tools (14 tools via JSON-RPC), Sessions (ephemeral opencode containers) |
@@ -40,15 +41,16 @@ Umbrella applications are a way to organize multiple Elixir applications within 
 
 **Rules:**
 - `perme8_events` depends on nothing in the umbrella (leaf-node shared infrastructure)
-- `identity` depends on `perme8_events`
-- `agents` depends on `identity`, `perme8_events`, and `entity_relationship_manager` (knowledge graph data)
+- `perme8_plugs` depends on nothing in the umbrella (leaf-node shared infrastructure, provides `Perme8.Plugs.SecurityHeaders`)
+- `identity` depends on `perme8_events`, `perme8_plugs`
+- `agents` depends on `identity`, `perme8_events`, `perme8_plugs`, and `entity_relationship_manager` (knowledge graph data)
 - `jarga` depends on `identity`, `agents`, and `perme8_events`
-- `jarga_web` and `jarga_api` depend on `jarga`, `agents`, and `perme8_events` (interface layers)
+- `jarga_web` and `jarga_api` depend on `jarga`, `agents`, `perme8_events`, and `perme8_plugs` (interface layers)
 - `agents_web` depends on `agents`, `identity`, and `perme8_events` (Sessions LiveView, delegates auth to Identity via shared session cookie)
-- `agents_api` depends on `agents` and `identity` (REST API for agent management)
-- `entity_relationship_manager` depends on `identity`, `jarga`, and `perme8_events`
+- `agents_api` depends on `agents`, `identity`, and `perme8_plugs` (REST API for agent management)
+- `entity_relationship_manager` depends on `identity`, `jarga`, `perme8_events`, and `perme8_plugs`
 - `webhooks` depends on `identity` (auth/API key verification), `jarga` (workspaces), and `perme8_events`
-- `webhooks_api` depends on `webhooks`, `identity`, and `jarga`
+- `webhooks_api` depends on `webhooks`, `identity`, `jarga`, and `perme8_plugs`
 - `perme8_dashboard` depends on `exo_dashboard` (mounts its LiveViews in a tabbed layout)
 - `alkali` and `perme8_tools` are independent
 
