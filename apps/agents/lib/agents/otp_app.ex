@@ -16,6 +16,9 @@ defmodule Agents.OTPApp do
         Hermes.Server.Registry,
         {Registry, keys: :unique, name: Agents.Sessions.TaskRegistry},
         {Registry, keys: :unique, name: Agents.Sessions.QueueRegistry},
+        # Recover tasks orphaned by a previous server restart before starting
+        # the session infrastructure (TaskRunnerSupervisor, QueueManager, etc.).
+        {Task, fn -> Agents.Sessions.Infrastructure.OrphanRecovery.recover_orphaned_tasks() end},
         Agents.Sessions.Infrastructure.TaskRunnerSupervisor,
         Agents.Sessions.Infrastructure.QueueManagerSupervisor,
         Agents.Sessions.Infrastructure.TicketSyncServer

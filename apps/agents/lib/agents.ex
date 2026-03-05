@@ -35,6 +35,7 @@ defmodule Agents do
       Agents.Domain,
       Agents.Application,
       Agents.Infrastructure,
+      Agents.Sessions.Infrastructure,
       Agents.Repo
     ],
     exports: [
