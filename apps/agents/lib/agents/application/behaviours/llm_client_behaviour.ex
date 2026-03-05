@@ -2,8 +2,12 @@ defmodule Agents.Application.Behaviours.LlmClientBehaviour do
   @moduledoc """
   Behaviour for LLM client implementations.
 
-  This allows mocking LlmClient in tests for testing streaming functionality.
+  Defines the contract for both synchronous and streaming LLM interactions,
+  allowing mock implementations in tests via Mox.
   """
+
+  @callback chat(messages :: list(map()), opts :: keyword()) ::
+              {:ok, String.t()} | {:error, String.t()}
 
   @callback chat_stream(messages :: list(map()), caller_pid :: pid(), opts :: keyword()) ::
               {:ok, pid()} | {:error, String.t()}
