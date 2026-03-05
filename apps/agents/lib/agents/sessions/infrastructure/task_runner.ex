@@ -175,6 +175,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     case state.opencode_client.reply_question(base_url, request_id, answers, []) do
       :ok ->
         state = cache_answer_message(state, request_id, message, answers)
+        broadcast_question_replied(state)
         {:reply, :ok, clear_pending_question(state)}
 
       {:error, _} = error ->
@@ -528,6 +529,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
         end
 
         state = mark_question_rejected(state)
+        broadcast_question_rejected(state)
         {:noreply, state}
     end
   end
@@ -1265,6 +1267,22 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
       pubsub,
       "task:#{task_id}",
       {:task_status_changed, task_id, status}
+    )
+  end
+
+  defp broadcast_question_replied(state) do
+    Phoenix.PubSub.broadcast(
+      state.pubsub,
+      "task:#{state.task_id}",
+      {:task_event, state.task_id, %{"type" => "question.replied"}}
+    )
+  end
+
+  defp broadcast_question_rejected(state) do
+    Phoenix.PubSub.broadcast(
+      state.pubsub,
+      "task:#{state.task_id}",
+      {:task_event, state.task_id, %{"type" => "question.rejected"}}
     )
   end
 
