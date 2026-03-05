@@ -3,8 +3,7 @@ defmodule Agents.Infrastructure.AgentQueriesTest do
 
   alias Agents.Infrastructure.Schemas.{AgentSchema, WorkspaceAgentJoinSchema}
   alias Agents.Infrastructure.Queries.AgentQueries
-  # Use Identity.Repo for all operations to ensure consistent transaction visibility
-  alias Identity.Repo, as: Repo
+  alias Agents.Repo
 
   import Agents.Test.AccountsFixtures
   import Agents.Test.WorkspacesFixtures

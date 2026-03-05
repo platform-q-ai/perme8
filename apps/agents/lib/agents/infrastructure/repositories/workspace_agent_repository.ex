@@ -9,7 +9,8 @@ defmodule Agents.Infrastructure.Repositories.WorkspaceAgentRepository do
 
   import Ecto.Query, warn: false
 
-  alias Identity.Repo, as: Repo
+  # Uses Agents.Repo (NOT Identity.Repo) for all database operations
+  alias Agents.Repo, as: Repo
   alias Agents.Infrastructure.Schemas.AgentSchema
   alias Agents.Infrastructure.Schemas.WorkspaceAgentJoinSchema
 

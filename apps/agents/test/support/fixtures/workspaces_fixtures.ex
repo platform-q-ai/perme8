@@ -1,19 +1,21 @@
 defmodule Agents.Test.WorkspacesFixtures do
   @moduledoc """
-  Test helpers for creating workspace entities via the `Identity` context.
+  Test helpers for creating workspace records for Agents tests.
 
-  This module replicates the workspace fixture logic from Jarga.WorkspacesFixtures
-  using only the Identity public API, avoiding cross-app test support dependencies.
+  Creates workspace and workspace_member records via raw SQL through
+  `Identity.Repo` so they are visible to the Identity facade at runtime.
+  Since cross-app FK constraints have been dropped, `Agents.Repo` can reference
+  these rows without needing direct visibility.
   """
 
-  # Test fixture module - top-level boundary for test data creation
+  # Test fixture module - top-level boundary for test data creation.
+  # Uses Identity.Repo for workspace inserts so the Identity facade can see them.
+  # This is a test-only boundary dep -- production Agents.Infrastructure does
+  # NOT depend on Identity.Repo.
   use Boundary,
     top_level?: true,
-    deps: [Identity, Identity.Repo],
+    deps: [Identity.Repo],
     exports: []
-
-  alias Identity.Domain.Entities.WorkspaceMember
-  alias Identity.Infrastructure.Schemas.WorkspaceMemberSchema
 
   def valid_workspace_attributes(attrs \\ %{}) do
     Enum.into(attrs, %{
@@ -23,34 +25,87 @@ defmodule Agents.Test.WorkspacesFixtures do
     })
   end
 
+  @doc """
+  Creates a workspace directly in the database via Identity.Repo.
+
+  Also creates an owner workspace_members entry for the given user.
+  Returns a map with `:id`, `:name`, and `:slug` fields.
+  """
   def workspace_fixture(user, attrs \\ %{}) do
     attrs = valid_workspace_attributes(attrs)
-    {:ok, workspace} = Identity.create_workspace(user, attrs)
-    workspace
+    id = Ecto.UUID.generate()
+    name = Map.get(attrs, :name)
+    description = Map.get(attrs, :description)
+    color = Map.get(attrs, :color)
+
+    slug =
+      name
+      |> String.downcase()
+      |> String.replace(~r/[^a-z0-9\s-]/, "")
+      |> String.replace(~r/\s+/, "-")
+      |> Kernel.<>("-" <> String.slice(id, 0..7))
+
+    now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+
+    Identity.Repo.query!(
+      """
+      INSERT INTO workspaces (id, name, description, color, slug, inserted_at, updated_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      """,
+      [Ecto.UUID.dump!(id), name, description, color, slug, now, now]
+    )
+
+    # Add the creating user as workspace owner
+    member_id = Ecto.UUID.generate()
+
+    Identity.Repo.query!(
+      """
+      INSERT INTO workspace_members (id, workspace_id, user_id, email, role, invited_at, joined_at, inserted_at, updated_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      """,
+      [
+        Ecto.UUID.dump!(member_id),
+        Ecto.UUID.dump!(id),
+        Ecto.UUID.dump!(user.id),
+        user.email,
+        "owner",
+        now,
+        now,
+        now,
+        now
+      ]
+    )
+
+    %{id: id, name: name, slug: slug}
   end
 
   @doc """
   Adds a workspace member directly (bypassing invitation flow).
 
-  This is for testing purposes only - bypasses the normal invitation/acceptance flow.
-
-  Returns the workspace_member domain entity.
+  This is for testing purposes only. Returns a map with the member details.
   """
   def add_workspace_member_fixture(workspace_id, user, role) do
-    now = DateTime.utc_now() |> DateTime.truncate(:second)
+    id = Ecto.UUID.generate()
+    now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
 
-    {:ok, schema} =
-      %WorkspaceMemberSchema{}
-      |> WorkspaceMemberSchema.changeset(%{
-        workspace_id: workspace_id,
-        user_id: user.id,
-        email: user.email,
-        role: role,
-        invited_at: now,
-        joined_at: now
-      })
-      |> Identity.Repo.insert()
+    Identity.Repo.query!(
+      """
+      INSERT INTO workspace_members (id, workspace_id, user_id, email, role, invited_at, joined_at, inserted_at, updated_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      """,
+      [
+        Ecto.UUID.dump!(id),
+        Ecto.UUID.dump!(workspace_id),
+        Ecto.UUID.dump!(user.id),
+        user.email,
+        to_string(role),
+        now,
+        now,
+        now,
+        now
+      ]
+    )
 
-    WorkspaceMember.from_schema(schema)
+    %{id: id, workspace_id: workspace_id, user_id: user.id, role: role}
   end
 end

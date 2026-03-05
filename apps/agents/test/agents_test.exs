@@ -6,8 +6,7 @@ defmodule AgentsTest do
 
   alias Agents
   alias Agents.Infrastructure.Schemas.{AgentSchema, WorkspaceAgentJoinSchema}
-  # Use Identity.Repo for all operations to ensure consistent transaction visibility
-  alias Identity.Repo, as: Repo
+  alias Agents.Repo
 
   describe "list_user_agents/1" do
     test "lists all agents owned by user" do

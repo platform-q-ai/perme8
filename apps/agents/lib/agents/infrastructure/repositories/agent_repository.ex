@@ -9,9 +9,8 @@ defmodule Agents.Infrastructure.Repositories.AgentRepository do
 
   import Ecto.Query, warn: false
 
-  # All database operations use Identity.Repo to ensure consistent visibility
-  # of user data (users table is managed by Identity.Repo)
-  alias Identity.Repo, as: Repo
+  # Uses Agents.Repo (NOT Identity.Repo) for all database operations
+  alias Agents.Repo, as: Repo
   alias Agents.Infrastructure.Schemas.AgentSchema
 
   @doc """

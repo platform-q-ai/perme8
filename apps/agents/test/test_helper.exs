@@ -1,6 +1,8 @@
 ExUnit.start(capture_log: true)
 
 Ecto.Adapters.SQL.Sandbox.mode(Agents.Repo, :manual)
+# Identity.Repo sandbox is needed because some Agents production code calls
+# the Identity facade (e.g. Identity.get_user!/1) which uses Identity.Repo.
 Ecto.Adapters.SQL.Sandbox.mode(Identity.Repo, :manual)
 
 # Define mocks for testing
