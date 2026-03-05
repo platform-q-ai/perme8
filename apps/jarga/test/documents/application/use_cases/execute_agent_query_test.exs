@@ -120,13 +120,11 @@ defmodule Jarga.Documents.Application.UseCases.ExecuteAgentQueryTest do
         node_id: "node_custom"
       }
 
-      # Execute the query
-      {:ok, _pid} = ExecuteAgentQuery.execute(params, self())
-
-      # We can't directly verify the system_prompt was used without mocking,
-      # but we can verify the execution succeeded
-      # In a real scenario, this would be verified by checking LlmClient calls
-      assert true
+      # Verifies that agent lookup + delegation to Agents.agent_query succeeds.
+      # The agent's system_prompt/model/temperature propagation is covered by
+      # Agents.Application.UseCases.AgentQueryTest (Mox-based, in the agents app).
+      assert {:ok, pid} = ExecuteAgentQuery.execute(params, self())
+      assert is_pid(pid)
     end
 
     test "passes full document content as context", %{
@@ -143,12 +141,11 @@ defmodule Jarga.Documents.Application.UseCases.ExecuteAgentQueryTest do
         node_id: "node_context"
       }
 
-      # Execute the query
-      {:ok, _pid} = ExecuteAgentQuery.execute(params, self())
-
-      # Context is passed via assigns to Agents.agent_query
-      # This test verifies the flow completes successfully
-      assert true
+      # Verifies that assigns (containing document content) are forwarded to
+      # Agents.agent_query successfully. Context extraction from assigns is
+      # covered by Agents.Application.UseCases.AgentQueryTest (Mox-based).
+      assert {:ok, pid} = ExecuteAgentQuery.execute(params, self())
+      assert is_pid(pid)
     end
 
     test "returns error for invalid command syntax", %{

@@ -34,6 +34,7 @@ defmodule Agents.Infrastructure.Services.LlmClient do
       {:ok, "Hello! How can I help you today?"}
 
   """
+  @impl true
   @spec chat(list(map()), keyword()) :: {:ok, String.t()} | {:error, String.t()}
   def chat(messages, opts \\ []) do
     model = Keyword.get(opts, :model, config(:chat_model, @default_model))
