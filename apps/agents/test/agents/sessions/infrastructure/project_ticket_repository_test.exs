@@ -81,12 +81,15 @@ defmodule Agents.Sessions.Infrastructure.ProjectTicketRepositoryTest do
   end
 
   test "reorder_positions/1 persists ticket positions in order" do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
     for {number, title} <- [{10, "Ticket 10"}, {20, "Ticket 20"}, {30, "Ticket 30"}] do
       %ProjectTicketSchema{}
       |> ProjectTicketSchema.changeset(%{
         number: number,
         title: title,
         status: "Backlog",
+        created_at: now,
         labels: []
       })
       |> Repo.insert!()
@@ -101,12 +104,15 @@ defmodule Agents.Sessions.Infrastructure.ProjectTicketRepositoryTest do
   end
 
   test "reorder_positions/1 preserves positions across remote sync" do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
     for {number, title} <- [{40, "Ticket 40"}, {50, "Ticket 50"}] do
       %ProjectTicketSchema{}
       |> ProjectTicketSchema.changeset(%{
         number: number,
         title: title,
         status: "Ready",
+        created_at: now,
         labels: []
       })
       |> Repo.insert!()
@@ -130,6 +136,8 @@ defmodule Agents.Sessions.Infrastructure.ProjectTicketRepositoryTest do
   end
 
   test "new tickets from remote sync are appended after existing tickets" do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
     # Create two existing tickets with known positions
     %ProjectTicketSchema{}
     |> ProjectTicketSchema.changeset(%{
@@ -137,6 +145,7 @@ defmodule Agents.Sessions.Infrastructure.ProjectTicketRepositoryTest do
       title: "Existing ticket 1",
       status: "Backlog",
       position: 0,
+      created_at: now,
       labels: []
     })
     |> Repo.insert!()
@@ -147,6 +156,7 @@ defmodule Agents.Sessions.Infrastructure.ProjectTicketRepositoryTest do
       title: "Existing ticket 2",
       status: "Backlog",
       position: 1,
+      created_at: now,
       labels: []
     })
     |> Repo.insert!()
@@ -174,6 +184,8 @@ defmodule Agents.Sessions.Infrastructure.ProjectTicketRepositoryTest do
   end
 
   test "new tickets from remote sync do not disrupt existing ordering" do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
     # Set up 3 tickets with explicit positions
     for {number, position} <- [{200, 0}, {201, 1}, {202, 2}] do
       %ProjectTicketSchema{}
@@ -182,6 +194,7 @@ defmodule Agents.Sessions.Infrastructure.ProjectTicketRepositoryTest do
         title: "Ticket #{number}",
         status: "Backlog",
         position: position,
+        created_at: now,
         labels: []
       })
       |> Repo.insert!()
@@ -207,23 +220,18 @@ defmodule Agents.Sessions.Infrastructure.ProjectTicketRepositoryTest do
     assert numbers == [202, 200, 201, 203]
   end
 
-  test "list_all/0 orders by position then inserted_at desc" do
-    # Insert two tickets with same position but different timestamps
-    {:ok, older} =
+  test "list_all/0 orders by position then created_at desc" do
+    # Insert two tickets with same position but different created_at timestamps
+    {:ok, _older} =
       %ProjectTicketSchema{}
       |> ProjectTicketSchema.changeset(%{
         number: 80,
         title: "Older ticket",
         status: "Backlog",
+        created_at: ~U[2025-01-01 00:00:00Z],
         labels: []
       })
       |> Repo.insert()
-
-    # Ensure a different inserted_at by updating the older one's timestamp
-    Repo.query!("UPDATE sessions_project_tickets SET inserted_at = $1 WHERE id = $2", [
-      ~U[2025-01-01 00:00:00Z],
-      older.id
-    ])
 
     {:ok, _newer} =
       %ProjectTicketSchema{}
@@ -231,6 +239,7 @@ defmodule Agents.Sessions.Infrastructure.ProjectTicketRepositoryTest do
         number: 81,
         title: "Newer ticket",
         status: "Backlog",
+        created_at: ~U[2026-03-01 00:00:00Z],
         labels: []
       })
       |> Repo.insert()
@@ -238,16 +247,19 @@ defmodule Agents.Sessions.Infrastructure.ProjectTicketRepositoryTest do
     tickets = ProjectTicketRepository.list_all()
     numbers = Enum.map(tickets, & &1.number)
 
-    # Newer (81) before older (80) because inserted_at DESC
+    # Newer (81) before older (80) because created_at DESC
     assert numbers == [81, 80]
   end
 
   test "delete_by_number/1 removes an existing ticket" do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
     %ProjectTicketSchema{}
     |> ProjectTicketSchema.changeset(%{
       number: 100,
       title: "Ticket to delete",
       status: "Backlog",
+      created_at: now,
       labels: []
     })
     |> Repo.insert!()
@@ -263,12 +275,15 @@ defmodule Agents.Sessions.Infrastructure.ProjectTicketRepositoryTest do
   end
 
   test "delete_not_in/1 removes tickets not in the given set" do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
     for number <- [301, 302, 303] do
       %ProjectTicketSchema{}
       |> ProjectTicketSchema.changeset(%{
         number: number,
         title: "Ticket #{number}",
         status: "Backlog",
+        created_at: now,
         labels: []
       })
       |> Repo.insert!()
@@ -285,12 +300,15 @@ defmodule Agents.Sessions.Infrastructure.ProjectTicketRepositoryTest do
   end
 
   test "delete_not_in/1 with empty set deletes all tickets" do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
     for number <- [401, 402] do
       %ProjectTicketSchema{}
       |> ProjectTicketSchema.changeset(%{
         number: number,
         title: "Ticket #{number}",
         status: "Backlog",
+        created_at: now,
         labels: []
       })
       |> Repo.insert!()

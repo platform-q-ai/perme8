@@ -349,19 +349,29 @@ defmodule AgentsWeb.SessionsLive.Index do
       |> normalize_ordered_ticket_numbers()
       |> Enum.uniq()
 
-    # Persist positions to the database
+    # Persist positions to the database (display order: first = top = highest position)
     Sessions.reorder_triage_tickets(ordered_numbers)
 
-    # Apply optimistic reorder to the in-memory ticket list
-    reordered =
-      Enum.sort_by(socket.assigns.tickets, fn ticket ->
-        case Enum.find_index(ordered_numbers, &(&1 == ticket.number)) do
-          nil -> 999_999
-          idx -> idx
-        end
-      end)
+    # Reload from DB to get the canonical order
+    tickets = reload_tickets(socket)
 
-    {:noreply, assign(socket, :tickets, reordered)}
+    {:noreply, assign(socket, :tickets, tickets)}
+  end
+
+  @impl true
+  def handle_event("send_ticket_to_top", %{"number" => number_str}, socket) do
+    number = String.to_integer(number_str)
+    Sessions.send_ticket_to_top(number)
+    tickets = reload_tickets(socket)
+    {:noreply, assign(socket, :tickets, tickets)}
+  end
+
+  @impl true
+  def handle_event("send_ticket_to_bottom", %{"number" => number_str}, socket) do
+    number = String.to_integer(number_str)
+    Sessions.send_ticket_to_bottom(number)
+    tickets = reload_tickets(socket)
+    {:noreply, assign(socket, :tickets, tickets)}
   end
 
   @impl true
@@ -1735,6 +1745,19 @@ defmodule AgentsWeb.SessionsLive.Index do
   end
 
   defp has_real_container?(_), do: false
+
+  # Reload tickets from the database with enrichment from the current tasks snapshot.
+  defp reload_tickets(socket) do
+    user = socket.assigns.current_scope.user
+
+    ticket_opts =
+      case socket.assigns[:tasks_snapshot] do
+        tasks when is_list(tasks) and tasks != [] -> [tasks: tasks]
+        _ -> []
+      end
+
+    Sessions.list_project_tickets(user.id, ticket_opts)
+  end
 
   # Re-derive ticket task_status fields from the current tasks snapshot.
   # This avoids a DB round-trip — it re-associates tickets with tasks in memory

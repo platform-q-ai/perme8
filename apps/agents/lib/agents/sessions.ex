@@ -205,6 +205,14 @@ defmodule Agents.Sessions do
     ProjectTicketRepository.reorder_positions(ordered_ticket_numbers)
   end
 
+  @doc "Moves a ticket to the top of the triage column."
+  @spec send_ticket_to_top(integer()) :: :ok
+  def send_ticket_to_top(number), do: ProjectTicketRepository.send_to_top(number)
+
+  @doc "Moves a ticket to the bottom of the triage column."
+  @spec send_ticket_to_bottom(integer()) :: :ok
+  def send_ticket_to_bottom(number), do: ProjectTicketRepository.send_to_bottom(number)
+
   @doc """
   Closes a project ticket: removes it from the local database and closes the
   issue on GitHub.
