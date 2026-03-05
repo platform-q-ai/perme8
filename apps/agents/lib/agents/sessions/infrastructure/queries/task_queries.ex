@@ -7,6 +7,7 @@ defmodule Agents.Sessions.Infrastructure.Queries.TaskQueries do
 
   import Ecto.Query, warn: false
 
+  alias Agents.Sessions.Domain.Policies.ImagePolicy
   alias Agents.Sessions.Infrastructure.Schemas.TaskSchema
 
   @doc """
@@ -75,6 +76,24 @@ defmodule Agents.Sessions.Infrastructure.Queries.TaskQueries do
   def count_running(query \\ base(), user_id) do
     from(t in query,
       where: t.user_id == ^user_id and t.status in ["pending", "starting", "running"],
+      select: count(t.id)
+    )
+  end
+
+  @doc """
+  Counts active heavyweight tasks (excluding light images) for a user.
+
+  Light image tasks are excluded from this count as they don't consume
+  concurrency slots in the build queue.
+  """
+  @spec count_running_heavyweight(Ecto.Query.t(), Ecto.UUID.t()) :: Ecto.Query.t()
+  def count_running_heavyweight(query \\ base(), user_id) do
+    light_images = ImagePolicy.light_image_names()
+
+    from(t in query,
+      where:
+        t.user_id == ^user_id and t.status in ["pending", "starting", "running"] and
+          (is_nil(t.image) or t.image not in ^light_images),
       select: count(t.id)
     )
   end

@@ -11,11 +11,13 @@ defmodule Agents.Sessions.Infrastructure.Adapters.DockerAdapter do
   @behaviour Agents.Sessions.Application.Behaviours.ContainerProviderBehaviour
 
   alias Agents.Sessions.Application.SessionsConfig
+  alias Agents.Sessions.Domain.Policies.ImagePolicy
 
   @impl true
   def start(image, opts \\ []) do
     system_cmd = Keyword.get(opts, :system_cmd, &System.cmd/3)
     env = Keyword.get(opts, :env, SessionsConfig.container_env())
+    limits = ImagePolicy.resource_limits(image)
 
     env_args = build_env_args(env)
 
@@ -25,8 +27,8 @@ defmodule Agents.Sessions.Infrastructure.Adapters.DockerAdapter do
         "-d",
         "-p",
         "127.0.0.1:0:4096",
-        "--memory=2g",
-        "--cpus=2"
+        "--memory=#{limits.memory}",
+        "--cpus=#{limits.cpus}"
       ] ++
         env_args ++ [image]
 

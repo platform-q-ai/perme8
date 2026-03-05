@@ -88,6 +88,12 @@ defmodule Agents.Sessions.Infrastructure.Repositories.TaskRepository do
   end
 
   @impl true
+  def count_running_heavyweight_tasks(user_id) do
+    TaskQueries.count_running_heavyweight(user_id)
+    |> Repo.one()
+  end
+
+  @impl true
   def list_queued_tasks(user_id) do
     TaskQueries.queued_for_user(user_id)
     |> Repo.all()

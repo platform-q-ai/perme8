@@ -1,5 +1,5 @@
 defmodule Mix.Tasks.Docker.Build do
-  @shortdoc "Builds a perme8 Docker image (opencode or pi)"
+  @shortdoc "Builds a perme8 Docker image (opencode, opencode-light, or pi)"
 
   @moduledoc """
   Builds a Docker image used by coding sessions.
@@ -13,7 +13,7 @@ defmodule Mix.Tasks.Docker.Build do
 
   ## Arguments
 
-    * `image` - Which image to build: `opencode` (default) or `pi`
+    * `image` - Which image to build: `opencode` (default), `opencode-light`, or `pi`
 
   ## Options
 
@@ -39,6 +39,7 @@ defmodule Mix.Tasks.Docker.Build do
 
   @images %{
     "opencode" => %{path: "infra/opencode", default_tag: "perme8-opencode"},
+    "opencode-light" => %{path: "infra/opencode-light", default_tag: "perme8-opencode-light"},
     "pi" => %{path: "infra/pi", default_tag: "perme8-pi"}
   }
 

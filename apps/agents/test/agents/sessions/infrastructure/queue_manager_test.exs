@@ -571,4 +571,103 @@ defmodule Agents.Sessions.Infrastructure.QueueManagerTest do
       assert updated.status == "running"
     end
   end
+
+  describe "light image queue bypass" do
+    test "light image tasks don't count against concurrency limit" do
+      user = user_fixture()
+      create_task(user, %{status: "running", image: "perme8-opencode-light"})
+
+      assert {:ok, _pid} =
+               QueueManagerSupervisor.ensure_started(user.id,
+                 concurrency_limit: 1,
+                 task_runner_starter: fn _task_id, _opts -> {:ok, self()} end
+               )
+
+      assert QueueManager.check_concurrency(user.id) == :ok
+    end
+
+    test "light image queued tasks are promoted immediately even when at heavyweight limit" do
+      user = user_fixture()
+      create_task(user, %{status: "running", image: "perme8-opencode"})
+
+      light_queued =
+        create_task(user, %{
+          status: "queued",
+          queue_position: 1,
+          image: "perme8-opencode-light"
+        })
+
+      test_pid = self()
+
+      assert {:ok, _pid} =
+               QueueManagerSupervisor.ensure_started(user.id,
+                 concurrency_limit: 1,
+                 task_runner_starter: fn task_id, _opts ->
+                   send(test_pid, {:started_runner, task_id})
+                   {:ok, self()}
+                 end
+               )
+
+      assert :ok = QueueManager.notify_task_queued(user.id, light_queued.id)
+
+      light_id = light_queued.id
+      assert_receive {:started_runner, ^light_id}
+
+      updated = Repo.get!(TaskSchema, light_queued.id)
+      assert updated.status == "pending"
+    end
+
+    test "heavyweight tasks remain queued when at limit with light tasks running" do
+      user = user_fixture()
+      create_task(user, %{status: "running", image: "perme8-opencode"})
+      create_task(user, %{status: "running", image: "perme8-opencode-light"})
+
+      heavy_queued =
+        create_task(user, %{
+          status: "queued",
+          queue_position: 1,
+          image: "perme8-opencode"
+        })
+
+      {:module, noop_container_mod, _, _} =
+        defmodule :"Agents.Sessions.QueueManagerTest.NoopForLightTest.#{System.unique_integer([:positive])}" do
+          def start(_image, _opts), do: {:error, :warmup_disabled}
+          def stop(_container_id, _opts \\ []), do: :ok
+          def status(_container_id, _opts \\ []), do: {:ok, :not_found}
+          def remove(_container_id, _opts \\ []), do: :ok
+          def restart(_container_id, _opts \\ []), do: {:ok, %{port: 4096}}
+
+          def stats(_container_id, _opts \\ []),
+            do: {:ok, %{cpu_percent: 0.0, memory_usage: 0, memory_limit: 0}}
+
+          def prepare_fresh_start(_container_id, _opts \\ []), do: :ok
+        end
+
+      assert {:ok, _pid} =
+               QueueManagerSupervisor.ensure_started(user.id,
+                 concurrency_limit: 1,
+                 container_provider: noop_container_mod,
+                 task_runner_starter: fn _task_id, _opts -> {:ok, self()} end
+               )
+
+      assert :ok = QueueManager.notify_task_queued(user.id, heavy_queued.id)
+
+      updated = Repo.get!(TaskSchema, heavy_queued.id)
+      assert updated.status == "queued"
+    end
+
+    test "multiple light image tasks can run simultaneously" do
+      user = user_fixture()
+      create_task(user, %{status: "running", image: "perme8-opencode-light"})
+      create_task(user, %{status: "running", image: "perme8-opencode-light"})
+
+      assert {:ok, _pid} =
+               QueueManagerSupervisor.ensure_started(user.id,
+                 concurrency_limit: 1,
+                 task_runner_starter: fn _task_id, _opts -> {:ok, self()} end
+               )
+
+      assert QueueManager.check_concurrency(user.id) == :ok
+    end
+  end
 end

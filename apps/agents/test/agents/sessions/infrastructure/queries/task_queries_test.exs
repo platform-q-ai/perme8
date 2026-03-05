@@ -87,6 +87,44 @@ defmodule Agents.Sessions.Infrastructure.Queries.TaskQueriesTest do
     end
   end
 
+  describe "count_running_heavyweight/1" do
+    test "excludes light image tasks from count" do
+      user = user_fixture()
+      create_task(user, %{status: "running", image: "perme8-opencode"})
+      create_task(user, %{status: "running", image: "perme8-opencode"})
+      create_task(user, %{status: "running", image: "perme8-opencode-light"})
+
+      count = TaskQueries.count_running_heavyweight(user.id) |> Repo.one()
+      assert count == 2
+    end
+
+    test "returns 0 when only light image tasks are running" do
+      user = user_fixture()
+      create_task(user, %{status: "running", image: "perme8-opencode-light"})
+      create_task(user, %{status: "pending", image: "perme8-opencode-light"})
+
+      count = TaskQueries.count_running_heavyweight(user.id) |> Repo.one()
+      assert count == 0
+    end
+
+    test "counts tasks with nil image as heavyweight" do
+      user = user_fixture()
+      create_task(user, %{status: "running"})
+
+      count = TaskQueries.count_running_heavyweight(user.id) |> Repo.one()
+      assert count == 1
+    end
+
+    test "existing count_running still counts all tasks" do
+      user = user_fixture()
+      create_task(user, %{status: "running", image: "perme8-opencode"})
+      create_task(user, %{status: "running", image: "perme8-opencode-light"})
+
+      count = TaskQueries.count_running(user.id) |> Repo.one()
+      assert count == 2
+    end
+  end
+
   describe "sessions_for_user/1" do
     test "includes latest_task_id for each session" do
       user = user_fixture()

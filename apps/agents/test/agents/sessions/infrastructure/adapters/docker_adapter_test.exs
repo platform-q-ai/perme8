@@ -118,6 +118,52 @@ defmodule Agents.Sessions.Infrastructure.Adapters.DockerAdapterTest do
     end
   end
 
+  describe "start/2 resource limits" do
+    test "uses reduced resource limits for light images" do
+      test_pid = self()
+
+      mock_cmd = fn
+        "docker", args, _opts ->
+          send(test_pid, {:docker_args, args})
+
+          if List.first(args) == "run" do
+            {"light-container\n", 0}
+          else
+            {"127.0.0.1:32768\n", 0}
+          end
+      end
+
+      DockerAdapter.start("perme8-opencode-light", system_cmd: mock_cmd, env: %{})
+
+      assert_receive {:docker_args, args}
+      assert "--memory=512m" in args
+      assert "--cpus=1" in args
+      refute "--memory=2g" in args
+      refute "--cpus=2" in args
+    end
+
+    test "uses default resource limits for standard images" do
+      test_pid = self()
+
+      mock_cmd = fn
+        "docker", args, _opts ->
+          send(test_pid, {:docker_args, args})
+
+          if List.first(args) == "run" do
+            {"standard-container\n", 0}
+          else
+            {"127.0.0.1:32768\n", 0}
+          end
+      end
+
+      DockerAdapter.start("perme8-opencode", system_cmd: mock_cmd, env: %{})
+
+      assert_receive {:docker_args, args}
+      assert "--memory=2g" in args
+      assert "--cpus=2" in args
+    end
+  end
+
   describe "stop/1" do
     test "runs docker stop and returns :ok on success" do
       mock_cmd = fn "docker", ["stop", "abc123"], _opts ->
