@@ -39,11 +39,11 @@ Add a new lightweight container image (`perme8-opencode-light`) purpose-built fo
 
 ---
 
-## Phase 1: Domain + Application (phoenix-tdd)
+## Phase 1: Domain + Application (phoenix-tdd) ✓
 
 ### Step 1.1: ImagePolicy — Pure Business Rules for Light Images
 
-- [ ] ⏸ **RED**: Write test `apps/agents/test/agents/sessions/domain/policies/image_policy_test.exs`
+- [x] ⏸ **RED**: Write test `apps/agents/test/agents/sessions/domain/policies/image_policy_test.exs`
   - Test `light_image?("perme8-opencode-light")` returns `true`
   - Test `light_image?("perme8-opencode")` returns `false`
   - Test `light_image?("perme8-pi")` returns `false`
@@ -53,41 +53,41 @@ Add a new lightweight container image (`perme8-opencode-light`) purpose-built fo
   - Test `resource_limits(nil)` returns default limits `%{memory: "2g", cpus: "2"}`
   - Test `bypasses_queue?("perme8-opencode-light")` returns `true`
   - Test `bypasses_queue?("perme8-opencode")` returns `false`
-- [ ] ⏸ **GREEN**: Implement `apps/agents/lib/agents/sessions/domain/policies/image_policy.ex`
+- [x] ⏸ **GREEN**: Implement `apps/agents/lib/agents/sessions/domain/policies/image_policy.ex`
   - Module: `Agents.Sessions.Domain.Policies.ImagePolicy`
   - `@light_images ["perme8-opencode-light"]`
   - `light_image?(image)` — checks membership in `@light_images`
   - `bypasses_queue?(image)` — delegates to `light_image?/1` (semantic alias for queue context)
   - `resource_limits(image)` — returns `%{memory: "512m", cpus: "1"}` for light images, `%{memory: "2g", cpus: "2"}` for others
-- [ ] ⏸ **REFACTOR**: Ensure no I/O, no infrastructure imports. Pure functions only.
+- [x] ⏸ **REFACTOR**: Ensure no I/O, no infrastructure imports. Pure functions only.
 
 ### Step 1.2: QueuePolicy — Extend with Light Image Awareness
 
-- [ ] ⏸ **RED**: Add tests to `apps/agents/test/agents/sessions/domain/policies/queue_policy_test.exs`
+- [x] ⏸ **RED**: Add tests to `apps/agents/test/agents/sessions/domain/policies/queue_policy_test.exs`
   - Test `count_towards_limit?("perme8-opencode")` returns `true`
   - Test `count_towards_limit?("perme8-opencode-light")` returns `false`
   - Test `should_queue_with_image?(3, 2, "perme8-opencode")` returns `true` (at limit)
   - Test `should_queue_with_image?(3, 2, "perme8-opencode-light")` returns `false` (bypasses)
-- [ ] ⏸ **GREEN**: Add to `apps/agents/lib/agents/sessions/domain/policies/queue_policy.ex`
+- [x] ⏸ **GREEN**: Add to `apps/agents/lib/agents/sessions/domain/policies/queue_policy.ex`
   - `count_towards_limit?(image)` — delegates to `ImagePolicy.bypasses_queue?/1` (inverted)
   - `should_queue_with_image?(running_count, limit, image)` — returns `false` when image bypasses queue, delegates to `should_queue?/2` otherwise
-- [ ] ⏸ **REFACTOR**: Keep existing `should_queue?/2` and `can_promote?/2` unchanged for backward compatibility.
+- [x] ⏸ **REFACTOR**: Keep existing `should_queue?/2` and `can_promote?/2` unchanged for backward compatibility.
 
 ### Step 1.3: SessionsConfig — Add Light Image to Available Images
 
-- [ ] ⏸ **RED**: Write test `apps/agents/test/agents/sessions/application/sessions_config_test.exs`
+- [x] ⏸ **RED**: Write test `apps/agents/test/agents/sessions/application/sessions_config_test.exs`
   - Test `available_images/0` includes `%{name: "perme8-opencode-light", label: "OpenCode Light"}`
   - Test `available_images/0` still includes `"perme8-opencode"` and `"perme8-pi"`
   - Test `available_images/0` returns list of 3 images
-- [ ] ⏸ **GREEN**: Update `apps/agents/lib/agents/sessions/application/sessions_config.ex`
+- [x] ⏸ **GREEN**: Update `apps/agents/lib/agents/sessions/application/sessions_config.ex`
   - Add `%{name: "perme8-opencode-light", label: "OpenCode Light"}` to the default list in `available_images/0`
-- [ ] ⏸ **REFACTOR**: Ensure ordering is sensible (OpenCode, OpenCode Light, Pi).
+- [x] ⏸ **REFACTOR**: Ensure ordering is sensible (OpenCode, OpenCode Light, Pi).
 
 ### Phase 1 Validation
 
-- [ ] ⏸ All domain policy tests pass (`mix test apps/agents/test/agents/sessions/domain/policies/ --trace`)
-- [ ] ⏸ SessionsConfig test passes
-- [ ] ⏸ No boundary violations (`mix boundary`)
+- [x] ⏸ All domain policy tests pass (`mix test apps/agents/test/agents/sessions/domain/policies/ --trace`)
+- [x] ⏸ SessionsConfig test passes
+- [x] ⏸ No boundary violations (`mix boundary`)
 
 ---
 

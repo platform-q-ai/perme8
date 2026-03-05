@@ -20,6 +20,7 @@ defmodule Agents.Sessions.Application.SessionsConfig do
     config()[:available_images] ||
       [
         %{name: "perme8-opencode", label: "OpenCode"},
+        %{name: "perme8-opencode-light", label: "OpenCode Light"},
         %{name: "perme8-pi", label: "Pi"}
       ]
   end
