@@ -15,6 +15,7 @@ defmodule Identity.Domain.Entities.ApiKey do
           hashed_token: String.t(),
           user_id: String.t(),
           workspace_access: [String.t()],
+          permissions: [String.t()] | nil,
           is_active: boolean(),
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil
@@ -27,6 +28,7 @@ defmodule Identity.Domain.Entities.ApiKey do
     :hashed_token,
     :user_id,
     :workspace_access,
+    :permissions,
     :is_active,
     :inserted_at,
     :updated_at
@@ -50,6 +52,7 @@ defmodule Identity.Domain.Entities.ApiKey do
       hashed_token: schema.hashed_token,
       user_id: schema.user_id,
       workspace_access: schema.workspace_access || [],
+      permissions: Map.get(schema, :permissions),
       is_active: schema.is_active,
       inserted_at: schema.inserted_at,
       updated_at: schema.updated_at

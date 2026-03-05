@@ -66,7 +66,7 @@ The implementation spans four apps:
 The core pure-function policy implementing wildcard-aware scope matching. This is the
 foundation — everything else depends on it.
 
-- [ ] ⏸ **RED**: Write test `apps/identity/test/identity/domain/policies/api_key_permission_policy_test.exs`
+- [x] ⏸ **RED**: Write test `apps/identity/test/identity/domain/policies/api_key_permission_policy_test.exs`
   - Tests:
     - `has_permission?/2` with `nil` permissions returns `true` (backward compat)
     - `has_permission?/2` with `["*"]` returns `true` for any scope
@@ -84,7 +84,7 @@ foundation — everything else depends on it.
     - `valid_scope?/1` validates format `^(\*|[a-z_]+:[a-z_.*]+)$`
     - `presets/0` returns the defined preset map
     - `all_scopes/0` returns the canonical registry of all known scopes
-- [ ] ⏸ **GREEN**: Implement `apps/identity/lib/identity/domain/policies/api_key_permission_policy.ex`
+- [x] ⏸ **GREEN**: Implement `apps/identity/lib/identity/domain/policies/api_key_permission_policy.ex`
   - Pure functions, no I/O
   - `has_permission?(permissions, required_scope)` — core matching with wildcard support
   - `permission_summary(permissions)` — categorizes permission level for UI display
@@ -92,24 +92,24 @@ foundation — everything else depends on it.
   - `presets/0` — returns map of preset name → scope list
   - `all_scopes/0` — canonical scope registry (REST + MCP)
   - Scope matching rules: nil → full access, `"*"` matches all, exact match, `"resource:*"` suffix wildcard, `"mcp:category.*"` nested wildcard
-- [ ] ⏸ **REFACTOR**: Ensure single responsibility — this module owns ONLY scope matching logic, no I/O
+- [x] ⏸ **REFACTOR**: Ensure single responsibility — this module owns ONLY scope matching logic, no I/O
 
 ### 1.2 ApiKey Domain Entity — Add `permissions` Field
 
-- [ ] ⏸ **RED**: Update test `apps/identity/test/identity/domain/entities/api_key_test.exs`
+- [x] ⏸ **RED**: Update test `apps/identity/test/identity/domain/entities/api_key_test.exs`
   - Tests:
     - `new/1` accepts `permissions` field (list of strings or nil)
     - `from_schema/1` maps `permissions` field correctly (including nil → nil)
     - Struct includes `permissions` key with default nil
-- [ ] ⏸ **GREEN**: Update `apps/identity/lib/identity/domain/entities/api_key.ex`
+- [x] ⏸ **GREEN**: Update `apps/identity/lib/identity/domain/entities/api_key.ex`
   - Add `permissions: [String.t()] | nil` to `@type t`, `defstruct`, and `from_schema/1`
-- [ ] ⏸ **REFACTOR**: Keep entity as pure data mapping, no logic
+- [x] ⏸ **REFACTOR**: Keep entity as pure data mapping, no logic
 
 ### Phase 1 Validation
 
-- [ ] ⏸ All domain policy tests pass: `mix test apps/identity/test/identity/domain/policies/api_key_permission_policy_test.exs`
-- [ ] ⏸ All entity tests pass: `mix test apps/identity/test/identity/domain/entities/api_key_test.exs`
-- [ ] ⏸ Tests run in milliseconds (no I/O, no DB)
+- [x] ⏸ All domain policy tests pass: `mix test apps/identity/test/identity/domain/policies/api_key_permission_policy_test.exs`
+- [x] ⏸ All entity tests pass: `mix test apps/identity/test/identity/domain/entities/api_key_test.exs`
+- [x] ⏸ Tests run in milliseconds (no I/O, no DB)
 - [ ] ⏸ No boundary violations: `mix boundary`
 
 ---
