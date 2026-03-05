@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+#
+# get-token — Generate a short-lived GitHub App installation access token.
+#
+# Usage:
+#   ~/.config/perme8/get-token          # prints the token to stdout
+#   export GH_TOKEN=$(~/.config/perme8/get-token)
+#
+# Requires: openssl, curl, base64
+#
+set -euo pipefail
+
+APP_ID="${GITHUB_APP_ID:-2896166}"
+PRIVATE_KEY="${GITHUB_APP_PRIVATE_KEY_PATH:-$HOME/.config/perme8/private-key.pem}"
+OWNER="${GITHUB_APP_OWNER:-platform-q-ai}"
+
+if [[ ! -r "$PRIVATE_KEY" ]]; then
+  echo "ERROR: Private key is not readable at $PRIVATE_KEY" >&2
+  exit 1
+fi
+
+# --- Helpers ----------------------------------------------------------------
+
+base64url() {
+  openssl base64 -e -A | tr '+/' '-_' | tr -d '='
+}
+
+now() {
+  date +%s
+}
+
+# --- Build JWT (RS256) ------------------------------------------------------
+
+header='{"alg":"RS256","typ":"JWT"}'
+iat=$(( $(now) - 60 ))          # issued 60s in the past to allow clock drift
+exp=$(( $(now) + 540 ))         # expires in 9 minutes (max is 10)
+
+payload=$(printf '{"iss":"%s","iat":%d,"exp":%d}' "$APP_ID" "$iat" "$exp")
+
+unsigned="$(echo -n "$header" | base64url).$(echo -n "$payload" | base64url)"
+
+signature=$(echo -n "$unsigned" \
+  | openssl dgst -sha256 -sign "$PRIVATE_KEY" \
+  | base64url)
+
+jwt="${unsigned}.${signature}"
+
+# --- Get Installation ID ----------------------------------------------------
+
+install_id=$(curl -sf \
+  -H "Authorization: Bearer ${jwt}" \
+  -H "Accept: application/vnd.github+json" \
+  "https://api.github.com/app/installations" \
+  | python3 -c "
+import sys, json
+installs = json.load(sys.stdin)
+for i in installs:
+    if i.get('account', {}).get('login') == '${OWNER}':
+        print(i['id'])
+        break
+")
+
+if [[ -z "$install_id" ]]; then
+  echo "ERROR: Could not find installation for ${OWNER}" >&2
+  exit 1
+fi
+
+# --- Exchange for Installation Access Token ---------------------------------
+
+token=$(curl -sf -X POST \
+  -H "Authorization: Bearer ${jwt}" \
+  -H "Accept: application/vnd.github+json" \
+  "https://api.github.com/app/installations/${install_id}/access_tokens" \
+  | python3 -c "import sys, json; print(json.load(sys.stdin)['token'])")
+
+if [[ -z "$token" ]]; then
+  echo "ERROR: Failed to generate installation token" >&2
+  exit 1
+fi
+
+echo "$token"
