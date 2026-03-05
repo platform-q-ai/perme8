@@ -5,7 +5,7 @@ defmodule JargaApi.Router do
   # Applied before :api or :api_authenticated so new pipelines inherit these automatically.
   pipeline :api_base do
     plug(:accepts, ["json"])
-    plug(JargaApi.Plugs.SecurityHeadersPlug)
+    plug(Perme8.Plugs.SecurityHeaders, profile: :api)
   end
 
   # Unauthenticated API pipeline for public endpoints (e.g., health check, OpenAPI spec)

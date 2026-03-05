@@ -3,7 +3,7 @@ defmodule WebhooksApi.Router do
 
   pipeline :api_base do
     plug(:accepts, ["json"])
-    plug(WebhooksApi.Plugs.SecurityHeadersPlug)
+    plug(Perme8.Plugs.SecurityHeaders, profile: :api)
   end
 
   pipeline :api_authenticated do

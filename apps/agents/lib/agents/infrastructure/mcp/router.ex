@@ -20,9 +20,8 @@ defmodule Agents.Infrastructure.Mcp.Router do
   use Plug.Router
 
   alias Agents.Infrastructure.Mcp.McpPipeline
-  alias Agents.Infrastructure.Mcp.SecurityHeadersPlug
 
-  plug(SecurityHeadersPlug)
+  plug(Perme8.Plugs.SecurityHeaders, profile: :api)
   plug(:match)
   plug(:dispatch)
 

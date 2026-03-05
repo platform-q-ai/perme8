@@ -4,7 +4,7 @@ defmodule AgentsApi.Router do
   # Shared base pipeline for all API routes — sets content type and security headers.
   pipeline :api_base do
     plug(:accepts, ["json"])
-    plug(AgentsApi.Plugs.SecurityHeadersPlug)
+    plug(Perme8.Plugs.SecurityHeaders, profile: :api)
   end
 
   # Unauthenticated API pipeline for public endpoints (e.g., health check, OpenAPI spec)

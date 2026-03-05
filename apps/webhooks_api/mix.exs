@@ -57,6 +57,7 @@ defmodule WebhooksApi.MixProject do
       {:webhooks, in_umbrella: true},
       {:identity, in_umbrella: true},
       {:jarga, in_umbrella: true},
+      {:perme8_plugs, in_umbrella: true},
       {:jason, "~> 1.2"},
       {:bandit, "~> 1.5"},
       {:boundary, "~> 0.10", runtime: false}
