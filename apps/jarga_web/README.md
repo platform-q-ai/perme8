@@ -78,7 +78,7 @@ LiveViews that handle events: `DashboardLive`, `WorkspaceLive.Index`, `Workspace
 | `PermissionsHelper` | Helper functions for checking user permissions in templates |
 | `AllowEctoSandbox` | Test hook for Ecto sandbox in browser tests |
 | `NotificationLive.OnMount` | Mount hook for loading notifications on page load |
-| `SecurityHeadersPlug` | Sets security headers (CSP, HSTS, X-Frame-Options, etc.) at the endpoint level |
+| `Perme8.Plugs.SecurityHeaders` | Sets security headers (CSP, HSTS, X-Frame-Options, etc.) at the endpoint level via shared `perme8_plugs` app |
 
 ## Assets
 

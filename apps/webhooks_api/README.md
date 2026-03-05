@@ -26,7 +26,7 @@ Webhooks (Context Facade -- delegates to domain/application/infrastructure)
 | Plug | Description |
 |------|-------------|
 | `ApiAuthPlug` | Bearer token authentication via Identity API key verification |
-| `SecurityHeadersPlug` | Security headers (CSP, HSTS, X-Frame-Options, etc.) |
+| `Perme8.Plugs.SecurityHeaders` | Security headers (CSP, HSTS, X-Frame-Options, etc.) via shared `perme8_plugs` app |
 | `CacheRawBody` | Preserves raw request body for HMAC signature verification |
 
 ### JSON Views

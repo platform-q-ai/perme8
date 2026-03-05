@@ -95,7 +95,7 @@ The `Identity` module (`lib/identity.ex`) is a **facade** -- a thin public API t
 
 ## Security
 
-`SecurityHeadersPlug` is applied at the endpoint level (before routing) so every response -- including static files, redirects, and error pages -- carries these headers:
+`Perme8.Plugs.SecurityHeaders` (from the shared `perme8_plugs` app) is applied at the endpoint level (before routing) so every response -- including static files, redirects, and error pages -- carries these headers:
 
 | Header | Value |
 |---|---|
@@ -119,7 +119,7 @@ Additional security features:
 |---|---|
 | `UserAuth` | Session management, `fetch_current_scope_for_user`, `require_authenticated_user`, LiveView on_mount hooks for auth + sudo mode |
 | `ApiAuthPlug` | Bearer token auth for API endpoints, returns 401 JSON on failure |
-| `SecurityHeadersPlug` | Endpoint-level security headers on all responses |
+| `Perme8.Plugs.SecurityHeaders` | Endpoint-level security headers on all responses (from shared `perme8_plugs` app) |
 
 ## Testing
 

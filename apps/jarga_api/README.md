@@ -49,7 +49,7 @@ Domain (ApiKeyScope)
 | Plug | Description |
 |------|-------------|
 | `ApiAuthPlug` | Bearer token authentication via Identity API key verification |
-| `SecurityHeadersPlug` | Security headers (CSP, HSTS, X-Frame-Options, etc.) |
+| `Perme8.Plugs.SecurityHeaders` | Security headers (CSP, HSTS, X-Frame-Options, etc.) via shared `perme8_plugs` app |
 
 **JSON Views:** `WorkspaceApiJSON`, `ProjectApiJSON`, `DocumentApiJSON`
 

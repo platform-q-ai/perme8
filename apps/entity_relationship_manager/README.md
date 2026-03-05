@@ -114,7 +114,7 @@ Bulk operations support `:atomic` (all-or-nothing, default) and `:partial` modes
 |------|---------|
 | `WorkspaceAuthPlug` | Extracts Bearer token, verifies API key, resolves user and workspace membership |
 | `AuthorizePlug` | Checks member role against `AuthorizationPolicy` per action |
-| `SecurityHeadersPlug` | Sets security headers (CSP, HSTS, X-Frame-Options, etc.) |
+| `Perme8.Plugs.SecurityHeaders` | Sets security headers (CSP, HSTS, X-Frame-Options, etc.) via shared `perme8_plugs` app |
 
 **Controllers:** `HealthController`, `SchemaController`, `EntityController`, `EdgeController`, `TraversalController`
 
