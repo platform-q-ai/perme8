@@ -1,0 +1,6 @@
+*
+!Dockerfile
+!entrypoint.sh
+!get-token
+!get-review-token
+!opencode.json

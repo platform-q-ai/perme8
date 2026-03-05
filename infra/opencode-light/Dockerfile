@@ -1,0 +1,40 @@
+# Stage 1: fetch the opencode binary
+FROM alpine:3.21 AS fetcher
+RUN apk add --no-cache curl bash
+RUN curl -fsSL https://opencode.ai/install | bash
+RUN cp /root/.opencode/bin/opencode /usr/local/bin/opencode
+
+# Stage 2: lightweight Alpine image for discussion/planning only
+FROM alpine:3.21
+
+# git: repo operations, bash+openssl+curl+python3: get-token script
+# ripgrep+fd: required by opencode's Grep and Glob tools
+# github-cli: issue/PR/project board operations
+#
+# NOT included (heavyweight build tools):
+#   elixir/erlang, postgresql, build-base, nodejs/npm, bun, chromium
+RUN apk add --no-cache git bash openssl curl python3 github-cli ripgrep fd
+
+# Copy opencode binary from fetcher stage
+COPY --from=fetcher /usr/local/bin/opencode /usr/local/bin/opencode
+
+# Non-root user
+RUN adduser -D -g "" appuser
+
+# Pre-create directories opencode expects at runtime
+RUN mkdir -p /home/appuser/.local/share/opencode \
+             /home/appuser/.local/state \
+             /home/appuser/.config/perme8 \
+             /home/appuser/.claude
+
+WORKDIR /workspace
+COPY opencode.json /workspace/opencode.json
+COPY entrypoint.sh /workspace/entrypoint.sh
+COPY get-token /home/appuser/.config/perme8/get-token
+COPY get-review-token /home/appuser/.config/perme8/get-review-token
+RUN chmod +x /workspace/entrypoint.sh /home/appuser/.config/perme8/get-token /home/appuser/.config/perme8/get-review-token
+RUN chown -R appuser:appuser /workspace /home/appuser/.local /home/appuser/.config /home/appuser/.claude
+
+USER appuser
+EXPOSE 4096
+ENTRYPOINT ["/workspace/entrypoint.sh"]
