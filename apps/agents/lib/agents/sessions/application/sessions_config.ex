@@ -99,19 +99,14 @@ defmodule Agents.Sessions.Application.SessionsConfig do
     config()[:github_sync_enabled] != false
   end
 
-  @doc "Returns the GitHub org login for ProjectV2 queries."
-  def github_project_org do
-    config()[:github_project_org] || "platform-q-ai"
+  @doc "Returns the GitHub org/owner for issue queries."
+  def github_org do
+    config()[:github_org] || config()[:github_project_org] || "platform-q-ai"
   end
 
-  @doc "Returns the GitHub ProjectV2 number to sync from."
-  def github_project_number do
-    config()[:github_project_number] || 7
-  end
-
-  @doc "Returns project statuses that should appear in the ticket list."
-  def github_ticket_statuses do
-    config()[:github_ticket_statuses] || ["Backlog", "Ready"]
+  @doc "Returns the GitHub repository name for issue queries."
+  def github_repo do
+    config()[:github_repo] || "perme8"
   end
 
   @doc "Returns GitHub sync polling interval in milliseconds."
@@ -119,7 +114,7 @@ defmodule Agents.Sessions.Application.SessionsConfig do
     config()[:github_poll_interval_ms] || 15_000
   end
 
-  @doc "Returns the GitHub token used for GraphQL project queries."
+  @doc "Returns the GitHub token used for API queries."
   def github_token do
     config()[:github_token]
   end

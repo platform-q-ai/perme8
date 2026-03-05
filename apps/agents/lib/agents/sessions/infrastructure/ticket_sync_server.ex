@@ -1,9 +1,10 @@
 defmodule Agents.Sessions.Infrastructure.TicketSyncServer do
   @moduledoc """
-  Polls GitHub ProjectV2 tickets and broadcasts updates.
+  Polls open GitHub issues from the configured repository and broadcasts updates.
 
-  Keeps the latest ticket snapshot in memory so LiveViews can render quickly
-  without calling GitHub directly.
+  Keeps the local `sessions_project_tickets` table in sync with the repo's
+  open issues so LiveViews can render quickly without calling GitHub directly.
+  Closed issues are automatically pruned from the local table on each sync.
   """
 
   use GenServer
@@ -28,21 +29,10 @@ defmodule Agents.Sessions.Infrastructure.TicketSyncServer do
     :exit, _ -> []
   end
 
-  @spec reorder_ticket(integer(), String.t() | nil, [integer()]) :: :ok | {:error, term()}
-  def reorder_ticket(ticket_number, target_status, ordered_ticket_numbers)
-      when is_integer(ticket_number) and is_list(ordered_ticket_numbers) do
-    GenServer.call(
-      __MODULE__,
-      {:reorder_ticket, ticket_number, target_status, ordered_ticket_numbers}
-    )
-  catch
-    :exit, _ -> {:error, :sync_server_unavailable}
-  end
-
   @doc """
-  Closes a ticket on GitHub asynchronously (sets board status to "Done" and
-  closes the issue). This is fire-and-forget — the local DB record should
-  already be deleted before calling this.
+  Closes a ticket on GitHub asynchronously (closes the issue).
+  This is fire-and-forget — the local DB record should already be
+  deleted before calling this.
   """
   @spec close_ticket(integer()) :: :ok
   def close_ticket(issue_number) when is_integer(issue_number) do
@@ -52,8 +42,6 @@ defmodule Agents.Sessions.Infrastructure.TicketSyncServer do
   @impl true
   def init(opts) do
     state = %{
-      tickets: [],
-      ticket_index: %{},
       client: Keyword.get(opts, :client, GithubProjectClient),
       ticket_repo: Keyword.get(opts, :ticket_repo, ProjectTicketRepository),
       poll_interval_ms: SessionsConfig.github_poll_interval_ms(),
@@ -69,32 +57,18 @@ defmodule Agents.Sessions.Infrastructure.TicketSyncServer do
 
   @impl true
   def handle_call(:list_tickets, _from, state) do
-    tickets = state.ticket_repo.list_by_statuses(SessionsConfig.github_ticket_statuses())
+    tickets = state.ticket_repo.list_all()
     {:reply, tickets, state}
   rescue
     _ -> {:reply, [], state}
   end
 
   @impl true
-  def handle_call({:reorder_ticket, ticket_number, target_status, ordered_numbers}, _from, state) do
-    result = do_reorder_ticket(state, ticket_number, target_status, ordered_numbers)
-
-    next_state =
-      case result do
-        :ok -> poll_tickets(state)
-        _ -> state
-      end
-
-    {:reply, result, next_state}
-  end
-
-  @impl true
   def handle_cast({:close_ticket, issue_number}, state) do
     opts = [
       token: SessionsConfig.github_token(),
-      org: SessionsConfig.github_project_org(),
-      project_number: SessionsConfig.github_project_number(),
-      repo: "perme8"
+      org: SessionsConfig.github_org(),
+      repo: SessionsConfig.github_repo()
     ]
 
     case state.client.close_issue(issue_number, opts) do
@@ -118,29 +92,28 @@ defmodule Agents.Sessions.Infrastructure.TicketSyncServer do
   defp poll_tickets(state) do
     opts = [
       token: SessionsConfig.github_token(),
-      org: SessionsConfig.github_project_org(),
-      project_number: SessionsConfig.github_project_number(),
-      statuses: SessionsConfig.github_ticket_statuses()
+      org: SessionsConfig.github_org(),
+      repo: SessionsConfig.github_repo()
     ]
-
-    reconcile_local_changes(state, opts)
 
     case state.client.fetch_tickets(opts) do
       {:ok, tickets} ->
         Enum.each(tickets, &sync_remote_ticket(state, &1))
 
-        persisted_tickets =
-          state.ticket_repo.list_by_statuses(SessionsConfig.github_ticket_statuses())
+        # Remove local tickets that are no longer in the open issues list
+        remote_numbers = MapSet.new(tickets, & &1.number)
+        state.ticket_repo.delete_not_in(remote_numbers)
 
+        persisted_tickets = state.ticket_repo.list_all()
         Phoenix.PubSub.broadcast(state.pubsub, @topic, {:tickets_synced, persisted_tickets})
-        %{state | tickets: tickets, ticket_index: build_ticket_index(tickets)}
+        state
 
       {:error, :missing_token} ->
-        Logger.debug("Skipping GitHub ticket sync: missing GH token")
+        Logger.debug("Skipping GitHub issue sync: missing GH token")
         state
 
       {:error, reason} ->
-        Logger.warning("GitHub ticket sync failed: #{inspect(reason)}")
+        Logger.warning("GitHub issue sync failed: #{inspect(reason)}")
         state
     end
   end
@@ -150,73 +123,5 @@ defmodule Agents.Sessions.Infrastructure.TicketSyncServer do
       {:ok, _} -> :ok
       {:error, reason} -> Logger.warning("Ticket upsert failed: #{inspect(reason)}")
     end
-  end
-
-  defp reconcile_local_changes(state, opts) do
-    state.ticket_repo.list_pending_push()
-    |> Enum.each(fn ticket ->
-      case state.client.push_ticket_update(ticket, opts) do
-        :ok ->
-          state.ticket_repo.mark_sync_success(ticket)
-
-        {:error, reason} ->
-          Logger.warning("Ticket push sync failed for ##{ticket.number}: #{inspect(reason)}")
-          state.ticket_repo.mark_sync_error(ticket, reason)
-      end
-    end)
-  rescue
-    reason -> Logger.warning("Ticket reconciliation failed: #{inspect(reason)}")
-  end
-
-  defp do_reorder_ticket(state, ticket_number, target_status, ordered_numbers) do
-    with %{item_id: item_id} = ticket <- Map.get(state.ticket_index, ticket_number),
-         project_id when is_binary(project_id) <- ticket[:project_id],
-         status_field_id <- ticket[:status_field_id],
-         status_option_ids <- ticket[:status_option_ids] || %{} do
-      after_item_id = resolve_after_item_id(state.ticket_index, ordered_numbers, ticket_number)
-      target_option_id = resolve_target_status_option_id(status_option_ids, target_status)
-
-      opts = [
-        token: SessionsConfig.github_token(),
-        project_id: project_id,
-        item_id: item_id,
-        after_item_id: after_item_id,
-        status_field_id: status_field_id,
-        target_status_option_id: target_option_id
-      ]
-
-      state.client.update_ticket_order_and_status(opts)
-    else
-      nil -> {:error, :ticket_not_found}
-      _ -> {:error, :missing_project_metadata}
-    end
-  end
-
-  defp build_ticket_index(tickets) do
-    Enum.reduce(tickets, %{}, fn ticket, acc ->
-      case ticket[:number] do
-        number when is_integer(number) -> Map.put(acc, number, ticket)
-        _ -> acc
-      end
-    end)
-  end
-
-  defp resolve_after_item_id(index, ordered_numbers, ticket_number) do
-    preceding =
-      ordered_numbers
-      |> Enum.take_while(&(&1 != ticket_number))
-      |> List.last()
-
-    case Map.get(index, preceding) do
-      %{item_id: item_id} when is_binary(item_id) -> item_id
-      _ -> nil
-    end
-  end
-
-  defp resolve_target_status_option_id(_status_option_ids, nil), do: nil
-
-  defp resolve_target_status_option_id(status_option_ids, target_status)
-       when is_binary(target_status) do
-    Map.get(status_option_ids, target_status)
   end
 end

@@ -674,7 +674,7 @@ defmodule Agents.SessionsTest do
       })
 
       insert_project_ticket(%{number: 410, title: "Ticket 410", status: "Ready", labels: []})
-      insert_project_ticket(%{number: 999, title: "Hidden", status: "Done", labels: []})
+      insert_project_ticket(%{number: 999, title: "Another ticket", status: "Done", labels: []})
 
       task_fixture(%{
         user_id: user.id,
@@ -685,22 +685,11 @@ defmodule Agents.SessionsTest do
 
       result = Sessions.list_project_tickets(user.id)
 
-      assert Enum.map(result, & &1.number) == [306, 410]
+      # All open issues are returned (no status filtering)
+      assert length(result) == 3
       assert Enum.find(result, &(&1.number == 306)).session_state == "running"
       assert Enum.find(result, &(&1.number == 410)).session_state == "idle"
-    end
-
-    test "update_project_ticket/2 marks ticket for GitHub reconciliation" do
-      insert_project_ticket(%{
-        number: 306,
-        title: "Ticket 306",
-        status: "Backlog",
-        labels: ["agents"]
-      })
-
-      assert {:ok, updated} = Sessions.update_project_ticket(306, %{status: "Ready"})
-      assert updated.status == "Ready"
-      assert updated.sync_state == "pending_push"
+      assert Enum.find(result, &(&1.number == 999)).session_state == "idle"
     end
   end
 

@@ -10,8 +10,6 @@ defmodule Agents.Sessions.Infrastructure.ProjectTicketRepositoryTest do
              ProjectTicketRepository.sync_remote_ticket(%{
                number: 306,
                title: "Ticket 306",
-               status: "Backlog",
-               priority: "Need",
                labels: ["agents"]
              })
 
@@ -21,89 +19,25 @@ defmodule Agents.Sessions.Infrastructure.ProjectTicketRepositoryTest do
     assert ticket.last_sync_error == nil
   end
 
-  test "mark_sync_error/2 marks pending local updates with error details" do
-    {:ok, ticket} =
-      %ProjectTicketSchema{}
-      |> ProjectTicketSchema.changeset(%{
-        number: 500,
-        title: "Ticket 500",
-        status: "Backlog",
-        labels: [],
-        sync_state: "pending_push"
-      })
-      |> Repo.insert()
-
-    assert {:ok, _} = ProjectTicketRepository.mark_sync_error(ticket, :boom)
-
-    refreshed = Repo.get!(ProjectTicketSchema, ticket.id)
-    assert refreshed.sync_state == "sync_error"
-    assert refreshed.last_sync_error =~ "boom"
-  end
-
-  test "sync_remote_ticket/1 does not overwrite pending_push local edits" do
-    {:ok, local_ticket} =
-      %ProjectTicketSchema{}
-      |> ProjectTicketSchema.changeset(%{
+  test "sync_remote_ticket/1 overwrites existing ticket data on re-sync" do
+    {:ok, _} =
+      ProjectTicketRepository.sync_remote_ticket(%{
         number: 700,
-        title: "Local Title",
-        status: "In progress",
-        priority: "Want",
-        labels: ["local"],
-        sync_state: "pending_push"
+        title: "Original Title",
+        labels: ["old"]
       })
-      |> Repo.insert()
 
-    assert {:ok, synced_ticket} =
-             ProjectTicketRepository.sync_remote_ticket(%{
-               number: 700,
-               title: "Remote Title",
-               status: "Backlog",
-               priority: "Need",
-               labels: ["remote"]
-             })
-
-    assert synced_ticket.id == local_ticket.id
-
-    refreshed = Repo.get!(ProjectTicketSchema, local_ticket.id)
-    assert refreshed.title == "Local Title"
-    assert refreshed.status == "In progress"
-    assert refreshed.priority == "Want"
-    assert refreshed.labels == ["local"]
-    assert refreshed.sync_state == "pending_push"
-  end
-
-  test "sync_remote_ticket/1 does not overwrite sync_error local edits" do
-    {:ok, local_ticket} =
-      %ProjectTicketSchema{}
-      |> ProjectTicketSchema.changeset(%{
-        number: 701,
-        title: "Local Error Title",
-        status: "In review",
-        priority: "Nice to have",
-        labels: ["local-error"],
-        sync_state: "sync_error",
-        last_sync_error: "push failed"
+    {:ok, synced} =
+      ProjectTicketRepository.sync_remote_ticket(%{
+        number: 700,
+        title: "Updated Title",
+        labels: ["new"]
       })
-      |> Repo.insert()
 
-    assert {:ok, synced_ticket} =
-             ProjectTicketRepository.sync_remote_ticket(%{
-               number: 701,
-               title: "Remote Title",
-               status: "Backlog",
-               priority: "Need",
-               labels: ["remote"]
-             })
-
-    assert synced_ticket.id == local_ticket.id
-
-    refreshed = Repo.get!(ProjectTicketSchema, local_ticket.id)
-    assert refreshed.title == "Local Error Title"
-    assert refreshed.status == "In review"
-    assert refreshed.priority == "Nice to have"
-    assert refreshed.labels == ["local-error"]
-    assert refreshed.sync_state == "sync_error"
-    assert refreshed.last_sync_error == "push failed"
+    refreshed = Repo.get!(ProjectTicketSchema, synced.id)
+    assert refreshed.title == "Updated Title"
+    assert refreshed.labels == ["new"]
+    assert refreshed.sync_state == "synced"
   end
 
   test "sync_remote_ticket/1 persists the body field from remote data" do
@@ -114,7 +48,6 @@ defmodule Agents.Sessions.Infrastructure.ProjectTicketRepositoryTest do
                number: 800,
                title: "Ticket with body",
                body: body_text,
-               status: "Backlog",
                labels: []
              })
 
@@ -129,7 +62,6 @@ defmodule Agents.Sessions.Infrastructure.ProjectTicketRepositoryTest do
              ProjectTicketRepository.sync_remote_ticket(%{
                number: 801,
                title: "Ticket without body",
-               status: "Backlog",
                labels: []
              })
 
@@ -162,7 +94,7 @@ defmodule Agents.Sessions.Infrastructure.ProjectTicketRepositoryTest do
 
     assert :ok = ProjectTicketRepository.reorder_positions([30, 10, 20])
 
-    tickets = ProjectTicketRepository.list_by_statuses(["Backlog"])
+    tickets = ProjectTicketRepository.list_all()
     numbers = Enum.map(tickets, & &1.number)
 
     assert numbers == [30, 10, 20]
@@ -188,11 +120,10 @@ defmodule Agents.Sessions.Infrastructure.ProjectTicketRepositoryTest do
       ProjectTicketRepository.sync_remote_ticket(%{
         number: 40,
         title: "Updated Ticket 40",
-        status: "Ready",
         labels: []
       })
 
-    tickets = ProjectTicketRepository.list_by_statuses(["Ready"])
+    tickets = ProjectTicketRepository.list_all()
     numbers = Enum.map(tickets, & &1.number)
 
     assert numbers == [50, 40]
@@ -225,7 +156,6 @@ defmodule Agents.Sessions.Infrastructure.ProjectTicketRepositoryTest do
       ProjectTicketRepository.sync_remote_ticket(%{
         number: 999,
         title: "Brand new ticket",
-        status: "Backlog",
         labels: []
       })
 
@@ -237,7 +167,6 @@ defmodule Agents.Sessions.Infrastructure.ProjectTicketRepositoryTest do
       ProjectTicketRepository.sync_remote_ticket(%{
         number: 998,
         title: "Very first ticket",
-        status: "Backlog",
         labels: []
       })
 
@@ -266,7 +195,6 @@ defmodule Agents.Sessions.Infrastructure.ProjectTicketRepositoryTest do
       ProjectTicketRepository.sync_remote_ticket(%{
         number: 203,
         title: "New from GitHub",
-        status: "Backlog",
         labels: []
       })
 
@@ -274,74 +202,19 @@ defmodule Agents.Sessions.Infrastructure.ProjectTicketRepositoryTest do
     assert new_ticket.position == 3
 
     # Full ordering should preserve user's drag order with new ticket at end
-    tickets = ProjectTicketRepository.list_by_statuses(["Backlog"])
+    tickets = ProjectTicketRepository.list_all()
     numbers = Enum.map(tickets, & &1.number)
     assert numbers == [202, 200, 201, 203]
   end
 
-  test "list_by_statuses/1 orders by priority when positions are equal" do
-    for {number, priority} <- [
-          {60, "Nice to have"},
-          {61, "Need"},
-          {62, "Want"},
-          {63, nil}
-        ] do
-      %ProjectTicketSchema{}
-      |> ProjectTicketSchema.changeset(%{
-        number: number,
-        title: "Ticket #{number}",
-        status: "Backlog",
-        priority: priority,
-        labels: []
-      })
-      |> Repo.insert!()
-    end
-
-    tickets = ProjectTicketRepository.list_by_statuses(["Backlog"])
-    numbers = Enum.map(tickets, & &1.number)
-
-    # Need (61) > Want (62) > Nice to have (60) > nil (63)
-    assert numbers == [61, 62, 60, 63]
-  end
-
-  test "list_by_statuses/1 orders by size when position and priority are equal" do
-    for {number, size} <- [
-          {70, "XS"},
-          {71, "XL"},
-          {72, "M"},
-          {73, "L"},
-          {74, "S"},
-          {75, nil}
-        ] do
-      %ProjectTicketSchema{}
-      |> ProjectTicketSchema.changeset(%{
-        number: number,
-        title: "Ticket #{number}",
-        status: "Backlog",
-        priority: "Need",
-        size: size,
-        labels: []
-      })
-      |> Repo.insert!()
-    end
-
-    tickets = ProjectTicketRepository.list_by_statuses(["Backlog"])
-    numbers = Enum.map(tickets, & &1.number)
-
-    # XL (71) > L (73) > M (72) > S (74) > XS (70) > nil (75)
-    assert numbers == [71, 73, 72, 74, 70, 75]
-  end
-
-  test "list_by_statuses/1 orders by inserted_at desc when position, priority, and size are equal" do
-    # Insert two tickets with same position, priority, size but different timestamps
+  test "list_all/0 orders by position then inserted_at desc" do
+    # Insert two tickets with same position but different timestamps
     {:ok, older} =
       %ProjectTicketSchema{}
       |> ProjectTicketSchema.changeset(%{
         number: 80,
         title: "Older ticket",
         status: "Backlog",
-        priority: "Need",
-        size: "M",
         labels: []
       })
       |> Repo.insert()
@@ -358,78 +231,15 @@ defmodule Agents.Sessions.Infrastructure.ProjectTicketRepositoryTest do
         number: 81,
         title: "Newer ticket",
         status: "Backlog",
-        priority: "Need",
-        size: "M",
         labels: []
       })
       |> Repo.insert()
 
-    tickets = ProjectTicketRepository.list_by_statuses(["Backlog"])
+    tickets = ProjectTicketRepository.list_all()
     numbers = Enum.map(tickets, & &1.number)
 
     # Newer (81) before older (80) because inserted_at DESC
     assert numbers == [81, 80]
-  end
-
-  test "list_by_statuses/1 full ordering cascade: position > priority > size > inserted_at" do
-    # Position 0, Need, XL — should be first
-    %ProjectTicketSchema{}
-    |> ProjectTicketSchema.changeset(%{
-      number: 90,
-      title: "Pos0 Need XL",
-      status: "Backlog",
-      priority: "Need",
-      size: "XL",
-      position: 0,
-      labels: []
-    })
-    |> Repo.insert!()
-
-    # Position 0, Need, S — same position/priority, smaller size
-    %ProjectTicketSchema{}
-    |> ProjectTicketSchema.changeset(%{
-      number: 91,
-      title: "Pos0 Need S",
-      status: "Backlog",
-      priority: "Need",
-      size: "S",
-      position: 0,
-      labels: []
-    })
-    |> Repo.insert!()
-
-    # Position 0, Nice to have, XL — same position, lower priority
-    %ProjectTicketSchema{}
-    |> ProjectTicketSchema.changeset(%{
-      number: 92,
-      title: "Pos0 NiceToHave XL",
-      status: "Backlog",
-      priority: "Nice to have",
-      size: "XL",
-      position: 0,
-      labels: []
-    })
-    |> Repo.insert!()
-
-    # Position 1, Need, XL — higher position number, so comes after position 0
-    %ProjectTicketSchema{}
-    |> ProjectTicketSchema.changeset(%{
-      number: 93,
-      title: "Pos1 Need XL",
-      status: "Backlog",
-      priority: "Need",
-      size: "XL",
-      position: 1,
-      labels: []
-    })
-    |> Repo.insert!()
-
-    tickets = ProjectTicketRepository.list_by_statuses(["Backlog"])
-    numbers = Enum.map(tickets, & &1.number)
-
-    # Position 0 group: Need/XL (90), Need/S (91), NiceToHave/XL (92)
-    # Position 1 group: Need/XL (93)
-    assert numbers == [90, 91, 92, 93]
   end
 
   test "delete_by_number/1 removes an existing ticket" do
@@ -445,10 +255,49 @@ defmodule Agents.Sessions.Infrastructure.ProjectTicketRepositoryTest do
     assert {:ok, deleted} = ProjectTicketRepository.delete_by_number(100)
     assert deleted.number == 100
 
-    assert ProjectTicketRepository.list_by_statuses(["Backlog"]) == []
+    assert ProjectTicketRepository.list_all() == []
   end
 
   test "delete_by_number/1 returns error for non-existent ticket" do
     assert {:error, :not_found} = ProjectTicketRepository.delete_by_number(99_999)
+  end
+
+  test "delete_not_in/1 removes tickets not in the given set" do
+    for number <- [301, 302, 303] do
+      %ProjectTicketSchema{}
+      |> ProjectTicketSchema.changeset(%{
+        number: number,
+        title: "Ticket #{number}",
+        status: "Backlog",
+        labels: []
+      })
+      |> Repo.insert!()
+    end
+
+    # Keep only 301 and 303
+    {deleted_count, _} = ProjectTicketRepository.delete_not_in(MapSet.new([301, 303]))
+
+    assert deleted_count == 1
+
+    remaining = ProjectTicketRepository.list_all()
+    numbers = Enum.map(remaining, & &1.number) |> Enum.sort()
+    assert numbers == [301, 303]
+  end
+
+  test "delete_not_in/1 with empty set deletes all tickets" do
+    for number <- [401, 402] do
+      %ProjectTicketSchema{}
+      |> ProjectTicketSchema.changeset(%{
+        number: number,
+        title: "Ticket #{number}",
+        status: "Backlog",
+        labels: []
+      })
+      |> Repo.insert!()
+    end
+
+    {deleted_count, _} = ProjectTicketRepository.delete_not_in(MapSet.new())
+    assert deleted_count == 2
+    assert ProjectTicketRepository.list_all() == []
   end
 end

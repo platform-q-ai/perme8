@@ -217,17 +217,6 @@ defmodule AgentsWeb.SessionsLive.HelpersTest do
     end
   end
 
-  describe "ticket_size_class/1" do
-    test "maps sizes to consistent badge classes" do
-      assert Helpers.ticket_size_class("XL") == "badge-error text-white"
-      assert Helpers.ticket_size_class("L") == "badge-warning"
-      assert Helpers.ticket_size_class("M") == "badge-info"
-      assert Helpers.ticket_size_class("S") == "badge-success"
-      assert Helpers.ticket_size_class("XS") == "badge-ghost"
-      assert Helpers.ticket_size_class(nil) == "badge-outline"
-    end
-  end
-
   describe "last_user_message/1" do
     test "returns the text of the last user message" do
       parts = [
