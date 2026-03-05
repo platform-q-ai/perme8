@@ -11,30 +11,69 @@ defmodule Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository do
   alias Agents.Sessions.Infrastructure.Schemas.ProjectTicketSchema
 
   @doc """
-  Lists all persisted tickets, ordered by position then inserted_at.
+  Lists all persisted tickets, ordered by position descending (highest first).
+  New tickets are appended with the next highest position, so they appear at
+  the bottom of the UI. "Send to top" gives a ticket the highest position;
+  "send to bottom" gives it the lowest.
   """
   @spec list_all() :: [ProjectTicketSchema.t()]
   def list_all do
     ProjectTicketSchema
-    |> order_by([ticket], asc: ticket.position, desc: ticket.inserted_at)
+    |> order_by([ticket], desc: ticket.position, desc: ticket.created_at)
     |> Repo.all()
   end
 
   @doc """
-  Updates the position of each ticket to match the given ordered list of ticket numbers.
+  Updates the position of each ticket to match the given display-order list
+  of ticket numbers (first element = shown at top = highest position).
   Tickets not in the list keep their existing position.
   """
   @spec reorder_positions([integer()]) :: :ok
   def reorder_positions(ordered_numbers) when is_list(ordered_numbers) do
+    count = length(ordered_numbers)
+
     Repo.transaction(fn ->
       ordered_numbers
       |> Enum.with_index()
       |> Enum.each(fn {number, index} ->
+        # First in the display list gets the highest position value
+        position = count - 1 - index
+
         ProjectTicketSchema
         |> where([t], t.number == ^number)
-        |> Repo.update_all(set: [position: index])
+        |> Repo.update_all(set: [position: position])
       end)
     end)
+
+    :ok
+  end
+
+  @doc """
+  Sets the given ticket's position to max + 1 so it appears at the top of the
+  triage column (highest position = displayed first).
+  """
+  @spec send_to_top(integer()) :: :ok
+  def send_to_top(number) when is_integer(number) do
+    max_pos = Repo.one(from(t in ProjectTicketSchema, select: max(t.position))) || 0
+
+    ProjectTicketSchema
+    |> where([t], t.number == ^number)
+    |> Repo.update_all(set: [position: max_pos + 1])
+
+    :ok
+  end
+
+  @doc """
+  Sets the given ticket's position to min - 1 so it appears at the bottom of
+  the triage column (lowest position = displayed last).
+  """
+  @spec send_to_bottom(integer()) :: :ok
+  def send_to_bottom(number) when is_integer(number) do
+    min_pos = Repo.one(from(t in ProjectTicketSchema, select: min(t.position))) || 0
+
+    ProjectTicketSchema
+    |> where([t], t.number == ^number)
+    |> Repo.update_all(set: [position: min_pos - 1])
 
     :ok
   end
@@ -82,6 +121,9 @@ defmodule Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository do
       |> Map.put(:sync_state, "synced")
       |> Map.put(:last_synced_at, now)
       |> Map.put(:last_sync_error, nil)
+      |> then(fn attrs ->
+        if is_nil(attrs[:created_at]), do: Map.put(attrs, :created_at, now), else: attrs
+      end)
 
     # New tickets get appended to the end; existing tickets preserve their position
     attrs_with_sync =
@@ -103,7 +145,7 @@ defmodule Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository do
     end
   end
 
-  @remote_attr_keys ~w(number title body labels url)a
+  @remote_attr_keys ~w(number title body labels url created_at)a
 
   defp normalize_remote_attrs(attrs) do
     normalized =

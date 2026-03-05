@@ -20,6 +20,7 @@ defmodule Agents.Sessions.Infrastructure.Schemas.ProjectTicketSchema do
           labels: [String.t()],
           url: String.t() | nil,
           position: integer(),
+          created_at: DateTime.t(),
           sync_state: String.t(),
           last_synced_at: DateTime.t() | nil,
           last_sync_error: String.t() | nil,
@@ -39,6 +40,7 @@ defmodule Agents.Sessions.Infrastructure.Schemas.ProjectTicketSchema do
     field(:labels, {:array, :string}, default: [])
     field(:url, :string)
     field(:position, :integer, default: 0)
+    field(:created_at, :utc_datetime)
     field(:sync_state, :string, default: "synced")
     field(:last_synced_at, :utc_datetime)
     field(:last_sync_error, :string)
@@ -61,6 +63,7 @@ defmodule Agents.Sessions.Infrastructure.Schemas.ProjectTicketSchema do
       :labels,
       :url,
       :position,
+      :created_at,
       :sync_state,
       :last_synced_at,
       :last_sync_error,

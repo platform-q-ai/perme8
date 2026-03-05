@@ -35,7 +35,8 @@ defmodule Agents.Sessions.Infrastructure.Clients.GithubProjectClient do
           title: String.t(),
           body: String.t() | nil,
           url: String.t() | nil,
-          labels: [String.t()]
+          labels: [String.t()],
+          created_at: DateTime.t() | nil
         }
 
   @doc """
@@ -111,12 +112,22 @@ defmodule Agents.Sessions.Infrastructure.Clients.GithubProjectClient do
       title: issue["title"],
       body: issue["body"],
       url: issue["html_url"],
+      created_at: parse_datetime(issue["created_at"]),
       labels:
         issue
         |> Map.get("labels", [])
         |> Enum.map(& &1["name"])
         |> Enum.reject(&is_nil/1)
     }
+  end
+
+  defp parse_datetime(nil), do: nil
+
+  defp parse_datetime(iso_string) when is_binary(iso_string) do
+    case DateTime.from_iso8601(iso_string) do
+      {:ok, dt, _offset} -> DateTime.truncate(dt, :second)
+      _ -> nil
+    end
   end
 
   defp do_close_issue(token, issue_number, opts) do

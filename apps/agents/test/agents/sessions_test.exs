@@ -702,7 +702,8 @@ defmodule Agents.SessionsTest do
         priority: attrs[:priority],
         labels: attrs[:labels] || [],
         url: attrs[:url] || "https://github.com/platform-q-ai/perme8/issues/#{attrs[:number]}",
-        sync_state: attrs[:sync_state] || "synced"
+        sync_state: attrs[:sync_state] || "synced",
+        created_at: attrs[:created_at] || DateTime.utc_now() |> DateTime.truncate(:second)
       }
 
     {:ok, ticket} =
