@@ -198,7 +198,29 @@ defmodule Agents.Sessions.Infrastructure.ProjectTicketRepositoryTest do
     assert numbers == [50, 40]
   end
 
-  test "new tickets from remote sync default to position 0" do
+  test "new tickets from remote sync are appended after existing tickets" do
+    # Create two existing tickets with known positions
+    %ProjectTicketSchema{}
+    |> ProjectTicketSchema.changeset(%{
+      number: 990,
+      title: "Existing ticket 1",
+      status: "Backlog",
+      position: 0,
+      labels: []
+    })
+    |> Repo.insert!()
+
+    %ProjectTicketSchema{}
+    |> ProjectTicketSchema.changeset(%{
+      number: 991,
+      title: "Existing ticket 2",
+      status: "Backlog",
+      position: 1,
+      labels: []
+    })
+    |> Repo.insert!()
+
+    # Sync a brand new ticket — should get position 2 (max + 1)
     {:ok, ticket} =
       ProjectTicketRepository.sync_remote_ticket(%{
         number: 999,
@@ -207,7 +229,54 @@ defmodule Agents.Sessions.Infrastructure.ProjectTicketRepositoryTest do
         labels: []
       })
 
+    assert ticket.position == 2
+  end
+
+  test "first new ticket from remote sync gets position 0" do
+    {:ok, ticket} =
+      ProjectTicketRepository.sync_remote_ticket(%{
+        number: 998,
+        title: "Very first ticket",
+        status: "Backlog",
+        labels: []
+      })
+
     assert ticket.position == 0
+  end
+
+  test "new tickets from remote sync do not disrupt existing ordering" do
+    # Set up 3 tickets with explicit positions
+    for {number, position} <- [{200, 0}, {201, 1}, {202, 2}] do
+      %ProjectTicketSchema{}
+      |> ProjectTicketSchema.changeset(%{
+        number: number,
+        title: "Ticket #{number}",
+        status: "Backlog",
+        position: position,
+        labels: []
+      })
+      |> Repo.insert!()
+    end
+
+    # User reorders: 202 first, then 200, then 201
+    ProjectTicketRepository.reorder_positions([202, 200, 201])
+
+    # Now sync a new ticket from GitHub
+    {:ok, new_ticket} =
+      ProjectTicketRepository.sync_remote_ticket(%{
+        number: 203,
+        title: "New from GitHub",
+        status: "Backlog",
+        labels: []
+      })
+
+    # New ticket should be appended at position 3
+    assert new_ticket.position == 3
+
+    # Full ordering should preserve user's drag order with new ticket at end
+    tickets = ProjectTicketRepository.list_by_statuses(["Backlog"])
+    numbers = Enum.map(tickets, & &1.number)
+    assert numbers == [202, 200, 201, 203]
   end
 
   test "list_by_statuses/1 orders by priority when positions are equal" do

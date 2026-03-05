@@ -92,6 +92,14 @@ defmodule Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository do
     ticket = Repo.get_by(ProjectTicketSchema, number: number)
     attrs = merge_remote_attrs(ticket, remote_attrs, now)
 
+    # New tickets get appended to the end of the list
+    attrs =
+      if is_nil(ticket) do
+        Map.put_new(attrs, :position, next_position())
+      else
+        attrs
+      end
+
     ticket = ticket || %ProjectTicketSchema{}
 
     ticket
@@ -138,6 +146,13 @@ defmodule Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository do
       last_sync_error: inspect(reason)
     })
     |> Repo.update()
+  end
+
+  defp next_position do
+    case Repo.one(from(t in ProjectTicketSchema, select: max(t.position))) do
+      nil -> 0
+      max_pos -> max_pos + 1
+    end
   end
 
   defp normalize_remote_attrs(attrs) do
