@@ -702,9 +702,10 @@ defmodule AgentsWeb.SessionsLive.Index do
     hydrated =
       entries
       |> Enum.map(&normalize_hydrated_new_session_entry/1)
-      |> Enum.reject(&is_nil/1)
-      |> Enum.reject(&stale_optimistic_entry?/1)
-      |> Enum.reject(&already_has_real_session?(&1, sessions))
+      |> Enum.reject(fn entry ->
+        is_nil(entry) or stale_optimistic_entry?(entry) or
+          already_has_real_session?(entry, sessions)
+      end)
 
     {:noreply,
      socket
@@ -1800,21 +1801,21 @@ defmodule AgentsWeb.SessionsLive.Index do
         number
 
       _ ->
-        sessions
-        |> Enum.find(&(&1.container_id == container_id))
-        |> case do
-          %{title: title} when is_binary(title) ->
-            case Sessions.extract_ticket_number(title) do
-              number when is_integer(number) and number > 0 ->
-                if Enum.any?(tickets, &(&1.number == number)), do: number, else: nil
+        extract_ticket_number_from_session(sessions, tickets, container_id)
+    end
+  end
 
-              _ ->
-                nil
-            end
+  defp extract_ticket_number_from_session(sessions, tickets, container_id) do
+    session = Enum.find(sessions, &(&1.container_id == container_id))
+    title = is_map(session) && Map.get(session, :title)
 
-          _ ->
-            nil
-        end
+    with title when is_binary(title) <- title,
+         number when is_integer(number) and number > 0 <-
+           Sessions.extract_ticket_number(title),
+         true <- Enum.any?(tickets, &(&1.number == number)) do
+      number
+    else
+      _ -> nil
     end
   end
 
@@ -1907,12 +1908,22 @@ defmodule AgentsWeb.SessionsLive.Index do
   defp upsert_session_from_task(sessions, task) do
     task_id = Map.get(task, :id)
     task_container_id = Map.get(task, :container_id)
+    session_update = build_session_from_task(task, task_id, task_container_id)
 
-    derived_container_id =
-      task_container_id || (is_binary(task_id) && "task:" <> task_id) || "task:unknown"
+    {existing, rest} = split_matching_sessions(sessions, task_id, task_container_id)
 
-    session_update = %{
-      container_id: derived_container_id,
+    merged =
+      case existing do
+        [first | _] -> Map.merge(first, session_update)
+        [] -> session_update
+      end
+
+    sort_sessions_for_sidebar([merged | rest])
+  end
+
+  defp build_session_from_task(task, task_id, task_container_id) do
+    %{
+      container_id: derive_container_id(task_container_id, task_id),
       task_count: 1,
       latest_status: Map.get(task, :status, "queued"),
       latest_task_id: task_id,
@@ -1926,22 +1937,22 @@ defmodule AgentsWeb.SessionsLive.Index do
       session_summary: Map.get(task, :session_summary),
       todo_items: Map.get(task, :todo_items) || %{"items" => []}
     }
-
-    {existing, rest} =
-      Enum.split_with(sessions, fn session ->
-        (is_binary(task_container_id) and task_container_id != "" and
-           session.container_id == task_container_id) ||
-          session.latest_task_id == task_id
-      end)
-
-    merged =
-      case existing do
-        [first | _] -> Map.merge(first, session_update)
-        [] -> session_update
-      end
-
-    sort_sessions_for_sidebar([merged | rest])
   end
+
+  defp derive_container_id(cid, _task_id) when is_binary(cid) and cid != "", do: cid
+  defp derive_container_id(_cid, task_id) when is_binary(task_id), do: "task:" <> task_id
+  defp derive_container_id(_cid, _task_id), do: "task:unknown"
+
+  defp split_matching_sessions(sessions, task_id, task_container_id) do
+    Enum.split_with(sessions, fn session ->
+      matches_container?(session, task_container_id) or session.latest_task_id == task_id
+    end)
+  end
+
+  defp matches_container?(session, cid) when is_binary(cid) and cid != "",
+    do: session.container_id == cid
+
+  defp matches_container?(_session, _cid), do: false
 
   defp hydrate_task_for_session(task, user_id) when is_map(task) do
     task_id = Map.get(task, :id)

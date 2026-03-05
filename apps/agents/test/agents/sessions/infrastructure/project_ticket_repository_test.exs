@@ -449,6 +449,6 @@ defmodule Agents.Sessions.Infrastructure.ProjectTicketRepositoryTest do
   end
 
   test "delete_by_number/1 returns error for non-existent ticket" do
-    assert {:error, :not_found} = ProjectTicketRepository.delete_by_number(99999)
+    assert {:error, :not_found} = ProjectTicketRepository.delete_by_number(99_999)
   end
 end
