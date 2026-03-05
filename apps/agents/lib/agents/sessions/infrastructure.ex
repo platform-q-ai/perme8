@@ -24,6 +24,7 @@ defmodule Agents.Sessions.Infrastructure do
       Repositories.TaskRepository,
       Repositories.ProjectTicketRepository,
       Queries.TaskQueries,
+      OrphanRecovery,
       TaskRunnerSupervisor,
       QueueManager,
       QueueManagerSupervisor,
