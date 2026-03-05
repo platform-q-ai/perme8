@@ -450,9 +450,27 @@ defmodule AgentsWeb.SessionsLive.Index do
   @impl true
   def handle_event("close_ticket", %{"number" => number_str}, socket) do
     number = String.to_integer(number_str)
+    user = socket.assigns.current_scope.user
+
+    # Find the ticket to get its associated session container_id
+    ticket = Enum.find(socket.assigns.tickets, &(&1.number == number))
+    container_id = ticket && ticket.associated_container_id
+
+    # Destroy the associated session if it exists
+    if is_binary(container_id) do
+      Sessions.delete_session(container_id, user.id)
+    end
 
     # Optimistically remove the ticket from the UI
     tickets = Enum.reject(socket.assigns.tickets, &(&1.number == number))
+
+    # Remove the associated session from the sessions list
+    sessions =
+      if is_binary(container_id) do
+        Enum.reject(socket.assigns.sessions, &(&1.container_id == container_id))
+      else
+        socket.assigns.sessions
+      end
 
     active_ticket_number =
       if socket.assigns.active_ticket_number == number,
@@ -466,11 +484,24 @@ defmodule AgentsWeb.SessionsLive.Index do
          do: "chat",
          else: socket.assigns.active_session_tab
 
+    # Clear active selection if we just destroyed the viewed session
+    socket =
+      if socket.assigns.active_container_id == container_id do
+        socket
+        |> assign(:active_container_id, nil)
+        |> assign(:current_task, nil)
+        |> assign(:events, [])
+        |> assign_session_state()
+      else
+        socket
+      end
+
     Sessions.close_project_ticket(number)
 
     {:noreply,
      socket
      |> assign(:tickets, tickets)
+     |> assign(:sessions, sessions)
      |> assign(:active_ticket_number, active_ticket_number)
      |> assign(:active_session_tab, tab)}
   end
@@ -771,6 +802,7 @@ defmodule AgentsWeb.SessionsLive.Index do
       )
 
     tasks_snapshot = upsert_task_snapshot(socket.assigns[:tasks_snapshot], updated_task)
+    tickets = re_enrich_tickets(socket.assigns.tickets, tasks_snapshot)
 
     socket =
       socket
@@ -779,6 +811,7 @@ defmodule AgentsWeb.SessionsLive.Index do
       |> assign(:sessions, sessions)
       |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)
       |> assign(:tasks_snapshot, tasks_snapshot)
+      |> assign(:tickets, tickets)
       |> request_task_refresh(task_id)
 
     socket =
@@ -854,10 +887,13 @@ defmodule AgentsWeb.SessionsLive.Index do
         socket.assigns[:sticky_warm_task_ids] || MapSet.new()
       )
 
+    tasks_snapshot = upsert_task_snapshot(socket.assigns[:tasks_snapshot], new_task)
+
     {:noreply,
      socket
      |> assign(:sessions, sessions)
-     |> assign(:tasks_snapshot, upsert_task_snapshot(socket.assigns[:tasks_snapshot], new_task))
+     |> assign(:tasks_snapshot, tasks_snapshot)
+     |> assign(:tickets, re_enrich_tickets(socket.assigns.tickets, tasks_snapshot))
      |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)}
   end
 
@@ -889,6 +925,8 @@ defmodule AgentsWeb.SessionsLive.Index do
         socket.assigns[:sticky_warm_task_ids] || MapSet.new()
       )
 
+    tasks_snapshot = upsert_task_snapshot(socket.assigns[:tasks_snapshot], task)
+
     {:noreply,
      socket
      |> clear_new_task_monitor(client_id)
@@ -898,7 +936,8 @@ defmodule AgentsWeb.SessionsLive.Index do
      )
      |> broadcast_optimistic_new_sessions_snapshot()
      |> assign(:sessions, sessions)
-     |> assign(:tasks_snapshot, upsert_task_snapshot(socket.assigns[:tasks_snapshot], task))
+     |> assign(:tasks_snapshot, tasks_snapshot)
+     |> assign(:tickets, re_enrich_tickets(socket.assigns.tickets, tasks_snapshot))
      |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)}
   end
 
@@ -946,10 +985,13 @@ defmodule AgentsWeb.SessionsLive.Index do
         socket.assigns[:sticky_warm_task_ids] || MapSet.new()
       )
 
+    tasks_snapshot = upsert_task_snapshot(socket.assigns[:tasks_snapshot], new_task)
+
     {:noreply,
      socket
      |> assign(:sessions, sessions)
-     |> assign(:tasks_snapshot, upsert_task_snapshot(socket.assigns[:tasks_snapshot], new_task))
+     |> assign(:tasks_snapshot, tasks_snapshot)
+     |> assign(:tickets, re_enrich_tickets(socket.assigns.tickets, tasks_snapshot))
      |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)}
   end
 
@@ -1013,8 +1055,19 @@ defmodule AgentsWeb.SessionsLive.Index do
 
     tickets = Sessions.list_project_tickets(user.id, ticket_opts)
 
+    # Re-derive active ticket number from the currently selected session
     active_ticket_number =
-      next_active_ticket_number(tickets, socket.assigns[:active_ticket_number])
+      case socket.assigns[:active_container_id] do
+        cid when is_binary(cid) and cid != "" ->
+          find_ticket_number_for_selected_session(
+            socket.assigns.sessions,
+            tickets,
+            cid
+          ) || next_active_ticket_number(tickets, socket.assigns[:active_ticket_number])
+
+        _ ->
+          next_active_ticket_number(tickets, socket.assigns[:active_ticket_number])
+      end
 
     {:noreply,
      socket |> assign(:tickets, tickets) |> assign(:active_ticket_number, active_ticket_number)}
@@ -1038,12 +1091,15 @@ defmodule AgentsWeb.SessionsLive.Index do
         other -> other
       end
 
+    tasks_snapshot = upsert_task_snapshot(socket.assigns[:tasks_snapshot], task)
+
     {:noreply,
      socket
      |> assign(:refreshing_task_ids, refreshing)
      |> assign(:current_task, current_task)
      |> assign(:sessions, sessions)
-     |> assign(:tasks_snapshot, upsert_task_snapshot(socket.assigns[:tasks_snapshot], task))
+     |> assign(:tasks_snapshot, tasks_snapshot)
+     |> assign(:tickets, re_enrich_tickets(socket.assigns.tickets, tasks_snapshot))
      |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)}
   end
 
@@ -1533,10 +1589,13 @@ defmodule AgentsWeb.SessionsLive.Index do
         socket.assigns[:sticky_warm_task_ids] || MapSet.new()
       )
 
+    tasks_snapshot = upsert_task_snapshot(socket.assigns[:tasks_snapshot], task)
+
     {:noreply,
      socket
      |> assign(:sessions, sessions)
-     |> assign(:tasks_snapshot, upsert_task_snapshot(socket.assigns[:tasks_snapshot], task))
+     |> assign(:tasks_snapshot, tasks_snapshot)
+     |> assign(:tickets, re_enrich_tickets(socket.assigns.tickets, tasks_snapshot))
      |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)
      |> push_event("scroll_to_bottom", %{})
      |> push_event("focus_input", %{})}
@@ -1566,14 +1625,14 @@ defmodule AgentsWeb.SessionsLive.Index do
             socket.assigns[:sticky_warm_task_ids] || MapSet.new()
           )
 
+        tasks_snapshot = upsert_task_snapshot(socket.assigns[:tasks_snapshot], updated)
+
         {:noreply,
          socket
          |> assign(:current_task, updated)
          |> assign(:sessions, sessions)
-         |> assign(
-           :tasks_snapshot,
-           upsert_task_snapshot(socket.assigns[:tasks_snapshot], updated)
-         )
+         |> assign(:tasks_snapshot, tasks_snapshot)
+         |> assign(:tickets, re_enrich_tickets(socket.assigns.tickets, tasks_snapshot))
          |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)
          |> put_flash(:info, "Task cancelled")}
 
@@ -1675,6 +1734,42 @@ defmodule AgentsWeb.SessionsLive.Index do
   end
 
   defp has_real_container?(_), do: false
+
+  # Re-derive ticket task_status fields from the current tasks snapshot.
+  # This avoids a DB round-trip — it re-associates tickets with tasks in memory
+  # using the same logic as Sessions.list_project_tickets/2.
+  defp re_enrich_tickets(tickets, tasks) when is_list(tickets) and is_list(tasks) do
+    task_by_ticket_number =
+      Enum.reduce(tasks, %{}, fn task, acc ->
+        case Sessions.extract_ticket_number(Map.get(task, :instruction)) do
+          nil -> acc
+          number -> Map.put_new(acc, number, task)
+        end
+      end)
+
+    Enum.map(tickets, fn ticket ->
+      task = Map.get(task_by_ticket_number, ticket.number)
+
+      Map.merge(ticket, %{
+        associated_task_id: task && task.id,
+        associated_container_id: task && task.container_id,
+        session_state: task_status_to_session_state(task && task.status),
+        task_status: task && task.status,
+        task_error: task && task.error
+      })
+    end)
+  end
+
+  defp re_enrich_tickets(tickets, _tasks), do: tickets
+
+  defp task_status_to_session_state(nil), do: "idle"
+
+  defp task_status_to_session_state(status)
+       when status in ["pending", "starting", "running", "queued", "awaiting_feedback"],
+       do: "running"
+
+  defp task_status_to_session_state("completed"), do: "completed"
+  defp task_status_to_session_state(_), do: "paused"
 
   defp upsert_task_snapshot(tasks, nil), do: tasks
 
