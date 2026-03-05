@@ -55,6 +55,7 @@ defmodule JargaApi.MixProject do
       {:phoenix, "~> 1.8.1"},
       {:jarga, in_umbrella: true},
       {:identity, in_umbrella: true},
+      {:perme8_plugs, in_umbrella: true},
       {:jason, "~> 1.2"},
       {:bandit, "~> 1.5"},
       {:boundary, "~> 0.10", runtime: false}

@@ -79,6 +79,7 @@ defmodule JargaWeb.MixProject do
        depth: 1},
       {:gettext, "~> 0.26"},
       {:perme8_events, in_umbrella: true},
+      {:perme8_plugs, in_umbrella: true},
       {:jarga, in_umbrella: true},
       {:agents, in_umbrella: true},
       {:notifications, in_umbrella: true},

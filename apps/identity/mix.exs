@@ -69,6 +69,7 @@ defmodule Identity.MixProject do
     [
       # Umbrella dependencies
       {:perme8_events, in_umbrella: true},
+      {:perme8_plugs, in_umbrella: true},
 
       # Database
       {:phoenix_ecto, "~> 4.6"},

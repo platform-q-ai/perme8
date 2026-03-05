@@ -53,6 +53,7 @@ defmodule EntityRelationshipManager.MixProject do
     [
       {:phoenix, "~> 1.8"},
       {:perme8_events, in_umbrella: true},
+      {:perme8_plugs, in_umbrella: true},
       {:jarga, in_umbrella: true},
       {:identity, in_umbrella: true},
       {:jason, "~> 1.2"},

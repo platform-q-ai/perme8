@@ -46,6 +46,6 @@ defmodule IdentityWeb.Endpoint do
   plug Plug.MethodOverride
   plug Plug.Head
   plug Plug.Session, @session_options
-  plug IdentityWeb.Plugs.SecurityHeadersPlug
+  plug Perme8.Plugs.SecurityHeaders, profile: :liveview
   plug IdentityWeb.Router
 end
