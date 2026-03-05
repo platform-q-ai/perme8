@@ -20,17 +20,27 @@ defmodule Agents.OTPApp do
         Agents.Repo,
         Hermes.Server.Registry,
         {Registry, keys: :unique, name: Agents.Sessions.TaskRegistry},
-        {Registry, keys: :unique, name: Agents.Sessions.QueueRegistry},
-        # Recover tasks orphaned by a previous server restart before starting
-        # the session infrastructure (TaskRunnerSupervisor, QueueManager, etc.).
-        {Task, fn -> OrphanRecovery.recover_orphaned_tasks() end},
-        TaskRunnerSupervisor,
-        QueueManagerSupervisor,
-        TicketSyncServer
-      ] ++ mcp_children() ++ mcp_http_children()
+        {Registry, keys: :unique, name: Agents.Sessions.QueueRegistry}
+      ] ++
+        orphan_recovery_children() ++
+        [
+          TaskRunnerSupervisor,
+          QueueManagerSupervisor,
+          TicketSyncServer
+        ] ++ mcp_children() ++ mcp_http_children()
 
     opts = [strategy: :one_for_one, name: Agents.Supervisor]
     Supervisor.start_link(children, opts)
+  end
+
+  # Recover tasks orphaned by a previous server restart.
+  # Skipped in test mode to avoid Ecto sandbox and Mox ownership conflicts.
+  defp orphan_recovery_children do
+    if Application.get_env(:agents, :skip_orphan_recovery, false) do
+      []
+    else
+      [{Task, fn -> OrphanRecovery.recover_orphaned_tasks() end}]
+    end
   end
 
   defp mcp_children do

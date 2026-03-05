@@ -226,3 +226,6 @@ config :agents, :mcp_transport, {:streamable_http, start: true}
 
 # Agents MCP HTTP: dev 4007 → test 5007
 config :agents, :mcp_http, port: 5007
+
+# Skip orphan recovery at boot — runs outside sandbox and conflicts with Mox
+config :agents, :skip_orphan_recovery, true
