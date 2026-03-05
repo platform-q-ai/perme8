@@ -164,9 +164,9 @@ defmodule Agents.Sessions do
   @doc """
   Lists persisted project tickets enriched with per-user session state.
 
-  Tickets are loaded from the agents DB, then each ticket is matched against
-  the user's recent tasks by issue number reference in instruction text
-  (for example: "#306" or "ticket 306").
+  Tickets are loaded from the agents DB (synced from GitHub open issues),
+  then each ticket is matched against the user's recent tasks by issue number
+  reference in instruction text (for example: "#306" or "ticket 306").
   """
   @spec list_project_tickets(String.t(), keyword()) :: [map()]
   def list_project_tickets(user_id, opts \\ []) do
@@ -174,7 +174,7 @@ defmodule Agents.Sessions do
 
     tickets =
       Keyword.get_lazy(opts, :tickets, fn ->
-        ProjectTicketRepository.list_by_statuses(SessionsConfig.github_ticket_statuses())
+        ProjectTicketRepository.list_all()
       end)
 
     task_by_ticket_number =
@@ -199,12 +199,6 @@ defmodule Agents.Sessions do
     end)
   end
 
-  @doc "Reorders a synced project ticket and optionally moves it to a new board status."
-  @spec reorder_project_ticket(integer(), String.t() | nil, [integer()]) :: :ok | {:error, term()}
-  def reorder_project_ticket(ticket_number, target_status, ordered_ticket_numbers) do
-    TicketSyncServer.reorder_ticket(ticket_number, target_status, ordered_ticket_numbers)
-  end
-
   @doc "Persists triage ticket ordering to the database."
   @spec reorder_triage_tickets([integer()]) :: :ok
   def reorder_triage_tickets(ordered_ticket_numbers) do
@@ -212,16 +206,8 @@ defmodule Agents.Sessions do
   end
 
   @doc """
-  Updates a persisted ticket locally and schedules reconciliation to GitHub.
-  """
-  @spec update_project_ticket(integer(), map()) :: {:ok, struct()} | {:error, term()}
-  def update_project_ticket(number, attrs) when is_integer(number) and is_map(attrs) do
-    ProjectTicketRepository.update_local_ticket(number, attrs)
-  end
-
-  @doc """
   Closes a project ticket: removes it from the local database and closes the
-  issue on GitHub (board status set to "Done" + issue state set to closed).
+  issue on GitHub.
 
   The GitHub close runs asynchronously via the TicketSyncServer so the UI
   is not blocked.

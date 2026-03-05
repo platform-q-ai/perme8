@@ -1,6 +1,8 @@
 defmodule Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository do
   @moduledoc """
   Repository for persisted session sidebar project tickets.
+
+  Stores open GitHub issues synced from the configured repo.
   """
 
   import Ecto.Query, warn: false
@@ -8,38 +10,13 @@ defmodule Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository do
   alias Agents.Repo
   alias Agents.Sessions.Infrastructure.Schemas.ProjectTicketSchema
 
-  @default_statuses ["Backlog", "Ready"]
-
-  @priority_order_fragment """
-  CASE priority
-    WHEN 'Need' THEN 0
-    WHEN 'Want' THEN 1
-    WHEN 'Nice to have' THEN 2
-    ELSE 3
-  END
+  @doc """
+  Lists all persisted tickets, ordered by position then inserted_at.
   """
-
-  @size_order_fragment """
-  CASE size
-    WHEN 'XL' THEN 0
-    WHEN 'L' THEN 1
-    WHEN 'M' THEN 2
-    WHEN 'S' THEN 3
-    WHEN 'XS' THEN 4
-    ELSE 5
-  END
-  """
-
-  @spec list_by_statuses([String.t()]) :: [ProjectTicketSchema.t()]
-  def list_by_statuses(statuses \\ @default_statuses) do
+  @spec list_all() :: [ProjectTicketSchema.t()]
+  def list_all do
     ProjectTicketSchema
-    |> where([ticket], ticket.status in ^statuses)
-    |> order_by([ticket],
-      asc: ticket.position,
-      asc: fragment(@priority_order_fragment),
-      asc: fragment(@size_order_fragment),
-      desc: ticket.inserted_at
-    )
+    |> order_by([ticket], asc: ticket.position, desc: ticket.inserted_at)
     |> Repo.all()
   end
 
@@ -74,14 +51,23 @@ defmodule Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository do
     end
   end
 
-  @spec list_pending_push() :: [ProjectTicketSchema.t()]
-  def list_pending_push do
+  @doc """
+  Deletes all tickets whose number is NOT in the given set.
+  Used to prune issues that have been closed on GitHub.
+  """
+  @spec delete_not_in(MapSet.t()) :: {integer(), nil}
+  def delete_not_in(%MapSet{} = keep_numbers) do
+    numbers_list = MapSet.to_list(keep_numbers)
+
     ProjectTicketSchema
-    |> where([ticket], ticket.sync_state == "pending_push")
-    |> order_by([ticket], asc: ticket.updated_at)
-    |> Repo.all()
+    |> where([t], t.number not in ^numbers_list)
+    |> Repo.delete_all()
   end
 
+  @doc """
+  Upserts a ticket from remote GitHub data.
+  New tickets get appended to the end of the position list.
+  """
   @spec sync_remote_ticket(map(), keyword()) ::
           {:ok, ProjectTicketSchema.t()} | {:error, Ecto.Changeset.t()}
   def sync_remote_ticket(attrs, opts \\ []) do
@@ -90,62 +76,24 @@ defmodule Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository do
     remote_attrs = normalize_remote_attrs(attrs)
     number = remote_attrs.number
     ticket = Repo.get_by(ProjectTicketSchema, number: number)
-    attrs = merge_remote_attrs(ticket, remote_attrs, now)
 
-    # New tickets get appended to the end of the list
-    attrs =
+    attrs_with_sync =
+      remote_attrs
+      |> Map.put(:sync_state, "synced")
+      |> Map.put(:last_synced_at, now)
+      |> Map.put(:last_sync_error, nil)
+
+    # New tickets get appended to the end; existing tickets preserve their position
+    attrs_with_sync =
       if is_nil(ticket) do
-        Map.put_new(attrs, :position, next_position())
+        Map.put_new(attrs_with_sync, :position, next_position())
       else
-        attrs
+        Map.put(attrs_with_sync, :position, ticket.position)
       end
 
-    ticket = ticket || %ProjectTicketSchema{}
-
-    ticket
-    |> ProjectTicketSchema.changeset(attrs)
+    (ticket || %ProjectTicketSchema{})
+    |> ProjectTicketSchema.changeset(attrs_with_sync)
     |> Repo.insert_or_update()
-  end
-
-  @spec update_local_ticket(integer(), map()) ::
-          {:ok, ProjectTicketSchema.t()} | {:error, Ecto.Changeset.t()} | {:error, :not_found}
-  def update_local_ticket(number, attrs) when is_integer(number) and is_map(attrs) do
-    case Repo.get_by(ProjectTicketSchema, number: number) do
-      nil ->
-        {:error, :not_found}
-
-      ticket ->
-        ticket
-        |> ProjectTicketSchema.changeset(
-          attrs
-          |> normalize_local_attrs()
-          |> Map.put(:sync_state, "pending_push")
-        )
-        |> Repo.update()
-    end
-  end
-
-  @spec mark_sync_success(ProjectTicketSchema.t()) ::
-          {:ok, ProjectTicketSchema.t()} | {:error, Ecto.Changeset.t()}
-  def mark_sync_success(%ProjectTicketSchema{} = ticket) do
-    ticket
-    |> ProjectTicketSchema.changeset(%{
-      sync_state: "synced",
-      last_synced_at: DateTime.utc_now() |> DateTime.truncate(:second),
-      last_sync_error: nil
-    })
-    |> Repo.update()
-  end
-
-  @spec mark_sync_error(ProjectTicketSchema.t(), term()) ::
-          {:ok, ProjectTicketSchema.t()} | {:error, Ecto.Changeset.t()}
-  def mark_sync_error(%ProjectTicketSchema{} = ticket, reason) do
-    ticket
-    |> ProjectTicketSchema.changeset(%{
-      sync_state: "sync_error",
-      last_sync_error: inspect(reason)
-    })
-    |> Repo.update()
   end
 
   defp next_position do
@@ -155,7 +103,7 @@ defmodule Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository do
     end
   end
 
-  @remote_attr_keys ~w(number external_id title body status priority size labels url)a
+  @remote_attr_keys ~w(number title body labels url)a
 
   defp normalize_remote_attrs(attrs) do
     normalized =
@@ -164,42 +112,5 @@ defmodule Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository do
       end)
 
     Map.update!(normalized, :labels, &List.wrap/1)
-  end
-
-  defp normalize_local_attrs(attrs) do
-    attrs
-    |> Map.take([:title, :status, :priority, :size, :labels, :url])
-    |> Map.update(:labels, [], &List.wrap/1)
-  end
-
-  defp merge_remote_attrs(nil, remote_attrs, now) do
-    remote_attrs
-    |> Map.put(:sync_state, "synced")
-    |> Map.put(:last_synced_at, now)
-    |> Map.put(:last_sync_error, nil)
-  end
-
-  defp merge_remote_attrs(%ProjectTicketSchema{} = ticket, remote_attrs, now) do
-    base =
-      if ticket.sync_state in ["pending_push", "sync_error"] do
-        remote_attrs
-        |> Map.put(:title, ticket.title)
-        |> Map.put(:status, ticket.status)
-        |> Map.put(:priority, ticket.priority)
-        |> Map.put(:size, ticket.size)
-        |> Map.put(:labels, ticket.labels)
-        |> Map.put(:url, ticket.url)
-        |> Map.put(:sync_state, ticket.sync_state)
-        |> Map.put(:last_synced_at, ticket.last_synced_at)
-        |> Map.put(:last_sync_error, ticket.last_sync_error)
-      else
-        remote_attrs
-        |> Map.put(:sync_state, "synced")
-        |> Map.put(:last_synced_at, now)
-        |> Map.put(:last_sync_error, nil)
-      end
-
-    # Always preserve the locally-set position
-    Map.put(base, :position, ticket.position)
   end
 end

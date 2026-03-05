@@ -336,25 +336,10 @@
                       <.status_dot status={ticket.task_status || "idle"} />
                     </div>
 
-                    <div class="flex w-full items-start justify-start gap-1.5 flex-wrap">
-                      <span class={[
-                        "badge badge-xs whitespace-nowrap",
-                        ticket_priority_class(ticket.priority)
-                      ]}>
-                        {ticket.priority || "Unprioritized"}
-                      </span>
-                      <span class={[
-                        "badge badge-xs whitespace-nowrap",
-                        ticket_size_class(ticket.size)
-                      ]}>
-                        {ticket.size || "Unsized"}
-                      </span>
-                      <span class={[
-                        "badge badge-xs whitespace-nowrap",
-                        ticket_status_class(ticket.status)
-                      ]}>
-                        {ticket.status || "Unknown"}
-                      </span>
+                    <div
+                      :if={ticket.labels != []}
+                      class="flex w-full items-start justify-start gap-1.5 flex-wrap"
+                    >
                       <span
                         :for={label <- ticket.labels || []}
                         class={[
@@ -558,17 +543,11 @@
                     <span class="badge badge-xs badge-info whitespace-nowrap">
                       {ticket.number}
                     </span>
-                    <span class={[
-                      "badge badge-xs whitespace-nowrap",
-                      ticket_priority_class(ticket.priority)
-                    ]}>
-                      {ticket.priority || "Unprioritized"}
-                    </span>
-                    <span class={[
-                      "badge badge-xs whitespace-nowrap",
-                      ticket_size_class(ticket.size)
-                    ]}>
-                      {ticket.size || "Unsized"}
+                    <span
+                      :for={label <- ticket.labels || []}
+                      class={["badge badge-xs whitespace-nowrap", ticket_label_class(label)]}
+                    >
+                      {label}
                     </span>
                   </div>
                 </div>
@@ -713,18 +692,15 @@
                       <.icon name="hero-arrow-path" class="size-3 animate-spin" /> Warming...
                     </span>
                   </div>
-                  <div class="flex w-full items-start justify-start gap-1 flex-wrap">
-                    <span class={[
-                      "badge badge-xs whitespace-nowrap",
-                      ticket_priority_class(ticket.priority)
-                    ]}>
-                      {ticket.priority || "Unprioritized"}
-                    </span>
-                    <span class={[
-                      "badge badge-xs whitespace-nowrap",
-                      ticket_size_class(ticket.size)
-                    ]}>
-                      {ticket.size || "Unsized"}
+                  <div
+                    :if={ticket.labels != []}
+                    class="flex w-full items-start justify-start gap-1 flex-wrap"
+                  >
+                    <span
+                      :for={label <- ticket.labels || []}
+                      class={["badge badge-xs whitespace-nowrap", ticket_label_class(label)]}
+                    >
+                      {label}
                     </span>
                   </div>
                 </div>
@@ -798,19 +774,10 @@
                       />
                     </span>
                   </div>
-                  <div class="flex w-full items-start justify-start gap-1 flex-wrap">
-                    <span class={[
-                      "badge badge-xs whitespace-nowrap",
-                      ticket_priority_class(ticket.priority)
-                    ]}>
-                      {ticket.priority || "Unprioritized"}
-                    </span>
-                    <span class={[
-                      "badge badge-xs whitespace-nowrap",
-                      ticket_size_class(ticket.size)
-                    ]}>
-                      {ticket.size || "Unsized"}
-                    </span>
+                  <div
+                    :if={ticket.labels != []}
+                    class="flex w-full items-start justify-start gap-1 flex-wrap"
+                  >
                     <span
                       :for={label <- ticket.labels || []}
                       class={["badge badge-xs whitespace-nowrap", ticket_label_class(label)]}
@@ -921,17 +888,11 @@
                     <span class="badge badge-xs badge-info whitespace-nowrap">
                       {ticket.number}
                     </span>
-                    <span class={[
-                      "badge badge-xs whitespace-nowrap",
-                      ticket_priority_class(ticket.priority)
-                    ]}>
-                      {ticket.priority || "Unprioritized"}
-                    </span>
-                    <span class={[
-                      "badge badge-xs whitespace-nowrap",
-                      ticket_size_class(ticket.size)
-                    ]}>
-                      {ticket.size || "Unsized"}
+                    <span
+                      :for={label <- ticket.labels || []}
+                      class={["badge badge-xs whitespace-nowrap", ticket_label_class(label)]}
+                    >
+                      {label}
                     </span>
                   </div>
                 </div>
@@ -1215,14 +1176,11 @@
             </div>
             <div class="text-xs text-base-content/60 mb-3">
               #{selected_ticket.number}
-              <span :if={selected_ticket.status}>
-                &middot; {selected_ticket.status}
-              </span>
-              <span :if={selected_ticket.priority}>
-                &middot; {selected_ticket.priority}
-              </span>
-              <span :if={selected_ticket.size}>
-                &middot; {selected_ticket.size}
+              <span
+                :for={label <- selected_ticket.labels || []}
+                class={["badge badge-xs whitespace-nowrap ml-1", ticket_label_class(label)]}
+              >
+                {label}
               </span>
             </div>
             <div class="session-markdown text-sm text-base-content/90">
