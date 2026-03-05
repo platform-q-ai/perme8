@@ -16,6 +16,7 @@ Each app has a single owner and a clear set of responsibilities. No two apps own
 | **webhooks** | Domain context | Outbound/inbound webhooks, HMAC signing, audit logging | `Webhooks.Repo` | `identity`, `perme8_events` |
 | **entity_relationship_manager** | Domain context + API | Schema definitions, entities, edges, graph traversal | Needs own Repo (currently borrows `Jarga.Repo`) | `identity`, `perme8_events` |
 | **perme8_events** | Shared infrastructure | Eventbus facade (`Perme8.Events`), EventBus dispatcher, EventHandler behaviour, DomainEvent macro, PubSub server | None | Nothing (foundational) |
+| **perme8_plugs** | Shared infrastructure | Shared Plug modules (`Perme8.Plugs.SecurityHeaders`) | None | Nothing (foundational) |
 | **jarga_web** | Interface (LiveView) | UI shell, mounts companion `_web` apps | None | `jarga`, `agents`, `chat`, `chat_web`, `identity`, `notifications`, `perme8_events` |
 | **jarga_api** | Interface (REST) | JSON API for workspaces, projects, documents | None | `jarga`, `identity` |
 | **agents_web** | Interface (LiveView) | Sessions UI, agent management UI | None | `agents`, `identity` |
@@ -64,6 +65,7 @@ Each context has its own `domain/`, `application/`, and `infrastructure/` layers
 - **perme8_events** -- Extracted in [#200](https://github.com/platform-q-ai/perme8/issues/200). EventBus, EventHandler, DomainEvent macro, and PubSub server now live in `apps/perme8_events/`.
 - **notifications** -- Extracted from `jarga` in [#38](https://github.com/platform-q-ai/perme8/issues/38). Now lives in `apps/notifications/` with its own `Notifications.Repo`.
 - **chat** -- Extracted from `jarga` in [#60](https://github.com/platform-q-ai/perme8/issues/60). Now lives in `apps/chat/` with its own `Chat.Repo`. Web layer in `apps/chat_web/`.
+- **perme8_plugs** -- Extracted in [#118](https://github.com/platform-q-ai/perme8/issues/118). Shared `SecurityHeaders` plug with `:liveview`/`:api` profiles now lives in `apps/perme8_plugs/`, replacing 7 duplicate plug modules across the umbrella.
 
 ---
 
