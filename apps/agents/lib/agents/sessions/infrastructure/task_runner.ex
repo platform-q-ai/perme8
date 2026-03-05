@@ -590,7 +590,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
     update_task_status(state, %{
       status: "cancelled",
-      completed_at: DateTime.utc_now()
+      completed_at: DateTime.utc_now(),
+      pending_question: nil
     })
 
     broadcast_status(state.task_id, "cancelled", state.pubsub)
@@ -1123,7 +1124,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     attrs = %{
       status: "failed",
       error: serialized_error,
-      completed_at: DateTime.utc_now()
+      completed_at: DateTime.utc_now(),
+      pending_question: nil
     }
 
     # Cache structured output parts (or plain text fallback) even on failure
@@ -1155,7 +1157,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
     attrs = %{
       status: "completed",
-      completed_at: DateTime.utc_now()
+      completed_at: DateTime.utc_now(),
+      pending_question: nil
     }
 
     # Cache structured output parts (or plain text fallback)
