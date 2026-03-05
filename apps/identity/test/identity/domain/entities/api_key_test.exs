@@ -48,6 +48,19 @@ defmodule Identity.Domain.Entities.ApiKeyTest do
       assert api_key.workspace_access == nil
       assert api_key.is_active == nil
     end
+
+    test "accepts permissions field" do
+      api_key = ApiKey.new(%{name: "Scoped Key", user_id: "user-1", permissions: ["agents:read"]})
+
+      assert api_key.permissions == ["agents:read"]
+    end
+
+    test "includes permissions key with nil default" do
+      api_key = ApiKey.new(%{name: "Test Key", user_id: "user-1"})
+
+      assert Map.has_key?(api_key, :permissions)
+      assert api_key.permissions == nil
+    end
   end
 
   describe "from_schema/1" do
@@ -117,6 +130,46 @@ defmodule Identity.Domain.Entities.ApiKeyTest do
       api_key = ApiKey.from_schema(schema)
 
       assert api_key.workspace_access == ["workspace-a", "workspace-b"]
+    end
+
+    test "maps permissions from schema" do
+      schema = %{
+        __struct__: SomeSchema,
+        id: "key-perm",
+        name: "Permission Key",
+        description: nil,
+        hashed_token: "hash",
+        user_id: "user-1",
+        workspace_access: ["workspace-a"],
+        permissions: ["agents:read", "mcp:knowledge.search"],
+        is_active: true,
+        inserted_at: nil,
+        updated_at: nil
+      }
+
+      api_key = ApiKey.from_schema(schema)
+
+      assert api_key.permissions == ["agents:read", "mcp:knowledge.search"]
+    end
+
+    test "keeps permissions nil when schema permissions are nil" do
+      schema = %{
+        __struct__: SomeSchema,
+        id: "key-perm-nil",
+        name: "Permission Key",
+        description: nil,
+        hashed_token: "hash",
+        user_id: "user-1",
+        workspace_access: ["workspace-a"],
+        permissions: nil,
+        is_active: true,
+        inserted_at: nil,
+        updated_at: nil
+      }
+
+      api_key = ApiKey.from_schema(schema)
+
+      assert api_key.permissions == nil
     end
   end
 
