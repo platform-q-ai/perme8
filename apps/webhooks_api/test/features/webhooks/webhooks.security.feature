@@ -347,7 +347,7 @@ Feature: Webhooks API Security Baseline
   #          clickjacking, etc. This covers both Bearer-token-authenticated
   #          endpoints and the HMAC-authenticated inbound receiver.
   # NOTE: checkSecurityHeaders sends a GET request, so we test against
-  #       endpoints with GET routes. The SecurityHeadersPlug is applied at
+  #       endpoints with GET routes. The Perme8.Plugs.SecurityHeaders plug is applied at
   #       the pipeline level, covering all HTTP methods uniformly.
   # ===========================================================================
 

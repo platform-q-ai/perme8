@@ -31,7 +31,7 @@ Feature: ERM API Security Headers
   # Security Headers — Schema Management Endpoint (authenticated)
   # Maps to: GET /api/v1/workspaces/:workspace_id/schema
   # PUT /api/v1/workspaces/:workspace_id/schema
-  # The SecurityHeadersPlug is applied at the pipeline level, so testing the
+  # The Perme8.Plugs.SecurityHeaders plug is applied at the pipeline level, so testing the
   # GET route covers all HTTP methods on the schema endpoint uniformly.
   # ---------------------------------------------------------------------------
 
