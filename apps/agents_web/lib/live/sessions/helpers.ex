@@ -352,4 +352,77 @@ defmodule AgentsWeb.SessionsLive.Helpers do
   end
 
   def ticket_label_class(_), do: "badge-outline"
+
+  @doc """
+  Filters sessions by a search query (case-insensitive match against title).
+  Returns all sessions when query is empty.
+  """
+  def filter_sessions_by_search(sessions, ""), do: sessions
+  def filter_sessions_by_search(sessions, nil), do: sessions
+
+  def filter_sessions_by_search(sessions, query) do
+    downcased = String.downcase(query)
+
+    Enum.filter(sessions, fn session ->
+      title = session.title || ""
+      String.contains?(String.downcase(title), downcased)
+    end)
+  end
+
+  @doc """
+  Filters tickets by a search query (case-insensitive match against title, number, and labels).
+  Returns all tickets when query is empty.
+  """
+  def filter_tickets_by_search(tickets, ""), do: tickets
+  def filter_tickets_by_search(tickets, nil), do: tickets
+
+  def filter_tickets_by_search(tickets, query) do
+    downcased = String.downcase(query)
+
+    Enum.filter(tickets, fn ticket ->
+      title_match = String.contains?(String.downcase(ticket.title || ""), downcased)
+      number_match = Integer.to_string(ticket.number) =~ downcased
+
+      label_match =
+        Enum.any?(ticket.labels || [], fn label ->
+          String.contains?(String.downcase(label), downcased)
+        end)
+
+      title_match or number_match or label_match
+    end)
+  end
+
+  @doc """
+  Filters sessions by status. :all returns everything.
+  Triage statuses: :awaiting_feedback, :completed, :cancelled
+  Build statuses: :failed, :queued, :running
+  """
+  def filter_sessions_by_status(sessions, :all), do: sessions
+
+  def filter_sessions_by_status(sessions, status) do
+    status_str = Atom.to_string(status)
+
+    Enum.filter(sessions, fn session ->
+      case status_str do
+        "running" -> session.latest_status in ["pending", "starting", "running"]
+        other -> session.latest_status == other
+      end
+    end)
+  end
+
+  @doc """
+  Filters tickets by status. :all returns everything.
+  """
+  def filter_tickets_by_status(tickets, :all), do: tickets
+
+  def filter_tickets_by_status(tickets, status) do
+    status_str = Atom.to_string(status)
+
+    Enum.filter(tickets, fn ticket ->
+      case status_str do
+        "running" -> ticket.task_status in ["pending", "starting", "running"]
+        other -> ticket.task_status == other
+      end
+    end)
+  end
 end
