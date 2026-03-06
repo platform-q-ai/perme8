@@ -28,7 +28,7 @@ defmodule EntityRelationshipManager.Application.UseCases.CreateEntity do
   """
   @default_event_bus Perme8.Events.EventBus
 
-  def execute(workspace_id, attrs, opts \\ []) do
+  def execute(workspace_id, attrs, actor_id, opts \\ []) do
     schema_repo = Keyword.get(opts, :schema_repo, RepoConfig.schema_repo())
     graph_repo = Keyword.get(opts, :graph_repo, RepoConfig.graph_repo())
     event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
@@ -40,7 +40,7 @@ defmodule EntityRelationshipManager.Application.UseCases.CreateEntity do
          {:ok, schema} <- fetch_schema(schema_repo, workspace_id),
          :ok <- validate_entity(schema, type, properties),
          {:ok, entity} <- graph_repo.create_entity(workspace_id, type, properties) do
-      emit_entity_created_event(entity, workspace_id, type, properties, event_bus)
+      emit_entity_created_event(entity, workspace_id, type, properties, actor_id, event_bus)
       {:ok, entity}
     end
   end
@@ -57,12 +57,11 @@ defmodule EntityRelationshipManager.Application.UseCases.CreateEntity do
     SchemaValidationPolicy.validate_entity_against_schema(entity, schema, type)
   end
 
-  # Part 2: thread actor_id from controller layer for audit trail attribution
-  defp emit_entity_created_event(entity, workspace_id, type, properties, event_bus) do
+  defp emit_entity_created_event(entity, workspace_id, type, properties, actor_id, event_bus) do
     event =
       EntityCreated.new(%{
         aggregate_id: entity.id,
-        actor_id: nil,
+        actor_id: actor_id,
         entity_id: entity.id,
         workspace_id: workspace_id,
         entity_type: type,

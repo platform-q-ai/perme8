@@ -10,13 +10,14 @@ defmodule EntityRelationshipManager.EntityController do
 
   def create(conn, params) do
     workspace_id = conn.assigns.workspace_id
+    actor_id = conn.assigns.current_user.id
 
     attrs = %{
       type: params["type"],
       properties: params["properties"] || %{}
     }
 
-    case EntityRelationshipManager.create_entity(workspace_id, attrs) do
+    case EntityRelationshipManager.create_entity(workspace_id, attrs, actor_id) do
       {:ok, entity} ->
         conn
         |> put_status(:created)
@@ -105,9 +106,10 @@ defmodule EntityRelationshipManager.EntityController do
 
   def update(conn, %{"id" => id} = params) do
     workspace_id = conn.assigns.workspace_id
+    actor_id = conn.assigns.current_user.id
     properties = params["properties"] || %{}
 
-    case EntityRelationshipManager.update_entity(workspace_id, id, properties) do
+    case EntityRelationshipManager.update_entity(workspace_id, id, properties, actor_id) do
       {:ok, entity} ->
         conn
         |> put_status(:ok)
@@ -126,8 +128,9 @@ defmodule EntityRelationshipManager.EntityController do
 
   def delete(conn, %{"id" => id}) do
     workspace_id = conn.assigns.workspace_id
+    actor_id = conn.assigns.current_user.id
 
-    case EntityRelationshipManager.delete_entity(workspace_id, id) do
+    case EntityRelationshipManager.delete_entity(workspace_id, id, actor_id) do
       {:ok, entity, deleted_edge_count} ->
         conn
         |> put_status(:ok)

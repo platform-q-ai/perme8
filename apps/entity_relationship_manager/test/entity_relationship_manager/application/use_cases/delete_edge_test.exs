@@ -18,7 +18,7 @@ defmodule EntityRelationshipManager.Application.UseCases.DeleteEdgeTest do
     :ok
   end
 
-  describe "execute/3 - event emission" do
+  describe "execute/4 - event emission" do
     test "emits EdgeDeleted event via event_bus" do
       deleted = edge(%{deleted_at: ~U[2026-01-02 00:00:00Z]})
 
@@ -26,7 +26,7 @@ defmodule EntityRelationshipManager.Application.UseCases.DeleteEdgeTest do
       |> expect(:soft_delete_edge, fn _ws_id, _id -> {:ok, deleted} end)
 
       assert {:ok, ^deleted} =
-               DeleteEdge.execute(workspace_id(), valid_uuid3(),
+               DeleteEdge.execute(workspace_id(), valid_uuid3(), valid_uuid(),
                  graph_repo: GraphRepositoryMock,
                  event_bus: TestEventBus
                )
@@ -35,15 +35,15 @@ defmodule EntityRelationshipManager.Application.UseCases.DeleteEdgeTest do
       assert event.edge_id == deleted.id
       assert event.workspace_id == workspace_id()
       assert event.aggregate_id == deleted.id
+      assert event.actor_id == valid_uuid()
     end
 
     test "does not emit event when deletion fails" do
-
       GraphRepositoryMock
       |> expect(:soft_delete_edge, fn _ws_id, _id -> {:error, :not_found} end)
 
       assert {:error, :not_found} =
-               DeleteEdge.execute(workspace_id(), valid_uuid(),
+               DeleteEdge.execute(workspace_id(), valid_uuid(), valid_uuid(),
                  graph_repo: GraphRepositoryMock,
                  event_bus: TestEventBus
                )
@@ -52,7 +52,7 @@ defmodule EntityRelationshipManager.Application.UseCases.DeleteEdgeTest do
     end
   end
 
-  describe "execute/3" do
+  describe "execute/4" do
     test "soft-deletes edge" do
       deleted = edge(%{deleted_at: ~U[2026-01-02 00:00:00Z]})
 
@@ -64,7 +64,9 @@ defmodule EntityRelationshipManager.Application.UseCases.DeleteEdgeTest do
       end)
 
       assert {:ok, ^deleted} =
-               DeleteEdge.execute(workspace_id(), valid_uuid3(), graph_repo: GraphRepositoryMock)
+               DeleteEdge.execute(workspace_id(), valid_uuid3(), valid_uuid(),
+                 graph_repo: GraphRepositoryMock
+               )
     end
 
     test "returns error when edge not found" do
@@ -72,12 +74,16 @@ defmodule EntityRelationshipManager.Application.UseCases.DeleteEdgeTest do
       |> expect(:soft_delete_edge, fn _ws_id, _id -> {:error, :not_found} end)
 
       assert {:error, :not_found} =
-               DeleteEdge.execute(workspace_id(), valid_uuid(), graph_repo: GraphRepositoryMock)
+               DeleteEdge.execute(workspace_id(), valid_uuid(), valid_uuid(),
+                 graph_repo: GraphRepositoryMock
+               )
     end
 
     test "returns error for invalid UUID" do
       assert {:error, msg} =
-               DeleteEdge.execute(workspace_id(), "bad-uuid", graph_repo: GraphRepositoryMock)
+               DeleteEdge.execute(workspace_id(), "bad-uuid", valid_uuid(),
+                 graph_repo: GraphRepositoryMock
+               )
 
       assert msg =~ "UUID"
     end
