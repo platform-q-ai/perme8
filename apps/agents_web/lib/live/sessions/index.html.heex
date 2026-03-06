@@ -65,8 +65,7 @@
               <button
                 :if={@session_search != ""}
                 type="button"
-                phx-click="session_search"
-                phx-value-session_search=""
+                phx-click="clear_session_search"
                 class="btn btn-ghost btn-xs btn-circle p-0 min-h-0 h-auto"
               >
                 <.icon name="hero-x-mark" class="size-3" />
@@ -171,7 +170,10 @@
           end) %>
         <% active_tickets =
           Enum.filter(filtered_tickets, fn t -> t.task_status in build_statuses end) %>
-        <%!-- Identify which sessions are ticket-associated --%>
+        <%!-- Association lookups use unfiltered @tickets/@sessions intentionally:
+             when a search/status filter hides one side of a session<->ticket pair,
+             the visible side must still resolve its association for correct rendering
+             (e.g. showing the ticket badge on a visible session whose ticket is filtered out). --%>
         <% ticket_for_session = fn session ->
           direct = Enum.find(@tickets, &(&1.associated_container_id == session.container_id))
 

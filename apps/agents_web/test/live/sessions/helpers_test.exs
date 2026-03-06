@@ -332,6 +332,18 @@ defmodule AgentsWeb.SessionsLive.HelpersTest do
       assert hd(result).number == 42
     end
 
+    test "number match is exact, not substring" do
+      tickets = [
+        %{title: "Bug A", number: 1, labels: []},
+        %{title: "Bug B", number: 10, labels: []},
+        %{title: "Bug C", number: 100, labels: []}
+      ]
+
+      result = Helpers.filter_tickets_by_search(tickets, "1")
+      assert length(result) == 1
+      assert hd(result).number == 1
+    end
+
     test "matches by label" do
       tickets = [
         %{title: "Bug A", number: 1, labels: ["frontend", "urgent"]},
@@ -366,6 +378,12 @@ defmodule AgentsWeb.SessionsLive.HelpersTest do
       tickets = [%{title: nil, number: 5, labels: nil}]
       result = Helpers.filter_tickets_by_search(tickets, "5")
       assert length(result) == 1
+    end
+
+    test "handles nil title and nil labels without crash on non-number query" do
+      tickets = [%{title: nil, number: 5, labels: nil}]
+      result = Helpers.filter_tickets_by_search(tickets, "nonexistent")
+      assert result == []
     end
   end
 
