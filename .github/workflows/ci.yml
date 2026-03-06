@@ -195,6 +195,16 @@ jobs:
         run: bun install
         working-directory: apps/exo_dashboard/priv/gherkin_parser
 
+      - name: Increase Postgres max_connections
+        run: |
+          # 6 Ecto repos with pool sizes totalling 70 connections, plus
+          # GenServers (TicketSyncServer, QueueManager) and Postgres
+          # background workers can exceed the default 100 limit.
+          docker exec ${{ job.services.postgres.id }} \
+            bash -c "sed -i 's/^#*max_connections.*/max_connections = 200/' /var/lib/postgresql/data/postgresql.conf"
+          docker restart ${{ job.services.postgres.id }}
+          until docker exec ${{ job.services.postgres.id }} pg_isready -U postgres; do sleep 1; done
+
       - name: Create test database
         run: MIX_ENV=test mix ecto.create
         env:
@@ -445,6 +455,14 @@ jobs:
       - name: Build assets
         if: matrix.domain == 'browser' || (matrix.domain == 'security' && contains('jarga-web identity agents-web', matrix.app))
         run: mix assets.build
+
+      - name: Increase Postgres max_connections
+        if: matrix.app != 'alkali'
+        run: |
+          docker exec ${{ job.services.postgres.id }} \
+            bash -c "sed -i 's/^#*max_connections.*/max_connections = 200/' /var/lib/postgresql/data/postgresql.conf"
+          docker restart ${{ job.services.postgres.id }}
+          until docker exec ${{ job.services.postgres.id }} pg_isready -U postgres; do sleep 1; done
 
       - name: Create test database
         if: matrix.app != 'alkali'
