@@ -59,4 +59,28 @@ defmodule Agents.Sessions.Domain.Policies.QueuePolicyTest do
       assert QueuePolicy.next_queue_position(3) == 4
     end
   end
+
+  describe "limit validation" do
+    test "valid_concurrency_limit?/1 is true only for integers in 1..10" do
+      for limit <- 1..10 do
+        assert QueuePolicy.valid_concurrency_limit?(limit)
+      end
+
+      refute QueuePolicy.valid_concurrency_limit?(0)
+      refute QueuePolicy.valid_concurrency_limit?(11)
+      refute QueuePolicy.valid_concurrency_limit?("2")
+      refute QueuePolicy.valid_concurrency_limit?(nil)
+    end
+
+    test "valid_warm_cache_limit?/1 is true only for integers in 0..5" do
+      for limit <- 0..5 do
+        assert QueuePolicy.valid_warm_cache_limit?(limit)
+      end
+
+      refute QueuePolicy.valid_warm_cache_limit?(-1)
+      refute QueuePolicy.valid_warm_cache_limit?(6)
+      refute QueuePolicy.valid_warm_cache_limit?("2")
+      refute QueuePolicy.valid_warm_cache_limit?(nil)
+    end
+  end
 end

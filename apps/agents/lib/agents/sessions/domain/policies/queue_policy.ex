@@ -41,4 +41,18 @@ defmodule Agents.Sessions.Domain.Policies.QueuePolicy do
   @spec next_queue_position(non_neg_integer() | nil) :: non_neg_integer()
   def next_queue_position(nil), do: 1
   def next_queue_position(current_max), do: current_max + 1
+
+  @doc """
+  Returns true when the concurrency limit is valid.
+  """
+  @spec valid_concurrency_limit?(term()) :: boolean()
+  def valid_concurrency_limit?(limit) when is_integer(limit), do: limit in 1..10
+  def valid_concurrency_limit?(_), do: false
+
+  @doc """
+  Returns true when the warm cache limit is valid.
+  """
+  @spec valid_warm_cache_limit?(term()) :: boolean()
+  def valid_warm_cache_limit?(limit) when is_integer(limit), do: limit in 0..5
+  def valid_warm_cache_limit?(_), do: false
 end
