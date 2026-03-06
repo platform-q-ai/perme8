@@ -39,6 +39,8 @@ defmodule Perme8.Plugs.SecurityHeaders do
 
   import Plug.Conn
 
+  # CSP strings are computed at compile time as module attributes.
+  # init/1 selects the appropriate string; call/2 uses it with zero runtime overhead.
   @liveview_csp [
                   "default-src 'self'",
                   "script-src 'self' 'unsafe-inline'",
