@@ -590,6 +590,37 @@
                         <span class="badge badge-xs badge-info whitespace-nowrap shrink-0">
                           {ticket.number}
                         </span>
+                        <span
+                          :if={t_session}
+                          class="text-[0.6rem] text-base-content/40"
+                        >
+                          {image_label(t_session.image)}
+                        </span>
+                        <span
+                          :if={t_session}
+                          class="text-[0.6rem] text-base-content/40"
+                        >
+                          &middot; {relative_time(t_session.latest_at)}
+                        </span>
+                        <span
+                          :if={t_session && Map.get(t_session, :started_at) != nil}
+                          class="text-[0.6rem] text-base-content/40"
+                          data-testid="session-duration"
+                        >
+                          &middot;
+                          <span
+                            id={"duration-overflow-ticket-#{ticket.number}"}
+                            phx-hook="DurationTimer"
+                            data-started-at={
+                              Map.get(t_session, :started_at) &&
+                                DateTime.to_iso8601(t_session.started_at)
+                            }
+                            data-completed-at={
+                              Map.get(t_session, :completed_at) &&
+                                DateTime.to_iso8601(t_session.completed_at)
+                            }
+                          />
+                        </span>
                       </div>
                       <.status_dot
                         status={ticket.task_status}
@@ -618,6 +649,24 @@
                         {label}
                       </span>
                     </div>
+
+                    <% t_file_stats =
+                      t_session && format_file_stats(Map.get(t_session, :session_summary)) %>
+                    <div
+                      :if={t_file_stats}
+                      class="text-[0.6rem] text-base-content/40 w-full"
+                      data-testid="session-file-stats"
+                    >
+                      {t_file_stats}
+                    </div>
+                    <.container_stats_bars
+                      :if={t_session && Map.has_key?(@container_stats, t_session.container_id)}
+                      stats={@container_stats[t_session.container_id]}
+                    />
+                    <.compact_progress_bar
+                      :if={t_session}
+                      todo_items={session_todo_items(t_session)}
+                    />
                   </div>
                   <%!-- Pause button strip (right edge) --%>
                   <div
@@ -766,6 +815,40 @@
                         >
                           <.icon name="hero-arrow-path" class="size-3 animate-spin" /> Warming...
                         </span>
+                        <span
+                          :if={!warming_ticket?.(ticket) && t_session}
+                          class="text-[0.6rem] text-base-content/40"
+                        >
+                          {image_label(t_session.image)}
+                        </span>
+                        <span
+                          :if={!warming_ticket?.(ticket) && t_session}
+                          class="text-[0.6rem] text-base-content/40"
+                        >
+                          &middot; {relative_time(t_session.latest_at)}
+                        </span>
+                        <span
+                          :if={
+                            !warming_ticket?.(ticket) && t_session &&
+                              Map.get(t_session, :started_at) != nil
+                          }
+                          class="text-[0.6rem] text-base-content/40"
+                          data-testid="session-duration"
+                        >
+                          &middot;
+                          <span
+                            id={"duration-warm-ticket-#{ticket.number}"}
+                            phx-hook="DurationTimer"
+                            data-started-at={
+                              Map.get(t_session, :started_at) &&
+                                DateTime.to_iso8601(t_session.started_at)
+                            }
+                            data-completed-at={
+                              Map.get(t_session, :completed_at) &&
+                                DateTime.to_iso8601(t_session.completed_at)
+                            }
+                          />
+                        </span>
                       </div>
                       <.status_dot
                         status={ticket.task_status}
@@ -797,6 +880,24 @@
                         {label}
                       </span>
                     </div>
+
+                    <% t_file_stats =
+                      t_session && format_file_stats(Map.get(t_session, :session_summary)) %>
+                    <div
+                      :if={t_file_stats}
+                      class="text-[0.6rem] text-base-content/40 w-full"
+                      data-testid="session-file-stats"
+                    >
+                      {t_file_stats}
+                    </div>
+                    <.container_stats_bars
+                      :if={t_session && Map.has_key?(@container_stats, t_session.container_id)}
+                      stats={@container_stats[t_session.container_id]}
+                    />
+                    <.compact_progress_bar
+                      :if={t_session}
+                      todo_items={session_todo_items(t_session)}
+                    />
                   </div>
                   <%!-- Pause button strip (right edge) --%>
                   <div
