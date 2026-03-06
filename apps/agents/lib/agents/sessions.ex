@@ -21,6 +21,7 @@ defmodule Agents.Sessions do
     ]
 
   alias Agents.Sessions.Application.UseCases.{
+    BuildSnapshot,
     CreateTask,
     CancelTask,
     DeleteTask,
@@ -33,6 +34,7 @@ defmodule Agents.Sessions do
 
   alias Agents.Sessions.Application.SessionsConfig
   alias Agents.Sessions.Infrastructure.QueueManager
+  alias Agents.Sessions.Infrastructure.QueueMirror
   alias Agents.Sessions.Infrastructure.QueueManagerSupervisor
   alias Agents.Sessions.Infrastructure.QueueOrchestrator
   alias Agents.Sessions.Infrastructure.QueueOrchestratorSupervisor
@@ -42,6 +44,8 @@ defmodule Agents.Sessions do
   alias Agents.Repo
   alias Agents.Sessions.Infrastructure.TaskRunnerSupervisor
   alias Ecto.Adapters.SQL
+
+  require Logger
 
   @doc """
   Creates a new coding task.
@@ -440,7 +444,13 @@ defmodule Agents.Sessions do
   @spec set_concurrency_limit(String.t(), non_neg_integer()) :: :ok | {:error, term()}
   def set_concurrency_limit(user_id, limit) do
     with {:ok, _pid} <- ensure_queue_backend_started(user_id) do
-      queue_module().set_concurrency_limit(user_id, limit)
+      result = queue_module().set_concurrency_limit(user_id, limit)
+
+      if not SessionsConfig.queue_v2_enabled?() do
+        maybe_mirror_queue_state(user_id)
+      end
+
+      result
     end
   end
 
@@ -487,6 +497,10 @@ defmodule Agents.Sessions do
 
     with {:ok, _pid} <- safe_ensure_queue_backend(queue_supervisor, user_id, ensure_opts) do
       _ = safe_notify_terminal(queue_backend, user_id, task_id, status)
+
+      if not SessionsConfig.queue_v2_enabled?() do
+        maybe_mirror_queue_state(user_id)
+      end
     end
 
     :ok
@@ -659,6 +673,20 @@ defmodule Agents.Sessions do
       QueueOrchestrator
     else
       QueueManager
+    end
+  end
+
+  defp maybe_mirror_queue_state(user_id) do
+    if SessionsConfig.queue_mirror_enabled?() do
+      try do
+        legacy_state = QueueManager.get_queue_state(user_id)
+        {:ok, snapshot} = BuildSnapshot.execute(user_id)
+
+        result = QueueMirror.compare(legacy_state, snapshot)
+        QueueMirror.log_comparison(user_id, result)
+      rescue
+        e -> Logger.warning("QueueMirror: comparison failed: #{Exception.message(e)}")
+      end
     end
   end
 
