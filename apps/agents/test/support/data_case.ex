@@ -40,8 +40,8 @@ defmodule Agents.DataCase do
   Agents.Repo handles all Agents-owned data (agents, workspace_agents, sessions).
   Identity.Repo is also checked out because some Agents production code calls the
   Identity facade (e.g. `Identity.get_user!/1`) which internally uses Identity.Repo.
-  Test fixtures create users/workspaces via raw SQL through Agents.Repo, so no
-  boundary dependency on Identity.Repo is needed.
+  Test fixtures create users/workspaces via raw SQL through Identity.Repo, so no
+  production boundary dependency on Identity.Repo is needed.
   """
   def setup_sandbox(tags) do
     :ok = Sandbox.checkout(Agents.Repo)
