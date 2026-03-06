@@ -33,14 +33,7 @@ defmodule Agents.Test.WorkspacesFixtures do
     name = Map.get(attrs, :name)
     description = Map.get(attrs, :description)
     color = Map.get(attrs, :color)
-
-    slug =
-      name
-      |> String.downcase()
-      |> String.replace(~r/[^a-z0-9\s-]/, "")
-      |> String.replace(~r/\s+/, "-")
-      |> Kernel.<>("-" <> String.slice(id, 0..7))
-
+    slug = generate_slug(name, id)
     now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
 
     Identity.Repo.query!(
@@ -52,25 +45,7 @@ defmodule Agents.Test.WorkspacesFixtures do
     )
 
     # Add the creating user as workspace owner
-    member_id = Ecto.UUID.generate()
-
-    Identity.Repo.query!(
-      """
-      INSERT INTO workspace_members (id, workspace_id, user_id, email, role, invited_at, joined_at, inserted_at, updated_at)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-      """,
-      [
-        Ecto.UUID.dump!(member_id),
-        Ecto.UUID.dump!(id),
-        Ecto.UUID.dump!(user.id),
-        user.email,
-        "owner",
-        now,
-        now,
-        now,
-        now
-      ]
-    )
+    insert_workspace_member(id, user, "owner", now)
 
     %{id: id, name: name, slug: slug}
   end
@@ -81,8 +56,23 @@ defmodule Agents.Test.WorkspacesFixtures do
   This is for testing purposes only. Returns a map with the member details.
   """
   def add_workspace_member_fixture(workspace_id, user, role) do
-    id = Ecto.UUID.generate()
     now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+    %{id: id} = insert_workspace_member(workspace_id, user, to_string(role), now)
+    %{id: id, workspace_id: workspace_id, user_id: user.id, role: role}
+  end
+
+  # -- Private helpers --
+
+  defp generate_slug(name, id) do
+    name
+    |> String.downcase()
+    |> String.replace(~r/[^a-z0-9\s-]/, "")
+    |> String.replace(~r/\s+/, "-")
+    |> Kernel.<>("-" <> String.slice(id, 0..7))
+  end
+
+  defp insert_workspace_member(workspace_id, user, role, now) do
+    id = Ecto.UUID.generate()
 
     Identity.Repo.query!(
       """
@@ -94,7 +84,7 @@ defmodule Agents.Test.WorkspacesFixtures do
         Ecto.UUID.dump!(workspace_id),
         Ecto.UUID.dump!(user.id),
         user.email,
-        to_string(role),
+        role,
         now,
         now,
         now,
@@ -102,6 +92,6 @@ defmodule Agents.Test.WorkspacesFixtures do
       ]
     )
 
-    %{id: id, workspace_id: workspace_id, user_id: user.id, role: role}
+    %{id: id}
   end
 end
