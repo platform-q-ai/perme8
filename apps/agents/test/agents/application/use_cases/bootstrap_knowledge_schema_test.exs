@@ -38,7 +38,7 @@ defmodule Agents.Application.UseCases.BootstrapKnowledgeSchemaTest do
 
       ErmGatewayMock
       |> expect(:get_schema, fn _ws_id -> {:ok, schema} end)
-      |> expect(:upsert_schema, fn ws_id, attrs ->
+      |> expect(:upsert_schema, fn ws_id, attrs, _actor_id ->
         assert ws_id == workspace_id()
         entity_types = attrs[:entity_types] || attrs["entity_types"]
 
@@ -56,7 +56,7 @@ defmodule Agents.Application.UseCases.BootstrapKnowledgeSchemaTest do
     test "when no schema exists, creates full schema with entity and edge types" do
       ErmGatewayMock
       |> expect(:get_schema, fn _ws_id -> {:error, :not_found} end)
-      |> expect(:upsert_schema, fn ws_id, attrs ->
+      |> expect(:upsert_schema, fn ws_id, attrs, _actor_id ->
         assert ws_id == workspace_id()
 
         entity_types = attrs[:entity_types] || attrs["entity_types"]
@@ -84,7 +84,7 @@ defmodule Agents.Application.UseCases.BootstrapKnowledgeSchemaTest do
     test "schema includes KnowledgeEntry entity type with correct properties" do
       ErmGatewayMock
       |> expect(:get_schema, fn _ws_id -> {:error, :not_found} end)
-      |> expect(:upsert_schema, fn _ws_id, attrs ->
+      |> expect(:upsert_schema, fn _ws_id, attrs, _actor_id ->
         entity_types = attrs[:entity_types] || attrs["entity_types"]
         knowledge_type = Enum.find(entity_types, fn et -> et.name == "KnowledgeEntry" end)
         assert knowledge_type != nil
@@ -122,7 +122,7 @@ defmodule Agents.Application.UseCases.BootstrapKnowledgeSchemaTest do
 
       ErmGatewayMock
       |> expect(:get_schema, fn _ws_id -> {:ok, schema} end)
-      |> expect(:upsert_schema, fn _ws_id, attrs ->
+      |> expect(:upsert_schema, fn _ws_id, attrs, _actor_id ->
         edge_names = Enum.map(attrs[:edge_types], & &1.name)
         # relates_to should appear exactly once (not duplicated)
         assert Enum.count(edge_names, &(&1 == "relates_to")) == 1

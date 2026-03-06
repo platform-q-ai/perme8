@@ -45,7 +45,7 @@ defmodule Agents.Infrastructure.Mcp.Tools.RelateToolTest do
       |> expect(:get_entity, fn ^workspace_id, ^to_id ->
         {:ok, Fixtures.erm_knowledge_entity(%{id: to_id})}
       end)
-      |> expect(:create_edge, fn ^workspace_id, attrs ->
+      |> expect(:create_edge, fn ^workspace_id, attrs, _actor_id ->
         assert attrs.type == "depends_on"
         {:ok, edge}
       end)

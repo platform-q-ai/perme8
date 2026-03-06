@@ -27,7 +27,7 @@ defmodule Agents.Application.UseCases.UpdateKnowledgeEntryTest do
         assert eid == entity_id
         {:ok, existing}
       end)
-      |> expect(:update_entity, fn _ws_id, eid, attrs ->
+      |> expect(:update_entity, fn _ws_id, eid, attrs, _actor_id ->
         assert eid == entity_id
         assert attrs.properties["title"] == "Updated Title"
         {:ok, updated}
@@ -76,7 +76,7 @@ defmodule Agents.Application.UseCases.UpdateKnowledgeEntryTest do
 
       ErmGatewayMock
       |> expect(:get_entity, fn _ws_id, _eid -> {:ok, existing} end)
-      |> expect(:update_entity, fn _ws_id, _eid, attrs ->
+      |> expect(:update_entity, fn _ws_id, _eid, attrs, _actor_id ->
         assert attrs.properties["title"] == "New Title"
         assert attrs.properties["body"] == "Original body"
         {:ok, erm_knowledge_entity(%{id: entity_id, properties: attrs.properties})}
@@ -94,7 +94,7 @@ defmodule Agents.Application.UseCases.UpdateKnowledgeEntryTest do
 
       ErmGatewayMock
       |> expect(:get_entity, fn _ws_id, _eid -> {:ok, existing} end)
-      |> expect(:update_entity, fn _ws_id, _eid, attrs ->
+      |> expect(:update_entity, fn _ws_id, _eid, attrs, _actor_id ->
         assert attrs.properties["last_verified_at"] == "2026-02-15T00:00:00Z"
         {:ok, erm_knowledge_entity(%{id: entity_id, properties: attrs.properties})}
       end)

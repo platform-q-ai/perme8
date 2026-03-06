@@ -16,12 +16,18 @@ defmodule Agents.Application.UseCases.UpdateKnowledgeEntry do
           {:ok, KnowledgeEntry.t()} | {:error, atom()}
   def execute(workspace_id, entity_id, attrs, opts \\ []) do
     erm_gateway = Keyword.get(opts, :erm_gateway, GatewayConfig.erm_gateway())
+    actor_id = Keyword.get(opts, :actor_id)
 
     with :ok <- KnowledgeValidationPolicy.validate_update_attrs(attrs),
          {:ok, existing} <- erm_gateway.get_entity(workspace_id, entity_id) do
       merged_properties = merge_properties(existing.properties, attrs)
 
-      case erm_gateway.update_entity(workspace_id, entity_id, %{properties: merged_properties}) do
+      case erm_gateway.update_entity(
+             workspace_id,
+             entity_id,
+             %{properties: merged_properties},
+             actor_id
+           ) do
         {:ok, updated_entity} -> {:ok, KnowledgeEntry.from_erm_entity(updated_entity)}
         {:error, reason} -> {:error, reason}
       end

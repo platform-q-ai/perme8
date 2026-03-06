@@ -36,7 +36,9 @@ defmodule Agents.Infrastructure.Mcp.Tools.CreateTool do
       external_links: Map.get(params, :external_links) || []
     }
 
-    case CreateKnowledgeEntry.execute(workspace_id, attrs) do
+    actor_id = frame.assigns[:user_id]
+
+    case CreateKnowledgeEntry.execute(workspace_id, attrs, actor_id: actor_id) do
       {:ok, entry} ->
         text = format_created(entry)
         {:reply, Response.text(Response.tool(), text), frame}

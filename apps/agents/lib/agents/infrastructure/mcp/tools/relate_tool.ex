@@ -29,7 +29,9 @@ defmodule Agents.Infrastructure.Mcp.Tools.RelateTool do
       type: params.relationship_type
     }
 
-    case CreateKnowledgeRelationship.execute(workspace_id, relate_params) do
+    actor_id = frame.assigns[:user_id]
+
+    case CreateKnowledgeRelationship.execute(workspace_id, relate_params, actor_id: actor_id) do
       {:ok, relationship} ->
         text = format_relationship(relationship)
         {:reply, Response.text(Response.tool(), text), frame}

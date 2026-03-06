@@ -23,6 +23,7 @@ defmodule Agents.Application.UseCases.CreateKnowledgeEntry do
   @spec execute(String.t(), map(), keyword()) :: {:ok, KnowledgeEntry.t()} | {:error, atom()}
   def execute(workspace_id, attrs, opts \\ []) do
     erm_gateway = Keyword.get(opts, :erm_gateway, GatewayConfig.erm_gateway())
+    actor_id = Keyword.get(opts, :actor_id)
 
     with :ok <- KnowledgeValidationPolicy.validate_entry_attrs(attrs),
          :ok <- validate_tags(attrs),
@@ -30,10 +31,11 @@ defmodule Agents.Application.UseCases.CreateKnowledgeEntry do
       entry = KnowledgeEntry.new(attrs)
       properties = KnowledgeEntry.to_erm_properties(entry)
 
-      case erm_gateway.create_entity(workspace_id, %{
-             type: "KnowledgeEntry",
-             properties: properties
-           }) do
+      case erm_gateway.create_entity(
+             workspace_id,
+             %{type: "KnowledgeEntry", properties: properties},
+             actor_id
+           ) do
         {:ok, erm_entity} -> {:ok, KnowledgeEntry.from_erm_entity(erm_entity)}
         {:error, _} = error -> error
       end
