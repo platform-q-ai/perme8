@@ -9,6 +9,7 @@ defmodule AgentsWeb.SessionsLive.Components.QueueLaneComponents do
   use Phoenix.Component
 
   alias Agents.Sessions.Domain.Entities.{LaneEntry, QueueSnapshot}
+  alias Agents.Sessions.Domain.Policies.RetryPolicy
 
   @doc """
   Renders all queue lanes from a snapshot in bottom-up order.
@@ -160,8 +161,10 @@ defmodule AgentsWeb.SessionsLive.Components.QueueLaneComponents do
   end
 
   defp retry_badge(assigns) do
+    assigns = assign(assigns, :max_retries, RetryPolicy.max_retries())
+
     ~H"""
-    <span class="badge badge-xs badge-error">{@retry_count}/3</span>
+    <span class="badge badge-xs badge-error">{@retry_count}/{@max_retries}</span>
     """
   end
 
