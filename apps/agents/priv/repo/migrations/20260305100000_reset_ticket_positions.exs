@@ -1,13 +1,14 @@
 defmodule Agents.Repo.Migrations.ResetTicketPositions do
-  use Ecto.Migration
-
-  @doc """
+  @moduledoc """
   Resets all ticket positions to 0 so that the default ordering falls back to
   `created_at DESC` (newest first). Adds a `created_at` column sourced from the
   GitHub issue creation date, defaulting to `inserted_at` until the next sync
   populates the real value. Drag-and-drop reordering still works — positions are
   assigned on drag, but the baseline is now creation-date order.
   """
+
+  use Ecto.Migration
+
   def up do
     alter table(:sessions_project_tickets) do
       add(:created_at, :utc_datetime)
