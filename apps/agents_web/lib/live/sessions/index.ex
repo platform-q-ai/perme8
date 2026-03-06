@@ -433,16 +433,26 @@ defmodule AgentsWeb.SessionsLive.Index do
     {:noreply, assign(socket, :session_search, String.trim(query))}
   end
 
-  @valid_status_filters ~w(all awaiting_feedback completed cancelled running queued failed)a
+  @impl true
+  def handle_event("clear_session_search", _params, socket) do
+    {:noreply, assign(socket, :session_search, "")}
+  end
+
+  @valid_status_filters %{
+    "all" => :all,
+    "awaiting_feedback" => :awaiting_feedback,
+    "completed" => :completed,
+    "cancelled" => :cancelled,
+    "running" => :running,
+    "queued" => :queued,
+    "failed" => :failed
+  }
 
   @impl true
   def handle_event("status_filter", %{"status" => status}, socket) do
-    filter = String.to_existing_atom(status)
-
-    if filter in @valid_status_filters do
-      {:noreply, assign(socket, :status_filter, filter)}
-    else
-      {:noreply, socket}
+    case Map.get(@valid_status_filters, status) do
+      nil -> {:noreply, socket}
+      filter -> {:noreply, assign(socket, :status_filter, filter)}
     end
   end
 

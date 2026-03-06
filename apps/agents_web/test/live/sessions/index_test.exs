@@ -3286,6 +3286,49 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       assert html =~ "session-item-failed-task"
     end
 
+    test "invalid status filter is handled gracefully", %{conn: conn, user: user} do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "A task",
+        container_id: "c-inv",
+        status: "completed"
+      })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      # Sending an unknown status string should not crash the handler
+      html = render_click(lv, "status_filter", %{"status" => "nonexistent"})
+      assert html =~ "session-item-a-task"
+    end
+
+    test "clear search button resets filter", %{conn: conn, user: user} do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Fix login bug",
+        container_id: "c-login-clear",
+        status: "completed"
+      })
+
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Add dark mode",
+        container_id: "c-dark-clear",
+        status: "completed"
+      })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      # Search to filter
+      lv
+      |> form(~s(form[phx-change="session_search"]), %{"session_search" => "login"})
+      |> render_change()
+
+      # Clear via dedicated event
+      html = render_click(lv, "clear_session_search", %{})
+      assert html =~ "session-item-fix-login-bug"
+      assert html =~ "session-item-add-dark-mode"
+    end
+
     test "search and status filter work together", %{conn: conn, user: user} do
       task_fixture(%{
         user_id: user.id,

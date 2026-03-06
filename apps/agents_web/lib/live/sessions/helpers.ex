@@ -381,7 +381,7 @@ defmodule AgentsWeb.SessionsLive.Helpers do
 
     Enum.filter(tickets, fn ticket ->
       title_match = String.contains?(String.downcase(ticket.title || ""), downcased)
-      number_match = Integer.to_string(ticket.number) =~ downcased
+      number_match = Integer.to_string(ticket.number) == downcased
 
       label_match =
         Enum.any?(ticket.labels || [], fn label ->
@@ -399,15 +399,13 @@ defmodule AgentsWeb.SessionsLive.Helpers do
   """
   def filter_sessions_by_status(sessions, :all), do: sessions
 
+  def filter_sessions_by_status(sessions, :running) do
+    Enum.filter(sessions, &(&1.latest_status in ["pending", "starting", "running"]))
+  end
+
   def filter_sessions_by_status(sessions, status) do
     status_str = Atom.to_string(status)
-
-    Enum.filter(sessions, fn session ->
-      case status_str do
-        "running" -> session.latest_status in ["pending", "starting", "running"]
-        other -> session.latest_status == other
-      end
-    end)
+    Enum.filter(sessions, &(&1.latest_status == status_str))
   end
 
   @doc """
@@ -415,14 +413,12 @@ defmodule AgentsWeb.SessionsLive.Helpers do
   """
   def filter_tickets_by_status(tickets, :all), do: tickets
 
+  def filter_tickets_by_status(tickets, :running) do
+    Enum.filter(tickets, &(&1.task_status in ["pending", "starting", "running"]))
+  end
+
   def filter_tickets_by_status(tickets, status) do
     status_str = Atom.to_string(status)
-
-    Enum.filter(tickets, fn ticket ->
-      case status_str do
-        "running" -> ticket.task_status in ["pending", "starting", "running"]
-        other -> ticket.task_status == other
-      end
-    end)
+    Enum.filter(tickets, &(&1.task_status == status_str))
   end
 end
