@@ -30,28 +30,28 @@ defmodule Agents.Infrastructure.Gateways.ErmGatewayTest do
       assert {:get_schema, 1} in @exported_functions
     end
 
-    test "exports upsert_schema/2" do
-      assert {:upsert_schema, 2} in @exported_functions
+    test "exports upsert_schema/3" do
+      assert {:upsert_schema, 3} in @exported_functions
     end
 
-    test "exports create_entity/2" do
-      assert {:create_entity, 2} in @exported_functions
+    test "exports create_entity/3" do
+      assert {:create_entity, 3} in @exported_functions
     end
 
     test "exports get_entity/2" do
       assert {:get_entity, 2} in @exported_functions
     end
 
-    test "exports update_entity/3" do
-      assert {:update_entity, 3} in @exported_functions
+    test "exports update_entity/4" do
+      assert {:update_entity, 4} in @exported_functions
     end
 
     test "exports list_entities/2" do
       assert {:list_entities, 2} in @exported_functions
     end
 
-    test "exports create_edge/2" do
-      assert {:create_edge, 2} in @exported_functions
+    test "exports create_edge/3" do
+      assert {:create_edge, 3} in @exported_functions
     end
 
     test "exports list_edges/2" do

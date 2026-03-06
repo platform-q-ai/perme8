@@ -9,22 +9,27 @@ defmodule Agents.Application.Behaviours.ErmGatewayBehaviour do
   @callback get_schema(workspace_id :: String.t()) ::
               {:ok, map()} | {:error, term()}
 
-  @callback upsert_schema(workspace_id :: String.t(), attrs :: map()) ::
+  @callback upsert_schema(workspace_id :: String.t(), attrs :: map(), actor_id :: String.t()) ::
               {:ok, map()} | {:error, term()}
 
-  @callback create_entity(workspace_id :: String.t(), attrs :: map()) ::
+  @callback create_entity(workspace_id :: String.t(), attrs :: map(), actor_id :: String.t()) ::
               {:ok, map()} | {:error, term()}
 
   @callback get_entity(workspace_id :: String.t(), entity_id :: String.t()) ::
               {:ok, map()} | {:error, :not_found}
 
-  @callback update_entity(workspace_id :: String.t(), entity_id :: String.t(), attrs :: map()) ::
+  @callback update_entity(
+              workspace_id :: String.t(),
+              entity_id :: String.t(),
+              attrs :: map(),
+              actor_id :: String.t()
+            ) ::
               {:ok, map()} | {:error, term()}
 
   @callback list_entities(workspace_id :: String.t(), filters :: map()) ::
               {:ok, [map()]}
 
-  @callback create_edge(workspace_id :: String.t(), attrs :: map()) ::
+  @callback create_edge(workspace_id :: String.t(), attrs :: map(), actor_id :: String.t()) ::
               {:ok, map()} | {:error, term()}
 
   @callback list_edges(workspace_id :: String.t(), filters :: map()) ::

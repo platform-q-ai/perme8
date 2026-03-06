@@ -35,7 +35,7 @@ defmodule Agents.Application.UseCases.CreateKnowledgeRelationshipTest do
       edge = erm_knowledge_edge(%{source_id: from_id, target_id: to_id, type: "relates_to"})
 
       ErmGatewayMock
-      |> expect(:create_edge, fn _ws_id, attrs ->
+      |> expect(:create_edge, fn _ws_id, attrs, _actor_id ->
         assert attrs.source_id == from_id
         assert attrs.target_id == to_id
         assert attrs.type == "relates_to"
@@ -120,7 +120,7 @@ defmodule Agents.Application.UseCases.CreateKnowledgeRelationshipTest do
       edge = erm_knowledge_edge(%{source_id: from_id, target_id: to_id, type: "relates_to"})
 
       ErmGatewayMock
-      |> expect(:create_edge, fn _ws_id, _attrs -> {:ok, edge} end)
+      |> expect(:create_edge, fn _ws_id, _attrs, _actor_id -> {:ok, edge} end)
 
       assert {:ok, %KnowledgeRelationship{}} =
                CreateKnowledgeRelationship.execute(
@@ -137,7 +137,7 @@ defmodule Agents.Application.UseCases.CreateKnowledgeRelationshipTest do
       ErmGatewayMock
       |> expect(:get_schema, fn _ws_id -> {:ok, schema_definition_with_knowledge()} end)
       |> expect(:get_entity, 2, fn _ws_id, _eid -> {:ok, erm_knowledge_entity()} end)
-      |> expect(:create_edge, fn _ws_id, _attrs -> {:ok, erm_knowledge_edge()} end)
+      |> expect(:create_edge, fn _ws_id, _attrs, _actor_id -> {:ok, erm_knowledge_edge()} end)
 
       assert {:ok, _} =
                CreateKnowledgeRelationship.execute(
@@ -153,7 +153,7 @@ defmodule Agents.Application.UseCases.CreateKnowledgeRelationshipTest do
       setup_bootstrap_and_entities(from_id, to_id)
 
       ErmGatewayMock
-      |> expect(:create_edge, fn _ws_id, attrs ->
+      |> expect(:create_edge, fn _ws_id, attrs, _actor_id ->
         assert attrs.source_id == from_id
         assert attrs.target_id == to_id
         assert attrs.type == "depends_on"

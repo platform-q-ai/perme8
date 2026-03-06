@@ -15,6 +15,7 @@ defmodule Agents.Application.UseCases.CreateKnowledgeRelationship do
           {:ok, KnowledgeRelationship.t()} | {:error, atom()}
   def execute(workspace_id, params, opts \\ []) do
     erm_gateway = Keyword.get(opts, :erm_gateway, GatewayConfig.erm_gateway())
+    actor_id = Keyword.get(opts, :actor_id)
 
     with {:ok, from_id} <- fetch_required(params, :from_id),
          {:ok, to_id} <- fetch_required(params, :to_id),
@@ -25,11 +26,11 @@ defmodule Agents.Application.UseCases.CreateKnowledgeRelationship do
          {:ok, _} <- erm_gateway.get_entity(workspace_id, from_id),
          {:ok, _} <- erm_gateway.get_entity(workspace_id, to_id),
          {:ok, edge} <-
-           erm_gateway.create_edge(workspace_id, %{
-             source_id: from_id,
-             target_id: to_id,
-             type: type
-           }) do
+           erm_gateway.create_edge(
+             workspace_id,
+             %{source_id: from_id, target_id: to_id, type: type},
+             actor_id
+           ) do
       {:ok, KnowledgeRelationship.from_erm_edge(edge)}
     end
   end

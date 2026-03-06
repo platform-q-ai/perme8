@@ -31,7 +31,9 @@ defmodule Agents.Infrastructure.Mcp.Tools.UpdateToolTest do
 
       Agents.Mocks.ErmGatewayMock
       |> expect(:get_entity, fn ^workspace_id, ^entity_id -> {:ok, existing} end)
-      |> expect(:update_entity, fn ^workspace_id, ^entity_id, _attrs -> {:ok, updated} end)
+      |> expect(:update_entity, fn ^workspace_id, ^entity_id, _attrs, _actor_id ->
+        {:ok, updated}
+      end)
 
       params = %{id: entity_id, title: "Updated Title"}
 

@@ -20,15 +20,13 @@ defmodule Agents.Infrastructure.Gateways.ErmGateway do
   end
 
   @impl true
-  def upsert_schema(workspace_id, attrs) do
-    # actor_id is nil — MCP tool handlers do not yet thread user identity.
-    # Part 2 will thread actor_id from the MCP frame through all ERM use cases.
-    EntityRelationshipManager.upsert_schema(workspace_id, attrs, nil)
+  def upsert_schema(workspace_id, attrs, actor_id) do
+    EntityRelationshipManager.upsert_schema(workspace_id, attrs, actor_id)
   end
 
   @impl true
-  def create_entity(workspace_id, attrs) do
-    EntityRelationshipManager.create_entity(workspace_id, attrs, nil)
+  def create_entity(workspace_id, attrs, actor_id) do
+    EntityRelationshipManager.create_entity(workspace_id, attrs, actor_id)
   end
 
   @impl true
@@ -37,8 +35,8 @@ defmodule Agents.Infrastructure.Gateways.ErmGateway do
   end
 
   @impl true
-  def update_entity(workspace_id, entity_id, attrs) do
-    EntityRelationshipManager.update_entity(workspace_id, entity_id, attrs, nil)
+  def update_entity(workspace_id, entity_id, attrs, actor_id) do
+    EntityRelationshipManager.update_entity(workspace_id, entity_id, attrs, actor_id)
   end
 
   @impl true
@@ -47,8 +45,8 @@ defmodule Agents.Infrastructure.Gateways.ErmGateway do
   end
 
   @impl true
-  def create_edge(workspace_id, attrs) do
-    EntityRelationshipManager.create_edge(workspace_id, attrs, nil)
+  def create_edge(workspace_id, attrs, actor_id) do
+    EntityRelationshipManager.create_edge(workspace_id, attrs, actor_id)
   end
 
   @impl true

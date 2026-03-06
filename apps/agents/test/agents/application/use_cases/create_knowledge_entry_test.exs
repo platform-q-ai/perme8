@@ -35,7 +35,7 @@ defmodule Agents.Application.UseCases.CreateKnowledgeEntryTest do
         })
 
       ErmGatewayMock
-      |> expect(:create_entity, fn ws_id, attrs ->
+      |> expect(:create_entity, fn ws_id, attrs, _actor_id ->
         assert ws_id == workspace_id()
         assert attrs.type == "KnowledgeEntry"
         assert attrs.properties["title"] == "New Entry"
@@ -53,7 +53,7 @@ defmodule Agents.Application.UseCases.CreateKnowledgeEntryTest do
     test "calls BootstrapKnowledgeSchema first" do
       ErmGatewayMock
       |> expect(:get_schema, fn _ws_id -> {:ok, schema_definition_with_knowledge()} end)
-      |> expect(:create_entity, fn _ws_id, _attrs ->
+      |> expect(:create_entity, fn _ws_id, _attrs, _actor_id ->
         {:ok, erm_knowledge_entity()}
       end)
 
@@ -67,7 +67,7 @@ defmodule Agents.Application.UseCases.CreateKnowledgeEntryTest do
       setup_bootstrap_mock()
 
       ErmGatewayMock
-      |> expect(:create_entity, fn _ws_id, attrs ->
+      |> expect(:create_entity, fn _ws_id, attrs, _actor_id ->
         assert attrs.type == "KnowledgeEntry"
         assert is_binary(attrs.properties["tags"])
         assert Jason.decode!(attrs.properties["tags"]) == ["arch", "design"]
@@ -128,7 +128,7 @@ defmodule Agents.Application.UseCases.CreateKnowledgeEntryTest do
         })
 
       ErmGatewayMock
-      |> expect(:create_entity, fn _ws_id, _attrs -> {:ok, entity} end)
+      |> expect(:create_entity, fn _ws_id, _attrs, _actor_id -> {:ok, entity} end)
 
       attrs = valid_entry_attrs(%{title: "Converted", body: "Body text", category: "concept"})
 

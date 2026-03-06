@@ -31,7 +31,7 @@ defmodule Agents.Infrastructure.Mcp.Tools.CreateToolTest do
       |> expect(:get_schema, fn ^workspace_id ->
         {:ok, Fixtures.schema_definition_with_knowledge()}
       end)
-      |> expect(:create_entity, fn ^workspace_id, attrs ->
+      |> expect(:create_entity, fn ^workspace_id, attrs, _actor_id ->
         assert attrs.type == "KnowledgeEntry"
         {:ok, entity}
       end)
@@ -74,7 +74,7 @@ defmodule Agents.Infrastructure.Mcp.Tools.CreateToolTest do
       |> expect(:get_schema, fn ^workspace_id ->
         {:ok, Fixtures.schema_definition_with_knowledge()}
       end)
-      |> expect(:create_entity, fn ^workspace_id, _attrs -> {:ok, entity} end)
+      |> expect(:create_entity, fn ^workspace_id, _attrs, _actor_id -> {:ok, entity} end)
 
       params = %{title: "Test", body: "Body", category: "how_to"}
 
