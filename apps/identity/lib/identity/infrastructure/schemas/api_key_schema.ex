@@ -29,6 +29,7 @@ defmodule Identity.Infrastructure.Schemas.ApiKeySchema do
           hashed_token: String.t(),
           user_id: String.t(),
           workspace_access: [String.t()],
+          permissions: [String.t()] | nil,
           is_active: boolean(),
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil
@@ -41,6 +42,7 @@ defmodule Identity.Infrastructure.Schemas.ApiKeySchema do
     field(:description, :string)
     field(:hashed_token, :string)
     field(:workspace_access, {:array, :string}, default: [])
+    field(:permissions, {:array, :string})
     field(:is_active, :boolean, default: true)
 
     belongs_to(:user, Identity.Infrastructure.Schemas.UserSchema)
@@ -60,10 +62,19 @@ defmodule Identity.Infrastructure.Schemas.ApiKeySchema do
   """
   def changeset(%__MODULE__{} = api_key, attrs) do
     api_key
-    |> cast(attrs, [:name, :description, :hashed_token, :user_id, :workspace_access, :is_active])
+    |> cast(attrs, [
+      :name,
+      :description,
+      :hashed_token,
+      :user_id,
+      :workspace_access,
+      :permissions,
+      :is_active
+    ])
     |> validate_required([:name, :hashed_token, :user_id])
     |> validate_length(:name, min: 1, max: 255)
     |> validate_length(:description, max: 1000)
+    |> validate_length(:permissions, max: 100)
     |> validate_workspace_access()
   end
 
@@ -85,6 +96,7 @@ defmodule Identity.Infrastructure.Schemas.ApiKeySchema do
       hashed_token: schema.hashed_token,
       user_id: schema.user_id,
       workspace_access: schema.workspace_access || [],
+      permissions: schema.permissions,
       is_active: schema.is_active,
       inserted_at: schema.inserted_at,
       updated_at: schema.updated_at
