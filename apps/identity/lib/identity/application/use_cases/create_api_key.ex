@@ -53,6 +53,7 @@ defmodule Identity.Application.UseCases.CreateApiKey do
       hashed_token: hashed_token,
       user_id: user_id,
       workspace_access: validated_access,
+      permissions: attrs[:permissions],
       is_active: true
     }
 

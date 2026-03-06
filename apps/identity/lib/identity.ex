@@ -58,6 +58,7 @@ defmodule Identity do
       Domain.Policies.AuthenticationPolicy,
       Domain.Policies.TokenPolicy,
       Domain.Policies.ApiKeyPolicy,
+      Domain.Policies.ApiKeyPermissionPolicy,
       Domain.Policies.MembershipPolicy,
       Domain.Policies.WorkspacePermissionsPolicy,
       Domain.Services.TokenBuilder,
@@ -82,8 +83,8 @@ defmodule Identity do
   import Ecto.Query, warn: false
   alias Identity.Repo
 
-  alias Identity.Domain.Entities.User
-  alias Identity.Domain.Policies.AuthenticationPolicy
+  alias Identity.Domain.Entities.{ApiKey, User}
+  alias Identity.Domain.Policies.{ApiKeyPermissionPolicy, AuthenticationPolicy}
   alias Identity.Infrastructure.Queries.TokenQueries
   alias Identity.Infrastructure.Schemas.{UserSchema, UserTokenSchema}
   alias Identity.Application.UseCases
@@ -550,6 +551,13 @@ defmodule Identity do
   """
   def verify_api_key(plain_token) when is_binary(plain_token) do
     UseCases.VerifyApiKey.execute(plain_token)
+  end
+
+  @doc """
+  Returns whether an API key is allowed to access a required scope.
+  """
+  def api_key_has_permission?(%ApiKey{} = api_key, required_scope) do
+    ApiKeyPermissionPolicy.has_permission?(api_key.permissions, required_scope)
   end
 
   @doc """
