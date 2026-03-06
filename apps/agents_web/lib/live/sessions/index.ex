@@ -353,18 +353,28 @@ defmodule AgentsWeb.SessionsLive.Index do
 
   @impl true
   def handle_event("send_ticket_to_top", %{"number" => number_str}, socket) do
-    number = String.to_integer(number_str)
-    Sessions.send_ticket_to_top(number)
-    tickets = reload_tickets(socket)
-    {:noreply, assign(socket, :tickets, tickets)}
+    case Integer.parse(number_str) do
+      {number, ""} ->
+        Sessions.send_ticket_to_top(number)
+        tickets = reload_tickets(socket)
+        {:noreply, assign(socket, :tickets, tickets)}
+
+      _ ->
+        {:noreply, socket}
+    end
   end
 
   @impl true
   def handle_event("send_ticket_to_bottom", %{"number" => number_str}, socket) do
-    number = String.to_integer(number_str)
-    Sessions.send_ticket_to_bottom(number)
-    tickets = reload_tickets(socket)
-    {:noreply, assign(socket, :tickets, tickets)}
+    case Integer.parse(number_str) do
+      {number, ""} ->
+        Sessions.send_ticket_to_bottom(number)
+        tickets = reload_tickets(socket)
+        {:noreply, assign(socket, :tickets, tickets)}
+
+      _ ->
+        {:noreply, socket}
+    end
   end
 
   @impl true
