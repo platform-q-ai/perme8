@@ -526,6 +526,29 @@ defmodule AgentsWeb.SessionsLive.Index do
   end
 
   @impl true
+  def handle_event("remove_ticket_from_queue", %{"number" => number_str}, socket) do
+    number = String.to_integer(number_str)
+    ticket = Enum.find(socket.assigns.tickets, &(&1.number == number))
+
+    cond do
+      is_nil(ticket) ->
+        {:noreply, put_flash(socket, :error, "Ticket not found")}
+
+      is_nil(ticket.associated_task_id) ->
+        {:noreply, put_flash(socket, :error, "Ticket has no associated task")}
+
+      true ->
+        case Sessions.get_task(ticket.associated_task_id, socket.assigns.current_scope.user.id) do
+          {:ok, task} ->
+            do_cancel_task(task, socket, "Ticket ##{number} paused and moved to triage")
+
+          {:error, _} ->
+            {:noreply, put_flash(socket, :error, "Failed to find task for ticket ##{number}")}
+        end
+    end
+  end
+
+  @impl true
   def handle_event("delete_session", %{"container-id" => container_id}, socket) do
     user = socket.assigns.current_scope.user
 
@@ -1649,7 +1672,7 @@ defmodule AgentsWeb.SessionsLive.Index do
     {:noreply, put_flash(socket, :error, task_error_message(reason))}
   end
 
-  defp do_cancel_task(task, socket) do
+  defp do_cancel_task(task, socket, flash_message \\ "Task cancelled") do
     user = socket.assigns.current_scope.user
 
     case Sessions.cancel_task(task.id, user.id) do
@@ -1678,7 +1701,7 @@ defmodule AgentsWeb.SessionsLive.Index do
          |> assign(:tasks_snapshot, tasks_snapshot)
          |> assign(:tickets, re_enrich_tickets(socket.assigns.tickets, tasks_snapshot))
          |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)
-         |> put_flash(:info, "Task cancelled")}
+         |> put_flash(:info, flash_message)}
 
       {:error, _reason} ->
         {:noreply, put_flash(socket, :error, "Failed to cancel task")}
