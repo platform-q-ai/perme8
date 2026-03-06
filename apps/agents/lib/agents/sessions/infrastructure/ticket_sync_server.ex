@@ -100,9 +100,20 @@ defmodule Agents.Sessions.Infrastructure.TicketSyncServer do
       {:ok, tickets} ->
         Enum.each(tickets, &sync_remote_ticket(state, &1))
 
-        # Remove local tickets that are no longer in the open issues list
-        remote_numbers = MapSet.new(tickets, & &1.number)
-        state.ticket_repo.delete_not_in(remote_numbers)
+        # Remove local tickets that are no longer in the open issues list.
+        # Guard: skip pruning when the API returns an empty list but we have
+        # local tickets — this protects against transient GitHub API issues
+        # (e.g. rate-limiting returning 200 with empty body) wiping the table.
+        local_count = length(state.ticket_repo.list_all())
+
+        if tickets == [] and local_count > 0 do
+          Logger.warning(
+            "GitHub sync returned 0 tickets but #{local_count} local tickets exist — skipping prune"
+          )
+        else
+          remote_numbers = MapSet.new(tickets, & &1.number)
+          state.ticket_repo.delete_not_in(remote_numbers)
+        end
 
         persisted_tickets = state.ticket_repo.list_all()
         Phoenix.PubSub.broadcast(state.pubsub, @topic, {:tickets_synced, persisted_tickets})
