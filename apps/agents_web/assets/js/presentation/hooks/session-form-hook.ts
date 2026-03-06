@@ -26,6 +26,26 @@ import { ViewHook } from 'phoenix_live_view'
  * />
  * ```
  */
+/** TTL in milliseconds for draft persistence (24 hours — drafts are user-authored text). */
+const DRAFT_STALE_TTL_MS = 24 * 60 * 60 * 1000
+
+type DraftEntry = {
+  text: string
+  savedAt: number
+}
+
+/**
+ * Returns true if a draft entry is stale (older than the TTL).
+ * Exported for testability.
+ */
+export function isStaleDraft(
+  entry: DraftEntry | null,
+  ttlMs: number = DRAFT_STALE_TTL_MS
+): boolean {
+  if (!entry || !entry.savedAt) return true
+  return Date.now() - entry.savedAt > ttlMs
+}
+
 export class SessionFormHook extends ViewHook<HTMLTextAreaElement> {
   private handleKeydown?: (e: KeyboardEvent) => void
   private handleInput?: () => void
@@ -41,7 +61,25 @@ export class SessionFormHook extends ViewHook<HTMLTextAreaElement> {
     if (!this.storageKey) return ''
 
     try {
-      return localStorage.getItem(this.storageKey) || ''
+      const raw = localStorage.getItem(this.storageKey)
+      if (!raw) return ''
+
+      // Try new format with timestamp
+      try {
+        const parsed = JSON.parse(raw) as DraftEntry
+        if (parsed.text !== undefined && parsed.savedAt !== undefined) {
+          if (isStaleDraft(parsed)) {
+            localStorage.removeItem(this.storageKey)
+            return ''
+          }
+          return parsed.text
+        }
+      } catch {
+        // Not JSON — treat as legacy plain string format
+      }
+
+      // Legacy format: plain string (no TTL check, migrate on next write)
+      return raw
     } catch {
       return ''
     }
@@ -54,7 +92,8 @@ export class SessionFormHook extends ViewHook<HTMLTextAreaElement> {
       if (value.trim() === '') {
         localStorage.removeItem(this.storageKey)
       } else {
-        localStorage.setItem(this.storageKey, value)
+        const entry: DraftEntry = { text: value, savedAt: Date.now() }
+        localStorage.setItem(this.storageKey, JSON.stringify(entry))
       }
     } catch {
       // ignore storage errors

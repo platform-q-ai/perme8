@@ -27,6 +27,43 @@ type OptimisticNewSessionsPayload = {
   entries?: OptimisticNewSessionEntry[]
 }
 
+/** TTL in milliseconds for queued message entries (matches Elixir-side @default_stale_seconds). */
+const QUEUE_STALE_TTL_MS = 120_000
+
+/**
+ * Returns true if a queued message entry is stale (older than the TTL).
+ * Exported for testability.
+ */
+export function isStaleQueueEntry(
+  entry: OptimisticQueueEntry,
+  ttlMs: number = QUEUE_STALE_TTL_MS
+): boolean {
+  if (!entry.queued_at) return true
+
+  const queuedAt = new Date(entry.queued_at).getTime()
+  if (isNaN(queuedAt)) return true
+
+  return Date.now() - queuedAt > ttlMs
+}
+
+/**
+ * Filters out stale entries from a queue entry array.
+ * Exported for testability.
+ */
+export function filterStaleEntries(
+  entries: OptimisticQueueEntry[],
+  ttlMs: number = QUEUE_STALE_TTL_MS
+): OptimisticQueueEntry[] {
+  return entries.filter((entry) => !isStaleQueueEntry(entry, ttlMs))
+}
+
+/**
+ * Phoenix hook for optimistic queue and new session state persistence.
+ *
+ * Persists and hydrates optimistic queue entries (queued follow-up messages)
+ * and optimistic new session entries to/from localStorage, ensuring the
+ * UI state survives reconnects. Stale entries are filtered out on hydration.
+ */
 export class SessionOptimisticStateHook extends ViewHook<HTMLElement> {
   private readonly STORAGE_PREFIX = 'agents:sessions:optimistic:v1'
   private readonly NEW_SESSIONS_STORAGE_PREFIX = 'agents:sessions:optimistic:new:v1'
@@ -77,7 +114,17 @@ export class SessionOptimisticStateHook extends ViewHook<HTMLElement> {
 
     try {
       const parsed = JSON.parse(raw) as { entries?: OptimisticQueueEntry[] }
-      const entries = Array.isArray(parsed.entries) ? parsed.entries : []
+      const allEntries = Array.isArray(parsed.entries) ? parsed.entries : []
+      const entries = filterStaleEntries(allEntries)
+
+      // Clean up storage if stale entries were removed
+      if (entries.length < allEntries.length) {
+        if (entries.length === 0) {
+          localStorage.removeItem(key)
+        } else {
+          localStorage.setItem(key, JSON.stringify({ version: 1, entries }))
+        }
+      }
 
       if (entries.length > 0) {
         this.pushEvent('hydrate_optimistic_queue', {

@@ -424,6 +424,237 @@ defmodule AgentsWeb.SessionsLive.EventProcessorTest do
     end
   end
 
+  describe "process_event/2 — message.updated (user) correlation_key dedup" do
+    test "removes queued message by correlation_key match (camelCase field)" do
+      socket =
+        build_socket(%{
+          queued_messages: [
+            %{
+              id: "q-1",
+              correlation_key: "key-abc",
+              content: "fix the bug",
+              queued_at: ~U[2026-03-01 00:00:00Z]
+            }
+          ]
+        })
+
+      event = %{
+        "type" => "message.updated",
+        "properties" => %{
+          "info" => %{
+            "role" => "user",
+            "id" => "msg-1",
+            "content" => "fix the bug",
+            "correlationKey" => "key-abc"
+          }
+        }
+      }
+
+      result = EventProcessor.process_event(event, socket)
+      assert result.assigns.queued_messages == []
+    end
+
+    test "removes queued message by correlation_key match (snake_case field)" do
+      socket =
+        build_socket(%{
+          queued_messages: [
+            %{
+              id: "q-1",
+              correlation_key: "key-xyz",
+              content: "fix the bug",
+              queued_at: ~U[2026-03-01 00:00:00Z]
+            }
+          ]
+        })
+
+      event = %{
+        "type" => "message.updated",
+        "properties" => %{
+          "info" => %{
+            "role" => "user",
+            "id" => "msg-1",
+            "content" => "fix the bug",
+            "correlation_key" => "key-xyz"
+          }
+        }
+      }
+
+      result = EventProcessor.process_event(event, socket)
+      assert result.assigns.queued_messages == []
+    end
+
+    test "correlation_key match takes priority over content match" do
+      socket =
+        build_socket(%{
+          queued_messages: [
+            %{
+              id: "q-1",
+              correlation_key: "key-first",
+              content: "fix the bug",
+              queued_at: ~U[2026-03-01 00:00:00Z]
+            },
+            %{
+              id: "q-2",
+              correlation_key: "key-second",
+              content: "fix the bug",
+              queued_at: ~U[2026-03-01 00:01:00Z]
+            }
+          ]
+        })
+
+      # Event matches q-2 by correlation_key, but q-1 by content (first match)
+      event = %{
+        "type" => "message.updated",
+        "properties" => %{
+          "info" => %{
+            "role" => "user",
+            "id" => "msg-1",
+            "content" => "fix the bug",
+            "correlationKey" => "key-second"
+          }
+        }
+      }
+
+      result = EventProcessor.process_event(event, socket)
+      # Should remove q-2 (correlation_key match), not q-1 (content match)
+      assert [%{id: "q-1"}] = result.assigns.queued_messages
+    end
+
+    test "falls back to content match when no correlationKey present" do
+      socket =
+        build_socket(%{
+          queued_messages: [
+            %{
+              id: "q-1",
+              correlation_key: "key-abc",
+              content: "fix the bug",
+              queued_at: ~U[2026-03-01 00:00:00Z]
+            }
+          ]
+        })
+
+      # No correlationKey in event — should fall back to content match
+      event = %{
+        "type" => "message.updated",
+        "properties" => %{
+          "info" => %{"role" => "user", "id" => "msg-1", "content" => "fix the bug"}
+        }
+      }
+
+      result = EventProcessor.process_event(event, socket)
+      assert result.assigns.queued_messages == []
+    end
+
+    test "falls back to content match when correlationKey doesn't match any queued message" do
+      socket =
+        build_socket(%{
+          queued_messages: [
+            %{
+              id: "q-1",
+              correlation_key: "key-abc",
+              content: "fix the bug",
+              queued_at: ~U[2026-03-01 00:00:00Z]
+            }
+          ]
+        })
+
+      event = %{
+        "type" => "message.updated",
+        "properties" => %{
+          "info" => %{
+            "role" => "user",
+            "id" => "msg-1",
+            "content" => "fix the bug",
+            "correlationKey" => "key-nonexistent"
+          }
+        }
+      }
+
+      result = EventProcessor.process_event(event, socket)
+      # Falls back to content match — removes q-1
+      assert result.assigns.queued_messages == []
+    end
+
+    test "handles queued messages without correlation_key field (content fallback)" do
+      socket =
+        build_socket(%{
+          queued_messages: [
+            %{id: "q-1", content: "fix the bug", queued_at: ~U[2026-03-01 00:00:00Z]}
+          ]
+        })
+
+      event = %{
+        "type" => "message.updated",
+        "properties" => %{
+          "info" => %{
+            "role" => "user",
+            "id" => "msg-1",
+            "content" => "fix the bug",
+            "correlationKey" => "key-abc"
+          }
+        }
+      }
+
+      # No correlation_key on the queued message — correlation_key match fails,
+      # falls back to content match
+      result = EventProcessor.process_event(event, socket)
+      assert result.assigns.queued_messages == []
+    end
+  end
+
+  describe "process_event/2 — unknown events" do
+    import ExUnit.CaptureLog
+
+    test "returns socket unchanged for unknown event type" do
+      socket = build_socket()
+
+      event = %{"type" => "some.unknown.event", "properties" => %{}}
+      result = EventProcessor.process_event(event, socket)
+      assert result.assigns == socket.assigns
+    end
+
+    test "logs a debug message for unknown event types" do
+      socket = build_socket()
+      event = %{"type" => "some.unknown.event", "properties" => %{}}
+
+      log =
+        capture_log(fn ->
+          EventProcessor.process_event(event, socket)
+        end)
+
+      assert log =~ "EventProcessor: unhandled event"
+      assert log =~ "some.unknown.event"
+    end
+
+    test "does not log for explicitly skipped todo.updated events" do
+      socket = build_socket()
+      event = %{"type" => "todo.updated", "properties" => %{}}
+
+      log =
+        capture_log(fn ->
+          EventProcessor.process_event(event, socket)
+        end)
+
+      refute log =~ "unhandled event"
+    end
+
+    test "known event types do not trigger the unknown event log" do
+      socket = build_socket()
+
+      event = %{
+        "type" => "session.updated",
+        "properties" => %{"info" => %{"title" => "test"}}
+      }
+
+      log =
+        capture_log(fn ->
+          EventProcessor.process_event(event, socket)
+        end)
+
+      refute log =~ "unhandled event"
+    end
+  end
+
   describe "decode_cached_output/1" do
     test "decodes JSON array of text parts" do
       json =
