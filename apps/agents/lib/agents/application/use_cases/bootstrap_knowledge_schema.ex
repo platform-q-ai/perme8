@@ -11,17 +11,16 @@ defmodule Agents.Application.UseCases.BootstrapKnowledgeSchema do
 
   alias Agents.Application.GatewayConfig
 
-  @spec execute(String.t(), keyword()) :: {:ok, term()} | {:error, term()}
-  def execute(workspace_id, opts \\ []) do
+  @spec execute(String.t(), String.t(), keyword()) :: {:ok, term()} | {:error, term()}
+  def execute(workspace_id, actor_id, opts \\ []) do
     erm_gateway = Keyword.get(opts, :erm_gateway, GatewayConfig.erm_gateway())
-    actor_id = Keyword.get(opts, :actor_id)
 
     case erm_gateway.get_schema(workspace_id) do
       {:ok, schema} ->
         if has_knowledge_type?(schema) do
           {:ok, :already_bootstrapped}
         else
-          upsert_with_knowledge(erm_gateway, workspace_id, schema, actor_id)
+          upsert_with_knowledge(erm_gateway, workspace_id, actor_id, schema)
         end
 
       {:error, :not_found} ->
@@ -36,7 +35,7 @@ defmodule Agents.Application.UseCases.BootstrapKnowledgeSchema do
     Enum.any?(schema.entity_types, fn et -> et.name == @knowledge_entity_type end)
   end
 
-  defp upsert_with_knowledge(erm_gateway, workspace_id, existing_schema, actor_id) do
+  defp upsert_with_knowledge(erm_gateway, workspace_id, actor_id, existing_schema) do
     existing_edge_names = MapSet.new(existing_schema.edge_types, & &1.name)
 
     new_edge_types =

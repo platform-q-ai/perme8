@@ -10,7 +10,9 @@ defmodule Agents.Application.UseCases.BootstrapKnowledgeSchemaTest do
 
   setup :verify_on_exit!
 
-  describe "execute/2" do
+  defp actor_id, do: "test-actor-id"
+
+  describe "execute/3" do
     test "when schema already exists with KnowledgeEntry type, returns :already_bootstrapped" do
       schema = schema_definition_with_knowledge()
 
@@ -21,7 +23,9 @@ defmodule Agents.Application.UseCases.BootstrapKnowledgeSchemaTest do
       end)
 
       assert {:ok, :already_bootstrapped} =
-               BootstrapKnowledgeSchema.execute(workspace_id(), erm_gateway: ErmGatewayMock)
+               BootstrapKnowledgeSchema.execute(workspace_id(), actor_id(),
+                 erm_gateway: ErmGatewayMock
+               )
     end
 
     test "when schema exists but missing KnowledgeEntry type, upserts schema" do
@@ -50,7 +54,9 @@ defmodule Agents.Application.UseCases.BootstrapKnowledgeSchemaTest do
       end)
 
       assert {:ok, _schema} =
-               BootstrapKnowledgeSchema.execute(workspace_id(), erm_gateway: ErmGatewayMock)
+               BootstrapKnowledgeSchema.execute(workspace_id(), actor_id(),
+                 erm_gateway: ErmGatewayMock
+               )
     end
 
     test "when no schema exists, creates full schema with entity and edge types" do
@@ -78,7 +84,9 @@ defmodule Agents.Application.UseCases.BootstrapKnowledgeSchemaTest do
       end)
 
       assert {:ok, _schema} =
-               BootstrapKnowledgeSchema.execute(workspace_id(), erm_gateway: ErmGatewayMock)
+               BootstrapKnowledgeSchema.execute(workspace_id(), actor_id(),
+                 erm_gateway: ErmGatewayMock
+               )
     end
 
     test "schema includes KnowledgeEntry entity type with correct properties" do
@@ -103,7 +111,9 @@ defmodule Agents.Application.UseCases.BootstrapKnowledgeSchemaTest do
       end)
 
       assert {:ok, _} =
-               BootstrapKnowledgeSchema.execute(workspace_id(), erm_gateway: ErmGatewayMock)
+               BootstrapKnowledgeSchema.execute(workspace_id(), actor_id(),
+                 erm_gateway: ErmGatewayMock
+               )
     end
 
     test "does not duplicate existing edge types when upserting" do
@@ -132,7 +142,9 @@ defmodule Agents.Application.UseCases.BootstrapKnowledgeSchemaTest do
       end)
 
       assert {:ok, _} =
-               BootstrapKnowledgeSchema.execute(workspace_id(), erm_gateway: ErmGatewayMock)
+               BootstrapKnowledgeSchema.execute(workspace_id(), actor_id(),
+                 erm_gateway: ErmGatewayMock
+               )
     end
 
     test "is idempotent -- calling twice does not error" do
@@ -142,10 +154,14 @@ defmodule Agents.Application.UseCases.BootstrapKnowledgeSchemaTest do
       |> expect(:get_schema, 2, fn _ws_id -> {:ok, schema} end)
 
       assert {:ok, :already_bootstrapped} =
-               BootstrapKnowledgeSchema.execute(workspace_id(), erm_gateway: ErmGatewayMock)
+               BootstrapKnowledgeSchema.execute(workspace_id(), actor_id(),
+                 erm_gateway: ErmGatewayMock
+               )
 
       assert {:ok, :already_bootstrapped} =
-               BootstrapKnowledgeSchema.execute(workspace_id(), erm_gateway: ErmGatewayMock)
+               BootstrapKnowledgeSchema.execute(workspace_id(), actor_id(),
+                 erm_gateway: ErmGatewayMock
+               )
     end
   end
 end

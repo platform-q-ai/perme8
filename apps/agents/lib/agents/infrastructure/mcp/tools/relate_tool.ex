@@ -22,6 +22,7 @@ defmodule Agents.Infrastructure.Mcp.Tools.RelateTool do
   @impl true
   def execute(params, frame) do
     workspace_id = frame.assigns[:workspace_id]
+    actor_id = frame.assigns[:user_id]
 
     relate_params = %{
       from_id: params.from_id,
@@ -29,9 +30,7 @@ defmodule Agents.Infrastructure.Mcp.Tools.RelateTool do
       type: params.relationship_type
     }
 
-    actor_id = frame.assigns[:user_id]
-
-    case CreateKnowledgeRelationship.execute(workspace_id, relate_params, actor_id: actor_id) do
+    case CreateKnowledgeRelationship.execute(workspace_id, relate_params, actor_id) do
       {:ok, relationship} ->
         text = format_relationship(relationship)
         {:reply, Response.text(Response.tool(), text), frame}

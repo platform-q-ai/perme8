@@ -20,14 +20,14 @@ defmodule Agents.Application.UseCases.CreateKnowledgeEntry do
   alias Agents.Domain.Entities.KnowledgeEntry
   alias Agents.Domain.Policies.KnowledgeValidationPolicy
 
-  @spec execute(String.t(), map(), keyword()) :: {:ok, KnowledgeEntry.t()} | {:error, atom()}
-  def execute(workspace_id, attrs, opts \\ []) do
+  @spec execute(String.t(), map(), String.t(), keyword()) ::
+          {:ok, KnowledgeEntry.t()} | {:error, atom()}
+  def execute(workspace_id, attrs, actor_id, opts \\ []) do
     erm_gateway = Keyword.get(opts, :erm_gateway, GatewayConfig.erm_gateway())
-    actor_id = Keyword.get(opts, :actor_id)
 
     with :ok <- KnowledgeValidationPolicy.validate_entry_attrs(attrs),
          :ok <- validate_tags(attrs),
-         {:ok, _} <- BootstrapKnowledgeSchema.execute(workspace_id, opts) do
+         {:ok, _} <- BootstrapKnowledgeSchema.execute(workspace_id, actor_id, opts) do
       entry = KnowledgeEntry.new(attrs)
       properties = KnowledgeEntry.to_erm_properties(entry)
 

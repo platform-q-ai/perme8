@@ -16,15 +16,17 @@ defmodule Agents.Infrastructure.Mcp.Tools.UpdateToolTest do
     :ok
   end
 
-  defp build_frame(workspace_id) do
-    Frame.new(%{workspace_id: workspace_id})
+  defp actor_id, do: "test-actor-id"
+
+  defp build_frame(workspace_id, actor_id) do
+    Frame.new(%{workspace_id: workspace_id, user_id: actor_id})
   end
 
   describe "execute/2" do
     test "updates entry and returns it" do
       workspace_id = Fixtures.workspace_id()
       entity_id = Fixtures.unique_id()
-      frame = build_frame(workspace_id)
+      frame = build_frame(workspace_id, actor_id())
 
       existing = Fixtures.erm_knowledge_entity(%{id: entity_id, workspace_id: workspace_id})
       updated = %{existing | properties: Map.put(existing.properties, "title", "Updated Title")}
@@ -47,7 +49,7 @@ defmodule Agents.Infrastructure.Mcp.Tools.UpdateToolTest do
     test "handles not_found gracefully" do
       workspace_id = Fixtures.workspace_id()
       entity_id = Fixtures.unique_id()
-      frame = build_frame(workspace_id)
+      frame = build_frame(workspace_id, actor_id())
 
       Agents.Mocks.ErmGatewayMock
       |> expect(:get_entity, fn ^workspace_id, ^entity_id -> {:error, :not_found} end)
@@ -61,7 +63,7 @@ defmodule Agents.Infrastructure.Mcp.Tools.UpdateToolTest do
     test "handles validation errors" do
       workspace_id = Fixtures.workspace_id()
       entity_id = Fixtures.unique_id()
-      frame = build_frame(workspace_id)
+      frame = build_frame(workspace_id, actor_id())
 
       params = %{id: entity_id, category: "invalid_category"}
 

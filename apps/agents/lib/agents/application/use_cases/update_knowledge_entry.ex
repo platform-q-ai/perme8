@@ -12,11 +12,10 @@ defmodule Agents.Application.UseCases.UpdateKnowledgeEntry do
 
   @updatable_fields ~w(title body category tags code_snippets file_paths external_links last_verified_at)a
 
-  @spec execute(String.t(), String.t(), map(), keyword()) ::
+  @spec execute(String.t(), String.t(), map(), String.t(), keyword()) ::
           {:ok, KnowledgeEntry.t()} | {:error, atom()}
-  def execute(workspace_id, entity_id, attrs, opts \\ []) do
+  def execute(workspace_id, entity_id, attrs, actor_id, opts \\ []) do
     erm_gateway = Keyword.get(opts, :erm_gateway, GatewayConfig.erm_gateway())
-    actor_id = Keyword.get(opts, :actor_id)
 
     with :ok <- KnowledgeValidationPolicy.validate_update_attrs(attrs),
          {:ok, existing} <- erm_gateway.get_entity(workspace_id, entity_id) do
