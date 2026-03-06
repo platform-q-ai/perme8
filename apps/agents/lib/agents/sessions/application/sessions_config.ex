@@ -91,12 +91,12 @@ defmodule Agents.Sessions.Application.SessionsConfig do
 
   @doc "Returns whether the v2 queue orchestrator is enabled."
   def queue_v2_enabled? do
-    config()[:queue_v2_enabled] || false
+    config()[:queue_v2_enabled] == true
   end
 
   @doc "Returns whether mirror mode is enabled for queue cross-validation."
   def queue_mirror_enabled? do
-    config()[:queue_mirror_enabled] || false
+    config()[:queue_mirror_enabled] == true
   end
 
   @doc "Returns the default warm cache limit for container pre-warming."
