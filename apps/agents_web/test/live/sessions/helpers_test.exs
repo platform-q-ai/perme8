@@ -256,6 +256,227 @@ defmodule AgentsWeb.SessionsLive.HelpersTest do
     end
   end
 
+  describe "filter_sessions_by_search/2" do
+    test "returns all sessions when query is empty" do
+      sessions = [%{title: "Fix login"}, %{title: "Add tests"}]
+      assert Helpers.filter_sessions_by_search(sessions, "") == sessions
+    end
+
+    test "returns all sessions when query is nil" do
+      sessions = [%{title: "Fix login"}]
+      assert Helpers.filter_sessions_by_search(sessions, nil) == sessions
+    end
+
+    test "filters sessions by title match (case-insensitive)" do
+      sessions = [
+        %{title: "Fix login bug"},
+        %{title: "Add test coverage"},
+        %{title: "Refactor LOGIN flow"}
+      ]
+
+      result = Helpers.filter_sessions_by_search(sessions, "login")
+      assert length(result) == 2
+      assert Enum.all?(result, fn s -> String.downcase(s.title) =~ "login" end)
+    end
+
+    test "returns empty list when nothing matches" do
+      sessions = [%{title: "Fix login"}, %{title: "Add tests"}]
+      assert Helpers.filter_sessions_by_search(sessions, "deploy") == []
+    end
+
+    test "handles sessions with nil title" do
+      sessions = [%{title: nil}, %{title: "Fix login"}]
+      result = Helpers.filter_sessions_by_search(sessions, "login")
+      assert length(result) == 1
+      assert hd(result).title == "Fix login"
+    end
+
+    test "matches partial strings" do
+      sessions = [%{title: "pick up ticket #306 using the relevant skill"}]
+      assert length(Helpers.filter_sessions_by_search(sessions, "306")) == 1
+      assert length(Helpers.filter_sessions_by_search(sessions, "ticket")) == 1
+      assert length(Helpers.filter_sessions_by_search(sessions, "SKILL")) == 1
+    end
+  end
+
+  describe "filter_tickets_by_search/2" do
+    test "returns all tickets when query is empty" do
+      tickets = [%{title: "Bug", number: 1, labels: []}]
+      assert Helpers.filter_tickets_by_search(tickets, "") == tickets
+    end
+
+    test "returns all tickets when query is nil" do
+      tickets = [%{title: "Bug", number: 1, labels: []}]
+      assert Helpers.filter_tickets_by_search(tickets, nil) == tickets
+    end
+
+    test "matches by title (case-insensitive)" do
+      tickets = [
+        %{title: "Fix login page", number: 1, labels: []},
+        %{title: "Add dark mode", number: 2, labels: []}
+      ]
+
+      result = Helpers.filter_tickets_by_search(tickets, "login")
+      assert length(result) == 1
+      assert hd(result).number == 1
+    end
+
+    test "matches by ticket number" do
+      tickets = [
+        %{title: "Bug A", number: 42, labels: []},
+        %{title: "Bug B", number: 123, labels: []}
+      ]
+
+      result = Helpers.filter_tickets_by_search(tickets, "42")
+      assert length(result) == 1
+      assert hd(result).number == 42
+    end
+
+    test "matches by label" do
+      tickets = [
+        %{title: "Bug A", number: 1, labels: ["frontend", "urgent"]},
+        %{title: "Bug B", number: 2, labels: ["backend"]}
+      ]
+
+      result = Helpers.filter_tickets_by_search(tickets, "frontend")
+      assert length(result) == 1
+      assert hd(result).number == 1
+    end
+
+    test "matches across title, number, and labels" do
+      tickets = [
+        %{title: "Fix login", number: 10, labels: ["bug"]},
+        %{title: "Something else", number: 100, labels: ["enhancement"]},
+        %{title: "Another task", number: 3, labels: ["login-related"]}
+      ]
+
+      result = Helpers.filter_tickets_by_search(tickets, "login")
+      assert length(result) == 2
+      numbers = Enum.map(result, & &1.number)
+      assert 10 in numbers
+      assert 3 in numbers
+    end
+
+    test "returns empty list when nothing matches" do
+      tickets = [%{title: "Bug", number: 1, labels: ["frontend"]}]
+      assert Helpers.filter_tickets_by_search(tickets, "deploy") == []
+    end
+
+    test "handles nil title and nil labels gracefully" do
+      tickets = [%{title: nil, number: 5, labels: nil}]
+      result = Helpers.filter_tickets_by_search(tickets, "5")
+      assert length(result) == 1
+    end
+  end
+
+  describe "filter_sessions_by_status/2" do
+    test "returns all sessions when status is :all" do
+      sessions = [
+        %{latest_status: "running"},
+        %{latest_status: "completed"},
+        %{latest_status: "failed"}
+      ]
+
+      assert Helpers.filter_sessions_by_status(sessions, :all) == sessions
+    end
+
+    test "filters by exact status" do
+      sessions = [
+        %{latest_status: "completed"},
+        %{latest_status: "failed"},
+        %{latest_status: "cancelled"}
+      ]
+
+      result = Helpers.filter_sessions_by_status(sessions, :completed)
+      assert length(result) == 1
+      assert hd(result).latest_status == "completed"
+    end
+
+    test ":running matches pending, starting, and running statuses" do
+      sessions = [
+        %{latest_status: "pending"},
+        %{latest_status: "starting"},
+        %{latest_status: "running"},
+        %{latest_status: "completed"},
+        %{latest_status: "queued"}
+      ]
+
+      result = Helpers.filter_sessions_by_status(sessions, :running)
+      assert length(result) == 3
+      statuses = Enum.map(result, & &1.latest_status)
+      assert "pending" in statuses
+      assert "starting" in statuses
+      assert "running" in statuses
+    end
+
+    test "filters queued sessions" do
+      sessions = [
+        %{latest_status: "queued"},
+        %{latest_status: "running"},
+        %{latest_status: "queued"}
+      ]
+
+      result = Helpers.filter_sessions_by_status(sessions, :queued)
+      assert length(result) == 2
+    end
+
+    test "filters awaiting_feedback sessions" do
+      sessions = [
+        %{latest_status: "awaiting_feedback"},
+        %{latest_status: "completed"}
+      ]
+
+      result = Helpers.filter_sessions_by_status(sessions, :awaiting_feedback)
+      assert length(result) == 1
+      assert hd(result).latest_status == "awaiting_feedback"
+    end
+
+    test "returns empty list when no sessions match" do
+      sessions = [%{latest_status: "completed"}, %{latest_status: "cancelled"}]
+      assert Helpers.filter_sessions_by_status(sessions, :failed) == []
+    end
+  end
+
+  describe "filter_tickets_by_status/2" do
+    test "returns all tickets when status is :all" do
+      tickets = [
+        %{task_status: "running"},
+        %{task_status: "completed"}
+      ]
+
+      assert Helpers.filter_tickets_by_status(tickets, :all) == tickets
+    end
+
+    test "filters by exact task_status" do
+      tickets = [
+        %{task_status: "completed"},
+        %{task_status: "failed"},
+        %{task_status: "queued"}
+      ]
+
+      result = Helpers.filter_tickets_by_status(tickets, :failed)
+      assert length(result) == 1
+      assert hd(result).task_status == "failed"
+    end
+
+    test ":running matches pending, starting, and running" do
+      tickets = [
+        %{task_status: "pending"},
+        %{task_status: "starting"},
+        %{task_status: "running"},
+        %{task_status: "completed"}
+      ]
+
+      result = Helpers.filter_tickets_by_status(tickets, :running)
+      assert length(result) == 3
+    end
+
+    test "returns empty list when no tickets match" do
+      tickets = [%{task_status: "completed"}]
+      assert Helpers.filter_tickets_by_status(tickets, :queued) == []
+    end
+  end
+
   describe "last_user_message/1" do
     test "returns the text of the last user message" do
       parts = [
