@@ -26,6 +26,11 @@ defmodule Agents.OTPApp do
         orphan_recovery_children() ++
         [
           TaskRunnerSupervisor,
+          # Both queue supervisors run unconditionally so the feature flag
+          # (queue_v2_enabled?) can be toggled at runtime without restarting
+          # the application. The Sessions facade routes calls to the active
+          # implementation. QueueManagerSupervisor will be removed once v2
+          # is validated in production and the legacy path is dropped.
           QueueManagerSupervisor,
           QueueOrchestratorSupervisor,
           TicketSyncServer
