@@ -30,23 +30,30 @@ defmodule AgentsApi.ConnCase do
   end
 
   @doc """
-  Sets up the sandbox for both Jarga.Repo and Identity.Repo.
+  Sets up the sandbox for Jarga.Repo, Identity.Repo, and Agents.Repo.
+
+  Agents.Repo is needed because Agents production code (called via the API
+  controllers) uses Agents.Repo for all database operations.
   """
   def setup_sandbox(tags) do
     :ok = Sandbox.checkout(Jarga.Repo)
     :ok = Sandbox.checkout(Identity.Repo)
+    :ok = Sandbox.checkout(Agents.Repo)
 
     Sandbox.allow(Jarga.Repo, self(), self())
     Sandbox.allow(Identity.Repo, self(), self())
+    Sandbox.allow(Agents.Repo, self(), self())
 
     unless tags[:async] do
       Sandbox.mode(Jarga.Repo, {:shared, self()})
       Sandbox.mode(Identity.Repo, {:shared, self()})
+      Sandbox.mode(Agents.Repo, {:shared, self()})
     end
 
     on_exit(fn ->
       Sandbox.checkin(Jarga.Repo)
       Sandbox.checkin(Identity.Repo)
+      Sandbox.checkin(Agents.Repo)
     end)
   end
 end
