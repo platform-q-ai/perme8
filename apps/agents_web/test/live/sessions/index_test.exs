@@ -2881,4 +2881,89 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       assert html =~ "A freeform coding task"
     end
   end
+
+  describe "pause restores instruction to chat input" do
+    setup %{conn: conn} do
+      user = user_fixture()
+      %{conn: log_in_user(conn, user), user: user}
+    end
+
+    test "pausing a queued ticket pushes restore_draft with the instruction", %{
+      conn: conn,
+      user: user
+    } do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "pick up ticket #42 using the relevant skill",
+        container_id: "c-ticket-42",
+        status: "queued"
+      })
+
+      ProjectTicketRepository.sync_remote_ticket(%{
+        number: 42,
+        title: "Build the widget",
+        status: "Backlog",
+        priority: "Need",
+        size: "M",
+        labels: []
+      })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+      send(lv.pid, {:tickets_synced, []})
+      _ = render(lv)
+
+      # Click the pause button on the ticket card
+      lv
+      |> element(~s([data-testid="pause-ticket-42"]))
+      |> render_click()
+
+      assert_push_event(lv, "restore_draft", %{
+        text: "pick up ticket #42 using the relevant skill"
+      })
+    end
+
+    test "pausing an in-progress non-ticket session pushes restore_draft", %{
+      conn: conn,
+      user: user
+    } do
+      task =
+        task_fixture(%{
+          user_id: user.id,
+          instruction: "Refactor the auth module",
+          container_id: "c-refactor",
+          status: "running"
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      # Click the pause button on the in-progress session card
+      lv
+      |> element(~s([phx-click="pause_session"][phx-value-task-id="#{task.id}"]))
+      |> render_click()
+
+      assert_push_event(lv, "restore_draft", %{text: "Refactor the auth module"})
+    end
+
+    test "cancelling the currently viewed task pushes restore_draft", %{
+      conn: conn,
+      user: user
+    } do
+      task =
+        task_fixture(%{
+          user_id: user.id,
+          instruction: "Write tests for login",
+          container_id: "c-cancel",
+          status: "running"
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions?container=c-cancel")
+
+      # Verify the task is the current task, then cancel it
+      lv
+      |> element(~s([phx-click="cancel_task"]))
+      |> render_click()
+
+      assert_push_event(lv, "restore_draft", %{text: "Write tests for login"})
+    end
+  end
 end
