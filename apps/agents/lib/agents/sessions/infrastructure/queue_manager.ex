@@ -476,7 +476,7 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
     state.task_repo.count_running_heavyweight_tasks(state.user_id)
   rescue
     e ->
-      Logger.warning("QueueManager count_running failed: #{Exception.message(e)}")
+      Logger.warning("QueueManager count_running_heavyweight failed: #{Exception.message(e)}")
       0
   end
 
