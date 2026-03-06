@@ -11,6 +11,7 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
   import Phoenix.Component, only: [assign: 3]
 
   alias Agents.Sessions.Domain.Entities.{TodoItem, TodoList}
+  alias AgentsWeb.SessionsLive.SdkFieldResolver
 
   # ---- Public API ----
 
@@ -41,8 +42,8 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
   end
 
   # Track user message IDs so we can skip their parts in output.
-  # Also clean up any matching queued message when the user message
-  # is processed by opencode (content match).
+  # Also clean up any matching queued message — correlation_key first,
+  # content match as fallback for backward compatibility.
   def process_event(
         %{
           "type" => "message.updated",
@@ -51,9 +52,10 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
         socket
       ) do
     content = extract_user_message_content(info)
+    correlation_key = SdkFieldResolver.resolve_correlation_key(info)
 
     socket =
-      case info["id"] || info["messageID"] || info["messageId"] do
+      case SdkFieldResolver.resolve_message_id(info) do
         msg_id when is_binary(msg_id) ->
           ids = MapSet.put(socket.assigns.user_message_ids, msg_id)
           assign(socket, :user_message_ids, ids)
@@ -62,7 +64,7 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
           socket
       end
 
-    remove_matching_queued_message(socket, content)
+    dedup_queued_message(socket, correlation_key, content)
   end
 
   # Text output — keyed by part ID so multiple messages accumulate
@@ -203,6 +205,12 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
   # also delivers this event.
   def process_event(%{"type" => "todo.updated"}, socket), do: socket
 
+  def process_event(%{"type" => type} = _event, socket) do
+    require Logger
+    Logger.warning("EventProcessor: unhandled event type=#{inspect(type)}")
+    socket
+  end
+
   def process_event(_event, socket), do: socket
 
   @doc """
@@ -306,19 +314,19 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
   end
 
   # Check if a part belongs to a user message (should be filtered from output)
-  defp user_message_part?(%{"messageID" => msg_id}, socket) when is_binary(msg_id) do
-    MapSet.member?(socket.assigns.user_message_ids, msg_id)
-  end
+  defp user_message_part?(part, socket) do
+    case part["messageID"] || part["messageId"] do
+      msg_id when is_binary(msg_id) ->
+        MapSet.member?(socket.assigns.user_message_ids, msg_id)
 
-  defp user_message_part?(%{"messageId" => msg_id}, socket) when is_binary(msg_id) do
-    MapSet.member?(socket.assigns.user_message_ids, msg_id)
+      _ ->
+        false
+    end
   end
-
-  defp user_message_part?(_part, _socket), do: false
 
   defp append_confirmed_user_message(socket, part, text) do
     message_id =
-      part["messageID"] || part["messageId"] || part["id"] ||
+      SdkFieldResolver.resolve_message_id(part) ||
         "user-part-#{System.unique_integer([:positive])}"
 
     trimmed = String.trim(text)
@@ -362,7 +370,7 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
   end
 
   defp stable_tool_part_id(part, tool_name) do
-    part["id"] || part["toolCallID"] || part["toolCallId"] || part["callID"] ||
+    SdkFieldResolver.resolve_tool_call_id(part) ||
       "tool-" <>
         Integer.to_string(
           :erlang.phash2({tool_name, part["messageID"] || part["messageId"] || ""})
@@ -411,8 +419,7 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
     end
   end
 
-  defp format_model(%{"modelID" => model_id}), do: model_id
-  defp format_model(_), do: nil
+  defp format_model(info), do: SdkFieldResolver.resolve_model_id(info)
 
   defp restore_question_card(socket, questions, session_id, request_id, rejected) do
     initial_selections = Enum.map(questions, fn _q -> [] end)
@@ -438,15 +445,40 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
 
   defp extract_user_message_content(_), do: nil
 
-  # Remove the first queued message whose content matches the given text.
-  defp remove_matching_queued_message(socket, nil), do: socket
-
-  defp remove_matching_queued_message(socket, content) do
+  # Dedup a queued message: try correlation_key match first, then content fallback.
+  defp dedup_queued_message(socket, correlation_key, content) do
     queued = Map.get(socket.assigns, :queued_messages, [])
-    if queued == [], do: socket, else: do_remove_matching(socket, queued, String.trim(content))
+    if queued == [], do: socket, else: do_dedup_queued(socket, queued, correlation_key, content)
   end
 
-  defp do_remove_matching(socket, queued, trimmed) do
+  defp do_dedup_queued(socket, queued, correlation_key, content) do
+    case remove_by_correlation_key(queued, correlation_key) do
+      {:ok, updated} ->
+        assign(socket, :queued_messages, updated)
+
+      :no_match ->
+        # Fall back to content-based matching for backward compatibility
+        remove_matching_queued_message_by_content(socket, queued, content)
+    end
+  end
+
+  defp remove_by_correlation_key(_queued, nil), do: :no_match
+
+  defp remove_by_correlation_key(queued, correlation_key) do
+    case Enum.find_index(queued, fn msg ->
+           Map.get(msg, :correlation_key) == correlation_key
+         end) do
+      nil -> :no_match
+      idx -> {:ok, List.delete_at(queued, idx)}
+    end
+  end
+
+  # Remove the first queued message whose content matches the given text.
+  defp remove_matching_queued_message_by_content(socket, _queued, nil), do: socket
+
+  defp remove_matching_queued_message_by_content(socket, queued, content) do
+    trimmed = String.trim(content)
+
     case Enum.find_index(queued, fn msg -> String.trim(msg.content) == trimmed end) do
       nil -> socket
       idx -> assign(socket, :queued_messages, List.delete_at(queued, idx))

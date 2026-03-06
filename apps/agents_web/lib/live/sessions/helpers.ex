@@ -51,13 +51,17 @@ defmodule AgentsWeb.SessionsLive.Helpers do
 
   def auth_error?(_), do: false
 
+  alias AgentsWeb.SessionsLive.SessionStateMachine
+
   @doc "Returns true if the task is in an active (non-terminal) state."
-  def active_task?(%{status: status}),
-    do: status in ["pending", "starting", "running", "queued", "awaiting_feedback"]
+  def active_task?(%{status: _} = task),
+    do: task |> SessionStateMachine.state_from_task() |> SessionStateMachine.active?()
 
   @doc "Returns true if the task is currently running."
   def task_running?(nil), do: false
-  def task_running?(%{status: status}), do: status in ["pending", "starting", "running"]
+
+  def task_running?(%{status: _} = task),
+    do: task |> SessionStateMachine.state_from_task() |> SessionStateMachine.task_running?()
 
   @doc "Returns true if the session can be deleted (task is in terminal state)."
   def session_deletable?(sessions, container_id) do

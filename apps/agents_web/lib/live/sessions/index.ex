@@ -9,6 +9,9 @@ defmodule AgentsWeb.SessionsLive.Index do
   alias Agents.Sessions
   alias Agents.Sessions.Domain.Entities.TodoList
   alias AgentsWeb.SessionsLive.EventProcessor
+  alias AgentsWeb.SessionsLive.SessionStateMachine
+
+  @follow_up_timeout_ms 30_000
 
   @impl true
   def mount(_params, _session, socket) do
@@ -53,6 +56,7 @@ defmodule AgentsWeb.SessionsLive.Index do
      |> assign(:queue_state, queue_state)
      |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)
      |> assign(:refreshing_task_ids, MapSet.new())
+     |> assign(:pending_follow_ups, %{})
      |> assign_session_state()
      |> assign(:form, to_form(%{"instruction" => ""}))}
   end
@@ -160,24 +164,13 @@ defmodule AgentsWeb.SessionsLive.Index do
     instruction = String.trim(instruction)
     ticket_number = parse_ticket_number_param(params)
 
-    cond do
-      instruction == "" ->
-        {:noreply, put_flash(socket, :error, "Instruction is required")}
-
-      task_running?(socket.assigns.current_task) ->
-        send_message_to_running_task(socket, instruction)
-
-      true ->
-        socket =
-          if resumable_task?(socket.assigns.current_task) do
-            append_optimistic_user_message(socket, instruction)
-          else
-            socket
-          end
-
-        socket
-        |> run_or_resume_task(instruction, ticket_number)
-        |> handle_task_result(socket)
+    if instruction == "" do
+      {:noreply, put_flash(socket, :error, "Instruction is required")}
+    else
+      socket.assigns.current_task
+      |> SessionStateMachine.state_from_task()
+      |> SessionStateMachine.submission_route()
+      |> route_message_submission(socket, instruction, ticket_number)
     end
   end
 
@@ -1199,47 +1192,102 @@ defmodule AgentsWeb.SessionsLive.Index do
         socket
       ) do
     caller = self()
+    timeout_ref = make_ref()
 
     Task.start(fn ->
-      result =
-        Sessions.send_message(
-          task_id,
-          instruction,
-          correlation_key: correlation_key,
-          command_type: "follow_up_message",
-          sent_at: DateTime.to_iso8601(queued_at)
-        )
+      try do
+        result =
+          Sessions.send_message(
+            task_id,
+            instruction,
+            correlation_key: correlation_key,
+            command_type: "follow_up_message",
+            sent_at: DateTime.to_iso8601(queued_at)
+          )
 
-      send(caller, {:follow_up_send_result, correlation_key, result})
+        send(caller, {:follow_up_send_result, correlation_key, result})
+      rescue
+        error ->
+          send(caller, {:follow_up_send_result, correlation_key, {:error, error}})
+      end
     end)
 
-    {:noreply, socket}
+    Process.send_after(
+      self(),
+      {:follow_up_timeout, correlation_key, timeout_ref},
+      @follow_up_timeout_ms
+    )
+
+    pending =
+      Map.put(socket.assigns.pending_follow_ups, correlation_key, %{
+        ref: timeout_ref,
+        dispatched_at: DateTime.utc_now()
+      })
+
+    {:noreply, assign(socket, :pending_follow_ups, pending)}
   end
 
   @impl true
-  def handle_info({:follow_up_send_result, _correlation_key, :ok}, socket), do: {:noreply, socket}
+  def handle_info({:follow_up_send_result, correlation_key, :ok}, socket) do
+    {:noreply,
+     assign(
+       socket,
+       :pending_follow_ups,
+       Map.delete(socket.assigns.pending_follow_ups, correlation_key)
+     )}
+  end
 
   @impl true
   def handle_info({:follow_up_send_result, correlation_key, {:error, _reason}}, socket) do
     {:noreply,
      socket
      |> assign(
+       :pending_follow_ups,
+       Map.delete(socket.assigns.pending_follow_ups, correlation_key)
+     )
+     |> assign(
        :queued_messages,
-       mark_queued_message_status(socket.assigns.queued_messages, correlation_key, "rolled_back")
+       SessionStateMachine.mark_queued_message_status(
+         socket.assigns.queued_messages,
+         correlation_key,
+         "rolled_back"
+       )
      )
      |> broadcast_optimistic_queue_snapshot()
      |> put_flash(:error, "Failed to send message")}
   end
 
   @impl true
-  def handle_info(_msg, socket), do: {:noreply, socket}
+  def handle_info({:follow_up_timeout, correlation_key, timeout_ref}, socket) do
+    case Map.get(socket.assigns.pending_follow_ups, correlation_key) do
+      %{ref: ^timeout_ref} ->
+        require Logger
+        Logger.warning("Follow-up dispatch timed out for correlation_key=#{correlation_key}")
 
-  defp mark_queued_message_status(messages, correlation_key, status) do
-    Enum.map(messages, fn msg ->
-      key = msg[:correlation_key] || msg[:id]
-      if key == correlation_key, do: Map.put(msg, :status, status), else: msg
-    end)
+        {:noreply,
+         socket
+         |> assign(
+           :pending_follow_ups,
+           Map.delete(socket.assigns.pending_follow_ups, correlation_key)
+         )
+         |> assign(
+           :queued_messages,
+           SessionStateMachine.mark_queued_message_status(
+             socket.assigns.queued_messages,
+             correlation_key,
+             "timed_out"
+           )
+         )
+         |> broadcast_optimistic_queue_snapshot()}
+
+      _ ->
+        # Already resolved (success or error arrived before timeout) — ignore
+        {:noreply, socket}
+    end
   end
+
+  @impl true
+  def handle_info(_msg, socket), do: {:noreply, socket}
 
   defp delete_queued_task_by_id(task_id, user_id) do
     case Sessions.get_task(task_id, user_id) do
@@ -1308,6 +1356,27 @@ defmodule AgentsWeb.SessionsLive.Index do
       todo_items: [],
       queued_messages: []
     )
+  end
+
+  defp route_message_submission(:follow_up, socket, instruction, _ticket_number) do
+    send_message_to_running_task(socket, instruction)
+  end
+
+  defp route_message_submission(:new_or_resume, socket, instruction, ticket_number) do
+    socket =
+      if resumable_task?(socket.assigns.current_task) do
+        append_optimistic_user_message(socket, instruction)
+      else
+        socket
+      end
+
+    socket
+    |> run_or_resume_task(instruction, ticket_number)
+    |> handle_task_result(socket)
+  end
+
+  defp route_message_submission(:blocked, socket, _instruction, _ticket_number) do
+    {:noreply, put_flash(socket, :error, "Cannot submit message in current state")}
   end
 
   defp send_message_to_running_task(socket, instruction) do
@@ -1612,6 +1681,7 @@ defmodule AgentsWeb.SessionsLive.Index do
     socket
     |> assign(:pending_question, nil)
     |> assign(:form, to_form(%{"instruction" => message}))
+    |> push_event("restore_draft", %{text: message})
     |> put_flash(:info, "Session ended. Your answer is in the input — submit to resume.")
   end
 
