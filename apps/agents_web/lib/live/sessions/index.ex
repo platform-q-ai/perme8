@@ -835,28 +835,12 @@ defmodule AgentsWeb.SessionsLive.Index do
     is_current_task = is_map(current_task) and current_task.id == task_id
 
     updated_current_task =
-      if is_current_task do
-        Map.put(current_task, :status, status)
-      else
-        current_task
-      end
+      if is_current_task,
+        do: Map.put(current_task, :status, status),
+        else: current_task
 
-    # Build a minimal task map for the changed task to update sessions/snapshot
     changed_task =
-      if is_current_task do
-        updated_current_task
-      else
-        # Find the task in the snapshot and update its status
-        snapshot_task =
-          (socket.assigns[:tasks_snapshot] || [])
-          |> Enum.find(&(&1.id == task_id))
-
-        if snapshot_task do
-          Map.put(snapshot_task, :status, status)
-        else
-          %{id: task_id, status: status}
-        end
-      end
+      resolve_changed_task(is_current_task, updated_current_task, task_id, status, socket)
 
     cid =
       if(is_current_task && updated_current_task && updated_current_task.container_id,
@@ -885,31 +869,7 @@ defmodule AgentsWeb.SessionsLive.Index do
       |> assign(:tasks_snapshot, tasks_snapshot)
       |> assign(:tickets, tickets)
       |> request_task_refresh(task_id)
-
-    # Only modify current session UI state (output_parts, pending_question,
-    # queued_messages) when the status change is for the currently viewed task.
-    # Non-current task completions should not wipe the active session's UI.
-    socket =
-      cond do
-        !is_current_task ->
-          clear_optimistic_queue_snapshot(socket, task_id)
-
-        status in ["completed", "failed"] ->
-          socket
-          |> assign(:output_parts, EventProcessor.freeze_streaming(socket.assigns.output_parts))
-          |> assign(:pending_question, nil)
-          |> assign(:queued_messages, [])
-          |> clear_optimistic_queue_snapshot(task_id)
-
-        status == "cancelled" ->
-          socket
-          |> assign(:output_parts, EventProcessor.freeze_streaming(socket.assigns.output_parts))
-          |> assign(:pending_question, nil)
-          |> clear_optimistic_queue_snapshot(task_id)
-
-        true ->
-          socket
-      end
+      |> apply_status_change_to_ui(is_current_task, status, task_id)
 
     {:noreply, socket}
   end
@@ -1771,12 +1731,7 @@ defmodule AgentsWeb.SessionsLive.Index do
 
     case Sessions.cancel_task(task.id, user.id) do
       :ok ->
-        updated =
-          case Sessions.get_task(task.id, user.id) do
-            {:ok, t} -> t
-            _ -> Map.put(task, :status, "cancelled")
-          end
-
+        updated = fetch_cancelled_task(task, user.id)
         sessions = upsert_session_from_task(socket.assigns.sessions, updated)
 
         sticky_warm_task_ids =
@@ -1787,20 +1742,7 @@ defmodule AgentsWeb.SessionsLive.Index do
           )
 
         tasks_snapshot = upsert_task_snapshot(socket.assigns[:tasks_snapshot], updated)
-
-        # Restore the most recent user message (not the original instruction).
-        # For tasks that ran, decode their output to find follow-up messages.
-        # Fall back to the original instruction for queued tasks with no output.
-        instruction =
-          case Map.get(updated, :output) do
-            output when is_binary(output) and output != "" ->
-              output
-              |> EventProcessor.decode_cached_output()
-              |> last_user_message()
-
-            _ ->
-              nil
-          end || Map.get(updated, :instruction) || Map.get(task, :instruction, "")
+        instruction = recover_instruction(updated, task)
 
         {:noreply,
          socket
@@ -1816,6 +1758,65 @@ defmodule AgentsWeb.SessionsLive.Index do
         {:noreply, put_flash(socket, :error, "Failed to cancel task")}
     end
   end
+
+  defp fetch_cancelled_task(task, user_id) do
+    case Sessions.get_task(task.id, user_id) do
+      {:ok, t} -> t
+      _ -> Map.put(task, :status, "cancelled")
+    end
+  end
+
+  # Restore the most recent user message (not the original instruction).
+  # For tasks that ran, decode their output to find follow-up messages.
+  # Fall back to the original instruction for queued tasks with no output.
+  defp recover_instruction(updated_task, original_task) do
+    case Map.get(updated_task, :output) do
+      output when is_binary(output) and output != "" ->
+        output
+        |> EventProcessor.decode_cached_output()
+        |> last_user_message()
+
+      _ ->
+        nil
+    end || Map.get(updated_task, :instruction) || Map.get(original_task, :instruction, "")
+  end
+
+  defp resolve_changed_task(true, updated_current_task, _task_id, _status, _socket),
+    do: updated_current_task
+
+  defp resolve_changed_task(false, _updated_current_task, task_id, status, socket) do
+    snapshot_task =
+      (socket.assigns[:tasks_snapshot] || [])
+      |> Enum.find(&(&1.id == task_id))
+
+    if snapshot_task,
+      do: Map.put(snapshot_task, :status, status),
+      else: %{id: task_id, status: status}
+  end
+
+  # Only modify current session UI state (output_parts, pending_question,
+  # queued_messages) when the status change is for the currently viewed task.
+  # Non-current task completions should not wipe the active session's UI.
+  defp apply_status_change_to_ui(socket, false, _status, task_id),
+    do: clear_optimistic_queue_snapshot(socket, task_id)
+
+  defp apply_status_change_to_ui(socket, true, status, task_id)
+       when status in ["completed", "failed"] do
+    socket
+    |> assign(:output_parts, EventProcessor.freeze_streaming(socket.assigns.output_parts))
+    |> assign(:pending_question, nil)
+    |> assign(:queued_messages, [])
+    |> clear_optimistic_queue_snapshot(task_id)
+  end
+
+  defp apply_status_change_to_ui(socket, true, "cancelled", task_id) do
+    socket
+    |> assign(:output_parts, EventProcessor.freeze_streaming(socket.assigns.output_parts))
+    |> assign(:pending_question, nil)
+    |> clear_optimistic_queue_snapshot(task_id)
+  end
+
+  defp apply_status_change_to_ui(socket, true, _status, _task_id), do: socket
 
   defp maybe_sync_status_from_session_event(
          socket,
