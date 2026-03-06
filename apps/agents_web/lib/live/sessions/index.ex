@@ -549,6 +549,19 @@ defmodule AgentsWeb.SessionsLive.Index do
   end
 
   @impl true
+  def handle_event("pause_session", %{"task-id" => task_id}, socket) do
+    user = socket.assigns.current_scope.user
+
+    case Sessions.get_task(task_id, user.id) do
+      {:ok, task} ->
+        do_cancel_task(task, socket, "Session paused")
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, "Failed to find task")}
+    end
+  end
+
+  @impl true
   def handle_event("delete_session", %{"container-id" => container_id}, socket) do
     user = socket.assigns.current_scope.user
 
