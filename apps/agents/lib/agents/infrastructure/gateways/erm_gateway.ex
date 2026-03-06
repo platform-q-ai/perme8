@@ -22,7 +22,7 @@ defmodule Agents.Infrastructure.Gateways.ErmGateway do
   @impl true
   def upsert_schema(workspace_id, attrs) do
     # actor_id is nil — MCP tool handlers do not yet thread user identity.
-    # TODO(Part 2): thread actor_id from MCP frame through all ERM use cases.
+    # Part 2 will thread actor_id from the MCP frame through all ERM use cases.
     EntityRelationshipManager.upsert_schema(workspace_id, attrs, nil)
   end
 
