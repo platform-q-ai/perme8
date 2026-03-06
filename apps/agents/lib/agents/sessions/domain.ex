@@ -14,14 +14,21 @@ defmodule Agents.Sessions.Domain do
       Entities.Task,
       Entities.TodoItem,
       Entities.TodoList,
+      Entities.QueueSnapshot,
+      Entities.LaneEntry,
       Policies.TaskPolicy,
       Policies.QueuePolicy,
+      Policies.QueueEngine,
+      Policies.RetryPolicy,
       Events.TaskCreated,
       Events.TaskCompleted,
       Events.TaskFailed,
       Events.TaskCancelled,
       Events.TaskQueued,
       Events.TaskDeprioritised,
-      Events.TaskPromoted
+      Events.TaskPromoted,
+      Events.TaskLaneChanged,
+      Events.TaskRetryScheduled,
+      Events.QueueSnapshotUpdated
     ]
 end

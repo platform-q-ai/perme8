@@ -12,6 +12,7 @@ defmodule Agents.Sessions.Application do
       Behaviours.ContainerProviderBehaviour,
       Behaviours.OpencodeClientBehaviour,
       Behaviours.TaskRepositoryBehaviour,
+      Behaviours.QueueOrchestratorBehaviour,
       Services.AuthRefresher,
       UseCases.CreateTask,
       UseCases.CancelTask,
@@ -21,6 +22,9 @@ defmodule Agents.Sessions.Application do
       UseCases.ResumeTask,
       UseCases.GetTask,
       UseCases.ListTasks,
+      UseCases.BuildSnapshot,
+      UseCases.PromoteTask,
+      UseCases.ScheduleRetry,
       SessionsConfig
     ]
 end

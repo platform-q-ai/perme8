@@ -89,6 +89,16 @@ defmodule Agents.Sessions.Application.SessionsConfig do
     config()[:default_concurrency_limit] || 2
   end
 
+  @doc "Returns whether the v2 queue orchestrator is enabled."
+  def queue_v2_enabled? do
+    config()[:queue_v2_enabled] || false
+  end
+
+  @doc "Returns the default warm cache limit for container pre-warming."
+  def default_warm_cache_limit do
+    config()[:default_warm_cache_limit] || 2
+  end
+
   @doc "Returns the PubSub server name for broadcasting task events."
   def pubsub do
     config()[:pubsub] || Perme8.Events.PubSub

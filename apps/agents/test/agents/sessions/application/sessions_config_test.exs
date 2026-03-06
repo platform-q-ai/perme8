@@ -35,4 +35,16 @@ defmodule Agents.Sessions.Application.SessionsConfigTest do
       assert is_map(SessionsConfig.container_env())
     end
   end
+
+  describe "queue_v2_enabled?/0" do
+    test "returns false by default" do
+      refute SessionsConfig.queue_v2_enabled?()
+    end
+  end
+
+  describe "default_warm_cache_limit/0" do
+    test "returns 2 by default" do
+      assert SessionsConfig.default_warm_cache_limit() == 2
+    end
+  end
 end
