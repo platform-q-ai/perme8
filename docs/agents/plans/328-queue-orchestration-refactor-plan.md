@@ -108,7 +108,7 @@ Lanes are derived from task status + metadata (no new DB column needed):
 
 ---
 
-## Phase 1: Domain Layer — QueueEngine + QueueSnapshot + RetryPolicy
+## Phase 1: Domain Layer — QueueEngine + QueueSnapshot + RetryPolicy ✓
 
 **Goal**: Pure domain models and policies. No I/O, no infrastructure. All tests run async in milliseconds.
 
@@ -116,7 +116,7 @@ Lanes are derived from task status + metadata (no new DB column needed):
 
 ### Step 1.1: QueueSnapshot + LaneEntry Entities
 
-- ⏸ **RED**: Write test `apps/agents/test/agents/sessions/domain/entities/queue_snapshot_test.exs`
+- [x] **RED**: Write test `apps/agents/test/agents/sessions/domain/entities/queue_snapshot_test.exs`
   - Tests:
     - `QueueSnapshot.new/1` creates a valid snapshot with all lanes defaulting to empty lists
     - `QueueSnapshot.total_queued/1` returns sum of warm + cold + retry_pending lane sizes
@@ -124,15 +124,15 @@ Lanes are derived from task status + metadata (no new DB column needed):
     - `QueueSnapshot.lane_for/2` returns the lane list for a given lane atom
     - `LaneEntry.new/1` creates a valid lane entry with defaults
     - `LaneEntry.warm?/1`, `LaneEntry.cold?/1` predicates work based on `warm_state`
-- ⏸ **GREEN**: Implement `apps/agents/lib/agents/sessions/domain/entities/queue_snapshot.ex`
+- [x] **GREEN**: Implement `apps/agents/lib/agents/sessions/domain/entities/queue_snapshot.ex`
   - Pure struct with `new/1`, `total_queued/1`, `available_slots/1`, `lane_for/2`
-- ⏸ **GREEN**: Implement `apps/agents/lib/agents/sessions/domain/entities/lane_entry.ex`
+- [x] **GREEN**: Implement `apps/agents/lib/agents/sessions/domain/entities/lane_entry.ex`
   - Pure struct with `new/1`, `warm?/1`, `cold?/1` predicates
-- ⏸ **REFACTOR**: Extract shared types, ensure consistent naming
+- [x] **REFACTOR**: Extract shared types, ensure consistent naming
 
 ### Step 1.2: QueueEngine Policy (Lane Assignment + Transitions)
 
-- ⏸ **RED**: Write test `apps/agents/test/agents/sessions/domain/policies/queue_engine_test.exs`
+- [x] **RED**: Write test `apps/agents/test/agents/sessions/domain/policies/queue_engine_test.exs`
   - Tests:
     - `assign_lane/1` returns `:processing` for pending/starting/running tasks
     - `assign_lane/1` returns `:warm` for queued tasks with a real container_id
@@ -149,13 +149,13 @@ Lanes are derived from task status + metadata (no new DB column needed):
     - `promotable_tasks/1` returns cold/warm tasks sorted by queue_position, warm first
     - `tasks_to_promote/2` returns up to N promotable tasks based on available slots
     - `classify_warm_state/1` returns :cold, :warming, :warm, or :hot based on container metadata
-- ⏸ **GREEN**: Implement `apps/agents/lib/agents/sessions/domain/policies/queue_engine.ex`
+- [x] **GREEN**: Implement `apps/agents/lib/agents/sessions/domain/policies/queue_engine.ex`
   - Pure functions: `assign_lane/1`, `build_snapshot/2`, `can_transition?/2`, `promotable_tasks/1`, `tasks_to_promote/2`, `classify_warm_state/1`
-- ⏸ **REFACTOR**: Ensure QueueEngine is composable and each function is single-responsibility
+- [x] **REFACTOR**: Ensure QueueEngine is composable and each function is single-responsibility
 
 ### Step 1.3: RetryPolicy (Retry/Backoff/Escalation)
 
-- ⏸ **RED**: Write test `apps/agents/test/agents/sessions/domain/policies/retry_policy_test.exs`
+- [x] **RED**: Write test `apps/agents/test/agents/sessions/domain/policies/retry_policy_test.exs`
   - Tests:
     - `retryable?/1` returns true for runner_start_failed, container_crashed errors
     - `retryable?/1` returns false for user_cancelled, validation_error
@@ -165,43 +165,43 @@ Lanes are derived from task status + metadata (no new DB column needed):
     - `should_escalate?/1` returns true when retry_count >= max_retries
     - `classify_failure/1` classifies error strings into retryable/permanent categories
     - `max_retries/0` returns the configurable default (3)
-- ⏸ **GREEN**: Implement `apps/agents/lib/agents/sessions/domain/policies/retry_policy.ex`
+- [x] **GREEN**: Implement `apps/agents/lib/agents/sessions/domain/policies/retry_policy.ex`
   - Pure functions: `retryable?/1`, `next_retry_delay/1`, `should_escalate?/1`, `classify_failure/1`, `max_retries/0`
-- ⏸ **REFACTOR**: Clean up, add @spec and @doc annotations
+- [x] **REFACTOR**: Clean up, add @spec and @doc annotations
 
 ### Step 1.4: Update Existing QueuePolicy
 
-- ⏸ **RED**: Update test `apps/agents/test/agents/sessions/domain/policies/queue_policy_test.exs`
+- [x] **RED**: Update test `apps/agents/test/agents/sessions/domain/policies/queue_policy_test.exs`
   - Tests:
     - Existing 8 tests still pass (no regressions)
     - Add `QueuePolicy.valid_concurrency_limit?/1` — true for 1..10
     - Add `QueuePolicy.valid_warm_cache_limit?/1` — true for 0..5
-- ⏸ **GREEN**: Add new functions to `apps/agents/lib/agents/sessions/domain/policies/queue_policy.ex`
-- ⏸ **REFACTOR**: Move limit validation from QueueManager guards into QueuePolicy
+- [x] **GREEN**: Add new functions to `apps/agents/lib/agents/sessions/domain/policies/queue_policy.ex`
+- [x] **REFACTOR**: Move limit validation from QueueManager guards into QueuePolicy
 
 ### Step 1.5: New Domain Events
 
-- ⏸ **RED**: Write test `apps/agents/test/agents/sessions/domain/events/queue_events_test.exs`
+- [x] **RED**: Write test `apps/agents/test/agents/sessions/domain/events/queue_events_test.exs`
   - Tests:
     - `TaskLaneChanged.new/1` creates valid event with required fields (task_id, user_id, from_lane, to_lane)
     - `TaskRetryScheduled.new/1` creates valid event with required fields (task_id, user_id, retry_count, next_retry_at)
     - `QueueSnapshotUpdated.new/1` creates valid event with required fields (user_id, snapshot)
-- ⏸ **GREEN**: Implement:
+- [x] **GREEN**: Implement:
   - `apps/agents/lib/agents/sessions/domain/events/task_lane_changed.ex`
   - `apps/agents/lib/agents/sessions/domain/events/task_retry_scheduled.ex`
   - `apps/agents/lib/agents/sessions/domain/events/queue_snapshot_updated.ex`
-- ⏸ **REFACTOR**: Verify event naming consistency with existing events
+- [x] **REFACTOR**: Verify event naming consistency with existing events
 
 ### Phase 1 Validation
 
-- ⏸ All domain tests pass (`mix test apps/agents/test/agents/sessions/domain/ --trace`)
-- ⏸ All tests are async (no database access)
-- ⏸ No boundary violations (`mix boundary`)
-- ⏸ Existing QueuePolicy tests still pass (regression check)
+- [x] All domain tests pass (`mix test apps/agents/test/agents/sessions/domain/ --trace`)
+- [x] All tests are async (no database access)
+- [x] No boundary violations (`mix boundary`)
+- [x] Existing QueuePolicy tests still pass (regression check)
 
 ---
 
-## Phase 2: Application Layer — QueueOrchestrator Use Cases
+## Phase 2: Application Layer — QueueOrchestrator Use Cases ⏳
 
 **Goal**: Orchestration logic with mocked dependencies. Feature-flagged alongside legacy QueueManager.
 
@@ -209,42 +209,42 @@ Lanes are derived from task status + metadata (no new DB column needed):
 
 ### Step 2.1: Feature Flag in SessionsConfig
 
-- ⏸ **RED**: Write test `apps/agents/test/agents/sessions/application/sessions_config_test.exs`
+- ✓ **RED**: Write test `apps/agents/test/agents/sessions/application/sessions_config_test.exs`
   - Tests:
     - `SessionsConfig.queue_v2_enabled?/0` reads from application config
     - Returns false by default
-- ⏸ **GREEN**: Add `queue_v2_enabled?/0` to `apps/agents/lib/agents/sessions/application/sessions_config.ex`
+- ✓ **GREEN**: Add `queue_v2_enabled?/0` to `apps/agents/lib/agents/sessions/application/sessions_config.ex`
   - Reads `Application.get_env(:agents, :queue_v2_enabled, false)`
-- ⏸ **REFACTOR**: Clean up
+- ✓ **REFACTOR**: Clean up
 
 ### Step 2.2: QueueOrchestrator Behaviour
 
 - ⏸ **RED**: Write test verifying the behaviour module defines the expected callbacks
-- ⏸ **GREEN**: Implement `apps/agents/lib/agents/sessions/application/behaviours/queue_orchestrator_behaviour.ex`
+- ✓ **GREEN**: Implement `apps/agents/lib/agents/sessions/application/behaviours/queue_orchestrator_behaviour.ex`
   - Callbacks:
     - `get_snapshot(user_id) :: QueueSnapshot.t()`
     - `notify_task_event(user_id, task_id, event_type) :: :ok`
     - `set_concurrency_limit(user_id, limit) :: :ok | {:error, term()}`
     - `set_warm_cache_limit(user_id, limit) :: :ok | {:error, term()}`
     - `check_concurrency(user_id) :: :ok | :at_limit`
-- ⏸ **REFACTOR**: Ensure behaviour is minimal and focused
+- ✓ **REFACTOR**: Ensure behaviour is minimal and focused
 
 ### Step 2.3: BuildSnapshot Use Case
 
-- ⏸ **RED**: Write test `apps/agents/test/agents/sessions/application/use_cases/build_snapshot_test.exs`
+- ✓ **RED**: Write test `apps/agents/test/agents/sessions/application/use_cases/build_snapshot_test.exs`
   - Tests (using Mox for task_repo):
     - Loads all active tasks for user from repo
     - Delegates to QueueEngine.build_snapshot/2 for lane assignment
     - Returns a valid QueueSnapshot struct
     - Handles empty task list gracefully
     - Populates metadata from SessionsConfig defaults
-- ⏸ **GREEN**: Implement `apps/agents/lib/agents/sessions/application/use_cases/build_snapshot.ex`
+- ✓ **GREEN**: Implement `apps/agents/lib/agents/sessions/application/use_cases/build_snapshot.ex`
   - `execute(user_id, opts)` — loads tasks, builds snapshot via QueueEngine
-- ⏸ **REFACTOR**: Ensure dependency injection for task_repo, config
+- ✓ **REFACTOR**: Ensure dependency injection for task_repo, config
 
 ### Step 2.4: PromoteTask Use Case (Refactored)
 
-- ⏸ **RED**: Write test `apps/agents/test/agents/sessions/application/use_cases/promote_task_test.exs`
+- ✓ **RED**: Write test `apps/agents/test/agents/sessions/application/use_cases/promote_task_test.exs`
   - Tests (using Mox):
     - Only promotes tasks that QueueEngine.can_transition?(task, :pending) returns true for
     - Warm tasks are promoted before cold tasks
@@ -253,13 +253,13 @@ Lanes are derived from task status + metadata (no new DB column needed):
     - Emits TaskLaneChanged event (from_lane: :warm/:cold, to_lane: :processing)
     - Does not promote cold tasks unless warm-ready (consistent with current behavior)
     - Returns updated snapshot after promotion
-- ⏸ **GREEN**: Implement `apps/agents/lib/agents/sessions/application/use_cases/promote_task.ex`
+- ✓ **GREEN**: Implement `apps/agents/lib/agents/sessions/application/use_cases/promote_task.ex`
   - Uses QueueEngine for policy decisions, delegates I/O to injected repo
-- ⏸ **REFACTOR**: Compare with existing QueueManager.promote_next_task and ensure parity
+- ✓ **REFACTOR**: Compare with existing QueueManager.promote_next_task and ensure parity
 
 ### Step 2.5: ScheduleRetry Use Case
 
-- ⏸ **RED**: Write test `apps/agents/test/agents/sessions/application/use_cases/schedule_retry_test.exs`
+- ✓ **RED**: Write test `apps/agents/test/agents/sessions/application/use_cases/schedule_retry_test.exs`
   - Tests (using Mox):
     - Only retries tasks where RetryPolicy.retryable?/1 returns true
     - Increments retry_count on the task
@@ -268,8 +268,8 @@ Lanes are derived from task status + metadata (no new DB column needed):
     - Moves task to retry_pending lane via TaskLaneChanged event
     - When retry_count >= max_retries, marks task as permanently failed
     - Does not retry user-cancelled tasks
-- ⏸ **GREEN**: Implement `apps/agents/lib/agents/sessions/application/use_cases/schedule_retry.ex`
-- ⏸ **REFACTOR**: Ensure error classification is thorough
+- ✓ **GREEN**: Implement `apps/agents/lib/agents/sessions/application/use_cases/schedule_retry.ex`
+- ✓ **REFACTOR**: Ensure error classification is thorough
 
 ### Step 2.6: Update CreateTask + ResumeTask Use Cases
 
@@ -286,10 +286,10 @@ Lanes are derived from task status + metadata (no new DB column needed):
 
 ### Phase 2 Validation
 
-- ⏸ All application tests pass with mocks
-- ⏸ All domain tests still pass (regression)
-- ⏸ No boundary violations (`mix boundary`)
-- ⏸ Feature flag defaults to false — no behavioral change in production
+- ✓ All application tests pass with mocks
+- ✓ All domain tests still pass (regression)
+- ✓ No boundary violations (`mix boundary`)
+- ✓ Feature flag defaults to false — no behavioral change in production
 
 ---
 
