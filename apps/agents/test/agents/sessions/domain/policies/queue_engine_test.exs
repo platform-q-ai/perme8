@@ -176,6 +176,187 @@ defmodule Agents.Sessions.Domain.Policies.QueueEngineTest do
     end
   end
 
+  describe "build_snapshot/2 light image awareness" do
+    test "running_count excludes light image processing tasks" do
+      tasks = [
+        task(id: "heavy-1", status: "running", image: "perme8-opencode"),
+        task(id: "light-1", status: "running", image: "perme8-opencode-light"),
+        task(id: "heavy-2", status: "pending", image: "perme8-opencode"),
+        task(id: "light-2", status: "pending", image: "perme8-opencode-light")
+      ]
+
+      config = %{concurrency_limit: 2, user_id: "user-123"}
+      snapshot = QueueEngine.build_snapshot(tasks, config)
+
+      # Only heavyweight tasks count toward running_count
+      assert snapshot.metadata.running_count == 2
+      # available_slots based on heavyweight-only count
+      assert snapshot.metadata.available_slots == 0
+      # All 4 are in the processing lane
+      assert length(snapshot.lanes.processing) == 4
+    end
+
+    test "available_slots unaffected by light image processing tasks" do
+      tasks = [
+        task(id: "light-1", status: "running", image: "perme8-opencode-light"),
+        task(id: "light-2", status: "running", image: "perme8-opencode-light"),
+        task(id: "queued-1", status: "queued", queue_position: 1, image: "perme8-opencode")
+      ]
+
+      config = %{concurrency_limit: 2, user_id: "user-123"}
+      snapshot = QueueEngine.build_snapshot(tasks, config)
+
+      # Light images don't count -> running_count = 0
+      assert snapshot.metadata.running_count == 0
+      assert snapshot.metadata.available_slots == 2
+    end
+
+    test "to_lane_entry populates image field" do
+      tasks = [task(id: "task-1", status: "running", image: "perme8-opencode-light")]
+      config = %{concurrency_limit: 2, user_id: "user-123"}
+      snapshot = QueueEngine.build_snapshot(tasks, config)
+
+      [entry] = snapshot.lanes.processing
+      assert entry.image == "perme8-opencode-light"
+    end
+
+    test "to_lane_entry defaults image to nil when not present" do
+      tasks = [task(id: "task-1", status: "running")]
+      config = %{concurrency_limit: 2, user_id: "user-123"}
+      snapshot = QueueEngine.build_snapshot(tasks, config)
+
+      [entry] = snapshot.lanes.processing
+      assert entry.image == nil
+    end
+  end
+
+  describe "light_image_tasks_to_promote/1" do
+    test "returns all queued light image tasks regardless of available slots" do
+      snapshot =
+        QueueSnapshot.new(%{
+          user_id: "user-123",
+          lanes: %{
+            processing: [
+              LaneEntry.new(%{task_id: "heavy-1", image: "perme8-opencode", lane: :processing}),
+              LaneEntry.new(%{task_id: "heavy-2", image: "perme8-opencode", lane: :processing})
+            ],
+            warm: [
+              LaneEntry.new(%{
+                task_id: "light-warm",
+                image: "perme8-opencode-light",
+                queue_position: 1,
+                lane: :warm
+              }),
+              LaneEntry.new(%{
+                task_id: "heavy-warm",
+                image: "perme8-opencode",
+                queue_position: 2,
+                lane: :warm
+              })
+            ],
+            cold: [
+              LaneEntry.new(%{
+                task_id: "light-cold",
+                image: "perme8-opencode-light",
+                queue_position: 3,
+                lane: :cold
+              }),
+              LaneEntry.new(%{
+                task_id: "heavy-cold",
+                image: "perme8-opencode",
+                queue_position: 4,
+                lane: :cold
+              })
+            ]
+          },
+          metadata: %{concurrency_limit: 2, running_count: 2}
+        })
+
+      promotable = QueueEngine.light_image_tasks_to_promote(snapshot)
+
+      assert Enum.map(promotable, & &1.task_id) == ["light-warm", "light-cold"]
+    end
+
+    test "returns empty list when no queued light image tasks exist" do
+      snapshot =
+        QueueSnapshot.new(%{
+          user_id: "user-123",
+          lanes: %{
+            warm: [
+              LaneEntry.new(%{
+                task_id: "heavy-1",
+                image: "perme8-opencode",
+                queue_position: 1,
+                lane: :warm
+              })
+            ],
+            cold: []
+          },
+          metadata: %{concurrency_limit: 2, running_count: 0}
+        })
+
+      assert QueueEngine.light_image_tasks_to_promote(snapshot) == []
+    end
+  end
+
+  describe "heavyweight_tasks_to_promote/2" do
+    test "returns only heavyweight promotable tasks up to available slots" do
+      snapshot =
+        QueueSnapshot.new(%{
+          user_id: "user-123",
+          lanes: %{
+            warm: [
+              LaneEntry.new(%{
+                task_id: "light-1",
+                image: "perme8-opencode-light",
+                queue_position: 1,
+                lane: :warm
+              }),
+              LaneEntry.new(%{
+                task_id: "heavy-1",
+                image: "perme8-opencode",
+                queue_position: 2,
+                lane: :warm
+              })
+            ],
+            cold: [
+              LaneEntry.new(%{
+                task_id: "heavy-2",
+                image: "perme8-opencode",
+                queue_position: 3,
+                lane: :cold
+              })
+            ]
+          },
+          metadata: %{concurrency_limit: 2, running_count: 1}
+        })
+
+      promotable = QueueEngine.heavyweight_tasks_to_promote(snapshot, 1)
+
+      assert Enum.map(promotable, & &1.task_id) == ["heavy-1"]
+    end
+
+    test "returns empty when no slots available" do
+      snapshot =
+        QueueSnapshot.new(%{
+          user_id: "user-123",
+          lanes: %{
+            warm: [
+              LaneEntry.new(%{
+                task_id: "heavy-1",
+                image: "perme8-opencode",
+                queue_position: 1,
+                lane: :warm
+              })
+            ]
+          },
+          metadata: %{concurrency_limit: 1, running_count: 1}
+        })
+
+      assert QueueEngine.heavyweight_tasks_to_promote(snapshot, 0) == []
+    end
+  end
+
   defp task(overrides) do
     Map.merge(
       %{
@@ -189,7 +370,8 @@ defmodule Agents.Sessions.Domain.Policies.QueueEngineTest do
         error: nil,
         queued_at: nil,
         started_at: nil,
-        user_id: "user-123"
+        user_id: "user-123",
+        image: nil
       },
       Map.new(overrides)
     )

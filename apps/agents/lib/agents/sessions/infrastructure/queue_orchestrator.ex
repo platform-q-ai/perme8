@@ -229,10 +229,21 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
   end
 
   defp promote_from_snapshot(state, snapshot) do
-    available = QueueSnapshot.available_slots(snapshot)
-    promotable = QueueEngine.tasks_to_promote(snapshot, available)
+    # Pass 1: promote all queued light image tasks (bypass concurrency limit)
+    light_entries = QueueEngine.light_image_tasks_to_promote(snapshot)
 
-    Enum.each(promotable, fn entry ->
+    Enum.each(light_entries, fn entry ->
+      case state.task_repo.get_task(entry.task_id) do
+        nil -> :ok
+        task -> promote_single_task(state, task, entry)
+      end
+    end)
+
+    # Pass 2: promote heavyweight tasks up to available concurrency slots
+    available = QueueSnapshot.available_slots(snapshot)
+    heavyweight_entries = QueueEngine.heavyweight_tasks_to_promote(snapshot, available)
+
+    Enum.each(heavyweight_entries, fn entry ->
       case state.task_repo.get_task(entry.task_id) do
         nil -> :ok
         task -> promote_single_task(state, task, entry)

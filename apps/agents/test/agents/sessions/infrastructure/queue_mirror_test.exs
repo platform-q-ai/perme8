@@ -69,5 +69,46 @@ defmodule Agents.Sessions.Infrastructure.QueueMirrorTest do
       assert {:mismatch, details} = QueueMirror.compare(legacy, snapshot)
       assert Enum.any?(details, fn {k, _} -> k == :queued_count end)
     end
+
+    test "matches when both sides use heavyweight-only running count" do
+      # Legacy QueueManager uses count_running_heavyweight_tasks (excludes light images)
+      # Snapshot running_count also excludes light images (via QueueEngine)
+      # Both should report running_count = 1 (only the heavyweight task)
+      legacy = %{running: 1, queued: [], concurrency_limit: 2}
+
+      snapshot =
+        QueueSnapshot.new(%{
+          user_id: "u1",
+          lanes: %{
+            processing: [
+              LaneEntry.new(%{
+                task_id: "heavy-1",
+                image: "perme8-opencode",
+                status: "running",
+                lane: :processing
+              }),
+              LaneEntry.new(%{
+                task_id: "light-1",
+                image: "perme8-opencode-light",
+                status: "running",
+                lane: :processing
+              })
+            ],
+            warm: [],
+            cold: [],
+            awaiting_feedback: [],
+            retry_pending: []
+          },
+          metadata: %{
+            concurrency_limit: 2,
+            warm_cache_limit: 2,
+            running_count: 1,
+            available_slots: 1,
+            total_queued: 0
+          }
+        })
+
+      assert :match = QueueMirror.compare(legacy, snapshot)
+    end
   end
 end

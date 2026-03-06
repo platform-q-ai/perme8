@@ -54,4 +54,38 @@ defmodule Agents.Sessions.Domain.Entities.LaneEntryTest do
       refute LaneEntry.cold?(LaneEntry.new(%{warm_state: :warming}))
     end
   end
+
+  describe "image field" do
+    test "defaults to nil" do
+      entry = LaneEntry.new(%{task_id: "task-1"})
+      assert entry.image == nil
+    end
+
+    test "stores image name when provided" do
+      entry = LaneEntry.new(%{task_id: "task-1", image: "perme8-opencode-light"})
+      assert entry.image == "perme8-opencode-light"
+    end
+  end
+
+  describe "light_image?/1" do
+    test "returns true for light image entries" do
+      entry = LaneEntry.new(%{task_id: "task-1", image: "perme8-opencode-light"})
+      assert LaneEntry.light_image?(entry)
+    end
+
+    test "returns false for heavyweight image entries" do
+      entry = LaneEntry.new(%{task_id: "task-1", image: "perme8-opencode"})
+      refute LaneEntry.light_image?(entry)
+    end
+
+    test "returns false for nil image" do
+      entry = LaneEntry.new(%{task_id: "task-1", image: nil})
+      refute LaneEntry.light_image?(entry)
+    end
+
+    test "returns false when image not set" do
+      entry = LaneEntry.new(%{task_id: "task-1"})
+      refute LaneEntry.light_image?(entry)
+    end
+  end
 end

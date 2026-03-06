@@ -3,6 +3,8 @@ defmodule Agents.Sessions.Domain.Entities.LaneEntry do
   Pure domain entity representing a task entry inside a queue lane.
   """
 
+  alias Agents.Sessions.Domain.Policies.ImagePolicy
+
   @type warm_state :: :cold | :warming | :warm | :hot
   @type lane :: :processing | :warm | :cold | :awaiting_feedback | :retry_pending
 
@@ -17,7 +19,8 @@ defmodule Agents.Sessions.Domain.Entities.LaneEntry do
           retry_count: non_neg_integer(),
           error: String.t() | nil,
           queued_at: DateTime.t() | nil,
-          started_at: DateTime.t() | nil
+          started_at: DateTime.t() | nil,
+          image: String.t() | nil
         }
 
   defstruct [
@@ -30,6 +33,7 @@ defmodule Agents.Sessions.Domain.Entities.LaneEntry do
     :error,
     :queued_at,
     :started_at,
+    :image,
     retry_count: 0,
     warm_state: :cold
   ]
@@ -56,4 +60,12 @@ defmodule Agents.Sessions.Domain.Entities.LaneEntry do
   @spec cold?(t()) :: boolean()
   def cold?(%__MODULE__{warm_state: :cold}), do: true
   def cold?(%__MODULE__{}), do: false
+
+  @doc """
+  Returns true when the entry uses a lightweight container image.
+
+  Delegates to `ImagePolicy` as the single source of truth for image classification.
+  """
+  @spec light_image?(t()) :: boolean()
+  def light_image?(%__MODULE__{image: image}), do: ImagePolicy.light_image?(image)
 end
