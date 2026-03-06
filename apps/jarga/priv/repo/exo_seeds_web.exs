@@ -23,6 +23,7 @@ Application.ensure_all_started(:bcrypt_elixir)
 {:ok, _} = Identity.Repo.start_link()
 {:ok, _} = Jarga.Repo.start_link()
 {:ok, _} = Notifications.Repo.start_link()
+{:ok, _} = Agents.Repo.start_link()
 
 # Start PubSub (required by context modules that broadcast events)
 Application.ensure_all_started(:perme8_events)
