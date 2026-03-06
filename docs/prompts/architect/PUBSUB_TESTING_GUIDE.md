@@ -287,6 +287,44 @@ For each feature that involves real-time updates:
 - [ ] **Event emitted after transaction** -- Not inside `Repo.transact` block (enforced by Credo check)
 - [ ] **Topic routing is correct** -- Event reaches workspace/user-scoped subscribers
 
+## Event Processing Observability
+
+### Never Silently Drop Unknown Events
+
+When processing external events (SSE streams, PubSub messages, webhook payloads), catch-all handlers must log unrecognized event types rather than silently discarding them.
+
+**Why:** Silent drops make it extremely difficult to diagnose why the UI isn't updating when event formats change or new event types are introduced. Logging unknown events provides an immediate signal during development and staging.
+
+**Pattern:**
+```elixir
+# Explicitly handle known no-op events BEFORE the catch-all
+def process_event(%{"type" => "todo.updated"}, socket), do: socket
+
+# Catch-all logs instead of silently dropping
+def process_event(event, socket) do
+  require Logger
+  Logger.debug("EventProcessor: unhandled event type=#{inspect(event["type"])}")
+  socket
+end
+```
+
+**Testing:**
+```elixir
+import ExUnit.CaptureLog
+
+test "unknown event type is logged" do
+  assert capture_log(fn ->
+    EventProcessor.process_event(%{"type" => "unknown.event"}, socket)
+  end) =~ "unhandled event type"
+end
+
+test "known no-op events are NOT logged" do
+  refute capture_log(fn ->
+    EventProcessor.process_event(%{"type" => "todo.updated"}, socket)
+  end) =~ "unhandled event type"
+end
+```
+
 ## Common Pitfalls
 
 ### Do Not Use Bare Tuples

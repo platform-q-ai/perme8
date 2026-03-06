@@ -18,6 +18,8 @@ This document outlines the core design principles for frontend development in th
   - [8. LiveView Streams Integration](#8-liveview-streams-integration)
   - [9. Phoenix LiveView Form Submission](#9-phoenix-liveview-form-submission)
   - [10. Phoenix Hook Class Patterns](#10-phoenix-hook-class-patterns)
+  - [11. localStorage and Client-side Persistence Patterns](#11-localstorage-and-client-side-persistence-patterns)
+  - [12. ProseMirror Plugin Event Handling](#12-prosemirror-plugin-event-handling)
 
 ---
 
@@ -1117,7 +1119,110 @@ export class MyHook extends ViewHook {
 
 ---
 
-### 11. ProseMirror Plugin Event Handling
+### 11. localStorage and Client-side Persistence Patterns
+
+When persisting state to localStorage (or sessionStorage) from Phoenix hooks, apply these rules to prevent stale data resurrection and ensure robust hydration.
+
+#### Staleness TTL for All Persisted State
+
+**CRITICAL**: Every piece of client-persisted state MUST have a time-to-live (TTL). Data persisted from a crashed tab, stale session, or previous browser session can silently corrupt the current UI state when hydrated without age checking.
+
+**Anti-pattern: No TTL Check**
+```typescript
+// BAD - Queued messages from a crashed tab persist indefinitely
+hydrateFromStorage(): QueuedMessage[] {
+  const raw = localStorage.getItem('queued_messages')
+  return raw ? JSON.parse(raw) : []  // Stale data from 3 days ago gets hydrated
+}
+```
+
+**Pattern: Staleness-checked Hydration**
+```typescript
+// GOOD - Filter stale entries before hydration
+private readonly STALE_TTL_MS = 120_000  // 120 seconds, matching server-side constant
+
+hydrateFromStorage(): QueuedMessage[] {
+  const raw = localStorage.getItem('queued_messages')
+  if (!raw) return []
+
+  const entries: QueuedMessage[] = JSON.parse(raw)
+  return entries.filter(entry => !this.isStale(entry))
+}
+
+private isStale(entry: QueuedMessage): boolean {
+  if (!entry.queued_at) return true  // Missing timestamp = stale
+  const age = Date.now() - entry.queued_at
+  return age > this.STALE_TTL_MS
+}
+```
+
+#### Draft Persistence with Timestamps
+
+When persisting user-authored drafts (textarea content), store a timestamp alongside the text:
+
+```typescript
+// GOOD - Timestamped storage format
+interface DraftEntry {
+  text: string
+  savedAt: number  // Date.now()
+}
+
+function saveDraft(key: string, text: string): void {
+  const entry: DraftEntry = { text, savedAt: Date.now() }
+  localStorage.setItem(key, JSON.stringify(entry))
+}
+
+function readDraft(key: string, ttlMs: number = 86_400_000): string {
+  const raw = localStorage.getItem(key)
+  if (!raw) return ''
+
+  // Backward compat: plain string from old format
+  try {
+    const entry: DraftEntry = JSON.parse(raw)
+    if (Date.now() - entry.savedAt > ttlMs) {
+      localStorage.removeItem(key)
+      return ''
+    }
+    return entry.text
+  } catch {
+    return raw  // Old format: plain string, treat as valid but migrate on next write
+  }
+}
+```
+
+#### Key Rules
+
+- ✅ ALL localStorage entries must include a timestamp (`savedAt`, `queued_at`, or equivalent)
+- ✅ ALL hydration paths must check staleness before using persisted data
+- ✅ TTL values should match server-side constants (e.g., `@optimistic_stale_seconds 120`)
+- ✅ Handle missing/invalid timestamps as stale (fail-safe)
+- ✅ Backward-compatible migration: if old format is plain string, accept it but write new format on next save
+- ✅ Extract staleness logic as pure functions for unit testing
+- ❌ Never hydrate persisted state without TTL validation
+- ❌ Never assume persisted state is from the current session
+
+#### Push Event Coordination
+
+When the server needs to override client-persisted state (e.g., restoring a draft after task cancellation), handle `push_event` from the server in the hook:
+
+```typescript
+// In the hook
+mounted(): void {
+  // Handle server-initiated draft restore
+  this.handleEvent('restore_draft', ({ text }: { text: string }) => {
+    this.el.value = text
+    this.saveDraft(text)  // Persist the server-provided value
+  })
+
+  // Hydrate from localStorage on mount (with staleness check)
+  const draft = readDraft(this.draftKey)
+  if (draft) {
+    this.el.value = draft
+  }
+}
+```
+
+### 12. ProseMirror Plugin Event Handling
 
 When building custom ProseMirror plugins, understanding the event processing order is critical for correct keyboard handling.
 
@@ -1392,4 +1497,5 @@ By following SOLID principles and Clean Architecture patterns in frontend code:
 8. Leverage Tailwind utilities for consistent, maintainable styling
 9. **Never use `form.submit()` in LiveView** - dispatch submit events instead to avoid page reloads
 10. **Always extend `ViewHook`** for Phoenix hooks and properly initialize in tests
-11. **Use `handleDOMEvents` in ProseMirror plugins** to intercept events before framework handlers, and access state via `pluginKey.getState(state)` not `this.getState()`
+11. **All localStorage state must have a staleness TTL** - never hydrate persisted data without checking its age
+12. **Use `handleDOMEvents` in ProseMirror plugins** to intercept events before framework handlers, and access state via `pluginKey.getState(state)` not `this.getState()`

@@ -1125,6 +1125,217 @@ test "optimistic update rolls back on error", %{conn: conn} do
 end
 ```
 
+### 12. Explicit State Machines for Complex LiveView State
+
+**When LiveView assigns grow beyond 5+ interdependent state variables, extract an explicit state machine module.**
+
+Implicit state machines -- where the current state is derived from the combination of multiple assigns checked in scattered `handle_event` and `handle_info` clauses -- are a recurring source of bugs. They create gaps where certain state combinations are unhandled and make it impossible to test state transitions in isolation.
+
+**Anti-pattern: Implicit State Machine**
+```elixir
+# BAD - State derived from 7+ assigns, checked inconsistently
+def handle_event("submit", _params, socket) do
+  cond do
+    task_running?(socket.assigns.current_task) ->
+      send_message_to_running_task(socket)
+    socket.assigns.composing_new ->
+      start_new_task(socket)
+    true ->
+      run_or_resume_task(socket)
+  end
+end
+
+# Scattered status checks with subtly different semantics
+def task_running?(task), do: task && task.status in ["pending", "starting", "running"]
+def active_task?(task), do: task && task.status in ["pending", "starting", "running", "queued", "awaiting_feedback"]
+# Bug: "queued" is active but not running -- submissions fall through to run_or_resume_task
+```
+
+**Pattern: Explicit State Machine Module**
+```elixir
+# GOOD - All states, transitions, and predicates in one testable module
+defmodule MyAppWeb.SessionStateMachine do
+  @type state :: :idle | :pending | :starting | :running | :queued | :awaiting_feedback | :completed | :failed | :cancelled
+
+  def state_from_status(nil), do: :idle
+  def state_from_status(%{status: status}), do: String.to_existing_atom(status)
+
+  def can_submit_message?(state), do: state in [:running, :queued, :awaiting_feedback]
+  def task_running?(state), do: state in [:pending, :starting, :running]
+  def active?(state), do: state in [:pending, :starting, :running, :queued, :awaiting_feedback]
+  def terminal?(state), do: state in [:completed, :failed, :cancelled]
+
+  def submission_route(state) when state in [:running, :queued, :awaiting_feedback], do: :follow_up
+  def submission_route(_state), do: :queue_or_start
+end
+```
+
+**When to extract a state machine:**
+- ✅ LiveView has 5+ interdependent assigns driving state
+- ✅ Multiple `handle_event`/`handle_info` clauses check overlapping status conditions
+- ✅ Status predicates (`running?`, `active?`, `submittable?`) exist in a helpers module
+- ✅ Different code paths treat the same status differently (e.g., "queued" is active but not running)
+- ✅ State transitions arrive from external sources (SSE events, PubSub) that may be out of order
+
+**Critical Rules:**
+- State machine modules are **pure functions** with no I/O -- testable in milliseconds
+- Place in the LiveView's module directory (e.g., `lib/live/sessions/session_state_machine.ex`)
+- All status string-to-atom conversions happen in one place (`state_from_status/1`)
+- Guard all event handlers against the current state -- reject stale events for terminal states
+- Unit test every state transition and predicate exhaustively
+
+### 13. Correlation-based Deduplication Over Content Matching
+
+**When matching optimistic/queued messages to confirmed backend messages, use correlation IDs as the primary strategy, not content comparison.**
+
+Content-based deduplication (matching by trimmed text content) is fragile:
+- Breaks when the backend normalizes whitespace differently
+- Fails when the user sends identical message text twice (FIFO assumption breaks on reorder)
+- Breaks when content extraction encounters an unrecognized format and returns nil
+
+**Anti-pattern: Content-based Dedup**
+```elixir
+# BAD - Match by trimmed content
+defp remove_matching_queued_message(socket, confirmed_content) do
+  trimmed = String.trim(confirmed_content)
+  Enum.reject(socket.assigns.queued_messages, fn msg ->
+    String.trim(msg.content) == trimmed
+  end)
+end
+```
+
+**Pattern: Correlation Key Dedup with Content Fallback**
+```elixir
+# GOOD - Match by correlation_key first, fall back to content
+defp remove_matching_queued_message(socket, event_info) do
+  correlation_key = resolve_correlation_key(event_info)
+
+  case remove_by_correlation_key(socket, correlation_key) do
+    {socket, true} -> socket
+    {socket, false} -> remove_by_content_fallback(socket, event_info)
+  end
+end
+```
+
+**When to use correlation IDs:**
+- ✅ Any optimistic UI that needs to reconcile local state with server-confirmed state
+- ✅ Message queues where duplicates are possible
+- ✅ Any pipeline where content may be transformed between send and echo
+- ✅ Always keep content matching as a backward-compatible fallback
+
+### 14. Bounded Async Dispatch (No Fire-and-Forget)
+
+**Every asynchronous operation spawned from a LiveView MUST guarantee a result callback (success or failure) within a bounded time.**
+
+Fire-and-forget patterns (`Task.start` without result tracking) leave state in limbo when the spawned work crashes or times out. The caller never learns about the failure, and the UI shows stale "pending" state indefinitely.
+
+**Anti-pattern: Untracked Fire-and-Forget**
+```elixir
+# BAD - If Task.start crashes or GenServer.call times out, no result message is ever sent
+def handle_info({:dispatch_follow_up, msg}, socket) do
+  Task.start(fn ->
+    result = MyContext.send_message(msg)
+    send(caller, {:send_result, msg.id, result})
+  end)
+  {:noreply, socket}
+end
+```
+
+**Pattern: Tracked Dispatch with Timeout**
+```elixir
+# GOOD - Guaranteed result within bounded time
+@dispatch_timeout_ms 30_000
+
+def handle_info({:dispatch_follow_up, msg}, socket) do
+  caller = self()
+  Task.start(fn ->
+    try do
+      result = MyContext.send_message(msg)
+      send(caller, {:send_result, msg.correlation_key, result})
+    rescue
+      e -> send(caller, {:send_result, msg.correlation_key, {:error, e}})
+    end
+  end)
+
+  # Schedule a timeout check
+  Process.send_after(self(), {:dispatch_timeout, msg.correlation_key}, @dispatch_timeout_ms)
+
+  socket = track_pending_dispatch(socket, msg.correlation_key)
+  {:noreply, socket}
+end
+
+def handle_info({:dispatch_timeout, correlation_key}, socket) do
+  if pending_dispatch?(socket, correlation_key) do
+    socket = mark_dispatch_timed_out(socket, correlation_key)
+    {:noreply, socket}
+  else
+    {:noreply, socket}  # Already resolved
+  end
+end
+```
+
+**Critical Rules:**
+- ✅ Wrap `Task.start` body in `try/rescue` to guarantee the result message is always sent
+- ✅ Use `Process.send_after` to set a timeout for every dispatched task
+- ✅ Track pending dispatches in an assign (e.g., `MapSet` or `Map` by correlation key)
+- ✅ Clean up tracking on success, failure, OR timeout
+- ❌ Never use bare `Task.start` for operations that update UI state
+- ❌ Never assume the spawned task will always succeed and send a result
+
+### 15. Centralizing External Field Name Resolution
+
+**When consuming events from external SDKs that use inconsistent field naming, centralize all field name resolution in one module.**
+
+External APIs and SDKs often have field naming inconsistencies (`messageID` vs `messageId` vs `message_id`). When resolution logic is spread across 5+ functions, a new SDK variant requires updating multiple locations, creating regression risk.
+
+**Anti-pattern: Scattered Field Resolution**
+```elixir
+# BAD - Same pattern repeated in multiple functions
+def extract_message_id(part), do: part["id"] || part["messageID"] || part["messageId"]
+def extract_tool_id(part), do: part["id"] || part["toolCallID"] || part["toolCallId"]
+# ... duplicated in 5 more places
+```
+
+**Pattern: Centralized Resolver Module**
+```elixir
+# GOOD - One module, one source of truth
+defmodule MyAppWeb.SdkFieldResolver do
+  @moduledoc "Centralizes field name resolution for external SDK events."
+
+  def resolve_message_id(map), do: map["id"] || map["messageID"] || map["messageId"]
+  def resolve_correlation_key(map), do: map["correlationKey"] || map["correlation_key"]
+  def resolve_tool_call_id(map), do: map["id"] || map["toolCallID"] || map["toolCallId"] || map["callID"]
+end
+```
+
+### 16. Event Processing Observability
+
+**Never silently drop unknown or malformed events. Always log unrecognized events to aid debugging.**
+
+Catch-all event handlers that return unchanged state without logging create silent data loss. When event formats change or new event types are added, the silent drop makes it extremely difficult to diagnose why the UI isn't updating.
+
+**Anti-pattern: Silent Drop**
+```elixir
+# BAD - Unknown events silently vanish
+def process_event(_event, socket), do: socket
+```
+
+**Pattern: Logged Drop**
+```elixir
+# GOOD - Unknown events are logged for debugging
+def process_event(event, socket) do
+  require Logger
+  Logger.debug("EventProcessor: unhandled event type=#{inspect(event["type"])}", event_type: event["type"])
+  socket
+end
+```
+
+**Rules:**
+- ✅ Log at `:debug` level to avoid noise in production
+- ✅ Include the event type in structured metadata for machine-readable logs
+- ✅ Explicitly handle known no-op events (like `todo.updated`) BEFORE the catch-all to avoid false logging
+- ✅ Consider feature-flagging verbose logging for dev/staging environments
+
 ---
 
 ## Summary: Clean Architecture Checklist
@@ -1173,6 +1384,12 @@ When reviewing or writing code, check these principles:
 - [ ] LiveView UI is optimistic -- update assigns/streams immediately on user action, before awaiting server confirmation
 - [ ] LiveView UI is event-driven -- all state changes from other users/processes arrive via PubSub `handle_info/2`
 - [ ] Rollback path exists for every optimistic update (handle failure in the use-case callback or `handle_info`)
+- [ ] Complex LiveView state (5+ interdependent assigns) is modeled as an explicit, unit-tested state machine module
+- [ ] Optimistic deduplication uses correlation IDs as primary match strategy (content matching only as fallback)
+- [ ] All async operations spawned from LiveView have bounded timeouts and guaranteed result callbacks
+- [ ] External SDK field name resolution is centralized in a single resolver module
+- [ ] Unknown/unrecognized events are logged, never silently dropped
+- [ ] Server-side form pre-fill for `phx-update="ignore"` elements uses push events, not assigns
 
 **When in doubt, ask:**
 1. Can I test this without a database? (Domain should be yes)
@@ -1180,3 +1397,6 @@ When reviewing or writing code, check these principles:
 3. Are dependencies injectable?
 4. Am I accessing another context's internals? (Should be no)
 5. Is business logic in the right layer?
+6. Is there an implicit state machine that should be extracted?
+7. Am I using content comparison where a correlation ID would be more reliable?
+8. Can this async operation fail silently without anyone knowing?

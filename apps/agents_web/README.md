@@ -48,13 +48,45 @@ Main sessions interface for running coding tasks in ephemeral opencode container
 - Task history with colour-coded status badges
 - Cancel / delete / resume actions
 
+## Key Modules
+
+| Module | File | Purpose |
+|--------|------|---------|
+| `SessionStateMachine` | `lib/live/sessions/session_state_machine.ex` | Explicit state machine for session lifecycle -- all state predicates and submission routing |
+| `SdkFieldResolver` | `lib/live/sessions/sdk_field_resolver.ex` | Centralized field name resolution for external SDK event variants |
+| `EventProcessor` | `lib/live/sessions/event_processor.ex` | SSE event dispatch, correlation-key dedup, output_parts transforms |
+| `Helpers` | `lib/live/sessions/helpers.ex` | Pure helper functions delegating to the state machine |
+
 ## JS Hooks
 
 | Hook | File | Purpose |
 |------|------|---------|
 | `SessionLog` | `assets/js/presentation/hooks/session-log-hook.ts` | Auto-scrolls event log using MutationObserver |
-| `SessionForm` | `assets/js/presentation/hooks/session-form-hook.ts` | Enter-to-submit, Shift+Enter-for-newline |
+| `SessionForm` | `assets/js/presentation/hooks/session-form-hook.ts` | Enter-to-submit, Shift+Enter-for-newline, draft persistence with staleness TTL |
+| `SessionOptimisticState` | `assets/js/presentation/hooks/session-optimistic-state-hook.ts` | localStorage bridge for optimistic queue state with staleness TTL |
 | `ConcurrencyLimit` | `assets/js/presentation/hooks/concurrency-limit-hook.ts` | Synchronizes queue concurrency selector with LiveView events |
+
+## Architectural Patterns
+
+### Explicit State Machine
+
+Session state is modeled as an explicit `SessionStateMachine` module rather than derived from scattered assign checks. All status predicates (`task_running?`, `active_task?`, `can_submit_message?`) delegate to the state machine. This eliminates gaps where certain statuses (e.g., "queued") were handled inconsistently.
+
+### Correlation-key Deduplication
+
+Optimistic message deduplication uses `correlation_key` as the primary match strategy, with content-based matching as a backward-compatible fallback. This prevents failures when duplicate content is sent or when whitespace normalization differs.
+
+### Bounded Async Dispatch
+
+Follow-up message dispatch uses `Process.send_after` timeouts to guarantee that every dispatched operation produces a result callback (success, failure, or timeout) within a bounded time window. No fire-and-forget `Task.start` without tracking.
+
+### Form Pre-fill via Push Events
+
+Server-side form pre-fill for the `phx-update="ignore"` textarea uses `push_event("restore_draft", ...)` instead of relying on assigns, since LiveView skips DOM patching for ignored elements.
+
+### localStorage Staleness TTL
+
+All client-persisted state (queued messages, drafts) includes timestamps and is validated against a staleness TTL during hydration to prevent stale data resurrection from crashed tabs.
 
 ## Dependencies
 
