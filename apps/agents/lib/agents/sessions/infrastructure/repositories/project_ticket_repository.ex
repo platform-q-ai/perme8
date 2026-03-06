@@ -32,18 +32,36 @@ defmodule Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository do
   def reorder_positions(ordered_numbers) when is_list(ordered_numbers) do
     count = length(ordered_numbers)
 
-    Repo.transaction(fn ->
-      ordered_numbers
-      |> Enum.with_index()
-      |> Enum.each(fn {number, index} ->
-        # First in the display list gets the highest position value
-        position = count - 1 - index
+    if count > 0 do
+      # Build a single UPDATE ... FROM (VALUES ...) to avoid N+1 writes.
+      # First in the display list gets the highest position value.
+      pairs =
+        ordered_numbers
+        |> Enum.with_index()
+        |> Enum.map(fn {number, index} -> {number, count - 1 - index} end)
 
-        ProjectTicketSchema
-        |> where([t], t.number == ^number)
-        |> Repo.update_all(set: [position: position])
-      end)
-    end)
+      # Use parameterized placeholders: ($1, $2), ($3, $4), ...
+      {placeholders, params} =
+        pairs
+        |> Enum.with_index()
+        |> Enum.map_reduce([], fn {{num, pos}, idx}, acc ->
+          p1 = idx * 2 + 1
+          p2 = idx * 2 + 2
+          {"($#{p1}::integer, $#{p2}::integer)", acc ++ [num, pos]}
+        end)
+
+      values_clause = Enum.join(placeholders, ", ")
+
+      Repo.query!(
+        """
+        UPDATE sessions_project_tickets AS t
+        SET position = v.pos
+        FROM (VALUES #{values_clause}) AS v(num, pos)
+        WHERE t.number = v.num
+        """,
+        params
+      )
+    end
 
     :ok
   end
