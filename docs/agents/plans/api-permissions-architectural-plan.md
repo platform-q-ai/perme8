@@ -165,38 +165,38 @@ foundation — everything else depends on it.
 
 ---
 
-## Phase 3: Identity Application — Use Cases and Facade (phoenix-tdd)
+## Phase 3: Identity Application — Use Cases and Facade (phoenix-tdd) ✓
 
 > Application layer. Tests use `Identity.DataCase` with mocked dependencies via opts.
 
 ### 3.1 CreateApiKey Use Case — Accept `permissions` Attribute
 
-- [ ] ⏸ **RED**: Update test `apps/identity/test/identity/application/use_cases/create_api_key_test.exs`
+- [x] ⏸ **RED**: Update test `apps/identity/test/identity/application/use_cases/create_api_key_test.exs`
   - Tests:
     - Creating with `permissions: ["agents:read", "mcp:knowledge.*"]` stores permissions on key
     - Creating without `permissions` key stores `nil` (backward compat)
     - Creating with `permissions: []` stores empty list
     - Creating with `permissions: ["*"]` stores `["*"]`
-- [ ] ⏸ **GREEN**: Update `apps/identity/lib/identity/application/use_cases/create_api_key.ex`
+- [x] ⏸ **GREEN**: Update `apps/identity/lib/identity/application/use_cases/create_api_key.ex`
   - Pass `permissions` from `attrs` into `build_api_key_attrs/3`
   - Add `permissions: attrs[:permissions]` to the attrs map
-- [ ] ⏸ **REFACTOR**: Keep use case focused on orchestration
+- [x] ⏸ **REFACTOR**: Keep use case focused on orchestration
 
 ### 3.2 UpdateApiKey Use Case — Accept `permissions` Attribute
 
-- [ ] ⏸ **RED**: Update test `apps/identity/test/identity/application/use_cases/update_api_key_test.exs`
+- [x] ⏸ **RED**: Update test `apps/identity/test/identity/application/use_cases/update_api_key_test.exs`
   - Tests:
     - Updating with `permissions: ["agents:read"]` updates permissions
     - Updating with `permissions: nil` does not overwrite existing permissions
     - Updating with `permissions: []` sets empty permissions
     - Updating other fields without `permissions` key does not change permissions
-- [ ] ⏸ **GREEN**: Update `apps/identity/lib/identity/application/use_cases/update_api_key.ex`
+- [x] ⏸ **GREEN**: Update `apps/identity/lib/identity/application/use_cases/update_api_key.ex`
   - Add `:permissions` to the `Map.take(attrs, [...])` list in `execute/4`
-- [ ] ⏸ **REFACTOR**: Verify existing authorization (ownership check) still applies
+- [x] ⏸ **REFACTOR**: Verify existing authorization (ownership check) still applies
 
 ### 3.3 Identity Facade — Add `api_key_has_permission?/2`
 
-- [ ] ⏸ **RED**: Write test in `apps/identity/test/identity_test.exs` (or update existing)
+- [x] ⏸ **RED**: Write test in `apps/identity/test/identity_test.exs` (or update existing)
   - Tests:
     - `Identity.api_key_has_permission?/2` delegates to `ApiKeyPermissionPolicy.has_permission?/2`
     - Accepts an `%ApiKey{}` entity and a required scope string
@@ -205,7 +205,7 @@ foundation — everything else depends on it.
     - Returns `true` for nil permissions (backward compat)
     - `Identity.create_api_key/2` with permissions attr works end-to-end
     - `Identity.update_api_key/3` with permissions attr works end-to-end
-- [ ] ⏸ **GREEN**: Update `apps/identity/lib/identity.ex`
+- [x] ⏸ **GREEN**: Update `apps/identity/lib/identity.ex`
   - Add `api_key_has_permission?/2` public function:
     ```elixir
     def api_key_has_permission?(%ApiKey{} = api_key, required_scope) do
@@ -213,22 +213,22 @@ foundation — everything else depends on it.
     end
     ```
   - Add `ApiKeyPermissionPolicy` to boundary exports (other apps need to call `Identity.api_key_has_permission?/2` which is the facade function, but the policy may also be useful for presets)
-- [ ] ⏸ **REFACTOR**: Keep facade thin — single-line delegation
+- [x] ⏸ **REFACTOR**: Keep facade thin — single-line delegation
 
 ### 3.4 Boundary Configuration — Export New Policy
 
-- [ ] ⏸ **RED**: Verify `mix boundary` passes after adding the new policy module
-- [ ] ⏸ **GREEN**: Update `apps/identity/lib/identity.ex` boundary exports:
+- [x] ⏸ **RED**: Verify `mix boundary` passes after adding the new policy module
+- [x] ⏸ **GREEN**: Update `apps/identity/lib/identity.ex` boundary exports:
   - Add `Domain.Policies.ApiKeyPermissionPolicy` to exports list (for consuming apps to call `Identity.api_key_has_permission?/2` and access presets/scopes)
-- [ ] ⏸ **REFACTOR**: Minimal exports — only what consuming apps need
+- [x] ⏸ **REFACTOR**: Minimal exports — only what consuming apps need
 
 ### Phase 3 Validation
 
-- [ ] ⏸ CreateApiKey tests pass: `mix test apps/identity/test/identity/application/use_cases/create_api_key_test.exs`
-- [ ] ⏸ UpdateApiKey tests pass: `mix test apps/identity/test/identity/application/use_cases/update_api_key_test.exs`
-- [ ] ⏸ Facade tests pass: `mix test apps/identity/test/identity_test.exs`
-- [ ] ⏸ No boundary violations: `mix boundary`
-- [ ] ⏸ Full identity test suite passes: `mix test apps/identity/test/`
+- [x] ⏸ CreateApiKey tests pass: `mix test apps/identity/test/identity/application/use_cases/create_api_key_test.exs`
+- [x] ⏸ UpdateApiKey tests pass: `mix test apps/identity/test/identity/application/use_cases/update_api_key_test.exs`
+- [x] ⏸ Facade tests pass: `mix test apps/identity/test/identity_test.exs`
+- [x] ⏸ No boundary violations: `mix boundary` (task unavailable; verified via `mix compile` and no boundary warnings)
+- [x] ⏸ Full identity test suite passes: `mix test apps/identity/test/`
 
 ---
 

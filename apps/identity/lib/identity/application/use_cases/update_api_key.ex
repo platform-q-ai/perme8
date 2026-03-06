@@ -47,7 +47,7 @@ defmodule Identity.Application.UseCases.UpdateApiKey do
     with {:ok, api_key} <- api_key_repo.get_by_id(repo, api_key_id),
          :ok <- authorize_management(api_key, user_id),
          :ok <- validate_workspace_access(workspaces, user_id, workspace_access) do
-      update_attrs = Map.take(attrs, [:name, :description, :workspace_access])
+      update_attrs = Map.take(attrs, [:name, :description, :workspace_access, :permissions])
       api_key_repo.update(repo, api_key.id, update_attrs)
     else
       {:error, :not_found} -> {:error, :not_found}
