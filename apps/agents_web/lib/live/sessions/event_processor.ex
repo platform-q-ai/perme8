@@ -10,6 +10,8 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
 
   import Phoenix.Component, only: [assign: 3]
 
+  require Logger
+
   alias Agents.Sessions.Domain.Entities.{TodoItem, TodoList}
   alias AgentsWeb.SessionsLive.SdkFieldResolver
 
@@ -206,7 +208,6 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
   def process_event(%{"type" => "todo.updated"}, socket), do: socket
 
   def process_event(%{"type" => type} = _event, socket) do
-    require Logger
     Logger.warning("EventProcessor: unhandled event type=#{inspect(type)}")
     socket
   end

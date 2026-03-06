@@ -8,6 +8,8 @@ defmodule AgentsWeb.SessionsLive.Index do
 
   alias Agents.Sessions
   alias Agents.Sessions.Domain.Entities.TodoList
+  require Logger
+
   alias AgentsWeb.SessionsLive.EventProcessor
   alias AgentsWeb.SessionsLive.SessionStateMachine
 
@@ -1271,7 +1273,6 @@ defmodule AgentsWeb.SessionsLive.Index do
   def handle_info({:follow_up_timeout, correlation_key, timeout_ref}, socket) do
     case Map.get(socket.assigns.pending_follow_ups, correlation_key) do
       %{ref: ^timeout_ref} ->
-        require Logger
         Logger.warning("Follow-up dispatch timed out for correlation_key=#{correlation_key}")
 
         {:noreply,
