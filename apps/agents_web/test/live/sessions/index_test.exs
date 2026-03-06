@@ -2922,16 +2922,24 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       })
     end
 
-    test "pausing an in-progress non-ticket session pushes restore_draft", %{
+    test "pausing an in-progress non-ticket session restores the last user message", %{
       conn: conn,
       user: user
     } do
+      output =
+        Jason.encode!([
+          %{"type" => "user", "id" => "u1", "text" => "Refactor the auth module"},
+          %{"type" => "text", "id" => "t1", "text" => "Sure, I'll refactor..."},
+          %{"type" => "user", "id" => "u2", "text" => "Also fix the tests"}
+        ])
+
       task =
         task_fixture(%{
           user_id: user.id,
           instruction: "Refactor the auth module",
           container_id: "c-refactor",
-          status: "running"
+          status: "running",
+          output: output
         })
 
       {:ok, lv, _html} = live(conn, ~p"/sessions")
@@ -2941,19 +2949,28 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       |> element(~s([phx-click="pause_session"][phx-value-task-id="#{task.id}"]))
       |> render_click()
 
-      assert_push_event(lv, "restore_draft", %{text: "Refactor the auth module"})
+      # Should restore the LAST user message, not the original instruction
+      assert_push_event(lv, "restore_draft", %{text: "Also fix the tests"})
     end
 
-    test "cancelling the currently viewed task pushes restore_draft", %{
+    test "cancelling the currently viewed task restores the last user message", %{
       conn: conn,
       user: user
     } do
-      task =
+      output =
+        Jason.encode!([
+          %{"type" => "user", "id" => "u1", "text" => "Write tests for login"},
+          %{"type" => "text", "id" => "t1", "text" => "I'll write some tests..."},
+          %{"type" => "user", "id" => "u2", "text" => "Focus on edge cases"}
+        ])
+
+      _task =
         task_fixture(%{
           user_id: user.id,
           instruction: "Write tests for login",
           container_id: "c-cancel",
-          status: "running"
+          status: "running",
+          output: output
         })
 
       {:ok, lv, _html} = live(conn, ~p"/sessions?container=c-cancel")
@@ -2963,7 +2980,42 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       |> element(~s([phx-click="cancel_task"]))
       |> render_click()
 
-      assert_push_event(lv, "restore_draft", %{text: "Write tests for login"})
+      # Should restore the LAST user message, not the original instruction
+      assert_push_event(lv, "restore_draft", %{text: "Focus on edge cases"})
+    end
+
+    test "falls back to instruction when task has no output", %{
+      conn: conn,
+      user: user
+    } do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "pick up ticket #99 using the relevant skill",
+        container_id: "c-ticket-99",
+        status: "queued"
+      })
+
+      ProjectTicketRepository.sync_remote_ticket(%{
+        number: 99,
+        title: "No-output ticket",
+        status: "Backlog",
+        priority: "Need",
+        size: "M",
+        labels: []
+      })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+      send(lv.pid, {:tickets_synced, []})
+      _ = render(lv)
+
+      lv
+      |> element(~s([data-testid="pause-ticket-99"]))
+      |> render_click()
+
+      # No output → falls back to original instruction
+      assert_push_event(lv, "restore_draft", %{
+        text: "pick up ticket #99 using the relevant skill"
+      })
     end
   end
 end
