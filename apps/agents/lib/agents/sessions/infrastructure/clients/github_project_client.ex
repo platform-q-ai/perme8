@@ -83,7 +83,11 @@ defmodule Agents.Sessions.Infrastructure.Clients.GithubProjectClient do
   defp fetch_all_pages(token, org, repo, page, acc) do
     url = "#{@api_base}/repos/#{org}/#{repo}/issues?state=open&per_page=100&page=#{page}"
 
-    case Req.get(url, headers: rest_headers(token)) do
+    case Req.get(url,
+           headers: rest_headers(token),
+           receive_timeout: 15_000,
+           connect_timeout: 5_000
+         ) do
       {:ok, %{status: 200, body: body}} when is_list(body) ->
         issues =
           body
