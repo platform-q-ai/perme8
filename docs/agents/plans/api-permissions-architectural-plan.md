@@ -114,19 +114,19 @@ foundation — everything else depends on it.
 
 ---
 
-## Phase 2: Identity Infrastructure — Schema, Migration, Repository (phoenix-tdd)
+## Phase 2: Identity Infrastructure — Schema, Migration, Repository (phoenix-tdd) ✓
 
 > Infrastructure layer. Tests use `Identity.DataCase`.
 
 ### 2.1 Migration — Add `permissions` Column
 
-- [ ] ⏸ **GREEN**: Create `apps/identity/priv/repo/migrations/[timestamp]_add_permissions_to_api_keys.exs`
+- [x] ⏸ **GREEN**: Create `apps/identity/priv/repo/migrations/[timestamp]_add_permissions_to_api_keys.exs`
   - Add `permissions` column to `api_keys` table: `{:array, :string}`, nullable, default `nil`
   - No data migration needed — existing rows with `nil` are treated as full access
 
 ### 2.2 ApiKeySchema — Add `permissions` Field and Changeset
 
-- [ ] ⏸ **RED**: Update test `apps/identity/test/identity/infrastructure/schemas/api_key_schema_test.exs`
+- [x] ⏸ **RED**: Update test `apps/identity/test/identity/infrastructure/schemas/api_key_schema_test.exs`
   - Tests:
     - Schema has `permissions` field (`:array, :string`)
     - `changeset/2` casts `permissions` attribute
@@ -135,33 +135,33 @@ foundation — everything else depends on it.
     - `changeset/2` accepts valid scope strings list
     - `changeset/2` validates max 100 permissions (length constraint)
     - `to_entity/1` includes `permissions` in the mapped entity
-- [ ] ⏸ **GREEN**: Update `apps/identity/lib/identity/infrastructure/schemas/api_key_schema.ex`
+- [x] ⏸ **GREEN**: Update `apps/identity/lib/identity/infrastructure/schemas/api_key_schema.ex`
   - Add `field(:permissions, {:array, :string})` to schema (no default — nil by default)
   - Add `:permissions` to `changeset/2` cast list
   - Add `validate_length(:permissions, max: 100)` constraint
   - Update `to_entity/1` to include `permissions` field
-- [ ] ⏸ **REFACTOR**: Keep changeset focused on cast/validation only
+- [x] ⏸ **REFACTOR**: Keep changeset focused on cast/validation only
 
 ### 2.3 ApiKeyRepository — Pass Through `permissions` in Insert/Update
 
-- [ ] ⏸ **RED**: Update test `apps/identity/test/identity/infrastructure/repositories/api_key_repository_test.exs`
+- [x] ⏸ **RED**: Update test `apps/identity/test/identity/infrastructure/repositories/api_key_repository_test.exs`
   - Tests:
     - `insert/2` with permissions attribute stores and returns permissions
     - `insert/2` without permissions stores nil
     - `update/3` with permissions attribute updates and returns permissions
     - `get_by_id/2` returns entity with permissions field
     - `get_by_hashed_token/2` returns entity with permissions field
-- [ ] ⏸ **GREEN**: Update `apps/identity/lib/identity/infrastructure/repositories/api_key_repository.ex`
+- [x] ⏸ **GREEN**: Update `apps/identity/lib/identity/infrastructure/repositories/api_key_repository.ex`
   - No functional changes needed — the repository delegates to schema changeset which now handles `permissions`
   - Verify that `insert`, `update`, `get_by_id`, `get_by_hashed_token` all correctly flow permissions through
-- [ ] ⏸ **REFACTOR**: Confirm thin wrapper principle — no business logic in repository
+- [x] ⏸ **REFACTOR**: Confirm thin wrapper principle — no business logic in repository
 
 ### Phase 2 Validation
 
-- [ ] ⏸ Migration runs: `mix ecto.migrate`
-- [ ] ⏸ All schema tests pass: `mix test apps/identity/test/identity/infrastructure/schemas/api_key_schema_test.exs`
-- [ ] ⏸ All repository tests pass: `mix test apps/identity/test/identity/infrastructure/repositories/api_key_repository_test.exs`
-- [ ] ⏸ No boundary violations: `mix boundary`
+- [x] ⏸ Migration runs: `mix ecto.migrate`
+- [x] ⏸ All schema tests pass: `mix test apps/identity/test/identity/infrastructure/schemas/api_key_schema_test.exs`
+- [x] ⏸ All repository tests pass: `mix test apps/identity/test/identity/infrastructure/repositories/api_key_repository_test.exs`
+- [x] ⏸ No boundary violations: `mix boundary` (task unavailable; verified via `mix compile` and no boundary warnings)
 
 ---
 
