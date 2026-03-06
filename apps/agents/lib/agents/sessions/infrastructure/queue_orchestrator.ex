@@ -113,6 +113,10 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
     {:reply, :ok, state}
   end
 
+  # After schedule_retry moves the task to "queued" with retry_count > 0,
+  # promote_and_broadcast is safe: QueueEngine.promotable_tasks/1 only returns
+  # :warm and :cold entries, never :retry_pending. Retry-pending tasks wait
+  # for their scheduled {:retry_task, id} timer before becoming promotable.
   @impl true
   def handle_call({:notify_task_failed, task_id}, _from, state) do
     state = handle_task_failure(state, task_id)
