@@ -31,11 +31,68 @@ The levels are cumulative. Each one builds on the previous. Skipping levels crea
 | **4** | Autonomous Validation | Agent | Implements, tests, and verifies autonomously | Spot-checks, defines acceptance criteria |
 | **5** | Autonomous Release | Agent | Full cycle: plan, build, validate, deploy | Sets policy, monitors outcomes |
 
+### Level Progression
+
+```mermaid
+graph LR
+    L0["<b>Level 0</b><br/>Vibe-Coding"]:::l0
+    L1["<b>Level 1</b><br/>Structured<br/>Prompting"]:::l1
+    L2["<b>Level 2</b><br/>Supervised<br/>Workflows"]:::l2
+    L3["<b>Level 3</b><br/>Autonomous<br/>Implementation"]:::l3
+    L4["<b>Level 4</b><br/>Autonomous<br/>Validation"]:::l4
+    L5["<b>Level 5</b><br/>Autonomous<br/>Release"]:::l5
+
+    L0 -->|"rules file<br/>basic CI"| L1
+    L1 -->|"structured prompts<br/>test coverage"| L2
+    L2 -->|"named workflows<br/>ownership rules"| L3
+    L3 -->|"comprehensive CI<br/>observability"| L4
+    L4 -->|"trusted validation<br/>policy framework"| L5
+
+    classDef l0 fill:#94a3b8,stroke:#64748b,color:#fff,stroke-width:2px
+    classDef l1 fill:#4a9eff,stroke:#2563eb,color:#fff,stroke-width:2px
+    classDef l2 fill:#8b5cf6,stroke:#7c3aed,color:#fff,stroke-width:2px
+    classDef l3 fill:#f59e0b,stroke:#d97706,color:#fff,stroke-width:2px
+    classDef l4 fill:#ef4444,stroke:#dc2626,color:#fff,stroke-width:2px
+    classDef l5 fill:#10b981,stroke:#059669,color:#fff,stroke-width:2px
+```
+
+### Autonomy vs. Oversight
+
+```mermaid
+quadrantChart
+    title Agent Autonomy vs. Human Oversight
+    x-axis "Low Agent Autonomy" --> "High Agent Autonomy"
+    y-axis "Low Human Oversight" --> "High Human Oversight"
+    "Level 0: Vibe-Coding": [0.1, 0.15]
+    "Level 1: Structured": [0.25, 0.8]
+    "Level 2: Supervised": [0.5, 0.75]
+    "Level 3: Autonomous Impl": [0.7, 0.5]
+    "Level 4: Autonomous Val": [0.85, 0.35]
+    "Level 5: Autonomous Release": [0.95, 0.2]
+```
+
 ---
 
 ## Level 0 -- Vibe-Coding
 
 > "Just talk to it and see what happens."
+
+```mermaid
+flowchart LR
+    DEV((Developer)):::human
+    CHAT[Chat with<br/>Claude]:::agent
+    CODE[Copy-paste<br/>into codebase]:::manual
+    TEST[Manual<br/>testing]:::manual
+    DEPLOY[git push<br/>& hope]:::manual
+
+    DEV -->|"ad-hoc prompt"| CHAT
+    CHAT -->|"generated code"| DEV
+    DEV --> CODE --> TEST --> DEPLOY
+
+    classDef human fill:#3b82f6,stroke:#2563eb,color:#fff,stroke-width:2px
+    classDef agent fill:#94a3b8,stroke:#64748b,color:#fff,stroke-width:2px
+    classDef manual fill:#f97316,stroke:#ea580c,color:#fff,stroke-width:2px
+```
 
 ### Goal
 
@@ -91,6 +148,42 @@ Developer: [commits, pushes, deploys manually]
 ## Level 1 -- Structured Prompting
 
 > "Give it context and constraints, not just wishes."
+
+```mermaid
+flowchart LR
+    TICKET[Ticket with<br/>acceptance criteria]:::human
+    PROMPT[Structured<br/>prompt]:::human
+    AGENT[Agent works<br/>in codebase]:::agent
+    TESTS[Agent writes<br/>tests]:::agent
+    BRANCH[Feature<br/>branch + PR]:::agent
+    REVIEW[Human<br/>reviews PR]:::human
+    MERGE[Merge +<br/>CI deploys]:::auto
+
+    TICKET --> PROMPT --> AGENT --> TESTS --> BRANCH --> REVIEW --> MERGE
+
+    classDef human fill:#3b82f6,stroke:#2563eb,color:#fff,stroke-width:2px
+    classDef agent fill:#8b5cf6,stroke:#7c3aed,color:#fff,stroke-width:2px
+    classDef auto fill:#10b981,stroke:#059669,color:#fff,stroke-width:2px
+```
+
+### What Changes from Level 0
+
+```mermaid
+flowchart TB
+    subgraph L0["Level 0"]
+        direction LR
+        A0["Ad-hoc chat"] --> B0["Copy-paste"] --> C0["Manual test"] --> D0["git push"]
+    end
+    subgraph L1["Level 1"]
+        direction LR
+        A1["Ticket + rules file"] --> B1["Agent in codebase"] --> C1["Agent writes tests"] --> D1["PR + CI"]
+    end
+
+    L0 -..->|"What changes"| L1
+
+    style L0 fill:#fef3c7,stroke:#f59e0b,color:#333
+    style L1 fill:#dbeafe,stroke:#3b82f6,color:#333
+```
 
 ### Goal
 
@@ -157,6 +250,26 @@ Move from ad-hoc prompting to deliberate, structured interactions. The agent ope
 ## Level 2 -- Supervised Workflows
 
 > "Chain the steps together. The agent runs the workflow; humans approve at gates."
+
+```mermaid
+flowchart LR
+    TICKET[Ticket]:::human
+    PLAN[Agent<br/>produces plan]:::agent
+    GATE1{GATE 1<br/>Plan review}:::gate
+    IMPL[Agent implements<br/>in phases<br/>TDD + commits]:::agent
+    PR[Agent creates<br/>PR]:::agent
+    GATE2{GATE 2<br/>PR review}:::gate
+    DEPLOY[CI deploys<br/>on merge]:::auto
+
+    TICKET --> PLAN --> GATE1
+    GATE1 -->|"approved"| IMPL --> PR --> GATE2
+    GATE2 -->|"approved"| DEPLOY
+
+    classDef human fill:#3b82f6,stroke:#2563eb,color:#fff,stroke-width:2px
+    classDef agent fill:#8b5cf6,stroke:#7c3aed,color:#fff,stroke-width:2px
+    classDef gate fill:#f59e0b,stroke:#d97706,color:#fff,stroke-width:2px
+    classDef auto fill:#10b981,stroke:#059669,color:#fff,stroke-width:2px
+```
 
 ### Goal
 
@@ -242,6 +355,35 @@ The agent executes multi-step workflows autonomously, but stops at defined check
 
 > "Give it the problem. It figures out the solution."
 
+```mermaid
+flowchart TB
+    TICKET[Ticket]:::human
+    EXPLORE[Agent explores<br/>codebase]:::agent
+    PRD[Agent produces<br/>PRD if needed]:::agent
+    PLAN[Agent creates<br/>plan]:::agent
+    BDD[Agent generates<br/>BDD feature files]:::agent
+    DRAFT[Draft PR for<br/>feature file review]:::gate
+    TDD[Agent implements<br/>TDD phases]:::agent
+    CI_FIX[Agent self-fixes<br/>CI failures]:::agent
+    REVIEW[Review agent<br/>reviews PR]:::review
+    ADDRESS[Agent addresses<br/>review comments]:::agent
+    READY[PR ready]:::agent
+    SPOT[Human spot-check<br/>5 min]:::human
+    DEPLOY[Merge +<br/>auto-deploy]:::auto
+
+    TICKET --> EXPLORE --> PRD --> PLAN --> BDD --> DRAFT
+    DRAFT -->|"approved"| TDD --> CI_FIX --> REVIEW
+    REVIEW --> ADDRESS --> READY --> SPOT --> DEPLOY
+    CI_FIX -.->|"fix & retry"| CI_FIX
+    ADDRESS -.->|"re-review"| REVIEW
+
+    classDef human fill:#3b82f6,stroke:#2563eb,color:#fff,stroke-width:2px
+    classDef agent fill:#8b5cf6,stroke:#7c3aed,color:#fff,stroke-width:2px
+    classDef review fill:#ec4899,stroke:#db2777,color:#fff,stroke-width:2px
+    classDef gate fill:#f59e0b,stroke:#d97706,color:#fff,stroke-width:2px
+    classDef auto fill:#10b981,stroke:#059669,color:#fff,stroke-width:2px
+```
+
 ### Goal
 
 The agent owns the entire implementation lifecycle -- from ticket to PR. Humans shift from directing the work to reviewing the outcomes. The agent plans its own approach, writes its own tests, and resolves its own review comments.
@@ -325,6 +467,41 @@ The agent owns the entire implementation lifecycle -- from ticket to PR. Humans 
 ## Level 4 -- Autonomous Validation
 
 > "The agent proves its own work is correct. Humans verify the verification."
+
+```mermaid
+flowchart TB
+    TICKET[Ticket]:::human
+    CLASSIFY{Agent classifies<br/>risk level}:::agent
+
+    CLASSIFY -->|"LOW / MEDIUM"| IMPL_LO[Agent plans +<br/>implements]:::agent
+    CLASSIFY -->|"HIGH / CRITICAL"| FLAG[Agent flags<br/>for human]:::gate
+
+    FLAG -->|"plan approved"| IMPL_HI[Agent plans +<br/>implements]:::agent
+
+    IMPL_LO --> VALIDATE
+    IMPL_HI --> VALIDATE
+
+    subgraph VALIDATE["Agent Validation Suite"]
+        direction TB
+        UNIT[Unit tests]:::check
+        INTEG[Integration tests]:::check
+        BDD_V[BDD scenarios]:::check
+        SEC[Security scan]:::check
+        BOUND[Boundary check]:::check
+        PERF[Performance<br/>baseline]:::check
+        AC[Acceptance<br/>criteria]:::check
+    end
+
+    VALIDATE --> REPORT[Validation<br/>report]:::agent
+    REPORT --> HUMAN[Human reviews<br/>report, not code<br/>2 min]:::human
+    HUMAN --> DEPLOY[Auto-deploy<br/>+ health checks<br/>+ auto-rollback]:::auto
+
+    classDef human fill:#3b82f6,stroke:#2563eb,color:#fff,stroke-width:2px
+    classDef agent fill:#8b5cf6,stroke:#7c3aed,color:#fff,stroke-width:2px
+    classDef gate fill:#f59e0b,stroke:#d97706,color:#fff,stroke-width:2px
+    classDef auto fill:#10b981,stroke:#059669,color:#fff,stroke-width:2px
+    classDef check fill:#e0e7ff,stroke:#6366f1,color:#333,stroke-width:1px
+```
 
 ### Goal
 
@@ -413,6 +590,43 @@ The agent doesn't just implement -- it validates its own work against multiple q
 
 > "The agent ships. Humans govern."
 
+```mermaid
+flowchart TB
+    subgraph SOURCES["Work Sources"]
+        direction LR
+        BACKLOG[Ticket<br/>backlog]:::human
+        OBSERVE[Observability<br/>signals]:::auto
+        CVE[Security<br/>advisories]:::auto
+    end
+
+    SOURCES --> INTAKE[Agent<br/>intake]:::agent
+    INTAKE --> CLASSIFY{Risk<br/>classification}:::agent
+
+    CLASSIFY -->|"LOW"| AUTO_PATH
+    CLASSIFY -->|"MEDIUM"| MED_PATH
+    CLASSIFY -->|"HIGH / CRITICAL"| GATED_PATH
+
+    subgraph AUTO_PATH["Fully Autonomous"]
+        direction LR
+        A_IMPL[Implement]:::agent --> A_VAL[Validate]:::agent --> A_MERGE[Auto-merge]:::auto --> A_DEPLOY[Auto-deploy]:::auto --> A_MON[Monitor<br/>15 min]:::auto
+    end
+
+    subgraph MED_PATH["Report-Approved"]
+        direction LR
+        M_IMPL[Implement]:::agent --> M_VAL[Validate]:::agent --> M_REPORT[Report to<br/>human]:::gate --> M_MERGE[Merge +<br/>deploy]:::auto
+    end
+
+    subgraph GATED_PATH["Human-Gated"]
+        direction LR
+        G_PLAN[Plan]:::agent --> G_GATE1{Plan<br/>review}:::gate --> G_IMPL[Implement]:::agent --> G_VAL[Validate]:::agent --> G_GATE2{PR<br/>review}:::gate --> G_STAGE[Staging]:::gate --> G_PROD[Production<br/>+ feature flag]:::auto
+    end
+
+    classDef human fill:#3b82f6,stroke:#2563eb,color:#fff,stroke-width:2px
+    classDef agent fill:#8b5cf6,stroke:#7c3aed,color:#fff,stroke-width:2px
+    classDef gate fill:#f59e0b,stroke:#d97706,color:#fff,stroke-width:2px
+    classDef auto fill:#10b981,stroke:#059669,color:#fff,stroke-width:2px
+```
+
 ### Goal
 
 The agent operates the full release cycle autonomously for approved classes of work. Humans define policy, set boundaries, and monitor outcomes -- but they don't drive individual changes. The agent is a trusted, independent contributor with merge and deploy authority for low-to-medium risk work.
@@ -493,44 +707,56 @@ The agent operates the full release cycle autonomously for approved classes of w
 
 ### Target-State Architecture
 
-```
-+------------------------------------------------------------------+
-|                        HUMAN GOVERNANCE                           |
-|  - Define policies and risk thresholds                           |
-|  - Review high-risk plans and PRs                                |
-|  - Monitor dashboards and audit trails                           |
-|  - Adjust autonomy boundaries based on outcomes                  |
-+------------------------------+-----------------------------------+
-                               |
-                         Policy + Oversight
-                               |
-+------------------------------v-----------------------------------+
-|                      AGENT ORCHESTRATION                         |
-|                                                                  |
-|  Ticket Intake -> Risk Classification -> Workflow Selection      |
-|       |                                        |                 |
-|       v                                        v                 |
-|  +----------+  +-----------+  +-----------+  +-----------+       |
-|  | Planning |->| Implement |->| Validate  |->| Deploy    |      |
-|  |          |  | (TDD)     |  | (Report)  |  | (Gated)   |      |
-|  +----------+  +-----------+  +-----------+  +-----------+       |
-|       |              |              |              |              |
-|       v              v              v              v              |
-|  Architecture    Codebase      Test Suites    CI/CD Pipeline     |
-|  Ownership       Boundaries    Security       Health Checks      |
-|  Registry        Enforcement   Scans          Rollback           |
-+------------------------------------------------------------------+
-                               |
-                        Observability
-                               |
-+------------------------------v-----------------------------------+
-|                    FEEDBACK LOOP                                  |
-|  - Post-deploy monitoring (errors, latency, saturation)          |
-|  - Automated rollback on threshold breach                        |
-|  - Agent-initiated follow-up tickets                             |
-|  - Weekly metrics: success rate, review time, defect rate        |
-|  - Quarterly audit of autonomous actions                         |
-+------------------------------------------------------------------+
+```mermaid
+flowchart TB
+    subgraph GOV["HUMAN GOVERNANCE"]
+        direction LR
+        POLICY["Define policies<br/>& risk thresholds"]:::human
+        REVIEW_HI["Review high-risk<br/>plans & PRs"]:::human
+        DASHBOARDS["Monitor dashboards<br/>& audit trails"]:::human
+        ADJUST["Adjust autonomy<br/>boundaries"]:::human
+    end
+
+    GOV -->|"Policy + Oversight"| ORCH
+
+    subgraph ORCH["AGENT ORCHESTRATION"]
+        direction TB
+        INTAKE["Ticket Intake"] --> RISK["Risk Classification"] --> WORKFLOW["Workflow Selection"]
+
+        subgraph PIPELINE["Delivery Pipeline"]
+            direction LR
+            PLAN_S["Planning"]:::agent --> IMPL_S["Implement<br/>(TDD)"]:::agent --> VAL_S["Validate<br/>(Report)"]:::agent --> DEPLOY_S["Deploy<br/>(Gated)"]:::agent
+        end
+
+        WORKFLOW --> PIPELINE
+
+        subgraph INFRA["Supporting Infrastructure"]
+            direction LR
+            ARCH_REG["Architecture<br/>Ownership<br/>Registry"]:::infra
+            BOUNDARIES["Codebase<br/>Boundary<br/>Enforcement"]:::infra
+            SECURITY["Test Suites<br/>Security<br/>Scans"]:::infra
+            CICD["CI/CD Pipeline<br/>Health Checks<br/>Rollback"]:::infra
+        end
+
+        PIPELINE --> INFRA
+    end
+
+    ORCH -->|"Observability"| FEEDBACK
+
+    subgraph FEEDBACK["FEEDBACK LOOP"]
+        direction LR
+        MONITOR["Post-deploy<br/>monitoring"]:::auto
+        ROLLBACK["Automated<br/>rollback"]:::auto
+        FOLLOWUP["Agent-initiated<br/>follow-up tickets"]:::auto
+        METRICS["Weekly metrics<br/>& quarterly audits"]:::auto
+    end
+
+    FEEDBACK -.->|"signals"| ORCH
+
+    classDef human fill:#3b82f6,stroke:#2563eb,color:#fff,stroke-width:2px
+    classDef agent fill:#8b5cf6,stroke:#7c3aed,color:#fff,stroke-width:2px
+    classDef auto fill:#10b981,stroke:#059669,color:#fff,stroke-width:2px
+    classDef infra fill:#e0e7ff,stroke:#6366f1,color:#333,stroke-width:1px
 ```
 
 ### How Human Oversight Changes Across Levels
@@ -568,6 +794,54 @@ Level 4: Human reviews evidence. Agent proves correctness.
 Level 5: Human governs.          Agent ships autonomously.
 ```
 
+### Where Developer Time Goes
+
+```mermaid
+pie title "Level 0 -- Developer Time"
+    "Writing code" : 60
+    "Manual testing" : 20
+    "Debugging" : 15
+    "Prompting AI" : 5
+```
+
+```mermaid
+pie title "Level 2-3 -- Developer Time"
+    "Writing tickets & criteria" : 25
+    "Reviewing plans & PRs" : 30
+    "Architecture decisions" : 20
+    "Writing code" : 15
+    "Debugging" : 10
+```
+
+```mermaid
+pie title "Level 4-5 -- Developer Time"
+    "Setting policy & guardrails" : 25
+    "Reviewing validation reports" : 15
+    "Architecture & strategy" : 30
+    "Monitoring & observability" : 20
+    "Writing code" : 10
+```
+
+### The Human Role Journey
+
+```mermaid
+journey
+    title How the Human Role Evolves
+    section Level 0-1: Craftsperson
+        Write code manually: 2: Developer
+        Prompt AI for suggestions: 3: Developer
+        Review AI output line-by-line: 3: Developer
+    section Level 2-3: Technical Lead
+        Write tickets with AC: 4: Developer
+        Review plans and PRs: 4: Developer
+        Define ownership rules: 5: Developer
+    section Level 4-5: Governor
+        Set risk policies: 5: Developer
+        Review validation reports: 5: Developer
+        Monitor dashboards: 4: Developer
+        Audit autonomous actions: 4: Developer
+```
+
 ### What Changes at Each Transition
 
 | Transition | What You Gain | What You Must Have First |
@@ -577,6 +851,48 @@ Level 5: Human governs.          Agent ships autonomously.
 | **2 -> 3** | Agent-driven delivery, self-healing CI | Named workflows, ownership rules, review automation |
 | **3 -> 4** | Validation reports, risk classification, auto-rollback | Comprehensive CI, observability, proven agent track record |
 | **4 -> 5** | Autonomous releases, agent-initiated work | Trusted validation, automated rollback, policy framework |
+
+### Guardrails Stack by Level
+
+```mermaid
+block-beta
+    columns 6
+    block:header:6
+        columns 6
+        H0["Level 0"] H1["Level 1"] H2["Level 2"] H3["Level 3"] H4["Level 4"] H5["Level 5"]
+    end
+    block:row6:6
+        columns 6
+        space space space space space R6["Audit trail +<br/>compliance"]
+    end
+    block:row5:6
+        columns 6
+        space space space space R5A["Auto-rollback"] R5B["Auto-rollback +<br/>monitoring"]
+    end
+    block:row4:6
+        columns 6
+        space space space R4A["Review agent"] R4B["Risk classification<br/>+ validation reports"] R4C["Policy engine"]
+    end
+    block:row3:6
+        columns 6
+        space space R3A["BDD feature<br/>files"] R3B["Self-healing CI"] R3C["Regression<br/>baselines"] R3D["Circuit breaker"]
+    end
+    block:row2:6
+        columns 6
+        space R2A["Rules file<br/>(AGENTS.md)"] R2B["Approval gates"] R2C["Ownership<br/>enforcement"] R2D["Security scans"] R2E["Scoped tokens"]
+    end
+    block:row1:6
+        columns 6
+        R1A["Basic CI"] R1B["Branch<br/>discipline"] R1C["Boundary<br/>checks"] R1D["Pre-commit<br/>hooks"] R1E["Health checks"] R1F["Escalation<br/>protocol"]
+    end
+
+    style H0 fill:#94a3b8,color:#fff
+    style H1 fill:#4a9eff,color:#fff
+    style H2 fill:#8b5cf6,color:#fff
+    style H3 fill:#f59e0b,color:#fff
+    style H4 fill:#ef4444,color:#fff
+    style H5 fill:#10b981,color:#fff
+```
 
 ### The One Rule That Never Changes
 
