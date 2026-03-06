@@ -16,14 +16,16 @@ defmodule Agents.Infrastructure.Mcp.Tools.CreateToolTest do
     :ok
   end
 
-  defp build_frame(workspace_id) do
-    Frame.new(%{workspace_id: workspace_id})
+  defp actor_id, do: "test-actor-id"
+
+  defp build_frame(workspace_id, actor_id) do
+    Frame.new(%{workspace_id: workspace_id, user_id: actor_id})
   end
 
   describe "execute/2" do
     test "creates entry and returns it" do
       workspace_id = Fixtures.workspace_id()
-      frame = build_frame(workspace_id)
+      frame = build_frame(workspace_id, actor_id())
 
       entity = Fixtures.erm_knowledge_entity(%{workspace_id: workspace_id})
 
@@ -55,7 +57,7 @@ defmodule Agents.Infrastructure.Mcp.Tools.CreateToolTest do
 
     test "handles validation errors with descriptive messages" do
       workspace_id = Fixtures.workspace_id()
-      frame = build_frame(workspace_id)
+      frame = build_frame(workspace_id, actor_id())
 
       params = %{title: "", body: "Some body", category: "how_to"}
 
@@ -66,7 +68,7 @@ defmodule Agents.Infrastructure.Mcp.Tools.CreateToolTest do
 
     test "passes workspace_id from frame assigns" do
       workspace_id = "ws-create-test"
-      frame = build_frame(workspace_id)
+      frame = build_frame(workspace_id, actor_id())
 
       entity = Fixtures.erm_knowledge_entity(%{workspace_id: workspace_id})
 

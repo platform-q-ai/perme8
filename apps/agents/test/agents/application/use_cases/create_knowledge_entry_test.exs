@@ -11,12 +11,14 @@ defmodule Agents.Application.UseCases.CreateKnowledgeEntryTest do
 
   setup :verify_on_exit!
 
+  defp actor_id, do: "test-actor-id"
+
   defp setup_bootstrap_mock do
     ErmGatewayMock
     |> expect(:get_schema, fn _ws_id -> {:ok, schema_definition_with_knowledge()} end)
   end
 
-  describe "execute/3" do
+  describe "execute/4" do
     test "creates entry with valid attrs, returns {:ok, knowledge_entry}" do
       setup_bootstrap_mock()
 
@@ -45,7 +47,9 @@ defmodule Agents.Application.UseCases.CreateKnowledgeEntryTest do
       attrs = valid_entry_attrs(%{title: "New Entry", body: "Content here", tags: ["tag1"]})
 
       assert {:ok, %KnowledgeEntry{} = entry} =
-               CreateKnowledgeEntry.execute(workspace_id(), attrs, erm_gateway: ErmGatewayMock)
+               CreateKnowledgeEntry.execute(workspace_id(), attrs, actor_id(),
+                 erm_gateway: ErmGatewayMock
+               )
 
       assert entry.title == "New Entry"
     end
@@ -60,7 +64,9 @@ defmodule Agents.Application.UseCases.CreateKnowledgeEntryTest do
       attrs = valid_entry_attrs()
 
       assert {:ok, _} =
-               CreateKnowledgeEntry.execute(workspace_id(), attrs, erm_gateway: ErmGatewayMock)
+               CreateKnowledgeEntry.execute(workspace_id(), attrs, actor_id(),
+                 erm_gateway: ErmGatewayMock
+               )
     end
 
     test "creates ERM entity with type KnowledgeEntry and JSON-encoded list properties" do
@@ -77,28 +83,36 @@ defmodule Agents.Application.UseCases.CreateKnowledgeEntryTest do
       attrs = valid_entry_attrs(%{tags: ["arch", "design"]})
 
       assert {:ok, _} =
-               CreateKnowledgeEntry.execute(workspace_id(), attrs, erm_gateway: ErmGatewayMock)
+               CreateKnowledgeEntry.execute(workspace_id(), attrs, actor_id(),
+                 erm_gateway: ErmGatewayMock
+               )
     end
 
     test "returns {:error, :title_required} for missing title" do
       attrs = %{body: "Content", category: "how_to"}
 
       assert {:error, :title_required} =
-               CreateKnowledgeEntry.execute(workspace_id(), attrs, erm_gateway: ErmGatewayMock)
+               CreateKnowledgeEntry.execute(workspace_id(), attrs, actor_id(),
+                 erm_gateway: ErmGatewayMock
+               )
     end
 
     test "returns {:error, :body_required} for missing body" do
       attrs = %{title: "Title", category: "how_to"}
 
       assert {:error, :body_required} =
-               CreateKnowledgeEntry.execute(workspace_id(), attrs, erm_gateway: ErmGatewayMock)
+               CreateKnowledgeEntry.execute(workspace_id(), attrs, actor_id(),
+                 erm_gateway: ErmGatewayMock
+               )
     end
 
     test "returns {:error, :invalid_category} for bad category" do
       attrs = %{title: "Title", body: "Content", category: "wrong"}
 
       assert {:error, :invalid_category} =
-               CreateKnowledgeEntry.execute(workspace_id(), attrs, erm_gateway: ErmGatewayMock)
+               CreateKnowledgeEntry.execute(workspace_id(), attrs, actor_id(),
+                 erm_gateway: ErmGatewayMock
+               )
     end
 
     test "returns {:error, :too_many_tags} for > 20 tags" do
@@ -106,7 +120,9 @@ defmodule Agents.Application.UseCases.CreateKnowledgeEntryTest do
       attrs = valid_entry_attrs(%{tags: tags})
 
       assert {:error, :too_many_tags} =
-               CreateKnowledgeEntry.execute(workspace_id(), attrs, erm_gateway: ErmGatewayMock)
+               CreateKnowledgeEntry.execute(workspace_id(), attrs, actor_id(),
+                 erm_gateway: ErmGatewayMock
+               )
     end
 
     test "converts ERM Entity response back to KnowledgeEntry domain entity" do
@@ -133,7 +149,9 @@ defmodule Agents.Application.UseCases.CreateKnowledgeEntryTest do
       attrs = valid_entry_attrs(%{title: "Converted", body: "Body text", category: "concept"})
 
       assert {:ok, %KnowledgeEntry{id: "converted-id", title: "Converted", tags: ["a", "b"]}} =
-               CreateKnowledgeEntry.execute(workspace_id(), attrs, erm_gateway: ErmGatewayMock)
+               CreateKnowledgeEntry.execute(workspace_id(), attrs, actor_id(),
+                 erm_gateway: ErmGatewayMock
+               )
     end
   end
 end

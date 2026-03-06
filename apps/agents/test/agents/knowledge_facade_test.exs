@@ -16,16 +16,16 @@ defmodule Agents.KnowledgeFacadeTest do
       assert function_exported?(Agents, :authenticate_mcp, 2)
     end
 
-    test "bootstrap_knowledge_schema/2 is exported" do
-      assert function_exported?(Agents, :bootstrap_knowledge_schema, 2)
+    test "bootstrap_knowledge_schema/3 is exported" do
+      assert function_exported?(Agents, :bootstrap_knowledge_schema, 3)
     end
 
-    test "create_knowledge_entry/3 is exported" do
-      assert function_exported?(Agents, :create_knowledge_entry, 3)
+    test "create_knowledge_entry/4 is exported" do
+      assert function_exported?(Agents, :create_knowledge_entry, 4)
     end
 
-    test "update_knowledge_entry/4 is exported" do
-      assert function_exported?(Agents, :update_knowledge_entry, 4)
+    test "update_knowledge_entry/5 is exported" do
+      assert function_exported?(Agents, :update_knowledge_entry, 5)
     end
 
     test "get_knowledge_entry/3 is exported" do
@@ -40,8 +40,8 @@ defmodule Agents.KnowledgeFacadeTest do
       assert function_exported?(Agents, :traverse_knowledge_graph, 3)
     end
 
-    test "create_knowledge_relationship/3 is exported" do
-      assert function_exported?(Agents, :create_knowledge_relationship, 3)
+    test "create_knowledge_relationship/4 is exported" do
+      assert function_exported?(Agents, :create_knowledge_relationship, 4)
     end
   end
 end

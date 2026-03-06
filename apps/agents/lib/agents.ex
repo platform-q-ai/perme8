@@ -350,23 +350,24 @@ defmodule Agents do
   end
 
   @doc "Bootstraps the knowledge graph schema for a workspace (idempotent)."
-  @spec bootstrap_knowledge_schema(String.t(), keyword()) :: {:ok, term()} | {:error, term()}
-  def bootstrap_knowledge_schema(workspace_id, opts \\ []) do
-    BootstrapKnowledgeSchema.execute(workspace_id, opts)
+  @spec bootstrap_knowledge_schema(String.t(), String.t(), keyword()) ::
+          {:ok, term()} | {:error, term()}
+  def bootstrap_knowledge_schema(workspace_id, actor_id, opts \\ []) do
+    BootstrapKnowledgeSchema.execute(workspace_id, actor_id, opts)
   end
 
   @doc "Creates a new knowledge entry in a workspace."
-  @spec create_knowledge_entry(String.t(), map(), keyword()) ::
+  @spec create_knowledge_entry(String.t(), map(), String.t(), keyword()) ::
           {:ok, struct()} | {:error, atom()}
-  def create_knowledge_entry(workspace_id, attrs, opts \\ []) do
-    CreateKnowledgeEntry.execute(workspace_id, attrs, opts)
+  def create_knowledge_entry(workspace_id, attrs, actor_id, opts \\ []) do
+    CreateKnowledgeEntry.execute(workspace_id, attrs, actor_id, opts)
   end
 
   @doc "Updates an existing knowledge entry."
-  @spec update_knowledge_entry(String.t(), String.t(), map(), keyword()) ::
+  @spec update_knowledge_entry(String.t(), String.t(), map(), String.t(), keyword()) ::
           {:ok, struct()} | {:error, atom()}
-  def update_knowledge_entry(workspace_id, entry_id, attrs, opts \\ []) do
-    UpdateKnowledgeEntry.execute(workspace_id, entry_id, attrs, opts)
+  def update_knowledge_entry(workspace_id, entry_id, attrs, actor_id, opts \\ []) do
+    UpdateKnowledgeEntry.execute(workspace_id, entry_id, attrs, actor_id, opts)
   end
 
   @doc "Gets a knowledge entry with its relationships."
@@ -391,10 +392,10 @@ defmodule Agents do
   end
 
   @doc "Creates a relationship between two knowledge entries."
-  @spec create_knowledge_relationship(String.t(), map(), keyword()) ::
+  @spec create_knowledge_relationship(String.t(), map(), String.t(), keyword()) ::
           {:ok, struct()} | {:error, atom()}
-  def create_knowledge_relationship(workspace_id, params, opts \\ []) do
-    CreateKnowledgeRelationship.execute(workspace_id, params, opts)
+  def create_knowledge_relationship(workspace_id, params, actor_id, opts \\ []) do
+    CreateKnowledgeRelationship.execute(workspace_id, params, actor_id, opts)
   end
 
   # ---------------------------------------------------------------------------
