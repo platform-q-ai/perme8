@@ -1058,43 +1058,41 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponents do
     base =
       "flex cursor-pointer w-full rounded-lg min-h-12 border transition-all duration-150 hover:-translate-y-px hover:shadow-md hover:ring-1 hover:ring-base-content/20 overflow-hidden"
 
-    variant_classes =
-      case variant do
-        :triage ->
-          grab = "cursor-grab active:cursor-grabbing"
-
-          status_class =
-            cond do
-              ticket.task_status == "awaiting_feedback" -> "border-warning/40 bg-warning/10"
-              ticket.task_status == "failed" -> "border-error/40 bg-error/10"
-              ticket.task_status == "cancelled" -> "border-base-content/20 bg-base-content/5"
-              true -> "border-info/25 bg-info/5"
-            end
-
-          "#{grab} #{status_class}"
-
-        :queued ->
-          cond do
-            session && has_container -> "border-warning/40 bg-warning/10"
-            true -> "border-base-content/20 bg-base-content/8"
-          end
-
-        :warm ->
-          cond do
-            warming -> "border-warning/55 bg-warning/15 animate-pulse"
-            session && has_container -> "border-warning/40 bg-warning/10"
-            true -> "border-base-content/20 bg-base-content/8"
-          end
-
-        :in_progress ->
-          "border-success/40 bg-success/10"
-      end
+    variant_classes = variant_classes(variant, ticket, session, warming, has_container)
 
     active_class =
       if active, do: "ring-2 ring-primary/60 shadow-sm shadow-primary/10", else: ""
 
     "#{base} #{variant_classes} #{active_class}"
   end
+
+  defp variant_classes(:triage, ticket, _session, _warming, _has_container) do
+    grab = "cursor-grab active:cursor-grabbing"
+    "#{grab} #{triage_status_class(ticket.task_status)}"
+  end
+
+  defp variant_classes(:queued, _ticket, session, _warming, has_container) do
+    if session && has_container,
+      do: "border-warning/40 bg-warning/10",
+      else: "border-base-content/20 bg-base-content/8"
+  end
+
+  defp variant_classes(:warm, _ticket, session, warming, has_container) do
+    cond do
+      warming -> "border-warning/55 bg-warning/15 animate-pulse"
+      session && has_container -> "border-warning/40 bg-warning/10"
+      true -> "border-base-content/20 bg-base-content/8"
+    end
+  end
+
+  defp variant_classes(:in_progress, _ticket, _session, _warming, _has_container) do
+    "border-success/40 bg-success/10"
+  end
+
+  defp triage_status_class("awaiting_feedback"), do: "border-warning/40 bg-warning/10"
+  defp triage_status_class("failed"), do: "border-error/40 bg-error/10"
+  defp triage_status_class("cancelled"), do: "border-base-content/20 bg-base-content/5"
+  defp triage_status_class(_), do: "border-info/25 bg-info/5"
 
   defp ticket_card_cold?(:triage, _session, _warming, _has_container), do: false
   defp ticket_card_cold?(:warm, _session, warming, has_container), do: !warming and !has_container
