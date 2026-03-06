@@ -1707,6 +1707,8 @@ defmodule AgentsWeb.SessionsLive.Index do
 
         tasks_snapshot = upsert_task_snapshot(socket.assigns[:tasks_snapshot], updated)
 
+        instruction = Map.get(updated, :instruction) || Map.get(task, :instruction, "")
+
         {:noreply,
          socket
          |> assign(:current_task, updated)
@@ -1714,6 +1716,7 @@ defmodule AgentsWeb.SessionsLive.Index do
          |> assign(:tasks_snapshot, tasks_snapshot)
          |> assign(:tickets, re_enrich_tickets(socket.assigns.tickets, tasks_snapshot))
          |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)
+         |> push_event("restore_draft", %{text: instruction})
          |> put_flash(:info, flash_message)}
 
       {:error, _reason} ->

@@ -123,6 +123,16 @@ export class SessionFormHook extends ViewHook<HTMLTextAreaElement> {
       this.el.focus()
     })
 
+    // Server can push "restore_draft" to restore an instruction
+    // (e.g. when a session is paused/cancelled)
+    this.handleEvent('restore_draft', ({ text }: { text: string }) => {
+      if (text) {
+        this.el.value = text
+        this.writeDraft(text)
+        this.el.focus()
+      }
+    })
+
     // Auto-focus on mount
     this.el.focus()
   }
