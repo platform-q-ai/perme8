@@ -2357,9 +2357,8 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       refute html =~ ~s(data-testid="triage-ticket-item-555")
 
       # Ticket should be removed from the database
-      assert ProjectTicketRepository.list_by_statuses([
-               "Backlog"
-             ]) == []
+      remaining = ProjectTicketRepository.list_all()
+      refute Enum.any?(remaining, &(&1.number == 555))
     end
 
     test "close_ticket switches to chat tab when viewing the closed ticket", %{
