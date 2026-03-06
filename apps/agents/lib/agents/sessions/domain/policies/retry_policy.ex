@@ -1,6 +1,19 @@
 defmodule Agents.Sessions.Domain.Policies.RetryPolicy do
   @moduledoc """
   Pure retry and escalation rules for session task failures.
+
+  ## Backoff Curve
+
+  Uses base-5 exponential backoff capped at 10 minutes:
+
+  | Retry | Delay             |
+  |-------|-------------------|
+  | 0     | 5 s  (5 * 5^0)    |
+  | 1     | 25 s (5 * 5^1)    |
+  | 2     | 125 s (~2 min)    |
+  | 3+    | 600 s (10 min cap)|
+
+  Configure `max_retries` via `:agents, :sessions, :max_retries` (default 3).
   """
 
   @retryable_errors MapSet.new([
