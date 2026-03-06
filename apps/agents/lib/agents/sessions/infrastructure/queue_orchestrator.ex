@@ -218,7 +218,9 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
     snapshot = build_current_snapshot(state)
     promote_from_snapshot(state, snapshot)
     state = maybe_schedule_warmup(state)
-    broadcast_snapshot(state)
+    # Rebuild snapshot after promotion to capture updated task states
+    post_promotion_snapshot = build_current_snapshot(state)
+    broadcast_snapshot(state, post_promotion_snapshot)
     state
   end
 
@@ -414,8 +416,8 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
     end
   end
 
-  defp broadcast_snapshot(state) do
-    snapshot = build_current_snapshot(state)
+  defp broadcast_snapshot(state, snapshot \\ nil) do
+    snapshot = snapshot || build_current_snapshot(state)
 
     Phoenix.PubSub.broadcast(
       state.pubsub,
