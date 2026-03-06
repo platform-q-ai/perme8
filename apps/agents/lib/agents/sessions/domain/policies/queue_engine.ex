@@ -177,5 +177,10 @@ defmodule Agents.Sessions.Domain.Policies.QueueEngine do
 
   defp real_container?(_), do: false
 
-  defp value(map, key), do: Map.get(map, key) || Map.get(map, Atom.to_string(key))
+  defp value(map, key) do
+    case Map.fetch(map, key) do
+      {:ok, val} -> val
+      :error -> Map.get(map, Atom.to_string(key))
+    end
+  end
 end
