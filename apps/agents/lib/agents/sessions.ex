@@ -682,21 +682,15 @@ defmodule Agents.Sessions do
       try do
         legacy_state = QueueManager.get_queue_state(user_id)
 
-        case BuildSnapshot.execute(user_id) do
-          {:ok, snapshot} ->
-            result = QueueMirror.compare(legacy_state, snapshot)
-            QueueMirror.log_comparison(user_id, result)
-
-          {:error, reason} ->
-            rate_limited_mirror_warning(user_id, "snapshot build failed: #{inspect(reason)}")
-        end
+        {:ok, snapshot} = BuildSnapshot.execute(user_id)
+        result = QueueMirror.compare(legacy_state, snapshot)
+        QueueMirror.log_comparison(user_id, result)
       rescue
         e -> rate_limited_mirror_warning(user_id, Exception.message(e))
       end
     end
   end
 
-  @doc false
   defp rate_limited_mirror_warning(user_id, message) do
     key = {__MODULE__, :mirror_failure, user_id}
     now = System.monotonic_time(:millisecond)
