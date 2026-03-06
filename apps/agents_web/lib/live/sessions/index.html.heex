@@ -936,6 +936,22 @@
                       todo_items={session_todo_items(t_session)}
                     />
                   </div>
+                  <%!-- Pause button strip (right edge) --%>
+                  <div
+                    class="flex flex-col shrink-0 border-l border-success/20"
+                    style="width: 10%;"
+                  >
+                    <button
+                      type="button"
+                      phx-click="remove_ticket_from_queue"
+                      phx-value-number={ticket.number}
+                      data-testid={"pause-ticket-#{ticket.number}"}
+                      class="flex-1 flex items-center justify-center text-base-content/30 hover:text-warning hover:bg-warning/10 transition-colors cursor-pointer"
+                      title="Pause and move to triage"
+                    >
+                      <.icon name="hero-pause-solid" class="size-3" />
+                    </button>
+                  </div>
                 </div>
               </li>
 
@@ -945,57 +961,78 @@
                   data-testid={"session-item-#{slugify(session.title)}"}
                   data-slot-state="used"
                   class={[
-                    "flex cursor-pointer flex-col gap-0.5 w-full rounded-lg p-2 min-h-16 border border-success/40 bg-success/10 transition-all duration-150 hover:-translate-y-px hover:shadow-md hover:ring-1 hover:ring-base-content/20",
+                    "flex cursor-pointer w-full rounded-lg min-h-16 border border-success/40 bg-success/10 transition-all duration-150 hover:-translate-y-px hover:shadow-md hover:ring-1 hover:ring-base-content/20 overflow-hidden",
                     session.container_id == @active_container_id &&
                       "ring-2 ring-primary/60 shadow-sm shadow-primary/10"
                   ]}
-                  phx-click="select_session"
-                  phx-value-container-id={session.container_id}
                 >
-                  <div class="flex items-center justify-between w-full">
-                    <span class="text-xs font-medium truncate flex-1 min-w-0">
-                      {truncate_instruction(session.title, 35)}
-                    </span>
-                    <div class="flex items-center gap-1">
-                      <.status_dot status={session.latest_status} />
-                    </div>
-                  </div>
-                  <% file_stats = format_file_stats(Map.get(session, :session_summary)) %>
-                  <div class="flex items-center gap-2 text-[0.65rem] text-base-content/50 w-full">
-                    <span>{image_label(session.image)}</span>
-                    <span>&middot;</span>
-                    <span>{relative_time(session.latest_at)}</span>
-                    <span
-                      :if={Map.get(session, :started_at) != nil}
-                      data-testid="session-duration"
-                    >
-                      &middot;
-                      <span
-                        id={"duration-sessions-#{session.container_id}"}
-                        phx-hook="DurationTimer"
-                        data-started-at={
-                          Map.get(session, :started_at) &&
-                            DateTime.to_iso8601(session.started_at)
-                        }
-                        data-completed-at={
-                          Map.get(session, :completed_at) &&
-                            DateTime.to_iso8601(session.completed_at)
-                        }
-                      />
-                    </span>
-                  </div>
                   <div
-                    :if={file_stats != nil}
-                    class="text-[0.6rem] text-base-content/40 w-full"
-                    data-testid="session-file-stats"
+                    class="flex-1 min-w-0 flex flex-col gap-0.5 p-2"
+                    phx-click="select_session"
+                    phx-value-container-id={session.container_id}
                   >
-                    {file_stats}
+                    <div class="flex items-center justify-between w-full">
+                      <span class="text-xs font-medium truncate flex-1 min-w-0">
+                        {truncate_instruction(session.title, 35)}
+                      </span>
+                      <div class="flex items-center gap-1">
+                        <.status_dot status={session.latest_status} />
+                      </div>
+                    </div>
+                    <% file_stats = format_file_stats(Map.get(session, :session_summary)) %>
+                    <div class="flex items-center gap-2 text-[0.65rem] text-base-content/50 w-full">
+                      <span>{image_label(session.image)}</span>
+                      <span>&middot;</span>
+                      <span>{relative_time(session.latest_at)}</span>
+                      <span
+                        :if={Map.get(session, :started_at) != nil}
+                        data-testid="session-duration"
+                      >
+                        &middot;
+                        <span
+                          id={"duration-sessions-#{session.container_id}"}
+                          phx-hook="DurationTimer"
+                          data-started-at={
+                            Map.get(session, :started_at) &&
+                              DateTime.to_iso8601(session.started_at)
+                          }
+                          data-completed-at={
+                            Map.get(session, :completed_at) &&
+                              DateTime.to_iso8601(session.completed_at)
+                          }
+                        />
+                      </span>
+                    </div>
+                    <div
+                      :if={file_stats != nil}
+                      class="text-[0.6rem] text-base-content/40 w-full"
+                      data-testid="session-file-stats"
+                    >
+                      {file_stats}
+                    </div>
+                    <.compact_progress_bar todo_items={session_todo_items(session)} />
+                    <.container_stats_bars
+                      :if={Map.has_key?(@container_stats, session.container_id)}
+                      stats={@container_stats[session.container_id]}
+                    />
                   </div>
-                  <.compact_progress_bar todo_items={session_todo_items(session)} />
-                  <.container_stats_bars
-                    :if={Map.has_key?(@container_stats, session.container_id)}
-                    stats={@container_stats[session.container_id]}
-                  />
+                  <%!-- Pause button strip (right edge) --%>
+                  <div
+                    :if={session.latest_task_id}
+                    class="flex flex-col shrink-0 border-l border-success/20"
+                    style="width: 10%;"
+                  >
+                    <button
+                      type="button"
+                      phx-click="pause_session"
+                      phx-value-task-id={session.latest_task_id}
+                      data-testid={"pause-session-#{slugify(session.title)}"}
+                      class="flex-1 flex items-center justify-center text-base-content/30 hover:text-warning hover:bg-warning/10 transition-colors cursor-pointer"
+                      title="Pause session"
+                    >
+                      <.icon name="hero-pause-solid" class="size-3" />
+                    </button>
+                  </div>
                 </div>
               </li>
 
