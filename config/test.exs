@@ -70,7 +70,7 @@ config :identity, Identity.Repo,
 
 # Agents uses the same database as Jarga
 # pool_size 10: reduced from 15 to stay within Postgres max_connections.
-# 6 repos total: Jarga(15)+Identity(15)+Agents(10)+Chat(10)+Notifications(15)+Webhooks(5) = 70 connections.
+# 6 repos total: Jarga(15)+Identity(15)+Agents(10)+Chat(15)+Notifications(15)+Webhooks(5) = 75 connections.
 config :agents, Agents.Repo,
   url: database_url,
   pool: Ecto.Adapters.SQL.Sandbox,
@@ -78,10 +78,12 @@ config :agents, Agents.Repo,
   ownership_timeout: :infinity
 
 # Chat uses the same database as Jarga
+# pool_size 15: cursor/document browser tests open multiple concurrent LiveView
+# sessions that each hold a Chat.Repo connection under sandbox ownership.
 config :chat, Chat.Repo,
   url: database_url,
   pool: Ecto.Adapters.SQL.Sandbox,
-  pool_size: 10,
+  pool_size: 15,
   ownership_timeout: :infinity
 
 # Notifications uses the same database as Jarga
