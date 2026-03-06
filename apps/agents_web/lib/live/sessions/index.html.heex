@@ -39,11 +39,126 @@
           <p>No sessions yet</p>
         </div>
       <% else %>
+        <%!-- Apply unified search and status filter across both columns --%>
+        <% filtered_sessions =
+          @sessions
+          |> filter_sessions_by_search(@session_search)
+          |> filter_sessions_by_status(@status_filter) %>
+        <% filtered_tickets =
+          @tickets
+          |> filter_tickets_by_search(@session_search)
+          |> filter_tickets_by_status(@status_filter) %>
+
+        <%!-- Search and filter controls (spans both columns) --%>
+        <div class="px-2 pt-2 pb-1 flex items-center gap-2 shrink-0">
+          <form phx-change="session_search" class="flex-1 min-w-0">
+            <label class="input input-bordered input-sm flex items-center gap-2 w-full">
+              <.icon name="hero-magnifying-glass" class="size-3.5 text-base-content/40" />
+              <input
+                type="text"
+                name="session_search"
+                value={@session_search}
+                placeholder="Search sessions and tickets..."
+                phx-debounce="200"
+                class="grow bg-transparent text-xs border-none focus:outline-none focus:ring-0 p-0"
+              />
+              <button
+                :if={@session_search != ""}
+                type="button"
+                phx-click="session_search"
+                phx-value-session_search=""
+                class="btn btn-ghost btn-xs btn-circle p-0 min-h-0 h-auto"
+              >
+                <.icon name="hero-x-mark" class="size-3" />
+              </button>
+            </label>
+          </form>
+          <div class="flex gap-1 shrink-0 flex-wrap">
+            <button
+              type="button"
+              phx-click="status_filter"
+              phx-value-status="all"
+              class={[
+                "btn btn-xs rounded-full",
+                if(@status_filter == :all, do: "btn-neutral", else: "btn-ghost")
+              ]}
+            >
+              All
+            </button>
+            <button
+              type="button"
+              phx-click="status_filter"
+              phx-value-status="running"
+              class={[
+                "btn btn-xs rounded-full",
+                if(@status_filter == :running, do: "btn-success", else: "btn-ghost")
+              ]}
+            >
+              Running
+            </button>
+            <button
+              type="button"
+              phx-click="status_filter"
+              phx-value-status="queued"
+              class={[
+                "btn btn-xs rounded-full",
+                if(@status_filter == :queued, do: "btn-info", else: "btn-ghost")
+              ]}
+            >
+              Queued
+            </button>
+            <button
+              type="button"
+              phx-click="status_filter"
+              phx-value-status="awaiting_feedback"
+              class={[
+                "btn btn-xs rounded-full",
+                if(@status_filter == :awaiting_feedback, do: "btn-warning", else: "btn-ghost")
+              ]}
+            >
+              Feedback
+            </button>
+            <button
+              type="button"
+              phx-click="status_filter"
+              phx-value-status="failed"
+              class={[
+                "btn btn-xs rounded-full",
+                if(@status_filter == :failed, do: "btn-error btn-outline", else: "btn-ghost")
+              ]}
+            >
+              Failed
+            </button>
+            <button
+              type="button"
+              phx-click="status_filter"
+              phx-value-status="completed"
+              class={[
+                "btn btn-xs rounded-full",
+                if(@status_filter == :completed, do: "btn-primary btn-outline", else: "btn-ghost")
+              ]}
+            >
+              Done
+            </button>
+            <button
+              type="button"
+              phx-click="status_filter"
+              phx-value-status="cancelled"
+              class={[
+                "btn btn-xs rounded-full",
+                if(@status_filter == :cancelled, do: "btn-neutral btn-outline", else: "btn-ghost")
+              ]}
+            >
+              Cancelled
+            </button>
+          </div>
+        </div>
+
         <%!-- Partition tickets into idle (triage) vs active (build) --%>
         <%!-- Tickets with sessions (awaiting_feedback, failed, completed) float to top of triage --%>
         <% build_statuses = ["pending", "starting", "running", "queued"] %>
         <% idle_tickets =
-          @tickets
+          filtered_tickets
           |> Enum.filter(fn t -> t.task_status not in build_statuses end)
           |> Enum.sort_by(fn t ->
             case t.task_status do
@@ -55,7 +170,7 @@
             end
           end) %>
         <% active_tickets =
-          Enum.filter(@tickets, fn t -> t.task_status in build_statuses end) %>
+          Enum.filter(filtered_tickets, fn t -> t.task_status in build_statuses end) %>
         <%!-- Identify which sessions are ticket-associated --%>
         <% ticket_for_session = fn session ->
           direct = Enum.find(@tickets, &(&1.associated_container_id == session.container_id))
@@ -94,7 +209,7 @@
 
         <%!-- Non-ticket sessions: triage (completed/cancelled/awaiting_feedback) and build --%>
         <% non_ticket_triage_sessions =
-          @sessions
+          filtered_sessions
           |> Enum.filter(fn s ->
             s.latest_status in ["completed", "cancelled", "awaiting_feedback"] and
               is_nil(ticket_for_session.(s))
@@ -105,21 +220,21 @@
           end) %>
 
         <% non_ticket_failed_sessions =
-          @sessions
+          filtered_sessions
           |> Enum.filter(fn s ->
             s.latest_status == "failed" and is_nil(ticket_for_session.(s))
           end)
           |> Enum.sort_by(&(-latest_at_unix(&1))) %>
 
         <% non_ticket_queued_sessions =
-          @sessions
+          filtered_sessions
           |> Enum.filter(fn s ->
             s.latest_status == "queued" and is_nil(ticket_for_session.(s))
           end)
           |> Enum.sort_by(&(-latest_at_unix(&1))) %>
 
         <% non_ticket_in_progress_sessions =
-          @sessions
+          filtered_sessions
           |> Enum.filter(fn s ->
             s.latest_status in ["pending", "starting", "running"] and
               is_nil(ticket_for_session.(s))

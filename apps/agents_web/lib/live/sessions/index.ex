@@ -72,6 +72,8 @@ defmodule AgentsWeb.SessionsLive.Index do
      |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)
      |> assign(:refreshing_task_ids, MapSet.new())
      |> assign(:pending_follow_ups, %{})
+     |> assign(:session_search, "")
+     |> assign(:status_filter, :all)
      |> assign_session_state()
      |> assign(:form, to_form(%{"instruction" => ""}))}
   end
@@ -424,6 +426,24 @@ defmodule AgentsWeb.SessionsLive.Index do
   @impl true
   def handle_event("select_image", %{"image" => image}, socket) do
     {:noreply, assign(socket, :selected_image, image)}
+  end
+
+  @impl true
+  def handle_event("session_search", %{"session_search" => query}, socket) do
+    {:noreply, assign(socket, :session_search, String.trim(query))}
+  end
+
+  @valid_status_filters ~w(all awaiting_feedback completed cancelled running queued failed)a
+
+  @impl true
+  def handle_event("status_filter", %{"status" => status}, socket) do
+    filter = String.to_existing_atom(status)
+
+    if filter in @valid_status_filters do
+      {:noreply, assign(socket, :status_filter, filter)}
+    else
+      {:noreply, socket}
+    end
   end
 
   @impl true
