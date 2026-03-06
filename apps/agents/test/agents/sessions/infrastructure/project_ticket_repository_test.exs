@@ -211,13 +211,14 @@ defmodule Agents.Sessions.Infrastructure.ProjectTicketRepositoryTest do
         labels: []
       })
 
-    # New ticket should be appended at position 3
+    # New ticket should get position max+1 = 3 (highest, so first in desc order)
     assert new_ticket.position == 3
 
-    # Full ordering should preserve user's drag order with new ticket at end
+    # list_all orders by position DESC — new ticket (pos 3) appears first,
+    # then the user's drag order is preserved: 202(2), 200(1), 201(0)
     tickets = ProjectTicketRepository.list_all()
     numbers = Enum.map(tickets, & &1.number)
-    assert numbers == [202, 200, 201, 203]
+    assert numbers == [203, 202, 200, 201]
   end
 
   test "list_all/0 orders by position then created_at desc" do
