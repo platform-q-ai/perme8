@@ -232,46 +232,46 @@ foundation — everything else depends on it.
 
 ---
 
-## Phase 4: Agents App — IdentityBehaviour and MCP Permission Enforcement (phoenix-tdd)
+## Phase 4: Agents App — IdentityBehaviour and MCP Permission Enforcement (phoenix-tdd) ✓
 
 > Consumer app. Tests use Mox for identity dependency injection.
 
 ### 4.1 IdentityBehaviour — Add `api_key_has_permission?/2` Callback
 
-- [ ] ⏸ **RED**: Update test `apps/agents/test/agents/application/behaviours/identity_behaviour_test.exs` (or verify callback exists)
+- [x] ⏸ **RED**: Update test `apps/agents/test/agents/application/behaviours/identity_behaviour_test.exs` (or verify callback exists)
   - Tests:
     - Behaviour defines `api_key_has_permission?/2` callback
     - Mock implementation via Mox responds correctly
-- [ ] ⏸ **GREEN**: Update `apps/agents/lib/agents/application/behaviours/identity_behaviour.ex`
+- [x] ⏸ **GREEN**: Update `apps/agents/lib/agents/application/behaviours/identity_behaviour.ex`
   - Add callback:
     ```elixir
     @callback api_key_has_permission?(api_key :: ApiKey.t(), scope :: String.t()) :: boolean()
     ```
-- [ ] ⏸ **REFACTOR**: Keep behaviour minimal — only the contract
+- [x] ⏸ **REFACTOR**: Keep behaviour minimal — only the contract
 
 ### 4.2 AuthenticateMcpRequest — Return API Key Entity
 
 Currently `AuthenticateMcpRequest.execute/2` returns `{:ok, %{workspace_id: ..., user_id: ...}}`.
 The MCP pipeline needs the full API key entity to check permissions. Extend the return value.
 
-- [ ] ⏸ **RED**: Update test `apps/agents/test/agents/application/use_cases/authenticate_mcp_request_test.exs`
+- [x] ⏸ **RED**: Update test `apps/agents/test/agents/application/use_cases/authenticate_mcp_request_test.exs`
   - Tests:
     - Successful authentication returns `api_key` entity in the result map: `{:ok, %{workspace_id: ..., user_id: ..., api_key: api_key}}`
     - Existing tests still pass with the extended return value
-- [ ] ⏸ **GREEN**: Update `apps/agents/lib/agents/application/use_cases/authenticate_mcp_request.ex`
+- [x] ⏸ **GREEN**: Update `apps/agents/lib/agents/application/use_cases/authenticate_mcp_request.ex`
   - In `resolve_workspace/2`, include `api_key` in the success map:
     ```elixir
     {:ok, %{workspace_id: workspace_id, user_id: api_key.user_id, api_key: api_key}}
     ```
-- [ ] ⏸ **REFACTOR**: Keep the use case focused on authentication and workspace resolution
+- [x] ⏸ **REFACTOR**: Keep the use case focused on authentication and workspace resolution
 
 ### 4.3 MCP AuthPlug — Assign API Key to Connection
 
-- [ ] ⏸ **RED**: Update test `apps/agents/test/agents/infrastructure/mcp/auth_plug_test.exs`
+- [x] ⏸ **RED**: Update test `apps/agents/test/agents/infrastructure/mcp/auth_plug_test.exs`
   - Tests:
     - On successful auth, `conn.assigns.api_key` contains the verified API key entity
     - Existing `workspace_id` and `user_id` assigns are unchanged
-- [ ] ⏸ **GREEN**: Update `apps/agents/lib/agents/infrastructure/mcp/auth_plug.ex`
+- [x] ⏸ **GREEN**: Update `apps/agents/lib/agents/infrastructure/mcp/auth_plug.ex`
   - In `authenticate/3`, extract `api_key` from the `AuthenticateMcpRequest` result and assign it:
     ```elixir
     case AuthenticateMcpRequest.execute(token, auth_opts) do
@@ -281,7 +281,7 @@ The MCP pipeline needs the full API key entity to check permissions. Extend the 
         |> assign(:user_id, user_id)
         |> assign(:api_key, api_key)
     ```
-- [ ] ⏸ **REFACTOR**: Keep plug thin — only assigns, no business logic
+- [x] ⏸ **REFACTOR**: Keep plug thin — only assigns, no business logic
 
 ### 4.4 MCP Permission Checking — Tool Execution Guard
 
@@ -300,7 +300,7 @@ registered name via `mcp:<tool_name>`).
 
 Since Hermes tool components receive a `frame` with `assigns`, we use `frame.assigns.api_key`.
 
-- [ ] ⏸ **RED**: Write test `apps/agents/test/agents/infrastructure/mcp/permission_guard_test.exs`
+- [x] ⏸ **RED**: Write test `apps/agents/test/agents/infrastructure/mcp/permission_guard_test.exs`
   - Tests:
     - `check_permission/2` with nil permissions (full access) returns `:ok`
     - `check_permission/2` with `["*"]` returns `:ok` for any tool
@@ -309,11 +309,11 @@ Since Hermes tool components receive a `frame` with `assigns`, we use `frame.ass
     - `check_permission/2` with `["mcp:*"]` returns `:ok` for any MCP tool
     - `check_permission/2` with `[]` returns `{:error, scope}` for any tool
     - Returns `{:error, required_scope}` with the `"mcp:<tool_name>"` scope string on denial
-- [ ] ⏸ **GREEN**: Implement `apps/agents/lib/agents/infrastructure/mcp/permission_guard.ex`
+- [x] ⏸ **GREEN**: Implement `apps/agents/lib/agents/infrastructure/mcp/permission_guard.ex`
   - `check_permission(frame, tool_name)` — reads `frame.assigns.api_key.permissions` and checks against `"mcp:#{tool_name}"` using `Identity.api_key_has_permission?/2`
   - Returns `:ok` or `{:error, "mcp:<tool_name>"}`
   - Accepts dependency injection for the identity module via frame assigns or module attribute
-- [ ] ⏸ **REFACTOR**: Keep module as pure utility — no state, no side effects
+- [x] ⏸ **REFACTOR**: Keep module as pure utility — no state, no side effects
 
 ### 4.5 Apply Permission Guard to Tool Components
 
@@ -321,11 +321,11 @@ Each tool component's `execute/2` should check permissions before proceeding. Ra
 modifying every tool, create a `__using__` macro or wrapper approach. However, to keep
 this incremental, we add the check to each existing tool component.
 
-- [ ] ⏸ **RED**: Update tool component tests to verify permission denial:
+- [x] ⏸ **RED**: Update tool component tests to verify permission denial:
   - `apps/agents/test/agents/infrastructure/mcp/tools/search_tool_test.exs` — denied with `["agents:read"]` permissions (no `mcp:knowledge.search`)
   - `apps/agents/test/agents/infrastructure/mcp/tools/create_tool_test.exs` — denied with `["mcp:knowledge.search"]` (no `mcp:knowledge.create`)
   - At least one jarga tool test for `mcp:jarga.*` wildcard matching
-- [ ] ⏸ **GREEN**: Update each tool component's `execute/2` to call `PermissionGuard.check_permission/2`:
+- [x] ⏸ **GREEN**: Update each tool component's `execute/2` to call `PermissionGuard.check_permission/2`:
   - `apps/agents/lib/agents/infrastructure/mcp/tools/search_tool.ex`
   - `apps/agents/lib/agents/infrastructure/mcp/tools/get_tool.ex`
   - `apps/agents/lib/agents/infrastructure/mcp/tools/traverse_tool.ex`
@@ -343,17 +343,17 @@ this incremental, we add the check to each existing tool component.
       end
     end
     ```
-- [ ] ⏸ **REFACTOR**: Consider extracting a `use PermissionGuard, scope: "knowledge.search"` macro to DRY up the pattern across all 14 tools
+- [x] ⏸ **REFACTOR**: Consider extracting a `use PermissionGuard, scope: "knowledge.search"` macro to DRY up the pattern across all 14 tools
 
 ### Phase 4 Validation
 
-- [ ] ⏸ IdentityBehaviour updated and Mox mock compiles
-- [ ] ⏸ AuthenticateMcpRequest tests pass: `mix test apps/agents/test/agents/application/use_cases/authenticate_mcp_request_test.exs`
-- [ ] ⏸ MCP AuthPlug tests pass: `mix test apps/agents/test/agents/infrastructure/mcp/auth_plug_test.exs`
-- [ ] ⏸ PermissionGuard tests pass: `mix test apps/agents/test/agents/infrastructure/mcp/permission_guard_test.exs`
-- [ ] ⏸ Tool component permission tests pass
-- [ ] ⏸ No boundary violations: `mix boundary`
-- [ ] ⏸ Full agents test suite passes: `mix test apps/agents/test/`
+- [x] ⏸ IdentityBehaviour updated and Mox mock compiles
+- [x] ⏸ AuthenticateMcpRequest tests pass: `mix test apps/agents/test/agents/application/use_cases/authenticate_mcp_request_test.exs`
+- [x] ⏸ MCP AuthPlug tests pass: `mix test apps/agents/test/agents/infrastructure/mcp/auth_plug_test.exs`
+- [x] ⏸ PermissionGuard tests pass: `mix test apps/agents/test/agents/infrastructure/mcp/permission_guard_test.exs`
+- [x] ⏸ Tool component permission tests pass
+- [x] ⏸ No boundary violations: `mix boundary` (task unavailable; verified via `mix compile` and no boundary warnings)
+- [x] ⏸ Full agents test suite passes: `mix test apps/agents/test/`
 
 ---
 

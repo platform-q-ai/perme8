@@ -6,6 +6,7 @@ defmodule Agents.Infrastructure.Mcp.Tools.Jarga.CreateDocumentTool do
   require Logger
 
   alias Hermes.Server.Response
+  alias Agents.Infrastructure.Mcp.PermissionGuard
   alias Agents.Application.UseCases.CreateDocument
 
   schema do
@@ -19,22 +20,29 @@ defmodule Agents.Infrastructure.Mcp.Tools.Jarga.CreateDocumentTool do
 
   @impl true
   def execute(params, frame) do
-    user_id = frame.assigns[:user_id]
-    workspace_id = frame.assigns[:workspace_id]
+    case PermissionGuard.check_permission(frame, "jarga.create_document") do
+      :ok ->
+        user_id = frame.assigns[:user_id]
+        workspace_id = frame.assigns[:workspace_id]
 
-    attrs = build_attrs(params)
+        attrs = build_attrs(params)
 
-    case CreateDocument.execute(user_id, workspace_id, attrs) do
-      {:ok, document} ->
-        text = format_created(document)
-        {:reply, Response.text(Response.tool(), text), frame}
+        case CreateDocument.execute(user_id, workspace_id, attrs) do
+          {:ok, document} ->
+            text = format_created(document)
+            {:reply, Response.text(Response.tool(), text), frame}
 
-      {:error, %Ecto.Changeset{} = changeset} ->
-        {:reply, Response.error(Response.tool(), format_changeset(changeset)), frame}
+          {:error, %Ecto.Changeset{} = changeset} ->
+            {:reply, Response.error(Response.tool(), format_changeset(changeset)), frame}
 
-      {:error, reason} ->
-        Logger.error("CreateDocumentTool unexpected error: #{inspect(reason)}")
-        {:reply, Response.error(Response.tool(), "An unexpected error occurred."), frame}
+          {:error, reason} ->
+            Logger.error("CreateDocumentTool unexpected error: #{inspect(reason)}")
+            {:reply, Response.error(Response.tool(), "An unexpected error occurred."), frame}
+        end
+
+      {:error, scope} ->
+        {:reply, Response.error(Response.tool(), "Insufficient permissions: #{scope} required"),
+         frame}
     end
   end
 

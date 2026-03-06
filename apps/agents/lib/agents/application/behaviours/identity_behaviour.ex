@@ -17,4 +17,6 @@ defmodule Agents.Application.Behaviours.IdentityBehaviour do
 
   @callback get_user(user_id :: String.t()) ::
               {:ok, User.t()} | {:error, :user_not_found}
+
+  @callback api_key_has_permission?(api_key :: ApiKey.t(), scope :: String.t()) :: boolean()
 end

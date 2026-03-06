@@ -6,6 +6,7 @@ defmodule Agents.Infrastructure.Mcp.Tools.Jarga.GetDocumentTool do
   require Logger
 
   alias Hermes.Server.Response
+  alias Agents.Infrastructure.Mcp.PermissionGuard
   alias Agents.Application.UseCases.GetDocument
 
   schema do
@@ -14,23 +15,30 @@ defmodule Agents.Infrastructure.Mcp.Tools.Jarga.GetDocumentTool do
 
   @impl true
   def execute(params, frame) do
-    user_id = frame.assigns[:user_id]
-    workspace_id = frame.assigns[:workspace_id]
+    case PermissionGuard.check_permission(frame, "jarga.get_document") do
+      :ok ->
+        user_id = frame.assigns[:user_id]
+        workspace_id = frame.assigns[:workspace_id]
 
-    case GetDocument.execute(user_id, workspace_id, params.slug) do
-      {:ok, document} ->
-        text = format_document(document)
-        {:reply, Response.text(Response.tool(), text), frame}
+        case GetDocument.execute(user_id, workspace_id, params.slug) do
+          {:ok, document} ->
+            text = format_document(document)
+            {:reply, Response.text(Response.tool(), text), frame}
 
-      {:error, :document_not_found} ->
-        {:reply, Response.error(Response.tool(), "Document not found."), frame}
+          {:error, :document_not_found} ->
+            {:reply, Response.error(Response.tool(), "Document not found."), frame}
 
-      {:error, :forbidden} ->
-        {:reply, Response.error(Response.tool(), "Access denied."), frame}
+          {:error, :forbidden} ->
+            {:reply, Response.error(Response.tool(), "Access denied."), frame}
 
-      {:error, reason} ->
-        Logger.error("GetDocumentTool unexpected error: #{inspect(reason)}")
-        {:reply, Response.error(Response.tool(), "An unexpected error occurred."), frame}
+          {:error, reason} ->
+            Logger.error("GetDocumentTool unexpected error: #{inspect(reason)}")
+            {:reply, Response.error(Response.tool(), "An unexpected error occurred."), frame}
+        end
+
+      {:error, scope} ->
+        {:reply, Response.error(Response.tool(), "Insufficient permissions: #{scope} required"),
+         frame}
     end
   end
 

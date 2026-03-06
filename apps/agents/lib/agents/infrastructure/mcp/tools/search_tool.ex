@@ -6,6 +6,7 @@ defmodule Agents.Infrastructure.Mcp.Tools.SearchTool do
   require Logger
 
   alias Hermes.Server.Response
+  alias Agents.Infrastructure.Mcp.PermissionGuard
   alias Agents.Application.UseCases.SearchKnowledgeEntries
 
   schema do
@@ -17,34 +18,42 @@ defmodule Agents.Infrastructure.Mcp.Tools.SearchTool do
 
   @impl true
   def execute(params, frame) do
-    workspace_id = frame.assigns[:workspace_id]
+    case PermissionGuard.check_permission(frame, "knowledge.search") do
+      :ok ->
+        workspace_id = frame.assigns[:workspace_id]
 
-    search_params = %{
-      query: Map.get(params, :query),
-      tags: Map.get(params, :tags),
-      category: Map.get(params, :category),
-      limit: Map.get(params, :limit)
-    }
+        search_params = %{
+          query: Map.get(params, :query),
+          tags: Map.get(params, :tags),
+          category: Map.get(params, :category),
+          limit: Map.get(params, :limit)
+        }
 
-    case SearchKnowledgeEntries.execute(workspace_id, search_params) do
-      {:ok, []} ->
-        {:reply, Response.text(Response.tool(), "No results found."), frame}
+        case SearchKnowledgeEntries.execute(workspace_id, search_params) do
+          {:ok, []} ->
+            {:reply, Response.text(Response.tool(), "No results found."), frame}
 
-      {:ok, entries} ->
-        text = format_results(entries)
-        {:reply, Response.text(Response.tool(), text), frame}
+          {:ok, entries} ->
+            text = format_results(entries)
+            {:reply, Response.text(Response.tool(), text), frame}
 
-      {:error, :empty_search} ->
-        {:reply,
-         Response.error(
-           Response.tool(),
-           "Please provide at least one search criteria: query, tags, or category."
-         ), frame}
+          {:error, :empty_search} ->
+            {:reply,
+             Response.error(
+               Response.tool(),
+               "Please provide at least one search criteria: query, tags, or category."
+             ), frame}
 
-      {:error, reason} ->
-        Logger.error("SearchTool unexpected error: #{inspect(reason)}")
+          {:error, reason} ->
+            Logger.error("SearchTool unexpected error: #{inspect(reason)}")
 
-        {:reply, Response.error(Response.tool(), "An unexpected error occurred while searching."),
+            {:reply,
+             Response.error(Response.tool(), "An unexpected error occurred while searching."),
+             frame}
+        end
+
+      {:error, scope} ->
+        {:reply, Response.error(Response.tool(), "Insufficient permissions: #{scope} required"),
          frame}
     end
   end

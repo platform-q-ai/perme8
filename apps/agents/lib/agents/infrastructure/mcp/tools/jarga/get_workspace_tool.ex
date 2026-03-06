@@ -6,6 +6,7 @@ defmodule Agents.Infrastructure.Mcp.Tools.Jarga.GetWorkspaceTool do
   require Logger
 
   alias Hermes.Server.Response
+  alias Agents.Infrastructure.Mcp.PermissionGuard
   alias Agents.Application.UseCases.GetWorkspace
 
   schema do
@@ -14,22 +15,29 @@ defmodule Agents.Infrastructure.Mcp.Tools.Jarga.GetWorkspaceTool do
 
   @impl true
   def execute(params, frame) do
-    user_id = frame.assigns[:user_id]
+    case PermissionGuard.check_permission(frame, "jarga.get_workspace") do
+      :ok ->
+        user_id = frame.assigns[:user_id]
 
-    case GetWorkspace.execute(user_id, params.slug) do
-      {:ok, workspace} ->
-        text = format_workspace(workspace)
-        {:reply, Response.text(Response.tool(), text), frame}
+        case GetWorkspace.execute(user_id, params.slug) do
+          {:ok, workspace} ->
+            text = format_workspace(workspace)
+            {:reply, Response.text(Response.tool(), text), frame}
 
-      {:error, :not_found} ->
-        {:reply, Response.error(Response.tool(), "Workspace not found."), frame}
+          {:error, :not_found} ->
+            {:reply, Response.error(Response.tool(), "Workspace not found."), frame}
 
-      {:error, :unauthorized} ->
-        {:reply, Response.error(Response.tool(), "Unauthorized."), frame}
+          {:error, :unauthorized} ->
+            {:reply, Response.error(Response.tool(), "Unauthorized."), frame}
 
-      {:error, reason} ->
-        Logger.error("GetWorkspaceTool unexpected error: #{inspect(reason)}")
-        {:reply, Response.error(Response.tool(), "An unexpected error occurred."), frame}
+          {:error, reason} ->
+            Logger.error("GetWorkspaceTool unexpected error: #{inspect(reason)}")
+            {:reply, Response.error(Response.tool(), "An unexpected error occurred."), frame}
+        end
+
+      {:error, scope} ->
+        {:reply, Response.error(Response.tool(), "Insufficient permissions: #{scope} required"),
+         frame}
     end
   end
 

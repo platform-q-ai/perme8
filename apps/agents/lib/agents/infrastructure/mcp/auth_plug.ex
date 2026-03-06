@@ -51,10 +51,11 @@ defmodule Agents.Infrastructure.Mcp.AuthPlug do
     auth_opts = Keyword.take(opts, [:identity_module])
 
     case AuthenticateMcpRequest.execute(token, auth_opts) do
-      {:ok, %{workspace_id: workspace_id, user_id: user_id}} ->
+      {:ok, %{workspace_id: workspace_id, user_id: user_id, api_key: api_key}} ->
         conn
         |> assign(:workspace_id, workspace_id)
         |> assign(:user_id, user_id)
+        |> assign(:api_key, api_key)
 
       {:error, _reason} ->
         unauthorized(conn, "Invalid or expired API key")

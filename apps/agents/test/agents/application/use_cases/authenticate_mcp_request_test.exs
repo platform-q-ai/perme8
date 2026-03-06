@@ -22,8 +22,26 @@ defmodule Agents.Application.UseCases.AuthenticateMcpRequestTest do
       |> expect(:verify_api_key, fn "valid-token" -> {:ok, api_key} end)
       |> expect(:resolve_workspace_id, fn ^ws_slug -> {:ok, ws_uuid} end)
 
-      assert {:ok, %{workspace_id: ^ws_uuid, user_id: ^user_id}} =
+      assert {:ok, %{workspace_id: ^ws_uuid, user_id: ^user_id, api_key: returned_api_key}} =
                AuthenticateMcpRequest.execute("valid-token", identity_module: IdentityMock)
+
+      assert returned_api_key == api_key
+    end
+
+    test "includes api_key in successful authentication context" do
+      user_id = unique_id()
+      workspace_slug = workspace_id()
+      workspace_id = unique_id()
+
+      api_key =
+        api_key_struct(%{user_id: user_id, workspace_access: [workspace_slug], is_active: true})
+
+      IdentityMock
+      |> expect(:verify_api_key, fn "token-with-api-key" -> {:ok, api_key} end)
+      |> expect(:resolve_workspace_id, fn ^workspace_slug -> {:ok, workspace_id} end)
+
+      assert {:ok, %{workspace_id: ^workspace_id, user_id: ^user_id, api_key: ^api_key}} =
+               AuthenticateMcpRequest.execute("token-with-api-key", identity_module: IdentityMock)
     end
 
     test "uses first workspace_id from workspace_access list" do

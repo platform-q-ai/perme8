@@ -6,6 +6,7 @@ defmodule Agents.Infrastructure.Mcp.Tools.UpdateTool do
   require Logger
 
   alias Hermes.Server.Response
+  alias Agents.Infrastructure.Mcp.PermissionGuard
   alias Agents.Application.UseCases.UpdateKnowledgeEntry
 
   schema do
@@ -24,38 +25,45 @@ defmodule Agents.Infrastructure.Mcp.Tools.UpdateTool do
 
   @impl true
   def execute(%{id: entry_id} = params, frame) do
-    workspace_id = frame.assigns[:workspace_id]
-    actor_id = frame.assigns[:user_id]
+    case PermissionGuard.check_permission(frame, "knowledge.update") do
+      :ok ->
+        workspace_id = frame.assigns[:workspace_id]
+        actor_id = frame.assigns[:user_id]
 
-    attrs =
-      params
-      |> Map.take(@updatable_keys)
-      |> Enum.reject(fn {_k, v} -> is_nil(v) end)
-      |> Map.new()
+        attrs =
+          params
+          |> Map.take(@updatable_keys)
+          |> Enum.reject(fn {_k, v} -> is_nil(v) end)
+          |> Map.new()
 
-    case UpdateKnowledgeEntry.execute(workspace_id, entry_id, attrs, actor_id) do
-      {:ok, entry} ->
-        text = format_updated(entry)
-        {:reply, Response.text(Response.tool(), text), frame}
+        case UpdateKnowledgeEntry.execute(workspace_id, entry_id, attrs, actor_id) do
+          {:ok, entry} ->
+            text = format_updated(entry)
+            {:reply, Response.text(Response.tool(), text), frame}
 
-      {:error, :not_found} ->
-        {:reply, Response.error(Response.tool(), "Knowledge entry not found."), frame}
+          {:error, :not_found} ->
+            {:reply, Response.error(Response.tool(), "Knowledge entry not found."), frame}
 
-      {:error, :invalid_category} ->
-        {:reply,
-         Response.error(
-           Response.tool(),
-           "Invalid category. Valid categories: how_to, pattern, convention, architecture_decision, gotcha, concept."
-         ), frame}
+          {:error, :invalid_category} ->
+            {:reply,
+             Response.error(
+               Response.tool(),
+               "Invalid category. Valid categories: how_to, pattern, convention, architecture_decision, gotcha, concept."
+             ), frame}
 
-      {:error, reason} ->
-        Logger.error("UpdateTool unexpected error: #{inspect(reason)}")
+          {:error, reason} ->
+            Logger.error("UpdateTool unexpected error: #{inspect(reason)}")
 
-        {:reply,
-         Response.error(
-           Response.tool(),
-           "An unexpected error occurred while updating the entry."
-         ), frame}
+            {:reply,
+             Response.error(
+               Response.tool(),
+               "An unexpected error occurred while updating the entry."
+             ), frame}
+        end
+
+      {:error, scope} ->
+        {:reply, Response.error(Response.tool(), "Insufficient permissions: #{scope} required"),
+         frame}
     end
   end
 

@@ -26,7 +26,7 @@ defmodule Agents.Application.UseCases.AuthenticateMcpRequest do
   defp resolve_workspace(%{workspace_access: [workspace_slug | _]} = api_key, identity_module) do
     case identity_module.resolve_workspace_id(workspace_slug) do
       {:ok, workspace_id} ->
-        {:ok, %{workspace_id: workspace_id, user_id: api_key.user_id}}
+        {:ok, %{workspace_id: workspace_id, user_id: api_key.user_id, api_key: api_key}}
 
       {:error, :not_found} ->
         {:error, :workspace_not_found}
