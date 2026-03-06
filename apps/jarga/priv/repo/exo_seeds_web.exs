@@ -779,6 +779,7 @@ alias Agents.Sessions.Infrastructure.Schemas.ProjectTicketSchema
   size: "M",
   labels: ["feature"],
   position: 1,
+  created_at: DateTime.utc_now() |> DateTime.truncate(:second),
   sync_state: "synced",
   last_synced_at: DateTime.utc_now() |> DateTime.truncate(:second)
 })
@@ -794,6 +795,7 @@ alias Agents.Sessions.Infrastructure.Schemas.ProjectTicketSchema
   size: "S",
   labels: ["bug"],
   position: 2,
+  created_at: DateTime.utc_now() |> DateTime.truncate(:second),
   sync_state: "synced",
   last_synced_at: DateTime.utc_now() |> DateTime.truncate(:second)
 })
