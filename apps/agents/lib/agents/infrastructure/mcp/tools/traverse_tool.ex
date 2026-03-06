@@ -6,6 +6,7 @@ defmodule Agents.Infrastructure.Mcp.Tools.TraverseTool do
   require Logger
 
   alias Hermes.Server.Response
+  alias Agents.Infrastructure.Mcp.PermissionGuard
   alias Agents.Application.UseCases.TraverseKnowledgeGraph
   alias Agents.Domain.Policies.KnowledgeValidationPolicy
 
@@ -17,39 +18,47 @@ defmodule Agents.Infrastructure.Mcp.Tools.TraverseTool do
 
   @impl true
   def execute(params, frame) do
-    workspace_id = frame.assigns[:workspace_id]
+    case PermissionGuard.check_permission(frame, "knowledge.traverse") do
+      :ok ->
+        workspace_id = frame.assigns[:workspace_id]
 
-    traverse_params = %{
-      start_id: params.id,
-      relationship_type: Map.get(params, :relationship_type),
-      depth: Map.get(params, :depth)
-    }
+        traverse_params = %{
+          start_id: params.id,
+          relationship_type: Map.get(params, :relationship_type),
+          depth: Map.get(params, :depth)
+        }
 
-    case TraverseKnowledgeGraph.execute(workspace_id, traverse_params) do
-      {:ok, []} ->
-        {:reply, Response.text(Response.tool(), "No connected entries found."), frame}
+        case TraverseKnowledgeGraph.execute(workspace_id, traverse_params) do
+          {:ok, []} ->
+            {:reply, Response.text(Response.tool(), "No connected entries found."), frame}
 
-      {:ok, entries} ->
-        text = format_traversal(entries)
-        {:reply, Response.text(Response.tool(), text), frame}
+          {:ok, entries} ->
+            text = format_traversal(entries)
+            {:reply, Response.text(Response.tool(), text), frame}
 
-      {:error, :not_found} ->
-        {:reply, Response.error(Response.tool(), "Starting entry not found."), frame}
+          {:error, :not_found} ->
+            {:reply, Response.error(Response.tool(), "Starting entry not found."), frame}
 
-      {:error, :invalid_relationship_type} ->
-        valid = KnowledgeValidationPolicy.relationship_types()
+          {:error, :invalid_relationship_type} ->
+            valid = KnowledgeValidationPolicy.relationship_types()
 
-        {:reply,
-         Response.error(
-           Response.tool(),
-           "Invalid relationship type. Valid types: #{Enum.join(valid, ", ")}"
-         ), frame}
+            {:reply,
+             Response.error(
+               Response.tool(),
+               "Invalid relationship type. Valid types: #{Enum.join(valid, ", ")}"
+             ), frame}
 
-      {:error, reason} ->
-        Logger.error("TraverseTool unexpected error: #{inspect(reason)}")
+          {:error, reason} ->
+            Logger.error("TraverseTool unexpected error: #{inspect(reason)}")
 
-        {:reply,
-         Response.error(Response.tool(), "An unexpected error occurred during traversal."), frame}
+            {:reply,
+             Response.error(Response.tool(), "An unexpected error occurred during traversal."),
+             frame}
+        end
+
+      {:error, scope} ->
+        {:reply, Response.error(Response.tool(), "Insufficient permissions: #{scope} required"),
+         frame}
     end
   end
 

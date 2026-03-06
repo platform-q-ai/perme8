@@ -6,6 +6,7 @@ defmodule Agents.Infrastructure.Mcp.Tools.Jarga.ListProjectsTool do
   require Logger
 
   alias Hermes.Server.Response
+  alias Agents.Infrastructure.Mcp.PermissionGuard
   alias Agents.Application.UseCases.ListProjects
 
   schema do
@@ -13,20 +14,27 @@ defmodule Agents.Infrastructure.Mcp.Tools.Jarga.ListProjectsTool do
 
   @impl true
   def execute(_params, frame) do
-    user_id = frame.assigns[:user_id]
-    workspace_id = frame.assigns[:workspace_id]
+    case PermissionGuard.check_permission(frame, "jarga.list_projects") do
+      :ok ->
+        user_id = frame.assigns[:user_id]
+        workspace_id = frame.assigns[:workspace_id]
 
-    case ListProjects.execute(user_id, workspace_id) do
-      {:ok, []} ->
-        {:reply, Response.text(Response.tool(), "No projects found."), frame}
+        case ListProjects.execute(user_id, workspace_id) do
+          {:ok, []} ->
+            {:reply, Response.text(Response.tool(), "No projects found."), frame}
 
-      {:ok, projects} ->
-        text = format_projects(projects)
-        {:reply, Response.text(Response.tool(), text), frame}
+          {:ok, projects} ->
+            text = format_projects(projects)
+            {:reply, Response.text(Response.tool(), text), frame}
 
-      {:error, reason} ->
-        Logger.error("ListProjectsTool unexpected error: #{inspect(reason)}")
-        {:reply, Response.error(Response.tool(), "An unexpected error occurred."), frame}
+          {:error, reason} ->
+            Logger.error("ListProjectsTool unexpected error: #{inspect(reason)}")
+            {:reply, Response.error(Response.tool(), "An unexpected error occurred."), frame}
+        end
+
+      {:error, scope} ->
+        {:reply, Response.error(Response.tool(), "Insufficient permissions: #{scope} required"),
+         frame}
     end
   end
 

@@ -12,12 +12,21 @@ defmodule Agents.Infrastructure.Mcp.Tools.Jarga.CreateDocumentToolTest do
 
   setup do
     Application.put_env(:agents, :jarga_gateway, Agents.Mocks.JargaGatewayMock)
+    Application.put_env(:agents, :identity_module, Agents.Mocks.IdentityMock)
+
+    stub(Agents.Mocks.IdentityMock, :api_key_has_permission?, fn _api_key, _scope -> true end)
+
     on_exit(fn -> Application.delete_env(:agents, :jarga_gateway) end)
+    on_exit(fn -> Application.delete_env(:agents, :identity_module) end)
     :ok
   end
 
   defp build_frame(workspace_id, user_id) do
-    Frame.new(%{workspace_id: workspace_id, user_id: user_id})
+    Frame.new(%{
+      workspace_id: workspace_id,
+      user_id: user_id,
+      api_key: %{id: "test-key", permissions: nil}
+    })
   end
 
   describe "execute/2" do

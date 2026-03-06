@@ -12,16 +12,20 @@ defmodule Agents.Infrastructure.Mcp.Tools.SearchToolTest do
 
   setup do
     Application.put_env(:agents, :erm_gateway, Agents.Mocks.ErmGatewayMock)
+    Application.put_env(:agents, :identity_module, Agents.Mocks.IdentityMock)
+
+    stub(Agents.Mocks.IdentityMock, :api_key_has_permission?, fn _api_key, _scope -> true end)
 
     on_exit(fn ->
       Application.delete_env(:agents, :erm_gateway)
+      Application.delete_env(:agents, :identity_module)
     end)
 
     :ok
   end
 
-  defp build_frame(workspace_id) do
-    Frame.new(%{workspace_id: workspace_id})
+  defp build_frame(workspace_id, api_key \\ Fixtures.api_key_struct()) do
+    Frame.new(%{workspace_id: workspace_id, api_key: api_key})
   end
 
   describe "execute/2" do
@@ -90,6 +94,20 @@ defmodule Agents.Infrastructure.Mcp.Tools.SearchToolTest do
 
       assert {:reply, _response, ^frame} =
                SearchTool.execute(params, frame)
+    end
+
+    test "denies execution when API key lacks knowledge.search scope" do
+      workspace_id = Fixtures.workspace_id()
+      api_key = Fixtures.api_key_struct(%{permissions: ["agents:read"]})
+      frame = build_frame(workspace_id, api_key)
+
+      Agents.Mocks.IdentityMock
+      |> expect(:api_key_has_permission?, fn ^api_key, "mcp:knowledge.search" -> false end)
+
+      assert {:reply, response, ^frame} = SearchTool.execute(%{query: "Test"}, frame)
+      assert %Hermes.Server.Response{type: :tool, isError: true} = response
+      assert [%{"type" => "text", "text" => text}] = response.content
+      assert text == "Insufficient permissions: mcp:knowledge.search required"
     end
   end
 end

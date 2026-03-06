@@ -6,6 +6,7 @@ defmodule Agents.Infrastructure.Mcp.Tools.CreateTool do
   require Logger
 
   alias Hermes.Server.Response
+  alias Agents.Infrastructure.Mcp.PermissionGuard
   alias Agents.Application.UseCases.CreateKnowledgeEntry
 
   schema do
@@ -24,26 +25,33 @@ defmodule Agents.Infrastructure.Mcp.Tools.CreateTool do
 
   @impl true
   def execute(params, frame) do
-    workspace_id = frame.assigns[:workspace_id]
-    actor_id = frame.assigns[:user_id]
+    case PermissionGuard.check_permission(frame, "knowledge.create") do
+      :ok ->
+        workspace_id = frame.assigns[:workspace_id]
+        actor_id = frame.assigns[:user_id]
 
-    attrs = %{
-      title: params.title,
-      body: params.body,
-      category: params.category,
-      tags: Map.get(params, :tags) || [],
-      code_snippets: Map.get(params, :code_snippets) || [],
-      file_paths: Map.get(params, :file_paths) || [],
-      external_links: Map.get(params, :external_links) || []
-    }
+        attrs = %{
+          title: params.title,
+          body: params.body,
+          category: params.category,
+          tags: Map.get(params, :tags) || [],
+          code_snippets: Map.get(params, :code_snippets) || [],
+          file_paths: Map.get(params, :file_paths) || [],
+          external_links: Map.get(params, :external_links) || []
+        }
 
-    case CreateKnowledgeEntry.execute(workspace_id, attrs, actor_id) do
-      {:ok, entry} ->
-        text = format_created(entry)
-        {:reply, Response.text(Response.tool(), text), frame}
+        case CreateKnowledgeEntry.execute(workspace_id, attrs, actor_id) do
+          {:ok, entry} ->
+            text = format_created(entry)
+            {:reply, Response.text(Response.tool(), text), frame}
 
-      {:error, reason} ->
-        {:reply, Response.error(Response.tool(), format_error(reason)), frame}
+          {:error, reason} ->
+            {:reply, Response.error(Response.tool(), format_error(reason)), frame}
+        end
+
+      {:error, scope} ->
+        {:reply, Response.error(Response.tool(), "Insufficient permissions: #{scope} required"),
+         frame}
     end
   end
 

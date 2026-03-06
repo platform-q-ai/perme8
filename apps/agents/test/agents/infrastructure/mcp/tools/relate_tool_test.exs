@@ -12,14 +12,23 @@ defmodule Agents.Infrastructure.Mcp.Tools.RelateToolTest do
 
   setup do
     Application.put_env(:agents, :erm_gateway, Agents.Mocks.ErmGatewayMock)
+    Application.put_env(:agents, :identity_module, Agents.Mocks.IdentityMock)
+
+    stub(Agents.Mocks.IdentityMock, :api_key_has_permission?, fn _api_key, _scope -> true end)
+
     on_exit(fn -> Application.delete_env(:agents, :erm_gateway) end)
+    on_exit(fn -> Application.delete_env(:agents, :identity_module) end)
     :ok
   end
 
   defp actor_id, do: "test-actor-id"
 
   defp build_frame(workspace_id, actor_id) do
-    Frame.new(%{workspace_id: workspace_id, user_id: actor_id})
+    Frame.new(%{
+      workspace_id: workspace_id,
+      user_id: actor_id,
+      api_key: Fixtures.api_key_struct()
+    })
   end
 
   describe "execute/2" do

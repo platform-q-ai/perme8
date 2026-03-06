@@ -12,12 +12,17 @@ defmodule Agents.Infrastructure.Mcp.Tools.TraverseToolTest do
 
   setup do
     Application.put_env(:agents, :erm_gateway, Agents.Mocks.ErmGatewayMock)
+    Application.put_env(:agents, :identity_module, Agents.Mocks.IdentityMock)
+
+    stub(Agents.Mocks.IdentityMock, :api_key_has_permission?, fn _api_key, _scope -> true end)
+
     on_exit(fn -> Application.delete_env(:agents, :erm_gateway) end)
+    on_exit(fn -> Application.delete_env(:agents, :identity_module) end)
     :ok
   end
 
   defp build_frame(workspace_id) do
-    Frame.new(%{workspace_id: workspace_id})
+    Frame.new(%{workspace_id: workspace_id, api_key: Fixtures.api_key_struct()})
   end
 
   describe "execute/2" do

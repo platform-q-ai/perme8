@@ -6,6 +6,7 @@ defmodule Agents.Infrastructure.Mcp.Tools.Jarga.ListDocumentsTool do
   require Logger
 
   alias Hermes.Server.Response
+  alias Agents.Infrastructure.Mcp.PermissionGuard
   alias Agents.Application.UseCases.ListDocuments
 
   schema do
@@ -14,25 +15,32 @@ defmodule Agents.Infrastructure.Mcp.Tools.Jarga.ListDocumentsTool do
 
   @impl true
   def execute(params, frame) do
-    user_id = frame.assigns[:user_id]
-    workspace_id = frame.assigns[:workspace_id]
+    case PermissionGuard.check_permission(frame, "jarga.list_documents") do
+      :ok ->
+        user_id = frame.assigns[:user_id]
+        workspace_id = frame.assigns[:workspace_id]
 
-    filter_params = build_filter_params(params)
+        filter_params = build_filter_params(params)
 
-    case ListDocuments.execute(user_id, workspace_id, filter_params) do
-      {:ok, []} ->
-        {:reply, Response.text(Response.tool(), "No documents found."), frame}
+        case ListDocuments.execute(user_id, workspace_id, filter_params) do
+          {:ok, []} ->
+            {:reply, Response.text(Response.tool(), "No documents found."), frame}
 
-      {:ok, documents} ->
-        text = format_documents(documents)
-        {:reply, Response.text(Response.tool(), text), frame}
+          {:ok, documents} ->
+            text = format_documents(documents)
+            {:reply, Response.text(Response.tool(), text), frame}
 
-      {:error, :project_not_found} ->
-        {:reply, Response.error(Response.tool(), "Project not found."), frame}
+          {:error, :project_not_found} ->
+            {:reply, Response.error(Response.tool(), "Project not found."), frame}
 
-      {:error, reason} ->
-        Logger.error("ListDocumentsTool unexpected error: #{inspect(reason)}")
-        {:reply, Response.error(Response.tool(), "An unexpected error occurred."), frame}
+          {:error, reason} ->
+            Logger.error("ListDocumentsTool unexpected error: #{inspect(reason)}")
+            {:reply, Response.error(Response.tool(), "An unexpected error occurred."), frame}
+        end
+
+      {:error, scope} ->
+        {:reply, Response.error(Response.tool(), "Insufficient permissions: #{scope} required"),
+         frame}
     end
   end
 

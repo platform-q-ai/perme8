@@ -6,6 +6,7 @@ defmodule Agents.Infrastructure.Mcp.Tools.GetTool do
   require Logger
 
   alias Hermes.Server.Response
+  alias Agents.Infrastructure.Mcp.PermissionGuard
   alias Agents.Application.UseCases.GetKnowledgeEntry
 
   schema do
@@ -14,24 +15,31 @@ defmodule Agents.Infrastructure.Mcp.Tools.GetTool do
 
   @impl true
   def execute(%{id: entry_id}, frame) do
-    workspace_id = frame.assigns[:workspace_id]
+    case PermissionGuard.check_permission(frame, "knowledge.get") do
+      :ok ->
+        workspace_id = frame.assigns[:workspace_id]
 
-    case GetKnowledgeEntry.execute(workspace_id, entry_id) do
-      {:ok, %{entry: entry, relationships: relationships}} ->
-        text = format_entry(entry, relationships)
-        {:reply, Response.text(Response.tool(), text), frame}
+        case GetKnowledgeEntry.execute(workspace_id, entry_id) do
+          {:ok, %{entry: entry, relationships: relationships}} ->
+            text = format_entry(entry, relationships)
+            {:reply, Response.text(Response.tool(), text), frame}
 
-      {:error, :not_found} ->
-        {:reply, Response.error(Response.tool(), "Knowledge entry not found."), frame}
+          {:error, :not_found} ->
+            {:reply, Response.error(Response.tool(), "Knowledge entry not found."), frame}
 
-      {:error, reason} ->
-        Logger.error("GetTool unexpected error: #{inspect(reason)}")
+          {:error, reason} ->
+            Logger.error("GetTool unexpected error: #{inspect(reason)}")
 
-        {:reply,
-         Response.error(
-           Response.tool(),
-           "An unexpected error occurred while retrieving the entry."
-         ), frame}
+            {:reply,
+             Response.error(
+               Response.tool(),
+               "An unexpected error occurred while retrieving the entry."
+             ), frame}
+        end
+
+      {:error, scope} ->
+        {:reply, Response.error(Response.tool(), "Insufficient permissions: #{scope} required"),
+         frame}
     end
   end
 

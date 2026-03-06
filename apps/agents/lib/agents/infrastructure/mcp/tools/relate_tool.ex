@@ -6,6 +6,7 @@ defmodule Agents.Infrastructure.Mcp.Tools.RelateTool do
   require Logger
 
   alias Hermes.Server.Response
+  alias Agents.Infrastructure.Mcp.PermissionGuard
   alias Agents.Application.UseCases.CreateKnowledgeRelationship
   alias Agents.Domain.Policies.KnowledgeValidationPolicy
 
@@ -21,47 +22,54 @@ defmodule Agents.Infrastructure.Mcp.Tools.RelateTool do
 
   @impl true
   def execute(params, frame) do
-    workspace_id = frame.assigns[:workspace_id]
-    actor_id = frame.assigns[:user_id]
+    case PermissionGuard.check_permission(frame, "knowledge.relate") do
+      :ok ->
+        workspace_id = frame.assigns[:workspace_id]
+        actor_id = frame.assigns[:user_id]
 
-    relate_params = %{
-      from_id: params.from_id,
-      to_id: params.to_id,
-      type: params.relationship_type
-    }
+        relate_params = %{
+          from_id: params.from_id,
+          to_id: params.to_id,
+          type: params.relationship_type
+        }
 
-    case CreateKnowledgeRelationship.execute(workspace_id, relate_params, actor_id) do
-      {:ok, relationship} ->
-        text = format_relationship(relationship)
-        {:reply, Response.text(Response.tool(), text), frame}
+        case CreateKnowledgeRelationship.execute(workspace_id, relate_params, actor_id) do
+          {:ok, relationship} ->
+            text = format_relationship(relationship)
+            {:reply, Response.text(Response.tool(), text), frame}
 
-      {:error, :self_reference} ->
-        {:reply,
-         Response.error(
-           Response.tool(),
-           "Cannot create a self-referencing relationship. Source and target must be different entries."
-         ), frame}
+          {:error, :self_reference} ->
+            {:reply,
+             Response.error(
+               Response.tool(),
+               "Cannot create a self-referencing relationship. Source and target must be different entries."
+             ), frame}
 
-      {:error, :invalid_relationship_type} ->
-        valid = KnowledgeValidationPolicy.relationship_types()
+          {:error, :invalid_relationship_type} ->
+            valid = KnowledgeValidationPolicy.relationship_types()
 
-        {:reply,
-         Response.error(
-           Response.tool(),
-           "Invalid relationship type. Valid types: #{Enum.join(valid, ", ")}"
-         ), frame}
+            {:reply,
+             Response.error(
+               Response.tool(),
+               "Invalid relationship type. Valid types: #{Enum.join(valid, ", ")}"
+             ), frame}
 
-      {:error, :not_found} ->
-        {:reply, Response.error(Response.tool(), "One or both entries not found."), frame}
+          {:error, :not_found} ->
+            {:reply, Response.error(Response.tool(), "One or both entries not found."), frame}
 
-      {:error, reason} ->
-        Logger.error("RelateTool unexpected error: #{inspect(reason)}")
+          {:error, reason} ->
+            Logger.error("RelateTool unexpected error: #{inspect(reason)}")
 
-        {:reply,
-         Response.error(
-           Response.tool(),
-           "An unexpected error occurred while creating the relationship."
-         ), frame}
+            {:reply,
+             Response.error(
+               Response.tool(),
+               "An unexpected error occurred while creating the relationship."
+             ), frame}
+        end
+
+      {:error, scope} ->
+        {:reply, Response.error(Response.tool(), "Insufficient permissions: #{scope} required"),
+         frame}
     end
   end
 
