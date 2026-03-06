@@ -43,14 +43,16 @@ defmodule Agents.Sessions.Domain.Entities.QueueSnapshot do
 
   @doc """
   Creates a queue snapshot with default lanes and metadata.
+
+  Accepts an optional `generated_at` key; defaults to the current UTC time.
   """
   @spec new(map()) :: t()
-  def new(attrs) when is_map(attrs) do
+  def new(attrs, now \\ DateTime.utc_now()) when is_map(attrs) do
     attrs =
       attrs
       |> normalize_lanes()
       |> normalize_metadata()
-      |> Map.put_new(:generated_at, DateTime.utc_now())
+      |> Map.put_new(:generated_at, now)
 
     struct(__MODULE__, attrs)
   end

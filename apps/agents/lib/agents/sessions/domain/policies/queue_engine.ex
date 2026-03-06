@@ -26,30 +26,21 @@ defmodule Agents.Sessions.Domain.Policies.QueueEngine do
   """
   @spec assign_lane(map()) :: lane()
   def assign_lane(task) when is_map(task) do
-    status = value(task, :status)
+    case value(task, :status) do
+      status when status in ["pending", "starting", "running"] -> :processing
+      "awaiting_feedback" -> :awaiting_feedback
+      "queued" -> assign_queued_lane(task)
+      _terminal -> :terminal
+    end
+  end
+
+  defp assign_queued_lane(task) do
     retry_count = value(task, :retry_count) || 0
 
     cond do
-      status in ["pending", "starting", "running"] ->
-        :processing
-
-      status == "awaiting_feedback" ->
-        :awaiting_feedback
-
-      status == "queued" and retry_count > 0 ->
-        :retry_pending
-
-      status == "queued" and real_container?(value(task, :container_id)) ->
-        :warm
-
-      status == "queued" ->
-        :cold
-
-      status in ["completed", "failed", "cancelled"] ->
-        :terminal
-
-      true ->
-        :terminal
+      retry_count > 0 -> :retry_pending
+      real_container?(value(task, :container_id)) -> :warm
+      true -> :cold
     end
   end
 
