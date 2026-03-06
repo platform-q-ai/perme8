@@ -138,5 +138,112 @@ defmodule Agents.Sessions.Application.UseCases.PromoteTaskTest do
                  event_bus: Agents.Sessions.Application.UseCases.PromoteTaskMockEventBus
                )
     end
+
+    test "promotes light image tasks even when no heavyweight slots available" do
+      snapshot =
+        QueueSnapshot.new(%{
+          user_id: "user-1",
+          lanes: %{
+            processing: [
+              LaneEntry.new(%{
+                task_id: "heavy-running",
+                image: "perme8-opencode",
+                lane: :processing
+              })
+            ],
+            warm: [
+              LaneEntry.new(%{
+                task_id: "light-1",
+                image: "perme8-opencode-light",
+                queue_position: 1,
+                lane: :warm
+              })
+            ],
+            cold: [
+              LaneEntry.new(%{
+                task_id: "heavy-queued",
+                image: "perme8-opencode",
+                queue_position: 2,
+                lane: :cold
+              })
+            ]
+          },
+          metadata: %{concurrency_limit: 1, running_count: 1}
+        })
+
+      assert {:ok, promoted} =
+               PromoteTask.execute(snapshot,
+                 task_repo: Agents.Sessions.Application.UseCases.PromoteTaskMockTaskRepo,
+                 event_bus: Agents.Sessions.Application.UseCases.PromoteTaskMockEventBus
+               )
+
+      # Light image promoted, heavyweight blocked
+      assert Enum.map(promoted, & &1.id) == ["light-1"]
+      assert_receive {:get_task, "light-1"}
+      refute_received {:get_task, "heavy-queued"}
+    end
+
+    test "promotes both light and heavyweight tasks when slots available" do
+      snapshot =
+        QueueSnapshot.new(%{
+          user_id: "user-1",
+          lanes: %{
+            warm: [
+              LaneEntry.new(%{
+                task_id: "light-1",
+                image: "perme8-opencode-light",
+                queue_position: 1,
+                lane: :warm
+              }),
+              LaneEntry.new(%{
+                task_id: "heavy-1",
+                image: "perme8-opencode",
+                queue_position: 2,
+                lane: :warm
+              })
+            ],
+            cold: []
+          },
+          metadata: %{concurrency_limit: 2, running_count: 0}
+        })
+
+      assert {:ok, promoted} =
+               PromoteTask.execute(snapshot,
+                 task_repo: Agents.Sessions.Application.UseCases.PromoteTaskMockTaskRepo,
+                 event_bus: Agents.Sessions.Application.UseCases.PromoteTaskMockEventBus
+               )
+
+      promoted_ids = Enum.map(promoted, & &1.id)
+      assert "light-1" in promoted_ids
+      assert "heavy-1" in promoted_ids
+    end
+
+    test "does not double-promote light image tasks" do
+      snapshot =
+        QueueSnapshot.new(%{
+          user_id: "user-1",
+          lanes: %{
+            warm: [
+              LaneEntry.new(%{
+                task_id: "light-1",
+                image: "perme8-opencode-light",
+                queue_position: 1,
+                lane: :warm
+              })
+            ],
+            cold: []
+          },
+          metadata: %{concurrency_limit: 2, running_count: 0}
+        })
+
+      assert {:ok, promoted} =
+               PromoteTask.execute(snapshot,
+                 task_repo: Agents.Sessions.Application.UseCases.PromoteTaskMockTaskRepo,
+                 event_bus: Agents.Sessions.Application.UseCases.PromoteTaskMockEventBus
+               )
+
+      # Should only promote light-1 once, not twice
+      assert Enum.map(promoted, & &1.id) == ["light-1"]
+    end
   end
 end

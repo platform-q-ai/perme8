@@ -166,5 +166,83 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestratorTest do
 
       assert :ok = QueueOrchestrator.check_concurrency(user.id)
     end
+
+    test "returns ok when only light image tasks are running" do
+      user = user_fixture()
+
+      _light_running =
+        create_task(user, %{status: "running", image: "perme8-opencode-light"})
+
+      start_orchestrator!(user.id, concurrency_limit: 1)
+
+      # Light image tasks don't count toward concurrency
+      assert :ok = QueueOrchestrator.check_concurrency(user.id)
+    end
+  end
+
+  describe "light image promotion" do
+    test "promotes light image tasks even when at concurrency limit" do
+      user = user_fixture()
+      _heavy_running = create_task(user, %{status: "running", image: "perme8-opencode"})
+
+      light_queued =
+        create_task(user, %{
+          status: "queued",
+          queue_position: 1,
+          image: "perme8-opencode-light"
+        })
+
+      Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "queue:user:#{user.id}")
+
+      start_orchestrator!(user.id,
+        concurrency_limit: 1,
+        pubsub: Perme8.Events.PubSub,
+        task_runner_starter: fn _task_id, _opts -> {:ok, self()} end
+      )
+
+      assert :ok = QueueOrchestrator.notify_task_queued(user.id, light_queued.id)
+
+      updated = Repo.get!(TaskSchema, light_queued.id)
+      assert updated.status == "pending"
+    end
+
+    test "does not promote heavyweight tasks when at concurrency limit" do
+      user = user_fixture()
+      _heavy_running = create_task(user, %{status: "running", image: "perme8-opencode"})
+
+      heavy_queued =
+        create_task(user, %{
+          status: "queued",
+          queue_position: 1,
+          image: "perme8-opencode"
+        })
+
+      start_orchestrator!(user.id,
+        concurrency_limit: 1,
+        pubsub: Perme8.Events.PubSub,
+        task_runner_starter: fn _task_id, _opts -> {:ok, self()} end
+      )
+
+      assert :ok = QueueOrchestrator.notify_task_queued(user.id, heavy_queued.id)
+
+      updated = Repo.get!(TaskSchema, heavy_queued.id)
+      assert updated.status == "queued"
+    end
+
+    test "snapshot running_count excludes light image tasks" do
+      user = user_fixture()
+      _heavy_running = create_task(user, %{status: "running", image: "perme8-opencode"})
+      _light_running = create_task(user, %{status: "running", image: "perme8-opencode-light"})
+
+      start_orchestrator!(user.id, concurrency_limit: 2)
+
+      snapshot = QueueOrchestrator.get_snapshot(user.id)
+
+      # Only the heavyweight task counts
+      assert snapshot.metadata.running_count == 1
+      assert snapshot.metadata.available_slots == 1
+      # Both tasks are in the processing lane
+      assert length(snapshot.lanes.processing) == 2
+    end
   end
 end

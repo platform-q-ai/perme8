@@ -78,7 +78,11 @@ defmodule Agents.Sessions.Domain.Policies.QueueEngine do
       retry_pending: lane_entries |> filter_lane(:retry_pending) |> sort_by_queue_position()
     }
 
-    running_count = length(lanes.processing)
+    running_count =
+      lanes.processing
+      |> Enum.reject(&LaneEntry.light_image?/1)
+      |> length()
+
     concurrency_limit = config[:concurrency_limit] || 2
     warm_cache_limit = config[:warm_cache_limit] || 2
 
@@ -126,6 +130,33 @@ defmodule Agents.Sessions.Domain.Policies.QueueEngine do
     |> Enum.take(available_slots)
   end
 
+  @doc """
+  Returns all queued light image tasks that should be promoted regardless of
+  available concurrency slots. Light image tasks bypass the concurrency limit.
+  """
+  @spec light_image_tasks_to_promote(QueueSnapshot.t()) :: [LaneEntry.t()]
+  def light_image_tasks_to_promote(%QueueSnapshot{} = snapshot) do
+    snapshot
+    |> promotable_tasks()
+    |> Enum.filter(&LaneEntry.light_image?/1)
+  end
+
+  @doc """
+  Returns up to N heavyweight (non-light-image) tasks to promote.
+  Used for the concurrency-limited promotion pass.
+  """
+  @spec heavyweight_tasks_to_promote(QueueSnapshot.t(), integer()) :: [LaneEntry.t()]
+  def heavyweight_tasks_to_promote(%QueueSnapshot{} = _snapshot, available_slots)
+      when available_slots <= 0,
+      do: []
+
+  def heavyweight_tasks_to_promote(%QueueSnapshot{} = snapshot, available_slots) do
+    snapshot
+    |> promotable_tasks()
+    |> Enum.reject(&LaneEntry.light_image?/1)
+    |> Enum.take(available_slots)
+  end
+
   defp to_lane_entry(task) do
     LaneEntry.new(%{
       task_id: value(task, :id) || value(task, :task_id),
@@ -138,7 +169,8 @@ defmodule Agents.Sessions.Domain.Policies.QueueEngine do
       retry_count: value(task, :retry_count) || 0,
       error: value(task, :error),
       queued_at: value(task, :queued_at),
-      started_at: value(task, :started_at)
+      started_at: value(task, :started_at),
+      image: value(task, :image)
     })
   end
 
