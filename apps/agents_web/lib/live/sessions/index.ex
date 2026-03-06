@@ -4,9 +4,11 @@ defmodule AgentsWeb.SessionsLive.Index do
   use AgentsWeb, :live_view
 
   import AgentsWeb.SessionsLive.Components.SessionComponents
+  import AgentsWeb.SessionsLive.Components.QueueLaneComponents
   import AgentsWeb.SessionsLive.Helpers
 
   alias Agents.Sessions
+  alias Agents.Sessions.Domain.Entities.QueueSnapshot
   alias Agents.Sessions.Domain.Entities.TodoList
   require Logger
 
@@ -22,7 +24,16 @@ defmodule AgentsWeb.SessionsLive.Index do
     tasks = Sessions.list_tasks(user.id)
     tickets = Sessions.list_project_tickets(user.id, tasks: tasks)
     active_ticket_number = next_active_ticket_number(tickets, nil)
-    queue_state = load_queue_state(user.id)
+    queue_state_or_snapshot = load_queue_state(user.id)
+
+    {queue_v2_enabled, queue_snapshot, queue_state} =
+      case queue_state_or_snapshot do
+        %QueueSnapshot{} = snapshot ->
+          {true, snapshot, QueueSnapshot.to_legacy_map(snapshot)}
+
+        queue_state when is_map(queue_state) ->
+          {false, nil, queue_state}
+      end
 
     if connected?(socket) do
       subscribe_to_active_tasks(tasks)
@@ -55,6 +66,8 @@ defmodule AgentsWeb.SessionsLive.Index do
      |> assign(:selected_image, default_image)
      |> assign(:optimistic_new_sessions, [])
      |> assign(:new_task_monitors, %{})
+     |> assign(:queue_v2_enabled, queue_v2_enabled)
+     |> assign(:queue_snapshot, queue_snapshot)
      |> assign(:queue_state, queue_state)
      |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)
      |> assign(:refreshing_task_ids, MapSet.new())
@@ -1060,6 +1073,15 @@ defmodule AgentsWeb.SessionsLive.Index do
          |> broadcast_optimistic_new_sessions_snapshot()
          |> maybe_flash_new_task_down(reason)}
     end
+  end
+
+  @impl true
+  def handle_info({:queue_snapshot, user_id, %QueueSnapshot{} = snapshot}, socket)
+      when user_id == socket.assigns.current_scope.user.id do
+    {:noreply,
+     socket
+     |> assign(:queue_snapshot, snapshot)
+     |> assign(:queue_state, QueueSnapshot.to_legacy_map(snapshot))}
   end
 
   @impl true
