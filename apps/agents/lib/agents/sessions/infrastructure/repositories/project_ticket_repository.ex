@@ -54,11 +54,13 @@ defmodule Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository do
   """
   @spec send_to_top(integer()) :: :ok
   def send_to_top(number) when is_integer(number) do
-    max_pos = Repo.one(from(t in ProjectTicketSchema, select: max(t.position))) || 0
+    Repo.transaction(fn ->
+      max_pos = Repo.one(from(t in ProjectTicketSchema, select: max(t.position))) || 0
 
-    ProjectTicketSchema
-    |> where([t], t.number == ^number)
-    |> Repo.update_all(set: [position: max_pos + 1])
+      ProjectTicketSchema
+      |> where([t], t.number == ^number)
+      |> Repo.update_all(set: [position: max_pos + 1])
+    end)
 
     :ok
   end
@@ -69,11 +71,13 @@ defmodule Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository do
   """
   @spec send_to_bottom(integer()) :: :ok
   def send_to_bottom(number) when is_integer(number) do
-    min_pos = Repo.one(from(t in ProjectTicketSchema, select: min(t.position))) || 0
+    Repo.transaction(fn ->
+      min_pos = Repo.one(from(t in ProjectTicketSchema, select: min(t.position))) || 0
 
-    ProjectTicketSchema
-    |> where([t], t.number == ^number)
-    |> Repo.update_all(set: [position: min_pos - 1])
+      ProjectTicketSchema
+      |> where([t], t.number == ^number)
+      |> Repo.update_all(set: [position: min_pos - 1])
+    end)
 
     :ok
   end
