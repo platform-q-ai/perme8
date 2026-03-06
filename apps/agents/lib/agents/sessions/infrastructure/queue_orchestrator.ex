@@ -385,7 +385,7 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
       snapshot = build_current_snapshot(state)
       cold_tasks = snapshot.lanes.cold
 
-      if length(cold_tasks) > 0 and state.warm_cache_limit > 0 do
+      if cold_tasks != [] and state.warm_cache_limit > 0 do
         Process.send_after(self(), :warm_top_queued, @warmup_delay_ms)
 
         %{

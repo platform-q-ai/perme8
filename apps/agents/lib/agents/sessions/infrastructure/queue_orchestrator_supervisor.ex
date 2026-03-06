@@ -1,4 +1,7 @@
 defmodule Agents.Sessions.Infrastructure.QueueOrchestratorSupervisor do
+  @moduledoc """
+  DynamicSupervisor for per-user QueueOrchestrator GenServer processes.
+  """
   use DynamicSupervisor
 
   def start_link(init_arg) do
