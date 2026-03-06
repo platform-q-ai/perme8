@@ -86,7 +86,7 @@ defmodule Agents.Sessions.Infrastructure.Clients.GithubProjectClient do
     case Req.get(url,
            headers: rest_headers(token),
            receive_timeout: 15_000,
-           connect_timeout: 5_000
+           connect_options: [timeout: 5_000]
          ) do
       {:ok, %{status: 200, body: body}} when is_list(body) ->
         issues =
