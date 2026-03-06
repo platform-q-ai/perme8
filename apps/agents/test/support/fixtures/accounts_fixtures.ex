@@ -42,6 +42,7 @@ defmodule Agents.Test.AccountsFixtures do
     now_utc = DateTime.utc_now() |> DateTime.truncate(:second)
     now_naive = DateTime.to_naive(now_utc)
 
+    # Column list matches the users table owned by Identity (see Identity.Infrastructure.Schemas.UserSchema)
     Identity.Repo.query!(
       """
       INSERT INTO users (id, email, first_name, last_name, confirmed_at, date_created, status)
