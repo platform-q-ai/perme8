@@ -29,6 +29,9 @@ defmodule Agents.Sessions.Infrastructure.Schemas.TaskSchema do
           parent_task_id: Ecto.UUID.t() | nil,
           pending_question: map() | nil,
           queue_position: integer() | nil,
+          retry_count: integer(),
+          last_retry_at: DateTime.t() | nil,
+          next_retry_at: DateTime.t() | nil,
           queued_at: DateTime.t() | nil,
           started_at: DateTime.t() | nil,
           completed_at: DateTime.t() | nil,
@@ -56,6 +59,9 @@ defmodule Agents.Sessions.Infrastructure.Schemas.TaskSchema do
     field(:parent_task_id, Ecto.UUID)
     field(:pending_question, :map)
     field(:queue_position, :integer)
+    field(:retry_count, :integer, default: 0)
+    field(:last_retry_at, :utc_datetime)
+    field(:next_retry_at, :utc_datetime)
     field(:queued_at, :utc_datetime)
     field(:started_at, :utc_datetime)
     field(:completed_at, :utc_datetime)
@@ -88,6 +94,9 @@ defmodule Agents.Sessions.Infrastructure.Schemas.TaskSchema do
       :output,
       :parent_task_id,
       :queue_position,
+      :retry_count,
+      :last_retry_at,
+      :next_retry_at,
       :queued_at,
       :started_at,
       :completed_at
@@ -118,6 +127,9 @@ defmodule Agents.Sessions.Infrastructure.Schemas.TaskSchema do
       :session_summary,
       :pending_question,
       :queue_position,
+      :retry_count,
+      :last_retry_at,
+      :next_retry_at,
       :queued_at,
       :started_at,
       :completed_at

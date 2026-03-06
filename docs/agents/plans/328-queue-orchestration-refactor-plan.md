@@ -293,7 +293,7 @@ Lanes are derived from task status + metadata (no new DB column needed):
 
 ---
 
-## Phase 3: Infrastructure Layer — QueueOrchestrator GenServer + Migration
+## Phase 3: Infrastructure Layer — QueueOrchestrator GenServer + Migration ⏳
 
 **Goal**: Replace QueueManager with QueueOrchestrator behind feature flag. Add retry columns.
 
@@ -301,7 +301,7 @@ Lanes are derived from task status + metadata (no new DB column needed):
 
 ### Step 3.1: Database Migration
 
-- ⏸ Create `apps/agents/priv/repo/migrations/YYYYMMDDHHMMSS_add_retry_fields_to_sessions_tasks.exs`
+- [x] Create `apps/agents/priv/repo/migrations/YYYYMMDDHHMMSS_add_retry_fields_to_sessions_tasks.exs`
   - Add columns:
     - `retry_count :integer, default: 0, null: false`
     - `last_retry_at :utc_datetime, null: true`
@@ -310,19 +310,19 @@ Lanes are derived from task status + metadata (no new DB column needed):
 
 ### Step 3.2: Update TaskSchema + Task Entity
 
-- ⏸ **RED**: Update test `apps/agents/test/agents/sessions/infrastructure/schemas/task_schema_test.exs`
+- [x] **RED**: Update test `apps/agents/test/agents/sessions/infrastructure/schemas/task_schema_test.exs`
   - Tests:
     - Changeset accepts retry_count, last_retry_at, next_retry_at fields
     - retry_count defaults to 0
     - status_changeset allows updating retry fields
-- ⏸ **GREEN**: Update `apps/agents/lib/agents/sessions/infrastructure/schemas/task_schema.ex`
+- [x] **GREEN**: Update `apps/agents/lib/agents/sessions/infrastructure/schemas/task_schema.ex`
   - Add fields: `retry_count`, `last_retry_at`, `next_retry_at`
   - Update changeset and status_changeset to cast new fields
-- ⏸ **GREEN**: Update `apps/agents/lib/agents/sessions/domain/entities/task.ex`
+- [x] **GREEN**: Update `apps/agents/lib/agents/sessions/domain/entities/task.ex`
   - Add fields: `retry_count`, `last_retry_at`, `next_retry_at` to struct and typespec
   - Update `from_schema/1` to include new fields
   - Update `valid_statuses/0` — no change needed (statuses unchanged)
-- ⏸ **REFACTOR**: Clean up
+- [x] **REFACTOR**: Clean up
 
 ### Step 3.3: Update TaskRepository + TaskQueries
 
@@ -341,7 +341,7 @@ Lanes are derived from task status + metadata (no new DB column needed):
 
 ### Step 3.4: QueueOrchestrator GenServer
 
-- ⏸ **RED**: Write test `apps/agents/test/agents/sessions/infrastructure/queue_orchestrator_test.exs`
+- [x] **RED**: Write test `apps/agents/test/agents/sessions/infrastructure/queue_orchestrator_test.exs`
   - Tests (integration with real DB, mirrors existing queue_manager_test.exs structure):
     - `get_snapshot/1` returns a valid QueueSnapshot with correct lane assignments
     - `notify_task_completed/2` promotes next queued task and broadcasts snapshot
@@ -357,38 +357,38 @@ Lanes are derived from task status + metadata (no new DB column needed):
     - Retry: failed task with retryable error gets retry_count incremented and re-queued after delay
     - Retry: non-retryable failure stays in failed status
     - Retry: exhausted retries stays in failed status with retry_exhausted error
-- ⏸ **GREEN**: Implement `apps/agents/lib/agents/sessions/infrastructure/queue_orchestrator.ex`
+- [x] **GREEN**: Implement `apps/agents/lib/agents/sessions/infrastructure/queue_orchestrator.ex`
   - GenServer using same Registry/via_tuple pattern as QueueManager
   - Delegates policy decisions to QueueEngine, RetryPolicy, QueuePolicy
   - Broadcasts QueueSnapshot (not raw map) on state changes
   - Handles retry scheduling via `Process.send_after/3`
-- ⏸ **REFACTOR**: Compare with QueueManager for feature parity, remove dead code
+- [x] **REFACTOR**: Compare with QueueManager for feature parity, remove dead code
 
 ### Step 3.5: QueueOrchestrator Supervisor
 
-- ⏸ **RED**: Write test `apps/agents/test/agents/sessions/infrastructure/queue_orchestrator_supervisor_test.exs`
+- [x] **RED**: Write test `apps/agents/test/agents/sessions/infrastructure/queue_orchestrator_supervisor_test.exs`
   - Tests:
     - `ensure_started/2` starts an orchestrator for a user
     - `ensure_started/2` returns existing pid if already running
     - Multiple users get separate orchestrator processes
-- ⏸ **GREEN**: Implement `apps/agents/lib/agents/sessions/infrastructure/queue_orchestrator_supervisor.ex`
+- [x] **GREEN**: Implement `apps/agents/lib/agents/sessions/infrastructure/queue_orchestrator_supervisor.ex`
   - DynamicSupervisor, same pattern as QueueManagerSupervisor
-- ⏸ **REFACTOR**: Ensure same fault tolerance guarantees as QueueManagerSupervisor
+- [x] **REFACTOR**: Ensure same fault tolerance guarantees as QueueManagerSupervisor
 
 ### Step 3.6: Update Sessions Facade (Feature Flag Routing)
 
-- ⏸ **RED**: Update test `apps/agents/test/agents/sessions_test.exs`
+- [x] **RED**: Update test `apps/agents/test/agents/sessions_test.exs`
   - Tests:
     - When `queue_v2_enabled?` is false, all queue functions route to QueueManager (existing behavior)
     - When `queue_v2_enabled?` is true, `get_queue_state/1` returns a QueueSnapshot
     - When `queue_v2_enabled?` is true, `notify_task_terminal_status/4` routes to QueueOrchestrator
     - When `queue_v2_enabled?` is true, `set_concurrency_limit/2` routes to QueueOrchestrator
     - Backward compatibility: QueueSnapshot can be converted to legacy map format
-- ⏸ **GREEN**: Update `apps/agents/lib/agents/sessions.ex`
+- [x] **GREEN**: Update `apps/agents/lib/agents/sessions.ex`
   - Add private helper `queue_backend/0` that returns `QueueManager` or `QueueOrchestrator`
   - Route queue-related functions through `queue_backend/0`
   - Add `QueueSnapshot.to_legacy_map/1` for backward compatibility during migration
-- ⏸ **REFACTOR**: Remove duplication between legacy and new paths
+- [x] **REFACTOR**: Remove duplication between legacy and new paths
 
 ### Phase 3 Validation
 

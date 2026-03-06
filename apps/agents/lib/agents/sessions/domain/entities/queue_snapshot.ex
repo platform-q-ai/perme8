@@ -82,6 +82,42 @@ defmodule Agents.Sessions.Domain.Entities.QueueSnapshot do
     Map.get(snapshot.lanes, lane, [])
   end
 
+  @doc """
+  Converts a snapshot into the legacy queue-state map shape.
+  """
+  @spec to_legacy_map(t()) :: map()
+  def to_legacy_map(%__MODULE__{} = snapshot) do
+    %{
+      running: snapshot.metadata.running_count,
+      queued:
+        Enum.map(
+          snapshot.lanes.cold ++ snapshot.lanes.warm ++ snapshot.lanes.retry_pending,
+          fn e ->
+            %{
+              id: e.task_id,
+              instruction: e.instruction,
+              status: e.status,
+              queue_position: e.queue_position
+            }
+          end
+        ),
+      awaiting_feedback:
+        Enum.map(snapshot.lanes.awaiting_feedback, fn e ->
+          %{id: e.task_id, instruction: e.instruction, status: e.status}
+        end),
+      concurrency_limit: snapshot.metadata.concurrency_limit,
+      warm_cache_limit: snapshot.metadata.warm_cache_limit,
+      warm_task_ids:
+        snapshot.lanes.warm
+        |> Enum.filter(&LaneEntry.warm?/1)
+        |> Enum.map(& &1.task_id),
+      warming_task_ids:
+        snapshot.lanes.warm
+        |> Enum.filter(fn e -> e.warm_state == :warming end)
+        |> Enum.map(& &1.task_id)
+    }
+  end
+
   defp normalize_lanes(attrs) do
     lanes = Map.merge(default_lanes(), Map.get(attrs, :lanes, %{}))
     Map.put(attrs, :lanes, lanes)
