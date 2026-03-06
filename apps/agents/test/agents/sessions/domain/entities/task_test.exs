@@ -56,6 +56,9 @@ defmodule Agents.Sessions.Domain.Entities.TaskTest do
       assert Map.has_key?(task, :session_summary)
       assert Map.has_key?(task, :parent_task_id)
       assert Map.has_key?(task, :queue_position)
+      assert Map.has_key?(task, :retry_count)
+      assert Map.has_key?(task, :last_retry_at)
+      assert Map.has_key?(task, :next_retry_at)
       assert Map.has_key?(task, :queued_at)
       assert Map.has_key?(task, :started_at)
       assert Map.has_key?(task, :completed_at)
@@ -101,6 +104,9 @@ defmodule Agents.Sessions.Domain.Entities.TaskTest do
         parent_task_id: nil,
         pending_question: nil,
         queue_position: 2,
+        retry_count: 1,
+        last_retry_at: ~U[2026-03-06 20:00:00.000000Z],
+        next_retry_at: ~U[2026-03-06 20:01:00.000000Z],
         queued_at: ~U[2026-01-01 00:00:00.000000Z],
         started_at: ~U[2026-01-01 00:00:00.000000Z],
         completed_at: nil,
@@ -131,6 +137,9 @@ defmodule Agents.Sessions.Domain.Entities.TaskTest do
       assert task.session_summary == %{"files" => 3, "additions" => 42, "deletions" => 18}
       assert task.parent_task_id == nil
       assert task.queue_position == 2
+      assert task.retry_count == 1
+      assert task.last_retry_at == ~U[2026-03-06 20:00:00.000000Z]
+      assert task.next_retry_at == ~U[2026-03-06 20:01:00.000000Z]
       assert task.queued_at == ~U[2026-01-01 00:00:00.000000Z]
       assert task.started_at == ~U[2026-01-01 00:00:00.000000Z]
       assert task.completed_at == nil
@@ -156,6 +165,9 @@ defmodule Agents.Sessions.Domain.Entities.TaskTest do
         parent_task_id: nil,
         pending_question: nil,
         queue_position: nil,
+        retry_count: nil,
+        last_retry_at: nil,
+        next_retry_at: nil,
         queued_at: nil,
         started_at: nil,
         completed_at: nil,
@@ -173,6 +185,9 @@ defmodule Agents.Sessions.Domain.Entities.TaskTest do
       assert task.todo_items == nil
       assert task.session_summary == nil
       assert task.queue_position == nil
+      assert task.retry_count == 0
+      assert task.last_retry_at == nil
+      assert task.next_retry_at == nil
       assert task.queued_at == nil
     end
   end

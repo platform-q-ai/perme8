@@ -61,6 +61,21 @@ defmodule Agents.Sessions.Infrastructure.Schemas.TaskSchemaTest do
       changeset = TaskSchema.changeset(%TaskSchema{}, attrs_with_optional)
       assert changeset.valid?
     end
+
+    test "accepts retry fields and defaults retry_count to zero", %{valid_attrs: attrs} do
+      now = ~U[2026-03-06 20:00:00Z]
+
+      changeset =
+        TaskSchema.changeset(
+          %TaskSchema{},
+          Map.merge(attrs, %{last_retry_at: now, next_retry_at: now})
+        )
+
+      assert changeset.valid?
+      assert %TaskSchema{}.retry_count == 0
+      assert changeset.changes.last_retry_at == now
+      assert changeset.changes.next_retry_at == now
+    end
   end
 
   describe "status_changeset/2" do
@@ -117,6 +132,24 @@ defmodule Agents.Sessions.Infrastructure.Schemas.TaskSchemaTest do
 
       assert changeset.valid?
       assert changeset.changes[:instruction] == "Follow-up instruction"
+    end
+
+    test "allows updating retry fields", %{valid_attrs: attrs} do
+      {:ok, task} = %TaskSchema{} |> TaskSchema.changeset(attrs) |> Repo.insert()
+      now = ~U[2026-03-06 20:00:00Z]
+
+      changeset =
+        TaskSchema.status_changeset(task, %{
+          status: "queued",
+          retry_count: 2,
+          last_retry_at: now,
+          next_retry_at: now
+        })
+
+      assert changeset.valid?
+      assert changeset.changes.retry_count == 2
+      assert changeset.changes.last_retry_at == now
+      assert changeset.changes.next_retry_at == now
     end
   end
 end

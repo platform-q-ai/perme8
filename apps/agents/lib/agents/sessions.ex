@@ -34,6 +34,8 @@ defmodule Agents.Sessions do
   alias Agents.Sessions.Application.SessionsConfig
   alias Agents.Sessions.Infrastructure.QueueManager
   alias Agents.Sessions.Infrastructure.QueueManagerSupervisor
+  alias Agents.Sessions.Infrastructure.QueueOrchestrator
+  alias Agents.Sessions.Infrastructure.QueueOrchestratorSupervisor
   alias Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository
   alias Agents.Sessions.Infrastructure.Repositories.TaskRepository
   alias Agents.Sessions.Infrastructure.TicketSyncServer
@@ -407,14 +409,14 @@ defmodule Agents.Sessions do
   @doc """
   Returns the current queue state for a user.
 
-  Ensures the QueueManager is started for the user.
+  Ensures the queue backend is started for the user.
   Returns a map with `:running`, `:queued`, `:awaiting_feedback`, `:concurrency_limit`, and
   `:warm_cache_limit`.
   """
   @spec get_queue_state(String.t()) :: map()
   def get_queue_state(user_id) do
-    case ensure_queue_manager_started(user_id) do
-      {:ok, _pid} -> QueueManager.get_queue_state(user_id)
+    case ensure_queue_backend_started(user_id) do
+      {:ok, _pid} -> queue_module().get_queue_state(user_id)
       {:error, _reason} -> default_queue_state()
     end
   end
@@ -424,8 +426,8 @@ defmodule Agents.Sessions do
   """
   @spec get_concurrency_limit(String.t()) :: non_neg_integer()
   def get_concurrency_limit(user_id) do
-    case ensure_queue_manager_started(user_id) do
-      {:ok, _pid} -> QueueManager.get_concurrency_limit(user_id)
+    case ensure_queue_backend_started(user_id) do
+      {:ok, _pid} -> queue_module().get_concurrency_limit(user_id)
       {:error, _reason} -> SessionsConfig.default_concurrency_limit()
     end
   end
@@ -437,8 +439,8 @@ defmodule Agents.Sessions do
   """
   @spec set_concurrency_limit(String.t(), non_neg_integer()) :: :ok | {:error, term()}
   def set_concurrency_limit(user_id, limit) do
-    with {:ok, _pid} <- ensure_queue_manager_started(user_id) do
-      QueueManager.set_concurrency_limit(user_id, limit)
+    with {:ok, _pid} <- ensure_queue_backend_started(user_id) do
+      queue_module().set_concurrency_limit(user_id, limit)
     end
   end
 
@@ -447,8 +449,8 @@ defmodule Agents.Sessions do
   """
   @spec get_warm_cache_limit(String.t()) :: non_neg_integer()
   def get_warm_cache_limit(user_id) do
-    case ensure_queue_manager_started(user_id) do
-      {:ok, _pid} -> QueueManager.get_warm_cache_limit(user_id)
+    case ensure_queue_backend_started(user_id) do
+      {:ok, _pid} -> queue_module().get_warm_cache_limit(user_id)
       {:error, _reason} -> 2
     end
   end
@@ -458,8 +460,8 @@ defmodule Agents.Sessions do
   """
   @spec set_warm_cache_limit(String.t(), non_neg_integer()) :: :ok | {:error, term()}
   def set_warm_cache_limit(user_id, limit) do
-    with {:ok, _pid} <- ensure_queue_manager_started(user_id) do
-      QueueManager.set_warm_cache_limit(user_id, limit)
+    with {:ok, _pid} <- ensure_queue_backend_started(user_id) do
+      queue_module().set_warm_cache_limit(user_id, limit)
     end
   end
 
@@ -480,15 +482,11 @@ defmodule Agents.Sessions do
 
   def notify_task_terminal_status(user_id, task_id, status, opts)
       when status in [:completed, :failed, :cancelled] do
-    queue_manager_supervisor =
-      Keyword.get(opts, :queue_manager_supervisor, QueueManagerSupervisor)
+    {queue_supervisor, queue_backend} = queue_backend_modules(opts)
+    ensure_opts = queue_backend_opts(opts)
 
-    queue_manager = Keyword.get(opts, :queue_manager, QueueManager)
-
-    ensure_opts = Keyword.get(opts, :queue_manager_opts, default_queue_manager_opts())
-
-    with {:ok, _pid} <- safe_ensure_queue_manager(queue_manager_supervisor, user_id, ensure_opts) do
-      _ = safe_notify_terminal(queue_manager, user_id, task_id, status)
+    with {:ok, _pid} <- safe_ensure_queue_backend(queue_supervisor, user_id, ensure_opts) do
+      _ = safe_notify_terminal(queue_backend, user_id, task_id, status)
     end
 
     :ok
@@ -502,14 +500,11 @@ defmodule Agents.Sessions do
   """
   @spec notify_task_queued(String.t(), String.t(), keyword()) :: :ok
   def notify_task_queued(user_id, task_id, opts \\ []) do
-    queue_manager_supervisor =
-      Keyword.get(opts, :queue_manager_supervisor, QueueManagerSupervisor)
+    {queue_supervisor, queue_backend} = queue_backend_modules(opts)
+    ensure_opts = queue_backend_opts(opts)
 
-    queue_manager = Keyword.get(opts, :queue_manager, QueueManager)
-    ensure_opts = Keyword.get(opts, :queue_manager_opts, default_queue_manager_opts())
-
-    with {:ok, _pid} <- safe_ensure_queue_manager(queue_manager_supervisor, user_id, ensure_opts) do
-      _ = safe_notify_task_queued(queue_manager, user_id, task_id)
+    with {:ok, _pid} <- safe_ensure_queue_backend(queue_supervisor, user_id, ensure_opts) do
+      _ = safe_notify_task_queued(queue_backend, user_id, task_id)
     end
 
     :ok
@@ -525,44 +520,44 @@ defmodule Agents.Sessions do
     }
   end
 
-  defp safe_ensure_queue_manager(queue_manager_supervisor, user_id, ensure_opts) do
-    if function_exported?(queue_manager_supervisor, :ensure_started, 2) do
-      queue_manager_supervisor.ensure_started(user_id, ensure_opts)
+  defp safe_ensure_queue_backend(queue_supervisor, user_id, ensure_opts) do
+    if function_exported?(queue_supervisor, :ensure_started, 2) do
+      queue_supervisor.ensure_started(user_id, ensure_opts)
     else
-      queue_manager_supervisor.ensure_started(user_id)
+      queue_supervisor.ensure_started(user_id)
     end
   rescue
-    _ -> {:error, :queue_manager_unavailable}
+    _ -> {:error, :queue_backend_unavailable}
   catch
-    :exit, _ -> {:error, :queue_manager_unavailable}
+    :exit, _ -> {:error, :queue_backend_unavailable}
   end
 
-  defp safe_notify_terminal(queue_manager, user_id, task_id, :completed) do
-    queue_manager.notify_task_completed(user_id, task_id)
+  defp safe_notify_terminal(queue_backend, user_id, task_id, :completed) do
+    queue_backend.notify_task_completed(user_id, task_id)
   rescue
     _ -> :ok
   catch
     :exit, _ -> :ok
   end
 
-  defp safe_notify_terminal(queue_manager, user_id, task_id, :failed) do
-    queue_manager.notify_task_failed(user_id, task_id)
+  defp safe_notify_terminal(queue_backend, user_id, task_id, :failed) do
+    queue_backend.notify_task_failed(user_id, task_id)
   rescue
     _ -> :ok
   catch
     :exit, _ -> :ok
   end
 
-  defp safe_notify_terminal(queue_manager, user_id, task_id, :cancelled) do
-    queue_manager.notify_task_cancelled(user_id, task_id)
+  defp safe_notify_terminal(queue_backend, user_id, task_id, :cancelled) do
+    queue_backend.notify_task_cancelled(user_id, task_id)
   rescue
     _ -> :ok
   catch
     :exit, _ -> :ok
   end
 
-  defp safe_notify_task_queued(queue_manager, user_id, task_id) do
-    queue_manager.notify_task_queued(user_id, task_id)
+  defp safe_notify_task_queued(queue_backend, user_id, task_id) do
+    queue_backend.notify_task_queued(user_id, task_id)
   rescue
     _ -> :ok
   catch
@@ -596,17 +591,17 @@ defmodule Agents.Sessions do
   end
 
   defp default_queue_checker(user_id) do
-    case ensure_queue_manager_started(user_id) do
-      {:ok, _pid} -> QueueManager.check_concurrency(user_id)
+    case ensure_queue_backend_started(user_id) do
+      {:ok, _pid} -> queue_module().check_concurrency(user_id)
       {:error, _reason} -> :at_limit
     end
   end
 
-  defp ensure_queue_manager_started(user_id) do
-    safe_ensure_queue_manager(QueueManagerSupervisor, user_id, default_queue_manager_opts())
+  defp ensure_queue_backend_started(user_id) do
+    safe_ensure_queue_backend(queue_supervisor_module(), user_id, default_queue_backend_opts())
   end
 
-  defp default_queue_manager_opts do
+  defp default_queue_backend_opts do
     [
       task_runner_starter: fn task_id, runner_opts ->
         runner_opts =
@@ -619,6 +614,52 @@ defmodule Agents.Sessions do
         TaskRunnerSupervisor.start_child(task_id, runner_opts)
       end
     ]
+  end
+
+  defp queue_backend_opts(opts) do
+    if SessionsConfig.queue_v2_enabled?() do
+      Keyword.get(opts, :queue_orchestrator_opts, default_queue_backend_opts())
+    else
+      Keyword.get(opts, :queue_manager_opts, default_queue_backend_opts())
+    end
+  end
+
+  defp queue_backend_modules(opts) do
+    if SessionsConfig.queue_v2_enabled?() do
+      {
+        Keyword.get(
+          opts,
+          :queue_orchestrator_supervisor,
+          Keyword.get(opts, :queue_manager_supervisor, QueueOrchestratorSupervisor)
+        ),
+        Keyword.get(
+          opts,
+          :queue_orchestrator,
+          Keyword.get(opts, :queue_manager, QueueOrchestrator)
+        )
+      }
+    else
+      {
+        Keyword.get(opts, :queue_manager_supervisor, QueueManagerSupervisor),
+        Keyword.get(opts, :queue_manager, QueueManager)
+      }
+    end
+  end
+
+  defp queue_supervisor_module do
+    if SessionsConfig.queue_v2_enabled?() do
+      QueueOrchestratorSupervisor
+    else
+      QueueManagerSupervisor
+    end
+  end
+
+  defp queue_module do
+    if SessionsConfig.queue_v2_enabled?() do
+      QueueOrchestrator
+    else
+      QueueManager
+    end
   end
 
   # Wire the real TaskRunnerSupervisor starter

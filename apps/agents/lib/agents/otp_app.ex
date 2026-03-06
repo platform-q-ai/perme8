@@ -10,6 +10,7 @@ defmodule Agents.OTPApp do
 
   alias Agents.Sessions.Infrastructure.OrphanRecovery
   alias Agents.Sessions.Infrastructure.QueueManagerSupervisor
+  alias Agents.Sessions.Infrastructure.QueueOrchestratorSupervisor
   alias Agents.Sessions.Infrastructure.TaskRunnerSupervisor
   alias Agents.Sessions.Infrastructure.TicketSyncServer
 
@@ -26,6 +27,7 @@ defmodule Agents.OTPApp do
         [
           TaskRunnerSupervisor,
           QueueManagerSupervisor,
+          QueueOrchestratorSupervisor,
           TicketSyncServer
         ] ++ mcp_children() ++ mcp_http_children()
 

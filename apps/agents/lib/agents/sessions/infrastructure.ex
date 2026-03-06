@@ -28,6 +28,8 @@ defmodule Agents.Sessions.Infrastructure do
       TaskRunnerSupervisor,
       QueueManager,
       QueueManagerSupervisor,
+      QueueOrchestrator,
+      QueueOrchestratorSupervisor,
       TicketSyncServer
     ]
 end

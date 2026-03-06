@@ -71,4 +71,77 @@ defmodule Agents.Sessions.Domain.Entities.QueueSnapshotTest do
       assert QueueSnapshot.lane_for(snapshot, :processing) == []
     end
   end
+
+  describe "to_legacy_map/1" do
+    test "converts snapshot to legacy queue map shape" do
+      warm =
+        LaneEntry.new(%{
+          task_id: "warm-1",
+          instruction: "Warm task",
+          status: "queued",
+          lane: :warm,
+          warm_state: :warm,
+          queue_position: 1
+        })
+
+      warming =
+        LaneEntry.new(%{
+          task_id: "warm-2",
+          instruction: "Warming task",
+          status: "queued",
+          lane: :warm,
+          warm_state: :warming,
+          queue_position: 2
+        })
+
+      cold =
+        LaneEntry.new(%{
+          task_id: "cold-1",
+          instruction: "Cold task",
+          status: "queued",
+          lane: :cold,
+          queue_position: 3
+        })
+
+      retry =
+        LaneEntry.new(%{
+          task_id: "retry-1",
+          instruction: "Retry task",
+          status: "queued",
+          lane: :retry_pending,
+          queue_position: 4
+        })
+
+      awaiting =
+        LaneEntry.new(%{
+          task_id: "awaiting-1",
+          instruction: "Awaiting",
+          status: "awaiting_feedback",
+          lane: :awaiting_feedback
+        })
+
+      snapshot =
+        QueueSnapshot.new(%{
+          user_id: "user-123",
+          lanes: %{
+            processing: [],
+            warm: [warm, warming],
+            cold: [cold],
+            retry_pending: [retry],
+            awaiting_feedback: [awaiting]
+          },
+          metadata: %{running_count: 1, concurrency_limit: 3, warm_cache_limit: 2}
+        })
+
+      legacy = QueueSnapshot.to_legacy_map(snapshot)
+
+      assert legacy.running == 1
+      assert Enum.map(legacy.queued, & &1.id) == ["cold-1", "warm-1", "warm-2", "retry-1"]
+      assert Enum.map(legacy.awaiting_feedback, & &1.id) == ["awaiting-1"]
+      assert legacy.concurrency_limit == 3
+      assert legacy.warm_cache_limit == 2
+      assert legacy.warm_task_ids == ["warm-1"]
+      assert legacy.warming_task_ids == ["warm-2"]
+    end
+  end
 end
