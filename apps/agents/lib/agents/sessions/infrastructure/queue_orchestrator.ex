@@ -189,11 +189,13 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
     end
   end
 
+  # Container pre-warming placeholder. Resets warmup state and broadcasts
+  # a fresh snapshot. Actual container pre-warming via container_provider
+  # is deferred to a follow-up ticket.
   @impl true
   def handle_info(:warm_top_queued, state) do
-    _ = state.container_provider
     state = %{state | warmup_scheduled: false, warming_task_ids: MapSet.new()}
-    state = promote_and_broadcast(state)
+    broadcast_snapshot(state)
     {:noreply, state}
   end
 
@@ -372,24 +374,24 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
     end
   end
 
+  # Deferred container warmup placeholder. Uses send_after to avoid
+  # triggering a redundant promote/broadcast cycle synchronously.
+  # Actual container pre-warming is a follow-up ticket.
+  @warmup_delay_ms 1_000
   defp maybe_schedule_warmup(state) do
     if state.warmup_scheduled do
       state
     else
-      queued = state.task_repo.list_queued_tasks(state.user_id)
-
-      cold_tasks =
-        Enum.filter(queued, fn t ->
-          is_nil(t.container_id) or String.starts_with?(t.container_id || "", "task:")
-        end)
+      snapshot = build_current_snapshot(state)
+      cold_tasks = snapshot.lanes.cold
 
       if length(cold_tasks) > 0 and state.warm_cache_limit > 0 do
-        Process.send(self(), :warm_top_queued, [])
+        Process.send_after(self(), :warm_top_queued, @warmup_delay_ms)
 
         %{
           state
           | warmup_scheduled: true,
-            warming_task_ids: MapSet.new(Enum.map(cold_tasks, & &1.id))
+            warming_task_ids: MapSet.new(Enum.map(cold_tasks, & &1.task_id))
         }
       else
         state
