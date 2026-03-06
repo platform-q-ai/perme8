@@ -100,6 +100,12 @@ defmodule Agents.Sessions.Infrastructure.Repositories.TaskRepository do
   end
 
   @impl true
+  def list_non_terminal_tasks(user_id) do
+    TaskQueries.non_terminal_for_user(user_id)
+    |> Repo.all()
+  end
+
+  @impl true
   def get_next_queued_task(user_id) do
     TaskQueries.next_queued(user_id)
     |> Repo.one()

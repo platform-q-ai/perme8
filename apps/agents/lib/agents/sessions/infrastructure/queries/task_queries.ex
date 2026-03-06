@@ -101,6 +101,20 @@ defmodule Agents.Sessions.Infrastructure.Queries.TaskQueries do
     )
   end
 
+  @terminal_statuses ["completed", "failed", "cancelled"]
+
+  @doc """
+  Returns all non-terminal tasks for a user (queued, pending, starting,
+  running, awaiting_feedback) in a single query.
+  """
+  @spec non_terminal_for_user(Ecto.Query.t(), Ecto.UUID.t()) :: Ecto.Query.t()
+  def non_terminal_for_user(query \\ base(), user_id) do
+    from(t in query,
+      where: t.user_id == ^user_id and t.status not in ^@terminal_statuses,
+      order_by: [asc: t.queue_position, asc: t.inserted_at]
+    )
+  end
+
   @doc """
   Returns the next queued task (lowest queue_position) for a user.
   """
