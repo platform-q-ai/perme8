@@ -42,6 +42,12 @@ defmodule Agents.Sessions.Application.SessionsConfigTest do
     end
   end
 
+  describe "queue_mirror_enabled?/0" do
+    test "returns false by default" do
+      refute SessionsConfig.queue_mirror_enabled?()
+    end
+  end
+
   describe "default_warm_cache_limit/0" do
     test "returns 2 by default" do
       assert SessionsConfig.default_warm_cache_limit() == 2

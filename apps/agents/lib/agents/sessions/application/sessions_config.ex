@@ -94,6 +94,11 @@ defmodule Agents.Sessions.Application.SessionsConfig do
     config()[:queue_v2_enabled] || false
   end
 
+  @doc "Returns whether mirror mode is enabled for queue cross-validation."
+  def queue_mirror_enabled? do
+    config()[:queue_mirror_enabled] || false
+  end
+
   @doc "Returns the default warm cache limit for container pre-warming."
   def default_warm_cache_limit do
     config()[:default_warm_cache_limit] || 2
