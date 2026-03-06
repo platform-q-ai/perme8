@@ -1707,7 +1707,19 @@ defmodule AgentsWeb.SessionsLive.Index do
 
         tasks_snapshot = upsert_task_snapshot(socket.assigns[:tasks_snapshot], updated)
 
-        instruction = Map.get(updated, :instruction) || Map.get(task, :instruction, "")
+        # Restore the most recent user message (not the original instruction).
+        # For tasks that ran, decode their output to find follow-up messages.
+        # Fall back to the original instruction for queued tasks with no output.
+        instruction =
+          case Map.get(updated, :output) do
+            output when is_binary(output) and output != "" ->
+              output
+              |> EventProcessor.decode_cached_output()
+              |> last_user_message()
+
+            _ ->
+              nil
+          end || Map.get(updated, :instruction) || Map.get(task, :instruction, "")
 
         {:noreply,
          socket
