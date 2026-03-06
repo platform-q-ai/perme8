@@ -401,7 +401,7 @@ Lanes are derived from task status + metadata (no new DB column needed):
 
 ---
 
-## Phase 4: Interface Layer — Reactive Snapshot UI
+## Phase 4: Interface Layer — Reactive Snapshot UI ⏳
 
 **Goal**: LiveView subscribes to QueueSnapshot, renders lanes bottom-up. No lane inference in template.
 
@@ -409,7 +409,7 @@ Lanes are derived from task status + metadata (no new DB column needed):
 
 ### Step 4.1: QueueSnapshot-Aware Components
 
-- ⏸ **RED**: Write test `apps/agents_web/test/live/sessions/components/queue_lane_components_test.exs`
+- [x] **RED**: Write test `apps/agents_web/test/live/sessions/components/queue_lane_components_test.exs`
   - Tests (using `render_component/2`):
     - `<.queue_lanes>` renders processing lane at bottom, warm above, cold above warm
     - `<.queue_lanes>` shows correct count badges per lane
@@ -417,7 +417,7 @@ Lanes are derived from task status + metadata (no new DB column needed):
     - `<.lane_entry>` shows retry badge when retry_count > 0
     - `<.queue_metadata>` renders concurrency limit, warm cache limit, available slots from snapshot
     - Empty lanes show appropriate empty states
-- ⏸ **GREEN**: Implement `apps/agents_web/lib/live/sessions/components/queue_lane_components.ex`
+- [x] **GREEN**: Implement `apps/agents_web/lib/live/sessions/components/queue_lane_components.ex`
   - Function components: `queue_lanes/1`, `lane_entry/1`, `queue_metadata/1`
   - Receives `@snapshot` assign (QueueSnapshot struct)
   - Bottom-up rendering: processing at bottom, warm/cold above, feedback/retry at top
@@ -460,12 +460,12 @@ Lanes are derived from task status + metadata (no new DB column needed):
 
 ### Step 4.4: Update Helpers for Snapshot
 
-- ⏸ **RED**: Update test `apps/agents_web/test/live/sessions/helpers_test.exs`
+- [x] **RED**: Update test `apps/agents_web/test/live/sessions/helpers_test.exs`
   - Tests:
     - Existing helper functions still work (regression)
     - New `lane_status_label/1` returns human-readable lane names
     - New `lane_css_class/1` returns appropriate CSS for each lane type
-- ⏸ **GREEN**: Update `apps/agents_web/lib/live/sessions/helpers.ex`
+- [x] **GREEN**: Update `apps/agents_web/lib/live/sessions/helpers.ex`
   - Add `lane_status_label/1`, `lane_css_class/1`
 - ⏸ **REFACTOR**: Remove `derive_sticky_warm_task_ids` helper if fully superseded
 

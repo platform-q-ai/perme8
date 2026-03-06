@@ -8,6 +8,7 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
 
   alias Agents.Sessions.Infrastructure.Schemas.TaskSchema
   alias Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository
+  alias Agents.Sessions.Domain.Entities.{LaneEntry, QueueSnapshot}
   alias Agents.Repo
 
   defmodule FakeTaskRunner do
@@ -1364,6 +1365,47 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       html = render(lv)
       assert html =~ "Working on it..."
       refute html =~ "Waiting for response"
+    end
+  end
+
+  describe "queue_snapshot v2 handling" do
+    setup %{conn: conn} do
+      user = user_fixture()
+      %{conn: log_in_user(conn, user), user: user}
+    end
+
+    test "handle_info with queue_snapshot updates assigns", %{conn: conn, user: user} do
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      snapshot =
+        QueueSnapshot.new(%{
+          user_id: user.id,
+          lanes: %{
+            processing: [],
+            warm: [
+              LaneEntry.new(%{
+                task_id: "task-1",
+                instruction: "Warm task",
+                status: "queued",
+                lane: :warm,
+                warm_state: :warm
+              })
+            ],
+            cold: [],
+            awaiting_feedback: [],
+            retry_pending: []
+          },
+          metadata: %{concurrency_limit: 3, running_count: 1, warm_cache_limit: 2}
+        })
+
+      send(lv.pid, {:queue_snapshot, user.id, snapshot})
+      _html = render(lv)
+
+      state = :sys.get_state(lv.pid)
+      assigns = state.socket.assigns
+
+      assert assigns.queue_snapshot == snapshot
+      assert assigns.queue_state == QueueSnapshot.to_legacy_map(snapshot)
     end
   end
 

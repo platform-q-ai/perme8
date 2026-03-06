@@ -275,6 +275,47 @@ defmodule AgentsWeb.SessionsLive.Helpers do
 
   def format_file_stats(_), do: nil
 
+  @doc "Returns CSS classes for ticket priority badge."
+  def ticket_priority_class("Need"), do: "badge-error text-white"
+  def ticket_priority_class("Want"), do: "badge-warning"
+  def ticket_priority_class("Nice to have"), do: "badge-ghost"
+  def ticket_priority_class(_), do: "badge-ghost"
+
+  @doc "Returns CSS classes for ticket board status badge."
+  def ticket_status_class("Backlog"), do: "badge-outline"
+  def ticket_status_class("Ready"), do: "badge-info"
+  def ticket_status_class(_), do: "badge-ghost"
+
+  @doc "Returns CSS classes for ticket size badge."
+  def ticket_size_class("XL"), do: "badge-error text-white"
+  def ticket_size_class("L"), do: "badge-warning"
+  def ticket_size_class("M"), do: "badge-info"
+  def ticket_size_class("S"), do: "badge-success"
+  def ticket_size_class("XS"), do: "badge-ghost"
+  def ticket_size_class(_), do: "badge-outline"
+
+  @doc "Returns CSS classes for associated session state badge."
+  def ticket_session_state_class("running"), do: "badge-success"
+  def ticket_session_state_class("completed"), do: "badge-primary"
+  def ticket_session_state_class("paused"), do: "badge-warning"
+  def ticket_session_state_class(_), do: "badge-ghost"
+
+  @doc "Returns a human-readable label for a queue lane."
+  def lane_status_label(:processing), do: "Processing"
+  def lane_status_label(:warm), do: "Warm"
+  def lane_status_label(:cold), do: "Cold"
+  def lane_status_label(:awaiting_feedback), do: "Awaiting Feedback"
+  def lane_status_label(:retry_pending), do: "Retry Pending"
+  def lane_status_label(_), do: "Unknown"
+
+  @doc "Returns CSS class for a lane type."
+  def lane_css_class(:processing), do: "lane-processing"
+  def lane_css_class(:warm), do: "lane-warm"
+  def lane_css_class(:cold), do: "lane-cold"
+  def lane_css_class(:awaiting_feedback), do: "lane-awaiting-feedback"
+  def lane_css_class(:retry_pending), do: "lane-retry-pending"
+  def lane_css_class(_), do: ""
+
   @label_classes %{
     "bug" => "badge-error",
     "fix" => "badge-error",

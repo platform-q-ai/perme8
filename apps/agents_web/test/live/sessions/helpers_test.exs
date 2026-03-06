@@ -217,6 +217,45 @@ defmodule AgentsWeb.SessionsLive.HelpersTest do
     end
   end
 
+  describe "ticket_size_class/1" do
+    test "maps sizes to consistent badge classes" do
+      assert Helpers.ticket_size_class("XL") == "badge-error text-white"
+      assert Helpers.ticket_size_class("L") == "badge-warning"
+      assert Helpers.ticket_size_class("M") == "badge-info"
+      assert Helpers.ticket_size_class("S") == "badge-success"
+      assert Helpers.ticket_size_class("XS") == "badge-ghost"
+      assert Helpers.ticket_size_class(nil) == "badge-outline"
+    end
+  end
+
+  describe "lane_status_label/1" do
+    test "returns human-readable lane labels" do
+      assert Helpers.lane_status_label(:processing) == "Processing"
+      assert Helpers.lane_status_label(:warm) == "Warm"
+      assert Helpers.lane_status_label(:cold) == "Cold"
+      assert Helpers.lane_status_label(:awaiting_feedback) == "Awaiting Feedback"
+      assert Helpers.lane_status_label(:retry_pending) == "Retry Pending"
+    end
+
+    test "returns Unknown for unsupported lanes" do
+      assert Helpers.lane_status_label(:something_else) == "Unknown"
+    end
+  end
+
+  describe "lane_css_class/1" do
+    test "returns lane css classes" do
+      assert Helpers.lane_css_class(:processing) == "lane-processing"
+      assert Helpers.lane_css_class(:warm) == "lane-warm"
+      assert Helpers.lane_css_class(:cold) == "lane-cold"
+      assert Helpers.lane_css_class(:awaiting_feedback) == "lane-awaiting-feedback"
+      assert Helpers.lane_css_class(:retry_pending) == "lane-retry-pending"
+    end
+
+    test "returns empty class for unsupported lanes" do
+      assert Helpers.lane_css_class(:something_else) == ""
+    end
+  end
+
   describe "last_user_message/1" do
     test "returns the text of the last user message" do
       parts = [
