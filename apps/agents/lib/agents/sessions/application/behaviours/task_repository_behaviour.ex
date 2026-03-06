@@ -36,6 +36,8 @@ defmodule Agents.Sessions.Application.Behaviours.TaskRepositoryBehaviour do
 
   @callback list_awaiting_feedback_tasks(user_id) :: [task]
 
+  @callback list_non_terminal_tasks(user_id) :: [task]
+
   @callback get_next_queued_task(user_id) :: task | nil
 
   @callback get_max_queue_position(user_id) :: non_neg_integer() | nil

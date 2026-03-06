@@ -205,13 +205,11 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
     QueueEngine.build_snapshot(tasks, config)
   end
 
+  # Single query for all non-terminal tasks (queued, pending, starting,
+  # running, awaiting_feedback). Replaces three overlapping queries that
+  # required Enum.uniq_by deduplication.
   defp load_all_active_tasks(state) do
-    queued = state.task_repo.list_queued_tasks(state.user_id)
-    awaiting = state.task_repo.list_awaiting_feedback_tasks(state.user_id)
-    active = state.task_repo.list_tasks_for_user(state.user_id, status: :active)
-
-    (active ++ queued ++ awaiting)
-    |> Enum.uniq_by(& &1.id)
+    state.task_repo.list_non_terminal_tasks(state.user_id)
   end
 
   defp promote_and_broadcast(state) do
