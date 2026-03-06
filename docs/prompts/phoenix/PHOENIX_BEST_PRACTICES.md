@@ -405,6 +405,77 @@ Remember anytime you use `phx-hook="MyHook"` and that JS hook manages its own DO
 
 **Note**: The actual hook implementation (in TypeScript) is handled separately. Your responsibility is to correctly reference and integrate hooks in your LiveView templates.
 
+### Form Pre-fill with `phx-update="ignore"`
+
+**CRITICAL**: Server-side form assigns do NOT reach elements marked with `phx-update="ignore"`. Use push events instead.
+
+When a template element (e.g., a textarea) has `phx-update="ignore"`, the server cannot update its content through assigns because Phoenix LiveView skips DOM patching for that element. This is by design -- `phx-update="ignore"` tells LiveView the element is client-managed.
+
+**The Problem:**
+```elixir
+# BAD - Server sets the form assign, but the textarea has phx-update="ignore"
+# The user sees the flash message but the textarea stays empty
+def handle_info({:question_result, {:error, :task_not_running}}, socket) do
+  socket =
+    socket
+    |> assign(:form, to_form(%{"instruction" => "The answer you typed"}))
+    |> put_flash(:error, "Task is no longer running")
+
+  {:noreply, socket}
+end
+```
+
+```heex
+<%!-- phx-update="ignore" means server assigns never reach this textarea --%>
+<textarea id="session-input" phx-hook="SessionForm" phx-update="ignore">{@form[:instruction].value}</textarea>
+```
+
+**The Solution:**
+```elixir
+# GOOD - Push a client event that the hook can handle
+def handle_info({:question_result, {:error, :task_not_running}}, socket) do
+  message = "The answer you typed"
+
+  socket =
+    socket
+    |> assign(:form, to_form(%{"instruction" => message}))
+    |> push_event("restore_draft", %{text: message})
+    |> put_flash(:error, "Task is no longer running")
+
+  {:noreply, socket}
+end
+```
+
+```typescript
+// In the hook -- handle the push event
+this.handleEvent('restore_draft', ({ text }: { text: string }) => {
+  this.el.value = text
+  // Also persist to localStorage if the hook manages drafts
+  this.saveDraft(text)
+})
+```
+
+**Best Practice: Extract a Helper**
+```elixir
+# Extract a helper that both assigns the form AND pushes the event
+defp set_form_instruction(socket, message) do
+  socket
+  |> assign(:form, to_form(%{"instruction" => message}))
+  |> push_event("restore_draft", %{text: message})
+end
+```
+
+**When this applies:**
+- Any form element with `phx-update="ignore"` where the server needs to set a value
+- Textareas managed by JS hooks (draft persistence, rich editors)
+- Any element where a hook manages DOM state but the server occasionally needs to override it
+
+**Rules:**
+- ✅ Always use `push_event` to communicate values to `phx-update="ignore"` elements
+- ✅ Handle the push event in the corresponding hook to update the DOM
+- ✅ Keep the form assign in sync (for non-ignored elements and server-side state)
+- ❌ Never rely on server assigns alone to update `phx-update="ignore"` elements
+
 ### Input Normalization Pattern
 
 The interface layer must normalize weakly-typed input (query params, form data) into well-typed structures before passing to core.

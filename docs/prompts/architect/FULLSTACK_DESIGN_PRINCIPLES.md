@@ -358,6 +358,64 @@ Follow the test pyramid - more tests at the bottom, fewer at the top:
 
 **Implementation:** Use cases inject `event_bus` via `opts[:event_bus]` and emit typed `DomainEvent` structs. Never call `Phoenix.PubSub.broadcast` directly from use cases.
 
+### Explicit State Machines for Complex UI State
+
+**Rule:** When a LiveView or frontend component manages 5+ interdependent state variables, extract an explicit, unit-tested state machine module.
+
+**Reasoning:**
+- Implicit state machines (state derived from multiple assigns, checked in scattered handlers) create gaps where certain state combinations are unhandled
+- Status predicates (`running?`, `active?`, `submittable?`) with subtly different semantics cause bugs when a status is "active" but not "running" (e.g., "queued")
+- State machines are pure functions testable in milliseconds without LiveView or DOM
+- All valid states, transitions, and predicates live in one auditable location
+- Event handlers can guard against stale or out-of-order events by checking the current state
+
+**Application:**
+- Backend: Extract `SessionStateMachine` modules from LiveViews with complex state
+- Frontend: Extract state derivation into pure functions separate from hooks
+- Define all valid states as a type (`@type state :: :idle | :running | ...`)
+- Derive all predicates from the state machine, not from raw status strings
+
+### Correlation IDs Over Content Matching
+
+**Rule:** When reconciling optimistic/local state with confirmed backend state, use correlation IDs as the primary matching strategy. Content-based matching is a fallback only.
+
+**Reasoning:**
+- Content matching breaks on whitespace normalization, duplicate messages, and format variants
+- Correlation IDs are unique, deterministic, and immune to content transformation
+- The pipeline often already generates and passes correlation IDs but doesn't use them for matching
+- Content fallback provides backward compatibility with in-flight messages that lack IDs
+
+### Bounded Async Operations
+
+**Rule:** Every asynchronous operation spawned from a UI process (LiveView, hook) must guarantee a result callback (success or failure) within a bounded time.
+
+**Reasoning:**
+- Fire-and-forget patterns (`Task.start` without result tracking) leave UI state in limbo
+- If the spawned work crashes, the caller never learns about the failure
+- Users see perpetual "pending" states with no way to recover
+- Bounded timeouts ensure every dispatched operation resolves within a known time window
+- The pattern: spawn work + schedule timeout + track pending operations + clean up on any resolution
+
+### Centralizing External API Field Resolution
+
+**Rule:** When consuming data from external APIs/SDKs that use inconsistent field naming, centralize all field name resolution in a single module.
+
+**Reasoning:**
+- External APIs evolve field names (`messageID` vs `messageId` vs `message_id`)
+- Scattered inline fallback chains (`map["a"] || map["b"] || map["c"]`) in 5+ locations create maintenance burden
+- A single resolver module means new variants require exactly one change
+- Resolver functions are pure and trivially testable
+
+### Client-side Persistence Hygiene
+
+**Rule:** All state persisted to localStorage/sessionStorage must include a timestamp and be validated against a staleness TTL during hydration.
+
+**Reasoning:**
+- Data from crashed tabs, stale sessions, or previous browser sessions can silently corrupt current state
+- Without TTL, queued messages or optimistic state from hours/days ago can resurrect on reconnect
+- The staleness TTL should match server-side constants (e.g., 120s for queue entries)
+- Missing or invalid timestamps should be treated as stale (fail-safe default)
+
 ### Separation of Ecto Schemas and Domain Logic
 
 **Backend Pattern:**
@@ -459,6 +517,13 @@ Follow the test pyramid - more tests at the bottom, fewer at the top:
 - Thin presentation layers
 - Business logic in domain and application layers
 - Infrastructure isolated from business concerns
+
+**Resilience:**
+- Complex UI state modeled as explicit, unit-tested state machines
+- Correlation IDs for state reconciliation (not content matching)
+- Bounded timeouts for all async operations (no fire-and-forget)
+- Centralized resolution of external API field name variants
+- All client-persisted state validated against staleness TTL on hydration
 
 ### Benefits
 
