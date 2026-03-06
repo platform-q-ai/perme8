@@ -676,17 +676,38 @@ defmodule Agents.Sessions do
     end
   end
 
+  @mirror_failure_interval_ms :timer.seconds(30)
   defp maybe_mirror_queue_state(user_id) do
     if SessionsConfig.queue_mirror_enabled?() do
       try do
         legacy_state = QueueManager.get_queue_state(user_id)
-        {:ok, snapshot} = BuildSnapshot.execute(user_id)
 
-        result = QueueMirror.compare(legacy_state, snapshot)
-        QueueMirror.log_comparison(user_id, result)
+        case BuildSnapshot.execute(user_id) do
+          {:ok, snapshot} ->
+            result = QueueMirror.compare(legacy_state, snapshot)
+            QueueMirror.log_comparison(user_id, result)
+
+          {:error, reason} ->
+            rate_limited_mirror_warning(user_id, "snapshot build failed: #{inspect(reason)}")
+        end
       rescue
-        e -> Logger.warning("QueueMirror: comparison failed: #{Exception.message(e)}")
+        e -> rate_limited_mirror_warning(user_id, Exception.message(e))
       end
+    end
+  end
+
+  @doc false
+  defp rate_limited_mirror_warning(user_id, message) do
+    key = {__MODULE__, :mirror_failure, user_id}
+    now = System.monotonic_time(:millisecond)
+
+    case :persistent_term.get(key, nil) do
+      last when is_integer(last) and now - last < @mirror_failure_interval_ms ->
+        :suppressed
+
+      _ ->
+        :persistent_term.put(key, now)
+        Logger.warning("QueueMirror: comparison failed for user #{user_id}: #{message}")
     end
   end
 
