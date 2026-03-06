@@ -12,17 +12,12 @@ defmodule Agents.Test.AccountsFixtures do
   is called at runtime.
   """
 
-  # Test fixture module - top-level boundary for test data creation.
-  # Uses Identity.Repo for user inserts so the Identity facade can see them.
-  # This is a test-only boundary dep -- production Agents.Infrastructure does
-  # NOT depend on Identity.Repo.
   use Boundary,
     top_level?: true,
     deps: [Identity.Repo],
     exports: []
 
   def unique_user_email, do: "user#{System.unique_integer([:positive])}@example.com"
-  def valid_user_password, do: "hello world!"
 
   def valid_user_attributes(attrs \\ %{}) do
     Enum.into(attrs, %{
@@ -35,15 +30,15 @@ defmodule Agents.Test.AccountsFixtures do
   @doc """
   Creates a minimal confirmed user directly in the database via Identity.Repo.
 
-  Returns a map with `:id` and `:email` fields -- enough for agent tests.
+  Returns a map with `:id`, `:email`, `:first_name`, and `:last_name` fields.
   Uses raw SQL insert to avoid depending on Identity schemas.
   """
   def user_fixture(attrs \\ %{}) do
     attrs = valid_user_attributes(attrs)
     id = Map.get(attrs, :id, Ecto.UUID.generate())
-    email = Map.get(attrs, :email, unique_user_email())
-    first_name = Map.get(attrs, :first_name, "Test")
-    last_name = Map.get(attrs, :last_name, "User")
+    email = attrs.email
+    first_name = attrs.first_name
+    last_name = attrs.last_name
     now_utc = DateTime.utc_now() |> DateTime.truncate(:second)
     now_naive = DateTime.to_naive(now_utc)
 

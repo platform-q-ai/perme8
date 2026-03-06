@@ -8,10 +8,6 @@ defmodule Agents.Test.WorkspacesFixtures do
   these rows without needing direct visibility.
   """
 
-  # Test fixture module - top-level boundary for test data creation.
-  # Uses Identity.Repo for workspace inserts so the Identity facade can see them.
-  # This is a test-only boundary dep -- production Agents.Infrastructure does
-  # NOT depend on Identity.Repo.
   use Boundary,
     top_level?: true,
     deps: [Identity.Repo],
