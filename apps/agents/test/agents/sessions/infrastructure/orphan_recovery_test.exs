@@ -45,6 +45,21 @@ defmodule Agents.Sessions.Infrastructure.OrphanRecoveryTest do
     end
   end
 
+  # Stub that records both stop and remove calls
+  defmodule StopAndRemoveTrackingContainerProvider do
+    @moduledoc false
+
+    def stop(container_id, _opts \\ []) do
+      send(Process.get(:test_pid), {:stopped, container_id})
+      :ok
+    end
+
+    def remove(container_id, _opts \\ []) do
+      send(Process.get(:test_pid), {:removed, container_id})
+      :ok
+    end
+  end
+
   # ---------------------------------------------------------------------------
   # Tests
   # ---------------------------------------------------------------------------
@@ -95,6 +110,22 @@ defmodule Agents.Sessions.Infrastructure.OrphanRecoveryTest do
       OrphanRecovery.recover_orphaned_tasks(container_provider: TrackingContainerProvider)
 
       assert_receive {:stopped, "ctr-stop-me"}
+    end
+
+    test "never calls remove on orphaned containers (only stop)" do
+      user = user_fixture()
+
+      _task =
+        insert_task(user, %{status: "running", container_id: "ctr-orphan-1", session_id: "s1"})
+
+      Process.put(:test_pid, self())
+
+      OrphanRecovery.recover_orphaned_tasks(
+        container_provider: StopAndRemoveTrackingContainerProvider
+      )
+
+      assert_receive {:stopped, "ctr-orphan-1"}
+      refute_receive {:removed, "ctr-orphan-1"}
     end
 
     test "skips tasks without container_id (no container to stop)" do
