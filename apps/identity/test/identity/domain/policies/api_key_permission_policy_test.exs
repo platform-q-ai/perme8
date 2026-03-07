@@ -123,6 +123,7 @@ defmodule Identity.Domain.Policies.ApiKeyPermissionPolicyTest do
                "agents:read",
                "agents:write",
                "agents:query",
+               "api_keys:write",
                "mcp:knowledge.search",
                "mcp:knowledge.get",
                "mcp:knowledge.traverse",
