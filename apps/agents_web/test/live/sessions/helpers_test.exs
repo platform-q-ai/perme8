@@ -534,4 +534,40 @@ defmodule AgentsWeb.SessionsLive.HelpersTest do
       assert Helpers.last_user_message(nil) == nil
     end
   end
+
+  describe "resumable_task?/1" do
+    test "returns true for completed task with container_id and session_id" do
+      task = %{status: "completed", container_id: "cid-1", session_id: "sid-1"}
+      assert Helpers.resumable_task?(task)
+    end
+
+    test "returns true for failed task with container_id and session_id" do
+      task = %{status: "failed", container_id: "cid-1", session_id: "sid-1"}
+      assert Helpers.resumable_task?(task)
+    end
+
+    test "returns true for cancelled task with container_id and session_id" do
+      task = %{status: "cancelled", container_id: "cid-1", session_id: "sid-1"}
+      assert Helpers.resumable_task?(task)
+    end
+
+    test "returns false for terminal task without container_id" do
+      task = %{status: "completed", container_id: nil, session_id: "sid-1"}
+      refute Helpers.resumable_task?(task)
+    end
+
+    test "returns false for terminal task without session_id" do
+      task = %{status: "completed", container_id: "cid-1", session_id: nil}
+      refute Helpers.resumable_task?(task)
+    end
+
+    test "returns false for running task" do
+      task = %{status: "running", container_id: "cid-1", session_id: "sid-1"}
+      refute Helpers.resumable_task?(task)
+    end
+
+    test "returns false for nil" do
+      refute Helpers.resumable_task?(nil)
+    end
+  end
 end

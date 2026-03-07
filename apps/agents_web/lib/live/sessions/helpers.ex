@@ -71,13 +71,8 @@ defmodule AgentsWeb.SessionsLive.Helpers do
     end
   end
 
-  @doc "Returns true if the task can be resumed."
-  def resumable_task?(%{status: status, container_id: cid, session_id: sid})
-      when status in ["completed", "failed", "cancelled"] and
-             not is_nil(cid) and not is_nil(sid),
-      do: true
-
-  def resumable_task?(_), do: false
+  @doc "Returns true if the task can be resumed. Delegates to SessionStateMachine."
+  def resumable_task?(task), do: SessionStateMachine.resumable?(task)
 
   @doc "Extracts the text of the last user message from output_parts."
   def last_user_message(output_parts) when is_list(output_parts) do
