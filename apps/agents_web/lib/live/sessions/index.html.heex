@@ -1,6 +1,6 @@
 <div class="flex h-full">
   <%!-- Left Panel: Session List --%>
-  <div class="w-[36rem] shrink-0 border-r border-base-300 flex flex-col bg-base-100">
+  <div class="w-1/2 shrink-0 border-r border-base-300 flex flex-col bg-base-100">
     <div class="p-3 border-b border-base-300 flex flex-col gap-1.5">
       <form id="sidebar-new-session-form" phx-submit="run_new_task" class="w-full">
         <div id="sidebar-new-session-input-wrap" phx-update="ignore">
@@ -76,13 +76,13 @@
             <button
               type="button"
               phx-click="status_filter"
-              phx-value-status="all"
+              phx-value-status="open"
               class={[
                 "btn btn-xs rounded-full",
-                if(@status_filter == :all, do: "btn-neutral", else: "btn-ghost")
+                if(@status_filter == :open, do: "btn-neutral", else: "btn-ghost")
               ]}
             >
-              All
+              Open
             </button>
             <button
               type="button"
@@ -149,6 +149,17 @@
               ]}
             >
               Cancelled
+            </button>
+            <button
+              type="button"
+              phx-click="status_filter"
+              phx-value-status="closed"
+              class={[
+                "btn btn-xs rounded-full",
+                if(@status_filter == :closed, do: "btn-neutral btn-outline", else: "btn-ghost")
+              ]}
+            >
+              Closed
             </button>
           </div>
         </div>
