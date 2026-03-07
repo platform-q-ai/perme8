@@ -9,6 +9,7 @@ defmodule Identity.Domain.Policies.ApiKeyPermissionPolicy do
     "agents:read",
     "agents:write",
     "agents:query",
+    "api_keys:write",
     "mcp:knowledge.search",
     "mcp:knowledge.get",
     "mcp:knowledge.traverse",
@@ -94,17 +95,11 @@ defmodule Identity.Domain.Policies.ApiKeyPermissionPolicy do
   defp scope_matches?(permission, required_scope) when permission == required_scope, do: true
 
   defp scope_matches?(permission, required_scope) do
-    cond do
-      String.ends_with?(permission, ":*") ->
-        prefix = String.trim_trailing(permission, "*")
-        String.starts_with?(required_scope, prefix)
-
-      String.ends_with?(permission, ".*") ->
-        prefix = String.trim_trailing(permission, "*")
-        String.starts_with?(required_scope, prefix)
-
-      true ->
-        false
+    if String.ends_with?(permission, "*") do
+      prefix = String.trim_trailing(permission, "*")
+      String.starts_with?(required_scope, prefix)
+    else
+      false
     end
   end
 end
