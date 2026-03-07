@@ -158,6 +158,42 @@ defmodule Agents.Sessions.Infrastructure.TaskRunnerTest do
   end
 
   # ---------------------------------------------------------------------------
+  # Subtask cache format round-trip
+  # ---------------------------------------------------------------------------
+
+  describe "subtask cache format round-trip" do
+    test "subtask cache entry decodes correctly through EventProcessor" do
+      alias AgentsWeb.SessionsLive.EventProcessor
+
+      # Build the cache entry that TaskRunner would produce
+      entry = %{
+        "type" => "subtask",
+        "id" => "subtask-msg-1",
+        "agent" => "explore",
+        "description" => "Research spike",
+        "prompt" => "Explore the codebase",
+        "status" => "running"
+      }
+
+      # Encode as JSON (simulating DB persistence)
+      json = Jason.encode!([entry])
+
+      # Decode through EventProcessor (simulating LiveView mount/reconnect)
+      parts = EventProcessor.decode_cached_output(json)
+
+      assert [
+               {:subtask, "subtask-msg-1",
+                %{
+                  agent: "explore",
+                  description: "Research spike",
+                  prompt: "Explore the codebase",
+                  status: :done
+                }}
+             ] = parts
+    end
+  end
+
+  # ---------------------------------------------------------------------------
   # Fresh warm start preparation failure
   # ---------------------------------------------------------------------------
 

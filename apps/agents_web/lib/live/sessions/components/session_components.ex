@@ -340,6 +340,58 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponents do
     """
   end
 
+  def chat_part(%{part: {:subtask, id, detail}} = assigns) do
+    assigns =
+      assigns
+      |> assign(:subtask_id, id)
+      |> assign(:agent, detail.agent)
+      |> assign(:description, detail.description)
+      |> assign(:prompt, detail.prompt)
+      |> assign(:subtask_status, detail.status)
+
+    ~H"""
+    <div class="flex gap-2 mb-3">
+      <div class="shrink-0 size-6 rounded-full bg-info/10 flex items-center justify-center mt-0.5">
+        <.icon name="hero-arrow-path-rounded-square" class="size-3.5 text-info" />
+      </div>
+      <div class="flex-1 min-w-0">
+        <details class="my-0.5 rounded-lg border border-info/20 bg-info/5 text-xs group">
+          <summary class="flex items-center gap-2 px-3 py-1.5 cursor-pointer select-none">
+            <span
+              :if={@subtask_status == :running}
+              class="loading loading-spinner loading-xs text-info"
+            >
+            </span>
+            <.icon
+              :if={@subtask_status == :done}
+              name="hero-check-circle"
+              class="size-3.5 text-success"
+            />
+            <span class="font-medium text-info/90">
+              Subtask: {@agent}
+            </span>
+            <span :if={@description != ""} class="text-base-content/50 truncate flex-1">
+              {@description}
+            </span>
+            <.icon
+              name="hero-chevron-right"
+              class="size-3 text-base-content/30 ml-auto transition-transform group-open:rotate-90 shrink-0"
+            />
+          </summary>
+          <div class="px-3 py-2 border-t border-info/10">
+            <div class="text-[0.6rem] font-semibold text-base-content/40 uppercase tracking-wider mb-0.5">
+              Prompt
+            </div>
+            <div class="text-[0.7rem] leading-snug text-base-content/60 whitespace-pre-wrap break-words max-h-48 overflow-y-auto">
+              {@prompt}
+            </div>
+          </div>
+        </details>
+      </div>
+    </div>
+    """
+  end
+
   def chat_part(assigns) do
     ~H"""
     <div class="flex gap-2 mb-3">

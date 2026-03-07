@@ -63,6 +63,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     last_flushed_todo_version: 0,
     # User message IDs — skip their parts from output cache (shown separately in UI)
     user_message_ids: MapSet.new(),
+    # Subtask message IDs — skip user message tracking for subagent invocations
+    subtask_message_ids: MapSet.new(),
     # Dependency injection
     container_provider: nil,
     opencode_client: nil,
@@ -463,15 +465,22 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
       {:task_event, state.task_id, event}
     )
 
+    # Track subtask message IDs so we can suppress their user messages
+    state = track_subtask_message_id(event, state)
+
     # Track user message IDs so we can filter their parts from output cache
     state = track_user_message_id(event, state)
 
-    # Cache user message parts explicitly so follow-up prompts persist
-    # across reconnects/reloads in the UI.
-    if user_message_part?(event, state) do
-      {:noreply, cache_user_message_part(event, state)}
-    else
-      handle_sdk_result(event, state)
+    # Route parts to appropriate caching: subtask → user → SDK dispatch
+    cond do
+      subtask_part?(event) ->
+        {:noreply, cache_subtask_part(event, state)}
+
+      user_message_part?(event, state) ->
+        {:noreply, cache_user_message_part(event, state)}
+
+      true ->
+        handle_sdk_result(event, state)
     end
   end
 
@@ -660,6 +669,59 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     end
   end
 
+  # ---- Private: Subtask message filtering ----
+
+  defp track_subtask_message_id(
+         %{
+           "type" => "message.part.updated",
+           "properties" => %{"part" => %{"type" => "subtask"} = part}
+         },
+         state
+       ) do
+    case part["messageID"] || part["messageId"] do
+      msg_id when is_binary(msg_id) ->
+        %{state | subtask_message_ids: MapSet.put(state.subtask_message_ids, msg_id)}
+
+      _ ->
+        state
+    end
+  end
+
+  defp track_subtask_message_id(_event, state), do: state
+
+  defp subtask_part?(%{
+         "type" => "message.part.updated",
+         "properties" => %{"part" => %{"type" => "subtask"}}
+       }),
+       do: true
+
+  defp subtask_part?(_event), do: false
+
+  defp cache_subtask_part(
+         %{
+           "type" => "message.part.updated",
+           "properties" => %{"part" => %{"type" => "subtask"} = part}
+         },
+         state
+       ) do
+    msg_id = part["messageID"] || part["messageId"] || part["id"]
+    subtask_id = if is_binary(msg_id), do: "subtask-#{msg_id}", else: nil
+
+    entry = %{
+      "type" => "subtask",
+      "id" => subtask_id,
+      "agent" => part["agent"] || "unknown",
+      "description" => part["description"] || "",
+      "prompt" => part["prompt"] || "",
+      "status" => "running"
+    }
+
+    parts = upsert_output_part(state.output_parts, subtask_id, entry)
+    %{state | output_parts: parts}
+  end
+
+  defp cache_subtask_part(_event, state), do: state
+
   # ---- Private: User message filtering ----
 
   defp track_user_message_id(
@@ -671,7 +733,13 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
        ) do
     case info["id"] || info["messageID"] || info["messageId"] do
       msg_id when is_binary(msg_id) ->
-        %{state | user_message_ids: MapSet.put(state.user_message_ids, msg_id)}
+        # Skip tracking for subtask messages — they should not be
+        # treated as user messages in the output cache.
+        if MapSet.member?(state.subtask_message_ids, msg_id) do
+          state
+        else
+          %{state | user_message_ids: MapSet.put(state.user_message_ids, msg_id)}
+        end
 
       _ ->
         state
@@ -688,7 +756,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
          state
        )
        when is_binary(msg_id) do
-    MapSet.member?(state.user_message_ids, msg_id)
+    MapSet.member?(state.user_message_ids, msg_id) and
+      not MapSet.member?(state.subtask_message_ids, msg_id)
   end
 
   defp user_message_part?(
@@ -699,7 +768,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
          state
        )
        when is_binary(msg_id) do
-    MapSet.member?(state.user_message_ids, msg_id)
+    MapSet.member?(state.user_message_ids, msg_id) and
+      not MapSet.member?(state.subtask_message_ids, msg_id)
   end
 
   defp user_message_part?(_event, _state), do: false
