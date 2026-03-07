@@ -20,6 +20,12 @@ defmodule AgentsApi.AgentApiController do
 
   use AgentsApi, :controller
 
+  plug AgentsApi.Plugs.ApiPermissionPlug, [scope: "agents:read"] when action in [:index, :show]
+
+  plug AgentsApi.Plugs.ApiPermissionPlug,
+       [scope: "agents:write"]
+       when action in [:create, :update, :delete]
+
   @allowed_fields ~w(name description system_prompt model temperature visibility enabled)
 
   @doc """

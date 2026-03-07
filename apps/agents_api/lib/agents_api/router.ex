@@ -26,6 +26,8 @@ defmodule AgentsApi.Router do
     pipe_through([:api_base, :api_authenticated])
 
     resources("/agents", AgentApiController, only: [:index, :show, :create, :update, :delete])
+    post("/api-keys", ApiKeyController, :create)
+    patch("/api-keys/:id", ApiKeyController, :update)
 
     post("/agents/:id/query", AgentQueryController, :create)
     get("/agents/:id/skills", SkillApiController, :index)

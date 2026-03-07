@@ -14,6 +14,8 @@ defmodule AgentsApi.AgentQueryController do
 
   use AgentsApi, :controller
 
+  plug AgentsApi.Plugs.ApiPermissionPlug, [scope: "agents:query"] when action in [:create]
+
   @query_timeout_ms 60_000
 
   @doc """
