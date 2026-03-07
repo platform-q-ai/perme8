@@ -46,7 +46,8 @@ Feature: Session Search and Filtering
   Scenario: All status filter pills are visible
     When I navigate to "${baseUrl}/sessions"
     And I wait for network idle
-    Then "button[phx-click='status_filter'][phx-value-status='all']" should exist
+    Then "button[phx-click='status_filter'][phx-value-status='open']" should exist
+    And "button[phx-click='status_filter'][phx-value-status='closed']" should exist
     And "button[phx-click='status_filter'][phx-value-status='running']" should exist
     And "button[phx-click='status_filter'][phx-value-status='queued']" should exist
     And "button[phx-click='status_filter'][phx-value-status='awaiting_feedback']" should exist
@@ -54,10 +55,10 @@ Feature: Session Search and Filtering
     And "button[phx-click='status_filter'][phx-value-status='completed']" should exist
     And "button[phx-click='status_filter'][phx-value-status='cancelled']" should exist
 
-  Scenario: All filter is active by default
+  Scenario: Open filter is active by default
     When I navigate to "${baseUrl}/sessions"
     And I wait for network idle
-    Then "button[phx-click='status_filter'][phx-value-status='all']" should have class "btn-neutral"
+    Then "button[phx-click='status_filter'][phx-value-status='open']" should have class "btn-neutral"
 
   Scenario: Clicking a filter pill activates it
     When I navigate to "${baseUrl}/sessions"
@@ -66,18 +67,18 @@ Feature: Session Search and Filtering
     And I wait for network idle
     And I wait for "button.phx-click-loading" to be hidden
     Then "button[phx-click='status_filter'][phx-value-status='running']" should have class "btn-success"
-    And "button[phx-click='status_filter'][phx-value-status='all']" should have class "btn-ghost"
+    And "button[phx-click='status_filter'][phx-value-status='open']" should have class "btn-ghost"
 
-  Scenario: Clicking All resets the active filter
+  Scenario: Clicking Open resets the active filter
     When I navigate to "${baseUrl}/sessions"
     And I wait for network idle
     And I click "button[phx-click='status_filter'][phx-value-status='failed']"
     And I wait for network idle
     And I wait for "button.phx-click-loading" to be hidden
-    And I click "button[phx-click='status_filter'][phx-value-status='all']"
+    And I click "button[phx-click='status_filter'][phx-value-status='open']"
     And I wait for network idle
     And I wait for "button.phx-click-loading" to be hidden
-    Then "button[phx-click='status_filter'][phx-value-status='all']" should have class "btn-neutral"
+    Then "button[phx-click='status_filter'][phx-value-status='open']" should have class "btn-neutral"
     And "button[phx-click='status_filter'][phx-value-status='failed']" should have class "btn-ghost"
 
   # ---------------------------------------------------------------------------

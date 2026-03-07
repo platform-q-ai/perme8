@@ -73,7 +73,7 @@ defmodule AgentsWeb.SessionsLive.Index do
      |> assign(:refreshing_task_ids, MapSet.new())
      |> assign(:pending_follow_ups, %{})
      |> assign(:session_search, "")
-     |> assign(:status_filter, :all)
+     |> assign(:status_filter, :open)
      |> assign_session_state()
      |> assign(:form, to_form(%{"instruction" => ""}))}
   end
@@ -440,6 +440,8 @@ defmodule AgentsWeb.SessionsLive.Index do
 
   @valid_status_filters %{
     "all" => :all,
+    "open" => :open,
+    "closed" => :closed,
     "awaiting_feedback" => :awaiting_feedback,
     "completed" => :completed,
     "cancelled" => :cancelled,
@@ -519,8 +521,11 @@ defmodule AgentsWeb.SessionsLive.Index do
       Sessions.delete_session(container_id, user.id)
     end
 
-    # Optimistically remove the ticket from the UI
-    tickets = Enum.reject(socket.assigns.tickets, &(&1.number == number))
+    # Optimistically mark the ticket as closed so it moves out of the Open filter
+    tickets =
+      Enum.map(socket.assigns.tickets, fn t ->
+        if t.number == number, do: %{t | state: "closed"}, else: t
+      end)
 
     # Remove the associated session from the sessions list
     sessions =

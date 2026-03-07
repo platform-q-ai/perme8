@@ -388,11 +388,14 @@ defmodule AgentsWeb.SessionsLive.Helpers do
   end
 
   @doc """
-  Filters sessions by status. :all returns everything.
+  Filters sessions by status. :all, :open, and :closed return everything
+  (open/closed are ticket-state filters that don't apply to sessions).
   Triage statuses: :awaiting_feedback, :completed, :cancelled
   Build statuses: :failed, :queued, :running
   """
   def filter_sessions_by_status(sessions, :all), do: sessions
+  def filter_sessions_by_status(sessions, :open), do: sessions
+  def filter_sessions_by_status(sessions, :closed), do: sessions
 
   def filter_sessions_by_status(sessions, :running) do
     Enum.filter(sessions, &(&1.latest_status in ["pending", "starting", "running"]))
@@ -404,9 +407,19 @@ defmodule AgentsWeb.SessionsLive.Helpers do
   end
 
   @doc """
-  Filters tickets by status. :all returns everything.
+  Filters tickets by status. :all returns everything, :open returns only
+  open tickets, :closed returns only closed tickets. Other atoms filter
+  by task_status.
   """
   def filter_tickets_by_status(tickets, :all), do: tickets
+
+  def filter_tickets_by_status(tickets, :open) do
+    Enum.filter(tickets, &(&1.state == "open"))
+  end
+
+  def filter_tickets_by_status(tickets, :closed) do
+    Enum.filter(tickets, &(&1.state == "closed"))
+  end
 
   def filter_tickets_by_status(tickets, :running) do
     Enum.filter(tickets, &(&1.task_status in ["pending", "starting", "running"]))

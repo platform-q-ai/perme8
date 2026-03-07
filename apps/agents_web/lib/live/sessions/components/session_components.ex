@@ -893,6 +893,7 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponents do
       assigns
       |> assign(:has_container, has_real_container?(assigns[:session]))
       |> assign(:file_stats, compute_file_stats(assigns[:session]))
+      |> assign(:closed, Map.get(assigns.ticket, :state) == "closed")
 
     ~H"""
     <div
@@ -921,9 +922,16 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponents do
               <span class="badge badge-xs badge-info whitespace-nowrap shrink-0">
                 {@ticket.number}
               </span>
+              <%!-- Closed badge --%>
+              <span
+                :if={@closed}
+                class="badge badge-xs badge-ghost whitespace-nowrap shrink-0"
+              >
+                Closed
+              </span>
               <%!-- Paused badge (triage only) --%>
               <span
-                :if={@variant == :triage && @ticket.task_status == "cancelled"}
+                :if={!@closed && @variant == :triage && @ticket.task_status == "cancelled"}
                 class="badge badge-xs badge-ghost whitespace-nowrap shrink-0"
               >
                 Paused
@@ -973,7 +981,10 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponents do
             <%!-- Title (triage renders below the badge row) --%>
             <span
               :if={@variant == :triage}
-              class="text-xs font-medium flex-1 min-w-0 overflow-hidden mt-0.5 mb-0.5"
+              class={[
+                "text-xs font-medium flex-1 min-w-0 overflow-hidden mt-0.5 mb-0.5",
+                @closed && "line-through text-base-content/50"
+              ]}
               style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;"
             >
               {@ticket.title}
@@ -988,7 +999,10 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponents do
         <%!-- Title (build variants render below the header row) --%>
         <span
           :if={@variant != :triage}
-          class="text-xs font-medium flex-1 min-w-0 overflow-hidden mt-0.5 mb-0.5"
+          class={[
+            "text-xs font-medium flex-1 min-w-0 overflow-hidden mt-0.5 mb-0.5",
+            @closed && "line-through text-base-content/50"
+          ]}
           style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;"
         >
           {@ticket.title}
@@ -1034,9 +1048,9 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponents do
         />
       </div>
 
-      <%!-- Action strip (right edge) --%>
+      <%!-- Action strip (right edge, hidden for closed tickets) --%>
       <div
-        :if={@variant == :triage}
+        :if={@variant == :triage && !@closed}
         class="flex flex-col shrink-0 border-l border-info/20"
         style="width: 10%;"
       >
@@ -1072,7 +1086,7 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponents do
         </button>
       </div>
       <div
-        :if={@variant != :triage}
+        :if={@variant != :triage && !@closed}
         class={[
           "flex flex-col shrink-0 border-l",
           @variant == :in_progress && "border-success/20",
@@ -1107,10 +1121,15 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponents do
   defp slot_state(:in_progress, _), do: "used"
 
   defp ticket_card_classes(variant, ticket, session, active, warming, has_container) do
+    closed = Map.get(ticket, :state) == "closed"
+
     base =
       "flex cursor-pointer w-full rounded-lg min-h-12 border transition-all duration-150 hover:-translate-y-px hover:shadow-md hover:ring-1 hover:ring-base-content/20 overflow-hidden"
 
-    variant_classes = variant_classes(variant, ticket, session, warming, has_container)
+    variant_classes =
+      if closed,
+        do: "border-base-content/10 bg-base-content/3 opacity-60",
+        else: variant_classes(variant, ticket, session, warming, has_container)
 
     active_class =
       if active, do: "ring-2 ring-primary/60 shadow-sm shadow-primary/10", else: ""

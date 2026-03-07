@@ -2394,13 +2394,15 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
         |> element(~s([data-testid="close-ticket-btn"]))
         |> render_click()
 
-      # Ticket should be removed from the triage lane
+      # Ticket should be removed from the triage lane (default filter is :open)
       refute html =~ "Ticket to close"
       refute html =~ ~s(data-testid="triage-ticket-item-555")
 
-      # Ticket should be removed from the database
+      # Ticket should be marked as closed in the database (not deleted)
       remaining = ProjectTicketRepository.list_all()
-      refute Enum.any?(remaining, &(&1.number == 555))
+      closed_ticket = Enum.find(remaining, &(&1.number == 555))
+      assert closed_ticket
+      assert closed_ticket.state == "closed"
     end
 
     test "close_ticket switches to chat tab when viewing the closed ticket", %{
@@ -3254,7 +3256,7 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       assert html =~ "session-item-failed-task"
     end
 
-    test "All filter resets to show everything", %{conn: conn, user: user} do
+    test "Open filter resets to show everything", %{conn: conn, user: user} do
       task_fixture(%{
         user_id: user.id,
         instruction: "Completed task",
@@ -3276,10 +3278,10 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       |> element(~s(button[phx-click="status_filter"][phx-value-status="completed"]))
       |> render_click()
 
-      # Reset to all
+      # Reset to open
       html =
         lv
-        |> element(~s(button[phx-click="status_filter"][phx-value-status="all"]))
+        |> element(~s(button[phx-click="status_filter"][phx-value-status="open"]))
         |> render_click()
 
       assert html =~ "session-item-completed-task"

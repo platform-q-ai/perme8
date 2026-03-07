@@ -458,18 +458,42 @@ defmodule AgentsWeb.SessionsLive.HelpersTest do
   describe "filter_tickets_by_status/2" do
     test "returns all tickets when status is :all" do
       tickets = [
-        %{task_status: "running"},
-        %{task_status: "completed"}
+        %{task_status: "running", state: "open"},
+        %{task_status: "completed", state: "closed"}
       ]
 
       assert Helpers.filter_tickets_by_status(tickets, :all) == tickets
     end
 
+    test ":open returns only tickets with state open" do
+      tickets = [
+        %{task_status: "running", state: "open"},
+        %{task_status: nil, state: "open"},
+        %{task_status: "completed", state: "closed"}
+      ]
+
+      result = Helpers.filter_tickets_by_status(tickets, :open)
+      assert length(result) == 2
+      assert Enum.all?(result, &(&1.state == "open"))
+    end
+
+    test ":closed returns only tickets with state closed" do
+      tickets = [
+        %{task_status: "running", state: "open"},
+        %{task_status: "completed", state: "closed"},
+        %{task_status: nil, state: "closed"}
+      ]
+
+      result = Helpers.filter_tickets_by_status(tickets, :closed)
+      assert length(result) == 2
+      assert Enum.all?(result, &(&1.state == "closed"))
+    end
+
     test "filters by exact task_status" do
       tickets = [
-        %{task_status: "completed"},
-        %{task_status: "failed"},
-        %{task_status: "queued"}
+        %{task_status: "completed", state: "open"},
+        %{task_status: "failed", state: "open"},
+        %{task_status: "queued", state: "open"}
       ]
 
       result = Helpers.filter_tickets_by_status(tickets, :failed)
@@ -479,10 +503,10 @@ defmodule AgentsWeb.SessionsLive.HelpersTest do
 
     test ":running matches pending, starting, and running" do
       tickets = [
-        %{task_status: "pending"},
-        %{task_status: "starting"},
-        %{task_status: "running"},
-        %{task_status: "completed"}
+        %{task_status: "pending", state: "open"},
+        %{task_status: "starting", state: "open"},
+        %{task_status: "running", state: "open"},
+        %{task_status: "completed", state: "open"}
       ]
 
       result = Helpers.filter_tickets_by_status(tickets, :running)
@@ -490,7 +514,7 @@ defmodule AgentsWeb.SessionsLive.HelpersTest do
     end
 
     test "returns empty list when no tickets match" do
-      tickets = [%{task_status: "completed"}]
+      tickets = [%{task_status: "completed", state: "open"}]
       assert Helpers.filter_tickets_by_status(tickets, :queued) == []
     end
   end
