@@ -5,6 +5,9 @@ defmodule AgentsApi.ApiKeyController do
 
   use AgentsApi, :controller
 
+  plug AgentsApi.Plugs.ApiPermissionPlug,
+       [scope: "api_keys:write"] when action in [:create, :update]
+
   @allowed_fields ~w(name description workspace_access permissions)a
 
   def create(conn, params) do
@@ -58,15 +61,10 @@ defmodule AgentsApi.ApiKeyController do
     Enum.reduce(@allowed_fields, %{}, fn field, acc ->
       string_key = Atom.to_string(field)
 
-      cond do
-        Map.has_key?(params, string_key) ->
-          Map.put(acc, field, Map.get(params, string_key))
-
-        Map.has_key?(params, field) ->
-          Map.put(acc, field, Map.get(params, field))
-
-        true ->
-          acc
+      if Map.has_key?(params, string_key) do
+        Map.put(acc, field, Map.get(params, string_key))
+      else
+        acc
       end
     end)
   end
