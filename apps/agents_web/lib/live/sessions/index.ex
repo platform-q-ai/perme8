@@ -1899,7 +1899,16 @@ defmodule AgentsWeb.SessionsLive.Index do
       caller = self()
 
       Task.start(fn ->
-        send(caller, {:task_refreshed, task_id, Sessions.get_task(task_id, user_id)})
+        try do
+          send(caller, {:task_refreshed, task_id, Sessions.get_task(task_id, user_id)})
+        rescue
+          error ->
+            Logger.warning(
+              "request_task_refresh failed for task_id=#{task_id}: #{inspect(error)}"
+            )
+
+            send(caller, {:task_refreshed, task_id, {:error, error}})
+        end
       end)
 
       assign(socket, :refreshing_task_ids, MapSet.put(refreshing, task_id))
