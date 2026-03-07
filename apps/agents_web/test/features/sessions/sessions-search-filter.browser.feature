@@ -64,6 +64,7 @@ Feature: Session Search and Filtering
     And I wait for network idle
     And I click "button[phx-click='status_filter'][phx-value-status='running']"
     And I wait for network idle
+    And I wait for "button.phx-click-loading" to be hidden
     Then "button[phx-click='status_filter'][phx-value-status='running']" should have class "btn-success"
     And "button[phx-click='status_filter'][phx-value-status='all']" should have class "btn-ghost"
 
@@ -72,8 +73,10 @@ Feature: Session Search and Filtering
     And I wait for network idle
     And I click "button[phx-click='status_filter'][phx-value-status='failed']"
     And I wait for network idle
+    And I wait for "button.phx-click-loading" to be hidden
     And I click "button[phx-click='status_filter'][phx-value-status='all']"
     And I wait for network idle
+    And I wait for "button.phx-click-loading" to be hidden
     Then "button[phx-click='status_filter'][phx-value-status='all']" should have class "btn-neutral"
     And "button[phx-click='status_filter'][phx-value-status='failed']" should have class "btn-ghost"
 
