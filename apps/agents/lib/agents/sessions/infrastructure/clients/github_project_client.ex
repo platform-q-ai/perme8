@@ -1,9 +1,10 @@
 defmodule Agents.Sessions.Infrastructure.Clients.GithubProjectClient do
   @moduledoc """
-  GitHub REST client for fetching open issues from a repository.
+  GitHub REST client for fetching issues from a repository.
 
-  Replaces the previous ProjectV2 GraphQL approach — now simply lists all
-  open issues from the configured repo using the GitHub REST API.
+  Replaces the previous ProjectV2 GraphQL approach — now simply lists
+  issues from the configured repo using the GitHub REST API.
+  Fetches both open and closed issues so the UI can filter by state.
   """
 
   @api_base "https://api.github.com"
@@ -36,11 +37,12 @@ defmodule Agents.Sessions.Infrastructure.Clients.GithubProjectClient do
           body: String.t() | nil,
           url: String.t() | nil,
           labels: [String.t()],
+          state: String.t(),
           created_at: DateTime.t() | nil
         }
 
   @doc """
-  Fetches all open issues from the configured repository.
+  Fetches all issues (open and closed) from the configured repository.
 
   ## Options
 
@@ -81,7 +83,7 @@ defmodule Agents.Sessions.Infrastructure.Clients.GithubProjectClient do
   end
 
   defp fetch_all_pages(token, org, repo, page, acc) do
-    url = "#{@api_base}/repos/#{org}/#{repo}/issues?state=open&per_page=100&page=#{page}"
+    url = "#{@api_base}/repos/#{org}/#{repo}/issues?state=all&per_page=100&page=#{page}"
 
     case Req.get(url,
            headers: rest_headers(token),
@@ -116,6 +118,7 @@ defmodule Agents.Sessions.Infrastructure.Clients.GithubProjectClient do
       title: issue["title"],
       body: issue["body"],
       url: issue["html_url"],
+      state: issue["state"] || "open",
       created_at: parse_datetime(issue["created_at"]),
       labels:
         issue

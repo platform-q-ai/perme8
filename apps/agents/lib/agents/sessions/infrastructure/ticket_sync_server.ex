@@ -1,10 +1,11 @@
 defmodule Agents.Sessions.Infrastructure.TicketSyncServer do
   @moduledoc """
-  Polls open GitHub issues from the configured repository and broadcasts updates.
+  Polls GitHub issues from the configured repository and broadcasts updates.
 
   Keeps the local `sessions_project_tickets` table in sync with the repo's
-  open issues so LiveViews can render quickly without calling GitHub directly.
-  Closed issues are automatically pruned from the local table on each sync.
+  issues (both open and closed) so LiveViews can render quickly without
+  calling GitHub directly. Issues deleted from GitHub entirely are pruned
+  from the local table on each sync.
   """
 
   use GenServer
@@ -100,7 +101,9 @@ defmodule Agents.Sessions.Infrastructure.TicketSyncServer do
       {:ok, tickets} ->
         Enum.each(tickets, &sync_remote_ticket(state, &1))
 
-        # Remove local tickets that are no longer in the open issues list.
+        # Remove local tickets that are no longer in the remote issues list
+        # (i.e. deleted from GitHub entirely — closed issues are kept and
+        # marked with state="closed" via the upsert above).
         # Guard: skip pruning when the API returns an empty list but we have
         # local tickets — this protects against transient GitHub API issues
         # (e.g. rate-limiting returning 200 with empty body) wiping the table.

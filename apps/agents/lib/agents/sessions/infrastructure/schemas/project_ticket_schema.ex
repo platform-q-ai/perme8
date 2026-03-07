@@ -7,6 +7,7 @@ defmodule Agents.Sessions.Infrastructure.Schemas.ProjectTicketSchema do
   import Ecto.Changeset
 
   @sync_states ["synced", "pending_push", "sync_error"]
+  @valid_states ["open", "closed"]
 
   @type t :: %__MODULE__{
           id: integer(),
@@ -15,6 +16,7 @@ defmodule Agents.Sessions.Infrastructure.Schemas.ProjectTicketSchema do
           title: String.t(),
           body: String.t() | nil,
           status: String.t() | nil,
+          state: String.t(),
           priority: String.t() | nil,
           size: String.t() | nil,
           labels: [String.t()],
@@ -35,6 +37,7 @@ defmodule Agents.Sessions.Infrastructure.Schemas.ProjectTicketSchema do
     field(:title, :string)
     field(:body, :string)
     field(:status, :string)
+    field(:state, :string, default: "open")
     field(:priority, :string)
     field(:size, :string)
     field(:labels, {:array, :string}, default: [])
@@ -58,6 +61,7 @@ defmodule Agents.Sessions.Infrastructure.Schemas.ProjectTicketSchema do
       :title,
       :body,
       :status,
+      :state,
       :priority,
       :size,
       :labels,
@@ -71,6 +75,7 @@ defmodule Agents.Sessions.Infrastructure.Schemas.ProjectTicketSchema do
     ])
     |> validate_required([:number, :title])
     |> validate_inclusion(:sync_state, @sync_states)
+    |> validate_inclusion(:state, @valid_states)
     |> unique_constraint(:number)
   end
 end
