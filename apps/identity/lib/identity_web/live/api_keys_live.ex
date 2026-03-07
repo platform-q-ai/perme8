@@ -2,6 +2,21 @@ defmodule IdentityWeb.ApiKeysLive do
   use IdentityWeb, :live_view
 
   alias Identity
+  alias Identity.Domain.Policies.ApiKeyPermissionPolicy
+
+  @all_scopes ApiKeyPermissionPolicy.all_scopes()
+  @preset_source ApiKeyPermissionPolicy.presets()
+  @preset_scopes %{
+    "full_access" => Map.fetch!(@preset_source, "Full Access"),
+    "read_only" => Map.fetch!(@preset_source, "Read Only"),
+    "agent_operator" => Map.fetch!(@preset_source, "Agent Operator")
+  }
+  @permission_presets [
+    {"full_access", "Full Access"},
+    {"read_only", "Read Only"},
+    {"agent_operator", "Agent Operator"},
+    {"custom", "Custom"}
+  ]
 
   @impl true
   def render(assigns) do
@@ -86,6 +101,7 @@ defmodule IdentityWeb.ApiKeysLive do
                   <tr>
                     <th class="text-sm font-semibold">Name</th>
                     <th class="text-sm font-semibold">Workspace Access</th>
+                    <th class="text-sm font-semibold">Permissions</th>
                     <th class="text-sm font-semibold">Status</th>
                     <th class="text-sm font-semibold">Created</th>
                     <th class="text-sm font-semibold text-right">Actions</th>
@@ -114,6 +130,9 @@ defmodule IdentityWeb.ApiKeysLive do
                         <% end %>
                       </td>
                       <td>
+                        <.permission_badge permissions={api_key.permissions} />
+                      </td>
+                      <td>
                         <%= if api_key.is_active do %>
                           <span class="badge badge-success badge-sm">Active</span>
                         <% else %>
@@ -131,6 +150,7 @@ defmodule IdentityWeb.ApiKeysLive do
                               size="sm"
                               phx-click="edit_key"
                               phx-value-id={api_key.id}
+                              data-testid={"edit-api-key-#{slugify_name(api_key.name)}"}
                               class="join-item"
                             >
                               <.icon name="hero-pencil" class="size-4" />
@@ -171,6 +191,7 @@ defmodule IdentityWeb.ApiKeysLive do
                   type="text"
                   label="Name"
                   placeholder="e.g., Production API Key"
+                  data-testid="api-key-name-input"
                   required
                 />
                 <.input
@@ -210,6 +231,14 @@ defmodule IdentityWeb.ApiKeysLive do
                     </div>
                   <% end %>
                 </div>
+
+                <.permission_selector
+                  permission_presets={@permission_presets}
+                  selected_preset={@selected_preset}
+                  selected_permissions={@selected_permissions}
+                  show_custom_scopes={@show_custom_scopes}
+                  grouped_scopes={group_scopes(@all_scopes)}
+                />
               </div>
 
               <div class="modal-action">
@@ -264,6 +293,14 @@ defmodule IdentityWeb.ApiKeysLive do
                     </div>
                   <% end %>
                 </div>
+
+                <.permission_selector
+                  permission_presets={@permission_presets}
+                  selected_preset={@selected_preset}
+                  selected_permissions={@selected_permissions}
+                  show_custom_scopes={@show_custom_scopes}
+                  grouped_scopes={group_scopes(@all_scopes)}
+                />
               </div>
 
               <div class="modal-action">
@@ -292,7 +329,7 @@ defmodule IdentityWeb.ApiKeysLive do
               </div>
               <h3 class="font-bold text-lg mb-2">Your API Key</h3>
               <p class="text-sm text-base-content/70 mb-4">
-                Copy this key now. For security reasons, it won't be shown again.
+                This token is shown only once. Copy it now and store it securely.
               </p>
 
               <div class="bg-base-200 rounded-lg p-4 mb-4">
@@ -369,6 +406,12 @@ defmodule IdentityWeb.ApiKeysLive do
       |> assign(:show_token_modal, false)
       |> assign(:new_token, nil)
       |> assign(:editing_key_id, nil)
+      |> assign(:permission_presets, @permission_presets)
+      |> assign(:all_scopes, @all_scopes)
+      |> assign(:selected_preset, "full_access")
+      |> assign(:selected_permissions, ["*"])
+      |> assign(:show_custom_scopes, false)
+      |> assign(:show_empty_permissions_warning, false)
 
     {:ok, socket}
   end
@@ -380,6 +423,10 @@ defmodule IdentityWeb.ApiKeysLive do
       socket
       |> assign(:show_create_modal, true)
       |> assign(:selected_workspaces, [])
+      |> assign(:selected_preset, "full_access")
+      |> assign(:selected_permissions, ["*"])
+      |> assign(:show_custom_scopes, false)
+      |> assign(:show_empty_permissions_warning, false)
       |> assign(:create_form, to_form(%{"name" => "", "description" => ""}))
 
     {:noreply, socket}
@@ -392,6 +439,10 @@ defmodule IdentityWeb.ApiKeysLive do
       socket
       |> assign(:show_create_modal, false)
       |> assign(:selected_workspaces, [])
+      |> assign(:selected_preset, "full_access")
+      |> assign(:selected_permissions, ["*"])
+      |> assign(:show_custom_scopes, false)
+      |> assign(:show_empty_permissions_warning, false)
 
     {:noreply, socket}
   end
@@ -401,10 +452,22 @@ defmodule IdentityWeb.ApiKeysLive do
   def handle_event("create_key", %{"name" => name, "description" => description} = attrs, socket) do
     workspace_access = get_selected_workspaces(attrs)
 
+    permissions =
+      resolve_selected_permissions(
+        socket.assigns.selected_preset,
+        socket.assigns.selected_permissions
+      )
+
+    show_empty_permissions_warning =
+      socket.assigns.selected_preset == "custom" and permissions == []
+
+    socket = assign(socket, :show_empty_permissions_warning, show_empty_permissions_warning)
+
     api_key_attrs = %{
       name: name,
       description: description,
-      workspace_access: workspace_access
+      workspace_access: workspace_access,
+      permissions: permissions
     }
 
     case Identity.create_api_key(current_user(socket).id, api_key_attrs) do
@@ -428,6 +491,10 @@ defmodule IdentityWeb.ApiKeysLive do
           |> assign(:new_token, plain_token)
           |> assign(:create_form, to_form(%{"name" => "", "description" => ""}))
           |> assign(:selected_workspaces, [])
+          |> assign(:selected_preset, "full_access")
+          |> assign(:selected_permissions, ["*"])
+          |> assign(:show_custom_scopes, false)
+          |> assign(:show_empty_permissions_warning, false)
 
         {:noreply, socket}
 
@@ -459,6 +526,9 @@ defmodule IdentityWeb.ApiKeysLive do
         {:noreply, socket}
 
       api_key ->
+        {selected_preset, selected_permissions, show_custom_scopes} =
+          permission_state_for_existing_key(api_key.permissions)
+
         edit_form =
           to_form(%{
             "name" => api_key.name,
@@ -471,6 +541,10 @@ defmodule IdentityWeb.ApiKeysLive do
           |> assign(:show_edit_modal, true)
           |> assign(:editing_key_id, api_key_id)
           |> assign(:selected_workspaces, api_key.workspace_access)
+          |> assign(:selected_preset, selected_preset)
+          |> assign(:selected_permissions, selected_permissions)
+          |> assign(:show_custom_scopes, show_custom_scopes)
+          |> assign(:show_empty_permissions_warning, false)
 
         {:noreply, socket}
     end
@@ -485,10 +559,22 @@ defmodule IdentityWeb.ApiKeysLive do
       ) do
     workspace_access = get_selected_workspaces(attrs)
 
+    permissions =
+      resolve_selected_permissions(
+        socket.assigns.selected_preset,
+        socket.assigns.selected_permissions
+      )
+
+    show_empty_permissions_warning =
+      socket.assigns.selected_preset == "custom" and permissions == []
+
+    socket = assign(socket, :show_empty_permissions_warning, show_empty_permissions_warning)
+
     update_attrs = %{
       name: name,
       description: description,
-      workspace_access: workspace_access
+      workspace_access: workspace_access,
+      permissions: permissions
     }
 
     case Identity.update_api_key(current_user(socket).id, api_key_id, update_attrs) do
@@ -507,6 +593,7 @@ defmodule IdentityWeb.ApiKeysLive do
           |> assign(:filtered_keys, filter_keys_by_status(all_keys, socket.assigns.active_filter))
           |> assign(:show_edit_modal, false)
           |> assign(:editing_key_id, nil)
+          |> assign(:show_empty_permissions_warning, false)
 
         {:noreply, socket}
 
@@ -541,6 +628,10 @@ defmodule IdentityWeb.ApiKeysLive do
       |> assign(:show_edit_modal, false)
       |> assign(:editing_key_id, nil)
       |> assign(:selected_workspaces, [])
+      |> assign(:selected_preset, "full_access")
+      |> assign(:selected_permissions, ["*"])
+      |> assign(:show_custom_scopes, false)
+      |> assign(:show_empty_permissions_warning, false)
 
     {:noreply, socket}
   end
@@ -609,6 +700,65 @@ defmodule IdentityWeb.ApiKeysLive do
     {:noreply, socket}
   end
 
+  @impl true
+  def handle_event("select_permission_preset", %{"value" => "custom"}, socket) do
+    selected_permissions =
+      case socket.assigns.selected_permissions do
+        ["*"] -> socket.assigns.all_scopes
+        permissions -> permissions
+      end
+
+    socket =
+      socket
+      |> assign(:selected_preset, "custom")
+      |> assign(:selected_permissions, selected_permissions)
+      |> assign(:show_custom_scopes, true)
+      |> assign(:show_empty_permissions_warning, false)
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("select_permission_preset", %{"value" => preset}, socket) do
+    permissions = Map.fetch!(@preset_scopes, preset)
+
+    socket =
+      socket
+      |> assign(:selected_preset, preset)
+      |> assign(:selected_permissions, permissions)
+      |> assign(:show_custom_scopes, false)
+      |> assign(:show_empty_permissions_warning, false)
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("toggle_scope", %{"scope" => scope}, socket) do
+    current_permissions =
+      case socket.assigns.selected_permissions do
+        ["*"] -> socket.assigns.all_scopes
+        permissions -> permissions
+      end
+
+    selected_permissions =
+      if scope in current_permissions do
+        Enum.reject(current_permissions, &(&1 == scope))
+      else
+        [scope | current_permissions]
+      end
+      |> Enum.uniq()
+      |> Enum.sort()
+
+    socket =
+      socket
+      |> assign(:selected_preset, "custom")
+      |> assign(:selected_permissions, selected_permissions)
+      |> assign(:show_custom_scopes, true)
+      |> assign(:show_empty_permissions_warning, false)
+
+    {:noreply, socket}
+  end
+
   # Handle toggle workspace checkbox (create mode)
   @impl true
   def handle_event("toggle_workspace", %{"workspace" => workspace}, socket) do
@@ -652,6 +802,93 @@ defmodule IdentityWeb.ApiKeysLive do
     {:noreply, socket}
   end
 
+  attr :permissions, :any, default: nil
+
+  defp permission_badge(assigns) do
+    summary = ApiKeyPermissionPolicy.permission_summary(assigns.permissions)
+
+    {badge_class, badge_text} =
+      case summary do
+        :full_access -> {"badge-success", "Full Access"}
+        :no_access -> {"badge-error", "No Access"}
+        :read_only -> {"badge-info", "Read Only"}
+        :agent_operator -> {"badge-warning", "Agent Operator"}
+        {:custom, count} -> {"badge-outline", "Custom (#{count} scopes)"}
+      end
+
+    assigns = assign(assigns, :badge_class, badge_class)
+    assigns = assign(assigns, :badge_text, badge_text)
+
+    ~H"""
+    <span class={["badge badge-sm", @badge_class]} data-testid="api-key-permission-badge">
+      {@badge_text}
+    </span>
+    """
+  end
+
+  attr :permission_presets, :list, required: true
+  attr :selected_preset, :string, required: true
+  attr :selected_permissions, :list, required: true
+  attr :show_custom_scopes, :boolean, required: true
+  attr :grouped_scopes, :list, required: true
+
+  defp permission_selector(assigns) do
+    ~H"""
+    <div class="form-control" id="api-key-permissions">
+      <label class="label">
+        <span class="label-text font-medium">Permissions</span>
+      </label>
+
+      <div class="flex flex-wrap gap-2">
+        <%= for {preset_value, preset_label} <- @permission_presets do %>
+          <button
+            type="button"
+            phx-click="select_permission_preset"
+            phx-value-value={preset_value}
+            data-testid={"permission-preset-#{String.replace(preset_value, "_", "-")}"}
+            aria-pressed={to_string(@selected_preset == preset_value)}
+            class={[
+              "btn btn-sm",
+              if(@selected_preset == preset_value, do: "btn-primary", else: "btn-outline")
+            ]}
+          >
+            {preset_label}
+          </button>
+        <% end %>
+      </div>
+
+      <%= if @show_custom_scopes do %>
+        <div class="mt-4 space-y-4">
+          <%= for {category, scopes} <- @grouped_scopes do %>
+            <div>
+              <p class="text-sm font-semibold mb-2">{category}</p>
+              <div class="flex flex-wrap gap-3">
+                <%= for scope <- scopes do %>
+                  <label class="label cursor-pointer gap-2 p-0">
+                    <input
+                      type="checkbox"
+                      checked={scope in @selected_permissions}
+                      phx-click="toggle_scope"
+                      phx-value-scope={scope}
+                      data-testid={"scope-#{scope_test_id_suffix(scope)}"}
+                      class="checkbox checkbox-sm checkbox-primary"
+                    />
+                    <span class="label-text text-xs">{scope}</span>
+                  </label>
+                <% end %>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+
+      <%= if @show_custom_scopes and @selected_permissions == [] do %>
+        <p class="mt-2 text-sm text-warning">Empty permissions will deny all access</p>
+      <% end %>
+    </div>
+    """
+  end
+
   # Private helper functions
 
   defp get_user_workspaces(user) do
@@ -669,6 +906,46 @@ defmodule IdentityWeb.ApiKeysLive do
 
   defp find_api_key(api_keys, api_key_id) do
     Enum.find(api_keys, &(&1.id == api_key_id))
+  end
+
+  defp resolve_selected_permissions("full_access", _selected_permissions), do: ["*"]
+  defp resolve_selected_permissions(_preset, selected_permissions), do: selected_permissions
+
+  defp permission_state_for_existing_key(nil), do: {"full_access", @all_scopes, false}
+  defp permission_state_for_existing_key(["*"]), do: {"full_access", ["*"], false}
+
+  defp permission_state_for_existing_key(permissions) do
+    cond do
+      MapSet.new(permissions) == MapSet.new(@preset_scopes["read_only"]) ->
+        {"read_only", @preset_scopes["read_only"], false}
+
+      MapSet.new(permissions) == MapSet.new(@preset_scopes["agent_operator"]) ->
+        {"agent_operator", @preset_scopes["agent_operator"], false}
+
+      true ->
+        {"custom", Enum.sort(permissions), true}
+    end
+  end
+
+  defp group_scopes(scopes) do
+    [
+      {"REST API", Enum.filter(scopes, &String.starts_with?(&1, "agents:"))},
+      {"MCP Knowledge", Enum.filter(scopes, &String.starts_with?(&1, "mcp:knowledge."))},
+      {"MCP Jarga", Enum.filter(scopes, &String.starts_with?(&1, "mcp:jarga."))}
+    ]
+  end
+
+  defp scope_test_id_suffix(scope) do
+    scope
+    |> String.replace(":", "-")
+    |> String.replace(".", "-")
+    |> String.replace("_", "-")
+  end
+
+  defp slugify_name(name) do
+    name
+    |> String.downcase()
+    |> String.replace(" ", "-")
   end
 
   defp filter_keys_by_status(keys, :active), do: Enum.filter(keys, & &1.is_active)
