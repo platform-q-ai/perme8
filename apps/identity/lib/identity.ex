@@ -555,7 +555,12 @@ defmodule Identity do
 
   @doc """
   Returns whether an API key is allowed to access a required scope.
+
+  Returns `false` when `api_key` is `nil` (defensive — callers should
+  ensure auth succeeded before checking permissions).
   """
+  def api_key_has_permission?(nil, _required_scope), do: false
+
   def api_key_has_permission?(%ApiKey{} = api_key, required_scope) do
     ApiKeyPermissionPolicy.has_permission?(api_key.permissions, required_scope)
   end
