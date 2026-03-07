@@ -172,6 +172,13 @@ export class SessionFormHook extends ViewHook<HTMLTextAreaElement> {
       }
     })
 
+    // Server can push "clear_input" to clear the textarea and draft
+    // (e.g. on session switch, successful task creation — works despite phx-update="ignore")
+    this.handleEvent('clear_input', () => {
+      this.el.value = ''
+      this.clearDraft()
+    })
+
     // Auto-focus on mount
     this.el.focus()
   }

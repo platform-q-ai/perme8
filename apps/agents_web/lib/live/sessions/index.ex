@@ -330,7 +330,7 @@ defmodule AgentsWeb.SessionsLive.Index do
      |> assign(:selected_image, Sessions.default_image())
      |> assign(:events, [])
      |> assign_session_state()
-     |> assign(:form, to_form(%{"instruction" => ""}))
+     |> clear_form()
      |> push_patch(to: ~p"/sessions?#{%{new: true}}")
      |> push_event("focus_input", %{})}
   end
@@ -471,7 +471,7 @@ defmodule AgentsWeb.SessionsLive.Index do
      |> assign(:composing_new, false)
      |> assign(:events, [])
      |> assign_session_state()
-     |> assign(:form, to_form(%{"instruction" => ""}))
+     |> clear_form()
      |> push_patch(to: ~p"/sessions?#{%{container: container_id}}")}
   end
 
@@ -488,7 +488,7 @@ defmodule AgentsWeb.SessionsLive.Index do
        |> assign(:composing_new, false)
        |> assign(:events, [])
        |> assign_session_state()
-       |> assign(:form, to_form(%{"instruction" => ""}))
+       |> clear_form()
        |> push_patch(to: ~p"/sessions?#{%{container: container_id, tab: "ticket"}}")}
     else
       {:noreply,
@@ -499,7 +499,7 @@ defmodule AgentsWeb.SessionsLive.Index do
        |> assign(:composing_new, true)
        |> assign(:events, [])
        |> assign_session_state()
-       |> assign(:form, to_form(%{"instruction" => ""}))
+       |> clear_form()
        |> push_patch(to: ~p"/sessions?#{%{new: true, tab: "ticket"}}")
        |> push_event("focus_input", %{})}
     end
@@ -841,7 +841,7 @@ defmodule AgentsWeb.SessionsLive.Index do
       {:error, :task_not_running} ->
         {:noreply,
          socket
-         |> assign(:form, to_form(%{"instruction" => message}))
+         |> prefill_form(message)
          |> put_flash(:info, "Session ended. Your answer is in the input — submit to resume.")}
 
       {:error, _} ->
@@ -946,7 +946,7 @@ defmodule AgentsWeb.SessionsLive.Index do
           socket
           |> assign(:current_task, new_task)
           |> assign(:events, [])
-          |> assign(:form, to_form(%{"instruction" => ""}))
+          |> clear_form()
 
         if is_resume do
           socket
@@ -1045,7 +1045,7 @@ defmodule AgentsWeb.SessionsLive.Index do
       socket
       |> assign(:current_task, new_task)
       |> assign(:events, [])
-      |> assign(:form, to_form(%{"instruction" => ""}))
+      |> clear_form()
       |> clear_flash()
 
     socket =
@@ -1382,6 +1382,24 @@ defmodule AgentsWeb.SessionsLive.Index do
     )
   end
 
+  # Clears the instruction textarea via both LiveView form state and a push event
+  # to the hook (necessary because phx-update="ignore" prevents server assigns from
+  # reaching the DOM).
+  defp clear_form(socket) do
+    socket
+    |> assign(:form, to_form(%{"instruction" => ""}))
+    |> push_event("clear_input", %{})
+  end
+
+  # Pre-fills the instruction textarea via both LiveView form state and a push event
+  # to the hook (necessary because phx-update="ignore" prevents server assigns from
+  # reaching the DOM).
+  defp prefill_form(socket, text) do
+    socket
+    |> assign(:form, to_form(%{"instruction" => text}))
+    |> push_event("restore_draft", %{text: text})
+  end
+
   defp route_message_submission(:follow_up, socket, instruction, _ticket_number) do
     send_message_to_running_task(socket, instruction)
   end
@@ -1428,7 +1446,7 @@ defmodule AgentsWeb.SessionsLive.Index do
        merge_queued_messages(socket.assigns.queued_messages, [queued_msg])
      )
      |> broadcast_optimistic_queue_snapshot()
-     |> assign(:form, to_form(%{"instruction" => ""}))
+     |> clear_form()
      |> push_event("scroll_to_bottom", %{})}
   end
 
@@ -1704,8 +1722,7 @@ defmodule AgentsWeb.SessionsLive.Index do
 
     socket
     |> assign(:pending_question, nil)
-    |> assign(:form, to_form(%{"instruction" => message}))
-    |> push_event("restore_draft", %{text: message})
+    |> prefill_form(message)
     |> put_flash(:info, "Session ended. Your answer is in the input — submit to resume.")
   end
 
@@ -1740,7 +1757,7 @@ defmodule AgentsWeb.SessionsLive.Index do
       |> assign(:current_task, task)
       |> assign(:active_container_id, task.container_id)
       |> assign(:composing_new, false)
-      |> assign(:form, to_form(%{"instruction" => ""}))
+      |> clear_form()
 
     socket =
       if is_resume do
