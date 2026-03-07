@@ -44,6 +44,8 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
   end
 
   # Track user message IDs so we can skip their parts in output.
+  # Skip tracking for subtask messages — their messageIDs are already
+  # tracked in subtask_message_ids and should not appear as user messages.
   # Also clean up any matching queued message — correlation_key first,
   # content match as fallback for backward compatibility.
   def process_event(
@@ -53,23 +55,65 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
         },
         socket
       ) do
-    content = extract_user_message_content(info)
-    correlation_key = SdkFieldResolver.resolve_correlation_key(info)
+    msg_id = SdkFieldResolver.resolve_message_id(info)
 
-    socket =
-      case SdkFieldResolver.resolve_message_id(info) do
-        msg_id when is_binary(msg_id) ->
-          ids = MapSet.put(socket.assigns.user_message_ids, msg_id)
-          assign(socket, :user_message_ids, ids)
+    if is_binary(msg_id) and
+         MapSet.member?(socket.assigns.subtask_message_ids, msg_id) do
+      socket
+    else
+      content = extract_user_message_content(info)
+      correlation_key = SdkFieldResolver.resolve_correlation_key(info)
 
-        _ ->
-          socket
-      end
+      socket =
+        case msg_id do
+          id when is_binary(id) ->
+            ids = MapSet.put(socket.assigns.user_message_ids, id)
+            assign(socket, :user_message_ids, ids)
 
-    dedup_queued_message(socket, correlation_key, content)
+          _ ->
+            socket
+        end
+
+      dedup_queued_message(socket, correlation_key, content)
+    end
   end
 
-  # Text output — keyed by part ID so multiple messages accumulate
+  # Subtask/subagent invocation — render as a forked conversation card
+  # instead of a user message. Track the messageID so subsequent text
+  # parts for this message are suppressed.
+  def process_event(
+        %{
+          "type" => "message.part.updated",
+          "properties" => %{"part" => %{"type" => "subtask"} = part}
+        },
+        socket
+      ) do
+    msg_id = part["messageID"] || part["messageId"]
+
+    socket =
+      if is_binary(msg_id) do
+        ids = MapSet.put(socket.assigns.subtask_message_ids, msg_id)
+        assign(socket, :subtask_message_ids, ids)
+      else
+        socket
+      end
+
+    subtask_id = if is_binary(msg_id), do: "subtask-#{msg_id}", else: "subtask-#{part["id"]}"
+
+    detail = %{
+      agent: part["agent"] || "unknown",
+      description: part["description"] || "",
+      prompt: part["prompt"] || "",
+      status: :running
+    }
+
+    parts = upsert_part(socket.assigns.output_parts, {:subtask, subtask_id, detail})
+    assign(socket, :output_parts, parts)
+  end
+
+  # Text output — keyed by part ID so multiple messages accumulate.
+  # Suppress text parts that belong to subtask messages (the prompt
+  # is already shown inside the subtask fork card).
   def process_event(
         %{
           "type" => "message.part.updated",
@@ -78,12 +122,17 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
         socket
       )
       when text != "" do
-    if user_message_part?(part, socket) do
-      append_confirmed_user_message(socket, part, text)
-    else
-      part_id = part["id"] || "text-default"
-      parts = upsert_part(socket.assigns.output_parts, {:text, part_id, text, :streaming})
-      assign(socket, :output_parts, parts)
+    cond do
+      subtask_message_part?(part, socket) ->
+        socket
+
+      user_message_part?(part, socket) ->
+        append_confirmed_user_message(socket, part, text)
+
+      true ->
+        part_id = part["id"] || "text-default"
+        parts = upsert_part(socket.assigns.output_parts, {:text, part_id, text, :streaming})
+        assign(socket, :output_parts, parts)
     end
   end
 
@@ -268,6 +317,7 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
       {:text, _, _, :streaming} -> true
       {:reasoning, _, _, :streaming} -> true
       {:tool, _, _, :running, _} -> true
+      {:subtask, _, %{status: :running}} -> true
       _ -> false
     end)
   end
@@ -280,6 +330,7 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
       {:text, id, text, :streaming} -> {:text, id, text, :frozen}
       {:reasoning, id, text, :streaming} -> {:reasoning, id, text, :frozen}
       {:tool, id, name, :running, detail} -> {:tool, id, name, :done, detail}
+      {:subtask, id, %{status: :running} = detail} -> {:subtask, id, %{detail | status: :done}}
       other -> other
     end)
   end
@@ -312,6 +363,17 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
     merged = Map.merge(existing_detail, new_detail, fn _k, old, new -> new || old end)
     parts = upsert_part(parts, {:tool, tool_id, tool_name, status, merged})
     assign(socket, :output_parts, parts)
+  end
+
+  # Check if a part belongs to a subtask message (should be suppressed from output)
+  defp subtask_message_part?(part, socket) do
+    case part["messageID"] || part["messageId"] do
+      msg_id when is_binary(msg_id) ->
+        MapSet.member?(socket.assigns.subtask_message_ids, msg_id)
+
+      _ ->
+        false
+    end
   end
 
   # Check if a part belongs to a user message (should be filtered from output)
@@ -533,6 +595,16 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
 
       {:tool, id, name, safe_cached_tool_status(status), detail}
     end
+  end
+
+  defp decode_output_part(%{"type" => "subtask", "id" => id, "agent" => agent} = entry) do
+    {:subtask, id,
+     %{
+       agent: agent,
+       description: entry["description"] || "",
+       prompt: entry["prompt"] || "",
+       status: :done
+     }}
   end
 
   # Legacy format without id

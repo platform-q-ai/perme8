@@ -201,6 +201,55 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponentsTest do
     end
   end
 
+  describe "chat_part/1 — subtask" do
+    test "renders subtask with agent name and description" do
+      part =
+        {:subtask, "sub-1",
+         %{
+           agent: "explore",
+           description: "Research spike",
+           prompt: "Explore the codebase",
+           status: :running
+         }}
+
+      html = render_component(&SessionComponents.chat_part/1, part: part)
+      assert html =~ "explore"
+      assert html =~ "Research spike"
+      assert html =~ "loading"
+    end
+
+    test "done subtask renders with checkmark instead of spinner" do
+      part =
+        {:subtask, "sub-1",
+         %{
+           agent: "explore",
+           description: "Research spike",
+           prompt: "Explore the codebase",
+           status: :done
+         }}
+
+      html = render_component(&SessionComponents.chat_part/1, part: part)
+      assert html =~ "explore"
+      refute html =~ "loading loading-spinner"
+      assert html =~ "hero-check-circle"
+    end
+
+    test "subtask card is collapsible with prompt text in body" do
+      part =
+        {:subtask, "sub-1",
+         %{
+           agent: "general",
+           description: "Multi-step task",
+           prompt: "Implement the feature end-to-end",
+           status: :done
+         }}
+
+      html = render_component(&SessionComponents.chat_part/1, part: part)
+      assert html =~ "<details"
+      assert html =~ "Implement the feature end-to-end"
+    end
+  end
+
   describe "container_stats_bars/1" do
     test "renders CPU and memory bars" do
       html =

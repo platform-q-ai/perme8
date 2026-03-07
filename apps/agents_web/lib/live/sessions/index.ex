@@ -1376,6 +1376,7 @@ defmodule AgentsWeb.SessionsLive.Index do
       confirmed_user_messages: [],
       optimistic_user_messages: [],
       user_message_ids: MapSet.new(),
+      subtask_message_ids: MapSet.new(),
       todo_items: [],
       queued_messages: []
     )

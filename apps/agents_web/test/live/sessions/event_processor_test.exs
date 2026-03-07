@@ -15,7 +15,8 @@ defmodule AgentsWeb.SessionsLive.EventProcessorTest do
       pending_question: nil,
       confirmed_user_messages: [],
       optimistic_user_messages: [],
-      user_message_ids: MapSet.new()
+      user_message_ids: MapSet.new(),
+      subtask_message_ids: MapSet.new()
     }
   end
 
@@ -754,6 +755,299 @@ defmodule AgentsWeb.SessionsLive.EventProcessorTest do
 
       assert EventProcessor.freeze_streaming(parts) ==
                [{:tool, "tool-1", "bash", :done, %{input: "ls"}}]
+    end
+
+    test "freezes running subtask parts to done" do
+      parts = [
+        {:subtask, "sub-1", %{agent: "explore", description: "d", prompt: "p", status: :running}}
+      ]
+
+      assert EventProcessor.freeze_streaming(parts) == [
+               {:subtask, "sub-1",
+                %{agent: "explore", description: "d", prompt: "p", status: :done}}
+             ]
+    end
+
+    test "leaves done subtask parts unchanged" do
+      parts = [
+        {:subtask, "sub-1", %{agent: "explore", description: "d", prompt: "p", status: :done}}
+      ]
+
+      assert ^parts = EventProcessor.freeze_streaming(parts)
+    end
+  end
+
+  # ---- Subtask handling ----
+
+  describe "process_event/2 — message.part.updated (subtask)" do
+    test "subtask part creates {:subtask, id, detail} in output_parts with :running status" do
+      socket = build_socket()
+
+      event = %{
+        "type" => "message.part.updated",
+        "properties" => %{
+          "part" => %{
+            "type" => "subtask",
+            "messageID" => "msg-sub-1",
+            "id" => "sub-1",
+            "sessionID" => "sess-sub",
+            "prompt" => "Explore the codebase",
+            "description" => "Research spike",
+            "agent" => "explore"
+          }
+        }
+      }
+
+      result = EventProcessor.process_event(event, socket)
+
+      assert [{:subtask, "subtask-msg-sub-1", detail}] = result.assigns.output_parts
+      assert detail.agent == "explore"
+      assert detail.description == "Research spike"
+      assert detail.prompt == "Explore the codebase"
+      assert detail.status == :running
+    end
+
+    test "subtask part adds messageID to subtask_message_ids" do
+      socket = build_socket()
+
+      event = %{
+        "type" => "message.part.updated",
+        "properties" => %{
+          "part" => %{
+            "type" => "subtask",
+            "messageID" => "msg-sub-1",
+            "id" => "sub-1",
+            "sessionID" => "sess-sub",
+            "prompt" => "Explore the codebase",
+            "description" => "Research spike",
+            "agent" => "explore"
+          }
+        }
+      }
+
+      result = EventProcessor.process_event(event, socket)
+      assert MapSet.member?(result.assigns.subtask_message_ids, "msg-sub-1")
+    end
+
+    test "subtask part with messageId (lower-camel) variant also works" do
+      socket = build_socket()
+
+      event = %{
+        "type" => "message.part.updated",
+        "properties" => %{
+          "part" => %{
+            "type" => "subtask",
+            "messageId" => "msg-sub-2",
+            "id" => "sub-2",
+            "sessionID" => "sess-sub",
+            "prompt" => "Search for files",
+            "description" => "Find tests",
+            "agent" => "general"
+          }
+        }
+      }
+
+      result = EventProcessor.process_event(event, socket)
+      assert MapSet.member?(result.assigns.subtask_message_ids, "msg-sub-2")
+
+      assert [{:subtask, "subtask-msg-sub-2", detail}] = result.assigns.output_parts
+      assert detail.agent == "general"
+    end
+
+    test "subtask part with optional model and command fields still creates correct tuple" do
+      socket = build_socket()
+
+      event = %{
+        "type" => "message.part.updated",
+        "properties" => %{
+          "part" => %{
+            "type" => "subtask",
+            "messageID" => "msg-sub-3",
+            "id" => "sub-3",
+            "sessionID" => "sess-sub",
+            "prompt" => "Investigate auth",
+            "description" => "Auth spike",
+            "agent" => "explore",
+            "model" => %{"providerID" => "anthropic", "modelID" => "claude-opus-4"},
+            "command" => "/explore"
+          }
+        }
+      }
+
+      result = EventProcessor.process_event(event, socket)
+
+      assert [{:subtask, "subtask-msg-sub-3", detail}] = result.assigns.output_parts
+      assert detail.agent == "explore"
+      assert detail.description == "Auth spike"
+      assert detail.prompt == "Investigate auth"
+      assert detail.status == :running
+    end
+  end
+
+  describe "process_event/2 — message.updated (user) subtask suppression" do
+    test "user message.updated for subtask messageID does NOT add to user_message_ids" do
+      socket = build_socket(%{subtask_message_ids: MapSet.new(["msg-sub-1"])})
+
+      event = %{
+        "type" => "message.updated",
+        "properties" => %{
+          "info" => %{"role" => "user", "id" => "msg-sub-1"}
+        }
+      }
+
+      result = EventProcessor.process_event(event, socket)
+      refute MapSet.member?(result.assigns.user_message_ids, "msg-sub-1")
+    end
+
+    test "user message.updated for subtask messageID does NOT trigger queued message dedup" do
+      socket =
+        build_socket(%{
+          subtask_message_ids: MapSet.new(["msg-sub-1"]),
+          queued_messages: [
+            %{id: "q-1", content: "Explore the codebase", queued_at: ~U[2026-03-01 00:00:00Z]}
+          ]
+        })
+
+      event = %{
+        "type" => "message.updated",
+        "properties" => %{
+          "info" => %{
+            "role" => "user",
+            "id" => "msg-sub-1",
+            "content" => "Explore the codebase"
+          }
+        }
+      }
+
+      result = EventProcessor.process_event(event, socket)
+      assert [%{id: "q-1"}] = result.assigns.queued_messages
+    end
+
+    test "normal user message.updated still tracks correctly (regression)" do
+      socket = build_socket(%{subtask_message_ids: MapSet.new()})
+
+      event = %{
+        "type" => "message.updated",
+        "properties" => %{
+          "info" => %{"role" => "user", "id" => "msg-normal-1"}
+        }
+      }
+
+      result = EventProcessor.process_event(event, socket)
+      assert MapSet.member?(result.assigns.user_message_ids, "msg-normal-1")
+    end
+  end
+
+  describe "process_event/2 — message.part.updated (text) subtask suppression" do
+    test "text part for subtask messageID is suppressed" do
+      socket =
+        build_socket(%{
+          subtask_message_ids: MapSet.new(["msg-sub-1"]),
+          user_message_ids: MapSet.new()
+        })
+
+      event = %{
+        "type" => "message.part.updated",
+        "properties" => %{
+          "part" => %{
+            "id" => "part-sub-1",
+            "type" => "text",
+            "text" => "Explore the codebase",
+            "messageID" => "msg-sub-1"
+          }
+        }
+      }
+
+      result = EventProcessor.process_event(event, socket)
+      assert result.assigns.output_parts == []
+    end
+
+    test "text part for normal messageID still renders (regression)" do
+      socket =
+        build_socket(%{
+          subtask_message_ids: MapSet.new(),
+          user_message_ids: MapSet.new()
+        })
+
+      event = %{
+        "type" => "message.part.updated",
+        "properties" => %{
+          "part" => %{
+            "id" => "part-1",
+            "type" => "text",
+            "text" => "Hello world",
+            "messageID" => "msg-normal-1"
+          }
+        }
+      }
+
+      result = EventProcessor.process_event(event, socket)
+      assert [{:text, "part-1", "Hello world", :streaming}] = result.assigns.output_parts
+    end
+
+    test "text part for user messageID still routes to user message caching (regression)" do
+      socket =
+        build_socket(%{
+          subtask_message_ids: MapSet.new(),
+          user_message_ids: MapSet.new(["msg-user-1"])
+        })
+
+      event = %{
+        "type" => "message.part.updated",
+        "properties" => %{
+          "part" => %{
+            "id" => "part-u-1",
+            "type" => "text",
+            "text" => "User typed this",
+            "messageID" => "msg-user-1"
+          }
+        }
+      }
+
+      result = EventProcessor.process_event(event, socket)
+      assert [{:user, "msg-user-1", "User typed this"}] = result.assigns.output_parts
+    end
+  end
+
+  describe "decode_cached_output/1 — subtask entries" do
+    test "decodes subtask cache entry into {:subtask, id, detail} tuple with :done status" do
+      json =
+        Jason.encode!([
+          %{
+            "type" => "subtask",
+            "id" => "subtask-msg-1",
+            "agent" => "explore",
+            "description" => "Research spike",
+            "prompt" => "Explore the codebase",
+            "status" => "running"
+          }
+        ])
+
+      parts = EventProcessor.decode_cached_output(json)
+
+      assert [
+               {:subtask, "subtask-msg-1",
+                %{
+                  agent: "explore",
+                  description: "Research spike",
+                  prompt: "Explore the codebase",
+                  status: :done
+                }}
+             ] = parts
+    end
+  end
+
+  describe "has_streaming_parts?/1 — subtask" do
+    test "returns true when there are running subtask parts" do
+      assert EventProcessor.has_streaming_parts?([
+               {:subtask, "sub-1", %{status: :running}}
+             ])
+    end
+
+    test "returns false when subtask is done" do
+      refute EventProcessor.has_streaming_parts?([
+               {:subtask, "sub-1", %{status: :done}}
+             ])
     end
   end
 end
