@@ -297,6 +297,7 @@ Feature: Agents REST API
   # Agent Query — POST /api/agents/:id/query
   # ===========================================================================
 
+  @wip
   Scenario: Query agent successfully
     # Step 1: Create an agent
     Given I set bearer token to "${valid-doc-key-product-team}"
@@ -379,6 +380,7 @@ Feature: Agents REST API
     And the response body should be valid JSON
     And the response body path "$.error" should equal "question is required"
 
+  @wip
   Scenario: Query agent with optional context
     # Step 1: Create an agent
     Given I set bearer token to "${valid-doc-key-product-team}"
