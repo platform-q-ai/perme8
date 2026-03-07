@@ -2,6 +2,7 @@ defmodule IdentityWeb.ApiKeysLiveTest do
   use IdentityWeb.ConnCase, async: true
 
   alias Identity
+  alias Identity.Domain.Policies.ApiKeyPermissionPolicy
   import Phoenix.LiveViewTest
   import Identity.AccountsFixtures
 
@@ -149,7 +150,7 @@ defmodule IdentityWeb.ApiKeysLiveTest do
       created_key = Enum.find(keys, &(&1.name == "Read Only Key"))
 
       assert created_key.permissions ==
-               Identity.Domain.Policies.ApiKeyPermissionPolicy.presets()["Read Only"]
+               ApiKeyPermissionPolicy.presets()["Read Only"]
     end
 
     test "submitting create with specific custom scopes creates key with those scopes", %{
@@ -391,14 +392,14 @@ defmodule IdentityWeb.ApiKeysLiveTest do
         Identity.create_api_key(user.id, %{
           name: "Read Only",
           description: "",
-          permissions: Identity.Domain.Policies.ApiKeyPermissionPolicy.presets()["Read Only"]
+          permissions: ApiKeyPermissionPolicy.presets()["Read Only"]
         })
 
       {:ok, {_agent_operator, _}} =
         Identity.create_api_key(user.id, %{
           name: "Agent Operator",
           description: "",
-          permissions: Identity.Domain.Policies.ApiKeyPermissionPolicy.presets()["Agent Operator"]
+          permissions: ApiKeyPermissionPolicy.presets()["Agent Operator"]
         })
 
       {:ok, {_custom, _}} =
@@ -528,7 +529,7 @@ defmodule IdentityWeb.ApiKeysLiveTest do
       edited_key = Enum.find(keys, &(&1.id == api_key.id))
 
       assert edited_key.permissions ==
-               Identity.Domain.Policies.ApiKeyPermissionPolicy.presets()["Read Only"]
+               ApiKeyPermissionPolicy.presets()["Read Only"]
     end
 
     test "key with nil permissions shows full access selected and all scopes checked", %{
