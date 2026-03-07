@@ -60,6 +60,7 @@ defmodule AgentsApi.Test.Fixtures do
       hashed_token: hashed_token,
       user_id: user_id,
       workspace_access: Map.get(attrs, :workspace_access, []),
+      permissions: Map.get(attrs, :permissions, Map.get(attrs, "permissions")),
       is_active: Map.get(attrs, :is_active, true)
     }
 

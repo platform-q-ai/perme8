@@ -357,13 +357,13 @@ this incremental, we add the check to each existing tool component.
 
 ---
 
-## Phase 5: Agents API — REST Permission Enforcement Plug (phoenix-tdd)
+## Phase 5: Agents API — REST Permission Enforcement Plug (phoenix-tdd) ✓
 
 > Consumer interface app. Tests use `AgentsApi.ConnCase`.
 
 ### 5.1 ApiPermissionPlug — Scope-Based REST Enforcement
 
-- [ ] ⏸ **RED**: Write test `apps/agents_api/test/agents_api/plugs/api_permission_plug_test.exs`
+- [x] ⏸ **RED**: Write test `apps/agents_api/test/agents_api/plugs/api_permission_plug_test.exs`
   - Tests:
     - Plug with `scope: "agents:read"` allows request when `api_key.permissions` includes `"agents:read"`
     - Plug with `scope: "agents:read"` allows request when `api_key.permissions` is `nil` (backward compat)
@@ -375,7 +375,7 @@ this incremental, we add the check to each existing tool component.
     - Plug halts connection on denial
     - Plug passes through on success (no halt)
     - Plug works with `conn.assigns.api_key` set by `ApiAuthPlug`
-- [ ] ⏸ **GREEN**: Implement `apps/agents_api/lib/agents_api/plugs/api_permission_plug.ex`
+- [x] ⏸ **GREEN**: Implement `apps/agents_api/lib/agents_api/plugs/api_permission_plug.ex`
   - `init(opts)` — expects `scope: "agents:read"` option
   - `call(conn, opts)` — reads `conn.assigns.api_key`, calls `Identity.api_key_has_permission?/2`
   - On success: pass through (no-op)
@@ -398,11 +398,11 @@ this incremental, we add the check to each existing tool component.
       end
     end
     ```
-- [ ] ⏸ **REFACTOR**: Keep plug stateless and focused on permission check only
+- [x] ⏸ **REFACTOR**: Keep plug stateless and focused on permission check only
 
 ### 5.2 Router — Wire Permission Plug into Pipelines
 
-- [ ] ⏸ **RED**: Write integration tests `apps/agents_api/test/agents_api/controllers/agent_api_controller_permission_test.exs`
+- [x] ⏸ **RED**: Write integration tests `apps/agents_api/test/agents_api/controllers/agent_api_controller_permission_test.exs`
   - Tests:
     - `GET /api/agents` with `agents:read` permission → 200
     - `GET /api/agents` with `agents:write` only → 403
@@ -418,7 +418,7 @@ this incremental, we add the check to each existing tool component.
     - `["agents:*"]` wildcard → all endpoints return 200
     - `[]` permissions → all endpoints return 403
     - Response body on 403 contains `{"error": "insufficient_permissions", "required": "<scope>"}`
-- [ ] ⏸ **GREEN**: Update `apps/agents_api/lib/agents_api/router.ex`
+- [x] ⏸ **GREEN**: Update `apps/agents_api/lib/agents_api/router.ex`
   - Add per-route or per-action permission scoping. The cleanest approach is per-route plugs:
     ```elixir
     scope "/api", AgentsApi do
@@ -454,7 +454,7 @@ this incremental, we add the check to each existing tool component.
     plug ApiPermissionPlug, scope: "agents:read" when action in [:index, :show]
     plug ApiPermissionPlug, scope: "agents:write" when action in [:create, :update, :delete]
     ```
-- [ ] ⏸ **REFACTOR**: Choose the approach that keeps router/controller changes minimal and explicit
+- [x] ⏸ **REFACTOR**: Choose the approach that keeps router/controller changes minimal and explicit
 
 ### 5.3 API Key CRUD Endpoints — Permissions in Create/Update (P1)
 
@@ -462,33 +462,33 @@ The HTTP feature file includes scenarios for `POST /api/api-keys` and `PATCH /ap
 accepting `permissions` in the request body. These endpoints are part of a REST API for
 managing API keys.
 
-- [ ] ⏸ **RED**: Write test `apps/agents_api/test/agents_api/controllers/api_key_controller_test.exs`
+- [x] ⏸ **RED**: Write test `apps/agents_api/test/agents_api/controllers/api_key_controller_test.exs`
   - Tests:
     - `POST /api/api-keys` with `permissions` creates API key with specified scopes
     - `POST /api/api-keys` without `permissions` creates API key with nil (full access)
     - `PATCH /api/api-keys/:id` with `permissions` updates the key's scopes
     - Response body contains the permissions array
     - Only the key's owner can update permissions
-- [ ] ⏸ **GREEN**: Implement `apps/agents_api/lib/agents_api/controllers/api_key_controller.ex`
+- [x] ⏸ **GREEN**: Implement `apps/agents_api/lib/agents_api/controllers/api_key_controller.ex`
   - `create/2` — calls `Identity.create_api_key/2` with permissions from params
   - `update/2` — calls `Identity.update_api_key/3` with permissions from params
   - Add JSON view for API key responses
-- [ ] ⏸ **GREEN**: Update `apps/agents_api/lib/agents_api/router.ex`
+- [x] ⏸ **GREEN**: Update `apps/agents_api/lib/agents_api/router.ex`
   - Add routes:
     ```elixir
     post("/api-keys", ApiKeyController, :create)
     patch("/api-keys/:id", ApiKeyController, :update)
     ```
   - These should be in the authenticated scope (require API key auth)
-- [ ] ⏸ **REFACTOR**: Keep controller thin — delegate to Identity facade
+- [x] ⏸ **REFACTOR**: Keep controller thin — delegate to Identity facade
 
 ### Phase 5 Validation
 
-- [ ] ⏸ ApiPermissionPlug tests pass: `mix test apps/agents_api/test/agents_api/plugs/api_permission_plug_test.exs`
-- [ ] ⏸ Controller permission integration tests pass: `mix test apps/agents_api/test/agents_api/controllers/agent_api_controller_permission_test.exs`
-- [ ] ⏸ API key controller tests pass: `mix test apps/agents_api/test/agents_api/controllers/api_key_controller_test.exs`
-- [ ] ⏸ No boundary violations: `mix boundary`
-- [ ] ⏸ Full agents_api test suite passes: `mix test apps/agents_api/test/`
+- [x] ⏸ ApiPermissionPlug tests pass: `mix test apps/agents_api/test/agents_api/plugs/api_permission_plug_test.exs`
+- [x] ⏸ Controller permission integration tests pass: `mix test apps/agents_api/test/agents_api/controllers/agent_api_controller_permission_test.exs`
+- [x] ⏸ API key controller tests pass: `mix test apps/agents_api/test/agents_api/controllers/api_key_controller_test.exs`
+- [x] ⏸ No boundary violations: `mix boundary` (task unavailable; `mix boundary` and `mix boundary.spec` are not runnable in this repo state)
+- [x] ⏸ Full agents_api test suite passes: `mix test apps/agents_api/test/`
 
 ---
 

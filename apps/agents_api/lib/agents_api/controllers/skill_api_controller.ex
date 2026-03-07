@@ -13,6 +13,8 @@ defmodule AgentsApi.SkillApiController do
 
   use AgentsApi, :controller
 
+  plug AgentsApi.Plugs.ApiPermissionPlug, [scope: "agents:read"] when action in [:index]
+
   # System-level skills available to all agents (v1: static list)
   @available_skills [
     %{
