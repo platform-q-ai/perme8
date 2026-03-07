@@ -16,8 +16,10 @@ defmodule Agents.Infrastructure.Mcp.Tools.RelateToolTest do
     :ok
   end
 
-  defp build_frame(workspace_id) do
-    Frame.new(%{workspace_id: workspace_id})
+  defp actor_id, do: "test-actor-id"
+
+  defp build_frame(workspace_id, actor_id) do
+    Frame.new(%{workspace_id: workspace_id, user_id: actor_id})
   end
 
   describe "execute/2" do
@@ -25,7 +27,7 @@ defmodule Agents.Infrastructure.Mcp.Tools.RelateToolTest do
       workspace_id = Fixtures.workspace_id()
       from_id = Fixtures.unique_id()
       to_id = Fixtures.unique_id()
-      frame = build_frame(workspace_id)
+      frame = build_frame(workspace_id, actor_id())
 
       edge =
         Fixtures.erm_knowledge_edge(%{
@@ -62,7 +64,7 @@ defmodule Agents.Infrastructure.Mcp.Tools.RelateToolTest do
     test "handles self-reference error" do
       workspace_id = Fixtures.workspace_id()
       entity_id = Fixtures.unique_id()
-      frame = build_frame(workspace_id)
+      frame = build_frame(workspace_id, actor_id())
 
       params = %{from_id: entity_id, to_id: entity_id, relationship_type: "relates_to"}
 
@@ -75,7 +77,7 @@ defmodule Agents.Infrastructure.Mcp.Tools.RelateToolTest do
 
     test "handles invalid relationship type" do
       workspace_id = Fixtures.workspace_id()
-      frame = build_frame(workspace_id)
+      frame = build_frame(workspace_id, actor_id())
 
       params = %{
         from_id: Fixtures.unique_id(),
@@ -94,7 +96,7 @@ defmodule Agents.Infrastructure.Mcp.Tools.RelateToolTest do
       workspace_id = Fixtures.workspace_id()
       from_id = Fixtures.unique_id()
       to_id = Fixtures.unique_id()
-      frame = build_frame(workspace_id)
+      frame = build_frame(workspace_id, actor_id())
 
       Agents.Mocks.ErmGatewayMock
       |> expect(:get_schema, fn ^workspace_id ->

@@ -33,6 +33,22 @@ defmodule Agents.Sessions.Application.UseCases.DeleteSessionTest do
       assert :ok = DeleteSession.execute("c1", "user-1", default_opts())
     end
 
+    test "calls remove (not stop) on the container" do
+      tasks = [
+        struct(TaskSchema, %{id: "t1", user_id: "user-1", status: "completed", container_id: "c1"})
+      ]
+
+      Agents.Mocks.TaskRepositoryMock
+      |> expect(:list_tasks_for_container, fn "c1", "user-1" -> tasks end)
+      |> expect(:delete_tasks_for_container, fn "c1", "user-1" -> {1, nil} end)
+
+      # Intentionally no stop expectation: DeleteSession must only remove.
+      Agents.Mocks.ContainerProviderMock
+      |> expect(:remove, fn "c1" -> :ok end)
+
+      assert :ok = DeleteSession.execute("c1", "user-1", default_opts())
+    end
+
     test "returns :not_found when no tasks exist for container" do
       Agents.Mocks.TaskRepositoryMock
       |> expect(:list_tasks_for_container, fn "c1", "user-1" -> [] end)

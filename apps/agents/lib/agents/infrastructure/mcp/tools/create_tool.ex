@@ -25,6 +25,7 @@ defmodule Agents.Infrastructure.Mcp.Tools.CreateTool do
   @impl true
   def execute(params, frame) do
     workspace_id = frame.assigns[:workspace_id]
+    actor_id = frame.assigns[:user_id]
 
     attrs = %{
       title: params.title,
@@ -36,9 +37,7 @@ defmodule Agents.Infrastructure.Mcp.Tools.CreateTool do
       external_links: Map.get(params, :external_links) || []
     }
 
-    actor_id = frame.assigns[:user_id]
-
-    case CreateKnowledgeEntry.execute(workspace_id, attrs, actor_id: actor_id) do
+    case CreateKnowledgeEntry.execute(workspace_id, attrs, actor_id) do
       {:ok, entry} ->
         text = format_created(entry)
         {:reply, Response.text(Response.tool(), text), frame}

@@ -25,6 +25,7 @@ defmodule Agents.Infrastructure.Mcp.Tools.UpdateTool do
   @impl true
   def execute(%{id: entry_id} = params, frame) do
     workspace_id = frame.assigns[:workspace_id]
+    actor_id = frame.assigns[:user_id]
 
     attrs =
       params
@@ -32,9 +33,7 @@ defmodule Agents.Infrastructure.Mcp.Tools.UpdateTool do
       |> Enum.reject(fn {_k, v} -> is_nil(v) end)
       |> Map.new()
 
-    actor_id = frame.assigns[:user_id]
-
-    case UpdateKnowledgeEntry.execute(workspace_id, entry_id, attrs, actor_id: actor_id) do
+    case UpdateKnowledgeEntry.execute(workspace_id, entry_id, attrs, actor_id) do
       {:ok, entry} ->
         text = format_updated(entry)
         {:reply, Response.text(Response.tool(), text), frame}

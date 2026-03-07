@@ -11,7 +11,9 @@ defmodule Agents.Application.UseCases.UpdateKnowledgeEntryTest do
 
   setup :verify_on_exit!
 
-  describe "execute/4" do
+  defp actor_id, do: "test-actor-id"
+
+  describe "execute/5" do
     test "updates entry with valid partial attrs, returns {:ok, knowledge_entry}" do
       entity_id = unique_id()
       existing = erm_knowledge_entity(%{id: entity_id})
@@ -34,7 +36,11 @@ defmodule Agents.Application.UseCases.UpdateKnowledgeEntryTest do
       end)
 
       assert {:ok, %KnowledgeEntry{title: "Updated Title"}} =
-               UpdateKnowledgeEntry.execute(workspace_id(), entity_id, %{title: "Updated Title"},
+               UpdateKnowledgeEntry.execute(
+                 workspace_id(),
+                 entity_id,
+                 %{title: "Updated Title"},
+                 actor_id(),
                  erm_gateway: ErmGatewayMock
                )
     end
@@ -44,14 +50,22 @@ defmodule Agents.Application.UseCases.UpdateKnowledgeEntryTest do
       |> expect(:get_entity, fn _ws_id, _eid -> {:error, :not_found} end)
 
       assert {:error, :not_found} =
-               UpdateKnowledgeEntry.execute(workspace_id(), "nonexistent", %{title: "New"},
+               UpdateKnowledgeEntry.execute(
+                 workspace_id(),
+                 "nonexistent",
+                 %{title: "New"},
+                 actor_id(),
                  erm_gateway: ErmGatewayMock
                )
     end
 
     test "returns {:error, :invalid_category} if category provided but invalid" do
       assert {:error, :invalid_category} =
-               UpdateKnowledgeEntry.execute(workspace_id(), unique_id(), %{category: "wrong"},
+               UpdateKnowledgeEntry.execute(
+                 workspace_id(),
+                 unique_id(),
+                 %{category: "wrong"},
+                 actor_id(),
                  erm_gateway: ErmGatewayMock
                )
     end
@@ -83,7 +97,11 @@ defmodule Agents.Application.UseCases.UpdateKnowledgeEntryTest do
       end)
 
       assert {:ok, %KnowledgeEntry{}} =
-               UpdateKnowledgeEntry.execute(workspace_id(), entity_id, %{title: "New Title"},
+               UpdateKnowledgeEntry.execute(
+                 workspace_id(),
+                 entity_id,
+                 %{title: "New Title"},
+                 actor_id(),
                  erm_gateway: ErmGatewayMock
                )
     end
@@ -104,6 +122,7 @@ defmodule Agents.Application.UseCases.UpdateKnowledgeEntryTest do
                  workspace_id(),
                  entity_id,
                  %{last_verified_at: "2026-02-15T00:00:00Z"},
+                 actor_id(),
                  erm_gateway: ErmGatewayMock
                )
     end

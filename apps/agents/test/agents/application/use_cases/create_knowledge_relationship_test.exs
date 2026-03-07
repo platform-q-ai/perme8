@@ -11,6 +11,8 @@ defmodule Agents.Application.UseCases.CreateKnowledgeRelationshipTest do
 
   setup :verify_on_exit!
 
+  defp actor_id, do: "test-actor-id"
+
   defp setup_bootstrap_and_entities(from_id, to_id) do
     ErmGatewayMock
     |> expect(:get_schema, fn _ws_id -> {:ok, schema_definition_with_knowledge()} end)
@@ -26,7 +28,7 @@ defmodule Agents.Application.UseCases.CreateKnowledgeRelationshipTest do
     end)
   end
 
-  describe "execute/3" do
+  describe "execute/4" do
     test "creates relationship between two entries" do
       from_id = unique_id()
       to_id = unique_id()
@@ -46,6 +48,7 @@ defmodule Agents.Application.UseCases.CreateKnowledgeRelationshipTest do
                CreateKnowledgeRelationship.execute(
                  workspace_id(),
                  %{from_id: from_id, to_id: to_id, type: "relates_to"},
+                 actor_id(),
                  erm_gateway: ErmGatewayMock
                )
     end
@@ -55,6 +58,7 @@ defmodule Agents.Application.UseCases.CreateKnowledgeRelationshipTest do
                CreateKnowledgeRelationship.execute(
                  workspace_id(),
                  %{from_id: unique_id()},
+                 actor_id(),
                  erm_gateway: ErmGatewayMock
                )
     end
@@ -66,6 +70,7 @@ defmodule Agents.Application.UseCases.CreateKnowledgeRelationshipTest do
                CreateKnowledgeRelationship.execute(
                  workspace_id(),
                  %{from_id: id, to_id: id, type: "relates_to"},
+                 actor_id(),
                  erm_gateway: ErmGatewayMock
                )
     end
@@ -75,6 +80,7 @@ defmodule Agents.Application.UseCases.CreateKnowledgeRelationshipTest do
                CreateKnowledgeRelationship.execute(
                  workspace_id(),
                  %{from_id: unique_id(), to_id: unique_id(), type: "bad_type"},
+                 actor_id(),
                  erm_gateway: ErmGatewayMock
                )
     end
@@ -91,6 +97,7 @@ defmodule Agents.Application.UseCases.CreateKnowledgeRelationshipTest do
                CreateKnowledgeRelationship.execute(
                  workspace_id(),
                  %{from_id: from_id, to_id: to_id, type: "relates_to"},
+                 actor_id(),
                  erm_gateway: ErmGatewayMock
                )
     end
@@ -108,6 +115,7 @@ defmodule Agents.Application.UseCases.CreateKnowledgeRelationshipTest do
                CreateKnowledgeRelationship.execute(
                  workspace_id(),
                  %{from_id: from_id, to_id: to_id, type: "relates_to"},
+                 actor_id(),
                  erm_gateway: ErmGatewayMock
                )
     end
@@ -126,6 +134,7 @@ defmodule Agents.Application.UseCases.CreateKnowledgeRelationshipTest do
                CreateKnowledgeRelationship.execute(
                  workspace_id(),
                  %{from_id: from_id, to_id: to_id, type: "relates_to"},
+                 actor_id(),
                  erm_gateway: ErmGatewayMock
                )
     end
@@ -143,6 +152,7 @@ defmodule Agents.Application.UseCases.CreateKnowledgeRelationshipTest do
                CreateKnowledgeRelationship.execute(
                  workspace_id(),
                  %{from_id: from_id, to_id: to_id, type: "relates_to"},
+                 actor_id(),
                  erm_gateway: ErmGatewayMock
                )
     end
@@ -164,6 +174,7 @@ defmodule Agents.Application.UseCases.CreateKnowledgeRelationshipTest do
                CreateKnowledgeRelationship.execute(
                  workspace_id(),
                  %{from_id: from_id, to_id: to_id, type: "depends_on"},
+                 actor_id(),
                  erm_gateway: ErmGatewayMock
                )
     end

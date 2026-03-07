@@ -11,18 +11,17 @@ defmodule Agents.Application.UseCases.CreateKnowledgeRelationship do
   alias Agents.Domain.Entities.KnowledgeRelationship
   alias Agents.Domain.Policies.KnowledgeValidationPolicy
 
-  @spec execute(String.t(), map(), keyword()) ::
+  @spec execute(String.t(), map(), String.t(), keyword()) ::
           {:ok, KnowledgeRelationship.t()} | {:error, atom()}
-  def execute(workspace_id, params, opts \\ []) do
+  def execute(workspace_id, params, actor_id, opts \\ []) do
     erm_gateway = Keyword.get(opts, :erm_gateway, GatewayConfig.erm_gateway())
-    actor_id = Keyword.get(opts, :actor_id)
 
     with {:ok, from_id} <- fetch_required(params, :from_id),
          {:ok, to_id} <- fetch_required(params, :to_id),
          {:ok, type} <- fetch_required(params, :type),
          :ok <- KnowledgeValidationPolicy.validate_self_reference(from_id, to_id),
          :ok <- validate_type(type),
-         {:ok, _} <- BootstrapKnowledgeSchema.execute(workspace_id, opts),
+         {:ok, _} <- BootstrapKnowledgeSchema.execute(workspace_id, actor_id, opts),
          {:ok, _} <- erm_gateway.get_entity(workspace_id, from_id),
          {:ok, _} <- erm_gateway.get_entity(workspace_id, to_id),
          {:ok, edge} <-
