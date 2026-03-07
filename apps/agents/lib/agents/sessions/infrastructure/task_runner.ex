@@ -704,7 +704,10 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
          },
          state
        ) do
-    msg_id = part["messageID"] || part["messageId"] || part["id"]
+    # Use messageID/messageId only — part["id"] is the subtask part ID,
+    # not the message ID. This must align with EventProcessor's lookup
+    # (subtask_message_part?/2) which also only checks messageID/messageId.
+    msg_id = part["messageID"] || part["messageId"]
     subtask_id = if is_binary(msg_id), do: "subtask-#{msg_id}", else: nil
 
     entry = %{
@@ -748,6 +751,10 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
   defp track_user_message_id(_event, state), do: state
 
+  # Defense-in-depth: track_user_message_id already skips subtask IDs,
+  # so the subtask_message_ids check here is redundant under normal
+  # event ordering. Kept as a safety net in case events arrive
+  # out of order (e.g., SSE reconnection delivers text before subtask part).
   defp user_message_part?(
          %{
            "type" => "message.part.updated",
