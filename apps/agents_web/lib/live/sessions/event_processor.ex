@@ -6,6 +6,12 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
   reasoning, questions, todo progress) and transforms socket assigns
   accordingly. Also provides cached output decoding, streaming state
   management, and todo restoration on reconnect.
+
+  ## Telemetry Events
+
+    * `[:agents_web, :event_processor, :unhandled]` — emitted when an event
+      with an unrecognized type is received. Measurements: `%{count: 1}`.
+      Metadata: `%{type: String.t() | nil}`.
   """
 
   import Phoenix.Component, only: [assign: 3]
@@ -257,11 +263,25 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
   def process_event(%{"type" => "todo.updated"}, socket), do: socket
 
   def process_event(%{"type" => type} = _event, socket) do
+    :telemetry.execute(
+      [:agents_web, :event_processor, :unhandled],
+      %{count: 1},
+      %{type: type}
+    )
+
     Logger.warning("EventProcessor: unhandled event type=#{inspect(type)}")
     socket
   end
 
-  def process_event(_event, socket), do: socket
+  def process_event(_event, socket) do
+    :telemetry.execute(
+      [:agents_web, :event_processor, :unhandled],
+      %{count: 1},
+      %{type: nil}
+    )
+
+    socket
+  end
 
   @doc """
   Loads cached output from a completed task's stored output string.

@@ -1050,4 +1050,58 @@ defmodule AgentsWeb.SessionsLive.EventProcessorTest do
              ])
     end
   end
+
+  describe "process_event/2 — telemetry for unhandled events" do
+    setup do
+      test_pid = self()
+
+      handler_id = "test-unhandled-#{System.unique_integer([:positive])}"
+
+      :telemetry.attach(
+        handler_id,
+        [:agents_web, :event_processor, :unhandled],
+        fn event_name, measurements, metadata, _config ->
+          send(test_pid, {:telemetry_event, event_name, measurements, metadata})
+        end,
+        nil
+      )
+
+      on_exit(fn -> :telemetry.detach(handler_id) end)
+      :ok
+    end
+
+    test "emits telemetry for events with unrecognized type" do
+      socket = build_socket()
+      EventProcessor.process_event(%{"type" => "unknown.event"}, socket)
+
+      assert_received {:telemetry_event, [:agents_web, :event_processor, :unhandled], %{count: 1},
+                       %{type: "unknown.event"}}
+    end
+
+    test "emits telemetry for events without a type key" do
+      socket = build_socket()
+      EventProcessor.process_event(%{"no_type" => true}, socket)
+
+      assert_received {:telemetry_event, [:agents_web, :event_processor, :unhandled], %{count: 1},
+                       %{type: nil}}
+    end
+
+    test "does not emit :unhandled telemetry for todo.updated (explicit skip)" do
+      socket = build_socket()
+      EventProcessor.process_event(%{"type" => "todo.updated"}, socket)
+
+      refute_received {:telemetry_event, [:agents_web, :event_processor, :unhandled], _, _}
+    end
+
+    test "does not emit :unhandled telemetry for known event types" do
+      socket = build_socket()
+
+      EventProcessor.process_event(
+        %{"type" => "session.updated", "properties" => %{"info" => %{}}},
+        socket
+      )
+
+      refute_received {:telemetry_event, [:agents_web, :event_processor, :unhandled], _, _}
+    end
+  end
 end
