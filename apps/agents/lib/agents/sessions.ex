@@ -220,15 +220,15 @@ defmodule Agents.Sessions do
   def send_ticket_to_bottom(number), do: ProjectTicketRepository.send_to_bottom(number)
 
   @doc """
-  Closes a project ticket: removes it from the local database and closes the
-  issue on GitHub.
+  Closes a project ticket: marks it as closed in the local database and closes
+  the issue on GitHub.
 
   The GitHub close runs asynchronously via the TicketSyncServer so the UI
   is not blocked.
   """
   @spec close_project_ticket(integer()) :: :ok | {:error, :not_found}
   def close_project_ticket(number) when is_integer(number) do
-    case ProjectTicketRepository.delete_by_number(number) do
+    case ProjectTicketRepository.close_by_number(number) do
       {:ok, _ticket} ->
         TicketSyncServer.close_ticket(number)
         :ok

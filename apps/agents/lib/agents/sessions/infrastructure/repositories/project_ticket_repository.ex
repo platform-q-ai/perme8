@@ -101,6 +101,18 @@ defmodule Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository do
   end
 
   @doc """
+  Marks a ticket as closed by its issue number.
+  Returns `{:ok, ticket}` if the ticket existed, `{:error, :not_found}` otherwise.
+  """
+  @spec close_by_number(integer()) :: {:ok, ProjectTicketSchema.t()} | {:error, :not_found}
+  def close_by_number(number) when is_integer(number) do
+    case Repo.get_by(ProjectTicketSchema, number: number) do
+      nil -> {:error, :not_found}
+      ticket -> ticket |> ProjectTicketSchema.changeset(%{state: "closed"}) |> Repo.update()
+    end
+  end
+
+  @doc """
   Deletes a ticket by its issue number.
   Returns `{:ok, ticket}` if the ticket existed, `{:error, :not_found}` otherwise.
   """
@@ -114,7 +126,7 @@ defmodule Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository do
 
   @doc """
   Deletes all tickets whose number is NOT in the given set.
-  Used to prune issues that have been closed on GitHub.
+  Used to prune issues that have been deleted from GitHub entirely.
   """
   @spec delete_not_in(MapSet.t()) :: {integer(), nil}
   def delete_not_in(%MapSet{} = keep_numbers) do
@@ -167,7 +179,7 @@ defmodule Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository do
     end
   end
 
-  @remote_attr_keys ~w(number title body labels url created_at)a
+  @remote_attr_keys ~w(number title body labels url state created_at)a
 
   defp normalize_remote_attrs(attrs) do
     normalized =
@@ -175,6 +187,8 @@ defmodule Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository do
         {key, attrs[key] || attrs[Atom.to_string(key)]}
       end)
 
-    Map.update!(normalized, :labels, &List.wrap/1)
+    normalized
+    |> Map.update!(:labels, &List.wrap/1)
+    |> Map.update!(:state, fn state -> state || "open" end)
   end
 end

@@ -319,4 +319,81 @@ defmodule Agents.Sessions.Infrastructure.ProjectTicketRepositoryTest do
     assert deleted_count == 2
     assert ProjectTicketRepository.list_all() == []
   end
+
+  test "close_by_number/1 marks an existing ticket as closed" do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    %ProjectTicketSchema{}
+    |> ProjectTicketSchema.changeset(%{
+      number: 500,
+      title: "Ticket to close",
+      status: "Backlog",
+      created_at: now,
+      labels: []
+    })
+    |> Repo.insert!()
+
+    assert {:ok, closed} = ProjectTicketRepository.close_by_number(500)
+    assert closed.state == "closed"
+
+    refreshed = Repo.get_by!(ProjectTicketSchema, number: 500)
+    assert refreshed.state == "closed"
+  end
+
+  test "close_by_number/1 returns error for non-existent ticket" do
+    assert {:error, :not_found} = ProjectTicketRepository.close_by_number(99_998)
+  end
+
+  test "sync_remote_ticket/1 persists the state field from remote data" do
+    assert {:ok, ticket} =
+             ProjectTicketRepository.sync_remote_ticket(%{
+               number: 600,
+               title: "Open ticket",
+               state: "open",
+               labels: []
+             })
+
+    assert ticket.state == "open"
+
+    assert {:ok, closed_ticket} =
+             ProjectTicketRepository.sync_remote_ticket(%{
+               number: 601,
+               title: "Closed ticket",
+               state: "closed",
+               labels: []
+             })
+
+    assert closed_ticket.state == "closed"
+  end
+
+  test "sync_remote_ticket/1 updates state on re-sync" do
+    {:ok, _} =
+      ProjectTicketRepository.sync_remote_ticket(%{
+        number: 602,
+        title: "Ticket 602",
+        state: "open",
+        labels: []
+      })
+
+    {:ok, updated} =
+      ProjectTicketRepository.sync_remote_ticket(%{
+        number: 602,
+        title: "Ticket 602",
+        state: "closed",
+        labels: []
+      })
+
+    assert updated.state == "closed"
+  end
+
+  test "new tickets default to open state" do
+    assert {:ok, ticket} =
+             ProjectTicketRepository.sync_remote_ticket(%{
+               number: 603,
+               title: "Ticket without state",
+               labels: []
+             })
+
+    assert ticket.state == "open"
+  end
 end
