@@ -269,11 +269,11 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
       false
     else
       event_session_id = extract_event_session_id(event)
-      child_session_ids = Map.get(socket.assigns, :child_session_ids, MapSet.new())
 
-      is_binary(event_session_id) and
-        event_session_id != parent_session_id and
-        MapSet.member?(child_session_ids, event_session_id)
+      # Any event whose session ID differs from the parent must be from a
+      # child session. This avoids a race where child events arrive before
+      # the subtask part event that formally registers the child session ID.
+      is_binary(event_session_id) and event_session_id != parent_session_id
     end
   end
 
