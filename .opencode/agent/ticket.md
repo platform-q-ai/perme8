@@ -54,6 +54,8 @@ Synthesize all gathered information into a ticket following the template below.
 
 **Return the fully formatted ticket body as your output** — the calling skill will create the GitHub issue. Do NOT write a file to disk. Do NOT attempt to call `gh` or create GitHub issues yourself.
 
+**Return format**: GitHub-flavored Markdown. The first H1 heading (`# Ticket: Feature Name`) will be used as the issue title by the calling skill. Everything after the first H1 is the issue body.
+
 ### 4. Present and Recommend Next Steps
 
 Output the ticket to the user, highlight any open questions, and recommend: "Ready for architect review."
