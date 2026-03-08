@@ -30,7 +30,7 @@ defmodule JargaApi.Accounts.Application.UseCases.ListAccessibleWorkspacesTest do
           is_active: true
         })
 
-      {:ok, workspaces} = ListAccessibleIdentity.execute(user, api_key, default_opts())
+      {:ok, workspaces} = ListAccessibleWorkspaces.execute(user, api_key, default_opts())
 
       assert length(workspaces) == 2
       slugs = Enum.map(workspaces, & &1.slug)
@@ -52,7 +52,7 @@ defmodule JargaApi.Accounts.Application.UseCases.ListAccessibleWorkspacesTest do
           is_active: true
         })
 
-      {:ok, workspaces} = ListAccessibleIdentity.execute(user, api_key, default_opts())
+      {:ok, workspaces} = ListAccessibleWorkspaces.execute(user, api_key, default_opts())
 
       assert workspaces == []
     end
@@ -71,7 +71,7 @@ defmodule JargaApi.Accounts.Application.UseCases.ListAccessibleWorkspacesTest do
           is_active: true
         })
 
-      {:ok, workspaces} = ListAccessibleIdentity.execute(user, api_key, default_opts())
+      {:ok, workspaces} = ListAccessibleWorkspaces.execute(user, api_key, default_opts())
 
       assert length(workspaces) == 1
       result = hd(workspaces)
@@ -99,7 +99,7 @@ defmodule JargaApi.Accounts.Application.UseCases.ListAccessibleWorkspacesTest do
           is_active: true
         })
 
-      {:ok, workspaces} = ListAccessibleIdentity.execute(user, api_key, default_opts())
+      {:ok, workspaces} = ListAccessibleWorkspaces.execute(user, api_key, default_opts())
 
       # User has access to all 3, but API key filters to only 2
       assert length(workspaces) == 2
@@ -123,7 +123,7 @@ defmodule JargaApi.Accounts.Application.UseCases.ListAccessibleWorkspacesTest do
           is_active: true
         })
 
-      {:ok, workspaces} = ListAccessibleIdentity.execute(user, api_key, default_opts())
+      {:ok, workspaces} = ListAccessibleWorkspaces.execute(user, api_key, default_opts())
 
       # Should only return the existing workspace that user has access to
       assert length(workspaces) == 1
@@ -145,7 +145,7 @@ defmodule JargaApi.Accounts.Application.UseCases.ListAccessibleWorkspacesTest do
           is_active: true
         })
 
-      {:ok, workspaces} = ListAccessibleIdentity.execute(user, api_key, default_opts())
+      {:ok, workspaces} = ListAccessibleWorkspaces.execute(user, api_key, default_opts())
 
       assert length(workspaces) == 2
     end
@@ -172,7 +172,7 @@ defmodule JargaApi.Accounts.Application.UseCases.ListAccessibleWorkspacesTest do
       end
 
       {:ok, workspaces} =
-        ListAccessibleIdentity.execute(user, api_key,
+        ListAccessibleWorkspaces.execute(user, api_key,
           list_workspaces_for_user: mock_list_workspaces_for_user
         )
 

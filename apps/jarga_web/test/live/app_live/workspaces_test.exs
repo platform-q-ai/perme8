@@ -127,7 +127,7 @@ defmodule JargaWeb.AppLive.WorkspacesTest do
       assert lv |> element("[data-workspace-id='#{workspace.id}']") |> has_element?()
 
       # Remove the user from the workspace (this will trigger the PubSub broadcast)
-      {:ok, _deleted_member} = Workspaces.remove_member(other_user, workspace.id, user.email)
+      {:ok, _deleted_member} = Identity.remove_member(other_user, workspace.id, user.email)
 
       # Verify workspace is removed from the workspaces list
       refute lv |> element("[data-workspace-id='#{workspace.id}']") |> has_element?()
@@ -674,7 +674,7 @@ defmodule JargaWeb.AppLive.WorkspacesTest do
       assert lv |> element("[data-workspace-id='#{workspace.id}']") |> has_element?()
 
       # Actually remove the member from DB
-      {:ok, _} = Workspaces.remove_member(other_user, workspace.id, user.email)
+      {:ok, _} = Identity.remove_member(other_user, workspace.id, user.email)
 
       # Send structured event
       event =
