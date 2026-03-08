@@ -342,6 +342,23 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponents do
     """
   end
 
+  def chat_part(%{part: {:answer_submitted, _id, text}} = assigns) do
+    assigns = assign(assigns, :text, text)
+
+    ~H"""
+    <div class="flex gap-2 mb-3">
+      <div class="shrink-0 size-6 rounded-full bg-success/10 flex items-center justify-center">
+        <.icon name="hero-check-circle" class="size-3.5 text-success" />
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="text-xs font-medium text-success/70 mb-0.5">Answer submitted</div>
+        <div class="text-sm whitespace-pre-line break-words">{@text}</div>
+        <div class="text-[11px] text-base-content/40 mt-0.5">Awaiting response...</div>
+      </div>
+    </div>
+    """
+  end
+
   def chat_part(%{part: {:subtask, id, detail}} = assigns) do
     assigns =
       assigns

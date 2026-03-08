@@ -510,6 +510,7 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
   defp promote_pending_user_part(parts, text, message_id) do
     case Enum.find_index(parts, fn
            {:user_pending, _id, pending_text} -> String.trim(pending_text) == text
+           {:answer_submitted, _id, pending_text} -> String.trim(pending_text) == text
            _ -> false
          end) do
       nil -> {parts, false}
@@ -666,6 +667,10 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
 
   defp decode_output_part(%{"type" => "user", "id" => id, "text" => text, "pending" => true}) do
     {:user_pending, id, text}
+  end
+
+  defp decode_output_part(%{"type" => "answer_submitted", "id" => id, "text" => text}) do
+    {:answer_submitted, id, text}
   end
 
   defp decode_output_part(%{"type" => "user", "id" => id, "text" => text}) do

@@ -1726,10 +1726,18 @@ defmodule AgentsWeb.SessionsLive.Index do
   defp serialize_queued_datetime(_), do: DateTime.utc_now() |> DateTime.to_iso8601()
 
   defp append_optimistic_user_message(socket, message) do
+    append_optimistic_part(socket, message, :user_pending)
+  end
+
+  defp append_answer_submitted_message(socket, message) do
+    append_optimistic_part(socket, message, :answer_submitted)
+  end
+
+  defp append_optimistic_part(socket, message, tag) do
     trimmed = String.trim(message)
     optimistic_id = "optimistic-#{System.unique_integer([:positive])}"
     updated = socket.assigns.optimistic_user_messages ++ [trimmed]
-    parts = socket.assigns.output_parts ++ [{:user_pending, optimistic_id, trimmed}]
+    parts = socket.assigns.output_parts ++ [{tag, optimistic_id, trimmed}]
 
     socket
     |> assign(:optimistic_user_messages, updated)
@@ -1774,7 +1782,7 @@ defmodule AgentsWeb.SessionsLive.Index do
     send(self(), {:answer_question_async, task_id, pending.request_id, answers, message})
 
     socket
-    |> append_optimistic_user_message(message)
+    |> append_answer_submitted_message(message)
     |> assign(:pending_question, nil)
   end
 

@@ -296,7 +296,7 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       refute html =~ "Awaiting response..."
     end
 
-    test "question tool submit appends answer to conversation history", %{conn: conn, user: user} do
+    test "question tool submit shows answer submitted indicator", %{conn: conn, user: user} do
       task =
         task_fixture(%{
           user_id: user.id,
@@ -339,6 +339,7 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
 
       html = render(lv)
       assert html =~ "Re: Deploy — Yes"
+      assert html =~ "Answer submitted"
     end
 
     test "follow-up stays between prior and subsequent assistant outputs", %{
