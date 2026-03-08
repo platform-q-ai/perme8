@@ -473,22 +473,17 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
         process_child_session_event(event, event_session_id, state)
 
       true ->
+        # Any non-parent session on this container's SSE stream must be a
+        # child. Register speculatively (with nil subtask_part_id) so
+        # subsequent events route through process_child_session_event/3.
         Logger.debug(
-          "TaskRunner: event from unknown session #{event_session_id}, skipping output cache"
+          "TaskRunner: registering unknown session #{event_session_id} as child (pre-subtask-part race)"
         )
 
-        broadcast_event(event, state)
+        child_session_ids = Map.put_new(state.child_session_ids, event_session_id, nil)
+        state = %{state | child_session_ids: child_session_ids}
 
-        state =
-          if subtask_part?(event) do
-            state
-            |> then(&track_subtask_message_id(event, &1))
-            |> then(&cache_subtask_part(event, &1))
-          else
-            state
-          end
-
-        {:noreply, state}
+        process_child_session_event(event, event_session_id, state)
     end
   end
 
@@ -685,11 +680,16 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   #
   #   - Parent session events → full processing (output cache, status transitions)
   #   - Known child session events → broadcast only (for LiveView subtask cards)
-  #   - Unknown session events → log + skip (defensive, covers race conditions)
+  #   - Unknown session events → speculatively register as child and route
+  #     through child processing. Any non-parent session on this container's
+  #     stream must be a child; child events often arrive before the parent's
+  #     subtask part event that formally registers them.
   #
   # Child session IDs are discovered via subtask part events, which include a
   # sessionID field. The `child_session_ids` map tracks child_session_id →
   # subtask_part_id for marking subtask cards as done when children complete.
+  # Speculatively registered children use `nil` as the subtask_part_id until
+  # the subtask part event arrives and overwrites it with the real value.
 
   defp process_parent_session_event(event, state) do
     broadcast_event(event, state)
