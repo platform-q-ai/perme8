@@ -119,7 +119,7 @@ Use this rule of thumb:
 
 - **Execute Plan** -- executes an existing phased plan end-to-end (implementation, commits, PR lifecycle, CI, review loop).
 - **Commit and PR** -- handles branch/commit/push/PR mechanics when implementation is already done or managed elsewhere.
-- **Handle Merge Conflict** -- resolves merge conflicts on a PR branch by understanding the PR's purpose, linked ticket, and ticket context. Analyses both sides of each conflict to determine intent and recency, and produces a resolution preserving all new functionality in the codebase's current style.
+- **Handle Merge Conflict** -- resolves merge conflicts on a PR branch by understanding the PR's purpose, linked ticket, and ticket context. Analyzes both sides of each conflict to determine intent, compares recency and correctness, and produces a resolution that preserves all new functionality from both branches while matching the codebase's current style.
 - **Finalize** -- runs quality gates before handoff: tests/checks, documentation sync, acceptance reconciliation, and follow-up issues.
 
 #### Review and Feedback
