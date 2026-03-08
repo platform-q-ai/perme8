@@ -13,18 +13,19 @@ A ticket serves as a single source of truth for feature requirements, capturing:
 
 The ticket does NOT specify **how** to build it (that's the architect's job).
 
-## When to Create a Ticket
+## Ticket Detail Levels
 
-**Create a ticket when:**
+**All work requires a ticket (GitHub issue).** The level of detail varies by scope:
+
+**Full detail** (use the complete template below):
 - Feature requirements are unclear or complex
 - Multiple stakeholders need alignment
 - Feature spans multiple systems or contexts
-- You want to ensure nothing is missed
 
-**Skip the ticket when:**
+**Lightweight** (a concise issue with acceptance criteria):
 - Requirements are simple and well-understood
-- It's a small bug fix or minor enhancement
-- You're iterating on existing functionality
+- Small bug fix or minor enhancement
+- Iterating on existing functionality
 
 ---
 
