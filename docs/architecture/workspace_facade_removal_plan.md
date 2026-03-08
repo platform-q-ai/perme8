@@ -79,7 +79,7 @@ Jarga.Accounts    →  DELETED
 
 ## Migration Phases
 
-### Phase 1: Migrate `jarga_web` callers of `Jarga.Workspaces`
+### Phase 1: Migrate `jarga_web` callers of `Jarga.Workspaces` (COMPLETE — #386)
 
 **Risk:** Medium (highest surface area — 11 LiveView/controller files)
 **Strategy:** Replace `alias Jarga.Workspaces` with `alias Identity` (or use `Identity` directly). All function signatures match 1:1 since the facade was pure delegation.
@@ -117,7 +117,7 @@ Jarga.Accounts    →  DELETED
 
 ---
 
-### Phase 3: Migrate `jarga_api` callers of `Jarga.Workspaces`
+### Phase 3: Migrate `jarga_api` callers of `Jarga.Workspaces` (COMPLETE — #386)
 
 **Risk:** Low (only 3 controller files, pure read operations)
 
@@ -131,7 +131,7 @@ Jarga.Accounts    →  DELETED
 
 ---
 
-### Phase 4: Migrate `jarga` internal callers of `Jarga.Workspaces`
+### Phase 4: Migrate `jarga` internal callers of `Jarga.Workspaces` (COMPLETE — #386)
 
 **Risk:** Medium-High (13 boundary modules depend on `Jarga.Workspaces`; these are core domain/application/infrastructure layers)
 
@@ -175,7 +175,7 @@ Jarga.Accounts    →  DELETED
 
 ---
 
-### Phase 5: Update `jarga_web` and `jarga_api` boundary configs
+### Phase 5: Update `jarga_web` and `jarga_api` boundary configs (COMPLETE — #386)
 
 Remove `Jarga.Workspaces` and `Jarga.Accounts` from boundary deps. Ensure `Identity` is already listed (it is in both).
 
@@ -188,7 +188,7 @@ Remove `Jarga.Workspaces` and `Jarga.Accounts` from boundary deps. Ensure `Ident
 
 ---
 
-### Phase 6: Delete facades and their tests
+### Phase 6: Delete facades and their tests (`Jarga.Workspaces` COMPLETE — #386; `Jarga.Accounts` remains)
 
 | Action | File |
 |--------|------|
@@ -201,7 +201,7 @@ Remove `Jarga.Workspaces` and `Jarga.Accounts` from boundary deps. Ensure `Ident
 
 ---
 
-### Phase 7: Clean up test fixtures
+### Phase 7: Clean up test fixtures (`Jarga.Workspaces` COMPLETE — #386; `Jarga.Accounts` remains)
 
 The `jarga` test fixtures in `apps/jarga/test/support/fixtures/workspaces_fixtures.ex` delegate to Identity's fixtures or call `Jarga.Workspaces` functions. Update them to call `Identity` directly.
 

@@ -5,8 +5,7 @@ defmodule Notifications.Application do
   Contains use cases that orchestrate domain logic and infrastructure.
   Defines the repository behaviour (port) for dependency injection.
 
-  No dependency on Jarga.Workspaces — action handling has been
-  removed from the Notifications bounded context.
+  Workspace operations are handled by `Identity` — no dependency needed here.
   """
 
   use Boundary,

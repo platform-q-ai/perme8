@@ -5,8 +5,7 @@ defmodule Notifications.Infrastructure do
   Contains database schemas, repositories, queries, and event subscribers.
   Uses `Notifications.Repo` (NOT `Identity.Repo`) for all database operations.
 
-  No dependency on `Jarga.Workspaces` — action handling has been removed
-  from the Notifications bounded context.
+  Workspace operations are handled by `Identity` — no dependency needed here.
   """
 
   use Boundary,
