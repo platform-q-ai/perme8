@@ -26,7 +26,7 @@ Agent definitions (CRUD, cloning, workspace assignment, LLM client, query execut
 
 ### perme8-mcp
 
-A standalone [MCP](https://modelcontextprotocol.io/) endpoint exposes 14 tools (6 knowledge + 8 jarga) via JSON-RPC 2.0 over HTTP. Tool sets are composed from config-driven `ToolProvider` modules. The knowledge tools allow LLM agents to create, search, update, relate, traverse, and retrieve knowledge entries stored in the Entity Relationship Manager (ERM). The jarga tools provide workspace, project, document, and note management.
+A standalone [MCP](https://modelcontextprotocol.io/) endpoint exposes 15 tools (6 knowledge + 8 jarga + 1 meta) via JSON-RPC 2.0 over HTTP. Tool sets are composed from config-driven `ToolProvider` modules. The knowledge tools allow LLM agents to create, search, update, relate, traverse, and retrieve knowledge entries stored in the Entity Relationship Manager (ERM). The jarga tools provide workspace, project, document, and note management. The `tools.search` meta-tool enables agents to discover available tools, search by keyword, and group results by provider.
 
 | Tool | Description |
 |------|-------------|
@@ -36,6 +36,7 @@ A standalone [MCP](https://modelcontextprotocol.io/) endpoint exposes 14 tools (
 | `knowledge.update` | Update an entry's fields |
 | `knowledge.relate` | Create a relationship between two entries |
 | `knowledge.traverse` | Walk the knowledge graph from an entry |
+| `tools.search` | Search and discover available MCP tools by keyword or provider |
 
 **Protocol:** MCP (JSON-RPC 2.0) via Hermes StreamableHTTP transport
 **Auth:** Bearer token (Identity API keys) validated by `AuthPlug`
