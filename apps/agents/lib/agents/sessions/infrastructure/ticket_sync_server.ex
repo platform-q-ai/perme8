@@ -13,6 +13,8 @@ defmodule Agents.Sessions.Infrastructure.TicketSyncServer do
   require Logger
 
   alias Agents.Sessions.Application.SessionsConfig
+  alias Agents.Sessions.Domain.Entities.Ticket
+  alias Agents.Sessions.Domain.Policies.TicketHierarchyPolicy
   alias Agents.Sessions.Infrastructure.Clients.GithubProjectClient
   alias Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository
 
@@ -20,7 +22,8 @@ defmodule Agents.Sessions.Infrastructure.TicketSyncServer do
 
   @spec start_link(keyword()) :: GenServer.on_start()
   def start_link(opts \\ []) do
-    GenServer.start_link(__MODULE__, opts, name: __MODULE__)
+    name = Keyword.get(opts, :name, __MODULE__)
+    GenServer.start_link(__MODULE__, opts, name: name)
   end
 
   @spec list_tickets() :: [map()]
@@ -45,8 +48,9 @@ defmodule Agents.Sessions.Infrastructure.TicketSyncServer do
     state = %{
       client: Keyword.get(opts, :client, GithubProjectClient),
       ticket_repo: Keyword.get(opts, :ticket_repo, ProjectTicketRepository),
-      poll_interval_ms: SessionsConfig.github_poll_interval_ms(),
-      pubsub: SessionsConfig.pubsub()
+      poll_interval_ms:
+        Keyword.get(opts, :poll_interval_ms, SessionsConfig.github_poll_interval_ms()),
+      pubsub: Keyword.get(opts, :pubsub, SessionsConfig.pubsub())
     }
 
     if SessionsConfig.github_sync_enabled?() do
@@ -101,6 +105,8 @@ defmodule Agents.Sessions.Infrastructure.TicketSyncServer do
       {:ok, tickets} ->
         Enum.each(tickets, &sync_remote_ticket(state, &1))
 
+        link_hierarchy_relationships(state, tickets)
+
         # Remove local tickets that are no longer in the remote issues list
         # (i.e. deleted from GitHub entirely — closed issues are kept and
         # marked with state="closed" via the upsert above).
@@ -137,5 +143,58 @@ defmodule Agents.Sessions.Infrastructure.TicketSyncServer do
       {:ok, _} -> :ok
       {:error, reason} -> Logger.warning("Ticket upsert failed: #{inspect(reason)}")
     end
+  end
+
+  defp link_hierarchy_relationships(state, remote_tickets) do
+    local_tickets = state.ticket_repo.list_all_flat()
+    tickets_by_number = Map.new(local_tickets, &{&1.number, &1})
+
+    raw_parent_child_map =
+      Enum.reduce(remote_tickets, %{}, fn ticket, acc ->
+        Enum.reduce(Map.get(ticket, :sub_issue_numbers, []), acc, fn child_number, acc2 ->
+          Map.put(acc2, child_number, ticket.number)
+        end)
+      end)
+
+    referenced_children = MapSet.new(Map.keys(raw_parent_child_map))
+
+    promoted_map =
+      local_tickets
+      |> Enum.map(& &1.number)
+      |> Enum.reject(&MapSet.member?(referenced_children, &1))
+      |> Map.new(fn number -> {number, nil} end)
+
+    initial_entities =
+      Enum.map(local_tickets, fn schema ->
+        Ticket.new(%{
+          id: schema.id,
+          number: schema.number,
+          parent_ticket_id: schema.parent_ticket_id
+        })
+      end)
+
+    {safe_parent_child_map, _entities} =
+      Enum.reduce(raw_parent_child_map, {%{}, initial_entities}, fn {child_number, parent_number},
+                                                                    {acc, entities} ->
+        case {Map.get(tickets_by_number, child_number), Map.get(tickets_by_number, parent_number)} do
+          {%{id: child_id}, %{id: parent_id}} ->
+            if TicketHierarchyPolicy.circular_reference?(entities, {child_id, parent_id}) do
+              {acc, entities}
+            else
+              updated_entities =
+                Enum.map(entities, fn
+                  %Ticket{id: ^child_id} = ticket -> %{ticket | parent_ticket_id: parent_id}
+                  ticket -> ticket
+                end)
+
+              {Map.put(acc, child_number, parent_number), updated_entities}
+            end
+
+          _ ->
+            {acc, entities}
+        end
+      end)
+
+    state.ticket_repo.link_sub_tickets(Map.merge(promoted_map, safe_parent_child_map))
   end
 end

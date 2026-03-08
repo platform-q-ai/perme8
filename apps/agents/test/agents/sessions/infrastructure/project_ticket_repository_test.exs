@@ -396,4 +396,188 @@ defmodule Agents.Sessions.Infrastructure.ProjectTicketRepositoryTest do
 
     assert ticket.state == "open"
   end
+
+  test "list_all/0 returns only root tickets with sub_tickets preloaded" do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    parent =
+      %ProjectTicketSchema{}
+      |> ProjectTicketSchema.changeset(%{
+        number: 710,
+        title: "Parent",
+        created_at: now,
+        labels: [],
+        position: 10
+      })
+      |> Repo.insert!()
+
+    child =
+      %ProjectTicketSchema{}
+      |> ProjectTicketSchema.changeset(%{
+        number: 711,
+        title: "Child",
+        created_at: now,
+        labels: [],
+        position: 3,
+        parent_ticket_id: parent.id
+      })
+      |> Repo.insert!()
+
+    root =
+      %ProjectTicketSchema{}
+      |> ProjectTicketSchema.changeset(%{
+        number: 712,
+        title: "Independent",
+        created_at: now,
+        labels: [],
+        position: 5
+      })
+      |> Repo.insert!()
+
+    [first, second] = ProjectTicketRepository.list_all()
+
+    assert Enum.map([first, second], & &1.number) == [710, 712]
+    assert first.sub_tickets != %Ecto.Association.NotLoaded{}
+    assert Enum.map(first.sub_tickets, & &1.number) == [child.number]
+    assert second.sub_tickets == []
+
+    refute Enum.any?([first, second], &(&1.number == child.number))
+    assert Enum.all?([first, second], &is_nil(&1.parent_ticket_id))
+    assert root.number == 712
+  end
+
+  test "list_all_flat/0 returns all tickets without hierarchy filtering" do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    parent =
+      %ProjectTicketSchema{}
+      |> ProjectTicketSchema.changeset(%{
+        number: 720,
+        title: "Parent",
+        created_at: now,
+        labels: [],
+        position: 4
+      })
+      |> Repo.insert!()
+
+    %ProjectTicketSchema{}
+    |> ProjectTicketSchema.changeset(%{
+      number: 721,
+      title: "Child",
+      created_at: now,
+      labels: [],
+      position: 3,
+      parent_ticket_id: parent.id
+    })
+    |> Repo.insert!()
+
+    %ProjectTicketSchema{}
+    |> ProjectTicketSchema.changeset(%{
+      number: 722,
+      title: "Root",
+      created_at: now,
+      labels: [],
+      position: 2
+    })
+    |> Repo.insert!()
+
+    numbers = ProjectTicketRepository.list_all_flat() |> Enum.map(& &1.number)
+    assert numbers == [720, 721, 722]
+  end
+
+  test "sync_remote_ticket/1 persists parent_ticket_id" do
+    assert {:ok, parent} =
+             ProjectTicketRepository.sync_remote_ticket(%{
+               number: 730,
+               title: "Parent",
+               labels: []
+             })
+
+    assert {:ok, child} =
+             ProjectTicketRepository.sync_remote_ticket(%{
+               number: 731,
+               title: "Child",
+               labels: [],
+               parent_ticket_id: parent.id
+             })
+
+    assert child.parent_ticket_id == parent.id
+
+    persisted = Repo.get_by!(ProjectTicketSchema, number: 731)
+    assert persisted.parent_ticket_id == parent.id
+  end
+
+  test "sync_remote_ticket/1 updates parent_ticket_id on re-sync" do
+    {:ok, parent_one} =
+      ProjectTicketRepository.sync_remote_ticket(%{number: 740, title: "Parent one", labels: []})
+
+    {:ok, parent_two} =
+      ProjectTicketRepository.sync_remote_ticket(%{number: 741, title: "Parent two", labels: []})
+
+    {:ok, _child} =
+      ProjectTicketRepository.sync_remote_ticket(%{
+        number: 742,
+        title: "Child",
+        labels: [],
+        parent_ticket_id: parent_one.id
+      })
+
+    {:ok, updated} =
+      ProjectTicketRepository.sync_remote_ticket(%{
+        number: 742,
+        title: "Child",
+        labels: [],
+        parent_ticket_id: parent_two.id
+      })
+
+    assert updated.parent_ticket_id == parent_two.id
+    refute updated.parent_ticket_id == parent_one.id
+  end
+
+  test "sync_remote_ticket/1 clears parent_ticket_id when promoted to top-level" do
+    {:ok, parent} =
+      ProjectTicketRepository.sync_remote_ticket(%{number: 750, title: "Parent", labels: []})
+
+    {:ok, _child} =
+      ProjectTicketRepository.sync_remote_ticket(%{
+        number: 751,
+        title: "Child",
+        labels: [],
+        parent_ticket_id: parent.id
+      })
+
+    {:ok, promoted} =
+      ProjectTicketRepository.sync_remote_ticket(%{
+        number: 751,
+        title: "Child",
+        labels: [],
+        parent_ticket_id: nil
+      })
+
+    assert promoted.parent_ticket_id == nil
+  end
+
+  test "link_sub_tickets/1 resolves parent numbers and updates children" do
+    {:ok, _parent} =
+      ProjectTicketRepository.sync_remote_ticket(%{number: 760, title: "Parent", labels: []})
+
+    {:ok, child} =
+      ProjectTicketRepository.sync_remote_ticket(%{number: 761, title: "Child", labels: []})
+
+    assert :ok = ProjectTicketRepository.link_sub_tickets(%{761 => 760})
+
+    refreshed = Repo.get!(ProjectTicketSchema, child.id)
+    parent = Repo.get_by!(ProjectTicketSchema, number: 760)
+    assert refreshed.parent_ticket_id == parent.id
+  end
+
+  test "link_sub_tickets/1 skips entries where parent does not exist" do
+    {:ok, child} =
+      ProjectTicketRepository.sync_remote_ticket(%{number: 771, title: "Child", labels: []})
+
+    assert :ok = ProjectTicketRepository.link_sub_tickets(%{771 => 779})
+
+    refreshed = Repo.get!(ProjectTicketSchema, child.id)
+    assert refreshed.parent_ticket_id == nil
+  end
 end

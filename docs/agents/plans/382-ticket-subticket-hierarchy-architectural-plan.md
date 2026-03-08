@@ -1,6 +1,6 @@
 # Feature: Ticket Domain Entity with Subticket Hierarchy and GitHub Sub-Issue Sync (#382)
 
-## Status: ⏸ Not Started
+## Status: ⏳ In Progress
 
 ## App Ownership
 
@@ -68,7 +68,7 @@ The implementation must pass all 10 scenarios in `ticket-subticket-hierarchy.bro
 
 ### 1.1 Ticket Domain Entity
 
-- [ ] ⏸ **RED**: Write test `apps/agents/test/agents/sessions/domain/entities/ticket_test.exs`
+- [x] ✓ **RED**: Write test `apps/agents/test/agents/sessions/domain/entities/ticket_test.exs`
   - Tests `new/1` creates a Ticket struct with all fields from PRD: `id`, `number`, `external_id`, `title`, `body`, `status`, `state`, `priority`, `size`, `labels`, `url`, `position`, `sync_state`, `last_synced_at`, `last_sync_error`, `remote_updated_at`, `parent_ticket_id`, `sub_tickets`, `created_at`, `inserted_at`, `updated_at`
   - Tests `new/1` defaults: `state` defaults to `"open"`, `labels` defaults to `[]`, `sub_tickets` defaults to `[]`, `position` defaults to `0`, `sync_state` defaults to `"synced"`
   - Tests `new/1` allows overriding defaults
@@ -80,7 +80,7 @@ The implementation must pass all 10 scenarios in `ticket-subticket-hierarchy.bro
   - Tests `valid_states/0` returns `["open", "closed"]`
   - All tests use `use ExUnit.Case, async: true` — no DB, no I/O
 
-- [ ] ⏸ **GREEN**: Implement `apps/agents/lib/agents/sessions/domain/entities/ticket.ex`
+- [x] ✓ **GREEN**: Implement `apps/agents/lib/agents/sessions/domain/entities/ticket.ex`
   - Pure struct with `defstruct` — no `use Ecto.Schema`, no infrastructure deps
   - `@type t` typespec with all fields
   - `new/1` — `struct(__MODULE__, attrs)` with defaults
@@ -92,11 +92,11 @@ The implementation must pass all 10 scenarios in `ticket-subticket-hierarchy.bro
   - `sub_ticket?/1` — `not is_nil(ticket.parent_ticket_id)`
   - `valid_states/0` — `["open", "closed"]`
 
-- [ ] ⏸ **REFACTOR**: Extract shared conversion helper if needed; ensure typespec completeness matches all schema fields
+- [x] ✓ **REFACTOR**: Extract shared conversion helper if needed; ensure typespec completeness matches all schema fields
 
 ### 1.2 Ticket Hierarchy Policy
 
-- [ ] ⏸ **RED**: Write test `apps/agents/test/agents/sessions/domain/policies/ticket_hierarchy_policy_test.exs`
+- [x] ✓ **RED**: Write test `apps/agents/test/agents/sessions/domain/policies/ticket_hierarchy_policy_test.exs`
   - Tests `build_tree/1` — given flat list of Ticket entities (some with `parent_ticket_id`), returns list of root-only tickets with `sub_tickets` populated
   - Tests `build_tree/1` — tickets with `parent_ticket_id` pointing to non-existent parent are treated as root
   - Tests `build_tree/1` — preserves original ordering (position-based) within each level
@@ -108,25 +108,25 @@ The implementation must pass all 10 scenarios in `ticket-subticket-hierarchy.bro
   - Tests `max_depth/0` — returns 2 (UI nesting cap)
   - All tests use `use ExUnit.Case, async: true` — pure functions, no I/O
 
-- [ ] ⏸ **GREEN**: Implement `apps/agents/lib/agents/sessions/domain/policies/ticket_hierarchy_policy.ex`
+- [x] ✓ **GREEN**: Implement `apps/agents/lib/agents/sessions/domain/policies/ticket_hierarchy_policy.ex`
   - `build_tree/1` — groups tickets by parent_ticket_id, assembles tree, returns root-level list
   - `circular_reference?/2` — walks parent chain to detect cycles
   - `sub_ticket_summary/1` — counts closed vs total sub_tickets
   - `sub_ticket_summary_text/1` — formats the count string for UI
   - `max_depth/0` — returns `2`
 
-- [ ] ⏸ **REFACTOR**: Ensure `build_tree/1` handles large flat lists efficiently (single pass with Map grouping)
+- [x] ✓ **REFACTOR**: Ensure `build_tree/1` handles large flat lists efficiently (single pass with Map grouping)
 
 ### 1.3 Ticket Enrichment Service
 
-- [ ] ⏸ **RED**: Write test `apps/agents/test/agents/sessions/domain/policies/ticket_enrichment_policy_test.exs`
+- [x] ✓ **RED**: Write test `apps/agents/test/agents/sessions/domain/policies/ticket_enrichment_policy_test.exs`
   - Tests `enrich/2` — given a `Ticket` entity and a list of `Task` entities, enriches the ticket with `associated_task_id`, `associated_container_id`, `session_state`, `task_status`, `task_error` by matching ticket number to task instruction
   - Tests `enrich/2` — returns ticket unchanged when no matching task found (`session_state` = `"idle"`)
   - Tests `enrich_all/2` — applies enrichment to a list of tickets, preserving tree structure (enriches sub_tickets recursively)
   - Tests `task_status_to_session_state/1` mapping: nil→"idle", "running"→"running", "completed"→"completed", "cancelled"→"paused"
   - All tests use `use ExUnit.Case, async: true`
 
-- [ ] ⏸ **GREEN**: Implement `apps/agents/lib/agents/sessions/domain/policies/ticket_enrichment_policy.ex`
+- [x] ✓ **GREEN**: Implement `apps/agents/lib/agents/sessions/domain/policies/ticket_enrichment_policy.ex`
   - `enrich/2` — adds enrichment fields to a Ticket entity struct, matching ticket.number against tasks via `Sessions.extract_ticket_number/1`
   - `enrich_all/2` — maps over tickets and their sub_tickets recursively
   - `task_status_to_session_state/1` — consolidates the mapping currently duplicated in Sessions facade and LiveView
@@ -135,7 +135,7 @@ The implementation must pass all 10 scenarios in `ticket-subticket-hierarchy.bro
 
 ### Phase 1 Validation
 
-- [ ] ⏸ All domain tests pass (`mix test apps/agents/test/agents/sessions/domain/ --no-start`, milliseconds, no I/O)
+- [x] ✓ All domain tests pass (`mix test apps/agents/test/agents/sessions/domain/ --no-start`, milliseconds, no I/O)
 - [ ] ⏸ No boundary violations (`mix boundary`)
 
 ---
@@ -144,7 +144,7 @@ The implementation must pass all 10 scenarios in `ticket-subticket-hierarchy.bro
 
 ### 2.1 Migration: Add parent_ticket_id to sessions_project_tickets
 
-- [ ] ⏸ Create `apps/agents/priv/repo/migrations/YYYYMMDDHHMMSS_add_parent_ticket_id_to_project_tickets.exs`
+- [x] ✓ Create `apps/agents/priv/repo/migrations/YYYYMMDDHHMMSS_add_parent_ticket_id_to_project_tickets.exs`
   ```elixir
   defmodule Agents.Repo.Migrations.AddParentTicketIdToProjectTickets do
     use Ecto.Migration
@@ -162,7 +162,7 @@ The implementation must pass all 10 scenarios in `ticket-subticket-hierarchy.bro
 
 ### 2.2 ProjectTicketSchema: Add parent_ticket_id and associations
 
-- [ ] ⏸ **RED**: Write test `apps/agents/test/agents/sessions/infrastructure/schemas/project_ticket_schema_test.exs`
+- [x] ✓ **RED**: Write test `apps/agents/test/agents/sessions/infrastructure/schemas/project_ticket_schema_test.exs`
   - Tests changeset accepts `parent_ticket_id` as a castable field
   - Tests `parent_ticket_id` can be nil (root ticket)
   - Tests `parent_ticket_id` can be set to an existing ticket's id
@@ -170,17 +170,17 @@ The implementation must pass all 10 scenarios in `ticket-subticket-hierarchy.bro
   - Tests `has_many :sub_tickets` association is defined
   - Uses `Agents.DataCase, async: true`
 
-- [ ] ⏸ **GREEN**: Update `apps/agents/lib/agents/sessions/infrastructure/schemas/project_ticket_schema.ex`
+- [x] ✓ **GREEN**: Update `apps/agents/lib/agents/sessions/infrastructure/schemas/project_ticket_schema.ex`
   - Add `belongs_to :parent_ticket, __MODULE__` to schema block
   - Add `has_many :sub_tickets, __MODULE__, foreign_key: :parent_ticket_id` to schema block
   - Add `:parent_ticket_id` to the typespec
   - Add `:parent_ticket_id` to the cast list in `changeset/2`
 
-- [ ] ⏸ **REFACTOR**: Update existing schema typespec to include `parent_ticket_id`
+- [x] ✓ **REFACTOR**: Update existing schema typespec to include `parent_ticket_id`
 
 ### 2.3 ProjectTicketRepository: Hierarchy support
 
-- [ ] ⏸ **RED**: Add tests to `apps/agents/test/agents/sessions/infrastructure/project_ticket_repository_test.exs`
+- [x] ✓ **RED**: Add tests to `apps/agents/test/agents/sessions/infrastructure/project_ticket_repository_test.exs`
   - Tests `list_all/0` preloads `sub_tickets` association (1 level deep)
   - Tests `list_all/0` returns only root tickets (where `parent_ticket_id` is nil) at top level, with `sub_tickets` populated
   - Tests `sync_remote_ticket/2` accepts and persists `parent_ticket_id`
@@ -191,35 +191,35 @@ The implementation must pass all 10 scenarios in `ticket-subticket-hierarchy.bro
   - Tests `delete_not_in/1` — subtickets whose parent is pruned get `parent_ticket_id` set to nil by FK constraint
   - Uses `Agents.DataCase, async: true`
 
-- [ ] ⏸ **GREEN**: Update `apps/agents/lib/agents/sessions/infrastructure/repositories/project_ticket_repository.ex`
+- [x] ✓ **GREEN**: Update `apps/agents/lib/agents/sessions/infrastructure/repositories/project_ticket_repository.ex`
   - Update `list_all/0` to preload `:sub_tickets` and filter to root tickets only (`where parent_ticket_id is nil`), with sub_tickets ordered by position
   - Add `list_all_flat/0` that returns all tickets without hierarchy filtering (for sync operations)
   - Update `sync_remote_ticket/2` to accept `parent_ticket_id` in attrs
   - Add `link_sub_tickets/1` — bulk-updates `parent_ticket_id` for child tickets by resolving parent numbers to IDs
   - Add `:parent_ticket_id` to `@remote_attr_keys` in `normalize_remote_attrs/1`
 
-- [ ] ⏸ **REFACTOR**: Extract preload/ordering logic into a composable query pattern
+- [x] ✓ **REFACTOR**: Extract preload/ordering logic into a composable query pattern
 
 ### 2.4 GithubProjectClient: Fetch sub-issue relationships
 
-- [ ] ⏸ **RED**: Write test `apps/agents/test/agents/sessions/infrastructure/clients/github_project_client_test.exs`
+- [x] ✓ **RED**: Write test `apps/agents/test/agents/sessions/infrastructure/clients/github_project_client_test.exs`
   - Tests `fetch_tickets/1` response includes `sub_issue_numbers` field (list of integers) for each ticket
   - Tests `parse_issue/1` (via `fetch_tickets`) extracts sub-issue numbers from the REST sub-issues endpoint data
   - Tests graceful handling when sub-issue fetch fails (parent ticket still returned, sub_issue_numbers = [])
   - Uses mock HTTP responses (Req test adapter or Mox)
 
-- [ ] ⏸ **GREEN**: Update `apps/agents/lib/agents/sessions/infrastructure/clients/github_project_client.ex`
+- [x] ✓ **GREEN**: Update `apps/agents/lib/agents/sessions/infrastructure/clients/github_project_client.ex`
   - Add `fetch_sub_issues/3` — calls `GET /repos/{owner}/{repo}/issues/{issue_number}/sub_issues` REST endpoint
   - Update `fetch_tickets/1` to also call `fetch_sub_issues/3` for each issue that may have sub-issues
   - Add `sub_issue_numbers` field to the `@type ticket` spec
   - Update `parse_issue/1` to include `sub_issue_numbers: []` default
   - Batch sub-issue fetches to minimize API calls (only fetch for issues that have sub-issue indicators)
 
-- [ ] ⏸ **REFACTOR**: Consider rate-limiting/batching strategy; add `@sub_issues_per_page` config
+- [x] ✓ **REFACTOR**: Consider rate-limiting/batching strategy; add `@sub_issues_per_page` config
 
 ### 2.5 TicketSyncServer: Resolve parent-child relationships
 
-- [ ] ⏸ **RED**: Add tests to existing test file or create `apps/agents/test/agents/sessions/infrastructure/ticket_sync_server_test.exs`
+- [x] ✓ **RED**: Add tests to existing test file or create `apps/agents/test/agents/sessions/infrastructure/ticket_sync_server_test.exs`
   - Tests `poll_tickets/1` syncs sub-issue relationships by calling `link_sub_tickets/1` after individual ticket upserts
   - Tests parent resolution: when parent ticket exists locally, child gets `parent_ticket_id` set
   - Tests deferred linking: when parent not yet synced, child has `parent_ticket_id = nil`
@@ -228,14 +228,14 @@ The implementation must pass all 10 scenarios in `ticket-subticket-hierarchy.bro
   - Tests circular reference guard: detects and skips cycle-creating parent assignments
   - Uses Mox for `client` and `ticket_repo` dependencies
 
-- [ ] ⏸ **GREEN**: Update `apps/agents/lib/agents/sessions/infrastructure/ticket_sync_server.ex`
+- [x] ✓ **GREEN**: Update `apps/agents/lib/agents/sessions/infrastructure/ticket_sync_server.ex`
   - After syncing individual tickets, build `parent_child_map` from fetched ticket data (`%{child_number => parent_number}`)
   - Call `state.ticket_repo.link_sub_tickets(parent_child_map)` to resolve and persist relationships
   - Clear `parent_ticket_id` for tickets not in any sub-issue list (promoted to top-level)
   - Use `TicketHierarchyPolicy.circular_reference?/2` before setting parent relationships
   - Guard against empty sync results wiping parent relationships (same guard as existing prune logic)
 
-- [ ] ⏸ **REFACTOR**: Extract parent resolution logic into a helper function for testability
+- [x] ✓ **REFACTOR**: Extract parent resolution logic into a helper function for testability
 
 ### 2.6 Sessions Facade: Return Ticket domain entities
 

@@ -38,7 +38,8 @@ defmodule Agents.Sessions.Infrastructure.Clients.GithubProjectClient do
           url: String.t() | nil,
           labels: [String.t()],
           state: String.t(),
-          created_at: DateTime.t() | nil
+          created_at: DateTime.t() | nil,
+          sub_issue_numbers: [integer()]
         }
 
   @doc """
@@ -75,31 +76,69 @@ defmodule Agents.Sessions.Infrastructure.Clients.GithubProjectClient do
     end
   end
 
+  @doc """
+  Fetches sub-issue numbers for a parent issue.
+
+  Returns `{:ok, []}` on failure to avoid failing the full sync.
+  """
+  @spec fetch_sub_issues(String.t(), String.t(), integer(), keyword()) :: {:ok, [integer()]}
+  def fetch_sub_issues(owner, repo, issue_number, opts \\ [])
+
+  def fetch_sub_issues(owner, repo, issue_number, opts) do
+    case Keyword.get(opts, :token) do
+      token when is_binary(token) and token != "" ->
+        api_base = Keyword.get(opts, :api_base, @api_base)
+        url = "#{api_base}/repos/#{owner}/#{repo}/issues/#{issue_number}/sub_issues"
+
+        case Req.get(url,
+               headers: rest_headers(token),
+               retry: false,
+               receive_timeout: 15_000,
+               connect_options: [timeout: 5_000]
+             ) do
+          {:ok, %{status: 200, body: body}} ->
+            {:ok, extract_sub_issue_numbers(body)}
+
+          {:ok, _response} ->
+            {:ok, []}
+
+          {:error, _reason} ->
+            {:ok, []}
+        end
+
+      _ ->
+        {:ok, []}
+    end
+  end
+
   defp do_fetch_tickets(token, opts) do
     org = Keyword.fetch!(opts, :org)
     repo = Keyword.fetch!(opts, :repo)
 
-    fetch_all_pages(token, org, repo, 1, [])
+    fetch_all_pages(token, org, repo, 1, [], opts)
   end
 
-  defp fetch_all_pages(token, org, repo, page, acc) do
-    url = "#{@api_base}/repos/#{org}/#{repo}/issues?state=all&per_page=100&page=#{page}"
+  defp fetch_all_pages(token, org, repo, page, acc, opts) do
+    api_base = Keyword.get(opts, :api_base, @api_base)
+    url = "#{api_base}/repos/#{org}/#{repo}/issues?state=all&per_page=100&page=#{page}"
 
     case Req.get(url,
            headers: rest_headers(token),
+           retry: false,
            receive_timeout: 15_000,
            connect_options: [timeout: 5_000]
          ) do
       {:ok, %{status: 200, body: body}} when is_list(body) ->
-        issues =
+        issues_without_sub_issues =
           body
           |> Enum.reject(&Map.has_key?(&1, "pull_request"))
           |> Enum.map(&parse_issue/1)
 
+        issues = enrich_with_sub_issues(issues_without_sub_issues, token, org, repo, opts)
         next_acc = acc ++ issues
 
         if length(body) == 100 do
-          fetch_all_pages(token, org, repo, page + 1, next_acc)
+          fetch_all_pages(token, org, repo, page + 1, next_acc, opts)
         else
           {:ok, next_acc}
         end
@@ -120,6 +159,7 @@ defmodule Agents.Sessions.Infrastructure.Clients.GithubProjectClient do
       url: issue["html_url"],
       state: issue["state"] || "open",
       created_at: parse_datetime(issue["created_at"]),
+      sub_issue_numbers: [],
       labels:
         issue
         |> Map.get("labels", [])
@@ -127,6 +167,34 @@ defmodule Agents.Sessions.Infrastructure.Clients.GithubProjectClient do
         |> Enum.reject(&is_nil/1)
     }
   end
+
+  defp enrich_with_sub_issues(issues, token, owner, repo, opts) do
+    Enum.map(issues, fn ticket ->
+      {:ok, sub_issue_numbers} =
+        fetch_sub_issues(owner, repo, ticket.number,
+          token: token,
+          api_base: Keyword.get(opts, :api_base, @api_base)
+        )
+
+      Map.put(ticket, :sub_issue_numbers, sub_issue_numbers)
+    end)
+  end
+
+  defp extract_sub_issue_numbers(body) when is_list(body) do
+    body
+    |> Enum.map(&extract_number/1)
+    |> Enum.reject(&is_nil/1)
+  end
+
+  defp extract_sub_issue_numbers(%{"sub_issues" => sub_issues}) when is_list(sub_issues) do
+    extract_sub_issue_numbers(sub_issues)
+  end
+
+  defp extract_sub_issue_numbers(_), do: []
+
+  defp extract_number(%{"number" => number}) when is_integer(number), do: number
+  defp extract_number(%{number: number}) when is_integer(number), do: number
+  defp extract_number(_), do: nil
 
   defp parse_datetime(nil), do: nil
 
