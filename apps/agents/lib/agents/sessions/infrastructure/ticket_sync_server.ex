@@ -176,25 +176,33 @@ defmodule Agents.Sessions.Infrastructure.TicketSyncServer do
     {safe_parent_child_map, _entities} =
       Enum.reduce(raw_parent_child_map, {%{}, initial_entities}, fn {child_number, parent_number},
                                                                     {acc, entities} ->
-        case {Map.get(tickets_by_number, child_number), Map.get(tickets_by_number, parent_number)} do
-          {%{id: child_id}, %{id: parent_id}} ->
-            if TicketHierarchyPolicy.circular_reference?(entities, {child_id, parent_id}) do
-              {acc, entities}
-            else
-              updated_entities =
-                Enum.map(entities, fn
-                  %Ticket{id: ^child_id} = ticket -> %{ticket | parent_ticket_id: parent_id}
-                  ticket -> ticket
-                end)
-
-              {Map.put(acc, child_number, parent_number), updated_entities}
-            end
-
-          _ ->
-            {acc, entities}
-        end
+        resolve_parent_child(tickets_by_number, child_number, parent_number, acc, entities)
       end)
 
     state.ticket_repo.link_sub_tickets(Map.merge(promoted_map, safe_parent_child_map))
+  end
+
+  defp resolve_parent_child(tickets_by_number, child_number, parent_number, acc, entities) do
+    case {Map.get(tickets_by_number, child_number), Map.get(tickets_by_number, parent_number)} do
+      {%{id: child_id}, %{id: parent_id}} ->
+        apply_parent_link(child_id, parent_id, child_number, parent_number, acc, entities)
+
+      _ ->
+        {acc, entities}
+    end
+  end
+
+  defp apply_parent_link(child_id, parent_id, child_number, parent_number, acc, entities) do
+    if TicketHierarchyPolicy.circular_reference?(entities, {child_id, parent_id}) do
+      {acc, entities}
+    else
+      updated_entities =
+        Enum.map(entities, fn
+          %Ticket{id: ^child_id} = ticket -> %{ticket | parent_ticket_id: parent_id}
+          ticket -> ticket
+        end)
+
+      {Map.put(acc, child_number, parent_number), updated_entities}
+    end
   end
 end
