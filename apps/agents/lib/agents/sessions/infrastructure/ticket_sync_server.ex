@@ -113,17 +113,19 @@ defmodule Agents.Sessions.Infrastructure.TicketSyncServer do
         # Guard: skip pruning when the API returns an empty list but we have
         # local tickets — this protects against transient GitHub API issues
         # (e.g. rate-limiting returning 200 with empty body) wiping the table.
-        local_count = length(state.ticket_repo.list_all())
+        # Use list_all_flat for the count check to avoid extra DB call.
+        local_flat = state.ticket_repo.list_all_flat()
 
-        if tickets == [] and local_count > 0 do
+        if tickets == [] and local_flat != [] do
           Logger.warning(
-            "GitHub sync returned 0 tickets but #{local_count} local tickets exist — skipping prune"
+            "GitHub sync returned 0 tickets but #{length(local_flat)} local tickets exist — skipping prune"
           )
         else
           remote_numbers = MapSet.new(tickets, & &1.number)
           state.ticket_repo.delete_not_in(remote_numbers)
         end
 
+        # Single hierarchical load for the broadcast
         persisted_tickets = state.ticket_repo.list_all()
         Phoenix.PubSub.broadcast(state.pubsub, @topic, {:tickets_synced, persisted_tickets})
         state
@@ -194,6 +196,10 @@ defmodule Agents.Sessions.Infrastructure.TicketSyncServer do
 
   defp apply_parent_link(child_id, parent_id, child_number, parent_number, acc, entities) do
     if TicketHierarchyPolicy.circular_reference?(entities, {child_id, parent_id}) do
+      Logger.warning(
+        "Skipping circular reference: ticket ##{child_number} → ##{parent_number} would create a cycle"
+      )
+
       {acc, entities}
     else
       updated_entities =

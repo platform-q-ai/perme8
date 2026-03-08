@@ -36,16 +36,18 @@ defmodule Agents.Sessions.Domain.Policies.TicketEnrichmentPolicy do
   defp enrich_ticket_tree(%Ticket{} = ticket, task_by_ticket_number) do
     task = Map.get(task_by_ticket_number, ticket.number)
 
-    ticket
-    |> apply_enrichment(task)
-    |> Map.update!(:sub_tickets, fn sub_tickets ->
-      Enum.map(sub_tickets || [], &enrich_ticket_tree(&1, task_by_ticket_number))
-    end)
+    enriched = apply_enrichment(ticket, task)
+
+    %{
+      enriched
+      | sub_tickets:
+          Enum.map(enriched.sub_tickets || [], &enrich_ticket_tree(&1, task_by_ticket_number))
+    }
   end
 
   defp build_task_index(tasks) do
     Enum.reduce(tasks, %{}, fn task, acc ->
-      case extract_ticket_number(Map.get(task, :instruction)) do
+      case extract_ticket_number(task.instruction) do
         nil -> acc
         number -> Map.put_new(acc, number, task)
       end

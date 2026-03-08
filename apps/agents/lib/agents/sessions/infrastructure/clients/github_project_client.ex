@@ -169,15 +169,26 @@ defmodule Agents.Sessions.Infrastructure.Clients.GithubProjectClient do
   end
 
   defp enrich_with_sub_issues(issues, token, owner, repo, opts) do
-    Enum.map(issues, fn ticket ->
-      {:ok, sub_issue_numbers} =
-        fetch_sub_issues(owner, repo, ticket.number,
-          token: token,
-          api_base: Keyword.get(opts, :api_base, @api_base)
-        )
+    issues
+    |> Task.async_stream(
+      fn ticket ->
+        {:ok, sub_issue_numbers} =
+          fetch_sub_issues(owner, repo, ticket.number,
+            token: token,
+            api_base: Keyword.get(opts, :api_base, @api_base)
+          )
 
-      Map.put(ticket, :sub_issue_numbers, sub_issue_numbers)
+        Map.put(ticket, :sub_issue_numbers, sub_issue_numbers)
+      end,
+      max_concurrency: 10,
+      timeout: 15_000,
+      on_timeout: :kill_task
+    )
+    |> Enum.map(fn
+      {:ok, ticket} -> ticket
+      {:exit, _reason} -> nil
     end)
+    |> Enum.reject(&is_nil/1)
   end
 
   defp extract_sub_issue_numbers(body) when is_list(body) do

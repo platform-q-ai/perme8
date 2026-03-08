@@ -2053,9 +2053,8 @@ defmodule AgentsWeb.SessionsLive.Index do
 
   defp map_ticket_tree(tickets, fun) when is_list(tickets) do
     Enum.map(tickets, fn ticket ->
-      ticket
-      |> fun.()
-      |> Map.update!(:sub_tickets, &map_ticket_tree(&1 || [], fun))
+      updated = fun.(ticket)
+      %{updated | sub_tickets: map_ticket_tree(updated.sub_tickets || [], fun)}
     end)
   end
 
