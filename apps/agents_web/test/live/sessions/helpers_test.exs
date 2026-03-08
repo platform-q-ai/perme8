@@ -458,8 +458,8 @@ defmodule AgentsWeb.SessionsLive.HelpersTest do
   describe "filter_tickets_by_status/2" do
     test "returns all tickets when status is :all" do
       tickets = [
-        %{task_status: "running", state: "open"},
-        %{task_status: "completed", state: "closed"}
+        %{task_status: "running", state: "open", sub_tickets: []},
+        %{task_status: "completed", state: "closed", sub_tickets: []}
       ]
 
       assert Helpers.filter_tickets_by_status(tickets, :all) == tickets
@@ -467,9 +467,9 @@ defmodule AgentsWeb.SessionsLive.HelpersTest do
 
     test ":open returns only tickets with state open" do
       tickets = [
-        %{task_status: "running", state: "open"},
-        %{task_status: nil, state: "open"},
-        %{task_status: "completed", state: "closed"}
+        %{task_status: "running", state: "open", sub_tickets: []},
+        %{task_status: nil, state: "open", sub_tickets: []},
+        %{task_status: "completed", state: "closed", sub_tickets: []}
       ]
 
       result = Helpers.filter_tickets_by_status(tickets, :open)
@@ -479,14 +479,92 @@ defmodule AgentsWeb.SessionsLive.HelpersTest do
 
     test ":closed returns only tickets with state closed" do
       tickets = [
-        %{task_status: "running", state: "open"},
-        %{task_status: "completed", state: "closed"},
-        %{task_status: nil, state: "closed"}
+        %{task_status: "running", state: "open", sub_tickets: []},
+        %{task_status: "completed", state: "closed", sub_tickets: []},
+        %{task_status: nil, state: "closed", sub_tickets: []}
       ]
 
       result = Helpers.filter_tickets_by_status(tickets, :closed)
       assert length(result) == 2
       assert Enum.all?(result, &(&1.state == "closed"))
+    end
+
+    test ":open keeps closed parent visible when it has open sub-tickets" do
+      tickets = [
+        %{
+          task_status: nil,
+          state: "closed",
+          sub_tickets: [
+            %{state: "open", task_status: nil},
+            %{state: "closed", task_status: nil}
+          ]
+        },
+        %{task_status: nil, state: "open", sub_tickets: []}
+      ]
+
+      result = Helpers.filter_tickets_by_status(tickets, :open)
+      assert length(result) == 2
+
+      # The closed parent should be included with only its open sub-tickets
+      parent = Enum.find(result, &(&1.state == "closed"))
+      assert parent != nil
+      assert length(parent.sub_tickets) == 1
+      assert hd(parent.sub_tickets).state == "open"
+    end
+
+    test ":open excludes closed parent when all sub-tickets are also closed" do
+      tickets = [
+        %{
+          task_status: nil,
+          state: "closed",
+          sub_tickets: [
+            %{state: "closed", task_status: nil}
+          ]
+        }
+      ]
+
+      result = Helpers.filter_tickets_by_status(tickets, :open)
+      assert result == []
+    end
+
+    test ":open filters sub-tickets to only show open ones" do
+      tickets = [
+        %{
+          task_status: nil,
+          state: "open",
+          sub_tickets: [
+            %{state: "open", task_status: nil},
+            %{state: "closed", task_status: nil},
+            %{state: "open", task_status: "running"}
+          ]
+        }
+      ]
+
+      result = Helpers.filter_tickets_by_status(tickets, :open)
+      assert length(result) == 1
+      assert length(hd(result).sub_tickets) == 2
+      assert Enum.all?(hd(result).sub_tickets, &(&1.state == "open"))
+    end
+
+    test ":closed keeps open parent visible when it has closed sub-tickets" do
+      tickets = [
+        %{
+          task_status: nil,
+          state: "open",
+          sub_tickets: [
+            %{state: "closed", task_status: nil},
+            %{state: "open", task_status: nil}
+          ]
+        }
+      ]
+
+      result = Helpers.filter_tickets_by_status(tickets, :closed)
+      assert length(result) == 1
+
+      parent = hd(result)
+      assert parent.state == "open"
+      assert length(parent.sub_tickets) == 1
+      assert hd(parent.sub_tickets).state == "closed"
     end
 
     test "filters by exact task_status" do
@@ -514,7 +592,7 @@ defmodule AgentsWeb.SessionsLive.HelpersTest do
     end
 
     test "returns empty list when no tickets match" do
-      tickets = [%{task_status: "completed", state: "open"}]
+      tickets = [%{task_status: "completed", state: "open", sub_tickets: []}]
       assert Helpers.filter_tickets_by_status(tickets, :queued) == []
     end
   end

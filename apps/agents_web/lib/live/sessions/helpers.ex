@@ -414,11 +414,31 @@ defmodule AgentsWeb.SessionsLive.Helpers do
   def filter_tickets_by_status(tickets, :all), do: tickets
 
   def filter_tickets_by_status(tickets, :open) do
-    Enum.filter(tickets, &(&1.state == "open"))
+    tickets
+    |> Enum.map(fn ticket ->
+      open_subs = Enum.filter(ticket.sub_tickets || [], &(&1.state == "open"))
+
+      cond do
+        ticket.state == "open" -> %{ticket | sub_tickets: open_subs}
+        open_subs != [] -> %{ticket | sub_tickets: open_subs}
+        true -> nil
+      end
+    end)
+    |> Enum.reject(&is_nil/1)
   end
 
   def filter_tickets_by_status(tickets, :closed) do
-    Enum.filter(tickets, &(&1.state == "closed"))
+    tickets
+    |> Enum.map(fn ticket ->
+      closed_subs = Enum.filter(ticket.sub_tickets || [], &(&1.state == "closed"))
+
+      cond do
+        ticket.state == "closed" -> %{ticket | sub_tickets: closed_subs}
+        closed_subs != [] -> %{ticket | sub_tickets: closed_subs}
+        true -> nil
+      end
+    end)
+    |> Enum.reject(&is_nil/1)
   end
 
   def filter_tickets_by_status(tickets, :running) do
