@@ -35,7 +35,7 @@ defmodule EntityRelationshipManager.Plugs.WorkspaceAuthPlug do
 
     verify_api_key_fn = Keyword.get(opts, :verify_api_key, &Identity.verify_api_key/1)
     get_user_fn = Keyword.get(opts, :get_user, &Identity.get_user/1)
-    get_member_fn = Keyword.get(opts, :get_member, &Jarga.Workspaces.get_member/2)
+    get_member_fn = Keyword.get(opts, :get_member, &Identity.get_member/2)
 
     with {:ok, workspace_id} <- validate_workspace_id(workspace_id),
          {:ok, token} <- extract_bearer_token(conn),
