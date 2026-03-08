@@ -8,6 +8,9 @@ defmodule AgentsWeb.SessionsLive.Index do
   import AgentsWeb.SessionsLive.Helpers
 
   alias Agents.Sessions
+  alias Agents.Sessions.Domain.Entities.Ticket
+  alias Agents.Sessions.Domain.Policies.TicketEnrichmentPolicy
+  alias Agents.Sessions.Domain.Policies.TicketHierarchyPolicy
   alias Agents.Sessions.Domain.Entities.QueueSnapshot
   alias Agents.Sessions.Domain.Entities.TodoList
   require Logger
@@ -74,6 +77,7 @@ defmodule AgentsWeb.SessionsLive.Index do
      |> assign(:pending_follow_ups, %{})
      |> assign(:session_search, "")
      |> assign(:status_filter, :open)
+     |> assign(:collapsed_parents, MapSet.new())
      |> assign_session_state()
      |> assign(:form, to_form(%{"instruction" => ""}))}
   end
@@ -101,6 +105,7 @@ defmodule AgentsWeb.SessionsLive.Index do
      |> assign(:active_session_tab, active_tab)
      |> assign(:active_container_id, selected_container_id)
      |> assign(:active_ticket_number, active_ticket_number)
+     |> assign_new(:collapsed_parents, fn -> MapSet.new() end)
      |> assign(:current_task, current_task)
      |> assign(:composing_new, selected_container_id == nil)
      |> assign(:tasks_snapshot, tasks)
@@ -481,7 +486,7 @@ defmodule AgentsWeb.SessionsLive.Index do
   @impl true
   def handle_event("select_ticket", %{"number" => number_str}, socket) do
     number = String.to_integer(number_str)
-    ticket = Enum.find(socket.assigns.tickets, &(&1.number == number))
+    ticket = find_ticket_by_number(socket.assigns.tickets, number)
     container_id = ticket && ticket.associated_container_id
 
     if is_binary(container_id) do
@@ -509,12 +514,26 @@ defmodule AgentsWeb.SessionsLive.Index do
   end
 
   @impl true
+  def handle_event("toggle_parent_collapse", %{"ticket-id" => ticket_id}, socket) do
+    collapsed_parents = socket.assigns[:collapsed_parents] || MapSet.new()
+
+    updated =
+      if MapSet.member?(collapsed_parents, ticket_id) do
+        MapSet.delete(collapsed_parents, ticket_id)
+      else
+        MapSet.put(collapsed_parents, ticket_id)
+      end
+
+    {:noreply, assign(socket, :collapsed_parents, updated)}
+  end
+
+  @impl true
   def handle_event("close_ticket", %{"number" => number_str}, socket) do
     number = String.to_integer(number_str)
     user = socket.assigns.current_scope.user
 
     # Find the ticket to get its associated session container_id
-    ticket = Enum.find(socket.assigns.tickets, &(&1.number == number))
+    ticket = find_ticket_by_number(socket.assigns.tickets, number)
     container_id = ticket && ticket.associated_container_id
 
     # Destroy the associated session if it exists
@@ -524,7 +543,7 @@ defmodule AgentsWeb.SessionsLive.Index do
 
     # Optimistically mark the ticket as closed so it moves out of the Open filter
     tickets =
-      Enum.map(socket.assigns.tickets, fn t ->
+      map_ticket_tree(socket.assigns.tickets, fn t ->
         if t.number == number, do: %{t | state: "closed"}, else: t
       end)
 
@@ -582,7 +601,7 @@ defmodule AgentsWeb.SessionsLive.Index do
   @impl true
   def handle_event("remove_ticket_from_queue", %{"number" => number_str}, socket) do
     number = String.to_integer(number_str)
-    ticket = Enum.find(socket.assigns.tickets, &(&1.number == number))
+    ticket = find_ticket_by_number(socket.assigns.tickets, number)
 
     cond do
       is_nil(ticket) ->
@@ -907,7 +926,7 @@ defmodule AgentsWeb.SessionsLive.Index do
       )
 
     tasks_snapshot = upsert_task_snapshot(socket.assigns[:tasks_snapshot], changed_task)
-    tickets = re_enrich_tickets(socket.assigns.tickets, tasks_snapshot)
+    tickets = TicketEnrichmentPolicy.enrich_all(socket.assigns.tickets, tasks_snapshot)
 
     socket =
       socket
@@ -982,7 +1001,10 @@ defmodule AgentsWeb.SessionsLive.Index do
      socket
      |> assign(:sessions, sessions)
      |> assign(:tasks_snapshot, tasks_snapshot)
-     |> assign(:tickets, re_enrich_tickets(socket.assigns.tickets, tasks_snapshot))
+     |> assign(
+       :tickets,
+       TicketEnrichmentPolicy.enrich_all(socket.assigns.tickets, tasks_snapshot)
+     )
      |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)}
   end
 
@@ -1026,7 +1048,10 @@ defmodule AgentsWeb.SessionsLive.Index do
      |> broadcast_optimistic_new_sessions_snapshot()
      |> assign(:sessions, sessions)
      |> assign(:tasks_snapshot, tasks_snapshot)
-     |> assign(:tickets, re_enrich_tickets(socket.assigns.tickets, tasks_snapshot))
+     |> assign(
+       :tickets,
+       TicketEnrichmentPolicy.enrich_all(socket.assigns.tickets, tasks_snapshot)
+     )
      |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)}
   end
 
@@ -1081,7 +1106,10 @@ defmodule AgentsWeb.SessionsLive.Index do
      socket
      |> assign(:sessions, sessions)
      |> assign(:tasks_snapshot, tasks_snapshot)
-     |> assign(:tickets, re_enrich_tickets(socket.assigns.tickets, tasks_snapshot))
+     |> assign(
+       :tickets,
+       TicketEnrichmentPolicy.enrich_all(socket.assigns.tickets, tasks_snapshot)
+     )
      |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)}
   end
 
@@ -1134,7 +1162,7 @@ defmodule AgentsWeb.SessionsLive.Index do
         )
 
       tickets =
-        re_enrich_tickets(
+        TicketEnrichmentPolicy.enrich_all(
           socket.assigns.tickets,
           socket.assigns[:tasks_snapshot] || []
         )
@@ -1206,7 +1234,10 @@ defmodule AgentsWeb.SessionsLive.Index do
      |> assign(:parent_session_id, current_task && current_task.session_id)
      |> assign(:sessions, sessions)
      |> assign(:tasks_snapshot, tasks_snapshot)
-     |> assign(:tickets, re_enrich_tickets(socket.assigns.tickets, tasks_snapshot))
+     |> assign(
+       :tickets,
+       TicketEnrichmentPolicy.enrich_all(socket.assigns.tickets, tasks_snapshot)
+     )
      |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)}
   end
 
@@ -1799,7 +1830,10 @@ defmodule AgentsWeb.SessionsLive.Index do
      socket
      |> assign(:sessions, sessions)
      |> assign(:tasks_snapshot, tasks_snapshot)
-     |> assign(:tickets, re_enrich_tickets(socket.assigns.tickets, tasks_snapshot))
+     |> assign(
+       :tickets,
+       TicketEnrichmentPolicy.enrich_all(socket.assigns.tickets, tasks_snapshot)
+     )
      |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)
      |> push_event("scroll_to_bottom", %{})
      |> push_event("focus_input", %{})}
@@ -1833,7 +1867,10 @@ defmodule AgentsWeb.SessionsLive.Index do
          |> assign(:parent_session_id, updated.session_id)
          |> assign(:sessions, sessions)
          |> assign(:tasks_snapshot, tasks_snapshot)
-         |> assign(:tickets, re_enrich_tickets(socket.assigns.tickets, tasks_snapshot))
+         |> assign(
+           :tickets,
+           TicketEnrichmentPolicy.enrich_all(socket.assigns.tickets, tasks_snapshot)
+         )
          |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)
          |> push_event("restore_draft", %{text: instruction})
          |> put_flash(:info, flash_message)}
@@ -2014,41 +2051,33 @@ defmodule AgentsWeb.SessionsLive.Index do
     Sessions.list_project_tickets(user.id, ticket_opts)
   end
 
-  # Re-derive ticket task_status fields from the current tasks snapshot.
-  # This avoids a DB round-trip — it re-associates tickets with tasks in memory
-  # using the same logic as Sessions.list_project_tickets/2.
-  defp re_enrich_tickets(tickets, tasks) when is_list(tickets) and is_list(tasks) do
-    task_by_ticket_number =
-      Enum.reduce(tasks, %{}, fn task, acc ->
-        case Sessions.extract_ticket_number(Map.get(task, :instruction)) do
-          nil -> acc
-          number -> Map.put_new(acc, number, task)
-        end
-      end)
-
+  defp map_ticket_tree(tickets, fun) when is_list(tickets) do
     Enum.map(tickets, fn ticket ->
-      task = Map.get(task_by_ticket_number, ticket.number)
-
-      Map.merge(ticket, %{
-        associated_task_id: task && task.id,
-        associated_container_id: task && task.container_id,
-        session_state: task_status_to_session_state(task && task.status),
-        task_status: task && task.status,
-        task_error: task && task.error
-      })
+      ticket
+      |> fun.()
+      |> Map.update!(:sub_tickets, &map_ticket_tree(&1 || [], fun))
     end)
   end
 
-  defp re_enrich_tickets(tickets, _tasks), do: tickets
+  defp all_tickets(tickets) when is_list(tickets) do
+    Enum.flat_map(tickets, fn ticket -> [ticket | all_tickets(ticket.sub_tickets || [])] end)
+  end
 
-  defp task_status_to_session_state(nil), do: "idle"
+  defp find_ticket_by_number(tickets, number) when is_integer(number) do
+    tickets
+    |> all_tickets()
+    |> Enum.find(&(&1.number == number))
+  end
 
-  defp task_status_to_session_state(status)
-       when status in ["pending", "starting", "running", "queued", "awaiting_feedback"],
-       do: "running"
+  defp find_ticket_by_number(_tickets, _number), do: nil
 
-  defp task_status_to_session_state("completed"), do: "completed"
-  defp task_status_to_session_state(_), do: "paused"
+  defp find_parent_ticket(_tickets, %{parent_ticket_id: nil}), do: nil
+
+  defp find_parent_ticket(tickets, %{parent_ticket_id: parent_id}) do
+    tickets
+    |> all_tickets()
+    |> Enum.find(&(&1.id == parent_id))
+  end
 
   defp upsert_task_snapshot(tasks, nil), do: tasks
 
@@ -2067,7 +2096,7 @@ defmodule AgentsWeb.SessionsLive.Index do
   defp upsert_task_snapshot(_tasks, task), do: [task]
 
   defp find_ticket_number_for_container(tickets, container_id) do
-    case Enum.find(tickets, &(&1.associated_container_id == container_id)) do
+    case Enum.find(all_tickets(tickets), &(&1.associated_container_id == container_id)) do
       %{number: number} -> number
       _ -> nil
     end
@@ -2090,7 +2119,7 @@ defmodule AgentsWeb.SessionsLive.Index do
     with title when is_binary(title) <- title,
          number when is_integer(number) and number > 0 <-
            Sessions.extract_ticket_number(title),
-         true <- Enum.any?(tickets, &(&1.number == number)) do
+         true <- Enum.any?(all_tickets(tickets), &(&1.number == number)) do
       number
     else
       _ -> nil
@@ -2100,9 +2129,11 @@ defmodule AgentsWeb.SessionsLive.Index do
   defp next_active_ticket_number([], _current), do: nil
 
   defp next_active_ticket_number(tickets, current) do
-    case Enum.find(tickets, &(&1.number == current)) do
+    flattened_tickets = all_tickets(tickets)
+
+    case Enum.find(flattened_tickets, &(&1.number == current)) do
       %{number: number} -> number
-      _ -> tickets |> List.first() |> then(&(&1 && &1.number))
+      _ -> flattened_tickets |> List.first() |> then(&(&1 && &1.number))
     end
   end
 

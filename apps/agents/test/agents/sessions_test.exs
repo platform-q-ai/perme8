@@ -2,7 +2,7 @@ defmodule Agents.SessionsTest do
   use Agents.DataCase, async: true
 
   alias Agents.Sessions
-  alias Agents.Sessions.Domain.Entities.Task
+  alias Agents.Sessions.Domain.Entities.{Task, Ticket}
   alias Agents.Sessions.Infrastructure.Schemas.ProjectTicketSchema
   alias Agents.Repo
 
@@ -614,36 +614,24 @@ defmodule Agents.SessionsTest do
       })
 
       tickets = [
-        %{
+        Ticket.new(%{
           number: 306,
           title: "Ticket 306",
           body: "Implement queue-first create flow",
-          status: "Backlog",
-          priority: "Need",
-          size: "M",
-          labels: ["agents"]
-        },
-        %{
+          size: "M"
+        }),
+        Ticket.new(%{
           number: 410,
           title: "Ticket 410",
           body: "Ship the browser feature files",
-          status: "Ready",
-          priority: "Want",
-          size: "S",
-          labels: []
-        },
-        %{
-          number: 999,
-          title: "Unlinked",
-          body: nil,
-          status: "Backlog",
-          priority: nil,
-          size: nil,
-          labels: []
-        }
+          size: "S"
+        }),
+        Ticket.new(%{number: 999, title: "Unlinked"})
       ]
 
       result = Sessions.list_project_tickets(user.id, tickets: tickets)
+
+      assert Enum.all?(result, &match?(%Ticket{}, &1))
 
       ticket_306 = Enum.find(result, &(&1.number == 306))
       ticket_410 = Enum.find(result, &(&1.number == 410))
@@ -687,9 +675,38 @@ defmodule Agents.SessionsTest do
 
       # All open issues are returned (no status filtering)
       assert length(result) == 3
+      assert Enum.all?(result, &match?(%Ticket{}, &1))
       assert Enum.find(result, &(&1.number == 306)).session_state == "running"
       assert Enum.find(result, &(&1.number == 410)).session_state == "idle"
       assert Enum.find(result, &(&1.number == 999)).session_state == "idle"
+    end
+
+    test "list_project_tickets/1 returns root tickets with enriched nested sub_tickets" do
+      user = user_fixture()
+
+      parent = insert_project_ticket(%{number: 500, title: "Parent ticket"})
+
+      _child =
+        insert_project_ticket(%{number: 501, title: "Child ticket", parent_ticket_id: parent.id})
+
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "continue work on #501",
+        container_id: "container-501",
+        status: "running"
+      })
+
+      [parent_ticket] = Sessions.list_project_tickets(user.id)
+
+      assert %Ticket{} = parent_ticket
+      assert parent_ticket.number == 500
+      assert length(parent_ticket.sub_tickets) == 1
+
+      [sub_ticket] = parent_ticket.sub_tickets
+      assert %Ticket{} = sub_ticket
+      assert sub_ticket.number == 501
+      assert sub_ticket.session_state == "running"
+      assert sub_ticket.associated_container_id == "container-501"
     end
   end
 
@@ -703,7 +720,8 @@ defmodule Agents.SessionsTest do
         labels: attrs[:labels] || [],
         url: attrs[:url] || "https://github.com/platform-q-ai/perme8/issues/#{attrs[:number]}",
         sync_state: attrs[:sync_state] || "synced",
-        created_at: attrs[:created_at] || DateTime.utc_now() |> DateTime.truncate(:second)
+        created_at: attrs[:created_at] || DateTime.utc_now() |> DateTime.truncate(:second),
+        parent_ticket_id: attrs[:parent_ticket_id]
       }
 
     {:ok, ticket} =

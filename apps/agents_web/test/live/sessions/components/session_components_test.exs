@@ -4,6 +4,7 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponentsTest do
   import Phoenix.LiveViewTest
 
   alias AgentsWeb.SessionsLive.Components.SessionComponents
+  alias Agents.Sessions.Domain.Entities.Ticket
 
   describe "status_badge/1" do
     test "renders idle badge" do
@@ -266,6 +267,49 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponentsTest do
       assert html =~ "MEM"
       assert html =~ "45%"
       assert html =~ "512M"
+    end
+  end
+
+  describe "ticket_card/1" do
+    test "renders data-ticket-depth attribute" do
+      ticket = Ticket.new(%{number: 1, title: "Parent"})
+
+      html =
+        render_component(&SessionComponents.ticket_card/1,
+          ticket: ticket,
+          variant: :triage,
+          depth: 1
+        )
+
+      assert html =~ ~s(data-ticket-depth="1")
+    end
+
+    test "applies subticket-card class for depth greater than zero" do
+      ticket = Ticket.new(%{number: 2, title: "Child"})
+
+      html =
+        render_component(&SessionComponents.ticket_card/1,
+          ticket: ticket,
+          variant: :triage,
+          depth: 1
+        )
+
+      assert html =~ "subticket-card"
+      assert html =~ "ml-4"
+    end
+
+    test "renders sub-issue badge when ticket has sub_tickets" do
+      ticket =
+        Ticket.new(%{
+          number: 3,
+          title: "Parent",
+          sub_tickets: [Ticket.new(%{number: 31, title: "Child"})]
+        })
+
+      html = render_component(&SessionComponents.ticket_card/1, ticket: ticket, variant: :triage)
+
+      assert html =~ "1 sub-issues"
+      assert html =~ ~s(data-has-subissues="true")
     end
   end
 end
