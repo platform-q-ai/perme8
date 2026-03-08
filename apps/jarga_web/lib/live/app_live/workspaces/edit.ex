@@ -7,7 +7,6 @@ defmodule JargaWeb.AppLive.Workspaces.Edit do
 
   import ChatWeb.ChatLive.MessageHandlers
 
-  alias Jarga.Workspaces
   alias JargaWeb.Layouts
 
   @impl true
@@ -76,8 +75,8 @@ defmodule JargaWeb.AppLive.Workspaces.Edit do
     user = socket.assigns.current_scope.user
 
     # This will raise if user is not a member
-    workspace = Workspaces.get_workspace_by_slug!(user, workspace_slug)
-    changeset = Workspaces.change_workspace(workspace)
+    workspace = Identity.get_workspace_by_slug!(user, workspace_slug)
+    changeset = Identity.change_workspace(workspace)
 
     {:ok,
      socket
@@ -90,7 +89,7 @@ defmodule JargaWeb.AppLive.Workspaces.Edit do
     user = socket.assigns.current_scope.user
     workspace_id = socket.assigns.workspace.id
 
-    case Workspaces.update_workspace(user, workspace_id, workspace_params) do
+    case Identity.update_workspace(user, workspace_id, workspace_params) do
       {:ok, workspace} ->
         {:noreply,
          socket

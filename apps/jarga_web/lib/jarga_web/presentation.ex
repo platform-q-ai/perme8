@@ -49,7 +49,7 @@ defmodule JargaWeb.Presentation do
   ## Dependency Rules
 
   The presentation layer:
-  - MAY depend on core contexts (Jarga.Accounts, Jarga.Workspaces, etc.)
+  - MAY depend on core contexts (Jarga.Accounts, Identity, etc.)
   - MAY use Phoenix/LiveView framework modules
   - MUST NOT be depended upon by core contexts
   - MUST NOT contain business logic (delegate to use cases)

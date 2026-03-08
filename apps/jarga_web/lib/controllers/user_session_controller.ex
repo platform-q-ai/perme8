@@ -20,7 +20,7 @@ defmodule JargaWeb.UserSessionController do
 
         # Create notifications for any pending workspace invitations
         # This ensures new users see invitations sent before they signed up
-        Jarga.Workspaces.create_notifications_for_pending_invitations(user)
+        Identity.create_notifications_for_pending_invitations(user)
 
         conn
         |> put_flash(:info, info)

@@ -8,7 +8,7 @@ defmodule JargaWeb.AppLive.Projects.Edit do
   import ChatWeb.ChatLive.MessageHandlers
   import JargaWeb.Live.PermissionsHelper
 
-  alias Jarga.{Workspaces, Projects}
+  alias Jarga.Projects
   alias JargaWeb.Layouts
 
   @impl true
@@ -79,7 +79,7 @@ defmodule JargaWeb.AppLive.Projects.Edit do
     user = socket.assigns.current_scope.user
 
     with {:ok, workspace, current_member} <-
-           Workspaces.get_workspace_and_member_by_slug(user, workspace_slug),
+           Identity.get_workspace_and_member_by_slug(user, workspace_slug),
          {:ok, project} <- Projects.get_project_by_slug(user, workspace.id, project_slug),
          true <- can_edit_project?(current_member, project, user) do
       changeset = Projects.change_project(project)

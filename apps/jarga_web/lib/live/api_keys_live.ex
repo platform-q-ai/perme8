@@ -654,7 +654,7 @@ defmodule JargaWeb.ApiKeysLive do
   # Private helper functions
 
   defp get_user_workspaces(user) do
-    Jarga.Workspaces.list_workspaces_for_user(user)
+    Identity.list_workspaces_for_user(user)
   end
 
   defp get_selected_workspaces(params) do
