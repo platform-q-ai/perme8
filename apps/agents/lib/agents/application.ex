@@ -34,6 +34,8 @@ defmodule Agents.Application do
       UseCases.SearchKnowledgeEntries,
       UseCases.TraverseKnowledgeGraph,
       UseCases.CreateKnowledgeRelationship,
+      # Tool discovery use cases
+      UseCases.SearchTools,
       # Jarga use cases
       UseCases.ListWorkspaces,
       UseCases.GetWorkspace,

@@ -9,10 +9,17 @@ defmodule Agents.Infrastructure.Mcp.ServerTest do
       assert {:init, 2} in functions
     end
 
-    test "registers all 14 tool components (6 knowledge + 8 jarga)" do
+    test "registers all 15 tool components (6 knowledge + 8 jarga + 1 tools)" do
       components = Server.__components__(:tool)
 
-      assert length(components) == 14
+      assert length(components) == 15
+    end
+
+    test "registers tools.search tool" do
+      tools = Server.__components__(:tool)
+      names = Enum.map(tools, & &1.name)
+
+      assert "tools.search" in names
     end
 
     test "registers knowledge.search tool" do

@@ -21,10 +21,10 @@ defmodule Agents.Infrastructure.Mcp.ToolProvider.LoaderTest do
     # Application.compile_env/3 and emits component() calls.
     # We test this indirectly through the Server module which uses the Loader.
 
-    test "Server.__components__(:tool) returns all 14 tools from configured providers" do
+    test "Server.__components__(:tool) returns all 15 tools from configured providers" do
       components = Server.__components__(:tool)
 
-      assert length(components) == 14
+      assert length(components) == 15
     end
 
     test "Server includes all knowledge tools loaded by KnowledgeToolProvider" do

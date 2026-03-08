@@ -399,6 +399,18 @@ defmodule Agents do
   end
 
   # ---------------------------------------------------------------------------
+  # Tool Discovery MCP — search/discover registered MCP tools
+  # ---------------------------------------------------------------------------
+
+  alias Agents.Application.UseCases.SearchTools
+
+  @doc "Searches registered MCP tools by keyword and/or groups by provider."
+  @spec search_tools(map(), keyword()) :: SearchTools.result()
+  def search_tools(params \\ %{}, opts \\ []) do
+    SearchTools.execute(params, opts)
+  end
+
+  # ---------------------------------------------------------------------------
   # Jarga MCP — workspace-scoped project & document tools via MCP
   # ---------------------------------------------------------------------------
 

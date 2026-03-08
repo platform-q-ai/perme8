@@ -139,8 +139,14 @@ else
   git clone --depth 1 "https://github.com/platform-q-ai/skills.git" "$HOME/.claude/skills" || echo "warn: skills repo not available, skipping"
 fi
 
-# Copy opencode config into the repo root
-cp /workspace/opencode.json /workspace/perme8/opencode.json
+# Copy opencode config into the repo root, substituting MCP connection vars.
+# PERME8_MCP_URL defaults to the host's MCP server via Docker's host gateway.
+# PERME8_MCP_API_KEY should be set to a valid API key for MCP auth.
+MCP_URL="${PERME8_MCP_URL:-http://host.docker.internal:4007/}"
+MCP_KEY="${PERME8_MCP_API_KEY:-}"
+sed -e "s|__PERME8_MCP_URL__|${MCP_URL}|g" \
+    -e "s|__PERME8_MCP_API_KEY__|${MCP_KEY}|g" \
+    /workspace/opencode.json > /workspace/perme8/opencode.json
 
 # ---- Start embedded PostgreSQL ----
 
