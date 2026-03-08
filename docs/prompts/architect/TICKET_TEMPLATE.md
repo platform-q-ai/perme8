@@ -1,34 +1,34 @@
-# Product Requirements Document Template
+# Ticket Template
 
-This template is used by the `prd` agent to create comprehensive Product Requirements Documents that feed into the `architect` agent for implementation planning.
+This template is used by the `ticket` agent to create comprehensive tickets that feed into the `architect` agent for implementation planning.
 
 ## Purpose
 
-A PRD serves as a single source of truth for feature requirements, capturing:
+A ticket serves as a single source of truth for feature requirements, capturing:
 - **What** needs to be built (functional requirements)
 - **Why** it's being built (business value, user needs)
 - **Who** it's for (target users, stakeholders)
 - **Constraints** (technical, business, security)
 - **Success criteria** (how we measure success)
 
-The PRD does NOT specify **how** to build it (that's the architect's job).
+The ticket does NOT specify **how** to build it (that's the architect's job).
 
-## When to Create a PRD
+## When to Create a Ticket
 
-**Create a PRD when:**
+**Create a ticket when:**
 - Feature requirements are unclear or complex
 - Multiple stakeholders need alignment
 - Feature spans multiple systems or contexts
 - You want to ensure nothing is missed
 
-**Skip the PRD when:**
+**Skip the ticket when:**
 - Requirements are simple and well-understood
 - It's a small bug fix or minor enhancement
 - You're iterating on existing functionality
 
 ---
 
-## PRD Template Structure
+## Ticket Template Structure
 
 ### 1. Executive Summary
 
@@ -359,7 +359,7 @@ Features or enhancements to consider for **future iterations** (not MVP):
 
 ### 13. Codebase Context
 
-*(Filled in by prd agent after researching codebase)*
+*(Filled in by ticket agent after researching codebase)*
 
 #### Existing Patterns
 
@@ -421,7 +421,7 @@ Questions that need resolution before implementation begins:
 
 ## Document Metadata
 
-**Document Prepared By**: PRD Agent
+**Document Prepared By**: Ticket Agent
 **Date Created**: [YYYY-MM-DD]
 **Last Updated**: [YYYY-MM-DD]
 **Version**: [1.0]
@@ -431,18 +431,18 @@ Questions that need resolution before implementation begins:
 
 ## How to Use This Template
 
-### For the PRD Agent
+### For the Ticket Agent
 
 1. **Gather requirements** through structured questioning (AskUserQuestion tool)
 2. **Research codebase** using Grep/Glob/Read tools
 3. **Fill in each section** with specifics from user responses and research
 4. **Flag open questions** that need resolution
-5. **Present complete PRD** to user for approval
+5. **Present complete ticket** to user for approval
 6. **Hand off to architect** once approved
 
 ### For the Architect Agent
 
-1. **Read the PRD** as source of truth for requirements
+1. **Read the ticket** as source of truth for requirements
 2. **Focus on sections**:
    - Functional Requirements (what to build)
    - Technical Requirements (constraints)
@@ -454,14 +454,14 @@ Questions that need resolution before implementation begins:
 
 ### For Implementation Agents (phoenix-tdd, typescript-tdd)
 
-- **Refer to PRD** for context on "why" this feature exists
+- **Refer to ticket** for context on "why" this feature exists
 - **Use acceptance criteria** to guide test writing
 - **Check edge cases** section when writing error handling tests
 - **Validate against success metrics** to ensure feature meets goals
 
 ---
 
-## Example PRD Excerpt
+## Example Ticket Excerpt
 
 Here's an abbreviated example for a "workspace member invitation" feature:
 
@@ -516,4 +516,4 @@ so that they can quickly join and collaborate without manual setup.
 
 ---
 
-This template ensures comprehensive requirements gathering while maintaining clear boundaries between "what to build" (PRD) and "how to build it" (architect's implementation plan).
+This template ensures comprehensive requirements gathering while maintaining clear boundaries between "what to build" (ticket) and "how to build it" (architect's implementation plan).

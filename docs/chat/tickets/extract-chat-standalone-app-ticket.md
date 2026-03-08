@@ -1,4 +1,4 @@
-# PRD: Extract Chat into Standalone Umbrella App
+# Ticket: Extract Chat into Standalone Umbrella App
 
 ## Summary
 - **Problem**: Chat is a bounded context currently embedded inside the `jarga` app. It violates the Standalone App Principle by borrowing `Identity.Repo`, coupling to Identity/Jarga schemas via `belongs_to` associations, and embedding Jarga-specific concepts (documents, notes, projects) into its use cases. This makes it impossible to use chat independently and blocks future multi-user chat features (#276).

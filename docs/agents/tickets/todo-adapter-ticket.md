@@ -1,4 +1,4 @@
-# PRD: Agent Session Todo Adapter for UI Progress Bar Pipeline
+# Ticket: Agent Session Todo Adapter for UI Progress Bar Pipeline
 
 **GitHub Issue**: [#273](https://github.com/platform-q-ai/perme8/issues/273)
 **Sub-Issues**: [#253](https://github.com/platform-q-ai/perme8/issues/253) (progress bar UI)
@@ -251,7 +251,7 @@
 
 ## Out of Scope
 
-- **Full step pipeline execution engine** — This PRD covers the adapter layer and progress bar. The pipeline orchestrator that automatically triggers next steps based on todo completion is tracked as a separate P2 effort.
+- **Full step pipeline execution engine** — This ticket covers the adapter layer and progress bar. The pipeline orchestrator that automatically triggers next steps based on todo completion is tracked as a separate P2 effort.
 - **Custom step definitions by users** — Users cannot manually create or edit todo items. Todos are created by the agent through SSE events or the MCP tool.
 - **Historical todo analytics** — No aggregation, dashboards, or reporting on todo completion rates across sessions.
 - **Multi-session todo lists** — Each task has its own isolated todo list. Cross-session todo coordination is not supported.

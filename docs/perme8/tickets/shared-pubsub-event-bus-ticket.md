@@ -1,4 +1,4 @@
-# PRD: Shared PubSub Event Bus
+# Ticket: Shared PubSub Event Bus
 
 **Ticket**: #37 — Make all apps event driven via shared PubSub event bus
 **Status**: Implemented (Parts 1 + 2a + 2b + 2c complete; P1/P2 enhancements deferred)
@@ -418,7 +418,7 @@ At no point should the system be in a broken state. Each phase is independently 
 - **DI via opts pattern** — already used in every use case (`opts[:notifier]`), trivially extends to `opts[:event_bus]`
 - **GenServer supervision** — OTP supervisors already manage processes in every app
 - **Ecto/PostgreSQL** — available for event_log persistence (P1)
-- **Existing event-driven architecture plan** — `docs/plans/event-driven-architecture.md` contains detailed implementation design that aligns with this PRD
+- **Existing event-driven architecture plan** — `docs/plans/event-driven-architecture.md` contains detailed implementation design that aligns with this ticket
 
 ---
 
@@ -467,9 +467,9 @@ At no point should the system be in a broken state. Each phase is independently 
 ## Open Questions
 
 - [ ] **Event infrastructure location**: Should `Perme8.Events` live inside the `jarga` app (leveraging existing dependency graph) or in a new `perme8_events` umbrella app? The former is simpler but semantically odd (event infrastructure in a domain app). The architect should decide.
-- [ ] **Identity migration scope**: The ticket lists 6 apps but not identity. Should identity's notifiers be left completely untouched, or should they adopt the event struct format (without switching to EventBus)? This PRD recommends P1 schema adoption.
-- [ ] **Chat event granularity**: Should `ChatResponseReceived` (LLM response) be a separate event from `ChatMessageSent`? Both represent messages but from different actors (user vs. LLM). This PRD treats LLM responses as out of scope for the initial migration since they're streamed incrementally.
-- [ ] **Event persistence priority**: The existing plan (docs/plans/event-driven-architecture.md) includes event persistence in Part 1. This PRD moves it to P1/Part 3 to reduce initial scope. Should persistence be P0?
+- [ ] **Identity migration scope**: The ticket lists 6 apps but not identity. Should identity's notifiers be left completely untouched, or should they adopt the event struct format (without switching to EventBus)? This ticket recommends P1 schema adoption.
+- [ ] **Chat event granularity**: Should `ChatResponseReceived` (LLM response) be a separate event from `ChatMessageSent`? Both represent messages but from different actors (user vs. LLM). This ticket treats LLM responses as out of scope for the initial migration since they're streamed incrementally.
+- [ ] **Event persistence priority**: The existing plan (docs/plans/event-driven-architecture.md) includes event persistence in Part 1. This ticket moves it to P1/Part 3 to reduce initial scope. Should persistence be P0?
 - [ ] **Wildcard topic subscriptions**: Does Phoenix.PubSub support wildcard topic patterns like `"events:*"`? If not, EventHandler may need to subscribe to explicit topic lists. The architect should verify and design accordingly.
 - [ ] **ERM dependency graph**: ERM is currently standalone. Adding event emission means it needs access to `Perme8.Events`. If events live in `jarga`, this creates a new dependency `entity_relationship_manager -> jarga`. Is this acceptable, or does this argue for a separate `perme8_events` app?
 

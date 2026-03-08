@@ -197,7 +197,7 @@ Recommended sequence based on coupling and complexity:
 | 4 | **Components** | Pending -- tightest coupling to documents |
 
 Each extraction follows the same playbook:
-1. Write a PRD for the extraction
+1. Write a ticket for the extraction
 2. Create an architectural plan with TDD phases
 3. Create the new umbrella app with its own boundary config
 4. Move domain, application, and infrastructure layers

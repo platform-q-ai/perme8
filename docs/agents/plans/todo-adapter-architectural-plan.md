@@ -2,7 +2,7 @@
 
 **GitHub Issue**: [#273](https://github.com/platform-q-ai/perme8/issues/273)
 **Sub-Issues**: [#253](https://github.com/platform-q-ai/perme8/issues/253) (progress bar UI)
-**PRD**: `docs/agents/prds/todo-adapter-prd.md`
+**Ticket**: `docs/agents/tickets/todo-adapter-ticket.md`
 **BDD Feature**: `apps/agents_web/test/features/sessions/todo-progress-bar.browser.feature`
 
 ## Overview
@@ -103,7 +103,7 @@ Build the pure domain models and the behaviour port. All domain tests run `async
   - Pure struct: `defstruct items: []`
   - `@type t :: %__MODULE__{items: [TodoItem.t()]}`
   - Functions: `new/1`, `from_sse_event/1`, `progress_percentage/1`, `completed_count/1`, `total_count/1`, `progress_summary/1`, `current_step/1`, `all_completed?/1`, `to_maps/1`, `from_maps/1`
-  - `from_sse_event/1` must handle the opencode SSE payload shape. Based on the PRD, the `todo.updated` event has properties containing todo items with id, title, status. The exact shape may need refinement during implementation — log the catch-all events first if needed.
+  - `from_sse_event/1` must handle the opencode SSE payload shape. Based on the ticket, the `todo.updated` event has properties containing todo items with id, title, status. The exact shape may need refinement during implementation — log the catch-all events first if needed.
   - No Ecto, no I/O
 
 - [x] ⏸ **REFACTOR**: Extract shared validation, ensure consistent error tuples
@@ -125,7 +125,7 @@ Build the pure domain models and the behaviour port. All domain tests run `async
     - `@callback clear_todos(task_id :: String.t()) :: :ok`
   - Types: `@type task_id :: String.t()`
 
-- [x] ⏸ **REFACTOR**: Verify callbacks match PRD contract; add `@moduledoc` with usage docs
+- [x] ⏸ **REFACTOR**: Verify callbacks match ticket contract; add `@moduledoc` with usage docs
 
 ### Step 1.4: Register Mox Mock for TodoAdapterBehaviour
 
@@ -449,7 +449,7 @@ Wire up the LiveView to receive, display, and restore todo state.
 
 ### SSE Event Payload Shape
 
-The exact shape of `todo.updated` events from opencode needs to be captured during implementation. Based on the opencode TodoWrite tool source and the PRD, the expected shape is:
+The exact shape of `todo.updated` events from opencode needs to be captured during implementation. Based on the opencode TodoWrite tool source and the ticket, the expected shape is:
 
 ```json
 {

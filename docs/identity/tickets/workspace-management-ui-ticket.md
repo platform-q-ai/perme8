@@ -1,4 +1,4 @@
-# PRD: Workspace Management UI — Invites, Roles & Members
+# Ticket: Workspace Management UI — Invites, Roles & Members
 
 ## Summary
 - **Problem**: The Identity app is at 90% completion. The workspace management UI (LiveView layer) is the last remaining piece needed to ship workspace management. The domain layer, application layer (use cases), and infrastructure layer are fully built — only the interface layer needs implementation.

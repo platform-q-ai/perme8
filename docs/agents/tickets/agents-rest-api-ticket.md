@@ -1,4 +1,4 @@
-# PRD: Agents REST API
+# Ticket: Agents REST API
 
 **Ticket:** #52 — Build agents REST API
 **App:** agents_api (new umbrella app)

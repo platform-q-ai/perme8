@@ -1,7 +1,7 @@
 # Feature: Extract Notifications into Standalone App (Phase 1)
 
 **Ticket**: #38
-**PRD**: `docs/notifications/prds/extract-notifications-prd.md`
+**Ticket**: `docs/notifications/tickets/extract-notifications-ticket.md`
 **BDD Features**: `apps/jarga_web/test/features/notifications/notifications.browser.feature` (11 scenarios), `apps/jarga_web/test/features/notifications/notifications.security.feature` (21 scenarios)
 
 ## Overview
@@ -23,13 +23,13 @@ Extract the notifications bounded context from `apps/jarga/lib/notifications/` (
 | Decision | Choice | Reference |
 |----------|--------|-----------|
 | Repo | `Notifications.Repo` → same shared Postgres DB | Matches `Agents.Repo` pattern |
-| Action handling | Removed from Notifications; jarga_web calls Identity directly | PRD §1.5 |
-| `NotificationActionTaken` event | Removed entirely | PRD §1.2 |
-| Schema `user_id` | Raw UUID field, no `belongs_to` to Identity | PRD §1.4 |
-| Migration | No data migration — same DB, just new Repo | PRD §1.9 |
-| NotificationBell | Stays in jarga_web, calls `Notifications` facade | PRD §1.7 |
-| WorkspaceInvitationSubscriber | Moves to `notifications` app | PRD §1.4 |
-| Boundary config | `deps: [Notifications.Repo, Perme8.Events]` | PRD §1.1 |
+| Action handling | Removed from Notifications; jarga_web calls Identity directly | Ticket §1.5 |
+| `NotificationActionTaken` event | Removed entirely | Ticket §1.2 |
+| Schema `user_id` | Raw UUID field, no `belongs_to` to Identity | Ticket §1.4 |
+| Migration | No data migration — same DB, just new Repo | Ticket §1.9 |
+| NotificationBell | Stays in jarga_web, calls `Notifications` facade | Ticket §1.7 |
+| WorkspaceInvitationSubscriber | Moves to `notifications` app | Ticket §1.4 |
+| Boundary config | `deps: [Notifications.Repo, Perme8.Events]` | Ticket §1.1 |
 
 ## Reference Implementations
 

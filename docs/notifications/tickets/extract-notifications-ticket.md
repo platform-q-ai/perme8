@@ -1,4 +1,4 @@
-# PRD: Extract Notifications into Standalone App
+# Ticket: Extract Notifications into Standalone App
 
 **Ticket**: #38
 **Status**: 10% complete (existing bounded context in Jarga)

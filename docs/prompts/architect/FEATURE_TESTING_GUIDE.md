@@ -118,7 +118,7 @@ Feature: Build Static Site
 
 ## Generating Feature Files
 
-Use the **BDD Feature Translator** skill to generate domain-specific feature files from a PRD. It delegates to specialized subagents:
+Use the **BDD Feature Translator** skill to generate domain-specific feature files from a ticket. It delegates to specialized subagents:
 
 - `exo-bdd-http` — translates to HTTP adapter perspective
 - `exo-bdd-browser` — translates to browser adapter perspective

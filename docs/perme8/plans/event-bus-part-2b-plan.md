@@ -783,7 +783,7 @@ end
 ## What's Deferred to Future Tickets
 
 - **Full notifier module removal** — Deleting notifier modules, behaviours, and `opts[:notifier]` injection from use cases. This ticket removes PubSub broadcasts but keeps the notifier module structure for email sending.
-- **Event persistence** (EventStore, event_log table) — P1 from the PRD
-- **Event registry + telemetry** — P1 from the PRD
+- **Event persistence** (EventStore, event_log table) — P1 from the ticket
+- **Event registry + telemetry** — P1 from the ticket
 - **Identity notifier full migration** — Converting Identity use cases to use `opts[:event_bus]` instead of `opts[:notifier]`
-- **Event replay and sagas** — P2 from the PRD
+- **Event replay and sagas** — P2 from the ticket
