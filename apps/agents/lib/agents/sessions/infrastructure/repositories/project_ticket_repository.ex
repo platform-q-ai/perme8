@@ -11,13 +11,26 @@ defmodule Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository do
   alias Agents.Sessions.Infrastructure.Schemas.ProjectTicketSchema
 
   @doc """
-  Lists all persisted tickets, ordered by position descending (highest first).
-  New tickets are appended with the next highest position, so they appear at
-  the bottom of the UI. "Send to top" gives a ticket the highest position;
-  "send to bottom" gives it the lowest.
+  Lists root-level tickets with one-level sub-tickets preloaded.
   """
   @spec list_all() :: [ProjectTicketSchema.t()]
   def list_all do
+    sub_tickets_query =
+      ProjectTicketSchema
+      |> order_by([ticket], desc: ticket.position, desc: ticket.created_at)
+
+    ProjectTicketSchema
+    |> where([ticket], is_nil(ticket.parent_ticket_id))
+    |> order_by([ticket], desc: ticket.position, desc: ticket.created_at)
+    |> preload([ticket], sub_tickets: ^sub_tickets_query)
+    |> Repo.all()
+  end
+
+  @doc """
+  Lists all persisted tickets without hierarchy filtering.
+  """
+  @spec list_all_flat() :: [ProjectTicketSchema.t()]
+  def list_all_flat do
     ProjectTicketSchema
     |> order_by([ticket], desc: ticket.position, desc: ticket.created_at)
     |> Repo.all()
@@ -172,6 +185,40 @@ defmodule Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository do
     |> Repo.insert_or_update()
   end
 
+  @doc """
+  Links child tickets to parent tickets by ticket number.
+
+  Accepts `%{child_number => parent_number}` and skips entries where either
+  side is not present locally.
+  """
+  @spec link_sub_tickets(map()) :: :ok
+  def link_sub_tickets(parent_child_map) when is_map(parent_child_map) do
+    tickets_by_number =
+      ProjectTicketSchema
+      |> select([ticket], {ticket.number, ticket.id})
+      |> Repo.all()
+      |> Map.new()
+
+    Enum.each(parent_child_map, fn {child_number, parent_number} ->
+      child_id = Map.get(tickets_by_number, child_number)
+
+      parent_id =
+        if is_nil(parent_number) do
+          nil
+        else
+          Map.get(tickets_by_number, parent_number)
+        end
+
+      if child_id && (is_nil(parent_number) || parent_id) do
+        ProjectTicketSchema
+        |> where([ticket], ticket.id == ^child_id)
+        |> Repo.update_all(set: [parent_ticket_id: parent_id])
+      end
+    end)
+
+    :ok
+  end
+
   defp next_position do
     case Repo.one(from(t in ProjectTicketSchema, select: max(t.position))) do
       nil -> 0
@@ -179,7 +226,7 @@ defmodule Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository do
     end
   end
 
-  @remote_attr_keys ~w(number title body labels url state created_at)a
+  @remote_attr_keys ~w(number title body labels url state created_at parent_ticket_id)a
 
   defp normalize_remote_attrs(attrs) do
     normalized =
