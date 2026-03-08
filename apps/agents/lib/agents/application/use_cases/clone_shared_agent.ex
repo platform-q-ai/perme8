@@ -14,7 +14,7 @@ defmodule Agents.Application.UseCases.CloneSharedAgent do
 
   @default_agent_repo Agents.Infrastructure.Repositories.AgentRepository
   @default_workspace_agent_repo Agents.Infrastructure.Repositories.WorkspaceAgentRepository
-  @default_workspaces Jarga.Workspaces
+  @default_workspaces Identity
 
   @doc """
   Clones a shared agent to the user's personal library.
@@ -26,7 +26,7 @@ defmodule Agents.Application.UseCases.CloneSharedAgent do
     - `:workspace_id` - Optional workspace context for permission check
     - `:agent_repo` - Repository module for agents (default: AgentRepository)
     - `:workspace_agent_repo` - Repository for workspace-agent associations (default: WorkspaceAgentRepository)
-    - `:workspaces` - Workspaces context module (default: Jarga.Workspaces)
+    - `:workspaces` - Workspaces context module (default: Identity)
 
   ## Returns
   - `{:ok, agent}` - Successfully cloned agent
