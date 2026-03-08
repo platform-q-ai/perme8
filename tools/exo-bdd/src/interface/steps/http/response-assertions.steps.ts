@@ -71,6 +71,11 @@ export function assertBodyPathContains(ctx: ResponseAssertionsContext, jsonPath:
   expect(actual).toContain(ctx.interpolate(expectedSubstring))
 }
 
+export function assertBodyPathNotContains(ctx: ResponseAssertionsContext, jsonPath: string, unexpectedSubstring: string) {
+  const actual = String(ctx.http.getBodyPath(jsonPath))
+  expect(actual).not.toContain(ctx.interpolate(unexpectedSubstring))
+}
+
 export function assertBodyPathMatches(ctx: ResponseAssertionsContext, jsonPath: string, pattern: string) {
   const actual = String(ctx.http.getBodyPath(jsonPath))
   expect(actual).toMatch(new RegExp(pattern))
@@ -177,6 +182,7 @@ Then<TestWorld>('the response body path {string} should equal {int}', function (
 Then<TestWorld>('the response body path {string} should exist', function (p: string) { assertBodyPathExists(this, p) })
 Then<TestWorld>('the response body path {string} should not exist', function (p: string) { assertBodyPathNotExists(this, p) })
 Then<TestWorld>('the response body path {string} should contain {string}', function (p: string, s: string) { assertBodyPathContains(this, p, s) })
+Then<TestWorld>('the response body path {string} should not contain {string}', function (p: string, s: string) { assertBodyPathNotContains(this, p, s) })
 Then<TestWorld>('the response body path {string} should match {string}', function (p: string, s: string) { assertBodyPathMatches(this, p, s) })
 Then<TestWorld>('the response body path {string} should have {int} items', function (p: string, n: number) { assertBodyPathHasItems(this, p, n) })
 Then<TestWorld>('the response body should be valid JSON', function () { assertBodyIsValidJson(this) })
