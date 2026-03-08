@@ -22,13 +22,13 @@ Extract the notifications bounded context from `apps/jarga/lib/notifications/` (
 | Decision | Choice | Reference |
 |----------|--------|-----------|
 | Repo | `Notifications.Repo` → same shared Postgres DB | Matches `Agents.Repo` pattern |
-| Action handling | Removed from Notifications; jarga_web calls Identity directly | Ticket §1.5 |
-| `NotificationActionTaken` event | Removed entirely | Ticket §1.2 |
-| Schema `user_id` | Raw UUID field, no `belongs_to` to Identity | Ticket §1.4 |
-| Migration | No data migration — same DB, just new Repo | Ticket §1.9 |
-| NotificationBell | Stays in jarga_web, calls `Notifications` facade | Ticket §1.7 |
-| WorkspaceInvitationSubscriber | Moves to `notifications` app | Ticket §1.4 |
-| Boundary config | `deps: [Notifications.Repo, Perme8.Events]` | Ticket §1.1 |
+| Action handling | Removed from Notifications; jarga_web calls Identity directly | [#38](https://github.com/platform-q-ai/perme8/issues/38) |
+| `NotificationActionTaken` event | Removed entirely | [#38](https://github.com/platform-q-ai/perme8/issues/38) |
+| Schema `user_id` | Raw UUID field, no `belongs_to` to Identity | [#38](https://github.com/platform-q-ai/perme8/issues/38) |
+| Migration | No data migration — same DB, just new Repo | [#38](https://github.com/platform-q-ai/perme8/issues/38) |
+| NotificationBell | Stays in jarga_web, calls `Notifications` facade | [#38](https://github.com/platform-q-ai/perme8/issues/38) |
+| WorkspaceInvitationSubscriber | Moves to `notifications` app | [#38](https://github.com/platform-q-ai/perme8/issues/38) |
+| Boundary config | `deps: [Notifications.Repo, Perme8.Events]` | [#38](https://github.com/platform-q-ai/perme8/issues/38) |
 
 ## Reference Implementations
 
