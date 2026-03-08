@@ -21,7 +21,6 @@ defmodule JargaApi.ProjectApiController do
   alias JargaApi.Accounts
   alias Jarga.Projects
   alias Jarga.Documents
-  alias Jarga.Workspaces
 
   @doc """
   Creates a new project in a workspace.
@@ -47,7 +46,7 @@ defmodule JargaApi.ProjectApiController do
     api_key = conn.assigns.api_key
 
     opts = [
-      get_workspace_and_member_by_slug: &Workspaces.get_workspace_and_member_by_slug/2,
+      get_workspace_and_member_by_slug: &Identity.get_workspace_and_member_by_slug/2,
       create_project: &Projects.create_project/3
     ]
 
@@ -94,7 +93,7 @@ defmodule JargaApi.ProjectApiController do
     api_key = conn.assigns.api_key
 
     opts = [
-      get_workspace_and_member_by_slug: &Workspaces.get_workspace_and_member_by_slug/2,
+      get_workspace_and_member_by_slug: &Identity.get_workspace_and_member_by_slug/2,
       get_project_by_slug: &Projects.get_project_by_slug/3,
       list_documents_for_project: &Documents.list_documents_for_project/3
     ]
