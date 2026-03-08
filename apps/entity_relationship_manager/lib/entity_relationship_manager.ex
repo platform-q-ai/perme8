@@ -8,8 +8,7 @@ defmodule EntityRelationshipManager do
 
   ## Dependencies
 
-  - `Identity` - API key verification and user lookup
-  - `Jarga.Workspaces` - Workspace membership and role verification
+  - `Identity` - API key verification, user lookup, workspace membership and role verification
 
   ## Exported Types
 
@@ -22,7 +21,6 @@ defmodule EntityRelationshipManager do
     top_level?: true,
     deps: [
       Identity,
-      Jarga.Workspaces,
       Jarga.Repo
     ],
     exports: [
