@@ -6,7 +6,7 @@
 
 Rearchitecture of the knowledge graph MCP functionality from a standalone `apps/knowledge_mcp/` umbrella app into the existing `apps/agents/` app. This consolidation follows reviewer feedback on PR #100 that the knowledge graph is just an ERM schema and MCP is a tool surface for the agents app.
 
-**Source of truth**: `docs/specs/knowledge-mcp-v2-ticket.md`
+**Source of truth**: See the linked GitHub issue for full requirements
 
 ### What changes
 
@@ -699,5 +699,5 @@ apps/knowledge_mcp/              — Entire directory (rm -rf)
 **Version**: 1.0
 **Date**: 2026-02-17
 **Status**: Ready for implementation
-**Ticket**: `docs/specs/knowledge-mcp-v2-ticket.md`
+**Ticket**: See linked GitHub issue
 **Related**: PR #100, Issues #97, #98, #99

@@ -1,7 +1,6 @@
 # Feature: Extract Notifications into Standalone App (Phase 1)
 
 **Ticket**: #38
-**Ticket**: `docs/notifications/tickets/extract-notifications-ticket.md`
 **BDD Features**: `apps/jarga_web/test/features/notifications/notifications.browser.feature` (11 scenarios), `apps/jarga_web/test/features/notifications/notifications.security.feature` (21 scenarios)
 
 ## Overview
