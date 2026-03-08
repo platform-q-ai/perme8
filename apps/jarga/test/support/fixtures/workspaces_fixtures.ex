@@ -2,18 +2,14 @@ defmodule Jarga.WorkspacesFixtures do
   @moduledoc """
   Test helpers for creating workspace entities via the `Identity` context.
 
-  This module delegates to Identity for all workspace-related fixture creation.
-  Direct usage of `Identity.WorkspacesFixtures` is preferred for new code.
+  All fixture functions call `Identity` directly.
   """
 
-  # Test fixture module - pure delegation facade to Identity
   use Boundary,
     top_level?: true,
     deps: [
       Identity,
-      Identity.Repo,
-      Jarga.Workspaces,
-      Jarga.Accounts
+      Identity.Repo
     ],
     exports: []
 
