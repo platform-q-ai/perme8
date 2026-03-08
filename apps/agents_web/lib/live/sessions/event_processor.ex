@@ -229,6 +229,18 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
   # also delivers this event.
   def process_event(%{"type" => "todo.updated"}, socket), do: socket
 
+  # Delta events carry incremental text fragments. The corresponding
+  # "message.part.updated" events already deliver the full cumulative
+  # content, so deltas are redundant for our rendering pipeline.
+  def process_event(%{"type" => "message.part.delta"}, socket), do: socket
+
+  # Events handled elsewhere (TaskRunner, LiveView) but not relevant to
+  # part rendering — silence the catch-all warning.
+  def process_event(%{"type" => "session.status"}, socket), do: socket
+  def process_event(%{"type" => "session.error"}, socket), do: socket
+  def process_event(%{"type" => "server.connected"}, socket), do: socket
+  def process_event(%{"type" => "permission.asked"}, socket), do: socket
+
   def process_event(%{"type" => type} = _event, socket) do
     :telemetry.execute(
       [:agents_web, :event_processor, :unhandled],
