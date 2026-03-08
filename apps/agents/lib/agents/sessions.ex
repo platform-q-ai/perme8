@@ -206,6 +206,22 @@ defmodule Agents.Sessions do
   def send_ticket_to_bottom(number), do: ProjectTicketRepository.send_to_bottom(number)
 
   @doc """
+  Triggers an immediate sync of tickets from GitHub.
+
+  Runs synchronously — the caller blocks until the sync completes
+  (up to 30 seconds). The sync fetches all issues from GitHub,
+  upserts them locally, links parent/child hierarchy, and prunes
+  deleted issues.
+
+  After completion the `:tickets_synced` PubSub broadcast fires
+  so any subscribed LiveViews update automatically.
+  """
+  @spec sync_tickets() :: :ok | {:error, term()}
+  def sync_tickets do
+    TicketSyncServer.sync_now()
+  end
+
+  @doc """
   Closes a project ticket: marks it as closed in the local database and closes
   the issue on GitHub.
 

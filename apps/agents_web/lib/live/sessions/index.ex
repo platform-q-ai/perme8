@@ -78,6 +78,7 @@ defmodule AgentsWeb.SessionsLive.Index do
      |> assign(:session_search, "")
      |> assign(:status_filter, :open)
      |> assign(:collapsed_parents, MapSet.new())
+     |> assign(:syncing_tickets, false)
      |> assign_session_state()
      |> assign(:form, to_form(%{"instruction" => ""}))}
   end
@@ -587,6 +588,18 @@ defmodule AgentsWeb.SessionsLive.Index do
      |> assign(:sessions, sessions)
      |> assign(:active_ticket_number, active_ticket_number)
      |> assign(:active_session_tab, tab)}
+  end
+
+  @impl true
+  def handle_event("sync_tickets", _params, socket) do
+    lv = self()
+
+    Task.start(fn ->
+      result = Sessions.sync_tickets()
+      send(lv, {:ticket_sync_finished, result})
+    end)
+
+    {:noreply, assign(socket, :syncing_tickets, true)}
   end
 
   @impl true
@@ -1205,6 +1218,11 @@ defmodule AgentsWeb.SessionsLive.Index do
 
     {:noreply,
      socket |> assign(:tickets, tickets) |> assign(:active_ticket_number, active_ticket_number)}
+  end
+
+  @impl true
+  def handle_info({:ticket_sync_finished, _result}, socket) do
+    {:noreply, assign(socket, :syncing_tickets, false)}
   end
 
   @impl true

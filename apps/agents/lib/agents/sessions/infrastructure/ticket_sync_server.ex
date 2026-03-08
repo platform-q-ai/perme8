@@ -34,6 +34,19 @@ defmodule Agents.Sessions.Infrastructure.TicketSyncServer do
   end
 
   @doc """
+  Triggers an immediate sync of tickets from GitHub.
+
+  Runs the sync synchronously and returns the result. The caller
+  blocks until the sync completes (or times out after 30 seconds).
+  """
+  @spec sync_now() :: :ok | {:error, term()}
+  def sync_now do
+    GenServer.call(__MODULE__, :sync_now, 30_000)
+  catch
+    :exit, _ -> {:error, :sync_server_unavailable}
+  end
+
+  @doc """
   Closes a ticket on GitHub asynchronously (closes the issue).
   This is fire-and-forget — the local DB record should already be
   deleted before calling this.
@@ -66,6 +79,12 @@ defmodule Agents.Sessions.Infrastructure.TicketSyncServer do
     {:reply, tickets, state}
   rescue
     _ -> {:reply, [], state}
+  end
+
+  @impl true
+  def handle_call(:sync_now, _from, state) do
+    next_state = poll_tickets(state)
+    {:reply, :ok, next_state}
   end
 
   @impl true
