@@ -22,7 +22,6 @@ defmodule JargaApi.DocumentApiController do
 
   alias JargaApi.Accounts
   alias Jarga.Documents
-  alias Jarga.Workspaces
   alias Jarga.Projects
 
   @doc """
@@ -59,7 +58,7 @@ defmodule JargaApi.DocumentApiController do
       |> maybe_add_project_slug(project_slug)
 
     opts = [
-      get_workspace_and_member_by_slug: &Workspaces.get_workspace_and_member_by_slug/2,
+      get_workspace_and_member_by_slug: &Identity.get_workspace_and_member_by_slug/2,
       create_document: &Documents.create_document/3,
       get_project_by_slug: &Projects.get_project_by_slug/3
     ]
@@ -115,7 +114,7 @@ defmodule JargaApi.DocumentApiController do
     api_key = conn.assigns.api_key
 
     opts = [
-      get_workspace_and_member_by_slug: &Workspaces.get_workspace_and_member_by_slug/2,
+      get_workspace_and_member_by_slug: &Identity.get_workspace_and_member_by_slug/2,
       get_document_by_slug: &Documents.get_document_by_slug/3,
       get_document_note: &Documents.get_document_note/1,
       get_project: &Projects.get_project/3,
@@ -175,7 +174,7 @@ defmodule JargaApi.DocumentApiController do
     attrs = Map.take(params, ["title", "content", "content_hash", "visibility"])
 
     opts = [
-      get_workspace_and_member_by_slug: &Workspaces.get_workspace_and_member_by_slug/2,
+      get_workspace_and_member_by_slug: &Identity.get_workspace_and_member_by_slug/2,
       get_document_by_slug: &Documents.get_document_by_slug/3,
       get_document_note: &Documents.get_document_note/1,
       update_document: &Documents.update_document/3,

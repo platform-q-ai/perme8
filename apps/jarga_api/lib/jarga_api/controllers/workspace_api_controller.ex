@@ -19,7 +19,6 @@ defmodule JargaApi.WorkspaceApiController do
   use JargaApi, :controller
 
   alias JargaApi.Accounts
-  alias Jarga.Workspaces
   alias Jarga.Documents
   alias Jarga.Projects
 
@@ -38,7 +37,7 @@ defmodule JargaApi.WorkspaceApiController do
     api_key = conn.assigns.api_key
 
     opts = [
-      list_workspaces_for_user: &Workspaces.list_workspaces_for_user/1
+      list_workspaces_for_user: &Identity.list_workspaces_for_user/1
     ]
 
     {:ok, workspaces} = Accounts.list_accessible_workspaces(user, api_key, opts)
@@ -64,7 +63,7 @@ defmodule JargaApi.WorkspaceApiController do
     api_key = conn.assigns.api_key
 
     opts = [
-      get_workspace_by_slug: &Workspaces.get_workspace_by_slug/2,
+      get_workspace_by_slug: &Identity.get_workspace_by_slug/2,
       list_documents_for_workspace: &Documents.list_documents_for_workspace/2,
       list_projects_for_workspace: &Projects.list_projects_for_workspace/2
     ]

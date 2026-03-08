@@ -6,14 +6,13 @@ defmodule JargaApi do
   JSON views, auth plug, and API-specific use cases and domain logic.
 
   It depends on:
-  - `Jarga` contexts (Workspaces, Projects, Documents) for domain data
-  - `Identity` for API key verification and user lookup
+  - `Jarga` contexts (Projects, Documents) for domain data
+  - `Identity` for workspaces, API key verification, and user lookup
   """
 
   # API interface layer - depends on Jarga contexts and Identity for auth
   use Boundary,
     deps: [
-      Jarga.Workspaces,
       Jarga.Projects,
       Jarga.Documents,
       Jarga.Documents.Notes.Domain,
