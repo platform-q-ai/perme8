@@ -4,7 +4,12 @@ defmodule Agents.Application.UseCases.SearchTools do
 
   Supports listing all tools, filtering by keyword (matched against tool name and
   description, case-insensitive), and grouping results by provider.
+
+  This use case does not require a user/workspace context because tool discovery
+  is a server-level capability — all authenticated callers see the same tool catalog.
   """
+
+  require Logger
 
   alias Agents.Application.GatewayConfig
 
@@ -39,7 +44,7 @@ defmodule Agents.Application.UseCases.SearchTools do
   def execute(params \\ %{}, opts \\ []) do
     query = Map.get(params, :query)
     group_by_provider = Map.get(params, :group_by_provider, false)
-    providers = Map.get(params, :providers) || Keyword.get(opts, :providers, default_providers())
+    providers = Keyword.get(opts, :providers, default_providers())
 
     if group_by_provider do
       {:ok, search_grouped(providers, query)}
@@ -68,18 +73,25 @@ defmodule Agents.Application.UseCases.SearchTools do
   end
 
   defp provider_tools(provider) do
-    Code.ensure_loaded!(provider)
+    case Code.ensure_loaded(provider) do
+      {:module, _} ->
+        Enum.flat_map(provider.components(), &load_tool/1)
 
-    provider.components()
-    |> Enum.map(fn {mod, name} ->
-      Code.ensure_loaded!(mod)
+      {:error, reason} ->
+        Logger.warning("Skipping provider #{inspect(provider)}: failed to load (#{reason})")
+        []
+    end
+  end
 
-      %{
-        name: name,
-        description: get_description(mod),
-        input_schema: get_input_schema(mod)
-      }
-    end)
+  defp load_tool({mod, name}) do
+    case Code.ensure_loaded(mod) do
+      {:module, _} ->
+        [%{name: name, description: get_description(mod), input_schema: get_input_schema(mod)}]
+
+      {:error, reason} ->
+        Logger.warning("Skipping tool #{name}: #{inspect(mod)} failed to load (#{reason})")
+        []
+    end
   end
 
   defp get_description(mod) do

@@ -24,19 +24,32 @@ defmodule Agents.Infrastructure.Mcp.Tools.ToolsSearchTool do
           group_by_provider: Map.get(params, :group_by_provider, false)
         }
 
-        case SearchTools.execute(search_params) do
-          {:ok, []} ->
-            {:reply, Response.text(Response.tool(), "No tools found."), frame}
-
-          {:ok, results} ->
-            text = format_results(results, search_params.group_by_provider)
-            {:reply, Response.text(Response.tool(), text), frame}
-        end
+        search_tools(search_params, frame)
 
       {:error, scope} ->
         {:reply, Response.error(Response.tool(), "Insufficient permissions: #{scope} required"),
          frame}
     end
+  end
+
+  defp search_tools(search_params, frame) do
+    case SearchTools.execute(search_params) do
+      {:ok, []} ->
+        {:reply, Response.text(Response.tool(), "No tools found."), frame}
+
+      {:ok, results} ->
+        text = format_results(results, search_params.group_by_provider)
+        {:reply, Response.text(Response.tool(), text), frame}
+    end
+  rescue
+    error ->
+      Logger.error("tools.search unexpected error: #{Exception.message(error)}")
+
+      {:reply,
+       Response.error(
+         Response.tool(),
+         "An unexpected error occurred while searching tools."
+       ), frame}
   end
 
   defp format_results(results, true) do
