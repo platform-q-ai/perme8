@@ -18,7 +18,6 @@ defmodule Jarga.Projects do
       Identity,
       Identity.Repo,
       Jarga.Accounts,
-      Jarga.Workspaces,
       # Same-context layer dependencies
       Jarga.Projects.Domain,
       Jarga.Projects.Application,

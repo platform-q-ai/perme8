@@ -32,8 +32,7 @@ defmodule Jarga.Projects.Infrastructure do
       Jarga.Repo,
       # Cross-context dependencies
       Identity,
-      Jarga.Accounts,
-      Jarga.Workspaces
+      Jarga.Accounts
     ],
     exports: [
       Schemas.ProjectSchema,

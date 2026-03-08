@@ -20,7 +20,6 @@ defmodule Jarga.Notes do
       Identity,
       Identity.Repo,
       Jarga.Accounts,
-      Jarga.Workspaces,
       Jarga.Projects,
       Jarga.Repo
     ],

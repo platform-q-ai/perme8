@@ -33,7 +33,6 @@ defmodule Jarga.Documents.Application do
       Identity,
       Jarga.Accounts,
       Jarga.Domain,
-      Jarga.Workspaces,
       Agents
       # Note: Infrastructure modules are referenced via @default_* attributes for DI
       # but we don't declare them as deps to avoid dependency cycle.

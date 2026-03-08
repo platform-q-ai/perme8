@@ -17,7 +17,6 @@ defmodule Jarga.Documents do
       Identity,
       Identity.Repo,
       Jarga.Accounts,
-      Jarga.Workspaces,
       Jarga.Projects,
       Agents,
       # Same-context layer dependencies
