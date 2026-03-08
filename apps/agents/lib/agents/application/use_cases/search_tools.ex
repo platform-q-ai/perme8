@@ -91,8 +91,8 @@ defmodule Agents.Application.UseCases.SearchTools do
   end
 
   defp get_input_schema(mod) do
-    if function_exported?(mod, :__schema__, 0) do
-      mod.__schema__()
+    if function_exported?(mod, :input_schema, 0) do
+      mod.input_schema()
     else
       nil
     end
