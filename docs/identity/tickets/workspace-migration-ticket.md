@@ -1,8 +1,8 @@
-# PRD: Migrate Workspaces from Jarga to Identity
+# Ticket: Migrate Workspaces from Jarga to Identity
 
 ## Document Metadata
 
-**Document Prepared By**: PRD Agent
+**Document Prepared By**: Ticket Agent
 **Date Created**: 2026-02-14
 **Last Updated**: 2026-02-14
 **Version**: 1.0
@@ -385,7 +385,7 @@ Migration file ownership moves from `apps/jarga/priv/repo/migrations/` to `apps/
 
 The `identity` app was previously extracted from `jarga` following a 7-phase approach documented in `docs/specs/identity-app-refactor.md` (852 lines). The same phased pattern should be followed here:
 
-| Phase | Identity Extraction (Precedent) | Workspace Migration (This PRD) |
+| Phase | Identity Extraction (Precedent) | Workspace Migration (This Ticket) |
 |-------|-------------------------------|-------------------------------|
 | 1 | Create Identity app structure | Already exists — add workspace subdirectories |
 | 2 | Move domain layer | Move Workspace, WorkspaceMember, SlugGenerator entities to Identity |
@@ -554,7 +554,7 @@ mix.exs                              → add slugy dependency if needed
 ## 12. Out of Scope
 
 - **Moving workspace LiveViews to IdentityWeb** — Workspace CRUD views stay in `jarga_web` for now. They can be moved later as a P2 enhancement.
-- **Creating new workspace features** — This PRD covers only the migration of existing functionality. No new features (e.g., workspace billing, workspace-level settings, workspace deletion cascade changes).
+- **Creating new workspace features** — This ticket covers only the migration of existing functionality. No new features (e.g., workspace billing, workspace-level settings, workspace deletion cascade changes).
 - **Renaming database tables** — The `workspaces` and `workspace_members` tables keep their names. No Ecto migration needed for renaming.
 - **Changing the permission model** — The RBAC model (owner/admin/member/guest) is preserved exactly. We're only splitting WHERE the policy code lives.
 - **Migrating PubSub topic naming** — Existing topic strings (`"workspace:#{id}"`, `"user:#{id}"`, `"workspace_invitations"`) are preserved.
@@ -640,4 +640,4 @@ No remaining blockers.
 
 ---
 
-**Recommendation**: This PRD is ready for architect review. The architect should create a TDD implementation plan following the 5-phase approach outlined in Section 10, using the Identity extraction spec (`docs/specs/identity-app-refactor.md`) as the primary reference for the migration pattern.
+**Recommendation**: This ticket is ready for architect review. The architect should create a TDD implementation plan following the 5-phase approach outlined in Section 10, using the Identity extraction spec (`docs/specs/identity-app-refactor.md`) as the primary reference for the migration pattern.

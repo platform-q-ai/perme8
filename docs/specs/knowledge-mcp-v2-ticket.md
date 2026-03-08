@@ -1,4 +1,4 @@
-# PRD: Knowledge Graph Schema + MCP Tools in Agents App (v2 - Rearchitected)
+# Ticket: Knowledge Graph Schema + MCP Tools in Agents App (v2 - Rearchitected)
 
 ## Summary
 

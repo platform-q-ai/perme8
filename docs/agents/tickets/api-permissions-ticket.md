@@ -1,4 +1,4 @@
-# PRD: API Permissions Management per API Key
+# Ticket: API Permissions Management per API Key
 
 **Ticket:** #56 — Add API permissions management per API key
 **Primary App:** identity (schema, domain, facade)
@@ -285,4 +285,4 @@ All valid scopes should be defined in a single module (`Identity.Domain.Policies
 - **Rate limiting per scope** — Different rate limits based on permission level.
 - **Permission inheritance / groups** — No role→permission mapping. Presets are UI sugar, not stored entities.
 - **Deny rules** — No deny semantics; permissions are purely additive (allow-list only).
-- **webhooks_api / jarga_api enforcement** — This PRD focuses on agents_api and MCP. Other API apps can adopt the same pattern in future tickets.
+- **webhooks_api / jarga_api enforcement** — This ticket focuses on agents_api and MCP. Other API apps can adopt the same pattern in future tickets.

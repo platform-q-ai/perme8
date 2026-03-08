@@ -1,7 +1,7 @@
 # Feature: API Permissions Management per API Key
 
 **Ticket:** #56 — Add API permissions management per API key
-**PRD:** `docs/agents/prds/api-permissions-prd.md`
+**Ticket:** `docs/agents/tickets/api-permissions-ticket.md`
 **BDD Feature Files:**
 - `apps/identity/test/features/api-permissions/api-permissions.browser.feature` (9 scenarios)
 - `apps/agents_api/test/features/api-permissions/api-permissions.http.feature` (14 scenarios)

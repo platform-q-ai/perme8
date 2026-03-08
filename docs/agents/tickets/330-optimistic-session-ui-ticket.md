@@ -1,4 +1,4 @@
-# PRD: Optimistic Sessions UI Updates with Durable Client State
+# Ticket: Optimistic Sessions UI Updates with Durable Client State
 
 ## Source
 - Ticket: #330

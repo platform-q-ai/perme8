@@ -36,7 +36,7 @@ Before creating any plan, read:
 You receive requirements from either:
 
 1. **Direct user request** — make reasonable assumptions, ask clarifying questions if needed
-2. **PRD from prd agent** — use as primary source of truth, translate requirements into a technical plan
+2. **Ticket from ticket agent** — use as primary source of truth, translate requirements into a technical plan
 
 ## Feature Analysis
 
@@ -201,10 +201,10 @@ Brief description of what and why.
 After creating the plan, use the **Write** tool to save it as:
 
 ```
-docs/<app>/plans/<prd-name>-architectural-plan.md
+docs/<app>/plans/<ticket-name>-architectural-plan.md
 ```
 
-Where `<app>` is the umbrella app being worked on and `<prd-name>` is the kebab-case name of the feature/PRD (e.g., `docs/identity/plans/user-registration-architectural-plan.md`).
+Where `<app>` is the umbrella app being worked on and `<ticket-name>` is the kebab-case name of the feature/ticket (e.g., `docs/identity/plans/user-registration-architectural-plan.md`).
 
 Create the `docs/<app>/plans/` directory if it doesn't exist.
 

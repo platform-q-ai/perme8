@@ -1,4 +1,4 @@
-# PRD: Warm-Only Processing Queue for Agent Sessions (#346)
+# Ticket: Warm-Only Processing Queue for Agent Sessions (#346)
 
 ## Source
 - Ticket: #346

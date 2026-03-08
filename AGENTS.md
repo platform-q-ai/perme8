@@ -84,15 +84,15 @@ This repo uses two layers of automation:
 Use this rule of thumb:
 
 1. Use a **skill** when the request matches an end-to-end workflow (ticket pickup, CRUD flows, execute plan, PR review, finalize).
-2. Use a **subagent** when you need a specific unit of work (explore codebase, produce PRD, architect a plan, implement via TDD, translate BDD).
+2. Use a **subagent** when you need a specific unit of work (explore codebase, produce a ticket, architect a plan, implement via TDD, translate BDD).
 3. For complex work, **compose them**: skill orchestrates, subagents execute specialized steps.
 
 ### Subagents (Task Tool)
 
 - **general** -- broad multi-step execution and research; good default when no specialist is clearly better.
 - **explore** -- fast codebase discovery (files, symbols, flows). Use for read-only investigations and impact analysis.
-- **prd** -- interviews and structures requirements into a PRD for downstream planning.
-- **architect** -- converts requirements/PRD into a phased TDD implementation plan.
+- **ticket** -- interviews and structures requirements into a ticket for downstream planning.
+- **architect** -- converts requirements/ticket into a phased TDD implementation plan.
 - **phoenix-tdd** -- implements Elixir/Phoenix/LiveView changes using strict Red-Green-Refactor.
 - **typescript-tdd** -- implements TypeScript/Vitest (including LiveView hooks and channel clients) using strict TDD.
 - **exo-bdd-browser** -- translates scenarios into browser-focused Playwright BDD features.
@@ -106,7 +106,7 @@ Use this rule of thumb:
 #### Orchestration
 
 - **Pick Up Ticket** -- starts from a GitHub issue, classifies work type, and routes to the right CRUD workflow. Use when asked to "work on" an existing ticket.
-- **Create Issue** -- creates a new GitHub issue with the appropriate app label.
+- **Create Ticket** -- interviews users to gather comprehensive product requirements and creates a structured ticket to brief the architect agent.
 
 #### CRUD Workflows
 
@@ -119,7 +119,7 @@ Use this rule of thumb:
 
 - **Execute Plan** -- executes an existing phased plan end-to-end (implementation, commits, PR lifecycle, CI, review loop).
 - **Commit and PR** -- handles branch/commit/push/PR mechanics when implementation is already done or managed elsewhere.
-- **Handle Merge Conflict** -- resolves merge conflicts on a PR branch by understanding the PR's purpose, linked ticket, and PRD. Analyses both sides of each conflict to determine intent and recency, and produces a resolution preserving all new functionality in the codebase's current style.
+- **Handle Merge Conflict** -- resolves merge conflicts on a PR branch by understanding the PR's purpose, linked ticket, and ticket context. Analyses both sides of each conflict to determine intent and recency, and produces a resolution preserving all new functionality in the codebase's current style.
 - **Finalize** -- runs quality gates before handoff: tests/checks, documentation sync, acceptance reconciliation, and follow-up issues.
 
 #### Review and Feedback
@@ -130,7 +130,7 @@ Use this rule of thumb:
 #### Documentation and Testing
 
 - **Check Documentation** -- verifies and fixes docs/API docs impacted by changes (`@moduledoc`, `@doc`, JSDoc, AGENTS/readmes/ownership docs).
-- **Generate Exo-BDD Features** -- creates browser/http/security BDD feature files from a PRD (early-pipeline or post-plan mode).
+- **Generate Exo-BDD Features** -- creates browser/http/security BDD feature files from a ticket (early-pipeline or post-plan mode).
 - **Run Tests** -- executes Exo-BDD and unit/integration test suites across umbrella apps with troubleshooting guidance.
 
 ### Recommended Usage Patterns
@@ -138,7 +138,7 @@ Use this rule of thumb:
 - **New feature from idea/ticket:** `CRUD Create` -> `Execute Plan` -> `Finalize`.
 - **Bug fix or refactor:** `CRUD Update` (and `Finalize` for handoff quality checks).
 - **Research-only request:** `CRUD Read` (delegates to `explore`).
-- **Plan-first request:** `prd` -> `architect` -> `Execute Plan`.
+- **Plan-first request:** `ticket` -> `architect` -> `Execute Plan`.
 - **PR quality loop:** `Review PR` -> `Address PR Comments` -> `Finalize`.
 - **PR with merge conflicts:** `Handle Merge Conflict` (then resume the normal PR flow).
 - **BDD-first delivery:** `Generate Exo-BDD Features`, then implement with `phoenix-tdd`/`typescript-tdd` as appropriate.
