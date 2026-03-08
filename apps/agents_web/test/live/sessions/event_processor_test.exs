@@ -603,6 +603,60 @@ defmodule AgentsWeb.SessionsLive.EventProcessorTest do
     end
   end
 
+  describe "process_event/2 — message.part.updated promotes :answer_submitted to :user" do
+    test "promotes :answer_submitted part to :user when matching user message part arrives" do
+      socket =
+        build_socket(%{
+          output_parts: [{:answer_submitted, "optimistic-1", "Re: Deploy — Yes"}],
+          optimistic_user_messages: ["Re: Deploy — Yes"],
+          user_message_ids: MapSet.new(["msg-42"])
+        })
+
+      event = %{
+        "type" => "message.part.updated",
+        "properties" => %{
+          "part" => %{
+            "type" => "text",
+            "id" => "part-1",
+            "text" => "Re: Deploy — Yes",
+            "messageID" => "msg-42"
+          }
+        }
+      }
+
+      result = EventProcessor.process_event(event, socket)
+      assert [{:user, _id, "Re: Deploy — Yes"}] = result.assigns.output_parts
+      assert result.assigns.optimistic_user_messages == []
+    end
+
+    test "does not promote :answer_submitted when content doesn't match" do
+      socket =
+        build_socket(%{
+          output_parts: [{:answer_submitted, "optimistic-1", "Re: Deploy — Yes"}],
+          optimistic_user_messages: ["Re: Deploy — Yes"],
+          user_message_ids: MapSet.new(["msg-42"])
+        })
+
+      event = %{
+        "type" => "message.part.updated",
+        "properties" => %{
+          "part" => %{
+            "type" => "text",
+            "id" => "part-1",
+            "text" => "something else",
+            "messageID" => "msg-42"
+          }
+        }
+      }
+
+      result = EventProcessor.process_event(event, socket)
+
+      # The :answer_submitted part remains; the non-matching text gets appended separately
+      assert {:answer_submitted, "optimistic-1", "Re: Deploy — Yes"} =
+               Enum.find(result.assigns.output_parts, &match?({:answer_submitted, _, _}, &1))
+    end
+  end
+
   describe "process_event/2 — unknown events" do
     import ExUnit.CaptureLog
 
@@ -702,6 +756,16 @@ defmodule AgentsWeb.SessionsLive.EventProcessorTest do
     test "falls back to plain text for non-JSON output" do
       parts = EventProcessor.decode_cached_output("just some plain text")
       assert [{:text, "cached-0", "just some plain text", :frozen}] = parts
+    end
+
+    test "decodes answer_submitted parts" do
+      json =
+        Jason.encode!([
+          %{"type" => "answer_submitted", "id" => "a-1", "text" => "Re: Deploy — Yes"}
+        ])
+
+      parts = EventProcessor.decode_cached_output(json)
+      assert [{:answer_submitted, "a-1", "Re: Deploy — Yes"}] = parts
     end
   end
 
