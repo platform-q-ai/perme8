@@ -10,6 +10,7 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponents do
   use Phoenix.Component
 
   import AgentsWeb.CoreComponents
+  alias Agents.Sessions.Domain.Entities.Ticket
 
   # ---- Tab Bar ----
 
@@ -880,6 +881,7 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponents do
     * `:active` - whether this ticket is currently selected (default false)
     * `:warming` - whether the ticket is currently warming (default false)
     * `:container_stats` - container stats map for this session, or nil (default nil)
+    * `:depth` - hierarchy depth (0=root, 1=subticket)
   """
   attr(:ticket, :map, required: true)
   attr(:variant, :atom, required: true, values: [:triage, :queued, :warm, :in_progress])
@@ -887,6 +889,7 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponents do
   attr(:active, :boolean, default: false)
   attr(:warming, :boolean, default: false)
   attr(:container_stats, :map, default: nil)
+  attr(:depth, :integer, default: 0)
 
   def ticket_card(assigns) do
     assigns =
@@ -900,8 +903,13 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponents do
       data-testid={ticket_card_test_id(@variant, @ticket.number)}
       data-triage-ticket-card={@variant == :triage || nil}
       data-ticket-number={(@variant == :triage && @ticket.number) || nil}
+      data-ticket-depth={@depth}
+      data-has-subissues={to_string(Ticket.has_sub_tickets?(@ticket))}
+      data-ticket-state={@ticket.state}
       data-slot-state={slot_state(@variant, @warming)}
-      class={ticket_card_classes(@variant, @ticket, @session, @active, @warming, @has_container)}
+      class={
+        ticket_card_classes(@variant, @ticket, @session, @active, @warming, @has_container, @depth)
+      }
     >
       <%!-- Ticket content area (clickable to select) --%>
       <div
@@ -935,6 +943,12 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponents do
                 class="badge badge-xs badge-ghost whitespace-nowrap shrink-0"
               >
                 Paused
+              </span>
+              <span
+                :if={Ticket.has_sub_tickets?(@ticket)}
+                class="badge badge-xs badge-outline whitespace-nowrap shrink-0"
+              >
+                {length(@ticket.sub_tickets || [])} sub-issues
               </span>
               <%!-- Warming indicator (warm variant only) --%>
               <span
@@ -1120,11 +1134,16 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponents do
   defp slot_state(:warm, _), do: "warm"
   defp slot_state(:in_progress, _), do: "used"
 
-  defp ticket_card_classes(variant, ticket, session, active, warming, has_container) do
+  defp ticket_card_classes(variant, ticket, session, active, warming, has_container, depth) do
     closed = Map.get(ticket, :state) == "closed"
 
     base =
       "flex cursor-pointer w-full rounded-lg min-h-12 border transition-all duration-150 hover:-translate-y-px hover:shadow-md hover:ring-1 hover:ring-base-content/20 overflow-hidden"
+
+    depth_classes =
+      if depth > 0,
+        do: "subticket-card ml-4 border-base-content/20 text-[0.95em]",
+        else: ""
 
     variant_classes =
       if closed,
@@ -1134,7 +1153,7 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponents do
     active_class =
       if active, do: "ring-2 ring-primary/60 shadow-sm shadow-primary/10", else: ""
 
-    "#{base} #{variant_classes} #{active_class}"
+    "#{base} #{variant_classes} #{active_class} #{depth_classes}"
   end
 
   defp variant_classes(:triage, ticket, _session, _warming, _has_container) do

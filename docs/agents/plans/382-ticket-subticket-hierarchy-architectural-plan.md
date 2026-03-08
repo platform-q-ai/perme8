@@ -239,7 +239,7 @@ The implementation must pass all 10 scenarios in `ticket-subticket-hierarchy.bro
 
 ### 2.6 Sessions Facade: Return Ticket domain entities
 
-- [ ] ⏸ **RED**: Update tests in `apps/agents/test/agents/sessions_test.exs`
+- [x] ✓ **RED**: Update tests in `apps/agents/test/agents/sessions_test.exs`
   - Tests `list_project_tickets/2` returns `%Ticket{}` domain entities (not maps or schema structs)
   - Tests returned tickets have `sub_tickets` populated as nested `%Ticket{}` entities
   - Tests enrichment fields (`associated_task_id`, `session_state`, etc.) are present on returned entities
@@ -247,7 +247,7 @@ The implementation must pass all 10 scenarios in `ticket-subticket-hierarchy.bro
   - Tests tree structure: returned list contains only root tickets, with sub_tickets nested
   - Uses `Agents.DataCase, async: true`
 
-- [ ] ⏸ **GREEN**: Update `apps/agents/lib/agents/sessions.ex`
+- [x] ✓ **GREEN**: Update `apps/agents/lib/agents/sessions.ex`
   - Update `list_project_tickets/2` to:
     1. Call `ProjectTicketRepository.list_all()` (which now returns root tickets with preloaded sub_tickets)
     2. Convert schemas to `Ticket` entities via `Ticket.from_schema/1` (recursive)
@@ -256,18 +256,18 @@ The implementation must pass all 10 scenarios in `ticket-subticket-hierarchy.bro
   - Remove duplicated `task_status_to_session_state/1` (now in `TicketEnrichmentPolicy`)
   - Remove ad-hoc `Map.merge` enrichment logic (replaced by `TicketEnrichmentPolicy`)
 
-- [ ] ⏸ **REFACTOR**: Ensure existing `Sessions` tests still pass; verify Boundary exports are correct
+- [x] ✓ **REFACTOR**: Ensure existing `Sessions` tests still pass; verify Boundary exports are correct
 
 ### 2.7 LiveView: Update index.ex for Ticket entities and hierarchy
 
-- [ ] ⏸ **RED**: Update tests in `apps/agents_web/test/live/sessions/index_test.exs`
+- [x] ✓ **RED**: Update tests in `apps/agents_web/test/live/sessions/index_test.exs`
   - Tests `re_enrich_tickets/2` replacement works with `%Ticket{}` entities (preserving sub_tickets)
   - Tests `handle_info({:tickets_synced, _})` reloads and assigns hierarchical ticket data
   - Tests `handle_event("select_ticket")` works with ticket entities
   - Tests `handle_event("reorder_triage_tickets")` works with hierarchical ticket list
   - Uses `AgentsWeb.ConnCase`
 
-- [ ] ⏸ **GREEN**: Update `apps/agents_web/lib/live/sessions/index.ex`
+- [x] ✓ **GREEN**: Update `apps/agents_web/lib/live/sessions/index.ex`
   - Replace `re_enrich_tickets/2` with call to `TicketEnrichmentPolicy.enrich_all/2`
   - Update all 10 call sites of `re_enrich_tickets/2` to use the new domain function
   - Remove `task_status_to_session_state/1` (delegated to enrichment policy)
@@ -276,11 +276,11 @@ The implementation must pass all 10 scenarios in `ticket-subticket-hierarchy.bro
   - Add `assign(:collapsed_parents, MapSet.new())` for collapsible parent state
   - Add `handle_event("toggle_parent_collapse", ...)` handler
 
-- [ ] ⏸ **REFACTOR**: Remove duplicated enrichment logic from LiveView; keep LiveView thin
+- [x] ✓ **REFACTOR**: Remove duplicated enrichment logic from LiveView; keep LiveView thin
 
 ### 2.8 Template: Hierarchical triage column rendering
 
-- [ ] ⏸ **RED**: Write/update tests in `apps/agents_web/test/live/sessions/index_test.exs`
+- [x] ✓ **RED**: Write/update tests in `apps/agents_web/test/live/sessions/index_test.exs`
   - Tests root tickets render with `data-ticket-depth="0"` attribute
   - Tests subtickets render with `data-ticket-depth="1"` and `subticket-card` CSS class
   - Tests parent tickets show subticket count (e.g., "3 sub-issues")
@@ -293,7 +293,7 @@ The implementation must pass all 10 scenarios in `ticket-subticket-hierarchy.bro
   - Tests subticket detail shows breadcrumb: `data-testid="ticket-detail-parent-breadcrumb"` with "Parent ticket" text
   - Uses `AgentsWeb.ConnCase`
 
-- [ ] ⏸ **GREEN**: Update `apps/agents_web/lib/live/sessions/index.html.heex`
+- [x] ✓ **GREEN**: Update `apps/agents_web/lib/live/sessions/index.html.heex`
   - **Triage column** (around line 430-455): Replace flat `idle_tickets` iteration with hierarchical rendering:
     - Root tickets (`Ticket.root_ticket?/1`): render with `data-ticket-depth="0"`, `data-has-subissues` attribute
     - Parent tickets: add toggle button `data-testid="triage-parent-toggle"`, subticket count badge
@@ -310,17 +310,17 @@ The implementation must pass all 10 scenarios in `ticket-subticket-hierarchy.bro
     - Breadcrumb `data-testid="ticket-detail-parent-breadcrumb"` when viewing a subticket
     - Closed parent summary: "2/3 closed" via `TicketHierarchyPolicy.sub_ticket_summary_text/1`
 
-- [ ] ⏸ **REFACTOR**: Extract ticket tree rendering into a reusable component if template gets too complex
+- [x] ✓ **REFACTOR**: Extract ticket tree rendering into a reusable component if template gets too complex
 
 ### 2.9 Components: ticket_card subticket variant
 
-- [ ] ⏸ **RED**: Write tests in `apps/agents_web/test/live/sessions/components/session_components_test.exs`
+- [x] ✓ **RED**: Write tests in `apps/agents_web/test/live/sessions/components/session_components_test.exs`
   - Tests `ticket_card/1` renders `data-ticket-depth` attribute based on new `depth` assign
   - Tests `ticket_card/1` applies `subticket-card` class when `depth > 0`
   - Tests `ticket_card/1` renders subticket count indicator when `Ticket.has_sub_tickets?/1`
   - Tests `ticket_card/1` renders indented styling for depth > 0
 
-- [ ] ⏸ **GREEN**: Update `apps/agents_web/lib/live/sessions/components/session_components.ex`
+- [x] ✓ **GREEN**: Update `apps/agents_web/lib/live/sessions/components/session_components.ex`
   - Add `attr(:depth, :integer, default: 0)` to `ticket_card/1`
   - Add `data-ticket-depth={@depth}` attribute to the card wrapper div
   - Add `data-has-subissues={Ticket.has_sub_tickets?(@ticket) || nil}` attribute
@@ -330,22 +330,22 @@ The implementation must pass all 10 scenarios in `ticket-subticket-hierarchy.bro
   - Apply indentation styling for subtickets (e.g., `ml-4` for depth 1)
   - Reduce visual prominence for subtickets (smaller text, lighter border)
 
-- [ ] ⏸ **REFACTOR**: Ensure no regression in existing ticket_card variants (:triage, :queued, :warm, :in_progress)
+- [x] ✓ **REFACTOR**: Ensure no regression in existing ticket_card variants (:triage, :queued, :warm, :in_progress)
 
 ### 2.10 TriageLaneDnd Hook: Subticket drag-and-drop awareness
 
-- [ ] ⏸ **RED**: Write test (manual verification via BDD feature file scenario 8)
+- [x] ✓ **RED**: Write test (manual verification via BDD feature file scenario 8)
   - Subtickets at `data-ticket-depth='1'` have `draggable="true"` attribute
   - Dragging a subticket reorders within its parent group only
   - `reorder_triage_tickets` event includes both root and sub ticket numbers in correct order
 
-- [ ] ⏸ **GREEN**: Update `apps/agents_web/assets/js/presentation/hooks/triage-lane-dnd-hook.ts`
+- [x] ✓ **GREEN**: Update `apps/agents_web/assets/js/presentation/hooks/triage-lane-dnd-hook.ts`
   - Update `collectTicketOrder` to include subticket ordering within parent groups
   - Ensure subticket cards (`data-ticket-depth='1'`) are draggable within their parent's `triage-subticket-list` container
   - Prevent subtickets from being dragged to root level or to a different parent group
   - Update drop logic to respect parent-child grouping boundaries
 
-- [ ] ⏸ **REFACTOR**: Ensure existing flat drag-and-drop still works for root tickets
+- [x] ✓ **REFACTOR**: Ensure existing flat drag-and-drop still works for root tickets
 
 ### 2.11 Boundary Export Update
 

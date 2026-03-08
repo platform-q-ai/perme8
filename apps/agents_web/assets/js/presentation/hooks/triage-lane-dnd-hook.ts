@@ -17,6 +17,8 @@ const DRAG_THRESHOLD_PX = 6
 type DndState = {
   draggedCard: HTMLElement | null
   draggedItem: HTMLElement | null
+  draggedDepth: number
+  draggedSubticketList: HTMLElement | null
 }
 
 type PendingDrag = {
@@ -38,7 +40,12 @@ function cardContainer(card: HTMLElement): HTMLElement | null {
 }
 
 export const TriageLaneDndHook = {
-  dndState: { draggedCard: null, draggedItem: null } as DndState,
+  dndState: {
+    draggedCard: null,
+    draggedItem: null,
+    draggedDepth: 0,
+    draggedSubticketList: null,
+  } as DndState,
   pendingDrag: null as PendingDrag | null,
   isDragging: false,
 
@@ -76,6 +83,21 @@ export const TriageLaneDndHook = {
       )
       const dropTarget = dropTargetCard && cardContainer(dropTargetCard)
 
+      if (this.dndState.draggedDepth > 0) {
+        const sourceList = this.dndState.draggedSubticketList
+        const targetList = dropTargetCard?.closest<HTMLElement>('[data-testid="triage-subticket-list"]')
+
+        if (!sourceList || sourceList !== targetList) {
+          if (draggedCard) draggedCard.classList.remove('opacity-70')
+          this.dndState.draggedCard = null
+          this.dndState.draggedItem = null
+          this.dndState.draggedDepth = 0
+          this.dndState.draggedSubticketList = null
+          this.isDragging = false
+          return
+        }
+      }
+
       if (dropTarget && dropTarget !== dragged) {
         const dropRect = dropTarget.getBoundingClientRect()
         const insertBefore = (event.clientY || 0) < dropRect.top + dropRect.height / 2
@@ -104,6 +126,8 @@ export const TriageLaneDndHook = {
       if (draggedCard) draggedCard.classList.remove('opacity-70')
       this.dndState.draggedCard = null
       this.dndState.draggedItem = null
+      this.dndState.draggedDepth = 0
+      this.dndState.draggedSubticketList = null
       this.isDragging = false
     })
   },
@@ -122,8 +146,11 @@ export const TriageLaneDndHook = {
 
   bindTriageTicketCards() {
     this.el.querySelectorAll<HTMLElement>('[data-triage-ticket-card]').forEach((card) => {
-      // Cards start NOT draggable — we enable it only after threshold
-      card.draggable = false
+      const depth = Number(card.dataset.ticketDepth || '0')
+      const isSubticket = depth > 0
+
+      // Subtickets are always draggable. Root tickets use threshold activation.
+      card.draggable = isSubticket
 
       if (card.dataset.triageDndBound === 'true') return
       card.dataset.triageDndBound = 'true'
@@ -141,6 +168,8 @@ export const TriageLaneDndHook = {
       )
 
       card.addEventListener('pointerdown', (event: PointerEvent) => {
+        if (isSubticket) return
+
         // Only primary button
         if (event.button !== 0) return
 
@@ -177,8 +206,12 @@ export const TriageLaneDndHook = {
         if (!number) return
 
         const item = cardContainer(card)
+        const depth = Number(card.dataset.ticketDepth || '0')
         this.dndState.draggedCard = card
         this.dndState.draggedItem = item
+        this.dndState.draggedDepth = depth
+        this.dndState.draggedSubticketList =
+          card.closest<HTMLElement>('[data-testid="triage-subticket-list"]') || null
         card.classList.add('opacity-70')
 
         event.dataTransfer?.setData(DRAG_TYPE, number)
@@ -188,9 +221,11 @@ export const TriageLaneDndHook = {
 
       card.addEventListener('dragend', () => {
         card.classList.remove('opacity-70')
-        card.draggable = false
+        card.draggable = isSubticket
         this.dndState.draggedCard = null
         this.dndState.draggedItem = null
+        this.dndState.draggedDepth = 0
+        this.dndState.draggedSubticketList = null
         this.isDragging = false
       })
     })

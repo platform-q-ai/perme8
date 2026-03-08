@@ -3371,4 +3371,94 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       refute html =~ "session-item-add-dark-mode"
     end
   end
+
+  describe "ticket hierarchy rendering" do
+    setup %{conn: conn} do
+      user = user_fixture()
+      %{conn: log_in_user(conn, user), user: user}
+    end
+
+    test "renders parent and subticket depth attributes and supports collapse toggle", %{
+      conn: conn
+    } do
+      {:ok, parent} =
+        ProjectTicketRepository.sync_remote_ticket(%{
+          number: 900,
+          title: "Parent ticket",
+          status: "Backlog",
+          labels: []
+        })
+
+      {:ok, _child} =
+        ProjectTicketRepository.sync_remote_ticket(%{
+          number: 901,
+          title: "Child ticket",
+          status: "Backlog",
+          labels: [],
+          parent_ticket_id: parent.id
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+      send(lv.pid, {:tickets_synced, []})
+
+      html = render(lv)
+      assert html =~ ~s(data-ticket-depth="0")
+      assert html =~ ~s(data-ticket-depth="1")
+      assert html =~ ~s(data-testid="triage-parent-toggle")
+      assert html =~ ~s(data-testid="triage-subticket-list")
+
+      html =
+        lv
+        |> element(~s([data-testid="triage-parent-toggle"]))
+        |> render_click()
+
+      refute html =~ ~s(data-testid="triage-subticket-list")
+    end
+
+    test "ticket detail panel renders body, labels, sub-issues, and breadcrumb for subticket", %{
+      conn: conn
+    } do
+      {:ok, parent} =
+        ProjectTicketRepository.sync_remote_ticket(%{
+          number: 910,
+          title: "Parent detail",
+          body: "Parent body",
+          status: "Backlog",
+          labels: ["agents"]
+        })
+
+      {:ok, _child} =
+        ProjectTicketRepository.sync_remote_ticket(%{
+          number: 911,
+          title: "Child detail",
+          body: "Child body",
+          status: "Backlog",
+          labels: [],
+          parent_ticket_id: parent.id
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+      send(lv.pid, {:tickets_synced, []})
+
+      lv
+      |> element(~s([phx-click="select_ticket"][phx-value-number="910"]))
+      |> render_click()
+
+      html = lv |> element(~s(button[data-tab-id="ticket"])) |> render_click()
+
+      assert html =~ ~s(data-testid="ticket-detail-panel")
+      assert html =~ ~s(data-testid="ticket-detail-body")
+      assert html =~ ~s(data-testid="ticket-detail-labels")
+      assert html =~ ~s(data-testid="ticket-detail-subissues")
+      assert html =~ ~s(data-testid="ticket-subissue-item-911")
+
+      html =
+        lv
+        |> element(~s([data-testid="ticket-subissue-item-911"]))
+        |> render_click()
+
+      assert html =~ ~s(data-ticket-type="subticket")
+      assert html =~ ~s(data-testid="ticket-detail-parent-breadcrumb")
+    end
+  end
 end
