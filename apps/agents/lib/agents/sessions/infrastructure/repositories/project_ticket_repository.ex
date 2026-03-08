@@ -192,6 +192,8 @@ defmodule Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository do
   side is not present locally.
   """
   @spec link_sub_tickets(map()) :: :ok
+  def link_sub_tickets(parent_child_map) when parent_child_map == %{}, do: :ok
+
   def link_sub_tickets(parent_child_map) when is_map(parent_child_map) do
     tickets_by_number =
       ProjectTicketSchema
@@ -199,22 +201,44 @@ defmodule Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository do
       |> Repo.all()
       |> Map.new()
 
-    Enum.each(parent_child_map, fn {child_number, parent_number} ->
-      child_id = Map.get(tickets_by_number, child_number)
+    # Build resolved list of {child_id, parent_id} pairs, skipping unresolvable entries
+    resolved =
+      parent_child_map
+      |> Enum.map(fn {child_number, parent_number} ->
+        child_id = Map.get(tickets_by_number, child_number)
 
-      parent_id =
-        if is_nil(parent_number) do
-          nil
-        else
-          Map.get(tickets_by_number, parent_number)
+        parent_id =
+          if is_nil(parent_number), do: nil, else: Map.get(tickets_by_number, parent_number)
+
+        if child_id && (is_nil(parent_number) || parent_id) do
+          {child_id, parent_id}
         end
+      end)
+      |> Enum.reject(&is_nil/1)
 
-      if child_id && (is_nil(parent_number) || parent_id) do
-        ProjectTicketSchema
-        |> where([ticket], ticket.id == ^child_id)
-        |> Repo.update_all(set: [parent_ticket_id: parent_id])
-      end
-    end)
+    if resolved != [] do
+      # Batch update using a single parameterized query with VALUES + JOIN
+      {placeholders, params} =
+        resolved
+        |> Enum.with_index()
+        |> Enum.map_reduce([], fn {{child_id, parent_id}, idx}, acc ->
+          p1 = idx * 2 + 1
+          p2 = idx * 2 + 2
+          {"($#{p1}::integer, $#{p2}::integer)", acc ++ [child_id, parent_id]}
+        end)
+
+      values_clause = Enum.join(placeholders, ", ")
+
+      Repo.query!(
+        """
+        UPDATE sessions_project_tickets AS t
+        SET parent_ticket_id = v.parent_id
+        FROM (VALUES #{values_clause}) AS v(child_id, parent_id)
+        WHERE t.id = v.child_id
+        """,
+        params
+      )
+    end
 
     :ok
   end

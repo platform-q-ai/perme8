@@ -7,6 +7,13 @@ defmodule Agents.Sessions.Infrastructure.TicketSyncServerTest do
   alias Agents.Sessions.Infrastructure.TicketSyncServer
   alias Agents.Test.TicketSyncServerTestClient
 
+  @topic "sessions:tickets"
+
+  setup do
+    Phoenix.PubSub.subscribe(Perme8.Events.PubSub, @topic)
+    :ok
+  end
+
   describe "poll sync hierarchy resolution" do
     test "poll links sub-issues under their parent" do
       server =
@@ -19,7 +26,7 @@ defmodule Agents.Sessions.Infrastructure.TicketSyncServerTest do
         ])
 
       send(server, :poll)
-      Process.sleep(50)
+      assert_receive {:tickets_synced, _}, 5_000
 
       parent = Repo.get_by!(ProjectTicketSchema, number: 382)
       child = Repo.get_by!(ProjectTicketSchema, number: 383)
@@ -38,7 +45,7 @@ defmodule Agents.Sessions.Infrastructure.TicketSyncServerTest do
         ])
 
       send(server, :poll)
-      Process.sleep(50)
+      assert_receive {:tickets_synced, _}, 5_000
 
       child = Repo.get_by!(ProjectTicketSchema, number: 391)
       assert child.parent_ticket_id == nil
@@ -62,13 +69,13 @@ defmodule Agents.Sessions.Infrastructure.TicketSyncServerTest do
         ])
 
       send(server, :poll)
-      Process.sleep(50)
+      assert_receive {:tickets_synced, _}, 5_000
       parent_a = Repo.get_by!(ProjectTicketSchema, number: 400)
       child_first = Repo.get_by!(ProjectTicketSchema, number: 402)
       assert child_first.parent_ticket_id == parent_a.id
 
       send(server, :poll)
-      Process.sleep(50)
+      assert_receive {:tickets_synced, _}, 5_000
       parent_b = Repo.get_by!(ProjectTicketSchema, number: 401)
       child_second = Repo.get_by!(ProjectTicketSchema, number: 402)
       assert child_second.parent_ticket_id == parent_b.id
@@ -85,7 +92,7 @@ defmodule Agents.Sessions.Infrastructure.TicketSyncServerTest do
         ])
 
       send(server, :poll)
-      Process.sleep(50)
+      assert_receive {:tickets_synced, _}, 5_000
 
       ticket_a = Repo.get_by!(ProjectTicketSchema, number: 500)
       ticket_b = Repo.get_by!(ProjectTicketSchema, number: 501)

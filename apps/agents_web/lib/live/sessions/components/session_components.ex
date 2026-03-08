@@ -11,6 +11,7 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponents do
 
   import AgentsWeb.CoreComponents
   alias Agents.Sessions.Domain.Entities.Ticket
+  alias Agents.Sessions.Domain.Policies.TicketHierarchyPolicy
 
   # ---- Tab Bar ----
 
@@ -948,7 +949,7 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponents do
                 :if={Ticket.has_sub_tickets?(@ticket)}
                 class="badge badge-xs badge-outline whitespace-nowrap shrink-0"
               >
-                {length(@ticket.sub_tickets || [])} sub-issues
+                {TicketHierarchyPolicy.sub_ticket_summary_text(@ticket)}
               </span>
               <%!-- Warming indicator (warm variant only) --%>
               <span

@@ -103,26 +103,29 @@ defmodule Agents.Sessions.Domain.Entities.Ticket do
     }
   end
 
+  @doc "Returns true if the ticket's state is open."
   @spec open?(t()) :: boolean()
   def open?(ticket), do: ticket.state == "open"
 
+  @doc "Returns true if the ticket's state is closed."
   @spec closed?(t()) :: boolean()
   def closed?(ticket), do: ticket.state == "closed"
 
+  @doc "Returns true if the ticket has any sub-tickets."
   @spec has_sub_tickets?(t()) :: boolean()
   def has_sub_tickets?(ticket), do: ticket.sub_tickets != [] and ticket.sub_tickets != nil
 
+  @doc "Returns true if this is a root-level ticket (no parent)."
   @spec root_ticket?(t()) :: boolean()
   def root_ticket?(ticket), do: is_nil(ticket.parent_ticket_id)
 
+  @doc "Returns true if this ticket is a sub-ticket of another."
   @spec sub_ticket?(t()) :: boolean()
   def sub_ticket?(ticket), do: not is_nil(ticket.parent_ticket_id)
 
+  @doc "Returns the list of valid ticket states."
   @spec valid_states() :: [String.t()]
   def valid_states, do: ["open", "closed"]
-
-  defp convert_sub_tickets(%Ecto.Association.NotLoaded{}), do: []
-  defp convert_sub_tickets(nil), do: []
 
   defp convert_sub_tickets(sub_tickets) when is_list(sub_tickets),
     do: Enum.map(sub_tickets, &from_schema/1)
