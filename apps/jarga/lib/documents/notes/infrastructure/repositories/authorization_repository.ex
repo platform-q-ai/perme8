@@ -10,7 +10,6 @@ defmodule Jarga.Documents.Notes.Infrastructure.Repositories.AuthorizationReposit
 
   alias Identity.Repo, as: Repo
   alias Identity.Domain.Entities.User
-  alias Jarga.Workspaces
   alias Jarga.Documents.Notes.Infrastructure.Schemas.NoteSchema
   alias Jarga.Documents.Notes.Infrastructure.Queries.Queries
   alias Jarga.Documents.Infrastructure.Schemas.DocumentComponentSchema
@@ -23,7 +22,7 @@ defmodule Jarga.Documents.Notes.Infrastructure.Repositories.AuthorizationReposit
   Returns {:ok, workspace} if authorized, {:error, reason} otherwise.
   """
   def verify_workspace_access(%User{} = user, workspace_id) do
-    Workspaces.get_workspace(user, workspace_id)
+    Identity.get_workspace(user, workspace_id)
   end
 
   @doc """

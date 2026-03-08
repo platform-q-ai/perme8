@@ -23,7 +23,6 @@ defmodule Jarga.Documents.Application.UseCases.CreateDocument do
   alias Ecto.Multi
   alias Identity.Domain.Entities.User
   alias Jarga.Documents.Domain.SlugGenerator
-  alias Jarga.Workspaces
   alias Jarga.Domain.Policies.DomainPermissionsPolicy, as: PermissionsPolicy
 
   # Default Infrastructure implementations (injected via opts for testing)
@@ -95,7 +94,7 @@ defmodule Jarga.Documents.Application.UseCases.CreateDocument do
 
   # Get actor's workspace membership
   defp get_workspace_member(%User{} = user, workspace_id) do
-    Workspaces.get_member(user, workspace_id)
+    Identity.get_member(user, workspace_id)
   end
 
   # Authorize document creation based on role

@@ -21,7 +21,6 @@ defmodule Jarga.Projects.Application.UseCases.UpdateProject do
   @behaviour Jarga.Projects.Application.UseCases.UseCase
 
   alias Jarga.Projects.Domain.Events.ProjectUpdated
-  alias Jarga.Workspaces
   alias Jarga.Domain.Policies.DomainPermissionsPolicy, as: PermissionsPolicy
 
   @default_project_repository Jarga.Projects.Infrastructure.Repositories.ProjectRepository
@@ -62,7 +61,7 @@ defmodule Jarga.Projects.Application.UseCases.UpdateProject do
 
     event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
 
-    with {:ok, member} <- Workspaces.get_member(actor, workspace_id),
+    with {:ok, member} <- Identity.get_member(actor, workspace_id),
          {:ok, project} <-
            authorization_repository.verify_project_access(actor, workspace_id, project_id),
          :ok <- authorize_edit_project(member.role, project, actor.id) do

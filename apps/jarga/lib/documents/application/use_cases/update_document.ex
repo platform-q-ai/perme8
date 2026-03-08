@@ -21,8 +21,6 @@ defmodule Jarga.Documents.Application.UseCases.UpdateDocument do
 
   alias Jarga.Documents.Application.Policies.DocumentAuthorizationPolicy
   alias Jarga.Documents.Domain.Policies.DocumentAccessPolicy
-  alias Jarga.Workspaces
-
   # Default Infrastructure implementations (injected via opts for testing)
   @default_document_schema Jarga.Documents.Infrastructure.Schemas.DocumentSchema
   @default_document_repository Jarga.Documents.Infrastructure.Repositories.DocumentRepository
@@ -66,7 +64,7 @@ defmodule Jarga.Documents.Application.UseCases.UpdateDocument do
 
     with {:ok, document} <-
            get_document_with_workspace_member(actor, document_id, document_repository),
-         {:ok, member} <- Workspaces.get_member(actor, document.workspace_id),
+         {:ok, member} <- Identity.get_member(actor, document.workspace_id),
          :ok <- authorize_document_update(member.role, document, actor.id, attrs) do
       update_document_and_notify(document, attrs, deps)
     end
@@ -77,7 +75,7 @@ defmodule Jarga.Documents.Application.UseCases.UpdateDocument do
     document = document_repository.get_by_id(document_id)
 
     with {:document, %{} = document} <- {:document, document},
-         {:ok, _workspace} <- Workspaces.verify_membership(user, document.workspace_id),
+         {:ok, _workspace} <- Identity.verify_membership(user, document.workspace_id),
          :ok <- authorize_document_access(user, document) do
       {:ok, document}
     else
