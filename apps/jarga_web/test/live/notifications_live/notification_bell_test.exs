@@ -62,7 +62,7 @@ defmodule JargaWeb.NotificationsLive.NotificationBellTest do
 
     # Create workspace
     {:ok, workspace} =
-      Workspaces.create_workspace(owner, %{
+      Identity.create_workspace(owner, %{
         name: "Test Workspace"
       })
 
@@ -159,7 +159,7 @@ defmodule JargaWeb.NotificationsLive.NotificationBellTest do
 
       # Send second notification
       {:ok, workspace2} =
-        Workspaces.create_workspace(owner, %{
+        Identity.create_workspace(owner, %{
           name: "Another Workspace"
         })
 
@@ -258,7 +258,7 @@ defmodule JargaWeb.NotificationsLive.NotificationBellTest do
           role: "member"
         })
 
-      {:ok, workspace2} = Workspaces.create_workspace(owner, %{name: "Workspace 2"})
+      {:ok, workspace2} = Identity.create_workspace(owner, %{name: "Workspace 2"})
 
       {:ok, _notification2} =
         Notifications.create_workspace_invitation_notification(%{
@@ -296,7 +296,7 @@ defmodule JargaWeb.NotificationsLive.NotificationBellTest do
       # Create a proper invitation using invite_member
       # This creates the workspace_member record
       {:ok, {:invitation_sent, _member}} =
-        Workspaces.invite_member(owner, workspace.id, invitee.email, :member)
+        Identity.invite_member(owner, workspace.id, invitee.email, :member)
 
       # Create the notification directly (in tests, PubSub might not be fully set up)
       {:ok, notification} =
@@ -341,7 +341,7 @@ defmodule JargaWeb.NotificationsLive.NotificationBellTest do
     } do
       # Create a proper invitation using invite_member
       {:ok, {:invitation_sent, _member}} =
-        Workspaces.invite_member(owner, workspace.id, invitee.email, :member)
+        Identity.invite_member(owner, workspace.id, invitee.email, :member)
 
       {:ok, notification} =
         Notifications.create_workspace_invitation_notification(%{
@@ -441,7 +441,7 @@ defmodule JargaWeb.NotificationsLive.NotificationBellTest do
     } do
       # Create a proper invitation using invite_member
       {:ok, {:invitation_sent, _member}} =
-        Workspaces.invite_member(owner, workspace.id, invitee.email, :member)
+        Identity.invite_member(owner, workspace.id, invitee.email, :member)
 
       # Create the notification directly (in tests, PubSub might not be fully set up)
       {:ok, notification} =
