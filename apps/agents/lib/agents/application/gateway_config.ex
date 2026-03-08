@@ -32,4 +32,10 @@ defmodule Agents.Application.GatewayConfig do
   def jarga_gateway do
     Application.get_env(:agents, :jarga_gateway, @default_jarga_gateway)
   end
+
+  @doc "Returns the configured MCP tool provider modules."
+  @spec tool_providers() :: [module()]
+  def tool_providers do
+    Application.get_env(:agents, :mcp_tool_providers, [])
+  end
 end
