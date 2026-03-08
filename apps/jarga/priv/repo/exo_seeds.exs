@@ -28,7 +28,6 @@ Application.ensure_all_started(:perme8_events)
 
 alias Identity.Application.Services.{ApiKeyTokenService, PasswordService}
 alias Identity.Infrastructure.Schemas.{ApiKeySchema, UserSchema}
-alias Jarga.Workspaces
 alias Identity.Infrastructure.Schemas.WorkspaceMemberSchema
 alias Identity.Domain.Entities.WorkspaceMember
 alias Jarga.Projects

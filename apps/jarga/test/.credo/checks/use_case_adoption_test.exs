@@ -99,7 +99,7 @@ defmodule Jarga.Credo.Check.Architecture.UseCaseAdoptionTest do
 
     test "reports issues for transaction blocks in context" do
       source = """
-      defmodule Jarga.Workspaces do
+      defmodule Jarga.SomeContext do
         def invite_member(email, workspace_id) do
           Repo.transaction(fn ->
             user = get_or_create_user(email)

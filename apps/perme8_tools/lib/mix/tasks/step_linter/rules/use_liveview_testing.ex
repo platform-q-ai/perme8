@@ -22,7 +22,7 @@ defmodule Mix.Tasks.StepLinter.Rules.UseLiveviewTesting do
   ```elixir
   step "I create a workspace", context do
     user = context[:current_user]
-    result = Jarga.Workspaces.create_workspace(user.id, %{name: "My Workspace"})
+    result = Identity.create_workspace(user.id, %{name: "My Workspace"})
     {:ok, Map.put(context, :workspace, result)}
   end
 
@@ -104,7 +104,7 @@ defmodule Mix.Tasks.StepLinter.Rules.UseLiveviewTesting do
   ## Detection
 
   This rule flags "When" and "Then" steps that:
-  1. Call context module functions (e.g., `Jarga.Workspaces.*`, `Jarga.Documents.*`)
+  1. Call context module functions (e.g., `Identity.*`, `Jarga.Documents.*`)
   2. Don't use LiveView test functions (`render_click`, `element`, `live`, etc.)
   3. Aren't marked as background/setup steps
 

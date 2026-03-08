@@ -5,7 +5,7 @@ defmodule Jarga.Domain.Policies.DomainPermissionsPolicy do
   Defines what actions each role can perform on projects and documents.
   This is pure domain logic with no infrastructure dependencies.
 
-  Extracted from the original `Jarga.Workspaces.Application.Policies.PermissionsPolicy`,
+  Extracted from the original `PermissionsPolicy`,
   covering only project and document permissions.
 
   Workspace-level permissions (`:view_workspace`, `:edit_workspace`, `:delete_workspace`,
