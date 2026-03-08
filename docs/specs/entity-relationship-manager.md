@@ -1,4 +1,4 @@
-# Product Requirements Document: Entity Relationship Manager
+# Ticket: Entity Relationship Manager
 
 ## 1. Executive Summary
 
