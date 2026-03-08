@@ -142,11 +142,17 @@ fi
 # Copy opencode config into the repo root, substituting MCP connection vars.
 # PERME8_MCP_URL defaults to the host's MCP server via Docker's host gateway.
 # PERME8_MCP_API_KEY should be set to a valid API key for MCP auth.
+# Uses jq for safe substitution (no shell metacharacter injection risk).
 MCP_URL="${PERME8_MCP_URL:-http://host.docker.internal:4007/}"
 MCP_KEY="${PERME8_MCP_API_KEY:-}"
-sed -e "s|__PERME8_MCP_URL__|${MCP_URL}|g" \
-    -e "s|__PERME8_MCP_API_KEY__|${MCP_KEY}|g" \
-    /workspace/opencode.json > /workspace/perme8/opencode.json
+
+if [ -z "$MCP_KEY" ]; then
+  echo "warn: PERME8_MCP_API_KEY is not set; MCP tool calls will fail authentication" >&2
+fi
+
+jq --arg url "$MCP_URL" --arg key "$MCP_KEY" \
+  '.mcpServers["perme8-mcp"].url = $url | .mcpServers["perme8-mcp"].headers.Authorization = "Bearer \($key)"' \
+  /workspace/opencode.json > /workspace/perme8/opencode.json
 
 # ---- Start embedded PostgreSQL ----
 
