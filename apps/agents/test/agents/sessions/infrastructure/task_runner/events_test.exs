@@ -1,6 +1,7 @@
 defmodule Agents.Sessions.Infrastructure.TaskRunner.EventsTest do
   use Agents.DataCase, async: false
 
+  import ExUnit.CaptureLog
   import Mox
 
   alias Agents.Sessions.Infrastructure.TaskRunner
@@ -445,5 +446,190 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.EventsTest do
              part["type"] == "user" and part["text"] == "Queued follow-up" and
                part["pending"] == true
            end)
+  end
+
+  test "session.updated with valid summary persists session_summary", %{task: task} do
+    test_pid = self()
+
+    summary = %{"files" => 3, "additions" => 42, "deletions" => 7}
+
+    Agents.Mocks.TaskRepositoryMock
+    |> stub(:get_task, fn _id -> task end)
+    |> stub(:update_task_status, fn _task, attrs ->
+      case attrs do
+        %{session_summary: ^summary} -> send(test_pid, {:session_summary_persisted, summary})
+        _ -> :ok
+      end
+
+      {:ok, task}
+    end)
+
+    Agents.Mocks.ContainerProviderMock
+    |> expect(:start, fn _image, _opts -> {:ok, %{container_id: "abc123", port: 4096}} end)
+    |> stub(:stop, fn _id -> :ok end)
+
+    Agents.Mocks.OpencodeClientMock
+    |> expect(:health, fn _url -> :ok end)
+    |> expect(:create_session, fn _url, _opts -> {:ok, %{"id" => "sess-1"}} end)
+    |> expect(:subscribe_events, fn _url, runner_pid ->
+      spawn(fn ->
+        Process.sleep(50)
+
+        send(runner_pid, {
+          :opencode_event,
+          %{
+            "type" => "session.updated",
+            "properties" => %{"info" => %{"summary" => summary}}
+          }
+        })
+      end)
+
+      {:ok, self()}
+    end)
+    |> expect(:send_prompt_async, fn _url, "sess-1", _parts, _opts -> :ok end)
+
+    {:ok, _pid} =
+      GenServer.start(
+        TaskRunner,
+        {task.id,
+         [
+           container_provider: Agents.Mocks.ContainerProviderMock,
+           opencode_client: Agents.Mocks.OpencodeClientMock,
+           task_repo: Agents.Mocks.TaskRepositoryMock,
+           pubsub: Perme8.Events.PubSub
+         ]}
+      )
+
+    assert_receive {:session_summary_persisted, ^summary}, 5000
+    assert_receive {:task_event, _, %{"type" => "session.updated"}}, 5000
+  end
+
+  test "session.updated with malformed summary does not persist", %{task: task} do
+    test_pid = self()
+
+    invalid_summary = %{"files" => "not_an_int", "extra_key" => true}
+
+    Agents.Mocks.TaskRepositoryMock
+    |> stub(:get_task, fn _id -> task end)
+    |> stub(:update_task_status, fn _task, attrs ->
+      if Map.has_key?(attrs, :session_summary) do
+        send(test_pid, {:session_summary_persisted, attrs.session_summary})
+      end
+
+      {:ok, task}
+    end)
+
+    Agents.Mocks.ContainerProviderMock
+    |> expect(:start, fn _image, _opts -> {:ok, %{container_id: "abc123", port: 4096}} end)
+    |> stub(:stop, fn _id -> :ok end)
+
+    Agents.Mocks.OpencodeClientMock
+    |> expect(:health, fn _url -> :ok end)
+    |> expect(:create_session, fn _url, _opts -> {:ok, %{"id" => "sess-1"}} end)
+    |> expect(:subscribe_events, fn _url, runner_pid ->
+      spawn(fn ->
+        Process.sleep(50)
+
+        send(runner_pid, {
+          :opencode_event,
+          %{
+            "type" => "session.updated",
+            "properties" => %{"info" => %{"summary" => invalid_summary}}
+          }
+        })
+      end)
+
+      {:ok, self()}
+    end)
+    |> expect(:send_prompt_async, fn _url, "sess-1", _parts, _opts -> :ok end)
+
+    log =
+      capture_log(fn ->
+        {:ok, _pid} =
+          GenServer.start(
+            TaskRunner,
+            {task.id,
+             [
+               container_provider: Agents.Mocks.ContainerProviderMock,
+               opencode_client: Agents.Mocks.OpencodeClientMock,
+               task_repo: Agents.Mocks.TaskRepositoryMock,
+               pubsub: Perme8.Events.PubSub
+             ]}
+          )
+
+        assert_receive {:task_event, _, %{"type" => "session.updated"}}, 5000
+        refute_receive {:session_summary_persisted, _}, 200
+      end)
+
+    assert log =~ "invalid session summary"
+    assert log =~ "not_an_int"
+  end
+
+  test "update_task_status logs error on failure", %{task: task} do
+    test_pid = self()
+    summary = %{"files" => 1, "additions" => 2, "deletions" => 3}
+
+    Agents.Mocks.TaskRepositoryMock
+    |> stub(:get_task, fn _id -> task end)
+    |> stub(:update_task_status, fn _task, attrs ->
+      if Map.has_key?(attrs, :session_summary) do
+        send(test_pid, :session_summary_update_attempted)
+
+        changeset =
+          task
+          |> Ecto.Changeset.change()
+          |> Ecto.Changeset.add_error(:status, "is invalid")
+
+        {:error, changeset}
+      else
+        {:ok, task}
+      end
+    end)
+
+    Agents.Mocks.ContainerProviderMock
+    |> expect(:start, fn _image, _opts -> {:ok, %{container_id: "abc123", port: 4096}} end)
+    |> stub(:stop, fn _id -> :ok end)
+
+    Agents.Mocks.OpencodeClientMock
+    |> expect(:health, fn _url -> :ok end)
+    |> expect(:create_session, fn _url, _opts -> {:ok, %{"id" => "sess-1"}} end)
+    |> expect(:subscribe_events, fn _url, runner_pid ->
+      spawn(fn ->
+        Process.sleep(50)
+
+        send(runner_pid, {
+          :opencode_event,
+          %{
+            "type" => "session.updated",
+            "properties" => %{"info" => %{"summary" => summary}}
+          }
+        })
+      end)
+
+      {:ok, self()}
+    end)
+    |> expect(:send_prompt_async, fn _url, "sess-1", _parts, _opts -> :ok end)
+
+    log =
+      capture_log(fn ->
+        {:ok, _pid} =
+          GenServer.start(
+            TaskRunner,
+            {task.id,
+             [
+               container_provider: Agents.Mocks.ContainerProviderMock,
+               opencode_client: Agents.Mocks.OpencodeClientMock,
+               task_repo: Agents.Mocks.TaskRepositoryMock,
+               pubsub: Perme8.Events.PubSub
+             ]}
+          )
+
+        assert_receive :session_summary_update_attempted, 5000
+        assert_receive {:task_event, _, %{"type" => "session.updated"}}, 5000
+      end)
+
+    assert log =~ "failed to update task status"
+    assert log =~ task.id
+    assert log =~ "is invalid"
   end
 end
