@@ -1168,7 +1168,14 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
          state
        )
        when is_map(summary) do
-    update_task_status(state, %{session_summary: summary})
+    if valid_session_summary?(summary) do
+      update_task_status(state, %{session_summary: summary})
+    else
+      Logger.warning(
+        "TaskRunner: invalid session summary for task #{state.task_id}: #{inspect(summary)}"
+      )
+    end
+
     {:continue, state}
   end
 
@@ -1294,10 +1301,30 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     state.session_id && state.container_port && state.status in [:prompting, :running]
   end
 
+  defp valid_session_summary?(
+         %{"files" => files, "additions" => additions, "deletions" => deletions} = summary
+       )
+       when is_integer(files) and is_integer(additions) and is_integer(deletions) do
+    map_size(summary) == 3
+  end
+
+  defp valid_session_summary?(_summary), do: false
+
   defp update_task_status(state, attrs) do
     case state.task_repo.get_task(state.task_id) do
       %TaskSchema{} = task ->
-        state.task_repo.update_task_status(task, attrs)
+        case state.task_repo.update_task_status(task, attrs) do
+          {:ok, _task} = result ->
+            result
+
+          {:error, changeset} = result ->
+            Logger.error(
+              "TaskRunner: failed to update task status task_id=#{state.task_id} " <>
+                "errors=#{inspect(changeset.errors)}"
+            )
+
+            result
+        end
 
       nil ->
         Logger.warning("TaskRunner: task #{state.task_id} not found in DB")
