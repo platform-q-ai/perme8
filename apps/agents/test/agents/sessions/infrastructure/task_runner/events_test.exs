@@ -626,6 +626,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.EventsTest do
 
         assert_receive :session_summary_update_attempted, 5000
         assert_receive {:task_event, _, %{"type" => "session.updated"}}, 5000
+        # Allow time for the Logger to flush
+        Process.sleep(100)
       end)
 
     assert log =~ "failed to update task status"
