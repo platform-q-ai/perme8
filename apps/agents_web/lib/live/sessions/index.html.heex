@@ -427,6 +427,29 @@
                 </div>
               </li>
 
+              <%!-- Sync tickets button when no tickets exist --%>
+              <li :if={idle_tickets == []} class="w-full">
+                <div class="mx-1 mt-2 mb-1 border-t border-info/35 flex items-center gap-1.5 pt-1.5">
+                  <.icon name="hero-ticket" class="size-3 text-info/60" />
+                  <span class="text-[0.6rem] font-semibold uppercase tracking-wider text-info/60">
+                    Tickets
+                  </span>
+                  <div class="ml-auto">
+                    <button
+                      type="button"
+                      phx-click="sync_tickets"
+                      disabled={@syncing_tickets}
+                      class="btn btn-ghost btn-xs px-1"
+                      title="Sync tickets from GitHub"
+                    >
+                      <.icon
+                        name="hero-arrow-path"
+                        class={"size-3 text-info/60 #{if @syncing_tickets, do: "animate-spin", else: ""}"}
+                      />
+                    </button>
+                  </div>
+                </div>
+              </li>
               <%!-- Triage tickets divider and draggable ticket list --%>
               <li :if={idle_tickets != []} class="w-full">
                 <div class="mx-1 mt-2 mb-1 border-t border-info/35 flex items-center gap-1.5 pt-1.5">
@@ -437,6 +460,20 @@
                   <span class="text-[0.6rem] text-base-content/40">
                     ({length(idle_tickets)})
                   </span>
+                  <div class="ml-auto">
+                    <button
+                      type="button"
+                      phx-click="sync_tickets"
+                      disabled={@syncing_tickets}
+                      class="btn btn-ghost btn-xs px-1"
+                      title="Sync tickets from GitHub"
+                    >
+                      <.icon
+                        name="hero-arrow-path"
+                        class={"size-3 text-info/60 #{if @syncing_tickets, do: "animate-spin", else: ""}"}
+                      />
+                    </button>
+                  </div>
                 </div>
               </li>
               <li
