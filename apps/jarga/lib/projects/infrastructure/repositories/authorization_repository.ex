@@ -12,7 +12,6 @@ defmodule Jarga.Projects.Infrastructure.Repositories.AuthorizationRepository do
 
   alias Identity.Domain.Entities.User
   alias Jarga.Projects.Infrastructure.Queries.Queries
-  alias Jarga.Workspaces
   alias Identity.Repo, as: Repo
 
   @doc """
@@ -48,7 +47,7 @@ defmodule Jarga.Projects.Infrastructure.Repositories.AuthorizationRepository do
     case Queries.for_user_by_id(user, workspace_id, project_id) |> repo.one() do
       nil ->
         # Check if user is authorized for the workspace first
-        case Workspaces.verify_membership(user, workspace_id) do
+        case Identity.verify_membership(user, workspace_id) do
           {:ok, _workspace} ->
             # User is authorized but project doesn't exist or doesn't belong to workspace
             {:error, :project_not_found}

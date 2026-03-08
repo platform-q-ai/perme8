@@ -19,7 +19,6 @@ defmodule Jarga.Documents.Application.UseCases.DeleteDocument do
 
   @behaviour Jarga.Documents.Application.UseCases.UseCase
 
-  alias Jarga.Workspaces
   alias Jarga.Documents.Application.Policies.DocumentAuthorizationPolicy
   alias Jarga.Documents.Domain.Policies.DocumentAccessPolicy
 
@@ -61,7 +60,7 @@ defmodule Jarga.Documents.Application.UseCases.DeleteDocument do
 
     with {:ok, document} <-
            get_document_with_workspace_member(actor, document_id, document_repository),
-         {:ok, member} <- Workspaces.get_member(actor, document.workspace_id),
+         {:ok, member} <- Identity.get_member(actor, document.workspace_id),
          :ok <- authorize_delete_document(member.role, document, actor.id) do
       delete_document_and_notify(document, deps)
     end
@@ -72,7 +71,7 @@ defmodule Jarga.Documents.Application.UseCases.DeleteDocument do
     document = document_repository.get_by_id(document_id)
 
     with {:document, %{} = document} <- {:document, document},
-         {:ok, _workspace} <- Workspaces.verify_membership(user, document.workspace_id),
+         {:ok, _workspace} <- Identity.verify_membership(user, document.workspace_id),
          :ok <- authorize_document_access(user, document) do
       {:ok, document}
     else

@@ -21,7 +21,6 @@ defmodule Jarga.Projects.Application.UseCases.CreateProject do
   alias Identity.Domain.Entities.User
   alias Jarga.Projects.Domain.Events.ProjectCreated
   alias Jarga.Projects.Domain.SlugGenerator
-  alias Jarga.Workspaces
   alias Jarga.Domain.Policies.DomainPermissionsPolicy, as: PermissionsPolicy
 
   @default_project_repository Jarga.Projects.Infrastructure.Repositories.ProjectRepository
@@ -81,7 +80,7 @@ defmodule Jarga.Projects.Application.UseCases.CreateProject do
 
   # Get actor's workspace membership
   defp get_workspace_member(%User{} = user, workspace_id) do
-    Workspaces.get_member(user, workspace_id)
+    Identity.get_member(user, workspace_id)
   end
 
   # Authorize project creation based on role
