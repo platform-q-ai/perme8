@@ -410,6 +410,9 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
         # Persist session_id to DB for resume and message retrieval
         update_task_status(state, %{session_id: session_id})
 
+        # Broadcast session_id so LiveView can see it without a page refresh
+        broadcast_session_id_set(state.task_id, session_id, state.pubsub)
+
         # Subscribe to SSE events
         case subscribe_to_events(state) do
           {:ok, state} ->
@@ -1347,6 +1350,14 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
       pubsub,
       "task:#{task_id}",
       {:task_status_changed, task_id, status}
+    )
+  end
+
+  defp broadcast_session_id_set(task_id, session_id, pubsub) do
+    Phoenix.PubSub.broadcast(
+      pubsub,
+      "task:#{task_id}",
+      {:task_session_id_set, task_id, session_id}
     )
   end
 
