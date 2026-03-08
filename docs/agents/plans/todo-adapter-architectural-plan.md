@@ -2,7 +2,7 @@
 
 **GitHub Issue**: [#273](https://github.com/platform-q-ai/perme8/issues/273)
 **Sub-Issues**: [#253](https://github.com/platform-q-ai/perme8/issues/253) (progress bar UI)
-**Ticket**: `docs/agents/tickets/todo-adapter-ticket.md`
+
 **BDD Feature**: `apps/agents_web/test/features/sessions/todo-progress-bar.browser.feature`
 
 ## Overview

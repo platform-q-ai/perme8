@@ -48,19 +48,17 @@ Before drafting, understand the existing landscape:
 - Read `docs/prompts/phoenix/PHOENIX_DESIGN_PRINCIPLES.md` for architecture context
 - Note available infrastructure that can be leveraged
 
-### 3. Draft and Save the Ticket
+### 3. Draft the Ticket
 
-Synthesize all gathered information into a ticket following the template below. Save it using the **Write** tool to:
+Synthesize all gathered information into a ticket following the template below.
 
-```
-docs/<app>/tickets/<feature-name>-ticket.md
-```
-
-Where `<app>` is the umbrella app and `<feature-name>` is kebab-case (e.g., `docs/identity/tickets/user-registration-ticket.md`). Create the directory if it doesn't exist.
+**Return the fully formatted ticket body as your output** — the calling skill will create the GitHub issue. Do NOT write a file to disk. Do NOT attempt to call `gh` or create GitHub issues yourself.
 
 ### 4. Present and Recommend Next Steps
 
 Output the ticket to the user, highlight any open questions, and recommend: "Ready for architect review."
+
+The calling skill will use your output to create a GitHub issue with the ticket content as the issue body.
 
 ## Ticket Template
 

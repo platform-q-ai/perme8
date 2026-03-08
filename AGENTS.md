@@ -106,7 +106,7 @@ Use this rule of thumb:
 #### Orchestration
 
 - **Pick Up Ticket** -- starts from a GitHub issue, classifies work type, and routes to the right CRUD workflow. Use when asked to "work on" an existing ticket.
-- **Create Ticket** -- interviews users to gather comprehensive product requirements and creates a structured ticket to brief the architect agent.
+- **Create Ticket** -- interviews users to gather comprehensive product requirements and creates a structured GitHub issue to brief the architect agent. Applies the owning app label and links as a sub-issue where applicable.
 
 #### CRUD Workflows
 

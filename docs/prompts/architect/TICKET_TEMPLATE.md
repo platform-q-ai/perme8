@@ -433,12 +433,12 @@ Questions that need resolution before implementation begins:
 
 ### For the Ticket Agent
 
-1. **Gather requirements** through structured questioning (AskUserQuestion tool)
+1. **Gather requirements** through structured questioning
 2. **Research codebase** using Grep/Glob/Read tools
 3. **Fill in each section** with specifics from user responses and research
 4. **Flag open questions** that need resolution
-5. **Present complete ticket** to user for approval
-6. **Hand off to architect** once approved
+5. **Return the complete ticket body** -- the calling skill creates the GitHub issue
+6. **Hand off to architect** once the issue is created and approved
 
 ### For the Architect Agent
 
