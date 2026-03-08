@@ -585,7 +585,7 @@ defmodule JargaWeb.AppLive.WorkspacesTest do
       assert path == ~p"/app/workspaces"
 
       # Verify workspace is deleted
-      assert Jarga.Workspaces.list_workspaces_for_user(user) == []
+      assert Identity.list_workspaces_for_user(user) == []
     end
 
     test "deletes workspace and its projects", %{conn: conn, user: user, workspace: workspace} do

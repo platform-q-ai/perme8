@@ -3,7 +3,6 @@ defmodule JargaApi.Accounts.Application.UseCases.GetWorkspaceWithDetailsTest do
 
   alias JargaApi.Accounts.Application.UseCases.GetWorkspaceWithDetails
   alias Identity.Domain.Entities.ApiKey
-  alias Jarga.Workspaces
   alias Jarga.Documents
   alias Jarga.Projects
   alias Identity.Domain.Entities.Workspace
@@ -16,7 +15,7 @@ defmodule JargaApi.Accounts.Application.UseCases.GetWorkspaceWithDetailsTest do
   # Helper to create default context opts for integration tests
   defp default_opts do
     [
-      get_workspace_by_slug: &Workspaces.get_workspace_by_slug/2,
+      get_workspace_by_slug: &Identity.get_workspace_by_slug/2,
       list_documents_for_workspace: &Documents.list_documents_for_workspace/2,
       list_projects_for_workspace: &Projects.list_projects_for_workspace/2
     ]
