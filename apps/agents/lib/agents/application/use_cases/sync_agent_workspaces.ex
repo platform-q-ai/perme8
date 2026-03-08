@@ -10,7 +10,7 @@ defmodule Agents.Application.UseCases.SyncAgentWorkspaces do
   @default_workspace_agent_repo Agents.Infrastructure.Repositories.WorkspaceAgentRepository
   @default_event_bus Perme8.Events.EventBus
   @default_accounts Jarga.Accounts
-  @default_workspaces Jarga.Workspaces
+  @default_workspaces Identity
 
   alias Agents.Domain.Events.AgentAddedToWorkspace
   alias Agents.Domain.Events.AgentRemovedFromWorkspace
@@ -26,7 +26,7 @@ defmodule Agents.Application.UseCases.SyncAgentWorkspaces do
     - `:agent_repo` - Repository module for agents (default: AgentRepository)
     - `:workspace_agent_repo` - Repository for workspace-agent associations (default: WorkspaceAgentRepository)
     - `:accounts` - Accounts context module (default: Jarga.Accounts)
-    - `:workspaces` - Workspaces context module (default: Jarga.Workspaces)
+    - `:workspaces` - Workspaces context module (default: Identity)
 
   ## Returns
   - `:ok` - Successfully synchronized
