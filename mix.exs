@@ -39,6 +39,7 @@ defmodule Perme8.MixProject do
   defp aliases do
     [
       setup: ["deps.get"],
+      "boundary.spec": &run_boundary_spec/1,
       "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
       "assets.build": [
         "tailwind jarga",
@@ -101,6 +102,42 @@ defmodule Perme8.MixProject do
         "assets.deploy": :prod
       ]
     ]
+  end
+
+  # Run a boundary mix task in each umbrella app that has the :boundary compiler.
+  # boundary.spec and boundary.check require the boundary compiler's ETS table,
+  # which only exists per-app (not at the umbrella root).
+  defp run_boundary_spec(_args), do: run_boundary_task("boundary.spec")
+
+  defp run_boundary_task(task) do
+    apps_path = Path.join(File.cwd!(), "apps")
+
+    apps_path
+    |> File.ls!()
+    |> Enum.sort()
+    |> Enum.each(fn app_dir ->
+      app_path = Path.join(apps_path, app_dir)
+      mix_file = Path.join(app_path, "mix.exs")
+
+      if File.exists?(mix_file) && has_boundary_compiler?(mix_file) do
+        Mix.shell().info([:cyan, "==> #{app_dir}", :reset])
+
+        case System.cmd("mix", [task],
+               cd: app_path,
+               env: [{"MIX_ENV", "dev"}],
+               stderr_to_stdout: true
+             ) do
+          {output, 0} -> Mix.shell().info(output)
+          {_output, _} -> Mix.shell().info("  (skipped — dependency or compilation issue)")
+        end
+      end
+    end)
+  end
+
+  defp has_boundary_compiler?(mix_file) do
+    mix_file
+    |> File.read!()
+    |> String.contains?(":boundary")
   end
 
   # Dependencies listed here are available only for this
