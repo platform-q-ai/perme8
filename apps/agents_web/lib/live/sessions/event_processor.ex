@@ -58,29 +58,13 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
         %{
           "type" => "message.updated",
           "properties" => %{"info" => %{"role" => "user"} = info}
-        },
+        } = event,
         socket
       ) do
-    msg_id = SdkFieldResolver.resolve_message_id(info)
-
-    if is_binary(msg_id) and
-         MapSet.member?(socket.assigns.subtask_message_ids, msg_id) do
+    if child_session_event?(event, socket) do
       socket
     else
-      content = extract_user_message_content(info)
-      correlation_key = SdkFieldResolver.resolve_correlation_key(info)
-
-      socket =
-        case msg_id do
-          id when is_binary(id) ->
-            ids = MapSet.put(socket.assigns.user_message_ids, id)
-            assign(socket, :user_message_ids, ids)
-
-          _ ->
-            socket
-        end
-
-      dedup_queued_message(socket, correlation_key, content)
+      process_user_message_updated(info, socket)
     end
   end
 
@@ -96,25 +80,10 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
       ) do
     msg_id = part["messageID"] || part["messageId"]
 
-    socket =
-      if is_binary(msg_id) do
-        ids = MapSet.put(socket.assigns.subtask_message_ids, msg_id)
-        assign(socket, :subtask_message_ids, ids)
-      else
-        socket
-      end
-
-    subtask_id = if is_binary(msg_id), do: "subtask-#{msg_id}", else: "subtask-#{part["id"]}"
-
-    detail = %{
-      agent: part["agent"] || "unknown",
-      description: part["description"] || "",
-      prompt: part["prompt"] || "",
-      status: :running
-    }
-
-    parts = upsert_part(socket.assigns.output_parts, {:subtask, subtask_id, detail})
-    assign(socket, :output_parts, parts)
+    socket
+    |> track_subtask_message(msg_id)
+    |> track_child_session(part)
+    |> render_subtask_card(part, msg_id)
   end
 
   # Text output — keyed by part ID so multiple messages accumulate.
@@ -124,21 +93,25 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
         %{
           "type" => "message.part.updated",
           "properties" => %{"part" => %{"type" => "text", "text" => text} = part}
-        },
+        } = event,
         socket
       )
       when text != "" do
-    cond do
-      subtask_message_part?(part, socket) ->
-        socket
+    if child_session_event?(event, socket) do
+      socket
+    else
+      cond do
+        subtask_message_part?(part, socket) ->
+          socket
 
-      user_message_part?(part, socket) ->
-        append_confirmed_user_message(socket, part, text)
+        user_message_part?(part, socket) ->
+          append_confirmed_user_message(socket, part, text)
 
-      true ->
-        part_id = part["id"] || "text-default"
-        parts = upsert_part(socket.assigns.output_parts, {:text, part_id, text, :streaming})
-        assign(socket, :output_parts, parts)
+        true ->
+          part_id = part["id"] || "text-default"
+          parts = upsert_part(socket.assigns.output_parts, {:text, part_id, text, :streaming})
+          assign(socket, :output_parts, parts)
+      end
     end
   end
 
@@ -147,13 +120,17 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
         %{
           "type" => "message.part.updated",
           "properties" => %{"part" => %{"type" => "reasoning", "text" => text} = part}
-        },
+        } = event,
         socket
       )
       when is_binary(text) and text != "" do
-    part_id = part["id"] || "reasoning-default"
-    parts = upsert_part(socket.assigns.output_parts, {:reasoning, part_id, text, :streaming})
-    assign(socket, :output_parts, parts)
+    if child_session_event?(event, socket) do
+      socket
+    else
+      part_id = part["id"] || "reasoning-default"
+      parts = upsert_part(socket.assigns.output_parts, {:reasoning, part_id, text, :streaming})
+      assign(socket, :output_parts, parts)
+    end
   end
 
   # tool-start / tool-result format (legacy)
@@ -161,26 +138,34 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
         %{
           "type" => "message.part.updated",
           "properties" => %{"part" => %{"type" => "tool-start"} = part}
-        },
+        } = event,
         socket
       ) do
-    detail = %{input: part["input"] || part["args"], title: nil, output: nil, error: nil}
+    if child_session_event?(event, socket) do
+      socket
+    else
+      detail = %{input: part["input"] || part["args"], title: nil, output: nil, error: nil}
 
-    tool_name = part["name"] || "tool"
-    tool_id = stable_tool_part_id(part, tool_name)
-    handle_tool_event(socket, tool_id, tool_name, :running, detail)
+      tool_name = part["name"] || "tool"
+      tool_id = stable_tool_part_id(part, tool_name)
+      handle_tool_event(socket, tool_id, tool_name, :running, detail)
+    end
   end
 
   def process_event(
         %{
           "type" => "message.part.updated",
           "properties" => %{"part" => %{"type" => "tool-result"} = part}
-        },
+        } = event,
         socket
       ) do
-    tool_name = part["name"] || "tool"
-    tool_id = stable_tool_part_id(part, tool_name)
-    handle_tool_event(socket, tool_id, tool_name, :done, %{})
+    if child_session_event?(event, socket) do
+      socket
+    else
+      tool_name = part["name"] || "tool"
+      tool_id = stable_tool_part_id(part, tool_name)
+      handle_tool_event(socket, tool_id, tool_name, :done, %{})
+    end
   end
 
   # SDK-style tool part with state object — the rich format
@@ -190,31 +175,13 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
           "properties" => %{
             "part" => %{"type" => "tool", "state" => %{"status" => status} = state} = part
           }
-        },
+        } = event,
         socket
       ) do
-    if ignore_empty_running_tool_part?(part, state, status) do
+    if child_session_event?(event, socket) or ignore_empty_running_tool_part?(part, state, status) do
       socket
     else
-      tool_name = part["tool"] || part["name"] || "tool"
-      tool_id = stable_tool_part_id(part, tool_name)
-
-      detail = %{
-        input: state["input"],
-        title: state["title"],
-        output: state["output"],
-        error: state["error"]
-      }
-
-      tool_status =
-        case status do
-          s when s in ["pending", "running"] -> :running
-          "completed" -> :done
-          "error" -> :error
-          _ -> :running
-        end
-
-      handle_tool_event(socket, tool_id, tool_name, tool_status, detail)
+      process_sdk_tool_part(socket, part, state, status)
     end
   end
 
@@ -281,6 +248,21 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
     )
 
     socket
+  end
+
+  def child_session_event?(event, socket) do
+    parent_session_id = Map.get(socket.assigns, :parent_session_id)
+
+    if is_nil(parent_session_id) do
+      false
+    else
+      event_session_id = extract_event_session_id(event)
+      child_session_ids = Map.get(socket.assigns, :child_session_ids, MapSet.new())
+
+      is_binary(event_session_id) and
+        event_session_id != parent_session_id and
+        MapSet.member?(child_session_ids, event_session_id)
+    end
   end
 
   @doc """
@@ -361,7 +343,10 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
   def decode_cached_output(output) do
     case Jason.decode(output) do
       {:ok, parts} when is_list(parts) ->
-        parts |> Enum.map(&decode_output_part/1) |> Enum.reject(&is_nil/1)
+        parts
+        |> Enum.map(&decode_output_part/1)
+        |> Enum.reject(&is_nil/1)
+        |> reattribute_subagent_prompts()
 
       _ ->
         [{:text, "cached-0", output, :frozen}]
@@ -369,6 +354,28 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
   end
 
   # ---- Private helpers ----
+
+  defp process_sdk_tool_part(socket, part, state, status) do
+    tool_name = part["tool"] || part["name"] || "tool"
+    tool_id = stable_tool_part_id(part, tool_name)
+
+    detail = %{
+      input: state["input"],
+      title: state["title"],
+      output: state["output"],
+      error: state["error"]
+    }
+
+    tool_status =
+      case status do
+        s when s in ["pending", "running"] -> :running
+        "completed" -> :done
+        "error" -> :error
+        _ -> :running
+      end
+
+    handle_tool_event(socket, tool_id, tool_name, tool_status, detail)
+  end
 
   defp handle_tool_event(socket, tool_id, tool_name, status, new_detail) do
     parts = freeze_streaming(socket.assigns.output_parts)
@@ -406,6 +413,59 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
         false
     end
   end
+
+  defp process_user_message_updated(info, socket) do
+    msg_id = SdkFieldResolver.resolve_message_id(info)
+
+    if is_binary(msg_id) and MapSet.member?(socket.assigns.subtask_message_ids, msg_id) do
+      socket
+    else
+      content = extract_user_message_content(info)
+      correlation_key = SdkFieldResolver.resolve_correlation_key(info)
+
+      socket = track_user_message_id(socket, msg_id)
+      dedup_queued_message(socket, correlation_key, content)
+    end
+  end
+
+  defp track_subtask_message(socket, msg_id) when is_binary(msg_id) do
+    ids = MapSet.put(socket.assigns.subtask_message_ids, msg_id)
+    assign(socket, :subtask_message_ids, ids)
+  end
+
+  defp track_subtask_message(socket, _), do: socket
+
+  defp track_child_session(socket, part) do
+    child_session_id = part["sessionID"] || part["session_id"]
+
+    if is_binary(child_session_id) do
+      ids = Map.get(socket.assigns, :child_session_ids, MapSet.new())
+      assign(socket, :child_session_ids, MapSet.put(ids, child_session_id))
+    else
+      socket
+    end
+  end
+
+  defp render_subtask_card(socket, part, msg_id) do
+    subtask_id = if is_binary(msg_id), do: "subtask-#{msg_id}", else: "subtask-#{part["id"]}"
+
+    detail = %{
+      agent: part["agent"] || "unknown",
+      description: part["description"] || "",
+      prompt: part["prompt"] || "",
+      status: :running
+    }
+
+    parts = upsert_part(socket.assigns.output_parts, {:subtask, subtask_id, detail})
+    assign(socket, :output_parts, parts)
+  end
+
+  defp track_user_message_id(socket, msg_id) when is_binary(msg_id) do
+    ids = MapSet.put(socket.assigns.user_message_ids, msg_id)
+    assign(socket, :user_message_ids, ids)
+  end
+
+  defp track_user_message_id(socket, _), do: socket
 
   defp append_confirmed_user_message(socket, part, text) do
     message_id =
@@ -656,4 +716,42 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
     blank?(name) and is_nil(entry["input"]) and is_nil(entry["title"]) and is_nil(entry["output"]) and
       is_nil(entry["error"])
   end
+
+  defp extract_event_session_id(%{"properties" => props}) when is_map(props) do
+    SdkFieldResolver.resolve_session_id(props)
+  end
+
+  defp extract_event_session_id(_), do: nil
+
+  defp reattribute_subagent_prompts(parts), do: do_reattribute_subagent_prompts(parts, [])
+
+  defp do_reattribute_subagent_prompts([], acc), do: Enum.reverse(acc)
+
+  defp do_reattribute_subagent_prompts(
+         [
+           {:tool, _id, tool_name, _status, detail} = tool,
+           {:user, user_id, text} | rest
+         ],
+         acc
+       )
+       when is_binary(tool_name) do
+    if task_tool_name?(tool_name) do
+      input = detail[:input] || %{}
+      prompt = input["prompt"] || text
+      description = input["description"] || ""
+
+      subtask =
+        {:subtask, user_id,
+         %{agent: "unknown", description: description, prompt: prompt, status: :done}}
+
+      do_reattribute_subagent_prompts(rest, [subtask, tool | acc])
+    else
+      do_reattribute_subagent_prompts([{:user, user_id, text} | rest], [tool | acc])
+    end
+  end
+
+  defp do_reattribute_subagent_prompts([part | rest], acc),
+    do: do_reattribute_subagent_prompts(rest, [part | acc])
+
+  defp task_tool_name?(name), do: String.downcase(name) == "task"
 end

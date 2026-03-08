@@ -97,4 +97,24 @@ defmodule AgentsWeb.SessionsLive.SdkFieldResolverTest do
       assert SdkFieldResolver.resolve_model_id(%{}) == nil
     end
   end
+
+  describe "resolve_session_id/1" do
+    test "extracts from 'sessionID' field" do
+      assert SdkFieldResolver.resolve_session_id(%{"sessionID" => "sess-1"}) == "sess-1"
+    end
+
+    test "extracts from 'session_id' field" do
+      assert SdkFieldResolver.resolve_session_id(%{"session_id" => "sess-1"}) == "sess-1"
+    end
+
+    test "prefers 'sessionID' over 'session_id'" do
+      assert SdkFieldResolver.resolve_session_id(%{"sessionID" => "s1", "session_id" => "s2"}) ==
+               "s1"
+    end
+
+    test "returns nil when no recognized field is present" do
+      assert SdkFieldResolver.resolve_session_id(%{"other" => "value"}) == nil
+      assert SdkFieldResolver.resolve_session_id(%{}) == nil
+    end
+  end
 end

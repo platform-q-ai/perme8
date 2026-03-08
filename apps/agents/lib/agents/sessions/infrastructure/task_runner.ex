@@ -65,6 +65,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     user_message_ids: MapSet.new(),
     # Subtask message IDs — skip user message tracking for subagent invocations
     subtask_message_ids: MapSet.new(),
+    # Child session IDs mapped to subtask part IDs for status updates
+    child_session_ids: %{},
     # Dependency injection
     container_provider: nil,
     opencode_client: nil,
@@ -461,29 +463,32 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
   @impl true
   def handle_info({:opencode_event, event}, state) do
-    # Broadcast all events to the LiveView via PubSub
-    Phoenix.PubSub.broadcast(
-      state.pubsub,
-      "task:#{state.task_id}",
-      {:task_event, state.task_id, event}
-    )
+    event_session_id = extract_event_session_id(event)
 
-    # Track subtask message IDs so we can suppress their user messages
-    state = track_subtask_message_id(event, state)
-
-    # Track user message IDs so we can filter their parts from output cache
-    state = track_user_message_id(event, state)
-
-    # Route parts to appropriate caching: subtask → user → SDK dispatch
     cond do
-      subtask_part?(event) ->
-        {:noreply, cache_subtask_part(event, state)}
+      is_nil(event_session_id) or event_session_id == state.session_id ->
+        process_parent_session_event(event, state)
 
-      user_message_part?(event, state) ->
-        {:noreply, cache_user_message_part(event, state)}
+      Map.has_key?(state.child_session_ids, event_session_id) ->
+        process_child_session_event(event, event_session_id, state)
 
       true ->
-        handle_sdk_result(event, state)
+        Logger.debug(
+          "TaskRunner: event from unknown session #{event_session_id}, skipping output cache"
+        )
+
+        broadcast_event(event, state)
+
+        state =
+          if subtask_part?(event) do
+            state
+            |> then(&track_subtask_message_id(event, &1))
+            |> then(&cache_subtask_part(event, &1))
+          else
+            state
+          end
+
+        {:noreply, state}
     end
   end
 
@@ -672,8 +677,84 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     end
   end
 
-  # ---- Private: Subtask message filtering ----
+  # ---- Private: Session event isolation ----
+  #
+  # The opencode SDK's global SSE stream (GET /event) emits events from ALL
+  # sessions (parent + children) on a single stream. These functions route
+  # events based on their session ID:
+  #
+  #   - Parent session events → full processing (output cache, status transitions)
+  #   - Known child session events → broadcast only (for LiveView subtask cards)
+  #   - Unknown session events → log + skip (defensive, covers race conditions)
+  #
+  # Child session IDs are discovered via subtask part events, which include a
+  # sessionID field. The `child_session_ids` map tracks child_session_id →
+  # subtask_part_id for marking subtask cards as done when children complete.
 
+  defp process_parent_session_event(event, state) do
+    broadcast_event(event, state)
+
+    # Track subtask message IDs so we can suppress their user messages
+    state = track_subtask_message_id(event, state)
+
+    # Track user message IDs so we can filter their parts from output cache
+    state = track_user_message_id(event, state)
+
+    # Route parts to appropriate caching: subtask -> user -> SDK dispatch
+    cond do
+      subtask_part?(event) ->
+        {:noreply, cache_subtask_part(event, state)}
+
+      user_message_part?(event, state) ->
+        {:noreply, cache_user_message_part(event, state)}
+
+      true ->
+        handle_sdk_result(event, state)
+    end
+  end
+
+  defp process_child_session_event(
+         %{"type" => "session.status", "properties" => props} = event,
+         child_session_id,
+         state
+       ) do
+    status_type = get_in(props, ["status", "type"]) || props["status"]
+
+    state =
+      case status_type do
+        "idle" -> mark_subtask_done(state, child_session_id)
+        _ -> state
+      end
+
+    broadcast_event(event, state)
+    {:noreply, state}
+  end
+
+  defp process_child_session_event(event, _child_session_id, state) do
+    broadcast_event(event, state)
+    {:noreply, state}
+  end
+
+  defp extract_event_session_id(%{"properties" => props}) when is_map(props) do
+    props["sessionID"] || props["session_id"] || get_in(props, ["part", "sessionID"]) ||
+      get_in(props, ["part", "session_id"])
+  end
+
+  defp extract_event_session_id(_), do: nil
+
+  defp broadcast_event(event, state) do
+    Phoenix.PubSub.broadcast(
+      state.pubsub,
+      "task:#{state.task_id}",
+      {:task_event, state.task_id, event}
+    )
+  end
+
+  # Track subtask message IDs for two purposes:
+  # 1. Add to `subtask_message_ids` so subsequent user messages from the same
+  #    message are suppressed (they are the subagent's prompt, not user input)
+  # 2. Register the child session ID in `child_session_ids` so events from
+  #    that session are correctly routed to `process_child_session_event/3`
   defp track_subtask_message_id(
          %{
            "type" => "message.part.updated",
@@ -683,7 +764,18 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
        ) do
     case part["messageID"] || part["messageId"] do
       msg_id when is_binary(msg_id) ->
-        %{state | subtask_message_ids: MapSet.put(state.subtask_message_ids, msg_id)}
+        subtask_message_ids = MapSet.put(state.subtask_message_ids, msg_id)
+        subtask_part_id = "subtask-#{msg_id}"
+        child_session_id = part["sessionID"] || part["session_id"]
+
+        child_session_ids =
+          if is_binary(child_session_id) and child_session_id != "" do
+            Map.put(state.child_session_ids, child_session_id, subtask_part_id)
+          else
+            state.child_session_ids
+          end
+
+        %{state | subtask_message_ids: subtask_message_ids, child_session_ids: child_session_ids}
 
       _ ->
         state
@@ -727,6 +819,22 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   end
 
   defp cache_subtask_part(_event, state), do: state
+
+  defp mark_subtask_done(state, child_session_id) do
+    case Map.get(state.child_session_ids, child_session_id) do
+      nil ->
+        state
+
+      subtask_part_id ->
+        output_parts =
+          Enum.map(state.output_parts, fn
+            %{"id" => ^subtask_part_id} = part -> Map.put(part, "status", "done")
+            part -> part
+          end)
+
+        %{state | output_parts: output_parts}
+    end
+  end
 
   # ---- Private: User message filtering ----
 

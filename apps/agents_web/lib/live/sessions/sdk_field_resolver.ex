@@ -37,4 +37,10 @@ defmodule AgentsWeb.SessionsLive.SdkFieldResolver do
   def resolve_model_id(map) do
     map["modelID"] || map["modelId"] || map["model_id"]
   end
+
+  @doc "Resolves the session ID from an event properties or part map."
+  @spec resolve_session_id(map()) :: String.t() | nil
+  def resolve_session_id(map) do
+    map["sessionID"] || map["session_id"]
+  end
 end
