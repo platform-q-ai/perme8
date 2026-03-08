@@ -300,7 +300,7 @@ defmodule JargaWeb.Integration.UserSignupAndConfirmationTest do
       invited_email = unique_user_email()
 
       {:ok, {:invitation_sent, invitation}} =
-        Jarga.Workspaces.invite_member(owner, workspace.id, invited_email, :member)
+        Identity.invite_member(owner, workspace.id, invited_email, :member)
 
       assert invitation.email == invited_email
       assert invitation.user_id == nil
@@ -365,7 +365,7 @@ defmodule JargaWeb.Integration.UserSignupAndConfirmationTest do
 
       # Owner invites existing user - creates an invitation that needs acceptance
       {:ok, {:invitation_sent, invitation}} =
-        Jarga.Workspaces.invite_member(owner, workspace.id, existing_user.email, :member)
+        Identity.invite_member(owner, workspace.id, existing_user.email, :member)
 
       # Verify invitation was created without user_id or joined_at
       assert invitation.email == existing_user.email
@@ -397,7 +397,7 @@ defmodule JargaWeb.Integration.UserSignupAndConfirmationTest do
       invited_email = unique_user_email()
 
       {:ok, {:invitation_sent, _invitation}} =
-        Jarga.Workspaces.invite_member(owner, workspace.id, invited_email, :member)
+        Identity.invite_member(owner, workspace.id, invited_email, :member)
 
       # New user signs up but doesn't confirm
       unconfirmed_user = unconfirmed_user_fixture(email: invited_email)
@@ -415,7 +415,7 @@ defmodule JargaWeb.Integration.UserSignupAndConfirmationTest do
       invited_email = unique_user_email()
 
       {:ok, {:invitation_sent, _invitation}} =
-        Jarga.Workspaces.invite_member(owner, workspace.id, invited_email, :member)
+        Identity.invite_member(owner, workspace.id, invited_email, :member)
 
       # User signs up and confirms
       user = user_fixture(email: invited_email)
@@ -437,10 +437,10 @@ defmodule JargaWeb.Integration.UserSignupAndConfirmationTest do
 
       # Both owners invite the same email
       {:ok, {:invitation_sent, invitation1}} =
-        Jarga.Workspaces.invite_member(owner1, workspace1.id, invited_email, :member)
+        Identity.invite_member(owner1, workspace1.id, invited_email, :member)
 
       {:ok, {:invitation_sent, invitation2}} =
-        Jarga.Workspaces.invite_member(owner2, workspace2.id, invited_email, :admin)
+        Identity.invite_member(owner2, workspace2.id, invited_email, :admin)
 
       assert invitation1.joined_at == nil
       assert invitation2.joined_at == nil

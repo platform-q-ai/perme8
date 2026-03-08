@@ -4,7 +4,6 @@ defmodule JargaWeb.NotificationsLive.NotificationBellTest do
   import Phoenix.LiveViewTest
 
   alias Jarga.Accounts
-  alias Jarga.Workspaces
   alias Notifications
 
   # Poll until condition is true or timeout (default 1s, interval 50ms)
@@ -328,7 +327,7 @@ defmodule JargaWeb.NotificationsLive.NotificationBellTest do
 
       # Poll for the membership to be created instead of fixed sleep
       assert wait_for(fn ->
-               members = Jarga.Workspaces.list_members(workspace.id)
+               members = Identity.list_members(workspace.id)
                Enum.any?(members, fn m -> m.user_id == invitee.id and not is_nil(m.joined_at) end)
              end),
              "Expected workspace membership to be created"
@@ -469,7 +468,7 @@ defmodule JargaWeb.NotificationsLive.NotificationBellTest do
 
       # Poll for the membership to be created instead of fixed sleep
       assert wait_for(fn ->
-               members = Jarga.Workspaces.list_members(workspace.id)
+               members = Identity.list_members(workspace.id)
                Enum.any?(members, fn m -> m.user_id == invitee.id and not is_nil(m.joined_at) end)
              end),
              "Expected workspace membership to be created"

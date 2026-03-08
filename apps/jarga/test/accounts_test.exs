@@ -403,10 +403,10 @@ defmodule Jarga.AccountsTest do
 
       # Invite the new user (creates pending invitation)
       assert {:ok, {:invitation_sent, _invitation}} =
-               Jarga.Workspaces.invite_member(owner, workspace.id, email, :admin)
+               Identity.invite_member(owner, workspace.id, email, :admin)
 
       # Verify invitation is pending
-      members = Jarga.Workspaces.list_members(workspace.id)
+      members = Identity.list_members(workspace.id)
       pending = Enum.find(members, &(&1.email == email))
       assert pending.user_id == nil
       assert pending.joined_at == nil
@@ -422,10 +422,10 @@ defmodule Jarga.AccountsTest do
       assert confirmed_user.confirmed_at
 
       # Accept pending invitations
-      assert {:ok, _accepted} = Jarga.Workspaces.accept_pending_invitations(confirmed_user)
+      assert {:ok, _accepted} = Identity.accept_pending_invitations(confirmed_user)
 
       # Verify invitation was accepted
-      members = Jarga.Workspaces.list_members(workspace.id)
+      members = Identity.list_members(workspace.id)
       accepted = Enum.find(members, &(&1.email == email))
       assert accepted.user_id == confirmed_user.id
       assert accepted.joined_at != nil
@@ -443,10 +443,10 @@ defmodule Jarga.AccountsTest do
 
       # Invite the new user to both workspaces
       assert {:ok, {:invitation_sent, _}} =
-               Jarga.Workspaces.invite_member(owner, workspace1.id, email, :admin)
+               Identity.invite_member(owner, workspace1.id, email, :admin)
 
       assert {:ok, {:invitation_sent, _}} =
-               Jarga.Workspaces.invite_member(owner, workspace2.id, email, :member)
+               Identity.invite_member(owner, workspace2.id, email, :member)
 
       # New user signs up with the invited email
       user = unconfirmed_user_fixture(%{email: email})
@@ -459,15 +459,15 @@ defmodule Jarga.AccountsTest do
       assert confirmed_user.confirmed_at
 
       # Accept pending invitations
-      assert {:ok, _accepted} = Jarga.Workspaces.accept_pending_invitations(confirmed_user)
+      assert {:ok, _accepted} = Identity.accept_pending_invitations(confirmed_user)
 
       # Verify both invitations were accepted
-      members1 = Jarga.Workspaces.list_members(workspace1.id)
+      members1 = Identity.list_members(workspace1.id)
       accepted1 = Enum.find(members1, &(&1.email == email))
       assert accepted1.user_id == confirmed_user.id
       assert accepted1.joined_at != nil
 
-      members2 = Jarga.Workspaces.list_members(workspace2.id)
+      members2 = Identity.list_members(workspace2.id)
       accepted2 = Enum.find(members2, &(&1.email == email))
       assert accepted2.user_id == confirmed_user.id
       assert accepted2.joined_at != nil
@@ -483,7 +483,7 @@ defmodule Jarga.AccountsTest do
       email = "newuser@example.com"
 
       assert {:ok, {:invitation_sent, _}} =
-               Jarga.Workspaces.invite_member(owner, workspace.id, email, :admin)
+               Identity.invite_member(owner, workspace.id, email, :admin)
 
       # New user signs up with mixed case email
       user = unconfirmed_user_fixture(%{email: "NewUser@Example.Com"})
@@ -494,10 +494,10 @@ defmodule Jarga.AccountsTest do
                Accounts.login_user_by_magic_link(encoded_token)
 
       # Accept pending invitations
-      assert {:ok, _accepted} = Jarga.Workspaces.accept_pending_invitations(confirmed_user)
+      assert {:ok, _accepted} = Identity.accept_pending_invitations(confirmed_user)
 
       # Verify invitation was accepted despite case difference
-      members = Jarga.Workspaces.list_members(workspace.id)
+      members = Identity.list_members(workspace.id)
       accepted = Enum.find(members, &(&1.user_id == confirmed_user.id))
       assert accepted != nil
       assert accepted.joined_at != nil
