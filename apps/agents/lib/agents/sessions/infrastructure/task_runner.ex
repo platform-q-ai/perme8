@@ -1320,7 +1320,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
           {:error, changeset} = result ->
             Logger.error(
               "TaskRunner: failed to update task status task_id=#{state.task_id} " <>
-                "errors=#{inspect(changeset.errors)}"
+                "errors=#{inspect(changeset)}"
             )
 
             result
