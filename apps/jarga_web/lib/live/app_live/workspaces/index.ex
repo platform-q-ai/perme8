@@ -7,7 +7,6 @@ defmodule JargaWeb.AppLive.Workspaces.Index do
 
   import ChatWeb.ChatLive.MessageHandlers
 
-  alias Jarga.Workspaces
   alias JargaWeb.Layouts
 
   # Cross-context domain events
@@ -88,7 +87,7 @@ defmodule JargaWeb.AppLive.Workspaces.Index do
   @impl true
   def mount(_params, _session, socket) do
     user = socket.assigns.current_scope.user
-    workspaces = Workspaces.list_workspaces_for_user(user)
+    workspaces = Identity.list_workspaces_for_user(user)
 
     # Subscribe to structured domain events
     if connected?(socket) do
@@ -109,7 +108,7 @@ defmodule JargaWeb.AppLive.Workspaces.Index do
   def handle_info(%WorkspaceInvitationNotified{workspace_id: workspace_id}, socket) do
     # Reload workspaces when user is invited to a new workspace
     user = socket.assigns.current_scope.user
-    workspaces = Workspaces.list_workspaces_for_user(user)
+    workspaces = Identity.list_workspaces_for_user(user)
 
     # Subscribe to the new workspace's event topic
     Perme8.Events.subscribe("events:workspace:#{workspace_id}")
@@ -121,7 +120,7 @@ defmodule JargaWeb.AppLive.Workspaces.Index do
   def handle_info(%MemberJoined{workspace_id: workspace_id}, socket) do
     # Reload workspaces when user accepts an invitation and joins
     user = socket.assigns.current_scope.user
-    workspaces = Workspaces.list_workspaces_for_user(user)
+    workspaces = Identity.list_workspaces_for_user(user)
 
     # Subscribe to the new workspace's event topic
     Perme8.Events.subscribe("events:workspace:#{workspace_id}")
@@ -134,7 +133,7 @@ defmodule JargaWeb.AppLive.Workspaces.Index do
     if target_user_id == socket.assigns.current_scope.user.id do
       # Current user was removed from a workspace — reload workspaces
       user = socket.assigns.current_scope.user
-      workspaces = Workspaces.list_workspaces_for_user(user)
+      workspaces = Identity.list_workspaces_for_user(user)
       {:noreply, assign(socket, workspaces: workspaces)}
     else
       {:noreply, socket}

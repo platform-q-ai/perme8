@@ -7,7 +7,7 @@ defmodule JargaWeb.AppLive.Documents.Show do
 
   import ChatWeb.ChatLive.MessageHandlers
 
-  alias Jarga.{Documents, Notes, Workspaces, Projects}
+  alias Jarga.{Documents, Notes, Projects}
 
   # Document domain events
   alias Jarga.Documents.Domain.Events.{
@@ -39,7 +39,7 @@ defmodule JargaWeb.AppLive.Documents.Show do
 
     # Optimized: get workspace and member in single query
     with {:ok, workspace, member} <-
-           Workspaces.get_workspace_and_member_by_slug(user, workspace_slug),
+           Identity.get_workspace_and_member_by_slug(user, workspace_slug),
          {:ok, document} <- get_document_by_slug(user, workspace.id, document_slug),
          {:ok, project} <- get_project_if_exists(user, document) do
       # Get the note component (first note in document_components)

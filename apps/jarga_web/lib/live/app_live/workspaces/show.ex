@@ -8,7 +8,7 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
   import JargaWeb.Live.PermissionsHelper
   import ChatWeb.ChatLive.MessageHandlers
 
-  alias Jarga.{Workspaces, Projects, Documents}
+  alias Jarga.{Projects, Documents}
   alias JargaWeb.Layouts
 
   # Document domain events
@@ -630,7 +630,7 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
 
     # Optimized: fetch workspace and member in single query
     # Members list is deferred until modal opens for better initial load performance
-    case Workspaces.get_workspace_and_member_by_slug(user, workspace_slug) do
+    case Identity.get_workspace_and_member_by_slug(user, workspace_slug) do
       {:ok, workspace, current_member} ->
         documents = Documents.list_documents_for_workspace(user, workspace.id)
         projects = Projects.list_projects_for_workspace(user, workspace.id)
@@ -827,7 +827,7 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
     user = socket.assigns.current_scope.user
     workspace_id = socket.assigns.workspace.id
 
-    case Workspaces.delete_workspace(user, workspace_id) do
+    case Identity.delete_workspace(user, workspace_id) do
       {:ok, _workspace} ->
         {:noreply,
          socket
@@ -842,7 +842,7 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
   @impl true
   def handle_event("show_members_modal", _params, socket) do
     # Load members when modal is opened (deferred loading for performance)
-    members = Workspaces.list_members(socket.assigns.workspace.id)
+    members = Identity.list_members(socket.assigns.workspace.id)
 
     {:noreply,
      socket
@@ -870,10 +870,10 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
         ArgumentError -> :invalid
       end
 
-    case Workspaces.invite_member(user, workspace_id, email, role_atom) do
+    case Identity.invite_member(user, workspace_id, email, role_atom) do
       {:ok, {:invitation_sent, _invitation}} ->
         # Reload members (to show pending invitation)
-        members = Workspaces.list_members(workspace_id)
+        members = Identity.list_members(workspace_id)
 
         {:noreply,
          socket
@@ -904,10 +904,10 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
     workspace_id = socket.assigns.workspace.id
     role_atom = String.to_existing_atom(new_role)
 
-    case Workspaces.change_member_role(user, workspace_id, email, role_atom) do
+    case Identity.change_member_role(user, workspace_id, email, role_atom) do
       {:ok, _updated_member} ->
         # Reload members
-        members = Workspaces.list_members(workspace_id)
+        members = Identity.list_members(workspace_id)
 
         {:noreply,
          socket
@@ -933,10 +933,10 @@ defmodule JargaWeb.AppLive.Workspaces.Show do
     user = socket.assigns.current_scope.user
     workspace_id = socket.assigns.workspace.id
 
-    case Workspaces.remove_member(user, workspace_id, email) do
+    case Identity.remove_member(user, workspace_id, email) do
       {:ok, _deleted_member} ->
         # Reload members
-        members = Workspaces.list_members(workspace_id)
+        members = Identity.list_members(workspace_id)
 
         {:noreply,
          socket

@@ -24,7 +24,6 @@ defmodule JargaWeb do
       # Context facades
       Jarga,
       Jarga.Accounts,
-      Jarga.Workspaces,
       Jarga.Projects,
       Jarga.Documents,
       Jarga.Notes,

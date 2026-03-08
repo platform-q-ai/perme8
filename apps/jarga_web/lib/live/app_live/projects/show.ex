@@ -8,7 +8,7 @@ defmodule JargaWeb.AppLive.Projects.Show do
   import ChatWeb.ChatLive.MessageHandlers
   import JargaWeb.Live.PermissionsHelper
 
-  alias Jarga.{Workspaces, Projects, Documents}
+  alias Jarga.{Projects, Documents}
   alias JargaWeb.Layouts
 
   # Document domain events
@@ -213,7 +213,7 @@ defmodule JargaWeb.AppLive.Projects.Show do
     user = socket.assigns.current_scope.user
 
     with {:ok, workspace, current_member} <-
-           Workspaces.get_workspace_and_member_by_slug(user, workspace_slug),
+           Identity.get_workspace_and_member_by_slug(user, workspace_slug),
          {:ok, project} <- get_project_by_slug(user, workspace.id, project_slug) do
       documents = Documents.list_documents_for_project(user, workspace.id, project.id)
 

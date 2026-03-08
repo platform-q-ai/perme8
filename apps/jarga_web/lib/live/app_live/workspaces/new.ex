@@ -7,7 +7,6 @@ defmodule JargaWeb.AppLive.Workspaces.New do
 
   import ChatWeb.ChatLive.MessageHandlers
 
-  alias Jarga.Workspaces
   alias JargaWeb.Layouts
 
   @impl true
@@ -68,7 +67,7 @@ defmodule JargaWeb.AppLive.Workspaces.New do
 
   @impl true
   def mount(_params, _session, socket) do
-    changeset = Workspaces.change_workspace()
+    changeset = Identity.change_workspace()
 
     {:ok,
      socket
@@ -91,7 +90,7 @@ defmodule JargaWeb.AppLive.Workspaces.New do
   def handle_event("save", %{"workspace" => workspace_params}, socket) do
     user = socket.assigns.current_scope.user
 
-    case Workspaces.create_workspace(user, workspace_params) do
+    case Identity.create_workspace(user, workspace_params) do
       {:ok, _workspace} ->
         {:noreply,
          socket
