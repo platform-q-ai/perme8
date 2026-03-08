@@ -324,4 +324,125 @@ defmodule Agents.Sessions.Infrastructure.TaskRunnerTest do
                "Fresh warm start preparation failed: auth refresh failed"
     end
   end
+
+  describe "session event isolation" do
+    defmodule NoopTaskRepo do
+      @moduledoc false
+      def get_task(_task_id), do: nil
+      def update_task_status(_task, _attrs), do: :ok
+    end
+
+    defp base_runner_state(overrides \\ %{}) do
+      Map.merge(
+        %TaskRunner{
+          task_id: "task-#{System.unique_integer([:positive])}",
+          session_id: "parent-sess-1",
+          pubsub: Perme8.Events.PubSub,
+          task_repo: NoopTaskRepo,
+          event_bus: StubEventBus,
+          queue_terminal_notifier: fn _, _, _ -> :ok end,
+          output_parts: []
+        },
+        overrides
+      )
+    end
+
+    test "parent session event is processed normally when event has no sessionID" do
+      state = base_runner_state()
+      task_id = state.task_id
+      Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "task:#{task_id}")
+
+      event = %{
+        "type" => "message.part.updated",
+        "properties" => %{"part" => %{"type" => "text", "id" => "text-1", "text" => "hello"}}
+      }
+
+      assert {:noreply, new_state} = TaskRunner.handle_info({:opencode_event, event}, state)
+      assert_receive {:task_event, ^task_id, ^event}
+
+      assert Enum.any?(new_state.output_parts, fn part ->
+               part["id"] == "text-1" and part["text"] == "hello"
+             end)
+    end
+
+    test "child session session.status idle does not trigger task completion" do
+      state =
+        base_runner_state(%{
+          was_running: true,
+          child_session_ids: %{"child-sess-1" => "subtask-msg-1"}
+        })
+
+      event = %{
+        "type" => "session.status",
+        "properties" => %{"sessionID" => "child-sess-1", "status" => %{"type" => "idle"}}
+      }
+
+      assert {:noreply, _new_state} = TaskRunner.handle_info({:opencode_event, event}, state)
+    end
+
+    test "parent session session.status idle triggers task completion" do
+      state = base_runner_state(%{was_running: true})
+
+      event = %{
+        "type" => "session.status",
+        "properties" => %{"sessionID" => "parent-sess-1", "status" => %{"type" => "idle"}}
+      }
+
+      assert {:stop, :normal, _new_state} =
+               TaskRunner.handle_info({:opencode_event, event}, state)
+    end
+
+    test "event with unknown session ID is skipped for caching" do
+      state = base_runner_state(%{output_parts: [%{"id" => "keep-1", "type" => "text"}]})
+      task_id = state.task_id
+      Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "task:#{task_id}")
+
+      event = %{
+        "type" => "message.part.updated",
+        "properties" => %{
+          "sessionID" => "unknown-sess",
+          "part" => %{"type" => "text", "id" => "child-text", "text" => "child output"}
+        }
+      }
+
+      assert {:noreply, new_state} = TaskRunner.handle_info({:opencode_event, event}, state)
+      assert_receive {:task_event, ^task_id, ^event}
+      assert new_state.output_parts == state.output_parts
+    end
+
+    test "subtask part event registers child session ID" do
+      state = base_runner_state()
+
+      event = %{
+        "type" => "message.part.updated",
+        "properties" => %{
+          "part" => %{
+            "type" => "subtask",
+            "messageID" => "msg-1",
+            "sessionID" => "child-sess-1"
+          }
+        }
+      }
+
+      assert {:noreply, new_state} = TaskRunner.handle_info({:opencode_event, event}, state)
+      assert new_state.child_session_ids == %{"child-sess-1" => "subtask-msg-1"}
+    end
+
+    test "event with no sessionID is treated as parent session" do
+      state = base_runner_state()
+
+      event = %{
+        "type" => "message.part.updated",
+        "properties" => %{
+          "part" => %{"type" => "reasoning", "id" => "reason-1", "text" => "thinking"}
+        }
+      }
+
+      assert {:noreply, new_state} = TaskRunner.handle_info({:opencode_event, event}, state)
+
+      assert Enum.any?(new_state.output_parts, fn part ->
+               part["id"] == "reason-1" and part["type"] == "reasoning"
+             end)
+    end
+  end
 end

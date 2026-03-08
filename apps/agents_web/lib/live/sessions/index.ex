@@ -105,6 +105,7 @@ defmodule AgentsWeb.SessionsLive.Index do
      |> assign(:composing_new, selected_container_id == nil)
      |> assign(:tasks_snapshot, tasks)
      |> assign_session_state()
+     |> assign(:parent_session_id, current_task && current_task.session_id)
      |> EventProcessor.maybe_load_cached_output(current_task)
      |> EventProcessor.maybe_load_pending_question(current_task)
      |> EventProcessor.maybe_load_todos(current_task)
@@ -911,6 +912,7 @@ defmodule AgentsWeb.SessionsLive.Index do
     socket =
       socket
       |> assign(:current_task, updated_current_task)
+      |> assign(:parent_session_id, updated_current_task && updated_current_task.session_id)
       |> assign(:active_container_id, cid)
       |> assign(:sessions, sessions)
       |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)
@@ -950,6 +952,7 @@ defmodule AgentsWeb.SessionsLive.Index do
         socket =
           socket
           |> assign(:current_task, new_task)
+          |> assign(:parent_session_id, new_task.session_id)
           |> assign(:events, [])
           |> clear_form()
 
@@ -1049,6 +1052,7 @@ defmodule AgentsWeb.SessionsLive.Index do
     socket =
       socket
       |> assign(:current_task, new_task)
+      |> assign(:parent_session_id, new_task.session_id)
       |> assign(:events, [])
       |> clear_form()
       |> clear_flash()
@@ -1199,6 +1203,7 @@ defmodule AgentsWeb.SessionsLive.Index do
      socket
      |> assign(:refreshing_task_ids, refreshing)
      |> assign(:current_task, current_task)
+     |> assign(:parent_session_id, current_task && current_task.session_id)
      |> assign(:sessions, sessions)
      |> assign(:tasks_snapshot, tasks_snapshot)
      |> assign(:tickets, re_enrich_tickets(socket.assigns.tickets, tasks_snapshot))
@@ -1376,6 +1381,8 @@ defmodule AgentsWeb.SessionsLive.Index do
       session_tokens: nil,
       session_cost: nil,
       session_summary: nil,
+      parent_session_id: nil,
+      child_session_ids: MapSet.new(),
       output_parts: [],
       pending_question: nil,
       confirmed_user_messages: [],
@@ -1760,6 +1767,7 @@ defmodule AgentsWeb.SessionsLive.Index do
     socket =
       socket
       |> assign(:current_task, task)
+      |> assign(:parent_session_id, task.session_id)
       |> assign(:active_container_id, task.container_id)
       |> assign(:composing_new, false)
       |> clear_form()
@@ -1822,6 +1830,7 @@ defmodule AgentsWeb.SessionsLive.Index do
         {:noreply,
          socket
          |> assign(:current_task, updated)
+         |> assign(:parent_session_id, updated.session_id)
          |> assign(:sessions, sessions)
          |> assign(:tasks_snapshot, tasks_snapshot)
          |> assign(:tickets, re_enrich_tickets(socket.assigns.tickets, tasks_snapshot))
@@ -1900,8 +1909,15 @@ defmodule AgentsWeb.SessionsLive.Index do
        ) do
     status_type = get_in(event, ["properties", "status", "type"])
 
+    event_session_id =
+      get_in(event, ["properties", "sessionID"]) || get_in(event, ["properties", "session_id"])
+
+    parent_session_id = Map.get(socket.assigns, :parent_session_id)
+
     case status_type do
-      "idle" ->
+      "idle"
+      when is_nil(parent_session_id) or is_nil(event_session_id) or
+             event_session_id == parent_session_id ->
         request_task_refresh(socket, task_id)
 
       _ ->

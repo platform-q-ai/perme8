@@ -1009,6 +1009,145 @@ defmodule AgentsWeb.SessionsLive.EventProcessorTest do
     end
   end
 
+  describe "process_event/2 — session event isolation" do
+    test "child session user message.updated does NOT add to user_message_ids" do
+      socket =
+        build_socket(%{
+          parent_session_id: "parent-sess",
+          child_session_ids: MapSet.new(["child-sess"]),
+          user_message_ids: MapSet.new(),
+          subtask_message_ids: MapSet.new(),
+          output_parts: []
+        })
+
+      event = %{
+        "type" => "message.updated",
+        "properties" => %{
+          "sessionID" => "child-sess",
+          "info" => %{"role" => "user", "id" => "msg-1", "content" => "Explore the code"}
+        }
+      }
+
+      result = EventProcessor.process_event(event, socket)
+      refute MapSet.member?(result.assigns.user_message_ids, "msg-1")
+    end
+
+    test "child session text part does NOT add to output_parts" do
+      socket =
+        build_socket(%{
+          parent_session_id: "parent-sess",
+          child_session_ids: MapSet.new(["child-sess"]),
+          output_parts: [],
+          user_message_ids: MapSet.new(),
+          subtask_message_ids: MapSet.new()
+        })
+
+      event = %{
+        "type" => "message.part.updated",
+        "properties" => %{
+          "sessionID" => "child-sess",
+          "part" => %{"type" => "text", "id" => "part-1", "text" => "some output"}
+        }
+      }
+
+      result = EventProcessor.process_event(event, socket)
+      assert result.assigns.output_parts == []
+    end
+
+    test "event without sessionID processes normally (backward compat)" do
+      socket =
+        build_socket(%{
+          parent_session_id: "parent-sess",
+          child_session_ids: MapSet.new(),
+          output_parts: [],
+          user_message_ids: MapSet.new(),
+          subtask_message_ids: MapSet.new()
+        })
+
+      event = %{
+        "type" => "message.part.updated",
+        "properties" => %{
+          "part" => %{"type" => "text", "id" => "part-1", "text" => "hello"}
+        }
+      }
+
+      result = EventProcessor.process_event(event, socket)
+      assert length(result.assigns.output_parts) == 1
+    end
+
+    test "parent session event with matching sessionID processes normally" do
+      socket =
+        build_socket(%{
+          parent_session_id: "parent-sess",
+          child_session_ids: MapSet.new(),
+          output_parts: [],
+          user_message_ids: MapSet.new(),
+          subtask_message_ids: MapSet.new()
+        })
+
+      event = %{
+        "type" => "message.part.updated",
+        "properties" => %{
+          "sessionID" => "parent-sess",
+          "part" => %{"type" => "text", "id" => "part-1", "text" => "hello"}
+        }
+      }
+
+      result = EventProcessor.process_event(event, socket)
+      assert length(result.assigns.output_parts) == 1
+    end
+
+    test "event processes normally when parent_session_id assign is nil" do
+      socket =
+        build_socket(%{
+          output_parts: [],
+          user_message_ids: MapSet.new(),
+          subtask_message_ids: MapSet.new()
+        })
+
+      event = %{
+        "type" => "message.part.updated",
+        "properties" => %{
+          "sessionID" => "some-sess",
+          "part" => %{"type" => "text", "id" => "part-1", "text" => "hello"}
+        }
+      }
+
+      result = EventProcessor.process_event(event, socket)
+      assert length(result.assigns.output_parts) == 1
+    end
+
+    test "subtask part event from child session is still processed (not filtered)" do
+      socket =
+        build_socket(%{
+          parent_session_id: "parent-sess",
+          child_session_ids: MapSet.new(["child-sess"]),
+          output_parts: [],
+          user_message_ids: MapSet.new(),
+          subtask_message_ids: MapSet.new()
+        })
+
+      event = %{
+        "type" => "message.part.updated",
+        "properties" => %{
+          "sessionID" => "child-sess",
+          "part" => %{
+            "type" => "subtask",
+            "id" => "part-1",
+            "messageID" => "msg-1",
+            "agent" => "explore",
+            "description" => "Research spike",
+            "prompt" => "Find the files"
+          }
+        }
+      }
+
+      result = EventProcessor.process_event(event, socket)
+      assert length(result.assigns.output_parts) == 1
+      assert {:subtask, _, %{agent: "explore"}} = hd(result.assigns.output_parts)
+    end
+  end
+
   describe "decode_cached_output/1 — subtask entries" do
     test "decodes subtask cache entry into {:subtask, id, detail} tuple with :done status" do
       json =
@@ -1034,6 +1173,56 @@ defmodule AgentsWeb.SessionsLive.EventProcessorTest do
                   status: :done
                 }}
              ] = parts
+    end
+  end
+
+  describe "decode_cached_output/1 — backport subagent prompt re-attribution" do
+    test "user part after task tool is re-attributed as subtask" do
+      json =
+        Jason.encode!([
+          %{
+            "type" => "tool",
+            "id" => "tool-1",
+            "name" => "task",
+            "status" => "done",
+            "input" => %{"prompt" => "Explore the codebase", "description" => "Research spike"}
+          },
+          %{"type" => "user", "id" => "user-1", "text" => "Explore the codebase"}
+        ])
+
+      parts = EventProcessor.decode_cached_output(json)
+
+      assert [
+               {:tool, "tool-1", "task", :done, _tool_detail},
+               {:subtask, "user-1",
+                %{agent: "unknown", prompt: "Explore the codebase", status: :done}}
+             ] = parts
+    end
+
+    test "user part NOT after task tool remains as user (regression)" do
+      json =
+        Jason.encode!([
+          %{"type" => "text", "id" => "text-1", "text" => "Hello"},
+          %{"type" => "user", "id" => "user-1", "text" => "Follow-up"}
+        ])
+
+      parts = EventProcessor.decode_cached_output(json)
+      assert {:user, "user-1", "Follow-up"} in parts
+    end
+
+    test "user part after non-task tool is NOT re-attributed" do
+      json =
+        Jason.encode!([
+          %{"type" => "tool", "id" => "tool-1", "name" => "read_file", "status" => "done"},
+          %{"type" => "user", "id" => "user-1", "text" => "Follow-up question"}
+        ])
+
+      parts = EventProcessor.decode_cached_output(json)
+
+      assert Enum.any?(parts, fn
+               {:user, "user-1", "Follow-up question"} -> true
+               _ -> false
+             end)
     end
   end
 
