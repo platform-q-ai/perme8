@@ -11,7 +11,6 @@ defmodule Agents.Sessions do
   use Boundary,
     top_level?: true,
     deps: [
-      Agents.Tickets,
       Agents.Sessions.Domain,
       Agents.Sessions.Application,
       Agents.Sessions.Infrastructure,
@@ -166,18 +165,6 @@ defmodule Agents.Sessions do
 
     task_repo.list_sessions_for_user(user_id, opts)
   end
-
-  defdelegate list_project_tickets(user_id, opts \\ []), to: Agents.Tickets
-
-  defdelegate reorder_triage_tickets(ordered_ticket_numbers), to: Agents.Tickets
-
-  defdelegate send_ticket_to_top(number), to: Agents.Tickets
-
-  defdelegate send_ticket_to_bottom(number), to: Agents.Tickets
-
-  defdelegate sync_tickets(), to: Agents.Tickets
-
-  defdelegate close_project_ticket(number), to: Agents.Tickets
 
   @doc """
   Returns the default Docker image name for sessions.
@@ -669,10 +656,4 @@ defmodule Agents.Sessions do
       end)
     end
   end
-
-  defdelegate link_ticket_to_task(ticket_number, task_id), to: Agents.Tickets
-
-  defdelegate unlink_ticket_from_task(ticket_number), to: Agents.Tickets
-
-  defdelegate extract_ticket_number(instruction), to: Agents.Tickets
 end

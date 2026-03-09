@@ -10,6 +10,7 @@ defmodule AgentsWeb.DashboardLive.Index do
   alias Agents.Sessions
   alias Agents.Sessions.Domain.Entities.QueueSnapshot
   alias Agents.Sessions.Domain.Entities.TodoList
+  alias Agents.Tickets
   alias Agents.Tickets.Domain.Entities.Ticket
   alias Agents.Tickets.Domain.Policies.TicketEnrichmentPolicy
   alias Agents.Tickets.Domain.Policies.TicketHierarchyPolicy
@@ -25,7 +26,7 @@ defmodule AgentsWeb.DashboardLive.Index do
     user = socket.assigns.current_scope.user
     sessions = Sessions.list_sessions(user.id)
     tasks = Sessions.list_tasks(user.id)
-    tickets = Sessions.list_project_tickets(user.id, tasks: tasks)
+    tickets = Tickets.list_project_tickets(user.id, tasks: tasks)
     active_ticket_number = next_active_ticket_number(tickets, nil)
     queue_state_or_snapshot = load_queue_state(user.id)
 
@@ -367,7 +368,7 @@ defmodule AgentsWeb.DashboardLive.Index do
       |> Enum.uniq()
 
     # Persist positions to the database (display order: first = top = highest position)
-    Sessions.reorder_triage_tickets(ordered_numbers)
+    Tickets.reorder_triage_tickets(ordered_numbers)
 
     # Reload from DB to get the canonical order
     tickets = reload_tickets(socket)
@@ -379,7 +380,7 @@ defmodule AgentsWeb.DashboardLive.Index do
   def handle_event("send_ticket_to_top", %{"number" => number_str}, socket) do
     case Integer.parse(number_str) do
       {number, ""} ->
-        Sessions.send_ticket_to_top(number)
+        Tickets.send_ticket_to_top(number)
         tickets = reload_tickets(socket)
         {:noreply, assign(socket, :tickets, tickets)}
 
@@ -392,7 +393,7 @@ defmodule AgentsWeb.DashboardLive.Index do
   def handle_event("send_ticket_to_bottom", %{"number" => number_str}, socket) do
     case Integer.parse(number_str) do
       {number, ""} ->
-        Sessions.send_ticket_to_bottom(number)
+        Tickets.send_ticket_to_bottom(number)
         tickets = reload_tickets(socket)
         {:noreply, assign(socket, :tickets, tickets)}
 
@@ -580,7 +581,7 @@ defmodule AgentsWeb.DashboardLive.Index do
         socket
       end
 
-    Sessions.close_project_ticket(number)
+    Tickets.close_project_ticket(number)
 
     {:noreply,
      socket
@@ -595,7 +596,7 @@ defmodule AgentsWeb.DashboardLive.Index do
     lv = self()
 
     Task.start(fn ->
-      result = Sessions.sync_tickets()
+      result = Tickets.sync_tickets()
       send(lv, {:ticket_sync_finished, result})
     end)
 
@@ -1090,7 +1091,7 @@ defmodule AgentsWeb.DashboardLive.Index do
 
     # Reload tickets from DB so the persisted task_id is picked up
     tickets =
-      Sessions.list_project_tickets(user.id, tasks: tasks_snapshot)
+      Tickets.list_project_tickets(user.id, tasks: tasks_snapshot)
 
     {:noreply,
      socket
@@ -1238,7 +1239,7 @@ defmodule AgentsWeb.DashboardLive.Index do
         _ -> []
       end
 
-    tickets = Sessions.list_project_tickets(user.id, ticket_opts)
+    tickets = Tickets.list_project_tickets(user.id, ticket_opts)
 
     # Re-derive active ticket number from the currently selected session
     active_ticket_number =
@@ -2133,7 +2134,7 @@ defmodule AgentsWeb.DashboardLive.Index do
         _ -> []
       end
 
-    Sessions.list_project_tickets(user.id, ticket_opts)
+    Tickets.list_project_tickets(user.id, ticket_opts)
   end
 
   defp map_ticket_tree(tickets, fun) when is_list(tickets) do
@@ -2235,7 +2236,7 @@ defmodule AgentsWeb.DashboardLive.Index do
 
     with title when is_binary(title) <- title,
          number when is_integer(number) and number > 0 <-
-           Sessions.extract_ticket_number(title),
+           Tickets.extract_ticket_number(title),
          true <- Enum.any?(all_tickets(tickets), &(&1.number == number)) do
       number
     else
@@ -2485,7 +2486,7 @@ defmodule AgentsWeb.DashboardLive.Index do
   defp ensure_ticket_reference(instruction, nil), do: instruction
 
   defp ensure_ticket_reference(instruction, ticket_number) do
-    if Sessions.extract_ticket_number(instruction) do
+    if Tickets.extract_ticket_number(instruction) do
       instruction
     else
       "##{ticket_number} #{instruction}"
@@ -2495,9 +2496,9 @@ defmodule AgentsWeb.DashboardLive.Index do
   defp maybe_link_ticket_to_task(task) do
     instruction = Map.get(task, :instruction, "")
 
-    case Sessions.extract_ticket_number(instruction) do
+    case Tickets.extract_ticket_number(instruction) do
       nil -> :ok
-      ticket_number -> Sessions.link_ticket_to_task(ticket_number, task.id)
+      ticket_number -> Tickets.link_ticket_to_task(ticket_number, task.id)
     end
   rescue
     _ -> :ok

@@ -768,7 +768,7 @@ IO.puts("[exo-seeds-web] Created all session-card-stats fixture sessions")
 # 8. Create project tickets (for ticket-sync browser tests)
 # ---------------------------------------------------------------------------
 
-alias Agents.Sessions.Infrastructure.Schemas.ProjectTicketSchema
+alias Agents.Tickets.Infrastructure.Schemas.ProjectTicketSchema
 
 %ProjectTicketSchema{}
 |> ProjectTicketSchema.changeset(%{

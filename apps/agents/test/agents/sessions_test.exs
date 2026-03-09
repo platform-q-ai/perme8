@@ -2,8 +2,10 @@ defmodule Agents.SessionsTest do
   use Agents.DataCase, async: true
 
   alias Agents.Sessions
-  alias Agents.Sessions.Domain.Entities.{Task, Ticket}
-  alias Agents.Sessions.Infrastructure.Schemas.ProjectTicketSchema
+  alias Agents.Sessions.Domain.Entities.Task
+  alias Agents.Tickets
+  alias Agents.Tickets.Domain.Entities.Ticket
+  alias Agents.Tickets.Infrastructure.Schemas.ProjectTicketSchema
   alias Agents.Repo
 
   import Agents.Test.AccountsFixtures
@@ -591,9 +593,9 @@ defmodule Agents.SessionsTest do
 
   describe "ticket sync projection" do
     test "extract_ticket_number/1 handles hashtag and ticket prefixes" do
-      assert Sessions.extract_ticket_number("Implement #306 in the session panel") == 306
-      assert Sessions.extract_ticket_number("please work on ticket 412 next") == 412
-      assert Sessions.extract_ticket_number("no ticket ref") == nil
+      assert Tickets.extract_ticket_number("Implement #306 in the session panel") == 306
+      assert Tickets.extract_ticket_number("please work on ticket 412 next") == 412
+      assert Tickets.extract_ticket_number("no ticket ref") == nil
     end
 
     test "list_project_tickets/2 enriches tickets with associated session state" do
@@ -629,7 +631,7 @@ defmodule Agents.SessionsTest do
         Ticket.new(%{number: 999, title: "Unlinked"})
       ]
 
-      result = Sessions.list_project_tickets(user.id, tickets: tickets)
+      result = Tickets.list_project_tickets(user.id, tickets: tickets)
 
       assert Enum.all?(result, &match?(%Ticket{}, &1))
 
@@ -671,7 +673,7 @@ defmodule Agents.SessionsTest do
         status: "running"
       })
 
-      result = Sessions.list_project_tickets(user.id)
+      result = Tickets.list_project_tickets(user.id)
 
       # All open issues are returned (no status filtering)
       assert length(result) == 3
@@ -696,7 +698,7 @@ defmodule Agents.SessionsTest do
         status: "running"
       })
 
-      [parent_ticket] = Sessions.list_project_tickets(user.id)
+      [parent_ticket] = Tickets.list_project_tickets(user.id)
 
       assert %Ticket{} = parent_ticket
       assert parent_ticket.number == 500
