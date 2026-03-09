@@ -40,6 +40,7 @@ defmodule Agents.Sessions do
   alias Agents.Sessions.Infrastructure.QueueOrchestrator
   alias Agents.Sessions.Infrastructure.QueueOrchestratorSupervisor
   alias Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository
+  alias Agents.Sessions.Domain.Entities.Session
   alias Agents.Sessions.Domain.Entities.Ticket
   alias Agents.Sessions.Domain.Policies.TicketEnrichmentPolicy
   alias Agents.Sessions.Infrastructure.Repositories.TaskRepository
@@ -272,7 +273,7 @@ defmodule Agents.Sessions do
   @doc "Returns a human-readable label for a lifecycle state."
   @spec session_display_name(atom()) :: String.t()
   def session_display_name(state) do
-    Agents.Sessions.Domain.Entities.Session.display_name(state)
+    Session.display_name(state)
   end
 
   @doc """

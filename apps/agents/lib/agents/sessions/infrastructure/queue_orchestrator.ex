@@ -481,11 +481,8 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
       {:task_status_changed, to_task.id, status}
     )
 
-    Logger.debug("Session lifecycle transition",
-      task_id: to_task.id,
-      from_state: from_state,
-      to_state: to_state,
-      container_id: container_id
+    Logger.debug(
+      "Session lifecycle transition: #{from_state} -> #{to_state} [task=#{to_task.id}, container=#{container_id}]"
     )
 
     Phoenix.PubSub.broadcast(
