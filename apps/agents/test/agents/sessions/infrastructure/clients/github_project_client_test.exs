@@ -1,7 +1,7 @@
-defmodule Agents.Sessions.Infrastructure.Clients.GithubProjectClientTest do
+defmodule Agents.Tickets.Infrastructure.Clients.GithubProjectClientTest do
   use ExUnit.Case, async: true
 
-  alias Agents.Sessions.Infrastructure.Clients.GithubProjectClient
+  alias Agents.Tickets.Infrastructure.Clients.GithubProjectClient
 
   describe "fetch_sub_issues/3" do
     test "calls the sub-issues endpoint and returns sub-issue numbers" do

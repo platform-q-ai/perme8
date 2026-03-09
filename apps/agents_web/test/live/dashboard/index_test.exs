@@ -7,7 +7,7 @@ defmodule AgentsWeb.DashboardLive.IndexTest do
   import Ecto.Query
 
   alias Agents.Sessions.Infrastructure.Schemas.TaskSchema
-  alias Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository
+  alias Agents.Tickets.Infrastructure.Repositories.ProjectTicketRepository
   alias Agents.Sessions.Domain.Entities.{LaneEntry, QueueSnapshot}
   alias Agents.Repo
 

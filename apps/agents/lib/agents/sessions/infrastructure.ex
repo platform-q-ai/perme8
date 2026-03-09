@@ -14,7 +14,6 @@ defmodule Agents.Sessions.Infrastructure do
   use Boundary,
     top_level?: true,
     deps: [
-      Agents.Tickets.Domain,
       Agents.Sessions.Domain,
       Agents.Sessions.Application,
       Agents.Repo

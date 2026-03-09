@@ -199,7 +199,7 @@
           inferred_number =
             [session.title, task_instruction]
             |> Enum.find_value(fn text ->
-              case Agents.Sessions.extract_ticket_number(text) do
+              case Agents.Tickets.extract_ticket_number(text) do
                 number when is_integer(number) and number > 0 -> number
                 _ -> nil
               end
