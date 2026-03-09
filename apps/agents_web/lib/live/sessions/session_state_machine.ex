@@ -107,12 +107,15 @@ defmodule AgentsWeb.SessionsLive.SessionStateMachine do
   @spec task_running?(state()) :: boolean()
   def task_running?(state), do: state in @running_states
 
+  @doc "Returns true if the session is in the warming state."
   @spec warming?(state()) :: boolean()
   def warming?(state), do: state == :warming
 
+  @doc "Returns true if the session is queued without a warm container."
   @spec queued_cold?(state()) :: boolean()
   def queued_cold?(state), do: state == :queued_cold
 
+  @doc "Returns true if the session is queued with a warm container."
   @spec queued_warm?(state()) :: boolean()
   def queued_warm?(state), do: state == :queued_warm
 
@@ -148,6 +151,7 @@ defmodule AgentsWeb.SessionsLive.SessionStateMachine do
   def submission_route(:idle), do: :new_or_resume
   def submission_route(:unknown), do: :blocked
 
+  @doc "Returns a human-readable display name for the session state."
   @spec display_name(state()) :: String.t()
   def display_name(state), do: Agents.Sessions.session_display_name(state)
 

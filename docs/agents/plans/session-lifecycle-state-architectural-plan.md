@@ -410,17 +410,17 @@ awaiting_feedback → queued_warm
 
 ### Phase 2 Validation
 
-- [ ] All infrastructure tests pass
-- [ ] All interface tests pass (SessionStateMachine, LiveView)
-- [ ] Migration runs cleanly: `mix ecto.migrate` (in agents app)
-- [ ] Backfill populates lifecycle_state for existing tasks
-- [ ] No boundary violations: `mix boundary`
-- [ ] Full test suite passes: `mix test` (umbrella-wide)
-- [ ] BDD feature file scenarios verifiable against the new data-testid attributes
+- [x] All infrastructure tests pass
+- [x] All interface tests pass (SessionStateMachine, LiveView)
+- [x] Migration runs cleanly: `mix ecto.migrate` (in agents app)
+- [x] Backfill populates lifecycle_state for existing tasks
+- [x] No boundary violations: `mix boundary`
+- [x] Full test suite passes: `mix test` (umbrella-wide)
+- [x] BDD feature file scenarios verifiable against the new data-testid attributes
 
 ### Pre-commit Checkpoint
 
-- [ ] `mix precommit` passes (compile with warnings-as-errors, boundary, format, credo, tests)
+- [x] `mix precommit` passes (compile with warnings-as-errors, boundary, format, credo, tests)
 
 ---
 

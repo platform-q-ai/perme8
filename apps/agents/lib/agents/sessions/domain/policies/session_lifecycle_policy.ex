@@ -40,6 +40,7 @@ defmodule Agents.Sessions.Domain.Policies.SessionLifecyclePolicy do
                        {:awaiting_feedback, :queued_warm}
                      ])
 
+  @doc "Derives a lifecycle state atom from a task map (or nil)."
   @spec derive(map() | nil) :: atom()
   def derive(nil), do: :idle
 
@@ -60,22 +61,28 @@ defmodule Agents.Sessions.Domain.Policies.SessionLifecyclePolicy do
   defp derive_from_status("cancelled", _task), do: :cancelled
   defp derive_from_status(_unknown, _task), do: :idle
 
+  @doc "Returns true if a transition from `from_state` to `to_state` is valid."
   @spec can_transition?(atom(), atom()) :: boolean()
   def can_transition?(from_state, to_state),
     do: MapSet.member?(@valid_transitions, {from_state, to_state})
 
+  @doc "Returns true if the state is an active (non-terminal, non-idle) state."
   @spec active?(atom()) :: boolean()
   def active?(state), do: state in @active_states
 
+  @doc "Returns true if the state is a terminal state."
   @spec terminal?(atom()) :: boolean()
   def terminal?(state), do: state in @terminal_states
 
+  @doc "Returns true if the state represents a warm container."
   @spec warm?(atom()) :: boolean()
   def warm?(state), do: state in @warm_states
 
+  @doc "Returns true if the state represents a cold (no container) state."
   @spec cold?(atom()) :: boolean()
   def cold?(state), do: state in @cold_states
 
+  @doc "Returns true if a message can be submitted in the given state."
   @spec can_submit_message?(atom()) :: boolean()
   def can_submit_message?(state), do: active?(state)
 
