@@ -64,12 +64,15 @@ defmodule Agents.Sessions.Domain.Entities.Session do
     lifecycle_state: :idle
   ]
 
+  @doc "Creates a new Session entity from a map of attributes."
   @spec new(map()) :: t()
   def new(attrs), do: struct(__MODULE__, attrs)
 
+  @doc "Builds a Session from a task map, deriving the lifecycle state."
   @spec from_task(map()) :: t()
   def from_task(task) when is_map(task), do: from_task(task, %{})
 
+  @doc "Builds a Session from a task map merged with additional metadata."
   @spec from_task(map(), map()) :: t()
   def from_task(task, metadata) when is_map(task) and is_map(metadata) do
     attrs = Map.merge(task, metadata)
@@ -98,9 +101,11 @@ defmodule Agents.Sessions.Domain.Entities.Session do
     })
   end
 
+  @doc "Returns the list of all valid lifecycle states."
   @spec valid_lifecycle_states() :: [lifecycle_state()]
   def valid_lifecycle_states, do: @valid_lifecycle_states
 
+  @doc "Returns a human-readable display name for a lifecycle state."
   @spec display_name(lifecycle_state()) :: String.t()
   def display_name(:queued_cold), do: "Queued (cold)"
   def display_name(:queued_warm), do: "Queued (warm)"
