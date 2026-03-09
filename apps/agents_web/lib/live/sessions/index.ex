@@ -920,9 +920,13 @@ defmodule AgentsWeb.SessionsLive.Index do
     is_current_task = is_map(current_task) and current_task.id == task_id
 
     updated_current_task =
-      if is_current_task,
-        do: Map.put(current_task, :status, status),
-        else: current_task
+      if is_current_task do
+        current_task
+        |> Map.put(:status, status)
+        |> Map.put(:lifecycle_state, lifecycle_state_for_task_status(current_task, status))
+      else
+        current_task
+      end
 
     changed_task =
       resolve_changed_task(is_current_task, updated_current_task, task_id, status, socket)
@@ -958,6 +962,32 @@ defmodule AgentsWeb.SessionsLive.Index do
       |> apply_status_change_to_ui(is_current_task, status, task_id)
 
     {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info({:lifecycle_state_changed, task_id, _from_state, to_state}, socket) do
+    lifecycle_state = lifecycle_state_to_string(to_state)
+
+    updated_current_task =
+      case socket.assigns.current_task do
+        %{id: ^task_id} = current_task -> Map.put(current_task, :lifecycle_state, lifecycle_state)
+        other -> other
+      end
+
+    tasks_snapshot =
+      update_task_lifecycle_state(socket.assigns[:tasks_snapshot] || [], task_id, lifecycle_state)
+
+    sessions =
+      update_session_lifecycle_state(socket.assigns.sessions, task_id, lifecycle_state)
+
+    tickets = TicketEnrichmentPolicy.enrich_all(socket.assigns.tickets, tasks_snapshot)
+
+    {:noreply,
+     socket
+     |> assign(:current_task, updated_current_task)
+     |> assign(:sessions, sessions)
+     |> assign(:tasks_snapshot, tasks_snapshot)
+     |> assign(:tickets, tickets)}
   end
 
   @impl true
@@ -1961,9 +1991,13 @@ defmodule AgentsWeb.SessionsLive.Index do
       (socket.assigns[:tasks_snapshot] || [])
       |> Enum.find(&(&1.id == task_id))
 
-    if snapshot_task,
-      do: Map.put(snapshot_task, :status, status),
-      else: %{id: task_id, status: status}
+    if snapshot_task do
+      snapshot_task
+      |> Map.put(:status, status)
+      |> Map.put(:lifecycle_state, lifecycle_state_for_task_status(snapshot_task, status))
+    else
+      %{id: task_id, status: status, lifecycle_state: status}
+    end
   end
 
   # Only modify current session UI state (output_parts, pending_question,
@@ -2144,6 +2178,39 @@ defmodule AgentsWeb.SessionsLive.Index do
   end
 
   defp upsert_task_snapshot(_tasks, task), do: [task]
+
+  defp update_task_lifecycle_state(tasks, _task_id, _lifecycle_state) when not is_list(tasks),
+    do: tasks
+
+  defp update_task_lifecycle_state(tasks, task_id, lifecycle_state) do
+    Enum.map(tasks, fn
+      %{id: ^task_id} = task -> Map.put(task, :lifecycle_state, lifecycle_state)
+      task -> task
+    end)
+  end
+
+  defp update_session_lifecycle_state(sessions, _task_id, _lifecycle_state)
+       when not is_list(sessions),
+       do: sessions
+
+  defp update_session_lifecycle_state(sessions, task_id, lifecycle_state) do
+    Enum.map(sessions, fn
+      %{latest_task_id: ^task_id} = session -> Map.put(session, :lifecycle_state, lifecycle_state)
+      session -> session
+    end)
+  end
+
+  defp lifecycle_state_to_string(state) when is_atom(state), do: Atom.to_string(state)
+  defp lifecycle_state_to_string(state) when is_binary(state), do: state
+  defp lifecycle_state_to_string(_state), do: "idle"
+
+  defp lifecycle_state_for_task_status(task, status) do
+    task
+    |> Map.put(:status, status)
+    |> Map.put(:lifecycle_state, nil)
+    |> SessionStateMachine.state_from_task()
+    |> lifecycle_state_to_string()
+  end
 
   defp find_ticket_number_for_container(tickets, container_id) do
     case Enum.find(all_tickets(tickets), &(&1.associated_container_id == container_id)) do

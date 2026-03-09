@@ -40,6 +40,22 @@ defmodule Agents.Sessions.Domain.Entities.TaskTest do
       assert task.status == "running"
     end
 
+    test "accepts lifecycle_state field" do
+      task =
+        Task.new(%{
+          user_id: "user-123",
+          instruction: "Run tests",
+          lifecycle_state: "queued_cold"
+        })
+
+      assert task.lifecycle_state == "queued_cold"
+    end
+
+    test "lifecycle_state defaults to nil" do
+      task = Task.new(%{user_id: "user-123", instruction: "Run tests"})
+      assert task.lifecycle_state == nil
+    end
+
     test "includes all fields in struct" do
       task = Task.new(%{user_id: "user-123", instruction: "Test"})
 
@@ -145,6 +161,39 @@ defmodule Agents.Sessions.Domain.Entities.TaskTest do
       assert task.completed_at == nil
       assert task.inserted_at == ~U[2026-01-01 00:00:00.000000Z]
       assert task.updated_at == ~U[2026-01-02 00:00:00.000000Z]
+    end
+
+    test "maps lifecycle_state from schema" do
+      schema = %{
+        __struct__: SomeSchema,
+        id: "task-123",
+        instruction: "Write tests for the login flow",
+        status: "queued",
+        lifecycle_state: "queued_warm",
+        image: "perme8-opencode",
+        container_id: "abc123",
+        container_port: 4096,
+        session_id: "sess-456",
+        user_id: "user-789",
+        error: nil,
+        output: nil,
+        todo_items: nil,
+        session_summary: nil,
+        parent_task_id: nil,
+        pending_question: nil,
+        queue_position: nil,
+        retry_count: nil,
+        last_retry_at: nil,
+        next_retry_at: nil,
+        queued_at: nil,
+        started_at: nil,
+        completed_at: nil,
+        inserted_at: ~U[2026-01-01 00:00:00.000000Z],
+        updated_at: ~U[2026-01-01 00:00:00.000000Z]
+      }
+
+      task = Task.from_schema(schema)
+      assert task.lifecycle_state == "queued_warm"
     end
 
     test "handles nil optional fields" do

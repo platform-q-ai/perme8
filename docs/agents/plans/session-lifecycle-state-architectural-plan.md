@@ -218,9 +218,9 @@ awaiting_feedback → queued_warm
 
 ### 2.1 Migration — Add lifecycle_state Column to sessions_tasks (P1)
 
-⏸ **Status**: Not Started
+✓ **Status**: Complete
 
-- [ ] Create migration `apps/agents/priv/repo/migrations/YYYYMMDDHHMMSS_add_lifecycle_state_to_sessions_tasks.exs`
+- [x] Create migration `apps/agents/priv/repo/migrations/YYYYMMDDHHMMSS_add_lifecycle_state_to_sessions_tasks.exs`
   - Module: `Agents.Repo.Migrations.AddLifecycleStateToSessionsTasks`
   - `use Ecto.Migration`
   - `def change do`:
@@ -232,40 +232,40 @@ awaiting_feedback → queued_warm
 
 ### 2.2 Update TaskSchema — Add lifecycle_state field
 
-⏸ **Status**: Not Started
+✓ **Status**: Complete
 
-- [ ] **RED**: Write/update test for schema changeset validation that lifecycle_state is included in cast/validate
+- [x] **RED**: Write/update test for schema changeset validation that lifecycle_state is included in cast/validate
   - Test that `status_changeset/2` accepts `:lifecycle_state` in attrs
   - Test that `changeset/2` accepts `:lifecycle_state` in attrs
   - Test that lifecycle_state validates inclusion in valid lifecycle states
-- [ ] **GREEN**: Update `apps/agents/lib/agents/sessions/infrastructure/schemas/task_schema.ex`
+- [x] **GREEN**: Update `apps/agents/lib/agents/sessions/infrastructure/schemas/task_schema.ex`
   - Add `field(:lifecycle_state, :string, default: "idle")` to schema block
   - Add `:lifecycle_state` to both `changeset/2` and `status_changeset/2` cast lists
   - Add `validate_inclusion(:lifecycle_state, @valid_lifecycle_states)` where `@valid_lifecycle_states` is `["idle", "queued_cold", "queued_warm", "warming", "pending", "starting", "running", "awaiting_feedback", "completed", "failed", "cancelled"]`
   - Update the `@type t` typespec to include `lifecycle_state: String.t()`
-- [ ] **REFACTOR**: Ensure Task entity's `from_schema/1` maps the new `lifecycle_state` field
+- [x] **REFACTOR**: Ensure Task entity's `from_schema/1` maps the new `lifecycle_state` field
 
 ### 2.3 Update Task Entity — Include lifecycle_state field
 
-⏸ **Status**: Not Started
+✓ **Status**: Complete
 
-- [ ] **RED**: Update `apps/agents/test/agents/sessions/domain/entities/task_test.exs`
+- [x] **RED**: Update `apps/agents/test/agents/sessions/domain/entities/task_test.exs`
   - Add test: `from_schema/1` maps `lifecycle_state` from schema
   - Add test: `new/1` accepts `lifecycle_state` field
   - Add test: `lifecycle_state` defaults to `nil` (entity doesn't enforce default; DB/schema does)
-- [ ] **GREEN**: Update `apps/agents/lib/agents/sessions/domain/entities/task.ex`
+- [x] **GREEN**: Update `apps/agents/lib/agents/sessions/domain/entities/task.ex`
   - Add `:lifecycle_state` to `@type t`, `defstruct`, and `from_schema/1`
-- [ ] **REFACTOR**: Clean up
+- [x] **REFACTOR**: Clean up
 
 ### 2.4 Update QueueEngine — Delegate to SessionLifecyclePolicy (P1)
 
-⏸ **Status**: Not Started
+✓ **Status**: Complete
 
-- [ ] **RED**: Update `apps/agents/test/agents/sessions/domain/policies/queue_engine_test.exs`
+- [x] **RED**: Update `apps/agents/test/agents/sessions/domain/policies/queue_engine_test.exs`
   - Existing `classify_warm_state/1` tests should continue passing (backward compatible)
   - Add new test: `classify_warm_state/1` returns same results as before (regression guard)
   - The internal delegation is transparent — tests verify behavior, not implementation
-- [ ] **GREEN**: Update `apps/agents/lib/agents/sessions/domain/policies/queue_engine.ex`
+- [x] **GREEN**: Update `apps/agents/lib/agents/sessions/domain/policies/queue_engine.ex`
   - `classify_warm_state/1` implementation delegates to `SessionLifecyclePolicy.derive/1` and maps lifecycle_state back to warm_state atoms:
     - `:queued_cold`, `:idle` → `:cold`
     - `:warming` → `:warming`
@@ -273,15 +273,15 @@ awaiting_feedback → queued_warm
     - `:running` → `:hot`
     - `:completed`, `:failed`, `:cancelled`, `:awaiting_feedback` → `:cold`
   - Keep `classify_warm_state/1` public API signature unchanged for backward compatibility
-- [ ] **REFACTOR**: Remove duplicated `real_container?/1` logic if SessionLifecyclePolicy provides equivalent check. Keep QueueEngine's `real_container?/1` if still used elsewhere in the module.
+- [x] **REFACTOR**: Remove duplicated `real_container?/1` logic if SessionLifecyclePolicy provides equivalent check. Keep QueueEngine's `real_container?/1` if still used elsewhere in the module.
 
 ### 2.5 PubSub Integration — Broadcast Lifecycle Transitions (P0)
 
-⏸ **Status**: Not Started
+✓ **Status**: Complete
 
-- [ ] **RED**: Add/update integration-style test (if existing task_runner or orchestrator tests exist) verifying that `{:lifecycle_state_changed, task_id, from_state, to_state}` is broadcast on `"task:#{task_id}"` topic
+- [x] **RED**: Add/update integration-style test (if existing task_runner or orchestrator tests exist) verifying that `{:lifecycle_state_changed, task_id, from_state, to_state}` is broadcast on `"task:#{task_id}"` topic
   - Note: Infrastructure PubSub tests may need `Agents.DataCase` rather than pure unit tests
-- [ ] **GREEN**: Update broadcast functions in infrastructure:
+- [x] **GREEN**: Update broadcast functions in infrastructure:
   - `apps/agents/lib/agents/sessions/infrastructure/task_runner.ex`:
     - Update `broadcast_status/3` to also broadcast `{:lifecycle_state_changed, task_id, from_state, to_state}` on `"task:#{task_id}"` topic
     - Compute `from_state` and `to_state` using `SessionLifecyclePolicy.derive/1` (before and after status change)
@@ -289,13 +289,13 @@ awaiting_feedback → queued_warm
     - Update `broadcast_task_status/3` to also broadcast lifecycle state change
   - `apps/agents/lib/agents/sessions/infrastructure/queue_orchestrator.ex`:
     - When promoting tasks or changing task state, broadcast lifecycle transitions
-- [ ] **REFACTOR**: Extract a shared `broadcast_lifecycle_transition/4` helper to avoid duplication across TaskRunner, QueueManager, QueueOrchestrator
+- [x] **REFACTOR**: Extract a shared `broadcast_lifecycle_transition/4` helper to avoid duplication across TaskRunner, QueueManager, QueueOrchestrator
 
 ### 2.6 Update SessionStateMachine — Add Warm-State-Aware States (P1)
 
-⏸ **Status**: Not Started
+✓ **Status**: Complete
 
-- [ ] **RED**: Update `apps/agents_web/test/live/sessions/session_state_machine_test.exs`
+- [x] **RED**: Update `apps/agents_web/test/live/sessions/session_state_machine_test.exs`
   - **`state_from_task/1` updates**:
     - Add test: task with `lifecycle_state: "queued_cold"` → `:queued_cold`
     - Add test: task with `lifecycle_state: "queued_warm"` → `:queued_warm`
@@ -310,7 +310,7 @@ awaiting_feedback → queued_warm
   - **Updated `can_submit_message?/1`**: includes all new active states
   - **Updated `submission_route/1`**: `:queued_cold`, `:queued_warm`, `:warming` → `:follow_up`
   - **`display_name/1`**: delegates to `Session.display_name/1` for consistent labels
-- [ ] **GREEN**: Update `apps/agents_web/lib/live/sessions/session_state_machine.ex`
+- [x] **GREEN**: Update `apps/agents_web/lib/live/sessions/session_state_machine.ex`
   - Add `:queued_cold`, `:queued_warm`, `:warming` to `@type state`
   - Update `@status_to_state` to include `"queued_cold" => :queued_cold`, `"queued_warm" => :queued_warm`, `"warming" => :warming`
   - Update `state_from_task/1` to prefer `lifecycle_state` field when present (non-nil), falling back to `status`-based mapping
@@ -318,20 +318,20 @@ awaiting_feedback → queued_warm
   - Add `@active_states` to include `:queued_cold, :queued_warm, :warming`
   - Add predicate functions: `warming?/1`, `queued_cold?/1`, `queued_warm?/1`
   - Add `display_name/1` delegating to `Agents.Sessions.Domain.Entities.Session.display_name/1`
-- [ ] **REFACTOR**: Ensure all existing tests still pass (backward compat)
+- [x] **REFACTOR**: Ensure all existing tests still pass (backward compat)
 
 ### 2.7 Update Helpers — Lifecycle-Aware CSS Classes (P1)
 
-⏸ **Status**: Not Started
+✓ **Status**: Complete
 
-- [ ] **RED**: Add tests for new lifecycle state CSS classes (if helpers have tests)
+- [x] **RED**: Add tests for new lifecycle state CSS classes (if helpers have tests)
   - `ticket_session_state_class("queued_cold")` → appropriate class
   - `ticket_session_state_class("queued_warm")` → appropriate class
   - `ticket_session_state_class("warming")` → appropriate class
   - `ticket_session_state_class("awaiting_feedback")` → appropriate class
   - `ticket_session_state_class("failed")` → `"badge-error"` (was `"paused"` → `"badge-warning"`)
   - `ticket_session_state_class("cancelled")` → `"badge-warning"`
-- [ ] **GREEN**: Update `apps/agents_web/lib/live/sessions/helpers.ex`
+- [x] **GREEN**: Update `apps/agents_web/lib/live/sessions/helpers.ex`
   - Update `ticket_session_state_class/1` to handle all 11 lifecycle states:
     - `"running"` → `"badge-success"`
     - `"queued_cold"` → `"badge-info"`
@@ -344,31 +344,31 @@ awaiting_feedback → queued_warm
     - `"failed"` → `"badge-error"`
     - `"cancelled"` → `"badge-ghost"`
     - `"idle"` or other → `"badge-ghost"`
-- [ ] **REFACTOR**: Remove old `"paused"` mapping (no longer exists in lifecycle states)
+- [x] **REFACTOR**: Remove old `"paused"` mapping (no longer exists in lifecycle states)
 
 ### 2.8 Update Queue Lane Components — Lifecycle-Aware Indicators (P1)
 
-⏸ **Status**: Not Started
+✓ **Status**: Complete
 
-- [ ] **RED**: Verify existing warm_state_indicator tests/expectations still hold
+- [x] **RED**: Verify existing warm_state_indicator tests/expectations still hold
   - The BDD feature file expects:
     - `[data-testid='warm-state-indicator-cold']` inside `[data-testid='lane-cold']`
     - `[data-testid='warm-state-indicator-warming']` inside `[data-testid='lane-warming']`
     - `[data-testid='warm-state-indicator-warm']` inside `[data-testid='lane-warm']`
-- [ ] **GREEN**: Update `apps/agents_web/lib/live/sessions/components/queue_lane_components.ex`
+- [x] **GREEN**: Update `apps/agents_web/lib/live/sessions/components/queue_lane_components.ex`
   - Update `warm_state_indicator/1` data-testid values to match BDD expectations:
     - `:cold` → `data-testid="warm-state-indicator-cold"`
     - `:warming` → `data-testid="warm-state-indicator-warming"`
     - `:warm` → `data-testid="warm-state-indicator-warm"`
     - `:hot` / `:processing` → `data-testid="warm-state-indicator-hot"`
   - Ensure lane data-testid pattern supports the BDD `[data-testid='lane-warming']` expectation (may need a `:warming` lane or render warming entries within their lane with correct data-testid)
-- [ ] **REFACTOR**: Clean up
+- [x] **REFACTOR**: Clean up
 
 ### 2.9 LiveView — Lifecycle State Display in Session Cards (P0)
 
-⏸ **Status**: Not Started
+✓ **Status**: Complete
 
-- [ ] **RED**: Write/update LiveView tests for lifecycle state rendering
+- [x] **RED**: Write/update LiveView tests for lifecycle state rendering
   - The BDD feature file expects:
     - `[data-testid='session-task-card']` containing `[data-testid='lifecycle-state']` with text matching display names
     - `[data-testid='session-task-card'][data-task-id='...']` for transition scenarios
@@ -376,7 +376,7 @@ awaiting_feedback → queued_warm
     - `[data-testid='state-predicate-active']` visible for active states
     - `[data-testid='state-predicate-terminal']` absent for active states
   - Test that `handle_info({:lifecycle_state_changed, task_id, from, to}, socket)` updates the rendered lifecycle state
-- [ ] **GREEN**: Update LiveView templates in `apps/agents_web/lib/live/sessions/`:
+- [x] **GREEN**: Update LiveView templates in `apps/agents_web/lib/live/sessions/`:
   - Add `data-testid="lifecycle-state"` element to session task cards displaying `Session.display_name(lifecycle_state)`
   - Add `data-testid="ticket-lifecycle-state"` element to triage ticket items
   - Add `data-testid="state-predicate-active"` conditional element (visible when `SessionStateMachine.active?/1`)
@@ -384,29 +384,29 @@ awaiting_feedback → queued_warm
   - Add `data-task-id` attribute to session-task-card elements
   - Handle `{:lifecycle_state_changed, task_id, from_state, to_state}` in `handle_info/2`
   - Subscribe to `task:#{task_id}` topic for lifecycle events (existing subscription pattern)
-- [ ] **REFACTOR**: Keep LiveView thin — delegate all state derivation to SessionStateMachine and Session entity
+- [x] **REFACTOR**: Keep LiveView thin — delegate all state derivation to SessionStateMachine and Session entity
 
 ### 2.10 LiveView — Real-time Transition Handling (P0)
 
-⏸ **Status**: Not Started
+✓ **Status**: Complete
 
-- [ ] **RED**: Write LiveView test verifying that sending a lifecycle_state_changed message to the view process updates the rendered state
+- [x] **RED**: Write LiveView test verifying that sending a lifecycle_state_changed message to the view process updates the rendered state
   - Test: `send(view.pid, {:lifecycle_state_changed, task_id, :queued_cold, :warming})` → lifecycle-state text changes to "Warming up"
   - Test: rapid transitions (:warming → :starting → :running) each update the displayed state
-- [ ] **GREEN**: Update `apps/agents_web/lib/live/sessions/index.ex` (or appropriate LiveView module)
+- [x] **GREEN**: Update `apps/agents_web/lib/live/sessions/index.ex` (or appropriate LiveView module)
   - Add `handle_info({:lifecycle_state_changed, task_id, from_state, to_state}, socket)` clause
   - Update the relevant task's `lifecycle_state` in socket assigns/streams
   - The UI re-renders with the new `Session.display_name(to_state)`
-- [ ] **REFACTOR**: Ensure no duplicate handling between `:task_status_changed` and `:lifecycle_state_changed` — lifecycle state change should be the primary, with task_status_changed handled for backward compatibility during migration
+- [x] **REFACTOR**: Ensure no duplicate handling between `:task_status_changed` and `:lifecycle_state_changed` — lifecycle state change should be the primary, with task_status_changed handled for backward compatibility during migration
 
 ### 2.11 Observability — Debug Logging for Lifecycle Transitions (P2)
 
-⏸ **Status**: Not Started
+✓ **Status**: Complete
 
-- [ ] **RED**: Verify Logger.debug call is made with structured metadata when lifecycle transitions occur
-- [ ] **GREEN**: Add `Logger.debug` calls at lifecycle transition broadcast points in TaskRunner/QueueOrchestrator/QueueManager:
+- [x] **RED**: Verify Logger.debug call is made with structured metadata when lifecycle transitions occur
+- [x] **GREEN**: Add `Logger.debug` calls at lifecycle transition broadcast points in TaskRunner/QueueOrchestrator/QueueManager:
   - `Logger.debug("Session lifecycle transition", task_id: task_id, from_state: from_state, to_state: to_state, container_id: container_id)`
-- [ ] **REFACTOR**: Clean up
+- [x] **REFACTOR**: Clean up
 
 ### Phase 2 Validation
 

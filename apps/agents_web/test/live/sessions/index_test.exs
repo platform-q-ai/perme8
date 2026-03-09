@@ -1298,6 +1298,46 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       assert html =~ "completed"
     end
 
+    test "renders lifecycle state and predicates on session task card", %{conn: conn, user: user} do
+      task =
+        task_fixture(%{
+          user_id: user.id,
+          status: "queued",
+          lifecycle_state: "queued_cold",
+          container_id: "c-lifecycle"
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions?container=c-lifecycle")
+
+      assert has_element?(lv, ~s([data-testid="session-task-card"][data-task-id="#{task.id}"]))
+      assert has_element?(lv, ~s([data-testid="lifecycle-state"]), "Queued (cold)")
+      assert has_element?(lv, ~s([data-testid="state-predicate-active"]))
+      refute has_element?(lv, ~s([data-testid="state-predicate-terminal"]))
+    end
+
+    test "lifecycle_state_changed updates rendered lifecycle state", %{conn: conn, user: user} do
+      task =
+        task_fixture(%{
+          user_id: user.id,
+          status: "queued",
+          lifecycle_state: "queued_cold",
+          container_id: "c-lifecycle-rt"
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions?container=c-lifecycle-rt")
+
+      assert has_element?(lv, ~s([data-testid="lifecycle-state"]), "Queued (cold)")
+
+      send(lv.pid, {:lifecycle_state_changed, task.id, :queued_cold, :warming})
+      assert has_element?(lv, ~s([data-testid="lifecycle-state"]), "Warming up")
+
+      send(lv.pid, {:lifecycle_state_changed, task.id, :warming, :starting})
+      assert has_element?(lv, ~s([data-testid="lifecycle-state"]), "Starting")
+
+      send(lv.pid, {:lifecycle_state_changed, task.id, :starting, :running})
+      assert has_element?(lv, ~s([data-testid="lifecycle-state"]), "Running")
+    end
+
     test "receiving task_status_changed to failed shows failed badge", %{conn: conn, user: user} do
       task = task_fixture(%{user_id: user.id, status: "running", container_id: "c1"})
 

@@ -21,6 +21,9 @@ defmodule AgentsWeb.SessionsLive.SessionStateMachine do
 
   @type state ::
           :idle
+          | :queued_cold
+          | :queued_warm
+          | :warming
           | :pending
           | :starting
           | :running
@@ -35,6 +38,9 @@ defmodule AgentsWeb.SessionsLive.SessionStateMachine do
 
   @status_to_state %{
     "pending" => :pending,
+    "queued_cold" => :queued_cold,
+    "queued_warm" => :queued_warm,
+    "warming" => :warming,
     "starting" => :starting,
     "running" => :running,
     "queued" => :queued,
@@ -44,8 +50,17 @@ defmodule AgentsWeb.SessionsLive.SessionStateMachine do
     "cancelled" => :cancelled
   }
 
-  @running_states [:pending, :starting, :running]
-  @active_states [:pending, :starting, :running, :queued, :awaiting_feedback]
+  @running_states [:warming, :pending, :starting, :running]
+  @active_states [
+    :queued_cold,
+    :queued_warm,
+    :warming,
+    :pending,
+    :starting,
+    :running,
+    :queued,
+    :awaiting_feedback
+  ]
   @terminal_states [:completed, :failed, :cancelled]
 
   # ---------- State derivation ----------
@@ -59,15 +74,47 @@ defmodule AgentsWeb.SessionsLive.SessionStateMachine do
   def state_from_task(nil), do: :idle
   def state_from_task(%{status: nil}), do: :idle
 
+  def state_from_task(%{lifecycle_state: lifecycle_state} = task)
+      when is_binary(lifecycle_state) do
+    lifecycle = Map.get(@status_to_state, lifecycle_state, :unknown)
+    status_state = status_state_from_task(task)
+
+    cond do
+      lifecycle == :idle and status_state != :unknown ->
+        status_state
+
+      status_state in @terminal_states and lifecycle not in @terminal_states ->
+        status_state
+
+      true ->
+        lifecycle
+    end
+  end
+
   def state_from_task(%{status: status}) when is_binary(status) do
     Map.get(@status_to_state, status, :unknown)
   end
+
+  defp status_state_from_task(%{status: status}) when is_binary(status) do
+    Map.get(@status_to_state, status, :unknown)
+  end
+
+  defp status_state_from_task(_), do: :unknown
 
   # ---------- State predicates ----------
 
   @doc "Returns true if the task is currently running (pending, starting, or running)."
   @spec task_running?(state()) :: boolean()
   def task_running?(state), do: state in @running_states
+
+  @spec warming?(state()) :: boolean()
+  def warming?(state), do: state == :warming
+
+  @spec queued_cold?(state()) :: boolean()
+  def queued_cold?(state), do: state == :queued_cold
+
+  @spec queued_warm?(state()) :: boolean()
+  def queued_warm?(state), do: state == :queued_warm
 
   @doc "Returns true if the task is in an active (non-terminal, non-idle) state."
   @spec active?(state()) :: boolean()
@@ -100,6 +147,9 @@ defmodule AgentsWeb.SessionsLive.SessionStateMachine do
   def submission_route(state) when state in @terminal_states, do: :new_or_resume
   def submission_route(:idle), do: :new_or_resume
   def submission_route(:unknown), do: :blocked
+
+  @spec display_name(state()) :: String.t()
+  def display_name(state), do: Agents.Sessions.session_display_name(state)
 
   # ---------- Task-level convenience ----------
 

@@ -12,6 +12,7 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponents do
   import AgentsWeb.CoreComponents
   alias Agents.Sessions.Domain.Entities.Ticket
   alias Agents.Sessions.Domain.Policies.TicketHierarchyPolicy
+  alias AgentsWeb.SessionsLive.SessionStateMachine
 
   # ---- Tab Bar ----
 
@@ -968,6 +969,13 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponents do
               >
                 {TicketHierarchyPolicy.sub_ticket_summary_text(@ticket)}
               </span>
+              <span
+                :if={ticket_lifecycle_label(@ticket)}
+                data-testid="ticket-lifecycle-state"
+                class="badge badge-xs badge-outline whitespace-nowrap shrink-0"
+              >
+                {ticket_lifecycle_label(@ticket)}
+              </span>
               <%!-- Warming indicator (warm variant only) --%>
               <span
                 :if={@variant == :warm && @warming}
@@ -1201,6 +1209,16 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponents do
   defp triage_status_class("failed"), do: "border-error/40 bg-error/10"
   defp triage_status_class("cancelled"), do: "border-base-content/20 bg-base-content/5"
   defp triage_status_class(_), do: "border-info/25 bg-info/5"
+
+  defp ticket_lifecycle_label(ticket) do
+    lifecycle_state = Map.get(ticket, :session_state)
+    status = Map.get(ticket, :task_status)
+
+    case SessionStateMachine.state_from_task(%{status: status, lifecycle_state: lifecycle_state}) do
+      :idle -> nil
+      state -> SessionStateMachine.display_name(state)
+    end
+  end
 
   defp ticket_card_cold?(:triage, _session, _warming, _has_container), do: false
   defp ticket_card_cold?(:warm, _session, warming, has_container), do: !warming and !has_container

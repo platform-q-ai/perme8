@@ -4,6 +4,7 @@ defmodule Agents.Sessions.Domain.Policies.QueueEngine do
   """
 
   alias Agents.Sessions.Domain.Entities.{LaneEntry, QueueSnapshot}
+  alias Agents.Sessions.Domain.Policies.SessionLifecyclePolicy
 
   @type lane :: :processing | :warm | :cold | :awaiting_feedback | :retry_pending | :terminal
 
@@ -49,14 +50,19 @@ defmodule Agents.Sessions.Domain.Policies.QueueEngine do
   """
   @spec classify_warm_state(map()) :: LaneEntry.warm_state()
   def classify_warm_state(task) when is_map(task) do
-    container_id = value(task, :container_id)
-    port = value(task, :container_port) || value(task, :port)
+    lifecycle_state =
+      SessionLifecyclePolicy.derive(%{
+        status: value(task, :status),
+        container_id: value(task, :container_id),
+        container_port: value(task, :container_port) || value(task, :port)
+      })
 
-    cond do
-      not real_container?(container_id) -> :cold
-      is_nil(port) -> :warming
-      value(task, :status) == "running" -> :hot
-      true -> :warm
+    case lifecycle_state do
+      state when state in [:queued_cold, :idle] -> :cold
+      :warming -> :warming
+      state when state in [:queued_warm, :pending, :starting] -> :warm
+      :running -> :hot
+      state when state in [:completed, :failed, :cancelled, :awaiting_feedback] -> :cold
     end
   end
 

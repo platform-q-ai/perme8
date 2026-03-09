@@ -23,6 +23,7 @@ defmodule Agents.SessionsFixtures do
         status: attrs[:status] || "pending"
       }
       |> maybe_put(:error, attrs[:error])
+      |> maybe_put(:lifecycle_state, attrs[:lifecycle_state])
       |> maybe_put(:container_id, attrs[:container_id])
       |> maybe_put(:session_id, attrs[:session_id])
       |> maybe_put(:output, attrs[:output])

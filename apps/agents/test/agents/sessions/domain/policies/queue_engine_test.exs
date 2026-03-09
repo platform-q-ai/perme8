@@ -47,11 +47,11 @@ defmodule Agents.Sessions.Domain.Policies.QueueEngineTest do
                :cold
     end
 
-    test "returns warming for real container id without a port" do
+    test "returns warm for real container id without a port" do
       assert QueueEngine.classify_warm_state(
                task(container_id: "container-123", container_port: nil)
              ) ==
-               :warming
+               :warm
     end
 
     test "returns warm for real container id with port" do
@@ -65,6 +65,19 @@ defmodule Agents.Sessions.Domain.Policies.QueueEngineTest do
       assert QueueEngine.classify_warm_state(
                task(status: "running", container_id: "container-123", container_port: 4000)
              ) == :hot
+    end
+
+    test "maps lifecycle-derived states to warm state classifications" do
+      assert QueueEngine.classify_warm_state(task(status: "queued", container_id: nil)) == :cold
+
+      assert QueueEngine.classify_warm_state(task(status: "queued", container_id: "container-1")) ==
+               :warm
+
+      assert QueueEngine.classify_warm_state(task(status: "pending", container_id: nil)) == :warm
+      assert QueueEngine.classify_warm_state(task(status: "starting", container_id: nil)) == :warm
+
+      assert QueueEngine.classify_warm_state(task(status: "awaiting_feedback", container_id: nil)) ==
+               :cold
     end
   end
 

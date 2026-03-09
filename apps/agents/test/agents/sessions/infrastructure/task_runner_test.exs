@@ -155,6 +155,39 @@ defmodule Agents.Sessions.Infrastructure.TaskRunnerTest do
 
       if Process.alive?(pid), do: GenServer.stop(pid, :normal)
     end
+
+    test "broadcasts lifecycle_state_changed alongside status broadcasts" do
+      user = user_fixture()
+      task = insert_task(user)
+
+      stub_container_provider =
+        Module.concat(__MODULE__, :"LifecycleStatsProvider#{System.unique_integer([:positive])}")
+
+      {:module, provider_mod, _, _} =
+        defmodule stub_container_provider do
+          def start(_image, _opts), do: {:ok, %{container_id: "lifecycle-container", port: 9999}}
+          def stop(_cid, _opts \\ []), do: :ok
+          def remove(_cid, _opts \\ []), do: :ok
+          def restart(_cid, _opts \\ []), do: {:ok, %{port: 9999}}
+          def status(_cid, _opts \\ []), do: {:ok, :running}
+
+          def stats(_cid, _opts \\ []),
+            do: {:ok, %{cpu_percent: 0.0, memory_usage: 0, memory_limit: 0}}
+
+          def prepare_fresh_start(_cid, _opts \\ []), do: :ok
+        end
+
+      Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "task:#{task.id}")
+
+      {:ok, pid} =
+        TaskRunner.start_link({task.id, common_opts(container_provider: provider_mod)})
+
+      task_id = task.id
+      assert_receive {:lifecycle_state_changed, ^task_id, :pending, :starting}, 5_000
+      assert_receive {:lifecycle_state_changed, ^task_id, :starting, :running}, 5_000
+
+      if Process.alive?(pid), do: GenServer.stop(pid, :normal)
+    end
   end
 
   # ---------------------------------------------------------------------------

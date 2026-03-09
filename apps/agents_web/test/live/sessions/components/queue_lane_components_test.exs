@@ -61,7 +61,7 @@ defmodule AgentsWeb.SessionsLive.Components.QueueLaneComponentsTest do
   end
 
   describe "lane_entry/1" do
-    test "shows running, warm, and cold indicators" do
+    test "shows running, warm, warming, and cold indicators" do
       running_html =
         render_component(&QueueLaneComponents.lane_entry/1,
           entry: entry("running-1", :processing),
@@ -80,9 +80,16 @@ defmodule AgentsWeb.SessionsLive.Components.QueueLaneComponentsTest do
           lane: :cold
         )
 
-      assert running_html =~ ~s(data-testid="task-running-indicator")
-      assert warm_html =~ ~s(data-testid="task-warm-indicator")
-      assert cold_html =~ ~s(data-testid="task-cold-indicator")
+      warming_html =
+        render_component(&QueueLaneComponents.lane_entry/1,
+          entry: entry("warming-1", :warm, warm_state: :warming),
+          lane: :warm
+        )
+
+      assert running_html =~ ~s(data-testid="warm-state-indicator-hot")
+      assert warm_html =~ ~s(data-testid="warm-state-indicator-warm")
+      assert warming_html =~ ~s(data-testid="warm-state-indicator-warming")
+      assert cold_html =~ ~s(data-testid="warm-state-indicator-cold")
     end
 
     test "shows retry badge when retry_count is greater than zero" do

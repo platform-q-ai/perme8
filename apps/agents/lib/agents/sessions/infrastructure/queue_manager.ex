@@ -6,6 +6,7 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
   use GenServer
 
   alias Agents.Sessions.Application.SessionsConfig
+  alias Agents.Sessions.Domain.Policies.SessionLifecyclePolicy
   alias Agents.Sessions.Domain.Policies.ImagePolicy
   alias Agents.Sessions.Domain.Events.{TaskDeprioritised, TaskPromoted}
   alias Agents.Sessions.Infrastructure.Adapters.DockerAdapter
@@ -334,7 +335,7 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
            pending_question: clear_resume_prompt(task.pending_question)
          }) do
       {:ok, updated_task} ->
-        broadcast_task_status(state, updated_task.id, "pending")
+        broadcast_task_status(state, task, updated_task, "pending")
         maybe_start_runner(state, updated_task, resume_prompt)
         emit_task_promoted(state, updated_task)
         state
@@ -446,12 +447,39 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
     )
   end
 
-  defp broadcast_task_status(state, task_id, status) do
+  defp broadcast_task_status(state, from_task, to_task, status) do
+    from_state = lifecycle_state(from_task)
+    to_state = lifecycle_state(to_task)
+    container_id = Map.get(to_task, :container_id)
+
     Phoenix.PubSub.broadcast(
       state.pubsub,
-      "task:#{task_id}",
-      {:task_status_changed, task_id, status}
+      "task:#{to_task.id}",
+      {:task_status_changed, to_task.id, status}
     )
+
+    Logger.debug("Session lifecycle transition",
+      task_id: to_task.id,
+      from_state: from_state,
+      to_state: to_state,
+      container_id: container_id
+    )
+
+    Phoenix.PubSub.broadcast(
+      state.pubsub,
+      "task:#{to_task.id}",
+      {:lifecycle_state_changed, to_task.id, from_state, to_state}
+    )
+  end
+
+  defp lifecycle_state(nil), do: :idle
+
+  defp lifecycle_state(task) do
+    SessionLifecyclePolicy.derive(%{
+      status: Map.get(task, :status),
+      container_id: Map.get(task, :container_id),
+      container_port: Map.get(task, :container_port)
+    })
   end
 
   defp queue_state(state) do

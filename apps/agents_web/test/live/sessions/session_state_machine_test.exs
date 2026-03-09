@@ -26,6 +26,28 @@ defmodule AgentsWeb.SessionsLive.SessionStateMachineTest do
       assert SessionStateMachine.state_from_task(%{status: "cancelled"}) == :cancelled
     end
 
+    test "prefers lifecycle_state when present" do
+      assert SessionStateMachine.state_from_task(%{
+               status: "queued",
+               lifecycle_state: "queued_cold"
+             }) ==
+               :queued_cold
+
+      assert SessionStateMachine.state_from_task(%{
+               status: "queued",
+               lifecycle_state: "queued_warm"
+             }) ==
+               :queued_warm
+
+      assert SessionStateMachine.state_from_task(%{status: "pending", lifecycle_state: "warming"}) ==
+               :warming
+    end
+
+    test "falls back to status mapping when lifecycle_state is nil" do
+      assert SessionStateMachine.state_from_task(%{status: "queued", lifecycle_state: nil}) ==
+               :queued
+    end
+
     test "returns :unknown for unrecognized status strings" do
       assert SessionStateMachine.state_from_task(%{status: "bogus"}) == :unknown
       assert SessionStateMachine.state_from_task(%{status: ""}) == :unknown
@@ -33,8 +55,9 @@ defmodule AgentsWeb.SessionsLive.SessionStateMachineTest do
   end
 
   describe "task_running?/1" do
-    test "returns true for pending, starting, running" do
+    test "returns true for pending, warming, starting, running" do
       assert SessionStateMachine.task_running?(:pending)
+      assert SessionStateMachine.task_running?(:warming)
       assert SessionStateMachine.task_running?(:starting)
       assert SessionStateMachine.task_running?(:running)
     end
@@ -50,8 +73,35 @@ defmodule AgentsWeb.SessionsLive.SessionStateMachineTest do
     end
   end
 
+  describe "warming?/1" do
+    test "returns true only for warming" do
+      assert SessionStateMachine.warming?(:warming)
+      refute SessionStateMachine.warming?(:running)
+      refute SessionStateMachine.warming?(:queued_warm)
+    end
+  end
+
+  describe "queued_cold?/1" do
+    test "returns true only for queued_cold" do
+      assert SessionStateMachine.queued_cold?(:queued_cold)
+      refute SessionStateMachine.queued_cold?(:queued_warm)
+      refute SessionStateMachine.queued_cold?(:queued)
+    end
+  end
+
+  describe "queued_warm?/1" do
+    test "returns true only for queued_warm" do
+      assert SessionStateMachine.queued_warm?(:queued_warm)
+      refute SessionStateMachine.queued_warm?(:queued_cold)
+      refute SessionStateMachine.queued_warm?(:queued)
+    end
+  end
+
   describe "active?/1" do
     test "returns true for all non-terminal, non-idle states" do
+      assert SessionStateMachine.active?(:queued_cold)
+      assert SessionStateMachine.active?(:queued_warm)
+      assert SessionStateMachine.active?(:warming)
       assert SessionStateMachine.active?(:pending)
       assert SessionStateMachine.active?(:starting)
       assert SessionStateMachine.active?(:running)
@@ -104,6 +154,12 @@ defmodule AgentsWeb.SessionsLive.SessionStateMachineTest do
       assert SessionStateMachine.can_submit_message?(:starting)
     end
 
+    test "returns true for queued_cold, queued_warm, and warming" do
+      assert SessionStateMachine.can_submit_message?(:queued_cold)
+      assert SessionStateMachine.can_submit_message?(:queued_warm)
+      assert SessionStateMachine.can_submit_message?(:warming)
+    end
+
     test "returns false for terminal states" do
       refute SessionStateMachine.can_submit_message?(:completed)
       refute SessionStateMachine.can_submit_message?(:failed)
@@ -123,7 +179,13 @@ defmodule AgentsWeb.SessionsLive.SessionStateMachineTest do
 
     test "routes pending and starting tasks to :follow_up — already in pipeline" do
       assert SessionStateMachine.submission_route(:pending) == :follow_up
+      assert SessionStateMachine.submission_route(:warming) == :follow_up
       assert SessionStateMachine.submission_route(:starting) == :follow_up
+    end
+
+    test "routes queued_cold and queued_warm tasks to :follow_up" do
+      assert SessionStateMachine.submission_route(:queued_cold) == :follow_up
+      assert SessionStateMachine.submission_route(:queued_warm) == :follow_up
     end
 
     test "routes queued tasks to :follow_up — fixes the gap where queued fell through" do
@@ -146,6 +208,14 @@ defmodule AgentsWeb.SessionsLive.SessionStateMachineTest do
 
     test "routes unknown to :blocked" do
       assert SessionStateMachine.submission_route(:unknown) == :blocked
+    end
+  end
+
+  describe "display_name/1" do
+    test "returns the domain-consistent lifecycle label" do
+      assert SessionStateMachine.display_name(:queued_cold) == "Queued (cold)"
+      assert SessionStateMachine.display_name(:queued_warm) == "Queued (warm)"
+      assert SessionStateMachine.display_name(:warming) == "Warming up"
     end
   end
 

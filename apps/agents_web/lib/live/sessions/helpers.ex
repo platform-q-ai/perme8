@@ -296,8 +296,16 @@ defmodule AgentsWeb.SessionsLive.Helpers do
 
   @doc "Returns CSS classes for associated session state badge."
   def ticket_session_state_class("running"), do: "badge-success"
+  def ticket_session_state_class("queued_cold"), do: "badge-info"
+  def ticket_session_state_class("queued_warm"), do: "badge-info"
+  def ticket_session_state_class("pending"), do: "badge-info"
+  def ticket_session_state_class("starting"), do: "badge-info"
+  def ticket_session_state_class("warming"), do: "badge-warning"
+  def ticket_session_state_class("awaiting_feedback"), do: "badge-warning"
   def ticket_session_state_class("completed"), do: "badge-primary"
-  def ticket_session_state_class("paused"), do: "badge-warning"
+  def ticket_session_state_class("failed"), do: "badge-error"
+  def ticket_session_state_class("cancelled"), do: "badge-ghost"
+  def ticket_session_state_class("idle"), do: "badge-ghost"
   def ticket_session_state_class(_), do: "badge-ghost"
 
   @doc "Returns a human-readable label for a queue lane."
