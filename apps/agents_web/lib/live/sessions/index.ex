@@ -879,11 +879,15 @@ defmodule AgentsWeb.SessionsLive.Index do
       {:error, :task_not_running} ->
         {:noreply,
          socket
+         |> remove_answer_submitted_part(message)
          |> prefill_form(message)
          |> put_flash(:info, "Session ended. Your answer is in the input — submit to resume.")}
 
       {:error, _} ->
-        {:noreply, put_flash(socket, :error, "Failed to submit answer — please try again")}
+        {:noreply,
+         socket
+         |> remove_answer_submitted_part(message)
+         |> put_flash(:error, "Failed to submit answer — please try again")}
     end
   end
 
@@ -1742,6 +1746,23 @@ defmodule AgentsWeb.SessionsLive.Index do
     socket
     |> assign(:optimistic_user_messages, updated)
     |> assign(:output_parts, parts)
+  end
+
+  defp remove_answer_submitted_part(socket, message) do
+    trimmed = String.trim(message)
+
+    parts =
+      Enum.reject(socket.assigns.output_parts, fn
+        {:answer_submitted, _id, text} -> String.trim(text) == trimmed
+        _ -> false
+      end)
+
+    optimistic =
+      List.delete(socket.assigns.optimistic_user_messages, trimmed)
+
+    socket
+    |> assign(:output_parts, parts)
+    |> assign(:optimistic_user_messages, optimistic)
   end
 
   defp toggle_selection(current, label, true = _multiple) do

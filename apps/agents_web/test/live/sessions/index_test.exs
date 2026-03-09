@@ -342,6 +342,61 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       assert html =~ "Answer submitted"
     end
 
+    test "answer submitted indicator is removed on async error", %{conn: conn, user: user} do
+      task =
+        task_fixture(%{
+          user_id: user.id,
+          instruction: "Initial instruction",
+          container_id: "c1",
+          status: "running"
+        })
+
+      start_supervised!({FakeTaskRunner, task.id})
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      # Submit a question answer to get the :answer_submitted indicator
+      send(lv.pid, {
+        :task_event,
+        task.id,
+        %{
+          "type" => "question.asked",
+          "properties" => %{
+            "id" => "req-1",
+            "sessionID" => "sess-1",
+            "questions" => [
+              %{
+                "header" => "Deploy",
+                "question" => "Ship now?",
+                "options" => [%{"label" => "Yes", "description" => "Deploy"}],
+                "multiple" => false
+              }
+            ]
+          }
+        }
+      })
+
+      lv
+      |> element("button[phx-value-question-index='0'][phx-value-label='Yes']")
+      |> render_click()
+
+      lv
+      |> form("#question-form", %{"custom_answer" => %{"0" => ""}})
+      |> render_submit()
+
+      html = render(lv)
+      assert html =~ "Answer submitted"
+
+      # Stop the FakeTaskRunner so the async handler hits {:error, :task_not_running}
+      stop_supervised!(FakeTaskRunner)
+
+      # Trigger the async handler directly with a non-existent task
+      send(lv.pid, {:answer_question_async, task.id, "req-1", [["Yes"]], "Re: Deploy — Yes"})
+
+      html = render(lv)
+      refute html =~ "Answer submitted"
+    end
+
     test "follow-up stays between prior and subsequent assistant outputs", %{
       conn: conn,
       user: user
