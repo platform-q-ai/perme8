@@ -384,14 +384,17 @@ defmodule AgentsWeb.SessionsLive.IndexTest do
       |> form("#question-form", %{"custom_answer" => %{"0" => ""}})
       |> render_submit()
 
-      html = render(lv)
-      assert html =~ "Answer submitted"
+      # Flush the first {:answer_question_async, ...} sent by submit_active_question
+      _ = render(lv)
+      assert render(lv) =~ "Answer submitted"
 
-      # Stop the FakeTaskRunner so the async handler hits {:error, :task_not_running}
-      stop_supervised!(FakeTaskRunner)
-
-      # Trigger the async handler directly with a non-existent task
-      send(lv.pid, {:answer_question_async, task.id, "req-1", [["Yes"]], "Re: Deploy — Yes"})
+      # Send a second async message with a non-existent task ID to trigger
+      # {:error, :task_not_running} — the FakeTaskRunner is only registered
+      # for task.id, so "no-such-task" will fail lookup immediately.
+      send(
+        lv.pid,
+        {:answer_question_async, "no-such-task", "req-1", [["Yes"]], "Re: Deploy — Yes"}
+      )
 
       html = render(lv)
       refute html =~ "Answer submitted"
