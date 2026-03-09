@@ -16,7 +16,7 @@ defmodule Agents.Tickets.Domain.Policies.TicketEnrichmentPolicy do
 
   @ticket_number_regex ~r/(?:^|\s)(?:#|ticket\s+)(\d+)\b/i
 
-  @type lifecycle_resolver :: (map() -> atom())
+  @typep lifecycle_resolver :: (map() -> atom())
 
   @spec enrich(Ticket.t(), [map()], lifecycle_resolver()) :: Ticket.t()
   def enrich(%Ticket{} = ticket, tasks, lifecycle_resolver) when is_list(tasks) do

@@ -9,16 +9,16 @@ defmodule Agents.Tickets do
       Agents.Tickets.Domain,
       Agents.Tickets.Application,
       Agents.Tickets.Infrastructure,
+      Agents.Sessions,
       Agents.Sessions.Domain,
-      Agents.Sessions.Infrastructure,
       Agents.Repo
     ],
     exports: [
       {Domain.Entities.Ticket, []}
     ]
 
+  alias Agents.Sessions
   alias Agents.Sessions.Domain.Policies.SessionLifecyclePolicy
-  alias Agents.Sessions.Infrastructure.Repositories.TaskRepository
   alias Agents.Tickets.Domain.Entities.Ticket
   alias Agents.Tickets.Domain.Policies.TicketEnrichmentPolicy
   alias Agents.Tickets.Infrastructure.Repositories.ProjectTicketRepository
@@ -35,7 +35,7 @@ defmodule Agents.Tickets do
   def list_project_tickets(user_id, opts \\ []) do
     tasks =
       Keyword.get_lazy(opts, :tasks, fn ->
-        TaskRepository.list_tasks_for_user(user_id, opts)
+        Sessions.list_tasks(user_id, opts)
       end)
 
     tickets =
