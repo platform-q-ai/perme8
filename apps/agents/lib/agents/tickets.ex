@@ -17,6 +17,7 @@ defmodule Agents.Tickets do
       {Domain.Entities.Ticket, []}
     ]
 
+  alias Agents.Sessions.Domain.Policies.SessionLifecyclePolicy
   alias Agents.Sessions.Infrastructure.Repositories.TaskRepository
   alias Agents.Tickets.Domain.Entities.Ticket
   alias Agents.Tickets.Domain.Policies.TicketEnrichmentPolicy
@@ -44,7 +45,7 @@ defmodule Agents.Tickets do
 
     tickets
     |> Enum.map(&Ticket.from_schema/1)
-    |> TicketEnrichmentPolicy.enrich_all(tasks)
+    |> TicketEnrichmentPolicy.enrich_all(tasks, &SessionLifecyclePolicy.derive/1)
   end
 
   @doc "Persists triage ticket ordering to the database."

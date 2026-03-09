@@ -3,7 +3,7 @@ defmodule Agents.Tickets.Domain do
 
   use Boundary,
     top_level?: true,
-    deps: [Agents.Sessions.Domain],
+    deps: [],
     exports: [
       Entities.Ticket,
       Policies.TicketHierarchyPolicy,

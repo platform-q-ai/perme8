@@ -2,10 +2,13 @@ defmodule Agents.Tickets.Domain.Policies.TicketEnrichmentPolicyTest do
   use ExUnit.Case, async: true
 
   alias Agents.Sessions.Domain.Entities.Task
+  alias Agents.Sessions.Domain.Policies.SessionLifecyclePolicy
   alias Agents.Tickets.Domain.Entities.Ticket
   alias Agents.Tickets.Domain.Policies.TicketEnrichmentPolicy
 
-  describe "enrich/2" do
+  @lifecycle_resolver &SessionLifecyclePolicy.derive/1
+
+  describe "enrich/3" do
     test "enriches a ticket from matching task instruction" do
       ticket = Ticket.new(%{number: 382, title: "Root ticket"})
 
@@ -20,7 +23,7 @@ defmodule Agents.Tickets.Domain.Policies.TicketEnrichmentPolicyTest do
         })
       ]
 
-      enriched = TicketEnrichmentPolicy.enrich(ticket, tasks)
+      enriched = TicketEnrichmentPolicy.enrich(ticket, tasks, @lifecycle_resolver)
 
       assert enriched.associated_task_id == "task-1"
       assert enriched.associated_container_id == "container-1"
@@ -33,7 +36,7 @@ defmodule Agents.Tickets.Domain.Policies.TicketEnrichmentPolicyTest do
       ticket = Ticket.new(%{number: 382, title: "Root ticket"})
       tasks = [Task.new(%{id: "task-2", instruction: "work on #999", user_id: "user-1"})]
 
-      enriched = TicketEnrichmentPolicy.enrich(ticket, tasks)
+      enriched = TicketEnrichmentPolicy.enrich(ticket, tasks, @lifecycle_resolver)
 
       assert enriched.associated_task_id == nil
       assert enriched.associated_container_id == nil
@@ -43,7 +46,7 @@ defmodule Agents.Tickets.Domain.Policies.TicketEnrichmentPolicyTest do
     end
   end
 
-  describe "enrich_all/2" do
+  describe "enrich_all/3" do
     test "enriches tickets recursively while preserving tree structure" do
       child = Ticket.new(%{id: 2, number: 383, parent_ticket_id: 1, sub_tickets: []})
       root = Ticket.new(%{id: 1, number: 382, parent_ticket_id: nil, sub_tickets: [child]})
@@ -66,7 +69,7 @@ defmodule Agents.Tickets.Domain.Policies.TicketEnrichmentPolicyTest do
         })
       ]
 
-      [enriched_root] = TicketEnrichmentPolicy.enrich_all([root], tasks)
+      [enriched_root] = TicketEnrichmentPolicy.enrich_all([root], tasks, @lifecycle_resolver)
 
       assert enriched_root.number == 382
       assert enriched_root.associated_task_id == "task-root"
@@ -107,7 +110,7 @@ defmodule Agents.Tickets.Domain.Policies.TicketEnrichmentPolicyTest do
         })
       ]
 
-      enriched = TicketEnrichmentPolicy.enrich(ticket, tasks)
+      enriched = TicketEnrichmentPolicy.enrich(ticket, tasks, @lifecycle_resolver)
 
       assert enriched.associated_task_id == "task-persisted"
       assert enriched.associated_container_id == "container-persisted"
@@ -132,7 +135,7 @@ defmodule Agents.Tickets.Domain.Policies.TicketEnrichmentPolicyTest do
         })
       ]
 
-      enriched = TicketEnrichmentPolicy.enrich(ticket, tasks)
+      enriched = TicketEnrichmentPolicy.enrich(ticket, tasks, @lifecycle_resolver)
 
       assert enriched.associated_task_id == nil
       assert enriched.session_state == "idle"
@@ -151,7 +154,7 @@ defmodule Agents.Tickets.Domain.Policies.TicketEnrichmentPolicyTest do
         })
       ]
 
-      enriched = TicketEnrichmentPolicy.enrich(ticket, tasks)
+      enriched = TicketEnrichmentPolicy.enrich(ticket, tasks, @lifecycle_resolver)
 
       assert enriched.associated_task_id == "task-regex"
       assert enriched.associated_container_id == "container-regex"
@@ -194,7 +197,7 @@ defmodule Agents.Tickets.Domain.Policies.TicketEnrichmentPolicyTest do
         })
       ]
 
-      [enriched_root] = TicketEnrichmentPolicy.enrich_all([root], tasks)
+      [enriched_root] = TicketEnrichmentPolicy.enrich_all([root], tasks, @lifecycle_resolver)
 
       assert enriched_root.associated_task_id == "task-root-persisted"
       assert enriched_root.session_state == "completed"
@@ -213,7 +216,7 @@ defmodule Agents.Tickets.Domain.Policies.TicketEnrichmentPolicyTest do
         Task.new(%{id: "task-1", instruction: "ticket #382", status: "queued", user_id: "user-1"})
       ]
 
-      enriched = TicketEnrichmentPolicy.enrich(ticket, tasks)
+      enriched = TicketEnrichmentPolicy.enrich(ticket, tasks, @lifecycle_resolver)
       assert enriched.session_state == "queued_cold"
     end
 
@@ -230,7 +233,7 @@ defmodule Agents.Tickets.Domain.Policies.TicketEnrichmentPolicyTest do
         })
       ]
 
-      enriched = TicketEnrichmentPolicy.enrich(ticket, tasks)
+      enriched = TicketEnrichmentPolicy.enrich(ticket, tasks, @lifecycle_resolver)
       assert enriched.session_state == "queued_warm"
     end
 
@@ -248,7 +251,7 @@ defmodule Agents.Tickets.Domain.Policies.TicketEnrichmentPolicyTest do
         })
       ]
 
-      enriched = TicketEnrichmentPolicy.enrich(ticket, tasks)
+      enriched = TicketEnrichmentPolicy.enrich(ticket, tasks, @lifecycle_resolver)
       assert enriched.session_state == "warming"
     end
 
@@ -264,7 +267,7 @@ defmodule Agents.Tickets.Domain.Policies.TicketEnrichmentPolicyTest do
         })
       ]
 
-      enriched = TicketEnrichmentPolicy.enrich(ticket, tasks)
+      enriched = TicketEnrichmentPolicy.enrich(ticket, tasks, @lifecycle_resolver)
       assert enriched.session_state == "cancelled"
     end
   end

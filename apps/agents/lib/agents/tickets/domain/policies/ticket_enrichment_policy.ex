@@ -12,28 +12,33 @@ defmodule Agents.Tickets.Domain.Policies.TicketEnrichmentPolicy do
   page reloads, re-enrichment cycles, and ticket syncs.
   """
 
-  alias Agents.Sessions.Domain.Policies.SessionLifecyclePolicy
   alias Agents.Tickets.Domain.Entities.Ticket
 
   @ticket_number_regex ~r/(?:^|\s)(?:#|ticket\s+)(\d+)\b/i
 
-  @spec enrich(Ticket.t(), [map()]) :: Ticket.t()
-  def enrich(%Ticket{} = ticket, tasks) when is_list(tasks) do
+  @type lifecycle_resolver :: (map() -> atom())
+
+  @spec enrich(Ticket.t(), [map()], lifecycle_resolver()) :: Ticket.t()
+  def enrich(%Ticket{} = ticket, tasks, lifecycle_resolver) when is_list(tasks) do
     task_by_ticket_number = build_task_index(tasks)
     task_by_id = build_task_id_index(tasks)
-    resolve_and_apply(ticket, task_by_id, task_by_ticket_number)
+    resolve_and_apply(ticket, task_by_id, task_by_ticket_number, lifecycle_resolver)
   end
 
-  def enrich(%Ticket{} = ticket, _tasks), do: ticket
+  def enrich(%Ticket{} = ticket, _tasks, _lifecycle_resolver), do: ticket
 
-  @spec enrich_all([Ticket.t()], [map()]) :: [Ticket.t()]
-  def enrich_all(tickets, tasks) when is_list(tickets) and is_list(tasks) do
+  @spec enrich_all([Ticket.t()], [map()], lifecycle_resolver()) :: [Ticket.t()]
+  def enrich_all(tickets, tasks, lifecycle_resolver) when is_list(tickets) and is_list(tasks) do
     task_by_ticket_number = build_task_index(tasks)
     task_by_id = build_task_id_index(tasks)
-    Enum.map(tickets, &enrich_ticket_tree(&1, task_by_id, task_by_ticket_number))
+
+    Enum.map(
+      tickets,
+      &enrich_ticket_tree(&1, task_by_id, task_by_ticket_number, lifecycle_resolver)
+    )
   end
 
-  def enrich_all(tickets, _tasks), do: tickets
+  def enrich_all(tickets, _tasks, _lifecycle_resolver), do: tickets
 
   @spec extract_ticket_number(term()) :: integer() | nil
   def extract_ticket_number(instruction) when is_binary(instruction) do
@@ -45,22 +50,27 @@ defmodule Agents.Tickets.Domain.Policies.TicketEnrichmentPolicy do
 
   def extract_ticket_number(_), do: nil
 
-  defp enrich_ticket_tree(%Ticket{} = ticket, task_by_id, task_by_ticket_number) do
-    enriched = resolve_and_apply(ticket, task_by_id, task_by_ticket_number)
+  defp enrich_ticket_tree(
+         %Ticket{} = ticket,
+         task_by_id,
+         task_by_ticket_number,
+         lifecycle_resolver
+       ) do
+    enriched = resolve_and_apply(ticket, task_by_id, task_by_ticket_number, lifecycle_resolver)
 
     %{
       enriched
       | sub_tickets:
           Enum.map(
             enriched.sub_tickets || [],
-            &enrich_ticket_tree(&1, task_by_id, task_by_ticket_number)
+            &enrich_ticket_tree(&1, task_by_id, task_by_ticket_number, lifecycle_resolver)
           )
     }
   end
 
-  defp resolve_and_apply(ticket, task_by_id, task_by_ticket_number) do
+  defp resolve_and_apply(ticket, task_by_id, task_by_ticket_number, lifecycle_resolver) do
     task = resolve_task(ticket, task_by_id, task_by_ticket_number)
-    apply_enrichment(ticket, task)
+    apply_enrichment(ticket, task, lifecycle_resolver)
   end
 
   defp resolve_task(%Ticket{associated_task_id: task_id}, task_by_id, _task_by_ticket_number)
@@ -85,7 +95,7 @@ defmodule Agents.Tickets.Domain.Policies.TicketEnrichmentPolicy do
     Map.new(tasks, fn task -> {Map.get(task, :id), task} end)
   end
 
-  defp apply_enrichment(%Ticket{} = ticket, nil) do
+  defp apply_enrichment(%Ticket{} = ticket, nil, _lifecycle_resolver) do
     %{
       ticket
       | associated_task_id: nil,
@@ -96,11 +106,11 @@ defmodule Agents.Tickets.Domain.Policies.TicketEnrichmentPolicy do
     }
   end
 
-  defp apply_enrichment(%Ticket{} = ticket, task) do
+  defp apply_enrichment(%Ticket{} = ticket, task, lifecycle_resolver) do
     status = Map.get(task, :status)
 
     lifecycle_state =
-      SessionLifecyclePolicy.derive(%{
+      lifecycle_resolver.(%{
         status: status,
         container_id: Map.get(task, :container_id),
         container_port: Map.get(task, :container_port)
