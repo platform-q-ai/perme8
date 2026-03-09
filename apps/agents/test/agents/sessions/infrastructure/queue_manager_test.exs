@@ -238,6 +238,28 @@ defmodule Agents.Sessions.Infrastructure.QueueManagerTest do
       assert updated.queue_position == nil
     end
 
+    test "broadcasts lifecycle_state_changed when promoting queued task" do
+      user = user_fixture()
+
+      queued =
+        create_task(user, %{status: "queued", queue_position: 1, container_id: "warm-container"})
+
+      Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "task:#{queued.id}")
+
+      assert {:ok, _pid} =
+               QueueManagerSupervisor.ensure_started(user.id,
+                 concurrency_limit: 2,
+                 warm_cache_limit: 0,
+                 pubsub: Perme8.Events.PubSub,
+                 task_runner_starter: fn _task_id, _opts -> {:ok, self()} end
+               )
+
+      QueueManager.notify_task_completed(user.id, queued.id)
+
+      queued_id = queued.id
+      assert_receive {:lifecycle_state_changed, ^queued_id, :queued_warm, :warming}
+    end
+
     test "promotes queued resume tasks with resume runner opts" do
       user = user_fixture()
 

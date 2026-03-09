@@ -269,6 +269,12 @@ defmodule Agents.Sessions do
     end
   end
 
+  @doc "Returns a human-readable label for a lifecycle state."
+  @spec session_display_name(atom()) :: String.t()
+  def session_display_name(state) do
+    Agents.Sessions.Domain.Entities.Session.display_name(state)
+  end
+
   @doc """
   Returns CPU and memory stats for a running container.
 

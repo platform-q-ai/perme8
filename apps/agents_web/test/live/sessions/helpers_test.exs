@@ -256,6 +256,23 @@ defmodule AgentsWeb.SessionsLive.HelpersTest do
     end
   end
 
+  describe "ticket_session_state_class/1" do
+    test "maps lifecycle states to expected badge classes" do
+      assert Helpers.ticket_session_state_class("running") == "badge-success"
+      assert Helpers.ticket_session_state_class("queued_cold") == "badge-info"
+      assert Helpers.ticket_session_state_class("queued_warm") == "badge-info"
+      assert Helpers.ticket_session_state_class("pending") == "badge-info"
+      assert Helpers.ticket_session_state_class("starting") == "badge-info"
+      assert Helpers.ticket_session_state_class("warming") == "badge-warning"
+      assert Helpers.ticket_session_state_class("awaiting_feedback") == "badge-warning"
+      assert Helpers.ticket_session_state_class("completed") == "badge-primary"
+      assert Helpers.ticket_session_state_class("failed") == "badge-error"
+      assert Helpers.ticket_session_state_class("cancelled") == "badge-ghost"
+      assert Helpers.ticket_session_state_class("idle") == "badge-ghost"
+      assert Helpers.ticket_session_state_class("unknown") == "badge-ghost"
+    end
+  end
+
   describe "filter_sessions_by_search/2" do
     test "returns all sessions when query is empty" do
       sessions = [%{title: "Fix login"}, %{title: "Add tests"}]

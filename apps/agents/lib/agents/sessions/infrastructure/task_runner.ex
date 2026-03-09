@@ -26,6 +26,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   alias Agents.Sessions.Application.Services.AuthRefresher
   alias Agents.Sessions.Domain.Entities.TodoList
   alias Agents.Sessions.Domain.Events.{TaskCompleted, TaskFailed, TaskCancelled}
+  alias Agents.Sessions.Domain.Policies.SessionLifecyclePolicy
   alias Agents.Sessions.Infrastructure.Schemas.TaskSchema
 
   require Logger
@@ -239,6 +240,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
     case state.container_provider.start(image, []) do
       {:ok, %{container_id: container_id, port: port}} ->
+        from_task = state.task_repo.get_task(state.task_id)
+
         update_task_status(state, %{
           status: "starting",
           container_id: container_id,
@@ -247,7 +250,16 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
           error: nil
         })
 
-        broadcast_status(state.task_id, "starting", state.pubsub)
+        broadcast_status_with_lifecycle(
+          state,
+          "starting",
+          %{
+            status: "starting",
+            container_id: container_id,
+            container_port: port
+          },
+          from_task
+        )
 
         new_state = %{
           state
@@ -271,6 +283,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   def handle_info(:restart_container, state) do
     case state.container_provider.restart(state.container_id) do
       {:ok, %{port: port}} ->
+        from_task = state.task_repo.get_task(state.task_id)
+
         update_task_status(state, %{
           status: "starting",
           container_port: port,
@@ -278,7 +292,15 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
           error: nil
         })
 
-        broadcast_status(state.task_id, "starting", state.pubsub)
+        broadcast_status_with_lifecycle(
+          state,
+          "starting",
+          %{
+            status: "starting",
+            container_port: port
+          },
+          from_task
+        )
 
         new_state = %{state | container_port: port, status: :health_check}
         send(self(), :wait_for_health_resume)
@@ -294,6 +316,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   def handle_info(:restart_prewarmed_container, state) do
     case state.container_provider.restart(state.container_id) do
       {:ok, %{port: port}} ->
+        from_task = state.task_repo.get_task(state.task_id)
+
         update_task_status(state, %{
           status: "starting",
           container_port: port,
@@ -301,7 +325,15 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
           error: nil
         })
 
-        broadcast_status(state.task_id, "starting", state.pubsub)
+        broadcast_status_with_lifecycle(
+          state,
+          "starting",
+          %{
+            status: "starting",
+            container_port: port
+          },
+          from_task
+        )
 
         new_state = %{state | container_port: port, status: :health_check}
         send(self(), :wait_for_health_fresh)
@@ -439,6 +471,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
     case state.opencode_client.send_prompt_async(base_url, state.session_id, parts, []) do
       :ok ->
+        from_task = state.task_repo.get_task(state.task_id)
+
         update_task_status(state, %{
           status: "running",
           started_at: DateTime.utc_now(),
@@ -446,7 +480,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
           error: nil
         })
 
-        broadcast_status(state.task_id, "running", state.pubsub)
+        broadcast_status_with_lifecycle(state, "running", %{status: "running"}, from_task)
         broadcast_container_stats(state)
 
         flush_ref = schedule_output_flush()
@@ -601,6 +635,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   def handle_info(:cancel, state) do
     cancel_flush_timer(state)
     cancel_question_timeout(state)
+    from_task = state.task_repo.get_task(state.task_id)
 
     if state.session_id && state.container_port do
       base_url = "http://localhost:#{state.container_port}"
@@ -613,7 +648,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
       pending_question: nil
     })
 
-    broadcast_status(state.task_id, "cancelled", state.pubsub)
+    broadcast_status_with_lifecycle(state, "cancelled", %{status: "cancelled"}, from_task)
 
     state.event_bus.emit(
       TaskCancelled.new(%{
@@ -1340,6 +1375,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
   defp fail_task(state, error) do
     cancel_flush_timer(state)
+    from_task = state.task_repo.get_task(state.task_id)
 
     serialized_error = serialize_error(error)
 
@@ -1355,7 +1391,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     attrs = put_todo_attrs(attrs, state)
 
     update_task_status(state, attrs)
-    broadcast_status(state.task_id, "failed", state.pubsub)
+    broadcast_status_with_lifecycle(state, "failed", attrs, from_task)
 
     state.event_bus.emit(
       TaskFailed.new(%{
@@ -1376,6 +1412,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
   defp complete_task(state) do
     cancel_flush_timer(state)
+    from_task = state.task_repo.get_task(state.task_id)
 
     attrs = %{
       status: "completed",
@@ -1388,7 +1425,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     attrs = put_todo_attrs(attrs, state)
 
     update_task_status(state, attrs)
-    broadcast_status(state.task_id, "completed", state.pubsub)
+    broadcast_status_with_lifecycle(state, "completed", attrs, from_task)
 
     state.event_bus.emit(
       TaskCompleted.new(%{
@@ -1492,6 +1529,62 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
       pubsub,
       "task:#{task_id}",
       {:task_status_changed, task_id, status}
+    )
+  end
+
+  defp broadcast_status_with_lifecycle(state, status, attrs, current_task) do
+    to_task = lifecycle_target_task(current_task, attrs, status)
+
+    from_state = lifecycle_state_from_task(current_task)
+    to_state = lifecycle_state_from_task(to_task)
+    container_id = Map.get(to_task, :container_id)
+
+    broadcast_status(state.task_id, status, state.pubsub)
+
+    broadcast_lifecycle_transition(
+      state.task_id,
+      from_state,
+      to_state,
+      container_id,
+      state.pubsub
+    )
+  end
+
+  defp lifecycle_target_task(nil, attrs, status) do
+    attrs
+    |> Map.new()
+    |> Map.put_new(:status, status)
+  end
+
+  defp lifecycle_target_task(task, attrs, status) do
+    task
+    |> Map.from_struct()
+    |> Map.merge(Map.new(attrs))
+    |> Map.put(:status, status)
+  end
+
+  defp lifecycle_state_from_task(nil), do: :idle
+
+  defp lifecycle_state_from_task(task) do
+    SessionLifecyclePolicy.derive(%{
+      status: Map.get(task, :status),
+      container_id: Map.get(task, :container_id),
+      container_port: Map.get(task, :container_port)
+    })
+  end
+
+  defp broadcast_lifecycle_transition(task_id, from_state, to_state, container_id, pubsub) do
+    Logger.debug("Session lifecycle transition",
+      task_id: task_id,
+      from_state: from_state,
+      to_state: to_state,
+      container_id: container_id
+    )
+
+    Phoenix.PubSub.broadcast(
+      pubsub,
+      "task:#{task_id}",
+      {:lifecycle_state_changed, task_id, from_state, to_state}
     )
   end
 

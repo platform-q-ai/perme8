@@ -947,9 +947,41 @@
       </div>
 
       <%!-- Session header --%>
-      <div class="px-4 py-3 border-b border-base-300 flex items-center justify-between bg-base-100 shrink-0">
+      <div
+        class="px-4 py-3 border-b border-base-300 flex items-center justify-between bg-base-100 shrink-0"
+        data-testid="session-task-card"
+        data-task-id={if(@current_task, do: @current_task.id, else: nil)}
+      >
         <div class="flex items-center gap-2 min-w-0">
           <.status_badge status={if @current_task, do: @current_task.status, else: "idle"} />
+          <span
+            :if={@current_task}
+            data-testid="lifecycle-state"
+            class="badge badge-xs badge-outline whitespace-nowrap"
+          >
+            {SessionStateMachine.state_from_task(@current_task)
+            |> SessionStateMachine.display_name()}
+          </span>
+          <span
+            :if={
+              @current_task &&
+                SessionStateMachine.state_from_task(@current_task)
+                |> SessionStateMachine.active?()
+            }
+            data-testid="state-predicate-active"
+            class="hidden"
+          >
+          </span>
+          <span
+            :if={
+              @current_task &&
+                SessionStateMachine.state_from_task(@current_task)
+                |> SessionStateMachine.terminal?()
+            }
+            data-testid="state-predicate-terminal"
+            class="hidden"
+          >
+          </span>
           <h2 class="text-sm font-medium truncate">
             {@session_title ||
               if @current_task,

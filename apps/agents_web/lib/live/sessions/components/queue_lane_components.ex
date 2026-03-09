@@ -128,20 +128,27 @@ defmodule AgentsWeb.SessionsLive.Components.QueueLaneComponents do
 
   defp warm_state_indicator(%{lane: :processing} = assigns) do
     ~H"""
-    <span data-testid="task-running-indicator" class="w-2 h-2 rounded-full bg-success animate-pulse" />
+    <span
+      data-testid="warm-state-indicator-hot"
+      class="w-2 h-2 rounded-full bg-success animate-pulse"
+    />
     """
   end
 
   defp warm_state_indicator(%{warm_state: :warm} = assigns) do
     ~H"""
-    <span data-testid="task-warm-indicator" class="w-2 h-2 rounded-full bg-warning" title="Warm" />
+    <span
+      data-testid="warm-state-indicator-warm"
+      class="w-2 h-2 rounded-full bg-warning"
+      title="Warm"
+    />
     """
   end
 
   defp warm_state_indicator(%{warm_state: :warming} = assigns) do
     ~H"""
     <span
-      data-testid="task-warming-indicator"
+      data-testid="warm-state-indicator-warming"
       class="w-2 h-2 rounded-full bg-warning/50 animate-pulse"
       title="Warming"
     />
@@ -150,7 +157,11 @@ defmodule AgentsWeb.SessionsLive.Components.QueueLaneComponents do
 
   defp warm_state_indicator(%{warm_state: :cold} = assigns) do
     ~H"""
-    <span data-testid="task-cold-indicator" class="w-2 h-2 rounded-full bg-base-300" title="Cold" />
+    <span
+      data-testid="warm-state-indicator-cold"
+      class="w-2 h-2 rounded-full bg-base-300"
+      title="Cold"
+    />
     """
   end
 

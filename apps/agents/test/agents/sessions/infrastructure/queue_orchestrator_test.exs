@@ -59,6 +59,7 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestratorTest do
         create_task(user, %{status: "queued", queue_position: 1, container_id: "container-1"})
 
       Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "queue:user:#{user.id}")
+      Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "task:#{queued.id}")
 
       start_orchestrator!(user.id,
         concurrency_limit: 2,
@@ -69,7 +70,9 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestratorTest do
       assert :ok = QueueOrchestrator.notify_task_completed(user.id, queued.id)
 
       user_id = user.id
+      queued_id = queued.id
       assert_receive {:queue_snapshot, ^user_id, %QueueSnapshot{}}
+      assert_receive {:lifecycle_state_changed, ^queued_id, :queued_warm, :warming}
 
       updated = Repo.get!(TaskSchema, queued.id)
       assert updated.status == "pending"

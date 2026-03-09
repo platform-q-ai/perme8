@@ -9,7 +9,14 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
   alias Agents.Sessions.Application.SessionsConfig
   alias Agents.Sessions.Domain.Entities.QueueSnapshot
   alias Agents.Sessions.Domain.Events.{TaskLaneChanged, TaskPromoted, TaskRetryScheduled}
-  alias Agents.Sessions.Domain.Policies.{QueueEngine, QueuePolicy, RetryPolicy}
+
+  alias Agents.Sessions.Domain.Policies.{
+    QueueEngine,
+    QueuePolicy,
+    RetryPolicy,
+    SessionLifecyclePolicy
+  }
+
   alias Agents.Sessions.Infrastructure.Adapters.DockerAdapter
   alias Agents.Sessions.Infrastructure.Repositories.TaskRepository
 
@@ -261,6 +268,7 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
            error: nil
          }) do
       {:ok, updated_task} ->
+        broadcast_task_status_and_lifecycle(state, task, updated_task, "pending")
         maybe_start_runner(state, updated_task)
         emit_promotion_events(state, entry)
 
@@ -320,6 +328,15 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
            next_retry_at: next_retry_at
          }) do
       {:ok, _updated} ->
+        updated_task = %{
+          task
+          | status: "queued",
+            retry_count: new_count,
+            next_retry_at: next_retry_at
+        }
+
+        broadcast_task_status_and_lifecycle(state, task, updated_task, "queued")
+
         Process.send_after(self(), {:retry_task, task.id}, delay_ms)
 
         state.event_bus.emit(
@@ -359,7 +376,13 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
         :ok
 
       %{status: status} = task when status in ["pending", "starting", "running"] ->
-        state.task_repo.update_task_status(task, %{status: "awaiting_feedback"})
+        case state.task_repo.update_task_status(task, %{status: "awaiting_feedback"}) do
+          {:ok, updated_task} ->
+            broadcast_task_status_and_lifecycle(state, task, updated_task, "awaiting_feedback")
+
+          _ ->
+            :ok
+        end
 
       _ ->
         :ok
@@ -374,11 +397,17 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
       %{status: "awaiting_feedback"} = task ->
         queue_position = (state.task_repo.get_max_queue_position(state.user_id) || 0) + 1
 
-        state.task_repo.update_task_status(task, %{
-          status: "queued",
-          queue_position: queue_position,
-          queued_at: DateTime.utc_now()
-        })
+        case state.task_repo.update_task_status(task, %{
+               status: "queued",
+               queue_position: queue_position,
+               queued_at: DateTime.utc_now()
+             }) do
+          {:ok, updated_task} ->
+            broadcast_task_status_and_lifecycle(state, task, updated_task, "queued")
+
+          _ ->
+            :ok
+        end
 
       _ ->
         :ok
@@ -439,5 +468,40 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
       "queue:user:#{state.user_id}",
       {:queue_snapshot, state.user_id, snapshot}
     )
+  end
+
+  defp broadcast_task_status_and_lifecycle(state, from_task, to_task, status) do
+    from_state = lifecycle_state(from_task)
+    to_state = lifecycle_state(to_task)
+    container_id = Map.get(to_task, :container_id)
+
+    Phoenix.PubSub.broadcast(
+      state.pubsub,
+      "task:#{to_task.id}",
+      {:task_status_changed, to_task.id, status}
+    )
+
+    Logger.debug("Session lifecycle transition",
+      task_id: to_task.id,
+      from_state: from_state,
+      to_state: to_state,
+      container_id: container_id
+    )
+
+    Phoenix.PubSub.broadcast(
+      state.pubsub,
+      "task:#{to_task.id}",
+      {:lifecycle_state_changed, to_task.id, from_state, to_state}
+    )
+  end
+
+  defp lifecycle_state(nil), do: :idle
+
+  defp lifecycle_state(task) do
+    SessionLifecyclePolicy.derive(%{
+      status: Map.get(task, :status),
+      container_id: Map.get(task, :container_id),
+      container_port: Map.get(task, :container_port)
+    })
   end
 end

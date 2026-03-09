@@ -62,6 +62,22 @@ defmodule Agents.Sessions.Infrastructure.Schemas.TaskSchemaTest do
       assert changeset.valid?
     end
 
+    test "casts lifecycle_state when provided", %{valid_attrs: attrs} do
+      changeset =
+        TaskSchema.changeset(%TaskSchema{}, Map.put(attrs, :lifecycle_state, "queued_warm"))
+
+      assert changeset.valid?
+      assert changeset.changes.lifecycle_state == "queued_warm"
+    end
+
+    test "validates lifecycle_state inclusion", %{valid_attrs: attrs} do
+      changeset =
+        TaskSchema.changeset(%TaskSchema{}, Map.put(attrs, :lifecycle_state, "not_a_state"))
+
+      refute changeset.valid?
+      assert %{lifecycle_state: _} = errors_on(changeset)
+    end
+
     test "accepts retry fields and defaults retry_count to zero", %{valid_attrs: attrs} do
       now = ~U[2026-03-06 20:00:00Z]
 
@@ -150,6 +166,26 @@ defmodule Agents.Sessions.Infrastructure.Schemas.TaskSchemaTest do
       assert changeset.changes.retry_count == 2
       assert changeset.changes.last_retry_at == now
       assert changeset.changes.next_retry_at == now
+    end
+
+    test "casts lifecycle_state when updating status", %{valid_attrs: attrs} do
+      {:ok, task} = %TaskSchema{} |> TaskSchema.changeset(attrs) |> Repo.insert()
+
+      changeset =
+        TaskSchema.status_changeset(task, %{status: "queued", lifecycle_state: "queued_cold"})
+
+      assert changeset.valid?
+      assert changeset.changes.lifecycle_state == "queued_cold"
+    end
+
+    test "validates lifecycle_state inclusion when updating status", %{valid_attrs: attrs} do
+      {:ok, task} = %TaskSchema{} |> TaskSchema.changeset(attrs) |> Repo.insert()
+
+      changeset =
+        TaskSchema.status_changeset(task, %{status: "queued", lifecycle_state: "bad_state"})
+
+      refute changeset.valid?
+      assert %{lifecycle_state: _} = errors_on(changeset)
     end
   end
 end

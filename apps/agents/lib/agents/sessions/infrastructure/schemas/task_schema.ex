@@ -12,11 +12,13 @@ defmodule Agents.Sessions.Infrastructure.Schemas.TaskSchema do
   import Ecto.Changeset
 
   alias Agents.Sessions.Domain.Entities.Task
+  alias Agents.Sessions.Domain.Policies.SessionLifecyclePolicy
 
   @type t :: %__MODULE__{
           id: Ecto.UUID.t(),
           instruction: String.t(),
           status: String.t(),
+          lifecycle_state: String.t(),
           image: String.t(),
           container_id: String.t() | nil,
           container_port: integer() | nil,
@@ -40,6 +42,19 @@ defmodule Agents.Sessions.Infrastructure.Schemas.TaskSchema do
         }
 
   @valid_statuses Task.valid_statuses()
+  @valid_lifecycle_states [
+    "idle",
+    "queued_cold",
+    "queued_warm",
+    "warming",
+    "pending",
+    "starting",
+    "running",
+    "awaiting_feedback",
+    "completed",
+    "failed",
+    "cancelled"
+  ]
 
   @primary_key {:id, Ecto.UUID, autogenerate: true}
   @foreign_key_type Ecto.UUID
@@ -47,6 +62,7 @@ defmodule Agents.Sessions.Infrastructure.Schemas.TaskSchema do
   schema "sessions_tasks" do
     field(:instruction, :string)
     field(:status, :string, default: "pending")
+    field(:lifecycle_state, :string, default: "idle")
     field(:image, :string, default: "perme8-opencode")
     field(:container_id, :string)
     field(:container_port, :integer)
@@ -86,6 +102,7 @@ defmodule Agents.Sessions.Infrastructure.Schemas.TaskSchema do
       :instruction,
       :user_id,
       :status,
+      :lifecycle_state,
       :image,
       :container_id,
       :container_port,
@@ -102,7 +119,9 @@ defmodule Agents.Sessions.Infrastructure.Schemas.TaskSchema do
       :completed_at
     ])
     |> validate_required([:instruction, :user_id])
+    |> maybe_derive_lifecycle_state()
     |> validate_inclusion(:status, @valid_statuses)
+    |> validate_inclusion(:lifecycle_state, @valid_lifecycle_states)
     |> foreign_key_constraint(:user_id)
     |> foreign_key_constraint(:parent_task_id)
   end
@@ -117,6 +136,7 @@ defmodule Agents.Sessions.Infrastructure.Schemas.TaskSchema do
     task
     |> cast(attrs, [
       :status,
+      :lifecycle_state,
       :instruction,
       :container_id,
       :container_port,
@@ -134,6 +154,23 @@ defmodule Agents.Sessions.Infrastructure.Schemas.TaskSchema do
       :started_at,
       :completed_at
     ])
+    |> maybe_derive_lifecycle_state()
     |> validate_inclusion(:status, @valid_statuses)
+    |> validate_inclusion(:lifecycle_state, @valid_lifecycle_states)
+  end
+
+  defp maybe_derive_lifecycle_state(changeset) do
+    if Map.has_key?(changeset.changes, :lifecycle_state) do
+      changeset
+    else
+      lifecycle_state =
+        SessionLifecyclePolicy.derive(%{
+          status: get_field(changeset, :status),
+          container_id: get_field(changeset, :container_id),
+          container_port: get_field(changeset, :container_port)
+        })
+
+      put_change(changeset, :lifecycle_state, Atom.to_string(lifecycle_state))
+    end
   end
 end
