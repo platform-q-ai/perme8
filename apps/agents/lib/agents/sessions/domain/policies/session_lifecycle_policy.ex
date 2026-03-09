@@ -45,22 +45,20 @@ defmodule Agents.Sessions.Domain.Policies.SessionLifecyclePolicy do
 
   def derive(task) when is_map(task) do
     status = value(task, :status)
-    container_id = value(task, :container_id)
-    container_port = value(task, :container_port)
 
-    case status do
-      nil -> :idle
-      "queued" -> if(real_container?(container_id), do: :queued_warm, else: :queued_cold)
-      "pending" -> derive_pending_state(container_id, container_port)
-      "starting" -> :starting
-      "running" -> :running
-      "awaiting_feedback" -> :awaiting_feedback
-      "completed" -> :completed
-      "failed" -> :failed
-      "cancelled" -> :cancelled
-      _ -> :idle
-    end
+    derive_from_status(status, task)
   end
+
+  defp derive_from_status(nil, _task), do: :idle
+  defp derive_from_status("queued", task), do: derive_queued_state(task)
+  defp derive_from_status("pending", task), do: derive_pending_state(task)
+  defp derive_from_status("starting", _task), do: :starting
+  defp derive_from_status("running", _task), do: :running
+  defp derive_from_status("awaiting_feedback", _task), do: :awaiting_feedback
+  defp derive_from_status("completed", _task), do: :completed
+  defp derive_from_status("failed", _task), do: :failed
+  defp derive_from_status("cancelled", _task), do: :cancelled
+  defp derive_from_status(_unknown, _task), do: :idle
 
   @spec can_transition?(atom(), atom()) :: boolean()
   def can_transition?(from_state, to_state),
@@ -81,11 +79,17 @@ defmodule Agents.Sessions.Domain.Policies.SessionLifecyclePolicy do
   @spec can_submit_message?(atom()) :: boolean()
   def can_submit_message?(state), do: active?(state)
 
-  defp derive_pending_state(container_id, container_port) do
-    cond do
-      real_container?(container_id) and is_nil(container_port) -> :warming
-      true -> :pending
-    end
+  defp derive_queued_state(task) do
+    container_id = value(task, :container_id)
+
+    if real_container?(container_id), do: :queued_warm, else: :queued_cold
+  end
+
+  defp derive_pending_state(task) do
+    container_id = value(task, :container_id)
+    container_port = value(task, :container_port)
+
+    if real_container?(container_id) and is_nil(container_port), do: :warming, else: :pending
   end
 
   defp real_container?(container_id) when is_binary(container_id) do

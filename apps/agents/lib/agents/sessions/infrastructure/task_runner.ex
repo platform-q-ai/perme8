@@ -1574,11 +1574,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   end
 
   defp broadcast_lifecycle_transition(task_id, from_state, to_state, container_id, pubsub) do
-    Logger.debug("Session lifecycle transition",
-      task_id: task_id,
-      from_state: from_state,
-      to_state: to_state,
-      container_id: container_id
+    Logger.debug(
+      "Session lifecycle transition: #{from_state} -> #{to_state} [task=#{task_id}, container=#{container_id}]"
     )
 
     Phoenix.PubSub.broadcast(
