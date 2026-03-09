@@ -4,6 +4,19 @@ defmodule Agents.Sessions.Infrastructure.ProjectTicketRepositoryTest do
   alias Agents.Repo
   alias Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository
   alias Agents.Sessions.Infrastructure.Schemas.ProjectTicketSchema
+  alias Agents.Sessions.Infrastructure.Schemas.TaskSchema
+
+  import Agents.Test.AccountsFixtures
+
+  defp create_task!(attrs \\ %{}) do
+    user = user_fixture()
+
+    %TaskSchema{}
+    |> TaskSchema.changeset(
+      Map.merge(%{instruction: "test instruction", user_id: user.id}, attrs)
+    )
+    |> Repo.insert!()
+  end
 
   test "sync_remote_ticket/1 persists remote tickets with sync metadata" do
     assert {:ok, ticket} =
@@ -579,5 +592,94 @@ defmodule Agents.Sessions.Infrastructure.ProjectTicketRepositoryTest do
 
     refreshed = Repo.get!(ProjectTicketSchema, child.id)
     assert refreshed.parent_ticket_id == nil
+  end
+
+  describe "link_task/2" do
+    test "persists task_id on a ticket" do
+      {:ok, _ticket} =
+        ProjectTicketRepository.sync_remote_ticket(%{
+          number: 850,
+          title: "Ticket for linking",
+          labels: []
+        })
+
+      task = create_task!()
+      assert {:ok, linked} = ProjectTicketRepository.link_task(850, task.id)
+      assert linked.task_id == task.id
+
+      refreshed = Repo.get_by!(ProjectTicketSchema, number: 850)
+      assert refreshed.task_id == task.id
+    end
+
+    test "returns error when ticket does not exist" do
+      task = create_task!()
+      assert {:error, :ticket_not_found} = ProjectTicketRepository.link_task(99_997, task.id)
+    end
+
+    test "overwrites previous task_id" do
+      {:ok, _ticket} =
+        ProjectTicketRepository.sync_remote_ticket(%{
+          number: 851,
+          title: "Ticket for re-linking",
+          labels: []
+        })
+
+      old_task = create_task!(%{instruction: "old task"})
+      new_task = create_task!(%{instruction: "new task"})
+
+      {:ok, _} = ProjectTicketRepository.link_task(851, old_task.id)
+      {:ok, relinked} = ProjectTicketRepository.link_task(851, new_task.id)
+
+      assert relinked.task_id == new_task.id
+    end
+  end
+
+  describe "unlink_task/1" do
+    test "clears task_id on a ticket" do
+      {:ok, _ticket} =
+        ProjectTicketRepository.sync_remote_ticket(%{
+          number: 860,
+          title: "Ticket for unlinking",
+          labels: []
+        })
+
+      task = create_task!()
+      {:ok, _} = ProjectTicketRepository.link_task(860, task.id)
+      {:ok, unlinked} = ProjectTicketRepository.unlink_task(860)
+
+      assert unlinked.task_id == nil
+
+      refreshed = Repo.get_by!(ProjectTicketSchema, number: 860)
+      assert refreshed.task_id == nil
+    end
+
+    test "returns error when ticket does not exist" do
+      assert {:error, :ticket_not_found} = ProjectTicketRepository.unlink_task(99_996)
+    end
+  end
+
+  describe "sync_remote_ticket/1 preserves task_id" do
+    test "does not clear task_id when re-syncing from remote" do
+      {:ok, _ticket} =
+        ProjectTicketRepository.sync_remote_ticket(%{
+          number: 870,
+          title: "Original title",
+          labels: []
+        })
+
+      task = create_task!()
+      {:ok, _} = ProjectTicketRepository.link_task(870, task.id)
+
+      # Simulate a remote sync that updates the title
+      {:ok, synced} =
+        ProjectTicketRepository.sync_remote_ticket(%{
+          number: 870,
+          title: "Updated title",
+          labels: ["new-label"]
+        })
+
+      assert synced.title == "Updated title"
+      assert synced.task_id == task.id
+    end
   end
 end

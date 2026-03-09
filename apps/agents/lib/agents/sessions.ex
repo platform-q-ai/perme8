@@ -725,6 +725,26 @@ defmodule Agents.Sessions do
     end
   end
 
+  @doc """
+  Links a task to a ticket by persisting the task ID on the ticket record.
+
+  This creates a durable association that survives page reloads, ticket
+  syncs, and re-enrichment cycles. Called automatically when a task is
+  created for a ticket (via `start_ticket_session`).
+  """
+  @spec link_ticket_to_task(integer(), String.t()) :: {:ok, struct()} | {:error, term()}
+  def link_ticket_to_task(ticket_number, task_id) do
+    ProjectTicketRepository.link_task(ticket_number, task_id)
+  end
+
+  @doc """
+  Removes the task association from a ticket.
+  """
+  @spec unlink_ticket_from_task(integer()) :: {:ok, struct()} | {:error, term()}
+  def unlink_ticket_from_task(ticket_number) do
+    ProjectTicketRepository.unlink_task(ticket_number)
+  end
+
   @doc false
   @spec extract_ticket_number(term()) :: integer() | nil
   def extract_ticket_number(instruction) when is_binary(instruction) do

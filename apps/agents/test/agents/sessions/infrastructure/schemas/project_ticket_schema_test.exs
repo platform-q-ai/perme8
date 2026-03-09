@@ -29,6 +29,33 @@ defmodule Agents.Sessions.Infrastructure.Schemas.ProjectTicketSchemaTest do
     end
   end
 
+  describe "task_id field" do
+    test "accepts task_id as a castable field" do
+      task_id = Ecto.UUID.generate()
+
+      changeset =
+        ProjectTicketSchema.changeset(%ProjectTicketSchema{}, %{
+          number: 103,
+          title: "Ticket with task",
+          task_id: task_id
+        })
+
+      assert changeset.valid?
+      assert Ecto.Changeset.get_change(changeset, :task_id) == task_id
+    end
+
+    test "accepts nil task_id" do
+      changeset =
+        ProjectTicketSchema.changeset(%ProjectTicketSchema{}, %{
+          number: 104,
+          title: "Ticket without task",
+          task_id: nil
+        })
+
+      assert changeset.valid?
+    end
+  end
+
   describe "schema associations" do
     test "defines parent_ticket belongs_to association" do
       association = ProjectTicketSchema.__schema__(:association, :parent_ticket)

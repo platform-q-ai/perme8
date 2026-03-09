@@ -1040,6 +1040,9 @@ defmodule AgentsWeb.SessionsLive.Index do
     optimistic_entry = Enum.find(socket.assigns.optimistic_new_sessions, &(&1.id == client_id))
     task = resolve_new_task_ack_task(task, user.id, optimistic_entry)
 
+    # Persist ticket-task association when a new task references a ticket
+    maybe_link_ticket_to_task(task)
+
     sessions = upsert_session_from_task(socket.assigns.sessions, task)
 
     sticky_warm_task_ids =
@@ -1051,6 +1054,10 @@ defmodule AgentsWeb.SessionsLive.Index do
 
     tasks_snapshot = upsert_task_snapshot(socket.assigns[:tasks_snapshot], task)
 
+    # Reload tickets from DB so the persisted task_id is picked up
+    tickets =
+      Sessions.list_project_tickets(user.id, tasks: tasks_snapshot)
+
     {:noreply,
      socket
      |> clear_new_task_monitor(client_id)
@@ -1061,10 +1068,7 @@ defmodule AgentsWeb.SessionsLive.Index do
      |> broadcast_optimistic_new_sessions_snapshot()
      |> assign(:sessions, sessions)
      |> assign(:tasks_snapshot, tasks_snapshot)
-     |> assign(
-       :tickets,
-       TicketEnrichmentPolicy.enrich_all(socket.assigns.tickets, tasks_snapshot)
-     )
+     |> assign(:tickets, tickets)
      |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)}
   end
 
@@ -2390,5 +2394,16 @@ defmodule AgentsWeb.SessionsLive.Index do
     else
       "##{ticket_number} #{instruction}"
     end
+  end
+
+  defp maybe_link_ticket_to_task(task) do
+    instruction = Map.get(task, :instruction, "")
+
+    case Sessions.extract_ticket_number(instruction) do
+      nil -> :ok
+      ticket_number -> Sessions.link_ticket_to_task(ticket_number, task.id)
+    end
+  rescue
+    _ -> :ok
   end
 end

@@ -126,6 +126,72 @@ defmodule Agents.Sessions.Domain.Entities.TicketTest do
       assert ticket.task_error == nil
     end
 
+    test "reads persisted task_id into associated_task_id" do
+      task_id = Ecto.UUID.generate()
+
+      schema = %{
+        __struct__: SomeSchema,
+        id: 1,
+        number: 382,
+        external_id: "I_kwDOLg0VD86cJxM_",
+        title: "Parent ticket",
+        body: nil,
+        status: "Todo",
+        state: "open",
+        priority: nil,
+        size: nil,
+        labels: [],
+        url: nil,
+        position: 0,
+        sync_state: "synced",
+        last_synced_at: nil,
+        last_sync_error: nil,
+        remote_updated_at: nil,
+        parent_ticket_id: nil,
+        sub_tickets: [],
+        created_at: nil,
+        inserted_at: nil,
+        updated_at: nil,
+        task_id: task_id
+      }
+
+      ticket = Ticket.from_schema(schema)
+
+      assert ticket.associated_task_id == task_id
+      assert ticket.associated_container_id == nil
+      assert ticket.session_state == "idle"
+    end
+
+    test "associated_task_id is nil when schema has no task_id key" do
+      schema = %{
+        __struct__: SomeSchema,
+        id: 1,
+        number: 382,
+        external_id: nil,
+        title: "No task_id key",
+        body: nil,
+        status: nil,
+        state: "open",
+        priority: nil,
+        size: nil,
+        labels: [],
+        url: nil,
+        position: 0,
+        sync_state: "synced",
+        last_synced_at: nil,
+        last_sync_error: nil,
+        remote_updated_at: nil,
+        parent_ticket_id: nil,
+        sub_tickets: [],
+        created_at: nil,
+        inserted_at: nil,
+        updated_at: nil
+      }
+
+      ticket = Ticket.from_schema(schema)
+      assert ticket.associated_task_id == nil
+    end
+
     test "recursively converts preloaded sub_tickets" do
       sub_schema = %{
         __struct__: SomeSchema,

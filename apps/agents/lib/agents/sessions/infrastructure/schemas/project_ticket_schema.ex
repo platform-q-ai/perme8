@@ -28,6 +28,7 @@ defmodule Agents.Sessions.Infrastructure.Schemas.ProjectTicketSchema do
           last_sync_error: String.t() | nil,
           remote_updated_at: DateTime.t() | nil,
           parent_ticket_id: integer() | nil,
+          task_id: Ecto.UUID.t() | nil,
           inserted_at: DateTime.t(),
           updated_at: DateTime.t()
         }
@@ -49,6 +50,7 @@ defmodule Agents.Sessions.Infrastructure.Schemas.ProjectTicketSchema do
     field(:last_synced_at, :utc_datetime)
     field(:last_sync_error, :string)
     field(:remote_updated_at, :utc_datetime)
+    field(:task_id, Ecto.UUID)
     belongs_to(:parent_ticket, __MODULE__)
     has_many(:sub_tickets, __MODULE__, foreign_key: :parent_ticket_id)
 
@@ -75,11 +77,13 @@ defmodule Agents.Sessions.Infrastructure.Schemas.ProjectTicketSchema do
       :last_synced_at,
       :last_sync_error,
       :remote_updated_at,
-      :parent_ticket_id
+      :parent_ticket_id,
+      :task_id
     ])
     |> validate_required([:number, :title])
     |> validate_inclusion(:sync_state, @sync_states)
     |> validate_inclusion(:state, @valid_states)
     |> unique_constraint(:number)
+    |> foreign_key_constraint(:task_id)
   end
 end

@@ -95,7 +95,7 @@ defmodule Agents.Sessions.Domain.Entities.Ticket do
       created_at: schema.created_at,
       inserted_at: schema.inserted_at,
       updated_at: schema.updated_at,
-      associated_task_id: nil,
+      associated_task_id: Map.get(schema, :task_id),
       associated_container_id: nil,
       session_state: "idle",
       task_status: nil,
