@@ -88,9 +88,9 @@ awaiting_feedback → queued_warm
 
 ### 1.1 Session Domain Entity
 
-⏸ **Status**: Not Started
+✓ **Status**: Complete
 
-- [ ] **RED**: Write test `apps/agents/test/agents/sessions/domain/entities/session_test.exs`
+- [x] **RED**: Write test `apps/agents/test/agents/sessions/domain/entities/session_test.exs`
   - Tests for `new/1`: creates Session with lifecycle_state, task_id, user_id, container_id, container_port, status fields
   - Tests for `from_task/1`: converts a Task entity (or task-like map) into a Session with derived lifecycle_state
   - Tests for `from_task/2`: converts a Task entity + container metadata map into a Session
@@ -98,7 +98,7 @@ awaiting_feedback → queued_warm
   - Valid lifecycle states constant returns all 11 states
   - Test `valid_lifecycle_states/0` returns the exact 11-element list
   - Test `display_name/1` returns human-readable labels: `:queued_cold` → `"Queued (cold)"`, `:queued_warm` → `"Queued (warm)"`, `:warming` → `"Warming up"`, `:starting` → `"Starting"`, `:running` → `"Running"`, `:awaiting_feedback` → `"Awaiting feedback"`, `:completed` → `"Completed"`, `:failed` → `"Failed"`, `:cancelled` → `"Cancelled"`, `:idle` → `"Idle"`, `:pending` → `"Pending"`
-- [ ] **GREEN**: Implement `apps/agents/lib/agents/sessions/domain/entities/session.ex`
+- [x] **GREEN**: Implement `apps/agents/lib/agents/sessions/domain/entities/session.ex`
   - Pure struct with `defstruct` (NO Ecto)
   - Fields: `task_id`, `user_id`, `lifecycle_state`, `status` (original task status), `container_id`, `container_port`, `session_id`, `instruction`, `error`, `queue_position`, `queued_at`, `started_at`, `completed_at`
   - `new/1` — creates from attribute map
@@ -106,13 +106,13 @@ awaiting_feedback → queued_warm
   - `from_task/2` — takes task + extra container metadata for runtime enrichment
   - `valid_lifecycle_states/0` — returns the 11 valid states as atoms
   - `display_name/1` — maps lifecycle_state atom to human-readable string
-- [ ] **REFACTOR**: Ensure from_task delegates to SessionLifecyclePolicy.derive/1 (not duplicating logic)
+- [x] **REFACTOR**: Ensure from_task delegates to SessionLifecyclePolicy.derive/1 (not duplicating logic)
 
 ### 1.2 SessionLifecyclePolicy — Core Derivation & Transitions
 
-⏸ **Status**: Not Started
+✓ **Status**: Complete
 
-- [ ] **RED**: Write test `apps/agents/test/agents/sessions/domain/policies/session_lifecycle_policy_test.exs`
+- [x] **RED**: Write test `apps/agents/test/agents/sessions/domain/policies/session_lifecycle_policy_test.exs`
   - **`derive/1` tests** (pure function, takes map with :status, :container_id, :container_port):
     - `nil` status or nil map → `:idle`
     - `"queued"` + no real container → `:queued_cold`
@@ -139,52 +139,52 @@ awaiting_feedback → queued_warm
     - `cold?/1`: true for `[:queued_cold, :idle]`, false for warm/active states
     - `can_submit_message?/1`: true for `[:queued_cold, :queued_warm, :warming, :pending, :starting, :running, :awaiting_feedback]`, false for `[:idle, :completed, :failed, :cancelled]`
   - Use `task/1` helper pattern (default map with overrides) matching existing QueueEngine test pattern
-- [ ] **GREEN**: Implement `apps/agents/lib/agents/sessions/domain/policies/session_lifecycle_policy.ex`
+- [x] **GREEN**: Implement `apps/agents/lib/agents/sessions/domain/policies/session_lifecycle_policy.ex`
   - Module: `Agents.Sessions.Domain.Policies.SessionLifecyclePolicy`
   - `@valid_transitions` — MapSet of `{from_state, to_state}` tuples (atoms)
   - `derive/1` — takes a map with `:status`, `:container_id`, `:container_port` keys, returns lifecycle_state atom. Reuses the `real_container?/1` check logic from QueueEngine.
   - `can_transition?/2` — validates lifecycle transitions between atoms
   - `active?/1`, `terminal?/1`, `warm?/1`, `cold?/1`, `can_submit_message?/1` — predicates on lifecycle_state atom
   - Pure functions only, no I/O
-- [ ] **REFACTOR**: Extract `real_container?/1` into a shared private helper or import from QueueEngine if boundary permits. If not, replicate the 3-line check (acceptable duplication for boundary isolation).
+- [x] **REFACTOR**: Extract `real_container?/1` into a shared private helper or import from QueueEngine if boundary permits. If not, replicate the 3-line check (acceptable duplication for boundary isolation).
 
 ### 1.3 Domain Events — SessionStateChanged, SessionWarmingStarted, SessionWarmed
 
-⏸ **Status**: Not Started
+✓ **Status**: Complete
 
-- [ ] **RED**: Write test `apps/agents/test/agents/sessions/domain/events/session_state_changed_test.exs`
+- [x] **RED**: Write test `apps/agents/test/agents/sessions/domain/events/session_state_changed_test.exs`
   - Tests: `new/1` with valid attrs (aggregate_id, actor_id, task_id, from_state, to_state, lifecycle_state)
   - Verify `event_type/0` returns `"sessions.session_state_changed"`
   - Verify `aggregate_type/0` returns `"session"`
   - Auto-generates event_id and occurred_at
   - Raises on missing required fields (task_id, from_state, to_state)
-- [ ] **GREEN**: Implement `apps/agents/lib/agents/sessions/domain/events/session_state_changed.ex`
+- [x] **GREEN**: Implement `apps/agents/lib/agents/sessions/domain/events/session_state_changed.ex`
   - `use Perme8.Events.DomainEvent, aggregate_type: "session", fields: [task_id: nil, user_id: nil, from_state: nil, to_state: nil, lifecycle_state: nil, container_id: nil], required: [:task_id, :from_state, :to_state]`
-- [ ] **REFACTOR**: Ensure event follows existing pattern exactly (see TaskCreated)
+- [x] **REFACTOR**: Ensure event follows existing pattern exactly (see TaskCreated)
 
-- [ ] **RED**: Write test `apps/agents/test/agents/sessions/domain/events/session_warming_started_test.exs`
+- [x] **RED**: Write test `apps/agents/test/agents/sessions/domain/events/session_warming_started_test.exs`
   - Tests: `new/1` with valid attrs (aggregate_id, actor_id, task_id, container_id)
   - Verify `event_type/0` returns `"sessions.session_warming_started"`
   - Verify `aggregate_type/0` returns `"session"`
   - Raises on missing required fields (task_id)
-- [ ] **GREEN**: Implement `apps/agents/lib/agents/sessions/domain/events/session_warming_started.ex`
+- [x] **GREEN**: Implement `apps/agents/lib/agents/sessions/domain/events/session_warming_started.ex`
   - `use Perme8.Events.DomainEvent, aggregate_type: "session", fields: [task_id: nil, user_id: nil, container_id: nil], required: [:task_id]`
-- [ ] **REFACTOR**: Clean up
+- [x] **REFACTOR**: Clean up
 
-- [ ] **RED**: Write test `apps/agents/test/agents/sessions/domain/events/session_warmed_test.exs`
+- [x] **RED**: Write test `apps/agents/test/agents/sessions/domain/events/session_warmed_test.exs`
   - Tests: `new/1` with valid attrs (aggregate_id, actor_id, task_id, container_id, container_port)
   - Verify `event_type/0` returns `"sessions.session_warmed"`
   - Verify `aggregate_type/0` returns `"session"`
   - Raises on missing required fields (task_id)
-- [ ] **GREEN**: Implement `apps/agents/lib/agents/sessions/domain/events/session_warmed.ex`
+- [x] **GREEN**: Implement `apps/agents/lib/agents/sessions/domain/events/session_warmed.ex`
   - `use Perme8.Events.DomainEvent, aggregate_type: "session", fields: [task_id: nil, user_id: nil, container_id: nil, container_port: nil], required: [:task_id]`
-- [ ] **REFACTOR**: Clean up
+- [x] **REFACTOR**: Clean up
 
 ### 1.4 Update TicketEnrichmentPolicy — Replace Lossy Mapping (P0)
 
-⏸ **Status**: Not Started
+✓ **Status**: Complete
 
-- [ ] **RED**: Update test `apps/agents/test/agents/sessions/domain/policies/ticket_enrichment_policy_test.exs`
+- [x] **RED**: Update test `apps/agents/test/agents/sessions/domain/policies/ticket_enrichment_policy_test.exs`
   - Add new tests for lifecycle-state-aware enrichment:
     - Task with status=queued, no container → session_state = `"queued_cold"`
     - Task with status=queued, real container → session_state = `"queued_warm"`
@@ -198,19 +198,19 @@ awaiting_feedback → queued_warm
     - No matching task → session_state = `"idle"`
   - Update existing test expectations: `"running"` status now maps to `"running"` (unchanged), but `"failed"` now maps to `"failed"` instead of `"paused"`
   - Specifically, test that enriched child ticket with status `"failed"` now has session_state `"failed"` (was `"paused"`)
-- [ ] **GREEN**: Update `apps/agents/lib/agents/sessions/domain/policies/ticket_enrichment_policy.ex`
+- [x] **GREEN**: Update `apps/agents/lib/agents/sessions/domain/policies/ticket_enrichment_policy.ex`
   - Replace `task_status_to_session_state/1` with delegation to `SessionLifecyclePolicy.derive/1`
   - `apply_enrichment/2` builds a map with `:status`, `:container_id`, `:container_port` from the task, calls `SessionLifecyclePolicy.derive/1`, converts result atom to string for `session_state` field
   - The mapping is now: `Atom.to_string(SessionLifecyclePolicy.derive(task_map))`
-- [ ] **REFACTOR**: Remove the old `task_status_to_session_state/1` private function entirely. Ensure backward compatibility is maintained in the `apply_enrichment/2` path.
+- [x] **REFACTOR**: Remove the old `task_status_to_session_state/1` private function entirely. Ensure backward compatibility is maintained in the `apply_enrichment/2` path.
 
 ### Phase 1 Validation
 
-- [ ] All entity tests pass: `mix test apps/agents/test/agents/sessions/domain/entities/session_test.exs` (milliseconds, no I/O)
-- [ ] All policy tests pass: `mix test apps/agents/test/agents/sessions/domain/policies/session_lifecycle_policy_test.exs` (milliseconds, no I/O)
-- [ ] All event tests pass: `mix test apps/agents/test/agents/sessions/domain/events/session_*_test.exs` (milliseconds, no I/O)
-- [ ] Updated enrichment tests pass: `mix test apps/agents/test/agents/sessions/domain/policies/ticket_enrichment_policy_test.exs`
-- [ ] No boundary violations: `mix boundary` (run from umbrella root)
+- [x] All entity tests pass: `mix test apps/agents/test/agents/sessions/domain/entities/session_test.exs` (milliseconds, no I/O)
+- [x] All policy tests pass: `mix test apps/agents/test/agents/sessions/domain/policies/session_lifecycle_policy_test.exs` (milliseconds, no I/O)
+- [x] All event tests pass: `mix test apps/agents/test/agents/sessions/domain/events/session_*_test.exs` (milliseconds, no I/O)
+- [x] Updated enrichment tests pass: `mix test apps/agents/test/agents/sessions/domain/policies/ticket_enrichment_policy_test.exs`
+- [x] No boundary violations: `mix boundary` (run from umbrella root)
 
 ---
 
