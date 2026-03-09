@@ -483,6 +483,13 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
         child_session_ids = Map.put_new(state.child_session_ids, event_session_id, nil)
         state = %{state | child_session_ids: child_session_ids}
 
+        # If this is a subtask part event, track the subtask message ID and
+        # cache the part. These are semantically parent-session operations
+        # (the subtask part appears in the parent's message stream) but the
+        # event carries the child's session ID, so it lands here.
+        state = track_subtask_message_id(event, state)
+        state = cache_subtask_part(event, state)
+
         process_child_session_event(event, event_session_id, state)
     end
   end

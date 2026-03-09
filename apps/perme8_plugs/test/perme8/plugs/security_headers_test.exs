@@ -142,6 +142,7 @@ defmodule Perme8.Plugs.SecurityHeadersTest do
 
   describe "Plug behaviour" do
     test "implements Plug behaviour" do
+      Code.ensure_loaded!(SecurityHeaders)
       assert function_exported?(SecurityHeaders, :init, 1)
       assert function_exported?(SecurityHeaders, :call, 2)
     end
