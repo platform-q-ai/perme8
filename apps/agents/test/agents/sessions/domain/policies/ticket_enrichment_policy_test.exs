@@ -75,7 +75,7 @@ defmodule Agents.Sessions.Domain.Policies.TicketEnrichmentPolicyTest do
       assert [%Ticket{} = enriched_child] = enriched_root.sub_tickets
       assert enriched_child.number == 383
       assert enriched_child.associated_task_id == "task-child"
-      assert enriched_child.session_state == "paused"
+      assert enriched_child.session_state == "failed"
       assert enriched_child.task_error == "boom"
       assert enriched_child.parent_ticket_id == 1
     end
@@ -205,6 +205,70 @@ defmodule Agents.Sessions.Domain.Policies.TicketEnrichmentPolicyTest do
       assert [enriched_child] = enriched_root.sub_tickets
       assert enriched_child.associated_task_id == "task-child-persisted"
       assert enriched_child.session_state == "running"
+    end
+  end
+
+  describe "lifecycle-aware session_state enrichment" do
+    test "maps queued without container to queued_cold" do
+      ticket = Ticket.new(%{number: 382, title: "Root ticket"})
+
+      tasks = [
+        Task.new(%{id: "task-1", instruction: "ticket #382", status: "queued", user_id: "user-1"})
+      ]
+
+      enriched = TicketEnrichmentPolicy.enrich(ticket, tasks)
+      assert enriched.session_state == "queued_cold"
+    end
+
+    test "maps queued with real container to queued_warm" do
+      ticket = Ticket.new(%{number: 382, title: "Root ticket"})
+
+      tasks = [
+        Task.new(%{
+          id: "task-1",
+          instruction: "ticket #382",
+          status: "queued",
+          container_id: "container-1",
+          user_id: "user-1"
+        })
+      ]
+
+      enriched = TicketEnrichmentPolicy.enrich(ticket, tasks)
+      assert enriched.session_state == "queued_warm"
+    end
+
+    test "maps pending with container and no port to warming" do
+      ticket = Ticket.new(%{number: 382, title: "Root ticket"})
+
+      tasks = [
+        Task.new(%{
+          id: "task-1",
+          instruction: "ticket #382",
+          status: "pending",
+          container_id: "container-1",
+          container_port: nil,
+          user_id: "user-1"
+        })
+      ]
+
+      enriched = TicketEnrichmentPolicy.enrich(ticket, tasks)
+      assert enriched.session_state == "warming"
+    end
+
+    test "maps cancelled to cancelled" do
+      ticket = Ticket.new(%{number: 382, title: "Root ticket"})
+
+      tasks = [
+        Task.new(%{
+          id: "task-1",
+          instruction: "ticket #382",
+          status: "cancelled",
+          user_id: "user-1"
+        })
+      ]
+
+      enriched = TicketEnrichmentPolicy.enrich(ticket, tasks)
+      assert enriched.session_state == "cancelled"
     end
   end
 

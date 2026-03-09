@@ -13,6 +13,7 @@ defmodule Agents.Sessions.Domain.Policies.TicketEnrichmentPolicy do
   """
 
   alias Agents.Sessions.Domain.Entities.Ticket
+  alias Agents.Sessions.Domain.Policies.SessionLifecyclePolicy
 
   @ticket_number_regex ~r/(?:^|\s)(?:#|ticket\s+)(\d+)\b/i
 
@@ -99,22 +100,20 @@ defmodule Agents.Sessions.Domain.Policies.TicketEnrichmentPolicy do
   defp apply_enrichment(%Ticket{} = ticket, task) do
     status = Map.get(task, :status)
 
+    lifecycle_state =
+      SessionLifecyclePolicy.derive(%{
+        status: status,
+        container_id: Map.get(task, :container_id),
+        container_port: Map.get(task, :container_port)
+      })
+
     %{
       ticket
       | associated_task_id: Map.get(task, :id),
         associated_container_id: Map.get(task, :container_id),
-        session_state: task_status_to_session_state(status),
+        session_state: Atom.to_string(lifecycle_state),
         task_status: status,
         task_error: Map.get(task, :error)
     }
   end
-
-  defp task_status_to_session_state(nil), do: "idle"
-
-  defp task_status_to_session_state(status)
-       when status in ["pending", "starting", "running", "queued", "awaiting_feedback"],
-       do: "running"
-
-  defp task_status_to_session_state("completed"), do: "completed"
-  defp task_status_to_session_state(_), do: "paused"
 end
