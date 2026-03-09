@@ -81,6 +81,7 @@ defmodule AgentsWeb.SessionsLive.Helpers do
     |> Enum.find_value(fn
       {:user, _id, text} -> text
       {:user_pending, _id, text} -> text
+      {:answer_submitted, _id, text} -> text
       _ -> nil
     end)
   end
@@ -207,6 +208,7 @@ defmodule AgentsWeb.SessionsLive.Helpers do
       not Enum.any?(output_parts, fn
         {:user, _id, text} -> String.trim(text || "") == instruction_text
         {:user_pending, _id, text} -> String.trim(text || "") == instruction_text
+        {:answer_submitted, _id, text} -> String.trim(text || "") == instruction_text
         _ -> false
       end)
     end

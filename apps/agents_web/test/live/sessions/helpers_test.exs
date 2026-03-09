@@ -635,6 +635,16 @@ defmodule AgentsWeb.SessionsLive.HelpersTest do
     test "returns nil for non-list input" do
       assert Helpers.last_user_message(nil) == nil
     end
+
+    test "returns answer_submitted message text" do
+      parts = [
+        {:user, "u1", "First message"},
+        {:text, "t1", "Response", :frozen},
+        {:answer_submitted, "a1", "Re: Deploy — Yes"}
+      ]
+
+      assert Helpers.last_user_message(parts) == "Re: Deploy — Yes"
+    end
   end
 
   describe "resumable_task?/1" do
