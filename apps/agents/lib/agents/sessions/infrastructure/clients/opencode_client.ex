@@ -217,7 +217,7 @@ defmodule Agents.Sessions.Infrastructure.Clients.OpencodeClient do
       {:cont, {Req.Request.new(), resp}}
     end
 
-    case Req.get(url, into: into_fun, receive_timeout: :infinity) do
+    case Req.get(url, into: into_fun, receive_timeout: :infinity, retry: false) do
       {:ok, _} ->
         :ok
 
@@ -300,7 +300,10 @@ defmodule Agents.Sessions.Infrastructure.Clients.OpencodeClient do
   # ---- Private: Default HTTP ----
 
   defp default_http(method, url, opts) do
-    req_opts = [{:method, method}, {:url, url} | opts]
+    # Disable Req's built-in retry — the TaskRunner and SSE connection
+    # already implement their own retry loops with proper backoff.
+    # Letting Req retry too causes nested retries and noisy warnings.
+    req_opts = [{:method, method}, {:url, url}, {:retry, false} | opts]
 
     case Req.request(req_opts) do
       {:ok, response} -> {:ok, response}
