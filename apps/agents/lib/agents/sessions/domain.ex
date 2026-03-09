@@ -3,8 +3,8 @@ defmodule Agents.Sessions.Domain do
   Domain layer boundary for the Sessions bounded context.
 
   Contains pure business logic with no external dependencies:
-  - Entities: Task, Session, TodoItem, TodoList, QueueSnapshot, LaneEntry, Ticket
-  - Policies: TaskPolicy, SessionLifecyclePolicy, QueueEngine, QueuePolicy, ImagePolicy, RetryPolicy, TicketHierarchyPolicy, TicketEnrichmentPolicy
+  - Entities: Task, Session, TodoItem, TodoList, QueueSnapshot, LaneEntry
+  - Policies: TaskPolicy, SessionLifecyclePolicy, QueueEngine, QueuePolicy, ImagePolicy, RetryPolicy
   - Events: Task lifecycle events, Session lifecycle events, Queue events
   """
 
