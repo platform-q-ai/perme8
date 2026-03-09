@@ -57,7 +57,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.ContainerLifecycleTest do
       # Intentionally no remove expectation: any remove/1 call would violate
       # the lifecycle contract and fail this test via Mox.
       Agents.Mocks.OpencodeClientMock
-      |> expect(:health, fn _url -> :ok end)
+      |> stub(:health, fn _url -> :ok end)
       |> expect(:create_session, fn _url, _opts -> {:ok, %{"id" => "sess-1"}} end)
       |> expect(:subscribe_events, fn _url, runner_pid ->
         spawn(fn ->
@@ -112,7 +112,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.ContainerLifecycleTest do
       end)
 
       Agents.Mocks.OpencodeClientMock
-      |> expect(:health, fn _url -> :ok end)
+      |> stub(:health, fn _url -> :ok end)
       |> expect(:create_session, fn _url, _opts -> {:ok, %{"id" => "sess-1"}} end)
       |> expect(:subscribe_events, fn _url, runner_pid ->
         spawn(fn ->
@@ -148,7 +148,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.ContainerLifecycleTest do
       end)
 
       Agents.Mocks.OpencodeClientMock
-      |> expect(:health, fn _url -> :ok end)
+      |> stub(:health, fn _url -> :ok end)
       |> expect(:create_session, fn _url, _opts -> {:ok, %{"id" => "sess-1"}} end)
       |> expect(:subscribe_events, fn _url, _runner_pid -> {:ok, self()} end)
       |> expect(:send_prompt_async, fn _url, "sess-1", _parts, _opts -> :ok end)
@@ -183,7 +183,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.ContainerLifecycleTest do
       end)
 
       Agents.Mocks.OpencodeClientMock
-      |> expect(:health, fn _url -> :ok end)
+      |> stub(:health, fn _url -> :ok end)
       |> expect(:create_session, fn _url, _opts -> {:ok, %{"id" => "sess-1"}} end)
       |> expect(:subscribe_events, fn _url, _runner_pid -> {:ok, self()} end)
       |> expect(:send_prompt_async, fn _url, "sess-1", _parts, _opts -> :ok end)
