@@ -428,12 +428,12 @@ awaiting_feedback → queued_warm
 
 ### 3.1 Export Lifecycle State Type
 
-⏸ **Status**: Not Started
+✓ **Status**: Complete
 
 **Justification**: LiveView hooks and channel clients in TypeScript need to pattern-match on lifecycle_state values. Without a shared type, TypeScript code uses raw strings with no compile-time safety.
 
-- [ ] **RED**: Write Vitest test verifying the type definition exports all 11 lifecycle states
-- [ ] **GREEN**: Create TypeScript type at `apps/agents_web/assets/js/types/session-lifecycle.ts`:
+- [x] **RED**: Write Vitest test verifying the type definition exports all 11 lifecycle states
+- [x] **GREEN**: Create TypeScript type at `apps/agents_web/assets/js/presentation/types/session-lifecycle.ts`:
   ```typescript
   export type SessionLifecycleState =
     | "idle" | "queued_cold" | "queued_warm" | "warming"
@@ -451,7 +451,7 @@ awaiting_feedback → queued_warm
 
   export function displayName(state: SessionLifecycleState): string { ... }
   ```
-- [ ] **REFACTOR**: Ensure hook files import from this shared type
+- [x] **REFACTOR**: Ensure hook files import from this shared type
 
 ---
 
