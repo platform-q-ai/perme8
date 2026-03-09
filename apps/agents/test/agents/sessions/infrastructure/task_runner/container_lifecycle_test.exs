@@ -89,6 +89,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.ContainerLifecycleTest do
       |> expect(:send_prompt_async, fn _url, "sess-1", _parts, _opts -> :ok end)
 
       {:ok, pid} = GenServer.start(TaskRunner, {task.id, opts})
+      ref = Process.monitor(pid)
 
       assert_receive {:task_status_changed, _, "completed"}, 5000
       assert_receive :container_stopped, 5000
@@ -96,7 +97,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.ContainerLifecycleTest do
       task = assert_task_status(task.id, "completed")
       assert task.completed_at != nil
 
-      Process.sleep(100)
+      assert_receive {:DOWN, ^ref, :process, ^pid, _reason}, 5000
       refute Process.alive?(pid)
     end
 
@@ -124,6 +125,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.ContainerLifecycleTest do
       |> expect(:send_prompt_async, fn _url, "sess-1", _parts, _opts -> :ok end)
 
       {:ok, pid} = GenServer.start(TaskRunner, {task.id, opts})
+      ref = Process.monitor(pid)
 
       assert_receive {:task_status_changed, _, "failed"}, 5000
       assert_receive :container_stopped, 5000
@@ -131,7 +133,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.ContainerLifecycleTest do
       task = assert_task_status(task.id, "failed")
       assert task.error =~ "SSE connection failed"
 
-      Process.sleep(100)
+      assert_receive {:DOWN, ^ref, :process, ^pid, _reason}, 5000
       refute Process.alive?(pid)
     end
 
@@ -153,6 +155,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.ContainerLifecycleTest do
       |> expect(:abort_session, fn _url, "sess-1" -> {:ok, true} end)
 
       {:ok, pid} = GenServer.start(TaskRunner, {task.id, opts})
+      ref = Process.monitor(pid)
 
       assert_receive {:task_status_changed, _, "running"}, 5000
       send(pid, :cancel)
@@ -163,7 +166,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.ContainerLifecycleTest do
       task = assert_task_status(task.id, "cancelled")
       assert task.completed_at != nil
 
-      Process.sleep(100)
+      assert_receive {:DOWN, ^ref, :process, ^pid, _reason}, 5000
       refute Process.alive?(pid)
     end
 
@@ -202,13 +205,14 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.ContainerLifecycleTest do
       |> expect(:start, fn _image, _opts -> {:error, :docker_unavailable} end)
 
       {:ok, pid} = GenServer.start(TaskRunner, {task.id, opts})
+      ref = Process.monitor(pid)
 
       assert_receive {:task_status_changed, _, "failed"}, 5000
 
       task = assert_task_status(task.id, "failed")
       assert task.error =~ "Container start failed"
 
-      Process.sleep(100)
+      assert_receive {:DOWN, ^ref, :process, ^pid, _reason}, 5000
       refute Process.alive?(pid)
     end
   end
