@@ -36,6 +36,7 @@ defmodule Agents do
       Agents.Application,
       Agents.Infrastructure,
       Agents.Sessions.Infrastructure,
+      Agents.Tickets.Infrastructure,
       Agents.Repo
     ],
     exports: [

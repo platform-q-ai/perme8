@@ -13,8 +13,8 @@ defmodule Agents.Sessions.Infrastructure.TicketSyncServer do
   require Logger
 
   alias Agents.Sessions.Application.SessionsConfig
-  alias Agents.Sessions.Domain.Entities.Ticket
-  alias Agents.Sessions.Domain.Policies.TicketHierarchyPolicy
+  alias Agents.Tickets.Domain.Entities.Ticket
+  alias Agents.Tickets.Domain.Policies.TicketHierarchyPolicy
   alias Agents.Sessions.Infrastructure.Clients.GithubProjectClient
   alias Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository
 

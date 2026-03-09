@@ -4,7 +4,7 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponentsTest do
   import Phoenix.LiveViewTest
 
   alias AgentsWeb.SessionsLive.Components.SessionComponents
-  alias Agents.Sessions.Domain.Entities.Ticket
+  alias Agents.Tickets.Domain.Entities.Ticket
 
   describe "status_badge/1" do
     test "renders idle badge" do

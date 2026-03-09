@@ -12,7 +12,7 @@ defmodule Agents.OTPApp do
   alias Agents.Sessions.Infrastructure.QueueManagerSupervisor
   alias Agents.Sessions.Infrastructure.QueueOrchestratorSupervisor
   alias Agents.Sessions.Infrastructure.TaskRunnerSupervisor
-  alias Agents.Sessions.Infrastructure.TicketSyncServer
+  alias Agents.Tickets.Infrastructure.TicketSyncServer
 
   @impl true
   def start(_type, _args) do
