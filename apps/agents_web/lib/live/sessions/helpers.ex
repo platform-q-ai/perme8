@@ -379,17 +379,32 @@ defmodule AgentsWeb.SessionsLive.Helpers do
   def filter_tickets_by_search(tickets, query) do
     downcased = String.downcase(query)
 
-    Enum.filter(tickets, fn ticket ->
-      title_match = String.contains?(String.downcase(ticket.title || ""), downcased)
-      number_match = Integer.to_string(ticket.number) == downcased
+    tickets
+    |> Enum.map(fn ticket -> filter_ticket_tree_by_search(ticket, downcased) end)
+    |> Enum.reject(&is_nil/1)
+  end
 
-      label_match =
-        Enum.any?(ticket.labels || [], fn label ->
-          String.contains?(String.downcase(label), downcased)
-        end)
+  defp filter_ticket_tree_by_search(ticket, downcased) do
+    matched_subs =
+      (ticket.sub_tickets || [])
+      |> Enum.map(&filter_ticket_tree_by_search(&1, downcased))
+      |> Enum.reject(&is_nil/1)
 
-      title_match or number_match or label_match
-    end)
+    if ticket_matches_search?(ticket, downcased) or matched_subs != [] do
+      %{ticket | sub_tickets: matched_subs}
+    end
+  end
+
+  defp ticket_matches_search?(ticket, downcased) do
+    title_match = String.contains?(String.downcase(ticket.title || ""), downcased)
+    number_match = Integer.to_string(ticket.number) == downcased
+
+    label_match =
+      Enum.any?(ticket.labels || [], fn label ->
+        String.contains?(String.downcase(label), downcased)
+      end)
+
+    title_match or number_match or label_match
   end
 
   @doc """
@@ -420,29 +435,13 @@ defmodule AgentsWeb.SessionsLive.Helpers do
 
   def filter_tickets_by_status(tickets, :open) do
     tickets
-    |> Enum.map(fn ticket ->
-      open_subs = Enum.filter(ticket.sub_tickets || [], &(&1.state == "open"))
-
-      cond do
-        ticket.state == "open" -> %{ticket | sub_tickets: open_subs}
-        open_subs != [] -> %{ticket | sub_tickets: open_subs}
-        true -> nil
-      end
-    end)
+    |> Enum.map(&filter_ticket_tree_by_state(&1, "open"))
     |> Enum.reject(&is_nil/1)
   end
 
   def filter_tickets_by_status(tickets, :closed) do
     tickets
-    |> Enum.map(fn ticket ->
-      closed_subs = Enum.filter(ticket.sub_tickets || [], &(&1.state == "closed"))
-
-      cond do
-        ticket.state == "closed" -> %{ticket | sub_tickets: closed_subs}
-        closed_subs != [] -> %{ticket | sub_tickets: closed_subs}
-        true -> nil
-      end
-    end)
+    |> Enum.map(&filter_ticket_tree_by_state(&1, "closed"))
     |> Enum.reject(&is_nil/1)
   end
 
@@ -453,5 +452,18 @@ defmodule AgentsWeb.SessionsLive.Helpers do
   def filter_tickets_by_status(tickets, status) do
     status_str = Atom.to_string(status)
     Enum.filter(tickets, &(&1.task_status == status_str))
+  end
+
+  defp filter_ticket_tree_by_state(ticket, target_state) do
+    filtered_subs =
+      (ticket.sub_tickets || [])
+      |> Enum.map(&filter_ticket_tree_by_state(&1, target_state))
+      |> Enum.reject(&is_nil/1)
+
+    cond do
+      ticket.state == target_state -> %{ticket | sub_tickets: filtered_subs}
+      filtered_subs != [] -> %{ticket | sub_tickets: filtered_subs}
+      true -> nil
+    end
   end
 end

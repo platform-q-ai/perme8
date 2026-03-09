@@ -312,8 +312,8 @@ defmodule AgentsWeb.SessionsLive.HelpersTest do
 
     test "matches by title (case-insensitive)" do
       tickets = [
-        %{title: "Fix login page", number: 1, labels: []},
-        %{title: "Add dark mode", number: 2, labels: []}
+        %{title: "Fix login page", number: 1, labels: [], sub_tickets: []},
+        %{title: "Add dark mode", number: 2, labels: [], sub_tickets: []}
       ]
 
       result = Helpers.filter_tickets_by_search(tickets, "login")
@@ -323,8 +323,8 @@ defmodule AgentsWeb.SessionsLive.HelpersTest do
 
     test "matches by ticket number" do
       tickets = [
-        %{title: "Bug A", number: 42, labels: []},
-        %{title: "Bug B", number: 123, labels: []}
+        %{title: "Bug A", number: 42, labels: [], sub_tickets: []},
+        %{title: "Bug B", number: 123, labels: [], sub_tickets: []}
       ]
 
       result = Helpers.filter_tickets_by_search(tickets, "42")
@@ -334,9 +334,9 @@ defmodule AgentsWeb.SessionsLive.HelpersTest do
 
     test "number match is exact, not substring" do
       tickets = [
-        %{title: "Bug A", number: 1, labels: []},
-        %{title: "Bug B", number: 10, labels: []},
-        %{title: "Bug C", number: 100, labels: []}
+        %{title: "Bug A", number: 1, labels: [], sub_tickets: []},
+        %{title: "Bug B", number: 10, labels: [], sub_tickets: []},
+        %{title: "Bug C", number: 100, labels: [], sub_tickets: []}
       ]
 
       result = Helpers.filter_tickets_by_search(tickets, "1")
@@ -346,8 +346,8 @@ defmodule AgentsWeb.SessionsLive.HelpersTest do
 
     test "matches by label" do
       tickets = [
-        %{title: "Bug A", number: 1, labels: ["frontend", "urgent"]},
-        %{title: "Bug B", number: 2, labels: ["backend"]}
+        %{title: "Bug A", number: 1, labels: ["frontend", "urgent"], sub_tickets: []},
+        %{title: "Bug B", number: 2, labels: ["backend"], sub_tickets: []}
       ]
 
       result = Helpers.filter_tickets_by_search(tickets, "frontend")
@@ -357,9 +357,9 @@ defmodule AgentsWeb.SessionsLive.HelpersTest do
 
     test "matches across title, number, and labels" do
       tickets = [
-        %{title: "Fix login", number: 10, labels: ["bug"]},
-        %{title: "Something else", number: 100, labels: ["enhancement"]},
-        %{title: "Another task", number: 3, labels: ["login-related"]}
+        %{title: "Fix login", number: 10, labels: ["bug"], sub_tickets: []},
+        %{title: "Something else", number: 100, labels: ["enhancement"], sub_tickets: []},
+        %{title: "Another task", number: 3, labels: ["login-related"], sub_tickets: []}
       ]
 
       result = Helpers.filter_tickets_by_search(tickets, "login")
@@ -370,20 +370,143 @@ defmodule AgentsWeb.SessionsLive.HelpersTest do
     end
 
     test "returns empty list when nothing matches" do
-      tickets = [%{title: "Bug", number: 1, labels: ["frontend"]}]
+      tickets = [%{title: "Bug", number: 1, labels: ["frontend"], sub_tickets: []}]
       assert Helpers.filter_tickets_by_search(tickets, "deploy") == []
     end
 
     test "handles nil title and nil labels gracefully" do
-      tickets = [%{title: nil, number: 5, labels: nil}]
+      tickets = [%{title: nil, number: 5, labels: nil, sub_tickets: []}]
       result = Helpers.filter_tickets_by_search(tickets, "5")
       assert length(result) == 1
     end
 
     test "handles nil title and nil labels without crash on non-number query" do
-      tickets = [%{title: nil, number: 5, labels: nil}]
+      tickets = [%{title: nil, number: 5, labels: nil, sub_tickets: []}]
       result = Helpers.filter_tickets_by_search(tickets, "nonexistent")
       assert result == []
+    end
+
+    test "surfaces parent when a sub-ticket matches the search" do
+      tickets = [
+        %{
+          title: "Parent ticket",
+          number: 10,
+          labels: [],
+          sub_tickets: [
+            %{title: "Child login fix", number: 11, labels: [], sub_tickets: []}
+          ]
+        },
+        %{title: "Unrelated", number: 20, labels: [], sub_tickets: []}
+      ]
+
+      result = Helpers.filter_tickets_by_search(tickets, "login")
+      assert length(result) == 1
+      assert hd(result).number == 10
+      assert length(hd(result).sub_tickets) == 1
+      assert hd(hd(result).sub_tickets).number == 11
+    end
+
+    test "surfaces parent when a deeply nested sub-ticket matches the search" do
+      tickets = [
+        %{
+          title: "Grandparent",
+          number: 1,
+          labels: [],
+          sub_tickets: [
+            %{
+              title: "Parent",
+              number: 2,
+              labels: [],
+              sub_tickets: [
+                %{title: "Deep auth fix", number: 3, labels: [], sub_tickets: []}
+              ]
+            }
+          ]
+        }
+      ]
+
+      result = Helpers.filter_tickets_by_search(tickets, "auth")
+      assert length(result) == 1
+      assert hd(result).number == 1
+      child = hd(hd(result).sub_tickets)
+      assert child.number == 2
+      assert hd(child.sub_tickets).number == 3
+    end
+
+    test "filters non-matching sub-tickets when searching" do
+      tickets = [
+        %{
+          title: "Parent",
+          number: 10,
+          labels: [],
+          sub_tickets: [
+            %{title: "Matching login", number: 11, labels: [], sub_tickets: []},
+            %{title: "Unrelated work", number: 12, labels: [], sub_tickets: []}
+          ]
+        }
+      ]
+
+      result = Helpers.filter_tickets_by_search(tickets, "login")
+      assert length(result) == 1
+      # Parent is kept because it has a matching sub-ticket
+      parent = hd(result)
+      assert parent.number == 10
+      # Only the matching sub-ticket is included
+      assert length(parent.sub_tickets) == 1
+      assert hd(parent.sub_tickets).number == 11
+    end
+
+    test "matches by sub-ticket number" do
+      tickets = [
+        %{
+          title: "Parent",
+          number: 10,
+          labels: [],
+          sub_tickets: [
+            %{title: "Sub A", number: 392, labels: [], sub_tickets: []}
+          ]
+        }
+      ]
+
+      result = Helpers.filter_tickets_by_search(tickets, "392")
+      assert length(result) == 1
+      assert hd(hd(result).sub_tickets).number == 392
+    end
+
+    test "matches by sub-ticket label" do
+      tickets = [
+        %{
+          title: "Parent",
+          number: 10,
+          labels: [],
+          sub_tickets: [
+            %{title: "Sub", number: 11, labels: ["agents"], sub_tickets: []}
+          ]
+        }
+      ]
+
+      result = Helpers.filter_tickets_by_search(tickets, "agents")
+      assert length(result) == 1
+      assert hd(hd(result).sub_tickets).number == 11
+    end
+
+    test "parent matches search independently of sub-tickets" do
+      tickets = [
+        %{
+          title: "Login feature",
+          number: 10,
+          labels: [],
+          sub_tickets: [
+            %{title: "Unrelated sub", number: 11, labels: [], sub_tickets: []}
+          ]
+        }
+      ]
+
+      result = Helpers.filter_tickets_by_search(tickets, "login")
+      assert length(result) == 1
+      assert hd(result).number == 10
+      # Sub-tickets that don't match are pruned
+      assert hd(result).sub_tickets == []
     end
   end
 
@@ -495,8 +618,8 @@ defmodule AgentsWeb.SessionsLive.HelpersTest do
           task_status: nil,
           state: "closed",
           sub_tickets: [
-            %{state: "open", task_status: nil},
-            %{state: "closed", task_status: nil}
+            %{state: "open", task_status: nil, sub_tickets: []},
+            %{state: "closed", task_status: nil, sub_tickets: []}
           ]
         },
         %{task_status: nil, state: "open", sub_tickets: []}
@@ -518,7 +641,7 @@ defmodule AgentsWeb.SessionsLive.HelpersTest do
           task_status: nil,
           state: "closed",
           sub_tickets: [
-            %{state: "closed", task_status: nil}
+            %{state: "closed", task_status: nil, sub_tickets: []}
           ]
         }
       ]
@@ -533,9 +656,9 @@ defmodule AgentsWeb.SessionsLive.HelpersTest do
           task_status: nil,
           state: "open",
           sub_tickets: [
-            %{state: "open", task_status: nil},
-            %{state: "closed", task_status: nil},
-            %{state: "open", task_status: "running"}
+            %{state: "open", task_status: nil, sub_tickets: []},
+            %{state: "closed", task_status: nil, sub_tickets: []},
+            %{state: "open", task_status: "running", sub_tickets: []}
           ]
         }
       ]
@@ -552,8 +675,8 @@ defmodule AgentsWeb.SessionsLive.HelpersTest do
           task_status: nil,
           state: "open",
           sub_tickets: [
-            %{state: "closed", task_status: nil},
-            %{state: "open", task_status: nil}
+            %{state: "closed", task_status: nil, sub_tickets: []},
+            %{state: "open", task_status: nil, sub_tickets: []}
           ]
         }
       ]
@@ -594,6 +717,62 @@ defmodule AgentsWeb.SessionsLive.HelpersTest do
     test "returns empty list when no tickets match" do
       tickets = [%{task_status: "completed", state: "open", sub_tickets: []}]
       assert Helpers.filter_tickets_by_status(tickets, :queued) == []
+    end
+
+    test ":open surfaces deeply nested open sub-tickets" do
+      tickets = [
+        %{
+          task_status: nil,
+          state: "closed",
+          sub_tickets: [
+            %{
+              state: "closed",
+              task_status: nil,
+              sub_tickets: [
+                %{state: "open", task_status: nil, sub_tickets: []}
+              ]
+            }
+          ]
+        }
+      ]
+
+      result = Helpers.filter_tickets_by_status(tickets, :open)
+      assert length(result) == 1
+
+      grandparent = hd(result)
+      assert grandparent.state == "closed"
+
+      parent = hd(grandparent.sub_tickets)
+      assert parent.state == "closed"
+
+      child = hd(parent.sub_tickets)
+      assert child.state == "open"
+    end
+
+    test ":closed surfaces deeply nested closed sub-tickets" do
+      tickets = [
+        %{
+          task_status: nil,
+          state: "open",
+          sub_tickets: [
+            %{
+              state: "open",
+              task_status: nil,
+              sub_tickets: [
+                %{state: "closed", task_status: nil, sub_tickets: []}
+              ]
+            }
+          ]
+        }
+      ]
+
+      result = Helpers.filter_tickets_by_status(tickets, :closed)
+      assert length(result) == 1
+
+      grandparent = hd(result)
+      parent = hd(grandparent.sub_tickets)
+      child = hd(parent.sub_tickets)
+      assert child.state == "closed"
     end
   end
 
