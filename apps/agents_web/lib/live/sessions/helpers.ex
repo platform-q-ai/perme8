@@ -132,6 +132,9 @@ defmodule AgentsWeb.SessionsLive.Helpers do
   def task_error_message(:no_session), do: "No session available for resume"
   def task_error_message(:health_timeout), do: "Container failed to become healthy after restart"
 
+  def task_error_message({:container_remove_failed, _reason}),
+    do: "Failed to remove container — session preserved for retry"
+
   def task_error_message({:auth_refresh_failed, failures}) when is_list(failures) do
     details =
       Enum.map_join(failures, "; ", fn %{provider: provider, reason: reason} ->
