@@ -8,10 +8,21 @@ A ticket serves as a single source of truth for feature requirements, capturing:
 - **What** needs to be built (functional requirements)
 - **Why** it's being built (business value, user needs)
 - **Who** it's for (target users, stakeholders)
-- **Constraints** (technical, business, security)
+- **Constraints** (performance, security, business rules)
 - **Success criteria** (how we measure success)
 
-The ticket does NOT specify **how** to build it (that's the architect's job).
+The ticket does NOT specify **how** to build it — no code, no file paths, no architecture decisions. That's the architect's job.
+
+## Key Principle: Conceptual Only
+
+Tickets describe **behaviours and expectations**, never implementation details. This separation ensures:
+- Requirements are understood independently of any technical approach
+- The architect has freedom to choose the best implementation strategy
+- Tickets remain useful even if the technology stack changes
+
+**Never include in a ticket**: code snippets, file paths, module/class names, database table names, framework-specific terminology (e.g., "Ecto schema", "LiveView", "context module"), architecture layer references, or migration details.
+
+**Always include in a ticket**: user behaviours, system responses, data the user sees or provides, validation rules in plain language, error messages, and measurable outcomes.
 
 ## Ticket Detail Levels
 
@@ -20,7 +31,7 @@ The ticket does NOT specify **how** to build it (that's the architect's job).
 **Full detail** (use the complete template below):
 - Feature requirements are unclear or complex
 - Multiple stakeholders need alignment
-- Feature spans multiple systems or contexts
+- Feature spans multiple areas of the product
 
 **Lightweight** (a concise issue with acceptance criteria):
 - Requirements are simple and well-understood
@@ -67,19 +78,19 @@ so that [benefit/value].
 #### Core Functionality
 
 **Must Have (P0)** - Critical for MVP:
-1. [Requirement description] - [Additional context]
-2. [Requirement description] - [Additional context]
+1. [Behaviour description — what the system should do, not how]
+2. [Behaviour description]
 
 **Should Have (P1)** - Important but not blocking:
-1. [Requirement description] - [Additional context]
+1. [Behaviour description]
 
 **Nice to Have (P2)** - Future enhancements:
-1. [Requirement description] - [Additional context]
+1. [Behaviour description]
 
 #### User Workflows
 
 **Workflow 1: [Workflow Name]**
-1. User navigates to [location]
+1. User navigates to [location in the product]
 2. User [action]
 3. System [response/feedback]
 4. User [action]
@@ -91,98 +102,46 @@ so that [benefit/value].
 #### Data Requirements
 
 **Data to Capture** (inputs from users):
-| Field Name | Type | Required? | Validation Rules | Notes |
-|------------|------|-----------|------------------|-------|
-| [field] | [string/number/date] | Yes/No | [min/max/pattern] | [context] |
+| Field | Type | Required? | Validation Rules | Notes |
+|-------|------|-----------|------------------|-------|
+| [field] | [text/number/date/etc.] | Yes/No | [plain-language rules] | [context] |
 
 **Data to Display** (outputs to users):
-| Field Name | Source | Format | Conditions |
-|------------|--------|--------|------------|
-| [field] | [database/API/computed] | [how presented] | [when shown] |
+| Information | When Shown | Format |
+|-------------|------------|--------|
+| [what the user sees] | [under what conditions] | [how it appears] |
 
 **Data Relationships**:
-- [Entity A] belongs to [Entity B]
-- [Entity C] has many [Entity D]
-- [Entity E] has many [Entity F] through [join table]
+- [Concept A] belongs to [Concept B]
+- [Concept C] has many [Concept D]
 
 ---
 
-### 4. Technical Requirements
+### 4. Constraints
 
-#### Architecture Considerations
+#### Performance
+- **Response Time**: [Target latency, e.g., "search results appear within 200ms"]
+- **Throughput**: [Volume, e.g., "support 100 concurrent users"]
+- **Data Volume**: [Scale, e.g., "handle up to 10,000 products"]
+- **Real-time Updates**: [Latency, e.g., "changes visible to other users within 1 second"]
 
-**Affected Layers** (which parts of Clean Architecture):
-- [ ] **Domain Layer** - [What business logic? e.g., "validation of discount rules"]
-- [ ] **Application Layer** - [What use cases? e.g., "process order with payment"]
-- [ ] **Infrastructure Layer** - [What persistence/external services? e.g., "store order in DB, call payment API"]
-- [ ] **Interface Layer** - [What UI/endpoints? e.g., "checkout LiveView page"]
+#### Security
+- **Authentication**: [Who must be logged in? Any SSO/token requirements?]
+- **Authorization**: [Who can access what? Role-based? Owner-only?]
+- **Data Privacy**: [PII? Encryption needs? Compliance requirements?]
+- **Input Validation**: [What inputs need sanitization? File upload restrictions?]
 
-**Technology Stack**:
-- **Backend**: [What Phoenix/Elixir components? e.g., "Channels for real-time updates"]
-- **Frontend**: [What TypeScript/LiveView? e.g., "LiveView hooks for rich text editor"]
-- **Real-time**: [EventBus domain events? e.g., "Emit OrderCreated event via EventBus for real-time updates"]
-- **Storage**: [What DB changes? e.g., "new orders table, add status to users table"]
-- **External Services**: [Any APIs? e.g., "Stripe payment API, SendGrid email"]
-
-#### Integration Points
-
-**Existing Systems**:
-| System/Context | Integration Type | Purpose | Notes |
-|----------------|------------------|---------|-------|
-| [Context name] | [Read/Write/Event] | [Why integrate?] | [Concerns?] |
-
-**External Services**:
-| Service | API/SDK | Authentication | Rate Limits | Error Handling |
-|---------|---------|----------------|-------------|----------------|
-| [Service] | [REST/GraphQL/SDK] | [API key/OAuth] | [Limits] | [How to handle?] |
-
-#### Performance Requirements
-
-- **Response Time**: [Target latency, e.g., "< 200ms for search results"]
-- **Throughput**: [Volume, e.g., "handle 100 concurrent users"]
-- **Data Volume**: [Scale, e.g., "support 10,000 products"]
-- **Real-time Updates**: [Latency, e.g., "updates propagate within 1 second"]
-
-#### Security Requirements
-
-**Authentication**:
-- [ ] Requires user login
-- [ ] OAuth/SSO integration
-- [ ] API token authentication
-- [ ] No authentication required
-
-**Authorization**:
-- [ ] Role-based access control (specify roles)
-- [ ] Owner-only access
-- [ ] Team/workspace-based permissions
-- [ ] Public access
-
-**Data Privacy**:
-- [ ] Contains PII (Personally Identifiable Information)
-- [ ] Requires encryption at rest
-- [ ] Requires encryption in transit (HTTPS)
-- [ ] GDPR/compliance considerations
-- [ ] Audit logging required
-
-**Input Validation**:
-- [What inputs need sanitization?]
-- [What validations prevent security issues?]
-- [File upload restrictions?]
+#### Integration
+- **External Services**: [Third-party services this must work with, their reliability, and fallback behaviour]
+- **Existing Features**: [Other parts of the product this must integrate with]
 
 ---
 
 ### 5. Non-Functional Requirements
 
-#### Scalability
-- [How should it scale? e.g., "horizontal scaling for background jobs"]
-
 #### Reliability
-- [Uptime requirements? e.g., "99.9% availability"]
-- [Fault tolerance? e.g., "graceful degradation if external API fails"]
-
-#### Maintainability
-- [Code quality standards?]
-- [Documentation requirements?]
+- [Uptime requirements?]
+- [What happens if an external service is unavailable?]
 
 #### Accessibility
 - [WCAG compliance level?]
@@ -190,9 +149,8 @@ so that [benefit/value].
 - [Keyboard navigation?]
 
 #### Observability
-- [What metrics to track?]
-- [What errors to monitor?]
-- [Performance monitoring?]
+- [What should be monitored?]
+- [What alerts should fire?]
 
 ---
 
@@ -207,13 +165,13 @@ so that [benefit/value].
 - [Interaction pattern 2: e.g., "inline editing with auto-save"]
 
 #### Responsive Design
-- [ ] Desktop support required (specify breakpoints)
-- [ ] Mobile support required (specify breakpoints)
-- [ ] Tablet support required (specify breakpoints)
+- [ ] Desktop support required
+- [ ] Mobile support required
+- [ ] Tablet support required
 
 #### Visual Design Notes
 - [Brand guidelines to follow?]
-- [Existing component library?]
+- [Existing design patterns to match?]
 - [Design mockups available?]
 
 ---
@@ -223,116 +181,71 @@ so that [benefit/value].
 #### Known Edge Cases
 
 **Edge Case 1**: [Scenario description]
-- **Expected Behavior**: [What should happen?]
-- **Rationale**: [Why this behavior?]
+- **Expected Behaviour**: [What should happen?]
+- **Rationale**: [Why this behaviour?]
 
 **Edge Case 2**: [Scenario description]
-- **Expected Behavior**: [What should happen?]
-- **Rationale**: [Why this behavior?]
+- **Expected Behaviour**: [What should happen?]
+- **Rationale**: [Why this behaviour?]
 
 #### Error Scenarios
 
-**Error Type 1**: [e.g., "Network timeout"]
+**Error 1**: [e.g., "Network timeout during save"]
 - **User-Facing Message**: [Friendly error message]
-- **Recovery Action**: [What can user do? e.g., "Retry automatically"]
-- **Logging**: [What to log for debugging?]
+- **Recovery**: [What can the user do? e.g., "Retry automatically"]
 
-**Error Type 2**: [e.g., "Invalid input"]
+**Error 2**: [e.g., "Invalid input"]
 - **User-Facing Message**: [Clear validation message]
-- **Recovery Action**: [How to correct?]
-- **Prevention**: [Client-side validation?]
+- **Recovery**: [How to correct?]
 
 #### Boundary Conditions
-- Empty state: [What if no data?]
-- Maximum limits: [What if too much data?]
+- Empty state: [What does the user see when there's no data?]
+- Maximum limits: [What happens when limits are reached?]
 - Concurrent access: [What if multiple users act simultaneously?]
 
 ---
 
-### 8. Validation & Testing Criteria
+### 8. Acceptance Criteria
 
-#### Acceptance Criteria
-
-- [ ] **AC1**: [Specific, testable criterion] - Verify by: [how to test]
-- [ ] **AC2**: [Specific, testable criterion] - Verify by: [how to test]
-- [ ] **AC3**: [Specific, testable criterion] - Verify by: [how to test]
+- [ ] **AC1**: [Specific, testable criterion describing observable behaviour]
+- [ ] **AC2**: [Specific, testable criterion describing observable behaviour]
+- [ ] **AC3**: [Specific, testable criterion describing observable behaviour]
 
 #### Test Scenarios
 
-**Happy Path Tests**:
-1. **Scenario**: [Normal user flow]
-   **Expected Result**: [What should happen]
+**Happy Path**:
+1. **Scenario**: [Normal user flow] → **Expected**: [What the user sees/experiences]
 
-2. **Scenario**: [Another common case]
-   **Expected Result**: [What should happen]
+**Edge Cases**:
+1. **Scenario**: [Boundary condition] → **Expected**: [How the system responds]
 
-**Edge Case Tests**:
-1. **Scenario**: [Boundary condition]
-   **Expected Result**: [How to handle]
-
-2. **Scenario**: [Error condition]
-   **Expected Result**: [Error handling behavior]
-
-**Security Tests**:
-1. **Scenario**: [Unauthorized access attempt]
-   **Expected Result**: [Access denied appropriately]
-
-**Performance Tests**:
-1. **Scenario**: [Load condition]
-   **Expected Result**: [Performance target met]
+**Security**:
+1. **Scenario**: [Unauthorized access attempt] → **Expected**: [Access denied appropriately]
 
 ---
 
 ### 9. Dependencies & Assumptions
 
 #### Dependencies
-
-**Internal Dependencies**:
-- [Feature/module this depends on] - [Current status] - [Risk if unavailable]
-
-**External Dependencies**:
-- [Third-party service/library] - [SLA/reliability] - [Fallback plan if unavailable]
-
-**Data Dependencies**:
-- [Required data/schema changes] - [Migration complexity]
+- [Feature or capability this depends on] - [Current status] - [Risk if unavailable]
+- [Third-party service] - [Reliability] - [Fallback plan]
 
 #### Assumptions
-
 - **Assumption 1**: [What we're assuming about users/system]
-  - **Impact if wrong**: [What happens if assumption is false?]
-
-- **Assumption 2**: [What we're assuming about infrastructure]
-  - **Impact if wrong**: [What happens if assumption is false?]
+  - **Impact if wrong**: [Consequence]
 
 #### Risks
 
-| Risk | Probability | Impact | Mitigation Strategy |
-|------|-------------|--------|---------------------|
+| Risk | Probability | Impact | Mitigation |
+|------|-------------|--------|------------|
 | [Risk description] | [High/Med/Low] | [High/Med/Low] | [How to mitigate?] |
 
 ---
 
 ### 10. Success Metrics
 
-#### Key Performance Indicators (KPIs)
-
 - **[Metric Name]**: [Target value] - Measured by: [how tracked]
 - **[Metric Name]**: [Target value] - Measured by: [how tracked]
-
-#### User Satisfaction Metrics
-
-- **[Metric]**: [How measured? e.g., "NPS survey after 1 week"]
-- **[Metric]**: [How measured? e.g., "task completion rate"]
-
-#### Business Metrics
-
-- **[Metric]**: [Target] - [Why important?]
-
-#### Technical Metrics
-
-- **Performance**: [e.g., "p95 latency < 200ms"]
-- **Reliability**: [e.g., "error rate < 0.1%"]
-- **Adoption**: [e.g., "80% of users try feature in first month"]
 
 ---
 
@@ -340,11 +253,10 @@ so that [benefit/value].
 
 Explicitly list what this feature will **NOT** include to prevent scope creep:
 
-- ❌ [Feature/capability not included]
-- ❌ [Feature/capability not included]
-- ❌ [Feature/capability not included]
+- [Feature/capability not included]
+- [Feature/capability not included]
 
-**Rationale**: [Why these are out of scope - complexity, timeline, etc.]
+**Rationale**: [Why these are out of scope]
 
 ---
 
@@ -352,52 +264,12 @@ Explicitly list what this feature will **NOT** include to prevent scope creep:
 
 Features or enhancements to consider for **future iterations** (not MVP):
 
-- 🔮 [Future enhancement] - [Why deferred?]
-- 🔮 [Future enhancement] - [Why deferred?]
-- 🔮 [Future enhancement] - [Why deferred?]
+- [Future enhancement] - [Why deferred?]
+- [Future enhancement] - [Why deferred?]
 
 ---
 
-### 13. Codebase Context
-
-*(Filled in by ticket agent after researching codebase)*
-
-#### Existing Patterns
-
-**Similar Features**:
-- [Feature name] - Located in: [file path] - Pattern: [approach used]
-
-**Reusable Components**:
-- [Component/module] - Located in: [path] - Purpose: [what it does]
-
-#### Affected Boundaries (Phoenix Contexts)
-
-| Context | Why Affected? | Changes Needed | Complexity |
-|---------|---------------|----------------|------------|
-| [Context name] | [Reason] | [Read/Write/Schema changes] | [Low/Med/High] |
-
-#### Available Infrastructure
-
-**Existing Services/Modules**:
-- [Service name] - [Purpose] - Can leverage: [yes/no/partially]
-
-**Database Schema**:
-- [Existing tables that will be used/modified]
-
-**Authentication/Authorization**:
-- [Existing auth system that can be leveraged]
-
-#### Integration Points
-
-**Features This Connects To**:
-- [Feature name] - [File/module] - [Integration type]
-
-**Domain Events / EventBus Topics**:
-- [Existing domain events that might be relevant, e.g., "events:workspace:{id}", "ProjectCreated", "DocumentDeleted"]
-
----
-
-### 14. Open Questions
+### 13. Open Questions
 
 Questions that need resolution before implementation begins:
 
@@ -405,28 +277,12 @@ Questions that need resolution before implementation begins:
   - **Blocker?**: [Yes/No]
   - **Owner**: [Who should answer?]
 
-- [ ] **Q2**: [Question about technical feasibility]
-  - **Blocker?**: [Yes/No]
-  - **Owner**: [Who should answer?]
-
 ---
 
-### 15. Approvals & Sign-Off
+### 14. Approvals & Sign-Off
 
 - [ ] **User/Stakeholder Approval** - [Name/Date]
-- [ ] **Technical Feasibility Confirmed** - [Name/Date]
-- [ ] **Security Review** (if needed) - [Name/Date]
 - [ ] **Ready for Architect Review** - [Name/Date]
-
----
-
-## Document Metadata
-
-**Document Prepared By**: Ticket Agent
-**Date Created**: [YYYY-MM-DD]
-**Last Updated**: [YYYY-MM-DD]
-**Version**: [1.0]
-**Status**: [Draft | In Review | Approved | Implementation]
 
 ---
 
@@ -435,23 +291,18 @@ Questions that need resolution before implementation begins:
 ### For the Ticket Agent
 
 1. **Gather requirements** through structured questioning
-2. **Research codebase** using Grep/Glob/Read tools
-3. **Fill in each section** with specifics from user responses and research
+2. **Fill in each section** with specifics from user responses — stay conceptual, describe behaviours
+3. **Never include** code, file paths, module names, or architecture-layer references
 4. **Flag open questions** that need resolution
 5. **Return the complete ticket body** -- the calling skill creates the GitHub issue
 6. **Hand off to architect** once the issue is created and approved
 
 ### For the Architect Agent
 
-1. **Read the ticket** as source of truth for requirements
-2. **Focus on sections**:
-   - Functional Requirements (what to build)
-   - Technical Requirements (constraints)
-   - Affected Boundaries (Phoenix contexts)
-   - Acceptance Criteria (definition of done)
-3. **Translate requirements** into TDD implementation plan
-4. **Break down into layers**: Domain → Application → Infrastructure → Interface
-5. **Create RED-GREEN-REFACTOR cycles** for each component
+1. **Read the ticket** as source of truth for requirements (what and why)
+2. **Research the codebase** to understand existing patterns and affected areas
+3. **Translate behaviours** into a technical implementation plan with code, file paths, and architecture decisions
+4. **Create RED-GREEN-REFACTOR cycles** for each component
 
 ### For Implementation Agents (phoenix-tdd, typescript-tdd)
 
@@ -488,33 +339,19 @@ so that they can quickly join and collaborate without manual setup.
 ### 3. Functional Requirements
 
 **Must Have (P0)**:
-1. Send email invitation with unique link - expires in 7 days
-2. Allow invitee to accept/decline invitation
-3. Automatically grant workspace access on acceptance
-4. Show pending invitations in workspace settings
+1. Owner can send an invitation to an email address — the invitation expires after 7 days
+2. Invitee receives an email with a unique link to accept or decline
+3. Accepting the invitation grants the invitee access to the workspace automatically
+4. Workspace settings shows a list of pending invitations
 
-### 4. Technical Requirements
+### 8. Acceptance Criteria
 
-**Affected Layers**:
-- [x] Domain Layer - invitation validation, expiry logic
-- [x] Application Layer - send invitation use case, accept invitation use case
-- [x] Infrastructure Layer - invitations table, email sending
-- [x] Interface Layer - invitation form, invitation list view
-
-**Technology Stack**:
-- Backend: Ecto schema for invitations, context for invitation management
-- Frontend: LiveView form for sending invites, LiveView component for invite list
-- Storage: New `workspace_invitations` table
-
-### 8. Validation & Testing Criteria
-
-**Acceptance Criteria**:
-- [ ] Owner can send invitation to valid email address
-- [ ] Invitee receives email with working link
-- [ ] Invitation link expires after 7 days
-- [ ] Accepted invitation grants workspace access
-- [ ] Owner can see list of pending invitations
+- [ ] Owner can send invitation to a valid email address
+- [ ] Invitee receives email with a working link
+- [ ] Invitation link expires after 7 days and shows an appropriate message
+- [ ] Accepting an invitation grants workspace access immediately
+- [ ] Owner can see a list of pending invitations with their status
 
 ---
 
-This template ensures comprehensive requirements gathering while maintaining clear boundaries between "what to build" (ticket) and "how to build it" (architect's implementation plan).
+This template ensures comprehensive requirements gathering while maintaining a clear boundary: the **ticket** describes what the system should do and how users experience it; the **architect's plan** determines how to build it.
