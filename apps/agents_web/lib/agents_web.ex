@@ -20,7 +20,7 @@ defmodule AgentsWeb do
       Jarga.Accounts,
       Perme8.Events
     ],
-    exports: [Endpoint, Telemetry, SessionsLive.Index, AgentsLive.Index, AgentsLive.Form]
+    exports: [Endpoint, Telemetry, DashboardLive.Index, AgentsLive.Index, AgentsLive.Form]
 
   def static_paths do
     ~w(assets fonts images favicon.ico robots.txt)

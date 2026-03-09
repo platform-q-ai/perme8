@@ -1,4 +1,4 @@
-defmodule AgentsWeb.SessionsLive.Helpers do
+defmodule AgentsWeb.DashboardLive.Helpers do
   @moduledoc """
   Pure helper functions for the Sessions LiveView.
 
@@ -51,7 +51,7 @@ defmodule AgentsWeb.SessionsLive.Helpers do
 
   def auth_error?(_), do: false
 
-  alias AgentsWeb.SessionsLive.SessionStateMachine
+  alias AgentsWeb.DashboardLive.SessionStateMachine
 
   @doc "Returns true if the task is in an active (non-terminal) state."
   def active_task?(%{status: _} = task),

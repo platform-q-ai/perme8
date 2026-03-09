@@ -62,7 +62,7 @@ defmodule Perme8DashboardWeb.Router do
     end
   end
 
-  # Sessions (requires Identity auth — uses AgentsWeb.SessionsLive.Index directly)
+  # Sessions (requires Identity auth — uses AgentsWeb.DashboardLive.Index directly)
   scope "/" do
     if Application.compile_env(:perme8_dashboard, :basic_auth_enabled) do
       pipe_through([:browser, :basic_auth, :require_auth])
@@ -76,7 +76,7 @@ defmodule Perme8DashboardWeb.Router do
         {Perme8DashboardWeb.Hooks.SetActiveTab, :default},
         {Perme8DashboardWeb.UserAuth, :require_authenticated}
       ] do
-      live("/sessions", AgentsWeb.SessionsLive.Index, :index)
+      live("/sessions", AgentsWeb.DashboardLive.Index, :index)
     end
   end
 end

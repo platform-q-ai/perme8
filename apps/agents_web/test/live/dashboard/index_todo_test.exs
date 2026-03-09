@@ -1,4 +1,4 @@
-defmodule AgentsWeb.SessionsLive.IndexTodoTest do
+defmodule AgentsWeb.DashboardLive.IndexTodoTest do
   use AgentsWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest

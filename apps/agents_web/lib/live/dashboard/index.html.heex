@@ -932,7 +932,7 @@
   <% selected_ticket = find_ticket_by_number(@tickets, @active_ticket_number) %>
   <% detail_tabs =
     if selected_ticket,
-      do: AgentsWeb.SessionsLive.Index.session_tabs(),
+      do: AgentsWeb.DashboardLive.Index.session_tabs(),
       else: [%{id: "chat", label: "Chat"}] %>
 
   <%!-- Right Panel: Active Session Detail --%>

@@ -1,4 +1,4 @@
-defmodule AgentsWeb.SessionsLive.EventProcessor do
+defmodule AgentsWeb.DashboardLive.EventProcessor do
   @moduledoc """
   Processes task events and manages output state for the Sessions LiveView.
 
@@ -19,7 +19,7 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
   require Logger
 
   alias Agents.Sessions.Domain.Entities.{TodoItem, TodoList}
-  alias AgentsWeb.SessionsLive.SdkFieldResolver
+  alias AgentsWeb.DashboardLive.SdkFieldResolver
 
   # ---- Public API ----
 

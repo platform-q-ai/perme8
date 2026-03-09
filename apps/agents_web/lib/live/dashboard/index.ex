@@ -1,11 +1,11 @@
-defmodule AgentsWeb.SessionsLive.Index do
+defmodule AgentsWeb.DashboardLive.Index do
   @moduledoc "LiveView for the session manager — split-panel layout with session list, output log, and task controls."
 
   use AgentsWeb, :live_view
 
-  import AgentsWeb.SessionsLive.Components.SessionComponents
-  import AgentsWeb.SessionsLive.Components.QueueLaneComponents
-  import AgentsWeb.SessionsLive.Helpers
+  import AgentsWeb.DashboardLive.Components.SessionComponents
+  import AgentsWeb.DashboardLive.Components.QueueLaneComponents
+  import AgentsWeb.DashboardLive.Helpers
 
   alias Agents.Sessions
   alias Agents.Sessions.Domain.Entities.QueueSnapshot
@@ -15,8 +15,8 @@ defmodule AgentsWeb.SessionsLive.Index do
   alias Agents.Tickets.Domain.Policies.TicketHierarchyPolicy
   require Logger
 
-  alias AgentsWeb.SessionsLive.EventProcessor
-  alias AgentsWeb.SessionsLive.SessionStateMachine
+  alias AgentsWeb.DashboardLive.EventProcessor
+  alias AgentsWeb.DashboardLive.SessionStateMachine
 
   @follow_up_timeout_ms 30_000
 

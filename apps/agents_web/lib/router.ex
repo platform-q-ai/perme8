@@ -31,7 +31,7 @@ defmodule AgentsWeb.Router do
 
     live_session :sessions,
       on_mount: [{AgentsWeb.UserAuth, :require_authenticated}] do
-      live("/sessions", SessionsLive.Index, :index)
+      live("/sessions", DashboardLive.Index, :index)
     end
   end
 end

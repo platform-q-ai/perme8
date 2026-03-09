@@ -1,7 +1,7 @@
-defmodule AgentsWeb.SessionsLive.SdkFieldResolverTest do
+defmodule AgentsWeb.DashboardLive.SdkFieldResolverTest do
   use ExUnit.Case, async: true
 
-  alias AgentsWeb.SessionsLive.SdkFieldResolver
+  alias AgentsWeb.DashboardLive.SdkFieldResolver
 
   describe "resolve_message_id/1" do
     test "extracts from 'id' field" do

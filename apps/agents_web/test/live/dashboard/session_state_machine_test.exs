@@ -1,7 +1,7 @@
-defmodule AgentsWeb.SessionsLive.SessionStateMachineTest do
+defmodule AgentsWeb.DashboardLive.SessionStateMachineTest do
   use ExUnit.Case, async: true
 
-  alias AgentsWeb.SessionsLive.SessionStateMachine
+  alias AgentsWeb.DashboardLive.SessionStateMachine
 
   describe "state_from_task/1" do
     test "returns :idle for nil task" do
