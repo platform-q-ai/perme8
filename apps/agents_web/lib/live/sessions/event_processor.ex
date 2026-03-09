@@ -239,6 +239,7 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
   def process_event(%{"type" => "session.status"}, socket), do: socket
   def process_event(%{"type" => "session.error"}, socket), do: socket
   def process_event(%{"type" => "server.connected"}, socket), do: socket
+  def process_event(%{"type" => "server.heartbeat"}, socket), do: socket
   def process_event(%{"type" => "permission.asked"}, socket), do: socket
 
   def process_event(%{"type" => type} = _event, socket) do
