@@ -1304,6 +1304,96 @@ defmodule AgentsWeb.SessionsLive.EventProcessorTest do
     end
   end
 
+  describe "process_event/2 — message.part.updated catch-all (unmatched variants)" do
+    import ExUnit.CaptureLog
+
+    test "empty reasoning text does not trigger unhandled event warning" do
+      socket = build_socket()
+
+      event = %{
+        "type" => "message.part.updated",
+        "properties" => %{
+          "part" => %{"id" => "r-1", "type" => "reasoning", "text" => ""}
+        }
+      }
+
+      log =
+        capture_log(fn ->
+          result = EventProcessor.process_event(event, socket)
+          assert result.assigns.output_parts == []
+        end)
+
+      refute log =~ "unhandled event"
+    end
+
+    test "tool part without state.status does not trigger unhandled event warning" do
+      socket = build_socket()
+
+      event = %{
+        "type" => "message.part.updated",
+        "properties" => %{
+          "part" => %{"type" => "tool", "id" => "tool-1", "name" => "bash"}
+        }
+      }
+
+      log =
+        capture_log(fn ->
+          result = EventProcessor.process_event(event, socket)
+          assert result.assigns.output_parts == []
+        end)
+
+      refute log =~ "unhandled event"
+    end
+
+    test "unknown part type does not trigger unhandled event warning" do
+      socket = build_socket()
+
+      event = %{
+        "type" => "message.part.updated",
+        "properties" => %{
+          "part" => %{"type" => "file", "id" => "f-1", "path" => "/tmp/test.txt"}
+        }
+      }
+
+      log =
+        capture_log(fn ->
+          result = EventProcessor.process_event(event, socket)
+          assert result.assigns.output_parts == []
+        end)
+
+      refute log =~ "unhandled event"
+    end
+
+    test "does not emit :unhandled telemetry for unmatched message.part.updated" do
+      test_pid = self()
+      handler_id = "test-mpu-catchall-#{System.unique_integer([:positive])}"
+
+      :telemetry.attach(
+        handler_id,
+        [:agents_web, :event_processor, :unhandled],
+        fn event_name, measurements, metadata, _config ->
+          send(test_pid, {:telemetry_event, event_name, measurements, metadata})
+        end,
+        nil
+      )
+
+      socket = build_socket()
+
+      event = %{
+        "type" => "message.part.updated",
+        "properties" => %{
+          "part" => %{"type" => "image", "id" => "img-1"}
+        }
+      }
+
+      EventProcessor.process_event(event, socket)
+
+      refute_received {:telemetry_event, [:agents_web, :event_processor, :unhandled], _, _}
+
+      :telemetry.detach(handler_id)
+    end
+  end
+
   describe "process_event/2 — telemetry for unhandled events" do
     setup do
       test_pid = self()

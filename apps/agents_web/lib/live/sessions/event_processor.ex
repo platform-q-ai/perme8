@@ -242,6 +242,13 @@ defmodule AgentsWeb.SessionsLive.EventProcessor do
   def process_event(%{"type" => "server.heartbeat"}, socket), do: socket
   def process_event(%{"type" => "permission.asked"}, socket), do: socket
 
+  # Catch-all for message.part.updated events whose inner part structure
+  # doesn't match a specific handler above — e.g. empty text/reasoning,
+  # tool parts without a state.status map, or new part types from the SDK.
+  # These are safe to ignore; the specific clauses above handle all
+  # renderable variants.
+  def process_event(%{"type" => "message.part.updated"}, socket), do: socket
+
   def process_event(%{"type" => type} = _event, socket) do
     :telemetry.execute(
       [:agents_web, :event_processor, :unhandled],
