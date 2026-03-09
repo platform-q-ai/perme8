@@ -243,6 +243,34 @@ defmodule Agents.Sessions.Infrastructure.Repositories.ProjectTicketRepository do
     :ok
   end
 
+  @doc """
+  Links a task to a ticket by ticket number.
+
+  Sets the `task_id` on the ticket record so the association persists
+  across page reloads and re-enrichment cycles.
+  """
+  @spec link_task(integer(), String.t()) :: {:ok, ProjectTicketSchema.t()} | {:error, term()}
+  def link_task(ticket_number, task_id) when is_integer(ticket_number) and is_binary(task_id) do
+    case Repo.get_by(ProjectTicketSchema, number: ticket_number) do
+      nil -> {:error, :ticket_not_found}
+      ticket -> ticket |> ProjectTicketSchema.changeset(%{task_id: task_id}) |> Repo.update()
+    end
+  end
+
+  @doc """
+  Unlinks a task from a ticket by ticket number.
+
+  Clears the persisted `task_id` so the ticket is no longer associated
+  with any task.
+  """
+  @spec unlink_task(integer()) :: {:ok, ProjectTicketSchema.t()} | {:error, term()}
+  def unlink_task(ticket_number) when is_integer(ticket_number) do
+    case Repo.get_by(ProjectTicketSchema, number: ticket_number) do
+      nil -> {:error, :ticket_not_found}
+      ticket -> ticket |> ProjectTicketSchema.changeset(%{task_id: nil}) |> Repo.update()
+    end
+  end
+
   defp next_position do
     case Repo.one(from(t in ProjectTicketSchema, select: max(t.position))) do
       nil -> 0
