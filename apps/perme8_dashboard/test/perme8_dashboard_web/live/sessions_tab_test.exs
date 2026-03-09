@@ -2,7 +2,7 @@ defmodule Perme8DashboardWeb.Live.SessionsTabTest do
   @moduledoc """
   Integration tests for the Sessions tab in the Perme8 Dashboard.
 
-  Verifies that AgentsWeb.SessionsLive.Index is correctly mounted
+  Verifies that AgentsWeb.DashboardLive.Index is correctly mounted
   in the dashboard router with Identity auth, and renders within
   the dashboard layout.
   """
@@ -64,7 +64,7 @@ defmodule Perme8DashboardWeb.Live.SessionsTabTest do
 
       # Dashboard layout present
       assert html =~ "Perme8 Dashboard"
-      # Sessions content present (AgentsWeb.SessionsLive.Index renders "Sessions" header)
+      # Sessions content present (AgentsWeb.DashboardLive.Index renders "Sessions" header)
       assert html =~ "Sessions"
     end
 

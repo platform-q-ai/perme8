@@ -196,7 +196,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunnerTest do
 
   describe "subtask cache format round-trip" do
     test "subtask cache entry decodes correctly through EventProcessor" do
-      alias AgentsWeb.SessionsLive.EventProcessor
+      alias AgentsWeb.DashboardLive.EventProcessor
 
       # Build the cache entry that TaskRunner would produce
       entry = %{

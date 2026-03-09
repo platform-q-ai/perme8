@@ -1,7 +1,7 @@
-defmodule AgentsWeb.SessionsLive.HelpersTest do
+defmodule AgentsWeb.DashboardLive.HelpersTest do
   use ExUnit.Case, async: true
 
-  alias AgentsWeb.SessionsLive.Helpers
+  alias AgentsWeb.DashboardLive.Helpers
 
   describe "auth_refreshing?/2" do
     test "returns true when task_id is in the map" do

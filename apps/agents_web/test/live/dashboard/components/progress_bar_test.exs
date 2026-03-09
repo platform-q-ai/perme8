@@ -1,9 +1,9 @@
-defmodule AgentsWeb.SessionsLive.Components.ProgressBarTest do
+defmodule AgentsWeb.DashboardLive.Components.ProgressBarTest do
   use ExUnit.Case, async: true
 
   import Phoenix.LiveViewTest
 
-  alias AgentsWeb.SessionsLive.Components.SessionComponents
+  alias AgentsWeb.DashboardLive.Components.SessionComponents
 
   describe "progress_bar/1" do
     test "renders nothing when todo_items is []" do

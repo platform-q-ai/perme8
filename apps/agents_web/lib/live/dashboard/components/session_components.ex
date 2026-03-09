@@ -1,10 +1,10 @@
-defmodule AgentsWeb.SessionsLive.Components.SessionComponents do
+defmodule AgentsWeb.DashboardLive.Components.SessionComponents do
   @moduledoc """
   Reusable components for the Sessions LiveView.
 
   Contains display components for session status, output parts (text, reasoning,
   tool calls), container stats, question cards, and todo progress bar. Extracted
-  from the main `AgentsWeb.SessionsLive.Index` to keep the LiveView module
+  from the main `AgentsWeb.DashboardLive.Index` to keep the LiveView module
   focused on event handling and state management.
   """
   use Phoenix.Component
@@ -12,7 +12,7 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponents do
   import AgentsWeb.CoreComponents
   alias Agents.Tickets.Domain.Entities.Ticket
   alias Agents.Tickets.Domain.Policies.TicketHierarchyPolicy
-  alias AgentsWeb.SessionsLive.SessionStateMachine
+  alias AgentsWeb.DashboardLive.SessionStateMachine
 
   # ---- Tab Bar ----
 
@@ -870,7 +870,7 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponents do
 
   # ---- Ticket Card ----
 
-  import AgentsWeb.SessionsLive.Helpers,
+  import AgentsWeb.DashboardLive.Helpers,
     only: [
       ticket_label_class: 1,
       format_file_stats: 1,

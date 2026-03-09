@@ -1,4 +1,4 @@
-defmodule AgentsWeb.SessionsLive.SdkFieldResolver do
+defmodule AgentsWeb.DashboardLive.SdkFieldResolver do
   @moduledoc """
   Centralizes SDK field name resolution for the opencode event stream.
 

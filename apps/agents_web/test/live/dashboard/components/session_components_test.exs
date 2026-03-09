@@ -1,9 +1,9 @@
-defmodule AgentsWeb.SessionsLive.Components.SessionComponentsTest do
+defmodule AgentsWeb.DashboardLive.Components.SessionComponentsTest do
   use ExUnit.Case, async: true
 
   import Phoenix.LiveViewTest
 
-  alias AgentsWeb.SessionsLive.Components.SessionComponents
+  alias AgentsWeb.DashboardLive.Components.SessionComponents
   alias Agents.Tickets.Domain.Entities.Ticket
 
   describe "status_badge/1" do

@@ -1,4 +1,4 @@
-defmodule AgentsWeb.SessionsLive.IndexAuthRefreshTest do
+defmodule AgentsWeb.DashboardLive.IndexAuthRefreshTest do
   @moduledoc """
   Tests for the per-session concurrent auth refresh feature.
 

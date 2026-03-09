@@ -1,7 +1,7 @@
-defmodule AgentsWeb.SessionsLive.EventProcessorTodoTest do
+defmodule AgentsWeb.DashboardLive.EventProcessorTodoTest do
   use ExUnit.Case, async: true
 
-  alias AgentsWeb.SessionsLive.EventProcessor
+  alias AgentsWeb.DashboardLive.EventProcessor
 
   defp base_assigns do
     %{

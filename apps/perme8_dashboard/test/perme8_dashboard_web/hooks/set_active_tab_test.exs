@@ -67,7 +67,7 @@ defmodule Perme8DashboardWeb.Hooks.SetActiveTabTest do
       %{conn: conn} = register_and_log_in_user(%{conn: conn})
       {:ok, _view, html} = live(conn, "/sessions")
 
-      # Sessions content present (AgentsWeb.SessionsLive.Index renders "Sessions" header)
+      # Sessions content present (AgentsWeb.DashboardLive.Index renders "Sessions" header)
       assert html =~ "Sessions"
     end
   end

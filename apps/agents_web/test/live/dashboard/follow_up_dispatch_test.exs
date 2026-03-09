@@ -1,7 +1,7 @@
-defmodule AgentsWeb.SessionsLive.FollowUpDispatchTest do
+defmodule AgentsWeb.DashboardLive.FollowUpDispatchTest do
   use ExUnit.Case, async: true
 
-  alias AgentsWeb.SessionsLive.SessionStateMachine
+  alias AgentsWeb.DashboardLive.SessionStateMachine
 
   describe "stale_queued_message?/2" do
     test "returns true for messages older than the TTL" do

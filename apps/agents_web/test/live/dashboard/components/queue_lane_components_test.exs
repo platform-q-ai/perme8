@@ -1,10 +1,10 @@
-defmodule AgentsWeb.SessionsLive.Components.QueueLaneComponentsTest do
+defmodule AgentsWeb.DashboardLive.Components.QueueLaneComponentsTest do
   use ExUnit.Case, async: true
 
   import Phoenix.LiveViewTest
 
   alias Agents.Sessions.Domain.Entities.{LaneEntry, QueueSnapshot}
-  alias AgentsWeb.SessionsLive.Components.QueueLaneComponents
+  alias AgentsWeb.DashboardLive.Components.QueueLaneComponents
 
   describe "queue_lanes/1" do
     test "renders processing lane at bottom via flex-col-reverse" do

@@ -1,4 +1,4 @@
-defmodule AgentsWeb.SessionsLive.Components.QueueLaneComponents do
+defmodule AgentsWeb.DashboardLive.Components.QueueLaneComponents do
   @moduledoc """
   Snapshot-driven queue lane components.
 

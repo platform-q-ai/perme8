@@ -1,4 +1,4 @@
-defmodule AgentsWeb.SessionsLive.SessionStateMachine do
+defmodule AgentsWeb.DashboardLive.SessionStateMachine do
   @moduledoc """
   Explicit state machine for session lifecycle.
 

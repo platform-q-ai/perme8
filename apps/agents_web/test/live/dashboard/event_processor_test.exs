@@ -1,7 +1,7 @@
-defmodule AgentsWeb.SessionsLive.EventProcessorTest do
+defmodule AgentsWeb.DashboardLive.EventProcessorTest do
   use ExUnit.Case, async: true
 
-  alias AgentsWeb.SessionsLive.EventProcessor
+  alias AgentsWeb.DashboardLive.EventProcessor
 
   # Build a minimal socket-like map with the assigns process_event expects.
   defp base_assigns do
