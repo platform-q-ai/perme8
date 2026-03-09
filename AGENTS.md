@@ -91,7 +91,7 @@ Use this rule of thumb:
 
 - **general** -- broad multi-step execution and research; good default when no specialist is clearly better.
 - **explore** -- fast codebase discovery (files, symbols, flows). Use for read-only investigations and impact analysis.
-- **ticket** -- interviews and structures requirements into a ticket for downstream planning.
+- **ticket** -- interviews and structures requirements into a purely conceptual ticket (behaviours and expectations, no code or implementation detail) for downstream planning.
 - **architect** -- converts requirements/ticket into a phased TDD implementation plan.
 - **phoenix-tdd** -- implements Elixir/Phoenix/LiveView changes using strict Red-Green-Refactor.
 - **typescript-tdd** -- implements TypeScript/Vitest (including LiveView hooks and channel clients) using strict TDD.

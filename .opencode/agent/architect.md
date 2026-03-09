@@ -38,6 +38,8 @@ You receive requirements from either:
 1. **Direct user request** — make reasonable assumptions, ask clarifying questions if needed
 2. **Ticket from ticket agent** — use as primary source of truth, translate requirements into a technical plan
 
+**Important**: Tickets are purely conceptual — they describe behaviours, expectations, and constraints without any code, file paths, or architecture decisions. It is your job to research the codebase, determine the technical approach, and produce the implementation plan with all code-level details.
+
 ## Feature Analysis
 
 When given a feature request:
