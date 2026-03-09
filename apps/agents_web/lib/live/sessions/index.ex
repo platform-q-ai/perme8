@@ -8,11 +8,11 @@ defmodule AgentsWeb.SessionsLive.Index do
   import AgentsWeb.SessionsLive.Helpers
 
   alias Agents.Sessions
-  alias Agents.Sessions.Domain.Entities.Ticket
-  alias Agents.Sessions.Domain.Policies.TicketEnrichmentPolicy
-  alias Agents.Sessions.Domain.Policies.TicketHierarchyPolicy
   alias Agents.Sessions.Domain.Entities.QueueSnapshot
   alias Agents.Sessions.Domain.Entities.TodoList
+  alias Agents.Tickets.Domain.Entities.Ticket
+  alias Agents.Tickets.Domain.Policies.TicketEnrichmentPolicy
+  alias Agents.Tickets.Domain.Policies.TicketHierarchyPolicy
   require Logger
 
   alias AgentsWeb.SessionsLive.EventProcessor

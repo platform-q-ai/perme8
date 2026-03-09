@@ -10,8 +10,8 @@ defmodule AgentsWeb.SessionsLive.Components.SessionComponents do
   use Phoenix.Component
 
   import AgentsWeb.CoreComponents
-  alias Agents.Sessions.Domain.Entities.Ticket
-  alias Agents.Sessions.Domain.Policies.TicketHierarchyPolicy
+  alias Agents.Tickets.Domain.Entities.Ticket
+  alias Agents.Tickets.Domain.Policies.TicketHierarchyPolicy
   alias AgentsWeb.SessionsLive.SessionStateMachine
 
   # ---- Tab Bar ----

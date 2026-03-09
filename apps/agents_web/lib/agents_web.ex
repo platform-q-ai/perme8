@@ -12,6 +12,8 @@ defmodule AgentsWeb do
       Agents.Domain,
       Agents.Sessions,
       Agents.Sessions.Domain,
+      Agents.Tickets,
+      Agents.Tickets.Domain,
       Identity,
       IdentityWeb,
       Jarga,
