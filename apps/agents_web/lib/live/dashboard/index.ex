@@ -10,6 +10,7 @@ defmodule AgentsWeb.DashboardLive.Index do
   alias Agents.Sessions
   alias Agents.Sessions.Domain.Entities.QueueSnapshot
   alias Agents.Sessions.Domain.Entities.TodoList
+  alias Agents.Sessions.Domain.Policies.SessionLifecyclePolicy
   alias Agents.Tickets
   alias Agents.Tickets.Domain.Entities.Ticket
   alias Agents.Tickets.Domain.Policies.TicketEnrichmentPolicy
@@ -948,7 +949,13 @@ defmodule AgentsWeb.DashboardLive.Index do
       )
 
     tasks_snapshot = upsert_task_snapshot(socket.assigns[:tasks_snapshot], changed_task)
-    tickets = TicketEnrichmentPolicy.enrich_all(socket.assigns.tickets, tasks_snapshot)
+
+    tickets =
+      TicketEnrichmentPolicy.enrich_all(
+        socket.assigns.tickets,
+        tasks_snapshot,
+        &SessionLifecyclePolicy.derive/1
+      )
 
     socket =
       socket
@@ -981,7 +988,12 @@ defmodule AgentsWeb.DashboardLive.Index do
     sessions =
       update_session_lifecycle_state(socket.assigns.sessions, task_id, lifecycle_state)
 
-    tickets = TicketEnrichmentPolicy.enrich_all(socket.assigns.tickets, tasks_snapshot)
+    tickets =
+      TicketEnrichmentPolicy.enrich_all(
+        socket.assigns.tickets,
+        tasks_snapshot,
+        &SessionLifecyclePolicy.derive/1
+      )
 
     {:noreply,
      socket
@@ -1051,7 +1063,11 @@ defmodule AgentsWeb.DashboardLive.Index do
      |> assign(:tasks_snapshot, tasks_snapshot)
      |> assign(
        :tickets,
-       TicketEnrichmentPolicy.enrich_all(socket.assigns.tickets, tasks_snapshot)
+       TicketEnrichmentPolicy.enrich_all(
+         socket.assigns.tickets,
+         tasks_snapshot,
+         &SessionLifecyclePolicy.derive/1
+       )
      )
      |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)}
   end
@@ -1160,7 +1176,11 @@ defmodule AgentsWeb.DashboardLive.Index do
      |> assign(:tasks_snapshot, tasks_snapshot)
      |> assign(
        :tickets,
-       TicketEnrichmentPolicy.enrich_all(socket.assigns.tickets, tasks_snapshot)
+       TicketEnrichmentPolicy.enrich_all(
+         socket.assigns.tickets,
+         tasks_snapshot,
+         &SessionLifecyclePolicy.derive/1
+       )
      )
      |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)}
   end
@@ -1216,7 +1236,8 @@ defmodule AgentsWeb.DashboardLive.Index do
       tickets =
         TicketEnrichmentPolicy.enrich_all(
           socket.assigns.tickets,
-          socket.assigns[:tasks_snapshot] || []
+          socket.assigns[:tasks_snapshot] || [],
+          &SessionLifecyclePolicy.derive/1
         )
 
       {:noreply,
@@ -1293,7 +1314,11 @@ defmodule AgentsWeb.DashboardLive.Index do
      |> assign(:tasks_snapshot, tasks_snapshot)
      |> assign(
        :tickets,
-       TicketEnrichmentPolicy.enrich_all(socket.assigns.tickets, tasks_snapshot)
+       TicketEnrichmentPolicy.enrich_all(
+         socket.assigns.tickets,
+         tasks_snapshot,
+         &SessionLifecyclePolicy.derive/1
+       )
      )
      |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)}
   end
@@ -1914,7 +1939,11 @@ defmodule AgentsWeb.DashboardLive.Index do
      |> assign(:tasks_snapshot, tasks_snapshot)
      |> assign(
        :tickets,
-       TicketEnrichmentPolicy.enrich_all(socket.assigns.tickets, tasks_snapshot)
+       TicketEnrichmentPolicy.enrich_all(
+         socket.assigns.tickets,
+         tasks_snapshot,
+         &SessionLifecyclePolicy.derive/1
+       )
      )
      |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)
      |> push_event("scroll_to_bottom", %{})
@@ -1951,7 +1980,11 @@ defmodule AgentsWeb.DashboardLive.Index do
          |> assign(:tasks_snapshot, tasks_snapshot)
          |> assign(
            :tickets,
-           TicketEnrichmentPolicy.enrich_all(socket.assigns.tickets, tasks_snapshot)
+           TicketEnrichmentPolicy.enrich_all(
+             socket.assigns.tickets,
+             tasks_snapshot,
+             &SessionLifecyclePolicy.derive/1
+           )
          )
          |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)
          |> push_event("restore_draft", %{text: instruction})
