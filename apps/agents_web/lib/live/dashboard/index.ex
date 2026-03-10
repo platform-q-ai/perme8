@@ -613,9 +613,10 @@ defmodule AgentsWeb.DashboardLive.Index do
   def handle_event("start_ticket_session", %{"number" => number_str}, socket) do
     number = String.to_integer(number_str)
     ticket = find_ticket_by_number(socket.assigns.tickets, number)
+    context = if ticket, do: Tickets.build_ticket_context(ticket), else: ""
 
     instruction =
-      "pick up ticket ##{number} using the relevant skill\n\n#{if ticket, do: Ticket.build_context_block(ticket), else: ""}"
+      "pick up ticket ##{number} using the relevant skill\n\n#{context}"
       |> String.trim()
 
     # Delegate to the existing run_new_task handler
