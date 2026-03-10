@@ -3276,6 +3276,75 @@ defmodule AgentsWeb.DashboardLive.IndexTest do
     end
   end
 
+  describe "ensure_ticket_reference edge cases in run_task" do
+    setup %{conn: conn} do
+      user = user_fixture()
+      %{conn: log_in_user(conn, user), user: user}
+    end
+
+    test "instruction already containing #N with ticket struct appends context without duplicating prefix",
+         %{conn: conn, user: user} do
+      {:ok, _ticket} =
+        ProjectTicketRepository.sync_remote_ticket(%{
+          number: 920,
+          title: "Already referenced ticket",
+          body: "Edge case body.",
+          status: "Ready",
+          priority: "Need",
+          size: "S",
+          labels: ["edge"]
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      _ =
+        render_submit(lv, "run_task", %{
+          "instruction" => "#920 do the thing",
+          "ticket_number" => "920"
+        })
+
+      created_task =
+        TaskSchema
+        |> where([t], t.user_id == ^user.id)
+        |> order_by([t], desc: t.inserted_at)
+        |> limit(1)
+        |> Repo.one!()
+
+      # Should NOT double the prefix — keeps original #920
+      assert created_task.instruction =~ "#920 do the thing"
+      refute created_task.instruction =~ "#920 #920"
+      # But context block is still appended
+      assert created_task.instruction =~ "## Ticket #920: Already referenced ticket"
+      assert created_task.instruction =~ "Body:\nEdge case body."
+    end
+
+    test "ticket_number present but ticket not found falls back to prefix-only", %{
+      conn: conn,
+      user: user
+    } do
+      # Do NOT sync ticket 999 — it doesn't exist in the DB
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      _ =
+        render_submit(lv, "run_task", %{
+          "instruction" => "work on this",
+          "ticket_number" => "999"
+        })
+
+      created_task =
+        TaskSchema
+        |> where([t], t.user_id == ^user.id)
+        |> order_by([t], desc: t.inserted_at)
+        |> limit(1)
+        |> Repo.one!()
+
+      # Falls back to the prefix-only clause (ticket struct is nil)
+      assert created_task.instruction =~ "#999 work on this"
+      # No context block since ticket couldn't be found
+      refute created_task.instruction =~ "<ticket-context>"
+    end
+  end
+
   describe "session search and filtering" do
     setup %{conn: conn} do
       user = user_fixture()

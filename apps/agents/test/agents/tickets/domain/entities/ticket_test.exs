@@ -350,7 +350,7 @@ defmodule Agents.Tickets.Domain.Entities.TicketTest do
   end
 
   describe "build_context_block/1" do
-    test "formats a ticket context block with all sections" do
+    test "formats a ticket context block with all sections wrapped in delimiters" do
       ticket =
         Ticket.new(%{
           id: 10,
@@ -366,6 +366,8 @@ defmodule Agents.Tickets.Domain.Entities.TicketTest do
 
       block = Ticket.build_context_block(ticket)
 
+      assert String.starts_with?(block, "<ticket-context>\n")
+      assert String.ends_with?(block, "\n</ticket-context>")
       assert block =~ "## Ticket #42: Fix session context"
       assert block =~ "Labels: #bug #tickets"
       assert block =~ "Body:\nDetailed reproduction and expected behavior."
@@ -386,6 +388,8 @@ defmodule Agents.Tickets.Domain.Entities.TicketTest do
 
       block = Ticket.build_context_block(ticket)
 
+      assert String.starts_with?(block, "<ticket-context>\n")
+      assert String.ends_with?(block, "\n</ticket-context>")
       assert block =~ "## Ticket #50: Minimal ticket"
       refute block =~ "Labels:"
       refute block =~ "Body:"
@@ -404,6 +408,53 @@ defmodule Agents.Tickets.Domain.Entities.TicketTest do
 
       assert block =~ "## Ticket #51: Child ticket"
       assert block =~ "Parent ticket (internal id: 999)"
+    end
+
+    test "truncates body exceeding 8000 characters" do
+      long_body = String.duplicate("x", 9_000)
+
+      ticket =
+        Ticket.new(%{
+          number: 60,
+          title: "Long body ticket",
+          body: long_body
+        })
+
+      block = Ticket.build_context_block(ticket)
+
+      assert block =~ "Body:\n" <> String.duplicate("x", 8_000)
+      assert block =~ "[truncated — body exceeded 8000 characters]"
+      # The full 9000-char body should NOT appear
+      refute block =~ String.duplicate("x", 9_000)
+    end
+
+    test "does not truncate body at exactly 8000 characters" do
+      exact_body = String.duplicate("y", 8_000)
+
+      ticket =
+        Ticket.new(%{
+          number: 61,
+          title: "Exact limit ticket",
+          body: exact_body
+        })
+
+      block = Ticket.build_context_block(ticket)
+
+      assert block =~ "Body:\n" <> exact_body
+      refute block =~ "[truncated"
+    end
+
+    test "omits whitespace-only body from the block" do
+      ticket =
+        Ticket.new(%{
+          number: 62,
+          title: "Whitespace body ticket",
+          body: "   \n\t  \n  "
+        })
+
+      block = Ticket.build_context_block(ticket)
+
+      refute block =~ "Body:"
     end
   end
 end
