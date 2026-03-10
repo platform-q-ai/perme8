@@ -187,7 +187,11 @@
              (e.g. showing the ticket badge on a visible session whose ticket is filtered out). --%>
         <% ticket_for_session = fn session ->
           direct = Enum.find(@tickets, &(&1.associated_container_id == session.container_id))
-          task_id_match = Enum.find(@tickets, &(&1.associated_task_id == session.latest_task_id))
+
+          task_id_match =
+            if session.latest_task_id,
+              do: Enum.find(@tickets, &(&1.associated_task_id == session.latest_task_id)),
+              else: nil
 
           task_instruction =
             (@tasks_snapshot || [])
