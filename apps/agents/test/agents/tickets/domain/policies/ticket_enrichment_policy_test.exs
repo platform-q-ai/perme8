@@ -137,8 +137,9 @@ defmodule Agents.Tickets.Domain.Policies.TicketEnrichmentPolicyTest do
 
       enriched = TicketEnrichmentPolicy.enrich(ticket, tasks, @lifecycle_resolver)
 
-      assert enriched.associated_task_id == nil
-      assert enriched.session_state == "idle"
+      assert enriched.associated_task_id == "task-regex"
+      assert enriched.associated_container_id == "container-regex"
+      assert enriched.session_state == "running"
     end
 
     test "falls back to regex when persisted task_id is nil" do

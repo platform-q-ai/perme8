@@ -73,9 +73,12 @@ defmodule Agents.Tickets.Domain.Policies.TicketEnrichmentPolicy do
     apply_enrichment(ticket, task, lifecycle_resolver)
   end
 
-  defp resolve_task(%Ticket{associated_task_id: task_id}, task_by_id, _task_by_ticket_number)
-       when is_binary(task_id) and task_id != "" do
-    Map.get(task_by_id, task_id)
+  defp resolve_task(%Ticket{} = ticket, task_by_id, task_by_ticket_number)
+       when is_binary(ticket.associated_task_id) and ticket.associated_task_id != "" do
+    case Map.get(task_by_id, ticket.associated_task_id) do
+      nil -> Map.get(task_by_ticket_number, ticket.number)
+      task -> task
+    end
   end
 
   defp resolve_task(%Ticket{number: number}, _task_by_id, task_by_ticket_number) do

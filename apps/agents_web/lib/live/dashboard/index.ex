@@ -190,13 +190,18 @@ defmodule AgentsWeb.DashboardLive.Index do
     instruction = String.trim(instruction)
     ticket_number = parse_ticket_number_param(params)
 
+    ticket =
+      if ticket_number,
+        do: find_ticket_by_number(socket.assigns.tickets, ticket_number),
+        else: nil
+
     if instruction == "" do
       {:noreply, put_flash(socket, :error, "Instruction is required")}
     else
       socket.assigns.current_task
       |> SessionStateMachine.state_from_task()
       |> SessionStateMachine.submission_route()
-      |> route_message_submission(socket, instruction, ticket_number)
+      |> route_message_submission(socket, instruction, ticket_number, ticket)
     end
   end
 
@@ -607,7 +612,11 @@ defmodule AgentsWeb.DashboardLive.Index do
   @impl true
   def handle_event("start_ticket_session", %{"number" => number_str}, socket) do
     number = String.to_integer(number_str)
-    instruction = "pick up ticket ##{number} using the relevant skill"
+    ticket = find_ticket_by_number(socket.assigns.tickets, number)
+
+    instruction =
+      "pick up ticket ##{number} using the relevant skill\n\n#{if ticket, do: Ticket.build_context_block(ticket), else: ""}"
+      |> String.trim()
 
     # Delegate to the existing run_new_task handler
     handle_event("run_new_task", %{"instruction" => instruction}, socket)
@@ -1525,11 +1534,11 @@ defmodule AgentsWeb.DashboardLive.Index do
     |> push_event("restore_draft", %{text: text})
   end
 
-  defp route_message_submission(:follow_up, socket, instruction, _ticket_number) do
+  defp route_message_submission(:follow_up, socket, instruction, _ticket_number, _ticket) do
     send_message_to_running_task(socket, instruction)
   end
 
-  defp route_message_submission(:new_or_resume, socket, instruction, ticket_number) do
+  defp route_message_submission(:new_or_resume, socket, instruction, ticket_number, ticket) do
     socket =
       if resumable_task?(socket.assigns.current_task) do
         append_optimistic_user_message(socket, instruction)
@@ -1538,11 +1547,11 @@ defmodule AgentsWeb.DashboardLive.Index do
       end
 
     socket
-    |> run_or_resume_task(instruction, ticket_number)
+    |> run_or_resume_task(instruction, ticket_number, ticket)
     |> handle_task_result(socket)
   end
 
-  defp route_message_submission(:blocked, socket, _instruction, _ticket_number) do
+  defp route_message_submission(:blocked, socket, _instruction, _ticket_number, _ticket) do
     {:noreply, put_flash(socket, :error, "Cannot submit message in current state")}
   end
 
@@ -1880,12 +1889,12 @@ defmodule AgentsWeb.DashboardLive.Index do
     socket |> assign(:pending_question, nil) |> put_flash(:error, error_msg)
   end
 
-  defp run_or_resume_task(socket, instruction, ticket_number) do
+  defp run_or_resume_task(socket, instruction, ticket_number, ticket \\ nil) do
     user = socket.assigns.current_scope.user
     current_task = socket.assigns.current_task
 
     if socket.assigns.composing_new || is_nil(current_task) do
-      instruction = ensure_ticket_reference(instruction, ticket_number)
+      instruction = ensure_ticket_reference(instruction, ticket_number, ticket)
 
       Sessions.create_task(%{
         instruction: instruction,
@@ -2516,9 +2525,17 @@ defmodule AgentsWeb.DashboardLive.Index do
 
   defp parse_ticket_number_param(_), do: nil
 
-  defp ensure_ticket_reference(instruction, nil), do: instruction
+  defp ensure_ticket_reference(instruction, nil, _ticket), do: instruction
 
-  defp ensure_ticket_reference(instruction, ticket_number) do
+  defp ensure_ticket_reference(instruction, _ticket_number, %Ticket{} = ticket) do
+    if Tickets.extract_ticket_number(instruction) do
+      "#{instruction}\n\n#{Ticket.build_context_block(ticket)}"
+    else
+      "##{ticket.number} #{instruction}\n\n#{Ticket.build_context_block(ticket)}"
+    end
+  end
+
+  defp ensure_ticket_reference(instruction, ticket_number, nil) do
     if Tickets.extract_ticket_number(instruction) do
       instruction
     else

@@ -348,4 +348,62 @@ defmodule Agents.Tickets.Domain.Entities.TicketTest do
       assert Ticket.valid_states() == ["open", "closed"]
     end
   end
+
+  describe "build_context_block/1" do
+    test "formats a ticket context block with all sections" do
+      ticket =
+        Ticket.new(%{
+          id: 10,
+          number: 42,
+          title: "Fix session context",
+          labels: ["bug", "tickets"],
+          body: "Detailed reproduction and expected behavior.",
+          sub_tickets: [
+            Ticket.new(%{number: 43, title: "Add tests"}),
+            %{number: 44, title: "Ship fix"}
+          ]
+        })
+
+      block = Ticket.build_context_block(ticket)
+
+      assert block =~ "## Ticket #42: Fix session context"
+      assert block =~ "Labels: #bug #tickets"
+      assert block =~ "Body:\nDetailed reproduction and expected behavior."
+      assert block =~ "Sub-tickets:"
+      assert block =~ "- #43: Add tests"
+      assert block =~ "- #44: Ship fix"
+    end
+
+    test "omits optional sections when labels, body, and sub_tickets are empty" do
+      ticket =
+        Ticket.new(%{
+          number: 50,
+          title: "Minimal ticket",
+          labels: [],
+          body: nil,
+          sub_tickets: []
+        })
+
+      block = Ticket.build_context_block(ticket)
+
+      assert block =~ "## Ticket #50: Minimal ticket"
+      refute block =~ "Labels:"
+      refute block =~ "Body:"
+      refute block =~ "Sub-tickets:"
+    end
+
+    test "includes parent reference for sub-tickets" do
+      ticket =
+        Ticket.new(%{
+          number: 51,
+          title: "Child ticket",
+          parent_ticket_id: 999
+        })
+
+      block = Ticket.build_context_block(ticket)
+
+      assert block =~ "## Ticket #51: Child ticket"
+      assert block =~ "Parent: ticket_id=999"
+    end
+  end
 end
