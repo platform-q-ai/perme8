@@ -46,7 +46,7 @@ defmodule Agents.Sessions.Domain.Policies.QueuePolicy do
   Returns true when the concurrency limit is valid.
   """
   @spec valid_concurrency_limit?(term()) :: boolean()
-  def valid_concurrency_limit?(limit) when is_integer(limit), do: limit in 1..10
+  def valid_concurrency_limit?(limit) when is_integer(limit), do: limit in 0..10
   def valid_concurrency_limit?(_), do: false
 
   @doc """

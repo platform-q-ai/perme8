@@ -71,6 +71,7 @@ defmodule AgentsWeb.DashboardLive.Index do
      |> assign(:selected_image, default_image)
      |> assign(:optimistic_new_sessions, [])
      |> assign(:new_task_monitors, %{})
+     |> assign(:pending_ticket_starts, %{})
      |> assign(:queue_v2_enabled, queue_v2_enabled)
      |> assign(:queue_snapshot, queue_snapshot)
      |> assign(:queue_state, queue_state)
@@ -413,7 +414,7 @@ defmodule AgentsWeb.DashboardLive.Index do
     user = socket.assigns.current_scope.user
 
     case Integer.parse(limit_str) do
-      {limit, ""} when limit >= 1 and limit <= 5 ->
+      {limit, ""} when limit >= 0 and limit <= 5 ->
         Sessions.set_concurrency_limit(user.id, limit)
         # Queue state will be updated via PubSub broadcast from QueueManager
         {:noreply, socket}
@@ -613,14 +614,58 @@ defmodule AgentsWeb.DashboardLive.Index do
   def handle_event("start_ticket_session", %{"number" => number_str}, socket) do
     number = String.to_integer(number_str)
     ticket = find_ticket_by_number(socket.assigns.tickets, number)
-    context = if ticket, do: Tickets.build_ticket_context(ticket), else: ""
 
-    instruction =
-      "pick up ticket ##{number} using the relevant skill\n\n#{context}"
-      |> String.trim()
+    if is_nil(ticket) do
+      {:noreply, put_flash(socket, :error, "Ticket ##{number} not found")}
+    else
+      context = Tickets.build_ticket_context(ticket)
 
-    # Delegate to the existing run_new_task handler
-    handle_event("run_new_task", %{"instruction" => instruction}, socket)
+      instruction =
+        "pick up ticket ##{number} using the relevant skill\n\n#{context}"
+        |> String.trim()
+
+      user = socket.assigns.current_scope.user
+      image = socket.assigns.selected_image || Sessions.default_image()
+      client_id = Ecto.UUID.generate()
+      parent = self()
+
+      {_pid, monitor_ref} =
+        spawn_monitor(fn ->
+          result =
+            Sessions.create_task(%{
+              instruction: instruction,
+              user_id: user.id,
+              image: image
+            })
+
+          send(parent, {:new_task_created, client_id, result})
+        end)
+
+      # Optimistically move the ticket to the build queue immediately.
+      # The ticket card renders with full ticket info (title, labels, number)
+      # while the async task creation completes in the background.
+      tickets =
+        update_ticket_by_number(socket.assigns.tickets, number, fn t ->
+          %{
+            t
+            | task_status: "queued",
+              associated_task_id: client_id,
+              session_state: "queued_cold"
+          }
+        end)
+
+      {:noreply,
+       socket
+       |> assign(
+         :new_task_monitors,
+         Map.put(socket.assigns.new_task_monitors, monitor_ref, client_id)
+       )
+       |> assign(
+         :pending_ticket_starts,
+         Map.put(socket.assigns.pending_ticket_starts, client_id, number)
+       )
+       |> assign(:tickets, tickets)}
+    end
   end
 
   @impl true
@@ -1101,6 +1146,11 @@ defmodule AgentsWeb.DashboardLive.Index do
     optimistic_entry = Enum.find(socket.assigns.optimistic_new_sessions, &(&1.id == client_id))
     task = resolve_new_task_ack_task(task, user.id, optimistic_entry)
 
+    # Subscribe to this task's PubSub topic so we receive status updates
+    # (starting, running, completed, etc.). Must happen before the refresh
+    # request below to avoid missing broadcasts after the refresh reads.
+    Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "task:#{task.id}")
+
     # Persist ticket-task association when a new task references a ticket
     maybe_link_ticket_to_task(task)
 
@@ -1119,22 +1169,46 @@ defmodule AgentsWeb.DashboardLive.Index do
     tickets =
       Tickets.list_project_tickets(user.id, tasks: tasks_snapshot)
 
-    {:noreply,
-     socket
-     |> clear_new_task_monitor(client_id)
-     |> assign(
-       :optimistic_new_sessions,
-       remove_optimistic_new_session(socket.assigns.optimistic_new_sessions, client_id)
-     )
-     |> broadcast_optimistic_new_sessions_snapshot()
-     |> assign(:sessions, sessions)
-     |> assign(:tasks_snapshot, tasks_snapshot)
-     |> assign(:tickets, tickets)
-     |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)}
+    socket =
+      socket
+      |> clear_new_task_monitor(client_id)
+      |> assign(
+        :optimistic_new_sessions,
+        remove_optimistic_new_session(socket.assigns.optimistic_new_sessions, client_id)
+      )
+      |> broadcast_optimistic_new_sessions_snapshot()
+      |> assign(
+        :pending_ticket_starts,
+        Map.delete(socket.assigns.pending_ticket_starts, client_id)
+      )
+      |> assign(:sessions, sessions)
+      |> assign(:tasks_snapshot, tasks_snapshot)
+      |> assign(:tickets, tickets)
+      |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)
+
+    # The task may have already been promoted (queued -> pending -> running)
+    # before we subscribed above, so any PubSub broadcasts from the
+    # QueueManager/TaskRunner were lost. Refresh from DB to catch up.
+    {:noreply, request_task_refresh(socket, task.id)}
   end
 
   @impl true
   def handle_info({:new_task_created, client_id, {:error, reason}}, socket) do
+    # If this was a ticket-initiated start, revert the optimistic ticket update
+    {ticket_number, pending} = Map.pop(socket.assigns.pending_ticket_starts, client_id)
+
+    socket =
+      if ticket_number do
+        tickets =
+          update_ticket_by_number(socket.assigns.tickets, ticket_number, fn t ->
+            %{t | task_status: nil, associated_task_id: nil, session_state: "idle"}
+          end)
+
+        assign(socket, :tickets, tickets)
+      else
+        socket
+      end
+
     {:noreply,
      socket
      |> clear_new_task_monitor(client_id)
@@ -1143,6 +1217,7 @@ defmodule AgentsWeb.DashboardLive.Index do
        remove_optimistic_new_session(socket.assigns.optimistic_new_sessions, client_id)
      )
      |> broadcast_optimistic_new_sessions_snapshot()
+     |> assign(:pending_ticket_starts, pending)
      |> put_flash(:error, task_error_message(reason))}
   end
 
@@ -1212,9 +1287,25 @@ defmodule AgentsWeb.DashboardLive.Index do
         {:noreply, socket}
 
       {client_id, monitors} ->
+        # Revert optimistic ticket update if this was a ticket-initiated start
+        {ticket_number, pending} = Map.pop(socket.assigns.pending_ticket_starts, client_id)
+
+        socket =
+          if ticket_number do
+            tickets =
+              update_ticket_by_number(socket.assigns.tickets, ticket_number, fn t ->
+                %{t | task_status: nil, associated_task_id: nil, session_state: "idle"}
+              end)
+
+            assign(socket, :tickets, tickets)
+          else
+            socket
+          end
+
         {:noreply,
          socket
          |> assign(:new_task_monitors, monitors)
+         |> assign(:pending_ticket_starts, pending)
          |> assign(
            :optimistic_new_sessions,
            remove_optimistic_new_session(socket.assigns.optimistic_new_sessions, client_id)
@@ -2198,6 +2289,21 @@ defmodule AgentsWeb.DashboardLive.Index do
   end
 
   defp find_ticket_by_number(_tickets, _number), do: nil
+
+  defp update_ticket_by_number(tickets, number, update_fn) when is_list(tickets) do
+    Enum.map(tickets, fn ticket ->
+      cond do
+        ticket.number == number ->
+          update_fn.(ticket)
+
+        is_list(ticket.sub_tickets) and ticket.sub_tickets != [] ->
+          %{ticket | sub_tickets: update_ticket_by_number(ticket.sub_tickets, number, update_fn)}
+
+        true ->
+          ticket
+      end
+    end)
+  end
 
   defp find_parent_ticket(_tickets, %{parent_ticket_id: nil}), do: nil
 

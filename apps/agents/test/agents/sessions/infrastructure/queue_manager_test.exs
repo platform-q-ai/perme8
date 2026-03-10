@@ -109,12 +109,13 @@ defmodule Agents.Sessions.Infrastructure.QueueManagerTest do
   end
 
   describe "queue processor rules" do
-    test "does not promote cold queued tasks before warm readiness" do
+    test "promotes cold queued tasks directly when under concurrency limit" do
       user = user_fixture()
 
       cold = create_task(user, %{status: "queued", queue_position: 1, container_id: nil})
+      test_pid = self()
 
-      {:module, container_provider_mod, _, _} =
+      {:module, noop_container_mod, _, _} =
         defmodule :"Agents.Sessions.QueueManagerTest.NoopContainerProvider.#{System.unique_integer([:positive])}" do
           def start(_image, _opts), do: {:error, :warmup_disabled}
           def stop(_container_id, _opts \\ []), do: :ok
@@ -132,15 +133,20 @@ defmodule Agents.Sessions.Infrastructure.QueueManagerTest do
                QueueManagerSupervisor.ensure_started(user.id,
                  concurrency_limit: 1,
                  warm_cache_limit: 0,
-                 container_provider: container_provider_mod,
-                 task_runner_starter: fn _task_id, _opts -> {:ok, self()} end
+                 container_provider: noop_container_mod,
+                 task_runner_starter: fn task_id, _opts ->
+                   send(test_pid, {:started_runner, task_id})
+                   {:ok, self()}
+                 end
                )
 
       assert :ok = QueueManager.notify_task_queued(user.id, cold.id)
 
+      cold_id = cold.id
+      assert_receive {:started_runner, ^cold_id}
+
       updated = Repo.get!(TaskSchema, cold.id)
-      assert updated.status == "queued"
-      assert updated.queue_position == 1
+      assert updated.status == "pending"
     end
 
     test "promotes queued tasks up to concurrency limit in queue order" do
@@ -370,6 +376,174 @@ defmodule Agents.Sessions.Infrastructure.QueueManagerTest do
       assert updated_first.container_id == "warmed-1"
       assert is_nil(updated_third.container_id)
     end
+
+    test "does not warm any tasks when warm_cache_limit is 0" do
+      user = user_fixture()
+      _running = create_task(user, %{status: "running"})
+
+      cold = create_task(user, %{status: "queued", queue_position: 1, container_id: nil})
+
+      test_pid = self()
+
+      {:module, spy_container_mod, _, _} =
+        defmodule :"Agents.Sessions.QueueManagerTest.SpyContainerProvider.#{System.unique_integer([:positive])}" do
+          def set_test_pid(pid), do: :persistent_term.put({__MODULE__, :test_pid}, pid)
+
+          def start(_image, _opts) do
+            send(:persistent_term.get({__MODULE__, :test_pid}), :container_started)
+            {:ok, %{container_id: "should-not-warm", port: 4096}}
+          end
+
+          def stop(_container_id, _opts \\ []), do: :ok
+          def status(_container_id, _opts \\ []), do: {:ok, :not_found}
+          def remove(_container_id, _opts \\ []), do: :ok
+          def restart(_container_id, _opts \\ []), do: {:ok, %{port: 4096}}
+
+          def stats(_container_id, _opts \\ []),
+            do: {:ok, %{cpu_percent: 0.0, memory_usage: 0, memory_limit: 0}}
+
+          def prepare_fresh_start(_container_id, _opts \\ []), do: :ok
+        end
+
+      spy_container_mod.set_test_pid(test_pid)
+
+      assert {:ok, _pid} =
+               QueueManagerSupervisor.ensure_started(user.id,
+                 concurrency_limit: 1,
+                 warm_cache_limit: 0,
+                 container_provider: spy_container_mod,
+                 task_runner_starter: fn _task_id, _opts -> {:ok, self()} end
+               )
+
+      assert :ok = QueueManager.notify_task_queued(user.id, cold.id)
+
+      # Allow time for any async warming that might be scheduled
+      Process.sleep(50)
+
+      # Container start should never have been called — warming is disabled
+      refute_receive :container_started, 100
+
+      # The task should remain cold (no container_id assigned by warming)
+      updated = Repo.get!(TaskSchema, cold.id)
+      assert is_nil(updated.container_id)
+    end
+
+    test "does not warm tasks when warm_cache_limit is 0 even with available concurrency slots" do
+      user = user_fixture()
+      # No running tasks — full concurrency capacity available
+      cold1 = create_task(user, %{status: "queued", queue_position: 1, container_id: nil})
+      cold2 = create_task(user, %{status: "queued", queue_position: 2, container_id: nil})
+
+      test_pid = self()
+
+      {:module, spy_container_mod, _, _} =
+        defmodule :"Agents.Sessions.QueueManagerTest.SpyContainerNoRunning.#{System.unique_integer([:positive])}" do
+          def set_test_pid(pid), do: :persistent_term.put({__MODULE__, :test_pid}, pid)
+
+          def start(_image, _opts) do
+            send(:persistent_term.get({__MODULE__, :test_pid}), :container_started)
+            {:ok, %{container_id: "should-not-warm", port: 4096}}
+          end
+
+          def stop(_container_id, _opts \\ []), do: :ok
+          def status(_container_id, _opts \\ []), do: {:ok, :not_found}
+          def remove(_container_id, _opts \\ []), do: :ok
+          def restart(_container_id, _opts \\ []), do: {:ok, %{port: 4096}}
+
+          def stats(_container_id, _opts \\ []),
+            do: {:ok, %{cpu_percent: 0.0, memory_usage: 0, memory_limit: 0}}
+
+          def prepare_fresh_start(_container_id, _opts \\ []), do: :ok
+        end
+
+      spy_container_mod.set_test_pid(test_pid)
+
+      assert {:ok, _pid} =
+               QueueManagerSupervisor.ensure_started(user.id,
+                 concurrency_limit: 3,
+                 warm_cache_limit: 0,
+                 container_provider: spy_container_mod,
+                 task_runner_starter: fn task_id, _opts ->
+                   send(test_pid, {:started_runner, task_id})
+                   {:ok, self()}
+                 end
+               )
+
+      assert :ok = QueueManager.notify_task_queued(user.id, cold1.id)
+
+      # Tasks should be promoted directly (cold promotion), not warmed
+      cold1_id = cold1.id
+      cold2_id = cold2.id
+      assert_receive {:started_runner, ^cold1_id}
+      assert_receive {:started_runner, ^cold2_id}
+
+      # Allow time for any async warming
+      Process.sleep(50)
+
+      # No container warming should have happened
+      refute_receive :container_started, 100
+    end
+
+    test "warms tasks up to warm_cache_limit only, not available concurrency slots" do
+      user = user_fixture()
+      # No running tasks — 3 concurrency slots available, but warm_cache_limit=1
+      cold1 = create_task(user, %{status: "queued", queue_position: 1, container_id: nil})
+      cold2 = create_task(user, %{status: "queued", queue_position: 2, container_id: nil})
+      cold3 = create_task(user, %{status: "queued", queue_position: 3, container_id: nil})
+
+      test_pid = self()
+      warm_count = :counters.new(1, [:atomics])
+
+      {:module, counting_container_mod, _, _} =
+        defmodule :"Agents.Sessions.QueueManagerTest.CountingContainerProvider.#{System.unique_integer([:positive])}" do
+          def set_test_pid(pid), do: :persistent_term.put({__MODULE__, :test_pid}, pid)
+          def set_counter(ref), do: :persistent_term.put({__MODULE__, :counter}, ref)
+
+          def start(_image, _opts) do
+            ref = :persistent_term.get({__MODULE__, :counter})
+            :counters.add(ref, 1, 1)
+            count = :counters.get(ref, 1)
+            send(:persistent_term.get({__MODULE__, :test_pid}), {:container_started, count})
+            {:ok, %{container_id: "warmed-#{count}", port: 4096}}
+          end
+
+          def stop(_container_id, _opts \\ []), do: :ok
+          def status(_container_id, _opts \\ []), do: {:ok, :not_found}
+          def remove(_container_id, _opts \\ []), do: :ok
+          def restart(_container_id, _opts \\ []), do: {:ok, %{port: 4096}}
+
+          def stats(_container_id, _opts \\ []),
+            do: {:ok, %{cpu_percent: 0.0, memory_usage: 0, memory_limit: 0}}
+
+          def prepare_fresh_start(_container_id, _opts \\ []), do: :ok
+        end
+
+      counting_container_mod.set_test_pid(test_pid)
+      counting_container_mod.set_counter(warm_count)
+
+      assert {:ok, _pid} =
+               QueueManagerSupervisor.ensure_started(user.id,
+                 concurrency_limit: 3,
+                 warm_cache_limit: 1,
+                 container_provider: counting_container_mod,
+                 task_runner_starter: fn task_id, _opts ->
+                   send(test_pid, {:started_runner, task_id})
+                   {:ok, self()}
+                 end
+               )
+
+      assert :ok = QueueManager.notify_task_queued(user.id, cold1.id)
+
+      # Allow time for all warming and promotions to complete
+      Process.sleep(100)
+
+      # Only 1 container should have been warmed (warm_cache_limit=1),
+      # not 3 (available concurrency slots)
+      total_warms = :counters.get(warm_count, 1)
+
+      assert total_warms <= 1,
+             "Expected at most 1 container warm (warm_cache_limit=1), got #{total_warms}"
+    end
   end
 
   describe "notify_task_failed/2" do
@@ -591,6 +765,76 @@ defmodule Agents.Sessions.Infrastructure.QueueManagerTest do
 
       updated = Repo.get!(TaskSchema, running.id)
       assert updated.status == "running"
+    end
+
+    test "set_concurrency_limit accepts 0 and prevents all promotion" do
+      user = user_fixture()
+      queued = create_task(user, %{status: "queued", queue_position: 1})
+      test_pid = self()
+
+      assert {:ok, _pid} =
+               QueueManagerSupervisor.ensure_started(user.id,
+                 concurrency_limit: 2,
+                 task_runner_starter: fn task_id, _opts ->
+                   send(test_pid, {:started_runner, task_id})
+                   {:ok, self()}
+                 end
+               )
+
+      assert :ok = QueueManager.set_concurrency_limit(user.id, 0)
+      assert QueueManager.get_concurrency_limit(user.id) == 0
+
+      # Notify a new task queued — nothing should promote
+      assert :ok = QueueManager.notify_task_queued(user.id, queued.id)
+
+      refute_receive {:started_runner, _}, 100
+
+      updated = Repo.get!(TaskSchema, queued.id)
+      assert updated.status == "queued"
+    end
+
+    test "set_concurrency_limit 0 requeues all running tasks" do
+      TestEventBus.start_global()
+
+      user = user_fixture()
+      running1 = create_task(user, %{status: "running"})
+      running2 = create_task(user, %{status: "running"})
+
+      {:module, noop_container_mod, _, _} =
+        defmodule :"Agents.Sessions.QueueManagerTest.NoopContainerForZero.#{System.unique_integer([:positive])}" do
+          def start(_image, _opts), do: {:error, :warmup_disabled}
+          def stop(_container_id, _opts \\ []), do: :ok
+          def status(_container_id, _opts \\ []), do: {:ok, :not_found}
+          def remove(_container_id, _opts \\ []), do: :ok
+          def restart(_container_id, _opts \\ []), do: {:ok, %{port: 4096}}
+
+          def stats(_container_id, _opts \\ []),
+            do: {:ok, %{cpu_percent: 0.0, memory_usage: 0, memory_limit: 0}}
+
+          def prepare_fresh_start(_container_id, _opts \\ []), do: :ok
+        end
+
+      Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "queue:user:#{user.id}")
+
+      assert {:ok, _pid} =
+               QueueManagerSupervisor.ensure_started(user.id,
+                 concurrency_limit: 2,
+                 event_bus: TestEventBus,
+                 pubsub: Perme8.Events.PubSub,
+                 container_provider: noop_container_mod,
+                 task_runner_starter: fn _task_id, _opts -> {:ok, self()} end
+               )
+
+      # Lower to 0 — all running tasks should be requeued
+      assert :ok = QueueManager.set_concurrency_limit(user.id, 0)
+
+      assert_receive {:queue_updated, _, _queue_state}
+
+      tasks =
+        [running1.id, running2.id]
+        |> Enum.map(&Repo.get!(TaskSchema, &1))
+
+      assert Enum.all?(tasks, &(&1.status == "queued"))
     end
   end
 

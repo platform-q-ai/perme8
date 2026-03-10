@@ -1835,6 +1835,76 @@ defmodule AgentsWeb.DashboardLive.IndexTest do
       assert length(:binary.matches(html, ~s(data-slot-state="empty"))) == 2
     end
 
+    test "concurrency limit 0 shows no empty slots and no concurrency slots", %{
+      conn: conn,
+      user: user
+    } do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Running session",
+        container_id: "c-running",
+        status: "running"
+      })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      send(lv.pid, {
+        :queue_updated,
+        user.id,
+        %{running: 1, queued: [], awaiting_feedback: [], concurrency_limit: 0}
+      })
+
+      html = render(lv)
+      refute html =~ ~s(data-testid="empty-concurrency-slot-1")
+      refute html =~ ~s(data-slot-state="empty")
+    end
+
+    test "concurrency limit 0 with no running tasks shows no empty slots", %{
+      conn: conn,
+      user: user
+    } do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Completed session",
+        container_id: "c-done",
+        status: "completed"
+      })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      send(lv.pid, {
+        :queue_updated,
+        user.id,
+        %{running: 0, queued: [], awaiting_feedback: [], concurrency_limit: 0}
+      })
+
+      html = render(lv)
+      refute html =~ ~s(data-testid="empty-concurrency-slot-1")
+      refute html =~ ~s(data-slot-state="empty")
+    end
+
+    test "concurrency limit dropdown includes 0 as an option", %{conn: conn, user: user} do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Session",
+        container_id: "c-1",
+        status: "completed"
+      })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      # Trigger queue_updated to render the build lane controls
+      send(lv.pid, {
+        :queue_updated,
+        user.id,
+        %{running: 0, queued: [], awaiting_feedback: [], concurrency_limit: 2}
+      })
+
+      html = render(lv)
+      # The concurrency limit dropdown should include 0 as an option
+      assert html =~ ~s(<option value="0")
+    end
+
     test "renders status dots in session list", %{conn: conn, user: user} do
       task_fixture(%{
         user_id: user.id,
@@ -2031,7 +2101,7 @@ defmodule AgentsWeb.DashboardLive.IndexTest do
 
       assert html =~ ~s(data-testid="session-item-warm-outside-queue-window")
       assert html =~ ~s(phx-value-task-id="#{task.id}")
-      assert html =~ "border border-warning/40 bg-warning/10"
+      assert html =~ "border-warning/40 bg-warning/10"
       refute html =~ "bg-base-content/35"
     end
 
@@ -2153,7 +2223,7 @@ defmodule AgentsWeb.DashboardLive.IndexTest do
       assert html =~ ~s(data-testid="session-item-warmed-queued-session")
       assert html =~ ~s(data-slot-state="warm")
       refute html =~ "Warming..."
-      assert html =~ "border border-warning/40 bg-warning/10"
+      assert html =~ "border-warning/40 bg-warning/10"
       refute html =~ "bg-base-content/35"
     end
 
@@ -2247,6 +2317,59 @@ defmodule AgentsWeb.DashboardLive.IndexTest do
       assert html =~ ~s(data-slot-state="warming")
       assert html =~ "Warming..."
       assert html =~ "animate-pulse"
+    end
+
+    test "queued ticket in warm slot renders as ticket card not session card", %{
+      conn: conn,
+      user: user
+    } do
+      task =
+        task_fixture(%{
+          user_id: user.id,
+          instruction: "pick up ticket #850 using the relevant skill",
+          status: "queued",
+          container_id: nil
+        })
+
+      {:ok, _ticket} =
+        ProjectTicketRepository.sync_remote_ticket(%{
+          number: 850,
+          title: "Warm ticket test",
+          status: "Backlog",
+          priority: "Need",
+          size: "M",
+          labels: ["warm-test"]
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+      send(lv.pid, {:tickets_synced, []})
+
+      # Place the task in the warm zone
+      send(lv.pid, {
+        :queue_updated,
+        user.id,
+        %{
+          running: 0,
+          queued: [%{id: task.id}],
+          awaiting_feedback: [],
+          concurrency_limit: 2,
+          warm_cache_limit: 1
+        }
+      })
+
+      html = render(lv)
+
+      # Should render as a ticket card (build-ticket-item-*), NOT as a session card
+      assert html =~ ~s(data-testid="build-ticket-item-850")
+      refute html =~ ~s(data-testid="session-item-pick-up-ticket-850-using-the-relevant-skill")
+
+      # Should have ticket identity: number badge and labels
+      assert html =~ "850"
+      assert html =~ "Warm ticket test"
+      assert html =~ "warm-test"
+
+      # Should be in a warm slot
+      assert html =~ ~s(data-slot-state="warm")
     end
 
     test "renders queue limit rule above the slot at concurrency threshold", %{
@@ -2640,7 +2763,7 @@ defmodule AgentsWeb.DashboardLive.IndexTest do
       assert html =~ "Ticket to start"
     end
 
-    test "clicking play button includes full ticket context in queued instruction", %{
+    test "clicking play button optimistically moves ticket to build queue", %{
       conn: conn,
       user: user
     } do
@@ -2665,17 +2788,72 @@ defmodule AgentsWeb.DashboardLive.IndexTest do
       {:ok, lv, _html} = live(conn, ~p"/sessions")
       send(lv.pid, {:tickets_synced, []})
 
-      lv
-      |> element(~s([data-testid="start-ticket-session-603"]))
-      |> render_click()
+      # Verify ticket starts in triage
+      html = render(lv)
+      assert html =~ ~s(data-testid="triage-ticket-item-603")
+      refute html =~ ~s(data-testid="build-ticket-item-603")
 
-      assert_push_event(lv, "optimistic_new_sessions_set", %{entries: [entry | _]})
-      instruction = entry["instruction"] || entry[:instruction]
+      # render_click returns the HTML immediately after the event handler
+      # (before async messages like :DOWN can revert the optimistic update)
+      html =
+        lv
+        |> element(~s([data-testid="start-ticket-session-603"]))
+        |> render_click()
 
-      assert instruction =~ "pick up ticket #603 using the relevant skill"
-      assert instruction =~ "## Ticket #603: Context-rich ticket"
-      assert instruction =~ "Labels: #bug #backend"
-      assert instruction =~ "Body:\nReproduce, verify, and ship."
+      # After clicking play, the ticket should immediately appear in build
+      # as a proper ticket card (not a bare "Syncing..." session)
+      assert html =~ ~s(data-testid="build-ticket-item-603")
+      assert html =~ "Context-rich ticket"
+      refute html =~ ~s(data-testid="triage-ticket-item-603")
+    end
+
+    test "optimistic ticket reverts to triage on task creation failure", %{
+      conn: conn,
+      user: user
+    } do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Existing session",
+        container_id: "c-play-fail",
+        status: "completed"
+      })
+
+      {:ok, _ticket} =
+        ProjectTicketRepository.sync_remote_ticket(%{
+          number: 604,
+          title: "Ticket that fails to start",
+          status: "Backlog",
+          priority: "Need",
+          size: "S",
+          labels: ["chore"]
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+      send(lv.pid, {:tickets_synced, []})
+
+      # Verify ticket starts in triage
+      html = render(lv)
+      assert html =~ ~s(data-testid="triage-ticket-item-604")
+
+      # render_click returns HTML immediately after the event handler
+      # (optimistic update applied, before async DOWN arrives)
+      html =
+        lv
+        |> element(~s([data-testid="start-ticket-session-604"]))
+        |> render_click()
+
+      # Optimistically moved to build
+      assert html =~ ~s(data-testid="build-ticket-item-604")
+
+      # The spawned process fails because create_task uses a DB connection
+      # not available in the test sandbox. The :DOWN monitor fires and
+      # reverts the optimistic ticket update.
+      Process.sleep(200)
+
+      # Ticket should revert back to triage after the error
+      html = render(lv)
+      assert html =~ ~s(data-testid="triage-ticket-item-604")
+      refute html =~ ~s(data-testid="build-ticket-item-604")
     end
   end
 

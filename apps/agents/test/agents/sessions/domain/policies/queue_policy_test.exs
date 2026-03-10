@@ -61,12 +61,12 @@ defmodule Agents.Sessions.Domain.Policies.QueuePolicyTest do
   end
 
   describe "limit validation" do
-    test "valid_concurrency_limit?/1 is true only for integers in 1..10" do
-      for limit <- 1..10 do
+    test "valid_concurrency_limit?/1 is true only for integers in 0..10" do
+      for limit <- 0..10 do
         assert QueuePolicy.valid_concurrency_limit?(limit)
       end
 
-      refute QueuePolicy.valid_concurrency_limit?(0)
+      refute QueuePolicy.valid_concurrency_limit?(-1)
       refute QueuePolicy.valid_concurrency_limit?(11)
       refute QueuePolicy.valid_concurrency_limit?("2")
       refute QueuePolicy.valid_concurrency_limit?(nil)
