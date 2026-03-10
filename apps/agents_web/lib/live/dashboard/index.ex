@@ -2529,10 +2529,12 @@ defmodule AgentsWeb.DashboardLive.Index do
   defp ensure_ticket_reference(instruction, nil, _ticket), do: instruction
 
   defp ensure_ticket_reference(instruction, _ticket_number, %Ticket{} = ticket) do
+    context = Tickets.build_ticket_context(ticket)
+
     if Tickets.extract_ticket_number(instruction) do
-      "#{instruction}\n\n#{Ticket.build_context_block(ticket)}"
+      "#{instruction}\n\n#{context}"
     else
-      "##{ticket.number} #{instruction}\n\n#{Ticket.build_context_block(ticket)}"
+      "##{ticket.number} #{instruction}\n\n#{context}"
     end
   end
 
