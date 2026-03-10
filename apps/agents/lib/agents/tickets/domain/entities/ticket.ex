@@ -35,6 +35,10 @@ defmodule Agents.Tickets.Domain.Entities.Ticket do
           task_error: String.t() | nil
         }
 
+  # Maximum body size forwarded to agents. GitHub issue bodies can be up to 65K
+  # characters; truncating avoids bloating context windows with oversized content.
+  @max_body_chars 8_000
+
   defstruct [
     :id,
     :number,
@@ -127,18 +131,25 @@ defmodule Agents.Tickets.Domain.Entities.Ticket do
   @spec valid_states() :: [String.t()]
   def valid_states, do: ["open", "closed"]
 
-  @doc "Formats a ticket as a structured context block for agent instructions."
+  @doc "Formats a ticket as a structured context block for agent instructions.
+
+  The output is wrapped in `<ticket-context>` delimiters to clearly delineate
+  user-controlled content (GitHub issue bodies) from system instructions.
+  Ticket bodies exceeding #{@max_body_chars} characters are truncated."
   @spec build_context_block(t()) :: String.t()
   def build_context_block(%__MODULE__{} = ticket) do
-    [
-      "## Ticket ##{ticket.number}: #{ticket.title}",
-      format_labels(ticket.labels),
-      format_parent(ticket),
-      format_body(ticket.body),
-      format_sub_tickets(ticket.sub_tickets)
-    ]
-    |> Enum.reject(&is_nil/1)
-    |> Enum.join("\n\n")
+    inner =
+      [
+        "## Ticket ##{ticket.number}: #{ticket.title}",
+        format_labels(ticket.labels),
+        format_parent(ticket),
+        format_body(ticket.body),
+        format_sub_tickets(ticket.sub_tickets)
+      ]
+      |> Enum.reject(&is_nil/1)
+      |> Enum.join("\n\n")
+
+    "<ticket-context>\n#{inner}\n</ticket-context>"
   end
 
   defp convert_sub_tickets(sub_tickets) when is_list(sub_tickets),
@@ -168,7 +179,17 @@ defmodule Agents.Tickets.Domain.Entities.Ticket do
 
   defp format_body(body) when is_binary(body) do
     trimmed = String.trim(body)
-    if trimmed == "", do: nil, else: "Body:\n#{trimmed}"
+
+    cond do
+      trimmed == "" ->
+        nil
+
+      String.length(trimmed) > @max_body_chars ->
+        "Body:\n#{String.slice(trimmed, 0, @max_body_chars)}\n\n[truncated — body exceeded #{@max_body_chars} characters]"
+
+      true ->
+        "Body:\n#{trimmed}"
+    end
   end
 
   defp format_body(_), do: nil
