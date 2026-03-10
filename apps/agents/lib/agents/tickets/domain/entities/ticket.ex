@@ -161,8 +161,10 @@ defmodule Agents.Tickets.Domain.Entities.Ticket do
 
   defp format_parent(%__MODULE__{parent_ticket_id: nil}), do: nil
 
+  # parent_ticket_id is the internal DB row id, not the GitHub issue number.
+  # The parent's number is not available on the struct, so we label it clearly.
   defp format_parent(%__MODULE__{parent_ticket_id: parent_ticket_id}),
-    do: "Parent: ticket_id=#{parent_ticket_id}"
+    do: "Parent ticket (internal id: #{parent_ticket_id})"
 
   defp format_body(body) when is_binary(body) do
     trimmed = String.trim(body)

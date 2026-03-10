@@ -403,7 +403,7 @@ defmodule Agents.Tickets.Domain.Entities.TicketTest do
       block = Ticket.build_context_block(ticket)
 
       assert block =~ "## Ticket #51: Child ticket"
-      assert block =~ "Parent: ticket_id=999"
+      assert block =~ "Parent ticket (internal id: 999)"
     end
   end
 end
