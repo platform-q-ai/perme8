@@ -127,8 +127,70 @@ defmodule Agents.Tickets.Domain.Entities.Ticket do
   @spec valid_states() :: [String.t()]
   def valid_states, do: ["open", "closed"]
 
+  @doc "Formats a ticket as a structured context block for agent instructions."
+  @spec build_context_block(t()) :: String.t()
+  def build_context_block(%__MODULE__{} = ticket) do
+    [
+      "## Ticket ##{ticket.number}: #{ticket.title}",
+      format_labels(ticket.labels),
+      format_parent(ticket),
+      format_body(ticket.body),
+      format_sub_tickets(ticket.sub_tickets)
+    ]
+    |> Enum.reject(&is_nil/1)
+    |> Enum.join("\n\n")
+  end
+
   defp convert_sub_tickets(sub_tickets) when is_list(sub_tickets),
     do: Enum.map(sub_tickets, &from_schema/1)
 
   defp convert_sub_tickets(_), do: []
+
+  defp format_labels(labels) when is_list(labels) do
+    formatted =
+      labels
+      |> Enum.map(&to_string/1)
+      |> Enum.map(&String.trim/1)
+      |> Enum.reject(&(&1 == ""))
+      |> Enum.map(&"##{&1}")
+
+    if formatted == [], do: nil, else: "Labels: #{Enum.join(formatted, " ")}"
+  end
+
+  defp format_labels(_), do: nil
+
+  defp format_parent(%__MODULE__{parent_ticket_id: nil}), do: nil
+
+  defp format_parent(%__MODULE__{parent_ticket_id: parent_ticket_id}),
+    do: "Parent: ticket_id=#{parent_ticket_id}"
+
+  defp format_body(body) when is_binary(body) do
+    trimmed = String.trim(body)
+    if trimmed == "", do: nil, else: "Body:\n#{trimmed}"
+  end
+
+  defp format_body(_), do: nil
+
+  defp format_sub_tickets(sub_tickets) when is_list(sub_tickets) do
+    entries =
+      sub_tickets
+      |> Enum.map(&format_sub_ticket_entry/1)
+      |> Enum.reject(&is_nil/1)
+
+    if entries == [], do: nil, else: "Sub-tickets:\n#{Enum.join(entries, "\n")}"
+  end
+
+  defp format_sub_tickets(_), do: nil
+
+  defp format_sub_ticket_entry(%__MODULE__{} = ticket),
+    do: format_sub_ticket_entry(%{number: ticket.number, title: ticket.title})
+
+  defp format_sub_ticket_entry(%{number: number, title: title}) when is_integer(number) do
+    suffix =
+      if is_binary(title) and String.trim(title) != "", do: ": #{String.trim(title)}", else: ""
+
+    "- ##{number}#{suffix}"
+  end
+
+  defp format_sub_ticket_entry(_), do: nil
 end

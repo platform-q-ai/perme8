@@ -2639,6 +2639,44 @@ defmodule AgentsWeb.DashboardLive.IndexTest do
       html = render(lv)
       assert html =~ "Ticket to start"
     end
+
+    test "clicking play button includes full ticket context in queued instruction", %{
+      conn: conn,
+      user: user
+    } do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Existing session",
+        container_id: "c-play-context",
+        status: "completed"
+      })
+
+      {:ok, _ticket} =
+        ProjectTicketRepository.sync_remote_ticket(%{
+          number: 603,
+          title: "Context-rich ticket",
+          body: "Reproduce, verify, and ship.",
+          status: "Backlog",
+          priority: "Need",
+          size: "M",
+          labels: ["bug", "backend"]
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+      send(lv.pid, {:tickets_synced, []})
+
+      lv
+      |> element(~s([data-testid="start-ticket-session-603"]))
+      |> render_click()
+
+      assert_push_event(lv, "optimistic_new_sessions_set", %{entries: [entry | _]})
+      instruction = entry["instruction"] || entry[:instruction]
+
+      assert instruction =~ "pick up ticket #603 using the relevant skill"
+      assert instruction =~ "## Ticket #603: Context-rich ticket"
+      assert instruction =~ "Labels: #bug #backend"
+      assert instruction =~ "Body:\nReproduce, verify, and ship."
+    end
   end
 
   describe "ticket card real-time session state updates" do
@@ -2960,6 +2998,40 @@ defmodule AgentsWeb.DashboardLive.IndexTest do
       refute html =~ ~s(data-testid="triage-ticket-item-804")
     end
 
+    test "session linked by associated_task_id renders only as build ticket", %{
+      conn: conn,
+      user: user
+    } do
+      task =
+        task_fixture(%{
+          user_id: user.id,
+          instruction: "Implement feature work",
+          status: "queued",
+          container_id: nil
+        })
+
+      {:ok, _ticket} =
+        ProjectTicketRepository.sync_remote_ticket(%{
+          number: 806,
+          title: "Task-linked build ticket",
+          status: "Backlog",
+          priority: "Need",
+          size: "M",
+          labels: []
+        })
+
+      assert {:ok, _} = ProjectTicketRepository.link_task(806, task.id)
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+      send(lv.pid, {:tickets_synced, []})
+
+      html = render(lv)
+
+      assert html =~ ~s(data-testid="build-ticket-item-806")
+      refute html =~ ~s(data-testid="triage-ticket-item-806")
+      refute html =~ ~s(data-testid="session-item-implement-feature-work")
+    end
+
     test "close_ticket removes ticket from UI and destroys session", %{conn: conn, user: user} do
       task_fixture(%{
         user_id: user.id,
@@ -3158,6 +3230,49 @@ defmodule AgentsWeb.DashboardLive.IndexTest do
       assert_push_event(lv, "restore_draft", %{
         text: "pick up ticket #99 using the relevant skill"
       })
+    end
+  end
+
+  describe "ticket context propagation in run_task" do
+    setup %{conn: conn} do
+      user = user_fixture()
+      %{conn: log_in_user(conn, user), user: user}
+    end
+
+    test "run_task with ticket_number prefixes instruction and appends ticket context", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, _ticket} =
+        ProjectTicketRepository.sync_remote_ticket(%{
+          number: 910,
+          title: "Ticket context for run_task",
+          body: "Include this body in session instruction.",
+          status: "Ready",
+          priority: "Need",
+          size: "M",
+          labels: ["triage"]
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      _ =
+        render_submit(lv, "run_task", %{
+          "instruction" => "implement now",
+          "ticket_number" => "910"
+        })
+
+      created_task =
+        TaskSchema
+        |> where([t], t.user_id == ^user.id)
+        |> order_by([t], desc: t.inserted_at)
+        |> limit(1)
+        |> Repo.one!()
+
+      assert created_task.instruction =~ "#910 implement now"
+      assert created_task.instruction =~ "## Ticket #910: Ticket context for run_task"
+      assert created_task.instruction =~ "Labels: #triage"
+      assert created_task.instruction =~ "Body:\nInclude this body in session instruction."
     end
   end
 

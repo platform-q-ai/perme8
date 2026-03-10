@@ -122,5 +122,9 @@ defmodule Agents.Tickets do
     TicketEnrichmentPolicy.extract_ticket_number(instruction)
   end
 
+  @doc "Builds a structured context block for a ticket, suitable for agent instructions."
+  @spec build_ticket_context(Ticket.t()) :: String.t()
+  defdelegate build_ticket_context(ticket), to: Ticket, as: :build_context_block
+
   def extract_ticket_number(_), do: nil
 end
