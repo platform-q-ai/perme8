@@ -12,7 +12,7 @@ defmodule Agents.SessionsTest do
   import Agents.SessionsFixtures
 
   describe "create_task/2" do
-    test "creates a queued task and returns domain entity" do
+    test "creates a task and returns current status from DB" do
       user = user_fixture()
 
       assert {:ok, %Task{} = task} =
@@ -22,7 +22,10 @@ defmodule Agents.SessionsTest do
                )
 
       assert task.instruction == "Write tests"
-      assert task.status == "queued"
+      # Task is created as "queued" but may be immediately promoted to
+      # "pending" by the queue manager. The facade re-reads from DB after
+      # notify_task_queued so the returned status reflects the current state.
+      assert task.status in ["queued", "pending"]
       assert task.user_id == user.id
     end
 

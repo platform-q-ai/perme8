@@ -38,7 +38,7 @@ defmodule Agents.Sessions do
   alias Agents.Sessions.Infrastructure.QueueManagerSupervisor
   alias Agents.Sessions.Infrastructure.QueueOrchestrator
   alias Agents.Sessions.Infrastructure.QueueOrchestratorSupervisor
-  alias Agents.Sessions.Domain.Entities.Session
+  alias Agents.Sessions.Domain.Entities.{Session, Task}
   alias Agents.Sessions.Infrastructure.Repositories.TaskRepository
   alias Agents.Repo
   alias Agents.Sessions.Infrastructure.TaskRunnerSupervisor
@@ -67,7 +67,16 @@ defmodule Agents.Sessions do
       {:ok, %{status: "queued", id: task_id} = task} ->
         user_id = attrs[:user_id] || attrs["user_id"]
         _ = notify_task_queued(user_id, task_id)
-        {:ok, task}
+
+        # Re-read the task from DB — notify_task_queued may have promoted it
+        # to "pending" (and started a TaskRunner), so the original task struct
+        # has a stale status.
+        task_repo = Keyword.get(opts, :task_repo, TaskRepository)
+
+        case task_repo.get_task(task_id) do
+          %{} = fresh -> {:ok, Task.from_schema(fresh)}
+          nil -> {:ok, task}
+        end
 
       other ->
         other

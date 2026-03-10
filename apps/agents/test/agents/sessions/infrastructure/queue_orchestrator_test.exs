@@ -148,7 +148,7 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestratorTest do
       user = user_fixture()
       start_orchestrator!(user.id)
 
-      assert {:error, :invalid_limit} = QueueOrchestrator.set_concurrency_limit(user.id, 0)
+      assert {:error, :invalid_limit} = QueueOrchestrator.set_concurrency_limit(user.id, -1)
       assert {:error, :invalid_limit} = QueueOrchestrator.set_concurrency_limit(user.id, 99)
     end
   end

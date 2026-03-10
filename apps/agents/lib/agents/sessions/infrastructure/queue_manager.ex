@@ -140,7 +140,7 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
 
   @impl true
   def handle_call({:set_concurrency_limit, limit}, _from, state)
-      when is_integer(limit) and limit >= 1 and limit <= 10 do
+      when is_integer(limit) and limit >= 0 and limit <= 10 do
     state = %{state | concurrency_limit: limit}
     state = enforce_concurrency_limit(state)
     state = promote_next_task(state)
@@ -290,11 +290,7 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
     state.task_repo.list_queued_tasks(state.user_id)
     |> Enum.filter(fn task -> ImagePolicy.bypasses_queue?(task.image) end)
     |> Enum.reduce(state, fn task, acc ->
-      if warm_ready_for_promotion?(task) do
-        promote_task(acc, task)
-      else
-        acc
-      end
+      promote_task(acc, task)
     end)
   end
 
@@ -312,13 +308,9 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
         state
 
       task ->
-        if warm_ready_for_promotion?(task) do
-          state
-          |> promote_task(task)
-          |> do_promote_to_capacity(running_count + 1)
-        else
-          state
-        end
+        state
+        |> promote_task(task)
+        |> do_promote_to_capacity(running_count + 1)
     end
   end
 
@@ -683,15 +675,8 @@ defmodule Agents.Sessions.Infrastructure.QueueManager do
 
   defp needs_warm?(_), do: false
 
-  defp warm_ready_for_promotion?(%{container_id: container_id}) when is_binary(container_id) do
-    not warm_placeholder_container_id?(container_id)
-  end
-
-  defp warm_ready_for_promotion?(_), do: false
-
   defp warm_target_count(state) do
-    available_slots = max(state.concurrency_limit - safe_count_running(state), 0)
-    max(state.warm_cache_limit, available_slots)
+    state.warm_cache_limit
   end
 
   defp warm_placeholder_container_id?(container_id) do
