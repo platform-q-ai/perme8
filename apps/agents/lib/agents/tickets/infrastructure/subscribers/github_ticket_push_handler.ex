@@ -69,6 +69,10 @@ defmodule Agents.Tickets.Infrastructure.Subscribers.GithubTicketPushHandler do
       {:ok, _} -> :ok
       {:error, reason} -> Logger.error("Failed to update ticket #{ticket_id}: #{inspect(reason)}")
     end
+  rescue
+    e ->
+      Logger.error("Failed to update ticket #{ticket_id}: #{Exception.message(e)}")
+      :ok
   end
 
   defp mark_sync_error(ticket_id, reason) do
@@ -86,6 +90,11 @@ defmodule Agents.Tickets.Infrastructure.Subscribers.GithubTicketPushHandler do
         })
         |> Agents.Repo.update()
     end
+  rescue
+    e ->
+      Logger.error("Failed to mark ticket #{ticket_id} as sync_error: #{Exception.message(e)}")
+
+      :ok
   end
 
   defp broadcast_tickets_refresh do
