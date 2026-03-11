@@ -206,18 +206,18 @@ Note: The existing `close_issue/2` uses GraphQL. We add a new REST-based version
 
 ---
 
-## Phase 2: Tool Modules + Provider + Config + AGENTS.md (phoenix-tdd)
+## Phase 2: Tool Modules + Provider + Config + AGENTS.md (phoenix-tdd) ⏳
 
 This phase builds the 8 MCP tool modules, the TicketToolProvider, registers it in config, and updates AGENTS.md.
 
 ### Step 2.1: TicketToolProvider
 
-- [ ] ⏸ **RED**: Write test `apps/agents/test/agents/infrastructure/mcp/tool_providers/ticket_tool_provider_test.exs`
+- [x] ✓ **RED**: Write test `apps/agents/test/agents/infrastructure/mcp/tool_providers/ticket_tool_provider_test.exs`
   - Test: `components/0` returns exactly 8 component specs
   - Test: each spec is a `{module, name}` tuple
   - Test: includes all 8 tool names: `ticket.read`, `ticket.list`, `ticket.create`, `ticket.update`, `ticket.close`, `ticket.comment`, `ticket.add_sub_issue`, `ticket.remove_sub_issue`
   - Test: all referenced modules are valid Hermes components (`__mcp_component_type__/0`)
-- [ ] ⏸ **GREEN**: Implement `apps/agents/lib/agents/infrastructure/mcp/tool_providers/ticket_tool_provider.ex`
+- [x] ✓ **GREEN**: Implement `apps/agents/lib/agents/infrastructure/mcp/tool_providers/ticket_tool_provider.ex`
   ```elixir
   defmodule Agents.Infrastructure.Mcp.ToolProviders.TicketToolProvider do
     @behaviour Agents.Infrastructure.Mcp.ToolProvider
@@ -239,33 +239,33 @@ This phase builds the 8 MCP tool modules, the TicketToolProvider, registers it i
     end
   end
   ```
-- [ ] ⏸ **REFACTOR**: Clean up
+- [x] ✓ **REFACTOR**: Clean up
 
 ### Step 2.2: `ticket.read` Tool (ReadTool)
 
-- [ ] ⏸ **RED**: Write test `apps/agents/test/agents/infrastructure/mcp/tools/ticket/read_tool_test.exs`
+- [x] ✓ **RED**: Write test `apps/agents/test/agents/infrastructure/mcp/tools/ticket/read_tool_test.exs`
   - Test: returns formatted issue details (Title, Labels, State, Body, Comments, Sub-issues) — validates BDD scenario "Read an issue by number"
   - Test: returns error with "not found" for non-existent issue — validates BDD scenario "Read non-existent issue"
   - Test: denies execution when API key lacks `mcp:ticket.read` scope — validates BDD scenario "Permission denied for ticket.read"
   - Schema validation (missing required `number` param) is handled by Hermes framework → `-32602` error — validates BDD scenario "Read missing required number param"
-- [ ] ⏸ **GREEN**: Implement `apps/agents/lib/agents/infrastructure/mcp/tools/ticket/read_tool.ex`
+- [x] ✓ **GREEN**: Implement `apps/agents/lib/agents/infrastructure/mcp/tools/ticket/read_tool.ex`
   - Schema: `field(:number, {:required, :integer}, description: "Issue number")`
   - Permission scope: `"ticket.read"`
   - Calls `github_client().get_issue(number, client_opts())`
   - Formats response as Markdown with Title, State, Labels, Assignees, Body, Comments, Sub-issues
   - Client resolved via: `Application.get_env(:agents, :github_ticket_client, Agents.Tickets.Infrastructure.Clients.GithubProjectClient)`
   - Config opts from `TicketsConfig`: token, org, repo
-- [ ] ⏸ **REFACTOR**: Extract `format_issue/1` helper, extract `client_opts/0` and `github_client/0` into a shared helper module
+- [x] ✓ **REFACTOR**: Extract `format_issue/1` helper, extract `client_opts/0` and `github_client/0` into a shared helper module
 
 ### Step 2.3: Shared Helper Module for Ticket Tools
 
-- [ ] ⏸ **RED**: Write test `apps/agents/test/agents/infrastructure/mcp/tools/ticket/helpers_test.exs`
+- [x] ✓ **RED**: Write test `apps/agents/test/agents/infrastructure/mcp/tools/ticket/helpers_test.exs`
   - Test: `client_opts/0` returns `[token: ..., org: ..., repo: ...]` from TicketsConfig
   - Test: `github_client/0` returns the configured module (default or overridden)
   - Test: `format_issue/1` formats a full issue map as Markdown with all fields
   - Test: `format_issue_summary/1` formats a compact issue summary for list results
   - Test: `format_error/1` handles `:not_found`, `:missing_token`, and generic errors
-- [ ] ⏸ **GREEN**: Implement `apps/agents/lib/agents/infrastructure/mcp/tools/ticket/helpers.ex`
+- [x] ✓ **GREEN**: Implement `apps/agents/lib/agents/infrastructure/mcp/tools/ticket/helpers.ex`
   ```elixir
   defmodule Agents.Infrastructure.Mcp.Tools.Ticket.Helpers do
     alias Agents.Tickets.Application.TicketsConfig
@@ -284,109 +284,109 @@ This phase builds the 8 MCP tool modules, the TicketToolProvider, registers it i
     def format_error(reason) do ... end
   end
   ```
-- [ ] ⏸ **REFACTOR**: Ensure all formatting includes Title, State, Labels per BDD assertions
+- [x] ✓ **REFACTOR**: Ensure all formatting includes Title, State, Labels per BDD assertions
 
 ### Step 2.4: `ticket.list` Tool (ListTool)
 
-- [ ] ⏸ **RED**: Write test `apps/agents/test/agents/infrastructure/mcp/tools/ticket/list_tool_test.exs`
+- [x] ✓ **RED**: Write test `apps/agents/test/agents/infrastructure/mcp/tools/ticket/list_tool_test.exs`
   - Test: returns formatted list of issues with "Issue" in output — validates BDD "List issues with no filters"
   - Test: passes `state: "open"` filter to client — validates BDD "List issues filtered by state"
   - Test: passes `labels: ["enhancement"]` filter to client and response contains "enhancement" — validates BDD "List issues filtered by labels"
   - Test: passes `query: "MCP"` to client — validates BDD "List issues with search query"
   - Test: returns empty state message when no issues found
   - Test: denies execution when API key lacks scope
-- [ ] ⏸ **GREEN**: Implement `apps/agents/lib/agents/infrastructure/mcp/tools/ticket/list_tool.ex`
+- [x] ✓ **GREEN**: Implement `apps/agents/lib/agents/infrastructure/mcp/tools/ticket/list_tool.ex`
   - Schema: `field(:state, :string, ...)`, `field(:labels, {:list, :string}, ...)`, `field(:assignee, :string, ...)`, `field(:query, :string, ...)`, `field(:per_page, :integer, ...)`
   - Permission scope: `"ticket.list"`
   - Builds filter opts from params, calls `github_client().list_issues(opts)`
   - Formats as Markdown list of issue summaries
-- [ ] ⏸ **REFACTOR**: Clean up
+- [x] ✓ **REFACTOR**: Clean up
 
 ### Step 2.5: `ticket.create` Tool (CreateTool)
 
-- [ ] ⏸ **RED**: Write test `apps/agents/test/agents/infrastructure/mcp/tools/ticket/create_tool_test.exs`
+- [x] ✓ **RED**: Write test `apps/agents/test/agents/infrastructure/mcp/tools/ticket/create_tool_test.exs`
   - Test: creates issue with title+body and returns `#N` in response — validates BDD "Create issue with title and body" (response matches `.*#[0-9]+.*`)
   - Test: creates issue with labels — validates BDD "Create issue with labels"
   - Test: schema validation rejects missing title → `-32602` — validates BDD "Create fails without title"
   - Test: denies execution when API key lacks scope
-- [ ] ⏸ **GREEN**: Implement `apps/agents/lib/agents/infrastructure/mcp/tools/ticket/create_tool.ex`
+- [x] ✓ **GREEN**: Implement `apps/agents/lib/agents/infrastructure/mcp/tools/ticket/create_tool.ex`
   - Schema: `field(:title, {:required, :string}, ...)`, `field(:body, :string, ...)`, `field(:labels, {:list, :string}, ...)`, `field(:assignees, {:list, :string}, ...)`
   - Permission scope: `"ticket.create"`
   - Calls `github_client().create_issue(attrs, client_opts())`
   - Response includes `#N` and URL
-- [ ] ⏸ **REFACTOR**: Clean up
+- [x] ✓ **REFACTOR**: Clean up
 
 ### Step 2.6: `ticket.update` Tool (UpdateTool)
 
-- [ ] ⏸ **RED**: Write test `apps/agents/test/agents/infrastructure/mcp/tools/ticket/update_tool_test.exs`
+- [x] ✓ **RED**: Write test `apps/agents/test/agents/infrastructure/mcp/tools/ticket/update_tool_test.exs`
   - Test: updates issue title — validates BDD "Update issue title"
   - Test: returns error with "not found" for non-existent issue — validates BDD "Update non-existent issue"
   - Test: schema validation rejects missing number → `-32602` — validates BDD "Update missing number"
   - Test: omitted fields = no change, explicit empty list = clear
   - Test: denies execution when API key lacks scope
-- [ ] ⏸ **GREEN**: Implement `apps/agents/lib/agents/infrastructure/mcp/tools/ticket/update_tool.ex`
+- [x] ✓ **GREEN**: Implement `apps/agents/lib/agents/infrastructure/mcp/tools/ticket/update_tool.ex`
   - Schema: `field(:number, {:required, :integer}, ...)`, `field(:title, :string, ...)`, `field(:body, :string, ...)`, `field(:labels, {:list, :string}, ...)`, `field(:assignees, {:list, :string}, ...)`, `field(:state, :string, ...)`
   - Permission scope: `"ticket.update"`
   - Builds update map from only present (non-nil) params
   - Calls `github_client().update_issue(number, attrs, client_opts())`
-- [ ] ⏸ **REFACTOR**: Clean up
+- [x] ✓ **REFACTOR**: Clean up
 
 ### Step 2.7: `ticket.close` Tool (CloseTool)
 
-- [ ] ⏸ **RED**: Write test `apps/agents/test/agents/infrastructure/mcp/tools/ticket/close_tool_test.exs`
+- [x] ✓ **RED**: Write test `apps/agents/test/agents/infrastructure/mcp/tools/ticket/close_tool_test.exs`
   - Test: closes issue with optional comment — validates BDD "Close issue with comment"
   - Test: returns error for non-existent issue — validates BDD "Close non-existent issue"
   - Test: schema validation rejects missing number → `-32602` — validates BDD "Close missing number"
   - Test: denies execution when API key lacks scope
-- [ ] ⏸ **GREEN**: Implement `apps/agents/lib/agents/infrastructure/mcp/tools/ticket/close_tool.ex`
+- [x] ✓ **GREEN**: Implement `apps/agents/lib/agents/infrastructure/mcp/tools/ticket/close_tool.ex`
   - Schema: `field(:number, {:required, :integer}, ...)`, `field(:comment, :string, ...)`
   - Permission scope: `"ticket.close"`
   - Calls `github_client().close_issue_with_comment(number, [comment: comment] ++ client_opts())`
-- [ ] ⏸ **REFACTOR**: Clean up
+- [x] ✓ **REFACTOR**: Clean up
 
 ### Step 2.8: `ticket.comment` Tool (CommentTool)
 
-- [ ] ⏸ **RED**: Write test `apps/agents/test/agents/infrastructure/mcp/tools/ticket/comment_tool_test.exs`
+- [x] ✓ **RED**: Write test `apps/agents/test/agents/infrastructure/mcp/tools/ticket/comment_tool_test.exs`
   - Test: adds comment to issue — validates BDD "Add comment to issue"
   - Test: returns error for non-existent issue — validates BDD "Comment on non-existent issue"
   - Test: schema validation rejects missing body → `-32602` — validates BDD "Comment missing body"
   - Test: denies execution when API key lacks scope
-- [ ] ⏸ **GREEN**: Implement `apps/agents/lib/agents/infrastructure/mcp/tools/ticket/comment_tool.ex`
+- [x] ✓ **GREEN**: Implement `apps/agents/lib/agents/infrastructure/mcp/tools/ticket/comment_tool.ex`
   - Schema: `field(:number, {:required, :integer}, ...)`, `field(:body, {:required, :string}, ...)`
   - Permission scope: `"ticket.comment"`
   - Calls `github_client().add_comment(number, body, client_opts())`
-- [ ] ⏸ **REFACTOR**: Clean up
+- [x] ✓ **REFACTOR**: Clean up
 
 ### Step 2.9: `ticket.add_sub_issue` Tool (AddSubIssueTool)
 
-- [ ] ⏸ **RED**: Write test `apps/agents/test/agents/infrastructure/mcp/tools/ticket/add_sub_issue_tool_test.exs`
+- [x] ✓ **RED**: Write test `apps/agents/test/agents/infrastructure/mcp/tools/ticket/add_sub_issue_tool_test.exs`
   - Test: adds sub-issue link and returns success — validates BDD "Add sub-issue"
   - Test: schema validation rejects missing params → `-32602` — validates BDD "Add sub-issue missing params"
   - Test: returns descriptive error if API rejects (422/404)
   - Test: denies execution when API key lacks scope
-- [ ] ⏸ **GREEN**: Implement `apps/agents/lib/agents/infrastructure/mcp/tools/ticket/add_sub_issue_tool.ex`
+- [x] ✓ **GREEN**: Implement `apps/agents/lib/agents/infrastructure/mcp/tools/ticket/add_sub_issue_tool.ex`
   - Schema: `field(:parent_number, {:required, :integer}, ...)`, `field(:child_number, {:required, :integer}, ...)`
   - Permission scope: `"ticket.add_sub_issue"`
   - Calls `github_client().add_sub_issue(parent_number, child_number, client_opts())`
-- [ ] ⏸ **REFACTOR**: Clean up
+- [x] ✓ **REFACTOR**: Clean up
 
 ### Step 2.10: `ticket.remove_sub_issue` Tool (RemoveSubIssueTool)
 
-- [ ] ⏸ **RED**: Write test `apps/agents/test/agents/infrastructure/mcp/tools/ticket/remove_sub_issue_tool_test.exs`
+- [x] ✓ **RED**: Write test `apps/agents/test/agents/infrastructure/mcp/tools/ticket/remove_sub_issue_tool_test.exs`
   - Test: removes sub-issue link and returns success — validates BDD "Remove sub-issue"
   - Test: schema validation rejects missing params → `-32602` — validates BDD "Remove sub-issue missing params"
   - Test: returns descriptive error if API rejects (422/404)
   - Test: denies execution when API key lacks scope
-- [ ] ⏸ **GREEN**: Implement `apps/agents/lib/agents/infrastructure/mcp/tools/ticket/remove_sub_issue_tool.ex`
+- [x] ✓ **GREEN**: Implement `apps/agents/lib/agents/infrastructure/mcp/tools/ticket/remove_sub_issue_tool.ex`
   - Schema: `field(:parent_number, {:required, :integer}, ...)`, `field(:child_number, {:required, :integer}, ...)`
   - Permission scope: `"ticket.remove_sub_issue"`
   - Calls `github_client().remove_sub_issue(parent_number, child_number, client_opts())`
-- [ ] ⏸ **REFACTOR**: Clean up
+- [x] ✓ **REFACTOR**: Clean up
 
 ### Step 2.11: Register TicketToolProvider in Config
 
-- [ ] ⏸ **RED**: Write test (or extend existing `loader_test.exs`) verifying `TicketToolProvider` is in the configured providers list
-- [ ] ⏸ **GREEN**: Update `config/config.exs` to add `Agents.Infrastructure.Mcp.ToolProviders.TicketToolProvider` to the `:mcp_tool_providers` list:
+- [x] ✓ **RED**: Write test (or extend existing `loader_test.exs`) verifying `TicketToolProvider` is in the configured providers list
+- [x] ✓ **GREEN**: Update `config/config.exs` to add `Agents.Infrastructure.Mcp.ToolProviders.TicketToolProvider` to the `:mcp_tool_providers` list:
   ```elixir
   config :agents, :mcp_tool_providers, [
     Agents.Infrastructure.Mcp.ToolProviders.KnowledgeToolProvider,
@@ -395,23 +395,23 @@ This phase builds the 8 MCP tool modules, the TicketToolProvider, registers it i
     Agents.Infrastructure.Mcp.ToolProviders.TicketToolProvider
   ]
   ```
-- [ ] ⏸ **REFACTOR**: Clean up
+- [x] ✓ **REFACTOR**: Clean up
 
 ### Step 2.12: Update AGENTS.md
 
-- [ ] ⏸ **GREEN**: Update `AGENTS.md` to:
+- [x] ✓ **GREEN**: Update `AGENTS.md` to:
   - Add section documenting the 8 new MCP ticket tools (tool names, parameters, usage examples)
   - Delineate: "Use perme8-mcp ticket tools for all GitHub issue operations; retain `gh` CLI for PR operations (`gh pr create`, `gh pr view`, `gh api repos/.../pulls/...`)"
   - Note that `gh issue` commands should no longer be used by skills (migration in separate ticket)
-- [ ] ⏸ **REFACTOR**: Ensure the documentation is consistent with existing AGENTS.md style
+- [x] ✓ **REFACTOR**: Ensure the documentation is consistent with existing AGENTS.md style
 
 ### Phase 2 Validation
 
-- [ ] ⏸ All tool provider tests pass
-- [ ] ⏸ All 8 tool module tests pass (with mocked GitHub client)
-- [ ] ⏸ Helper module tests pass
-- [ ] ⏸ Config registration verified
-- [ ] ⏸ No boundary violations (`mix boundary`)
+- [x] ✓ All tool provider tests pass
+- [x] ✓ All 8 tool module tests pass (with mocked GitHub client)
+- [x] ✓ Helper module tests pass
+- [x] ✓ Config registration verified
+- [x] ✓ No boundary violations (`mix boundary`)
 - [ ] ⏸ Full test suite passes (`mix test`)
 - [ ] ⏸ Pre-commit checks pass (`mix precommit`)
 

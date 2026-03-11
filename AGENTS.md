@@ -31,6 +31,27 @@ export GH_TOKEN=$(~/.config/perme8/get-review-token)
 
 The token is short-lived (9 minutes). Re-generate if a command fails with a 401.
 
+### GitHub Issues via perme8-mcp Ticket Tools
+
+Use perme8-mcp ticket tools for all GitHub **issue** operations. Keep using `gh` for **pull request** operations.
+
+#### Ticket MCP Tools
+
+- `ticket.read` - params: `number`
+- `ticket.list` - params: `state`, `labels`, `assignee`, `query`, `per_page`
+- `ticket.create` - params: `title`, `body`, `labels`, `assignees`
+- `ticket.update` - params: `number`, `title`, `body`, `labels`, `assignees`, `state`
+- `ticket.close` - params: `number`, `comment`
+- `ticket.comment` - params: `number`, `body`
+- `ticket.add_sub_issue` - params: `parent_number`, `child_number`
+- `ticket.remove_sub_issue` - params: `parent_number`, `child_number`
+
+#### Operation Split
+
+- **Use ticket MCP tools for issues**: read/list/create/update/close/comment/sub-issue linking.
+- **Use `gh` CLI for PRs**: `gh pr create`, `gh pr view`, `gh api repos/.../pulls/...`.
+- `gh issue ...` command usage is being migrated away from skills in a separate ticket.
+
 Automated review workflows must skip events where the sender/reviewer identity is `platformqbot` to avoid review loops.
 
 Review-bot token generation requires:
