@@ -12,6 +12,7 @@ defmodule Agents.Tickets.Infrastructure.TicketSyncServer do
 
   require Logger
 
+  alias Agents.Tickets.Application.TicketsConfig
   alias Agents.Tickets.Domain.Entities.Ticket
   alias Agents.Tickets.Domain.Policies.TicketHierarchyPolicy
   alias Agents.Tickets.Infrastructure.Clients.GithubProjectClient
@@ -62,11 +63,12 @@ defmodule Agents.Tickets.Infrastructure.TicketSyncServer do
       client: Keyword.get(opts, :client, GithubProjectClient),
       ticket_repo: Keyword.get(opts, :ticket_repo, ProjectTicketRepository),
       lifecycle_repo: Keyword.get(opts, :lifecycle_repo, TicketLifecycleEventRepository),
-      poll_interval_ms: Keyword.get(opts, :poll_interval_ms, github_poll_interval_ms()),
-      pubsub: Keyword.get(opts, :pubsub, pubsub())
+      poll_interval_ms:
+        Keyword.get(opts, :poll_interval_ms, TicketsConfig.github_poll_interval_ms()),
+      pubsub: Keyword.get(opts, :pubsub, TicketsConfig.pubsub())
     }
 
-    if github_sync_enabled?() do
+    if TicketsConfig.github_sync_enabled?() do
       Process.send_after(self(), :poll, 0)
     end
 
@@ -90,9 +92,9 @@ defmodule Agents.Tickets.Infrastructure.TicketSyncServer do
   @impl true
   def handle_cast({:close_ticket, issue_number}, state) do
     opts = [
-      token: github_token(),
-      org: github_org(),
-      repo: github_repo()
+      token: TicketsConfig.github_token(),
+      org: TicketsConfig.github_org(),
+      repo: TicketsConfig.github_repo()
     ]
 
     case state.client.close_issue(issue_number, opts) do
@@ -115,9 +117,9 @@ defmodule Agents.Tickets.Infrastructure.TicketSyncServer do
 
   defp poll_tickets(state) do
     opts = [
-      token: github_token(),
-      org: github_org(),
-      repo: github_repo()
+      token: TicketsConfig.github_token(),
+      org: TicketsConfig.github_org(),
+      repo: TicketsConfig.github_repo()
     ]
 
     case state.client.fetch_tickets(opts) do
@@ -310,33 +312,5 @@ defmodule Agents.Tickets.Infrastructure.TicketSyncServer do
 
       {Map.put(acc, child_number, parent_number), updated_entities}
     end
-  end
-
-  defp github_sync_enabled? do
-    tickets_config()[:github_sync_enabled] != false
-  end
-
-  defp github_org do
-    tickets_config()[:github_org] || tickets_config()[:github_project_org] || "platform-q-ai"
-  end
-
-  defp github_repo do
-    tickets_config()[:github_repo] || "perme8"
-  end
-
-  defp github_poll_interval_ms do
-    tickets_config()[:github_poll_interval_ms] || 15_000
-  end
-
-  defp github_token do
-    tickets_config()[:github_token]
-  end
-
-  defp pubsub do
-    tickets_config()[:pubsub] || Perme8.Events.PubSub
-  end
-
-  defp tickets_config do
-    Application.get_env(:agents, :sessions, [])
   end
 end
