@@ -289,7 +289,7 @@ defmodule AgentsWeb.DashboardLive.Components.SessionComponents do
     <div
       :if={@todo_items != []}
       data-testid="session-todo-progress"
-      class="flex gap-0.5 w-full mt-1"
+      class="flex gap-0.5 w-full px-2 pb-1.5"
     >
       <%= for item <- @todo_items do %>
         <div class={[
@@ -900,6 +900,7 @@ defmodule AgentsWeb.DashboardLive.Components.SessionComponents do
     * `:warm` - queued item in build queue warm zone (may be warming)
     * `:in_progress` - actively running item in build queue
     * `:failed` - failed item in build queue
+    * `:optimistic` - optimistic queued item (syncing with server)
 
   ## Assigns
 
@@ -916,7 +917,7 @@ defmodule AgentsWeb.DashboardLive.Components.SessionComponents do
 
   attr(:variant, :atom,
     required: true,
-    values: [:triage, :triage_session, :queued, :warm, :in_progress, :failed]
+    values: [:triage, :triage_session, :queued, :warm, :in_progress, :failed, :optimistic]
   )
 
   attr(:session, :map, default: nil)
@@ -927,14 +928,49 @@ defmodule AgentsWeb.DashboardLive.Components.SessionComponents do
   attr(:auth_refreshing, :map, default: %{})
 
   def ticket_card(assigns) do
+    session = assigns[:session]
+
+    # Normalize session fields: optimistic entries use :instruction/:queued_at
+    # instead of :title/:latest_at and may lack keys like :container_id.
+    # Normalize once here so the template can use dot access uniformly.
+    session =
+      if session do
+        defaults = %{
+          latest_at: nil,
+          title: nil,
+          container_id: nil,
+          latest_status: nil,
+          latest_error: nil,
+          latest_task_id: nil,
+          started_at: nil,
+          completed_at: nil,
+          todo_items: nil,
+          session_summary: nil,
+          image: nil
+        }
+
+        session = Map.merge(defaults, session)
+
+        session
+        |> then(fn s ->
+          if s.latest_at, do: s, else: Map.put(s, :latest_at, s[:queued_at])
+        end)
+        |> then(fn s ->
+          if s.title, do: s, else: Map.put(s, :title, s[:instruction])
+        end)
+      else
+        session
+      end
+
     assigns =
       assigns
-      |> assign(:has_container, has_real_container?(assigns[:session]))
-      |> assign(:file_stats, compute_file_stats(assigns[:session]))
+      |> assign(:session, session)
+      |> assign(:has_container, has_real_container?(session))
+      |> assign(:file_stats, compute_file_stats(session))
       |> assign(:closed, ticket_closed?(assigns[:ticket]))
       |> assign(:is_ticket, not is_nil(assigns[:ticket]))
-      |> assign(:card_title, card_title(assigns[:ticket], assigns[:session]))
-      |> assign(:card_status, card_status(assigns[:ticket], assigns[:session]))
+      |> assign(:card_title, card_title(assigns[:ticket], session))
+      |> assign(:card_status, card_status(assigns[:ticket], session))
 
     ~H"""
     <div
@@ -946,26 +982,30 @@ defmodule AgentsWeb.DashboardLive.Components.SessionComponents do
       data-ticket-state={(@is_ticket && @ticket.state) || nil}
       data-slot-state={slot_state(@variant, @warming)}
       class={
-        ticket_card_classes(@variant, @ticket, @session, @active, @warming, @has_container, @depth)
+        ticket_card_classes(
+          @variant,
+          @ticket,
+          @session,
+          @active,
+          @warming,
+          @has_container,
+          @depth,
+          @card_status
+        )
       }
     >
-      <%!-- Card content area (clickable to select) --%>
-      <div
-        class="flex-1 min-w-0 flex flex-col items-start gap-1 p-2"
-        phx-click={card_click_event(@is_ticket)}
-        phx-value-number={(@is_ticket && @ticket.number) || nil}
-        phx-value-container-id={(!@is_ticket && @session && @session.container_id) || nil}
-      >
-        <%!-- Header row: badges + status dot --%>
-        <div class="flex items-start justify-between w-full gap-2">
-          <div class={[
-            triage_variant?(@variant) && "flex flex-col items-start gap-1 flex-1 min-w-0",
-            !triage_variant?(@variant) && "flex items-center gap-1.5 flex-wrap min-w-0"
-          ]}>
-            <div class={[
-              triage_variant?(@variant) && "flex items-center gap-1.5",
-              !triage_variant?(@variant) && "contents"
-            ]}>
+      <%!-- Main row: content area + action strip --%>
+      <div class="flex flex-1 min-w-0 min-h-0">
+        <%!-- Card content area (clickable to select) --%>
+        <div
+          class="flex-1 min-w-0 flex flex-col items-start gap-1 p-2"
+          phx-click={card_click_event(@is_ticket)}
+          phx-value-number={(@is_ticket && @ticket.number) || nil}
+          phx-value-container-id={(!@is_ticket && @session && @session.container_id) || nil}
+        >
+          <%!-- Header row: badges + status dot --%>
+          <div class="flex items-start justify-between w-full gap-2">
+            <div class="flex items-center gap-1.5 flex-wrap min-w-0">
               <%!-- Ticket number badge (ticket-backed cards only) --%>
               <span :if={@is_ticket} class="badge badge-xs badge-info whitespace-nowrap shrink-0">
                 {@ticket.number}
@@ -1037,26 +1077,56 @@ defmodule AgentsWeb.DashboardLive.Components.SessionComponents do
               >
                 <.icon name="hero-arrow-path" class="size-3 animate-spin" /> Warming...
               </span>
+              <%!-- Syncing badge (optimistic variant only) --%>
+              <span
+                :if={@variant == :optimistic}
+                class="badge badge-xs badge-info badge-outline"
+              >
+                Syncing...
+              </span>
             </div>
-            <%!-- Inline session metadata (build variants, when not warming) --%>
+            <.status_dot
+              status={@card_status}
+              cold={ticket_card_cold?(@variant, @session, @warming, @has_container)}
+            />
+          </div>
+
+          <%!-- Title (unified: always below the header row) --%>
+          <span
+            class={[
+              "text-xs font-medium flex-1 min-w-0 overflow-hidden mt-0.5 mb-0.5",
+              @closed && "line-through text-base-content/50"
+            ]}
+            style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;"
+          >
+            {@card_title}
+          </span>
+
+          <%!-- Labels (ticket-backed cards only) --%>
+          <div
+            :if={@is_ticket && @ticket.labels != []}
+            class="flex w-full items-start justify-start gap-1.5 flex-wrap"
+          >
             <span
-              :if={!triage_variant?(@variant) && !@warming && @session}
-              class="text-[0.6rem] text-base-content/40"
+              :for={label <- @ticket.labels || []}
+              class={["badge badge-xs whitespace-nowrap", ticket_label_class(label)]}
             >
-              {image_label(@session.image)}
+              {label}
             </span>
+          </div>
+
+          <%!-- Session metadata (unified: same layout for all variants) --%>
+          <div
+            :if={@session}
+            class="flex items-center gap-2 text-[0.6rem] text-base-content/40 w-full"
+          >
+            <%!-- Triage ticket cards show a mini status dot for the associated session --%>
+            <.status_dot :if={@variant == :triage} status={@session.latest_status} />
+            <span :if={@session[:image]}>{image_label(@session.image)}</span>
+            <span :if={@session[:latest_at]}>{relative_time(@session.latest_at)}</span>
+            <span :if={@file_stats}>{@file_stats}</span>
             <span
-              :if={!triage_variant?(@variant) && !@warming && @session}
-              class="text-[0.6rem] text-base-content/40"
-            >
-              &middot; {relative_time(@session.latest_at)}
-            </span>
-            <span
-              :if={
-                !triage_variant?(@variant) && !@warming && @session &&
-                  Map.get(@session, :started_at) != nil
-              }
-              class="text-[0.6rem] text-base-content/40"
+              :if={Map.get(@session, :started_at) != nil}
               data-testid="session-duration"
             >
               &middot;
@@ -1073,190 +1143,115 @@ defmodule AgentsWeb.DashboardLive.Components.SessionComponents do
                 }
               />
             </span>
-            <%!-- Title (triage variants render inside the header flex column) --%>
-            <span
-              :if={triage_variant?(@variant)}
-              class={[
-                "text-xs font-medium flex-1 min-w-0 overflow-hidden mt-0.5 mb-0.5",
-                @closed && "line-through text-base-content/50"
-              ]}
-              style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;"
-            >
-              {@card_title}
-            </span>
           </div>
-          <.status_dot
-            status={@card_status}
-            cold={ticket_card_cold?(@variant, @session, @warming, @has_container)}
+
+          <.container_stats_bars
+            :if={@container_stats}
+            stats={@container_stats}
           />
         </div>
 
-        <%!-- Title (build variants render below the header row) --%>
-        <span
-          :if={!triage_variant?(@variant)}
+        <%!-- Action strip: triage ticket actions (up/play/down) --%>
+        <div
+          :if={@variant == :triage && @is_ticket && !@closed}
+          class="flex flex-col shrink-0 border-l border-info/20"
+          style="width: 10%;"
+        >
+          <button
+            type="button"
+            phx-click="send_ticket_to_top"
+            phx-value-number={@ticket.number}
+            data-testid={"send-ticket-to-top-#{@ticket.number}"}
+            class="flex-1 flex items-center justify-center text-base-content/30 hover:text-base-content/70 hover:bg-base-content/5 transition-colors cursor-pointer"
+            title="Send to top"
+          >
+            <.icon name="hero-chevron-double-up-mini" class="size-3" />
+          </button>
+          <button
+            type="button"
+            phx-click="start_ticket_session"
+            phx-value-number={@ticket.number}
+            data-testid={"start-ticket-session-#{@ticket.number}"}
+            class="flex-1 flex items-center justify-center text-success/50 hover:text-success hover:bg-success/10 transition-colors cursor-pointer"
+            title="Start session for this ticket"
+          >
+            <.icon name="hero-play-solid" class="size-3" />
+          </button>
+          <button
+            type="button"
+            phx-click="send_ticket_to_bottom"
+            phx-value-number={@ticket.number}
+            data-testid={"send-ticket-to-bottom-#{@ticket.number}"}
+            class="flex-1 flex items-center justify-center text-base-content/30 hover:text-base-content/70 hover:bg-base-content/5 transition-colors cursor-pointer"
+            title="Send to bottom"
+          >
+            <.icon name="hero-chevron-double-down-mini" class="size-3" />
+          </button>
+        </div>
+        <%!-- Action strip: build queue ticket pause button --%>
+        <div
+          :if={@variant not in [:triage, :triage_session, :failed] && @is_ticket && !@closed}
           class={[
-            "text-xs font-medium flex-1 min-w-0 overflow-hidden mt-0.5 mb-0.5",
-            @closed && "line-through text-base-content/50"
+            "flex flex-col shrink-0 border-l",
+            @variant == :in_progress && "border-success/20",
+            @variant != :in_progress && "border-base-content/10"
           ]}
-          style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;"
+          style="width: 10%;"
         >
-          {@card_title}
-        </span>
-
-        <%!-- Labels (ticket-backed cards only) --%>
-        <div
-          :if={@is_ticket && @ticket.labels != []}
-          class="flex w-full items-start justify-start gap-1.5 flex-wrap"
-        >
-          <span
-            :for={label <- @ticket.labels || []}
-            class={["badge badge-xs whitespace-nowrap", ticket_label_class(label)]}
+          <button
+            type="button"
+            phx-click="remove_ticket_from_queue"
+            phx-value-number={@ticket.number}
+            data-testid={"pause-ticket-#{@ticket.number}"}
+            class="flex-1 flex items-center justify-center text-base-content/30 hover:text-warning hover:bg-warning/10 transition-colors cursor-pointer"
+            title="Pause and move to triage"
           >
-            {label}
-          </span>
+            <.icon name="hero-pause-solid" class="size-3" />
+          </button>
         </div>
-
-        <%!-- Session summary (triage: compact inline; build: full stats) --%>
+        <%!-- Action strip: build queue session pause button --%>
         <div
-          :if={triage_variant?(@variant) && @session}
-          class="flex items-center gap-2 text-[0.6rem] text-base-content/40 w-full"
+          :if={
+            @variant in [:in_progress, :queued, :warm] && !@is_ticket && @session &&
+              @session.latest_task_id
+          }
+          class={[
+            "flex flex-col shrink-0 border-l",
+            @variant == :in_progress && "border-success/20",
+            @variant != :in_progress && "border-base-content/10"
+          ]}
+          style="width: 10%;"
         >
-          <%!-- Triage ticket cards show a mini status dot for the associated session --%>
-          <.status_dot :if={@variant == :triage} status={@session.latest_status} />
-          <span>{relative_time(@session.latest_at)}</span>
-          <span :if={@file_stats}>{@file_stats}</span>
-          <span
-            :if={Map.get(@session, :started_at) != nil}
-            data-testid="session-duration"
+          <button
+            type="button"
+            phx-click="pause_session"
+            phx-value-task-id={@session.latest_task_id}
+            data-testid={"pause-session-#{slugify(@session.title)}"}
+            class="flex-1 flex items-center justify-center text-base-content/30 hover:text-warning hover:bg-warning/10 transition-colors cursor-pointer"
+            title="Pause session"
           >
-            &middot;
-            <span
-              id={duration_timer_id(@variant, @ticket, @session)}
-              phx-hook="DurationTimer"
-              data-started-at={
-                Map.get(@session, :started_at) &&
-                  DateTime.to_iso8601(@session.started_at)
-              }
-              data-completed-at={
-                Map.get(@session, :completed_at) &&
-                  DateTime.to_iso8601(@session.completed_at)
-              }
-            />
-          </span>
+            <.icon name="hero-pause-solid" class="size-3" />
+          </button>
         </div>
-
-        <div
-          :if={!triage_variant?(@variant) && @file_stats}
-          class="text-[0.6rem] text-base-content/40 w-full"
-          data-testid="session-file-stats"
-        >
-          {@file_stats}
-        </div>
-        <.container_stats_bars
-          :if={!triage_variant?(@variant) && @container_stats}
-          stats={@container_stats}
-        />
-        <.compact_progress_bar
-          :if={@session}
-          todo_items={session_todo_items(@session)}
-        />
       </div>
-
-      <%!-- Action strip: triage ticket actions (up/play/down) --%>
-      <div
-        :if={@variant == :triage && @is_ticket && !@closed}
-        class="flex flex-col shrink-0 border-l border-info/20"
-        style="width: 10%;"
-      >
-        <button
-          type="button"
-          phx-click="send_ticket_to_top"
-          phx-value-number={@ticket.number}
-          data-testid={"send-ticket-to-top-#{@ticket.number}"}
-          class="flex-1 flex items-center justify-center text-base-content/30 hover:text-base-content/70 hover:bg-base-content/5 transition-colors cursor-pointer"
-          title="Send to top"
-        >
-          <.icon name="hero-chevron-double-up-mini" class="size-3" />
-        </button>
-        <button
-          type="button"
-          phx-click="start_ticket_session"
-          phx-value-number={@ticket.number}
-          data-testid={"start-ticket-session-#{@ticket.number}"}
-          class="flex-1 flex items-center justify-center text-success/50 hover:text-success hover:bg-success/10 transition-colors cursor-pointer"
-          title="Start session for this ticket"
-        >
-          <.icon name="hero-play-solid" class="size-3" />
-        </button>
-        <button
-          type="button"
-          phx-click="send_ticket_to_bottom"
-          phx-value-number={@ticket.number}
-          data-testid={"send-ticket-to-bottom-#{@ticket.number}"}
-          class="flex-1 flex items-center justify-center text-base-content/30 hover:text-base-content/70 hover:bg-base-content/5 transition-colors cursor-pointer"
-          title="Send to bottom"
-        >
-          <.icon name="hero-chevron-double-down-mini" class="size-3" />
-        </button>
-      </div>
-      <%!-- Action strip: build queue ticket pause button --%>
-      <div
-        :if={@variant not in [:triage, :triage_session, :failed] && @is_ticket && !@closed}
-        class={[
-          "flex flex-col shrink-0 border-l",
-          @variant == :in_progress && "border-success/20",
-          @variant != :in_progress && "border-base-content/10"
-        ]}
-        style="width: 10%;"
-      >
-        <button
-          type="button"
-          phx-click="remove_ticket_from_queue"
-          phx-value-number={@ticket.number}
-          data-testid={"pause-ticket-#{@ticket.number}"}
-          class="flex-1 flex items-center justify-center text-base-content/30 hover:text-warning hover:bg-warning/10 transition-colors cursor-pointer"
-          title="Pause and move to triage"
-        >
-          <.icon name="hero-pause-solid" class="size-3" />
-        </button>
-      </div>
-      <%!-- Action strip: build queue session pause button --%>
-      <div
-        :if={
-          @variant in [:in_progress, :queued, :warm] && !@is_ticket && @session &&
-            @session.latest_task_id
-        }
-        class={[
-          "flex flex-col shrink-0 border-l",
-          @variant == :in_progress && "border-success/20",
-          @variant != :in_progress && "border-base-content/10"
-        ]}
-        style="width: 10%;"
-      >
-        <button
-          type="button"
-          phx-click="pause_session"
-          phx-value-task-id={@session.latest_task_id}
-          data-testid={"pause-session-#{slugify(@session.title)}"}
-          class="flex-1 flex items-center justify-center text-base-content/30 hover:text-warning hover:bg-warning/10 transition-colors cursor-pointer"
-          title="Pause session"
-        >
-          <.icon name="hero-pause-solid" class="size-3" />
-        </button>
-      </div>
+      <%!-- Progress bar: full width at the bottom of the card --%>
+      <.compact_progress_bar
+        :if={@session}
+        todo_items={session_todo_items(@session)}
+      />
     </div>
     """
   end
 
   # ---- Card Helpers ----
 
-  # Whether a variant renders in triage column layout (title in header flex column)
-  defp triage_variant?(:triage), do: true
-  defp triage_variant?(:triage_session), do: true
-  defp triage_variant?(_), do: false
-
   # Test ID generation: ticket-backed cards use ticket number, session-only use slugified title
   defp card_test_id(:triage, %{number: n}, _session), do: "triage-ticket-item-#{n}"
+
+  defp card_test_id(:optimistic, _ticket, %{title: title}),
+    do: "optimistic-session-item-#{slugify(title)}"
+
+  defp card_test_id(:optimistic, _ticket, _session), do: "optimistic-session-item-unknown"
   defp card_test_id(_variant, %{number: n}, _session), do: "build-ticket-item-#{n}"
   defp card_test_id(_variant, nil, %{title: title}), do: "session-item-#{slugify(title)}"
   defp card_test_id(_variant, nil, _session), do: "session-item-unknown"
@@ -1265,14 +1260,19 @@ defmodule AgentsWeb.DashboardLive.Components.SessionComponents do
   defp card_click_event(true = _is_ticket), do: "select_ticket"
   defp card_click_event(false), do: "select_session"
 
-  # Card title: prefer ticket title, fall back to session title (truncated)
+  # Card title: prefer ticket title, fall back to session title/instruction (truncated)
   defp card_title(%{title: title}, _session), do: title
-  defp card_title(nil, %{title: title}), do: truncate_instruction(title, 35)
+  defp card_title(nil, %{title: title}) when is_binary(title), do: truncate_instruction(title, 35)
+
+  defp card_title(nil, %{instruction: instr}) when is_binary(instr),
+    do: truncate_instruction(instr, 35)
+
   defp card_title(nil, nil), do: ""
 
-  # Card status: prefer ticket task_status, fall back to session latest_status
+  # Card status: prefer ticket task_status, fall back to session latest_status or status
   defp card_status(%{task_status: status}, _session), do: status || "idle"
-  defp card_status(nil, %{latest_status: status}), do: status
+  defp card_status(nil, %{latest_status: status}) when is_binary(status), do: status
+  defp card_status(nil, %{status: status}) when is_binary(status), do: status
   defp card_status(nil, nil), do: "idle"
 
   defp ticket_closed?(%{state: "closed"}), do: true
@@ -1294,12 +1294,22 @@ defmodule AgentsWeb.DashboardLive.Components.SessionComponents do
   defp slot_state(:warm, _), do: "warm"
   defp slot_state(:in_progress, _), do: "used"
   defp slot_state(:failed, _), do: "failed"
+  defp slot_state(:optimistic, _), do: "optimistic-queued"
 
-  defp ticket_card_classes(variant, ticket, session, active, warming, has_container, depth) do
+  defp ticket_card_classes(
+         variant,
+         ticket,
+         session,
+         active,
+         warming,
+         has_container,
+         depth,
+         card_status
+       ) do
     closed = ticket_closed?(ticket)
 
     base =
-      "flex cursor-pointer w-full rounded-lg min-h-12 border transition-all duration-150 hover:-translate-y-px hover:shadow-md hover:ring-1 hover:ring-base-content/20 overflow-hidden"
+      "flex flex-col cursor-pointer w-full rounded-lg min-h-12 border transition-all duration-150 hover:-translate-y-px hover:shadow-md hover:ring-1 hover:ring-base-content/20 overflow-hidden"
 
     depth_classes =
       if depth > 0,
@@ -1309,7 +1319,7 @@ defmodule AgentsWeb.DashboardLive.Components.SessionComponents do
     variant_classes =
       if closed,
         do: "border-base-content/10 bg-base-content/3 opacity-60",
-        else: variant_classes(variant, ticket, session, warming, has_container)
+        else: variant_classes(variant, ticket, session, warming, has_container, card_status)
 
     active_class =
       if active, do: "ring-2 ring-primary/60 shadow-sm shadow-primary/10", else: ""
@@ -1317,48 +1327,51 @@ defmodule AgentsWeb.DashboardLive.Components.SessionComponents do
     "#{base} #{variant_classes} #{active_class} #{depth_classes}"
   end
 
-  defp variant_classes(:triage, ticket, _session, _warming, _has_container) do
-    grab = "cursor-grab active:cursor-grabbing"
-    task_status = if ticket, do: ticket.task_status, else: nil
-    "#{grab} #{triage_status_class(task_status)}"
+  # Unified status-driven color function — single source of truth for card colors.
+  # Every card gets its border/bg from semantic status, not from which column it's in.
+  defp status_color_classes("completed"), do: "border-violet-400/40 bg-violet-500/10"
+  defp status_color_classes("failed"), do: "border-error/40 bg-error/10"
+  defp status_color_classes("cancelled"), do: "border-base-content/20 bg-base-content/5"
+  defp status_color_classes("awaiting_feedback"), do: "border-warning/40 bg-warning/10"
+  defp status_color_classes("pending"), do: "border-success/40 bg-success/10"
+  defp status_color_classes("starting"), do: "border-success/40 bg-success/10"
+  defp status_color_classes("running"), do: "border-success/40 bg-success/10"
+  defp status_color_classes("optimistic"), do: "border-info/35 bg-info/10"
+  defp status_color_classes(_), do: "border-info/25 bg-info/5"
+
+  defp variant_classes(:triage, _ticket, _session, _warming, _has_container, card_status) do
+    "cursor-grab active:cursor-grabbing #{status_color_classes(card_status)}"
   end
 
-  defp variant_classes(:triage_session, _ticket, session, _warming, _has_container) do
-    status = if session, do: session.latest_status, else: nil
-
-    case status do
-      "completed" -> "border-violet-400/40 bg-violet-500/10"
-      "cancelled" -> "border-error/35 bg-error/10"
-      _ -> "border-transparent"
-    end
+  defp variant_classes(:triage_session, _ticket, _session, _warming, _has_container, card_status) do
+    status_color_classes(card_status)
   end
 
-  defp variant_classes(:failed, _ticket, _session, _warming, _has_container) do
-    "border-warning/40 bg-warning/10"
+  defp variant_classes(:failed, _ticket, _session, _warming, _has_container, _card_status) do
+    status_color_classes("failed")
   end
 
-  defp variant_classes(:queued, _ticket, session, _warming, has_container) do
-    if session && has_container,
+  defp variant_classes(:queued, _ticket, _session, _warming, has_container, _card_status) do
+    if has_container,
       do: "border-warning/40 bg-warning/10",
       else: "border-base-content/20 bg-base-content/8"
   end
 
-  defp variant_classes(:warm, _ticket, session, warming, has_container) do
+  defp variant_classes(:warm, _ticket, _session, warming, has_container, _card_status) do
     cond do
       warming -> "border-warning/55 bg-warning/15 animate-pulse"
-      session && has_container -> "border-warning/40 bg-warning/10"
+      has_container -> "border-warning/40 bg-warning/10"
       true -> "border-base-content/20 bg-base-content/8"
     end
   end
 
-  defp variant_classes(:in_progress, _ticket, _session, _warming, _has_container) do
-    "border-success/40 bg-success/10"
+  defp variant_classes(:in_progress, _ticket, _session, _warming, _has_container, _card_status) do
+    status_color_classes("running")
   end
 
-  defp triage_status_class("awaiting_feedback"), do: "border-warning/40 bg-warning/10"
-  defp triage_status_class("failed"), do: "border-error/40 bg-error/10"
-  defp triage_status_class("cancelled"), do: "border-base-content/20 bg-base-content/5"
-  defp triage_status_class(_), do: "border-info/25 bg-info/5"
+  defp variant_classes(:optimistic, _ticket, _session, _warming, _has_container, _card_status) do
+    status_color_classes("optimistic")
+  end
 
   defp ticket_lifecycle_label(ticket) do
     lifecycle_state = Map.get(ticket, :session_state)
@@ -1373,6 +1386,7 @@ defmodule AgentsWeb.DashboardLive.Components.SessionComponents do
   defp ticket_card_cold?(:triage, _session, _warming, _has_container), do: false
   defp ticket_card_cold?(:triage_session, _session, _warming, _has_container), do: false
   defp ticket_card_cold?(:failed, _session, _warming, _has_container), do: false
+  defp ticket_card_cold?(:optimistic, _session, _warming, _has_container), do: false
   defp ticket_card_cold?(:warm, _session, warming, has_container), do: !warming and !has_container
 
   defp ticket_card_cold?(_variant, session, _warming, has_container),

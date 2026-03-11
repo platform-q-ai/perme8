@@ -48,6 +48,9 @@
           @tickets
           |> filter_tickets_by_search(@session_search)
           |> filter_tickets_by_status(@status_filter) %>
+        <%!-- Flattened ticket list (includes sub-tickets) for association lookups --%>
+        <% all_tickets_flat =
+          Enum.flat_map(@tickets, fn t -> [t | t.sub_tickets || []] end) %>
 
         <%!-- Search and filter controls (spans both columns) --%>
         <div class="px-2 pt-2 pb-1 flex items-center gap-2 shrink-0">
@@ -165,8 +168,14 @@
         </div>
 
         <%!-- Partition tickets into idle (triage) vs active (build) --%>
-        <%!-- Tickets with sessions (awaiting_feedback, failed, completed) float to top of triage --%>
+        <%!-- Sub-tickets participate identically to root tickets in lane partitioning --%>
         <% build_statuses = ["pending", "starting", "running", "queued"] %>
+        <% filtered_tickets_flat =
+          Enum.flat_map(filtered_tickets, fn t -> [t | t.sub_tickets || []] end) %>
+        <% active_tickets =
+          Enum.filter(filtered_tickets_flat, fn t -> t.task_status in build_statuses end) %>
+        <% active_ticket_numbers = MapSet.new(active_tickets, & &1.number) %>
+        <%!-- idle_tickets: root tickets not in build. Sub-tickets render in the parent accordion --%>
         <% idle_tickets =
           filtered_tickets
           |> Enum.filter(fn t -> t.task_status not in build_statuses end)
@@ -179,18 +188,17 @@
               _ -> 4
             end
           end) %>
-        <% active_tickets =
-          Enum.filter(filtered_tickets, fn t -> t.task_status in build_statuses end) %>
         <%!-- Association lookups use unfiltered @tickets/@sessions intentionally:
              when a search/status filter hides one side of a session<->ticket pair,
              the visible side must still resolve its association for correct rendering
              (e.g. showing the ticket badge on a visible session whose ticket is filtered out). --%>
         <% ticket_for_session = fn session ->
-          direct = Enum.find(@tickets, &(&1.associated_container_id == session.container_id))
+          direct =
+            Enum.find(all_tickets_flat, &(&1.associated_container_id == session.container_id))
 
           task_id_match =
             if session.latest_task_id,
-              do: Enum.find(@tickets, &(&1.associated_task_id == session.latest_task_id)),
+              do: Enum.find(all_tickets_flat, &(&1.associated_task_id == session.latest_task_id)),
               else: nil
 
           task_instruction =
@@ -212,8 +220,11 @@
 
           direct || task_id_match ||
             case inferred_number do
-              number when is_integer(number) -> Enum.find(@tickets, &(&1.number == number))
-              _ -> nil
+              number when is_integer(number) ->
+                Enum.find(all_tickets_flat, &(&1.number == number))
+
+              _ ->
+                nil
             end
         end %>
 
@@ -479,7 +490,12 @@
                   class="mt-1 ml-3 flex flex-col gap-1"
                 >
                   <div
-                    :for={sub_ticket <- ticket.sub_tickets}
+                    :for={
+                      sub_ticket <-
+                        Enum.reject(ticket.sub_tickets, fn st ->
+                          MapSet.member?(active_ticket_numbers, st.number)
+                        end)
+                    }
                     class="w-full"
                     data-ticket-depth="1"
                     data-triage-ticket-item
@@ -557,26 +573,11 @@
 
               <%!-- Optimistic queued sessions (syncing) --%>
               <li :for={session <- optimistic_queued_sessions} class="w-full">
-                <div
-                  data-testid={"optimistic-session-item-#{slugify(session.instruction)}"}
-                  data-slot-state="optimistic-queued"
-                  class="flex flex-col gap-0.5 w-full rounded-lg p-2 min-h-16 border border-info/35 bg-info/10"
-                >
-                  <div class="flex items-center justify-between w-full">
-                    <span class="text-xs font-medium truncate flex-1 min-w-0">
-                      {truncate_instruction(session.instruction, 35)}
-                    </span>
-                    <div class="flex items-center gap-1">
-                      <span class="badge badge-xs badge-info badge-outline">Syncing...</span>
-                      <.status_dot status="queued" />
-                    </div>
-                  </div>
-                  <div class="flex items-center gap-2 text-[0.65rem] text-base-content/50 w-full">
-                    <span>{image_label(session.image)}</span>
-                    <span>&middot;</span>
-                    <span>{relative_time(session.queued_at)}</span>
-                  </div>
-                </div>
+                <.ticket_card
+                  variant={:optimistic}
+                  session={session}
+                  active={false}
+                />
               </li>
 
               <%!-- Warm cache divider --%>

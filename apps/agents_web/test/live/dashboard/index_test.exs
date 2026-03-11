@@ -2855,6 +2855,111 @@ defmodule AgentsWeb.DashboardLive.IndexTest do
       assert html =~ ~s(data-testid="triage-ticket-item-604")
       refute html =~ ~s(data-testid="build-ticket-item-604")
     end
+
+    test "sub-ticket moves to build queue when started", %{conn: conn, user: user} do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Existing session",
+        container_id: "c-sub-start",
+        status: "completed"
+      })
+
+      {:ok, parent} =
+        ProjectTicketRepository.sync_remote_ticket(%{
+          number: 610,
+          title: "Parent with sub-tickets",
+          status: "Backlog",
+          priority: "Need",
+          size: "L",
+          labels: []
+        })
+
+      {:ok, _child} =
+        ProjectTicketRepository.sync_remote_ticket(%{
+          number: 611,
+          title: "Child sub-ticket",
+          status: "Backlog",
+          priority: "Need",
+          size: "S",
+          labels: [],
+          parent_ticket_id: parent.id
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+      send(lv.pid, {:tickets_synced, []})
+
+      # Sub-ticket should be visible in triage (parents expand by default)
+      html = render(lv)
+      assert html =~ ~s(data-testid="triage-ticket-item-610")
+      assert html =~ ~s(data-testid="triage-ticket-item-611")
+      refute html =~ ~s(data-testid="build-ticket-item-611")
+
+      # Click play on the sub-ticket
+      html =
+        lv
+        |> element(~s([data-testid="start-ticket-session-611"]))
+        |> render_click()
+
+      # Sub-ticket should move to build queue
+      assert html =~ ~s(data-testid="build-ticket-item-611")
+      assert html =~ "Child sub-ticket"
+      # Sub-ticket should no longer appear in triage
+      refute html =~ ~s(data-testid="triage-ticket-item-611")
+      # Parent should still be in triage
+      assert html =~ ~s(data-testid="triage-ticket-item-610")
+    end
+
+    test "sub-ticket reverts to triage on task creation failure", %{conn: conn, user: user} do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Existing session",
+        container_id: "c-sub-fail",
+        status: "completed"
+      })
+
+      {:ok, parent} =
+        ProjectTicketRepository.sync_remote_ticket(%{
+          number: 620,
+          title: "Parent for failure test",
+          status: "Backlog",
+          priority: "Need",
+          size: "L",
+          labels: []
+        })
+
+      {:ok, _child} =
+        ProjectTicketRepository.sync_remote_ticket(%{
+          number: 621,
+          title: "Child that fails to start",
+          status: "Backlog",
+          priority: "Need",
+          size: "S",
+          labels: [],
+          parent_ticket_id: parent.id
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+      send(lv.pid, {:tickets_synced, []})
+
+      html = render(lv)
+      assert html =~ ~s(data-testid="triage-ticket-item-621")
+
+      # Click play on the sub-ticket
+      html =
+        lv
+        |> element(~s([data-testid="start-ticket-session-621"]))
+        |> render_click()
+
+      # Optimistically moved to build
+      assert html =~ ~s(data-testid="build-ticket-item-621")
+
+      # The spawned process fails in test sandbox; DOWN reverts the update
+      Process.sleep(200)
+
+      html = render(lv)
+      assert html =~ ~s(data-testid="triage-ticket-item-621")
+      refute html =~ ~s(data-testid="build-ticket-item-621")
+    end
   end
 
   describe "ticket card real-time session state updates" do
