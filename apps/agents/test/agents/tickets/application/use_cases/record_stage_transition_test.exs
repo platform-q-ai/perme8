@@ -14,6 +14,12 @@ defmodule Agents.Tickets.TestDoubles.RecordStageTransitionEventBus do
   def emit(event), do: Process.get({__MODULE__, :emit}).(event)
 end
 
+defmodule Agents.Tickets.TestDoubles.RecordStageTransitionRepo do
+  @moduledoc false
+  def transaction(fun), do: {:ok, fun.()}
+  def rollback(reason), do: throw({:rollback, reason})
+end
+
 defmodule Agents.Tickets.Application.UseCases.RecordStageTransitionTest do
   use ExUnit.Case, async: true
 
@@ -23,6 +29,7 @@ defmodule Agents.Tickets.Application.UseCases.RecordStageTransitionTest do
   alias Agents.Tickets.Domain.Events.TicketStageChanged
   alias Agents.Tickets.TestDoubles.RecordStageTransitionEventBus
   alias Agents.Tickets.TestDoubles.RecordStageTransitionLifecycleRepo
+  alias Agents.Tickets.TestDoubles.RecordStageTransitionRepo
   alias Agents.Tickets.TestDoubles.RecordStageTransitionTicketRepo
 
   setup do
@@ -54,6 +61,7 @@ defmodule Agents.Tickets.Application.UseCases.RecordStageTransitionTest do
     assert {:ok, %{ticket: updated_ticket, lifecycle_event: lifecycle_event}} =
              RecordStageTransition.execute(402, "ready",
                now: now,
+               repo: RecordStageTransitionRepo,
                ticket_repo: RecordStageTransitionTicketRepo,
                lifecycle_repo: RecordStageTransitionLifecycleRepo,
                event_bus: RecordStageTransitionEventBus
@@ -78,6 +86,7 @@ defmodule Agents.Tickets.Application.UseCases.RecordStageTransitionTest do
 
     assert {:error, :same_stage} =
              RecordStageTransition.execute(402, "open",
+               repo: RecordStageTransitionRepo,
                ticket_repo: RecordStageTransitionTicketRepo,
                lifecycle_repo: RecordStageTransitionLifecycleRepo,
                event_bus: RecordStageTransitionEventBus
@@ -92,6 +101,7 @@ defmodule Agents.Tickets.Application.UseCases.RecordStageTransitionTest do
 
     assert {:error, :invalid_from_stage} =
              RecordStageTransition.execute(402, "open",
+               repo: RecordStageTransitionRepo,
                ticket_repo: RecordStageTransitionTicketRepo,
                lifecycle_repo: RecordStageTransitionLifecycleRepo,
                event_bus: RecordStageTransitionEventBus
@@ -102,6 +112,7 @@ defmodule Agents.Tickets.Application.UseCases.RecordStageTransitionTest do
 
     assert {:error, :invalid_to_stage} =
              RecordStageTransition.execute(402, "bad",
+               repo: RecordStageTransitionRepo,
                ticket_repo: RecordStageTransitionTicketRepo,
                lifecycle_repo: RecordStageTransitionLifecycleRepo,
                event_bus: RecordStageTransitionEventBus
@@ -117,6 +128,7 @@ defmodule Agents.Tickets.Application.UseCases.RecordStageTransitionTest do
 
     assert {:error, :ticket_not_found} =
              RecordStageTransition.execute(999, "ready",
+               repo: RecordStageTransitionRepo,
                ticket_repo: RecordStageTransitionTicketRepo,
                lifecycle_repo: RecordStageTransitionLifecycleRepo,
                event_bus: RecordStageTransitionEventBus
@@ -146,6 +158,7 @@ defmodule Agents.Tickets.Application.UseCases.RecordStageTransitionTest do
              RecordStageTransition.execute(402, "ready",
                trigger: "manual",
                now: now,
+               repo: RecordStageTransitionRepo,
                ticket_repo: RecordStageTransitionTicketRepo,
                lifecycle_repo: RecordStageTransitionLifecycleRepo,
                event_bus: RecordStageTransitionEventBus
