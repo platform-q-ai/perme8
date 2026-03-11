@@ -6,7 +6,11 @@ defmodule Agents.Tickets.Domain do
     deps: [],
     exports: [
       Entities.Ticket,
+      Entities.TicketLifecycleEvent,
+      Entities.Ticket.View,
       Policies.TicketHierarchyPolicy,
-      Policies.TicketEnrichmentPolicy
+      Policies.TicketEnrichmentPolicy,
+      Policies.TicketLifecyclePolicy,
+      Events.TicketStageChanged
     ]
 end

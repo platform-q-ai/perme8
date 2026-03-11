@@ -8,6 +8,15 @@ defmodule Agents.Tickets.Infrastructure.Schemas.ProjectTicketSchema do
 
   @sync_states ["synced", "pending_push", "sync_error"]
   @valid_states ["open", "closed"]
+  @lifecycle_stages [
+    "open",
+    "ready",
+    "in_progress",
+    "in_review",
+    "ci_testing",
+    "deployed",
+    "closed"
+  ]
 
   @type t :: %__MODULE__{
           id: integer(),
@@ -27,6 +36,8 @@ defmodule Agents.Tickets.Infrastructure.Schemas.ProjectTicketSchema do
           last_synced_at: DateTime.t() | nil,
           last_sync_error: String.t() | nil,
           remote_updated_at: DateTime.t() | nil,
+          lifecycle_stage: String.t(),
+          lifecycle_stage_entered_at: DateTime.t() | nil,
           parent_ticket_id: integer() | nil,
           task_id: Ecto.UUID.t() | nil,
           inserted_at: DateTime.t(),
@@ -50,9 +61,15 @@ defmodule Agents.Tickets.Infrastructure.Schemas.ProjectTicketSchema do
     field(:last_synced_at, :utc_datetime)
     field(:last_sync_error, :string)
     field(:remote_updated_at, :utc_datetime)
+    field(:lifecycle_stage, :string, default: "open")
+    field(:lifecycle_stage_entered_at, :utc_datetime)
     field(:task_id, Ecto.UUID)
     belongs_to(:parent_ticket, __MODULE__)
     has_many(:sub_tickets, __MODULE__, foreign_key: :parent_ticket_id)
+
+    has_many(:lifecycle_events, Agents.Tickets.Infrastructure.Schemas.TicketLifecycleEventSchema,
+      foreign_key: :ticket_id
+    )
 
     timestamps(type: :utc_datetime)
   end
@@ -77,12 +94,15 @@ defmodule Agents.Tickets.Infrastructure.Schemas.ProjectTicketSchema do
       :last_synced_at,
       :last_sync_error,
       :remote_updated_at,
+      :lifecycle_stage,
+      :lifecycle_stage_entered_at,
       :parent_ticket_id,
       :task_id
     ])
     |> validate_required([:number, :title])
     |> validate_inclusion(:sync_state, @sync_states)
     |> validate_inclusion(:state, @valid_states)
+    |> validate_inclusion(:lifecycle_stage, @lifecycle_stages)
     |> unique_constraint(:number)
     |> foreign_key_constraint(:task_id)
   end

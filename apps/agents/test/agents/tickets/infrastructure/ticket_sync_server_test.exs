@@ -1,9 +1,12 @@
 defmodule Agents.Tickets.Infrastructure.TicketSyncServerTest do
   use Agents.DataCase, async: false
 
+  import Ecto.Query
+
   alias Agents.Repo
   alias Agents.Tickets.Infrastructure.Repositories.ProjectTicketRepository
   alias Agents.Tickets.Infrastructure.Schemas.ProjectTicketSchema
+  alias Agents.Tickets.Infrastructure.Schemas.TicketLifecycleEventSchema
   alias Agents.Tickets.Infrastructure.TicketSyncServer
   alias Agents.Test.TicketSyncServerTestClient
 
@@ -98,6 +101,87 @@ defmodule Agents.Tickets.Infrastructure.TicketSyncServerTest do
       ticket_b = Repo.get_by!(ProjectTicketSchema, number: 501)
 
       refute ticket_a.parent_ticket_id == ticket_b.id and ticket_b.parent_ticket_id == ticket_a.id
+    end
+  end
+
+  describe "lifecycle event recording" do
+    test "creates initial lifecycle event when syncing a new ticket" do
+      server =
+        start_sync_server([
+          {:ok, [%{number: 1200, title: "New ticket", state: "open", labels: []}]}
+        ])
+
+      send(server, :poll)
+      assert_receive {:tickets_synced, _}, 5_000
+
+      ticket = Repo.get_by!(ProjectTicketSchema, number: 1200)
+
+      event =
+        Repo.one!(
+          from(e in TicketLifecycleEventSchema,
+            where: e.ticket_id == ^ticket.id,
+            order_by: [asc: e.transitioned_at],
+            limit: 1
+          )
+        )
+
+      assert event.from_stage == nil
+      assert event.to_stage == "open"
+      assert event.trigger == "sync"
+    end
+
+    test "records a transition when ticket state changes across syncs" do
+      server =
+        start_sync_server([
+          {:ok, [%{number: 1201, title: "Lifecycle", state: "open", labels: []}]},
+          {:ok, [%{number: 1201, title: "Lifecycle", state: "closed", labels: []}]}
+        ])
+
+      send(server, :poll)
+      assert_receive {:tickets_synced, _}, 5_000
+
+      send(server, :poll)
+      assert_receive {:tickets_synced, _}, 5_000
+
+      ticket = Repo.get_by!(ProjectTicketSchema, number: 1201)
+
+      events =
+        Repo.all(
+          from(e in TicketLifecycleEventSchema,
+            where: e.ticket_id == ^ticket.id,
+            order_by: [asc: e.transitioned_at, asc: e.id]
+          )
+        )
+
+      assert Enum.map(events, &{&1.from_stage, &1.to_stage, &1.trigger}) == [
+               {nil, "open", "sync"},
+               {"open", "closed", "sync"}
+             ]
+    end
+
+    test "does not create duplicate lifecycle event when state does not change" do
+      server =
+        start_sync_server([
+          {:ok, [%{number: 1202, title: "Stable", state: "open", labels: []}]},
+          {:ok, [%{number: 1202, title: "Stable", state: "open", labels: []}]}
+        ])
+
+      send(server, :poll)
+      assert_receive {:tickets_synced, _}, 5_000
+
+      send(server, :poll)
+      assert_receive {:tickets_synced, _}, 5_000
+
+      ticket = Repo.get_by!(ProjectTicketSchema, number: 1202)
+
+      count =
+        Repo.aggregate(
+          from(e in TicketLifecycleEventSchema, where: e.ticket_id == ^ticket.id),
+          :count,
+          :id
+        )
+
+      assert count == 1
     end
   end
 

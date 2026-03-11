@@ -252,28 +252,28 @@ The feature file selectors require these new data attributes and test IDs on tic
 
 - [x] ✓ All domain tests pass (`mix test apps/agents/test/agents/tickets/domain/` — milliseconds, no I/O)
 - [x] ✓ All application tests pass (`mix test apps/agents/test/agents/tickets/application/` — with mocks)
-- [ ] ⏸ No boundary violations (`mix boundary`)
+- [x] ✓ No boundary violations (`mix boundary`)
 
 ---
 
-## Phase 2: Infrastructure + Interface (phoenix-tdd)
+## Phase 2: Infrastructure + Interface (phoenix-tdd) ⏳
 
 ### 2.1 Migration — Create `sessions_ticket_lifecycle_events` Table
 
-- [ ] ⏸ Create `apps/agents/priv/repo/migrations/YYYYMMDDHHMMSS_create_sessions_ticket_lifecycle_events.exs`
+- [x] ✓ Create `apps/agents/priv/repo/migrations/YYYYMMDDHHMMSS_create_sessions_ticket_lifecycle_events.exs`
   - Table: `sessions_ticket_lifecycle_events`
   - Columns: `id` (bigserial PK), `ticket_id` (bigint NOT NULL, FK → `sessions_project_tickets(id)` ON DELETE CASCADE), `from_stage` (varchar, nullable), `to_stage` (varchar NOT NULL), `transitioned_at` (utc_datetime NOT NULL), `trigger` (varchar NOT NULL, default "system"), `inserted_at` (utc_datetime NOT NULL)
   - Indexes: `index(:sessions_ticket_lifecycle_events, [:ticket_id])`, `index(:sessions_ticket_lifecycle_events, [:ticket_id, :transitioned_at])`
 
 ### 2.2 Migration — Add Lifecycle Columns to `sessions_project_tickets`
 
-- [ ] ⏸ Create `apps/agents/priv/repo/migrations/YYYYMMDDHHMMSS_add_lifecycle_stage_to_project_tickets.exs`
+- [x] ✓ Create `apps/agents/priv/repo/migrations/YYYYMMDDHHMMSS_add_lifecycle_stage_to_project_tickets.exs`
   - Add column `lifecycle_stage` (varchar, NOT NULL, default "open")
   - Add column `lifecycle_stage_entered_at` (utc_datetime, nullable)
 
 ### 2.3 TicketLifecycleEventSchema
 
-- [ ] ⏸ **RED**: Write test `apps/agents/test/agents/tickets/infrastructure/schemas/ticket_lifecycle_event_schema_test.exs`
+- [x] ✓ **RED**: Write test `apps/agents/test/agents/tickets/infrastructure/schemas/ticket_lifecycle_event_schema_test.exs`
   - Tests:
     - Valid changeset with all required fields (ticket_id, to_stage, transitioned_at)
     - Invalid changeset when `to_stage` is missing
@@ -281,7 +281,7 @@ The feature file selectors require these new data attributes and test IDs on tic
     - `trigger` defaults to `"system"` when not provided
     - Accepts valid trigger values: `"system"`, `"sync"`, `"manual"`
   - Use `Agents.DataCase, async: true`
-- [ ] ⏸ **GREEN**: Implement `apps/agents/lib/agents/tickets/infrastructure/schemas/ticket_lifecycle_event_schema.ex`
+- [x] ✓ **GREEN**: Implement `apps/agents/lib/agents/tickets/infrastructure/schemas/ticket_lifecycle_event_schema.ex`
   - Module: `Agents.Tickets.Infrastructure.Schemas.TicketLifecycleEventSchema`
   - ```elixir
     use Ecto.Schema
@@ -304,11 +304,11 @@ The feature file selectors require these new data attributes and test IDs on tic
       |> foreign_key_constraint(:ticket_id)
     end
     ```
-- [ ] ⏸ **REFACTOR**: Clean up
+- [x] ✓ **REFACTOR**: Clean up
 
 ### 2.4 ProjectTicketSchema Update — Add Lifecycle Fields + Association
 
-- [ ] ⏸ **RED**: Write/update test `apps/agents/test/agents/tickets/infrastructure/schemas/project_ticket_schema_test.exs`
+- [x] ✓ **RED**: Write/update test `apps/agents/test/agents/tickets/infrastructure/schemas/project_ticket_schema_test.exs`
   - Tests:
     - Schema includes `lifecycle_stage` field with default `"open"`
     - Schema includes `lifecycle_stage_entered_at` field (nullable)
@@ -316,92 +316,92 @@ The feature file selectors require these new data attributes and test IDs on tic
     - Changeset accepts `lifecycle_stage` and `lifecycle_stage_entered_at`
     - Changeset validates `lifecycle_stage` is one of the 7 valid stages
   - Use `Agents.DataCase, async: true`
-- [ ] ⏸ **GREEN**: Update `apps/agents/lib/agents/tickets/infrastructure/schemas/project_ticket_schema.ex`
+- [x] ✓ **GREEN**: Update `apps/agents/lib/agents/tickets/infrastructure/schemas/project_ticket_schema.ex`
   - Add fields: `field(:lifecycle_stage, :string, default: "open")`, `field(:lifecycle_stage_entered_at, :utc_datetime)`
   - Add association: `has_many(:lifecycle_events, Agents.Tickets.Infrastructure.Schemas.TicketLifecycleEventSchema, foreign_key: :ticket_id)`
   - Update `changeset/2` to cast `[:lifecycle_stage, :lifecycle_stage_entered_at]`
   - Add validation: `validate_inclusion(:lifecycle_stage, @lifecycle_stages)` where `@lifecycle_stages ["open", "ready", "in_progress", "in_review", "ci_testing", "deployed", "closed"]`
   - Update `@type t` to include new fields
-- [ ] ⏸ **REFACTOR**: Keep changeset clean, extract stage constants if shared
+- [x] ✓ **REFACTOR**: Keep changeset clean, extract stage constants if shared
 
 ### 2.5 TicketLifecycleEventRepository
 
-- [ ] ⏸ **RED**: Write test `apps/agents/test/agents/tickets/infrastructure/repositories/ticket_lifecycle_event_repository_test.exs`
+- [x] ✓ **RED**: Write test `apps/agents/test/agents/tickets/infrastructure/repositories/ticket_lifecycle_event_repository_test.exs`
   - Tests:
     - `create/1` inserts a lifecycle event and returns `{:ok, schema}`
     - `list_for_ticket/1` returns ordered lifecycle events for a ticket (oldest first)
     - `list_for_ticket/1` returns `[]` for ticket with no events
     - `latest_for_ticket/1` returns the most recent event or nil
   - Use `Agents.DataCase` (requires DB)
-- [ ] ⏸ **GREEN**: Implement `apps/agents/lib/agents/tickets/infrastructure/repositories/ticket_lifecycle_event_repository.ex`
+- [x] ✓ **GREEN**: Implement `apps/agents/lib/agents/tickets/infrastructure/repositories/ticket_lifecycle_event_repository.ex`
   - Module: `Agents.Tickets.Infrastructure.Repositories.TicketLifecycleEventRepository`
   - `create/1` — inserts a `TicketLifecycleEventSchema` changeset
   - `list_for_ticket/1` — queries events ordered by `transitioned_at` ASC
   - `latest_for_ticket/1` — returns most recent event
-- [ ] ⏸ **REFACTOR**: Clean up
+- [x] ✓ **REFACTOR**: Clean up
 
 ### 2.6 ProjectTicketRepository Update — Preload Lifecycle Events
 
-- [ ] ⏸ **RED**: Write/update test `apps/agents/test/agents/tickets/infrastructure/repositories/project_ticket_repository_test.exs`
+- [x] ✓ **RED**: Write/update test `apps/agents/test/agents/tickets/infrastructure/repositories/project_ticket_repository_test.exs`
   - Tests:
     - `list_all/0` preloads `lifecycle_events` ordered by `transitioned_at`
     - `get_by_id/1` (new function) returns ticket with preloaded lifecycle events, or nil
     - `update_lifecycle_stage/3` atomically updates `lifecycle_stage` and `lifecycle_stage_entered_at`
   - Use `Agents.DataCase`
-- [ ] ⏸ **GREEN**: Update `apps/agents/lib/agents/tickets/infrastructure/repositories/project_ticket_repository.ex`
+- [x] ✓ **GREEN**: Update `apps/agents/lib/agents/tickets/infrastructure/repositories/project_ticket_repository.ex`
   - Update `list_all/0` to preload `:lifecycle_events` ordered by `transitioned_at`
   - Add `get_by_id/1` — loads a single ticket by ID with preloaded lifecycle events
   - Add `update_lifecycle_stage/3` — updates `lifecycle_stage` and `lifecycle_stage_entered_at` on a ticket
-- [ ] ⏸ **REFACTOR**: Ensure preload is efficient (single query)
+- [x] ✓ **REFACTOR**: Ensure preload is efficient (single query)
 
 ### 2.7 Boundary Updates
 
-- [ ] ⏸ Update `apps/agents/lib/agents/tickets/domain.ex` — Add exports:
+- [x] ✓ Update `apps/agents/lib/agents/tickets/domain.ex` — Add exports:
   - `Entities.TicketLifecycleEvent`
   - `Entities.Ticket.View`
   - `Policies.TicketLifecyclePolicy`
   - `Events.TicketStageChanged`
-- [ ] ⏸ Update `apps/agents/lib/agents/tickets/application.ex` — Add deps:
+- [x] ✓ Update `apps/agents/lib/agents/tickets/application.ex` — Add deps:
   - `Agents.Tickets.Infrastructure` (use cases need repos)
   - `Perme8.Events` (for event bus)
   - Add export: `UseCases.RecordStageTransition`
-- [ ] ⏸ Update `apps/agents/lib/agents/tickets/infrastructure.ex` — Add exports:
+- [x] ✓ Update `apps/agents/lib/agents/tickets/infrastructure.ex` — Add exports:
   - `Schemas.TicketLifecycleEventSchema`
   - `Repositories.TicketLifecycleEventRepository`
-- [ ] ⏸ Update `apps/agents/lib/agents/tickets.ex` (facade) — Add deps:
+- [x] ✓ Update `apps/agents/lib/agents/tickets.ex` (facade) — Add deps:
   - `Perme8.Events` (if not already present, for domain event types)
 
 ### 2.8 Facade Update — Agents.Tickets
 
-- [ ] ⏸ **RED**: Write/update test `apps/agents/test/agents/tickets_test.exs`
+- [x] ✓ **RED**: Write/update test `apps/agents/test/agents/tickets_test.exs`
   - Tests:
     - `record_ticket_stage_transition/3` delegates to `RecordStageTransition.execute/3`
     - `get_ticket_lifecycle/1` returns ticket with lifecycle events
     - `list_project_tickets/2` returns tickets with lifecycle fields populated
   - Use `Agents.DataCase`
-- [ ] ⏸ **GREEN**: Update `apps/agents/lib/agents/tickets.ex`
+- [x] ✓ **GREEN**: Update `apps/agents/lib/agents/tickets.ex`
   - Add `record_ticket_stage_transition/3` — delegates to `RecordStageTransition.execute/3`
   - Add `get_ticket_lifecycle/1` — loads ticket by ID with preloaded lifecycle events, converts to domain entity
   - Ensure `list_project_tickets/2` returns tickets with `lifecycle_stage`, `lifecycle_stage_entered_at`, and `lifecycle_events` populated
-- [ ] ⏸ **REFACTOR**: Keep facade thin
+- [x] ✓ **REFACTOR**: Keep facade thin
 
 ### 2.9 TicketSyncServer Update — Record Lifecycle Events on Sync
 
-- [ ] ⏸ **RED**: Write/update test `apps/agents/test/agents/tickets/infrastructure/ticket_sync_server_test.exs`
+- [x] ✓ **RED**: Write/update test `apps/agents/test/agents/tickets/infrastructure/ticket_sync_server_test.exs`
   - Tests:
     - When a new ticket is synced for the first time, a lifecycle event with `from_stage: nil, to_stage: "open", trigger: "sync"` is created
     - When a ticket's state changes during sync (e.g., "open" → "closed"), a lifecycle event is recorded with `trigger: "sync"`
     - Existing ticket synced with same state does NOT create a duplicate lifecycle event
   - Use `Agents.DataCase`
-- [ ] ⏸ **GREEN**: Update `apps/agents/lib/agents/tickets/infrastructure/ticket_sync_server.ex`
+- [x] ✓ **GREEN**: Update `apps/agents/lib/agents/tickets/infrastructure/ticket_sync_server.ex`
   - After `sync_remote_ticket/2` succeeds, check if the ticket is new (was just inserted) → record initial lifecycle event `{nil, "open", "sync"}`
   - After `sync_remote_ticket/2` succeeds on existing ticket, check if `state` changed → record lifecycle event `{old_stage, new_stage, "sync"}`
   - Use the `RecordStageTransition` use case or directly call the lifecycle event repository (since TicketSyncServer is in infrastructure, it can call repos directly; alternatively, call through the facade)
-- [ ] ⏸ **REFACTOR**: Minimise changes to sync flow, keep lifecycle recording as a post-sync step
+- [x] ✓ **REFACTOR**: Minimise changes to sync flow, keep lifecycle recording as a post-sync step
 
 ### 2.10 UI Component Updates — Ticket Card Lifecycle Badge + Duration
 
-- [ ] ⏸ **RED**: Write test `apps/agents_web/test/live/dashboard/lifecycle_display_test.exs`
+- [x] ✓ **RED**: Write test `apps/agents_web/test/live/dashboard/lifecycle_display_test.exs`
   - Tests:
     - Ticket card renders `[data-testid="ticket-lifecycle-stage"]` with correct stage label
     - Ticket card renders `[data-testid="ticket-lifecycle-duration"]` with formatted duration
@@ -412,7 +412,7 @@ The feature file selectors require these new data attributes and test IDs on tic
     - Each of the 7 stages renders the correct human-readable label
     - Duration formatting: "2h 15m", "3d 4h", "45m", "0m"
   - Use `AgentsWeb.ConnCase`
-- [ ] ⏸ **GREEN**: Update `apps/agents_web/lib/live/dashboard/components/session_components.ex`
+- [x] ✓ **GREEN**: Update `apps/agents_web/lib/live/dashboard/components/session_components.ex`
   - Update `ticket_card/1` to render lifecycle stage badge:
     ```heex
     <span
@@ -434,21 +434,21 @@ The feature file selectors require these new data attributes and test IDs on tic
     ```
   - Add private helper `lifecycle_stage_badge_class/1` for stage-specific colors
   - Import or alias `Agents.Tickets.Domain.Entities.Ticket.View`
-- [ ] ⏸ **REFACTOR**: Extract lifecycle display into sub-component if it grows too large
+- [x] ✓ **REFACTOR**: Extract lifecycle display into sub-component if it grows too large
 
 ### 2.11 Template Updates — Data Attributes for BDD
 
-- [ ] ⏸ **RED**: Verify BDD selectors require specific data attributes (already defined above)
-- [ ] ⏸ **GREEN**: Update `apps/agents_web/lib/live/dashboard/index.html.heex`
+- [x] ✓ **RED**: Verify BDD selectors require specific data attributes (already defined above)
+- [x] ✓ **GREEN**: Update `apps/agents_web/lib/live/dashboard/index.html.heex`
   - Add `data-testid="triage-ticket-item"` to the `<li>` wrapper around each triage ticket card
   - Add `data-lifecycle-stage={ticket.lifecycle_stage}` to the `<li>` wrapper
   - Add `data-ticket-id` attribute for fixture identification (e.g., `data-ticket-id={"ticket-#{ticket.number}"}`)
   - These attributes enable the BDD selectors like `[data-testid='triage-ticket-item'][data-lifecycle-stage='open']`
-- [ ] ⏸ **REFACTOR**: Ensure attributes don't conflict with existing data attributes
+- [x] ✓ **REFACTOR**: Ensure attributes don't conflict with existing data attributes
 
 ### 2.12 Lifecycle Timeline Component — Ticket Detail Tab
 
-- [ ] ⏸ **RED**: Write test `apps/agents_web/test/live/dashboard/lifecycle_timeline_test.exs`
+- [x] ✓ **RED**: Write test `apps/agents_web/test/live/dashboard/lifecycle_timeline_test.exs`
   - Tests:
     - Timeline is visible when ticket has lifecycle events and detail tab is active
     - Timeline renders correct number of `[data-testid='ticket-lifecycle-timeline-stage']` elements
@@ -457,35 +457,35 @@ The feature file selectors require these new data attributes and test IDs on tic
     - `data-relative-width` values sum approximately to 100 (or are proportionally correct)
     - Timeline is hidden when ticket has no lifecycle events
   - Use `AgentsWeb.ConnCase`
-- [ ] ⏸ **GREEN**: Add `lifecycle_timeline/1` component to `apps/agents_web/lib/live/dashboard/components/session_components.ex`
+- [x] ✓ **GREEN**: Add `lifecycle_timeline/1` component to `apps/agents_web/lib/live/dashboard/components/session_components.ex`
   - Component accepts a ticket assign with lifecycle_events preloaded
   - Renders `[data-testid="ticket-lifecycle-timeline"]` container
   - For each completed stage: renders `[data-testid="ticket-lifecycle-timeline-stage"]` with stage label and duration
   - For each stage: renders `[data-testid="ticket-lifecycle-duration-bar"]` with `data-stage` and `data-relative-width` attributes
   - Uses `Ticket.View.lifecycle_timeline_data/1` for data derivation
   - Duration bars use Tailwind width classes or inline styles based on `data-relative-width`
-- [ ] ⏸ **GREEN**: Update ticket detail tab in `index.html.heex` or `index.ex` to render `lifecycle_timeline/1` when the "ticket" tab is active and a ticket is selected
-- [ ] ⏸ **REFACTOR**: Extract timeline data preparation to keep component thin
+- [x] ✓ **GREEN**: Update ticket detail tab in `index.html.heex` or `index.ex` to render `lifecycle_timeline/1` when the "ticket" tab is active and a ticket is selected
+- [x] ✓ **REFACTOR**: Extract timeline data preparation to keep component thin
 
 ### 2.13 LiveView PubSub — Real-Time Stage Transition Updates
 
-- [ ] ⏸ **RED**: Write test `apps/agents_web/test/live/dashboard/lifecycle_realtime_test.exs`
+- [x] ✓ **RED**: Write test `apps/agents_web/test/live/dashboard/lifecycle_realtime_test.exs`
   - Tests:
     - When a `TicketStageChanged` event is broadcast, the LiveView updates the ticket's lifecycle stage in the assign
     - The ticket card re-renders with the new stage label and reset duration
     - Multiple tickets can receive independent stage transitions
   - Use `AgentsWeb.ConnCase`
-- [ ] ⏸ **GREEN**: Update `apps/agents_web/lib/live/dashboard/index.ex`
+- [x] ✓ **GREEN**: Update `apps/agents_web/lib/live/dashboard/index.ex`
   - Subscribe to ticket lifecycle events (already subscribes to `"sessions:tickets"`)
   - Add `handle_info/2` clause for `{:ticket_stage_changed, ticket_id, to_stage, transitioned_at}` (or pattern match on the `TicketStageChanged` domain event struct)
   - Update the matching ticket in `socket.assigns.tickets` with the new `lifecycle_stage` and `lifecycle_stage_entered_at`
   - Optionally broadcast via the existing PubSub topic or a new `"tickets:lifecycle"` topic
-- [ ] ⏸ **REFACTOR**: Use `EventProcessor` pattern if the LiveView already uses it for event delegation
+- [x] ✓ **REFACTOR**: Use `EventProcessor` pattern if the LiveView already uses it for event delegation
 
 ### 2.14 BDD Fixture Support
 
-- [ ] ⏸ **RED**: The BDD feature file uses `?fixture=ticket_lifecycle_*` query params. These require fixture handling in the LiveView or test setup.
-- [ ] ⏸ **GREEN**: Implement fixture handling for BDD scenarios
+- [x] ✓ **RED**: The BDD feature file uses `?fixture=ticket_lifecycle_*` query params. These require fixture handling in the LiveView or test setup.
+- [x] ✓ **GREEN**: Implement fixture handling for BDD scenarios
   - The fixture system uses query params (e.g., `?fixture=ticket_lifecycle_in_progress`) to seed the LiveView with test data
   - In `handle_params/3`, detect fixture params and override `tickets` assign with fixture data
   - This follows the pattern established by `session-lifecycle-state.browser.feature` which uses `?fixture=session_lifecycle_*`
@@ -500,14 +500,14 @@ The feature file selectors require these new data attributes and test IDs on tic
     - `ticket_lifecycle_closed` — closed ticket
     - `ticket_lifecycle_no_events` — ticket with no lifecycle events (defaults to "open")
   - Add `data-testid="simulate-ticket-transition-in-progress-to-in-review"` button (only rendered in test/fixture mode)
-- [ ] ⏸ **REFACTOR**: Extract fixture data into a shared module if pattern grows
+- [x] ✓ **REFACTOR**: Extract fixture data into a shared module if pattern grows
 
 ### Phase 2 Validation
 
-- [ ] ⏸ All infrastructure tests pass (`mix test apps/agents/test/agents/tickets/infrastructure/`)
+- [x] ✓ All infrastructure tests pass (`mix test apps/agents/test/agents/tickets/infrastructure/`)
 - [ ] ⏸ All interface tests pass (`mix test apps/agents_web/test/live/dashboard/`)
-- [ ] ⏸ Migrations run (`mix ecto.migrate`)
-- [ ] ⏸ No boundary violations (`mix boundary`)
+- [x] ✓ Migrations run (`mix ecto.migrate`)
+- [x] ✓ No boundary violations (`mix boundary`)
 - [ ] ⏸ Full test suite passes (`mix test`)
 
 ---
