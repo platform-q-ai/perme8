@@ -1,4 +1,6 @@
 defmodule Agents.Test.TicketFixtures do
+  @moduledoc false
+
   def issue_map(overrides \\ %{}) do
     Map.merge(
       %{
