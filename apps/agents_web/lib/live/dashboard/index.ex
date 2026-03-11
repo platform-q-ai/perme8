@@ -203,10 +203,23 @@ defmodule AgentsWeb.DashboardLive.Index do
     if instruction == "" do
       {:noreply, put_flash(socket, :error, "Instruction is required")}
     else
-      socket.assigns.current_task
-      |> SessionStateMachine.state_from_task()
-      |> SessionStateMachine.submission_route()
-      |> route_message_submission(socket, instruction, ticket_number, ticket)
+      route =
+        socket.assigns.current_task
+        |> SessionStateMachine.state_from_task()
+        |> SessionStateMachine.submission_route()
+
+      # When the submission comes from the ticket tab for a ticket that
+      # isn't associated with the current task, force a new task instead
+      # of following up on an unrelated running session.
+      {route, socket} =
+        if route == :follow_up and is_integer(ticket_number) and
+             not ticket_owns_current_task?(ticket, socket.assigns.current_task) do
+          {:new_or_resume, assign(socket, :composing_new, true)}
+        else
+          {route, socket}
+        end
+
+      route_message_submission(route, socket, instruction, ticket_number, ticket)
     end
   end
 
@@ -477,7 +490,15 @@ defmodule AgentsWeb.DashboardLive.Index do
     ticket = find_ticket_by_number(socket.assigns.tickets, number)
     container_id = ticket && ticket.associated_container_id
 
-    if is_binary(container_id) do
+    # Only navigate to the associated container if it actually exists in the
+    # sessions list. A stale associated_container_id (from a deleted session)
+    # would otherwise fall through to the default session in handle_params,
+    # causing the ticket tab to display on an unrelated session.
+    session_exists =
+      is_binary(container_id) and
+        Enum.any?(socket.assigns.sessions, &(&1.container_id == container_id))
+
+    if session_exists do
       {:noreply,
        socket
        |> assign(:active_ticket_number, number)
@@ -2971,6 +2992,20 @@ defmodule AgentsWeb.DashboardLive.Index do
   end
 
   defp parse_ticket_number_param(_), do: nil
+
+  # Returns true when the ticket's associated task matches the current task,
+  # meaning a follow-up message should go to that task. Returns false when
+  # the ticket has no task or is linked to a different task — in that case
+  # a new task should be created for the ticket.
+  defp ticket_owns_current_task?(nil, _current_task), do: false
+  defp ticket_owns_current_task?(_ticket, nil), do: false
+
+  defp ticket_owns_current_task?(%{associated_task_id: task_id}, %{id: current_id})
+       when is_binary(task_id) and is_binary(current_id) do
+    task_id == current_id
+  end
+
+  defp ticket_owns_current_task?(_ticket, _current_task), do: false
 
   defp ensure_ticket_reference(instruction, nil, _ticket), do: instruction
 
