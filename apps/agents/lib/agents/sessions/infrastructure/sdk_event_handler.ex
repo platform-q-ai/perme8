@@ -40,18 +40,15 @@ defmodule Agents.Sessions.Infrastructure.SdkEventHandler do
           {:ok, updated_session}
 
         {:skip, reason} ->
-          Logger.debug("SdkEventHandler: skipped event",
-            task_id: session.task_id,
-            event_type: event_type,
-            skip_reason: reason
+          Logger.debug(
+            "SdkEventHandler: skipped event #{event_type} for task #{session.task_id}: #{reason}"
           )
 
           {:skip, reason}
       end
     else
-      Logger.debug("SdkEventHandler: not relevant event",
-        task_id: session.task_id,
-        event_type: event_type
+      Logger.debug(
+        "SdkEventHandler: not relevant event #{event_type} for task #{session.task_id}"
       )
 
       {:skip, :not_relevant}
