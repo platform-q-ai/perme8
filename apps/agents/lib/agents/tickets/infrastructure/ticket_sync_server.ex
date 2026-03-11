@@ -190,7 +190,7 @@ defmodule Agents.Tickets.Infrastructure.TicketSyncServer do
            trigger: "sync"
          }) do
       {:ok, _event} ->
-        :ok = maybe_update_lifecycle_stage(state, synced_ticket.id, stage, now)
+        maybe_update_lifecycle_stage(state, synced_ticket.id, stage, now)
 
         Phoenix.PubSub.broadcast(
           state.pubsub,
@@ -218,7 +218,7 @@ defmodule Agents.Tickets.Infrastructure.TicketSyncServer do
              trigger: "sync"
            }) do
         {:ok, _event} ->
-          :ok = maybe_update_lifecycle_stage(state, synced_ticket.id, to_stage, now)
+          maybe_update_lifecycle_stage(state, synced_ticket.id, to_stage, now)
 
           Phoenix.PubSub.broadcast(
             state.pubsub,
@@ -239,6 +239,7 @@ defmodule Agents.Tickets.Infrastructure.TicketSyncServer do
 
       {:error, reason} ->
         Logger.warning("Ticket lifecycle stage update failed: #{inspect(reason)}")
+        :ok
     end
   end
 
