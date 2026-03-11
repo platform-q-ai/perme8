@@ -928,39 +928,7 @@ defmodule AgentsWeb.DashboardLive.Components.SessionComponents do
   attr(:auth_refreshing, :map, default: %{})
 
   def ticket_card(assigns) do
-    session = assigns[:session]
-
-    # Normalize session fields: optimistic entries use :instruction/:queued_at
-    # instead of :title/:latest_at and may lack keys like :container_id.
-    # Normalize once here so the template can use dot access uniformly.
-    session =
-      if session do
-        defaults = %{
-          latest_at: nil,
-          title: nil,
-          container_id: nil,
-          latest_status: nil,
-          latest_error: nil,
-          latest_task_id: nil,
-          started_at: nil,
-          completed_at: nil,
-          todo_items: nil,
-          session_summary: nil,
-          image: nil
-        }
-
-        session = Map.merge(defaults, session)
-
-        session
-        |> then(fn s ->
-          if s.latest_at, do: s, else: Map.put(s, :latest_at, s[:queued_at])
-        end)
-        |> then(fn s ->
-          if s.title, do: s, else: Map.put(s, :title, s[:instruction])
-        end)
-      else
-        session
-      end
+    session = normalize_session(assigns[:session])
 
     assigns =
       assigns
@@ -1244,6 +1212,33 @@ defmodule AgentsWeb.DashboardLive.Components.SessionComponents do
   end
 
   # ---- Card Helpers ----
+
+  # Normalize session fields: optimistic entries use :instruction/:queued_at
+  # instead of :title/:latest_at and may lack keys like :container_id.
+  # Fills defaults so the template can use dot access uniformly.
+  defp normalize_session(nil), do: nil
+
+  defp normalize_session(session) do
+    defaults = %{
+      latest_at: nil,
+      title: nil,
+      container_id: nil,
+      latest_status: nil,
+      latest_error: nil,
+      latest_task_id: nil,
+      started_at: nil,
+      completed_at: nil,
+      todo_items: nil,
+      session_summary: nil,
+      image: nil
+    }
+
+    session = Map.merge(defaults, session)
+
+    session
+    |> then(fn s -> if s.latest_at, do: s, else: Map.put(s, :latest_at, s[:queued_at]) end)
+    |> then(fn s -> if s.title, do: s, else: Map.put(s, :title, s[:instruction]) end)
+  end
 
   # Test ID generation: ticket-backed cards use ticket number, session-only use slugified title
   defp card_test_id(:triage, %{number: n}, _session), do: "triage-ticket-item-#{n}"

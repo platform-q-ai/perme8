@@ -1289,18 +1289,7 @@ defmodule AgentsWeb.DashboardLive.Index do
       {client_id, monitors} ->
         # Revert optimistic ticket update if this was a ticket-initiated start
         {ticket_number, pending} = Map.pop(socket.assigns.pending_ticket_starts, client_id)
-
-        socket =
-          if ticket_number do
-            tickets =
-              update_ticket_by_number(socket.assigns.tickets, ticket_number, fn t ->
-                %{t | task_status: nil, associated_task_id: nil, session_state: "idle"}
-              end)
-
-            assign(socket, :tickets, tickets)
-          else
-            socket
-          end
+        socket = maybe_revert_optimistic_ticket(socket, ticket_number)
 
         {:noreply,
          socket
@@ -2289,6 +2278,17 @@ defmodule AgentsWeb.DashboardLive.Index do
   end
 
   defp find_ticket_by_number(_tickets, _number), do: nil
+
+  defp maybe_revert_optimistic_ticket(socket, nil), do: socket
+
+  defp maybe_revert_optimistic_ticket(socket, ticket_number) do
+    tickets =
+      update_ticket_by_number(socket.assigns.tickets, ticket_number, fn t ->
+        %{t | task_status: nil, associated_task_id: nil, session_state: "idle"}
+      end)
+
+    assign(socket, :tickets, tickets)
+  end
 
   defp update_ticket_by_number(tickets, number, update_fn) when is_list(tickets) do
     Enum.map(tickets, fn ticket ->
