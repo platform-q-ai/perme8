@@ -9,10 +9,10 @@ defmodule Agents.Infrastructure.Mcp.ServerTest do
       assert {:init, 2} in functions
     end
 
-    test "registers all 15 tool components (6 knowledge + 8 jarga + 1 tools)" do
+    test "registers all 23 tool components (6 knowledge + 8 jarga + 1 tools + 8 ticket)" do
       components = Server.__components__(:tool)
 
-      assert length(components) == 15
+      assert length(components) == 23
     end
 
     test "registers tools.search tool" do
@@ -62,6 +62,20 @@ defmodule Agents.Infrastructure.Mcp.ServerTest do
       names = Enum.map(tools, & &1.name)
 
       assert "knowledge.relate" in names
+    end
+
+    test "registers ticket.read tool" do
+      tools = Server.__components__(:tool)
+      names = Enum.map(tools, & &1.name)
+
+      assert "ticket.read" in names
+    end
+
+    test "registers ticket.list tool" do
+      tools = Server.__components__(:tool)
+      names = Enum.map(tools, & &1.name)
+
+      assert "ticket.list" in names
     end
 
     test "server name is perme8-mcp" do
