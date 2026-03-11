@@ -2376,6 +2376,7 @@ defmodule AgentsWeb.DashboardLive.Index do
   defp ticket_lifecycle_fixture_tickets("ticket_lifecycle_in_progress") do
     [
       lifecycle_fixture_ticket(402, "Lifecycle in progress",
+        external_id: "in-progress-ticket",
         lifecycle_stage: "in_progress",
         lifecycle_stage_entered_at: DateTime.add(DateTime.utc_now(), -1800, :second)
       )
@@ -2385,6 +2386,7 @@ defmodule AgentsWeb.DashboardLive.Index do
   defp ticket_lifecycle_fixture_tickets("ticket_lifecycle_in_progress_duration") do
     [
       lifecycle_fixture_ticket(402, "Lifecycle in progress duration",
+        external_id: "in-progress-duration-ticket",
         lifecycle_stage: "in_progress",
         lifecycle_stage_entered_at: DateTime.add(DateTime.utc_now(), -7200, :second)
       )
@@ -2444,6 +2446,7 @@ defmodule AgentsWeb.DashboardLive.Index do
 
     [
       lifecycle_fixture_ticket(430, "Timeline fixture",
+        external_id: "timeline-ticket",
         lifecycle_stage: "in_progress",
         lifecycle_stage_entered_at: DateTime.add(now, -6_000, :second),
         lifecycle_events: events
@@ -2483,6 +2486,7 @@ defmodule AgentsWeb.DashboardLive.Index do
 
     [
       lifecycle_fixture_ticket(431, "Relative durations fixture",
+        external_id: "relative-durations-ticket",
         lifecycle_stage: "in_progress",
         lifecycle_stage_entered_at: DateTime.add(now, -6_000, :second),
         lifecycle_events: events
@@ -2513,7 +2517,6 @@ defmodule AgentsWeb.DashboardLive.Index do
     [
       lifecycle_fixture_ticket(451, "Closed ticket fixture",
         external_id: "closed-ticket",
-        state: "closed",
         lifecycle_stage: "closed",
         lifecycle_stage_entered_at: DateTime.add(DateTime.utc_now(), -3600, :second)
       )
