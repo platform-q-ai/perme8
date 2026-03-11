@@ -39,7 +39,9 @@ defmodule Agents.Tickets.Infrastructure.Subscribers.GithubTicketPushHandler do
 
     issue_body = if body in [nil, ""], do: "", else: body
 
-    case GithubProjectClient.create_issue("#{title}\n#{issue_body}", opts) do
+    attrs = %{"title" => title, "body" => issue_body}
+
+    case GithubProjectClient.create_issue(attrs, opts) do
       {:ok, issue} ->
         update_local_ticket(ticket_id, issue)
         broadcast_tickets_refresh()
