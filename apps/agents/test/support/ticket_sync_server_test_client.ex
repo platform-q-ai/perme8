@@ -14,6 +14,4 @@ defmodule Agents.Test.TicketSyncServerTestClient do
       [] -> {{:ok, []}, []}
     end)
   end
-
-  def close_issue(_issue_number, _opts), do: :ok
 end

@@ -6,6 +6,52 @@ defmodule Agents.TicketsTest do
   alias Agents.Tickets.Infrastructure.Repositories.ProjectTicketRepository
   alias Agents.Tickets.Infrastructure.Schemas.ProjectTicketSchema
 
+  defmodule SuccessGithubClient do
+    @behaviour Agents.Application.Behaviours.GithubTicketClientBehaviour
+
+    @impl true
+    def update_issue(number, _attrs, _opts),
+      do: {:ok, %{number: number, state: "closed"}}
+
+    @impl true
+    def get_issue(_, _), do: {:error, :not_implemented}
+    @impl true
+    def list_issues(_), do: {:error, :not_implemented}
+    @impl true
+    def create_issue(_, _), do: {:error, :not_implemented}
+    @impl true
+    def close_issue_with_comment(_, _), do: {:error, :not_implemented}
+    @impl true
+    def add_comment(_, _, _), do: {:error, :not_implemented}
+    @impl true
+    def add_sub_issue(_, _, _), do: {:error, :not_implemented}
+    @impl true
+    def remove_sub_issue(_, _, _), do: {:error, :not_implemented}
+  end
+
+  defmodule FailingGithubClient do
+    @behaviour Agents.Application.Behaviours.GithubTicketClientBehaviour
+
+    @impl true
+    def update_issue(_number, _attrs, _opts),
+      do: {:error, {:unexpected_status, 502, "Bad Gateway"}}
+
+    @impl true
+    def get_issue(_, _), do: {:error, :not_implemented}
+    @impl true
+    def list_issues(_), do: {:error, :not_implemented}
+    @impl true
+    def create_issue(_, _), do: {:error, :not_implemented}
+    @impl true
+    def close_issue_with_comment(_, _), do: {:error, :not_implemented}
+    @impl true
+    def add_comment(_, _, _), do: {:error, :not_implemented}
+    @impl true
+    def add_sub_issue(_, _, _), do: {:error, :not_implemented}
+    @impl true
+    def remove_sub_issue(_, _, _), do: {:error, :not_implemented}
+  end
+
   defp create_ticket!(number, attrs \\ %{}) do
     base = %{
       number: number,
@@ -73,6 +119,42 @@ defmodule Agents.TicketsTest do
       assert ticket.lifecycle_stage == "closed"
       assert ticket.lifecycle_stage_entered_at == ~U[2026-03-11 14:00:00Z]
       assert ticket.lifecycle_events == []
+    end
+  end
+
+  describe "close_project_ticket/1" do
+    setup do
+      previous = Application.get_env(:agents, :github_ticket_client)
+      on_exit(fn -> Application.put_env(:agents, :github_ticket_client, previous) end)
+      :ok
+    end
+
+    test "closes on GitHub first, then marks as closed locally" do
+      Application.put_env(:agents, :github_ticket_client, SuccessGithubClient)
+      create_ticket!(700, %{state: "open"})
+
+      assert :ok = Tickets.close_project_ticket(700)
+
+      refreshed = Repo.get_by!(ProjectTicketSchema, number: 700)
+      assert refreshed.state == "closed"
+    end
+
+    test "returns error and does not close locally when GitHub fails" do
+      Application.put_env(:agents, :github_ticket_client, FailingGithubClient)
+      create_ticket!(701, %{state: "open"})
+
+      assert {:error, {:unexpected_status, 502, "Bad Gateway"}} =
+               Tickets.close_project_ticket(701)
+
+      # Ticket must remain open locally
+      refreshed = Repo.get_by!(ProjectTicketSchema, number: 701)
+      assert refreshed.state == "open"
+    end
+
+    test "succeeds even when ticket does not exist locally (GitHub already closed)" do
+      Application.put_env(:agents, :github_ticket_client, SuccessGithubClient)
+
+      assert :ok = Tickets.close_project_ticket(9999)
     end
   end
 end
