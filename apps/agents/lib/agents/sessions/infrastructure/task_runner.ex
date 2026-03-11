@@ -782,6 +782,13 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
       {:skip, _reason} ->
         state
     end
+  rescue
+    e ->
+      Logger.warning(
+        "Session SDK event handling failed for task #{state.task_id}: #{Exception.message(e)}"
+      )
+
+      state
   end
 
   defp process_child_session_event(

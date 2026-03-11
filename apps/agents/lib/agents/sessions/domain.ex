@@ -4,8 +4,8 @@ defmodule Agents.Sessions.Domain do
 
   Contains pure business logic with no external dependencies:
   - Entities: Task, Session, TodoItem, TodoList, QueueSnapshot, LaneEntry
-  - Policies: TaskPolicy, SessionLifecyclePolicy, QueueEngine, QueuePolicy, ImagePolicy, RetryPolicy
-  - Events: Task lifecycle events, Session lifecycle events, Queue events
+  - Policies: TaskPolicy, SessionLifecyclePolicy, QueueEngine, QueuePolicy, ImagePolicy, RetryPolicy, SdkEventPolicy, SdkEventTypes, SdkErrorPolicy
+  - Events: Task lifecycle events, Session lifecycle events, Queue events, SDK session events
   """
 
   use Boundary,
@@ -39,6 +39,16 @@ defmodule Agents.Sessions.Domain do
       Events.QueueSnapshotUpdated,
       Events.SessionStateChanged,
       Events.SessionWarmingStarted,
-      Events.SessionWarmed
+      Events.SessionWarmed,
+      Events.SessionCompacted,
+      Events.SessionDiffProduced,
+      Events.SessionErrorOccurred,
+      Events.SessionFileEdited,
+      Events.SessionMessageUpdated,
+      Events.SessionMetadataUpdated,
+      Events.SessionPermissionRequested,
+      Events.SessionPermissionResolved,
+      Events.SessionRetrying,
+      Events.SessionServerConnected
     ]
 end
