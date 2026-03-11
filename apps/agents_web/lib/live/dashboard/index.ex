@@ -13,6 +13,8 @@ defmodule AgentsWeb.DashboardLive.Index do
   alias Agents.Sessions.Domain.Policies.SessionLifecyclePolicy
   alias Agents.Tickets
   alias Agents.Tickets.Domain.Entities.Ticket
+  alias Agents.Tickets.Domain.Entities.TicketLifecycleEvent
+  alias Agents.Tickets.Domain.Events.TicketStageChanged
   alias Agents.Tickets.Domain.Policies.TicketEnrichmentPolicy
   alias Agents.Tickets.Domain.Policies.TicketHierarchyPolicy
   require Logger
@@ -81,6 +83,7 @@ defmodule AgentsWeb.DashboardLive.Index do
      |> assign(:session_search, "")
      |> assign(:status_filter, :open)
      |> assign(:collapsed_parents, MapSet.new())
+     |> assign(:fixture, nil)
      |> assign(:syncing_tickets, false)
      |> assign_session_state()
      |> assign(:form, to_form(%{"instruction" => ""}))}
@@ -88,6 +91,7 @@ defmodule AgentsWeb.DashboardLive.Index do
 
   @impl true
   def handle_params(params, _url, socket) do
+    socket = maybe_apply_ticket_lifecycle_fixture(socket, params)
     sessions = socket.assigns.sessions
     tasks = tasks_snapshot_or_reload(socket)
     selected_container_id = resolve_selected_container_id(params, sessions)
@@ -534,6 +538,13 @@ defmodule AgentsWeb.DashboardLive.Index do
       end
 
     {:noreply, assign(socket, :collapsed_parents, updated)}
+  end
+
+  @impl true
+  def handle_event("simulate_ticket_transition_in_progress_to_in_review", _params, socket) do
+    transitioned_at = DateTime.utc_now() |> DateTime.truncate(:second)
+    send(self(), {:ticket_stage_changed, 402, "in_review", transitioned_at})
+    {:noreply, socket}
   end
 
   @impl true
@@ -1368,6 +1379,19 @@ defmodule AgentsWeb.DashboardLive.Index do
 
     {:noreply,
      socket |> assign(:tickets, tickets) |> assign(:active_ticket_number, active_ticket_number)}
+  end
+
+  @impl true
+  def handle_info({:ticket_stage_changed, ticket_id, to_stage, transitioned_at}, socket) do
+    {:noreply, update_ticket_lifecycle_assigns(socket, ticket_id, to_stage, transitioned_at)}
+  end
+
+  @impl true
+  def handle_info(%TicketStageChanged{} = event, socket) do
+    transitioned_at = event.occurred_at || DateTime.utc_now() |> DateTime.truncate(:second)
+
+    {:noreply,
+     update_ticket_lifecycle_assigns(socket, event.ticket_id, event.to_stage, transitioned_at)}
   end
 
   @impl true
@@ -2290,6 +2314,19 @@ defmodule AgentsWeb.DashboardLive.Index do
     assign(socket, :tickets, tickets)
   end
 
+  defp update_ticket_lifecycle_assigns(socket, ticket_id, to_stage, transitioned_at) do
+    tickets =
+      map_ticket_tree(socket.assigns.tickets, fn ticket ->
+        if lifecycle_ticket_match?(ticket, ticket_id) do
+          %{ticket | lifecycle_stage: to_stage, lifecycle_stage_entered_at: transitioned_at}
+        else
+          ticket
+        end
+      end)
+
+    assign(socket, :tickets, tickets)
+  end
+
   defp update_ticket_by_number(tickets, number, update_fn) when is_list(tickets) do
     Enum.map(tickets, fn ticket ->
       cond do
@@ -2303,6 +2340,220 @@ defmodule AgentsWeb.DashboardLive.Index do
           ticket
       end
     end)
+  end
+
+  defp lifecycle_ticket_match?(ticket, ticket_id) do
+    candidate_ids = [Map.get(ticket, :id), Map.get(ticket, :number)]
+    ticket_id in candidate_ids
+  end
+
+  defp maybe_apply_ticket_lifecycle_fixture(socket, %{"fixture" => fixture})
+       when is_binary(fixture) do
+    case ticket_lifecycle_fixture_tickets(fixture) do
+      [] ->
+        assign(socket, :fixture, fixture)
+
+      tickets ->
+        active_ticket_number = tickets |> List.first() |> then(&(&1 && &1.number))
+
+        socket
+        |> assign(:fixture, fixture)
+        |> assign(:sessions, [])
+        |> assign(:tasks_snapshot, [])
+        |> assign(:tickets, tickets)
+        |> assign(:active_ticket_number, active_ticket_number)
+    end
+  end
+
+  defp maybe_apply_ticket_lifecycle_fixture(socket, _params) do
+    assign(socket, :fixture, nil)
+  end
+
+  def ticket_data_id(ticket) do
+    Map.get(ticket, :external_id) || "ticket-#{ticket.number}"
+  end
+
+  defp ticket_lifecycle_fixture_tickets("ticket_lifecycle_in_progress") do
+    [
+      lifecycle_fixture_ticket(402, "Lifecycle in progress",
+        lifecycle_stage: "in_progress",
+        lifecycle_stage_entered_at: DateTime.add(DateTime.utc_now(), -1800, :second)
+      )
+    ]
+  end
+
+  defp ticket_lifecycle_fixture_tickets("ticket_lifecycle_in_progress_duration") do
+    [
+      lifecycle_fixture_ticket(402, "Lifecycle in progress duration",
+        lifecycle_stage: "in_progress",
+        lifecycle_stage_entered_at: DateTime.add(DateTime.utc_now(), -7200, :second)
+      )
+    ]
+  end
+
+  defp ticket_lifecycle_fixture_tickets("ticket_lifecycle_all_stages") do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    [
+      {5001, "open"},
+      {5002, "ready"},
+      {5003, "in_progress"},
+      {5004, "in_review"},
+      {5005, "ci_testing"},
+      {5006, "deployed"},
+      {5007, "closed"}
+    ]
+    |> Enum.with_index()
+    |> Enum.map(fn {{number, stage}, idx} ->
+      lifecycle_fixture_ticket(number, "Lifecycle stage #{stage}",
+        lifecycle_stage: stage,
+        lifecycle_stage_entered_at: DateTime.add(now, -3600 * (idx + 1), :second)
+      )
+    end)
+  end
+
+  defp ticket_lifecycle_fixture_tickets("ticket_lifecycle_timeline") do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    events = [
+      TicketLifecycleEvent.new(%{
+        id: 1,
+        ticket_id: 430,
+        from_stage: nil,
+        to_stage: "open",
+        transitioned_at: DateTime.add(now, -18_000, :second),
+        trigger: "sync"
+      }),
+      TicketLifecycleEvent.new(%{
+        id: 2,
+        ticket_id: 430,
+        from_stage: "open",
+        to_stage: "ready",
+        transitioned_at: DateTime.add(now, -12_000, :second),
+        trigger: "manual"
+      }),
+      TicketLifecycleEvent.new(%{
+        id: 3,
+        ticket_id: 430,
+        from_stage: "ready",
+        to_stage: "in_progress",
+        transitioned_at: DateTime.add(now, -6_000, :second),
+        trigger: "manual"
+      })
+    ]
+
+    [
+      lifecycle_fixture_ticket(430, "Timeline fixture",
+        lifecycle_stage: "in_progress",
+        lifecycle_stage_entered_at: DateTime.add(now, -6_000, :second),
+        lifecycle_events: events
+      )
+    ]
+  end
+
+  defp ticket_lifecycle_fixture_tickets("ticket_lifecycle_relative_durations") do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    events = [
+      TicketLifecycleEvent.new(%{
+        id: 11,
+        ticket_id: 431,
+        from_stage: nil,
+        to_stage: "open",
+        transitioned_at: DateTime.add(now, -10_000, :second),
+        trigger: "sync"
+      }),
+      TicketLifecycleEvent.new(%{
+        id: 12,
+        ticket_id: 431,
+        from_stage: "open",
+        to_stage: "ready",
+        transitioned_at: DateTime.add(now, -9_000, :second),
+        trigger: "manual"
+      }),
+      TicketLifecycleEvent.new(%{
+        id: 13,
+        ticket_id: 431,
+        from_stage: "ready",
+        to_stage: "in_progress",
+        transitioned_at: DateTime.add(now, -6_000, :second),
+        trigger: "manual"
+      })
+    ]
+
+    [
+      lifecycle_fixture_ticket(431, "Relative durations fixture",
+        lifecycle_stage: "in_progress",
+        lifecycle_stage_entered_at: DateTime.add(now, -6_000, :second),
+        lifecycle_events: events
+      )
+    ]
+  end
+
+  defp ticket_lifecycle_fixture_tickets("ticket_lifecycle_realtime_transition") do
+    [
+      lifecycle_fixture_ticket(402, "Realtime transition ticket",
+        lifecycle_stage: "in_progress",
+        lifecycle_stage_entered_at: DateTime.add(DateTime.utc_now(), -7200, :second)
+      )
+    ]
+  end
+
+  defp ticket_lifecycle_fixture_tickets("ticket_lifecycle_newly_synced") do
+    [
+      lifecycle_fixture_ticket(450, "Newly synced ticket",
+        external_id: "newly-synced-ticket",
+        lifecycle_stage: "open",
+        lifecycle_stage_entered_at: DateTime.add(DateTime.utc_now(), -300, :second)
+      )
+    ]
+  end
+
+  defp ticket_lifecycle_fixture_tickets("ticket_lifecycle_closed") do
+    [
+      lifecycle_fixture_ticket(451, "Closed ticket fixture",
+        external_id: "closed-ticket",
+        state: "closed",
+        lifecycle_stage: "closed",
+        lifecycle_stage_entered_at: DateTime.add(DateTime.utc_now(), -3600, :second)
+      )
+    ]
+  end
+
+  defp ticket_lifecycle_fixture_tickets("ticket_lifecycle_no_events") do
+    [
+      lifecycle_fixture_ticket(452, "No events ticket fixture",
+        external_id: "default-lifecycle-ticket",
+        lifecycle_stage: "open",
+        lifecycle_stage_entered_at: nil,
+        lifecycle_events: []
+      )
+    ]
+  end
+
+  defp ticket_lifecycle_fixture_tickets(_fixture), do: []
+
+  defp lifecycle_fixture_ticket(number, title, attrs) do
+    defaults = %{
+      id: number,
+      number: number,
+      title: title,
+      state: "open",
+      labels: ["agents"],
+      lifecycle_stage: "open",
+      lifecycle_stage_entered_at: DateTime.utc_now() |> DateTime.truncate(:second),
+      lifecycle_events: [],
+      sub_tickets: [],
+      position: 0,
+      session_state: "idle",
+      task_status: nil,
+      associated_task_id: nil,
+      associated_container_id: nil
+    }
+
+    defaults
+    |> Map.merge(Map.new(attrs))
+    |> Ticket.new()
   end
 
   defp find_parent_ticket(_tickets, %{parent_ticket_id: nil}), do: nil

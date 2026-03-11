@@ -73,5 +73,53 @@ defmodule Agents.Tickets.Infrastructure.Schemas.ProjectTicketSchemaTest do
       assert association.related_key == :parent_ticket_id
       assert association.related == ProjectTicketSchema
     end
+
+    test "defines lifecycle_events has_many association" do
+      association = ProjectTicketSchema.__schema__(:association, :lifecycle_events)
+
+      assert %Ecto.Association.Has{} = association
+      assert association.owner_key == :id
+      assert association.related_key == :ticket_id
+
+      assert association.related ==
+               Agents.Tickets.Infrastructure.Schemas.TicketLifecycleEventSchema
+    end
+  end
+
+  describe "lifecycle fields" do
+    test "includes lifecycle_stage and lifecycle_stage_entered_at fields" do
+      assert :lifecycle_stage in ProjectTicketSchema.__schema__(:fields)
+      assert :lifecycle_stage_entered_at in ProjectTicketSchema.__schema__(:fields)
+      assert ProjectTicketSchema.__schema__(:type, :lifecycle_stage) == :string
+      assert ProjectTicketSchema.__schema__(:type, :lifecycle_stage_entered_at) == :utc_datetime
+    end
+
+    test "changeset casts lifecycle fields" do
+      entered_at = ~U[2026-03-11 10:00:00Z]
+
+      changeset =
+        ProjectTicketSchema.changeset(%ProjectTicketSchema{}, %{
+          number: 105,
+          title: "Lifecycle ticket",
+          lifecycle_stage: "in_progress",
+          lifecycle_stage_entered_at: entered_at
+        })
+
+      assert changeset.valid?
+      assert Ecto.Changeset.get_change(changeset, :lifecycle_stage) == "in_progress"
+      assert Ecto.Changeset.get_change(changeset, :lifecycle_stage_entered_at) == entered_at
+    end
+
+    test "changeset validates lifecycle_stage inclusion" do
+      changeset =
+        ProjectTicketSchema.changeset(%ProjectTicketSchema{}, %{
+          number: 106,
+          title: "Lifecycle ticket",
+          lifecycle_stage: "bad_stage"
+        })
+
+      refute changeset.valid?
+      assert "is invalid" in errors_on(changeset).lifecycle_stage
+    end
   end
 end

@@ -436,9 +436,14 @@
               <li
                 :for={ticket <- idle_tickets}
                 class="w-full"
+                data-testid="triage-ticket-item"
                 data-ticket-depth="0"
                 data-has-subissues={to_string(Ticket.has_sub_tickets?(ticket))}
+                data-lifecycle-stage={ticket.lifecycle_stage}
+                data-ticket-id={ticket_data_id(ticket)}
                 data-triage-ticket-item
+                phx-click="select_ticket"
+                phx-value-number={ticket.number}
               >
                 <% t_session = session_for_ticket.(ticket) %>
                 <div class="flex items-start gap-1">
@@ -497,8 +502,13 @@
                         end)
                     }
                     class="w-full"
+                    data-testid="triage-ticket-item"
                     data-ticket-depth="1"
+                    data-lifecycle-stage={sub_ticket.lifecycle_stage}
+                    data-ticket-id={ticket_data_id(sub_ticket)}
                     data-triage-ticket-item
+                    phx-click="select_ticket"
+                    phx-value-number={sub_ticket.number}
                   >
                     <% sub_session = session_for_ticket.(sub_ticket) %>
                     <.ticket_card
@@ -1049,6 +1059,17 @@
                 </button>
               </div>
             </div>
+            <.lifecycle_timeline ticket={selected_ticket} />
+
+            <button
+              :if={@fixture == "ticket_lifecycle_realtime_transition"}
+              type="button"
+              phx-click="simulate_ticket_transition_in_progress_to_in_review"
+              data-testid="simulate-ticket-transition-in-progress-to-in-review"
+              class="btn btn-xs btn-outline mt-3"
+            >
+              Simulate In Progress -> In Review
+            </button>
             <div
               :if={Ticket.closed?(selected_ticket) and Ticket.has_sub_tickets?(selected_ticket)}
               class="mt-3 text-xs text-base-content/60"

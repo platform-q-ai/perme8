@@ -10,19 +10,31 @@ defmodule Agents.Tickets.Infrastructure.Repositories.ProjectTicketRepository do
   alias Agents.Repo
   alias Agents.Tickets.Infrastructure.Schemas.ProjectTicketSchema
 
+  defp lifecycle_events_query do
+    from(event in Agents.Tickets.Infrastructure.Schemas.TicketLifecycleEventSchema,
+      order_by: [asc: event.transitioned_at, asc: event.id]
+    )
+  end
+
   @doc """
   Lists root-level tickets with one-level sub-tickets preloaded.
   """
   @spec list_all() :: [ProjectTicketSchema.t()]
   def list_all do
+    lifecycle_events_query = lifecycle_events_query()
+
     sub_tickets_query =
       ProjectTicketSchema
       |> order_by([ticket], desc: ticket.position, desc: ticket.created_at)
+      |> preload([ticket], lifecycle_events: ^lifecycle_events_query)
 
     ProjectTicketSchema
     |> where([ticket], is_nil(ticket.parent_ticket_id))
     |> order_by([ticket], desc: ticket.position, desc: ticket.created_at)
-    |> preload([ticket], sub_tickets: ^sub_tickets_query)
+    |> preload([ticket],
+      lifecycle_events: ^lifecycle_events_query,
+      sub_tickets: ^sub_tickets_query
+    )
     |> Repo.all()
   end
 
@@ -34,6 +46,42 @@ defmodule Agents.Tickets.Infrastructure.Repositories.ProjectTicketRepository do
     ProjectTicketSchema
     |> order_by([ticket], desc: ticket.position, desc: ticket.created_at)
     |> Repo.all()
+  end
+
+  @doc """
+  Loads a ticket by id with lifecycle events preloaded.
+  """
+  @spec get_by_id(integer()) :: {:ok, ProjectTicketSchema.t()} | nil
+  def get_by_id(id) when is_integer(id) do
+    lifecycle_events_query = lifecycle_events_query()
+
+    case Repo.get(ProjectTicketSchema, id) do
+      nil -> nil
+      ticket -> {:ok, Repo.preload(ticket, lifecycle_events: lifecycle_events_query)}
+    end
+  end
+
+  @doc """
+  Updates a ticket's lifecycle stage and entered-at timestamp.
+  """
+  @spec update_lifecycle_stage(integer(), String.t(), DateTime.t()) ::
+          {:ok, ProjectTicketSchema.t()}
+          | {:error, :ticket_not_found}
+          | {:error, Ecto.Changeset.t()}
+  def update_lifecycle_stage(ticket_id, to_stage, entered_at)
+      when is_integer(ticket_id) and is_binary(to_stage) do
+    case Repo.get(ProjectTicketSchema, ticket_id) do
+      nil ->
+        {:error, :ticket_not_found}
+
+      ticket ->
+        ticket
+        |> ProjectTicketSchema.changeset(%{
+          lifecycle_stage: to_stage,
+          lifecycle_stage_entered_at: entered_at
+        })
+        |> Repo.update()
+    end
   end
 
   @doc """

@@ -11,7 +11,8 @@ defmodule Agents.Tickets do
       Agents.Tickets.Infrastructure,
       Agents.Sessions,
       Agents.Sessions.Domain,
-      Agents.Repo
+      Agents.Repo,
+      Perme8.Events
     ],
     exports: [
       {Domain.Entities.Ticket, []}
@@ -21,6 +22,7 @@ defmodule Agents.Tickets do
   alias Agents.Sessions.Domain.Policies.SessionLifecyclePolicy
   alias Agents.Tickets.Domain.Entities.Ticket
   alias Agents.Tickets.Domain.Policies.TicketEnrichmentPolicy
+  alias Agents.Tickets.Application.UseCases.RecordStageTransition
   alias Agents.Tickets.Infrastructure.Repositories.ProjectTicketRepository
   alias Agents.Tickets.Infrastructure.TicketSyncServer
 
@@ -46,6 +48,26 @@ defmodule Agents.Tickets do
     tickets
     |> Enum.map(&Ticket.from_schema/1)
     |> TicketEnrichmentPolicy.enrich_all(tasks, &SessionLifecyclePolicy.derive/1)
+  end
+
+  @doc """
+  Records a lifecycle stage transition for a ticket.
+  """
+  @spec record_ticket_stage_transition(integer(), String.t(), keyword()) ::
+          {:ok, %{ticket: map(), lifecycle_event: map()}} | {:error, term()}
+  def record_ticket_stage_transition(ticket_id, to_stage, opts \\ []) do
+    RecordStageTransition.execute(ticket_id, to_stage, opts)
+  end
+
+  @doc """
+  Loads a ticket by id with lifecycle events.
+  """
+  @spec get_ticket_lifecycle(integer()) :: {:ok, Ticket.t()} | {:error, :ticket_not_found}
+  def get_ticket_lifecycle(ticket_id) when is_integer(ticket_id) do
+    case ProjectTicketRepository.get_by_id(ticket_id) do
+      {:ok, schema} -> {:ok, Ticket.from_schema(schema)}
+      nil -> {:error, :ticket_not_found}
+    end
   end
 
   @doc "Persists triage ticket ordering to the database."

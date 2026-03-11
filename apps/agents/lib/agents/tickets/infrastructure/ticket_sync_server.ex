@@ -12,11 +12,13 @@ defmodule Agents.Tickets.Infrastructure.TicketSyncServer do
 
   require Logger
 
-  alias Agents.Tickets.Application.TicketsConfig
+  alias Agents.Repo
   alias Agents.Tickets.Domain.Entities.Ticket
   alias Agents.Tickets.Domain.Policies.TicketHierarchyPolicy
   alias Agents.Tickets.Infrastructure.Clients.GithubProjectClient
   alias Agents.Tickets.Infrastructure.Repositories.ProjectTicketRepository
+  alias Agents.Tickets.Infrastructure.Repositories.TicketLifecycleEventRepository
+  alias Agents.Tickets.Infrastructure.Schemas.ProjectTicketSchema
 
   @topic "sessions:tickets"
 
@@ -61,12 +63,12 @@ defmodule Agents.Tickets.Infrastructure.TicketSyncServer do
     state = %{
       client: Keyword.get(opts, :client, GithubProjectClient),
       ticket_repo: Keyword.get(opts, :ticket_repo, ProjectTicketRepository),
-      poll_interval_ms:
-        Keyword.get(opts, :poll_interval_ms, TicketsConfig.github_poll_interval_ms()),
-      pubsub: Keyword.get(opts, :pubsub, TicketsConfig.pubsub())
+      lifecycle_repo: Keyword.get(opts, :lifecycle_repo, TicketLifecycleEventRepository),
+      poll_interval_ms: Keyword.get(opts, :poll_interval_ms, github_poll_interval_ms()),
+      pubsub: Keyword.get(opts, :pubsub, pubsub())
     }
 
-    if TicketsConfig.github_sync_enabled?() do
+    if github_sync_enabled?() do
       Process.send_after(self(), :poll, 0)
     end
 
@@ -90,9 +92,9 @@ defmodule Agents.Tickets.Infrastructure.TicketSyncServer do
   @impl true
   def handle_cast({:close_ticket, issue_number}, state) do
     opts = [
-      token: TicketsConfig.github_token(),
-      org: TicketsConfig.github_org(),
-      repo: TicketsConfig.github_repo()
+      token: github_token(),
+      org: github_org(),
+      repo: github_repo()
     ]
 
     case state.client.close_issue(issue_number, opts) do
@@ -115,9 +117,9 @@ defmodule Agents.Tickets.Infrastructure.TicketSyncServer do
 
   defp poll_tickets(state) do
     opts = [
-      token: TicketsConfig.github_token(),
-      org: TicketsConfig.github_org(),
-      repo: TicketsConfig.github_repo()
+      token: github_token(),
+      org: github_org(),
+      repo: github_repo()
     ]
 
     case state.client.fetch_tickets(opts) do
@@ -160,10 +162,84 @@ defmodule Agents.Tickets.Infrastructure.TicketSyncServer do
   end
 
   defp sync_remote_ticket(state, ticket) do
+    previous_ticket = Repo.get_by(ProjectTicketSchema, number: ticket.number)
+
     case state.ticket_repo.sync_remote_ticket(ticket) do
-      {:ok, _} -> :ok
-      {:error, reason} -> Logger.warning("Ticket upsert failed: #{inspect(reason)}")
+      {:ok, synced_ticket} ->
+        maybe_record_lifecycle_transition(state, previous_ticket, synced_ticket)
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("Ticket upsert failed: #{inspect(reason)}")
     end
+  end
+
+  defp maybe_record_lifecycle_transition(state, nil, synced_ticket) do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+    stage = stage_for_ticket(synced_ticket)
+
+    case state.lifecycle_repo.create(%{
+           ticket_id: synced_ticket.id,
+           from_stage: nil,
+           to_stage: stage,
+           transitioned_at: now,
+           trigger: "sync"
+         }) do
+      {:ok, _event} ->
+        :ok = maybe_update_lifecycle_stage(state, synced_ticket.id, stage, now)
+
+        Phoenix.PubSub.broadcast(
+          state.pubsub,
+          @topic,
+          {:ticket_stage_changed, synced_ticket.id, stage, now}
+        )
+
+      {:error, reason} ->
+        Logger.warning("Ticket lifecycle initial event creation failed: #{inspect(reason)}")
+    end
+  end
+
+  defp maybe_record_lifecycle_transition(state, previous_ticket, synced_ticket) do
+    from_stage = stage_for_ticket(previous_ticket)
+    to_stage = stage_for_ticket(synced_ticket)
+
+    if from_stage != to_stage do
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+      case state.lifecycle_repo.create(%{
+             ticket_id: synced_ticket.id,
+             from_stage: from_stage,
+             to_stage: to_stage,
+             transitioned_at: now,
+             trigger: "sync"
+           }) do
+        {:ok, _event} ->
+          :ok = maybe_update_lifecycle_stage(state, synced_ticket.id, to_stage, now)
+
+          Phoenix.PubSub.broadcast(
+            state.pubsub,
+            @topic,
+            {:ticket_stage_changed, synced_ticket.id, to_stage, now}
+          )
+
+        {:error, reason} ->
+          Logger.warning("Ticket lifecycle transition creation failed: #{inspect(reason)}")
+      end
+    end
+  end
+
+  defp maybe_update_lifecycle_stage(state, ticket_id, stage, entered_at) do
+    case state.ticket_repo.update_lifecycle_stage(ticket_id, stage, entered_at) do
+      {:ok, _ticket} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("Ticket lifecycle stage update failed: #{inspect(reason)}")
+    end
+  end
+
+  defp stage_for_ticket(ticket) do
+    Map.get(ticket, :state) || Map.get(ticket, :lifecycle_stage) || "open"
   end
 
   defp link_hierarchy_relationships(state, remote_tickets) do
@@ -229,5 +305,33 @@ defmodule Agents.Tickets.Infrastructure.TicketSyncServer do
 
       {Map.put(acc, child_number, parent_number), updated_entities}
     end
+  end
+
+  defp github_sync_enabled? do
+    tickets_config()[:github_sync_enabled] != false
+  end
+
+  defp github_org do
+    tickets_config()[:github_org] || tickets_config()[:github_project_org] || "platform-q-ai"
+  end
+
+  defp github_repo do
+    tickets_config()[:github_repo] || "perme8"
+  end
+
+  defp github_poll_interval_ms do
+    tickets_config()[:github_poll_interval_ms] || 15_000
+  end
+
+  defp github_token do
+    tickets_config()[:github_token]
+  end
+
+  defp pubsub do
+    tickets_config()[:pubsub] || Perme8.Events.PubSub
+  end
+
+  defp tickets_config do
+    Application.get_env(:agents, :sessions, [])
   end
 end

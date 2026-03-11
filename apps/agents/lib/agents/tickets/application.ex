@@ -3,6 +3,6 @@ defmodule Agents.Tickets.Application do
 
   use Boundary,
     top_level?: true,
-    deps: [Agents.Tickets.Domain],
-    exports: [TicketsConfig]
+    deps: [Agents.Tickets.Domain, Agents.Tickets.Infrastructure, Perme8.Events],
+    exports: [TicketsConfig, UseCases.RecordStageTransition]
 end

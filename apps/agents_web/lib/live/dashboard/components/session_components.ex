@@ -11,8 +11,8 @@ defmodule AgentsWeb.DashboardLive.Components.SessionComponents do
 
   import AgentsWeb.CoreComponents
   alias Agents.Tickets.Domain.Entities.Ticket
+  alias Agents.Tickets.Domain.Entities.Ticket.View
   alias Agents.Tickets.Domain.Policies.TicketHierarchyPolicy
-  alias AgentsWeb.DashboardLive.SessionStateMachine
 
   # ---- Tab Bar ----
 
@@ -1009,11 +1009,21 @@ defmodule AgentsWeb.DashboardLive.Components.SessionComponents do
                 {TicketHierarchyPolicy.sub_ticket_summary_text(@ticket)}
               </span>
               <span
-                :if={@is_ticket && ticket_lifecycle_label(@ticket)}
-                data-testid="ticket-lifecycle-state"
-                class="badge badge-xs badge-outline whitespace-nowrap shrink-0"
+                :if={@is_ticket && @ticket.lifecycle_stage}
+                data-testid="ticket-lifecycle-stage"
+                class={[
+                  "badge badge-xs whitespace-nowrap shrink-0",
+                  lifecycle_stage_badge_class(@ticket.lifecycle_stage)
+                ]}
               >
-                {ticket_lifecycle_label(@ticket)}
+                {View.lifecycle_stage_label(@ticket)}
+              </span>
+              <span
+                :if={@is_ticket}
+                data-testid="ticket-lifecycle-duration"
+                class="text-[0.6rem] text-base-content/40 whitespace-nowrap shrink-0"
+              >
+                {View.current_stage_duration(@ticket, DateTime.utc_now())}
               </span>
               <%!-- Auth refresh button (failed session-only cards) --%>
               <button
@@ -1368,14 +1378,50 @@ defmodule AgentsWeb.DashboardLive.Components.SessionComponents do
     status_color_classes("optimistic")
   end
 
-  defp ticket_lifecycle_label(ticket) do
-    lifecycle_state = Map.get(ticket, :session_state)
-    status = Map.get(ticket, :task_status)
+  defp lifecycle_stage_badge_class("open"), do: "badge-ghost"
+  defp lifecycle_stage_badge_class("ready"), do: "badge-info"
+  defp lifecycle_stage_badge_class("in_progress"), do: "badge-warning"
+  defp lifecycle_stage_badge_class("in_review"), do: "badge-primary"
+  defp lifecycle_stage_badge_class("ci_testing"), do: "badge-accent"
+  defp lifecycle_stage_badge_class("deployed"), do: "badge-success"
+  defp lifecycle_stage_badge_class("closed"), do: "badge-neutral"
+  defp lifecycle_stage_badge_class(_), do: "badge-outline"
 
-    case SessionStateMachine.state_from_task(%{status: status, lifecycle_state: lifecycle_state}) do
-      :idle -> nil
-      state -> SessionStateMachine.display_name(state)
-    end
+  attr(:ticket, :map, required: true)
+
+  def lifecycle_timeline(assigns) do
+    timeline = View.lifecycle_timeline_data(assigns.ticket)
+    assigns = assign(assigns, :timeline, timeline)
+
+    ~H"""
+    <div :if={@timeline != []} data-testid="ticket-lifecycle-timeline" class="mt-4 space-y-2">
+      <div
+        :for={item <- @timeline}
+        data-testid="ticket-lifecycle-timeline-stage"
+        class="rounded border border-base-300 p-2"
+      >
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-medium">{item.label}</span>
+          <span
+            data-testid="ticket-lifecycle-timeline-stage-duration"
+            class="text-xs text-base-content/60"
+          >
+            {item.duration}
+          </span>
+        </div>
+        <div class="mt-1 h-1.5 rounded bg-base-300">
+          <div
+            data-testid="ticket-lifecycle-duration-bar"
+            data-stage={item.stage}
+            data-relative-width={round(item.relative_width)}
+            class="h-1.5 rounded bg-primary"
+            style={"width: #{item.relative_width}%"}
+          >
+          </div>
+        </div>
+      </div>
+    </div>
+    """
   end
 
   defp ticket_card_cold?(:triage, _session, _warming, _has_container), do: false

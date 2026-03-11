@@ -4,6 +4,7 @@ defmodule Agents.Tickets.Infrastructure.Repositories.ProjectTicketRepositoryTest
   alias Agents.Repo
   alias Agents.Tickets.Infrastructure.Repositories.ProjectTicketRepository
   alias Agents.Tickets.Infrastructure.Schemas.ProjectTicketSchema
+  alias Agents.Tickets.Infrastructure.Schemas.TicketLifecycleEventSchema
   alias Agents.Sessions.Infrastructure.Schemas.TaskSchema
 
   import Agents.Test.AccountsFixtures
@@ -680,6 +681,102 @@ defmodule Agents.Tickets.Infrastructure.Repositories.ProjectTicketRepositoryTest
 
       assert synced.title == "Updated title"
       assert synced.task_id == task.id
+    end
+  end
+
+  describe "lifecycle repository integration" do
+    test "list_all/0 preloads lifecycle_events ordered by transitioned_at" do
+      ticket =
+        %ProjectTicketSchema{}
+        |> ProjectTicketSchema.changeset(%{
+          number: 9001,
+          title: "Lifecycle order",
+          created_at: ~U[2026-03-11 09:00:00Z],
+          labels: []
+        })
+        |> Repo.insert!()
+
+      %TicketLifecycleEventSchema{}
+      |> TicketLifecycleEventSchema.changeset(%{
+        ticket_id: ticket.id,
+        from_stage: "open",
+        to_stage: "ready",
+        transitioned_at: ~U[2026-03-11 11:00:00Z],
+        trigger: "manual"
+      })
+      |> Repo.insert!()
+
+      %TicketLifecycleEventSchema{}
+      |> TicketLifecycleEventSchema.changeset(%{
+        ticket_id: ticket.id,
+        from_stage: nil,
+        to_stage: "open",
+        transitioned_at: ~U[2026-03-11 10:00:00Z],
+        trigger: "sync"
+      })
+      |> Repo.insert!()
+
+      [loaded_ticket] = ProjectTicketRepository.list_all()
+
+      assert loaded_ticket.lifecycle_events != %Ecto.Association.NotLoaded{}
+      assert Enum.map(loaded_ticket.lifecycle_events, & &1.to_stage) == ["open", "ready"]
+    end
+
+    test "get_by_id/1 returns ticket with lifecycle_events preloaded" do
+      ticket =
+        %ProjectTicketSchema{}
+        |> ProjectTicketSchema.changeset(%{
+          number: 9002,
+          title: "Lifecycle ticket",
+          created_at: ~U[2026-03-11 09:00:00Z],
+          labels: []
+        })
+        |> Repo.insert!()
+
+      %TicketLifecycleEventSchema{}
+      |> TicketLifecycleEventSchema.changeset(%{
+        ticket_id: ticket.id,
+        from_stage: nil,
+        to_stage: "open",
+        transitioned_at: ~U[2026-03-11 10:00:00Z],
+        trigger: "sync"
+      })
+      |> Repo.insert!()
+
+      assert {:ok, loaded_ticket} = ProjectTicketRepository.get_by_id(ticket.id)
+      assert loaded_ticket.id == ticket.id
+      assert loaded_ticket.lifecycle_events != %Ecto.Association.NotLoaded{}
+      assert length(loaded_ticket.lifecycle_events) == 1
+
+      assert ProjectTicketRepository.get_by_id(-1) == nil
+    end
+
+    test "update_lifecycle_stage/3 updates stage and entered_at atomically" do
+      ticket =
+        %ProjectTicketSchema{}
+        |> ProjectTicketSchema.changeset(%{
+          number: 9003,
+          title: "Lifecycle update",
+          created_at: ~U[2026-03-11 09:00:00Z],
+          labels: []
+        })
+        |> Repo.insert!()
+
+      entered_at = ~U[2026-03-11 12:00:00Z]
+
+      assert {:ok, updated} =
+               ProjectTicketRepository.update_lifecycle_stage(
+                 ticket.id,
+                 "in_progress",
+                 entered_at
+               )
+
+      assert updated.lifecycle_stage == "in_progress"
+      assert updated.lifecycle_stage_entered_at == entered_at
+
+      reloaded = Repo.get!(ProjectTicketSchema, ticket.id)
+      assert reloaded.lifecycle_stage == "in_progress"
+      assert reloaded.lifecycle_stage_entered_at == entered_at
     end
   end
 end
