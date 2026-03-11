@@ -230,13 +230,13 @@ All artifacts belong to the `agents` app per `docs/app_ownership.md`. No other a
 
 ---
 
-## Phase 5: Session Lifecycle Policy Extensions
+## Phase 5: Session Lifecycle Policy Extensions ✓
 
 **Goal**: Extend `SessionLifecyclePolicy` with new transitions needed for SDK event handling, and add a new `SdkEventPolicy` that maps raw SDK events to Session state transitions and domain events.
 
 ### 5.1 SessionLifecyclePolicy — New Transitions
 
-- [ ] ⏸ **RED**: Add tests to `apps/agents/test/agents/sessions/domain/policies/session_lifecycle_policy_test.exs`
+- [x] **RED**: Add tests to `apps/agents/test/agents/sessions/domain/policies/session_lifecycle_policy_test.exs`
   - Tests:
     - `can_transition?(:awaiting_feedback, :running)` returns `true` (permission resolved → back to running)
     - `can_transition?(:awaiting_feedback, :failed)` returns `true` (permission denied terminally)
@@ -247,13 +247,13 @@ All artifacts belong to the `agents` app per `docs/app_ownership.md`. No other a
     - `can_transition?(:idle, :failed)` returns `true` (session fails from idle)
     - `can_transition?(:idle, :cancelled)` returns `true` (session cancelled from idle)
     - All existing transitions still valid (backward compatibility)
-- [ ] ⏸ **GREEN**: Add new transitions to `@valid_transitions` MapSet in `apps/agents/lib/agents/sessions/domain/policies/session_lifecycle_policy.ex`
+- [x] **GREEN**: Add new transitions to `@valid_transitions` MapSet in `apps/agents/lib/agents/sessions/domain/policies/session_lifecycle_policy.ex`
   - Add: `{:awaiting_feedback, :running}`, `{:awaiting_feedback, :failed}`, `{:awaiting_feedback, :cancelled}`, `{:running, :idle}`, `{:idle, :running}`, `{:idle, :completed}`, `{:idle, :failed}`, `{:idle, :cancelled}`
-- [ ] ⏸ **REFACTOR**: Ensure all transitions are documented in @moduledoc
+- [x] **REFACTOR**: Ensure all transitions are documented in @moduledoc
 
 ### 5.2 SdkEventPolicy — SDK Event to Session State Mapping
 
-- [ ] ⏸ **RED**: Write test `apps/agents/test/agents/sessions/domain/policies/sdk_event_policy_test.exs`
+- [x] **RED**: Write test `apps/agents/test/agents/sessions/domain/policies/sdk_event_policy_test.exs`
   - Tests (each test receives a Session struct and a raw SDK event map, returns `{:ok, updated_session, [domain_events]}` or `{:skip, reason}`):
     - **session.status — busy**: Running session stays running, no new domain events (state confirmation)
     - **session.status — busy**: Non-running session (e.g., starting) → no state change (session not yet in SDK's purview)
@@ -285,7 +285,7 @@ All artifacts belong to the `agents` app per `docs/app_ownership.md`. No other a
     - **file.edited**: Appends file path to `file_edits`, emits `SessionFileEdited` (P1)
     - **Unhandled event type**: Returns `{:skip, :not_relevant}`
     - **Terminal state guard**: Any event (except metadata/observability) on a terminal session → `{:skip, :already_terminal}`
-- [ ] ⏸ **GREEN**: Implement `apps/agents/lib/agents/sessions/domain/policies/sdk_event_policy.ex`
+- [x] **GREEN**: Implement `apps/agents/lib/agents/sessions/domain/policies/sdk_event_policy.ex`
   - Module: `Agents.Sessions.Domain.Policies.SdkEventPolicy`
   - Main function: `apply_event(session, sdk_event)` where `sdk_event` is the raw map `%{"type" => ..., "properties" => ...}`
   - Returns `{:ok, updated_session, domain_events}` or `{:skip, reason}`
@@ -295,12 +295,12 @@ All artifacts belong to the `agents` app per `docs/app_ownership.md`. No other a
   - Uses `SessionLifecyclePolicy.terminal?/1` to guard terminal states
   - Builds domain event structs using the `.new/1` constructors
   - **Pure function** — no I/O, no Repo, no PubSub. Takes session + event, returns session + events.
-- [ ] ⏸ **REFACTOR**: Extract private helper functions for each event type group (status events, error events, permission events, message events, metadata events, server events). Ensure each clause is under 15 lines.
+- [x] **REFACTOR**: Extract private helper functions for each event type group (status events, error events, permission events, message events, metadata events, server events). Ensure each clause is under 15 lines.
 
 ### Phase 5 Validation
-- [ ] All SdkEventPolicy tests pass (milliseconds, no I/O, pure)
-- [ ] All SessionLifecyclePolicy tests pass (including new transitions)
-- [ ] No boundary violations (`mix boundary`)
+- [x] All SdkEventPolicy tests pass (milliseconds, no I/O, pure)
+- [x] All SessionLifecyclePolicy tests pass (including new transitions)
+- [x] No boundary violations (`mix boundary`) *(task unavailable in this environment; validated via `mix compile`)*
 
 ---
 
