@@ -24,9 +24,11 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
   alias Agents.Sessions.Application.SessionsConfig
   alias Agents.Sessions.Application.Services.AuthRefresher
+  alias Agents.Sessions.Domain.Entities.Session
   alias Agents.Sessions.Domain.Entities.TodoList
   alias Agents.Sessions.Domain.Events.{TaskCompleted, TaskFailed, TaskCancelled}
   alias Agents.Sessions.Domain.Policies.SessionLifecyclePolicy
+  alias Agents.Sessions.Infrastructure.SdkEventHandler
   alias Agents.Sessions.Infrastructure.Schemas.TaskSchema
 
   require Logger
@@ -46,6 +48,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     :sse_pid,
     :auth_refresher,
     :fresh_warm_container,
+    :session,
     status: :starting,
     health_retries: 0,
     sse_reconnecting: false,
@@ -155,6 +158,15 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
           queue_terminal_notifier: queue_terminal_notifier,
           health_retries: SessionsConfig.health_check_max_retries()
         }
+
+        session =
+          Session.new(%{
+            task_id: task_id,
+            user_id: task.user_id,
+            lifecycle_state: :starting
+          })
+
+        state = %{state | session: session}
 
         state =
           initialize_lifecycle(
@@ -744,6 +756,9 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     # Track user message IDs so we can filter their parts from output cache
     state = track_user_message_id(event, state)
 
+    # Update Session entity via SdkEventHandler (domain events emitted here)
+    state = update_session_from_sdk_event(state, event)
+
     # Route parts to appropriate caching: subtask -> user -> SDK dispatch
     cond do
       subtask_part?(event) ->
@@ -754,6 +769,18 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
       true ->
         handle_sdk_result(event, state)
+    end
+  end
+
+  defp update_session_from_sdk_event(%{session: nil} = state, _event), do: state
+
+  defp update_session_from_sdk_event(state, event) do
+    case SdkEventHandler.handle(state.session, event, event_bus: state.event_bus) do
+      {:ok, updated_session} ->
+        %{state | session: updated_session}
+
+      {:skip, _reason} ->
+        state
     end
   end
 
