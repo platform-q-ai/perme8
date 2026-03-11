@@ -51,29 +51,6 @@ defmodule Agents.Tickets.Infrastructure.Clients.GithubProjectClient do
   end
 
   @doc """
-  Creates a new GitHub issue with the given body text as the issue body.
-
-  The first line of `body` is used as the issue title. If the body is a single
-  line, the title is the full text and the issue body is left empty.
-
-  ## Options
-
-    * `:token` - GitHub token (required)
-    * `:org` - GitHub org/owner (required)
-    * `:repo` - Repository name (required)
-  """
-  @spec create_issue(String.t(), keyword()) :: {:ok, ticket()} | {:error, term()}
-  def create_issue(body, opts \\ []) do
-    token = Keyword.get(opts, :token)
-
-    if is_binary(token) and token != "" do
-      do_create_issue(token, body, opts)
-    else
-      {:error, :missing_token}
-    end
-  end
-
-  @doc """
   Closes a GitHub issue by number using the GraphQL API.
   """
   @spec close_issue(integer(), keyword()) :: :ok | {:error, term()}
@@ -380,41 +357,6 @@ defmodule Agents.Tickets.Infrastructure.Clients.GithubProjectClient do
     case DateTime.from_iso8601(iso_string) do
       {:ok, dt, _offset} -> DateTime.truncate(dt, :second)
       _ -> nil
-    end
-  end
-
-  defp do_create_issue(token, body, opts) do
-    org = Keyword.fetch!(opts, :org)
-    repo = Keyword.fetch!(opts, :repo)
-    api_base = Keyword.get(opts, :api_base, @api_base)
-    url = "#{api_base}/repos/#{org}/#{repo}/issues"
-
-    {title, issue_body} = split_title_body(body)
-
-    payload = %{"title" => title, "body" => issue_body}
-
-    case Req.post(url,
-           json: payload,
-           headers: rest_headers(token),
-           retry: false,
-           receive_timeout: 15_000,
-           connect_options: [timeout: 5_000]
-         ) do
-      {:ok, %{status: status, body: response_body}} when status in [200, 201] ->
-        {:ok, parse_issue(response_body)}
-
-      {:ok, %{status: status, body: response_body}} ->
-        {:error, {:unexpected_status, status, response_body}}
-
-      {:error, reason} ->
-        {:error, reason}
-    end
-  end
-
-  defp split_title_body(text) do
-    case String.split(text, "\n", parts: 2) do
-      [title] -> {String.trim(title), ""}
-      [title, rest] -> {String.trim(title), String.trim(rest)}
     end
   end
 
