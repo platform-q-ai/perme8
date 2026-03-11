@@ -57,6 +57,8 @@ Feature: Ticket lifecycle time tracking in Sessions UI
     And I wait for network idle
     When I click "[data-testid='triage-ticket-item'][data-ticket-id='timeline-ticket']"
     And I wait for network idle
+    And I click "button[data-tab-id='ticket']"
+    And I wait for network idle
     Then "[data-testid='ticket-lifecycle-timeline']" should be visible
     And there should be 3 "[data-testid='ticket-lifecycle-timeline-stage']" elements
     And "[data-testid='ticket-lifecycle-timeline-stage-duration']" should exist
@@ -65,6 +67,8 @@ Feature: Ticket lifecycle time tracking in Sessions UI
     Given I navigate to "${baseUrl}/sessions?fixture=ticket_lifecycle_relative_durations"
     And I wait for network idle
     When I click "[data-testid='triage-ticket-item'][data-ticket-id='relative-durations-ticket']"
+    And I wait for network idle
+    And I click "button[data-tab-id='ticket']"
     And I wait for network idle
     Then "[data-testid='ticket-lifecycle-timeline']" should be visible
     And there should be 3 "[data-testid='ticket-lifecycle-duration-bar']" elements
