@@ -1156,7 +1156,9 @@ Feature: Ticket MCP Tools - HTTP API
   # Permission enforcement
   # ==========================================================================
 
-  Scenario: Permission denied for ticket.read
+  Scenario: No-access key rejected at initialization
+    # The no-access key has no workspace access at all, so the MCP server
+    # rejects authentication at the transport layer before any tool dispatch.
     Given I set bearer token to "${valid-no-access-key}"
     When I POST to "/" with body:
       """
@@ -1171,36 +1173,4 @@ Feature: Ticket MCP Tools - HTTP API
         "id": 147
       }
       """
-    Then the response status should be 200
-    And I store response header "mcp-session-id" as "mcpSessionId"
-    Given I set header "Mcp-Session-Id" to "${mcpSessionId}"
-    And I set bearer token to "${valid-no-access-key}"
-    When I POST to "/" with body:
-      """
-      {
-        "jsonrpc": "2.0",
-        "method": "notifications/initialized"
-      }
-      """
-    Then the response status should be 202
-    Given I set bearer token to "${valid-no-access-key}"
-    And I set header "Mcp-Session-Id" to "${mcpSessionId}"
-    When I POST to "/" with body:
-      """
-      {
-        "jsonrpc": "2.0",
-        "method": "tools/call",
-        "params": {
-          "name": "ticket.read",
-          "arguments": {
-            "number": 1
-          }
-        },
-        "id": 148
-      }
-      """
-    Then the response status should be 200
-    And the response body should be valid JSON
-    And the response body path "$.result.isError" should be true
-    And the response body path "$.result.content[0].text" should contain "Insufficient permissions"
-    And the response body path "$.result.content[0].text" should contain "mcp:ticket.read"
+    Then the response status should be 401

@@ -32,7 +32,9 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.HelpersTest do
       assert Helpers.github_client() == Agents.Mocks.GithubTicketClientMock
     end
 
-    test "returns default github client module" do
+    test "returns default github client module when no override configured" do
+      Application.delete_env(:agents, :github_ticket_client)
+
       assert Helpers.github_client() == Agents.Tickets.Infrastructure.Clients.GithubProjectClient
     end
   end
