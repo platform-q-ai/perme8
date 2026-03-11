@@ -64,7 +64,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.InitTest do
     Agents.Mocks.OpencodeClientMock
     |> stub(:health, fn _url -> {:error, :unhealthy} end)
 
-    {:ok, _pid} =
+    {:ok, pid} =
       GenServer.start(
         TaskRunner,
         {task.id,
@@ -77,6 +77,10 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.InitTest do
       )
 
     assert_receive {:status_updated, "starting"}, 5000
+
+    # Kill the process to prevent health-check retries from leaking
+    # Mox calls into subsequent test modules.
+    on_exit(fn -> if Process.alive?(pid), do: Process.exit(pid, :kill) end)
   end
 
   test "init returns {:stop, :task_not_found} when task is nil", %{task: task} do
@@ -191,7 +195,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.InitTest do
       :ok
     end)
 
-    {:ok, _pid} =
+    {:ok, pid} =
       GenServer.start(
         TaskRunner,
         {task.id,
@@ -206,10 +210,16 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.InitTest do
          ]}
       )
 
+    ref = Process.monitor(pid)
+
     assert_receive {:status_updated, "starting"}, 5000
     assert_receive :fresh_start_prepared, 5000
     assert_receive {:auth_refreshed, "http://localhost:4096"}, 5000
     assert_receive :prompt_sent, 5000
+
+    # Wait for the TaskRunner to fully terminate so its Mox calls
+    # don't leak into the next test module's expectations.
+    assert_receive {:DOWN, ^ref, :process, ^pid, _reason}, 5000
   end
 
   test "fresh warm preparation failure does not leak raw command output", %{task: task} do
