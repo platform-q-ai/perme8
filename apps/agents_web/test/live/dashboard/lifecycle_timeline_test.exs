@@ -9,7 +9,7 @@ defmodule AgentsWeb.DashboardLive.LifecycleTimelineTest do
     {:ok, view, _html} = live(conn, ~p"/sessions?fixture=ticket_lifecycle_timeline")
 
     view
-    |> element("[data-testid='triage-ticket-item']")
+    |> element(~s([phx-click="select_ticket"][phx-value-number="430"]))
     |> render_click()
 
     view
@@ -32,7 +32,7 @@ defmodule AgentsWeb.DashboardLive.LifecycleTimelineTest do
     {:ok, view, _html} = live(conn, ~p"/sessions?fixture=ticket_lifecycle_relative_durations")
 
     view
-    |> element("[data-testid='triage-ticket-item']")
+    |> element(~s([phx-click="select_ticket"][phx-value-number="431"]))
     |> render_click()
 
     view
