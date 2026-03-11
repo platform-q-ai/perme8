@@ -231,3 +231,9 @@ config :agents, :mcp_http, port: 5007
 
 # Skip orphan recovery at boot — runs outside sandbox and conflicts with Mox
 config :agents, :skip_orphan_recovery, true
+
+# Agents Ticket MCP tools: use in-memory stub so exo-bdd tests work without
+# a real GitHub token. Unit tests override this with Mox via Application.put_env.
+config :agents,
+       :github_ticket_client,
+       Agents.Tickets.Infrastructure.Clients.StubGithubTicketClient
