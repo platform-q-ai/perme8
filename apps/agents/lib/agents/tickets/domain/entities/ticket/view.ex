@@ -26,10 +26,10 @@ defmodule Agents.Tickets.Domain.Entities.Ticket.View do
     |> format_duration()
   end
 
-  @spec lifecycle_summary(Ticket.t()) :: [map()]
-  def lifecycle_summary(%Ticket{} = ticket) do
+  @spec lifecycle_summary(Ticket.t(), DateTime.t()) :: [map()]
+  def lifecycle_summary(%Ticket{} = ticket, %DateTime{} = now \\ DateTime.utc_now()) do
     ticket.lifecycle_events
-    |> TicketLifecyclePolicy.calculate_stage_durations()
+    |> TicketLifecyclePolicy.calculate_stage_durations(now)
     |> Enum.map(fn {stage, duration_seconds} ->
       %{
         stage: stage,
@@ -39,9 +39,9 @@ defmodule Agents.Tickets.Domain.Entities.Ticket.View do
     end)
   end
 
-  @spec lifecycle_timeline_data(Ticket.t()) :: [map()]
-  def lifecycle_timeline_data(%Ticket{} = ticket) do
-    durations = TicketLifecyclePolicy.calculate_stage_durations(ticket.lifecycle_events)
+  @spec lifecycle_timeline_data(Ticket.t(), DateTime.t()) :: [map()]
+  def lifecycle_timeline_data(%Ticket{} = ticket, %DateTime{} = now \\ DateTime.utc_now()) do
+    durations = TicketLifecyclePolicy.calculate_stage_durations(ticket.lifecycle_events, now)
     relative = TicketLifecyclePolicy.calculate_relative_durations(durations) |> Map.new()
 
     Enum.map(durations, fn {stage, duration_seconds} ->
