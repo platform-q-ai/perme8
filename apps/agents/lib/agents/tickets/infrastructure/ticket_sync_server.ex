@@ -182,7 +182,7 @@ defmodule Agents.Tickets.Infrastructure.TicketSyncServer do
 
   defp maybe_record_lifecycle_transition(state, nil, synced_ticket) do
     now = DateTime.utc_now() |> DateTime.truncate(:second)
-    stage = stage_for_ticket(synced_ticket)
+    stage = derive_lifecycle_stage(synced_ticket)
 
     case state.lifecycle_repo.create(%{
            ticket_id: synced_ticket.id,
@@ -206,8 +206,8 @@ defmodule Agents.Tickets.Infrastructure.TicketSyncServer do
   end
 
   defp maybe_record_lifecycle_transition(state, previous_ticket, synced_ticket) do
-    from_stage = stage_for_ticket(previous_ticket)
-    to_stage = stage_for_ticket(synced_ticket)
+    from_stage = derive_lifecycle_stage(previous_ticket)
+    to_stage = derive_lifecycle_stage(synced_ticket)
 
     if from_stage != to_stage do
       now = DateTime.utc_now() |> DateTime.truncate(:second)
@@ -245,7 +245,10 @@ defmodule Agents.Tickets.Infrastructure.TicketSyncServer do
     end
   end
 
-  defp stage_for_ticket(ticket) do
+  # Derives a lifecycle stage from a ticket struct. Uses the GitHub :state
+  # ("open"/"closed") as the primary signal during sync, falling back to the
+  # persisted :lifecycle_stage for tickets already in the pipeline.
+  defp derive_lifecycle_stage(ticket) do
     Map.get(ticket, :state) || Map.get(ticket, :lifecycle_stage) || "open"
   end
 
