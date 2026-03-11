@@ -68,6 +68,10 @@ defmodule Agents.Sessions.Domain.Policies.SessionLifecyclePolicyTest do
       valid = [
         {:idle, :queued_cold},
         {:idle, :queued_warm},
+        {:idle, :running},
+        {:idle, :completed},
+        {:idle, :failed},
+        {:idle, :cancelled},
         {:queued_cold, :warming},
         {:queued_cold, :pending},
         {:queued_cold, :cancelled},
@@ -84,7 +88,11 @@ defmodule Agents.Sessions.Domain.Policies.SessionLifecyclePolicyTest do
         {:running, :completed},
         {:running, :failed},
         {:running, :cancelled},
+        {:running, :idle},
         {:running, :awaiting_feedback},
+        {:awaiting_feedback, :running},
+        {:awaiting_feedback, :failed},
+        {:awaiting_feedback, :cancelled},
         {:awaiting_feedback, :queued_cold},
         {:awaiting_feedback, :queued_warm}
       ]
@@ -96,7 +104,7 @@ defmodule Agents.Sessions.Domain.Policies.SessionLifecyclePolicyTest do
 
     test "returns false for invalid transitions" do
       refute SessionLifecyclePolicy.can_transition?(:completed, :running)
-      refute SessionLifecyclePolicy.can_transition?(:idle, :running)
+      refute SessionLifecyclePolicy.can_transition?(:idle, :warming)
       refute SessionLifecyclePolicy.can_transition?(:failed, :queued_cold)
       refute SessionLifecyclePolicy.can_transition?(:cancelled, :pending)
     end
@@ -104,6 +112,24 @@ defmodule Agents.Sessions.Domain.Policies.SessionLifecyclePolicyTest do
     test "returns false for self transitions" do
       refute SessionLifecyclePolicy.can_transition?(:running, :running)
       refute SessionLifecyclePolicy.can_transition?(:idle, :idle)
+    end
+
+    test "returns true for SDK-event-driven transitions" do
+      sdk_transitions = [
+        {:awaiting_feedback, :running},
+        {:awaiting_feedback, :failed},
+        {:awaiting_feedback, :cancelled},
+        {:running, :idle},
+        {:idle, :running},
+        {:idle, :completed},
+        {:idle, :failed},
+        {:idle, :cancelled}
+      ]
+
+      Enum.each(sdk_transitions, fn {from_state, to_state} ->
+        assert SessionLifecyclePolicy.can_transition?(from_state, to_state),
+               "expected #{from_state} -> #{to_state} to be valid"
+      end)
     end
   end
 

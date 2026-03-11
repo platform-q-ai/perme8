@@ -1,6 +1,10 @@
 defmodule Agents.Sessions.Domain.Policies.SessionLifecyclePolicy do
   @moduledoc """
   Pure lifecycle-state derivation and transition rules for session tasks.
+
+  Includes queue-driven transitions and SDK-event-driven transitions such as
+  `awaiting_feedback -> running|failed|cancelled`, `running -> idle`, and
+  `idle -> running|completed|failed|cancelled`.
   """
 
   @active_states [
@@ -19,6 +23,10 @@ defmodule Agents.Sessions.Domain.Policies.SessionLifecyclePolicy do
   @valid_transitions MapSet.new([
                        {:idle, :queued_cold},
                        {:idle, :queued_warm},
+                       {:idle, :running},
+                       {:idle, :completed},
+                       {:idle, :failed},
+                       {:idle, :cancelled},
                        {:queued_cold, :warming},
                        {:queued_cold, :pending},
                        {:queued_cold, :cancelled},
@@ -35,7 +43,11 @@ defmodule Agents.Sessions.Domain.Policies.SessionLifecyclePolicy do
                        {:running, :completed},
                        {:running, :failed},
                        {:running, :cancelled},
+                       {:running, :idle},
                        {:running, :awaiting_feedback},
+                       {:awaiting_feedback, :running},
+                       {:awaiting_feedback, :failed},
+                       {:awaiting_feedback, :cancelled},
                        {:awaiting_feedback, :queued_cold},
                        {:awaiting_feedback, :queued_warm}
                      ])
