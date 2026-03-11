@@ -936,4 +936,79 @@ defmodule Agents.Sessions.Infrastructure.QueueManagerTest do
       assert QueueManager.check_concurrency(user.id) == :ok
     end
   end
+
+  describe "warm-readiness gate removal" do
+    test "promotes queued task with warm placeholder container_id immediately" do
+      user = user_fixture()
+
+      # Create a task with a "task:" prefix container_id — this simulates a task
+      # that has been assigned a warm placeholder container but hasn't received
+      # a real container yet. Previously, warm_ready_for_promotion? would block
+      # this task from promoting. Now it should promote immediately.
+      warming_task =
+        create_task(user, %{
+          status: "queued",
+          queue_position: 1,
+          container_id: "task:placeholder-#{System.unique_integer([:positive])}"
+        })
+
+      test_pid = self()
+
+      assert {:ok, _pid} =
+               QueueManagerSupervisor.ensure_started(user.id,
+                 concurrency_limit: 1,
+                 warm_cache_limit: 0,
+                 task_runner_starter: fn task_id, _opts ->
+                   send(test_pid, {:started_runner, task_id})
+                   {:ok, self()}
+                 end
+               )
+
+      assert :ok = QueueManager.notify_task_queued(user.id, warming_task.id)
+
+      warming_id = warming_task.id
+      assert_receive {:started_runner, ^warming_id}
+
+      updated = Repo.get!(TaskSchema, warming_task.id)
+      assert updated.status == "pending"
+    end
+
+    test "promotes next queued task with warm placeholder after running task completes" do
+      user = user_fixture()
+
+      running = create_task(user, %{status: "running", container_id: "real-container"})
+
+      next_in_queue =
+        create_task(user, %{
+          status: "queued",
+          queue_position: 1,
+          container_id: "task:warming-#{System.unique_integer([:positive])}"
+        })
+
+      test_pid = self()
+
+      assert {:ok, _pid} =
+               QueueManagerSupervisor.ensure_started(user.id,
+                 concurrency_limit: 1,
+                 warm_cache_limit: 0,
+                 task_runner_starter: fn task_id, _opts ->
+                   send(test_pid, {:started_runner, task_id})
+                   {:ok, self()}
+                 end
+               )
+
+      # Mark the running task as completed in DB so the slot frees up
+      running
+      |> TaskSchema.status_changeset(%{status: "completed"})
+      |> Repo.update!()
+
+      assert :ok = QueueManager.notify_task_completed(user.id, running.id)
+
+      next_id = next_in_queue.id
+      assert_receive {:started_runner, ^next_id}
+
+      updated = Repo.get!(TaskSchema, next_in_queue.id)
+      assert updated.status == "pending"
+    end
+  end
 end
