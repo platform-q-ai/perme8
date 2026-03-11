@@ -41,7 +41,7 @@ defmodule Agents.Tickets.Domain.Policies.TicketLifecyclePolicyTest do
 
   describe "calculate_stage_durations/1 and /2" do
     test "returns [] for empty event list" do
-      assert TicketLifecyclePolicy.calculate_stage_durations([]) == []
+      assert TicketLifecyclePolicy.calculate_stage_durations([], DateTime.utc_now()) == []
     end
 
     test "handles single event by measuring from transitioned_at to now" do

@@ -18,9 +18,6 @@ defmodule Agents.Tickets.Domain.Policies.TicketLifecyclePolicy do
     end
   end
 
-  @spec calculate_stage_durations([map()]) :: [{String.t(), non_neg_integer()}]
-  def calculate_stage_durations(events), do: calculate_stage_durations(events, DateTime.utc_now())
-
   @spec calculate_stage_durations([map()], DateTime.t()) :: [{String.t(), non_neg_integer()}]
   def calculate_stage_durations([], _now), do: []
 
@@ -69,8 +66,8 @@ defmodule Agents.Tickets.Domain.Policies.TicketLifecyclePolicy do
   def stage_color("closed"), do: "base"
   def stage_color(_), do: "neutral"
 
-  defp duration_seconds(from, to) do
-    DateTime.diff(to, from, :second)
+  defp duration_seconds(started_at, ended_at) do
+    DateTime.diff(ended_at, started_at, :second)
     |> max(0)
   end
 end
