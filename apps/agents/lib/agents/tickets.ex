@@ -109,10 +109,16 @@ defmodule Agents.Tickets do
   If the GitHub close fails, the local record is left unchanged and an error
   is returned so the caller can surface it to the user. This prevents the
   local state from drifting out of sync with GitHub.
+
+  ## Options
+
+    * `:github_client` - module implementing `GithubTicketClientBehaviour`
+      (defaults to application config `:github_ticket_client` or
+      `GithubProjectClient`)
   """
-  @spec close_project_ticket(integer()) :: :ok | {:error, term()}
-  def close_project_ticket(number) when is_integer(number) do
-    client = github_client()
+  @spec close_project_ticket(integer(), keyword()) :: :ok | {:error, term()}
+  def close_project_ticket(number, opts \\ []) when is_integer(number) do
+    client = Keyword.get_lazy(opts, :github_client, &github_client/0)
 
     github_opts = [
       token: TicketsConfig.github_token(),
