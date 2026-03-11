@@ -33,6 +33,16 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.RemoveSubIssueTool do
                "Removed sub-issue ##{child_number} from parent issue ##{parent_number}."
              ), frame}
 
+          {:error, :not_found} ->
+            {:reply,
+             Response.error(
+               Response.tool(),
+               Helpers.format_error(
+                 :not_found,
+                 "Issue ##{parent_number} or ##{child_number}"
+               )
+             ), frame}
+
           {:error, reason} ->
             Logger.error("ticket.remove_sub_issue error: #{inspect(reason)}")
 

@@ -1,6 +1,8 @@
 defmodule Agents.Infrastructure.Mcp.Tools.Ticket.Helpers do
   @moduledoc false
 
+  require Logger
+
   def github_client do
     Application.get_env(
       :agents,
@@ -74,10 +76,16 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.Helpers do
 
   def format_error(:not_found, context), do: "#{context} not found."
   def format_error(:missing_token, _context), do: "GitHub token not configured."
-  def format_error(reason, _context), do: "An unexpected error occurred: #{inspect(reason)}"
+
+  def format_error(reason, _context) do
+    Logger.warning("Unhandled ticket error: #{inspect(reason)}")
+    "An unexpected error occurred. Check server logs for details."
+  end
 
   defp format_list([]), do: "None"
   defp format_list(items), do: Enum.join(items, ", ")
+
+  defp blank_to_default(nil, default), do: default
 
   defp blank_to_default(value, default) when is_binary(value) do
     if String.trim(value) == "", do: default, else: value

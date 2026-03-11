@@ -67,7 +67,8 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.ListToolTest do
         {:ok, []}
       end)
 
-      ListTool.execute(%{"state" => "open"}, frame)
+      assert {:reply, response, ^frame} = ListTool.execute(%{"state" => "open"}, frame)
+      assert %Hermes.Server.Response{isError: false} = response
     end
 
     test "passes labels filter and includes label in output" do
@@ -94,7 +95,20 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.ListToolTest do
         {:ok, []}
       end)
 
-      ListTool.execute(%{"query" => "MCP"}, frame)
+      assert {:reply, response, ^frame} = ListTool.execute(%{"query" => "MCP"}, frame)
+      assert %Hermes.Server.Response{isError: false} = response
+    end
+
+    test "returns error on generic client failure" do
+      frame = build_frame()
+
+      Agents.Mocks.GithubTicketClientMock
+      |> expect(:list_issues, fn _opts -> {:error, {:unexpected_status, 500, %{}}} end)
+
+      assert {:reply, response, ^frame} = ListTool.execute(%{}, frame)
+      assert %Hermes.Server.Response{isError: true} = response
+      assert [%{"text" => text}] = response.content
+      assert text =~ "unexpected error"
     end
 
     test "returns empty state message when no issues" do

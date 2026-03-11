@@ -33,6 +33,16 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.AddSubIssueTool do
                "Added sub-issue ##{child_number} to parent issue ##{parent_number}."
              ), frame}
 
+          {:error, :not_found} ->
+            {:reply,
+             Response.error(
+               Response.tool(),
+               Helpers.format_error(
+                 :not_found,
+                 "Issue ##{parent_number} or ##{child_number}"
+               )
+             ), frame}
+
           {:error, reason} ->
             Logger.error("ticket.add_sub_issue error: #{inspect(reason)}")
 
