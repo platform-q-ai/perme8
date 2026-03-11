@@ -520,4 +520,91 @@ defmodule Agents.Sessions.Domain.Policies.SdkEventPolicyTest do
       assert updated.last_event_id == "permission.updated:perm-1"
     end
   end
+
+  describe "edge cases" do
+    test "event without type key returns skip" do
+      session = running_session()
+      assert {:skip, :not_relevant} = SdkEventPolicy.apply_event(session, %{"foo" => "bar"})
+    end
+
+    test "nil event returns skip" do
+      session = running_session()
+      assert {:skip, :not_relevant} = SdkEventPolicy.apply_event(session, nil)
+    end
+
+    test "event without properties key defaults to empty map" do
+      session = running_session()
+      event = %{"type" => "session.status"}
+
+      assert {:ok, _updated, _events} = SdkEventPolicy.apply_event(session, event)
+    end
+
+    test "session.status with unknown status string returns ok with no events" do
+      session = running_session()
+      event = sdk_event("session.status", %{"status" => "something_new"})
+
+      assert {:ok, updated, events} = SdkEventPolicy.apply_event(session, event)
+      assert updated.lifecycle_state == :running
+      assert events == []
+    end
+
+    test "session.status with nested map format is normalized" do
+      session = running_session()
+      event = sdk_event("session.status", %{"status" => %{"type" => "idle"}})
+
+      assert {:ok, updated, events} = SdkEventPolicy.apply_event(session, event)
+      assert updated.lifecycle_state == :completed
+
+      assert Enum.any?(events, fn e ->
+               e.event_type == "sessions.session_state_changed" and e.to_state == :completed
+             end)
+    end
+
+    test "session.error with nil message defaults to 'Unknown error'" do
+      session = running_session()
+      event = sdk_event("session.error", %{"category" => "auth"})
+
+      assert {:ok, updated, _events} = SdkEventPolicy.apply_event(session, event)
+      assert updated.error == "Unknown error"
+    end
+
+    test "permission.replied on non-awaiting session returns skip" do
+      session = running_session()
+      event = sdk_event("permission.replied", %{"id" => "perm-1", "outcome" => "allowed"})
+
+      assert {:skip, :invalid_state} = SdkEventPolicy.apply_event(session, event)
+    end
+
+    test "session.created emits no domain events" do
+      session = running_session()
+      event = sdk_event("session.created", %{"title" => "Test"})
+
+      assert {:ok, _updated, events} = SdkEventPolicy.apply_event(session, event)
+      assert events == []
+    end
+
+    test "message.part.removed emits no events and preserves state" do
+      session = running_session()
+      event = sdk_event("message.part.removed", %{})
+
+      assert {:ok, updated, events} = SdkEventPolicy.apply_event(session, event)
+      assert events == []
+      assert updated.lifecycle_state == :running
+    end
+
+    test "retry status stores retry_next_at" do
+      session = running_session()
+
+      event =
+        sdk_event("session.status", %{
+          "status" => "retry",
+          "attempt" => 1,
+          "message" => "Rate limited",
+          "next" => "2026-03-11T12:00:00Z"
+        })
+
+      assert {:ok, updated, _events} = SdkEventPolicy.apply_event(session, event)
+      assert updated.retry_next_at == "2026-03-11T12:00:00Z"
+    end
+  end
 end

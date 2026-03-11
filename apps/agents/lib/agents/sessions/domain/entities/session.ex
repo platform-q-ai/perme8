@@ -1,6 +1,10 @@
 defmodule Agents.Sessions.Domain.Entities.Session do
   @moduledoc """
   Pure domain entity representing a unified session lifecycle view.
+
+  Tracks both lifecycle state transitions and SDK event state: message counts,
+  streaming activity, active tool calls, error classification, permission
+  context, retry metadata, file edits, compaction, and session metadata.
   """
 
   alias Agents.Sessions.Domain.Policies.SessionLifecyclePolicy
@@ -47,7 +51,7 @@ defmodule Agents.Sessions.Domain.Entities.Session do
           permission_context: map() | nil,
           retry_attempt: non_neg_integer(),
           retry_message: String.t() | nil,
-          retry_next_at: DateTime.t() | nil,
+          retry_next_at: String.t() | nil,
           message_count: non_neg_integer(),
           streaming_active: boolean(),
           active_tool_calls: non_neg_integer(),
@@ -129,14 +133,11 @@ defmodule Agents.Sessions.Domain.Entities.Session do
   @doc "Records a file path edit once, deduplicated by path."
   @spec record_file_edit(t(), String.t()) :: t()
   def record_file_edit(session, path) do
-    file_edits =
-      if path in session.file_edits do
-        session.file_edits
-      else
-        session.file_edits ++ [path]
-      end
-
-    %{session | file_edits: file_edits}
+    if path in session.file_edits do
+      session
+    else
+      %{session | file_edits: [path | session.file_edits]}
+    end
   end
 
   @doc "Marks the session as compacted."

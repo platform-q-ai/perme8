@@ -9,7 +9,8 @@ defmodule Agents.Sessions.Infrastructure.SdkEventHandler do
   the pure domain model. No Repo calls.
   """
 
-  alias Agents.Sessions.Domain.Policies.{SdkEventPolicy, SdkEventTypes}
+  alias Agents.Sessions.Domain.Entities.Session
+  alias Agents.Sessions.Domain.Policies.SdkEventPolicy
 
   require Logger
 
@@ -25,33 +26,29 @@ defmodule Agents.Sessions.Infrastructure.SdkEventHandler do
 
   - `:event_bus` — module implementing `emit_all/2` (default: `Perme8.Events.EventBus`)
   """
-  @spec handle(struct(), map(), keyword()) :: {:ok, struct()} | {:skip, atom()}
+  @spec handle(Session.t(), map(), keyword()) :: {:ok, Session.t()} | {:skip, atom()}
   def handle(session, sdk_event, opts \\ []) do
     event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
-    event_type = Map.get(sdk_event, "type", "unknown")
 
-    if SdkEventTypes.handled?(event_type) do
-      case SdkEventPolicy.apply_event(session, sdk_event) do
-        {:ok, updated_session, []} ->
-          {:ok, updated_session}
+    case SdkEventPolicy.apply_event(session, sdk_event) do
+      {:ok, updated_session, []} ->
+        {:ok, updated_session}
 
-        {:ok, updated_session, domain_events} ->
-          :ok = event_bus.emit_all(domain_events)
-          {:ok, updated_session}
+      {:ok, updated_session, domain_events} ->
+        case event_bus.emit_all(domain_events) do
+          :ok ->
+            :ok
 
-        {:skip, reason} ->
-          Logger.debug(
-            "SdkEventHandler: skipped event #{event_type} for task #{session.task_id}: #{reason}"
-          )
+          error ->
+            Logger.warning(
+              "SdkEventHandler: emit_all failed for task #{session.task_id}: #{inspect(error)}"
+            )
+        end
 
-          {:skip, reason}
-      end
-    else
-      Logger.debug(
-        "SdkEventHandler: not relevant event #{event_type} for task #{session.task_id}"
-      )
+        {:ok, updated_session}
 
-      {:skip, :not_relevant}
+      {:skip, reason} ->
+        {:skip, reason}
     end
   end
 end

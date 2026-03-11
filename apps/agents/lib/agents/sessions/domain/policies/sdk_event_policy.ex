@@ -70,9 +70,11 @@ defmodule Agents.Sessions.Domain.Policies.SdkEventPolicy do
   end
 
   defp process_and_stamp(session, type, properties) do
-    case handle_event(session, type, properties) do
+    normalized = normalize_properties(type, properties)
+
+    case handle_event(session, type, normalized) do
       {:ok, updated_session, events} ->
-        event_key = derive_event_key(type, properties)
+        event_key = derive_event_key(type, normalized)
         updated_session = stamp_event_id(updated_session, event_key)
         {:ok, updated_session, events}
 
@@ -80,6 +82,16 @@ defmodule Agents.Sessions.Domain.Policies.SdkEventPolicy do
         skip
     end
   end
+
+  # The SDK may send session.status with either a flat string or nested map:
+  # %{"status" => "busy"} or %{"status" => %{"type" => "busy"}}
+  # Normalize to the flat format for consistent pattern matching.
+  defp normalize_properties("session.status", %{"status" => %{"type" => status_type}} = props)
+       when is_binary(status_type) do
+    Map.put(props, "status", status_type)
+  end
+
+  defp normalize_properties(_type, properties), do: properties
 
   defp stamp_event_id(session, nil), do: session
   defp stamp_event_id(session, key), do: Session.update(session, %{last_event_id: key})
@@ -296,7 +308,9 @@ defmodule Agents.Sessions.Domain.Policies.SdkEventPolicy do
   end
 
   defp complete_if_possible(session) do
-    if session.lifecycle_state in [:running, :awaiting_feedback] do
+    # Only running sessions can transition to completed; awaiting_feedback -> completed
+    # is not a valid transition per SessionLifecyclePolicy.
+    if session.lifecycle_state == :running do
       transition_with_state_event(session, :completed, %{streaming_active: false}, [])
     else
       {:skip, :no_transition}
