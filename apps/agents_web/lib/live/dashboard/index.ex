@@ -2243,8 +2243,6 @@ defmodule AgentsWeb.DashboardLive.Index do
 
   defp apply_ticket_closed(socket, number) do
     user = socket.assigns.current_scope.user
-
-    # Find the ticket to get its associated session container_id
     ticket = find_ticket_by_number(socket.assigns.tickets, number)
     container_id = ticket && ticket.associated_container_id
 
@@ -2255,7 +2253,6 @@ defmodule AgentsWeb.DashboardLive.Index do
     # don't keep the ticket "linked" to a deleted task.
     tasks_snapshot = maybe_remove_tasks(socket.assigns[:tasks_snapshot], container_id)
 
-    # Mark the ticket as closed so it moves out of the Open filter
     tickets =
       map_ticket_tree(socket.assigns.tickets, fn t ->
         if t.number == number, do: %{t | state: "closed"}, else: t
