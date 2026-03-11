@@ -32,8 +32,7 @@ defmodule Agents.Sessions.Infrastructure.SdkEventHandlerTest do
 
       assert {:ok, updated} = SdkEventHandler.handle(session, event, event_bus: TestEventBus)
       assert updated.retry_attempt == 2
-      assert_received {:events_emitted, events}
-      assert length(events) > 0
+      assert_received {:events_emitted, [_ | _]}
     end
 
     test "emits all domain events via event_bus" do
@@ -42,8 +41,7 @@ defmodule Agents.Sessions.Infrastructure.SdkEventHandlerTest do
 
       assert {:ok, updated} = SdkEventHandler.handle(session, event, event_bus: TestEventBus)
       assert updated.lifecycle_state == :failed
-      assert_received {:events_emitted, events}
-      assert length(events) == 2
+      assert_received {:events_emitted, [_, _]}
     end
 
     test "returns skip for ignored event types" do

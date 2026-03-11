@@ -38,39 +38,51 @@ defmodule Agents.Sessions.Domain.Policies.SdkEventPolicy do
   def apply_event(session, %{"type" => type} = event) when is_binary(type) do
     properties = Map.get(event, "properties", %{})
 
-    cond do
-      not SdkEventTypes.handled?(type) ->
-        {:skip, :not_relevant}
-
-      SessionLifecyclePolicy.terminal?(session.lifecycle_state) and
-          type not in @terminal_safe_events ->
-        {:skip, :already_terminal}
-
-      true ->
-        event_key = derive_event_key(type, properties)
-
-        if event_key != nil and event_key == session.last_event_id do
-          {:skip, :duplicate}
-        else
-          case handle_event(session, type, properties) do
-            {:ok, updated_session, events} ->
-              updated_session =
-                if event_key do
-                  Session.update(updated_session, %{last_event_id: event_key})
-                else
-                  updated_session
-                end
-
-              {:ok, updated_session, events}
-
-            {:skip, reason} ->
-              {:skip, reason}
-          end
-        end
+    with :ok <- check_relevance(type),
+         :ok <- check_terminal_guard(session.lifecycle_state, type),
+         :ok <- check_idempotency(session, type, properties) do
+      process_and_stamp(session, type, properties)
     end
   end
 
   def apply_event(_session, _event), do: {:skip, :not_relevant}
+
+  defp check_relevance(type) do
+    if SdkEventTypes.handled?(type), do: :ok, else: {:skip, :not_relevant}
+  end
+
+  defp check_terminal_guard(lifecycle_state, type) do
+    if SessionLifecyclePolicy.terminal?(lifecycle_state) and type not in @terminal_safe_events do
+      {:skip, :already_terminal}
+    else
+      :ok
+    end
+  end
+
+  defp check_idempotency(session, type, properties) do
+    event_key = derive_event_key(type, properties)
+
+    if event_key != nil and event_key == session.last_event_id do
+      {:skip, :duplicate}
+    else
+      :ok
+    end
+  end
+
+  defp process_and_stamp(session, type, properties) do
+    case handle_event(session, type, properties) do
+      {:ok, updated_session, events} ->
+        event_key = derive_event_key(type, properties)
+        updated_session = stamp_event_id(updated_session, event_key)
+        {:ok, updated_session, events}
+
+      {:skip, _reason} = skip ->
+        skip
+    end
+  end
+
+  defp stamp_event_id(session, nil), do: session
+  defp stamp_event_id(session, key), do: Session.update(session, %{last_event_id: key})
 
   defp handle_event(session, "session.status", %{"status" => "busy"}), do: {:ok, session, []}
 
