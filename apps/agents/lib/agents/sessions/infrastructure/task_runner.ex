@@ -663,11 +663,13 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
     notify_queue_terminal(state, :cancelled)
 
-    cleanup_container(state)
     {:stop, :normal, state}
   end
 
-  # ---- Terminate (defensive cleanup) ----
+  # ---- Terminate (single cleanup point) ----
+  # Container cleanup is done exclusively here to avoid double-stop.
+  # All terminal paths use {:stop, :normal, state} which guarantees
+  # terminate/2 is called by OTP.
 
   @impl true
   def terminate(_reason, state) do
@@ -1406,8 +1408,6 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     )
 
     notify_queue_terminal(state, :failed)
-
-    cleanup_container(state)
   end
 
   defp complete_task(state) do
@@ -1439,8 +1439,6 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     )
 
     notify_queue_terminal(state, :completed)
-
-    cleanup_container(state)
   end
 
   defp notify_queue_terminal(state, status) when status in [:completed, :failed, :cancelled] do

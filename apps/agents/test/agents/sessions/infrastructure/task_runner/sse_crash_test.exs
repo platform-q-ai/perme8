@@ -77,10 +77,13 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.SseCrashTest do
         {task.id, @default_opts}
       )
 
+    ref = Process.monitor(pid)
+
     assert_receive {:failed, error}, 5000
     assert String.contains?(error, "SSE process crashed")
 
-    Process.sleep(100)
+    # Wait for GenServer to fully terminate before test cleanup
+    assert_receive {:DOWN, ^ref, :process, ^pid, _reason}, 5000
     refute Process.alive?(pid)
   end
 
@@ -186,11 +189,13 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.SseCrashTest do
     end)
     |> expect(:send_prompt_async, fn _url, "sess-1", _parts, _opts -> :ok end)
 
-    {:ok, _pid} =
+    {:ok, pid} =
       GenServer.start(
         TaskRunner,
         {task.id, @default_opts}
       )
+
+    ref = Process.monitor(pid)
 
     assert_receive {:task_status_changed, _, "running"}, 5000
     assert_receive {:task_status_changed, _, "completed"}, 5000
@@ -208,6 +213,9 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.SseCrashTest do
 
     refute_receive {:failed, _}, 200
     assert :atomics.get(reconnect_calls, 1) == 2
+
+    # Wait for GenServer to fully terminate before test cleanup
+    assert_receive {:DOWN, ^ref, :process, ^pid, _reason}, 5000
   end
 
   test "normal SSE DOWN while active does not fail immediately", %{task: task} do
@@ -258,6 +266,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.SseCrashTest do
     |> stub(:abort_session, fn _url, _session_id -> {:ok, true} end)
 
     {:ok, pid} = GenServer.start(TaskRunner, {task.id, @default_opts})
+    ref = Process.monitor(pid)
 
     assert_receive {:task_status_changed, _, "running"}, 5000
     refute_receive {:failed, _}, 200
@@ -266,6 +275,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.SseCrashTest do
     assert Process.alive?(pid)
 
     send(pid, :cancel)
-    Process.sleep(100)
+
+    # Wait for GenServer to fully terminate before test cleanup
+    assert_receive {:DOWN, ^ref, :process, ^pid, _reason}, 5000
   end
 end
