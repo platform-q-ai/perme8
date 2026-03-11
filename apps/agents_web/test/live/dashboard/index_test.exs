@@ -4281,4 +4281,83 @@ defmodule AgentsWeb.DashboardLive.IndexTest do
       refute html =~ "1 files"
     end
   end
+
+  describe "run_task with ticket_number for unrelated active session" do
+    setup %{conn: conn} do
+      user = user_fixture()
+      %{conn: log_in_user(conn, user), user: user}
+    end
+
+    test "creates a new task instead of following up on unrelated active session", %{
+      conn: conn,
+      user: user
+    } do
+      # 1. Create a running task on session A (unrelated to any ticket)
+      running_task =
+        task_fixture(%{
+          user_id: user.id,
+          instruction: "Some unrelated coding task",
+          container_id: "c-unrelated-active",
+          status: "running"
+        })
+
+      # 2. Create ticket #422 with no associated session
+      {:ok, _ticket} =
+        ProjectTicketRepository.sync_remote_ticket(%{
+          number: 422,
+          title: "Ticket that needs a session",
+          body: "Please work on this.",
+          status: "Ready",
+          priority: "Need",
+          size: "M",
+          labels: []
+        })
+
+      # 3. Mount the dashboard viewing session A — current_task = running task
+      {:ok, lv, _html} = live(conn, ~p"/sessions?container=c-unrelated-active")
+
+      # Verify current_task is the running task
+      state = :sys.get_state(lv.pid)
+
+      assert state.socket.assigns.current_task.id == running_task.id
+      assert state.socket.assigns.current_task.status == "running"
+
+      # 4. Count tasks before submission
+      task_count_before =
+        TaskSchema
+        |> where([t], t.user_id == ^user.id)
+        |> select([t], count(t.id))
+        |> Repo.one!()
+
+      # 5. Submit run_task with ticket_number for the unrelated ticket
+      #    This simulates the user being on the ticket tab with ticket #422
+      #    but current_task is the running task from session A.
+      _ =
+        render_submit(lv, "run_task", %{
+          "instruction" => "fix the bug in this ticket",
+          "ticket_number" => "422"
+        })
+
+      # 6. A NEW task should have been created for the ticket
+      task_count_after =
+        TaskSchema
+        |> where([t], t.user_id == ^user.id)
+        |> select([t], count(t.id))
+        |> Repo.one!()
+
+      assert task_count_after == task_count_before + 1,
+             "Expected a new task to be created for ticket #422, " <>
+               "but task count didn't increase (was #{task_count_before}, now #{task_count_after}). " <>
+               "The message was likely routed as a follow-up to the unrelated running task."
+
+      # The new task's instruction should reference ticket #422
+      new_task =
+        TaskSchema
+        |> where([t], t.user_id == ^user.id and t.id != ^running_task.id)
+        |> Repo.one!()
+
+      assert new_task.instruction =~ "#422"
+      assert new_task.instruction =~ "fix the bug in this ticket"
+    end
+  end
 end
