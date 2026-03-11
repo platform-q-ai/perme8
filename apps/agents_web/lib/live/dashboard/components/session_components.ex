@@ -1092,7 +1092,7 @@ defmodule AgentsWeb.DashboardLive.Components.SessionComponents do
             <.status_dot :if={@variant == :triage} status={@session.latest_status} />
             <span :if={@session[:image]}>{image_label(@session.image)}</span>
             <span :if={@session[:latest_at]}>{relative_time(@session.latest_at)}</span>
-            <span :if={@file_stats}>{@file_stats}</span>
+            <span :if={@file_stats} data-testid="session-file-stats">{@file_stats}</span>
             <span
               :if={Map.get(@session, :started_at) != nil}
               data-testid="session-duration"
