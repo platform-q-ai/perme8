@@ -12,13 +12,11 @@ defmodule Agents.Tickets.Infrastructure.TicketSyncServer do
 
   require Logger
 
-  alias Agents.Repo
   alias Agents.Tickets.Domain.Entities.Ticket
   alias Agents.Tickets.Domain.Policies.TicketHierarchyPolicy
   alias Agents.Tickets.Infrastructure.Clients.GithubProjectClient
   alias Agents.Tickets.Infrastructure.Repositories.ProjectTicketRepository
   alias Agents.Tickets.Infrastructure.Repositories.TicketLifecycleEventRepository
-  alias Agents.Tickets.Infrastructure.Schemas.ProjectTicketSchema
 
   @topic "sessions:tickets"
 
@@ -124,7 +122,15 @@ defmodule Agents.Tickets.Infrastructure.TicketSyncServer do
 
     case state.client.fetch_tickets(opts) do
       {:ok, tickets} ->
-        Enum.each(tickets, &sync_remote_ticket(state, &1))
+        # Pre-fetch all existing tickets in one query to avoid N+1
+        existing_by_number =
+          state.ticket_repo.list_all_flat()
+          |> Map.new(&{&1.number, &1})
+
+        Enum.each(tickets, fn ticket ->
+          previous = Map.get(existing_by_number, ticket.number)
+          sync_remote_ticket(state, ticket, previous)
+        end)
 
         link_hierarchy_relationships(state, tickets)
 
@@ -161,9 +167,7 @@ defmodule Agents.Tickets.Infrastructure.TicketSyncServer do
     end
   end
 
-  defp sync_remote_ticket(state, ticket) do
-    previous_ticket = Repo.get_by(ProjectTicketSchema, number: ticket.number)
-
+  defp sync_remote_ticket(state, ticket, previous_ticket) do
     case state.ticket_repo.sync_remote_ticket(ticket) do
       {:ok, synced_ticket} ->
         maybe_record_lifecycle_transition(state, previous_ticket, synced_ticket)
