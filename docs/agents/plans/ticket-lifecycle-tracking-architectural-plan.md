@@ -101,11 +101,11 @@ The feature file selectors require these new data attributes and test IDs on tic
 
 ---
 
-## Phase 1: Domain + Application (phoenix-tdd)
+## Phase 1: Domain + Application (phoenix-tdd) ✓
 
 ### 1.1 TicketLifecycleEvent Entity
 
-- [ ] ⏸ **RED**: Write test `apps/agents/test/agents/tickets/domain/entities/ticket_lifecycle_event_test.exs`
+- [x] ✓ **RED**: Write test `apps/agents/test/agents/tickets/domain/entities/ticket_lifecycle_event_test.exs`
   - Tests:
     - `new/1` creates a struct with all fields from attributes map
     - `new/1` handles nil fields gracefully
@@ -113,17 +113,17 @@ The feature file selectors require these new data attributes and test IDs on tic
     - `from_schema/1` maps all fields correctly (id, ticket_id, from_stage, to_stage, transitioned_at, trigger, inserted_at)
     - Default trigger is `"system"`
   - Use `ExUnit.Case, async: true` — no database needed
-- [ ] ⏸ **GREEN**: Implement `apps/agents/lib/agents/tickets/domain/entities/ticket_lifecycle_event.ex`
+- [x] ✓ **GREEN**: Implement `apps/agents/lib/agents/tickets/domain/entities/ticket_lifecycle_event.ex`
   - Module: `Agents.Tickets.Domain.Entities.TicketLifecycleEvent`
   - Pure struct with `defstruct`: `:id`, `:ticket_id`, `:from_stage`, `:to_stage`, `:transitioned_at`, `trigger: "system"`, `:inserted_at`
   - `@type t` typespec
   - `new/1` — creates struct from attributes
   - `from_schema/1` — converts infrastructure schema to domain entity
-- [ ] ⏸ **REFACTOR**: Extract shared attribute mapping logic if applicable
+- [x] ✓ **REFACTOR**: Extract shared attribute mapping logic if applicable
 
 ### 1.2 Ticket Entity Update — Add Lifecycle Fields
 
-- [ ] ⏸ **RED**: Write/update test `apps/agents/test/agents/tickets/domain/entities/ticket_test.exs`
+- [x] ✓ **RED**: Write/update test `apps/agents/test/agents/tickets/domain/entities/ticket_test.exs`
   - Tests:
     - `new/1` includes `lifecycle_stage` defaulting to `"open"`
     - `new/1` includes `lifecycle_stage_entered_at` defaulting to nil
@@ -131,15 +131,15 @@ The feature file selectors require these new data attributes and test IDs on tic
     - `from_schema/1` maps `lifecycle_stage`, `lifecycle_stage_entered_at`, and preloaded `lifecycle_events` (converting via `TicketLifecycleEvent.from_schema/1`)
     - Existing tests continue to pass with new fields
   - Use `ExUnit.Case, async: true`
-- [ ] ⏸ **GREEN**: Update `apps/agents/lib/agents/tickets/domain/entities/ticket.ex`
+- [x] ✓ **GREEN**: Update `apps/agents/lib/agents/tickets/domain/entities/ticket.ex`
   - Add to `defstruct`: `lifecycle_stage: "open"`, `:lifecycle_stage_entered_at`, `lifecycle_events: []`
   - Add to `@type t`: `lifecycle_stage: String.t()`, `lifecycle_stage_entered_at: DateTime.t() | nil`, `lifecycle_events: [TicketLifecycleEvent.t()]`
   - Update `from_schema/1` to map `lifecycle_stage`, `lifecycle_stage_entered_at`, and convert `lifecycle_events` association (handling `%Ecto.Association.NotLoaded{}` gracefully → default `[]`)
-- [ ] ⏸ **REFACTOR**: Ensure `from_schema/1` handles `Ecto.Association.NotLoaded` → `[]` for lifecycle_events
+- [x] ✓ **REFACTOR**: Ensure `from_schema/1` handles `Ecto.Association.NotLoaded` → `[]` for lifecycle_events
 
 ### 1.3 TicketLifecyclePolicy — Stage Validation and Duration Calculation
 
-- [ ] ⏸ **RED**: Write test `apps/agents/test/agents/tickets/domain/policies/ticket_lifecycle_policy_test.exs`
+- [x] ✓ **RED**: Write test `apps/agents/test/agents/tickets/domain/policies/ticket_lifecycle_policy_test.exs`
   - Tests:
     - `valid_stage?/1` returns true for all 7 stages ("open", "ready", "in_progress", "in_review", "ci_testing", "deployed", "closed")
     - `valid_stage?/1` returns false for invalid strings ("unknown", "", nil)
@@ -156,7 +156,7 @@ The feature file selectors require these new data attributes and test IDs on tic
     - `stage_label/1` returns human-readable label for each stage ("Open", "Ready", "In Progress", "In Review", "CI Testing", "Deployed", "Closed")
     - `stage_color/1` returns a color identifier for each stage (for UI badge rendering)
   - Use `ExUnit.Case, async: true` — ALL pure functions, zero I/O
-- [ ] ⏸ **GREEN**: Implement `apps/agents/lib/agents/tickets/domain/policies/ticket_lifecycle_policy.ex`
+- [x] ✓ **GREEN**: Implement `apps/agents/lib/agents/tickets/domain/policies/ticket_lifecycle_policy.ex`
   - Module: `Agents.Tickets.Domain.Policies.TicketLifecyclePolicy`
   - `@valid_stages ["open", "ready", "in_progress", "in_review", "ci_testing", "deployed", "closed"]`
   - `valid_stage?/1` — returns boolean
@@ -165,11 +165,11 @@ The feature file selectors require these new data attributes and test IDs on tic
   - `calculate_relative_durations/1` — takes `[{stage, seconds}]`, returns `[{stage, relative_width}]` where widths are percentages (0-100)
   - `stage_label/1` — returns human-readable label for a stage string
   - `stage_color/1` — returns CSS-friendly color identifier for each stage
-- [ ] ⏸ **REFACTOR**: Extract helper for duration arithmetic if needed
+- [x] ✓ **REFACTOR**: Extract helper for duration arithmetic if needed
 
 ### 1.4 Ticket.View — Pure Display Formatting
 
-- [ ] ⏸ **RED**: Write test `apps/agents/test/agents/tickets/domain/entities/ticket/view_test.exs`
+- [x] ✓ **RED**: Write test `apps/agents/test/agents/tickets/domain/entities/ticket/view_test.exs`
   - Tests:
     - `lifecycle_stage_label/1` returns formatted label from ticket's `lifecycle_stage` (delegates to `TicketLifecyclePolicy.stage_label/1`)
     - `lifecycle_stage_color/1` returns color identifier from ticket's `lifecycle_stage`
@@ -179,7 +179,7 @@ The feature file selectors require these new data attributes and test IDs on tic
     - `lifecycle_timeline_data/1` returns data for rendering timeline bars including relative widths
     - `format_duration/1` formats seconds into human-readable strings ("2h 15m", "3d", "45m", "0m")
   - Use `ExUnit.Case, async: true` — pure functions
-- [ ] ⏸ **GREEN**: Implement `apps/agents/lib/agents/tickets/domain/entities/ticket/view.ex`
+- [x] ✓ **GREEN**: Implement `apps/agents/lib/agents/tickets/domain/entities/ticket/view.ex`
   - Module: `Agents.Tickets.Domain.Entities.Ticket.View`
   - `lifecycle_stage_label/1` — accepts ticket, returns label string
   - `lifecycle_stage_color/1` — accepts ticket, returns color string
@@ -188,11 +188,11 @@ The feature file selectors require these new data attributes and test IDs on tic
   - `lifecycle_timeline_data/1` — returns timeline bars with relative widths
   - `format_duration/1` — pure seconds-to-string formatter
   - All functions delegate to `TicketLifecyclePolicy` for calculations, then format for display
-- [ ] ⏸ **REFACTOR**: Ensure consistent duration formatting
+- [x] ✓ **REFACTOR**: Ensure consistent duration formatting
 
 ### 1.5 TicketStageChanged Domain Event
 
-- [ ] ⏸ **RED**: Write test `apps/agents/test/agents/tickets/domain/events/ticket_stage_changed_test.exs`
+- [x] ✓ **RED**: Write test `apps/agents/test/agents/tickets/domain/events/ticket_stage_changed_test.exs`
   - Tests:
     - Event struct can be created with required fields
     - Required fields: `:ticket_id`, `:from_stage`, `:to_stage`
@@ -200,7 +200,7 @@ The feature file selectors require these new data attributes and test IDs on tic
     - Event has `aggregate_type: "ticket"`
     - Follows `Perme8.Events.DomainEvent` macro pattern (has `event_id`, `event_type`, `occurred_at`, `metadata`)
   - Use `ExUnit.Case, async: true`
-- [ ] ⏸ **GREEN**: Implement `apps/agents/lib/agents/tickets/domain/events/ticket_stage_changed.ex`
+- [x] ✓ **GREEN**: Implement `apps/agents/lib/agents/tickets/domain/events/ticket_stage_changed.ex`
   - Module: `Agents.Tickets.Domain.Events.TicketStageChanged`
   - ```elixir
     use Perme8.Events.DomainEvent,
@@ -208,11 +208,11 @@ The feature file selectors require these new data attributes and test IDs on tic
       fields: [ticket_id: nil, from_stage: nil, to_stage: nil, trigger: "system"],
       required: [:ticket_id, :from_stage, :to_stage]
     ```
-- [ ] ⏸ **REFACTOR**: Verify event matches patterns in `Agents.Sessions.Domain.Events.*`
+- [x] ✓ **REFACTOR**: Verify event matches patterns in `Agents.Sessions.Domain.Events.*`
 
 ### 1.6 RecordStageTransition Use Case
 
-- [ ] ⏸ **RED**: Write test `apps/agents/test/agents/tickets/application/use_cases/record_stage_transition_test.exs`
+- [x] ✓ **RED**: Write test `apps/agents/test/agents/tickets/application/use_cases/record_stage_transition_test.exs`
   - Tests:
     - Successfully records a stage transition: creates lifecycle event + updates ticket's `lifecycle_stage` and `lifecycle_stage_entered_at`
     - Rejects same-stage transition (returns `{:error, :same_stage}`)
@@ -226,7 +226,7 @@ The feature file selectors require these new data attributes and test IDs on tic
     - Handles ticket not found gracefully (returns `{:error, :ticket_not_found}`)
   - Use `Agents.DataCase, async: true` with Mox mocks for repos and event bus
   - Mock setup: define `MockTicketRepo`, `MockLifecycleRepo`, `MockEventBus` behaviours
-- [ ] ⏸ **GREEN**: Implement `apps/agents/lib/agents/tickets/application/use_cases/record_stage_transition.ex`
+- [x] ✓ **GREEN**: Implement `apps/agents/lib/agents/tickets/application/use_cases/record_stage_transition.ex`
   - Module: `Agents.Tickets.Application.UseCases.RecordStageTransition`
   - Pattern:
     ```elixir
@@ -246,12 +246,12 @@ The feature file selectors require these new data attributes and test IDs on tic
       # 3. Emit TicketStageChanged event AFTER transaction commits
     end
     ```
-- [ ] ⏸ **REFACTOR**: Extract validation logic into policy calls
+- [x] ✓ **REFACTOR**: Extract validation logic into policy calls
 
 ### Phase 1 Validation
 
-- [ ] ⏸ All domain tests pass (`mix test apps/agents/test/agents/tickets/domain/` — milliseconds, no I/O)
-- [ ] ⏸ All application tests pass (`mix test apps/agents/test/agents/tickets/application/` — with mocks)
+- [x] ✓ All domain tests pass (`mix test apps/agents/test/agents/tickets/domain/` — milliseconds, no I/O)
+- [x] ✓ All application tests pass (`mix test apps/agents/test/agents/tickets/application/` — with mocks)
 - [ ] ⏸ No boundary violations (`mix boundary`)
 
 ---
