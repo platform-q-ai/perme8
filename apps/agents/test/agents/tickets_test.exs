@@ -122,29 +122,21 @@ defmodule Agents.TicketsTest do
     end
   end
 
-  describe "close_project_ticket/1" do
-    setup do
-      previous = Application.get_env(:agents, :github_ticket_client)
-      on_exit(fn -> Application.put_env(:agents, :github_ticket_client, previous) end)
-      :ok
-    end
-
+  describe "close_project_ticket/2" do
     test "closes on GitHub first, then marks as closed locally" do
-      Application.put_env(:agents, :github_ticket_client, SuccessGithubClient)
       create_ticket!(700, %{state: "open"})
 
-      assert :ok = Tickets.close_project_ticket(700)
+      assert :ok = Tickets.close_project_ticket(700, github_client: SuccessGithubClient)
 
       refreshed = Repo.get_by!(ProjectTicketSchema, number: 700)
       assert refreshed.state == "closed"
     end
 
     test "returns error and does not close locally when GitHub fails" do
-      Application.put_env(:agents, :github_ticket_client, FailingGithubClient)
       create_ticket!(701, %{state: "open"})
 
       assert {:error, {:unexpected_status, 502, "Bad Gateway"}} =
-               Tickets.close_project_ticket(701)
+               Tickets.close_project_ticket(701, github_client: FailingGithubClient)
 
       # Ticket must remain open locally
       refreshed = Repo.get_by!(ProjectTicketSchema, number: 701)
@@ -152,9 +144,7 @@ defmodule Agents.TicketsTest do
     end
 
     test "succeeds even when ticket does not exist locally (GitHub already closed)" do
-      Application.put_env(:agents, :github_ticket_client, SuccessGithubClient)
-
-      assert :ok = Tickets.close_project_ticket(9999)
+      assert :ok = Tickets.close_project_ticket(9999, github_client: SuccessGithubClient)
     end
   end
 end
