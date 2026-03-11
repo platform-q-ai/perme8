@@ -74,6 +74,28 @@ When adding a new feature or placing code:
 5. **Never use another app's Repo** -- if you need data from another app, call its public API.
 6. **Domain events live in the emitting app** -- the app that produces the event defines the struct and publishes it. Event infrastructure lives in `perme8_events`.
 
+### Domain Event Testing Rule
+
+> **Always inject `TestEventBus` in tests that call use cases which emit domain events.** Use cases default to `Perme8.Events.EventBus` which publishes to real PubSub. Event handler GenServers in the supervision tree (e.g. `GithubTicketPushHandler`) subscribe on startup and will receive those events. Without Ecto sandbox access, the handler crashes. With `one_for_one` strategy and default `max_restarts: 3`, repeated crashes kill the entire supervisor -- including `Agents.Repo` -- causing mass "could not lookup Ecto repo" failures.
+
+Pattern for use case tests:
+
+```elixir
+# In the test module
+@default_opts [actor_id: @actor_id, event_bus: TestEventBus]
+
+setup do
+  TestEventBus.start_global()
+  :ok
+end
+
+test "creates a thing" do
+  assert {:ok, _} = CreateThing.execute("input", @default_opts)
+end
+```
+
+For event handlers that touch the database, wrap Repo calls in `try/rescue` as defense in depth so a sandbox or connection error never crashes the GenServer.
+
 ## Agents and Skills
 
 This repo uses two layers of automation:
