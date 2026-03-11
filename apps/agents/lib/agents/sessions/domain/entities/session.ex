@@ -42,6 +42,20 @@ defmodule Agents.Sessions.Domain.Entities.Session do
           session_id: String.t() | nil,
           instruction: String.t() | nil,
           error: String.t() | nil,
+          error_category: atom() | nil,
+          error_recoverable: boolean() | nil,
+          permission_context: map() | nil,
+          retry_attempt: non_neg_integer(),
+          retry_message: String.t() | nil,
+          retry_next_at: DateTime.t() | nil,
+          message_count: non_neg_integer(),
+          streaming_active: boolean(),
+          active_tool_calls: non_neg_integer(),
+          file_edits: [String.t()],
+          compacted: boolean(),
+          sdk_session_title: String.t() | nil,
+          sdk_share_status: String.t() | nil,
+          last_event_id: String.t() | nil,
           queue_position: integer() | nil,
           queued_at: DateTime.t() | nil,
           started_at: DateTime.t() | nil,
@@ -57,16 +71,77 @@ defmodule Agents.Sessions.Domain.Entities.Session do
     :session_id,
     :instruction,
     :error,
+    :error_category,
+    :error_recoverable,
+    :permission_context,
+    :retry_message,
+    :retry_next_at,
+    :sdk_session_title,
+    :sdk_share_status,
+    :last_event_id,
     :queue_position,
     :queued_at,
     :started_at,
     :completed_at,
+    message_count: 0,
+    streaming_active: false,
+    active_tool_calls: 0,
+    retry_attempt: 0,
+    file_edits: [],
+    compacted: false,
     lifecycle_state: :idle
   ]
 
   @doc "Creates a new Session entity from a map of attributes."
   @spec new(map()) :: t()
   def new(attrs), do: struct(__MODULE__, attrs)
+
+  @doc "Updates a Session entity by merging the provided attributes."
+  @spec update(t(), map()) :: t()
+  def update(session, attrs), do: struct(session, attrs)
+
+  @doc "Increments the tracked message count by one."
+  @spec track_message(t()) :: t()
+  def track_message(session), do: %{session | message_count: session.message_count + 1}
+
+  @doc "Decrements the tracked message count by one, with a floor of zero."
+  @spec remove_message(t()) :: t()
+  def remove_message(session), do: %{session | message_count: max(session.message_count - 1, 0)}
+
+  @doc "Marks the session as actively streaming."
+  @spec start_streaming(t()) :: t()
+  def start_streaming(session), do: %{session | streaming_active: true}
+
+  @doc "Marks the session as no longer actively streaming."
+  @spec stop_streaming(t()) :: t()
+  def stop_streaming(session), do: %{session | streaming_active: false}
+
+  @doc "Increments the count of active tool calls by one."
+  @spec increment_tool_calls(t()) :: t()
+  def increment_tool_calls(session),
+    do: %{session | active_tool_calls: session.active_tool_calls + 1}
+
+  @doc "Decrements active tool calls by one, with a floor of zero."
+  @spec decrement_tool_calls(t()) :: t()
+  def decrement_tool_calls(session),
+    do: %{session | active_tool_calls: max(session.active_tool_calls - 1, 0)}
+
+  @doc "Records a file path edit once, deduplicated by path."
+  @spec record_file_edit(t(), String.t()) :: t()
+  def record_file_edit(session, path) do
+    file_edits =
+      if path in session.file_edits do
+        session.file_edits
+      else
+        session.file_edits ++ [path]
+      end
+
+    %{session | file_edits: file_edits}
+  end
+
+  @doc "Marks the session as compacted."
+  @spec mark_compacted(t()) :: t()
+  def mark_compacted(session), do: %{session | compacted: true}
 
   @doc "Builds a Session from a task map, deriving the lifecycle state."
   @spec from_task(map()) :: t()
