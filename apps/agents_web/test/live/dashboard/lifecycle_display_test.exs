@@ -27,7 +27,7 @@ defmodule AgentsWeb.DashboardLive.LifecycleDisplayTest do
 
     assert has_element?(
              view,
-             "[data-testid='triage-ticket-item'][data-lifecycle-stage='in_progress'][data-ticket-id='ticket-402']"
+             "[data-testid='triage-ticket-item'][data-lifecycle-stage='in_progress'][data-ticket-id='in-progress-ticket']"
            )
   end
 

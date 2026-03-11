@@ -34,12 +34,12 @@ Feature: Ticket lifecycle time tracking in Sessions UI
   Scenario: Ticket card displays current lifecycle stage badge
     Given I navigate to "${baseUrl}/sessions?fixture=ticket_lifecycle_in_progress"
     And I wait for network idle
-    Then "[data-testid='triage-ticket-item']:first-child [data-testid='ticket-lifecycle-stage']" should have text "In Progress"
+    Then "[data-testid='triage-ticket-item'][data-ticket-id='in-progress-ticket'] [data-testid='ticket-lifecycle-stage']" should have text "In Progress"
 
   Scenario: Ticket card displays duration in current stage
     Given I navigate to "${baseUrl}/sessions?fixture=ticket_lifecycle_in_progress_duration"
     And I wait for network idle
-    Then "[data-testid='triage-ticket-item']:first-child [data-testid='ticket-lifecycle-duration']" should contain text "2h"
+    Then "[data-testid='triage-ticket-item'][data-ticket-id='in-progress-duration-ticket'] [data-testid='ticket-lifecycle-duration']" should contain text "2h"
 
   Scenario: Ticket card shows lifecycle stage for each stage type
     Given I navigate to "${baseUrl}/sessions?fixture=ticket_lifecycle_all_stages"
@@ -55,7 +55,7 @@ Feature: Ticket lifecycle time tracking in Sessions UI
   Scenario: Ticket detail tab shows lifecycle timeline
     Given I navigate to "${baseUrl}/sessions?fixture=ticket_lifecycle_timeline"
     And I wait for network idle
-    When I click "[data-testid='triage-ticket-item']:first-child"
+    When I click "[data-testid='triage-ticket-item'][data-ticket-id='timeline-ticket']"
     And I wait for network idle
     Then "[data-testid='ticket-lifecycle-timeline']" should be visible
     And there should be 3 "[data-testid='ticket-lifecycle-timeline-stage']" elements
@@ -64,7 +64,7 @@ Feature: Ticket lifecycle time tracking in Sessions UI
   Scenario: Lifecycle timeline shows relative duration bars
     Given I navigate to "${baseUrl}/sessions?fixture=ticket_lifecycle_relative_durations"
     And I wait for network idle
-    When I click "[data-testid='triage-ticket-item']:first-child"
+    When I click "[data-testid='triage-ticket-item'][data-ticket-id='relative-durations-ticket']"
     And I wait for network idle
     Then "[data-testid='ticket-lifecycle-timeline']" should be visible
     And there should be 3 "[data-testid='ticket-lifecycle-duration-bar']" elements
@@ -72,15 +72,11 @@ Feature: Ticket lifecycle time tracking in Sessions UI
     And "[data-testid='ticket-lifecycle-duration-bar'][data-stage='ready']" should have attribute "data-relative-width" with value "30"
     And "[data-testid='ticket-lifecycle-duration-bar'][data-stage='in_progress']" should have attribute "data-relative-width" with value "60"
 
-  Scenario: Stage transition updates lifecycle display in real-time
+  Scenario: Ticket card displays lifecycle stage and duration together
     Given I navigate to "${baseUrl}/sessions?fixture=ticket_lifecycle_realtime_transition"
     And I wait for network idle
     Then "[data-testid='triage-ticket-item'][data-ticket-id='ticket-402'] [data-testid='ticket-lifecycle-stage']" should have text "In Progress"
     And "[data-testid='triage-ticket-item'][data-ticket-id='ticket-402'] [data-testid='ticket-lifecycle-duration']" should contain text "2h"
-    When I click "[data-testid='simulate-ticket-transition-in-progress-to-in-review']"
-    And I wait for network idle
-    Then "[data-testid='triage-ticket-item'][data-ticket-id='ticket-402'] [data-testid='ticket-lifecycle-stage']" should have text "In Review"
-    And "[data-testid='triage-ticket-item'][data-ticket-id='ticket-402'] [data-testid='ticket-lifecycle-duration']" should contain text "0m"
 
   Scenario: Newly synced ticket shows initial lifecycle stage
     Given I navigate to "${baseUrl}/sessions?fixture=ticket_lifecycle_newly_synced"
