@@ -399,6 +399,7 @@ defmodule Agents.Tickets.Infrastructure.Clients.GithubProjectClientTest do
 
   describe "behaviour contract" do
     test "implements GithubTicketClientBehaviour callbacks" do
+      Code.ensure_loaded!(GithubProjectClient)
       assert function_exported?(GithubProjectClient, :get_issue, 2)
       assert function_exported?(GithubProjectClient, :list_issues, 1)
       assert function_exported?(GithubProjectClient, :create_issue, 2)
