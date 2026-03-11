@@ -47,15 +47,20 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.TimeoutTest do
     Agents.Mocks.OpencodeClientMock
     |> stub(:health, fn _url -> {:error, :unhealthy} end)
 
-    {:ok, _pid} =
+    {:ok, pid} =
       GenServer.start(
         Agents.Sessions.Infrastructure.TaskRunner,
         {task.id, @default_opts}
       )
 
+    ref = Process.monitor(pid)
+
     assert_receive {:failed, "Health check timed out"}, 30_000
 
     # Verify PubSub broadcast
     assert_receive {:task_status_changed, _, "failed"}, 5000
+
+    # Wait for GenServer to fully terminate before test cleanup
+    assert_receive {:DOWN, ^ref, :process, ^pid, _reason}, 5000
   end
 end
