@@ -304,13 +304,13 @@ All artifacts belong to the `agents` app per `docs/app_ownership.md`. No other a
 
 ---
 
-## Phase 6: SDK Event Handler — Infrastructure Entry Point
+## Phase 6: SDK Event Handler — Infrastructure Entry Point ✓
 
 **Goal**: Create the single infrastructure entry point that receives raw SDK events, resolves them to a Session, applies the SdkEventPolicy, and emits domain events via EventBus. This module is the bridge between the GenServer world (TaskRunner) and the pure domain model.
 
 ### 6.1 SdkEventHandler Module
 
-- [ ] ⏸ **RED**: Write test `apps/agents/test/agents/sessions/infrastructure/sdk_event_handler_test.exs`
+- [x] **RED**: Write test `apps/agents/test/agents/sessions/infrastructure/sdk_event_handler_test.exs`
   - Use `ExUnit.Case, async: true` (pure logic with DI mocks)
   - Tests:
     - `handle/3` with a handled event type calls SdkEventPolicy, receives `{:ok, session, events}`, emits events via event_bus, returns `{:ok, updated_session}`
@@ -320,7 +320,7 @@ All artifacts belong to the `agents` app per `docs/app_ownership.md`. No other a
     - `handle/3` extracts `task_id` and `user_id` from the session for event `aggregate_id` and `actor_id`
     - `handle/3` logs unhandled event types at debug level (observability)
     - `handle/3` returns `{:ok, updated_session}` with all SDK tracking fields updated
-- [ ] ⏸ **GREEN**: Implement `apps/agents/lib/agents/sessions/infrastructure/sdk_event_handler.ex`
+- [x] **GREEN**: Implement `apps/agents/lib/agents/sessions/infrastructure/sdk_event_handler.ex`
   - Module: `Agents.Sessions.Infrastructure.SdkEventHandler`
   - `handle(session, sdk_event, opts \\ [])` — main entry point
     - `opts[:event_bus]` defaults to `Perme8.Events.EventBus`
@@ -331,11 +331,11 @@ All artifacts belong to the `agents` app per `docs/app_ownership.md`. No other a
     - If not handled: logs at debug, returns `{:skip, :not_relevant}`
   - **No Repo calls** — this is a thin orchestrator between pure policy and EventBus
   - Depends on: `SdkEventTypes`, `SdkEventPolicy`, `Perme8.Events.EventBus`
-- [ ] ⏸ **REFACTOR**: Ensure structured Logger metadata includes `task_id` and `event_type`
+- [x] **REFACTOR**: Ensure structured Logger metadata includes `task_id` and `event_type`
 
 ### Phase 6 Validation
-- [ ] All SdkEventHandler tests pass
-- [ ] Handler has no direct Repo/DB dependencies (verifiable by inspection)
+- [x] All SdkEventHandler tests pass
+- [x] Handler has no direct Repo/DB dependencies (verifiable by inspection)
 
 ---
 
@@ -390,7 +390,7 @@ All artifacts belong to the `agents` app per `docs/app_ownership.md`. No other a
 
 ---
 
-## Phase 8: PubSub Broadcasting for Domain Events
+## Phase 8: PubSub Broadcasting for Domain Events ⏳
 
 **Goal**: Ensure all domain events produced by the SdkEventHandler are broadcast over PubSub so the UI layer (out of scope for this ticket) and other subscribers can react.
 
@@ -410,14 +410,14 @@ All artifacts belong to the `agents` app per `docs/app_ownership.md`. No other a
 
 ### 8.2 High-Frequency Event Debouncing
 
-- [ ] ⏸ **RED**: Write test `apps/agents/test/agents/sessions/infrastructure/sdk_event_debouncer_test.exs`
+- [x] **RED**: Write test `apps/agents/test/agents/sessions/infrastructure/sdk_event_debouncer_test.exs`
   - Tests:
     - `should_emit?/2` with `:message_part_updated` type returns `false` if last emission was < 500ms ago
     - `should_emit?/2` with `:message_part_updated` type returns `true` if last emission was >= 500ms ago
     - `should_emit?/2` with any non-debounced event type always returns `true`
     - `record_emission/2` updates the last emission timestamp for the event type
     - State-changing events (e.g., `SessionStateChanged`) are NEVER debounced
-- [ ] ⏸ **GREEN**: Implement `apps/agents/lib/agents/sessions/infrastructure/sdk_event_debouncer.ex`
+- [x] **GREEN**: Implement `apps/agents/lib/agents/sessions/infrastructure/sdk_event_debouncer.ex`
   - Module: `Agents.Sessions.Infrastructure.SdkEventDebouncer`
   - Tracks last emission time per event type
   - `should_emit?/2` — checks if enough time has passed since last emission
@@ -425,7 +425,7 @@ All artifacts belong to the `agents` app per `docs/app_ownership.md`. No other a
   - Debounced event types: `SessionMessageUpdated` (for `message.part.updated` events)
   - Non-debounced: all state-change events, error events, permission events
   - Pure module (takes and returns timestamps/state, does not manage its own state)
-- [ ] ⏸ **REFACTOR**: Make debounce interval configurable via `SessionsConfig`
+- [x] **REFACTOR**: Make debounce interval configurable via options (`:interval`)
 
 ### Phase 8 Validation
 - [ ] All PubSub integration tests pass
@@ -434,30 +434,30 @@ All artifacts belong to the `agents` app per `docs/app_ownership.md`. No other a
 
 ---
 
-## Phase 9: Idempotent Event Processing
+## Phase 9: Idempotent Event Processing ✓
 
 **Goal**: Ensure that receiving the same SDK event twice (e.g., due to SSE reconnection) does not produce duplicate state transitions or domain events. Use the `last_event_id` field on Session for tracking.
 
 ### 9.1 Idempotency Guard in SdkEventPolicy
 
-- [ ] ⏸ **RED**: Add tests to `apps/agents/test/agents/sessions/domain/policies/sdk_event_policy_test.exs`
+- [x] **RED**: Add tests to `apps/agents/test/agents/sessions/domain/policies/sdk_event_policy_test.exs`
   - Tests:
     - `apply_event/2` with an event that has the same derived event key as `session.last_event_id` returns `{:skip, :duplicate}`
     - `apply_event/2` with a new event key processes normally and sets `last_event_id` on the returned session
     - Event key derivation: combination of `type` + relevant identifying properties (e.g., `"session.status:idle"`, `"message.updated:msg-123"`, `"permission.updated:perm-456"`)
     - `apply_event/2` with events that have no identifying properties (e.g., `message.part.updated` streaming) are not subject to idempotency checks (they are inherently idempotent via latest-state overwrite)
     - State-confirming events (e.g., `session.status` busy when already running) are naturally idempotent and don't produce domain events — verify no duplicate emissions
-- [ ] ⏸ **GREEN**: Add idempotency logic to `apps/agents/lib/agents/sessions/domain/policies/sdk_event_policy.ex`
+- [x] **GREEN**: Add idempotency logic to `apps/agents/lib/agents/sessions/domain/policies/sdk_event_policy.ex`
   - `derive_event_key/1` — generates a unique key from the event type + identifying properties
   - At the top of `apply_event/2`: if `derive_event_key(event) == session.last_event_id`, return `{:skip, :duplicate}`
   - On successful processing: set `last_event_id` on the returned session
   - Events with no stable identifier (streaming parts) skip the idempotency check
-- [ ] ⏸ **REFACTOR**: Extract `derive_event_key/1` as a standalone function with comprehensive pattern matching
+- [x] **REFACTOR**: Extract `derive_event_key/1` as a standalone function with comprehensive pattern matching
 
 ### Phase 9 Validation
-- [ ] All idempotency tests pass
-- [ ] Duplicate events are silently skipped
-- [ ] No regression in normal event processing flow
+- [x] All idempotency tests pass
+- [x] Duplicate events are silently skipped
+- [x] No regression in normal event processing flow
 
 ---
 

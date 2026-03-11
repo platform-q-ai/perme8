@@ -463,4 +463,61 @@ defmodule Agents.Sessions.Domain.Policies.SdkEventPolicyTest do
       assert updated.compacted == true
     end
   end
+
+  describe "idempotency" do
+    test "duplicate event with same event key is skipped" do
+      session = running_session(%{last_event_id: "session.status:idle"})
+      event = sdk_event("session.status", %{"status" => "idle"})
+
+      assert {:skip, :duplicate} = SdkEventPolicy.apply_event(session, event)
+    end
+
+    test "new event with different key is processed normally" do
+      session = running_session(%{last_event_id: "session.status:busy"})
+      event = sdk_event("session.status", %{"status" => "idle"})
+
+      assert {:ok, updated, _events} = SdkEventPolicy.apply_event(session, event)
+      assert updated.last_event_id == "session.status:idle"
+    end
+
+    test "processed event sets last_event_id on returned session" do
+      session = running_session()
+      event = sdk_event("session.error", %{"category" => "auth", "message" => "Bad key"})
+
+      assert {:ok, updated, _events} = SdkEventPolicy.apply_event(session, event)
+      assert updated.last_event_id == "session.error:auth"
+    end
+
+    test "streaming events (message.part.updated with text delta) skip idempotency" do
+      session = running_session(%{last_event_id: "message.part.updated:text"})
+      event = sdk_event("message.part.updated", %{"type" => "text", "delta" => "hello"})
+
+      assert {:ok, _updated, _events} = SdkEventPolicy.apply_event(session, event)
+    end
+
+    test "observability events skip idempotency" do
+      session = running_session(%{last_event_id: "server.connected"})
+      event = sdk_event("server.connected", %{})
+
+      assert {:ok, _updated, _events} = SdkEventPolicy.apply_event(session, event)
+    end
+
+    test "message events with id use the id in key" do
+      session = running_session()
+      event = sdk_event("message.updated", %{"id" => "msg-123", "role" => "assistant"})
+
+      assert {:ok, updated, _events} = SdkEventPolicy.apply_event(session, event)
+      assert updated.last_event_id == "message.updated:msg-123"
+    end
+
+    test "permission events use permission id in key" do
+      session = running_session()
+
+      event =
+        sdk_event("permission.updated", %{"id" => "perm-1", "tool" => "bash", "action" => "x"})
+
+      assert {:ok, updated, _events} = SdkEventPolicy.apply_event(session, event)
+      assert updated.last_event_id == "permission.updated:perm-1"
+    end
+  end
 end
