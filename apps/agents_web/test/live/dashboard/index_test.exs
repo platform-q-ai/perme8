@@ -3377,6 +3377,73 @@ defmodule AgentsWeb.DashboardLive.IndexTest do
       assert html =~ ~s(data-testid="session-item-a-freeform-coding-task")
       assert html =~ "A freeform coding task"
     end
+
+    test "close_ticket cleans stale task from snapshot so re-opened ticket is idle", %{
+      conn: conn,
+      user: user
+    } do
+      # 1. Create a failed task linked to ticket #900 via instruction pattern
+      _task =
+        task_fixture(%{
+          user_id: user.id,
+          instruction: "pick up ticket #900 using the relevant skill",
+          container_id: "c-ticket-900",
+          status: "failed",
+          error: "something went wrong"
+        })
+
+      {:ok, _ticket} =
+        ProjectTicketRepository.sync_remote_ticket(%{
+          number: 900,
+          title: "Ticket that re-links after delete",
+          status: "Backlog",
+          priority: "Need",
+          size: "M",
+          labels: []
+        })
+
+      # 2. Mount — ticket should show as failed in triage
+      {:ok, lv, _html} = live(conn, ~p"/sessions?container=c-ticket-900")
+      send(lv.pid, {:tickets_synced, []})
+      html = render(lv)
+
+      assert html =~ ~s(data-testid="triage-ticket-item-900")
+      # The card uses error border colors when task_status is "failed"
+      assert html =~ "border-error"
+
+      # 3. Close the ticket (destroys the session)
+      lv
+      |> element(~s([phx-click="select_ticket"][phx-value-number="900"]))
+      |> render_click()
+
+      lv |> element(~s(button[data-tab-id="ticket"])) |> render_click()
+
+      lv
+      |> element(~s([data-testid="close-ticket-btn"]))
+      |> render_click()
+
+      # 4. Re-open the ticket in the DB and reload.
+      #    Enrichment runs against tasks_snapshot. Without the fix, the stale
+      #    failed task still lurks in the snapshot, so enrichment's regex
+      #    fallback re-links the ticket to the old failed task — the ticket
+      #    card shows error styling instead of idle. With the fix, the
+      #    snapshot was cleaned on close_ticket, so the ticket renders idle.
+      Repo.update_all(
+        from(t in "sessions_project_tickets", where: t.number == 900),
+        set: [state: "open"]
+      )
+
+      send(lv.pid, {:tickets_synced, []})
+      html = render(lv)
+
+      assert html =~ ~s(data-testid="triage-ticket-item-900")
+      # After closing and re-opening, the ticket should be idle — no error
+      # border from the old failed session should bleed through.
+      # Locate only the ticket-900 card to avoid false matches elsewhere.
+      [_, card_html] = String.split(html, ~s(data-testid="triage-ticket-item-900"), parts: 2)
+      card_html = String.split(card_html, ~s(data-testid="), parts: 2) |> hd()
+      refute card_html =~ "border-error"
+    end
   end
 
   describe "pause restores instruction to chat input" do

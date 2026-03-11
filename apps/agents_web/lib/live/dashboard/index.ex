@@ -536,6 +536,15 @@ defmodule AgentsWeb.DashboardLive.Index do
       Sessions.delete_session(container_id, user.id)
     end
 
+    # Clean up tasks_snapshot for the destroyed session so stale entries
+    # don't keep the ticket "linked" to a deleted task.
+    tasks_snapshot =
+      if is_binary(container_id) do
+        remove_tasks_for_container(socket.assigns[:tasks_snapshot], container_id)
+      else
+        socket.assigns[:tasks_snapshot]
+      end
+
     # Optimistically mark the ticket as closed so it moves out of the Open filter
     tickets =
       map_ticket_tree(socket.assigns.tickets, fn t ->
@@ -578,6 +587,7 @@ defmodule AgentsWeb.DashboardLive.Index do
 
     {:noreply,
      socket
+     |> assign(:tasks_snapshot, tasks_snapshot)
      |> assign(:tickets, tickets)
      |> assign(:sessions, sessions)
      |> assign(:active_ticket_number, active_ticket_number)
@@ -708,6 +718,18 @@ defmodule AgentsWeb.DashboardLive.Index do
               |> assign_session_state(),
             else: socket
 
+        # Remove deleted tasks from the snapshot and re-enrich tickets so they
+        # no longer reference the now-deleted session. Without this cleanup,
+        # the stale task entry causes the ticket to stay "linked" to the old
+        # session; a subsequent new task then appears as an orphan session card
+        # instead of being associated with the ticket.
+        {tasks_snapshot, tickets} =
+          purge_tasks_and_reenrich(
+            socket.assigns[:tasks_snapshot],
+            socket.assigns.tickets,
+            container_id
+          )
+
         sticky_warm_task_ids =
           derive_sticky_warm_task_ids(
             sessions,
@@ -718,6 +740,8 @@ defmodule AgentsWeb.DashboardLive.Index do
         {:noreply,
          socket
          |> assign(:sessions, sessions)
+         |> assign(:tasks_snapshot, tasks_snapshot)
+         |> assign(:tickets, tickets)
          |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)
          |> put_flash(:info, "Session deleted")}
 
@@ -742,6 +766,15 @@ defmodule AgentsWeb.DashboardLive.Index do
             session.container_id == container_id or session.latest_task_id == task_id
           end)
 
+        # Remove deleted tasks from snapshot and re-enrich tickets so they
+        # no longer reference the now-deleted task.
+        {tasks_snapshot, tickets} =
+          purge_tasks_and_reenrich(
+            socket.assigns[:tasks_snapshot],
+            socket.assigns.tickets,
+            container_id
+          )
+
         sticky_warm_task_ids =
           derive_sticky_warm_task_ids(
             sessions,
@@ -752,6 +785,8 @@ defmodule AgentsWeb.DashboardLive.Index do
         {:noreply,
          socket
          |> assign(:sessions, sessions)
+         |> assign(:tasks_snapshot, tasks_snapshot)
+         |> assign(:tickets, tickets)
          |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)
          |> put_flash(:info, "Queued session removed")}
 
@@ -1991,6 +2026,11 @@ defmodule AgentsWeb.DashboardLive.Index do
 
     is_resume = match?(%{id: id} when id == task.id, socket.assigns.current_task)
 
+    # Persist ticket-task association so the link survives page reloads.
+    # The async start_ticket_session path does this in {:new_task_created, ...},
+    # but the synchronous run_task path was missing it.
+    maybe_link_ticket_to_task(task)
+
     socket =
       socket
       |> assign(:current_task, task)
@@ -2557,6 +2597,55 @@ defmodule AgentsWeb.DashboardLive.Index do
   end
 
   defp upsert_task_snapshot(_tasks, task), do: [task]
+
+  # Remove tasks belonging to a container from the snapshot. Matches tasks
+  # by their real container_id (from the DB) or by synthetic container_ids
+  # produced by derive_container_id (e.g. "task:<task_id>").
+  defp remove_tasks_for_container(tasks, _container_id) when not is_list(tasks), do: tasks
+
+  defp remove_tasks_for_container(tasks, container_id) when is_binary(container_id) do
+    Enum.reject(tasks, fn task ->
+      task_cid = Map.get(task, :container_id)
+      task_id = Map.get(task, :id)
+
+      task_cid == container_id or
+        (is_binary(task_id) and "task:#{task_id}" == container_id)
+    end)
+  end
+
+  # Removes tasks for a container from the snapshot, asynchronously unlinks
+  # any tickets that referenced those tasks in the DB, and re-enriches tickets
+  # against the cleaned snapshot so the UI reflects the cleared association.
+  defp purge_tasks_and_reenrich(tasks_snapshot, tickets, container_id) do
+    old_tasks = tasks_snapshot || []
+    cleaned = remove_tasks_for_container(old_tasks, container_id)
+
+    removed_task_ids =
+      MapSet.new(old_tasks, & &1.id)
+      |> MapSet.difference(MapSet.new(cleaned, & &1.id))
+
+    # Unlink any tickets that were associated with a deleted task (fire-and-forget).
+    unless MapSet.size(removed_task_ids) == 0 do
+      all_tickets = Enum.flat_map(tickets, fn t -> [t | t.sub_tickets || []] end)
+
+      Task.start(fn ->
+        for ticket <- all_tickets,
+            is_binary(ticket.associated_task_id),
+            MapSet.member?(removed_task_ids, ticket.associated_task_id) do
+          Tickets.unlink_ticket_from_task(ticket.number)
+        end
+      end)
+    end
+
+    enriched_tickets =
+      TicketEnrichmentPolicy.enrich_all(
+        tickets,
+        cleaned,
+        &SessionLifecyclePolicy.derive/1
+      )
+
+    {cleaned, enriched_tickets}
+  end
 
   defp update_task_lifecycle_state(tasks, _task_id, _lifecycle_state) when not is_list(tasks),
     do: tasks
