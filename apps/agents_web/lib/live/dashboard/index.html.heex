@@ -442,8 +442,6 @@
                 data-lifecycle-stage={ticket.lifecycle_stage}
                 data-ticket-id={ticket_data_id(ticket)}
                 data-triage-ticket-item
-                phx-click="select_ticket"
-                phx-value-number={ticket.number}
               >
                 <% t_session = session_for_ticket.(ticket) %>
                 <div class="flex items-start gap-1">
@@ -507,8 +505,6 @@
                     data-lifecycle-stage={sub_ticket.lifecycle_stage}
                     data-ticket-id={ticket_data_id(sub_ticket)}
                     data-triage-ticket-item
-                    phx-click="select_ticket"
-                    phx-value-number={sub_ticket.number}
                   >
                     <% sub_session = session_for_ticket.(sub_ticket) %>
                     <.ticket_card
