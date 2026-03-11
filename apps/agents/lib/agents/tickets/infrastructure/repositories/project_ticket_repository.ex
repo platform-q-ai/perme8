@@ -188,6 +188,10 @@ defmodule Agents.Tickets.Infrastructure.Repositories.ProjectTicketRepository do
   @doc """
   Deletes all tickets whose number is NOT in the given set.
   Used to prune issues that have been deleted from GitHub entirely.
+
+  Tickets with `sync_state: "pending_push"` are excluded from pruning
+  because they haven't been pushed to GitHub yet and therefore won't
+  appear in the remote set.
   """
   @spec delete_not_in(MapSet.t()) :: {integer(), nil}
   def delete_not_in(%MapSet{} = keep_numbers) do
@@ -195,6 +199,7 @@ defmodule Agents.Tickets.Infrastructure.Repositories.ProjectTicketRepository do
 
     ProjectTicketSchema
     |> where([t], t.number not in ^numbers_list)
+    |> where([t], t.sync_state != "pending_push")
     |> Repo.delete_all()
   end
 
@@ -319,11 +324,25 @@ defmodule Agents.Tickets.Infrastructure.Repositories.ProjectTicketRepository do
     end
   end
 
-  defp next_position do
+  @doc """
+  Returns the next available position value for a new ticket.
+  """
+  @spec next_position() :: integer()
+  def next_position do
     case Repo.one(from(t in ProjectTicketSchema, select: max(t.position))) do
       nil -> 0
       max_pos -> max_pos + 1
     end
+  end
+
+  @doc """
+  Inserts a locally-created ticket (not yet synced to GitHub).
+  """
+  @spec insert_local(map()) :: {:ok, ProjectTicketSchema.t()} | {:error, Ecto.Changeset.t()}
+  def insert_local(attrs) do
+    %ProjectTicketSchema{}
+    |> ProjectTicketSchema.changeset(attrs)
+    |> Repo.insert()
   end
 
   @remote_attr_keys ~w(number title body labels url state created_at parent_ticket_id)a

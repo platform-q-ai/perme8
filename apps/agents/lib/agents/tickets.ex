@@ -20,6 +20,7 @@ defmodule Agents.Tickets do
 
   alias Agents.Sessions
   alias Agents.Sessions.Domain.Policies.SessionLifecyclePolicy
+  alias Agents.Tickets.Application.UseCases.CreateTicket
   alias Agents.Tickets.Domain.Entities.Ticket
   alias Agents.Tickets.Domain.Policies.TicketEnrichmentPolicy
   alias Agents.Tickets.Application.UseCases.RecordStageTransition
@@ -136,6 +137,21 @@ defmodule Agents.Tickets do
   @spec unlink_ticket_from_task(integer()) :: {:ok, struct()} | {:error, term()}
   def unlink_ticket_from_task(ticket_number) do
     ProjectTicketRepository.unlink_task(ticket_number)
+  end
+
+  @doc """
+  Creates a new ticket locally and asynchronously pushes it to GitHub.
+
+  The first line of `body` is used as the ticket title; the rest becomes the
+  body. The ticket is inserted into the local database immediately (with
+  `sync_state: "pending_push"`) and a `TicketCreated` domain event is emitted.
+  The `GithubTicketPushHandler` subscriber reacts to this event to create the
+  corresponding GitHub issue and update the local record with the real issue
+  number.
+  """
+  @spec create_ticket(String.t(), keyword()) :: {:ok, struct()} | {:error, term()}
+  def create_ticket(body, opts \\ []) when is_binary(body) do
+    CreateTicket.execute(body, opts)
   end
 
   @doc false

@@ -56,10 +56,10 @@ defmodule AgentsWeb.DashboardLive.IndexTest do
       assert html =~ "Sessions"
     end
 
-    test "renders sidebar new session textarea", %{conn: conn} do
+    test "renders sidebar new ticket textarea", %{conn: conn} do
       {:ok, _lv, html} = live(conn, ~p"/sessions")
-      assert html =~ "sidebar-new-session-form"
-      assert html =~ "Start a new session..."
+      assert html =~ "sidebar-new-ticket-form"
+      assert html =~ "Add a ticket..."
     end
 
     test "renders empty state when no sessions exist", %{conn: conn} do
@@ -1741,11 +1741,11 @@ defmodule AgentsWeb.DashboardLive.IndexTest do
 
       {:ok, _lv, html} = live(conn, ~p"/sessions")
 
-      assert html =~ "sidebar-new-session-form"
-      assert html =~ "sidebar-new-session-instruction"
+      assert html =~ "sidebar-new-ticket-form"
+      assert html =~ "sidebar-new-ticket-instruction"
     end
 
-    test "submitting empty sidebar quick-start instruction does not change selected session", %{
+    test "submitting empty sidebar quick-start body does not change selected session", %{
       conn: conn,
       user: user
     } do
@@ -1759,11 +1759,11 @@ defmodule AgentsWeb.DashboardLive.IndexTest do
       {:ok, lv, _html} = live(conn, ~p"/sessions")
 
       lv
-      |> form("#sidebar-new-session-form", %{"instruction" => "   "})
+      |> form("#sidebar-new-ticket-form", %{"body" => "   "})
       |> render_submit()
 
       html = render(lv)
-      assert html =~ "sidebar-new-session-form"
+      assert html =~ "sidebar-new-ticket-form"
       assert html =~ "Existing session"
     end
 

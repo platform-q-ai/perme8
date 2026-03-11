@@ -211,50 +211,25 @@ defmodule AgentsWeb.DashboardLive.Index do
   end
 
   @impl true
-  def handle_event("run_new_task", %{"instruction" => instruction}, socket) do
-    instruction = String.trim(instruction)
+  def handle_event("create_ticket", %{"body" => body}, socket) do
+    body = String.trim(body)
 
-    if instruction == "" do
-      {:noreply, put_flash(socket, :error, "Instruction is required")}
+    if body == "" do
+      {:noreply, put_flash(socket, :error, "Ticket body is required")}
     else
       user = socket.assigns.current_scope.user
-      image = socket.assigns.selected_image || Sessions.default_image()
-      client_id = Ecto.UUID.generate()
-      queued_at = DateTime.utc_now()
 
-      optimistic_entry = %{
-        id: client_id,
-        instruction: instruction,
-        image: image,
-        status: "queued",
-        queued_at: queued_at
-      }
+      case Tickets.create_ticket(body, actor_id: user.id) do
+        {:ok, _ticket} ->
+          {:noreply,
+           socket
+           |> put_flash(:info, "Ticket created")
+           |> push_event("clear_input", %{})}
 
-      parent = self()
-
-      {_pid, monitor_ref} =
-        spawn_monitor(fn ->
-          result =
-            Sessions.create_task(%{
-              instruction: instruction,
-              user_id: user.id,
-              image: image
-            })
-
-          send(parent, {:new_task_created, client_id, result})
-        end)
-
-      {:noreply,
-       socket
-       |> assign(
-         :new_task_monitors,
-         Map.put(socket.assigns.new_task_monitors, monitor_ref, client_id)
-       )
-       |> assign(
-         :optimistic_new_sessions,
-         merge_optimistic_new_sessions(socket.assigns.optimistic_new_sessions, [optimistic_entry])
-       )
-       |> broadcast_optimistic_new_sessions_snapshot()}
+        {:error, reason} ->
+          Logger.error("Failed to create ticket: #{inspect(reason)}")
+          {:noreply, put_flash(socket, :error, "Failed to create ticket")}
+      end
     end
   end
 

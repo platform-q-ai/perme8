@@ -779,4 +779,116 @@ defmodule Agents.Tickets.Infrastructure.Repositories.ProjectTicketRepositoryTest
       assert reloaded.lifecycle_stage_entered_at == entered_at
     end
   end
+
+  describe "insert_local/1" do
+    test "inserts a new ticket with the given attributes" do
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+      assert {:ok, ticket} =
+               ProjectTicketRepository.insert_local(%{
+                 number: -1,
+                 title: "Local ticket",
+                 body: "Created locally",
+                 state: "open",
+                 sync_state: "pending_push",
+                 position: 0,
+                 created_at: now
+               })
+
+      assert ticket.number == -1
+      assert ticket.title == "Local ticket"
+      assert ticket.body == "Created locally"
+      assert ticket.sync_state == "pending_push"
+
+      persisted = Repo.get!(ProjectTicketSchema, ticket.id)
+      assert persisted.title == "Local ticket"
+    end
+
+    test "rejects insert without required fields" do
+      assert {:error, changeset} =
+               ProjectTicketRepository.insert_local(%{
+                 title: "Missing number"
+               })
+
+      assert errors_on(changeset)[:number]
+    end
+
+    test "rejects duplicate number" do
+      attrs = %{
+        number: -999,
+        title: "First",
+        state: "open",
+        sync_state: "pending_push",
+        position: 0,
+        created_at: DateTime.utc_now() |> DateTime.truncate(:second)
+      }
+
+      assert {:ok, _} = ProjectTicketRepository.insert_local(attrs)
+      assert {:error, changeset} = ProjectTicketRepository.insert_local(attrs)
+      assert errors_on(changeset)[:number]
+    end
+  end
+
+  describe "next_position/0" do
+    test "returns 0 when no tickets exist" do
+      assert ProjectTicketRepository.next_position() == 0
+    end
+
+    test "returns max + 1 when tickets exist" do
+      ProjectTicketRepository.sync_remote_ticket(%{number: 900, title: "Pos 0", labels: []})
+      ProjectTicketRepository.sync_remote_ticket(%{number: 901, title: "Pos 1", labels: []})
+
+      pos = ProjectTicketRepository.next_position()
+      assert pos >= 2
+    end
+  end
+
+  describe "delete_not_in/1 with pending_push tickets" do
+    test "does not prune pending_push tickets" do
+      # Create a synced ticket and a pending_push ticket
+      {:ok, synced} =
+        ProjectTicketRepository.sync_remote_ticket(%{
+          number: 950,
+          title: "Synced from GH",
+          labels: []
+        })
+
+      {:ok, pending} =
+        ProjectTicketRepository.insert_local(%{
+          number: -42,
+          title: "Local pending",
+          state: "open",
+          sync_state: "pending_push",
+          position: 0,
+          created_at: DateTime.utc_now() |> DateTime.truncate(:second)
+        })
+
+      # Prune everything not in {950} — pending_push ticket should survive
+      ProjectTicketRepository.delete_not_in(MapSet.new([950]))
+
+      assert Repo.get(ProjectTicketSchema, synced.id) != nil
+      assert Repo.get(ProjectTicketSchema, pending.id) != nil
+    end
+
+    test "prunes synced tickets not in the remote set" do
+      {:ok, keeper} =
+        ProjectTicketRepository.sync_remote_ticket(%{
+          number: 960,
+          title: "Keeper",
+          labels: []
+        })
+
+      {:ok, pruned} =
+        ProjectTicketRepository.sync_remote_ticket(%{
+          number: 961,
+          title: "To be pruned",
+          labels: []
+        })
+
+      ProjectTicketRepository.delete_not_in(MapSet.new([960]))
+
+      assert Repo.get(ProjectTicketSchema, keeper.id) != nil
+      assert Repo.get(ProjectTicketSchema, pruned.id) == nil
+    end
+  end
 end

@@ -12,6 +12,7 @@ defmodule Agents.OTPApp do
   alias Agents.Sessions.Infrastructure.QueueManagerSupervisor
   alias Agents.Sessions.Infrastructure.QueueOrchestratorSupervisor
   alias Agents.Sessions.Infrastructure.TaskRunnerSupervisor
+  alias Agents.Tickets.Infrastructure.Subscribers.GithubTicketPushHandler
   alias Agents.Tickets.Infrastructure.TicketSyncServer
 
   @impl true
@@ -33,7 +34,8 @@ defmodule Agents.OTPApp do
           # is validated in production and the legacy path is dropped.
           QueueManagerSupervisor,
           QueueOrchestratorSupervisor,
-          TicketSyncServer
+          TicketSyncServer,
+          GithubTicketPushHandler
         ] ++ mcp_children() ++ mcp_http_children()
 
     opts = [strategy: :one_for_one, name: Agents.Supervisor]

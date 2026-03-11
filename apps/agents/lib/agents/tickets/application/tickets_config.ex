@@ -30,6 +30,11 @@ defmodule Agents.Tickets.Application.TicketsConfig do
     config()[:github_token]
   end
 
+  @doc "Returns the GitHub REST API base URL (for testing overrides)."
+  def github_api_base do
+    config()[:github_api_base] || "https://api.github.com"
+  end
+
   @doc "Returns the PubSub server name for broadcasting task events."
   def pubsub do
     config()[:pubsub] || Perme8.Events.PubSub
