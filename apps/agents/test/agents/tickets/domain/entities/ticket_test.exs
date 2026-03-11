@@ -34,6 +34,9 @@ defmodule Agents.Tickets.Domain.Entities.TicketTest do
       assert Map.has_key?(ticket, :session_state)
       assert Map.has_key?(ticket, :task_status)
       assert Map.has_key?(ticket, :task_error)
+      assert Map.has_key?(ticket, :lifecycle_stage)
+      assert Map.has_key?(ticket, :lifecycle_stage_entered_at)
+      assert Map.has_key?(ticket, :lifecycle_events)
     end
 
     test "sets expected defaults" do
@@ -45,6 +48,9 @@ defmodule Agents.Tickets.Domain.Entities.TicketTest do
       assert ticket.position == 0
       assert ticket.sync_state == "synced"
       assert ticket.session_state == "idle"
+      assert ticket.lifecycle_stage == "open"
+      assert ticket.lifecycle_stage_entered_at == nil
+      assert ticket.lifecycle_events == []
     end
 
     test "allows overriding defaults" do
@@ -312,6 +318,93 @@ defmodule Agents.Tickets.Domain.Entities.TicketTest do
 
       ticket = Ticket.from_schema(schema)
       assert ticket.parent_ticket_id == nil
+    end
+
+    test "maps lifecycle fields and converts preloaded lifecycle_events" do
+      lifecycle_event = %{
+        __struct__: SomeLifecycleSchema,
+        id: 11,
+        ticket_id: 1,
+        from_stage: "open",
+        to_stage: "ready",
+        transitioned_at: ~U[2026-03-10 09:00:00Z],
+        trigger: "manual",
+        inserted_at: ~U[2026-03-10 09:00:01Z]
+      }
+
+      schema = %{
+        __struct__: SomeSchema,
+        id: 1,
+        number: 382,
+        external_id: "parent-382",
+        title: "Parent",
+        body: nil,
+        status: "Todo",
+        state: "open",
+        priority: nil,
+        size: nil,
+        labels: [],
+        url: nil,
+        position: 0,
+        sync_state: "synced",
+        last_synced_at: nil,
+        last_sync_error: nil,
+        remote_updated_at: nil,
+        parent_ticket_id: nil,
+        sub_tickets: [],
+        created_at: nil,
+        inserted_at: nil,
+        updated_at: nil,
+        lifecycle_stage: "ready",
+        lifecycle_stage_entered_at: ~U[2026-03-10 09:00:00Z],
+        lifecycle_events: [lifecycle_event]
+      }
+
+      ticket = Ticket.from_schema(schema)
+
+      assert ticket.lifecycle_stage == "ready"
+      assert ticket.lifecycle_stage_entered_at == ~U[2026-03-10 09:00:00Z]
+      assert [event] = ticket.lifecycle_events
+      assert event.id == 11
+      assert event.to_stage == "ready"
+      assert event.trigger == "manual"
+    end
+
+    test "defaults lifecycle_events to [] when association is not loaded" do
+      schema = %{
+        __struct__: SomeSchema,
+        id: 1,
+        number: 382,
+        external_id: "parent-382",
+        title: "Parent",
+        body: nil,
+        status: "Todo",
+        state: "open",
+        priority: nil,
+        size: nil,
+        labels: [],
+        url: nil,
+        position: 0,
+        sync_state: "synced",
+        last_synced_at: nil,
+        last_sync_error: nil,
+        remote_updated_at: nil,
+        parent_ticket_id: nil,
+        sub_tickets: [],
+        created_at: nil,
+        inserted_at: nil,
+        updated_at: nil,
+        lifecycle_stage: "open",
+        lifecycle_stage_entered_at: nil,
+        lifecycle_events: %Ecto.Association.NotLoaded{
+          __field__: :lifecycle_events,
+          __owner__: SomeSchema,
+          __cardinality__: :many
+        }
+      }
+
+      ticket = Ticket.from_schema(schema)
+      assert ticket.lifecycle_events == []
     end
   end
 

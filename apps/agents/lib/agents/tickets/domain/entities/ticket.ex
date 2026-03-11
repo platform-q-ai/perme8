@@ -6,6 +6,8 @@ defmodule Agents.Tickets.Domain.Entities.Ticket do
   It contains no persistence or query concerns.
   """
 
+  alias Agents.Tickets.Domain.Entities.TicketLifecycleEvent
+
   @type t :: %__MODULE__{
           id: integer() | nil,
           number: integer() | nil,
@@ -32,7 +34,10 @@ defmodule Agents.Tickets.Domain.Entities.Ticket do
           associated_container_id: String.t() | nil,
           session_state: String.t(),
           task_status: String.t() | nil,
-          task_error: String.t() | nil
+          task_error: String.t() | nil,
+          lifecycle_stage: String.t(),
+          lifecycle_stage_entered_at: DateTime.t() | nil,
+          lifecycle_events: [TicketLifecycleEvent.t()]
         }
 
   # Maximum body size forwarded to agents. GitHub issue bodies can be up to 65K
@@ -60,12 +65,15 @@ defmodule Agents.Tickets.Domain.Entities.Ticket do
     :associated_container_id,
     :task_status,
     :task_error,
+    :lifecycle_stage_entered_at,
     state: "open",
     labels: [],
     position: 0,
     sync_state: "synced",
     sub_tickets: [],
-    session_state: "idle"
+    session_state: "idle",
+    lifecycle_stage: "open",
+    lifecycle_events: []
   ]
 
   @doc "Creates a new Ticket entity from attributes."
@@ -103,7 +111,10 @@ defmodule Agents.Tickets.Domain.Entities.Ticket do
       associated_container_id: nil,
       session_state: "idle",
       task_status: nil,
-      task_error: nil
+      task_error: nil,
+      lifecycle_stage: Map.get(schema, :lifecycle_stage, "open"),
+      lifecycle_stage_entered_at: Map.get(schema, :lifecycle_stage_entered_at),
+      lifecycle_events: convert_lifecycle_events(Map.get(schema, :lifecycle_events, []))
     }
   end
 
@@ -156,6 +167,13 @@ defmodule Agents.Tickets.Domain.Entities.Ticket do
     do: Enum.map(sub_tickets, &from_schema/1)
 
   defp convert_sub_tickets(_), do: []
+
+  defp convert_lifecycle_events(%Ecto.Association.NotLoaded{}), do: []
+
+  defp convert_lifecycle_events(lifecycle_events) when is_list(lifecycle_events),
+    do: Enum.map(lifecycle_events, &TicketLifecycleEvent.from_schema/1)
+
+  defp convert_lifecycle_events(_), do: []
 
   defp format_labels(labels) when is_list(labels) do
     formatted =
