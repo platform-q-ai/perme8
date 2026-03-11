@@ -2,16 +2,16 @@
   <%!-- Left Panel: Session List --%>
   <div class="w-1/2 shrink-0 border-r border-base-300 flex flex-col bg-base-100">
     <div class="p-3 border-b border-base-300 flex flex-col gap-1.5">
-      <form id="sidebar-new-session-form" phx-submit="run_new_task" class="w-full">
-        <div id="sidebar-new-session-input-wrap" phx-update="ignore">
+      <form id="sidebar-new-ticket-form" phx-submit="create_ticket" class="w-full">
+        <div id="sidebar-new-ticket-input-wrap" phx-update="ignore">
           <textarea
-            id="sidebar-new-session-instruction"
-            name="instruction"
+            id="sidebar-new-ticket-instruction"
+            name="body"
             rows="2"
             phx-hook="SessionForm"
-            data-draft-key="sidebar-new-session"
+            data-draft-key="sidebar-new-ticket"
             class="textarea textarea-bordered w-full text-sm leading-snug"
-            placeholder="Start a new session..."
+            placeholder="Add a ticket..."
           ></textarea>
         </div>
       </form>

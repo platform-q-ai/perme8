@@ -9,10 +9,12 @@ defmodule Agents.Tickets.Infrastructure do
       Agents.Repo
     ],
     exports: [
+      Clients.GithubProjectClient,
       Schemas.ProjectTicketSchema,
       Schemas.TicketLifecycleEventSchema,
       Repositories.ProjectTicketRepository,
       Repositories.TicketLifecycleEventRepository,
+      Subscribers.GithubTicketPushHandler,
       TicketSyncServer
     ]
 end
