@@ -4027,4 +4027,191 @@ defmodule AgentsWeb.DashboardLive.IndexTest do
       assert html =~ ~s(data-testid="ticket-detail-parent-breadcrumb")
     end
   end
+
+  describe "session card duration and file stats rendering" do
+    setup %{conn: conn} do
+      user = user_fixture()
+      %{conn: log_in_user(conn, user), user: user}
+    end
+
+    defp task_with_timestamps(attrs, timestamp_attrs) do
+      task = task_fixture(attrs)
+
+      task
+      |> TaskSchema.status_changeset(timestamp_attrs)
+      |> Repo.update!()
+    end
+
+    test "completed session card shows duration element", %{conn: conn, user: user} do
+      five_min_ago = DateTime.add(DateTime.utc_now(), -300, :second)
+      now = DateTime.utc_now()
+
+      task_with_timestamps(
+        %{
+          user_id: user.id,
+          instruction: "Completed with duration",
+          container_id: "c-dur-#{System.unique_integer([:positive])}",
+          status: "completed"
+        },
+        %{started_at: five_min_ago, completed_at: now}
+      )
+
+      {:ok, _lv, html} = live(conn, ~p"/sessions")
+
+      assert html =~ ~s(data-testid="session-item-completed-with-duration")
+      assert html =~ ~s(data-testid="session-duration")
+    end
+
+    test "failed session card shows duration element", %{conn: conn, user: user} do
+      two_min_ago = DateTime.add(DateTime.utc_now(), -120, :second)
+
+      task_with_timestamps(
+        %{
+          user_id: user.id,
+          instruction: "Failed with duration",
+          container_id: "c-fail-dur-#{System.unique_integer([:positive])}",
+          status: "failed"
+        },
+        %{started_at: two_min_ago}
+      )
+
+      {:ok, _lv, html} = live(conn, ~p"/sessions")
+
+      assert html =~ ~s(data-testid="session-item-failed-with-duration")
+      assert html =~ ~s(data-testid="session-duration")
+    end
+
+    test "session card without started_at does not show duration element", %{
+      conn: conn,
+      user: user
+    } do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Pending no duration",
+        container_id: "c-no-dur-#{System.unique_integer([:positive])}",
+        status: "pending"
+      })
+
+      {:ok, _lv, html} = live(conn, ~p"/sessions")
+
+      assert html =~ ~s(data-testid="session-item-pending-no-duration")
+      refute html =~ ~s(data-testid="session-duration")
+    end
+
+    test "completed session card shows file change stats", %{conn: conn, user: user} do
+      five_min_ago = DateTime.add(DateTime.utc_now(), -300, :second)
+      now = DateTime.utc_now()
+
+      task_with_timestamps(
+        %{
+          user_id: user.id,
+          instruction: "Completed with file stats",
+          container_id: "c-fstats-#{System.unique_integer([:positive])}",
+          status: "completed"
+        },
+        %{
+          started_at: five_min_ago,
+          completed_at: now,
+          session_summary: %{"files" => 3, "additions" => 42, "deletions" => 18}
+        }
+      )
+
+      {:ok, _lv, html} = live(conn, ~p"/sessions")
+
+      assert html =~ ~s(data-testid="session-item-completed-with-file-stats")
+      assert html =~ ~s(data-testid="session-file-stats")
+      assert html =~ "3 files"
+      assert html =~ "+42"
+      assert html =~ "-18"
+    end
+
+    test "session card without session_summary does not show file stats", %{
+      conn: conn,
+      user: user
+    } do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "No file stats",
+        container_id: "c-no-fstats-#{System.unique_integer([:positive])}",
+        status: "completed"
+      })
+
+      {:ok, _lv, html} = live(conn, ~p"/sessions")
+
+      assert html =~ ~s(data-testid="session-item-no-file-stats")
+      refute html =~ ~s(data-testid="session-file-stats")
+    end
+
+    test "session card shows both duration and file stats together", %{conn: conn, user: user} do
+      five_min_ago = DateTime.add(DateTime.utc_now(), -300, :second)
+      now = DateTime.utc_now()
+
+      task_with_timestamps(
+        %{
+          user_id: user.id,
+          instruction: "Both stats session",
+          container_id: "c-both-#{System.unique_integer([:positive])}",
+          status: "completed"
+        },
+        %{
+          started_at: five_min_ago,
+          completed_at: now,
+          session_summary: %{"files" => 5, "additions" => 100, "deletions" => 50}
+        }
+      )
+
+      {:ok, _lv, html} = live(conn, ~p"/sessions")
+
+      card_testid = ~s(data-testid="session-item-both-stats-session")
+      assert html =~ card_testid
+      assert html =~ ~s(data-testid="session-duration")
+      assert html =~ ~s(data-testid="session-file-stats")
+      assert html =~ "5 files"
+      assert html =~ "+100"
+      assert html =~ "-50"
+    end
+
+    test "file stats with zero files does not render", %{conn: conn, user: user} do
+      task_with_timestamps(
+        %{
+          user_id: user.id,
+          instruction: "Zero files session",
+          container_id: "c-zero-#{System.unique_integer([:positive])}",
+          status: "completed"
+        },
+        %{
+          started_at: DateTime.add(DateTime.utc_now(), -60, :second),
+          completed_at: DateTime.utc_now(),
+          session_summary: %{"files" => 0, "additions" => 0, "deletions" => 0}
+        }
+      )
+
+      {:ok, _lv, html} = live(conn, ~p"/sessions")
+
+      assert html =~ ~s(data-testid="session-item-zero-files-session")
+      refute html =~ ~s(data-testid="session-file-stats")
+    end
+
+    test "file stats with single file uses singular label", %{conn: conn, user: user} do
+      task_with_timestamps(
+        %{
+          user_id: user.id,
+          instruction: "Single file session",
+          container_id: "c-single-#{System.unique_integer([:positive])}",
+          status: "completed"
+        },
+        %{
+          started_at: DateTime.add(DateTime.utc_now(), -60, :second),
+          completed_at: DateTime.utc_now(),
+          session_summary: %{"files" => 1, "additions" => 10, "deletions" => 5}
+        }
+      )
+
+      {:ok, _lv, html} = live(conn, ~p"/sessions")
+
+      assert html =~ ~s(data-testid="session-file-stats")
+      assert html =~ "1 file"
+      refute html =~ "1 files"
+    end
+  end
 end
