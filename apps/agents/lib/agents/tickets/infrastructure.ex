@@ -6,6 +6,7 @@ defmodule Agents.Tickets.Infrastructure do
     deps: [
       Agents.Tickets.Domain,
       Agents.Tickets.Application,
+      Agents.Application,
       Agents.Repo
     ],
     exports: [

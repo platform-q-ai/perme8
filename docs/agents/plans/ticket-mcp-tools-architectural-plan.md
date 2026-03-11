@@ -60,13 +60,13 @@ This gives us:
 
 ---
 
-## Phase 1: Behaviour + GitHub Client Extension + Test Fixtures (phoenix-tdd)
+## Phase 1: Behaviour + GitHub Client Extension + Test Fixtures (phoenix-tdd) ✓
 
 This phase establishes the testable contract (behaviour), extends the GitHub client with the 8 new API operations, and creates test fixtures for all downstream tool tests.
 
 ### Step 1.1: GithubTicketClientBehaviour
 
-- [ ] ⏸ **RED**: Write test `apps/agents/test/agents/application/behaviours/github_ticket_client_behaviour_test.exs`
+- [x] ✓ **RED**: Write test `apps/agents/test/agents/application/behaviours/github_ticket_client_behaviour_test.exs`
   - Tests: Behaviour module defines the expected callbacks
   - Verify: `@callback get_issue(integer(), keyword()) :: {:ok, map()} | {:error, term()}`
   - Verify: `@callback list_issues(keyword()) :: {:ok, [map()]} | {:error, term()}`
@@ -76,133 +76,133 @@ This phase establishes the testable contract (behaviour), extends the GitHub cli
   - Verify: `@callback add_comment(integer(), String.t(), keyword()) :: {:ok, map()} | {:error, term()}`
   - Verify: `@callback add_sub_issue(integer(), integer(), keyword()) :: {:ok, map()} | {:error, term()}`
   - Verify: `@callback remove_sub_issue(integer(), integer(), keyword()) :: {:ok, map()} | {:error, term()}`
-- [ ] ⏸ **GREEN**: Implement `apps/agents/lib/agents/application/behaviours/github_ticket_client_behaviour.ex`
+- [x] ✓ **GREEN**: Implement `apps/agents/lib/agents/application/behaviours/github_ticket_client_behaviour.ex`
   - Define the 8 callbacks with proper typespecs
-- [ ] ⏸ **REFACTOR**: Ensure typespec consistency with existing client patterns
+- [x] ✓ **REFACTOR**: Ensure typespec consistency with existing client patterns
 
 ### Step 1.2: Extend GithubProjectClient — `get_issue/2`
 
-- [ ] ⏸ **RED**: Write test `apps/agents/test/agents/tickets/infrastructure/clients/github_project_client_test.exs`
+- [x] ✓ **RED**: Write test `apps/agents/test/agents/tickets/infrastructure/clients/github_project_client_test.exs`
   - Test: `get_issue/2` returns `{:ok, issue_map}` for a valid issue number
   - Test: `get_issue/2` returns `{:error, :not_found}` for non-existent issue (404)
   - Test: `get_issue/2` returns `{:error, :missing_token}` when token is nil
   - Test: `get_issue/2` includes title, body, state, labels, assignees, comments, sub_issue_numbers
   - Use `Req.Test` adapter for HTTP stubbing (no real API calls)
-- [ ] ⏸ **GREEN**: Implement `get_issue/2` in `apps/agents/lib/agents/tickets/infrastructure/clients/github_project_client.ex`
+- [x] ✓ **GREEN**: Implement `get_issue/2` in `apps/agents/lib/agents/tickets/infrastructure/clients/github_project_client.ex`
   - `GET /repos/{owner}/{repo}/issues/{number}` — fetches issue details
   - `GET /repos/{owner}/{repo}/issues/{number}/comments` — fetches comments
   - Enriches with sub_issue_numbers using existing `fetch_sub_issues/4`
   - Returns map with keys: `:number, :title, :body, :state, :labels, :assignees, :url, :comments, :sub_issue_numbers, :created_at`
-- [ ] ⏸ **REFACTOR**: Extract shared parsing helpers if duplicated with `parse_issue/1`
+- [x] ✓ **REFACTOR**: Extract shared parsing helpers if duplicated with `parse_issue/1`
 
 ### Step 1.3: Extend GithubProjectClient — `list_issues/1`
 
-- [ ] ⏸ **RED**: Write tests in `github_project_client_test.exs`
+- [x] ✓ **RED**: Write tests in `github_project_client_test.exs`
   - Test: `list_issues/1` with no filters returns open issues
   - Test: `list_issues/1` with `state: "closed"` filters by state
   - Test: `list_issues/1` with `labels: ["bug"]` filters by labels
   - Test: `list_issues/1` with `query: "MCP"` uses GitHub search API
   - Test: `list_issues/1` with `assignee: "username"` filters by assignee
   - Test: `list_issues/1` returns `{:error, :missing_token}` when token is nil
-- [ ] ⏸ **GREEN**: Implement `list_issues/1` in `github_project_client.ex`
+- [x] ✓ **GREEN**: Implement `list_issues/1` in `github_project_client.ex`
   - `GET /repos/{owner}/{repo}/issues` with query params (state, labels, assignee, per_page)
   - When `query` is provided, use `GET /search/issues?q=...+repo:{owner}/{repo}`
   - Returns `{:ok, [issue_map]}` — each issue has `:number, :title, :state, :labels, :url, :assignees`
-- [ ] ⏸ **REFACTOR**: Share parsing logic with `get_issue/2`
+- [x] ✓ **REFACTOR**: Share parsing logic with `get_issue/2`
 
 ### Step 1.4: Extend GithubProjectClient — `create_issue/2`
 
-- [ ] ⏸ **RED**: Write tests in `github_project_client_test.exs`
+- [x] ✓ **RED**: Write tests in `github_project_client_test.exs`
   - Test: `create_issue/2` with title and body returns `{:ok, issue_map}` with number and URL
   - Test: `create_issue/2` with labels creates issue with labels
   - Test: `create_issue/2` with assignees creates issue with assignees
   - Test: `create_issue/2` returns `{:error, :missing_token}` when token is nil
-- [ ] ⏸ **GREEN**: Implement `create_issue/2` in `github_project_client.ex`
+- [x] ✓ **GREEN**: Implement `create_issue/2` in `github_project_client.ex`
   - `POST /repos/{owner}/{repo}/issues` with JSON body `{title, body, labels, assignees}`
   - Returns `{:ok, %{number: N, url: "...", title: "..."}}`
-- [ ] ⏸ **REFACTOR**: Clean up
+- [x] ✓ **REFACTOR**: Clean up
 
 ### Step 1.5: Extend GithubProjectClient — `update_issue/3`
 
-- [ ] ⏸ **RED**: Write tests in `github_project_client_test.exs`
+- [x] ✓ **RED**: Write tests in `github_project_client_test.exs`
   - Test: `update_issue/3` updates title
   - Test: `update_issue/3` updates body
   - Test: `update_issue/3` updates labels (empty list clears)
   - Test: `update_issue/3` updates state (open/closed)
   - Test: `update_issue/3` returns `{:error, :not_found}` for non-existent issue
   - Test: `update_issue/3` omitted fields are not sent
-- [ ] ⏸ **GREEN**: Implement `update_issue/3` in `github_project_client.ex`
+- [x] ✓ **GREEN**: Implement `update_issue/3` in `github_project_client.ex`
   - `PATCH /repos/{owner}/{repo}/issues/{number}` with JSON body (only non-nil fields)
   - Returns `{:ok, updated_issue_map}`
-- [ ] ⏸ **REFACTOR**: Clean up
+- [x] ✓ **REFACTOR**: Clean up
 
 ### Step 1.6: Extend GithubProjectClient — `close_issue/2` (REST version)
 
 Note: The existing `close_issue/2` uses GraphQL. We add a new REST-based version that also supports an optional closing comment and returns the updated issue.
 
-- [ ] ⏸ **RED**: Write tests in `github_project_client_test.exs`
+- [x] ✓ **RED**: Write tests in `github_project_client_test.exs`
   - Test: `close_issue_with_comment/2` closes issue and optionally adds comment
   - Test: `close_issue_with_comment/2` returns `{:error, :not_found}` for non-existent issue
-- [ ] ⏸ **GREEN**: Implement `close_issue_with_comment/2` in `github_project_client.ex`
+- [x] ✓ **GREEN**: Implement `close_issue_with_comment/2` in `github_project_client.ex`
   - If comment provided: `POST /repos/{owner}/{repo}/issues/{number}/comments` then `PATCH .../issues/{number}` with `{state: "closed"}`
   - If no comment: just `PATCH .../issues/{number}` with `{state: "closed"}`
   - Returns `{:ok, closed_issue_map}`
-- [ ] ⏸ **REFACTOR**: Clean up
+- [x] ✓ **REFACTOR**: Clean up
 
 ### Step 1.7: Extend GithubProjectClient — `add_comment/3`
 
-- [ ] ⏸ **RED**: Write tests in `github_project_client_test.exs`
+- [x] ✓ **RED**: Write tests in `github_project_client_test.exs`
   - Test: `add_comment/3` posts comment and returns `{:ok, comment_map}`
   - Test: `add_comment/3` returns `{:error, :not_found}` for non-existent issue
-- [ ] ⏸ **GREEN**: Implement `add_comment/3` in `github_project_client.ex`
+- [x] ✓ **GREEN**: Implement `add_comment/3` in `github_project_client.ex`
   - `POST /repos/{owner}/{repo}/issues/{number}/comments` with `{body: "..."}`
   - Returns `{:ok, %{id: N, url: "...", body: "..."}}`
-- [ ] ⏸ **REFACTOR**: Clean up
+- [x] ✓ **REFACTOR**: Clean up
 
 ### Step 1.8: Extend GithubProjectClient — `add_sub_issue/3`
 
-- [ ] ⏸ **RED**: Write tests in `github_project_client_test.exs`
+- [x] ✓ **RED**: Write tests in `github_project_client_test.exs`
   - Test: `add_sub_issue/3` links child to parent and returns `{:ok, result_map}`
   - Test: `add_sub_issue/3` returns descriptive error if API returns 422/404
-- [ ] ⏸ **GREEN**: Implement `add_sub_issue/3` in `github_project_client.ex`
+- [x] ✓ **GREEN**: Implement `add_sub_issue/3` in `github_project_client.ex`
   - `POST /repos/{owner}/{repo}/issues/{parent_number}/sub_issues` with `{sub_issue_id: child_issue_id}`
   - Needs to first resolve the child issue's node_id via `GET /repos/{owner}/{repo}/issues/{child_number}` (or GraphQL)
   - Returns `{:ok, %{parent_number: N, child_number: M}}`
-- [ ] ⏸ **REFACTOR**: Clean up
+- [x] ✓ **REFACTOR**: Clean up
 
 ### Step 1.9: Extend GithubProjectClient — `remove_sub_issue/3`
 
-- [ ] ⏸ **RED**: Write tests in `github_project_client_test.exs`
+- [x] ✓ **RED**: Write tests in `github_project_client_test.exs`
   - Test: `remove_sub_issue/3` unlinks child from parent and returns `{:ok, result_map}`
   - Test: `remove_sub_issue/3` returns descriptive error if API returns 422/404
-- [ ] ⏸ **GREEN**: Implement `remove_sub_issue/3` in `github_project_client.ex`
+- [x] ✓ **GREEN**: Implement `remove_sub_issue/3` in `github_project_client.ex`
   - `DELETE /repos/{owner}/{repo}/issues/{parent_number}/sub_issues` with `{sub_issue_id: child_issue_id}`
   - Returns `{:ok, %{parent_number: N, child_number: M}}`
-- [ ] ⏸ **REFACTOR**: Clean up
+- [x] ✓ **REFACTOR**: Clean up
 
 ### Step 1.10: GithubProjectClient implements GithubTicketClientBehaviour
 
-- [ ] ⏸ **RED**: Write test confirming the module implements the behaviour
+- [x] ✓ **RED**: Write test confirming the module implements the behaviour
   - Test: `GithubProjectClient` has `@behaviour GithubTicketClientBehaviour`
   - Test: all 8 callback functions are exported
-- [ ] ⏸ **GREEN**: Add `@behaviour Agents.Application.Behaviours.GithubTicketClientBehaviour` to `GithubProjectClient`
-- [ ] ⏸ **REFACTOR**: Ensure all function signatures match the behaviour typespecs
+- [x] ✓ **GREEN**: Add `@behaviour Agents.Application.Behaviours.GithubTicketClientBehaviour` to `GithubProjectClient`
+- [x] ✓ **REFACTOR**: Ensure all function signatures match the behaviour typespecs
 
 ### Step 1.11: Register Mox Mock + Test Fixtures
 
-- [ ] ⏸ **RED**: Write test `apps/agents/test/support/fixtures/ticket_fixtures.ex` exists and provides helpers
-- [ ] ⏸ **GREEN**: Create:
+- [x] ✓ **RED**: Write test `apps/agents/test/support/fixtures/ticket_fixtures.ex` exists and provides helpers
+- [x] ✓ **GREEN**: Create:
   - `apps/agents/test/support/fixtures/ticket_fixtures.ex` — provides `issue_map/1`, `comment_map/1`, `api_key_struct/0`
   - Add `Mox.defmock(Agents.Mocks.GithubTicketClientMock, for: Agents.Application.Behaviours.GithubTicketClientBehaviour)` to `apps/agents/test/test_helper.exs`
   - Add `:github_ticket_client` config key support to tool modules
-- [ ] ⏸ **REFACTOR**: Ensure fixture shapes match the real API response shapes
+- [x] ✓ **REFACTOR**: Ensure fixture shapes match the real API response shapes
 
 ### Phase 1 Validation
 
-- [ ] ⏸ All behaviour tests pass
-- [ ] ⏸ All GitHub client extension tests pass (with HTTP stubs)
-- [ ] ⏸ Mox mock created and registered
-- [ ] ⏸ No boundary violations (`mix boundary`)
+- [x] ✓ All behaviour tests pass
+- [x] ✓ All GitHub client extension tests pass (with HTTP stubs)
+- [x] ✓ Mox mock created and registered
+- [x] ✓ No boundary violations (`mix boundary`)
 
 ---
 
