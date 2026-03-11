@@ -28,6 +28,8 @@ defmodule Agents.Sessions.Infrastructure do
       QueueManagerSupervisor,
       QueueMirror,
       QueueOrchestrator,
-      QueueOrchestratorSupervisor
+      QueueOrchestratorSupervisor,
+      SdkEventDebouncer,
+      SdkEventHandler
     ]
 end

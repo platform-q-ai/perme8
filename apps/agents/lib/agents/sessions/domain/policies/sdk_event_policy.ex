@@ -36,6 +36,8 @@ defmodule Agents.Sessions.Domain.Policies.SdkEventPolicy do
   @doc "Applies a raw SDK event to a session."
   @spec apply_event(Session.t(), map()) :: result()
   def apply_event(session, %{"type" => type} = event) when is_binary(type) do
+    properties = Map.get(event, "properties", %{})
+
     cond do
       not SdkEventTypes.handled?(type) ->
         {:skip, :not_relevant}
@@ -45,7 +47,26 @@ defmodule Agents.Sessions.Domain.Policies.SdkEventPolicy do
         {:skip, :already_terminal}
 
       true ->
-        handle_event(session, type, Map.get(event, "properties", %{}))
+        event_key = derive_event_key(type, properties)
+
+        if event_key != nil and event_key == session.last_event_id do
+          {:skip, :duplicate}
+        else
+          case handle_event(session, type, properties) do
+            {:ok, updated_session, events} ->
+              updated_session =
+                if event_key do
+                  Session.update(updated_session, %{last_event_id: event_key})
+                else
+                  updated_session
+                end
+
+              {:ok, updated_session, events}
+
+            {:skip, reason} ->
+              {:skip, reason}
+          end
+        end
     end
   end
 
@@ -310,4 +331,39 @@ defmodule Agents.Sessions.Domain.Policies.SdkEventPolicy do
       user_id: session.user_id
     }
   end
+
+  defp derive_event_key("session.status", %{"status" => status}) when is_binary(status),
+    do: "session.status:" <> status
+
+  defp derive_event_key("session.error", %{"category" => category}) when is_binary(category),
+    do: "session.error:" <> category
+
+  defp derive_event_key("permission.updated", %{"id" => id}) when is_binary(id),
+    do: "permission.updated:" <> id
+
+  defp derive_event_key("permission.replied", %{"id" => id}) when is_binary(id),
+    do: "permission.replied:" <> id
+
+  defp derive_event_key("message.updated", %{"id" => id}) when is_binary(id),
+    do: "message.updated:" <> id
+
+  defp derive_event_key("message.removed", %{"id" => id}) when is_binary(id),
+    do: "message.removed:" <> id
+
+  defp derive_event_key("session.deleted", _props), do: "session.deleted"
+  defp derive_event_key("session.created", _props), do: "session.created"
+  defp derive_event_key("session.compacted", _props), do: "session.compacted"
+
+  defp derive_event_key(type, _props)
+       when type in [
+              "message.part.updated",
+              "message.part.removed",
+              "server.connected",
+              "session.diff",
+              "session.updated",
+              "file.edited"
+            ],
+       do: nil
+
+  defp derive_event_key(type, _props), do: type
 end
