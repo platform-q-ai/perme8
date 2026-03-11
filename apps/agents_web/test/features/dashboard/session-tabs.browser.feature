@@ -13,8 +13,8 @@ Feature: Session Detail Tabbed Layout
     And I wait for network idle
     And I navigate to "${baseUrl}/sessions"
     And I wait for network idle
-    And I fill "textarea#sidebar-new-session-instruction" with "Create a task for tab layout verification"
-    And I focus on "textarea#sidebar-new-session-instruction"
+    And I fill "textarea#sidebar-new-ticket-instruction" with "Create a task for tab layout verification"
+    And I focus on "textarea#sidebar-new-ticket-instruction"
     And I press "Enter"
     And I wait for network idle
 

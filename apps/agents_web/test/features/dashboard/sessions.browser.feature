@@ -33,8 +33,8 @@ Feature: Coding Sessions Management
   Scenario: Sessions page renders sidebar quick-start form
     When I navigate to "${baseUrl}/sessions"
     And I wait for network idle
-    Then "form#sidebar-new-session-form" should exist
-    And "textarea#sidebar-new-session-instruction" should exist
+    Then "form#sidebar-new-ticket-form" should exist
+    And "textarea#sidebar-new-ticket-instruction" should exist
 
   @wip
   Scenario: Sessions page shows empty state when no sessions exist
@@ -49,10 +49,10 @@ Feature: Coding Sessions Management
   Scenario: Sidebar quick-start textarea has placeholder text
     When I navigate to "${baseUrl}/sessions"
     And I wait for network idle
-    Then "textarea#sidebar-new-session-instruction[placeholder='Start a new session...']" should exist
+    Then "textarea#sidebar-new-ticket-instruction[placeholder='Add a ticket...']" should exist
 
   Scenario: Empty state still shows sidebar quick-start textarea
     When I navigate to "${baseUrl}/sessions"
     And I wait for network idle
-    Then "form#sidebar-new-session-form" should exist
-    And "textarea#sidebar-new-session-instruction" should exist
+    Then "form#sidebar-new-ticket-form" should exist
+    And "textarea#sidebar-new-ticket-instruction" should exist
