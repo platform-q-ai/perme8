@@ -14,7 +14,8 @@ defmodule AgentsWeb.DashboardLive.LifecycleRealtimeTest do
              "In Progress"
            )
 
-    send(view.pid, {:ticket_stage_changed, 402, "in_review", ~U[2026-03-11 15:00:00Z]})
+    transitioned_at = DateTime.utc_now() |> DateTime.truncate(:second)
+    send(view.pid, {:ticket_stage_changed, 402, "in_review", transitioned_at})
 
     assert has_element?(
              view,
@@ -32,7 +33,8 @@ defmodule AgentsWeb.DashboardLive.LifecycleRealtimeTest do
   test "multiple tickets receive independent lifecycle updates", %{conn: conn} do
     {:ok, view, _html} = live(conn, ~p"/sessions?fixture=ticket_lifecycle_all_stages")
 
-    send(view.pid, {:ticket_stage_changed, 5001, "closed", ~U[2026-03-11 15:00:00Z]})
+    transitioned_at = DateTime.utc_now() |> DateTime.truncate(:second)
+    send(view.pid, {:ticket_stage_changed, 5001, "closed", transitioned_at})
 
     assert has_element?(
              view,
