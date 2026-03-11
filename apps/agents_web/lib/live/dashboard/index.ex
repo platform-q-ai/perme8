@@ -525,48 +525,15 @@ defmodule AgentsWeb.DashboardLive.Index do
   @impl true
   def handle_event("close_ticket", %{"number" => number_str}, socket) do
     number = String.to_integer(number_str)
-    user = socket.assigns.current_scope.user
 
-    # Find the ticket to get its associated session container_id
-    ticket = find_ticket_by_number(socket.assigns.tickets, number)
-    container_id = ticket && ticket.associated_container_id
+    case Tickets.close_project_ticket(number) do
+      :ok ->
+        {:noreply, apply_ticket_closed(socket, number)}
 
-    # Destroy the associated session if it exists
-    maybe_delete_session(container_id, user.id)
-
-    # Clean up tasks_snapshot for the destroyed session so stale entries
-    # don't keep the ticket "linked" to a deleted task.
-    tasks_snapshot = maybe_remove_tasks(socket.assigns[:tasks_snapshot], container_id)
-
-    # Optimistically mark the ticket as closed so it moves out of the Open filter
-    tickets =
-      map_ticket_tree(socket.assigns.tickets, fn t ->
-        if t.number == number, do: %{t | state: "closed"}, else: t
-      end)
-
-    # Remove the associated session from the sessions list
-    sessions = maybe_reject_session(socket.assigns.sessions, container_id)
-
-    active_ticket_number =
-      if socket.assigns.active_ticket_number == number,
-        do: nil,
-        else: socket.assigns.active_ticket_number
-
-    # Switch back to chat tab if we just closed the viewed ticket
-    tab = tab_after_ticket_close(socket.assigns, number)
-
-    # Clear active selection if we just destroyed the viewed session
-    socket = maybe_clear_active_session(socket, container_id)
-
-    Tickets.close_project_ticket(number)
-
-    {:noreply,
-     socket
-     |> assign(:tasks_snapshot, tasks_snapshot)
-     |> assign(:tickets, tickets)
-     |> assign(:sessions, sessions)
-     |> assign(:active_ticket_number, active_ticket_number)
-     |> assign(:active_session_tab, tab)}
+      {:error, _reason} ->
+        {:noreply,
+         put_flash(socket, :error, "Failed to close ticket on GitHub. Please try again.")}
+    end
   end
 
   @impl true
@@ -2274,6 +2241,48 @@ defmodule AgentsWeb.DashboardLive.Index do
     Tickets.list_project_tickets(user.id, ticket_opts)
   end
 
+  defp apply_ticket_closed(socket, number) do
+    user = socket.assigns.current_scope.user
+
+    # Find the ticket to get its associated session container_id
+    ticket = find_ticket_by_number(socket.assigns.tickets, number)
+    container_id = ticket && ticket.associated_container_id
+
+    # Best-effort session cleanup -- Docker failure must not block the UI update
+    maybe_delete_session(container_id, user.id)
+
+    # Clean up tasks_snapshot for the destroyed session so stale entries
+    # don't keep the ticket "linked" to a deleted task.
+    tasks_snapshot = maybe_remove_tasks(socket.assigns[:tasks_snapshot], container_id)
+
+    # Mark the ticket as closed so it moves out of the Open filter
+    tickets =
+      map_ticket_tree(socket.assigns.tickets, fn t ->
+        if t.number == number, do: %{t | state: "closed"}, else: t
+      end)
+
+    # Remove the associated session from the sessions list
+    sessions = maybe_reject_session(socket.assigns.sessions, container_id)
+
+    active_ticket_number =
+      if socket.assigns.active_ticket_number == number,
+        do: nil,
+        else: socket.assigns.active_ticket_number
+
+    # Switch back to chat tab if we just closed the viewed ticket
+    tab = tab_after_ticket_close(socket.assigns, number)
+
+    # Clear active selection if we just destroyed the viewed session
+    socket = maybe_clear_active_session(socket, container_id)
+
+    socket
+    |> assign(:tasks_snapshot, tasks_snapshot)
+    |> assign(:tickets, tickets)
+    |> assign(:sessions, sessions)
+    |> assign(:active_ticket_number, active_ticket_number)
+    |> assign(:active_session_tab, tab)
+  end
+
   defp map_ticket_tree(tickets, fun) when is_list(tickets) do
     Enum.map(tickets, fn ticket ->
       updated = fun.(ticket)
@@ -2591,6 +2600,8 @@ defmodule AgentsWeb.DashboardLive.Index do
   # Helper functions for close_ticket to reduce cyclomatic complexity
   defp maybe_delete_session(container_id, user_id) when is_binary(container_id) do
     Sessions.delete_session(container_id, user_id)
+  rescue
+    _ -> :ok
   end
 
   defp maybe_delete_session(_container_id, _user_id), do: :ok

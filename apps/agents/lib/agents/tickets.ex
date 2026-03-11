@@ -20,10 +20,12 @@ defmodule Agents.Tickets do
 
   alias Agents.Sessions
   alias Agents.Sessions.Domain.Policies.SessionLifecyclePolicy
+  alias Agents.Tickets.Application.TicketsConfig
   alias Agents.Tickets.Application.UseCases.CreateTicket
+  alias Agents.Tickets.Application.UseCases.RecordStageTransition
   alias Agents.Tickets.Domain.Entities.Ticket
   alias Agents.Tickets.Domain.Policies.TicketEnrichmentPolicy
-  alias Agents.Tickets.Application.UseCases.RecordStageTransition
+  alias Agents.Tickets.Infrastructure.Clients.GithubProjectClient
   alias Agents.Tickets.Infrastructure.Repositories.ProjectTicketRepository
   alias Agents.Tickets.Infrastructure.TicketSyncServer
 
@@ -102,22 +104,40 @@ defmodule Agents.Tickets do
   end
 
   @doc """
-  Closes a project ticket: marks it as closed in the local database and closes
-  the issue on GitHub.
+  Closes a project ticket on GitHub first, then marks it as closed locally.
 
-  The GitHub close runs asynchronously via the TicketSyncServer so the UI
-  is not blocked.
+  If the GitHub close fails, the local record is left unchanged and an error
+  is returned so the caller can surface it to the user. This prevents the
+  local state from drifting out of sync with GitHub.
   """
-  @spec close_project_ticket(integer()) :: :ok | {:error, :not_found}
+  @spec close_project_ticket(integer()) :: :ok | {:error, term()}
   def close_project_ticket(number) when is_integer(number) do
-    case ProjectTicketRepository.close_by_number(number) do
-      {:ok, _ticket} ->
-        TicketSyncServer.close_ticket(number)
-        :ok
+    client = github_client()
 
-      {:error, :not_found} ->
-        {:error, :not_found}
+    github_opts = [
+      token: TicketsConfig.github_token(),
+      org: TicketsConfig.github_org(),
+      repo: TicketsConfig.github_repo()
+    ]
+
+    case client.update_issue(number, %{state: "closed"}, github_opts) do
+      {:ok, _issue} ->
+        case ProjectTicketRepository.close_by_number(number) do
+          {:ok, _ticket} -> :ok
+          {:error, :not_found} -> :ok
+        end
+
+      {:error, reason} ->
+        {:error, reason}
     end
+  end
+
+  defp github_client do
+    Application.get_env(
+      :agents,
+      :github_ticket_client,
+      GithubProjectClient
+    )
   end
 
   @doc """
