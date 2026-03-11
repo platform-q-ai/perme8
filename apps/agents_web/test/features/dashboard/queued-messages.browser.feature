@@ -79,5 +79,5 @@ Feature: Queued Messages in Sessions
   Scenario: Sidebar quick-start form is visible without extra action
     Given I navigate to "${baseUrl}/sessions"
     And I wait for network idle
-    Then "form#sidebar-new-session-form" should exist
-    And "textarea#sidebar-new-session-instruction[placeholder='Start a new session...']" should exist
+    Then "form#sidebar-new-ticket-form" should exist
+    And "textarea#sidebar-new-ticket-instruction[placeholder='Add a ticket...']" should exist

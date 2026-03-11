@@ -16,17 +16,17 @@ Feature: Optimistic session updates in the Sessions UI
 
   Scenario: optimistic new session appears in sidebar immediately
     Given "div#session-optimistic-state" should exist
-    And "form#sidebar-new-session-form" should exist
-    When I fill "textarea#sidebar-new-session-instruction" with "Optimistic sidebar enqueue"
-    And I focus on "textarea#sidebar-new-session-instruction"
+    And "form#sidebar-new-ticket-form" should exist
+    When I fill "textarea#sidebar-new-ticket-instruction" with "Optimistic sidebar enqueue"
+    And I focus on "textarea#sidebar-new-ticket-instruction"
     And I press "Enter"
     Then I should see "Optimistic sidebar enqueue"
 
   Scenario: optimistic entry survives a full browser reload
     Given "div#session-optimistic-state" should exist
-    And "form#sidebar-new-session-form" should exist
-    When I fill "textarea#sidebar-new-session-instruction" with "Reload optimistic enqueue"
-    And I focus on "textarea#sidebar-new-session-instruction"
+    And "form#sidebar-new-ticket-form" should exist
+    When I fill "textarea#sidebar-new-ticket-instruction" with "Reload optimistic enqueue"
+    And I focus on "textarea#sidebar-new-ticket-instruction"
     And I press "Enter"
     And I should see "Reload optimistic enqueue"
     When I reload the page
@@ -35,9 +35,9 @@ Feature: Optimistic session updates in the Sessions UI
 
   Scenario: backend reconciliation removes optimistic placeholder
     Given "div#session-log" should exist
-    And "form#sidebar-new-session-form" should exist
-    When I fill "textarea#sidebar-new-session-instruction" with "Reconcile optimistic enqueue"
-    And I focus on "textarea#sidebar-new-session-instruction"
+    And "form#sidebar-new-ticket-form" should exist
+    When I fill "textarea#sidebar-new-ticket-instruction" with "Reconcile optimistic enqueue"
+    And I focus on "textarea#sidebar-new-ticket-instruction"
     And I press "Enter"
     When I wait for 2 seconds
     Then "[data-slot-state='optimistic-queued']" should not exist
