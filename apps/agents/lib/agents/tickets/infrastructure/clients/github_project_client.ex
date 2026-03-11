@@ -493,14 +493,7 @@ defmodule Agents.Tickets.Infrastructure.Clients.GithubProjectClient do
   defp get_ok_body(url, token, opts, statuses \\ [200]) do
     case Req.get(url, request_opts(token, opts)) do
       {:ok, %{status: status, body: body}} ->
-        if status in statuses do
-          {:ok, body}
-        else
-          case status do
-            404 -> {:error, :not_found}
-            _ -> {:error, {:unexpected_status, status, body}}
-          end
-        end
+        if(status in statuses, do: {:ok, body}, else: error_for_status(status, body))
 
       {:error, reason} ->
         {:error, reason}
@@ -512,14 +505,7 @@ defmodule Agents.Tickets.Infrastructure.Clients.GithubProjectClient do
 
     case Req.post(url, request) do
       {:ok, %{status: status, body: body}} ->
-        if status in statuses do
-          {:ok, body}
-        else
-          case status do
-            404 -> {:error, :not_found}
-            _ -> {:error, {:unexpected_status, status, body}}
-          end
-        end
+        if(status in statuses, do: {:ok, body}, else: error_for_status(status, body))
 
       {:error, reason} ->
         {:error, reason}
@@ -531,19 +517,15 @@ defmodule Agents.Tickets.Infrastructure.Clients.GithubProjectClient do
 
     case Req.patch(url, request) do
       {:ok, %{status: status, body: body}} ->
-        if status in statuses do
-          {:ok, body}
-        else
-          case status do
-            404 -> {:error, :not_found}
-            _ -> {:error, {:unexpected_status, status, body}}
-          end
-        end
+        if(status in statuses, do: {:ok, body}, else: error_for_status(status, body))
 
       {:error, reason} ->
         {:error, reason}
     end
   end
+
+  defp error_for_status(404, _body), do: {:error, :not_found}
+  defp error_for_status(status, body), do: {:error, {:unexpected_status, status, body}}
 
   defp delete_ok_body(url, token, payload, opts, statuses) do
     request =
@@ -554,14 +536,7 @@ defmodule Agents.Tickets.Infrastructure.Clients.GithubProjectClient do
 
     case Req.request(request) do
       {:ok, %{status: status, body: body}} ->
-        if status in statuses do
-          {:ok, body}
-        else
-          case status do
-            404 -> {:error, :not_found}
-            _ -> {:error, {:unexpected_status, status, body}}
-          end
-        end
+        if(status in statuses, do: {:ok, body}, else: error_for_status(status, body))
 
       {:error, reason} ->
         {:error, reason}
@@ -643,8 +618,7 @@ defmodule Agents.Tickets.Infrastructure.Clients.GithubProjectClient do
       labels when is_list(labels) and labels != [] ->
         labels
         |> Enum.reject(&(&1 in [nil, ""]))
-        |> Enum.map(&"label:#{&1}")
-        |> Enum.join(" ")
+        |> Enum.map_join(" ", &"label:#{&1}")
 
       _ ->
         nil

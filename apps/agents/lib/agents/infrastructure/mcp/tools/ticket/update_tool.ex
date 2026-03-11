@@ -9,6 +9,8 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.UpdateTool do
   alias Agents.Infrastructure.Mcp.Tools.Ticket.Helpers
   alias Hermes.Server.Response
 
+  @updatable_fields [:title, :body, :labels, :assignees, :state]
+
   schema do
     field(:number, {:required, :integer}, description: "Issue number")
     field(:title, :string, description: "New title")
@@ -24,42 +26,40 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.UpdateTool do
 
     case PermissionGuard.check_permission(frame, "ticket.update") do
       :ok ->
-        attrs =
-          [:title, :body, :labels, :assignees, :state]
-          |> Enum.reduce(%{}, fn key, acc ->
-            value = Helpers.get_param(params, key)
-
-            if is_nil(value) do
-              acc
-            else
-              Map.put(acc, key, value)
-            end
-          end)
-
-        case Helpers.github_client().update_issue(number, attrs, Helpers.client_opts()) do
-          {:ok, issue} ->
-            {:reply,
-             Response.text(Response.tool(), "Updated issue ##{issue.number}: #{issue.title}"),
-             frame}
-
-          {:error, :not_found} ->
-            {:reply,
-             Response.error(
-               Response.tool(),
-               Helpers.format_error(:not_found, "Issue ##{number}")
-             ), frame}
-
-          {:error, reason} ->
-            Logger.error("ticket.update error: #{inspect(reason)}")
-
-            {:reply,
-             Response.error(Response.tool(), Helpers.format_error(reason, "Issue ##{number}")),
-             frame}
-        end
+        handle_update(number, build_attrs(params), frame)
 
       {:error, scope} ->
         {:reply, Response.error(Response.tool(), "Insufficient permissions: #{scope} required"),
          frame}
+    end
+  end
+
+  defp build_attrs(params) do
+    for key <- @updatable_fields,
+        value = Helpers.get_param(params, key),
+        not is_nil(value),
+        into: %{},
+        do: {key, value}
+  end
+
+  defp handle_update(number, attrs, frame) do
+    case Helpers.github_client().update_issue(number, attrs, Helpers.client_opts()) do
+      {:ok, issue} ->
+        {:reply, Response.text(Response.tool(), "Updated issue ##{issue.number}: #{issue.title}"),
+         frame}
+
+      {:error, :not_found} ->
+        {:reply,
+         Response.error(
+           Response.tool(),
+           Helpers.format_error(:not_found, "Issue ##{number}")
+         ), frame}
+
+      {:error, reason} ->
+        Logger.error("ticket.update error: #{inspect(reason)}")
+
+        {:reply,
+         Response.error(Response.tool(), Helpers.format_error(reason, "Issue ##{number}")), frame}
     end
   end
 end
