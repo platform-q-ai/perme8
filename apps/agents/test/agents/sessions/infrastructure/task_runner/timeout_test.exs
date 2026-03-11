@@ -15,6 +15,12 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.TimeoutTest do
 
     Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "task:#{task.id}")
 
+    # Ensure fast health-check config so retries exhaust quickly
+    original = Application.get_env(:agents, :sessions, [])
+    merged = Keyword.merge(original, health_check_interval_ms: 10, health_check_max_retries: 3)
+    Application.put_env(:agents, :sessions, merged)
+    on_exit(fn -> Application.put_env(:agents, :sessions, original) end)
+
     {:ok, task: task}
   end
 
@@ -54,6 +60,9 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.TimeoutTest do
       )
 
     ref = Process.monitor(pid)
+
+    # Kill the process on test exit to prevent leaks into subsequent modules
+    on_exit(fn -> if Process.alive?(pid), do: Process.exit(pid, :kill) end)
 
     assert_receive {:failed, "Health check timed out"}, 30_000
 
