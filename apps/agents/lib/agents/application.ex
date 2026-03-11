@@ -56,6 +56,7 @@ defmodule Agents.Application do
       Behaviours.ErmGatewayBehaviour,
       Behaviours.IdentityBehaviour,
       Behaviours.JargaGatewayBehaviour,
+      Behaviours.GithubTicketClientBehaviour,
       # Config
       GatewayConfig
     ]
