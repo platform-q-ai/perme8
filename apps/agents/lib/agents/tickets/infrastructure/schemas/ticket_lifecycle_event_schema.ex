@@ -8,6 +8,7 @@ defmodule Agents.Tickets.Infrastructure.Schemas.TicketLifecycleEventSchema do
 
   alias Agents.Tickets.Infrastructure.Schemas.ProjectTicketSchema
 
+  @valid_stages ["open", "ready", "in_progress", "in_review", "ci_testing", "deployed", "closed"]
   @valid_triggers ["system", "sync", "manual"]
 
   @type t :: %__MODULE__{
@@ -37,6 +38,7 @@ defmodule Agents.Tickets.Infrastructure.Schemas.TicketLifecycleEventSchema do
     event
     |> cast(attrs, [:ticket_id, :from_stage, :to_stage, :transitioned_at, :trigger])
     |> validate_required([:ticket_id, :to_stage, :transitioned_at])
+    |> validate_inclusion(:to_stage, @valid_stages)
     |> validate_inclusion(:trigger, @valid_triggers)
     |> foreign_key_constraint(:ticket_id)
   end
