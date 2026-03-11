@@ -67,6 +67,20 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.CreateToolTest do
                CreateTool.execute(%{"title" => "With labels", "labels" => ["enhancement"]}, frame)
     end
 
+    test "returns error on generic client failure" do
+      frame = build_frame()
+
+      Agents.Mocks.GithubTicketClientMock
+      |> expect(:create_issue, fn _attrs, _opts -> {:error, {:unexpected_status, 422, %{}}} end)
+
+      assert {:reply, response, ^frame} =
+               CreateTool.execute(%{"title" => "Will fail"}, frame)
+
+      assert %Hermes.Server.Response{isError: true} = response
+      assert [%{"text" => text}] = response.content
+      assert text =~ "unexpected error"
+    end
+
     test "denies execution when scope is missing" do
       api_key = %{id: "k-1", permissions: []}
       frame = build_frame(api_key)

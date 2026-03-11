@@ -48,7 +48,21 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.AddSubIssueToolTest do
       assert %Hermes.Server.Response{isError: false} = response
     end
 
-    test "returns descriptive error for api rejection" do
+    test "returns not found error when issue does not exist" do
+      frame = build_frame()
+
+      Agents.Mocks.GithubTicketClientMock
+      |> expect(:add_sub_issue, fn 1, 999, _opts -> {:error, :not_found} end)
+
+      assert {:reply, response, ^frame} =
+               AddSubIssueTool.execute(%{"parent_number" => 1, "child_number" => 999}, frame)
+
+      assert %Hermes.Server.Response{isError: true} = response
+      assert [%{"text" => text}] = response.content
+      assert text =~ "not found"
+    end
+
+    test "returns generic error for api rejection" do
       frame = build_frame()
 
       Agents.Mocks.GithubTicketClientMock
@@ -61,7 +75,7 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.AddSubIssueToolTest do
 
       assert %Hermes.Server.Response{isError: true} = response
       assert [%{"text" => text}] = response.content
-      assert text =~ "Unable to modify sub-issue relationship"
+      assert text =~ "unexpected error"
     end
 
     test "denies execution when scope is missing" do

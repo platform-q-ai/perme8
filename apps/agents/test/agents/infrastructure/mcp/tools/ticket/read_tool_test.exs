@@ -80,6 +80,18 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.ReadToolTest do
       assert text =~ "not found"
     end
 
+    test "returns error on generic client failure" do
+      frame = build_frame()
+
+      Agents.Mocks.GithubTicketClientMock
+      |> expect(:get_issue, fn 1, _opts -> {:error, {:unexpected_status, 500, %{}}} end)
+
+      assert {:reply, response, ^frame} = ReadTool.execute(%{"number" => 1}, frame)
+      assert %Hermes.Server.Response{type: :tool, isError: true} = response
+      assert [%{"type" => "text", "text" => text}] = response.content
+      assert text =~ "unexpected error"
+    end
+
     test "denies execution when api key lacks mcp:ticket.read scope" do
       api_key = %{id: "key-1", permissions: ["mcp:tools.search"]}
       frame = build_frame(api_key)

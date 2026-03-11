@@ -39,6 +39,20 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.HelpersTest do
     end
   end
 
+  describe "get_param/2" do
+    test "finds value by atom key" do
+      assert Helpers.get_param(%{number: 42}, :number) == 42
+    end
+
+    test "falls back to string key" do
+      assert Helpers.get_param(%{"number" => 42}, :number) == 42
+    end
+
+    test "returns nil when key is absent" do
+      assert Helpers.get_param(%{}, :number) == nil
+    end
+  end
+
   describe "format_issue/1" do
     test "formats full issue details as markdown" do
       issue =
@@ -59,6 +73,22 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.HelpersTest do
       assert text =~ "Comments"
       assert text =~ "Sub-issues"
       assert text =~ "MCP ticket helpers"
+    end
+
+    test "handles nil body and empty collections gracefully" do
+      issue =
+        Fixtures.issue_map(%{
+          number: 99,
+          body: nil,
+          labels: [],
+          comments: [],
+          sub_issue_numbers: []
+        })
+
+      text = Helpers.format_issue(issue)
+
+      assert text =~ "(empty)"
+      assert text =~ "None"
     end
   end
 
@@ -84,8 +114,10 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.HelpersTest do
       assert Helpers.format_error(:missing_token, "ignored") == "GitHub token not configured."
     end
 
-    test "formats generic errors" do
-      assert Helpers.format_error({:unexpected, :boom}, "ignored") =~ "unexpected"
+    test "formats generic errors without leaking internals" do
+      text = Helpers.format_error({:unexpected, :boom}, "ignored")
+      assert text =~ "unexpected error"
+      refute text =~ "boom"
     end
   end
 end

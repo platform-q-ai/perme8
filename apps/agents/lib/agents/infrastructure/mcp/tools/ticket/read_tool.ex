@@ -36,7 +36,7 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.ReadTool do
             {:reply,
              Response.error(
                Response.tool(),
-               "Failed to read issue: #{Helpers.format_error(reason, "")}"
+               Helpers.format_error(reason, "Issue ##{number}")
              ), frame}
         end
 
