@@ -3316,12 +3316,13 @@ defmodule AgentsWeb.DashboardLive.IndexTest do
     end
 
     test "close_ticket removes ticket from UI and destroys session", %{conn: conn, user: user} do
-      task_fixture(%{
-        user_id: user.id,
-        instruction: "pick up ticket #805 using the relevant skill",
-        container_id: "c-ticket-805",
-        status: "completed"
-      })
+      task =
+        task_fixture(%{
+          user_id: user.id,
+          instruction: "pick up ticket #805 using the relevant skill",
+          container_id: "c-ticket-805",
+          status: "completed"
+        })
 
       {:ok, _ticket} =
         ProjectTicketRepository.sync_remote_ticket(%{
@@ -3332,6 +3333,10 @@ defmodule AgentsWeb.DashboardLive.IndexTest do
           size: "M",
           labels: []
         })
+
+      # Persist the FK so apply_ticket_closed can resolve the container_id
+      # even when the task is terminal and enrichment regex doesn't match.
+      ProjectTicketRepository.link_task(805, task.id)
 
       {:ok, lv, _html} = live(conn, ~p"/sessions")
       send(lv.pid, {:tickets_synced, []})
@@ -3382,8 +3387,8 @@ defmodule AgentsWeb.DashboardLive.IndexTest do
       conn: conn,
       user: user
     } do
-      # 1. Create a failed task linked to ticket #900 via instruction pattern
-      _task =
+      # 1. Create a failed task linked to ticket #900 via persisted FK
+      task =
         task_fixture(%{
           user_id: user.id,
           instruction: "pick up ticket #900 using the relevant skill",
@@ -3401,6 +3406,9 @@ defmodule AgentsWeb.DashboardLive.IndexTest do
           size: "M",
           labels: []
         })
+
+      # Persist the FK so apply_ticket_closed can resolve the container_id
+      ProjectTicketRepository.link_task(900, task.id)
 
       # 2. Mount — ticket should show as failed in triage
       {:ok, lv, _html} = live(conn, ~p"/sessions?container=c-ticket-900")

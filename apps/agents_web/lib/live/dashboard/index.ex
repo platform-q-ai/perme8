@@ -2261,7 +2261,13 @@ defmodule AgentsWeb.DashboardLive.Index do
   defp apply_ticket_closed(socket, number) do
     user = socket.assigns.current_scope.user
     ticket = find_ticket_by_number(socket.assigns.tickets, number)
-    container_id = ticket && ticket.associated_container_id
+
+    # Resolve the container_id for session cleanup. We try three sources:
+    # 1. Enrichment-derived associated_container_id (set for active tasks)
+    # 2. Persisted associated_task_id → look up container_id from tasks_snapshot
+    #    (works for terminal tasks where enrichment no longer sets container_id)
+    # 3. nil (no session to clean up)
+    container_id = resolve_container_for_ticket(ticket, socket.assigns[:tasks_snapshot])
 
     # Best-effort session cleanup -- Docker failure must not block the UI update
     maybe_delete_session(container_id, user.id)
@@ -2295,6 +2301,34 @@ defmodule AgentsWeb.DashboardLive.Index do
     |> assign(:sessions, sessions)
     |> assign(:active_ticket_number, active_ticket_number)
     |> assign(:active_session_tab, tab)
+  end
+
+  # Resolves the container_id for a ticket's associated session.
+  # Tries enrichment-derived container_id first, then falls back to looking
+  # up the persisted task_id in the in-memory tasks_snapshot.
+  defp resolve_container_for_ticket(nil, _tasks_snapshot), do: nil
+
+  defp resolve_container_for_ticket(ticket, tasks_snapshot) do
+    # 1. Try enrichment-derived value (set for active/non-terminal tasks)
+    case ticket.associated_container_id do
+      cid when is_binary(cid) and cid != "" ->
+        cid
+
+      _ ->
+        # 2. Fall back to persisted task_id → look up container from snapshot
+        resolve_container_from_task_id(ticket.associated_task_id, tasks_snapshot)
+    end
+  end
+
+  defp resolve_container_from_task_id(nil, _tasks_snapshot), do: nil
+  defp resolve_container_from_task_id(_task_id, nil), do: nil
+  defp resolve_container_from_task_id(_task_id, tasks) when not is_list(tasks), do: nil
+
+  defp resolve_container_from_task_id(task_id, tasks_snapshot) do
+    case Enum.find(tasks_snapshot, &(&1.id == task_id)) do
+      nil -> nil
+      task -> Map.get(task, :container_id)
+    end
   end
 
   defp map_ticket_tree(tickets, fun) when is_list(tickets) do
