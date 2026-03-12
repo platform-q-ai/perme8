@@ -62,6 +62,35 @@ defmodule AgentsWeb.DashboardLive.IndexTest do
       assert html =~ "Add a ticket..."
     end
 
+    test "create_ticket via sidebar form creates ticket and shows in UI", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      # Submit the form with a ticket body
+      lv
+      |> form("#sidebar-new-ticket-form", %{body: "Fix the login page"})
+      |> render_submit()
+
+      # The CreateTicket use case broadcasts {:tickets_synced, []} which
+      # the LiveView handles to reload tickets from DB.
+      html = render(lv)
+
+      # The ticket should appear in the triage lane
+      assert html =~ "Fix the login page"
+    end
+
+    test "create_ticket with empty body does not create a ticket", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      # Submit with whitespace-only body — should not crash or create a ticket
+      lv
+      |> form("#sidebar-new-ticket-form", %{body: "   "})
+      |> render_submit()
+
+      html = render(lv)
+      # No ticket should appear in the triage lane
+      refute html =~ ~s(data-testid="triage-ticket-item-)
+    end
+
     test "renders empty state when no sessions exist", %{conn: conn} do
       {:ok, _lv, html} = live(conn, ~p"/sessions")
       assert html =~ "No sessions yet"
