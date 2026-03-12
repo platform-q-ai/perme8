@@ -48,8 +48,23 @@ defmodule Agents.Tickets.Domain.Policies.TicketEnrichmentPolicyTest do
 
   describe "enrich_all/3" do
     test "enriches tickets recursively while preserving tree structure" do
-      child = Ticket.new(%{id: 2, number: 383, parent_ticket_id: 1, sub_tickets: []})
-      root = Ticket.new(%{id: 1, number: 382, parent_ticket_id: nil, sub_tickets: [child]})
+      child =
+        Ticket.new(%{
+          id: 2,
+          number: 383,
+          parent_ticket_id: 1,
+          sub_tickets: [],
+          associated_task_id: "task-child"
+        })
+
+      root =
+        Ticket.new(%{
+          id: 1,
+          number: 382,
+          parent_ticket_id: nil,
+          sub_tickets: [child],
+          associated_task_id: "task-root"
+        })
 
       tasks = [
         Task.new(%{
@@ -256,7 +271,7 @@ defmodule Agents.Tickets.Domain.Policies.TicketEnrichmentPolicyTest do
       assert enriched.session_state == "warming"
     end
 
-    test "maps cancelled to cancelled" do
+    test "skips cancelled tasks in regex fallback (returns idle)" do
       ticket = Ticket.new(%{number: 382, title: "Root ticket"})
 
       tasks = [
@@ -269,7 +284,49 @@ defmodule Agents.Tickets.Domain.Policies.TicketEnrichmentPolicyTest do
       ]
 
       enriched = TicketEnrichmentPolicy.enrich(ticket, tasks, @lifecycle_resolver)
+      assert enriched.session_state == "idle"
+      assert enriched.associated_task_id == nil
+    end
+
+    test "skips completed and failed tasks in regex fallback" do
+      ticket = Ticket.new(%{number: 382, title: "Root ticket"})
+
+      for status <- ["completed", "failed"] do
+        tasks = [
+          Task.new(%{
+            id: "task-1",
+            instruction: "ticket #382",
+            status: status,
+            user_id: "user-1"
+          })
+        ]
+
+        enriched = TicketEnrichmentPolicy.enrich(ticket, tasks, @lifecycle_resolver)
+        assert enriched.session_state == "idle", "expected idle for #{status} task"
+        assert enriched.associated_task_id == nil
+      end
+    end
+
+    test "maps cancelled to cancelled via persisted association" do
+      ticket =
+        Ticket.new(%{
+          number: 382,
+          title: "Root ticket",
+          associated_task_id: "task-1"
+        })
+
+      tasks = [
+        Task.new(%{
+          id: "task-1",
+          instruction: "ticket #382",
+          status: "cancelled",
+          user_id: "user-1"
+        })
+      ]
+
+      enriched = TicketEnrichmentPolicy.enrich(ticket, tasks, @lifecycle_resolver)
       assert enriched.session_state == "cancelled"
+      assert enriched.associated_task_id == "task-1"
     end
   end
 
