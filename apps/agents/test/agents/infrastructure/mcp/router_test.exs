@@ -17,7 +17,7 @@ defmodule Agents.Infrastructure.Mcp.RouterTest do
   alias Agents.Infrastructure.Mcp.Router
   alias Agents.Test.KnowledgeFixtures, as: Fixtures
 
-  setup :set_mox_from_context
+  setup :set_mox_global
   setup :verify_on_exit!
 
   setup do
