@@ -532,18 +532,11 @@ defmodule AgentsWeb.DashboardLive.Index do
     container_id = ticket && ticket.associated_container_id
 
     # Destroy the associated session if it exists
-    if is_binary(container_id) do
-      Sessions.delete_session(container_id, user.id)
-    end
+    maybe_delete_session(container_id, user.id)
 
     # Clean up tasks_snapshot for the destroyed session so stale entries
     # don't keep the ticket "linked" to a deleted task.
-    tasks_snapshot =
-      if is_binary(container_id) do
-        remove_tasks_for_container(socket.assigns[:tasks_snapshot], container_id)
-      else
-        socket.assigns[:tasks_snapshot]
-      end
+    tasks_snapshot = maybe_remove_tasks(socket.assigns[:tasks_snapshot], container_id)
 
     # Optimistically mark the ticket as closed so it moves out of the Open filter
     tickets =
@@ -552,12 +545,7 @@ defmodule AgentsWeb.DashboardLive.Index do
       end)
 
     # Remove the associated session from the sessions list
-    sessions =
-      if is_binary(container_id) do
-        Enum.reject(socket.assigns.sessions, &(&1.container_id == container_id))
-      else
-        socket.assigns.sessions
-      end
+    sessions = maybe_reject_session(socket.assigns.sessions, container_id)
 
     active_ticket_number =
       if socket.assigns.active_ticket_number == number,
@@ -565,23 +553,10 @@ defmodule AgentsWeb.DashboardLive.Index do
         else: socket.assigns.active_ticket_number
 
     # Switch back to chat tab if we just closed the viewed ticket
-    tab =
-      if socket.assigns.active_ticket_number == number and
-           socket.assigns.active_session_tab == "ticket",
-         do: "chat",
-         else: socket.assigns.active_session_tab
+    tab = tab_after_ticket_close(socket.assigns, number)
 
     # Clear active selection if we just destroyed the viewed session
-    socket =
-      if socket.assigns.active_container_id == container_id do
-        socket
-        |> assign(:active_container_id, nil)
-        |> assign(:current_task, nil)
-        |> assign(:events, [])
-        |> assign_session_state()
-      else
-        socket
-      end
+    socket = maybe_clear_active_session(socket, container_id)
 
     Tickets.close_project_ticket(number)
 
@@ -2612,6 +2587,45 @@ defmodule AgentsWeb.DashboardLive.Index do
         (is_binary(task_id) and "task:#{task_id}" == container_id)
     end)
   end
+
+  # Helper functions for close_ticket to reduce cyclomatic complexity
+  defp maybe_delete_session(container_id, user_id) when is_binary(container_id) do
+    Sessions.delete_session(container_id, user_id)
+  end
+
+  defp maybe_delete_session(_container_id, _user_id), do: :ok
+
+  defp maybe_remove_tasks(tasks_snapshot, container_id) when is_binary(container_id) do
+    remove_tasks_for_container(tasks_snapshot, container_id)
+  end
+
+  defp maybe_remove_tasks(tasks_snapshot, _container_id), do: tasks_snapshot
+
+  defp maybe_reject_session(sessions, container_id) when is_binary(container_id) do
+    Enum.reject(sessions, &(&1.container_id == container_id))
+  end
+
+  defp maybe_reject_session(sessions, _container_id), do: sessions
+
+  defp tab_after_ticket_close(assigns, number) do
+    if assigns.active_ticket_number == number and assigns.active_session_tab == "ticket",
+      do: "chat",
+      else: assigns.active_session_tab
+  end
+
+  defp maybe_clear_active_session(socket, container_id) when is_binary(container_id) do
+    if socket.assigns.active_container_id == container_id do
+      socket
+      |> assign(:active_container_id, nil)
+      |> assign(:current_task, nil)
+      |> assign(:events, [])
+      |> assign_session_state()
+    else
+      socket
+    end
+  end
+
+  defp maybe_clear_active_session(socket, _container_id), do: socket
 
   # Removes tasks for a container from the snapshot, asynchronously unlinks
   # any tickets that referenced those tasks in the DB, and re-enriches tickets
