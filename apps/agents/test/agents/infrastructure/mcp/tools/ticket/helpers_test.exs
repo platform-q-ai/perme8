@@ -5,6 +5,9 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.HelpersTest do
   alias Agents.Test.TicketFixtures, as: Fixtures
 
   setup do
+    prev_sessions = Application.get_env(:agents, :sessions)
+    prev_client = Application.get_env(:agents, :github_ticket_client)
+
     Application.put_env(:agents, :sessions,
       github_token: "token-123",
       github_org: "platform-q-ai",
@@ -12,8 +15,8 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.HelpersTest do
     )
 
     on_exit(fn ->
-      Application.delete_env(:agents, :sessions)
-      Application.delete_env(:agents, :github_ticket_client)
+      restore_or_delete(:agents, :sessions, prev_sessions)
+      restore_or_delete(:agents, :github_ticket_client, prev_client)
     end)
 
     :ok
@@ -120,4 +123,7 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.HelpersTest do
       refute text =~ "boom"
     end
   end
+
+  defp restore_or_delete(app, key, nil), do: Application.delete_env(app, key)
+  defp restore_or_delete(app, key, value), do: Application.put_env(app, key, value)
 end

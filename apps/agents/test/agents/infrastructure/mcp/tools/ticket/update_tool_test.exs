@@ -11,6 +11,10 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.UpdateToolTest do
   setup :verify_on_exit!
 
   setup do
+    prev_client = Application.get_env(:agents, :github_ticket_client)
+    prev_identity = Application.get_env(:agents, :identity_module)
+    prev_sessions = Application.get_env(:agents, :sessions)
+
     Application.put_env(:agents, :github_ticket_client, Agents.Mocks.GithubTicketClientMock)
     Application.put_env(:agents, :identity_module, Agents.Mocks.IdentityMock)
 
@@ -23,9 +27,9 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.UpdateToolTest do
     stub(Agents.Mocks.IdentityMock, :api_key_has_permission?, fn _api_key, _scope -> true end)
 
     on_exit(fn ->
-      Application.delete_env(:agents, :github_ticket_client)
-      Application.delete_env(:agents, :identity_module)
-      Application.delete_env(:agents, :sessions)
+      restore_or_delete(:agents, :github_ticket_client, prev_client)
+      restore_or_delete(:agents, :identity_module, prev_identity)
+      restore_or_delete(:agents, :sessions, prev_sessions)
     end)
 
     :ok
@@ -89,4 +93,7 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.UpdateToolTest do
       assert %Hermes.Server.Response{isError: true} = response
     end
   end
+
+  defp restore_or_delete(app, key, nil), do: Application.delete_env(app, key)
+  defp restore_or_delete(app, key, value), do: Application.put_env(app, key, value)
 end
