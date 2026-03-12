@@ -16,6 +16,11 @@ defmodule Agents.Tickets.Domain.Policies.TicketEnrichmentPolicy do
 
   @ticket_number_regex ~r/(?:^|\s)(?:#|ticket\s+)(\d+)\b/i
 
+  # Tasks in terminal states should not be matched by the regex fallback.
+  # If the user cancelled/completed/failed a task, the regex should not
+  # re-associate it with the ticket on the next enrichment cycle.
+  @terminal_statuses ["cancelled", "completed", "failed"]
+
   @typep lifecycle_resolver :: (map() -> atom())
 
   @spec enrich(Ticket.t(), [map()], lifecycle_resolver()) :: Ticket.t()
@@ -86,7 +91,9 @@ defmodule Agents.Tickets.Domain.Policies.TicketEnrichmentPolicy do
   end
 
   defp build_task_index(tasks) do
-    Enum.reduce(tasks, %{}, fn task, acc ->
+    tasks
+    |> Enum.reject(&terminal?/1)
+    |> Enum.reduce(%{}, fn task, acc ->
       case extract_ticket_number(task.instruction) do
         nil -> acc
         number -> Map.put_new(acc, number, task)
@@ -97,6 +104,8 @@ defmodule Agents.Tickets.Domain.Policies.TicketEnrichmentPolicy do
   defp build_task_id_index(tasks) do
     Map.new(tasks, fn task -> {Map.get(task, :id), task} end)
   end
+
+  defp terminal?(task), do: Map.get(task, :status) in @terminal_statuses
 
   defp apply_enrichment(%Ticket{} = ticket, nil, _lifecycle_resolver) do
     %{

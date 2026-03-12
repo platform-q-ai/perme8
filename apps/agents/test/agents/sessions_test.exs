@@ -604,37 +604,56 @@ defmodule Agents.SessionsTest do
     test "list_project_tickets/2 enriches tickets with associated session state" do
       user = user_fixture()
 
-      task_fixture(%{
-        user_id: user.id,
-        instruction: "Work on #306 from backlog",
-        container_id: "container-306",
-        status: "running"
-      })
+      _task_306 =
+        task_fixture(%{
+          user_id: user.id,
+          instruction: "Work on #306 from backlog",
+          container_id: "container-306",
+          status: "running"
+        })
 
-      task_fixture(%{
-        user_id: user.id,
-        instruction: "ship ticket 410 fixes",
-        container_id: "container-410",
-        status: "completed"
-      })
+      task_410 =
+        task_fixture(%{
+          user_id: user.id,
+          instruction: "ship ticket 410 fixes",
+          container_id: "container-410",
+          status: "completed"
+        })
 
-      tickets = [
-        Ticket.new(%{
+      alias Agents.Tickets.Infrastructure.Repositories.ProjectTicketRepository
+
+      {:ok, _} =
+        ProjectTicketRepository.sync_remote_ticket(%{
           number: 306,
           title: "Ticket 306",
           body: "Implement queue-first create flow",
-          size: "M"
-        }),
-        Ticket.new(%{
+          labels: [],
+          state: "open"
+        })
+
+      {:ok, _} =
+        ProjectTicketRepository.sync_remote_ticket(%{
           number: 410,
           title: "Ticket 410",
           body: "Ship the browser feature files",
-          size: "S"
-        }),
-        Ticket.new(%{number: 999, title: "Unlinked"})
-      ]
+          labels: [],
+          state: "open"
+        })
 
-      result = Tickets.list_project_tickets(user.id, tickets: tickets)
+      {:ok, _} =
+        ProjectTicketRepository.sync_remote_ticket(%{
+          number: 999,
+          title: "Unlinked",
+          labels: [],
+          state: "open"
+        })
+
+      # Running tasks match via regex fallback; terminal tasks require a
+      # persisted association (task_id FK). Link ticket 410 via the DB so
+      # enrichment finds the completed task through the persisted path.
+      {:ok, _} = Tickets.link_ticket_to_task(410, task_410.id)
+
+      result = Tickets.list_project_tickets(user.id)
 
       assert Enum.all?(result, &match?(%Ticket{}, &1))
 
@@ -645,12 +664,10 @@ defmodule Agents.SessionsTest do
       assert ticket_306.session_state == "running"
       assert ticket_306.associated_container_id == "container-306"
       assert ticket_306.body == "Implement queue-first create flow"
-      assert ticket_306.size == "M"
 
       assert ticket_410.session_state == "completed"
       assert ticket_410.associated_container_id == "container-410"
       assert ticket_410.body == "Ship the browser feature files"
-      assert ticket_410.size == "S"
 
       assert ticket_999.session_state == "idle"
       assert ticket_999.associated_container_id == nil
