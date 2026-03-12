@@ -2663,22 +2663,16 @@ defmodule AgentsWeb.DashboardLive.Index do
     old_tasks = tasks_snapshot || []
     cleaned = remove_tasks_for_container(old_tasks, container_id)
 
-    removed_task_ids =
-      MapSet.new(old_tasks, & &1.id)
-      |> MapSet.difference(MapSet.new(cleaned, & &1.id))
-
-    # Unlink any tickets that were associated with a deleted task (fire-and-forget).
-    unless MapSet.size(removed_task_ids) == 0 do
-      all_tickets = Enum.flat_map(tickets, fn t -> [t | t.sub_tickets || []] end)
-
-      Task.start(fn ->
-        for ticket <- all_tickets,
-            is_binary(ticket.associated_task_id),
-            MapSet.member?(removed_task_ids, ticket.associated_task_id) do
-          Tickets.unlink_ticket_from_task(ticket.number)
-        end
-      end)
-    end
+    # No need to explicitly unlink tickets in the DB here. The callers
+    # (delete_session, delete_queued_task) only reach this point when
+    # Sessions.delete_session/delete_task succeeds, which deletes the task
+    # rows from the DB. The FK cascade (on_delete: :nilify_all) on
+    # sessions_project_tickets.task_id automatically clears the link.
+    #
+    # A previous version fired a Task.start to call unlink_ticket_from_task
+    # here, but that introduced a race condition: if the user started a new
+    # session for the same ticket before the async unlink ran, the stale
+    # unlink would wipe the fresh link.
 
     enriched_tickets =
       TicketEnrichmentPolicy.enrich_all(

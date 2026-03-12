@@ -891,4 +891,58 @@ defmodule Agents.Tickets.Infrastructure.Repositories.ProjectTicketRepositoryTest
       assert Repo.get(ProjectTicketSchema, pruned.id) == nil
     end
   end
+
+  describe "FK cascade on task deletion" do
+    test "deleting a task row nullifies the ticket's task_id via on_delete cascade" do
+      task = create_task!(%{status: "failed", error: "boom"})
+
+      {:ok, _ticket} =
+        ProjectTicketRepository.sync_remote_ticket(%{
+          number: 950,
+          title: "Ticket linked to a task",
+          status: "Backlog",
+          priority: "Need",
+          size: "M",
+          labels: []
+        })
+
+      # Link the ticket to the task
+      {:ok, linked} = ProjectTicketRepository.link_task(950, task.id)
+      assert linked.task_id == task.id
+
+      # Delete the task row (simulates what delete_session does)
+      Repo.delete!(task)
+
+      # The FK cascade (on_delete: :nilify_all) should clear task_id
+      reloaded = Repo.get_by!(ProjectTicketSchema, number: 950)
+      assert reloaded.task_id == nil
+    end
+
+    test "new link_task after task deletion sets the new task_id" do
+      old_task = create_task!(%{status: "failed", error: "boom"})
+
+      {:ok, _ticket} =
+        ProjectTicketRepository.sync_remote_ticket(%{
+          number: 951,
+          title: "Ticket for re-link test",
+          status: "Backlog",
+          priority: "Need",
+          size: "M",
+          labels: []
+        })
+
+      # Link to old task, then delete it (cascade clears task_id)
+      {:ok, _} = ProjectTicketRepository.link_task(951, old_task.id)
+      Repo.delete!(old_task)
+
+      reloaded = Repo.get_by!(ProjectTicketSchema, number: 951)
+      assert reloaded.task_id == nil
+
+      # Create a new task and link the ticket to it
+      new_task = create_task!(%{instruction: "pick up ticket #951"})
+      {:ok, re_linked} = ProjectTicketRepository.link_task(951, new_task.id)
+
+      assert re_linked.task_id == new_task.id
+    end
+  end
 end
