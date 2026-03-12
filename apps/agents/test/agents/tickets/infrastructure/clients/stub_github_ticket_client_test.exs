@@ -54,10 +54,8 @@ defmodule Agents.Tickets.Infrastructure.Clients.StubGithubTicketClientTest do
       assert issue.number == 1
     end
 
-    test "returns synthetic issue for unknown number" do
-      assert {:ok, issue} = Stub.update_issue(999_999, %{title: "New Title"}, @opts)
-      assert issue.number == 999_999
-      assert issue.title == "New Title"
+    test "returns not_found for unknown number" do
+      assert {:error, :not_found} = Stub.update_issue(999_999, %{title: "New Title"}, @opts)
     end
   end
 

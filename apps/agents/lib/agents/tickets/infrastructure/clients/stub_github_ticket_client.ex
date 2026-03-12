@@ -77,35 +77,21 @@ defmodule Agents.Tickets.Infrastructure.Clients.StubGithubTicketClient do
 
   @impl true
   def update_issue(number, attrs, _opts) do
-    base =
-      case Map.fetch(@known_issues, number) do
-        {:ok, issue} ->
+    case Map.fetch(@known_issues, number) do
+      {:ok, issue} ->
+        updated =
           issue
+          |> maybe_put(:title, Map.get(attrs, :title))
+          |> maybe_put(:body, Map.get(attrs, :body))
+          |> maybe_put(:labels, Map.get(attrs, :labels))
+          |> maybe_put(:assignees, Map.get(attrs, :assignees))
+          |> maybe_put(:state, Map.get(attrs, :state))
 
-        :error ->
-          %{
-            number: number,
-            title: "Issue ##{number}",
-            body: "",
-            state: "open",
-            labels: [],
-            assignees: [],
-            url: nil,
-            comments: [],
-            sub_issue_numbers: [],
-            created_at: nil
-          }
-      end
+        {:ok, updated}
 
-    updated =
-      base
-      |> maybe_put(:title, Map.get(attrs, :title))
-      |> maybe_put(:body, Map.get(attrs, :body))
-      |> maybe_put(:labels, Map.get(attrs, :labels))
-      |> maybe_put(:assignees, Map.get(attrs, :assignees))
-      |> maybe_put(:state, Map.get(attrs, :state))
-
-    {:ok, updated}
+      :error ->
+        {:error, :not_found}
+    end
   end
 
   @impl true

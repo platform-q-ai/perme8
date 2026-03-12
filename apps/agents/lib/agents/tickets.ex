@@ -133,6 +133,13 @@ defmodule Agents.Tickets do
           {:error, :not_found} -> :ok
         end
 
+      # Issue doesn't exist on GitHub -- treat as already closed
+      {:error, :not_found} ->
+        case ProjectTicketRepository.close_by_number(number) do
+          {:ok, _ticket} -> :ok
+          {:error, :not_found} -> :ok
+        end
+
       {:error, reason} ->
         {:error, reason}
     end
