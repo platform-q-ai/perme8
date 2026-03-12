@@ -21,6 +21,7 @@ defmodule AgentsWeb.DashboardLive.Index do
 
   alias AgentsWeb.DashboardLive.EventProcessor
   alias AgentsWeb.DashboardLive.SessionStateMachine
+  alias AgentsWeb.DashboardLive.TicketSessionLinker
 
   @follow_up_timeout_ms 30_000
 
@@ -642,7 +643,18 @@ defmodule AgentsWeb.DashboardLive.Index do
       true ->
         case Sessions.get_task(ticket.associated_task_id, socket.assigns.current_scope.user.id) do
           {:ok, task} ->
-            do_cancel_task(task, socket, "Ticket ##{number} paused and moved to triage")
+            case perform_cancel_task(task, socket) do
+              {:ok, socket} ->
+                # Clear the persisted FK so the ticket doesn't re-associate
+                # on next page reload (Bug 1 fix).
+                socket = TicketSessionLinker.unlink_and_refresh(socket, number)
+
+                {:noreply,
+                 put_flash(socket, :info, "Ticket ##{number} paused and moved to triage")}
+
+              {:error, socket} ->
+                {:noreply, socket}
+            end
 
           {:error, _} ->
             {:noreply, put_flash(socket, :error, "Failed to find task for ticket ##{number}")}
@@ -682,12 +694,9 @@ defmodule AgentsWeb.DashboardLive.Index do
             else: socket
 
         # Remove deleted tasks from the snapshot and re-enrich tickets so they
-        # no longer reference the now-deleted session. Without this cleanup,
-        # the stale task entry causes the ticket to stay "linked" to the old
-        # session; a subsequent new task then appears as an orphan session card
-        # instead of being associated with the ticket.
+        # no longer reference the now-deleted session.
         {tasks_snapshot, tickets} =
-          purge_tasks_and_reenrich(
+          TicketSessionLinker.cleanup_and_refresh(
             socket.assigns[:tasks_snapshot],
             socket.assigns.tickets,
             container_id
@@ -732,7 +741,7 @@ defmodule AgentsWeb.DashboardLive.Index do
         # Remove deleted tasks from snapshot and re-enrich tickets so they
         # no longer reference the now-deleted task.
         {tasks_snapshot, tickets} =
-          purge_tasks_and_reenrich(
+          TicketSessionLinker.cleanup_and_refresh(
             socket.assigns[:tasks_snapshot],
             socket.assigns.tickets,
             container_id
@@ -1135,9 +1144,6 @@ defmodule AgentsWeb.DashboardLive.Index do
     # request below to avoid missing broadcasts after the refresh reads.
     Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "task:#{task.id}")
 
-    # Persist ticket-task association when a new task references a ticket
-    maybe_link_ticket_to_task(task)
-
     sessions = upsert_session_from_task(socket.assigns.sessions, task)
 
     sticky_warm_task_ids =
@@ -1147,11 +1153,9 @@ defmodule AgentsWeb.DashboardLive.Index do
         socket.assigns[:sticky_warm_task_ids] || MapSet.new()
       )
 
-    tasks_snapshot = upsert_task_snapshot(socket.assigns[:tasks_snapshot], task)
-
-    # Reload tickets from DB so the persisted task_id is picked up
-    tickets =
-      Tickets.list_project_tickets(user.id, tasks: tasks_snapshot)
+    # Persist ticket-task FK and reload tickets from DB via the linker.
+    # This replaces the old maybe_link_ticket_to_task + manual reload pattern.
+    socket = TicketSessionLinker.link_and_refresh(socket, task)
 
     socket =
       socket
@@ -1166,8 +1170,6 @@ defmodule AgentsWeb.DashboardLive.Index do
         Map.delete(socket.assigns.pending_ticket_starts, client_id)
       )
       |> assign(:sessions, sessions)
-      |> assign(:tasks_snapshot, tasks_snapshot)
-      |> assign(:tickets, tickets)
       |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)
 
     # The task may have already been promoted (queued -> pending -> running)
@@ -1326,15 +1328,8 @@ defmodule AgentsWeb.DashboardLive.Index do
 
   @impl true
   def handle_info({:tickets_synced, _tickets}, socket) do
-    user = socket.assigns.current_scope.user
-
-    ticket_opts =
-      case socket.assigns[:tasks_snapshot] do
-        tasks when is_list(tasks) and tasks != [] -> [tasks: tasks]
-        _ -> []
-      end
-
-    tickets = Tickets.list_project_tickets(user.id, ticket_opts)
+    socket = TicketSessionLinker.refresh_tickets(socket)
+    tickets = socket.assigns.tickets
 
     # Re-derive active ticket number from the currently selected session
     active_ticket_number =
@@ -1350,8 +1345,7 @@ defmodule AgentsWeb.DashboardLive.Index do
           next_active_ticket_number(tickets, socket.assigns[:active_ticket_number])
       end
 
-    {:noreply,
-     socket |> assign(:tickets, tickets) |> assign(:active_ticket_number, active_ticket_number)}
+    {:noreply, assign(socket, :active_ticket_number, active_ticket_number)}
   end
 
   @impl true
@@ -1989,11 +1983,6 @@ defmodule AgentsWeb.DashboardLive.Index do
 
     is_resume = match?(%{id: id} when id == task.id, socket.assigns.current_task)
 
-    # Persist ticket-task association so the link survives page reloads.
-    # The async start_ticket_session path does this in {:new_task_created, ...},
-    # but the synchronous run_task path was missing it.
-    maybe_link_ticket_to_task(task)
-
     socket =
       socket
       |> assign(:current_task, task)
@@ -2023,20 +2012,14 @@ defmodule AgentsWeb.DashboardLive.Index do
         socket.assigns[:sticky_warm_task_ids] || MapSet.new()
       )
 
-    tasks_snapshot = upsert_task_snapshot(socket.assigns[:tasks_snapshot], task)
+    # Persist ticket-task FK and reload tickets from DB so the link
+    # is immediately reflected in the UI (Bug 2 fix). This replaces
+    # the old maybe_link_ticket_to_task + stale enrich_all pattern.
+    socket = TicketSessionLinker.link_and_refresh(socket, task)
 
     {:noreply,
      socket
      |> assign(:sessions, sessions)
-     |> assign(:tasks_snapshot, tasks_snapshot)
-     |> assign(
-       :tickets,
-       TicketEnrichmentPolicy.enrich_all(
-         socket.assigns.tickets,
-         tasks_snapshot,
-         &SessionLifecyclePolicy.derive/1
-       )
-     )
      |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)
      |> push_event("scroll_to_bottom", %{})
      |> push_event("focus_input", %{})}
@@ -2047,6 +2030,20 @@ defmodule AgentsWeb.DashboardLive.Index do
   end
 
   defp do_cancel_task(task, socket, flash_message \\ "Task cancelled") do
+    case perform_cancel_task(task, socket) do
+      {:ok, socket} ->
+        {:noreply, put_flash(socket, :info, flash_message)}
+
+      {:error, socket} ->
+        {:noreply, socket}
+    end
+  end
+
+  # Cancels the task and updates all socket assigns (sessions, tasks_snapshot,
+  # tickets enrichment, sticky warm IDs, draft restoration). Returns the updated
+  # socket for callers that need to chain additional operations (e.g. unlinking
+  # a ticket FK after cancel).
+  defp perform_cancel_task(task, socket) do
     user = socket.assigns.current_scope.user
 
     case Sessions.cancel_task(task.id, user.id) do
@@ -2064,7 +2061,7 @@ defmodule AgentsWeb.DashboardLive.Index do
         tasks_snapshot = upsert_task_snapshot(socket.assigns[:tasks_snapshot], updated)
         instruction = recover_instruction(updated, task)
 
-        {:noreply,
+        {:ok,
          socket
          |> assign(:current_task, updated)
          |> assign(:parent_session_id, updated.session_id)
@@ -2079,11 +2076,10 @@ defmodule AgentsWeb.DashboardLive.Index do
            )
          )
          |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)
-         |> push_event("restore_draft", %{text: instruction})
-         |> put_flash(:info, flash_message)}
+         |> push_event("restore_draft", %{text: instruction})}
 
       {:error, _reason} ->
-        {:noreply, put_flash(socket, :error, "Failed to cancel task")}
+        {:error, put_flash(socket, :error, "Failed to cancel task")}
     end
   end
 
@@ -2657,33 +2653,6 @@ defmodule AgentsWeb.DashboardLive.Index do
   defp maybe_clear_active_session(socket, _container_id), do: socket
 
   # Removes tasks for a container from the snapshot, asynchronously unlinks
-  # any tickets that referenced those tasks in the DB, and re-enriches tickets
-  # against the cleaned snapshot so the UI reflects the cleared association.
-  defp purge_tasks_and_reenrich(tasks_snapshot, tickets, container_id) do
-    old_tasks = tasks_snapshot || []
-    cleaned = remove_tasks_for_container(old_tasks, container_id)
-
-    # No need to explicitly unlink tickets in the DB here. The callers
-    # (delete_session, delete_queued_task) only reach this point when
-    # Sessions.delete_session/delete_task succeeds, which deletes the task
-    # rows from the DB. The FK cascade (on_delete: :nilify_all) on
-    # sessions_project_tickets.task_id automatically clears the link.
-    #
-    # A previous version fired a Task.start to call unlink_ticket_from_task
-    # here, but that introduced a race condition: if the user started a new
-    # session for the same ticket before the async unlink ran, the stale
-    # unlink would wipe the fresh link.
-
-    enriched_tickets =
-      TicketEnrichmentPolicy.enrich_all(
-        tickets,
-        cleaned,
-        &SessionLifecyclePolicy.derive/1
-      )
-
-    {cleaned, enriched_tickets}
-  end
-
   defp update_task_lifecycle_state(tasks, _task_id, _lifecycle_state) when not is_list(tasks),
     do: tasks
 
@@ -3019,16 +2988,5 @@ defmodule AgentsWeb.DashboardLive.Index do
     else
       "##{ticket_number} #{instruction}"
     end
-  end
-
-  defp maybe_link_ticket_to_task(task) do
-    instruction = Map.get(task, :instruction, "")
-
-    case Tickets.extract_ticket_number(instruction) do
-      nil -> :ok
-      ticket_number -> Tickets.link_ticket_to_task(ticket_number, task.id)
-    end
-  rescue
-    _ -> :ok
   end
 end
