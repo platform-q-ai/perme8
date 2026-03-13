@@ -19,6 +19,7 @@ defmodule AgentsWeb.DashboardLive.SessionDataHelpers do
 
   @optimistic_stale_seconds 120
 
+  @doc "Returns the list of available session panel tabs."
   def session_tabs do
     [
       %{id: "chat", label: "Chat"},
@@ -181,6 +182,7 @@ defmodule AgentsWeb.DashboardLive.SessionDataHelpers do
     |> push_event("restore_draft", %{text: text})
   end
 
+  @doc "Routes a user message to the appropriate handler based on the session state machine's submission route."
   def route_message_submission(:follow_up, socket, instruction, _ticket_number, _ticket) do
     send_message_to_running_task(socket, instruction)
   end
@@ -535,6 +537,7 @@ defmodule AgentsWeb.DashboardLive.SessionDataHelpers do
     socket |> assign(:pending_question, nil) |> put_flash(:error, error_msg)
   end
 
+  @doc "Creates a new task or resumes the current one, returning `{:ok, task}` or `{:error, reason}`."
   def run_or_resume_task(socket, instruction, ticket_number, ticket \\ nil) do
     user = socket.assigns.current_scope.user
     current_task = socket.assigns.current_task
@@ -552,6 +555,7 @@ defmodule AgentsWeb.DashboardLive.SessionDataHelpers do
     end
   end
 
+  @doc "Processes task creation/resume results — subscribes to PubSub, updates assigns, and links tickets."
   def handle_task_result({:ok, task}, socket) do
     Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "task:#{task.id}")
 
@@ -976,6 +980,7 @@ defmodule AgentsWeb.DashboardLive.SessionDataHelpers do
     |> Enum.find(&(&1.id == parent_id))
   end
 
+  @doc "Inserts or replaces a task in the tasks_snapshot list by id."
   def upsert_task_snapshot(tasks, nil), do: tasks
 
   def upsert_task_snapshot(tasks, task) when is_list(tasks) do
@@ -1200,6 +1205,7 @@ defmodule AgentsWeb.DashboardLive.SessionDataHelpers do
     end)
   end
 
+  @doc "Inserts or replaces a session entry derived from a task in the sessions list."
   def upsert_session_from_task(sessions, task) do
     task_id = Map.get(task, :id)
     task_container_id = Map.get(task, :container_id)
