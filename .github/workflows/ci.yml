@@ -251,6 +251,11 @@ jobs:
         with:
           name: build-artifacts
 
+      - name: Reinstall JS dependencies
+        run: |
+          cd apps/jarga_web/assets && npm ci
+          cd ../../agents_web/assets && npm ci
+
       - name: Sync dependencies with lock file
         run: mix deps.get
 
