@@ -113,13 +113,8 @@ defmodule AgentsWeb.DashboardLive.PubSubHandlers do
 
     tasks_snapshot = upsert_task_snapshot(socket.assigns[:tasks_snapshot], changed_task)
 
-    tickets =
-      TicketEnrichmentPolicy.enrich_all(
-        socket.assigns.tickets,
-        tasks_snapshot,
-        &SessionLifecyclePolicy.derive/1
-      )
-
+    # Skip synchronous enrich_all here — request_task_refresh triggers
+    # task_refreshed_ok which performs authoritative enrichment with fresh data.
     socket =
       socket
       |> assign(:current_task, updated_current_task)
@@ -128,7 +123,6 @@ defmodule AgentsWeb.DashboardLive.PubSubHandlers do
       |> assign(:sessions, sessions)
       |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)
       |> assign(:tasks_snapshot, tasks_snapshot)
-      |> assign(:tickets, tickets)
       |> request_task_refresh(task_id)
       |> apply_status_change_to_ui(is_current_task, status, task_id)
 
@@ -150,19 +144,12 @@ defmodule AgentsWeb.DashboardLive.PubSubHandlers do
     sessions =
       update_session_lifecycle_state(socket.assigns.sessions, task_id, lifecycle_state)
 
-    tickets =
-      TicketEnrichmentPolicy.enrich_all(
-        socket.assigns.tickets,
-        tasks_snapshot,
-        &SessionLifecyclePolicy.derive/1
-      )
-
+    # Lifecycle state changes don't affect ticket enrichment — skip enrich_all.
     {:noreply,
      socket
      |> assign(:current_task, updated_current_task)
      |> assign(:sessions, sessions)
-     |> assign(:tasks_snapshot, tasks_snapshot)
-     |> assign(:tickets, tickets)}
+     |> assign(:tasks_snapshot, tasks_snapshot)}
   end
 
   def container_stats_updated(container_id, stats, socket) do
@@ -410,18 +397,11 @@ defmodule AgentsWeb.DashboardLive.PubSubHandlers do
           socket.assigns[:sticky_warm_task_ids] || MapSet.new()
         )
 
-      tickets =
-        TicketEnrichmentPolicy.enrich_all(
-          socket.assigns.tickets,
-          socket.assigns[:tasks_snapshot] || [],
-          &SessionLifecyclePolicy.derive/1
-        )
-
+      # Queue metadata doesn't change ticket state — skip enrich_all.
       {:noreply,
        socket
        |> assign(:queue_state, queue_state)
-       |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)
-       |> assign(:tickets, tickets)}
+       |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)}
     else
       {:noreply, socket}
     end
