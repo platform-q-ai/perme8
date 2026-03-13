@@ -23,7 +23,6 @@ Each app has a single owner and a clear set of responsibilities. No two apps own
 | **agents_api** | Interface (REST) | JSON API for agents | None | `agents`, `identity` |
 | **webhooks_api** | Interface (REST) | JSON API for webhooks | None | `webhooks`, `identity` |
 | **exo_dashboard** | Dev tool | BDD feature dashboard | None | Nothing |
-| **perme8_dashboard** | Dev tool | Unified dev-tool hub | None | `exo_dashboard`, `agents_web` |
 | **alkali** | Standalone | Static site generator | None | Nothing |
 | **chat** | Domain context | Chat sessions, messages, real-time messaging | `Chat.Repo` | `identity`, `agents`, `perme8_events` |
 | **chat_web** | Interface (LiveView) | Chat panel UI, message components | None | `chat`, `identity`, `agents` |
@@ -121,7 +120,7 @@ Feature files test the **owning app**, not the mounting app:
 
 ### Mounting Apps vs. Owning Apps
 
-Some apps exist primarily to mount other apps into a unified shell (e.g., `jarga_web` mounts `agents_web`, `perme8_dashboard` mounts `exo_dashboard`). These mounting apps should only contain feature files for:
+Some apps exist primarily to mount other apps into a unified shell (e.g., `jarga_web` mounts `agents_web`). These mounting apps should only contain feature files for:
 
 - **Navigation** -- verifying the user can navigate to the mounted app
 - **Shell integration** -- verifying the mounted app renders within the shell (tabs, layout, sidebar)
@@ -133,7 +132,6 @@ The mounted app's **own functionality** (forms, interactions, data display, work
 | Agent session management UI | `apps/agents_web/test/features/` | Session creation, message sending, agent behaviour |
 | Navigating to agents from jarga shell | `apps/jarga_web/test/features/` | Navigation link works, agents UI mounts in shell |
 | BDD dashboard functionality | `apps/exo_dashboard/test/features/` | Feature browsing, run triggering, result display |
-| Navigating to exo dashboard tab | `apps/perme8_dashboard/test/features/` | Tab renders, dashboard mounts in hub |
 
 ---
 

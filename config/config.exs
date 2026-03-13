@@ -132,12 +132,6 @@ config :esbuild,
     cd: Path.expand("../apps/exo_dashboard/assets", __DIR__),
     env: %{"NODE_PATH" => [Path.expand("../deps", __DIR__), Mix.Project.build_path()]}
   ],
-  perme8_dashboard: [
-    args:
-      ~w(js/app.ts --bundle --target=es2022 --outdir=../priv/static/assets/js --external:/fonts/* --external:/images/*),
-    cd: Path.expand("../apps/perme8_dashboard/assets", __DIR__),
-    env: %{"NODE_PATH" => [Path.expand("../deps", __DIR__), Mix.Project.build_path()]}
-  ],
   agents: [
     args:
       ~w(js/app.ts --bundle --target=es2022 --outdir=../priv/static/assets/js --external:/fonts/* --external:/images/*),
@@ -168,13 +162,6 @@ config :tailwind,
       --output=priv/static/assets/css/app.css
     ),
     cd: Path.expand("../apps/exo_dashboard", __DIR__)
-  ],
-  perme8_dashboard: [
-    args: ~w(
-      --input=assets/css/app.css
-      --output=priv/static/assets/css/app.css
-    ),
-    cd: Path.expand("../apps/perme8_dashboard", __DIR__)
   ],
   agents: [
     args: ~w(
@@ -271,20 +258,6 @@ config :exo_dashboard, ExoDashboardWeb.Endpoint,
   ],
   pubsub_server: Perme8.Events.PubSub,
   live_view: [signing_salt: "exo_dashboard_salt"]
-
-# ============================================================================
-# Perme8Dashboard App Configuration
-# ============================================================================
-
-config :perme8_dashboard, Perme8DashboardWeb.Endpoint,
-  url: [host: "localhost"],
-  adapter: Bandit.PhoenixAdapter,
-  render_errors: [
-    formats: [html: Perme8DashboardWeb.ErrorHTML],
-    layout: false
-  ],
-  pubsub_server: Perme8.Events.PubSub,
-  live_view: [signing_salt: "perme8_dashboard_salt"]
 
 # Identity session configuration
 # Apps that delegate auth to Identity (agents_web) must use the same key and salt.

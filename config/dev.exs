@@ -223,34 +223,6 @@ config :exo_dashboard, ExoDashboardWeb.Endpoint,
     ]
   ]
 
-# ============================================================================
-# Perme8Dashboard App Development Configuration
-# ============================================================================
-
-# Identity URL for login redirects (Identity runs on port 4001 in dev)
-config :perme8_dashboard, :identity_url, "http://localhost:4001"
-
-config :perme8_dashboard, Perme8DashboardWeb.Endpoint,
-  http: [ip: {127, 0, 0, 1}, port: 4012],
-  check_origin: false,
-  code_reloader: true,
-  debug_errors: true,
-  # Must match Identity's secret_key_base so the shared session cookie
-  # (_identity_key) signed by Identity can be verified by perme8_dashboard.
-  secret_key_base: "dev_identity_secret_key_base_at_least_64_bytes_long_for_security",
-  watchers: [
-    esbuild: {Esbuild, :install_and_run, [:perme8_dashboard, ~w(--sourcemap=inline --watch)]},
-    tailwind: {Tailwind, :install_and_run, [:perme8_dashboard, ~w(--watch)]}
-  ]
-
-config :perme8_dashboard, Perme8DashboardWeb.Endpoint,
-  live_reload: [
-    patterns: [
-      ~r"priv/static/(?!uploads/).*(js|css|png|jpeg|jpg|gif|svg)$",
-      ~r"lib/perme8_dashboard_web/(controllers|live|components)/.*(ex|heex)$"
-    ]
-  ]
-
 # Do not include metadata nor timestamps in development logs
 config :logger, :default_formatter, format: "[$level] $message\n"
 

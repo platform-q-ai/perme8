@@ -70,6 +70,11 @@ defmodule AgentsWeb.Layouts do
     doc: "the current [scope](https://hexdocs.pm/phoenix/scopes.html)"
   )
 
+  attr(:full_width, :boolean,
+    default: false,
+    doc: "when true, content fills the viewport without padding or max-width constraints"
+  )
+
   slot(:inner_block, required: true)
 
   def admin(assigns) do
@@ -90,7 +95,13 @@ defmodule AgentsWeb.Layouts do
         </div>
         
     <!-- Page content -->
-        <main class="flex-1 flex flex-col px-3 sm:px-6 pb-6 pt-0 lg:p-8 overflow-y-auto">
+        <main class={[
+          "flex-1 flex flex-col",
+          if(@full_width,
+            do: "overflow-hidden",
+            else: "px-3 sm:px-6 pb-6 pt-0 lg:p-8 overflow-y-auto"
+          )
+        ]}>
           {render_slot(@inner_block)}
         </main>
 
