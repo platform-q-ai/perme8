@@ -127,14 +127,6 @@ defmodule AgentsWeb.DashboardLive.Index do
      |> push_event("focus_input", %{})}
   end
 
-  @doc false
-  def session_tabs do
-    [
-      %{id: "chat", label: "Chat"},
-      %{id: "ticket", label: "Ticket"}
-    ]
-  end
-
   # -- Task Execution Handlers ------------------------------------------------
 
   @impl true

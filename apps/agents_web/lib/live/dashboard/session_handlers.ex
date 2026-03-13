@@ -12,7 +12,6 @@ defmodule AgentsWeb.DashboardLive.SessionHandlers do
   import AgentsWeb.DashboardLive.Helpers, only: [task_error_message: 1]
 
   alias Agents.Sessions
-  alias AgentsWeb.DashboardLive.Index, as: DashboardIndex
   alias AgentsWeb.DashboardLive.TicketSessionLinker
 
   @valid_status_filters %{
@@ -169,7 +168,7 @@ defmodule AgentsWeb.DashboardLive.SessionHandlers do
   end
 
   def switch_tab(%{"tab" => tab}, socket) do
-    valid_tabs = Enum.map(DashboardIndex.session_tabs(), & &1.id)
+    valid_tabs = Enum.map(session_tabs(), & &1.id)
     tab = if tab in valid_tabs, do: tab, else: "chat"
 
     params =
