@@ -23,6 +23,8 @@ defmodule AgentsWeb.DashboardLive.TicketSessionLinker do
 
   import Phoenix.Component, only: [assign: 3]
 
+  require Logger
+
   alias Agents.Sessions.Domain.Policies.SessionLifecyclePolicy
   alias Agents.Tickets
   alias Agents.Tickets.Domain.Policies.TicketEnrichmentPolicy
@@ -110,11 +112,24 @@ defmodule AgentsWeb.DashboardLive.TicketSessionLinker do
     instruction = Map.get(task, :instruction, "")
 
     case Tickets.extract_ticket_number(instruction) do
-      nil -> :ok
-      ticket_number -> Tickets.link_ticket_to_task(ticket_number, task.id)
+      nil ->
+        :ok
+
+      ticket_number ->
+        case Tickets.link_ticket_to_task(ticket_number, task.id) do
+          {:ok, _} ->
+            :ok
+
+          {:error, reason} ->
+            Logger.warning(
+              "persist_ticket_link failed for ticket ##{ticket_number}: #{inspect(reason)}"
+            )
+        end
     end
   rescue
-    _ -> :ok
+    error ->
+      Logger.warning("persist_ticket_link crashed: #{inspect(error)}")
+      :ok
   end
 
   defp upsert_task_snapshot(tasks, nil), do: tasks
