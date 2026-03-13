@@ -35,7 +35,6 @@ jobs:
       erm: ${{ steps.filter.outputs.erm }}
       agents_web: ${{ steps.filter.outputs.agents_web }}
       exo_dashboard: ${{ steps.filter.outputs.exo_dashboard }}
-      perme8_dashboard: ${{ steps.filter.outputs.perme8_dashboard }}
       webhooks: ${{ steps.filter.outputs.webhooks }}
       webhooks_api: ${{ steps.filter.outputs.webhooks_api }}
       shared: ${{ steps.filter.outputs.shared }}
@@ -82,8 +81,6 @@ jobs:
               - 'apps/entity_relationship_manager/**/*.{ex,exs,heex,ts,js,cjs,css,json,feature}'
             exo_dashboard:
               - 'apps/exo_dashboard/**/*.{ex,exs,heex,ts,js,cjs,css,json,feature}'
-            perme8_dashboard:
-              - 'apps/perme8_dashboard/**/*.{ex,exs,heex,ts,js,cjs,css,json,feature}'
             webhooks:
               - 'apps/webhooks/**/*.{ex,exs,heex,ts,js,cjs,css,json,feature}'
             webhooks_api:
@@ -321,7 +318,6 @@ jobs:
           CHANGED_SHARED: ${{ needs.changes.outputs.shared }}
           CHANGED_EXO_BDD: ${{ needs.changes.outputs.exo_bdd }}
           CHANGED_EXO_DASHBOARD: ${{ needs.changes.outputs.exo_dashboard }}
-          CHANGED_PERME8_DASHBOARD: ${{ needs.changes.outputs.perme8_dashboard }}
           CHANGED_WEBHOOKS: ${{ needs.changes.outputs.webhooks }}
           CHANGED_WEBHOOKS_API: ${{ needs.changes.outputs.webhooks_api }}
           IS_MAIN: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
@@ -347,8 +343,6 @@ jobs:
               {"app": "jarga-web", "domain": "browser",  "config_name": "jarga-web",                   "timeout": 15},
               {"app": "jarga-web", "domain": "security", "config_name": "jarga-web",                   "timeout": 15},
               {"app": "exo-dashboard", "domain": "browser", "config_name": "exo-dashboard",            "timeout": 10},
-              {"app": "perme8-dashboard", "domain": "browser",  "config_name": "perme8-dashboard",        "timeout": 10},
-              {"app": "perme8-dashboard", "domain": "security", "config_name": "perme8-dashboard",        "timeout": 15},
               {"app": "webhooks-api",     "domain": "http",     "config_name": "webhooks-api",            "timeout": 10},
               {"app": "webhooks-api",     "domain": "security", "config_name": "webhooks-api",            "timeout": 15},
           ]
@@ -382,8 +376,6 @@ jobs:
                   apps.add("erm")
               if changed.get("CHANGED_EXO_DASHBOARD") == "true":
                   apps.add("exo-dashboard")
-              if changed.get("CHANGED_PERME8_DASHBOARD") == "true":
-                  apps.add("perme8-dashboard")
               if changed.get("CHANGED_WEBHOOKS") == "true":
                   apps.add("webhooks-api")
               if changed.get("CHANGED_WEBHOOKS_API") == "true":

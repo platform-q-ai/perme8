@@ -41,7 +41,6 @@ config :jarga, live_dashboard_in_prod: true
 # Enable HTTP Basic Auth on dev-tool dashboards in production.
 # Credentials are shared with LiveDashboard (DASHBOARD_USERNAME / DASHBOARD_PASSWORD).
 config :exo_dashboard, basic_auth_enabled: true
-config :perme8_dashboard, basic_auth_enabled: true
 
 # Note we also include the path to a cache manifest
 # containing the digested version of static files. This
