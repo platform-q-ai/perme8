@@ -1,5 +1,5 @@
 defmodule AgentsWeb.DashboardLive.TicketHandlers do
-  @moduledoc false
+  @moduledoc "Handles ticket CRUD events, queue management, and ticket-session linking from the dashboard UI."
 
   use Phoenix.VerifiedRoutes,
     endpoint: AgentsWeb.Endpoint,

@@ -1,5 +1,5 @@
 defmodule AgentsWeb.DashboardLive.TaskExecutionHandlers do
-  @moduledoc false
+  @moduledoc "Handles task submission, cancellation, and restart from the dashboard UI."
 
   import Phoenix.Component, only: [assign: 3]
   import Phoenix.LiveView, only: [put_flash: 3]
