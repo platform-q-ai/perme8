@@ -1,5 +1,5 @@
 defmodule AgentsWeb.DashboardLive.SessionHandlers do
-  @moduledoc false
+  @moduledoc "Manages session selection, tab switching, and session lifecycle actions (delete, pin, archive)."
 
   use Phoenix.VerifiedRoutes,
     endpoint: AgentsWeb.Endpoint,

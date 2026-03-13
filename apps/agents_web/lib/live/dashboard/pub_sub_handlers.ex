@@ -1,5 +1,5 @@
 defmodule AgentsWeb.DashboardLive.PubSubHandlers do
-  @moduledoc false
+  @moduledoc "Processes PubSub messages (task events, queue updates, ticket syncs) for the dashboard LiveView."
 
   import Phoenix.Component, only: [assign: 3]
   import Phoenix.LiveView, only: [clear_flash: 1, put_flash: 3]

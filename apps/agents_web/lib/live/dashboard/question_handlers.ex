@@ -1,5 +1,5 @@
 defmodule AgentsWeb.DashboardLive.QuestionHandlers do
-  @moduledoc false
+  @moduledoc "Handles interactive question prompts and answer submissions from the dashboard UI."
 
   import Phoenix.Component, only: [assign: 3]
   import AgentsWeb.DashboardLive.SessionDataHelpers

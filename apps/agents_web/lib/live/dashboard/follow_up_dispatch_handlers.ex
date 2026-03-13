@@ -1,5 +1,5 @@
 defmodule AgentsWeb.DashboardLive.FollowUpDispatchHandlers do
-  @moduledoc false
+  @moduledoc "Routes follow-up messages to existing tasks or creates new ones."
 
   import Phoenix.Component, only: [assign: 3]
   import Phoenix.LiveView, only: [put_flash: 3]

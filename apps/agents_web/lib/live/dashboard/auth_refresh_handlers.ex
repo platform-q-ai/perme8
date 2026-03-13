@@ -1,5 +1,5 @@
 defmodule AgentsWeb.DashboardLive.AuthRefreshHandlers do
-  @moduledoc false
+  @moduledoc "Handles async auth-refresh results and updates task state accordingly."
 
   import Phoenix.Component, only: [assign: 3]
   import Phoenix.LiveView, only: [put_flash: 3]
