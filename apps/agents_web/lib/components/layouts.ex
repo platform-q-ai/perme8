@@ -2,9 +2,8 @@ defmodule AgentsWeb.Layouts do
   @moduledoc """
   Layouts for AgentsWeb.
 
-  Provides a minimal layout for the sessions view and an admin layout
-  for agent management pages with sidebar navigation.
-  When mounted in the Perme8 Dashboard, the dashboard provides its own layout.
+  Provides an admin layout with sidebar navigation for agent management
+  and sessions pages, plus a minimal layout for standalone views.
   """
 
   use AgentsWeb, :html
