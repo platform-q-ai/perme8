@@ -6,7 +6,7 @@ defmodule JargaWeb.AppLive.WorkspacesTest do
   import Jarga.WorkspacesFixtures
   import Jarga.ProjectsFixtures
 
-  alias Jarga.{Projects, Workspaces}
+  alias Jarga.Projects
 
   # Cross-context domain events
   alias Identity.Domain.Events.{WorkspaceUpdated, MemberRemoved, WorkspaceInvitationNotified}
