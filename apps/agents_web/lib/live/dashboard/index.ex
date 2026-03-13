@@ -8,6 +8,9 @@ defmodule AgentsWeb.DashboardLive.Index do
   import AgentsWeb.DashboardLive.Helpers
   import AgentsWeb.DashboardLive.SessionDataHelpers
 
+  import AgentsWeb.DashboardLive.TicketLifecycleFixtures,
+    only: [maybe_apply_ticket_lifecycle_fixture: 2]
+
   alias Agents.Sessions
   alias Agents.Sessions.Domain.Entities.QueueSnapshot
   alias Agents.Tickets
