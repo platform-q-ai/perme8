@@ -1,6 +1,7 @@
 defmodule AgentsWeb.DashboardLive.TaskExecutionHandlers do
   @moduledoc false
 
+  import Phoenix.Component, only: [assign: 3]
   import Phoenix.LiveView, only: [put_flash: 3]
   import AgentsWeb.DashboardLive.SessionDataHelpers
   import AgentsWeb.DashboardLive.Helpers, only: [resumable_task?: 1, last_user_message: 1]
@@ -30,7 +31,7 @@ defmodule AgentsWeb.DashboardLive.TaskExecutionHandlers do
       {route, socket} =
         if route == :follow_up and is_integer(ticket_number) and
              not ticket_owns_current_task?(ticket, socket.assigns.current_task) do
-          {:new_or_resume, Phoenix.Component.assign(socket, :composing_new, true)}
+          {:new_or_resume, assign(socket, :composing_new, true)}
         else
           {route, socket}
         end
