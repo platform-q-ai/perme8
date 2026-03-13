@@ -18,7 +18,7 @@ defmodule AgentsWeb.DashboardLive.Index do
   alias AgentsWeb.DashboardLive.AuthRefreshHandlers
   alias AgentsWeb.DashboardLive.EventProcessor
   alias AgentsWeb.DashboardLive.FollowUpDispatchHandlers
-  alias AgentsWeb.DashboardLive.PubsubHandlers
+  alias AgentsWeb.DashboardLive.PubSubHandlers
   alias AgentsWeb.DashboardLive.QuestionHandlers
   alias AgentsWeb.DashboardLive.SessionHandlers
   alias AgentsWeb.DashboardLive.SessionStateMachine
@@ -277,93 +277,93 @@ defmodule AgentsWeb.DashboardLive.Index do
 
   @impl true
   def handle_info({:task_event, task_id, event}, socket),
-    do: PubsubHandlers.task_event(task_id, event, socket)
+    do: PubSubHandlers.task_event(task_id, event, socket)
 
   @impl true
   def handle_info({:answer_question_async, task_id, request_id, answers, message}, socket),
-    do: PubsubHandlers.answer_question_async(task_id, request_id, answers, message, socket)
+    do: PubSubHandlers.answer_question_async(task_id, request_id, answers, message, socket)
 
   @impl true
   def handle_info({:todo_updated, task_id, todo_items}, socket),
-    do: PubsubHandlers.todo_updated(task_id, todo_items, socket)
+    do: PubSubHandlers.todo_updated(task_id, todo_items, socket)
 
   @impl true
   def handle_info({:task_status_changed, task_id, status}, socket),
-    do: PubsubHandlers.task_status_changed(task_id, status, socket)
+    do: PubSubHandlers.task_status_changed(task_id, status, socket)
 
   @impl true
   def handle_info({:lifecycle_state_changed, task_id, _from_state, to_state}, socket),
-    do: PubsubHandlers.lifecycle_state_changed(task_id, to_state, socket)
+    do: PubSubHandlers.lifecycle_state_changed(task_id, to_state, socket)
 
   @impl true
   def handle_info({:container_stats_updated, _task_id, container_id, stats}, socket),
-    do: PubsubHandlers.container_stats_updated(container_id, stats, socket)
+    do: PubSubHandlers.container_stats_updated(container_id, stats, socket)
 
   # Tagged async result from per-session auth refresh (success)
   @impl true
   def handle_info({ref, {task_id, {:ok, new_task}}}, socket)
       when is_reference(ref) and is_binary(task_id),
-      do: PubsubHandlers.tagged_auth_refresh_ok(ref, task_id, new_task, socket)
+      do: PubSubHandlers.tagged_auth_refresh_ok(ref, task_id, new_task, socket)
 
   # Tagged async result from per-session auth refresh (error)
   @impl true
   def handle_info({ref, {task_id, {:error, reason}}}, socket)
       when is_reference(ref) and is_binary(task_id),
-      do: PubsubHandlers.tagged_auth_refresh_error(ref, task_id, reason, socket)
+      do: PubSubHandlers.tagged_auth_refresh_error(ref, task_id, reason, socket)
 
   @impl true
   def handle_info({:new_task_created, client_id, {:ok, task}}, socket),
-    do: PubsubHandlers.new_task_created_ok(client_id, task, socket)
+    do: PubSubHandlers.new_task_created_ok(client_id, task, socket)
 
   @impl true
   def handle_info({:new_task_created, client_id, {:error, reason}}, socket),
-    do: PubsubHandlers.new_task_created_error(client_id, reason, socket)
+    do: PubSubHandlers.new_task_created_error(client_id, reason, socket)
 
   # Untagged async result (from run_or_resume_task — not auth refresh)
   @impl true
   def handle_info({ref, {:ok, new_task}}, socket) when is_reference(ref),
-    do: PubsubHandlers.untagged_async_ok(ref, new_task, socket)
+    do: PubSubHandlers.untagged_async_ok(ref, new_task, socket)
 
   @impl true
   def handle_info({ref, {:error, reason}}, socket) when is_reference(ref),
-    do: PubsubHandlers.untagged_async_error(ref, reason, socket)
+    do: PubSubHandlers.untagged_async_error(ref, reason, socket)
 
   @impl true
   def handle_info({:DOWN, ref, :process, _pid, reason}, socket),
-    do: PubsubHandlers.down(ref, reason, socket)
+    do: PubSubHandlers.down(ref, reason, socket)
 
   @impl true
   def handle_info({:queue_snapshot, user_id, %QueueSnapshot{} = snapshot}, socket)
       when user_id == socket.assigns.current_scope.user.id,
-      do: PubsubHandlers.queue_snapshot(snapshot, socket)
+      do: PubSubHandlers.queue_snapshot(snapshot, socket)
 
   @impl true
   def handle_info({:queue_updated, user_id, queue_state}, socket),
-    do: PubsubHandlers.queue_updated(user_id, queue_state, socket)
+    do: PubSubHandlers.queue_updated(user_id, queue_state, socket)
 
   @impl true
   def handle_info({:tickets_synced, _tickets}, socket),
-    do: PubsubHandlers.tickets_synced(socket)
+    do: PubSubHandlers.tickets_synced(socket)
 
   @impl true
   def handle_info({:ticket_stage_changed, ticket_id, to_stage, transitioned_at}, socket),
-    do: PubsubHandlers.ticket_stage_changed(ticket_id, to_stage, transitioned_at, socket)
+    do: PubSubHandlers.ticket_stage_changed(ticket_id, to_stage, transitioned_at, socket)
 
   @impl true
   def handle_info(%TicketStageChanged{} = event, socket),
-    do: PubsubHandlers.ticket_stage_changed_event(event, socket)
+    do: PubSubHandlers.ticket_stage_changed_event(event, socket)
 
   @impl true
   def handle_info({:ticket_sync_finished, _result}, socket),
-    do: PubsubHandlers.ticket_sync_finished(socket)
+    do: PubSubHandlers.ticket_sync_finished(socket)
 
   @impl true
   def handle_info({:task_refreshed, task_id, {:ok, task}}, socket),
-    do: PubsubHandlers.task_refreshed_ok(task_id, task, socket)
+    do: PubSubHandlers.task_refreshed_ok(task_id, task, socket)
 
   @impl true
   def handle_info({:task_refreshed, task_id, _}, socket),
-    do: PubsubHandlers.task_refreshed_error(task_id, socket)
+    do: PubSubHandlers.task_refreshed_error(task_id, socket)
 
   # -- Follow-Up Dispatch Handlers ---------------------------------------------
 
