@@ -1,4 +1,4 @@
-defmodule AgentsWeb.DashboardLive.PubsubHandlers do
+defmodule AgentsWeb.DashboardLive.PubSubHandlers do
   @moduledoc false
 
   import Phoenix.Component, only: [assign: 3]
