@@ -121,26 +121,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
 
-  test:
-    name: Build and test
+  build:
+    name: Build
     needs: changes
     if: needs.changes.outputs.umbrella == 'true'
     runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: jarga_test
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
 
     steps:
       - name: Checkout code
@@ -174,6 +159,9 @@ jobs:
       - name: Compile dependencies
         run: mix deps.compile
 
+      - name: Compile project
+        run: mix compile
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -194,6 +182,80 @@ jobs:
       - name: Install Gherkin parser dependencies
         run: bun install
         working-directory: apps/exo_dashboard/priv/gherkin_parser
+
+      - name: Build assets
+        run: mix assets.build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: |
+            deps
+            apps/jarga_web/priv/static
+            apps/identity/priv/static
+            apps/agents_web/priv/static
+            apps/jarga_web/assets/node_modules
+            apps/identity/assets/node_modules
+            apps/agents_web/assets/node_modules
+            apps/exo_dashboard/priv/gherkin_parser/node_modules
+          retention-days: 1
+
+      - name: Cancel workflow on failure
+        if: failure()
+        run: gh run cancel ${{ github.run_id }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  test:
+    name: Test
+    needs: [changes, build]
+    if: needs.changes.outputs.umbrella == 'true'
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: jarga_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          version-file: .tool-versions
+          version-type: strict
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .tool-versions
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+
+      - name: Sync dependencies with lock file
+        run: mix deps.get
+
+      - name: Compile project
+        run: mix compile
 
       - name: Increase Postgres max_connections
         run: |
@@ -367,7 +429,7 @@ jobs:
 
   exo-bdd-360:
     name: "360: ${{ matrix.domain }} / ${{ matrix.app }}"
-    needs: [changes, selective-matrix]
+    needs: [changes, selective-matrix, build]
     if: needs.changes.outputs.umbrella == 'true' || needs.changes.outputs.exo_bdd == 'true'
     timeout-minutes: ${{ matrix.timeout }}
     runs-on: ubuntu-latest
@@ -401,17 +463,39 @@ jobs:
           version-file: .tool-versions
           version-type: strict
 
+      - name: Set up Node.js
+        if: matrix.domain == 'browser' || (matrix.domain == 'security' && contains('jarga-web identity agents-web', matrix.app))
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .tool-versions
+
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
 
-      - name: Restore deps cache
+      - name: Download build artifacts
+        if: needs.build.result == 'success'
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+
+      - name: Sync dependencies with lock file
+        if: needs.build.result == 'success'
+        run: mix deps.get
+
+      - name: Compile project
+        if: needs.build.result == 'success'
+        run: mix compile
+
+      - name: Fallback - Restore deps cache
+        if: needs.build.result != 'success'
         uses: actions/cache@v4
         with:
           path: deps
           key: ${{ runner.os }}-deps-${{ hashFiles('.tool-versions', '**/mix.lock') }}
           restore-keys: ${{ runner.os }}-deps-
 
-      - name: Restore build cache
+      - name: Fallback - Restore build cache
+        if: needs.build.result != 'success'
         uses: actions/cache@v4
         with:
           path: _build
@@ -420,42 +504,38 @@ jobs:
             ${{ runner.os }}-build-${{ hashFiles('.tool-versions', '**/mix.lock') }}-
             ${{ runner.os }}-build-
 
-      - name: Install Elixir dependencies
+      - name: Fallback - Install Elixir dependencies
+        if: needs.build.result != 'success'
         run: mix deps.get
 
-      - name: Compile dependencies
+      - name: Fallback - Compile dependencies
+        if: needs.build.result != 'success'
         run: mix deps.compile
 
-      - name: Set up Node.js
-        if: matrix.domain == 'browser' || (matrix.domain == 'security' && contains('jarga-web identity agents-web', matrix.app))
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: .tool-versions
-
-      - name: Install exo-bdd dependencies
-        run: bun install
-        working-directory: tools/exo-bdd
-
-      - name: Install JavaScript dependencies
-        if: matrix.domain == 'browser' || (matrix.domain == 'security' && contains('jarga-web identity agents-web', matrix.app))
+      - name: Fallback - Install JavaScript dependencies
+        if: needs.build.result != 'success' && (matrix.domain == 'browser' || (matrix.domain == 'security' && contains('jarga-web identity agents-web', matrix.app)))
         run: |
           cd apps/jarga_web/assets && npm ci
           cd ../../identity/assets && npm ci
           cd ../../agents_web/assets && npm ci
 
-      - name: Install Gherkin parser dependencies
-        if: matrix.app == 'exo-dashboard'
+      - name: Fallback - Install Gherkin parser dependencies
+        if: needs.build.result != 'success' && matrix.app == 'exo-dashboard'
         run: bun install
         working-directory: apps/exo_dashboard/priv/gherkin_parser
+
+      - name: Fallback - Build assets
+        if: needs.build.result != 'success' && (matrix.domain == 'browser' || (matrix.domain == 'security' && contains('jarga-web identity agents-web', matrix.app)))
+        run: mix assets.build
+
+      - name: Install exo-bdd dependencies
+        run: bun install
+        working-directory: tools/exo-bdd
 
       - name: Install Playwright browsers
         if: matrix.domain == 'browser'
         run: bunx playwright install --with-deps chromium
         working-directory: tools/exo-bdd
-
-      - name: Build assets
-        if: matrix.domain == 'browser' || (matrix.domain == 'security' && contains('jarga-web identity agents-web', matrix.app))
-        run: mix assets.build
 
       - name: Increase Postgres max_connections
         if: matrix.app != 'alkali'
@@ -496,14 +576,14 @@ jobs:
   ci-gate:
     name: CI gate
     runs-on: ubuntu-latest
-    needs: [changes, test, exo-bdd, exo-bdd-360]
+    needs: [changes, build, test, exo-bdd, exo-bdd-360]
     if: always()
     steps:
       - name: Check all jobs passed
         run: |
           # Fail if any dependency failed or was cancelled.
           # Skipped jobs (due to path filtering) are acceptable.
-          results="${{ needs.test.result }} ${{ needs.exo-bdd.result }} ${{ needs.exo-bdd-360.result }}"
+          results="${{ needs.build.result }} ${{ needs.test.result }} ${{ needs.exo-bdd.result }} ${{ needs.exo-bdd-360.result }}"
           for r in $results; do
             if [ "$r" = "failure" ] || [ "$r" = "cancelled" ]; then
               echo "::error::Job result '$r' detected — failing CI gate"
@@ -515,7 +595,7 @@ jobs:
   deploy:
     name: Deploy to Render
     runs-on: ubuntu-latest
-    needs: [changes, test, exo-bdd, selective-matrix, exo-bdd-360, ci-gate]
+    needs: [changes, build, test, exo-bdd, selective-matrix, exo-bdd-360, ci-gate]
     if: |
       always() &&
       github.event_name == 'push' && github.ref == 'refs/heads/main' &&
