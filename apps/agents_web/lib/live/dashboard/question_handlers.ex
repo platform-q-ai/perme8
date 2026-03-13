@@ -15,7 +15,7 @@ defmodule AgentsWeb.DashboardLive.QuestionHandlers do
         {:noreply, socket}
 
       pending ->
-        q_idx = String.to_integer(q_idx_str)
+        {q_idx, ""} = Integer.parse(q_idx_str)
         multiple = Enum.at(pending.questions, q_idx)["multiple"] || false
         current = Enum.at(pending.selected, q_idx, [])
 

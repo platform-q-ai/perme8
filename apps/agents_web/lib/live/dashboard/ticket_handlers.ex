@@ -78,7 +78,13 @@ defmodule AgentsWeb.DashboardLive.TicketHandlers do
   end
 
   def select_ticket(%{"number" => number_str}, socket) do
-    number = String.to_integer(number_str)
+    case Integer.parse(number_str) do
+      {number, ""} -> do_select_ticket(number, socket)
+      _ -> {:noreply, socket}
+    end
+  end
+
+  defp do_select_ticket(number, socket) do
     ticket = find_ticket_by_number(socket.assigns.tickets, number)
     container_id = ticket && ticket.associated_container_id
 
@@ -134,15 +140,19 @@ defmodule AgentsWeb.DashboardLive.TicketHandlers do
   end
 
   def close_ticket(%{"number" => number_str}, socket) do
-    number = String.to_integer(number_str)
+    case Integer.parse(number_str) do
+      {number, ""} ->
+        case Tickets.close_project_ticket(number) do
+          :ok ->
+            {:noreply, apply_ticket_closed(socket, number)}
 
-    case Tickets.close_project_ticket(number) do
-      :ok ->
-        {:noreply, apply_ticket_closed(socket, number)}
+          {:error, _reason} ->
+            {:noreply,
+             put_flash(socket, :error, "Failed to close ticket on GitHub. Please try again.")}
+        end
 
-      {:error, _reason} ->
-        {:noreply,
-         put_flash(socket, :error, "Failed to close ticket on GitHub. Please try again.")}
+      _ ->
+        {:noreply, socket}
     end
   end
 
@@ -158,7 +168,13 @@ defmodule AgentsWeb.DashboardLive.TicketHandlers do
   end
 
   def start_ticket_session(%{"number" => number_str}, socket) do
-    number = String.to_integer(number_str)
+    case Integer.parse(number_str) do
+      {number, ""} -> do_start_ticket_session(number, socket)
+      _ -> {:noreply, socket}
+    end
+  end
+
+  defp do_start_ticket_session(number, socket) do
     ticket = find_ticket_by_number(socket.assigns.tickets, number)
 
     if is_nil(ticket) do
@@ -215,18 +231,23 @@ defmodule AgentsWeb.DashboardLive.TicketHandlers do
   end
 
   def remove_ticket_from_queue(%{"number" => number_str}, socket) do
-    number = String.to_integer(number_str)
-    ticket = find_ticket_by_number(socket.assigns.tickets, number)
+    case Integer.parse(number_str) do
+      {number, ""} ->
+        ticket = find_ticket_by_number(socket.assigns.tickets, number)
 
-    cond do
-      is_nil(ticket) ->
-        {:noreply, put_flash(socket, :error, "Ticket not found")}
+        cond do
+          is_nil(ticket) ->
+            {:noreply, put_flash(socket, :error, "Ticket not found")}
 
-      is_nil(ticket.associated_task_id) ->
-        {:noreply, put_flash(socket, :error, "Ticket has no associated task")}
+          is_nil(ticket.associated_task_id) ->
+            {:noreply, put_flash(socket, :error, "Ticket has no associated task")}
 
-      true ->
-        cancel_and_unlink_ticket(ticket, number, socket)
+          true ->
+            cancel_and_unlink_ticket(ticket, number, socket)
+        end
+
+      _ ->
+        {:noreply, socket}
     end
   end
 
