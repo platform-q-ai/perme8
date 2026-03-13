@@ -113,8 +113,17 @@ defmodule AgentsWeb.DashboardLive.PubSubHandlers do
 
     tasks_snapshot = upsert_task_snapshot(socket.assigns[:tasks_snapshot], changed_task)
 
-    # Skip synchronous enrich_all here — request_task_refresh triggers
-    # task_refreshed_ok which performs authoritative enrichment with fresh data.
+    # Synchronous enrichment is needed so ticket lane placement reflects
+    # the status change immediately (e.g. failed task → ticket returns to
+    # triage). The subsequent task_refreshed_ok provides authoritative
+    # enrichment with fresh DB data.
+    tickets =
+      TicketEnrichmentPolicy.enrich_all(
+        socket.assigns.tickets,
+        tasks_snapshot,
+        &SessionLifecyclePolicy.derive/1
+      )
+
     socket =
       socket
       |> assign(:current_task, updated_current_task)
@@ -123,6 +132,7 @@ defmodule AgentsWeb.DashboardLive.PubSubHandlers do
       |> assign(:sessions, sessions)
       |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)
       |> assign(:tasks_snapshot, tasks_snapshot)
+      |> assign(:tickets, tickets)
       |> request_task_refresh(task_id)
       |> apply_status_change_to_ui(is_current_task, status, task_id)
 
