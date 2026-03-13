@@ -13,6 +13,7 @@ defmodule AgentsWeb.DashboardLive.SessionDataHelpers do
   alias Agents.Tickets.Domain.Policies.TicketEnrichmentPolicy
 
   alias AgentsWeb.DashboardLive.EventProcessor
+  alias AgentsWeb.DashboardLive.Index, as: DashboardIndex
   alias AgentsWeb.DashboardLive.SessionStateMachine
   alias AgentsWeb.DashboardLive.TicketSessionLinker
 
@@ -26,7 +27,7 @@ defmodule AgentsWeb.DashboardLive.SessionDataHelpers do
     valid_tabs =
       Enum.map(
         if(has_ticket_tab?,
-          do: AgentsWeb.DashboardLive.Index.session_tabs(),
+          do: DashboardIndex.session_tabs(),
           else: [%{id: "chat"}]
         ),
         & &1.id

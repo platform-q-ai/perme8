@@ -226,24 +226,27 @@ defmodule AgentsWeb.DashboardLive.TicketHandlers do
         {:noreply, put_flash(socket, :error, "Ticket has no associated task")}
 
       true ->
-        case Sessions.get_task(ticket.associated_task_id, socket.assigns.current_scope.user.id) do
-          {:ok, task} ->
-            case perform_cancel_task(task, socket) do
-              {:ok, socket} ->
-                # Clear the persisted FK so the ticket doesn't re-associate
-                # on next page reload (Bug 1 fix).
-                socket = TicketSessionLinker.unlink_and_refresh(socket, number)
+        cancel_and_unlink_ticket(ticket, number, socket)
+    end
+  end
 
-                {:noreply,
-                 put_flash(socket, :info, "Ticket ##{number} paused and moved to triage")}
+  defp cancel_and_unlink_ticket(ticket, number, socket) do
+    case Sessions.get_task(ticket.associated_task_id, socket.assigns.current_scope.user.id) do
+      {:ok, task} ->
+        case perform_cancel_task(task, socket) do
+          {:ok, socket} ->
+            # Clear the persisted FK so the ticket doesn't re-associate
+            # on next page reload (Bug 1 fix).
+            socket = TicketSessionLinker.unlink_and_refresh(socket, number)
 
-              {:error, socket} ->
-                {:noreply, socket}
-            end
+            {:noreply, put_flash(socket, :info, "Ticket ##{number} paused and moved to triage")}
 
-          {:error, _} ->
-            {:noreply, put_flash(socket, :error, "Failed to find task for ticket ##{number}")}
+          {:error, socket} ->
+            {:noreply, socket}
         end
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, "Failed to find task for ticket ##{number}")}
     end
   end
 end
