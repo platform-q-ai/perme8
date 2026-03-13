@@ -1048,7 +1048,6 @@ defmodule AgentsWeb.DashboardLive.SessionDataHelpers do
 
   def maybe_clear_active_session(socket, _container_id), do: socket
 
-  # Removes tasks for a container from the snapshot, asynchronously unlinks
   def update_task_lifecycle_state(tasks, _task_id, _lifecycle_state) when not is_list(tasks),
     do: tasks
 
