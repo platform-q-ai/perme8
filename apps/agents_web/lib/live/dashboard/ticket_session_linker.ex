@@ -23,6 +23,9 @@ defmodule AgentsWeb.DashboardLive.TicketSessionLinker do
 
   import Phoenix.Component, only: [assign: 3]
 
+  import AgentsWeb.DashboardLive.SessionDataHelpers,
+    only: [upsert_task_snapshot: 2, remove_tasks_for_container: 2]
+
   require Logger
 
   alias Agents.Sessions.Domain.Policies.SessionLifecyclePolicy
@@ -130,33 +133,5 @@ defmodule AgentsWeb.DashboardLive.TicketSessionLinker do
     error ->
       Logger.warning("persist_ticket_link crashed: #{inspect(error)}")
       :ok
-  end
-
-  defp upsert_task_snapshot(tasks, nil), do: tasks
-
-  defp upsert_task_snapshot(tasks, task) when is_list(tasks) do
-    {matches, rest} = Enum.split_with(tasks, &(&1.id == task.id))
-
-    merged =
-      case matches do
-        [existing | _] -> Map.merge(existing, task)
-        [] -> task
-      end
-
-    [merged | rest]
-  end
-
-  defp upsert_task_snapshot(_tasks, task), do: [task]
-
-  defp remove_tasks_for_container(tasks, _container_id) when not is_list(tasks), do: tasks
-
-  defp remove_tasks_for_container(tasks, container_id) when is_binary(container_id) do
-    Enum.reject(tasks, fn task ->
-      task_cid = Map.get(task, :container_id)
-      task_id = Map.get(task, :id)
-
-      task_cid == container_id or
-        (is_binary(task_id) and "task:#{task_id}" == container_id)
-    end)
   end
 end
