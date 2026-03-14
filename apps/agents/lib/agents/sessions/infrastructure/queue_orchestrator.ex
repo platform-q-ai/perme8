@@ -216,7 +216,10 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
     try do
       broadcast_snapshot(state)
     rescue
-      _ -> :ok
+      e ->
+        Logger.warning(
+          "QueueOrchestrator: broadcast_snapshot failed after warming: #{Exception.message(e)}"
+        )
     end
 
     {:noreply, state}
