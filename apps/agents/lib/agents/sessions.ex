@@ -21,7 +21,6 @@ defmodule Agents.Sessions do
     ]
 
   alias Agents.Sessions.Application.UseCases.{
-    BuildSnapshot,
     CreateTask,
     CancelTask,
     DeleteTask,
@@ -33,9 +32,7 @@ defmodule Agents.Sessions do
   }
 
   alias Agents.Sessions.Application.SessionsConfig
-  alias Agents.Sessions.Infrastructure.QueueManager
-  alias Agents.Sessions.Infrastructure.QueueMirror
-  alias Agents.Sessions.Infrastructure.QueueManagerSupervisor
+  alias Agents.Sessions.Domain.Entities.QueueSnapshot
   alias Agents.Sessions.Infrastructure.QueueOrchestrator
   alias Agents.Sessions.Infrastructure.QueueOrchestratorSupervisor
   alias Agents.Sessions.Domain.Entities.{Session, Task}
@@ -354,7 +351,7 @@ defmodule Agents.Sessions do
   end
 
   @doc """
-  Returns the current queue state for a user.
+  Returns the current queue state for a user as a legacy map.
 
   Ensures the queue backend is started for the user.
   Returns a map with `:running`, `:queued`, `:awaiting_feedback`, `:concurrency_limit`, and
@@ -363,9 +360,26 @@ defmodule Agents.Sessions do
   @spec get_queue_state(String.t()) :: map()
   def get_queue_state(user_id) do
     case ensure_queue_backend_started(user_id) do
-      {:ok, _pid} -> queue_module().get_queue_state(user_id)
+      {:ok, _pid} -> QueueOrchestrator.get_queue_state(user_id)
       {:error, _reason} -> default_queue_state()
     end
+  end
+
+  @doc """
+  Returns the current queue snapshot for a user.
+
+  Returns a `QueueSnapshot` struct or `nil` if the backend is unavailable.
+  """
+  @spec get_queue_snapshot(String.t()) :: QueueSnapshot.t() | nil
+  def get_queue_snapshot(user_id) do
+    case ensure_queue_backend_started(user_id) do
+      {:ok, _pid} -> QueueOrchestrator.get_snapshot(user_id)
+      {:error, _reason} -> nil
+    end
+  rescue
+    _ -> nil
+  catch
+    :exit, _ -> nil
   end
 
   @doc """
@@ -374,7 +388,7 @@ defmodule Agents.Sessions do
   @spec get_concurrency_limit(String.t()) :: non_neg_integer()
   def get_concurrency_limit(user_id) do
     case ensure_queue_backend_started(user_id) do
-      {:ok, _pid} -> queue_module().get_concurrency_limit(user_id)
+      {:ok, _pid} -> QueueOrchestrator.get_concurrency_limit(user_id)
       {:error, _reason} -> SessionsConfig.default_concurrency_limit()
     end
   end
@@ -387,13 +401,7 @@ defmodule Agents.Sessions do
   @spec set_concurrency_limit(String.t(), non_neg_integer()) :: :ok | {:error, term()}
   def set_concurrency_limit(user_id, limit) do
     with {:ok, _pid} <- ensure_queue_backend_started(user_id) do
-      result = queue_module().set_concurrency_limit(user_id, limit)
-
-      if not SessionsConfig.queue_v2_enabled?() do
-        maybe_mirror_queue_state(user_id)
-      end
-
-      result
+      QueueOrchestrator.set_concurrency_limit(user_id, limit)
     end
   end
 
@@ -403,7 +411,7 @@ defmodule Agents.Sessions do
   @spec get_warm_cache_limit(String.t()) :: non_neg_integer()
   def get_warm_cache_limit(user_id) do
     case ensure_queue_backend_started(user_id) do
-      {:ok, _pid} -> queue_module().get_warm_cache_limit(user_id)
+      {:ok, _pid} -> QueueOrchestrator.get_warm_cache_limit(user_id)
       {:error, _reason} -> 2
     end
   end
@@ -414,7 +422,7 @@ defmodule Agents.Sessions do
   @spec set_warm_cache_limit(String.t(), non_neg_integer()) :: :ok | {:error, term()}
   def set_warm_cache_limit(user_id, limit) do
     with {:ok, _pid} <- ensure_queue_backend_started(user_id) do
-      queue_module().set_warm_cache_limit(user_id, limit)
+      QueueOrchestrator.set_warm_cache_limit(user_id, limit)
     end
   end
 
@@ -440,10 +448,6 @@ defmodule Agents.Sessions do
 
     with {:ok, _pid} <- safe_ensure_queue_backend(queue_supervisor, user_id, ensure_opts) do
       _ = safe_notify_terminal(queue_backend, user_id, task_id, status)
-
-      if not SessionsConfig.queue_v2_enabled?() do
-        maybe_mirror_queue_state(user_id)
-      end
     end
 
     :ok
@@ -549,13 +553,13 @@ defmodule Agents.Sessions do
 
   defp default_queue_checker(user_id) do
     case ensure_queue_backend_started(user_id) do
-      {:ok, _pid} -> queue_module().check_concurrency(user_id)
+      {:ok, _pid} -> QueueOrchestrator.check_concurrency(user_id)
       {:error, _reason} -> :at_limit
     end
   end
 
   defp ensure_queue_backend_started(user_id) do
-    safe_ensure_queue_backend(queue_supervisor_module(), user_id, default_queue_backend_opts())
+    safe_ensure_queue_backend(QueueOrchestratorSupervisor, user_id, default_queue_backend_opts())
   end
 
   defp default_queue_backend_opts do
@@ -574,78 +578,14 @@ defmodule Agents.Sessions do
   end
 
   defp queue_backend_opts(opts) do
-    if SessionsConfig.queue_v2_enabled?() do
-      Keyword.get(opts, :queue_orchestrator_opts, default_queue_backend_opts())
-    else
-      Keyword.get(opts, :queue_manager_opts, default_queue_backend_opts())
-    end
+    Keyword.get(opts, :queue_orchestrator_opts, default_queue_backend_opts())
   end
 
   defp queue_backend_modules(opts) do
-    if SessionsConfig.queue_v2_enabled?() do
-      {
-        Keyword.get(
-          opts,
-          :queue_orchestrator_supervisor,
-          Keyword.get(opts, :queue_manager_supervisor, QueueOrchestratorSupervisor)
-        ),
-        Keyword.get(
-          opts,
-          :queue_orchestrator,
-          Keyword.get(opts, :queue_manager, QueueOrchestrator)
-        )
-      }
-    else
-      {
-        Keyword.get(opts, :queue_manager_supervisor, QueueManagerSupervisor),
-        Keyword.get(opts, :queue_manager, QueueManager)
-      }
-    end
-  end
-
-  defp queue_supervisor_module do
-    if SessionsConfig.queue_v2_enabled?() do
-      QueueOrchestratorSupervisor
-    else
-      QueueManagerSupervisor
-    end
-  end
-
-  defp queue_module do
-    if SessionsConfig.queue_v2_enabled?() do
-      QueueOrchestrator
-    else
-      QueueManager
-    end
-  end
-
-  @mirror_failure_interval_ms :timer.seconds(30)
-  defp maybe_mirror_queue_state(user_id) do
-    if SessionsConfig.queue_mirror_enabled?() do
-      try do
-        legacy_state = QueueManager.get_queue_state(user_id)
-
-        {:ok, snapshot} = BuildSnapshot.execute(user_id)
-        result = QueueMirror.compare(legacy_state, snapshot)
-        QueueMirror.log_comparison(user_id, result)
-      rescue
-        e -> rate_limited_mirror_warning(user_id, Exception.message(e))
-      end
-    end
-  end
-
-  defp rate_limited_mirror_warning(user_id, message) do
-    key = {__MODULE__, :mirror_failure, user_id}
-    now = System.monotonic_time(:millisecond)
-
-    case :persistent_term.get(key, nil) do
-      last when is_integer(last) and now - last < @mirror_failure_interval_ms ->
-        :suppressed
-
-      _ ->
-        :persistent_term.put(key, now)
-        Logger.warning("QueueMirror: comparison failed for user #{user_id}: #{message}")
-    end
+    {
+      Keyword.get(opts, :queue_orchestrator_supervisor, QueueOrchestratorSupervisor),
+      Keyword.get(opts, :queue_orchestrator, QueueOrchestrator)
+    }
   end
 
   # Wire the real TaskRunnerSupervisor starter

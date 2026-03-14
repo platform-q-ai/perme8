@@ -185,7 +185,7 @@ defmodule AgentsWeb.DashboardLive.SessionHandlers do
     case Integer.parse(limit_str) do
       {limit, ""} when limit >= 0 and limit <= 5 ->
         Sessions.set_concurrency_limit(user.id, limit)
-        # Queue state will be updated via PubSub broadcast from QueueManager
+        # Queue state will be updated via PubSub broadcast from QueueOrchestrator
         {:noreply, socket}
 
       _ ->

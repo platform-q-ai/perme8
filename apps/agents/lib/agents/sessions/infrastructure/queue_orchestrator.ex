@@ -196,13 +196,68 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
     end
   end
 
-  # Container pre-warming placeholder. Resets warmup state and broadcasts
-  # a fresh snapshot. Actual container pre-warming via container_provider
-  # is deferred to a follow-up ticket.
+  # Container pre-warming: starts containers for cold queued tasks up to
+  # warm_cache_limit. Containers stay running so promotion can skip the
+  # full cold-start health check cycle. Wrapped in try/rescue for
+  # resilience when DB connections are unavailable (e.g., in test sandbox).
   @impl true
   def handle_info(:warm_top_queued, state) do
-    state = %{state | warmup_scheduled: false, warming_task_ids: MapSet.new()}
-    broadcast_snapshot(state)
+    state = %{state | warmup_scheduled: false}
+
+    try do
+      warm_top_queued_tasks(state)
+    rescue
+      e ->
+        Logger.warning("QueueOrchestrator: warming failed: #{Exception.message(e)}")
+    end
+
+    state = %{state | warming_task_ids: MapSet.new()}
+
+    try do
+      broadcast_snapshot(state)
+    rescue
+      e ->
+        Logger.warning(
+          "QueueOrchestrator: broadcast_snapshot failed after warming: #{Exception.message(e)}"
+        )
+    end
+
+    {:noreply, state}
+  end
+
+  # Handles the result of an async container warming task. Updates the
+  # task in the DB with the new container_id and container_port.
+  # Wrapped in try/rescue for resilience in test environments.
+  @impl true
+  def handle_info({:warm_result, task_id, result}, state) do
+    try do
+      case result do
+        {:ok, container_id, port} ->
+          case state.task_repo.get_task(task_id) do
+            nil ->
+              :ok
+
+            task ->
+              state.task_repo.update_task_status(task, %{
+                container_id: container_id,
+                container_port: port
+              })
+          end
+
+        {:error, reason} ->
+          Logger.warning(
+            "QueueOrchestrator: warming failed for task #{task_id}: #{inspect(reason)}"
+          )
+      end
+
+      broadcast_snapshot(state)
+    rescue
+      e ->
+        Logger.warning(
+          "QueueOrchestrator: warm_result handling failed for task #{task_id}: #{Exception.message(e)}"
+        )
+    end
+
     {:noreply, state}
   end
 
@@ -220,9 +275,12 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
 
   # Single query for all non-terminal tasks (queued, pending, starting,
   # running, awaiting_feedback). Replaces three overlapping queries that
-  # required Enum.uniq_by deduplication.
+  # required Enum.uniq_by deduplication. Returns empty list on DB errors
+  # to prevent GenServer crashes in environments without DB access.
   defp load_all_active_tasks(state) do
     state.task_repo.list_non_terminal_tasks(state.user_id)
+  rescue
+    _ -> []
   end
 
   defp promote_and_broadcast(state) do
@@ -259,17 +317,20 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
   end
 
   defp promote_single_task(state, task, entry) do
+    resume_prompt = queued_resume_prompt(task.pending_question)
+
     case state.task_repo.update_task_status(task, %{
            status: "pending",
            queue_position: nil,
            queued_at: nil,
            started_at: nil,
            completed_at: nil,
-           error: nil
+           error: nil,
+           pending_question: clear_resume_prompt(task.pending_question)
          }) do
       {:ok, updated_task} ->
         broadcast_task_status_and_lifecycle(state, task, updated_task, "pending")
-        maybe_start_runner(state, updated_task)
+        maybe_start_runner(state, updated_task, resume_prompt)
         emit_promotion_events(state, entry)
 
       {:error, reason} ->
@@ -395,12 +456,16 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
         :ok
 
       %{status: "awaiting_feedback"} = task ->
+        # Stop the container before re-queuing — warming will restart it
+        maybe_stop_container_for_requeue(state, task)
+
         queue_position = (state.task_repo.get_max_queue_position(state.user_id) || 0) + 1
 
         case state.task_repo.update_task_status(task, %{
                status: "queued",
                queue_position: queue_position,
-               queued_at: DateTime.utc_now()
+               queued_at: DateTime.utc_now(),
+               container_port: nil
              }) do
           {:ok, updated_task} ->
             broadcast_task_status_and_lifecycle(state, task, updated_task, "queued")
@@ -414,24 +479,31 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
     end
   end
 
-  # Deferred container warmup placeholder. Uses send_after to avoid
-  # triggering a redundant promote/broadcast cycle synchronously.
-  # Actual container pre-warming is a follow-up ticket.
+  defp maybe_stop_container_for_requeue(state, %{container_id: cid})
+       when is_binary(cid) and cid != "" do
+    state.container_provider.stop(cid)
+  end
+
+  defp maybe_stop_container_for_requeue(_state, _task), do: :ok
+
+  # Schedules a deferred warmup if there are queued tasks (cold or warm
+  # with stale containers) and the warm_cache_limit allows it. Uses
+  # send_after to avoid triggering warming synchronously during promotion.
   @warmup_delay_ms 1_000
   defp maybe_schedule_warmup(state) do
     if state.warmup_scheduled do
       state
     else
       snapshot = build_current_snapshot(state)
-      cold_tasks = snapshot.lanes.cold
+      warmable_tasks = snapshot.lanes.cold ++ snapshot.lanes.warm
 
-      if cold_tasks != [] and state.warm_cache_limit > 0 do
+      if warmable_tasks != [] and state.warm_cache_limit > 0 do
         Process.send_after(self(), :warm_top_queued, @warmup_delay_ms)
 
         %{
           state
           | warmup_scheduled: true,
-            warming_task_ids: MapSet.new(Enum.map(cold_tasks, & &1.task_id))
+            warming_task_ids: MapSet.new(Enum.map(warmable_tasks, & &1.task_id))
         }
       else
         state
@@ -439,10 +511,110 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
     end
   end
 
-  defp maybe_start_runner(%{task_runner_starter: nil}, _task), do: :ok
+  # Warms the top N queued tasks (N = warm_cache_limit) by starting
+  # containers for cold tasks and checking status for tasks with
+  # existing containers. Considers both cold-lane and warm-lane tasks
+  # since warm-lane tasks may have stale/missing containers.
+  defp warm_top_queued_tasks(state) do
+    tasks =
+      state.task_repo.list_non_terminal_tasks(state.user_id)
+      |> Enum.filter(&(&1.status == "queued"))
+      |> Enum.sort_by(& &1.queue_position)
+      |> Enum.take(state.warm_cache_limit)
 
-  defp maybe_start_runner(state, task) do
-    case state.task_runner_starter.(task.id, []) do
+    Enum.each(tasks, &maybe_warm_task(state, &1))
+  end
+
+  defp maybe_warm_task(state, %{container_id: nil} = task) do
+    warm_task_container(state, task)
+  end
+
+  defp maybe_warm_task(state, %{container_id: container_id} = task)
+       when is_binary(container_id) do
+    case state.container_provider.status(container_id) do
+      {:ok, :running} ->
+        # Already warm and running — nothing to do
+        :ok
+
+      {:ok, :stopped} ->
+        # Restart the stopped container
+        restart_warm_container(state, task, container_id)
+
+      {:ok, :not_found} ->
+        # Container gone — start a fresh one
+        warm_task_container(state, task)
+
+      {:error, _reason} ->
+        :ok
+    end
+  end
+
+  defp maybe_warm_task(_state, _task), do: :ok
+
+  # Starts a new container asynchronously and sends the result back
+  # to the orchestrator GenServer. Uses Task.start (unlinked, unmonitored)
+  # so a container start failure doesn't crash the GenServer.
+  #
+  # Design choice: if the spawned process is killed externally (OOM,
+  # supervisor shutdown) before sending {:warm_result, ...}, the
+  # orchestrator never learns about the failure. This is intentional —
+  # the next queue event (task queued, completed, etc.) triggers
+  # maybe_schedule_warmup/1, which will schedule another warming cycle
+  # that retries any tasks still missing a container.
+  defp warm_task_container(state, task) do
+    image = Map.get(task, :image) || SessionsConfig.image()
+    container_provider = state.container_provider
+    task_id = task.id
+    orchestrator = self()
+
+    Task.start(fn ->
+      result =
+        try do
+          case container_provider.start(image, []) do
+            {:ok, %{container_id: container_id, port: port}} ->
+              {:ok, container_id, port}
+
+            {:error, reason} ->
+              {:error, reason}
+          end
+        rescue
+          e -> {:error, Exception.message(e)}
+        end
+
+      send(orchestrator, {:warm_result, task_id, result})
+    end)
+  end
+
+  # Restarts an existing stopped container asynchronously.
+  defp restart_warm_container(state, task, container_id) do
+    container_provider = state.container_provider
+    task_id = task.id
+    orchestrator = self()
+
+    Task.start(fn ->
+      result =
+        try do
+          case container_provider.restart(container_id) do
+            {:ok, %{port: port}} ->
+              {:ok, container_id, port}
+
+            {:error, reason} ->
+              {:error, reason}
+          end
+        rescue
+          e -> {:error, Exception.message(e)}
+        end
+
+      send(orchestrator, {:warm_result, task_id, result})
+    end)
+  end
+
+  defp maybe_start_runner(%{task_runner_starter: nil}, _task, _resume_prompt), do: :ok
+
+  defp maybe_start_runner(state, task, resume_prompt) do
+    runner_opts = runner_opts_for(task, resume_prompt)
+
+    case state.task_runner_starter.(task.id, runner_opts) do
       {:ok, _pid} ->
         :ok
 
@@ -459,6 +631,63 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
         :error
     end
   end
+
+  defp runner_opts_for(
+         %{container_id: cid, session_id: sid, instruction: instruction},
+         prompt_instruction
+       )
+       when is_binary(prompt_instruction) and prompt_instruction != "" and is_binary(cid) and
+              cid != "" and
+              is_binary(sid) and sid != "" do
+    [
+      resume: true,
+      instruction: instruction,
+      prompt_instruction: prompt_instruction,
+      container_id: cid,
+      session_id: sid
+    ]
+  end
+
+  # Note: `already_healthy: true` reflects container health at warming time.
+  # There is a TOCTOU gap — by promotion time the container could have crashed.
+  # This is an accepted tradeoff: if TaskRunner's `prepare_fresh_start` fails,
+  # the task is marked failed and will be retried via RetryPolicy. A pre-promotion
+  # health check would add latency to every promotion without meaningfully
+  # narrowing the race window.
+  defp runner_opts_for(
+         %{container_id: cid, session_id: nil, container_port: port},
+         _resume_prompt
+       )
+       when is_binary(cid) and cid != "" and is_integer(port) do
+    [
+      prewarmed_container_id: cid,
+      container_port: port,
+      already_healthy: true,
+      fresh_warm_container: true
+    ]
+  end
+
+  defp runner_opts_for(%{container_id: cid, session_id: nil}, _resume_prompt)
+       when is_binary(cid) and cid != "" do
+    [
+      prewarmed_container_id: cid,
+      fresh_warm_container: true
+    ]
+  end
+
+  defp runner_opts_for(_task, _resume_prompt), do: []
+
+  defp queued_resume_prompt(%{"resume_prompt" => prompt}) when is_binary(prompt), do: prompt
+  defp queued_resume_prompt(_), do: nil
+
+  defp clear_resume_prompt(%{"resume_prompt" => _} = pending_question) do
+    case Map.delete(pending_question, "resume_prompt") do
+      map when map_size(map) == 0 -> nil
+      map -> map
+    end
+  end
+
+  defp clear_resume_prompt(other), do: other
 
   defp broadcast_snapshot(state, snapshot \\ nil) do
     snapshot = snapshot || build_current_snapshot(state)

@@ -568,8 +568,8 @@ defmodule Agents.SessionsTest do
 
       assert :ok =
                Sessions.notify_task_terminal_status(user.id, task.id, :completed,
-                 queue_manager_supervisor: supervisor_mod,
-                 queue_manager: queue_manager_mod
+                 queue_orchestrator_supervisor: supervisor_mod,
+                 queue_orchestrator: queue_manager_mod
                )
 
       user_id = user.id
@@ -589,7 +589,7 @@ defmodule Agents.SessionsTest do
 
       assert :ok =
                Sessions.notify_task_terminal_status(user.id, task.id, :failed,
-                 queue_manager_supervisor: supervisor_mod
+                 queue_orchestrator_supervisor: supervisor_mod
                )
     end
   end
