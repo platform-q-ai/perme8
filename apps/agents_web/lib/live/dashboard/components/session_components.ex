@@ -873,6 +873,7 @@ defmodule AgentsWeb.DashboardLive.Components.SessionComponents do
   import AgentsWeb.DashboardLive.Helpers,
     only: [
       ticket_label_class: 1,
+      available_labels: 0,
       format_file_stats: 1,
       session_todo_items: 1,
       image_label: 1,
@@ -1480,4 +1481,58 @@ defmodule AgentsWeb.DashboardLive.Components.SessionComponents do
 
   defp compute_file_stats(nil), do: nil
   defp compute_file_stats(session), do: format_file_stats(Map.get(session, :session_summary))
+
+  # ---- Label Picker ----
+
+  @doc """
+  Renders a label picker with toggleable label badges.
+
+  Shows all available labels from the predefined set. Currently applied
+  labels are highlighted. Clicking a label emits an "update_ticket_labels"
+  event with the toggled label list.
+
+  ## Assigns
+
+    * `:ticket` - the ticket struct/map with `:number` and `:labels` fields (required)
+  """
+  attr(:ticket, :map, required: true)
+
+  def label_picker(assigns) do
+    ~H"""
+    <div data-testid="label-picker" class="mt-4">
+      <div class="text-xs font-semibold uppercase tracking-wider text-base-content/60 mb-2">
+        Labels
+      </div>
+      <div class="flex flex-wrap gap-1.5">
+        <button
+          :for={label <- available_labels()}
+          type="button"
+          phx-click="update_ticket_labels"
+          phx-value-number={@ticket.number}
+          phx-value-labels={Jason.encode!(toggle_label(@ticket.labels || [], label))}
+          data-testid={"label-toggle-#{label}"}
+          class={[
+            "badge badge-sm cursor-pointer transition-all hover:scale-105",
+            ticket_label_class(label),
+            if(label in (@ticket.labels || []),
+              do: "opacity-100 ring-1 ring-primary/40",
+              else: "opacity-40 hover:opacity-70"
+            )
+          ]}
+        >
+          {label}
+        </button>
+      </div>
+    </div>
+    """
+  end
+
+  @doc false
+  def toggle_label(current_labels, label) do
+    if label in current_labels do
+      List.delete(current_labels, label)
+    else
+      [label | current_labels] |> Enum.sort()
+    end
+  end
 end
