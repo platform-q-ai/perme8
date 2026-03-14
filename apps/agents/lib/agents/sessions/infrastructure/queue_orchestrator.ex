@@ -249,7 +249,10 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
 
       broadcast_snapshot(state)
     rescue
-      _ -> :ok
+      e ->
+        Logger.warning(
+          "QueueOrchestrator: warm_result handling failed for task #{task_id}: #{Exception.message(e)}"
+        )
     end
 
     {:noreply, state}
