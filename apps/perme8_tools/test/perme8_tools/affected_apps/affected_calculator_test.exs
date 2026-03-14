@@ -1,29 +1,9 @@
 defmodule Perme8Tools.AffectedApps.AffectedCalculatorTest do
   use ExUnit.Case, async: true
 
-  alias Perme8Tools.AffectedApps.{AffectedCalculator, DependencyGraph}
+  alias Perme8Tools.AffectedApps.{AffectedCalculator, DependencyGraph, Fixtures}
 
-  @perme8_deps %{
-    perme8_events: [],
-    perme8_plugs: [],
-    identity: [:perme8_events, :perme8_plugs],
-    agents: [:perme8_events, :perme8_plugs, :identity],
-    notifications: [:perme8_events, :identity],
-    chat: [:perme8_events, :identity, :agents],
-    jarga: [:perme8_events, :identity, :agents, :notifications],
-    entity_relationship_manager: [:perme8_events, :perme8_plugs, :jarga, :identity],
-    webhooks: [:perme8_events, :identity, :jarga],
-    jarga_web: [:perme8_events, :perme8_plugs, :jarga, :agents, :notifications, :chat, :chat_web],
-    jarga_api: [:jarga, :identity, :perme8_plugs],
-    agents_web: [:perme8_events, :agents, :identity, :jarga],
-    agents_api: [:agents, :identity, :perme8_plugs],
-    chat_web: [:chat, :identity, :agents],
-    webhooks_api: [:webhooks, :identity, :jarga, :perme8_plugs],
-    exo_dashboard: [],
-    perme8_dashboard: [:exo_dashboard, :agents_web, :identity, :jarga],
-    alkali: [],
-    perme8_tools: []
-  }
+  @perme8_deps Fixtures.perme8_deps()
 
   setup do
     {:ok, graph} = DependencyGraph.build(@perme8_deps)
