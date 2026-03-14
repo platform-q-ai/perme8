@@ -604,6 +604,19 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
     ]
   end
 
+  defp runner_opts_for(
+         %{container_id: cid, session_id: nil, container_port: port},
+         _resume_prompt
+       )
+       when is_binary(cid) and cid != "" and is_integer(port) do
+    [
+      prewarmed_container_id: cid,
+      container_port: port,
+      already_healthy: true,
+      fresh_warm_container: true
+    ]
+  end
+
   defp runner_opts_for(%{container_id: cid, session_id: nil}, _resume_prompt)
        when is_binary(cid) and cid != "" do
     [

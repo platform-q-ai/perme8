@@ -128,6 +128,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     resume_container_id = Keyword.get(opts, :container_id)
     resume_session_id = Keyword.get(opts, :session_id)
     prewarmed_container_id = Keyword.get(opts, :prewarmed_container_id)
+    prewarmed_container_port = Keyword.get(opts, :container_port)
+    already_healthy = Keyword.get(opts, :already_healthy, false)
     fresh_warm_container = Keyword.get(opts, :fresh_warm_container, false)
     prompt_instruction = Keyword.get(opts, :prompt_instruction)
     auth_refresher = Keyword.get(opts, :auth_refresher, AuthRefresher)
@@ -176,7 +178,9 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
             prompt_instruction,
             resume_container_id,
             resume_session_id,
-            prewarmed_container_id
+            prewarmed_container_id,
+            prewarmed_container_port,
+            already_healthy
           )
 
         {:ok, state}
@@ -1321,7 +1325,9 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
          prompt_instruction,
          resume_container_id,
          resume_session_id,
-         _prewarmed_container_id
+         _prewarmed_container_id,
+         _prewarmed_container_port,
+         _already_healthy
        ) do
     existing_parts = restore_output_parts(task.output)
     existing_todos = restore_todo_items(task.todo_items)
@@ -1350,18 +1356,35 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
          _prompt_instruction,
          _resume_container_id,
          _resume_session_id,
-         prewarmed_container_id
+         prewarmed_container_id,
+         prewarmed_container_port,
+         already_healthy
        ) do
-    maybe_start_from_prewarmed(state, prewarmed_container_id)
+    maybe_start_from_prewarmed(
+      state,
+      prewarmed_container_id,
+      prewarmed_container_port,
+      already_healthy
+    )
   end
 
-  defp maybe_start_from_prewarmed(state, prewarmed_container_id)
+  # Prewarmed container is already running and healthy — skip restart and health check
+  defp maybe_start_from_prewarmed(state, prewarmed_container_id, prewarmed_container_port, true)
+       when is_binary(prewarmed_container_id) and prewarmed_container_id != "" and
+              is_integer(prewarmed_container_port) do
+    send(self(), :prepare_fresh_start)
+    %{state | container_id: prewarmed_container_id, container_port: prewarmed_container_port}
+  end
+
+  # Prewarmed container exists but may need restart — restart and health check
+  defp maybe_start_from_prewarmed(state, prewarmed_container_id, _port, _already_healthy)
        when is_binary(prewarmed_container_id) and prewarmed_container_id != "" do
     send(self(), :restart_prewarmed_container)
     %{state | container_id: prewarmed_container_id}
   end
 
-  defp maybe_start_from_prewarmed(state, _prewarmed_container_id) do
+  # No prewarmed container — cold start
+  defp maybe_start_from_prewarmed(state, _prewarmed_container_id, _port, _already_healthy) do
     send(self(), :start_container)
     state
   end
