@@ -8,7 +8,12 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestratorTest do
 
   import Agents.Test.AccountsFixtures
 
+  # Fields that require status_changeset (not in the creation changeset)
+  @status_only_fields [:pending_question, :todo_items, :session_summary]
+
   defp create_task(user, attrs) do
+    {status_attrs, create_attrs} = Map.split(attrs, @status_only_fields)
+
     default_attrs = %{
       instruction: "Queue task",
       user_id: user.id,
@@ -16,9 +21,18 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestratorTest do
       container_id: nil
     }
 
-    %TaskSchema{}
-    |> TaskSchema.changeset(Map.merge(default_attrs, attrs))
-    |> Repo.insert!()
+    task =
+      %TaskSchema{}
+      |> TaskSchema.changeset(Map.merge(default_attrs, create_attrs))
+      |> Repo.insert!()
+
+    if map_size(status_attrs) > 0 do
+      task
+      |> TaskSchema.status_changeset(status_attrs)
+      |> Repo.update!()
+    else
+      task
+    end
   end
 
   defp start_orchestrator!(user_id, opts \\ []) do
@@ -246,6 +260,151 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestratorTest do
       assert snapshot.metadata.available_slots == 1
       # Both tasks are in the processing lane
       assert length(snapshot.lanes.processing) == 2
+    end
+  end
+
+  describe "promote_single_task resume_prompt and runner opts" do
+    test "extracts resume_prompt from pending_question and passes resume opts to runner" do
+      user = user_fixture()
+      _running = create_task(user, %{status: "running"})
+
+      queued =
+        create_task(user, %{
+          status: "queued",
+          queue_position: 1,
+          container_id: "cid-1",
+          session_id: "sid-1",
+          instruction: "do something",
+          pending_question: %{"resume_prompt" => "continue here", "other_key" => "keep"}
+        })
+
+      test_pid = self()
+
+      runner_starter = fn task_id, opts ->
+        send(test_pid, {:runner_started, task_id, opts})
+        {:ok, self()}
+      end
+
+      Perme8.Events.TestEventBus.start_global()
+
+      start_orchestrator!(user.id,
+        concurrency_limit: 2,
+        pubsub: Perme8.Events.PubSub,
+        event_bus: Perme8.Events.TestEventBus,
+        task_runner_starter: runner_starter
+      )
+
+      assert :ok = QueueOrchestrator.notify_task_completed(user.id, queued.id)
+
+      assert_receive {:runner_started, task_id, opts}
+      assert task_id == queued.id
+      assert opts[:resume] == true
+      assert opts[:prompt_instruction] == "continue here"
+      assert opts[:container_id] == "cid-1"
+      assert opts[:session_id] == "sid-1"
+      assert opts[:instruction] == "do something"
+
+      updated = Repo.get!(TaskSchema, queued.id)
+      assert updated.pending_question == %{"other_key" => "keep"}
+    end
+
+    test "passes prewarmed opts when task has container_id but no session_id" do
+      user = user_fixture()
+      _running = create_task(user, %{status: "running"})
+
+      queued =
+        create_task(user, %{
+          status: "queued",
+          queue_position: 1,
+          container_id: "warm-cid",
+          session_id: nil
+        })
+
+      test_pid = self()
+
+      runner_starter = fn task_id, opts ->
+        send(test_pid, {:runner_started, task_id, opts})
+        {:ok, self()}
+      end
+
+      Perme8.Events.TestEventBus.start_global()
+
+      start_orchestrator!(user.id,
+        concurrency_limit: 2,
+        pubsub: Perme8.Events.PubSub,
+        event_bus: Perme8.Events.TestEventBus,
+        task_runner_starter: runner_starter
+      )
+
+      assert :ok = QueueOrchestrator.notify_task_completed(user.id, queued.id)
+
+      assert_receive {:runner_started, _task_id, opts}
+      assert opts[:prewarmed_container_id] == "warm-cid"
+      assert opts[:fresh_warm_container] == true
+      refute opts[:resume]
+    end
+
+    test "passes empty opts for cold start task" do
+      user = user_fixture()
+      _running = create_task(user, %{status: "running"})
+
+      queued =
+        create_task(user, %{
+          status: "queued",
+          queue_position: 1,
+          container_id: nil,
+          session_id: nil
+        })
+
+      test_pid = self()
+
+      runner_starter = fn task_id, opts ->
+        send(test_pid, {:runner_started, task_id, opts})
+        {:ok, self()}
+      end
+
+      Perme8.Events.TestEventBus.start_global()
+
+      start_orchestrator!(user.id,
+        concurrency_limit: 2,
+        pubsub: Perme8.Events.PubSub,
+        event_bus: Perme8.Events.TestEventBus,
+        task_runner_starter: runner_starter
+      )
+
+      assert :ok = QueueOrchestrator.notify_task_completed(user.id, queued.id)
+
+      assert_receive {:runner_started, _task_id, opts}
+      assert opts == []
+    end
+
+    test "clears resume_prompt entirely when no other keys in pending_question" do
+      user = user_fixture()
+      _running = create_task(user, %{status: "running"})
+
+      queued =
+        create_task(user, %{
+          status: "queued",
+          queue_position: 1,
+          container_id: "cid-2",
+          session_id: "sid-2",
+          instruction: "work",
+          pending_question: %{"resume_prompt" => "try again"}
+        })
+
+      Perme8.Events.TestEventBus.start_global()
+
+      start_orchestrator!(user.id,
+        concurrency_limit: 2,
+        pubsub: Perme8.Events.PubSub,
+        event_bus: Perme8.Events.TestEventBus,
+        task_runner_starter: fn _task_id, _opts -> {:ok, self()} end
+      )
+
+      assert :ok = QueueOrchestrator.notify_task_completed(user.id, queued.id)
+
+      updated = Repo.get!(TaskSchema, queued.id)
+      assert is_nil(updated.pending_question)
     end
   end
 end

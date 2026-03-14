@@ -259,17 +259,20 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
   end
 
   defp promote_single_task(state, task, entry) do
+    resume_prompt = queued_resume_prompt(task.pending_question)
+
     case state.task_repo.update_task_status(task, %{
            status: "pending",
            queue_position: nil,
            queued_at: nil,
            started_at: nil,
            completed_at: nil,
-           error: nil
+           error: nil,
+           pending_question: clear_resume_prompt(task.pending_question)
          }) do
       {:ok, updated_task} ->
         broadcast_task_status_and_lifecycle(state, task, updated_task, "pending")
-        maybe_start_runner(state, updated_task)
+        maybe_start_runner(state, updated_task, resume_prompt)
         emit_promotion_events(state, entry)
 
       {:error, reason} ->
@@ -439,10 +442,12 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
     end
   end
 
-  defp maybe_start_runner(%{task_runner_starter: nil}, _task), do: :ok
+  defp maybe_start_runner(%{task_runner_starter: nil}, _task, _resume_prompt), do: :ok
 
-  defp maybe_start_runner(state, task) do
-    case state.task_runner_starter.(task.id, []) do
+  defp maybe_start_runner(state, task, resume_prompt) do
+    runner_opts = runner_opts_for(task, resume_prompt)
+
+    case state.task_runner_starter.(task.id, runner_opts) do
       {:ok, _pid} ->
         :ok
 
@@ -459,6 +464,44 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
         :error
     end
   end
+
+  defp runner_opts_for(
+         %{container_id: cid, session_id: sid, instruction: instruction},
+         prompt_instruction
+       )
+       when is_binary(prompt_instruction) and prompt_instruction != "" and is_binary(cid) and
+              cid != "" and
+              is_binary(sid) and sid != "" do
+    [
+      resume: true,
+      instruction: instruction,
+      prompt_instruction: prompt_instruction,
+      container_id: cid,
+      session_id: sid
+    ]
+  end
+
+  defp runner_opts_for(%{container_id: cid, session_id: nil}, _resume_prompt)
+       when is_binary(cid) and cid != "" do
+    [
+      prewarmed_container_id: cid,
+      fresh_warm_container: true
+    ]
+  end
+
+  defp runner_opts_for(_task, _resume_prompt), do: []
+
+  defp queued_resume_prompt(%{"resume_prompt" => prompt}) when is_binary(prompt), do: prompt
+  defp queued_resume_prompt(_), do: nil
+
+  defp clear_resume_prompt(%{"resume_prompt" => _} = pending_question) do
+    case Map.delete(pending_question, "resume_prompt") do
+      map when map_size(map) == 0 -> nil
+      map -> map
+    end
+  end
+
+  defp clear_resume_prompt(other), do: other
 
   defp broadcast_snapshot(state, snapshot \\ nil) do
     snapshot = snapshot || build_current_snapshot(state)
