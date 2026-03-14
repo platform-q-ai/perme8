@@ -22,6 +22,20 @@ defmodule Agents.Sessions.Infrastructure.OrphanRecovery do
 
   @active_statuses ["pending", "starting", "running"]
 
+  @orphan_error_prefix "Orphaned by server restart"
+
+  @doc """
+  Returns the error message prefix used to identify orphaned tasks.
+
+  Used by both `OrphanRecovery` (to set the error) and `Sessions.validate_orphaned/1`
+  (to check it), ensuring the two are always in sync.
+  """
+  @spec orphan_error_prefix() :: String.t()
+  def orphan_error_prefix, do: @orphan_error_prefix
+
+  defp orphan_error_message,
+    do: "#{@orphan_error_prefix} — no TaskRunner process was active for this task"
+
   @doc """
   Finds and recovers all tasks stuck in active states.
 
@@ -75,16 +89,23 @@ defmodule Agents.Sessions.Infrastructure.OrphanRecovery do
       end
     end
 
-    # Mark the task as failed
-    task
-    |> TaskSchema.status_changeset(%{
-      status: "failed",
-      error: "Orphaned by server restart — no TaskRunner process was active for this task",
-      completed_at: DateTime.utc_now()
-    })
-    |> Repo.update!()
+    # Mark the task as failed (best-effort per task — log and continue on error)
+    changeset =
+      TaskSchema.status_changeset(task, %{
+        status: "failed",
+        error: orphan_error_message(),
+        completed_at: DateTime.utc_now()
+      })
 
-    Logger.info("OrphanRecovery: marked task #{task.id} as failed (was #{task.status})")
+    case Repo.update(changeset) do
+      {:ok, _updated} ->
+        Logger.info("OrphanRecovery: marked task #{task.id} as failed (was #{task.status})")
+
+      {:error, reason} ->
+        Logger.error(
+          "OrphanRecovery: failed to mark task #{task.id} as failed: #{inspect(reason)}"
+        )
+    end
 
     # Broadcast per-task status change so any subscribed LiveViews update.
     # Best-effort: PubSub may not be started yet during boot or in tests.
@@ -109,6 +130,9 @@ defmodule Agents.Sessions.Infrastructure.OrphanRecovery do
   defp safe_broadcast(pubsub, topic, message) do
     Phoenix.PubSub.broadcast(pubsub, topic, message)
   rescue
-    _ -> :ok
+    error ->
+      Logger.debug("OrphanRecovery: broadcast to #{topic} failed: #{Exception.message(error)}")
+
+      :ok
   end
 end

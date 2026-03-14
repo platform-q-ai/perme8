@@ -157,9 +157,11 @@ defmodule Agents.Sessions do
   end
 
   defp validate_orphaned(task) do
+    orphan_prefix = Agents.Sessions.Infrastructure.OrphanRecovery.orphan_error_prefix()
+
     if task.status == "failed" and
          is_binary(task.error) and
-         String.contains?(task.error, "Orphaned by server restart") do
+         String.contains?(task.error, orphan_prefix) do
       :ok
     else
       {:error, :not_orphaned}
