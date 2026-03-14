@@ -21,12 +21,15 @@ defmodule Agents.Tickets do
   alias Agents.Sessions
   alias Agents.Sessions.Domain.Policies.SessionLifecyclePolicy
   alias Agents.Tickets.Application.TicketsConfig
+  alias Agents.Tickets.Application.UseCases.AddTicketDependency
   alias Agents.Tickets.Application.UseCases.CreateTicket
   alias Agents.Tickets.Application.UseCases.RecordStageTransition
+  alias Agents.Tickets.Application.UseCases.RemoveTicketDependency
   alias Agents.Tickets.Domain.Entities.Ticket
   alias Agents.Tickets.Domain.Policies.TicketEnrichmentPolicy
   alias Agents.Tickets.Infrastructure.Clients.GithubProjectClient
   alias Agents.Tickets.Infrastructure.Repositories.ProjectTicketRepository
+  alias Agents.Tickets.Infrastructure.Repositories.TicketDependencyRepository
   alias Agents.Tickets.Infrastructure.TicketSyncServer
 
   @doc """
@@ -185,6 +188,42 @@ defmodule Agents.Tickets do
   @spec create_ticket(String.t(), keyword()) :: {:ok, struct()} | {:error, term()}
   def create_ticket(body, opts \\ []) when is_binary(body) do
     CreateTicket.execute(body, opts)
+  end
+
+  @doc """
+  Adds a dependency: blocker_ticket_id blocks blocked_ticket_id.
+
+  ## Options
+  - `:actor_id` - (required)
+  - `:event_bus` - Event bus module
+  - `:dependency_repo` - Repository module
+  """
+  @spec add_dependency(integer(), integer(), keyword()) :: {:ok, struct()} | {:error, term()}
+  def add_dependency(blocker_ticket_id, blocked_ticket_id, opts \\ []) do
+    AddTicketDependency.execute(blocker_ticket_id, blocked_ticket_id, opts)
+  end
+
+  @doc """
+  Removes a dependency: blocker_ticket_id no longer blocks blocked_ticket_id.
+
+  ## Options
+  - `:actor_id` - (required)
+  - `:event_bus` - Event bus module
+  - `:dependency_repo` - Repository module
+  """
+  @spec remove_dependency(integer(), integer(), keyword()) ::
+          :ok | {:error, :dependency_not_found}
+  def remove_dependency(blocker_ticket_id, blocked_ticket_id, opts \\ []) do
+    RemoveTicketDependency.execute(blocker_ticket_id, blocked_ticket_id, opts)
+  end
+
+  @doc """
+  Searches tickets by number or title, excluding the given ticket ID.
+  Used for the dependency typeahead search.
+  """
+  @spec search_tickets_for_dependency(String.t(), integer()) :: [struct()]
+  def search_tickets_for_dependency(query, exclude_ticket_id) do
+    TicketDependencyRepository.search_tickets(query, exclude_ticket_id)
   end
 
   @doc false

@@ -33,7 +33,9 @@ defmodule Agents.Tickets.Infrastructure.Repositories.ProjectTicketRepository do
     |> order_by([ticket], desc: ticket.position, desc: ticket.created_at)
     |> preload([ticket],
       lifecycle_events: ^lifecycle_events_query,
-      sub_tickets: ^sub_tickets_query
+      sub_tickets: ^sub_tickets_query,
+      blocking: [],
+      blocked_by: []
     )
     |> Repo.all()
   end
@@ -56,8 +58,16 @@ defmodule Agents.Tickets.Infrastructure.Repositories.ProjectTicketRepository do
     lifecycle_events_query = lifecycle_events_query()
 
     case Repo.get(ProjectTicketSchema, id) do
-      nil -> nil
-      ticket -> {:ok, Repo.preload(ticket, lifecycle_events: lifecycle_events_query)}
+      nil ->
+        nil
+
+      ticket ->
+        {:ok,
+         Repo.preload(ticket,
+           lifecycle_events: lifecycle_events_query,
+           blocking: [],
+           blocked_by: []
+         )}
     end
   end
 

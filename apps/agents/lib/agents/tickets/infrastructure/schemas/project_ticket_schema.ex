@@ -71,6 +71,21 @@ defmodule Agents.Tickets.Infrastructure.Schemas.ProjectTicketSchema do
       foreign_key: :ticket_id
     )
 
+    has_many(
+      :blocking_dependencies,
+      Agents.Tickets.Infrastructure.Schemas.TicketDependencySchema,
+      foreign_key: :blocker_ticket_id
+    )
+
+    has_many(
+      :blocked_by_dependencies,
+      Agents.Tickets.Infrastructure.Schemas.TicketDependencySchema,
+      foreign_key: :blocked_ticket_id
+    )
+
+    has_many(:blocking, through: [:blocking_dependencies, :blocked_ticket])
+    has_many(:blocked_by, through: [:blocked_by_dependencies, :blocker_ticket])
+
     timestamps(type: :utc_datetime)
   end
 

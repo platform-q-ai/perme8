@@ -408,6 +408,67 @@ defmodule Agents.Tickets.Domain.Entities.TicketTest do
     end
   end
 
+  describe "dependency fields defaults" do
+    test "blocks defaults to empty list" do
+      ticket = %Ticket{}
+      assert ticket.blocks == []
+    end
+
+    test "blocked_by defaults to empty list" do
+      ticket = %Ticket{}
+      assert ticket.blocked_by == []
+    end
+  end
+
+  describe "blocked?/1" do
+    test "returns false when blocked_by is empty" do
+      ticket = %Ticket{blocked_by: []}
+      refute Ticket.blocked?(ticket)
+    end
+
+    test "returns true when at least one blocker is open" do
+      ticket = %Ticket{blocked_by: [%Ticket{state: "open"}, %Ticket{state: "closed"}]}
+      assert Ticket.blocked?(ticket)
+    end
+
+    test "returns false when all blockers are closed" do
+      ticket = %Ticket{blocked_by: [%Ticket{state: "closed"}]}
+      refute Ticket.blocked?(ticket)
+    end
+  end
+
+  describe "blocked_status/1" do
+    test "returns :none when blocked_by is empty" do
+      ticket = %Ticket{blocked_by: []}
+      assert Ticket.blocked_status(ticket) == :none
+    end
+
+    test "returns :active when at least one blocker is open" do
+      ticket = %Ticket{blocked_by: [%Ticket{state: "open"}]}
+      assert Ticket.blocked_status(ticket) == :active
+    end
+
+    test "returns :resolved when all blockers are closed" do
+      ticket = %Ticket{blocked_by: [%Ticket{state: "closed"}, %Ticket{state: "closed"}]}
+      assert Ticket.blocked_status(ticket) == :resolved
+    end
+  end
+
+  describe "open_blocker_count/1" do
+    test "returns 0 when blocked_by is empty" do
+      ticket = %Ticket{blocked_by: []}
+      assert Ticket.open_blocker_count(ticket) == 0
+    end
+
+    test "counts only open blockers" do
+      ticket = %Ticket{
+        blocked_by: [%Ticket{state: "open"}, %Ticket{state: "closed"}, %Ticket{state: "open"}]
+      }
+
+      assert Ticket.open_blocker_count(ticket) == 2
+    end
+  end
+
   describe "domain query helpers" do
     test "open?/1 returns true for open tickets" do
       assert Ticket.open?(Ticket.new(%{state: "open"}))
