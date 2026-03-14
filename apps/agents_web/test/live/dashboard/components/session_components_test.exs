@@ -4,6 +4,7 @@ defmodule AgentsWeb.DashboardLive.Components.SessionComponentsTest do
   import Phoenix.LiveViewTest
 
   alias AgentsWeb.DashboardLive.Components.SessionComponents
+  alias AgentsWeb.DashboardLive.Helpers
   alias Agents.Tickets.Domain.Entities.Ticket
 
   describe "status_badge/1" do
@@ -342,7 +343,7 @@ defmodule AgentsWeb.DashboardLive.Components.SessionComponentsTest do
       ticket = Ticket.new(%{number: 102, title: "Test", labels: []})
       html = render_component(&SessionComponents.label_picker/1, ticket: ticket)
 
-      for label <- AgentsWeb.DashboardLive.Helpers.available_labels() do
+      for label <- Helpers.available_labels() do
         assert html =~ ~s(data-testid="label-toggle-#{label}")
       end
     end

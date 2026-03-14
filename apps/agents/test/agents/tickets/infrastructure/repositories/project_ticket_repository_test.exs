@@ -988,7 +988,7 @@ defmodule Agents.Tickets.Infrastructure.Repositories.ProjectTicketRepositoryTest
     end
 
     test "returns {:error, :not_found} when ticket number doesn't exist" do
-      assert {:error, :not_found} = ProjectTicketRepository.update_labels(99999, ["bug"])
+      assert {:error, :not_found} = ProjectTicketRepository.update_labels(99_999, ["bug"])
     end
   end
 end

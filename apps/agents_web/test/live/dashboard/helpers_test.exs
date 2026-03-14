@@ -200,7 +200,7 @@ defmodule AgentsWeb.DashboardLive.HelpersTest do
       labels = Helpers.available_labels()
       assert is_list(labels)
       assert labels == Enum.sort(labels)
-      assert length(labels) > 0
+      assert labels != []
     end
 
     test "each label is a binary string" do
