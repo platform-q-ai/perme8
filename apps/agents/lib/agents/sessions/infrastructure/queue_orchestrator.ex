@@ -638,6 +638,12 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
     ]
   end
 
+  # Note: `already_healthy: true` reflects container health at warming time.
+  # There is a TOCTOU gap — by promotion time the container could have crashed.
+  # This is an accepted tradeoff: if TaskRunner's `prepare_fresh_start` fails,
+  # the task is marked failed and will be retried via RetryPolicy. A pre-promotion
+  # health check would add latency to every promotion without meaningfully
+  # narrowing the race window.
   defp runner_opts_for(
          %{container_id: cid, session_id: nil, container_port: port},
          _resume_prompt
