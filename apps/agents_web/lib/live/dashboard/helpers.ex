@@ -6,6 +6,8 @@ defmodule AgentsWeb.DashboardLive.Helpers do
   depend on socket state. Used by the LiveView and its template.
   """
 
+  alias Agents.Tickets.Domain.Entities.Ticket
+
   @doc "Formats a token count for display (e.g., 5200 → \"5.2k\")."
   def format_token_count(nil), do: "-"
   def format_token_count(n) when is_number(n) and n >= 1000, do: "#{Float.round(n / 1000, 1)}k"
@@ -458,12 +460,10 @@ defmodule AgentsWeb.DashboardLive.Helpers do
   end
 
   def filter_tickets_by_status(tickets, :blocked) do
-    alias Agents.Tickets.Domain.Entities.Ticket
     Enum.filter(tickets, &(Ticket.blocked_status(&1) == :active))
   end
 
   def filter_tickets_by_status(tickets, :unblocked) do
-    alias Agents.Tickets.Domain.Entities.Ticket
     Enum.reject(tickets, &(Ticket.blocked_status(&1) == :active))
   end
 

@@ -12,8 +12,8 @@ defmodule Agents.Tickets.Domain.Policies.TicketDependencyPolicy do
   Returns true if adding the proposed edge (blocker_id → blocked_id)
   would create a cycle in the directed dependency graph.
 
-  Uses DFS from `blocker_id` following reverse edges to detect if
-  `blocked_id` can reach `blocker_id` through existing edges.
+  Uses DFS from `blocked_id` following forward edges to detect if
+  `blocker_id` is reachable through existing edges.
   """
   @spec circular_dependency?([edge()], integer(), integer()) :: boolean()
   def circular_dependency?(_edges, blocker_id, blocked_id) when blocker_id == blocked_id, do: true

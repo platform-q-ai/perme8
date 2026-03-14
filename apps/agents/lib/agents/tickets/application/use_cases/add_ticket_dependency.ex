@@ -29,10 +29,12 @@ defmodule Agents.Tickets.Application.UseCases.AddTicketDependency do
     dep_repo = Keyword.get(opts, :dependency_repo, @default_dependency_repo)
     actor_id = Keyword.fetch!(opts, :actor_id)
 
+    edges = dep_repo.list_edges()
+
     with :ok <- validate_not_self(blocker_ticket_id, blocked_ticket_id),
          :ok <- validate_tickets_exist(blocker_ticket_id, blocked_ticket_id, dep_repo),
-         :ok <- validate_not_duplicate(blocker_ticket_id, blocked_ticket_id, dep_repo),
-         :ok <- validate_not_circular(blocker_ticket_id, blocked_ticket_id, dep_repo) do
+         :ok <- validate_not_duplicate(blocker_ticket_id, blocked_ticket_id, edges),
+         :ok <- validate_not_circular(blocker_ticket_id, blocked_ticket_id, edges) do
       case dep_repo.add_dependency(blocker_ticket_id, blocked_ticket_id) do
         {:ok, dependency} ->
           emit_event(blocker_ticket_id, blocked_ticket_id, :added, actor_id, event_bus)
@@ -56,9 +58,7 @@ defmodule Agents.Tickets.Application.UseCases.AddTicketDependency do
     end
   end
 
-  defp validate_not_duplicate(blocker_id, blocked_id, dep_repo) do
-    edges = dep_repo.list_edges()
-
+  defp validate_not_duplicate(blocker_id, blocked_id, edges) do
     if TicketDependencyPolicy.duplicate_dependency?(edges, {blocker_id, blocked_id}) do
       {:error, :duplicate_dependency}
     else
@@ -66,9 +66,7 @@ defmodule Agents.Tickets.Application.UseCases.AddTicketDependency do
     end
   end
 
-  defp validate_not_circular(blocker_id, blocked_id, dep_repo) do
-    edges = dep_repo.list_edges()
-
+  defp validate_not_circular(blocker_id, blocked_id, edges) do
     if TicketDependencyPolicy.circular_dependency?(edges, blocker_id, blocked_id) do
       {:error, :circular_dependency}
     else

@@ -71,18 +71,28 @@ defmodule Agents.Tickets.Infrastructure.Repositories.TicketDependencyRepository 
         limit: 10
       )
 
+    sanitized = sanitize_like(query_string)
+
     case Integer.parse(query_string) do
       {number, ""} ->
         from(t in base_query,
-          where: t.number == ^number or ilike(t.title, ^"%#{query_string}%")
+          where: t.number == ^number or ilike(t.title, ^"%#{sanitized}%")
         )
         |> Repo.all()
 
       _ ->
         from(t in base_query,
-          where: ilike(t.title, ^"%#{query_string}%")
+          where: ilike(t.title, ^"%#{sanitized}%")
         )
         |> Repo.all()
     end
+  end
+
+  # Escapes SQL LIKE wildcards to prevent user input from altering query semantics.
+  defp sanitize_like(str) do
+    str
+    |> String.replace("\\", "\\\\")
+    |> String.replace("%", "\\%")
+    |> String.replace("_", "\\_")
   end
 end
