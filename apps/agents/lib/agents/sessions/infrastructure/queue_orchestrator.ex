@@ -552,8 +552,15 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
   defp maybe_warm_task(_state, _task), do: :ok
 
   # Starts a new container asynchronously and sends the result back
-  # to the orchestrator GenServer. Uses Task.start (unlinked) so a
-  # container start failure doesn't crash the GenServer.
+  # to the orchestrator GenServer. Uses Task.start (unlinked, unmonitored)
+  # so a container start failure doesn't crash the GenServer.
+  #
+  # Design choice: if the spawned process is killed externally (OOM,
+  # supervisor shutdown) before sending {:warm_result, ...}, the
+  # orchestrator never learns about the failure. This is intentional —
+  # the next queue event (task queued, completed, etc.) triggers
+  # maybe_schedule_warmup/1, which will schedule another warming cycle
+  # that retries any tasks still missing a container.
   defp warm_task_container(state, task) do
     image = Map.get(task, :image) || SessionsConfig.image()
     container_provider = state.container_provider
