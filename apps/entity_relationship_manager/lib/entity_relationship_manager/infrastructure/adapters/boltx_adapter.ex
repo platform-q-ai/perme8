@@ -88,10 +88,18 @@ defmodule EntityRelationshipManager.Infrastructure.Adapters.Neo4jAdapter.BoltxAd
         String.trim_trailing(url, "/")
 
       uri = Keyword.get(config, :uri) ->
-        # Convert bolt:// URI to http:// URL
+        # Convert bolt:// URI to http(s):// URL.
+        # bolt+s:// and bolt+ssc:// indicate TLS — map to https with port 7473.
+        # Plain bolt:// maps to http with port 7474.
+        {scheme, port} =
+          cond do
+            String.match?(uri, ~r"^bolt\+s(sc)?://") -> {"https", "7473"}
+            true -> {"http", "7474"}
+          end
+
         uri
-        |> String.replace(~r"^bolt(\+s(?:sc)?)?://", "http://")
-        |> String.replace(~r":7687$", ":7474")
+        |> String.replace(~r"^bolt(\+s(?:sc)?)?://", "#{scheme}://")
+        |> String.replace(~r":7687$", ":#{port}")
         |> String.trim_trailing("/")
 
       true ->
