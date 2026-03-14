@@ -15,6 +15,31 @@ defmodule AgentsWeb.DashboardLive.TicketHandlersTest do
   alias Agents.Tickets.Infrastructure.Repositories.ProjectTicketRepository
   alias Agents.Repo
 
+  # Polls the database until a task matching the query appears, with exponential backoff.
+  # Avoids brittle Process.sleep with a fixed duration.
+  defp await_task_created(query, opts \\ []) do
+    timeout = Keyword.get(opts, :timeout, 2_000)
+    interval = Keyword.get(opts, :interval, 50)
+    deadline = System.monotonic_time(:millisecond) + timeout
+
+    do_await_task(query, interval, deadline)
+  end
+
+  defp do_await_task(query, interval, deadline) do
+    case Repo.one(query) do
+      %TaskSchema{} = task ->
+        task
+
+      nil ->
+        if System.monotonic_time(:millisecond) >= deadline do
+          flunk("Timed out waiting for task to be created")
+        else
+          Process.sleep(interval)
+          do_await_task(query, interval, deadline)
+        end
+    end
+  end
+
   describe "start_ticket_session" do
     setup %{conn: conn} do
       user = user_fixture()
@@ -57,23 +82,18 @@ defmodule AgentsWeb.DashboardLive.TicketHandlersTest do
       |> element(~s([data-testid="start-ticket-session-700"]))
       |> render_click()
 
-      # Wait for the spawned process to complete and the :new_task_created
-      # message to be handled by the LiveView.
-      Process.sleep(500)
-
-      # Force a render to process any pending messages
-      _ = render(lv)
-
-      # Verify a task was created in the DB for this user with ticket reference
-      task =
+      # Poll until the async task creation completes
+      task_query =
         TaskSchema
         |> where([t], t.user_id == ^user.id)
         |> where([t], ilike(t.instruction, "%pick up ticket #700%"))
         |> order_by([t], desc: t.inserted_at)
         |> limit(1)
-        |> Repo.one()
 
-      assert task != nil, "Expected a task to be created for ticket #700"
+      task = await_task_created(task_query)
+
+      # Force a render to process any pending messages
+      _ = render(lv)
       assert task.instruction =~ "pick up ticket #700"
       assert task.instruction =~ "Task creation test ticket"
     end
@@ -109,19 +129,16 @@ defmodule AgentsWeb.DashboardLive.TicketHandlersTest do
       |> element(~s([data-testid="start-ticket-session-702"]))
       |> render_click()
 
-      # Wait for async task creation and message handling
-      Process.sleep(500)
-      _ = render(lv)
-
-      # Verify a task was created
-      task =
+      # Poll until the async task creation completes
+      task_query =
         TaskSchema
         |> where([t], t.user_id == ^user.id)
         |> where([t], ilike(t.instruction, "%pick up ticket #702%"))
         |> limit(1)
-        |> Repo.one!()
 
-      assert task != nil
+      task = await_task_created(task_query)
+
+      _ = render(lv)
 
       # Simulate a message.part.updated event with assistant text.
       # If current_task was properly set, the event will be processed by
@@ -177,8 +194,14 @@ defmodule AgentsWeb.DashboardLive.TicketHandlersTest do
       |> element(~s([data-testid="start-ticket-session-701"]))
       |> render_click()
 
-      # Wait for async task creation
-      Process.sleep(500)
+      # Poll until the async task creation completes
+      task_query =
+        TaskSchema
+        |> where([t], t.user_id == ^user.id)
+        |> where([t], ilike(t.instruction, "%pick up ticket #701%"))
+        |> limit(1)
+
+      _task = await_task_created(task_query)
 
       html = render(lv)
 
