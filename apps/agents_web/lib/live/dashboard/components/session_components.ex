@@ -1498,6 +1498,8 @@ defmodule AgentsWeb.DashboardLive.Components.SessionComponents do
   attr(:ticket, :map, required: true)
 
   def label_picker(assigns) do
+    assigns = assign(assigns, :labels, assigns.ticket.labels || [])
+
     ~H"""
     <div data-testid="label-picker" class="mt-4">
       <div class="text-xs font-semibold uppercase tracking-wider text-base-content/60 mb-2">
@@ -1509,12 +1511,12 @@ defmodule AgentsWeb.DashboardLive.Components.SessionComponents do
           type="button"
           phx-click="update_ticket_labels"
           phx-value-number={@ticket.number}
-          phx-value-labels={Jason.encode!(toggle_label(@ticket.labels || [], label))}
+          phx-value-labels={Jason.encode!(toggle_label(@labels, label))}
           data-testid={"label-toggle-#{label}"}
           class={[
             "badge badge-sm cursor-pointer transition-all hover:scale-105",
             ticket_label_class(label),
-            if(label in (@ticket.labels || []),
+            if(label in @labels,
               do: "opacity-100 ring-1 ring-primary/40",
               else: "opacity-40 hover:opacity-70"
             )
