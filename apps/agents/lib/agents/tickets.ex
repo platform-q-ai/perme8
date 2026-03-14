@@ -199,12 +199,17 @@ defmodule Agents.Tickets do
 
     case client.update_issue(number, %{labels: labels}, github_opts) do
       {:ok, _issue} ->
-        ProjectTicketRepository.update_labels(number, labels)
-        :ok
+        case ProjectTicketRepository.update_labels(number, labels) do
+          {:ok, _ticket} -> :ok
+          {:error, :not_found} -> :ok
+        end
 
+      # Issue doesn't exist on GitHub -- still update locally
       {:error, :not_found} ->
-        ProjectTicketRepository.update_labels(number, labels)
-        :ok
+        case ProjectTicketRepository.update_labels(number, labels) do
+          {:ok, _ticket} -> :ok
+          {:error, :not_found} -> :ok
+        end
 
       {:error, reason} ->
         {:error, reason}
