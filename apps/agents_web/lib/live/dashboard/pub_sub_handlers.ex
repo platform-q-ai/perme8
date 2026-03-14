@@ -284,37 +284,7 @@ defmodule AgentsWeb.DashboardLive.PubSubHandlers do
       |> assign(:sessions, sessions)
       |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)
 
-    # If this task was started from a ticket, set current_task and navigate
-    # to the session so the user can see the chat and streaming output.
-    # Without this, the LiveView stays on the previous view, current_task
-    # is never set, and all SSE events are silently discarded by the
-    # task_event guard in task_event/3.
-    #
-    # The task may not have a container_id yet (still "queued"), but setting
-    # current_task ensures events are processed once the TaskRunner starts.
-    # Navigation uses the container_id if available, otherwise just
-    # sets current_task and lets the task_status_updated handler navigate
-    # when the container becomes available.
-    socket =
-      if ticket_number do
-        socket =
-          socket
-          |> assign(:current_task, task)
-          |> assign(:active_ticket_number, ticket_number)
-          |> assign(:composing_new, false)
-          |> assign(:events, [])
-          |> assign_session_state()
-
-        if task.container_id do
-          socket
-          |> assign(:active_container_id, task.container_id)
-          |> push_patch(to: ~p"/sessions?#{%{container: task.container_id, tab: "ticket"}}")
-        else
-          socket
-        end
-      else
-        socket
-      end
+    socket = maybe_navigate_to_ticket_session(socket, ticket_number, task)
 
     # The task may have already been promoted (queued -> pending -> running)
     # before we subscribed above, so any PubSub broadcasts from the
@@ -549,5 +519,32 @@ defmodule AgentsWeb.DashboardLive.PubSubHandlers do
      |> assign(:tasks_snapshot, tasks)
      |> assign(:tickets, tickets)
      |> put_flash(:info, message)}
+  end
+
+  # -- Private Helpers ---------------------------------------------------------
+
+  # If this task was started from a ticket, set current_task and navigate
+  # to the session so the user sees the chat and streaming output.
+  # Without this, the LiveView stays on the previous view, current_task
+  # is never set, and all SSE events are silently discarded by the
+  # task_event guard in task_event/3.
+  defp maybe_navigate_to_ticket_session(socket, nil, _task), do: socket
+
+  defp maybe_navigate_to_ticket_session(socket, ticket_number, task) do
+    socket =
+      socket
+      |> assign(:current_task, task)
+      |> assign(:active_ticket_number, ticket_number)
+      |> assign(:composing_new, false)
+      |> assign(:events, [])
+      |> assign_session_state()
+
+    if task.container_id do
+      socket
+      |> assign(:active_container_id, task.container_id)
+      |> push_patch(to: ~p"/sessions?#{%{container: task.container_id, tab: "ticket"}}")
+    else
+      socket
+    end
   end
 end
