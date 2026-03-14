@@ -305,11 +305,19 @@ end
 neo4j_url = System.get_env("NEO4J_URL")
 
 if neo4j_url do
+  neo4j_password =
+    System.get_env("NEO4J_PASSWORD") ||
+      if config_env() == :prod do
+        raise "environment variable NEO4J_PASSWORD is required when NEO4J_URL is set"
+      else
+        "password"
+      end
+
   config :entity_relationship_manager, :neo4j,
     url: neo4j_url,
     auth: [
       username: System.get_env("NEO4J_USER", "neo4j"),
-      password: System.get_env("NEO4J_PASSWORD", "password")
+      password: neo4j_password
     ],
     database: System.get_env("NEO4J_DATABASE", "neo4j")
 
