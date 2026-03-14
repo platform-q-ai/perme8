@@ -1172,9 +1172,9 @@ defmodule AgentsWeb.DashboardLive.SessionDataHelpers do
   def latest_at_unix(_), do: 0
 
   def load_queue_state(user_id) do
-    Sessions.get_queue_state(user_id)
+    Sessions.get_queue_snapshot(user_id)
   catch
-    :exit, _reason -> default_queue_state()
+    :exit, _reason -> nil
   end
 
   def default_queue_state do

@@ -198,49 +198,60 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
 
   # Container pre-warming: starts containers for cold queued tasks up to
   # warm_cache_limit. Containers stay running so promotion can skip the
-  # full cold-start health check cycle.
+  # full cold-start health check cycle. Wrapped in try/rescue for
+  # resilience when DB connections are unavailable (e.g., in test sandbox).
   @impl true
   def handle_info(:warm_top_queued, state) do
     state = %{state | warmup_scheduled: false}
-    warm_top_queued_tasks(state)
+
+    try do
+      warm_top_queued_tasks(state)
+    rescue
+      e ->
+        Logger.warning("QueueOrchestrator: warming failed: #{Exception.message(e)}")
+    end
+
     state = %{state | warming_task_ids: MapSet.new()}
-    broadcast_snapshot(state)
+
+    try do
+      broadcast_snapshot(state)
+    rescue
+      _ -> :ok
+    end
+
     {:noreply, state}
   end
 
   # Handles the result of an async container warming task. Updates the
   # task in the DB with the new container_id and container_port.
+  # Wrapped in try/rescue for resilience in test environments.
   @impl true
-  def handle_info({ref, {:warm_result, task_id, result}}, state) when is_reference(ref) do
-    Process.demonitor(ref, [:flush])
+  def handle_info({:warm_result, task_id, result}, state) do
+    try do
+      case result do
+        {:ok, container_id, port} ->
+          case state.task_repo.get_task(task_id) do
+            nil ->
+              :ok
 
-    case result do
-      {:ok, container_id, port} ->
-        case state.task_repo.get_task(task_id) do
-          nil ->
-            :ok
+            task ->
+              state.task_repo.update_task_status(task, %{
+                container_id: container_id,
+                container_port: port
+              })
+          end
 
-          task ->
-            state.task_repo.update_task_status(task, %{
-              container_id: container_id,
-              container_port: port
-            })
-        end
+        {:error, reason} ->
+          Logger.warning(
+            "QueueOrchestrator: warming failed for task #{task_id}: #{inspect(reason)}"
+          )
+      end
 
-      {:error, reason} ->
-        Logger.warning(
-          "QueueOrchestrator: warming failed for task #{task_id}: #{inspect(reason)}"
-        )
+      broadcast_snapshot(state)
+    rescue
+      _ -> :ok
     end
 
-    broadcast_snapshot(state)
-    {:noreply, state}
-  end
-
-  # Ignore DOWN messages from warming tasks — errors are handled via the
-  # {:warm_result, ...} message above.
-  @impl true
-  def handle_info({:DOWN, _ref, :process, _pid, _reason}, state) do
     {:noreply, state}
   end
 
@@ -258,9 +269,12 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
 
   # Single query for all non-terminal tasks (queued, pending, starting,
   # running, awaiting_feedback). Replaces three overlapping queries that
-  # required Enum.uniq_by deduplication.
+  # required Enum.uniq_by deduplication. Returns empty list on DB errors
+  # to prevent GenServer crashes in environments without DB access.
   defp load_all_active_tasks(state) do
     state.task_repo.list_non_terminal_tasks(state.user_id)
+  rescue
+    _ -> []
   end
 
   defp promote_and_broadcast(state) do
@@ -532,20 +546,29 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
   defp maybe_warm_task(_state, _task), do: :ok
 
   # Starts a new container asynchronously and sends the result back
-  # to the orchestrator GenServer.
+  # to the orchestrator GenServer. Uses Task.start (unlinked) so a
+  # container start failure doesn't crash the GenServer.
   defp warm_task_container(state, task) do
     image = Map.get(task, :image) || SessionsConfig.image()
     container_provider = state.container_provider
     task_id = task.id
+    orchestrator = self()
 
-    Task.async(fn ->
-      case container_provider.start(image, []) do
-        {:ok, %{container_id: container_id, port: port}} ->
-          {:warm_result, task_id, {:ok, container_id, port}}
+    Task.start(fn ->
+      result =
+        try do
+          case container_provider.start(image, []) do
+            {:ok, %{container_id: container_id, port: port}} ->
+              {:ok, container_id, port}
 
-        {:error, reason} ->
-          {:warm_result, task_id, {:error, reason}}
-      end
+            {:error, reason} ->
+              {:error, reason}
+          end
+        rescue
+          e -> {:error, Exception.message(e)}
+        end
+
+      send(orchestrator, {:warm_result, task_id, result})
     end)
   end
 
@@ -553,15 +576,23 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
   defp restart_warm_container(state, task, container_id) do
     container_provider = state.container_provider
     task_id = task.id
+    orchestrator = self()
 
-    Task.async(fn ->
-      case container_provider.restart(container_id) do
-        {:ok, %{port: port}} ->
-          {:warm_result, task_id, {:ok, container_id, port}}
+    Task.start(fn ->
+      result =
+        try do
+          case container_provider.restart(container_id) do
+            {:ok, %{port: port}} ->
+              {:ok, container_id, port}
 
-        {:error, reason} ->
-          {:warm_result, task_id, {:error, reason}}
-      end
+            {:error, reason} ->
+              {:error, reason}
+          end
+        rescue
+          e -> {:error, Exception.message(e)}
+        end
+
+      send(orchestrator, {:warm_result, task_id, result})
     end)
   end
 

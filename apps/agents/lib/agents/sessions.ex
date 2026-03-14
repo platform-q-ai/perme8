@@ -32,6 +32,7 @@ defmodule Agents.Sessions do
   }
 
   alias Agents.Sessions.Application.SessionsConfig
+  alias Agents.Sessions.Domain.Entities.QueueSnapshot
   alias Agents.Sessions.Infrastructure.QueueOrchestrator
   alias Agents.Sessions.Infrastructure.QueueOrchestratorSupervisor
   alias Agents.Sessions.Domain.Entities.{Session, Task}
@@ -350,7 +351,7 @@ defmodule Agents.Sessions do
   end
 
   @doc """
-  Returns the current queue state for a user.
+  Returns the current queue state for a user as a legacy map.
 
   Ensures the queue backend is started for the user.
   Returns a map with `:running`, `:queued`, `:awaiting_feedback`, `:concurrency_limit`, and
@@ -362,6 +363,23 @@ defmodule Agents.Sessions do
       {:ok, _pid} -> QueueOrchestrator.get_queue_state(user_id)
       {:error, _reason} -> default_queue_state()
     end
+  end
+
+  @doc """
+  Returns the current queue snapshot for a user.
+
+  Returns a `QueueSnapshot` struct or `nil` if the backend is unavailable.
+  """
+  @spec get_queue_snapshot(String.t()) :: QueueSnapshot.t() | nil
+  def get_queue_snapshot(user_id) do
+    case ensure_queue_backend_started(user_id) do
+      {:ok, _pid} -> QueueOrchestrator.get_snapshot(user_id)
+      {:error, _reason} -> nil
+    end
+  rescue
+    _ -> nil
+  catch
+    :exit, _ -> nil
   end
 
   @doc """

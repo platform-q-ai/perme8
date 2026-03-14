@@ -278,7 +278,7 @@ defmodule AgentsWeb.DashboardLive.PubSubHandlers do
 
     # The task may have already been promoted (queued -> pending -> running)
     # before we subscribed above, so any PubSub broadcasts from the
-    # QueueManager/TaskRunner were lost. Refresh from DB to catch up.
+    # QueueOrchestrator/TaskRunner were lost. Refresh from DB to catch up.
     {:noreply, request_task_refresh(socket, task.id)}
   end
 
@@ -396,25 +396,6 @@ defmodule AgentsWeb.DashboardLive.PubSubHandlers do
      socket
      |> assign(:queue_snapshot, snapshot)
      |> assign(:queue_state, QueueSnapshot.to_legacy_map(snapshot))}
-  end
-
-  def queue_updated(user_id, queue_state, socket) do
-    if user_id == socket.assigns.current_scope.user.id do
-      sticky_warm_task_ids =
-        derive_sticky_warm_task_ids(
-          socket.assigns.sessions,
-          queue_state,
-          socket.assigns[:sticky_warm_task_ids] || MapSet.new()
-        )
-
-      # Queue metadata doesn't change ticket state — skip enrich_all.
-      {:noreply,
-       socket
-       |> assign(:queue_state, queue_state)
-       |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)}
-    else
-      {:noreply, socket}
-    end
   end
 
   def tickets_synced(socket) do

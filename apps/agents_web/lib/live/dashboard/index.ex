@@ -35,16 +35,8 @@ defmodule AgentsWeb.DashboardLive.Index do
     tasks = Sessions.list_tasks(user.id)
     tickets = Tickets.list_project_tickets(user.id, tasks: tasks)
     active_ticket_number = next_active_ticket_number(tickets, nil)
-    queue_state_or_snapshot = load_queue_state(user.id)
-
-    {queue_v2_enabled, queue_snapshot, queue_state} =
-      case queue_state_or_snapshot do
-        %QueueSnapshot{} = snapshot ->
-          {true, snapshot, QueueSnapshot.to_legacy_map(snapshot)}
-
-        queue_state when is_map(queue_state) ->
-          {false, nil, queue_state}
-      end
+    queue_snapshot = load_queue_state(user.id) || empty_queue_snapshot(user.id)
+    queue_state = QueueSnapshot.to_legacy_map(queue_snapshot)
 
     if connected?(socket) do
       subscribe_to_active_tasks(tasks)
@@ -78,7 +70,6 @@ defmodule AgentsWeb.DashboardLive.Index do
      |> assign(:optimistic_new_sessions, [])
      |> assign(:new_task_monitors, %{})
      |> assign(:pending_ticket_starts, %{})
-     |> assign(:queue_v2_enabled, queue_v2_enabled)
      |> assign(:queue_snapshot, queue_snapshot)
      |> assign(:queue_state, queue_state)
      |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)
@@ -341,10 +332,6 @@ defmodule AgentsWeb.DashboardLive.Index do
       do: PubSubHandlers.queue_snapshot(snapshot, socket)
 
   @impl true
-  def handle_info({:queue_updated, user_id, queue_state}, socket),
-    do: PubSubHandlers.queue_updated(user_id, queue_state, socket)
-
-  @impl true
   def handle_info({:tickets_synced, _tickets}, socket),
     do: PubSubHandlers.tickets_synced(socket)
 
@@ -399,5 +386,36 @@ defmodule AgentsWeb.DashboardLive.Index do
 
   def ticket_data_id(ticket) do
     Map.get(ticket, :external_id) || "ticket-#{ticket.number}"
+  end
+
+  defp empty_queue_snapshot(user_id) do
+    QueueSnapshot.new(%{
+      user_id: user_id,
+      lanes: %{
+        processing: [],
+        warm: [],
+        cold: [],
+        awaiting_feedback: [],
+        retry_pending: []
+      },
+      metadata: %{
+        concurrency_limit: Sessions.get_concurrency_limit(user_id),
+        running_count: 0,
+        warm_cache_limit: 2
+      }
+    })
+  rescue
+    _ ->
+      QueueSnapshot.new(%{
+        user_id: user_id,
+        lanes: %{
+          processing: [],
+          warm: [],
+          cold: [],
+          awaiting_feedback: [],
+          retry_pending: []
+        },
+        metadata: %{concurrency_limit: 2, running_count: 0, warm_cache_limit: 2}
+      })
   end
 end

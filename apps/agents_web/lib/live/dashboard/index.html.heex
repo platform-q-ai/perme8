@@ -702,11 +702,9 @@
       </div>
 
       <%!-- Queue panel --%>
-      <%= if @queue_v2_enabled and @queue_snapshot do %>
+      <%= if @queue_snapshot do %>
         <.queue_metadata snapshot={@queue_snapshot} />
         <.queue_lanes snapshot={@queue_snapshot} active_container_id={@active_container_id} />
-      <% else %>
-        <.queue_panel queue_state={@queue_state} user_id={@current_scope.user.id} />
       <% end %>
     </div>
 
