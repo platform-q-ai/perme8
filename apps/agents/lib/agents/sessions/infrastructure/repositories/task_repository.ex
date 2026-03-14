@@ -124,11 +124,12 @@ defmodule Agents.Sessions.Infrastructure.Repositories.TaskRepository do
   end
 
   @impl true
-  def get_tasks_by_ids([]), do: []
+  def get_tasks_by_ids([], _user_id), do: []
 
-  def get_tasks_by_ids(ids) when is_list(ids) do
+  def get_tasks_by_ids(ids, user_id) when is_list(ids) do
     TaskQueries.base()
-    |> where([t], t.id in ^ids)
+    |> TaskQueries.for_user(user_id)
+    |> TaskQueries.by_ids(ids)
     |> Repo.all()
   end
 end

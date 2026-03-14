@@ -183,14 +183,14 @@ defmodule Agents.Sessions do
   end
 
   @doc """
-  Fetches tasks by a list of IDs.
+  Fetches tasks by a list of IDs, scoped to a specific user.
 
   Used to backfill tasks that fall outside the default 50-task snapshot
   window but are still referenced by ticket FK associations.
   """
-  @spec get_tasks_by_ids([String.t()]) :: [struct()]
-  def get_tasks_by_ids(ids) do
-    TaskRepository.get_tasks_by_ids(ids)
+  @spec get_tasks_by_ids([String.t()], String.t()) :: [struct()]
+  def get_tasks_by_ids(ids, user_id) do
+    TaskRepository.get_tasks_by_ids(ids, user_id)
   end
 
   @doc """

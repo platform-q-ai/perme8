@@ -44,5 +44,5 @@ defmodule Agents.Sessions.Application.Behaviours.TaskRepositoryBehaviour do
 
   @callback get_max_queue_position(user_id) :: non_neg_integer() | nil
 
-  @callback get_tasks_by_ids([task_id]) :: [task]
+  @callback get_tasks_by_ids([task_id], user_id) :: [task]
 end
