@@ -5,6 +5,8 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestratorTest do
   alias Agents.Sessions.Domain.Entities.QueueSnapshot
   alias Agents.Sessions.Infrastructure.QueueOrchestrator
   alias Agents.Sessions.Infrastructure.Schemas.TaskSchema
+  alias Agents.Test.StubContainerProvider
+  alias Perme8.Events.TestEventBus
 
   import Agents.Test.AccountsFixtures
 
@@ -285,12 +287,12 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestratorTest do
         {:ok, self()}
       end
 
-      Perme8.Events.TestEventBus.start_global()
+      TestEventBus.start_global()
 
       start_orchestrator!(user.id,
         concurrency_limit: 2,
         pubsub: Perme8.Events.PubSub,
-        event_bus: Perme8.Events.TestEventBus,
+        event_bus: TestEventBus,
         task_runner_starter: runner_starter
       )
 
@@ -328,12 +330,12 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestratorTest do
         {:ok, self()}
       end
 
-      Perme8.Events.TestEventBus.start_global()
+      TestEventBus.start_global()
 
       start_orchestrator!(user.id,
         concurrency_limit: 2,
         pubsub: Perme8.Events.PubSub,
-        event_bus: Perme8.Events.TestEventBus,
+        event_bus: TestEventBus,
         task_runner_starter: runner_starter
       )
 
@@ -366,12 +368,12 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestratorTest do
         {:ok, self()}
       end
 
-      Perme8.Events.TestEventBus.start_global()
+      TestEventBus.start_global()
 
       start_orchestrator!(user.id,
         concurrency_limit: 2,
         pubsub: Perme8.Events.PubSub,
-        event_bus: Perme8.Events.TestEventBus,
+        event_bus: TestEventBus,
         task_runner_starter: runner_starter
       )
 
@@ -403,12 +405,12 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestratorTest do
         {:ok, self()}
       end
 
-      Perme8.Events.TestEventBus.start_global()
+      TestEventBus.start_global()
 
       start_orchestrator!(user.id,
         concurrency_limit: 2,
         pubsub: Perme8.Events.PubSub,
-        event_bus: Perme8.Events.TestEventBus,
+        event_bus: TestEventBus,
         task_runner_starter: runner_starter
       )
 
@@ -432,12 +434,12 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestratorTest do
           pending_question: %{"resume_prompt" => "try again"}
         })
 
-      Perme8.Events.TestEventBus.start_global()
+      TestEventBus.start_global()
 
       start_orchestrator!(user.id,
         concurrency_limit: 2,
         pubsub: Perme8.Events.PubSub,
-        event_bus: Perme8.Events.TestEventBus,
+        event_bus: TestEventBus,
         task_runner_starter: fn _task_id, _opts -> {:ok, self()} end
       )
 
@@ -478,7 +480,7 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestratorTest do
       call_counter = :counters.new(1, [:atomics])
 
       container_provider =
-        Agents.Test.StubContainerProvider.new(%{
+        StubContainerProvider.new(%{
           start: fn _image, _opts ->
             :counters.add(call_counter, 1, 1)
             count = :counters.get(call_counter, 1)
@@ -488,13 +490,13 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestratorTest do
           status: fn _id -> {:ok, :running} end
         })
 
-      Perme8.Events.TestEventBus.start_global()
+      TestEventBus.start_global()
 
       start_orchestrator!(user.id,
         concurrency_limit: 1,
         warm_cache_limit: 2,
         pubsub: Perme8.Events.PubSub,
-        event_bus: Perme8.Events.TestEventBus,
+        event_bus: TestEventBus,
         container_provider: container_provider
       )
 
@@ -538,7 +540,7 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestratorTest do
       test_pid = self()
 
       container_provider =
-        Agents.Test.StubContainerProvider.new(%{
+        StubContainerProvider.new(%{
           start: fn _image, _opts ->
             send(test_pid, :container_started)
             {:ok, %{container_id: "new-cid", port: 5000}}
@@ -546,13 +548,13 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestratorTest do
           status: fn "existing-cid" -> {:ok, :running} end
         })
 
-      Perme8.Events.TestEventBus.start_global()
+      TestEventBus.start_global()
 
       start_orchestrator!(user.id,
         concurrency_limit: 1,
         warm_cache_limit: 2,
         pubsub: Perme8.Events.PubSub,
-        event_bus: Perme8.Events.TestEventBus,
+        event_bus: TestEventBus,
         container_provider: container_provider
       )
 
@@ -583,7 +585,7 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestratorTest do
       test_pid = self()
 
       container_provider =
-        Agents.Test.StubContainerProvider.new(%{
+        StubContainerProvider.new(%{
           start: fn _image, _opts ->
             send(test_pid, :container_started)
             {:ok, %{container_id: "new-warm-cid", port: 5001}}
@@ -591,13 +593,13 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestratorTest do
           status: fn "gone-cid" -> {:ok, :not_found} end
         })
 
-      Perme8.Events.TestEventBus.start_global()
+      TestEventBus.start_global()
 
       start_orchestrator!(user.id,
         concurrency_limit: 1,
         warm_cache_limit: 2,
         pubsub: Perme8.Events.PubSub,
-        event_bus: Perme8.Events.TestEventBus,
+        event_bus: TestEventBus,
         container_provider: container_provider
       )
 
@@ -624,7 +626,7 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestratorTest do
       test_pid = self()
 
       container_provider =
-        Agents.Test.StubContainerProvider.new(%{
+        StubContainerProvider.new(%{
           start: fn _image, _opts ->
             send(test_pid, :container_started)
             {:ok, %{container_id: "cid", port: 4000}}
@@ -632,13 +634,13 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestratorTest do
           status: fn _id -> {:ok, :not_found} end
         })
 
-      Perme8.Events.TestEventBus.start_global()
+      TestEventBus.start_global()
 
       start_orchestrator!(user.id,
         concurrency_limit: 1,
         warm_cache_limit: 0,
         pubsub: Perme8.Events.PubSub,
-        event_bus: Perme8.Events.TestEventBus,
+        event_bus: TestEventBus,
         container_provider: container_provider
       )
 
@@ -668,7 +670,7 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestratorTest do
       test_pid = self()
 
       container_provider =
-        Agents.Test.StubContainerProvider.new(%{
+        StubContainerProvider.new(%{
           stop: fn container_id ->
             send(test_pid, {:container_stopped, container_id})
             :ok
@@ -679,13 +681,13 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestratorTest do
           end
         })
 
-      Perme8.Events.TestEventBus.start_global()
+      TestEventBus.start_global()
 
       start_orchestrator!(user.id,
         concurrency_limit: 1,
         warm_cache_limit: 2,
         pubsub: Perme8.Events.PubSub,
-        event_bus: Perme8.Events.TestEventBus,
+        event_bus: TestEventBus,
         container_provider: container_provider
       )
 
