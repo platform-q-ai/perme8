@@ -242,6 +242,51 @@ defmodule AgentsWeb.DashboardLive.TicketHandlers do
     end
   end
 
+  def update_ticket_labels(%{"number" => number_str, "labels" => labels_json}, socket)
+      when is_binary(labels_json) do
+    case Jason.decode(labels_json) do
+      {:ok, labels} when is_list(labels) ->
+        update_ticket_labels(%{"number" => number_str, "labels" => labels}, socket)
+
+      _ ->
+        {:noreply, socket}
+    end
+  end
+
+  def update_ticket_labels(%{"number" => number_str, "labels" => labels}, socket)
+      when is_list(labels) do
+    case Integer.parse(number_str) do
+      {number, ""} ->
+        # Optimistic update: immediately reflect the new labels in the UI
+        tickets =
+          update_ticket_by_number(socket.assigns.tickets, number, fn ticket ->
+            %{ticket | labels: labels}
+          end)
+
+        socket = assign(socket, :tickets, tickets)
+
+        # Persist to GitHub + local DB
+        case Tickets.update_ticket_labels(number, labels) do
+          :ok ->
+            {:noreply, socket}
+
+          {:error, _reason} ->
+            # Rollback: reload tickets from DB to restore accurate state
+            tickets = reload_tickets(socket)
+
+            {:noreply,
+             socket
+             |> assign(:tickets, tickets)
+             |> put_flash(:error, "Failed to update labels on GitHub. Please try again.")}
+        end
+
+      _ ->
+        {:noreply, socket}
+    end
+  end
+
+  def update_ticket_labels(_params, socket), do: {:noreply, socket}
+
   def remove_ticket_from_queue(%{"number" => number_str}, socket) do
     case Integer.parse(number_str) do
       {number, ""} ->
