@@ -10,6 +10,7 @@ defmodule Perme8Tools.MixProject do
       deps_path: "../../deps",
       lockfile: "../../mix.lock",
       elixir: "~> 1.15",
+      elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       compilers: [:boundary] ++ Mix.compilers(),
@@ -24,6 +25,9 @@ defmodule Perme8Tools.MixProject do
       mod: {Perme8Tools.Application, []}
     ]
   end
+
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(_), do: ["lib"]
 
   # Boundary configuration - tools app doesn't need strict boundaries
   defp boundary do
