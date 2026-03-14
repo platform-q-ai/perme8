@@ -47,39 +47,41 @@ defmodule AgentsWeb.DashboardLive.IndexTest do
 
   # Helper: convert a legacy queue state map to a QueueSnapshot and send
   # it as a :queue_snapshot message to the LiveView process.
+  #
+  # Handles warm_cache_limit (tasks within the limit go to warm lane),
+  # warm_task_ids (explicit warm tasks), and warming_task_ids (tasks
+  # currently being warmed, shown with warming animation).
   defp send_queue_state(lv, user_id, queue_state) do
     running_count = Map.get(queue_state, :running, 0)
     concurrency_limit = Map.get(queue_state, :concurrency_limit, 2)
-    warm_cache_limit = Map.get(queue_state, :warm_cache_limit, 2)
+    warm_cache_limit = Map.get(queue_state, :warm_cache_limit, 0)
     queued = Map.get(queue_state, :queued, [])
     awaiting_feedback = Map.get(queue_state, :awaiting_feedback, [])
-    warm_task_ids = Map.get(queue_state, :warm_task_ids, [])
+    warming_task_ids = Map.get(queue_state, :warming_task_ids, [])
+
+    # Split queued tasks: first warm_cache_limit go to warm lane, rest to cold
+    queued_ids =
+      Enum.map(queued, fn item ->
+        if is_map(item), do: Map.get(item, :id), else: item
+      end)
+
+    {warm_ids, cold_ids} = Enum.split(queued_ids, warm_cache_limit)
 
     warm_entries =
-      Enum.filter(queued, fn item ->
-        id = if is_map(item), do: Map.get(item, :id), else: item
-        id in warm_task_ids
-      end)
-      |> Enum.map(fn item ->
-        id = if is_map(item), do: Map.get(item, :id), else: item
+      Enum.map(warm_ids, fn id ->
+        ws = if id in warming_task_ids, do: :warming, else: :warm
 
         LaneEntry.new(%{
           task_id: id,
           instruction: "",
           status: "queued",
           lane: :warm,
-          warm_state: :warm
+          warm_state: ws
         })
       end)
 
     cold_entries =
-      Enum.reject(queued, fn item ->
-        id = if is_map(item), do: Map.get(item, :id), else: item
-        id in warm_task_ids
-      end)
-      |> Enum.map(fn item ->
-        id = if is_map(item), do: Map.get(item, :id), else: item
-
+      Enum.map(cold_ids, fn id ->
         LaneEntry.new(%{
           task_id: id,
           instruction: "",
@@ -2388,11 +2390,10 @@ defmodule AgentsWeb.DashboardLive.IndexTest do
 
       send_queue_state(lv, user.id, %{
         running: 0,
-        queued: [],
+        queued: [%{id: task.id}],
         awaiting_feedback: [],
         concurrency_limit: 2,
         warm_cache_limit: 1,
-        warm_task_ids: [task.id],
         warming_task_ids: [task.id]
       })
 

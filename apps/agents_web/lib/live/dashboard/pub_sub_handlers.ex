@@ -392,10 +392,20 @@ defmodule AgentsWeb.DashboardLive.PubSubHandlers do
   end
 
   def queue_snapshot(snapshot, socket) do
+    queue_state = QueueSnapshot.to_legacy_map(snapshot)
+
+    sticky_warm_task_ids =
+      derive_sticky_warm_task_ids(
+        socket.assigns.sessions,
+        queue_state,
+        socket.assigns[:sticky_warm_task_ids] || MapSet.new()
+      )
+
     {:noreply,
      socket
      |> assign(:queue_snapshot, snapshot)
-     |> assign(:queue_state, QueueSnapshot.to_legacy_map(snapshot))}
+     |> assign(:queue_state, queue_state)
+     |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)}
   end
 
   def tickets_synced(socket) do
