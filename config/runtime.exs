@@ -322,7 +322,7 @@ if neo4j_url do
     database: System.get_env("NEO4J_DATABASE", "neo4j")
 
   config :entity_relationship_manager,
-    neo4j_adapter: EntityRelationshipManager.Infrastructure.Adapters.Neo4jAdapter.BoltxAdapter
+    neo4j_adapter: EntityRelationshipManager.Infrastructure.Adapters.Neo4jAdapter.HttpAdapter
 end
 
 # ERM real repos flag — set by exo-bdd integration tests via ERM_REAL_REPOS=true

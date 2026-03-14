@@ -1,13 +1,10 @@
-defmodule EntityRelationshipManager.Infrastructure.Adapters.Neo4jAdapter.BoltxAdapter do
+defmodule EntityRelationshipManager.Infrastructure.Adapters.Neo4jAdapter.HttpAdapter do
   @moduledoc """
   Real Neo4j adapter using the Neo4j HTTP Transactional API.
 
   Executes Cypher queries against a running Neo4j instance over HTTP.
   No external Bolt driver dependency is required — uses `Req` for HTTP
   requests.
-
-  Despite the module name (kept for consistency with existing references),
-  this adapter communicates over HTTP, not Bolt.
 
   ## Configuration
 
@@ -16,6 +13,9 @@ defmodule EntityRelationshipManager.Infrastructure.Adapters.Neo4jAdapter.BoltxAd
         auth: [username: "neo4j", password: "password"],
         database: "neo4j"
   """
+
+  # 15-second connect + receive timeout for Neo4j HTTP calls.
+  @req_timeout_ms :timer.seconds(15)
 
   @doc """
   Execute a parameterized Cypher query against Neo4j.
@@ -50,7 +50,9 @@ defmodule EntityRelationshipManager.Infrastructure.Adapters.Neo4jAdapter.BoltxAd
     case Req.post(tx_url,
            json: body,
            auth: {:basic, "#{username}:#{password}"},
-           headers: [{"accept", "application/json"}]
+           headers: [{"accept", "application/json"}],
+           connect_options: [timeout: @req_timeout_ms],
+           receive_timeout: @req_timeout_ms
          ) do
       {:ok, %Req.Response{status: 200, body: %{"results" => results, "errors" => []}}} ->
         records = parse_results(results)

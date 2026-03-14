@@ -72,7 +72,7 @@ config :entity_relationship_manager, :neo4j,
   database: "neo4j"
 
 config :entity_relationship_manager,
-  neo4j_adapter: EntityRelationshipManager.Infrastructure.Adapters.Neo4jAdapter.BoltxAdapter
+  neo4j_adapter: EntityRelationshipManager.Infrastructure.Adapters.Neo4jAdapter.HttpAdapter
 
 # Entity Relationship Manager dev configuration (Graph API on port 4005)
 config :entity_relationship_manager, EntityRelationshipManager.Endpoint,
