@@ -62,7 +62,19 @@ defmodule Mix.Tasks.AffectedApps do
     changed_files = get_changed_files(opts, file_args)
 
     # 2. Build dependency graph
-    {:ok, graph} = GraphDiscovery.build_graph(umbrella_root)
+    graph =
+      case GraphDiscovery.build_graph(umbrella_root) do
+        {:ok, graph} ->
+          graph
+
+        {:error, :circular_dependency, cycle} ->
+          Mix.raise("""
+          Circular dependency detected in umbrella apps: #{inspect(cycle)}
+
+          Fix the circular dependency in the affected apps' mix.exs files.
+          """)
+      end
+
     known_apps = graph |> DependencyGraph.all_apps() |> MapSet.to_list()
 
     # 3. Classify files
