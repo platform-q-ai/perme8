@@ -246,7 +246,11 @@ defmodule AgentsWeb.DashboardLive.TicketHandlers do
       when is_binary(labels_json) do
     case Jason.decode(labels_json) do
       {:ok, labels} when is_list(labels) ->
-        update_ticket_labels(%{"number" => number_str, "labels" => labels}, socket)
+        if valid_labels?(labels) do
+          update_ticket_labels(%{"number" => number_str, "labels" => labels}, socket)
+        else
+          {:noreply, socket}
+        end
 
       _ ->
         {:noreply, socket}
@@ -306,6 +310,12 @@ defmodule AgentsWeb.DashboardLive.TicketHandlers do
       _ ->
         {:noreply, socket}
     end
+  end
+
+  @allowed_labels AgentsWeb.DashboardLive.Helpers.available_labels() |> MapSet.new()
+
+  defp valid_labels?(labels) do
+    Enum.all?(labels, &(is_binary(&1) and MapSet.member?(@allowed_labels, &1)))
   end
 
   defp cancel_and_unlink_ticket(ticket, number, socket) do
