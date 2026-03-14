@@ -57,6 +57,7 @@ defmodule EntityRelationshipManager.MixProject do
       {:jarga, in_umbrella: true},
       {:identity, in_umbrella: true},
       {:jason, "~> 1.2"},
+      {:req, "~> 0.5"},
       {:bandit, "~> 1.5"},
       {:boundary, "~> 0.10", runtime: false},
       {:mox, "~> 1.0", only: :test}

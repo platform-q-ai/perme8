@@ -42,6 +42,23 @@ services:
         echo "pg_backup: cron scheduled (hourly). Waiting..."
         crond -f -l 2
 
+  neo4j:
+    image: neo4j:5-community
+    container_name: perme8_neo4j
+    environment:
+      NEO4J_AUTH: neo4j/password
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    volumes:
+      - neo4j_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "cypher-shell -u neo4j -p password 'RETURN 1'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 volumes:
   postgres_data:
   postgres_backups:
+  neo4j_data:
