@@ -12,6 +12,7 @@ defmodule AgentsWeb.DashboardLive.TicketHandlers do
 
   alias Agents.Sessions
   alias Agents.Tickets
+  alias Agents.Tickets.Domain.Entities.Ticket
   alias AgentsWeb.DashboardLive.TicketSessionLinker
 
   require Logger
@@ -175,7 +176,6 @@ defmodule AgentsWeb.DashboardLive.TicketHandlers do
   end
 
   defp do_start_ticket_session(number, socket) do
-    alias Agents.Tickets.Domain.Entities.Ticket
     ticket = find_ticket_by_number(socket.assigns.tickets, number)
 
     cond do
