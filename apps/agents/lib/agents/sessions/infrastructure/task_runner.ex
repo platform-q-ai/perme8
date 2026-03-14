@@ -170,6 +170,12 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
         state = %{state | session: session}
 
+        prewarmed_opts = %{
+          container_id: prewarmed_container_id,
+          container_port: prewarmed_container_port,
+          already_healthy: already_healthy
+        }
+
         state =
           initialize_lifecycle(
             state,
@@ -178,9 +184,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
             prompt_instruction,
             resume_container_id,
             resume_session_id,
-            prewarmed_container_id,
-            prewarmed_container_port,
-            already_healthy
+            prewarmed_opts
           )
 
         {:ok, state}
@@ -1325,9 +1329,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
          prompt_instruction,
          resume_container_id,
          resume_session_id,
-         _prewarmed_container_id,
-         _prewarmed_container_port,
-         _already_healthy
+         _prewarmed_opts
        ) do
     existing_parts = restore_output_parts(task.output)
     existing_todos = restore_todo_items(task.todo_items)
@@ -1356,15 +1358,13 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
          _prompt_instruction,
          _resume_container_id,
          _resume_session_id,
-         prewarmed_container_id,
-         prewarmed_container_port,
-         already_healthy
+         prewarmed_opts
        ) do
     maybe_start_from_prewarmed(
       state,
-      prewarmed_container_id,
-      prewarmed_container_port,
-      already_healthy
+      prewarmed_opts.container_id,
+      prewarmed_opts.container_port,
+      prewarmed_opts.already_healthy
     )
   end
 

@@ -19,6 +19,7 @@ defmodule Agents.Test.StubContainerProvider do
   Creates a new StubContainerProvider backed by a uniquely named ETS table.
   Returns a dynamically defined module that the QueueOrchestrator can call.
   """
+  # credo:disable-for-next-line Credo.Check.Refactor.CyclomaticComplexity
   def new(fns) when is_map(fns) do
     table_name = :"stub_container_#{System.unique_integer([:positive, :monotonic])}"
     :ets.new(table_name, [:named_table, :public, :set])
