@@ -124,24 +124,17 @@ defmodule Mix.Tasks.AffectedApps do
   # --- Private ---
 
   defp find_umbrella_root do
-    # In an umbrella project, Mix.Project.config()[:apps_path] is set.
-    # The umbrella root is two levels up from any app directory.
-    case Mix.Project.config()[:apps_path] do
-      nil ->
-        # We might be running from the umbrella root itself
-        cwd = File.cwd!()
+    # Walk up from cwd looking for a directory containing `apps/`
+    find_umbrella_root(File.cwd!())
+  end
 
-        if File.dir?(Path.join(cwd, "apps")) do
-          cwd
-        else
-          # Try going up from an app directory
-          Path.expand("../..", cwd)
-        end
+  defp find_umbrella_root("/"), do: File.cwd!()
 
-      _apps_path ->
-        # In an umbrella app, go up to the root
-        build_path = Mix.Project.config()[:build_path] || "../../_build"
-        Path.expand(Path.join(build_path, ".."), File.cwd!())
+  defp find_umbrella_root(dir) do
+    if File.dir?(Path.join(dir, "apps")) do
+      dir
+    else
+      find_umbrella_root(Path.dirname(dir))
     end
   end
 
