@@ -165,7 +165,7 @@ defmodule Perme8Tools.AffectedApps.DependencyGraph do
         {:halt, {:cycle, extract_cycle(dep, path)}}
 
       :white ->
-        case visit(dep, adjacency, colors, path ++ [dep]) do
+        case visit(dep, adjacency, colors, [dep | path]) do
           {:cycle, cycle} -> {:halt, {:cycle, cycle}}
           {:ok, new_colors} -> {:cont, {:ok, new_colors}}
         end
@@ -175,9 +175,11 @@ defmodule Perme8Tools.AffectedApps.DependencyGraph do
     end
   end
 
-  defp extract_cycle(dep, path) do
+  defp extract_cycle(dep, reversed_path) do
+    path = Enum.reverse(reversed_path)
+
     case Enum.find_index(path, &(&1 == dep)) do
-      nil -> [dep | path] |> Enum.reverse()
+      nil -> [dep | path]
       idx -> Enum.slice(path, idx..-1//1)
     end
   end
