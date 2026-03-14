@@ -24,8 +24,8 @@ defmodule Perme8Tools.AffectedApps.MixExsParser do
   @spec parse_in_umbrella_deps(String.t()) :: [atom()]
   def parse_in_umbrella_deps(content) when is_binary(content) do
     # Match dep tuples that contain `in_umbrella: true`
-    # The regex captures the full dep tuple so we can check for `only: :test`
-    ~r/\{:(\w+),\s*in_umbrella:\s*true[^}]*\}/
+    # Uses the `s` flag so `.` and `\s` match across newlines for multi-line declarations
+    ~r/\{:(\w+),\s*in_umbrella:\s*true[^}]*\}/s
     |> Regex.scan(content)
     |> Enum.reject(fn [full_match, _name] ->
       Regex.match?(~r/only:\s*:test/, full_match)

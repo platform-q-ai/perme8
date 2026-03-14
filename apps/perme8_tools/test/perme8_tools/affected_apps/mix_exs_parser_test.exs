@@ -109,9 +109,8 @@ defmodule Perme8Tools.AffectedApps.MixExsParserTest do
       end
       """
 
-      # The regex matches single-line tuples; multi-line where in_umbrella
-      # is on a different line but still within the same {} should still match
       result = MixExsParser.parse_in_umbrella_deps(content)
+      assert :perme8_events in result
       assert :identity in result
     end
 
