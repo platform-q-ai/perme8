@@ -174,6 +174,43 @@ defmodule Agents.Tickets do
     end
   end
 
+  @doc """
+  Updates labels on a project ticket on GitHub first, then persists locally.
+
+  If the GitHub update fails (except :not_found), the local record is left
+  unchanged and an error is returned so the caller can surface it to the user.
+
+  ## Options
+
+    * `:github_client` - module implementing `GithubTicketClientBehaviour`
+      (defaults to application config `:github_ticket_client` or
+      `GithubProjectClient`)
+  """
+  @spec update_ticket_labels(integer(), [String.t()], keyword()) :: :ok | {:error, term()}
+  def update_ticket_labels(number, labels, opts \\ [])
+      when is_integer(number) and is_list(labels) do
+    client = Keyword.get_lazy(opts, :github_client, &github_client/0)
+
+    github_opts = [
+      token: TicketsConfig.github_token(),
+      org: TicketsConfig.github_org(),
+      repo: TicketsConfig.github_repo()
+    ]
+
+    case client.update_issue(number, %{labels: labels}, github_opts) do
+      {:ok, _issue} ->
+        ProjectTicketRepository.update_labels(number, labels)
+        :ok
+
+      {:error, :not_found} ->
+        ProjectTicketRepository.update_labels(number, labels)
+        :ok
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
   defp github_client do
     Application.get_env(
       :agents,
