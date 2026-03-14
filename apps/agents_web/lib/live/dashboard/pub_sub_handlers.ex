@@ -529,4 +529,25 @@ defmodule AgentsWeb.DashboardLive.PubSubHandlers do
        MapSet.delete(socket.assigns[:refreshing_task_ids] || MapSet.new(), task_id)
      )}
   end
+
+  def sessions_orphaned(count, _task_ids, socket) do
+    user = socket.assigns.current_scope.user
+
+    # Reload sessions and tasks so the UI immediately shows the failed state
+    sessions = Sessions.list_sessions(user.id)
+    tasks = Sessions.list_tasks(user.id)
+
+    tickets =
+      Agents.Tickets.list_project_tickets(user.id, tasks: tasks)
+
+    message =
+      "#{count} active session#{if count > 1, do: "s were", else: " was"} interrupted by a server restart. You can restart them from the session list."
+
+    {:noreply,
+     socket
+     |> assign(:sessions, sessions)
+     |> assign(:tasks_snapshot, tasks)
+     |> assign(:tickets, tickets)
+     |> put_flash(:info, message)}
+  end
 end
