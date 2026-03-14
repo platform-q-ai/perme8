@@ -66,10 +66,6 @@ defmodule Perme8Tools.AffectedApps.OutputFormatter do
     if MapSet.size(apps) == 0, do: [], else: ["", "Unit tests: (no apps to test)"]
   end
 
-  defp format_exo_bdd_section(%{exo_bdd_combos: [], all_exo_bdd?: true}) do
-    ["", "Exo-BDD: ALL combos (framework change)"]
-  end
-
   defp format_exo_bdd_section(%{exo_bdd_combos: []}) do
     []
   end
