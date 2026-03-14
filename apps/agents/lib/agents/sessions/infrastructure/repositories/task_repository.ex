@@ -122,4 +122,13 @@ defmodule Agents.Sessions.Infrastructure.Repositories.TaskRepository do
     TaskQueries.max_queue_position(user_id)
     |> Repo.one()
   end
+
+  @impl true
+  def get_tasks_by_ids([]), do: []
+
+  def get_tasks_by_ids(ids) when is_list(ids) do
+    TaskQueries.base()
+    |> where([t], t.id in ^ids)
+    |> Repo.all()
+  end
 end
