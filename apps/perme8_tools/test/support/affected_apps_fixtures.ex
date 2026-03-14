@@ -37,7 +37,6 @@ defmodule Perme8Tools.AffectedApps.Fixtures do
       chat_web: [:chat, :identity, :agents],
       webhooks_api: [:webhooks, :identity, :jarga, :perme8_plugs],
       exo_dashboard: [],
-      perme8_dashboard: [:exo_dashboard, :agents_web, :identity, :jarga],
       alkali: [],
       perme8_tools: []
     }

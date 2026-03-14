@@ -93,7 +93,7 @@ defmodule Mix.Tasks.AffectedAppsTest do
       {:ok, decoded} = Jason.decode(output)
       assert decoded["all_exo_bdd"] == true
       assert decoded["affected_apps"] == []
-      assert length(decoded["exo_bdd_combos"]) == 20
+      assert length(decoded["exo_bdd_combos"]) == 18
     end
 
     test "docs file triggers no affected apps" do

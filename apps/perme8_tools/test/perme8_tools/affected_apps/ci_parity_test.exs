@@ -72,13 +72,6 @@ defmodule Perme8Tools.AffectedApps.CiParityTest do
 
       assert "exo-dashboard" in apps
     end
-
-    test "perme8_dashboard change -> perme8-dashboard combos (matches Python)", %{graph: graph} do
-      combos = compute_exo_combos(["apps/perme8_dashboard/lib/perme8_dashboard.ex"], graph)
-      apps = Enum.map(combos, & &1.app) |> Enum.uniq()
-
-      assert "perme8-dashboard" in apps
-    end
   end
 
   describe "CI parity: trigger-all scenarios" do
@@ -86,12 +79,12 @@ defmodule Perme8Tools.AffectedApps.CiParityTest do
       graph: graph
     } do
       combos = compute_exo_combos(["config/config.exs"], graph)
-      assert length(combos) == 20
+      assert length(combos) == 18
     end
 
     test "tools/exo-bdd change -> all combos (matches Python exo_bdd_changed)", %{graph: graph} do
       combos = compute_exo_combos(["tools/exo-bdd/src/runner.ts"], graph)
-      assert length(combos) == 20
+      assert length(combos) == 18
     end
   end
 

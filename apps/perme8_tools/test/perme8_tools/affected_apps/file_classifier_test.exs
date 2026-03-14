@@ -17,7 +17,6 @@ defmodule Perme8Tools.AffectedApps.FileClassifierTest do
     :jarga_api,
     :jarga_web,
     :notifications,
-    :perme8_dashboard,
     :perme8_events,
     :perme8_plugs,
     :perme8_tools,

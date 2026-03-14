@@ -18,9 +18,9 @@ defmodule Perme8Tools.AffectedApps.GraphDiscoveryTest do
       assert :perme8_events in apps
     end
 
-    test "discovers the expected number of apps (19)" do
+    test "discovers the expected number of apps (18)" do
       apps = GraphDiscovery.discover_apps(@umbrella_root)
-      assert length(apps) == 19
+      assert length(apps) == 18
     end
 
     test "returns sorted list" do
@@ -45,9 +45,9 @@ defmodule Perme8Tools.AffectedApps.GraphDiscoveryTest do
       assert %DependencyGraph{} = graph
     end
 
-    test "discovered graph has all 19 apps" do
+    test "discovered graph has all 18 apps" do
       {:ok, graph} = GraphDiscovery.build_graph(@umbrella_root)
-      assert MapSet.size(DependencyGraph.all_apps(graph)) == 19
+      assert MapSet.size(DependencyGraph.all_apps(graph)) == 18
     end
 
     test "identity depends on perme8_events and perme8_plugs" do

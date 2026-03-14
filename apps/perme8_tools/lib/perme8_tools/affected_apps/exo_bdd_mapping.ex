@@ -31,8 +31,6 @@ defmodule Perme8Tools.AffectedApps.ExoBddMapping do
     %{app: "jarga-web", domain: "browser", config_name: "jarga-web", timeout: 15},
     %{app: "jarga-web", domain: "security", config_name: "jarga-web", timeout: 15},
     %{app: "exo-dashboard", domain: "browser", config_name: "exo-dashboard", timeout: 10},
-    %{app: "perme8-dashboard", domain: "browser", config_name: "perme8-dashboard", timeout: 10},
-    %{app: "perme8-dashboard", domain: "security", config_name: "perme8-dashboard", timeout: 15},
     %{app: "webhooks-api", domain: "http", config_name: "webhooks-api", timeout: 10},
     %{app: "webhooks-api", domain: "security", config_name: "webhooks-api", timeout: 15}
   ]
@@ -54,7 +52,6 @@ defmodule Perme8Tools.AffectedApps.ExoBddMapping do
     jarga_api: "jarga-api",
     jarga_web: "jarga-web",
     exo_dashboard: "exo-dashboard",
-    perme8_dashboard: "perme8-dashboard",
     webhooks_api: "webhooks-api"
   }
 

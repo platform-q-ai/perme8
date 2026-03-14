@@ -4,9 +4,9 @@ defmodule Perme8Tools.AffectedApps.ExoBddMappingTest do
   alias Perme8Tools.AffectedApps.ExoBddMapping
 
   describe "all_combos/0" do
-    test "returns 20 combos matching CI ALL_COMBOS" do
+    test "returns 18 combos matching CI ALL_COMBOS" do
       combos = ExoBddMapping.all_combos()
-      assert length(combos) == 20
+      assert length(combos) == 18
     end
 
     test "each combo has required keys" do
@@ -31,7 +31,6 @@ defmodule Perme8Tools.AffectedApps.ExoBddMappingTest do
                "identity",
                "jarga-api",
                "jarga-web",
-               "perme8-dashboard",
                "webhooks-api"
              ]
     end
@@ -89,7 +88,7 @@ defmodule Perme8Tools.AffectedApps.ExoBddMappingTest do
 
     test "all_exo_bdd option returns all combos" do
       combos = ExoBddMapping.exo_bdd_combos(MapSet.new(), all_exo_bdd?: true)
-      assert length(combos) == 20
+      assert length(combos) == 18
     end
 
     test "perme8_tools has no exo-bdd combos" do

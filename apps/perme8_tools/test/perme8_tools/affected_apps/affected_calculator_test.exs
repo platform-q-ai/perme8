@@ -33,7 +33,6 @@ defmodule Perme8Tools.AffectedApps.AffectedCalculatorTest do
       assert :webhooks in result.affected_apps
       assert :webhooks_api in result.affected_apps
       assert :entity_relationship_manager in result.affected_apps
-      assert :perme8_dashboard in result.affected_apps
 
       # Independent apps not affected
       refute :alkali in result.affected_apps
@@ -89,7 +88,7 @@ defmodule Perme8Tools.AffectedApps.AffectedCalculatorTest do
       result = AffectedCalculator.calculate(classification, graph)
 
       assert result.all_apps? == true
-      assert MapSet.size(result.affected_apps) == 19
+      assert MapSet.size(result.affected_apps) == 18
     end
 
     test "empty file list returns empty affected set", %{graph: graph} do

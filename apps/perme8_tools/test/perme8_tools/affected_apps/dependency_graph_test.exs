@@ -25,7 +25,7 @@ defmodule Perme8Tools.AffectedApps.DependencyGraphTest do
 
     test "builds successfully with the full Perme8 dependency map" do
       assert {:ok, graph} = DependencyGraph.build(@perme8_deps)
-      assert MapSet.size(DependencyGraph.all_apps(graph)) == 19
+      assert MapSet.size(DependencyGraph.all_apps(graph)) == 18
     end
 
     test "detects circular dependencies" do
@@ -101,7 +101,6 @@ defmodule Perme8Tools.AffectedApps.DependencyGraphTest do
       assert :agents_web in dependents
       assert :webhooks in dependents
       assert :webhooks_api in dependents
-      assert :perme8_dashboard in dependents
 
       # Should NOT include apps with no dependency path
       refute :alkali in dependents
@@ -128,7 +127,6 @@ defmodule Perme8Tools.AffectedApps.DependencyGraphTest do
       assert :webhooks in dependents
       assert :webhooks_api in dependents
       assert :entity_relationship_manager in dependents
-      assert :perme8_dashboard in dependents
     end
 
     test "jarga_web has no dependents (leaf interface app)" do
