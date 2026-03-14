@@ -14,6 +14,7 @@ defmodule AgentsWeb.DashboardLive.TicketHandlersTest do
   alias Agents.Sessions.Infrastructure.Schemas.TaskSchema
   alias Agents.Tickets.Infrastructure.Repositories.ProjectTicketRepository
   alias Agents.Repo
+  alias Ecto.Adapters.SQL.Sandbox
 
   # Polls the database until a task matching the query appears, with exponential backoff.
   # Avoids brittle Process.sleep with a fixed duration.
@@ -45,7 +46,7 @@ defmodule AgentsWeb.DashboardLive.TicketHandlersTest do
       user = user_fixture()
       # Allow sandbox access from spawned processes (start_ticket_session
       # uses spawn_monitor to create the task asynchronously).
-      Ecto.Adapters.SQL.Sandbox.mode(Repo, {:shared, self()})
+      Sandbox.mode(Repo, {:shared, self()})
 
       %{conn: log_in_user(conn, user), user: user}
     end

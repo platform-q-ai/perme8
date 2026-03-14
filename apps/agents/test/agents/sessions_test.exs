@@ -3,6 +3,7 @@ defmodule Agents.SessionsTest do
 
   alias Agents.Sessions
   alias Agents.Sessions.Domain.Entities.Task
+  alias Agents.Sessions.Infrastructure.OrphanRecovery
   alias Agents.Tickets
   alias Agents.Tickets.Domain.Entities.Ticket
   alias Agents.Tickets.Infrastructure.Schemas.ProjectTicketSchema
@@ -757,7 +758,7 @@ defmodule Agents.SessionsTest do
   describe "restart_orphaned_task/3" do
     test "restarts a task that was orphaned by server restart" do
       user = user_fixture()
-      orphan_prefix = Agents.Sessions.Infrastructure.OrphanRecovery.orphan_error_prefix()
+      orphan_prefix = OrphanRecovery.orphan_error_prefix()
 
       task =
         task_fixture(%{

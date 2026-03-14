@@ -38,6 +38,7 @@ defmodule Agents.Sessions do
   alias Agents.Sessions.Domain.Entities.{Session, Task}
   alias Agents.Sessions.Infrastructure.Repositories.TaskRepository
   alias Agents.Repo
+  alias Agents.Sessions.Infrastructure.OrphanRecovery
   alias Agents.Sessions.Infrastructure.TaskRunnerSupervisor
   alias Ecto.Adapters.SQL
 
@@ -157,7 +158,7 @@ defmodule Agents.Sessions do
   end
 
   defp validate_orphaned(task) do
-    orphan_prefix = Agents.Sessions.Infrastructure.OrphanRecovery.orphan_error_prefix()
+    orphan_prefix = OrphanRecovery.orphan_error_prefix()
 
     if task.status == "failed" and
          is_binary(task.error) and
