@@ -1,8 +1,13 @@
 defmodule AgentsWeb.DashboardLive.PubSubHandlers do
   @moduledoc "Processes PubSub messages (task events, queue updates, ticket syncs) for the dashboard LiveView."
 
+  use Phoenix.VerifiedRoutes,
+    endpoint: AgentsWeb.Endpoint,
+    router: AgentsWeb.Router,
+    statics: AgentsWeb.static_paths()
+
   import Phoenix.Component, only: [assign: 3]
-  import Phoenix.LiveView, only: [clear_flash: 1, put_flash: 3]
+  import Phoenix.LiveView, only: [clear_flash: 1, push_patch: 2, put_flash: 3]
   import AgentsWeb.DashboardLive.SessionDataHelpers
 
   import AgentsWeb.DashboardLive.Helpers,
@@ -243,6 +248,9 @@ defmodule AgentsWeb.DashboardLive.PubSubHandlers do
     optimistic_entry = Enum.find(socket.assigns.optimistic_new_sessions, &(&1.id == client_id))
     task = resolve_new_task_ack_task(task, user.id, optimistic_entry)
 
+    # Check if this task was started from a ticket before clearing the map.
+    ticket_number = Map.get(socket.assigns.pending_ticket_starts, client_id)
+
     # Subscribe to this task's PubSub topic so we receive status updates
     # (starting, running, completed, etc.). Must happen before the refresh
     # request below to avoid missing broadcasts after the refresh reads.
@@ -275,6 +283,38 @@ defmodule AgentsWeb.DashboardLive.PubSubHandlers do
       )
       |> assign(:sessions, sessions)
       |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)
+
+    # If this task was started from a ticket, set current_task and navigate
+    # to the session so the user can see the chat and streaming output.
+    # Without this, the LiveView stays on the previous view, current_task
+    # is never set, and all SSE events are silently discarded by the
+    # task_event guard in task_event/3.
+    #
+    # The task may not have a container_id yet (still "queued"), but setting
+    # current_task ensures events are processed once the TaskRunner starts.
+    # Navigation uses the container_id if available, otherwise just
+    # sets current_task and lets the task_status_updated handler navigate
+    # when the container becomes available.
+    socket =
+      if ticket_number do
+        socket =
+          socket
+          |> assign(:current_task, task)
+          |> assign(:active_ticket_number, ticket_number)
+          |> assign(:composing_new, false)
+          |> assign(:events, [])
+          |> assign_session_state()
+
+        if task.container_id do
+          socket
+          |> assign(:active_container_id, task.container_id)
+          |> push_patch(to: ~p"/sessions?#{%{container: task.container_id, tab: "ticket"}}")
+        else
+          socket
+        end
+      else
+        socket
+      end
 
     # The task may have already been promoted (queued -> pending -> running)
     # before we subscribed above, so any PubSub broadcasts from the

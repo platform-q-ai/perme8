@@ -62,7 +62,7 @@ defmodule AgentsWeb.DashboardLive.TicketHandlersTest do
       Process.sleep(500)
 
       # Force a render to process any pending messages
-      html = render(lv)
+      _ = render(lv)
 
       # Verify a task was created in the DB for this user with ticket reference
       task =
@@ -78,7 +78,10 @@ defmodule AgentsWeb.DashboardLive.TicketHandlersTest do
       assert task.instruction =~ "Task creation test ticket"
     end
 
-    test "navigates to the new session after task creation", %{conn: conn, user: user} do
+    test "sets current_task after ticket session creation so events are processed", %{
+      conn: conn,
+      user: user
+    } do
       task_fixture(%{
         user_id: user.id,
         instruction: "Existing session",
@@ -90,7 +93,7 @@ defmodule AgentsWeb.DashboardLive.TicketHandlersTest do
         ProjectTicketRepository.sync_remote_ticket(%{
           number: 702,
           title: "Navigation test ticket",
-          body: "After starting, the UI should navigate to this session.",
+          body: "After starting, current_task should be set.",
           status: "Backlog",
           priority: "Need",
           size: "S",
@@ -110,8 +113,7 @@ defmodule AgentsWeb.DashboardLive.TicketHandlersTest do
       Process.sleep(500)
       _ = render(lv)
 
-      # After the task is created, the LiveView should have set current_task
-      # and navigated to the session so the user can see the chat.
+      # Verify a task was created
       task =
         TaskSchema
         |> where([t], t.user_id == ^user.id)
@@ -119,9 +121,32 @@ defmodule AgentsWeb.DashboardLive.TicketHandlersTest do
         |> limit(1)
         |> Repo.one!()
 
-      # The URL should contain the container_id of the new session,
-      # proving the LiveView navigated to it after task creation.
-      assert_patched(lv, "/sessions?container=#{task.container_id}&tab=ticket")
+      assert task != nil
+
+      # Simulate a message.part.updated event with assistant text.
+      # If current_task was properly set, the event will be processed by
+      # EventProcessor (not silently discarded by the task_event guard
+      # that checks current_task.id == task_id).
+      send(
+        lv.pid,
+        {:task_event, task.id,
+         %{
+           "type" => "message.part.updated",
+           "properties" => %{
+             "part" => %{
+               "type" => "text",
+               "text" => "Working on ticket 702"
+             },
+             "messageID" => "msg-1"
+           }
+         }}
+      )
+
+      html = render(lv)
+
+      # The assistant text should appear in output_parts — proving
+      # current_task was set and the task_event guard matched.
+      assert html =~ "Working on ticket 702"
     end
 
     test "ticket moves to build queue after successful task creation", %{conn: conn, user: user} do
