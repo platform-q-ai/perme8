@@ -9,7 +9,7 @@ defmodule Agents.Sessions.Infrastructure.OrphanRecovery do
 
   Designed to run once during application boot as a `Task` child in the
   supervision tree, after the Repo is started but before other session
-  infrastructure (TaskRunnerSupervisor, QueueManagerSupervisor).
+  infrastructure (TaskRunnerSupervisor, QueueOrchestratorSupervisor).
   """
 
   require Logger

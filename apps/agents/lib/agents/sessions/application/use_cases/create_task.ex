@@ -25,7 +25,7 @@ defmodule Agents.Sessions.Application.UseCases.CreateTask do
   - `opts` - Keyword list with:
     - `:task_repo` - Repository module (default: TaskRepository)
     - `:task_runner_starter` - Function to start a TaskRunner (default: TaskRunnerSupervisor.start_child)
-    - `:queue_manager` - QueueManager module (default: QueueManager)
+    - `:queue_orchestrator` - QueueOrchestrator module (default: QueueOrchestrator)
 
   ## Returns
   - `{:ok, task}` - Domain entity on success
