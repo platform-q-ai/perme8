@@ -172,6 +172,19 @@ defmodule Agents.Tickets.Infrastructure.Repositories.ProjectTicketRepository do
   end
 
   @doc """
+  Updates the labels on a ticket by its issue number.
+  Returns `{:ok, ticket}` if the ticket existed, `{:error, :not_found}` otherwise.
+  """
+  @spec update_labels(integer(), [String.t()]) ::
+          {:ok, ProjectTicketSchema.t()} | {:error, :not_found}
+  def update_labels(number, labels) when is_integer(number) and is_list(labels) do
+    case Repo.get_by(ProjectTicketSchema, number: number) do
+      nil -> {:error, :not_found}
+      ticket -> ticket |> ProjectTicketSchema.changeset(%{labels: labels}) |> Repo.update()
+    end
+  end
+
+  @doc """
   Marks a ticket as closed by its issue number.
   Returns `{:ok, ticket}` if the ticket existed, `{:error, :not_found}` otherwise.
   """

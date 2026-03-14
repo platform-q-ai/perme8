@@ -195,6 +195,29 @@ defmodule AgentsWeb.DashboardLive.HelpersTest do
     end
   end
 
+  describe "available_labels/0" do
+    test "returns a sorted list of all known label strings" do
+      labels = Helpers.available_labels()
+      assert is_list(labels)
+      assert labels == Enum.sort(labels)
+      assert length(labels) > 0
+    end
+
+    test "each label is a binary string" do
+      for label <- Helpers.available_labels() do
+        assert is_binary(label), "Expected #{inspect(label)} to be a binary string"
+      end
+    end
+
+    test "includes representative labels from the @label_classes map" do
+      labels = Helpers.available_labels()
+      assert "bug" in labels
+      assert "enhancement" in labels
+      assert "agents" in labels
+      assert "refactor" in labels
+    end
+  end
+
   describe "ticket_label_class/1" do
     test "maps known high-signal labels to daisyUI classes" do
       assert Helpers.ticket_label_class("bug") == "badge-error"

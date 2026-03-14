@@ -356,6 +356,9 @@ defmodule AgentsWeb.DashboardLive.Helpers do
     "blocked" => "badge-warning"
   }
 
+  @doc "Returns the sorted list of all known label names available for the label picker."
+  def available_labels, do: @label_classes |> Map.keys() |> Enum.sort()
+
   @doc "Returns CSS classes for GitHub label badges."
   def ticket_label_class(label) when is_binary(label) do
     Map.get(@label_classes, String.downcase(String.trim(label)), "badge-outline")
