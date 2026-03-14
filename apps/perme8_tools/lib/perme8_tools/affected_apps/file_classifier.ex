@@ -106,19 +106,13 @@ defmodule Perme8Tools.AffectedApps.FileClassifier do
   end
 
   defp classify_app_file(path, known_apps) do
-    case Regex.run(~r{^apps/([^/]+)/(.+)$}, path) do
-      [_full, app_dir, rest] ->
-        app_atom = String.to_atom(app_dir)
-
-        if app_atom in known_apps and code_file?(rest) do
-          type = if String.starts_with?(rest, "test/"), do: :test, else: :code
-          {:app, app_atom, type}
-        else
-          :ignore
-        end
-
-      nil ->
-        :ignore
+    with [_full, app_dir, rest] <- Regex.run(~r{^apps/([^/]+)/(.+)$}, path),
+         app_atom = String.to_atom(app_dir),
+         true <- app_atom in known_apps and code_file?(rest) do
+      type = if String.starts_with?(rest, "test/"), do: :test, else: :code
+      {:app, app_atom, type}
+    else
+      _ -> :ignore
     end
   end
 

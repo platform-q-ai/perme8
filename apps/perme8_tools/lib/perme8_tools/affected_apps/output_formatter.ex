@@ -30,60 +30,61 @@ defmodule Perme8Tools.AffectedApps.OutputFormatter do
   """
   @spec format_human(map()) :: String.t()
   def format_human(result) do
-    sections = []
+    [
+      format_affected_section(result),
+      format_unit_test_section(result),
+      format_exo_bdd_section(result)
+    ]
+    |> List.flatten()
+    |> Enum.join("\n")
+  end
 
-    sections =
-      cond do
-        result.all_apps? ->
-          sections ++ ["Affected apps: ALL (shared config change)"]
+  defp format_affected_section(result) do
+    cond do
+      result.all_apps? ->
+        ["Affected apps: ALL (shared config change)"]
 
-        MapSet.size(result.affected_apps) == 0 ->
-          sections ++ ["No apps affected"]
+      MapSet.size(result.affected_apps) == 0 ->
+        ["No apps affected"]
 
-        true ->
-          apps =
-            result.affected_apps
-            |> Enum.map(&to_string/1)
-            |> Enum.sort()
-            |> Enum.join(", ")
+      true ->
+        apps =
+          result.affected_apps
+          |> Enum.map(&to_string/1)
+          |> Enum.sort()
+          |> Enum.join(", ")
 
-          sections ++ ["Affected apps (#{MapSet.size(result.affected_apps)}): #{apps}"]
-      end
+        ["Affected apps (#{MapSet.size(result.affected_apps)}): #{apps}"]
+    end
+  end
 
-    sections =
-      if result[:mix_test_command] do
-        sections ++ ["", "Unit tests: #{result.mix_test_command}"]
-      else
-        if MapSet.size(result.affected_apps) == 0 do
-          sections
-        else
-          sections ++ ["", "Unit tests: (no apps to test)"]
-        end
-      end
+  defp format_unit_test_section(%{mix_test_command: cmd}) when is_binary(cmd) do
+    ["", "Unit tests: #{cmd}"]
+  end
 
-    sections =
-      case result.exo_bdd_combos do
-        [] ->
-          if result.all_exo_bdd? do
-            sections ++ ["", "Exo-BDD: ALL combos (framework change)"]
-          else
-            sections
-          end
+  defp format_unit_test_section(%{affected_apps: apps}) do
+    if MapSet.size(apps) == 0, do: [], else: ["", "Unit tests: (no apps to test)"]
+  end
 
-        combos ->
-          combo_lines =
-            Enum.map(combos, fn c ->
-              "  - #{c.config_name} [#{c.domain}] (timeout: #{c.timeout}m)"
-            end)
+  defp format_exo_bdd_section(%{exo_bdd_combos: [], all_exo_bdd?: true}) do
+    ["", "Exo-BDD: ALL combos (framework change)"]
+  end
 
-          label =
-            if result.all_exo_bdd?,
-              do: "Exo-BDD combos (ALL - framework change):",
-              else: "Exo-BDD combos (#{length(combos)}):"
+  defp format_exo_bdd_section(%{exo_bdd_combos: []}) do
+    []
+  end
 
-          sections ++ ["", label | combo_lines]
-      end
+  defp format_exo_bdd_section(%{exo_bdd_combos: combos, all_exo_bdd?: all_exo_bdd?}) do
+    combo_lines =
+      Enum.map(combos, fn c ->
+        "  - #{c.config_name} [#{c.domain}] (timeout: #{c.timeout}m)"
+      end)
 
-    Enum.join(sections, "\n")
+    label =
+      if all_exo_bdd?,
+        do: "Exo-BDD combos (ALL - framework change):",
+        else: "Exo-BDD combos (#{length(combos)}):"
+
+    ["", label | combo_lines]
   end
 end

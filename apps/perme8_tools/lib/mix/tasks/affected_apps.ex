@@ -40,6 +40,7 @@ defmodule Mix.Tasks.AffectedApps do
 
   alias Perme8Tools.AffectedApps.{
     AffectedCalculator,
+    DependencyGraph,
     DiffProvider,
     ExoBddMapping,
     FileClassifier,
@@ -62,7 +63,7 @@ defmodule Mix.Tasks.AffectedApps do
 
     # 2. Build dependency graph
     {:ok, graph} = GraphDiscovery.build_graph(umbrella_root)
-    known_apps = graph |> Perme8Tools.AffectedApps.DependencyGraph.all_apps() |> MapSet.to_list()
+    known_apps = graph |> DependencyGraph.all_apps() |> MapSet.to_list()
 
     # 3. Classify files
     classification = FileClassifier.classify_all(changed_files, known_apps)

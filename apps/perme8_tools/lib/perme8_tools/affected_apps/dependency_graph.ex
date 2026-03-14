@@ -106,19 +106,16 @@ defmodule Perme8Tools.AffectedApps.DependencyGraph do
         else
           new_visited = MapSet.put(visited, node)
           neighbors = Map.get(reverse, node, MapSet.new())
-
-          new_queue =
-            Enum.reduce(neighbors, rest, fn neighbor, q ->
-              if MapSet.member?(new_visited, neighbor) do
-                q
-              else
-                :queue.in(neighbor, q)
-              end
-            end)
-
+          new_queue = enqueue_unvisited(neighbors, new_visited, rest)
           do_bfs(reverse, new_queue, new_visited)
         end
     end
+  end
+
+  defp enqueue_unvisited(neighbors, visited, queue) do
+    Enum.reduce(neighbors, queue, fn neighbor, q ->
+      if MapSet.member?(visited, neighbor), do: q, else: :queue.in(neighbor, q)
+    end)
   end
 
   # Detect cycles using DFS with three-color marking
@@ -153,34 +150,35 @@ defmodule Perme8Tools.AffectedApps.DependencyGraph do
 
     result =
       Enum.reduce_while(deps, {:ok, colors}, fn dep, {:ok, acc_colors} ->
-        case Map.get(acc_colors, dep, :black) do
-          :gray ->
-            # Found a cycle - extract the cycle path
-            cycle_start = Enum.find_index(path, &(&1 == dep))
-
-            cycle =
-              if cycle_start do
-                Enum.slice(path, cycle_start..-1//1)
-              else
-                [dep | path] |> Enum.reverse()
-              end
-
-            {:halt, {:cycle, cycle}}
-
-          :white ->
-            case visit(dep, adjacency, acc_colors, path ++ [dep]) do
-              {:cycle, cycle} -> {:halt, {:cycle, cycle}}
-              {:ok, new_colors} -> {:cont, {:ok, new_colors}}
-            end
-
-          :black ->
-            {:cont, {:ok, acc_colors}}
-        end
+        visit_dep(dep, adjacency, acc_colors, path)
       end)
 
     case result do
       {:cycle, cycle} -> {:cycle, cycle}
       {:ok, final_colors} -> {:ok, Map.put(final_colors, app, :black)}
+    end
+  end
+
+  defp visit_dep(dep, adjacency, colors, path) do
+    case Map.get(colors, dep, :black) do
+      :gray ->
+        {:halt, {:cycle, extract_cycle(dep, path)}}
+
+      :white ->
+        case visit(dep, adjacency, colors, path ++ [dep]) do
+          {:cycle, cycle} -> {:halt, {:cycle, cycle}}
+          {:ok, new_colors} -> {:cont, {:ok, new_colors}}
+        end
+
+      :black ->
+        {:cont, {:ok, colors}}
+    end
+  end
+
+  defp extract_cycle(dep, path) do
+    case Enum.find_index(path, &(&1 == dep)) do
+      nil -> [dep | path] |> Enum.reverse()
+      idx -> Enum.slice(path, idx..-1//1)
     end
   end
 end
