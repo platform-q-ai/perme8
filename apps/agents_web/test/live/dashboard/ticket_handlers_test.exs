@@ -48,6 +48,12 @@ defmodule AgentsWeb.DashboardLive.TicketHandlersTest do
       # uses spawn_monitor to create the task asynchronously).
       Sandbox.mode(Repo, {:shared, self()})
 
+      on_exit(fn ->
+        # Give in-flight DB operations (ticket linking, task updates) time
+        # to finish before the sandbox connection is reclaimed.
+        Process.sleep(100)
+      end)
+
       %{conn: log_in_user(conn, user), user: user}
     end
 
