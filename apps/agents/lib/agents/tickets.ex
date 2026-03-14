@@ -68,8 +68,7 @@ defmodule Agents.Tickets do
     missing_ids =
       ticket_schemas
       |> Enum.map(&Map.get(&1, :task_id))
-      |> Enum.reject(&is_nil/1)
-      |> Enum.reject(&MapSet.member?(snapshot_ids, &1))
+      |> Enum.reject(&(is_nil(&1) or MapSet.member?(snapshot_ids, &1)))
       |> Enum.uniq()
 
     if missing_ids == [] do

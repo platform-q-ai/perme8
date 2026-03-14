@@ -190,7 +190,7 @@ defmodule Agents.Sessions do
   """
   @spec get_tasks_by_ids([String.t()]) :: [struct()]
   def get_tasks_by_ids(ids) do
-    Agents.Sessions.Infrastructure.Repositories.TaskRepository.get_tasks_by_ids(ids)
+    TaskRepository.get_tasks_by_ids(ids)
   end
 
   @doc """
