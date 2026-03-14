@@ -41,6 +41,7 @@ defmodule Agents.Sessions.Infrastructure.OrphanRecovery do
 
   Options:
     - `:container_provider` — module implementing `stop/2` (default: `DockerAdapter`)
+    - `:pubsub` — PubSub module for broadcasting notifications (default: `Perme8.Events.PubSub`)
 
   Returns `{:ok, count}` where count is the number of recovered tasks.
   """
