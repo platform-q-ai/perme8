@@ -457,6 +457,16 @@ defmodule AgentsWeb.DashboardLive.Helpers do
     Enum.filter(tickets, &(&1.task_status in ["pending", "starting", "running"]))
   end
 
+  def filter_tickets_by_status(tickets, :blocked) do
+    alias Agents.Tickets.Domain.Entities.Ticket
+    Enum.filter(tickets, &(Ticket.blocked_status(&1) == :active))
+  end
+
+  def filter_tickets_by_status(tickets, :unblocked) do
+    alias Agents.Tickets.Domain.Entities.Ticket
+    Enum.reject(tickets, &(Ticket.blocked_status(&1) == :active))
+  end
+
   def filter_tickets_by_status(tickets, status) do
     status_str = Atom.to_string(status)
     Enum.filter(tickets, &(&1.task_status == status_str))

@@ -1071,6 +1071,180 @@
                   </button>
                 </div>
               </div>
+              <%!-- Dependency: Blocked By section --%>
+              <div
+                :if={length(selected_ticket.blocked_by) > 0}
+                data-testid="ticket-blocked-by-section"
+                class="mt-4"
+              >
+                <div class="text-xs font-semibold uppercase tracking-wider text-base-content/60 mb-2">
+                  Blocked by
+                </div>
+                <div class="flex flex-col gap-1">
+                  <div
+                    :for={blocker <- selected_ticket.blocked_by}
+                    class="flex items-center justify-between group"
+                  >
+                    <button
+                      type="button"
+                      phx-click="select_ticket"
+                      phx-value-number={blocker.number}
+                      class="text-sm text-primary hover:underline truncate"
+                    >
+                      #{blocker.number} {blocker.title}
+                    </button>
+                    <button
+                      type="button"
+                      phx-click="remove_dependency"
+                      phx-value-blocker-id={blocker.id}
+                      phx-value-blocked-id={selected_ticket.id}
+                      data-testid="remove-dependency-button"
+                      class="btn btn-ghost btn-xs opacity-0 group-hover:opacity-100"
+                    >
+                      <.icon name="hero-x-mark" class="h-3 w-3" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <%!-- Dependency: Blocks section --%>
+              <div
+                :if={length(selected_ticket.blocks) > 0}
+                data-testid="ticket-blocks-section"
+                class="mt-4"
+              >
+                <div class="text-xs font-semibold uppercase tracking-wider text-base-content/60 mb-2">
+                  Blocks
+                </div>
+                <div class="flex flex-col gap-1">
+                  <div
+                    :for={blocked <- selected_ticket.blocks}
+                    class="flex items-center justify-between group"
+                  >
+                    <button
+                      type="button"
+                      phx-click="select_ticket"
+                      phx-value-number={blocked.number}
+                      class="text-sm text-primary hover:underline truncate"
+                    >
+                      #{blocked.number} {blocked.title}
+                    </button>
+                    <button
+                      type="button"
+                      phx-click="remove_dependency"
+                      phx-value-blocker-id={selected_ticket.id}
+                      phx-value-blocked-id={blocked.id}
+                      data-testid="remove-dependency-button"
+                      class="btn btn-ghost btn-xs opacity-0 group-hover:opacity-100"
+                    >
+                      <.icon name="hero-x-mark" class="h-3 w-3" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <%!-- Session start prevention for blocked tickets --%>
+              <div
+                :if={Ticket.blocked?(selected_ticket)}
+                class="mt-3 p-2 bg-error/10 rounded-lg"
+              >
+                <p class="text-xs text-error font-semibold mb-1">
+                  Cannot start session — ticket is blocked by:
+                </p>
+                <div class="flex flex-col gap-0.5">
+                  <button
+                    :for={
+                      blocker <- Enum.filter(selected_ticket.blocked_by, &(&1.state == "open"))
+                    }
+                    type="button"
+                    phx-click="select_ticket"
+                    phx-value-number={blocker.number}
+                    data-testid="blocker-ticket-link"
+                    class="text-xs text-primary hover:underline text-left"
+                  >
+                    #{blocker.number} {blocker.title}
+                  </button>
+                </div>
+              </div>
+
+              <%!-- Add Dependency button --%>
+              <button
+                type="button"
+                phx-click="add_dependency_start"
+                data-testid="add-dependency-button"
+                class="btn btn-ghost btn-xs mt-3 gap-1"
+              >
+                <.icon name="hero-link" class="h-3 w-3" /> Add dependency
+              </button>
+
+              <%!-- Dependency Search Overlay --%>
+              <div
+                :if={@dependency_search_mode}
+                class="mt-2 p-3 bg-base-200 rounded-lg"
+                data-testid="dependency-search-overlay"
+              >
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-xs font-semibold">Add Dependency</span>
+                  <button type="button" phx-click="cancel_dependency" class="btn btn-ghost btn-xs">
+                    <.icon name="hero-x-mark" class="h-3 w-3" />
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  phx-keyup="dependency_search"
+                  phx-debounce="300"
+                  data-testid="dependency-search-input"
+                  placeholder="Search by ticket # or title..."
+                  class="input input-sm input-bordered w-full mb-2"
+                  value={@dependency_search_query}
+                />
+                <div
+                  :if={@dependency_search_results != []}
+                  data-testid="dependency-search-results"
+                  class="space-y-1 max-h-40 overflow-y-auto mb-2"
+                >
+                  <button
+                    :for={result <- @dependency_search_results}
+                    type="button"
+                    phx-click="select_dependency_target"
+                    phx-value-ticket-id={result.id}
+                    data-testid="dependency-search-result"
+                    class={"btn btn-ghost btn-xs w-full justify-start #{if @selected_dependency_target == result.id, do: "btn-active", else: ""}"}
+                  >
+                    #{result.number} {result.title}
+                  </button>
+                </div>
+                <div :if={@selected_dependency_target} class="flex gap-1 mb-2">
+                  <button
+                    type="button"
+                    phx-click="set_dependency_direction"
+                    phx-value-direction="blocks"
+                    data-testid="dependency-direction-blocks"
+                    class={"btn btn-xs #{if @dependency_direction == "blocks", do: "btn-primary", else: "btn-ghost"}"}
+                  >
+                    This blocks that
+                  </button>
+                  <button
+                    type="button"
+                    phx-click="set_dependency_direction"
+                    phx-value-direction="blocked_by"
+                    data-testid="dependency-direction-blocked-by"
+                    class={"btn btn-xs #{if @dependency_direction == "blocked_by", do: "btn-primary", else: "btn-ghost"}"}
+                  >
+                    This is blocked by that
+                  </button>
+                </div>
+                <button
+                  :if={@selected_dependency_target && @dependency_direction}
+                  type="button"
+                  phx-click="confirm_dependency"
+                  data-testid="dependency-confirm-button"
+                  class="btn btn-primary btn-xs w-full"
+                >
+                  Confirm
+                </button>
+              </div>
+
               <.lifecycle_timeline ticket={selected_ticket} />
 
               <button

@@ -175,58 +175,71 @@ defmodule AgentsWeb.DashboardLive.TicketHandlers do
   end
 
   defp do_start_ticket_session(number, socket) do
+    alias Agents.Tickets.Domain.Entities.Ticket
     ticket = find_ticket_by_number(socket.assigns.tickets, number)
 
-    if is_nil(ticket) do
-      {:noreply, put_flash(socket, :error, "Ticket ##{number} not found")}
-    else
-      context = Tickets.build_ticket_context(ticket)
+    cond do
+      is_nil(ticket) ->
+        {:noreply, put_flash(socket, :error, "Ticket ##{number} not found")}
 
-      instruction =
-        "pick up ticket ##{number} using the relevant skill\n\n#{context}"
-        |> String.trim()
+      Ticket.blocked?(ticket) ->
+        blockers =
+          ticket.blocked_by
+          |> Enum.filter(&(&1.state == "open"))
+          |> Enum.map(&"##{&1.number}")
+          |> Enum.join(", ")
 
-      user = socket.assigns.current_scope.user
-      image = socket.assigns.selected_image || Sessions.default_image()
-      client_id = Ecto.UUID.generate()
-      parent = self()
+        {:noreply,
+         put_flash(socket, :error, "Cannot start session — ticket is blocked by: #{blockers}")}
 
-      {_pid, monitor_ref} =
-        spawn_monitor(fn ->
-          result =
-            Sessions.create_task(%{
-              instruction: instruction,
-              user_id: user.id,
-              image: image
-            })
+      true ->
+        context = Tickets.build_ticket_context(ticket)
 
-          send(parent, {:new_task_created, client_id, result})
-        end)
+        instruction =
+          "pick up ticket ##{number} using the relevant skill\n\n#{context}"
+          |> String.trim()
 
-      # Optimistically move the ticket to the build queue immediately.
-      # The ticket card renders with full ticket info (title, labels, number)
-      # while the async task creation completes in the background.
-      tickets =
-        update_ticket_by_number(socket.assigns.tickets, number, fn t ->
-          %{
-            t
-            | task_status: "queued",
-              associated_task_id: client_id,
-              session_state: "queued_cold"
-          }
-        end)
+        user = socket.assigns.current_scope.user
+        image = socket.assigns.selected_image || Sessions.default_image()
+        client_id = Ecto.UUID.generate()
+        parent = self()
 
-      {:noreply,
-       socket
-       |> assign(
-         :new_task_monitors,
-         Map.put(socket.assigns.new_task_monitors, monitor_ref, client_id)
-       )
-       |> assign(
-         :pending_ticket_starts,
-         Map.put(socket.assigns.pending_ticket_starts, client_id, number)
-       )
-       |> assign(:tickets, tickets)}
+        {_pid, monitor_ref} =
+          spawn_monitor(fn ->
+            result =
+              Sessions.create_task(%{
+                instruction: instruction,
+                user_id: user.id,
+                image: image
+              })
+
+            send(parent, {:new_task_created, client_id, result})
+          end)
+
+        # Optimistically move the ticket to the build queue immediately.
+        # The ticket card renders with full ticket info (title, labels, number)
+        # while the async task creation completes in the background.
+        tickets =
+          update_ticket_by_number(socket.assigns.tickets, number, fn t ->
+            %{
+              t
+              | task_status: "queued",
+                associated_task_id: client_id,
+                session_state: "queued_cold"
+            }
+          end)
+
+        {:noreply,
+         socket
+         |> assign(
+           :new_task_monitors,
+           Map.put(socket.assigns.new_task_monitors, monitor_ref, client_id)
+         )
+         |> assign(
+           :pending_ticket_starts,
+           Map.put(socket.assigns.pending_ticket_starts, client_id, number)
+         )
+         |> assign(:tickets, tickets)}
     end
   end
 
