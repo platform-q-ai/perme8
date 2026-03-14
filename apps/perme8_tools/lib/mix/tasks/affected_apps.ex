@@ -147,20 +147,13 @@ defmodule Mix.Tasks.AffectedApps do
         DiffProvider.from_args(file_args)
 
       true ->
-        # Try stdin
-        files = DiffProvider.from_stdin()
+        Mix.raise("""
+        No changed files provided. Usage:
 
-        if files == [] do
-          Mix.raise("""
-          No changed files provided. Usage:
-
-            mix affected_apps FILE [FILE...]
-            mix affected_apps --diff main
-            echo "apps/identity/lib/identity.ex" | mix affected_apps
-          """)
-        end
-
-        files
+          mix affected_apps FILE [FILE...]
+          mix affected_apps --diff main
+          echo "apps/identity/lib/identity.ex" | mix affected_apps
+        """)
     end
   end
 
@@ -181,20 +174,13 @@ defmodule Mix.Tasks.AffectedApps do
   end
 
   defp build_dry_run_commands(result) do
-    lines = []
+    test_line = if result[:mix_test_command], do: [result.mix_test_command], else: []
 
-    lines =
-      if result[:mix_test_command] do
-        lines ++ [result.mix_test_command]
-      else
-        lines
-      end
-
-    lines =
-      Enum.reduce(result.exo_bdd_combos, lines, fn combo, acc ->
-        acc ++ ["mix exo_test --name #{combo.config_name} --adapter #{combo.domain}"]
+    exo_lines =
+      Enum.map(result.exo_bdd_combos, fn combo ->
+        "mix exo_test --name #{combo.config_name} --adapter #{combo.domain}"
       end)
 
-    Enum.join(lines, "\n")
+    Enum.join(test_line ++ exo_lines, "\n")
   end
 end
