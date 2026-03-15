@@ -43,6 +43,14 @@ defmodule Agents.Sessions.Infrastructure.Queries.TaskQueries do
   end
 
   @doc """
+  Filters tasks by a list of ids.
+  """
+  @spec by_ids(Ecto.Query.t(), [Ecto.UUID.t()]) :: Ecto.Query.t()
+  def by_ids(query \\ base(), ids) do
+    from(t in query, where: t.id in ^ids)
+  end
+
+  @doc """
   Orders tasks by most recent first.
   """
   @spec recent_first(Ecto.Query.t()) :: Ecto.Query.t()

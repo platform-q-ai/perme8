@@ -35,6 +35,10 @@ defmodule Agents.Tickets do
   Tickets are loaded from the agents DB (synced from GitHub open issues),
   then each ticket is matched against the user's recent tasks by issue number
   reference in instruction text (for example: "#306" or "ticket 306").
+
+  If a ticket has a persisted `task_id` FK but that task isn't in the
+  snapshot (e.g., it fell outside the 50-task window), the task is fetched
+  from the DB and merged into the snapshot so enrichment can find it.
   """
   @spec list_project_tickets(String.t(), keyword()) :: [Ticket.t()]
   def list_project_tickets(user_id, opts \\ []) do
@@ -48,9 +52,31 @@ defmodule Agents.Tickets do
         ProjectTicketRepository.list_all()
       end)
 
+    tasks = backfill_missing_tasks(tickets, tasks, user_id)
+
     tickets
     |> Enum.map(&Ticket.from_schema/1)
     |> TicketEnrichmentPolicy.enrich_all(tasks, &SessionLifecyclePolicy.derive/1)
+  end
+
+  # Tickets with a persisted task_id FK may reference tasks outside the
+  # 50-task snapshot window. Fetch any missing ones from the DB so the
+  # enrichment policy can resolve them.
+  defp backfill_missing_tasks(ticket_schemas, tasks, user_id) do
+    snapshot_ids = MapSet.new(tasks, &Map.get(&1, :id))
+
+    missing_ids =
+      ticket_schemas
+      |> Enum.map(&Map.get(&1, :task_id))
+      |> Enum.reject(&(is_nil(&1) or MapSet.member?(snapshot_ids, &1)))
+      |> Enum.uniq()
+
+    if missing_ids == [] do
+      tasks
+    else
+      fetched = Sessions.get_tasks_by_ids(missing_ids, user_id)
+      tasks ++ fetched
+    end
   end
 
   @doc """

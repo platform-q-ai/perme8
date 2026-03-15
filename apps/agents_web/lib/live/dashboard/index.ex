@@ -41,6 +41,7 @@ defmodule AgentsWeb.DashboardLive.Index do
     if connected?(socket) do
       subscribe_to_active_tasks(tasks)
       Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "queue:user:#{user.id}")
+      Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "sessions:user:#{user.id}")
       Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "sessions:tickets")
     end
 
@@ -378,6 +379,12 @@ defmodule AgentsWeb.DashboardLive.Index do
   @impl true
   def handle_info({:follow_up_timeout, correlation_key, timeout_ref}, socket),
     do: FollowUpDispatchHandlers.follow_up_timeout(correlation_key, timeout_ref, socket)
+
+  # -- Orphan recovery notification --------------------------------------------
+
+  @impl true
+  def handle_info({:sessions_orphaned, count, task_ids}, socket),
+    do: PubSubHandlers.sessions_orphaned(count, task_ids, socket)
 
   # -- Catch-all ---------------------------------------------------------------
 
