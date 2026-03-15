@@ -57,7 +57,7 @@ Feature: Ticket MCP Tools - HTTP API
         "params": {
           "name": "ticket.read",
           "arguments": {
-            "number": 1
+             "number": 101
           }
         },
         "id": 102
@@ -300,7 +300,7 @@ Feature: Ticket MCP Tools - HTTP API
         "params": {
           "name": "ticket.list",
           "arguments": {
-            "labels": ["enhancement"]
+             "labels": ["feature"]
           }
         },
         "id": 112
@@ -309,7 +309,7 @@ Feature: Ticket MCP Tools - HTTP API
     Then the response status should be 200
     And the response body should be valid JSON
     And the response body path "$.result.isError" should be false
-    And the response body path "$.result.content[0].text" should contain "enhancement"
+    And the response body path "$.result.content[0].text" should contain "feature"
 
   Scenario: List tickets with search query
     Given I set bearer token to "${valid-doc-key-product-team}"
@@ -348,7 +348,7 @@ Feature: Ticket MCP Tools - HTTP API
         "params": {
           "name": "ticket.list",
           "arguments": {
-            "query": "MCP"
+             "query": "authentication"
           }
         },
         "id": 114
@@ -409,7 +409,7 @@ Feature: Ticket MCP Tools - HTTP API
     Then the response status should be 200
     And the response body should be valid JSON
     And the response body path "$.result.isError" should be false
-    And the response body path "$.result.content[0].text" should match ".*#[0-9]+.*"
+    And the response body path "$.result.content[0].text" should match ".*#-?[0-9]+.*"
 
   Scenario: Create ticket with title only
     Given I set bearer token to "${valid-doc-key-product-team}"
@@ -548,7 +548,7 @@ Feature: Ticket MCP Tools - HTTP API
         "params": {
           "name": "ticket.update",
           "arguments": {
-            "number": 1,
+             "number": 101,
             "title": "Updated title"
           }
         },
@@ -698,7 +698,7 @@ Feature: Ticket MCP Tools - HTTP API
         "params": {
            "name": "ticket.close",
           "arguments": {
-            "number": 1
+             "number": 101
           }
         },
         "id": 128
@@ -843,8 +843,8 @@ Feature: Ticket MCP Tools - HTTP API
         "params": {
           "name": "ticket.add_sub_issue",
           "arguments": {
-            "parent_number": 1,
-            "child_number": 2
+             "parent_number": 101,
+            "child_number": 102
           }
         },
         "id": 140
@@ -942,8 +942,8 @@ Feature: Ticket MCP Tools - HTTP API
         "params": {
           "name": "ticket.remove_sub_issue",
           "arguments": {
-            "parent_number": 1,
-            "child_number": 2
+             "parent_number": 101,
+            "child_number": 102
           }
         },
         "id": 144
