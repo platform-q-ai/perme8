@@ -65,6 +65,21 @@ config :notifications, Notifications.Repo,
   show_sensitive_data_on_connection_error: true,
   pool_size: 10
 
+# EntityRelationshipManager uses the same database as Jarga
+config :entity_relationship_manager, EntityRelationshipManager.Repo,
+  url: database_url,
+  show_sensitive_data_on_connection_error: true,
+  pool_size: 10
+
+# Entity Relationship Manager Neo4j connection (local Docker)
+config :entity_relationship_manager, :neo4j,
+  url: "http://localhost:7474",
+  auth: [username: "neo4j", password: "password"],
+  database: "neo4j"
+
+config :entity_relationship_manager,
+  neo4j_adapter: EntityRelationshipManager.Infrastructure.Adapters.Neo4jAdapter.HttpAdapter
+
 # Entity Relationship Manager dev configuration (Graph API on port 4005)
 config :entity_relationship_manager, EntityRelationshipManager.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4005],

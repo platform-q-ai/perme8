@@ -6,6 +6,8 @@ defmodule AgentsWeb.DashboardLive.Helpers do
   depend on socket state. Used by the LiveView and its template.
   """
 
+  alias Agents.Tickets.Domain.Entities.Ticket
+
   @doc "Formats a token count for display (e.g., 5200 → \"5.2k\")."
   def format_token_count(nil), do: "-"
   def format_token_count(n) when is_number(n) and n >= 1000, do: "#{Float.round(n / 1000, 1)}k"
@@ -354,6 +356,11 @@ defmodule AgentsWeb.DashboardLive.Helpers do
     "blocked" => "badge-warning"
   }
 
+  @available_labels @label_classes |> Map.keys() |> Enum.sort()
+
+  @doc "Returns the sorted list of all known label names available for the label picker."
+  def available_labels, do: @available_labels
+
   @doc "Returns CSS classes for GitHub label badges."
   def ticket_label_class(label) when is_binary(label) do
     Map.get(@label_classes, String.downcase(String.trim(label)), "badge-outline")
@@ -455,6 +462,14 @@ defmodule AgentsWeb.DashboardLive.Helpers do
 
   def filter_tickets_by_status(tickets, :running) do
     Enum.filter(tickets, &(&1.task_status in ["pending", "starting", "running"]))
+  end
+
+  def filter_tickets_by_status(tickets, :blocked) do
+    Enum.filter(tickets, &(Ticket.blocked_status(&1) == :active))
+  end
+
+  def filter_tickets_by_status(tickets, :unblocked) do
+    Enum.reject(tickets, &(Ticket.blocked_status(&1) == :active))
   end
 
   def filter_tickets_by_status(tickets, status) do

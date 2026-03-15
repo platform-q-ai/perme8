@@ -8,11 +8,13 @@ defmodule EntityRelationshipManager.DataCase do
     top_level?: true,
     deps: [
       EntityRelationshipManager,
-      Jarga.DataCase
+      EntityRelationshipManager.Repo
     ],
     exports: []
 
   use ExUnit.CaseTemplate
+
+  alias Ecto.Adapters.SQL.Sandbox
 
   using do
     quote do
@@ -21,7 +23,16 @@ defmodule EntityRelationshipManager.DataCase do
   end
 
   setup tags do
-    Jarga.DataCase.setup_sandbox(tags)
+    :ok = Sandbox.checkout(EntityRelationshipManager.Repo)
+
+    unless tags[:async] do
+      Sandbox.mode(EntityRelationshipManager.Repo, {:shared, self()})
+    end
+
+    on_exit(fn ->
+      Sandbox.checkin(EntityRelationshipManager.Repo)
+    end)
+
     :ok
   end
 end

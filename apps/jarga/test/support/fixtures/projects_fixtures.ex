@@ -62,7 +62,7 @@ defmodule Jarga.ProjectsFixtures do
       user_id: user.id,
       workspace_id: workspace.id
     })
-    |> Identity.Repo.insert!()
+    |> Jarga.Repo.insert!()
     |> Project.from_schema()
   end
 

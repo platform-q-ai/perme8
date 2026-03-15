@@ -21,12 +21,15 @@ defmodule Agents.Tickets do
   alias Agents.Sessions
   alias Agents.Sessions.Domain.Policies.SessionLifecyclePolicy
   alias Agents.Tickets.Application.TicketsConfig
+  alias Agents.Tickets.Application.UseCases.AddTicketDependency
   alias Agents.Tickets.Application.UseCases.CreateTicket
   alias Agents.Tickets.Application.UseCases.RecordStageTransition
+  alias Agents.Tickets.Application.UseCases.RemoveTicketDependency
   alias Agents.Tickets.Domain.Entities.Ticket
   alias Agents.Tickets.Domain.Policies.TicketEnrichmentPolicy
   alias Agents.Tickets.Infrastructure.Clients.GithubProjectClient
   alias Agents.Tickets.Infrastructure.Repositories.ProjectTicketRepository
+  alias Agents.Tickets.Infrastructure.Repositories.TicketDependencyRepository
   alias Agents.Tickets.Infrastructure.TicketSyncServer
 
   @doc """
@@ -35,6 +38,10 @@ defmodule Agents.Tickets do
   Tickets are loaded from the agents DB (synced from GitHub open issues),
   then each ticket is matched against the user's recent tasks by issue number
   reference in instruction text (for example: "#306" or "ticket 306").
+
+  If a ticket has a persisted `task_id` FK but that task isn't in the
+  snapshot (e.g., it fell outside the 50-task window), the task is fetched
+  from the DB and merged into the snapshot so enrichment can find it.
   """
   @spec list_project_tickets(String.t(), keyword()) :: [Ticket.t()]
   def list_project_tickets(user_id, opts \\ []) do
@@ -48,9 +55,31 @@ defmodule Agents.Tickets do
         ProjectTicketRepository.list_all()
       end)
 
+    tasks = backfill_missing_tasks(tickets, tasks, user_id)
+
     tickets
     |> Enum.map(&Ticket.from_schema/1)
     |> TicketEnrichmentPolicy.enrich_all(tasks, &SessionLifecyclePolicy.derive/1)
+  end
+
+  # Tickets with a persisted task_id FK may reference tasks outside the
+  # 50-task snapshot window. Fetch any missing ones from the DB so the
+  # enrichment policy can resolve them.
+  defp backfill_missing_tasks(ticket_schemas, tasks, user_id) do
+    snapshot_ids = MapSet.new(tasks, &Map.get(&1, :id))
+
+    missing_ids =
+      ticket_schemas
+      |> Enum.map(&Map.get(&1, :task_id))
+      |> Enum.reject(&(is_nil(&1) or MapSet.member?(snapshot_ids, &1)))
+      |> Enum.uniq()
+
+    if missing_ids == [] do
+      tasks
+    else
+      fetched = Sessions.get_tasks_by_ids(missing_ids, user_id)
+      tasks ++ fetched
+    end
   end
 
   @doc """
@@ -145,6 +174,48 @@ defmodule Agents.Tickets do
     end
   end
 
+  @doc """
+  Updates labels on a project ticket on GitHub first, then persists locally.
+
+  If the GitHub update fails (except :not_found), the local record is left
+  unchanged and an error is returned so the caller can surface it to the user.
+
+  ## Options
+
+    * `:github_client` - module implementing `GithubTicketClientBehaviour`
+      (defaults to application config `:github_ticket_client` or
+      `GithubProjectClient`)
+  """
+  @spec update_ticket_labels(integer(), [String.t()], keyword()) :: :ok | {:error, term()}
+  def update_ticket_labels(number, labels, opts \\ [])
+      when is_integer(number) and is_list(labels) do
+    client = Keyword.get_lazy(opts, :github_client, &github_client/0)
+
+    github_opts = [
+      token: TicketsConfig.github_token(),
+      org: TicketsConfig.github_org(),
+      repo: TicketsConfig.github_repo()
+    ]
+
+    case client.update_issue(number, %{labels: labels}, github_opts) do
+      {:ok, _issue} ->
+        case ProjectTicketRepository.update_labels(number, labels) do
+          {:ok, _ticket} -> :ok
+          {:error, :not_found} -> :ok
+        end
+
+      # Issue doesn't exist on GitHub -- still update locally
+      {:error, :not_found} ->
+        case ProjectTicketRepository.update_labels(number, labels) do
+          {:ok, _ticket} -> :ok
+          {:error, :not_found} -> :ok
+        end
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
   defp github_client do
     Application.get_env(
       :agents,
@@ -185,6 +256,42 @@ defmodule Agents.Tickets do
   @spec create_ticket(String.t(), keyword()) :: {:ok, struct()} | {:error, term()}
   def create_ticket(body, opts \\ []) when is_binary(body) do
     CreateTicket.execute(body, opts)
+  end
+
+  @doc """
+  Adds a dependency: blocker_ticket_id blocks blocked_ticket_id.
+
+  ## Options
+  - `:actor_id` - (required)
+  - `:event_bus` - Event bus module
+  - `:dependency_repo` - Repository module
+  """
+  @spec add_dependency(integer(), integer(), keyword()) :: {:ok, struct()} | {:error, term()}
+  def add_dependency(blocker_ticket_id, blocked_ticket_id, opts \\ []) do
+    AddTicketDependency.execute(blocker_ticket_id, blocked_ticket_id, opts)
+  end
+
+  @doc """
+  Removes a dependency: blocker_ticket_id no longer blocks blocked_ticket_id.
+
+  ## Options
+  - `:actor_id` - (required)
+  - `:event_bus` - Event bus module
+  - `:dependency_repo` - Repository module
+  """
+  @spec remove_dependency(integer(), integer(), keyword()) ::
+          :ok | {:error, :dependency_not_found}
+  def remove_dependency(blocker_ticket_id, blocked_ticket_id, opts \\ []) do
+    RemoveTicketDependency.execute(blocker_ticket_id, blocked_ticket_id, opts)
+  end
+
+  @doc """
+  Searches tickets by number or title, excluding the given ticket ID.
+  Used for the dependency typeahead search.
+  """
+  @spec search_tickets_for_dependency(String.t(), integer()) :: [struct()]
+  def search_tickets_for_dependency(query, exclude_ticket_id) do
+    TicketDependencyRepository.search_tickets(query, exclude_ticket_id)
   end
 
   @doc false

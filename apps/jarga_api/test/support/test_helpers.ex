@@ -11,15 +11,8 @@ defmodule JargaApi.Test.Helpers do
   alias Ecto.Adapters.SQL.Sandbox
 
   def ensure_sandbox_checkout do
-    # Checkout both repos for dual-repo setup
-    case Sandbox.checkout(Jarga.Repo) do
-      :ok ->
-        Sandbox.mode(Jarga.Repo, {:shared, self()})
-
-      {:already, _owner} ->
-        :ok
-    end
-
+    # Jarga.Repo delegates to Identity.Repo via get_dynamic_repo in test mode,
+    # so only Identity.Repo needs checkout.
     case Sandbox.checkout(Identity.Repo) do
       :ok ->
         Sandbox.mode(Identity.Repo, {:shared, self()})

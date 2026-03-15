@@ -225,6 +225,13 @@ if config_env() == :prod do
     pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
     socket_options: maybe_ipv6
 
+  # EntityRelationshipManager uses the same database as Jarga
+  config :entity_relationship_manager, EntityRelationshipManager.Repo,
+    ssl: true,
+    url: database_url,
+    pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
+    socket_options: maybe_ipv6
+
   # Build list of allowed origins for WebSocket connections
   check_origins = [
     "https://www.jarga.ai",
@@ -298,6 +305,31 @@ if config_env() == :prod do
       adapter: Swoosh.Adapters.Sendgrid,
       api_key: sendgrid_api_key
   end
+end
+
+# ERM Neo4j connection — override via environment variables in production.
+# Set NEO4J_URL to enable the real Neo4j adapter (e.g. http://neo4j:7474).
+neo4j_url = System.get_env("NEO4J_URL")
+
+if neo4j_url do
+  neo4j_password =
+    System.get_env("NEO4J_PASSWORD") ||
+      if config_env() == :prod do
+        raise "environment variable NEO4J_PASSWORD is required when NEO4J_URL is set"
+      else
+        "password"
+      end
+
+  config :entity_relationship_manager, :neo4j,
+    url: neo4j_url,
+    auth: [
+      username: System.get_env("NEO4J_USER", "neo4j"),
+      password: neo4j_password
+    ],
+    database: System.get_env("NEO4J_DATABASE", "neo4j")
+
+  config :entity_relationship_manager,
+    neo4j_adapter: EntityRelationshipManager.Infrastructure.Adapters.Neo4jAdapter.HttpAdapter
 end
 
 # ERM real repos flag — set by exo-bdd integration tests via ERM_REAL_REPOS=true

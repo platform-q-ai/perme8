@@ -151,7 +151,7 @@ if [ -z "$MCP_KEY" ]; then
 fi
 
 jq --arg url "$MCP_URL" --arg key "$MCP_KEY" \
-  '.mcpServers["perme8-mcp"].url = $url | .mcpServers["perme8-mcp"].headers.Authorization = "Bearer \($key)"' \
+  '.mcp["perme8-mcp"].url = $url | .mcp["perme8-mcp"].headers.Authorization = "Bearer \($key)"' \
   /workspace/opencode.json > /workspace/perme8/opencode.json
 
 # ---- Start embedded PostgreSQL ----

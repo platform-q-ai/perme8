@@ -6,10 +6,11 @@
     "bash": "allow",
     "write": "allow"
   },
-  "mcpServers": {
+  "mcp": {
     "perme8-mcp": {
-      "type": "streamablehttp",
+      "type": "remote",
       "url": "__PERME8_MCP_URL__",
+      "oauth": false,
       "headers": {
         "Authorization": "Bearer __PERME8_MCP_API_KEY__"
       }

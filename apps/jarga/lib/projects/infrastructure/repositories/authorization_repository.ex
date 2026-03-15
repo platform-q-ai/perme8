@@ -12,7 +12,7 @@ defmodule Jarga.Projects.Infrastructure.Repositories.AuthorizationRepository do
 
   alias Identity.Domain.Entities.User
   alias Jarga.Projects.Infrastructure.Queries.Queries
-  alias Identity.Repo, as: Repo
+  alias Jarga.Repo, as: Repo
 
   @doc """
   Verifies that a user has access to a project within a workspace.

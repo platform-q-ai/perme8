@@ -873,6 +873,7 @@ defmodule AgentsWeb.DashboardLive.Components.SessionComponents do
   import AgentsWeb.DashboardLive.Helpers,
     only: [
       ticket_label_class: 1,
+      available_labels: 0,
       format_file_stats: 1,
       session_todo_items: 1,
       image_label: 1,
@@ -948,6 +949,7 @@ defmodule AgentsWeb.DashboardLive.Components.SessionComponents do
       data-ticket-depth={@depth}
       data-has-subissues={(@is_ticket && to_string(Ticket.has_sub_tickets?(@ticket))) || "false"}
       data-ticket-state={(@is_ticket && @ticket.state) || nil}
+      data-blocked={(@is_ticket && blocked_data_attr(@ticket)) || nil}
       data-slot-state={slot_state(@variant, @warming)}
       class={
         ticket_card_classes(
@@ -1025,6 +1027,21 @@ defmodule AgentsWeb.DashboardLive.Components.SessionComponents do
               >
                 {View.current_stage_duration(@ticket, DateTime.utc_now())}
               </span>
+              <%!-- Blocked indicator --%>
+              <span
+                :if={@is_ticket && Ticket.blocked_status(@ticket) == :active}
+                data-testid="blocked-indicator"
+                class="badge badge-xs badge-error whitespace-nowrap shrink-0"
+              >
+                Blocked by {Ticket.open_blocker_count(@ticket)}
+              </span>
+              <span
+                :if={@is_ticket && Ticket.blocked_status(@ticket) == :resolved}
+                data-testid="blocked-indicator"
+                class="badge badge-xs badge-ghost whitespace-nowrap shrink-0"
+              >
+                Blockers resolved
+              </span>
               <%!-- Auth refresh button (failed session-only cards) --%>
               <button
                 :if={
@@ -1101,6 +1118,13 @@ defmodule AgentsWeb.DashboardLive.Components.SessionComponents do
             <%!-- Triage ticket cards show a mini status dot for the associated session --%>
             <.status_dot :if={@variant == :triage} status={@session.latest_status} />
             <span :if={@session[:image]}>{image_label(@session.image)}</span>
+            <span
+              :if={@is_ticket && @ticket.associated_container_id}
+              class="font-mono"
+              title={@ticket.associated_container_id}
+            >
+              {short_container_id(@ticket.associated_container_id)}
+            </span>
             <span :if={@session[:latest_at]}>{relative_time(@session.latest_at)}</span>
             <span :if={@file_stats} data-testid="session-file-stats">{@file_stats}</span>
             <span
@@ -1274,6 +1298,11 @@ defmodule AgentsWeb.DashboardLive.Components.SessionComponents do
 
   defp card_title(nil, nil), do: ""
 
+  # Truncate a container ID (SHA256 hash) to a short prefix for display.
+  # The full ID is available as a title attribute for hover/copy.
+  defp short_container_id(id) when is_binary(id), do: String.slice(id, 0, 12)
+  defp short_container_id(_), do: nil
+
   # Card status: prefer ticket task_status, fall back to session latest_status or status
   defp card_status(%{task_status: status}, _session), do: status || "idle"
   defp card_status(nil, %{latest_status: status}) when is_binary(status), do: status
@@ -1282,6 +1311,14 @@ defmodule AgentsWeb.DashboardLive.Components.SessionComponents do
 
   defp ticket_closed?(%{state: "closed"}), do: true
   defp ticket_closed?(_), do: false
+
+  defp blocked_data_attr(ticket) do
+    case Ticket.blocked_status(ticket) do
+      :active -> "active"
+      :resolved -> "resolved"
+      :none -> nil
+    end
+  end
 
   # Duration timer DOM id must be unique per card
   defp duration_timer_id(variant, %{number: n}, _session),
@@ -1444,4 +1481,60 @@ defmodule AgentsWeb.DashboardLive.Components.SessionComponents do
 
   defp compute_file_stats(nil), do: nil
   defp compute_file_stats(session), do: format_file_stats(Map.get(session, :session_summary))
+
+  # ---- Label Picker ----
+
+  @doc """
+  Renders a label picker with toggleable label badges.
+
+  Shows all available labels from the predefined set. Currently applied
+  labels are highlighted. Clicking a label emits an "update_ticket_labels"
+  event with the toggled label list.
+
+  ## Assigns
+
+    * `:ticket` - the ticket struct/map with `:number` and `:labels` fields (required)
+  """
+  attr(:ticket, :map, required: true)
+
+  def label_picker(assigns) do
+    assigns = assign(assigns, :labels, assigns.ticket.labels || [])
+
+    ~H"""
+    <div data-testid="label-picker" class="mt-4">
+      <div class="text-xs font-semibold uppercase tracking-wider text-base-content/60 mb-2">
+        Labels
+      </div>
+      <div class="flex flex-wrap gap-1.5">
+        <button
+          :for={label <- available_labels()}
+          type="button"
+          phx-click="update_ticket_labels"
+          phx-value-number={@ticket.number}
+          phx-value-labels={Jason.encode!(toggle_label(@labels, label))}
+          data-testid={"label-toggle-#{label}"}
+          class={[
+            "badge badge-sm cursor-pointer transition-all hover:scale-105",
+            ticket_label_class(label),
+            if(label in @labels,
+              do: "opacity-100 ring-1 ring-primary/40",
+              else: "opacity-40 hover:opacity-70"
+            )
+          ]}
+        >
+          {label}
+        </button>
+      </div>
+    </div>
+    """
+  end
+
+  @doc false
+  def toggle_label(current_labels, label) do
+    if label in current_labels do
+      List.delete(current_labels, label)
+    else
+      [label | current_labels] |> Enum.sort()
+    end
+  end
 end

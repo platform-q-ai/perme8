@@ -36,22 +36,21 @@ defmodule AgentsApi.ConnCase do
   controllers) uses Agents.Repo for all database operations.
   """
   def setup_sandbox(tags) do
-    :ok = Sandbox.checkout(Jarga.Repo)
+    # Jarga.Repo delegates to Identity.Repo via get_dynamic_repo in test mode,
+    # so only Identity.Repo needs checkout. Checking out Jarga.Repo separately
+    # would double-checkout Identity.Repo.
     :ok = Sandbox.checkout(Identity.Repo)
     :ok = Sandbox.checkout(Agents.Repo)
 
-    Sandbox.allow(Jarga.Repo, self(), self())
     Sandbox.allow(Identity.Repo, self(), self())
     Sandbox.allow(Agents.Repo, self(), self())
 
     unless tags[:async] do
-      Sandbox.mode(Jarga.Repo, {:shared, self()})
       Sandbox.mode(Identity.Repo, {:shared, self()})
       Sandbox.mode(Agents.Repo, {:shared, self()})
     end
 
     on_exit(fn ->
-      Sandbox.checkin(Jarga.Repo)
       Sandbox.checkin(Identity.Repo)
       Sandbox.checkin(Agents.Repo)
     end)

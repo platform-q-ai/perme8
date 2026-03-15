@@ -4451,4 +4451,88 @@ defmodule AgentsWeb.DashboardLive.IndexTest do
       assert new_task.instruction =~ "fix the bug in this ticket"
     end
   end
+
+  defmodule LabelTestGithubClient do
+    @behaviour Agents.Application.Behaviours.GithubTicketClientBehaviour
+
+    @impl true
+    def update_issue(number, _attrs, _opts), do: {:ok, %{number: number}}
+    @impl true
+    def get_issue(_, _), do: {:error, :not_implemented}
+    @impl true
+    def list_issues(_), do: {:error, :not_implemented}
+    @impl true
+    def create_issue(_, _), do: {:error, :not_implemented}
+    @impl true
+    def close_issue_with_comment(_, _), do: {:error, :not_implemented}
+    @impl true
+    def add_comment(_, _, _), do: {:error, :not_implemented}
+    @impl true
+    def add_sub_issue(_, _, _), do: {:error, :not_implemented}
+    @impl true
+    def remove_sub_issue(_, _, _), do: {:error, :not_implemented}
+  end
+
+  describe "ticket label picker" do
+    setup %{conn: conn} do
+      user = user_fixture()
+
+      {:ok, _ticket} =
+        ProjectTicketRepository.sync_remote_ticket(%{
+          number: 950,
+          title: "Label picker test ticket",
+          body: "Test body",
+          labels: ["bug"]
+        })
+
+      original = Application.get_env(:agents, :github_ticket_client)
+      Application.put_env(:agents, :github_ticket_client, LabelTestGithubClient)
+
+      on_exit(fn ->
+        if original,
+          do: Application.put_env(:agents, :github_ticket_client, original),
+          else: Application.delete_env(:agents, :github_ticket_client)
+      end)
+
+      %{conn: log_in_user(conn, user), user: user}
+    end
+
+    test "label picker is visible on ticket detail panel", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+      send(lv.pid, {:tickets_synced, []})
+
+      # Select the ticket
+      lv
+      |> element(~s([phx-click="select_ticket"][phx-value-number="950"]))
+      |> render_click()
+
+      html = lv |> element(~s(button[data-tab-id="ticket"])) |> render_click()
+
+      # Label picker should be visible
+      assert html =~ ~s(data-testid="label-picker")
+      assert html =~ ~s(data-testid="label-toggle-bug")
+      assert html =~ ~s(data-testid="label-toggle-enhancement")
+    end
+
+    test "clicking a label triggers update and reflects in UI", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+      send(lv.pid, {:tickets_synced, []})
+
+      # Select the ticket and view detail panel
+      lv
+      |> element(~s([phx-click="select_ticket"][phx-value-number="950"]))
+      |> render_click()
+
+      lv |> element(~s(button[data-tab-id="ticket"])) |> render_click()
+
+      # Click the "enhancement" label toggle to add it
+      html =
+        lv
+        |> element(~s([data-testid="label-toggle-enhancement"]))
+        |> render_click()
+
+      # The ticket should now have "enhancement" label (added to existing "bug")
+      assert html =~ "enhancement"
+    end
+  end
 end

@@ -18,7 +18,13 @@ defmodule Jarga.DataCase do
   # Needs access to Notifications and Chat repo boundaries (for sandboxed repo usage)
   use Boundary,
     top_level?: true,
-    deps: [Jarga.Repo, Jarga.Test.SandboxHelper, Notifications, Notifications.Repo],
+    deps: [
+      Jarga.Repo,
+      Jarga.Test.SandboxHelper,
+      Notifications,
+      Notifications.Repo,
+      EntityRelationshipManager.Repo
+    ],
     exports: []
 
   use ExUnit.CaseTemplate
@@ -27,9 +33,10 @@ defmodule Jarga.DataCase do
 
   using do
     quote do
-      # Use Identity.Repo as the default Repo in tests
-      # This ensures all database operations happen in the same transaction
-      alias Identity.Repo, as: Repo
+      # Use Jarga.Repo as the default Repo in tests.
+      # In test setup, Jarga.Repo is routed through Identity.Repo's sandbox
+      # connection via put_dynamic_repo, so all repos share the same transaction.
+      alias Jarga.Repo, as: Repo
 
       import Ecto
       import Ecto.Changeset
@@ -46,43 +53,46 @@ defmodule Jarga.DataCase do
   @doc """
   Sets up the sandbox based on the test tags.
 
-  IMPORTANT: Jarga.Repo, Identity.Repo, Agents.Repo, and Notifications.Repo all
-  point to the same PostgreSQL database. We checkout all repos and allow them to
-  share data so foreign key constraints work across repos.
+  IMPORTANT: Jarga.Repo, Identity.Repo, Agents.Repo, Notifications.Repo, and
+  EntityRelationshipManager.Repo all point to the same PostgreSQL database.
+  We checkout all repos and allow them to share data so foreign key constraints
+  work across repos.
   """
   def setup_sandbox(tags) do
-    # Checkout all repos that share the same database
-    :ok = Sandbox.checkout(Jarga.Repo)
+    # Checkout all repos that share the same database.
+    # IMPORTANT: Jarga.Repo delegates to Identity.Repo via default_dynamic_repo
+    # in test mode (configured in lib/repo.ex). This means all Jarga.Repo calls
+    # — including from spawned processes like LiveView channels — route through
+    # Identity.Repo's sandbox connection. No separate Jarga.Repo checkout is
+    # needed, and FK constraints are satisfied because all data lives in the
+    # same sandbox transaction.
     :ok = Sandbox.checkout(Identity.Repo)
     :ok = Sandbox.checkout(Agents.Repo)
     :ok = Sandbox.checkout(Chat.Repo)
     :ok = Sandbox.checkout(Notifications.Repo)
+    :ok = Sandbox.checkout(EntityRelationshipManager.Repo)
 
-    # CRITICAL: Allow all repos to share data by allowing cross-process access
-    # Since all repos connect to the same database, we need to allow them
-    # to see each other's uncommitted data for foreign key constraints to work.
-    # The trick is to use the same owner (self()) for all repos.
-    Sandbox.allow(Jarga.Repo, self(), self())
     Sandbox.allow(Identity.Repo, self(), self())
     Sandbox.allow(Agents.Repo, self(), self())
     Sandbox.allow(Chat.Repo, self(), self())
     Sandbox.allow(Notifications.Repo, self(), self())
+    Sandbox.allow(EntityRelationshipManager.Repo, self(), self())
 
     unless tags[:async] do
-      # In non-async mode, share the connection with any spawned processes
-      Sandbox.mode(Jarga.Repo, {:shared, self()})
+      # In non-async mode, share the connection with any spawned processes.
       Sandbox.mode(Identity.Repo, {:shared, self()})
       Sandbox.mode(Agents.Repo, {:shared, self()})
       Sandbox.mode(Chat.Repo, {:shared, self()})
       Sandbox.mode(Notifications.Repo, {:shared, self()})
+      Sandbox.mode(EntityRelationshipManager.Repo, {:shared, self()})
     end
 
     on_exit(fn ->
-      Sandbox.checkin(Jarga.Repo)
       Sandbox.checkin(Identity.Repo)
       Sandbox.checkin(Agents.Repo)
       Sandbox.checkin(Chat.Repo)
       Sandbox.checkin(Notifications.Repo)
+      Sandbox.checkin(EntityRelationshipManager.Repo)
     end)
 
     # Enable PubSub subscribers for integration tests

@@ -4,6 +4,7 @@ defmodule AgentsWeb.DashboardLive.Components.SessionComponentsTest do
   import Phoenix.LiveViewTest
 
   alias AgentsWeb.DashboardLive.Components.SessionComponents
+  alias AgentsWeb.DashboardLive.Helpers
   alias Agents.Tickets.Domain.Entities.Ticket
 
   describe "status_badge/1" do
@@ -310,6 +311,72 @@ defmodule AgentsWeb.DashboardLive.Components.SessionComponentsTest do
 
       assert html =~ "1 sub-issues"
       assert html =~ ~s(data-has-subissues="true")
+    end
+  end
+
+  describe "label_picker/1" do
+    test "renders all available labels as toggleable buttons" do
+      ticket = Ticket.new(%{number: 100, title: "Test ticket", labels: []})
+      html = render_component(&SessionComponents.label_picker/1, ticket: ticket)
+
+      assert html =~ ~s(data-testid="label-picker")
+      assert html =~ "Labels"
+
+      # Check a representative sample of labels are rendered
+      assert html =~ ~s(data-testid="label-toggle-bug")
+      assert html =~ ~s(data-testid="label-toggle-enhancement")
+      assert html =~ ~s(data-testid="label-toggle-agents")
+      assert html =~ ~s(data-testid="label-toggle-refactor")
+    end
+
+    test "applied labels are visually distinguished with ring class" do
+      ticket = Ticket.new(%{number: 101, title: "Labeled", labels: ["bug", "agents"]})
+      html = render_component(&SessionComponents.label_picker/1, ticket: ticket)
+
+      # The rendered HTML should contain ring-1 for applied labels
+      # and opacity-40 for non-applied labels
+      assert html =~ "ring-1"
+      assert html =~ "opacity-40"
+    end
+
+    test "renders with data-testid for each label" do
+      ticket = Ticket.new(%{number: 102, title: "Test", labels: []})
+      html = render_component(&SessionComponents.label_picker/1, ticket: ticket)
+
+      for label <- Helpers.available_labels() do
+        assert html =~ ~s(data-testid="label-toggle-#{label}")
+      end
+    end
+
+    test "each label button emits update_ticket_labels event" do
+      ticket = Ticket.new(%{number: 103, title: "Test", labels: ["bug"]})
+      html = render_component(&SessionComponents.label_picker/1, ticket: ticket)
+
+      assert html =~ ~s(phx-click="update_ticket_labels")
+      assert html =~ ~s(phx-value-number="103")
+    end
+
+    test "when ticket has empty labels, all buttons show as unselected" do
+      ticket = Ticket.new(%{number: 104, title: "Test", labels: []})
+      html = render_component(&SessionComponents.label_picker/1, ticket: ticket)
+
+      # No ring class should appear when no labels are applied
+      refute html =~ "ring-1 ring-primary/40"
+    end
+  end
+
+  describe "toggle_label/2" do
+    test "adds label when not present" do
+      assert SessionComponents.toggle_label([], "bug") == ["bug"]
+    end
+
+    test "removes label when present" do
+      assert SessionComponents.toggle_label(["bug", "agents"], "bug") == ["agents"]
+    end
+
+    test "sorts result when adding" do
+      result = SessionComponents.toggle_label(["bug"], "agents")
+      assert result == ["agents", "bug"]
     end
   end
 end

@@ -16,7 +16,6 @@ defmodule Jarga.Projects do
     deps: [
       # Cross-context dependencies
       Identity,
-      Identity.Repo,
       Jarga.Accounts,
       # Same-context layer dependencies
       Jarga.Projects.Domain,
@@ -29,7 +28,7 @@ defmodule Jarga.Projects do
       {Infrastructure.Schemas.ProjectSchema, []}
     ]
 
-  alias Identity.Repo, as: Repo
+  alias Jarga.Repo, as: Repo
   alias Identity.Domain.Entities.User
   alias Jarga.Projects.Infrastructure.Queries.Queries
   alias Jarga.Projects.Infrastructure.Schemas.ProjectSchema

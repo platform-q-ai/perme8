@@ -945,4 +945,50 @@ defmodule Agents.Tickets.Infrastructure.Repositories.ProjectTicketRepositoryTest
       assert re_linked.task_id == new_task.id
     end
   end
+
+  describe "update_labels/2" do
+    test "updates labels on an existing ticket" do
+      {:ok, _ticket} =
+        ProjectTicketRepository.sync_remote_ticket(%{
+          number: 960,
+          title: "Ticket for label update",
+          labels: ["bug"]
+        })
+
+      assert {:ok, updated} = ProjectTicketRepository.update_labels(960, ["bug", "agents"])
+      assert updated.labels == ["bug", "agents"]
+
+      # Verify persisted in DB
+      reloaded = Repo.get_by!(ProjectTicketSchema, number: 960)
+      assert reloaded.labels == ["bug", "agents"]
+    end
+
+    test "replaces existing labels with new list" do
+      {:ok, _ticket} =
+        ProjectTicketRepository.sync_remote_ticket(%{
+          number: 961,
+          title: "Ticket for label replace",
+          labels: ["old-label", "another"]
+        })
+
+      assert {:ok, updated} = ProjectTicketRepository.update_labels(961, ["new-label"])
+      assert updated.labels == ["new-label"]
+    end
+
+    test "can set labels to empty list" do
+      {:ok, _ticket} =
+        ProjectTicketRepository.sync_remote_ticket(%{
+          number: 962,
+          title: "Ticket for label clear",
+          labels: ["bug", "frontend"]
+        })
+
+      assert {:ok, updated} = ProjectTicketRepository.update_labels(962, [])
+      assert updated.labels == []
+    end
+
+    test "returns {:error, :not_found} when ticket number doesn't exist" do
+      assert {:error, :not_found} = ProjectTicketRepository.update_labels(99_999, ["bug"])
+    end
+  end
 end
