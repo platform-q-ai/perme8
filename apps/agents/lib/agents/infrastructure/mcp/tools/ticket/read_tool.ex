@@ -30,6 +30,15 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.ReadTool do
                Response.tool(),
                Helpers.format_error(:ticket_not_found, "Ticket ##{number}")
              ), frame}
+
+          {:error, reason} ->
+            Logger.error("ticket.read error: #{inspect(reason)}")
+
+            {:reply,
+             Response.error(
+               Response.tool(),
+               Helpers.format_error(reason, "Ticket ##{number}")
+             ), frame}
         end
 
       {:error, scope} ->

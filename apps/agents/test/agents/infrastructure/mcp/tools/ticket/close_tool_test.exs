@@ -73,7 +73,7 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.CloseToolTest do
 
       assert %Hermes.Server.Response{isError: false} = response
       assert [%{"text" => text}] = response.content
-      assert text =~ "Closed ticket #99_999"
+      assert text =~ "Closed ticket #99999"
     end
 
     test "denies execution when scope is missing" do

@@ -418,7 +418,7 @@ defmodule Agents.Tickets.Infrastructure.Repositories.ProjectTicketRepository do
          {:child, child} when not is_nil(child) <-
            {:child, Repo.get_by(ProjectTicketSchema, number: child_number)} do
       child
-      |> ProjectTicketSchema.changeset(%{parent_ticket_id: parent.id})
+      |> ProjectTicketSchema.changeset(%{parent_ticket_id: parent.id, sync_state: "pending_push"})
       |> Repo.update()
     else
       {:parent, nil} -> {:error, :parent_not_found}
@@ -433,8 +433,13 @@ defmodule Agents.Tickets.Infrastructure.Repositories.ProjectTicketRepository do
           {:ok, ProjectTicketSchema.t()} | {:error, :not_found}
   def clear_parent_ticket(child_number) do
     case Repo.get_by(ProjectTicketSchema, number: child_number) do
-      nil -> {:error, :not_found}
-      child -> child |> ProjectTicketSchema.changeset(%{parent_ticket_id: nil}) |> Repo.update()
+      nil ->
+        {:error, :not_found}
+
+      child ->
+        child
+        |> ProjectTicketSchema.changeset(%{parent_ticket_id: nil, sync_state: "pending_push"})
+        |> Repo.update()
     end
   end
 

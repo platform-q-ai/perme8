@@ -11,10 +11,8 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.CreateTool do
   alias Hermes.Server.Response
 
   schema do
-    field(:title, {:required, :string}, description: "Issue title")
-    field(:body, :string, description: "Issue body")
-    field(:labels, {:list, :string}, description: "Label names")
-    field(:assignees, {:list, :string}, description: "Assignee usernames")
+    field(:title, {:required, :string}, description: "Ticket title")
+    field(:body, :string, description: "Ticket body")
   end
 
   @impl true

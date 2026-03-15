@@ -10,15 +10,16 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.UpdateTool do
   alias Agents.Tickets
   alias Hermes.Server.Response
 
-  @updatable_fields [:title, :body, :labels, :assignees, :state]
+  @updatable_fields [:title, :body, :labels, :state, :priority, :size]
 
   schema do
     field(:number, {:required, :integer}, description: "Ticket number")
     field(:title, :string, description: "New title")
     field(:body, :string, description: "New body")
     field(:labels, {:list, :string}, description: "Replacement labels")
-    field(:assignees, {:list, :string}, description: "Replacement assignees")
     field(:state, :string, description: "Ticket state")
+    field(:priority, :string, description: "Ticket priority")
+    field(:size, :string, description: "Ticket size")
   end
 
   @impl true
