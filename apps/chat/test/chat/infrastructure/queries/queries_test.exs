@@ -141,6 +141,51 @@ defmodule Chat.Infrastructure.Queries.QueriesTest do
     end
   end
 
+  describe "orphan detection queries" do
+    test "sample_distinct_user_ids/1 returns up to N distinct user_ids" do
+      user_id_1 = Ecto.UUID.generate()
+      user_id_2 = Ecto.UUID.generate()
+      insert_session(%{user_id: user_id_1})
+      insert_session(%{user_id: user_id_1})
+      insert_session(%{user_id: user_id_2})
+
+      result = Queries.sample_distinct_user_ids(10) |> Repo.all()
+      assert length(result) == 2
+      assert MapSet.new(result) == MapSet.new([user_id_1, user_id_2])
+    end
+
+    test "sample_distinct_user_ids/1 respects limit" do
+      for _ <- 1..5, do: insert_session(%{user_id: Ecto.UUID.generate()})
+
+      result = Queries.sample_distinct_user_ids(2) |> Repo.all()
+      assert length(result) == 2
+    end
+
+    test "sessions_for_user/1 returns all sessions for a user" do
+      user_id = Ecto.UUID.generate()
+      other_id = Ecto.UUID.generate()
+      insert_session(%{user_id: user_id})
+      insert_session(%{user_id: user_id})
+      insert_session(%{user_id: other_id})
+
+      result = Queries.sessions_for_user(user_id) |> Repo.all()
+      assert length(result) == 2
+      assert Enum.all?(result, &(&1.user_id == user_id))
+    end
+
+    test "sessions_for_user_and_workspace/2 filters by both user and workspace" do
+      user_id = Ecto.UUID.generate()
+      ws_id = Ecto.UUID.generate()
+      other_ws_id = Ecto.UUID.generate()
+      insert_session(%{user_id: user_id, workspace_id: ws_id})
+      insert_session(%{user_id: user_id, workspace_id: other_ws_id})
+
+      result = Queries.sessions_for_user_and_workspace(user_id, ws_id) |> Repo.all()
+      assert length(result) == 1
+      assert hd(result).workspace_id == ws_id
+    end
+  end
+
   defp insert_session(attrs \\ %{}) do
     base = %{user_id: Ecto.UUID.generate(), title: "Session"}
 
