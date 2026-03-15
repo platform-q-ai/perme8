@@ -86,6 +86,10 @@ config :chat, Chat.Repo,
   pool_size: 15,
   ownership_timeout: :infinity
 
+# Disable infrastructure children (event subscriber, orphan worker) in tests
+# to avoid sandbox conflicts with GenServers polling outside owned processes
+config :chat, start_infrastructure: false
+
 # Notifications uses the same database as Jarga
 # pool_size 15 required: jarga-web browser tests (exo-bdd) run concurrent
 # scenarios that each load the notification bell component via LiveView,
