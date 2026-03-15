@@ -1117,6 +1117,13 @@ defmodule AgentsWeb.DashboardLive.Components.SessionComponents do
             <%!-- Triage ticket cards show a mini status dot for the associated session --%>
             <.status_dot :if={@variant == :triage} status={@session.latest_status} />
             <span :if={@session[:image]}>{image_label(@session.image)}</span>
+            <span
+              :if={@is_ticket && @ticket.associated_container_id}
+              class="font-mono"
+              title={@ticket.associated_container_id}
+            >
+              {short_container_id(@ticket.associated_container_id)}
+            </span>
             <span :if={@session[:latest_at]}>{relative_time(@session.latest_at)}</span>
             <span :if={@file_stats} data-testid="session-file-stats">{@file_stats}</span>
             <span
@@ -1289,6 +1296,11 @@ defmodule AgentsWeb.DashboardLive.Components.SessionComponents do
     do: truncate_instruction(instr, 35)
 
   defp card_title(nil, nil), do: ""
+
+  # Truncate a container ID (SHA256 hash) to a short prefix for display.
+  # The full ID is available as a title attribute for hover/copy.
+  defp short_container_id(id) when is_binary(id), do: String.slice(id, 0, 12)
+  defp short_container_id(_), do: nil
 
   # Card status: prefer ticket task_status, fall back to session latest_status or status
   defp card_status(%{task_status: status}, _session), do: status || "idle"

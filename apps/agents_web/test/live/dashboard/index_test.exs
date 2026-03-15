@@ -45,6 +45,85 @@ defmodule AgentsWeb.DashboardLive.IndexTest do
     end
   end
 
+  # Helper: convert a legacy queue state map to a QueueSnapshot and send
+  # it as a :queue_snapshot message to the LiveView process.
+  #
+  # Handles warm_cache_limit (tasks within the limit go to warm lane),
+  # warm_task_ids (explicit warm tasks), and warming_task_ids (tasks
+  # currently being warmed, shown with warming animation).
+  defp send_queue_state(lv, user_id, queue_state) do
+    running_count = Map.get(queue_state, :running, 0)
+    concurrency_limit = Map.get(queue_state, :concurrency_limit, 2)
+    warm_cache_limit = Map.get(queue_state, :warm_cache_limit, 0)
+    queued = Map.get(queue_state, :queued, [])
+    awaiting_feedback = Map.get(queue_state, :awaiting_feedback, [])
+    warming_task_ids = Map.get(queue_state, :warming_task_ids, [])
+
+    # Split queued tasks: first warm_cache_limit go to warm lane, rest to cold
+    queued_ids =
+      Enum.map(queued, fn item ->
+        if is_map(item), do: Map.get(item, :id), else: item
+      end)
+
+    {warm_ids, cold_ids} = Enum.split(queued_ids, warm_cache_limit)
+
+    warm_entries =
+      Enum.map(warm_ids, fn id ->
+        ws = if id in warming_task_ids, do: :warming, else: :warm
+
+        LaneEntry.new(%{
+          task_id: id,
+          instruction: "",
+          status: "queued",
+          lane: :warm,
+          warm_state: ws
+        })
+      end)
+
+    cold_entries =
+      Enum.map(cold_ids, fn id ->
+        LaneEntry.new(%{
+          task_id: id,
+          instruction: "",
+          status: "queued",
+          lane: :cold,
+          warm_state: :cold
+        })
+      end)
+
+    af_entries =
+      Enum.map(awaiting_feedback, fn item ->
+        id = if is_map(item), do: Map.get(item, :id), else: item
+
+        LaneEntry.new(%{
+          task_id: id,
+          instruction: "",
+          status: "awaiting_feedback",
+          lane: :awaiting_feedback,
+          warm_state: :cold
+        })
+      end)
+
+    snapshot =
+      QueueSnapshot.new(%{
+        user_id: user_id,
+        lanes: %{
+          processing: [],
+          warm: warm_entries,
+          cold: cold_entries,
+          awaiting_feedback: af_entries,
+          retry_pending: []
+        },
+        metadata: %{
+          concurrency_limit: concurrency_limit,
+          running_count: running_count,
+          warm_cache_limit: warm_cache_limit
+        }
+      })
+
+    send(lv.pid, {:queue_snapshot, user_id, snapshot})
+  end
+
   describe "mount and rendering" do
     setup %{conn: conn} do
       user = user_fixture()
@@ -1806,10 +1885,11 @@ defmodule AgentsWeb.DashboardLive.IndexTest do
 
       {:ok, lv, _html} = live(conn, ~p"/sessions")
 
-      send(lv.pid, {
-        :queue_updated,
-        user.id,
-        %{running: 1, queued: [], awaiting_feedback: [], concurrency_limit: 3}
+      send_queue_state(lv, user.id, %{
+        running: 1,
+        queued: [],
+        awaiting_feedback: [],
+        concurrency_limit: 3
       })
 
       html = render(lv)
@@ -1843,20 +1923,22 @@ defmodule AgentsWeb.DashboardLive.IndexTest do
 
       {:ok, lv, _html} = live(conn, ~p"/sessions")
 
-      send(lv.pid, {
-        :queue_updated,
-        user.id,
-        %{running: 1, queued: [], awaiting_feedback: [], concurrency_limit: 2}
+      send_queue_state(lv, user.id, %{
+        running: 1,
+        queued: [],
+        awaiting_feedback: [],
+        concurrency_limit: 2
       })
 
       html = render(lv)
       assert html =~ ~s(data-testid="empty-concurrency-slot-1")
       refute html =~ ~s(data-testid="empty-concurrency-slot-2")
 
-      send(lv.pid, {
-        :queue_updated,
-        user.id,
-        %{running: 2, queued: [], awaiting_feedback: [], concurrency_limit: 4}
+      send_queue_state(lv, user.id, %{
+        running: 2,
+        queued: [],
+        awaiting_feedback: [],
+        concurrency_limit: 4
       })
 
       html = render(lv)
@@ -1877,10 +1959,11 @@ defmodule AgentsWeb.DashboardLive.IndexTest do
 
       {:ok, lv, _html} = live(conn, ~p"/sessions")
 
-      send(lv.pid, {
-        :queue_updated,
-        user.id,
-        %{running: 1, queued: [], awaiting_feedback: [], concurrency_limit: 0}
+      send_queue_state(lv, user.id, %{
+        running: 1,
+        queued: [],
+        awaiting_feedback: [],
+        concurrency_limit: 0
       })
 
       html = render(lv)
@@ -1901,10 +1984,11 @@ defmodule AgentsWeb.DashboardLive.IndexTest do
 
       {:ok, lv, _html} = live(conn, ~p"/sessions")
 
-      send(lv.pid, {
-        :queue_updated,
-        user.id,
-        %{running: 0, queued: [], awaiting_feedback: [], concurrency_limit: 0}
+      send_queue_state(lv, user.id, %{
+        running: 0,
+        queued: [],
+        awaiting_feedback: [],
+        concurrency_limit: 0
       })
 
       html = render(lv)
@@ -1923,10 +2007,11 @@ defmodule AgentsWeb.DashboardLive.IndexTest do
       {:ok, lv, _html} = live(conn, ~p"/sessions")
 
       # Trigger queue_updated to render the build lane controls
-      send(lv.pid, {
-        :queue_updated,
-        user.id,
-        %{running: 0, queued: [], awaiting_feedback: [], concurrency_limit: 2}
+      send_queue_state(lv, user.id, %{
+        running: 0,
+        queued: [],
+        awaiting_feedback: [],
+        concurrency_limit: 2
       })
 
       html = render(lv)
@@ -2028,10 +2113,11 @@ defmodule AgentsWeb.DashboardLive.IndexTest do
 
       {:ok, lv, _html} = live(conn, ~p"/sessions")
 
-      send(lv.pid, {
-        :queue_updated,
-        user.id,
-        %{running: 1, queued: [], awaiting_feedback: [], concurrency_limit: 2}
+      send_queue_state(lv, user.id, %{
+        running: 1,
+        queued: [],
+        awaiting_feedback: [],
+        concurrency_limit: 2
       })
 
       html = render(lv)
@@ -2082,16 +2168,12 @@ defmodule AgentsWeb.DashboardLive.IndexTest do
 
       {:ok, lv, _html} = live(conn, ~p"/sessions")
 
-      send(lv.pid, {
-        :queue_updated,
-        user.id,
-        %{
-          running: 0,
-          queued: [],
-          awaiting_feedback: [],
-          concurrency_limit: 2,
-          warm_cache_limit: 3
-        }
+      send_queue_state(lv, user.id, %{
+        running: 0,
+        queued: [],
+        awaiting_feedback: [],
+        concurrency_limit: 2,
+        warm_cache_limit: 3
       })
 
       html = render(lv)
@@ -2114,16 +2196,12 @@ defmodule AgentsWeb.DashboardLive.IndexTest do
 
       {:ok, lv, _html} = live(conn, ~p"/sessions")
 
-      send(lv.pid, {
-        :queue_updated,
-        user.id,
-        %{
-          running: 0,
-          queued: [],
-          awaiting_feedback: [],
-          concurrency_limit: 2,
-          warm_cache_limit: 0
-        }
+      send_queue_state(lv, user.id, %{
+        running: 0,
+        queued: [],
+        awaiting_feedback: [],
+        concurrency_limit: 2,
+        warm_cache_limit: 0
       })
 
       html = render(lv)
@@ -2164,16 +2242,12 @@ defmodule AgentsWeb.DashboardLive.IndexTest do
 
       {:ok, lv, _html} = live(conn, ~p"/sessions")
 
-      send(lv.pid, {
-        :queue_updated,
-        user.id,
-        %{
-          running: 0,
-          queued: [%{id: task.id}],
-          awaiting_feedback: [],
-          concurrency_limit: 2,
-          warm_cache_limit: 1
-        }
+      send_queue_state(lv, user.id, %{
+        running: 0,
+        queued: [%{id: task.id}],
+        awaiting_feedback: [],
+        concurrency_limit: 2,
+        warm_cache_limit: 1
       })
 
       html = render(lv)
@@ -2198,17 +2272,13 @@ defmodule AgentsWeb.DashboardLive.IndexTest do
 
       {:ok, lv, _html} = live(conn, ~p"/sessions")
 
-      send(lv.pid, {
-        :queue_updated,
-        user.id,
-        %{
-          running: 0,
-          queued: [%{id: task.id}],
-          awaiting_feedback: [],
-          concurrency_limit: 2,
-          warm_cache_limit: 1,
-          warming_task_ids: [task.id]
-        }
+      send_queue_state(lv, user.id, %{
+        running: 0,
+        queued: [%{id: task.id}],
+        awaiting_feedback: [],
+        concurrency_limit: 2,
+        warm_cache_limit: 1,
+        warming_task_ids: [task.id]
       })
 
       html = render(lv)
@@ -2235,16 +2305,12 @@ defmodule AgentsWeb.DashboardLive.IndexTest do
 
       {:ok, lv, _html} = live(conn, ~p"/sessions")
 
-      send(lv.pid, {
-        :queue_updated,
-        user.id,
-        %{
-          running: 0,
-          queued: [%{id: task.id}],
-          awaiting_feedback: [],
-          concurrency_limit: 2,
-          warm_cache_limit: 1
-        }
+      send_queue_state(lv, user.id, %{
+        running: 0,
+        queued: [%{id: task.id}],
+        awaiting_feedback: [],
+        concurrency_limit: 2,
+        warm_cache_limit: 1
       })
 
       html = render(lv)
@@ -2270,18 +2336,14 @@ defmodule AgentsWeb.DashboardLive.IndexTest do
 
       {:ok, lv, _html} = live(conn, ~p"/sessions")
 
-      send(lv.pid, {
-        :queue_updated,
-        user.id,
-        %{
-          running: 0,
-          queued: [],
-          awaiting_feedback: [],
-          concurrency_limit: 2,
-          warm_cache_limit: 1,
-          warm_task_ids: [],
-          warming_task_ids: []
-        }
+      send_queue_state(lv, user.id, %{
+        running: 0,
+        queued: [],
+        awaiting_feedback: [],
+        concurrency_limit: 2,
+        warm_cache_limit: 1,
+        warm_task_ids: [],
+        warming_task_ids: []
       })
 
       html = render(lv)
@@ -2326,18 +2388,13 @@ defmodule AgentsWeb.DashboardLive.IndexTest do
 
       {:ok, lv, _html} = live(conn, ~p"/sessions")
 
-      send(lv.pid, {
-        :queue_updated,
-        user.id,
-        %{
-          running: 0,
-          queued: [],
-          awaiting_feedback: [],
-          concurrency_limit: 2,
-          warm_cache_limit: 1,
-          warm_task_ids: [task.id],
-          warming_task_ids: [task.id]
-        }
+      send_queue_state(lv, user.id, %{
+        running: 0,
+        queued: [%{id: task.id}],
+        awaiting_feedback: [],
+        concurrency_limit: 2,
+        warm_cache_limit: 1,
+        warming_task_ids: [task.id]
       })
 
       html = render(lv)
@@ -2374,16 +2431,12 @@ defmodule AgentsWeb.DashboardLive.IndexTest do
       send(lv.pid, {:tickets_synced, []})
 
       # Place the task in the warm zone
-      send(lv.pid, {
-        :queue_updated,
-        user.id,
-        %{
-          running: 0,
-          queued: [%{id: task.id}],
-          awaiting_feedback: [],
-          concurrency_limit: 2,
-          warm_cache_limit: 1
-        }
+      send_queue_state(lv, user.id, %{
+        running: 0,
+        queued: [%{id: task.id}],
+        awaiting_feedback: [],
+        concurrency_limit: 2,
+        warm_cache_limit: 1
       })
 
       html = render(lv)
@@ -2414,10 +2467,11 @@ defmodule AgentsWeb.DashboardLive.IndexTest do
 
       {:ok, lv, _html} = live(conn, ~p"/sessions")
 
-      send(lv.pid, {
-        :queue_updated,
-        user.id,
-        %{running: 1, queued: [], awaiting_feedback: [], concurrency_limit: 2}
+      send_queue_state(lv, user.id, %{
+        running: 1,
+        queued: [],
+        awaiting_feedback: [],
+        concurrency_limit: 2
       })
 
       html = render(lv)

@@ -20,6 +20,7 @@ defmodule EntityRelationshipManager.Infrastructure do
       {Repositories.GraphRepository, []},
       {Repositories.InMemoryGraphRepository, []},
       {Adapters.Neo4jAdapter, []},
+      {Adapters.Neo4jAdapter.HttpAdapter, []},
       {Adapters.Neo4jDefaultAdapter, []},
       {Schemas.SchemaDefinitionSchema, []}
     ]

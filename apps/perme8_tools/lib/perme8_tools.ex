@@ -7,5 +7,16 @@ defmodule Perme8Tools do
   """
   use Boundary,
     top_level?: true,
-    deps: []
+    deps: [],
+    exports: [
+      {AffectedApps.AffectedCalculator, []},
+      {AffectedApps.DependencyGraph, []},
+      {AffectedApps.DiffProvider, []},
+      {AffectedApps.ExoBddMapping, []},
+      {AffectedApps.FileClassifier, []},
+      {AffectedApps.GraphDiscovery, []},
+      {AffectedApps.MixExsParser, []},
+      {AffectedApps.OutputFormatter, []},
+      {AffectedApps.TestPaths, []}
+    ]
 end

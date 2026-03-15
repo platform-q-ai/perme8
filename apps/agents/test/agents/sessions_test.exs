@@ -3,6 +3,7 @@ defmodule Agents.SessionsTest do
 
   alias Agents.Sessions
   alias Agents.Sessions.Domain.Entities.Task
+  alias Agents.Sessions.Infrastructure.OrphanRecovery
   alias Agents.Tickets
   alias Agents.Tickets.Domain.Entities.Ticket
   alias Agents.Tickets.Infrastructure.Schemas.ProjectTicketSchema
@@ -568,8 +569,8 @@ defmodule Agents.SessionsTest do
 
       assert :ok =
                Sessions.notify_task_terminal_status(user.id, task.id, :completed,
-                 queue_manager_supervisor: supervisor_mod,
-                 queue_manager: queue_manager_mod
+                 queue_orchestrator_supervisor: supervisor_mod,
+                 queue_orchestrator: queue_manager_mod
                )
 
       user_id = user.id
@@ -589,7 +590,7 @@ defmodule Agents.SessionsTest do
 
       assert :ok =
                Sessions.notify_task_terminal_status(user.id, task.id, :failed,
-                 queue_manager_supervisor: supervisor_mod
+                 queue_orchestrator_supervisor: supervisor_mod
                )
     end
   end
@@ -752,5 +753,65 @@ defmodule Agents.SessionsTest do
       |> Repo.insert()
 
     ticket
+  end
+
+  describe "restart_orphaned_task/3" do
+    test "restarts a task that was orphaned by server restart" do
+      user = user_fixture()
+      orphan_prefix = OrphanRecovery.orphan_error_prefix()
+
+      task =
+        task_fixture(%{
+          user_id: user.id,
+          status: "failed",
+          error: "#{orphan_prefix} — no TaskRunner process was active for this task",
+          container_id: "c-orphan-restart",
+          session_id: "s-orphan-restart"
+        })
+
+      assert {:ok, restarted} =
+               Sessions.restart_orphaned_task(task.id, user.id,
+                 task_runner_starter: fn _id, _opts -> {:ok, self()} end
+               )
+
+      assert restarted.instruction == task.instruction
+    end
+
+    test "returns :not_found for non-existent task" do
+      user = user_fixture()
+
+      assert {:error, :not_found} =
+               Sessions.restart_orphaned_task(Ecto.UUID.generate(), user.id)
+    end
+
+    test "returns :not_orphaned for task with wrong status" do
+      user = user_fixture()
+      task = task_fixture(%{user_id: user.id, status: "completed"})
+
+      assert {:error, :not_orphaned} =
+               Sessions.restart_orphaned_task(task.id, user.id)
+    end
+
+    test "returns :not_orphaned for failed task with different error" do
+      user = user_fixture()
+
+      task =
+        task_fixture(%{
+          user_id: user.id,
+          status: "failed",
+          error: "Container crashed unexpectedly"
+        })
+
+      assert {:error, :not_orphaned} =
+               Sessions.restart_orphaned_task(task.id, user.id)
+    end
+
+    test "returns :not_orphaned for failed task with nil error" do
+      user = user_fixture()
+      task = task_fixture(%{user_id: user.id, status: "failed", error: nil})
+
+      assert {:error, :not_orphaned} =
+               Sessions.restart_orphaned_task(task.id, user.id)
+    end
   end
 end

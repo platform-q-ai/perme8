@@ -300,6 +300,31 @@ if config_env() == :prod do
   end
 end
 
+# ERM Neo4j connection — override via environment variables in production.
+# Set NEO4J_URL to enable the real Neo4j adapter (e.g. http://neo4j:7474).
+neo4j_url = System.get_env("NEO4J_URL")
+
+if neo4j_url do
+  neo4j_password =
+    System.get_env("NEO4J_PASSWORD") ||
+      if config_env() == :prod do
+        raise "environment variable NEO4J_PASSWORD is required when NEO4J_URL is set"
+      else
+        "password"
+      end
+
+  config :entity_relationship_manager, :neo4j,
+    url: neo4j_url,
+    auth: [
+      username: System.get_env("NEO4J_USER", "neo4j"),
+      password: neo4j_password
+    ],
+    database: System.get_env("NEO4J_DATABASE", "neo4j")
+
+  config :entity_relationship_manager,
+    neo4j_adapter: EntityRelationshipManager.Infrastructure.Adapters.Neo4jAdapter.HttpAdapter
+end
+
 # ERM real repos flag — set by exo-bdd integration tests via ERM_REAL_REPOS=true
 if System.get_env("ERM_REAL_REPOS") == "true" do
   config :entity_relationship_manager, :real_repos, true

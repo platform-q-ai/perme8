@@ -124,6 +124,12 @@ config :entity_relationship_manager, EntityRelationshipManager.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 5005],
   secret_key_base: "erm_test_secret_key_base_at_least_64_bytes_long_for_security_purposes"
 
+# ERM Neo4j connection — used only by tests tagged :neo4j
+config :entity_relationship_manager, :neo4j,
+  url: "http://localhost:7474",
+  auth: [username: "neo4j", password: "password"],
+  database: "neo4j"
+
 # ERM repository configuration.
 # Unit tests (ExUnit) use Mox mocks by default.
 # Integration/BDD tests set ERM_REAL_REPOS=true in the server env,

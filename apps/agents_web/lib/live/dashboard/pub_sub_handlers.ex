@@ -1,8 +1,13 @@
 defmodule AgentsWeb.DashboardLive.PubSubHandlers do
   @moduledoc "Processes PubSub messages (task events, queue updates, ticket syncs) for the dashboard LiveView."
 
+  use Phoenix.VerifiedRoutes,
+    endpoint: AgentsWeb.Endpoint,
+    router: AgentsWeb.Router,
+    statics: AgentsWeb.static_paths()
+
   import Phoenix.Component, only: [assign: 3]
-  import Phoenix.LiveView, only: [clear_flash: 1, put_flash: 3]
+  import Phoenix.LiveView, only: [clear_flash: 1, push_patch: 2, put_flash: 3]
   import AgentsWeb.DashboardLive.SessionDataHelpers
 
   import AgentsWeb.DashboardLive.Helpers,
@@ -243,6 +248,9 @@ defmodule AgentsWeb.DashboardLive.PubSubHandlers do
     optimistic_entry = Enum.find(socket.assigns.optimistic_new_sessions, &(&1.id == client_id))
     task = resolve_new_task_ack_task(task, user.id, optimistic_entry)
 
+    # Check if this task was started from a ticket before clearing the map.
+    ticket_number = Map.get(socket.assigns.pending_ticket_starts, client_id)
+
     # Subscribe to this task's PubSub topic so we receive status updates
     # (starting, running, completed, etc.). Must happen before the refresh
     # request below to avoid missing broadcasts after the refresh reads.
@@ -276,9 +284,11 @@ defmodule AgentsWeb.DashboardLive.PubSubHandlers do
       |> assign(:sessions, sessions)
       |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)
 
+    socket = maybe_navigate_to_ticket_session(socket, ticket_number, task)
+
     # The task may have already been promoted (queued -> pending -> running)
     # before we subscribed above, so any PubSub broadcasts from the
-    # QueueManager/TaskRunner were lost. Refresh from DB to catch up.
+    # QueueOrchestrator/TaskRunner were lost. Refresh from DB to catch up.
     {:noreply, request_task_refresh(socket, task.id)}
   end
 
@@ -392,29 +402,20 @@ defmodule AgentsWeb.DashboardLive.PubSubHandlers do
   end
 
   def queue_snapshot(snapshot, socket) do
+    queue_state = QueueSnapshot.to_legacy_map(snapshot)
+
+    sticky_warm_task_ids =
+      derive_sticky_warm_task_ids(
+        socket.assigns.sessions,
+        queue_state,
+        socket.assigns[:sticky_warm_task_ids] || MapSet.new()
+      )
+
     {:noreply,
      socket
      |> assign(:queue_snapshot, snapshot)
-     |> assign(:queue_state, QueueSnapshot.to_legacy_map(snapshot))}
-  end
-
-  def queue_updated(user_id, queue_state, socket) do
-    if user_id == socket.assigns.current_scope.user.id do
-      sticky_warm_task_ids =
-        derive_sticky_warm_task_ids(
-          socket.assigns.sessions,
-          queue_state,
-          socket.assigns[:sticky_warm_task_ids] || MapSet.new()
-        )
-
-      # Queue metadata doesn't change ticket state — skip enrich_all.
-      {:noreply,
-       socket
-       |> assign(:queue_state, queue_state)
-       |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)}
-    else
-      {:noreply, socket}
-    end
+     |> assign(:queue_state, queue_state)
+     |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)}
   end
 
   def tickets_synced(socket) do
@@ -497,5 +498,53 @@ defmodule AgentsWeb.DashboardLive.PubSubHandlers do
        :refreshing_task_ids,
        MapSet.delete(socket.assigns[:refreshing_task_ids] || MapSet.new(), task_id)
      )}
+  end
+
+  def sessions_orphaned(count, _task_ids, socket) do
+    user = socket.assigns.current_scope.user
+
+    # Reload sessions and tasks so the UI immediately shows the failed state
+    sessions = Sessions.list_sessions(user.id)
+    tasks = Sessions.list_tasks(user.id)
+
+    tickets =
+      Agents.Tickets.list_project_tickets(user.id, tasks: tasks)
+
+    message =
+      "#{count} active session#{if count > 1, do: "s were", else: " was"} interrupted by a server restart. You can restart them from the session list."
+
+    {:noreply,
+     socket
+     |> assign(:sessions, sessions)
+     |> assign(:tasks_snapshot, tasks)
+     |> assign(:tickets, tickets)
+     |> put_flash(:info, message)}
+  end
+
+  # -- Private Helpers ---------------------------------------------------------
+
+  # If this task was started from a ticket, set current_task and navigate
+  # to the session so the user sees the chat and streaming output.
+  # Without this, the LiveView stays on the previous view, current_task
+  # is never set, and all SSE events are silently discarded by the
+  # task_event guard in task_event/3.
+  defp maybe_navigate_to_ticket_session(socket, nil, _task), do: socket
+
+  defp maybe_navigate_to_ticket_session(socket, ticket_number, task) do
+    socket =
+      socket
+      |> assign(:current_task, task)
+      |> assign(:active_ticket_number, ticket_number)
+      |> assign(:composing_new, false)
+      |> assign(:events, [])
+      |> assign_session_state()
+
+    if task.container_id do
+      socket
+      |> assign(:active_container_id, task.container_id)
+      |> push_patch(to: ~p"/sessions?#{%{container: task.container_id, tab: "ticket"}}")
+    else
+      socket
+    end
   end
 end
