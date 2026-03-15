@@ -5,12 +5,15 @@ defmodule Chat.Infrastructure do
 
   use Boundary,
     top_level?: true,
-    deps: [Chat.Domain, Chat.Application, Chat.Repo],
+    deps: [Chat.Domain, Chat.Application, Chat.Repo, Identity, Perme8.Events],
     exports: [
       Schemas.SessionSchema,
       Schemas.MessageSchema,
       Repositories.SessionRepository,
       Repositories.MessageRepository,
-      Queries.Queries
+      Queries.Queries,
+      Adapters.IdentityApiAdapter,
+      Subscribers.IdentityEventSubscriber,
+      Workers.OrphanDetectionWorker
     ]
 end

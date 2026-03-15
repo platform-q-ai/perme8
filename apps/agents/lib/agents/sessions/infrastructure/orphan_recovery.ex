@@ -47,7 +47,13 @@ defmodule Agents.Sessions.Infrastructure.OrphanRecovery do
   """
   @spec recover_orphaned_tasks(keyword()) :: {:ok, non_neg_integer()}
   def recover_orphaned_tasks(opts \\ []) do
-    container_provider = Keyword.get(opts, :container_provider, DockerAdapter)
+    container_provider =
+      Keyword.get(
+        opts,
+        :container_provider,
+        Application.get_env(:agents, :container_provider, DockerAdapter)
+      )
+
     pubsub = Keyword.get(opts, :pubsub, Perme8.Events.PubSub)
 
     orphans =

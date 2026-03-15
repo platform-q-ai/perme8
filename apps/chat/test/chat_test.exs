@@ -76,6 +76,47 @@ defmodule ChatTest do
     end
   end
 
+  describe "referential integrity" do
+    test "create_session succeeds with a real existing user" do
+      user = chat_user_fixture()
+
+      assert {:ok, session} = Chat.create_session(%{user_id: user.id, title: "Valid session"})
+      assert session.user_id == user.id
+    end
+
+    test "create_session fails with {:error, :user_not_found} for a non-existent user_id" do
+      assert {:error, :user_not_found} =
+               Chat.create_session(%{user_id: Ecto.UUID.generate(), title: "Orphan"})
+    end
+
+    test "create_session fails when workspace_id is provided but user is not a member" do
+      user = chat_user_fixture()
+      other_user = chat_user_fixture()
+      workspace = Identity.WorkspacesFixtures.workspace_fixture(other_user)
+
+      assert {:error, :not_a_member} =
+               Chat.create_session(%{
+                 user_id: user.id,
+                 workspace_id: workspace.id,
+                 title: "No access"
+               })
+    end
+
+    test "create_session succeeds when workspace_id is provided and user is a member" do
+      user = chat_user_fixture()
+      workspace = Identity.WorkspacesFixtures.workspace_fixture(user)
+
+      assert {:ok, session} =
+               Chat.create_session(%{
+                 user_id: user.id,
+                 workspace_id: workspace.id,
+                 title: "Has access"
+               })
+
+      assert session.workspace_id == workspace.id
+    end
+  end
+
   describe "context preparation facade functions" do
     test "prepare_chat_context delegates to use case" do
       context_input = %{

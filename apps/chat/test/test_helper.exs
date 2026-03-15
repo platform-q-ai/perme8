@@ -10,3 +10,7 @@ Mox.defmock(Chat.Mocks.SessionRepositoryMock,
 Mox.defmock(Chat.Mocks.MessageRepositoryMock,
   for: Chat.Application.Behaviours.MessageRepositoryBehaviour
 )
+
+Mox.defmock(Chat.Mocks.IdentityApiMock,
+  for: Chat.Application.Behaviours.IdentityApiBehaviour
+)

@@ -15,6 +15,7 @@ defmodule Chat.Application do
       UseCases.ListSessions,
       UseCases.DeleteSession,
       Behaviours.MessageRepositoryBehaviour,
-      Behaviours.SessionRepositoryBehaviour
+      Behaviours.SessionRepositoryBehaviour,
+      Behaviours.IdentityApiBehaviour
     ]
 end
