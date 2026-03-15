@@ -28,6 +28,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   alias Agents.Sessions.Domain.Events.{TaskCompleted, TaskFailed, TaskCancelled}
   alias Agents.Sessions.Infrastructure.SdkEventHandler
   alias Agents.Sessions.Infrastructure.Schemas.TaskSchema
+  alias Agents.Sessions.Infrastructure.TaskRunner.OutputCache
   alias Agents.Sessions.Infrastructure.TaskRunner.TaskBroadcaster
   alias Agents.Sessions.Infrastructure.TaskRunner.TodoTracker
 
@@ -203,7 +204,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
     case state.opencode_client.reply_question(base_url, request_id, answers, []) do
       :ok ->
-        state = cache_answer_message(state, request_id, message, answers)
+        state = do_cache_answer_message(state, request_id, message, answers)
         TaskBroadcaster.broadcast_question_replied(state.task_id, state.pubsub)
         {:reply, :ok, clear_pending_question(state)}
 
@@ -244,7 +245,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
     state =
       if result == :ok do
-        cache_queued_user_message(state, message, command_payload)
+        do_cache_queued_user_message(state, message, command_payload)
       else
         state
       end
@@ -561,7 +562,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
         # (the subtask part appears in the parent's message stream) but the
         # event carries the child's session ID, so it lands here.
         state = track_subtask_message_id(event, state)
-        state = cache_subtask_part(event, state)
+        state = do_cache_subtask_part(event, state)
 
         process_child_session_event(event, event_session_id, state)
     end
@@ -800,10 +801,10 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     # Route parts to appropriate caching: subtask -> user -> SDK dispatch
     cond do
       subtask_part?(event) ->
-        {:noreply, cache_subtask_part(event, state)}
+        {:noreply, do_cache_subtask_part(event, state)}
 
       user_message_part?(event, state) ->
-        {:noreply, cache_user_message_part(event, state)}
+        {:noreply, do_cache_user_message_part(event, state)}
 
       true ->
         handle_sdk_result(event, state)
@@ -838,8 +839,16 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
     state =
       case status_type do
-        "idle" -> mark_subtask_done(state, child_session_id)
-        _ -> state
+        "idle" ->
+          subtask_part_id = Map.get(state.child_session_ids, child_session_id)
+
+          %{
+            state
+            | output_parts: OutputCache.mark_subtask_done(state.output_parts, subtask_part_id)
+          }
+
+        _ ->
+          state
       end
 
     TaskBroadcaster.broadcast_event(event, state.task_id, state.pubsub)
@@ -900,49 +909,19 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
   defp subtask_part?(_event), do: false
 
-  defp cache_subtask_part(
+  defp do_cache_subtask_part(
          %{
            "type" => "message.part.updated",
            "properties" => %{"part" => %{"type" => "subtask"} = part}
          },
          state
        ) do
-    # Use messageID/messageId only — part["id"] is the subtask part ID,
-    # not the message ID. This must align with EventProcessor's lookup
-    # (subtask_message_part?/2) which also only checks messageID/messageId.
-    msg_id = part["messageID"] || part["messageId"]
-    subtask_id = if is_binary(msg_id), do: "subtask-#{msg_id}", else: nil
-
-    entry = %{
-      "type" => "subtask",
-      "id" => subtask_id,
-      "agent" => part["agent"] || "unknown",
-      "description" => part["description"] || "",
-      "prompt" => part["prompt"] || "",
-      "status" => "running"
-    }
-
-    parts = upsert_output_part(state.output_parts, subtask_id, entry)
+    {entry, subtask_id} = OutputCache.build_subtask_entry(part)
+    parts = OutputCache.upsert_part(state.output_parts, subtask_id, entry)
     %{state | output_parts: parts}
   end
 
-  defp cache_subtask_part(_event, state), do: state
-
-  defp mark_subtask_done(state, child_session_id) do
-    case Map.get(state.child_session_ids, child_session_id) do
-      nil ->
-        state
-
-      subtask_part_id ->
-        output_parts =
-          Enum.map(state.output_parts, fn
-            %{"id" => ^subtask_part_id} = part -> Map.put(part, "status", "done")
-            part -> part
-          end)
-
-        %{state | output_parts: output_parts}
-    end
-  end
+  defp do_cache_subtask_part(_event, state), do: state
 
   # ---- Private: User message filtering ----
 
@@ -1000,7 +979,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
   defp user_message_part?(_event, _state), do: false
 
-  defp cache_user_message_part(
+  defp do_cache_user_message_part(
          %{
            "type" => "message.part.updated",
            "properties" => %{"part" => %{"type" => "text", "text" => text} = part}
@@ -1008,79 +987,36 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
          state
        )
        when is_binary(text) and text != "" do
-    msg_id = part["messageID"] || part["messageId"] || part["id"]
-    part_id = if is_binary(msg_id), do: "user-" <> msg_id, else: nil
-
-    entry = %{"type" => "user", "id" => part_id, "text" => text}
-    {parts, matched?} = promote_pending_user_part(state.output_parts, text, part_id)
-    parts = if matched?, do: parts, else: upsert_output_part(parts, part_id, entry)
+    {entry, part_id} = OutputCache.build_user_message_entry(part)
+    {parts, matched?} = OutputCache.promote_pending_user_part(state.output_parts, text, part_id)
+    parts = if matched?, do: parts, else: OutputCache.upsert_part(parts, part_id, entry)
     %{state | output_parts: parts}
   end
 
-  defp cache_user_message_part(_event, state), do: state
+  defp do_cache_user_message_part(_event, state), do: state
 
-  defp cache_queued_user_message(state, message, command_payload \\ %{})
+  defp do_cache_queued_user_message(state, message, command_payload \\ %{}) do
+    case OutputCache.build_queued_user_entry(message, command_payload) do
+      {entry, pending_id} ->
+        output_parts = OutputCache.upsert_part(state.output_parts, pending_id, entry)
+        state = %{state | output_parts: output_parts}
+        flush_output_to_db(state)
+        state
 
-  defp cache_queued_user_message(state, message, command_payload) when is_binary(message) do
-    text = String.trim(message)
-
-    if text == "" do
-      state
-    else
-      correlation_key = Map.get(command_payload, "correlation_key")
-
-      pending_id =
-        if is_binary(correlation_key) and correlation_key != "" do
-          "queued-user-#{correlation_key}"
-        else
-          "queued-user-#{System.unique_integer([:positive])}"
-        end
-
-      entry =
-        %{"type" => "user", "id" => pending_id, "text" => text, "pending" => true}
-        |> maybe_put_payload_field("correlation_key", Map.get(command_payload, "correlation_key"))
-        |> maybe_put_payload_field("command_type", Map.get(command_payload, "command_type"))
-        |> maybe_put_payload_field("sent_at", Map.get(command_payload, "sent_at"))
-
-      output_parts = upsert_output_part(state.output_parts, pending_id, entry)
-      state = %{state | output_parts: output_parts}
-      flush_output_to_db(state)
-      state
+      nil ->
+        state
     end
   end
 
-  defp cache_queued_user_message(state, _message, _command_payload), do: state
-
-  defp maybe_put_payload_field(entry, _key, nil), do: entry
-  defp maybe_put_payload_field(entry, _key, ""), do: entry
-  defp maybe_put_payload_field(entry, key, value), do: Map.put(entry, key, value)
-
-  defp maybe_cache_resume_prompt_message(state, message) when is_binary(message) do
+  defp do_maybe_cache_resume_prompt(state, message) when is_binary(message) do
     if String.trim(message) == "" do
       state
     else
-      cache_queued_user_message(state, message)
+      do_cache_queued_user_message(state, message)
     end
   end
 
-  defp maybe_cache_resume_prompt_message(state, _message), do: state
-
-  defp promote_pending_user_part(parts, text, part_id) do
-    case Enum.find_index(parts, fn
-           %{"type" => "user", "pending" => true, "text" => pending_text} ->
-             String.trim(to_string(pending_text || "")) == String.trim(text)
-
-           _ ->
-             false
-         end) do
-      nil ->
-        {parts, false}
-
-      idx ->
-        replacement = %{"type" => "user", "id" => part_id, "text" => text}
-        {List.replace_at(parts, idx, replacement), true}
-    end
-  end
+  defp do_maybe_cache_resume_prompt(state, _message), do: state
 
   # ---- Private: SDK Event Handling ----
 
@@ -1208,7 +1144,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
        when is_binary(text) and text != "" do
     part_id = part["id"] || "text-default"
     entry = %{"type" => "text", "id" => part_id, "text" => text}
-    parts = upsert_output_part(state.output_parts, part_id, entry)
+    parts = OutputCache.upsert_part(state.output_parts, part_id, entry)
     {:continue, %{state | output_text: text, output_parts: parts}}
   end
 
@@ -1223,7 +1159,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
        when is_binary(text) and text != "" do
     part_id = part["id"] || "reasoning-default"
     entry = %{"type" => "reasoning", "id" => part_id, "text" => text}
-    parts = upsert_output_part(state.output_parts, part_id, entry)
+    parts = OutputCache.upsert_part(state.output_parts, part_id, entry)
     {:continue, %{state | output_parts: parts}}
   end
 
@@ -1249,7 +1185,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
       "error" => nil
     }
 
-    parts = upsert_output_part(state.output_parts, tool_id, entry)
+    parts = OutputCache.upsert_part(state.output_parts, tool_id, entry)
     {:continue, %{state | output_parts: parts}}
   end
 
@@ -1265,8 +1201,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
        ) do
     tool_id = part["id"]
     existing = Enum.find(state.output_parts, fn p -> p["id"] == tool_id end) || %{}
-    entry = build_tool_entry(part, tool_state, existing)
-    parts = upsert_output_part(state.output_parts, tool_id, entry)
+    entry = OutputCache.build_tool_entry(part, tool_state, existing)
+    parts = OutputCache.upsert_part(state.output_parts, tool_id, entry)
     {:continue, %{state | output_parts: parts}}
   end
 
@@ -1292,23 +1228,6 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   defp handle_sdk_event(_event, state) do
     {:continue, state}
   end
-
-  defp build_tool_entry(part, tool_state, existing) do
-    Map.merge(existing, %{
-      "type" => "tool",
-      "id" => part["id"],
-      "name" => part["tool"] || part["name"] || "tool",
-      "status" => normalize_tool_status(tool_state["status"]),
-      "input" => tool_state["input"] || existing["input"],
-      "title" => tool_state["title"] || existing["title"],
-      "output" => tool_state["output"] || existing["output"],
-      "error" => tool_state["error"] || existing["error"]
-    })
-  end
-
-  defp normalize_tool_status("completed"), do: "done"
-  defp normalize_tool_status("error"), do: "error"
-  defp normalize_tool_status(_), do: "running"
 
   # ---- Private helpers ----
 
@@ -1353,7 +1272,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
          resume_session_id,
          _prewarmed_opts
        ) do
-    existing_parts = restore_output_parts(task.output)
+    existing_parts = OutputCache.restore_parts(task.output)
     existing_todos = TodoTracker.restore_items(task.todo_items)
 
     state = %{
@@ -1368,7 +1287,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
         last_flushed_todo_version: if(existing_todos == [], do: 0, else: 1)
     }
 
-    state = maybe_cache_resume_prompt_message(state, prompt_instruction)
+    state = do_maybe_cache_resume_prompt(state, prompt_instruction)
     send(self(), :restart_container)
     state
   end
@@ -1458,7 +1377,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     cancel_flush_timer(state)
     from_task = state.task_repo.get_task(state.task_id)
 
-    serialized_error = serialize_error(error)
+    serialized_error = OutputCache.serialize_error(error)
 
     attrs = %{
       status: "failed",
@@ -1468,7 +1387,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     }
 
     # Cache structured output parts (or plain text fallback) even on failure
-    attrs = put_output_attrs(attrs, state)
+    attrs = OutputCache.put_output_attrs(attrs, state.output_parts, state.output_text)
     attrs = TodoTracker.put_attrs(attrs, state.todo_items)
 
     update_task_status(state, attrs)
@@ -1507,7 +1426,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     }
 
     # Cache structured output parts (or plain text fallback)
-    attrs = put_output_attrs(attrs, state)
+    attrs = OutputCache.put_output_attrs(attrs, state.output_parts, state.output_text)
     attrs = TodoTracker.put_attrs(attrs, state.todo_items)
 
     update_task_status(state, attrs)
@@ -1552,15 +1471,6 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
       :ok
   end
 
-  # Prefer structured output_parts (JSON); fall back to plain output_text
-  defp put_output_attrs(attrs, state) do
-    case serialize_output_parts(state.output_parts) do
-      nil when state.output_text != "" -> Map.put(attrs, :output, state.output_text)
-      nil -> attrs
-      json -> Map.put(attrs, :output, json)
-    end
-  end
-
   defp cleanup_container(%{container_id: nil}), do: :ok
 
   defp cleanup_container(state) do
@@ -1574,25 +1484,6 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
       :ok
   end
 
-  # Insert or update a part by its ID. If a part with the same ID
-  # exists, replace it in-place. Otherwise append.
-  defp upsert_output_part(parts, nil, entry) do
-    parts ++ [entry]
-  end
-
-  defp upsert_output_part(parts, part_id, entry) do
-    case Enum.find_index(parts, fn p -> p["id"] == part_id end) do
-      nil -> parts ++ [entry]
-      idx -> List.replace_at(parts, idx, entry)
-    end
-  end
-
-  defp serialize_output_parts([]), do: nil
-
-  defp serialize_output_parts(parts) do
-    Jason.encode!(parts)
-  end
-
   defp sanitize_fresh_start_reason({:docker_prepare_fresh_start_failed, exit_code, _output}) do
     "container repo sync failed (exit #{exit_code})"
   end
@@ -1600,20 +1491,6 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   defp sanitize_fresh_start_reason({:auth_refresh_failed, _provider}), do: "auth refresh failed"
 
   defp sanitize_fresh_start_reason(_), do: "internal preparation error"
-
-  defp serialize_error(error) when is_binary(error), do: error
-
-  defp serialize_error(%{"data" => %{"message" => msg}}), do: msg
-  defp serialize_error(%{"message" => msg}), do: msg
-
-  defp serialize_error(error) when is_map(error) do
-    case Jason.encode(error) do
-      {:ok, json} -> json
-      _ -> inspect(error)
-    end
-  end
-
-  defp serialize_error(error), do: inspect(error)
 
   defp clear_pending_question(state) do
     cancel_question_timeout(state)
@@ -1671,39 +1548,18 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     }
   end
 
-  defp cache_answer_message(state, request_id, message, answers) do
-    text =
-      case message do
-        msg when is_binary(msg) ->
-          String.trim(msg)
+  defp do_cache_answer_message(state, request_id, message, answers) do
+    case OutputCache.build_answer_entry(request_id, message, answers) do
+      {entry, part_id} ->
+        output_parts = OutputCache.upsert_part(state.output_parts, part_id, entry)
+        state = %{state | output_parts: output_parts}
+        flush_output_to_db(state)
+        state
 
-        _ ->
-          format_answers_for_cache(answers)
-      end
-
-    if String.trim(text) == "" do
-      state
-    else
-      part_id = "user-answer-#{request_id}"
-      entry = %{"type" => "user", "id" => part_id, "text" => text}
-      output_parts = upsert_output_part(state.output_parts, part_id, entry)
-      state = %{state | output_parts: output_parts}
-      flush_output_to_db(state)
-      state
+      nil ->
+        state
     end
   end
-
-  defp format_answers_for_cache(answers) when is_list(answers) do
-    answers
-    |> Enum.with_index(1)
-    |> Enum.map_join("\n", fn {answer_list, idx} ->
-      cleaned = Enum.reject(answer_list, &(&1 in [nil, ""]))
-      if cleaned == [], do: nil, else: "Answer #{idx}: #{Enum.join(cleaned, ", ")}"
-    end)
-    |> String.trim()
-  end
-
-  defp format_answers_for_cache(_), do: ""
 
   defp cancel_question_timeout(%{question_timeout_ref: nil}), do: :ok
   defp cancel_question_timeout(%{question_timeout_ref: ref}), do: Process.cancel_timer(ref)
@@ -1720,7 +1576,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     attrs = %{}
 
     attrs =
-      case serialize_output_parts(state.output_parts) do
+      case OutputCache.serialize_parts(state.output_parts) do
         nil -> attrs
         json -> Map.put(attrs, :output, json)
       end
@@ -1731,20 +1587,4 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
       update_task_status(state, attrs)
     end
   end
-
-  # Restore previously cached output parts from DB on resume.
-  # The output column stores either a JSON array of structured parts
-  # or a plain text string. We decode back to the internal map format
-  # so new parts from the resumed session are appended correctly.
-  defp restore_output_parts(nil), do: []
-  defp restore_output_parts(""), do: []
-
-  defp restore_output_parts(output) when is_binary(output) do
-    case Jason.decode(output) do
-      {:ok, parts} when is_list(parts) -> parts
-      _ -> [%{"type" => "text", "id" => "cached-0", "text" => output}]
-    end
-  end
-
-  defp restore_output_parts(_), do: []
 end
