@@ -224,4 +224,68 @@ defmodule Agents.Sessions.Infrastructure.OrphanRecoveryTest do
       assert result == {:ok, 0}
     end
   end
+
+  describe "PubSub broadcasting" do
+    test "broadcasts per-task :task_status_changed for each orphan" do
+      user = user_fixture()
+      t1 = insert_task(user, %{status: "running", container_id: "c1", session_id: "s1"})
+      t2 = insert_task(user, %{status: "starting", container_id: "c2"})
+
+      Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "task:#{t1.id}")
+      Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "task:#{t2.id}")
+
+      Process.put(:test_pid, self())
+      OrphanRecovery.recover_orphaned_tasks(container_provider: TrackingContainerProvider)
+
+      assert_receive {:task_status_changed, task1_id, "failed"}
+      assert task1_id == t1.id
+
+      assert_receive {:task_status_changed, task2_id, "failed"}
+      assert task2_id == t2.id
+    end
+
+    test "broadcasts per-user :sessions_orphaned summary with correct count and task IDs" do
+      user = user_fixture()
+      t1 = insert_task(user, %{status: "running", container_id: "c1", session_id: "s1"})
+      t2 = insert_task(user, %{status: "pending", container_id: "c2"})
+
+      Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "sessions:user:#{user.id}")
+
+      Process.put(:test_pid, self())
+      OrphanRecovery.recover_orphaned_tasks(container_provider: TrackingContainerProvider)
+
+      assert_receive {:sessions_orphaned, count, task_ids}
+      assert count == 2
+      assert Enum.sort(task_ids) == Enum.sort([t1.id, t2.id])
+    end
+
+    test "groups broadcasts correctly for multiple users" do
+      user_a = user_fixture()
+      user_b = user_fixture()
+      _t1 = insert_task(user_a, %{status: "running", container_id: "ca1", session_id: "s1"})
+      _t2 = insert_task(user_a, %{status: "starting", container_id: "ca2"})
+      _t3 = insert_task(user_b, %{status: "pending", container_id: "cb1"})
+
+      Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "sessions:user:#{user_a.id}")
+      Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "sessions:user:#{user_b.id}")
+
+      Process.put(:test_pid, self())
+      OrphanRecovery.recover_orphaned_tasks(container_provider: TrackingContainerProvider)
+
+      assert_receive {:sessions_orphaned, 2, _task_ids_a}
+      assert_receive {:sessions_orphaned, 1, _task_ids_b}
+    end
+
+    test "does not broadcast when no orphans exist" do
+      user = user_fixture()
+      _completed = insert_task(user, %{status: "completed", completed_at: DateTime.utc_now()})
+
+      Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "sessions:user:#{user.id}")
+
+      Process.put(:test_pid, self())
+      OrphanRecovery.recover_orphaned_tasks(container_provider: TrackingContainerProvider)
+
+      refute_receive {:sessions_orphaned, _, _}
+    end
+  end
 end

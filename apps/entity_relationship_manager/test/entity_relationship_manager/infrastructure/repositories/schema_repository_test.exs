@@ -31,7 +31,7 @@ defmodule EntityRelationshipManager.Infrastructure.Repositories.SchemaRepository
 
     %SchemaDefinitionSchema{}
     |> SchemaDefinitionSchema.create_changeset(Map.merge(default_attrs, attrs))
-    |> Jarga.Repo.insert!()
+    |> EntityRelationshipManager.Repo.insert!()
   end
 
   describe "get_schema/1" do

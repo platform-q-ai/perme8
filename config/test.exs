@@ -122,10 +122,28 @@ config :jarga_web, JargaWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 5000],
   secret_key_base: "k/DpMQ7vB/8OirPNBlAhucs6RCPp5ZRK09Is1Sd7Jb+YThz21IeYYYpueAbJYNEd"
 
+# EntityRelationshipManager uses the same database as Jarga
+# pool_size 5: kept small to stay within Postgres max_connections.
+# 7 repos total: Jarga(15)+Identity(15)+Agents(10)+Chat(15)+Notifications(15)+Webhooks(5)+ERM(5) = 80 connections.
+config :entity_relationship_manager, EntityRelationshipManager.Repo,
+  url: database_url,
+  pool: Ecto.Adapters.SQL.Sandbox,
+  pool_size: 5,
+  ownership_timeout: :infinity
+
+# Enable Phoenix.Ecto.SQL.Sandbox plug in ERM endpoint during tests
+config :entity_relationship_manager, sandbox: true
+
 # ERM: dev 4005 → test 5005
 config :entity_relationship_manager, EntityRelationshipManager.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 5005],
   secret_key_base: "erm_test_secret_key_base_at_least_64_bytes_long_for_security_purposes"
+
+# ERM Neo4j connection — used only by tests tagged :neo4j
+config :entity_relationship_manager, :neo4j,
+  url: "http://localhost:7474",
+  auth: [username: "neo4j", password: "password"],
+  database: "neo4j"
 
 # ERM repository configuration.
 # Unit tests (ExUnit) use Mox mocks by default.

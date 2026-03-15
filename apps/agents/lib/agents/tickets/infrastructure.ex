@@ -12,8 +12,10 @@ defmodule Agents.Tickets.Infrastructure do
     exports: [
       Clients.GithubProjectClient,
       Schemas.ProjectTicketSchema,
+      Schemas.TicketDependencySchema,
       Schemas.TicketLifecycleEventSchema,
       Repositories.ProjectTicketRepository,
+      Repositories.TicketDependencyRepository,
       Repositories.TicketLifecycleEventRepository,
       Subscribers.GithubTicketPushHandler,
       TicketSyncServer

@@ -8,6 +8,7 @@ defmodule EntityRelationshipManager.Application do
     maybe_configure_real_repos()
 
     children = [
+      EntityRelationshipManager.Repo,
       EntityRelationshipManager.Endpoint
     ]
 

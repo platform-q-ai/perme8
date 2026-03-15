@@ -39,7 +39,7 @@ defmodule EntityRelationshipManager.MixProject do
           apps: [
             {:phoenix, :relaxed},
             {:phoenix_ecto, :relaxed},
-            {:jarga, :relaxed},
+            {:ecto_sql, :relaxed},
             {:identity, :relaxed},
             {:perme8_events, :relaxed}
           ]
@@ -52,11 +52,14 @@ defmodule EntityRelationshipManager.MixProject do
   defp deps do
     [
       {:phoenix, "~> 1.8"},
+      {:phoenix_ecto, "~> 4.4"},
+      {:ecto_sql, "~> 3.10"},
+      {:postgrex, ">= 0.0.0"},
       {:perme8_events, in_umbrella: true},
       {:perme8_plugs, in_umbrella: true},
-      {:jarga, in_umbrella: true},
       {:identity, in_umbrella: true},
       {:jason, "~> 1.2"},
+      {:req, "~> 0.5"},
       {:bandit, "~> 1.5"},
       {:boundary, "~> 0.10", runtime: false},
       {:mox, "~> 1.0", only: :test}

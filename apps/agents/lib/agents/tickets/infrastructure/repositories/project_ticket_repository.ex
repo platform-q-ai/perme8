@@ -33,7 +33,9 @@ defmodule Agents.Tickets.Infrastructure.Repositories.ProjectTicketRepository do
     |> order_by([ticket], desc: ticket.position, desc: ticket.created_at)
     |> preload([ticket],
       lifecycle_events: ^lifecycle_events_query,
-      sub_tickets: ^sub_tickets_query
+      sub_tickets: ^sub_tickets_query,
+      blocking: [],
+      blocked_by: []
     )
     |> Repo.all()
   end
@@ -56,8 +58,16 @@ defmodule Agents.Tickets.Infrastructure.Repositories.ProjectTicketRepository do
     lifecycle_events_query = lifecycle_events_query()
 
     case Repo.get(ProjectTicketSchema, id) do
-      nil -> nil
-      ticket -> {:ok, Repo.preload(ticket, lifecycle_events: lifecycle_events_query)}
+      nil ->
+        nil
+
+      ticket ->
+        {:ok,
+         Repo.preload(ticket,
+           lifecycle_events: lifecycle_events_query,
+           blocking: [],
+           blocked_by: []
+         )}
     end
   end
 
@@ -159,6 +169,19 @@ defmodule Agents.Tickets.Infrastructure.Repositories.ProjectTicketRepository do
     end)
 
     :ok
+  end
+
+  @doc """
+  Updates the labels on a ticket by its issue number.
+  Returns `{:ok, ticket}` if the ticket existed, `{:error, :not_found}` otherwise.
+  """
+  @spec update_labels(integer(), [String.t()]) ::
+          {:ok, ProjectTicketSchema.t()} | {:error, :not_found}
+  def update_labels(number, labels) when is_integer(number) and is_list(labels) do
+    case Repo.get_by(ProjectTicketSchema, number: number) do
+      nil -> {:error, :not_found}
+      ticket -> ticket |> ProjectTicketSchema.changeset(%{labels: labels}) |> Repo.update()
+    end
   end
 
   @doc """

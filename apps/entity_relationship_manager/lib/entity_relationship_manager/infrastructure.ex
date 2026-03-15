@@ -13,13 +13,14 @@ defmodule EntityRelationshipManager.Infrastructure do
     deps: [
       EntityRelationshipManager,
       EntityRelationshipManager.Domain,
-      Jarga.Repo
+      EntityRelationshipManager.Repo
     ],
     exports: [
       {Repositories.SchemaRepository, []},
       {Repositories.GraphRepository, []},
       {Repositories.InMemoryGraphRepository, []},
       {Adapters.Neo4jAdapter, []},
+      {Adapters.Neo4jAdapter.HttpAdapter, []},
       {Adapters.Neo4jDefaultAdapter, []},
       {Schemas.SchemaDefinitionSchema, []}
     ]

@@ -19,6 +19,7 @@ defmodule AgentsWeb.DashboardLive.Index do
   alias Agents.Tickets.Domain.Policies.TicketHierarchyPolicy
 
   alias AgentsWeb.DashboardLive.AuthRefreshHandlers
+  alias AgentsWeb.DashboardLive.DependencyHandlers
   alias AgentsWeb.DashboardLive.EventProcessor
   alias AgentsWeb.DashboardLive.FollowUpDispatchHandlers
   alias AgentsWeb.DashboardLive.PubSubHandlers
@@ -41,6 +42,7 @@ defmodule AgentsWeb.DashboardLive.Index do
     if connected?(socket) do
       subscribe_to_active_tasks(tasks)
       Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "queue:user:#{user.id}")
+      Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "sessions:user:#{user.id}")
       Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "sessions:tickets")
     end
 
@@ -80,6 +82,11 @@ defmodule AgentsWeb.DashboardLive.Index do
      |> assign(:collapsed_parents, MapSet.new())
      |> assign(:fixture, nil)
      |> assign(:syncing_tickets, false)
+     |> assign(:dependency_search_mode, false)
+     |> assign(:dependency_search_results, [])
+     |> assign(:dependency_search_query, "")
+     |> assign(:selected_dependency_target, nil)
+     |> assign(:dependency_direction, nil)
      |> assign_session_state()
      |> assign(:form, to_form(%{"instruction" => ""}))}
   end
@@ -180,6 +187,40 @@ defmodule AgentsWeb.DashboardLive.Index do
   @impl true
   def handle_event("remove_ticket_from_queue", params, socket),
     do: TicketHandlers.remove_ticket_from_queue(params, socket)
+
+  @impl true
+  def handle_event("update_ticket_labels", params, socket),
+    do: TicketHandlers.update_ticket_labels(params, socket)
+
+  # -- Dependency Handlers -----------------------------------------------------
+
+  @impl true
+  def handle_event("add_dependency_start", params, socket),
+    do: DependencyHandlers.add_dependency_start(params, socket)
+
+  @impl true
+  def handle_event("cancel_dependency", params, socket),
+    do: DependencyHandlers.cancel_dependency(params, socket)
+
+  @impl true
+  def handle_event("dependency_search", params, socket),
+    do: DependencyHandlers.dependency_search(params, socket)
+
+  @impl true
+  def handle_event("select_dependency_target", params, socket),
+    do: DependencyHandlers.select_dependency_target(params, socket)
+
+  @impl true
+  def handle_event("set_dependency_direction", params, socket),
+    do: DependencyHandlers.set_dependency_direction(params, socket)
+
+  @impl true
+  def handle_event("confirm_dependency", params, socket),
+    do: DependencyHandlers.confirm_dependency(params, socket)
+
+  @impl true
+  def handle_event("remove_dependency", params, socket),
+    do: DependencyHandlers.remove_dependency(params, socket)
 
   # -- Session Handlers --------------------------------------------------------
 
@@ -378,6 +419,12 @@ defmodule AgentsWeb.DashboardLive.Index do
   @impl true
   def handle_info({:follow_up_timeout, correlation_key, timeout_ref}, socket),
     do: FollowUpDispatchHandlers.follow_up_timeout(correlation_key, timeout_ref, socket)
+
+  # -- Orphan recovery notification --------------------------------------------
+
+  @impl true
+  def handle_info({:sessions_orphaned, count, task_ids}, socket),
+    do: PubSubHandlers.sessions_orphaned(count, task_ids, socket)
 
   # -- Catch-all ---------------------------------------------------------------
 

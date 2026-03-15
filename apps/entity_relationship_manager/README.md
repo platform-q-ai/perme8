@@ -271,7 +271,7 @@ In `config/config.exs` or `config/runtime.exs`:
 
 ```elixir
 config :entity_relationship_manager,
-  ecto_repo: Jarga.Repo,
+  ecto_repo: EntityRelationshipManager.Repo,
   schema_repo: EntityRelationshipManager.Infrastructure.Repositories.SchemaRepository,
   graph_repo: EntityRelationshipManager.Infrastructure.Repositories.GraphRepository
 
@@ -292,7 +292,8 @@ config :entity_relationship_manager,
 | Dependency | Purpose |
 |------------|---------|
 | `:phoenix` | Web framework (router, controllers, endpoint) |
-| `:jarga` | Core platform (workspaces, repo) |
+| `:ecto_sql` | Ecto repository and database adapter |
+| `:postgrex` | PostgreSQL driver |
 | `:identity` | Authentication (API key verification) |
 | `:jason` | JSON encoding/decoding |
 | `:bandit` | HTTP server |

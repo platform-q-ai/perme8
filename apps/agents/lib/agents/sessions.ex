@@ -38,6 +38,7 @@ defmodule Agents.Sessions do
   alias Agents.Sessions.Domain.Entities.{Session, Task}
   alias Agents.Sessions.Infrastructure.Repositories.TaskRepository
   alias Agents.Repo
+  alias Agents.Sessions.Infrastructure.OrphanRecovery
   alias Agents.Sessions.Infrastructure.TaskRunnerSupervisor
   alias Ecto.Adapters.SQL
 
@@ -138,6 +139,37 @@ defmodule Agents.Sessions do
   end
 
   @doc """
+  Restarts a task that was orphaned by a server restart.
+
+  Re-enqueues the failed task using its original instruction so it goes
+  through the normal queue → promote → TaskRunner flow. The existing
+  container is restarted (not recreated).
+
+  Returns `{:error, :not_orphaned}` if the task's error doesn't indicate
+  it was orphaned by a restart.
+  """
+  @spec restart_orphaned_task(String.t(), String.t(), keyword()) ::
+          {:ok, struct()} | {:error, term()}
+  def restart_orphaned_task(task_id, user_id, opts \\ []) do
+    with {:ok, task} <- get_task(task_id, user_id, opts),
+         :ok <- validate_orphaned(task) do
+      resume_task(task_id, %{user_id: user_id, instruction: task.instruction}, opts)
+    end
+  end
+
+  defp validate_orphaned(task) do
+    orphan_prefix = OrphanRecovery.orphan_error_prefix()
+
+    if task.status == "failed" and
+         is_binary(task.error) and
+         String.contains?(task.error, orphan_prefix) do
+      :ok
+    else
+      {:error, :not_orphaned}
+    end
+  end
+
+  @doc """
   Gets a task by ID with ownership check.
   """
   @spec get_task(String.t(), String.t(), keyword()) :: {:ok, struct()} | {:error, :not_found}
@@ -151,6 +183,17 @@ defmodule Agents.Sessions do
   @spec list_tasks(String.t(), keyword()) :: [struct()]
   def list_tasks(user_id, opts \\ []) do
     ListTasks.execute(user_id, opts)
+  end
+
+  @doc """
+  Fetches tasks by a list of IDs, scoped to a specific user.
+
+  Used to backfill tasks that fall outside the default 50-task snapshot
+  window but are still referenced by ticket FK associations.
+  """
+  @spec get_tasks_by_ids([String.t()], String.t()) :: [struct()]
+  def get_tasks_by_ids(ids, user_id) do
+    TaskRepository.get_tasks_by_ids(ids, user_id)
   end
 
   @doc """
