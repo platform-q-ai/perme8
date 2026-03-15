@@ -188,6 +188,10 @@ defmodule AgentsWeb.DashboardLive.Index do
   def handle_event("remove_ticket_from_queue", params, socket),
     do: TicketHandlers.remove_ticket_from_queue(params, socket)
 
+  @impl true
+  def handle_event("update_ticket_labels", params, socket),
+    do: TicketHandlers.update_ticket_labels(params, socket)
+
   # -- Dependency Handlers -----------------------------------------------------
 
   @impl true
