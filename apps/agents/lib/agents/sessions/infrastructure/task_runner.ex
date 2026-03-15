@@ -27,9 +27,9 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   alias Agents.Sessions.Domain.Entities.Session
   alias Agents.Sessions.Domain.Entities.TodoList
   alias Agents.Sessions.Domain.Events.{TaskCompleted, TaskFailed, TaskCancelled}
-  alias Agents.Sessions.Domain.Policies.SessionLifecyclePolicy
   alias Agents.Sessions.Infrastructure.SdkEventHandler
   alias Agents.Sessions.Infrastructure.Schemas.TaskSchema
+  alias Agents.Sessions.Infrastructure.TaskRunner.TaskBroadcaster
 
   require Logger
 
@@ -204,7 +204,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     case state.opencode_client.reply_question(base_url, request_id, answers, []) do
       :ok ->
         state = cache_answer_message(state, request_id, message, answers)
-        broadcast_question_replied(state)
+        TaskBroadcaster.broadcast_question_replied(state.task_id, state.pubsub)
         {:reply, :ok, clear_pending_question(state)}
 
       {:error, _} = error ->
@@ -274,8 +274,9 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
           error: nil
         })
 
-        broadcast_status_with_lifecycle(
-          state,
+        TaskBroadcaster.broadcast_status_with_lifecycle(
+          state.task_id,
+          state.pubsub,
           "starting",
           %{
             status: "starting",
@@ -316,8 +317,9 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
           error: nil
         })
 
-        broadcast_status_with_lifecycle(
-          state,
+        TaskBroadcaster.broadcast_status_with_lifecycle(
+          state.task_id,
+          state.pubsub,
           "starting",
           %{
             status: "starting",
@@ -349,8 +351,9 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
           error: nil
         })
 
-        broadcast_status_with_lifecycle(
-          state,
+        TaskBroadcaster.broadcast_status_with_lifecycle(
+          state.task_id,
+          state.pubsub,
           "starting",
           %{
             status: "starting",
@@ -469,7 +472,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
         update_task_status(state, %{session_id: session_id})
 
         # Broadcast session_id so LiveView can see it without a page refresh
-        broadcast_session_id_set(state.task_id, session_id, state.pubsub)
+        TaskBroadcaster.broadcast_session_id_set(state.task_id, session_id, state.pubsub)
 
         # Subscribe to SSE events
         case subscribe_to_events(state) do
@@ -504,8 +507,20 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
           error: nil
         })
 
-        broadcast_status_with_lifecycle(state, "running", %{status: "running"}, from_task)
-        broadcast_container_stats(state)
+        TaskBroadcaster.broadcast_status_with_lifecycle(
+          state.task_id,
+          state.pubsub,
+          "running",
+          %{status: "running"},
+          from_task
+        )
+
+        TaskBroadcaster.broadcast_container_stats(
+          state.container_id,
+          state.container_provider,
+          state.task_id,
+          state.pubsub
+        )
 
         flush_ref = schedule_output_flush()
 
@@ -573,7 +588,12 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
       end
 
     # Push container stats to subscribers (event-driven, replaces LiveView polling)
-    broadcast_container_stats(state)
+    TaskBroadcaster.broadcast_container_stats(
+      state.container_id,
+      state.container_provider,
+      state.task_id,
+      state.pubsub
+    )
 
     # Schedule the next flush if we're still running
     flush_ref = schedule_output_flush()
@@ -606,7 +626,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
         end
 
         state = mark_question_rejected(state)
-        broadcast_question_rejected(state)
+        TaskBroadcaster.broadcast_question_rejected(state.task_id, state.pubsub)
         {:noreply, state}
     end
   end
@@ -672,7 +692,13 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
       pending_question: nil
     })
 
-    broadcast_status_with_lifecycle(state, "cancelled", %{status: "cancelled"}, from_task)
+    TaskBroadcaster.broadcast_status_with_lifecycle(
+      state.task_id,
+      state.pubsub,
+      "cancelled",
+      %{status: "cancelled"},
+      from_task
+    )
 
     state.event_bus.emit(
       TaskCancelled.new(%{
@@ -760,7 +786,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   # the subtask part event arrives and overwrites it with the real value.
 
   defp process_parent_session_event(event, state) do
-    broadcast_event(event, state)
+    TaskBroadcaster.broadcast_event(event, state.task_id, state.pubsub)
 
     # Track subtask message IDs so we can suppress their user messages
     state = track_subtask_message_id(event, state)
@@ -816,12 +842,12 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
         _ -> state
       end
 
-    broadcast_event(event, state)
+    TaskBroadcaster.broadcast_event(event, state.task_id, state.pubsub)
     {:noreply, state}
   end
 
   defp process_child_session_event(event, _child_session_id, state) do
-    broadcast_event(event, state)
+    TaskBroadcaster.broadcast_event(event, state.task_id, state.pubsub)
     {:noreply, state}
   end
 
@@ -831,14 +857,6 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   end
 
   defp extract_event_session_id(_), do: nil
-
-  defp broadcast_event(event, state) do
-    Phoenix.PubSub.broadcast(
-      state.pubsub,
-      "task:#{state.task_id}",
-      {:task_event, state.task_id, event}
-    )
-  end
 
   # Track subtask message IDs for two purposes:
   # 1. Add to `subtask_message_ids` so subsequent user messages from the same
@@ -1170,7 +1188,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     case parse_todo_event(props) do
       {:ok, todo_items} ->
         merged_items = merge_prior_resume_items(state.prior_resume_items, todo_items)
-        broadcast_todo_update(state.task_id, merged_items, state.pubsub)
+        TaskBroadcaster.broadcast_todo_update(state.task_id, merged_items, state.pubsub)
 
         {:continue, %{state | todo_items: merged_items, todo_version: state.todo_version + 1}}
 
@@ -1454,7 +1472,14 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     attrs = put_todo_attrs(attrs, state)
 
     update_task_status(state, attrs)
-    broadcast_status_with_lifecycle(state, "failed", attrs, from_task)
+
+    TaskBroadcaster.broadcast_status_with_lifecycle(
+      state.task_id,
+      state.pubsub,
+      "failed",
+      attrs,
+      from_task
+    )
 
     state.event_bus.emit(
       TaskFailed.new(%{
@@ -1486,7 +1511,14 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     attrs = put_todo_attrs(attrs, state)
 
     update_task_status(state, attrs)
-    broadcast_status_with_lifecycle(state, "completed", attrs, from_task)
+
+    TaskBroadcaster.broadcast_status_with_lifecycle(
+      state.task_id,
+      state.pubsub,
+      "completed",
+      attrs,
+      from_task
+    )
 
     state.event_bus.emit(
       TaskCompleted.new(%{
@@ -1582,121 +1614,6 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   end
 
   defp serialize_error(error), do: inspect(error)
-
-  defp broadcast_status(task_id, status, pubsub) do
-    Phoenix.PubSub.broadcast(
-      pubsub,
-      "task:#{task_id}",
-      {:task_status_changed, task_id, status}
-    )
-  end
-
-  defp broadcast_status_with_lifecycle(state, status, attrs, current_task) do
-    to_task = lifecycle_target_task(current_task, attrs, status)
-
-    from_state = lifecycle_state_from_task(current_task)
-    to_state = lifecycle_state_from_task(to_task)
-    container_id = Map.get(to_task, :container_id)
-
-    broadcast_status(state.task_id, status, state.pubsub)
-
-    broadcast_lifecycle_transition(
-      state.task_id,
-      from_state,
-      to_state,
-      container_id,
-      state.pubsub
-    )
-  end
-
-  defp lifecycle_target_task(nil, attrs, status) do
-    attrs
-    |> Map.new()
-    |> Map.put_new(:status, status)
-  end
-
-  defp lifecycle_target_task(task, attrs, status) do
-    task
-    |> Map.from_struct()
-    |> Map.merge(Map.new(attrs))
-    |> Map.put(:status, status)
-  end
-
-  defp lifecycle_state_from_task(nil), do: :idle
-
-  defp lifecycle_state_from_task(task) do
-    SessionLifecyclePolicy.derive(%{
-      status: Map.get(task, :status),
-      container_id: Map.get(task, :container_id),
-      container_port: Map.get(task, :container_port)
-    })
-  end
-
-  defp broadcast_lifecycle_transition(task_id, from_state, to_state, container_id, pubsub) do
-    Logger.debug(
-      "Session lifecycle transition: #{from_state} -> #{to_state} [task=#{task_id}, container=#{container_id}]"
-    )
-
-    Phoenix.PubSub.broadcast(
-      pubsub,
-      "task:#{task_id}",
-      {:lifecycle_state_changed, task_id, from_state, to_state}
-    )
-  end
-
-  defp broadcast_session_id_set(task_id, session_id, pubsub) do
-    Phoenix.PubSub.broadcast(
-      pubsub,
-      "task:#{task_id}",
-      {:task_session_id_set, task_id, session_id}
-    )
-  end
-
-  defp broadcast_question_replied(state) do
-    Phoenix.PubSub.broadcast(
-      state.pubsub,
-      "task:#{state.task_id}",
-      {:task_event, state.task_id, %{"type" => "question.replied"}}
-    )
-  end
-
-  defp broadcast_question_rejected(state) do
-    Phoenix.PubSub.broadcast(
-      state.pubsub,
-      "task:#{state.task_id}",
-      {:task_event, state.task_id, %{"type" => "question.rejected"}}
-    )
-  end
-
-  defp broadcast_container_stats(state) when is_binary(state.container_id) do
-    case state.container_provider.stats(state.container_id) do
-      {:ok, stats} ->
-        mem_percent =
-          if stats.memory_limit > 0,
-            do: Float.round(stats.memory_usage / stats.memory_limit * 100, 1),
-            else: 0.0
-
-        payload = %{
-          cpu_percent: stats.cpu_percent,
-          memory_percent: mem_percent,
-          memory_usage: stats.memory_usage,
-          memory_limit: stats.memory_limit
-        }
-
-        Phoenix.PubSub.broadcast(
-          state.pubsub,
-          "task:#{state.task_id}",
-          {:container_stats_updated, state.task_id, state.container_id, payload}
-        )
-
-      {:error, _} ->
-        :ok
-    end
-  rescue
-    _ -> :ok
-  end
-
-  defp broadcast_container_stats(_state), do: :ok
 
   defp clear_pending_question(state) do
     cancel_question_timeout(state)
@@ -1823,10 +1740,6 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   end
 
   defp parse_todo_event(_), do: {:error, :invalid_payload}
-
-  defp broadcast_todo_update(task_id, todo_items, pubsub) do
-    Phoenix.PubSub.broadcast(pubsub, "task:#{task_id}", {:todo_updated, task_id, todo_items})
-  end
 
   defp put_todo_attrs(attrs, %{todo_items: []}), do: attrs
 
