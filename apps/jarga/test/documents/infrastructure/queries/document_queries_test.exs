@@ -3,8 +3,7 @@ defmodule Jarga.Documents.Infrastructure.Queries.DocumentQueriesTest do
 
   alias Jarga.Documents.Infrastructure.Queries.DocumentQueries
   alias Jarga.Documents
-  # Use Identity.Repo for all operations to ensure consistent transaction visibility
-  alias Identity.Repo, as: Repo
+  # Repo alias is provided by DataCase (Jarga.Repo, routed through Identity.Repo in sandbox)
 
   import Jarga.AccountsFixtures
   import Jarga.WorkspacesFixtures

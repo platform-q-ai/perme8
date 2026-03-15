@@ -75,14 +75,16 @@ IO.puts("[exo-seeds] Cleaning previous seed data...")
 # so we can truncate all tables through a single repo connection. If the repos are
 # ever split into separate databases, these statements must be routed to the
 # correct repo for each table.
+# Identity-owned tables
 Ecto.Adapters.SQL.query!(Identity.Repo, "TRUNCATE api_keys CASCADE", [])
-Ecto.Adapters.SQL.query!(Identity.Repo, "TRUNCATE document_components CASCADE", [])
-Ecto.Adapters.SQL.query!(Identity.Repo, "TRUNCATE documents CASCADE", [])
-Ecto.Adapters.SQL.query!(Identity.Repo, "TRUNCATE projects CASCADE", [])
 Ecto.Adapters.SQL.query!(Identity.Repo, "TRUNCATE workspace_members CASCADE", [])
 Ecto.Adapters.SQL.query!(Identity.Repo, "TRUNCATE workspaces CASCADE", [])
 Ecto.Adapters.SQL.query!(Identity.Repo, "TRUNCATE users_tokens CASCADE", [])
 Ecto.Adapters.SQL.query!(Identity.Repo, "TRUNCATE users CASCADE", [])
+# Jarga-owned tables
+Ecto.Adapters.SQL.query!(Jarga.Repo, "TRUNCATE document_components CASCADE", [])
+Ecto.Adapters.SQL.query!(Jarga.Repo, "TRUNCATE documents CASCADE", [])
+Ecto.Adapters.SQL.query!(Jarga.Repo, "TRUNCATE projects CASCADE", [])
 Ecto.Adapters.SQL.query!(Webhooks.Repo, "TRUNCATE inbound_webhook_logs CASCADE", [])
 Ecto.Adapters.SQL.query!(Webhooks.Repo, "TRUNCATE inbound_webhook_configs CASCADE", [])
 Ecto.Adapters.SQL.query!(Webhooks.Repo, "TRUNCATE webhook_deliveries CASCADE", [])

@@ -61,7 +61,10 @@ config :jarga, Jarga.Repo,
   # full scenario duration, easily exceeding the default 120s ownership timeout.
   ownership_timeout: :infinity
 
-# Identity uses the same database as Jarga
+# Identity uses the same database as Jarga.
+# All umbrella repos share the same PostgreSQL database. Identity.Repo is the
+# primary pool owner — other repos borrow its sandbox connection so FK
+# constraints across repos work within the same test transaction.
 config :identity, Identity.Repo,
   url: database_url,
   pool: Ecto.Adapters.SQL.Sandbox,

@@ -10,7 +10,6 @@ defmodule Jarga.Projects.Infrastructure.Queries.Queries do
 
   alias Identity.Domain.Entities.User
   alias Jarga.Projects.Infrastructure.Schemas.ProjectSchema
-  alias Identity.Infrastructure.Schemas.{WorkspaceSchema, WorkspaceMemberSchema}
 
   @doc """
   Base query for projects.
@@ -46,12 +45,11 @@ defmodule Jarga.Projects.Infrastructure.Queries.Queries do
 
   """
   def for_user(query \\ base(), %User{} = user) do
+    user_id = Ecto.UUID.dump!(user.id)
+
     from(p in query,
-      join: w in WorkspaceSchema,
-      on: p.workspace_id == w.id,
-      join: wm in WorkspaceMemberSchema,
-      on: wm.workspace_id == w.id,
-      where: wm.user_id == ^user.id
+      join: wm in "workspace_members",
+      on: wm.workspace_id == p.workspace_id and wm.user_id == ^user_id
     )
   end
 

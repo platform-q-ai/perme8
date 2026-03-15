@@ -15,7 +15,6 @@ defmodule Jarga.Documents do
     deps: [
       # Cross-context dependencies
       Identity,
-      Identity.Repo,
       Jarga.Accounts,
       Jarga.Projects,
       Agents,
@@ -32,7 +31,7 @@ defmodule Jarga.Documents do
       {Notes, []}
     ]
 
-  alias Identity.Repo, as: Repo
+  alias Jarga.Repo, as: Repo
   alias Identity.Domain.Entities.User
   alias Jarga.Documents.Notes.Infrastructure.Repositories.NoteRepository
   alias Jarga.Documents.Domain.Entities.Document
