@@ -28,7 +28,10 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   alias Agents.Sessions.Domain.Events.{TaskCompleted, TaskFailed, TaskCancelled}
   alias Agents.Sessions.Infrastructure.SdkEventHandler
   alias Agents.Sessions.Infrastructure.Schemas.TaskSchema
+  alias Agents.Sessions.Infrastructure.TaskRunner.ContainerLifecycle
   alias Agents.Sessions.Infrastructure.TaskRunner.OutputCache
+  alias Agents.Sessions.Infrastructure.TaskRunner.QuestionHandler
+  alias Agents.Sessions.Infrastructure.TaskRunner.SseEventRouter
   alias Agents.Sessions.Infrastructure.TaskRunner.TaskBroadcaster
   alias Agents.Sessions.Infrastructure.TaskRunner.TodoTracker
 
@@ -452,7 +455,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
       {:error, reason} ->
         fail_task(
           state,
-          "Fresh warm start preparation failed: #{sanitize_fresh_start_reason(reason)}"
+          "Fresh warm start preparation failed: #{QuestionHandler.sanitize_fresh_start_reason(reason)}"
         )
 
         {:stop, :normal, state}
@@ -537,7 +540,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
   @impl true
   def handle_info({:opencode_event, event}, state) do
-    event_session_id = extract_event_session_id(event)
+    event_session_id = SseEventRouter.extract_session_id(event)
 
     cond do
       is_nil(event_session_id) or event_session_id == state.session_id ->
@@ -561,7 +564,19 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
         # cache the part. These are semantically parent-session operations
         # (the subtask part appears in the parent's message stream) but the
         # event carries the child's session ID, so it lands here.
-        state = track_subtask_message_id(event, state)
+        {subtask_message_ids, child_session_ids} =
+          SseEventRouter.track_subtask_message_id(
+            event,
+            state.subtask_message_ids,
+            state.child_session_ids
+          )
+
+        state = %{
+          state
+          | subtask_message_ids: subtask_message_ids,
+            child_session_ids: child_session_ids
+        }
+
         state = do_cache_subtask_part(event, state)
 
         process_child_session_event(event, event_session_id, state)
@@ -644,7 +659,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
   @impl true
   def handle_info({:DOWN, _ref, :process, pid, reason}, state) when reason != :normal do
-    if current_sse_process?(state, pid) do
+    if ContainerLifecycle.current_sse_process?(state.sse_pid, pid) do
       fail_task(state, "SSE process crashed: #{inspect(reason)}")
       {:stop, :normal, state}
     else
@@ -654,7 +669,14 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
   @impl true
   def handle_info({:DOWN, _ref, :process, pid, :normal}, state) do
-    if should_reconnect_sse?(state, pid) do
+    if ContainerLifecycle.should_reconnect_sse?(
+         state.sse_pid,
+         state.sse_reconnecting,
+         state.status,
+         state.session_id,
+         state.container_port,
+         pid
+       ) do
       send(self(), :reconnect_sse)
       {:noreply, %{state | sse_pid: nil, sse_reconnecting: true}}
     else
@@ -790,20 +812,38 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     TaskBroadcaster.broadcast_event(event, state.task_id, state.pubsub)
 
     # Track subtask message IDs so we can suppress their user messages
-    state = track_subtask_message_id(event, state)
+    {subtask_message_ids, child_session_ids} =
+      SseEventRouter.track_subtask_message_id(
+        event,
+        state.subtask_message_ids,
+        state.child_session_ids
+      )
+
+    state = %{
+      state
+      | subtask_message_ids: subtask_message_ids,
+        child_session_ids: child_session_ids
+    }
 
     # Track user message IDs so we can filter their parts from output cache
-    state = track_user_message_id(event, state)
+    user_message_ids =
+      SseEventRouter.track_user_message_id(
+        event,
+        state.user_message_ids,
+        state.subtask_message_ids
+      )
+
+    state = %{state | user_message_ids: user_message_ids}
 
     # Update Session entity via SdkEventHandler (domain events emitted here)
     state = update_session_from_sdk_event(state, event)
 
     # Route parts to appropriate caching: subtask -> user -> SDK dispatch
     cond do
-      subtask_part?(event) ->
+      SseEventRouter.subtask_part?(event) ->
         {:noreply, do_cache_subtask_part(event, state)}
 
-      user_message_part?(event, state) ->
+      SseEventRouter.user_message_part?(event, state.user_message_ids, state.subtask_message_ids) ->
         {:noreply, do_cache_user_message_part(event, state)}
 
       true ->
@@ -860,54 +900,11 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     {:noreply, state}
   end
 
-  defp extract_event_session_id(%{"properties" => props}) when is_map(props) do
-    props["sessionID"] || props["session_id"] || get_in(props, ["part", "sessionID"]) ||
-      get_in(props, ["part", "session_id"])
-  end
-
-  defp extract_event_session_id(_), do: nil
-
   # Track subtask message IDs for two purposes:
   # 1. Add to `subtask_message_ids` so subsequent user messages from the same
   #    message are suppressed (they are the subagent's prompt, not user input)
   # 2. Register the child session ID in `child_session_ids` so events from
   #    that session are correctly routed to `process_child_session_event/3`
-  defp track_subtask_message_id(
-         %{
-           "type" => "message.part.updated",
-           "properties" => %{"part" => %{"type" => "subtask"} = part}
-         },
-         state
-       ) do
-    case part["messageID"] || part["messageId"] do
-      msg_id when is_binary(msg_id) ->
-        subtask_message_ids = MapSet.put(state.subtask_message_ids, msg_id)
-        subtask_part_id = "subtask-#{msg_id}"
-        child_session_id = part["sessionID"] || part["session_id"]
-
-        child_session_ids =
-          if is_binary(child_session_id) and child_session_id != "" do
-            Map.put(state.child_session_ids, child_session_id, subtask_part_id)
-          else
-            state.child_session_ids
-          end
-
-        %{state | subtask_message_ids: subtask_message_ids, child_session_ids: child_session_ids}
-
-      _ ->
-        state
-    end
-  end
-
-  defp track_subtask_message_id(_event, state), do: state
-
-  defp subtask_part?(%{
-         "type" => "message.part.updated",
-         "properties" => %{"part" => %{"type" => "subtask"}}
-       }),
-       do: true
-
-  defp subtask_part?(_event), do: false
 
   defp do_cache_subtask_part(
          %{
@@ -922,62 +919,6 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   end
 
   defp do_cache_subtask_part(_event, state), do: state
-
-  # ---- Private: User message filtering ----
-
-  defp track_user_message_id(
-         %{
-           "type" => "message.updated",
-           "properties" => %{"info" => %{"role" => "user"} = info}
-         },
-         state
-       ) do
-    case info["id"] || info["messageID"] || info["messageId"] do
-      msg_id when is_binary(msg_id) ->
-        # Skip tracking for subtask messages — they should not be
-        # treated as user messages in the output cache.
-        if MapSet.member?(state.subtask_message_ids, msg_id) do
-          state
-        else
-          %{state | user_message_ids: MapSet.put(state.user_message_ids, msg_id)}
-        end
-
-      _ ->
-        state
-    end
-  end
-
-  defp track_user_message_id(_event, state), do: state
-
-  # Defense-in-depth: track_user_message_id already skips subtask IDs,
-  # so the subtask_message_ids check here is redundant under normal
-  # event ordering. Kept as a safety net in case events arrive
-  # out of order (e.g., SSE reconnection delivers text before subtask part).
-  defp user_message_part?(
-         %{
-           "type" => "message.part.updated",
-           "properties" => %{"part" => %{"messageID" => msg_id}}
-         },
-         state
-       )
-       when is_binary(msg_id) do
-    MapSet.member?(state.user_message_ids, msg_id) and
-      not MapSet.member?(state.subtask_message_ids, msg_id)
-  end
-
-  defp user_message_part?(
-         %{
-           "type" => "message.part.updated",
-           "properties" => %{"part" => %{"messageId" => msg_id}}
-         },
-         state
-       )
-       when is_binary(msg_id) do
-    MapSet.member?(state.user_message_ids, msg_id) and
-      not MapSet.member?(state.subtask_message_ids, msg_id)
-  end
-
-  defp user_message_part?(_event, _state), do: false
 
   defp do_cache_user_message_part(
          %{
@@ -1054,7 +995,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   defp handle_sdk_event(%{"type" => "permission.asked", "properties" => props}, state) do
     permission_id = props["id"]
     session_id = props["sessionID"]
-    tool_name = extract_tool_name(props)
+    tool_name = QuestionHandler.extract_tool_name(props)
 
     if permission_id && session_id do
       {:permission, session_id, permission_id, tool_name, state}
@@ -1212,7 +1153,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
          state
        )
        when is_map(summary) do
-    if valid_session_summary?(summary) do
+    if QuestionHandler.valid_session_summary?(summary) do
       update_task_status(state, %{session_summary: summary})
     else
       Logger.warning(
@@ -1230,14 +1171,6 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   end
 
   # ---- Private helpers ----
-
-  # Extract a printable tool name from permission.asked properties.
-  # The "tool" field can be a map (e.g. %{"callID" => ..., "messageID" => ...})
-  # so we fall back to the "permission" type or "name" field.
-  defp extract_tool_name(%{"tool" => tool}) when is_binary(tool), do: tool
-  defp extract_tool_name(%{"permission" => perm}) when is_binary(perm), do: perm
-  defp extract_tool_name(%{"name" => name}) when is_binary(name), do: name
-  defp extract_tool_name(_), do: "unknown"
 
   defp subscribe_to_events(state) do
     base_url = "http://localhost:#{state.container_port}"
@@ -1329,28 +1262,6 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     send(self(), :start_container)
     state
   end
-
-  defp should_reconnect_sse?(state, pid) do
-    current_sse_process?(state, pid) and
-      not state.sse_reconnecting and
-      task_active_for_sse_reconnect?(state)
-  end
-
-  defp current_sse_process?(%{sse_pid: pid}, pid) when is_pid(pid), do: true
-  defp current_sse_process?(_, _), do: false
-
-  defp task_active_for_sse_reconnect?(state) do
-    state.session_id && state.container_port && state.status in [:prompting, :running]
-  end
-
-  defp valid_session_summary?(
-         %{"files" => files, "additions" => additions, "deletions" => deletions} = summary
-       )
-       when is_integer(files) and is_integer(additions) and is_integer(deletions) do
-    map_size(summary) == 3
-  end
-
-  defp valid_session_summary?(_summary), do: false
 
   defp update_task_status(state, attrs) do
     case state.task_repo.get_task(state.task_id) do
@@ -1483,14 +1394,6 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
       :ok
   end
-
-  defp sanitize_fresh_start_reason({:docker_prepare_fresh_start_failed, exit_code, _output}) do
-    "container repo sync failed (exit #{exit_code})"
-  end
-
-  defp sanitize_fresh_start_reason({:auth_refresh_failed, _provider}), do: "auth refresh failed"
-
-  defp sanitize_fresh_start_reason(_), do: "internal preparation error"
 
   defp clear_pending_question(state) do
     cancel_question_timeout(state)
