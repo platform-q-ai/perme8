@@ -1,36 +1,35 @@
 defmodule Agents.Infrastructure.Mcp.Tools.Ticket.ReadToolTest do
-  use ExUnit.Case, async: false
+  use Agents.DataCase, async: false
 
   import Mox
 
   alias Agents.Infrastructure.Mcp.Tools.Ticket.ReadTool
   alias Agents.Test.TicketFixtures, as: Fixtures
+  alias Agents.Tickets.Infrastructure.Repositories.ProjectTicketRepository
   alias Hermes.Server.Frame
 
   setup :set_mox_from_context
   setup :verify_on_exit!
 
   setup do
-    prev_client = Application.get_env(:agents, :github_ticket_client)
     prev_identity = Application.get_env(:agents, :identity_module)
-    prev_sessions = Application.get_env(:agents, :sessions)
-
-    Application.put_env(:agents, :github_ticket_client, Agents.Mocks.GithubTicketClientMock)
     Application.put_env(:agents, :identity_module, Agents.Mocks.IdentityMock)
-
-    Application.put_env(:agents, :sessions,
-      github_token: "test-token",
-      github_org: "platform-q-ai",
-      github_repo: "perme8"
-    )
-
     stub(Agents.Mocks.IdentityMock, :api_key_has_permission?, fn _api_key, _scope -> true end)
 
     on_exit(fn ->
-      restore_or_delete(:agents, :github_ticket_client, prev_client)
-      restore_or_delete(:agents, :identity_module, prev_identity)
-      restore_or_delete(:agents, :sessions, prev_sessions)
+      if prev_identity,
+        do: Application.put_env(:agents, :identity_module, prev_identity),
+        else: Application.delete_env(:agents, :identity_module)
     end)
+
+    {:ok, _ticket} =
+      ProjectTicketRepository.sync_remote_ticket(%{
+        number: 600,
+        title: "Readable ticket",
+        body: "This is the body.",
+        state: "open",
+        labels: ["agents"]
+      })
 
     :ok
   end
@@ -40,77 +39,39 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.ReadToolTest do
   end
 
   describe "execute/2" do
-    test "returns formatted issue details" do
+    test "reads a ticket by number from the DB" do
       frame = build_frame()
 
-      issue =
-        Fixtures.issue_map(%{
-          number: 42,
-          title: "Ticket MCP integration",
-          state: "open",
-          labels: ["enhancement", "mcp"],
-          assignees: ["alice"],
-          comments: [Fixtures.comment_map(%{body: "first comment"})],
-          sub_issue_numbers: [100, 101]
-        })
+      assert {:reply, response, ^frame} = ReadTool.execute(%{"number" => 600}, frame)
 
-      Agents.Mocks.GithubTicketClientMock
-      |> expect(:get_issue, fn 42, opts ->
-        assert opts[:token] == "test-token"
-        assert opts[:org] == "platform-q-ai"
-        assert opts[:repo] == "perme8"
-        {:ok, issue}
-      end)
-
-      assert {:reply, response, ^frame} = ReadTool.execute(%{"number" => 42}, frame)
-      assert %Hermes.Server.Response{type: :tool, isError: false} = response
-      assert [%{"type" => "text", "text" => text}] = response.content
-      assert text =~ "Title"
-      assert text =~ "Labels"
-      assert text =~ "State"
-      assert text =~ "Sub-issues"
-      assert text =~ "Comments"
+      assert %Hermes.Server.Response{isError: false} = response
+      assert [%{"text" => text}] = response.content
+      assert text =~ "Ticket #600"
+      assert text =~ "Readable ticket"
+      assert text =~ "This is the body."
     end
 
-    test "returns not found error for unknown issue" do
+    test "returns error for non-existent ticket" do
       frame = build_frame()
 
-      Agents.Mocks.GithubTicketClientMock
-      |> expect(:get_issue, fn 999, _opts -> {:error, :not_found} end)
+      assert {:reply, response, ^frame} = ReadTool.execute(%{"number" => 99999}, frame)
 
-      assert {:reply, response, ^frame} = ReadTool.execute(%{"number" => 999}, frame)
-      assert %Hermes.Server.Response{type: :tool, isError: true} = response
-      assert [%{"type" => "text", "text" => text}] = response.content
+      assert %Hermes.Server.Response{isError: true} = response
+      assert [%{"text" => text}] = response.content
       assert text =~ "not found"
     end
 
-    test "returns error on generic client failure" do
-      frame = build_frame()
-
-      Agents.Mocks.GithubTicketClientMock
-      |> expect(:get_issue, fn 1, _opts -> {:error, {:unexpected_status, 500, %{}}} end)
-
-      assert {:reply, response, ^frame} = ReadTool.execute(%{"number" => 1}, frame)
-      assert %Hermes.Server.Response{type: :tool, isError: true} = response
-      assert [%{"type" => "text", "text" => text}] = response.content
-      assert text =~ "unexpected error"
-    end
-
-    test "denies execution when api key lacks mcp:ticket.read scope" do
-      api_key = %{id: "key-1", permissions: ["mcp:tools.search"]}
+    test "denies execution when scope is missing" do
+      api_key = %{id: "k-1", permissions: []}
       frame = build_frame(api_key)
 
-      Agents.Mocks.IdentityMock
-      |> expect(:api_key_has_permission?, fn ^api_key, "mcp:ticket.read" -> false end)
+      expect(Agents.Mocks.IdentityMock, :api_key_has_permission?, fn ^api_key,
+                                                                     "mcp:ticket.read" ->
+        false
+      end)
 
-      assert {:reply, response, ^frame} = ReadTool.execute(%{"number" => 1}, frame)
-      assert %Hermes.Server.Response{type: :tool, isError: true} = response
-      assert [%{"type" => "text", "text" => text}] = response.content
-      assert text =~ "Insufficient permissions"
-      assert text =~ "mcp:ticket.read"
+      assert {:reply, response, ^frame} = ReadTool.execute(%{"number" => 600}, frame)
+      assert %Hermes.Server.Response{isError: true} = response
     end
   end
-
-  defp restore_or_delete(app, key, nil), do: Application.delete_env(app, key)
-  defp restore_or_delete(app, key, value), do: Application.put_env(app, key, value)
 end

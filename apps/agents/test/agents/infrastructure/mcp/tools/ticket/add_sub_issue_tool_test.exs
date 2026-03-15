@@ -1,36 +1,35 @@
 defmodule Agents.Infrastructure.Mcp.Tools.Ticket.AddSubIssueToolTest do
-  use ExUnit.Case, async: false
+  use Agents.DataCase, async: false
 
   import Mox
 
   alias Agents.Infrastructure.Mcp.Tools.Ticket.AddSubIssueTool
   alias Agents.Test.TicketFixtures, as: Fixtures
+  alias Agents.Tickets.Infrastructure.Repositories.ProjectTicketRepository
   alias Hermes.Server.Frame
+  alias Perme8.Events.TestEventBus
 
   setup :set_mox_from_context
   setup :verify_on_exit!
 
   setup do
-    prev_client = Application.get_env(:agents, :github_ticket_client)
     prev_identity = Application.get_env(:agents, :identity_module)
-    prev_sessions = Application.get_env(:agents, :sessions)
-
-    Application.put_env(:agents, :github_ticket_client, Agents.Mocks.GithubTicketClientMock)
     Application.put_env(:agents, :identity_module, Agents.Mocks.IdentityMock)
-
-    Application.put_env(:agents, :sessions,
-      github_token: "test-token",
-      github_org: "platform-q-ai",
-      github_repo: "perme8"
-    )
-
     stub(Agents.Mocks.IdentityMock, :api_key_has_permission?, fn _api_key, _scope -> true end)
 
+    TestEventBus.start_global()
+
     on_exit(fn ->
-      restore_or_delete(:agents, :github_ticket_client, prev_client)
-      restore_or_delete(:agents, :identity_module, prev_identity)
-      restore_or_delete(:agents, :sessions, prev_sessions)
+      if prev_identity,
+        do: Application.put_env(:agents, :identity_module, prev_identity),
+        else: Application.delete_env(:agents, :identity_module)
     end)
+
+    {:ok, _parent} =
+      ProjectTicketRepository.sync_remote_ticket(%{number: 900, title: "Parent", state: "open"})
+
+    {:ok, _child} =
+      ProjectTicketRepository.sync_remote_ticket(%{number: 901, title: "Child", state: "open"})
 
     :ok
   end
@@ -40,62 +39,64 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.AddSubIssueToolTest do
   end
 
   describe "execute/2" do
-    test "adds sub-issue link and returns success" do
+    test "adds sub-issue link" do
       frame = build_frame()
 
-      Agents.Mocks.GithubTicketClientMock
-      |> expect(:add_sub_issue, fn 1, 2, _opts -> {:ok, %{parent_number: 1, child_number: 2}} end)
-
       assert {:reply, response, ^frame} =
-               AddSubIssueTool.execute(%{"parent_number" => 1, "child_number" => 2}, frame)
+               AddSubIssueTool.execute(
+                 %{"parent_number" => 900, "child_number" => 901},
+                 frame
+               )
 
       assert %Hermes.Server.Response{isError: false} = response
+      assert [%{"text" => text}] = response.content
+      assert text =~ "Added sub-issue #901 to parent ticket #900"
     end
 
-    test "returns not found error when issue does not exist" do
+    test "returns error when parent not found" do
       frame = build_frame()
 
-      Agents.Mocks.GithubTicketClientMock
-      |> expect(:add_sub_issue, fn 1, 999, _opts -> {:error, :not_found} end)
-
       assert {:reply, response, ^frame} =
-               AddSubIssueTool.execute(%{"parent_number" => 1, "child_number" => 999}, frame)
+               AddSubIssueTool.execute(
+                 %{"parent_number" => 99999, "child_number" => 901},
+                 frame
+               )
 
       assert %Hermes.Server.Response{isError: true} = response
       assert [%{"text" => text}] = response.content
-      assert text =~ "not found"
+      assert text =~ "Parent ticket not found"
     end
 
-    test "returns generic error for api rejection" do
+    test "returns error when child not found" do
       frame = build_frame()
 
-      Agents.Mocks.GithubTicketClientMock
-      |> expect(:add_sub_issue, fn 1, 999, _opts ->
-        {:error, "Unable to modify sub-issue relationship: Not Found"}
-      end)
-
       assert {:reply, response, ^frame} =
-               AddSubIssueTool.execute(%{"parent_number" => 1, "child_number" => 999}, frame)
+               AddSubIssueTool.execute(
+                 %{"parent_number" => 900, "child_number" => 99999},
+                 frame
+               )
 
       assert %Hermes.Server.Response{isError: true} = response
       assert [%{"text" => text}] = response.content
-      assert text =~ "unexpected error"
+      assert text =~ "Child ticket not found"
     end
 
     test "denies execution when scope is missing" do
       api_key = %{id: "k-1", permissions: []}
       frame = build_frame(api_key)
 
-      Agents.Mocks.IdentityMock
-      |> expect(:api_key_has_permission?, fn ^api_key, "mcp:ticket.add_sub_issue" -> false end)
+      expect(Agents.Mocks.IdentityMock, :api_key_has_permission?, fn ^api_key,
+                                                                     "mcp:ticket.add_sub_issue" ->
+        false
+      end)
 
       assert {:reply, response, ^frame} =
-               AddSubIssueTool.execute(%{"parent_number" => 1, "child_number" => 2}, frame)
+               AddSubIssueTool.execute(
+                 %{"parent_number" => 900, "child_number" => 901},
+                 frame
+               )
 
       assert %Hermes.Server.Response{isError: true} = response
     end
   end
-
-  defp restore_or_delete(app, key, nil), do: Application.delete_env(app, key)
-  defp restore_or_delete(app, key, value), do: Application.put_env(app, key, value)
 end

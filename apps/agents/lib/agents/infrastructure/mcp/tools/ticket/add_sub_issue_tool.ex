@@ -1,5 +1,5 @@
 defmodule Agents.Infrastructure.Mcp.Tools.Ticket.AddSubIssueTool do
-  @moduledoc "Link a child issue as a sub-issue of a parent issue."
+  @moduledoc "Link a child ticket as a sub-issue of a parent ticket via the agents domain layer."
 
   use Hermes.Server.Component, type: :tool
 
@@ -7,11 +7,12 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.AddSubIssueTool do
 
   alias Agents.Infrastructure.Mcp.PermissionGuard
   alias Agents.Infrastructure.Mcp.Tools.Ticket.Helpers
+  alias Agents.Tickets
   alias Hermes.Server.Response
 
   schema do
-    field(:parent_number, {:required, :integer}, description: "Parent issue number")
-    field(:child_number, {:required, :integer}, description: "Child issue number")
+    field(:parent_number, {:required, :integer}, description: "Parent ticket number")
+    field(:child_number, {:required, :integer}, description: "Child ticket number")
   end
 
   @impl true
@@ -21,26 +22,28 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.AddSubIssueTool do
 
     case PermissionGuard.check_permission(frame, "ticket.add_sub_issue") do
       :ok ->
-        case Helpers.github_client().add_sub_issue(
-               parent_number,
-               child_number,
-               Helpers.client_opts()
-             ) do
-          {:ok, _result} ->
+        opts = [actor_id: Helpers.actor_id(frame)]
+
+        case Tickets.add_sub_issue(parent_number, child_number, opts) do
+          {:ok, _schema} ->
             {:reply,
              Response.text(
                Response.tool(),
-               "Added sub-issue ##{child_number} to parent issue ##{parent_number}."
+               "Added sub-issue ##{child_number} to parent ticket ##{parent_number}."
              ), frame}
 
-          {:error, :not_found} ->
+          {:error, :parent_not_found} ->
             {:reply,
              Response.error(
                Response.tool(),
-               Helpers.format_error(
-                 :not_found,
-                 "Issue ##{parent_number} or ##{child_number}"
-               )
+               Helpers.format_error(:parent_not_found, nil)
+             ), frame}
+
+          {:error, :child_not_found} ->
+            {:reply,
+             Response.error(
+               Response.tool(),
+               Helpers.format_error(:child_not_found, nil)
              ), frame}
 
           {:error, reason} ->

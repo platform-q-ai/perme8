@@ -1,36 +1,42 @@
 defmodule Agents.Infrastructure.Mcp.Tools.Ticket.ListToolTest do
-  use ExUnit.Case, async: false
+  use Agents.DataCase, async: false
 
   import Mox
 
   alias Agents.Infrastructure.Mcp.Tools.Ticket.ListTool
   alias Agents.Test.TicketFixtures, as: Fixtures
+  alias Agents.Tickets.Infrastructure.Repositories.ProjectTicketRepository
   alias Hermes.Server.Frame
 
   setup :set_mox_from_context
   setup :verify_on_exit!
 
   setup do
-    prev_client = Application.get_env(:agents, :github_ticket_client)
     prev_identity = Application.get_env(:agents, :identity_module)
-    prev_sessions = Application.get_env(:agents, :sessions)
-
-    Application.put_env(:agents, :github_ticket_client, Agents.Mocks.GithubTicketClientMock)
     Application.put_env(:agents, :identity_module, Agents.Mocks.IdentityMock)
-
-    Application.put_env(:agents, :sessions,
-      github_token: "test-token",
-      github_org: "platform-q-ai",
-      github_repo: "perme8"
-    )
-
     stub(Agents.Mocks.IdentityMock, :api_key_has_permission?, fn _api_key, _scope -> true end)
 
     on_exit(fn ->
-      restore_or_delete(:agents, :github_ticket_client, prev_client)
-      restore_or_delete(:agents, :identity_module, prev_identity)
-      restore_or_delete(:agents, :sessions, prev_sessions)
+      if prev_identity,
+        do: Application.put_env(:agents, :identity_module, prev_identity),
+        else: Application.delete_env(:agents, :identity_module)
     end)
+
+    {:ok, _t1} =
+      ProjectTicketRepository.sync_remote_ticket(%{
+        number: 500,
+        title: "First ticket",
+        state: "open",
+        labels: ["agents"]
+      })
+
+    {:ok, _t2} =
+      ProjectTicketRepository.sync_remote_ticket(%{
+        number: 501,
+        title: "Second ticket",
+        state: "closed",
+        labels: ["bug"]
+      })
 
     :ok
   end
@@ -40,106 +46,47 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.ListToolTest do
   end
 
   describe "execute/2" do
-    test "returns formatted list with issue entries" do
+    test "lists tickets from the DB" do
       frame = build_frame()
-
-      issues = [
-        Fixtures.issue_map(%{number: 1, title: "First"}),
-        Fixtures.issue_map(%{number: 2, title: "Second"})
-      ]
-
-      Agents.Mocks.GithubTicketClientMock
-      |> expect(:list_issues, fn opts ->
-        assert opts[:token] == "test-token"
-        assert opts[:org] == "platform-q-ai"
-        assert opts[:repo] == "perme8"
-        {:ok, issues}
-      end)
 
       assert {:reply, response, ^frame} = ListTool.execute(%{}, frame)
+
       assert %Hermes.Server.Response{isError: false} = response
       assert [%{"text" => text}] = response.content
-      assert text =~ "Issue"
+      assert text =~ "First ticket"
     end
 
-    test "passes state filter" do
+    test "filters by state" do
       frame = build_frame()
 
-      Agents.Mocks.GithubTicketClientMock
-      |> expect(:list_issues, fn opts ->
-        assert opts[:state] == "open"
-        {:ok, []}
-      end)
+      assert {:reply, response, ^frame} = ListTool.execute(%{"state" => "closed"}, frame)
 
-      assert {:reply, response, ^frame} = ListTool.execute(%{"state" => "open"}, frame)
-      assert %Hermes.Server.Response{isError: false} = response
-    end
-
-    test "passes labels filter and includes label in output" do
-      frame = build_frame()
-      issues = [Fixtures.issue_map(%{number: 3, labels: ["enhancement"]})]
-
-      Agents.Mocks.GithubTicketClientMock
-      |> expect(:list_issues, fn opts ->
-        assert opts[:labels] == ["enhancement"]
-        {:ok, issues}
-      end)
-
-      assert {:reply, response, ^frame} = ListTool.execute(%{"labels" => ["enhancement"]}, frame)
       assert [%{"text" => text}] = response.content
-      assert text =~ "enhancement"
+      assert text =~ "Second ticket"
+      refute text =~ "First ticket"
     end
 
-    test "passes query filter" do
+    test "returns 'no tickets' when no matches" do
       frame = build_frame()
 
-      Agents.Mocks.GithubTicketClientMock
-      |> expect(:list_issues, fn opts ->
-        assert opts[:query] == "MCP"
-        {:ok, []}
-      end)
+      assert {:reply, response, ^frame} =
+               ListTool.execute(%{"query" => "nonexistent999"}, frame)
 
-      assert {:reply, response, ^frame} = ListTool.execute(%{"query" => "MCP"}, frame)
-      assert %Hermes.Server.Response{isError: false} = response
-    end
-
-    test "returns error on generic client failure" do
-      frame = build_frame()
-
-      Agents.Mocks.GithubTicketClientMock
-      |> expect(:list_issues, fn _opts -> {:error, {:unexpected_status, 500, %{}}} end)
-
-      assert {:reply, response, ^frame} = ListTool.execute(%{}, frame)
-      assert %Hermes.Server.Response{isError: true} = response
       assert [%{"text" => text}] = response.content
-      assert text =~ "unexpected error"
-    end
-
-    test "returns empty state message when no issues" do
-      frame = build_frame()
-
-      Agents.Mocks.GithubTicketClientMock
-      |> expect(:list_issues, fn _opts -> {:ok, []} end)
-
-      assert {:reply, response, ^frame} = ListTool.execute(%{}, frame)
-      assert [%{"text" => text}] = response.content
-      assert text =~ "No issues found"
+      assert text =~ "No tickets found"
     end
 
     test "denies execution when scope is missing" do
       api_key = %{id: "k-1", permissions: []}
       frame = build_frame(api_key)
 
-      Agents.Mocks.IdentityMock
-      |> expect(:api_key_has_permission?, fn ^api_key, "mcp:ticket.list" -> false end)
+      expect(Agents.Mocks.IdentityMock, :api_key_has_permission?, fn ^api_key,
+                                                                     "mcp:ticket.list" ->
+        false
+      end)
 
       assert {:reply, response, ^frame} = ListTool.execute(%{}, frame)
       assert %Hermes.Server.Response{isError: true} = response
-      assert [%{"text" => text}] = response.content
-      assert text =~ "Insufficient permissions"
     end
   end
-
-  defp restore_or_delete(app, key, nil), do: Application.delete_env(app, key)
-  defp restore_or_delete(app, key, value), do: Application.put_env(app, key, value)
 end

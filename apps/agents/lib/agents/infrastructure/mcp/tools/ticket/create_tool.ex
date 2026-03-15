@@ -1,5 +1,5 @@
 defmodule Agents.Infrastructure.Mcp.Tools.Ticket.CreateTool do
-  @moduledoc "Create a GitHub issue via MCP ticket tools."
+  @moduledoc "Create a ticket via the agents domain layer."
 
   use Hermes.Server.Component, type: :tool
 
@@ -7,6 +7,7 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.CreateTool do
 
   alias Agents.Infrastructure.Mcp.PermissionGuard
   alias Agents.Infrastructure.Mcp.Tools.Ticket.Helpers
+  alias Agents.Tickets
   alias Hermes.Server.Response
 
   schema do
@@ -20,22 +21,31 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.CreateTool do
   def execute(params, frame) do
     case PermissionGuard.check_permission(frame, "ticket.create") do
       :ok ->
-        attrs = %{
-          title: Helpers.get_param(params, :title),
-          body: Helpers.get_param(params, :body),
-          labels: Helpers.get_param(params, :labels),
-          assignees: Helpers.get_param(params, :assignees)
-        }
+        title = Helpers.get_param(params, :title)
+        body = Helpers.get_param(params, :body)
 
-        case Helpers.github_client().create_issue(attrs, Helpers.client_opts()) do
-          {:ok, issue} ->
-            text = "Created issue ##{issue.number}: #{issue.title}\n#{issue.url}"
+        # Build the raw text that CreateTicket expects: first line = title, rest = body
+        raw_text =
+          case body do
+            nil -> title
+            "" -> title
+            b -> "#{title}\n#{b}"
+          end
+
+        opts = [actor_id: Helpers.actor_id(frame)]
+
+        case Tickets.create_ticket(raw_text, opts) do
+          {:ok, schema} ->
+            text = "Created ticket ##{schema.number}: #{schema.title}"
             {:reply, Response.text(Response.tool(), text), frame}
+
+          {:error, :body_required} ->
+            {:reply, Response.error(Response.tool(), "Title is required."), frame}
 
           {:error, reason} ->
             Logger.error("ticket.create error: #{inspect(reason)}")
 
-            {:reply, Response.error(Response.tool(), Helpers.format_error(reason, "Issue")),
+            {:reply, Response.error(Response.tool(), Helpers.format_error(reason, "Ticket")),
              frame}
         end
 
