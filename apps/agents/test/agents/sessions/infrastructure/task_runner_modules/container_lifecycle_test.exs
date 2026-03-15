@@ -1,4 +1,4 @@
-defmodule Agents.Sessions.Infrastructure.TaskRunner.ContainerLifecycleModuleTest do
+defmodule Agents.Sessions.Infrastructure.TaskRunner.ContainerLifecycleTest do
   use ExUnit.Case, async: true
 
   alias Agents.Sessions.Infrastructure.TaskRunner.ContainerLifecycle
