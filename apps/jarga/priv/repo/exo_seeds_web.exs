@@ -41,17 +41,20 @@ alias Agents
 
 IO.puts("[exo-seeds-web] Cleaning previous seed data...")
 
-Ecto.Adapters.SQL.query!(Identity.Repo, "TRUNCATE notifications CASCADE", [])
-Ecto.Adapters.SQL.query!(Identity.Repo, "TRUNCATE sessions_tasks CASCADE", [])
-Ecto.Adapters.SQL.query!(Identity.Repo, "TRUNCATE sessions_project_tickets CASCADE", [])
+# Jarga-owned tables
+Ecto.Adapters.SQL.query!(Jarga.Repo, "TRUNCATE document_components CASCADE", [])
+Ecto.Adapters.SQL.query!(Jarga.Repo, "TRUNCATE documents CASCADE", [])
+Ecto.Adapters.SQL.query!(Jarga.Repo, "TRUNCATE projects CASCADE", [])
+# Other app tables (shared database)
+Ecto.Adapters.SQL.query!(Notifications.Repo, "TRUNCATE notifications CASCADE", [])
+Ecto.Adapters.SQL.query!(Agents.Repo, "TRUNCATE sessions_tasks CASCADE", [])
+Ecto.Adapters.SQL.query!(Agents.Repo, "TRUNCATE sessions_project_tickets CASCADE", [])
 Ecto.Adapters.SQL.query!(Identity.Repo, "TRUNCATE api_keys CASCADE", [])
 Ecto.Adapters.SQL.query!(Identity.Repo, "TRUNCATE chat_messages CASCADE", [])
 Ecto.Adapters.SQL.query!(Identity.Repo, "TRUNCATE chat_sessions CASCADE", [])
-Ecto.Adapters.SQL.query!(Identity.Repo, "TRUNCATE workspace_agents CASCADE", [])
-Ecto.Adapters.SQL.query!(Identity.Repo, "TRUNCATE agents CASCADE", [])
-Ecto.Adapters.SQL.query!(Identity.Repo, "TRUNCATE document_components CASCADE", [])
-Ecto.Adapters.SQL.query!(Identity.Repo, "TRUNCATE documents CASCADE", [])
-Ecto.Adapters.SQL.query!(Identity.Repo, "TRUNCATE projects CASCADE", [])
+Ecto.Adapters.SQL.query!(Agents.Repo, "TRUNCATE workspace_agents CASCADE", [])
+Ecto.Adapters.SQL.query!(Agents.Repo, "TRUNCATE agents CASCADE", [])
+# Identity-owned tables
 Ecto.Adapters.SQL.query!(Identity.Repo, "TRUNCATE workspace_members CASCADE", [])
 Ecto.Adapters.SQL.query!(Identity.Repo, "TRUNCATE workspaces CASCADE", [])
 Ecto.Adapters.SQL.query!(Identity.Repo, "TRUNCATE users_tokens CASCADE", [])

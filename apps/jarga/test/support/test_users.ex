@@ -29,7 +29,6 @@ defmodule Jarga.TestUsers do
     deps: [
       Jarga.Repo,
       Identity,
-      Identity.Repo,
       Jarga.Accounts
     ],
     exports: []
