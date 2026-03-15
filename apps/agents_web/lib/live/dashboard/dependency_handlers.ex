@@ -66,7 +66,6 @@ defmodule AgentsWeb.DashboardLive.DependencyHandlers do
     active_ticket = find_active_ticket(socket)
     target_id = socket.assigns.selected_dependency_target
     direction = socket.assigns.dependency_direction
-    user = socket.assigns.current_scope.user
 
     cond do
       is_nil(active_ticket) ->
@@ -76,39 +75,46 @@ defmodule AgentsWeb.DashboardLive.DependencyHandlers do
         {:noreply, put_flash(socket, :error, "Select a ticket and direction first")}
 
       true ->
-        opts = [actor_id: user.id]
-
-        {blocker_id, blocked_id} =
-          case direction do
-            "blocks" -> {active_ticket.id, target_id}
-            "blocked_by" -> {target_id, active_ticket.id}
-          end
-
-        case Tickets.add_dependency(blocker_id, blocked_id, opts) do
-          {:ok, _dep} ->
-            tickets = reload_tickets(socket)
-
-            {:noreply,
-             socket
-             |> reset_dependency_assigns()
-             |> assign(:tickets, tickets)
-             |> put_flash(:info, "Dependency added")}
-
-          {:error, :circular_dependency} ->
-            {:noreply,
-             put_flash(socket, :error, "Cannot add dependency — it would create a circular chain")}
-
-          {:error, :duplicate_dependency} ->
-            {:noreply, put_flash(socket, :error, "This dependency already exists")}
-
-          {:error, :self_dependency} ->
-            {:noreply, put_flash(socket, :error, "A ticket cannot depend on itself")}
-
-          {:error, reason} ->
-            Logger.error("Failed to add dependency: #{inspect(reason)}")
-            {:noreply, put_flash(socket, :error, "Failed to add dependency")}
-        end
+        do_confirm_dependency(active_ticket, target_id, direction, socket)
     end
+  end
+
+  defp do_confirm_dependency(active_ticket, target_id, direction, socket) do
+    user = socket.assigns.current_scope.user
+
+    {blocker_id, blocked_id} =
+      case direction do
+        "blocks" -> {active_ticket.id, target_id}
+        "blocked_by" -> {target_id, active_ticket.id}
+      end
+
+    case Tickets.add_dependency(blocker_id, blocked_id, actor_id: user.id) do
+      {:ok, _dep} ->
+        tickets = reload_tickets(socket)
+
+        {:noreply,
+         socket
+         |> reset_dependency_assigns()
+         |> assign(:tickets, tickets)
+         |> put_flash(:info, "Dependency added")}
+
+      {:error, error} ->
+        {:noreply, put_flash(socket, :error, dependency_error_message(error))}
+    end
+  end
+
+  defp dependency_error_message(:circular_dependency),
+    do: "Cannot add dependency — it would create a circular chain"
+
+  defp dependency_error_message(:duplicate_dependency),
+    do: "This dependency already exists"
+
+  defp dependency_error_message(:self_dependency),
+    do: "A ticket cannot depend on itself"
+
+  defp dependency_error_message(reason) do
+    Logger.error("Failed to add dependency: #{inspect(reason)}")
+    "Failed to add dependency"
   end
 
   def remove_dependency(%{"blocker-id" => blocker_str, "blocked-id" => blocked_str}, socket) do

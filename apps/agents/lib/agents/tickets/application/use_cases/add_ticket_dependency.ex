@@ -8,10 +8,9 @@ defmodule Agents.Tickets.Application.UseCases.AddTicketDependency do
 
   alias Agents.Tickets.Domain.Events.TicketDependencyChanged
   alias Agents.Tickets.Domain.Policies.TicketDependencyPolicy
-  alias Agents.Tickets.Infrastructure.Repositories.TicketDependencyRepository
 
   @default_event_bus Perme8.Events.EventBus
-  @default_dependency_repo TicketDependencyRepository
+  @default_dependency_repo Agents.Tickets.Infrastructure.Repositories.TicketDependencyRepository
   @default_pubsub Perme8.Events.PubSub
   @tickets_topic "sessions:tickets"
 

@@ -186,8 +186,7 @@ defmodule AgentsWeb.DashboardLive.TicketHandlers do
         blockers =
           ticket.blocked_by
           |> Enum.filter(&(&1.state == "open"))
-          |> Enum.map(&"##{&1.number}")
-          |> Enum.join(", ")
+          |> Enum.map_join(", ", &"##{&1.number}")
 
         {:noreply,
          put_flash(socket, :error, "Cannot start session — ticket is blocked by: #{blockers}")}
