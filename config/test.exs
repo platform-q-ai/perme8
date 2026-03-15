@@ -243,6 +243,12 @@ config :agents, :mcp_http, port: 5007
 # Skip orphan recovery at boot — runs outside sandbox and conflicts with Mox
 config :agents, :skip_orphan_recovery, true
 
+# Use noop container provider in tests so integration tests don't crash
+# when Docker is unavailable (e.g. in CI or development environments without Docker)
+config :agents,
+       :container_provider,
+       Agents.Sessions.Infrastructure.Adapters.NoopContainerProvider
+
 # Agents Ticket MCP tools: use in-memory stub so exo-bdd tests work without
 # a real GitHub token. Unit tests override this with Mox via Application.put_env.
 config :agents,

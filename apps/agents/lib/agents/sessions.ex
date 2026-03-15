@@ -263,7 +263,11 @@ defmodule Agents.Sessions do
       Keyword.get(
         opts,
         :container_provider,
-        Agents.Sessions.Infrastructure.Adapters.DockerAdapter
+        Application.get_env(
+          :agents,
+          :container_provider,
+          Agents.Sessions.Infrastructure.Adapters.DockerAdapter
+        )
       )
 
     container_provider.stats(container_id)
