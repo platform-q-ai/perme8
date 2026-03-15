@@ -1,8 +1,10 @@
 # Exclude evaluation tests and WIP features by default
 ExUnit.start(exclude: [:evaluation, :wip], capture_log: true)
 
-# Jarga.Repo uses put_dynamic_repo(Identity.Repo) in DataCase, so only
-# Identity.Repo needs sandbox mode set here. Both share the same connection.
+# Both repos need manual mode so DataCase can checkout each test's connection.
+# Jarga.Repo is also checked out for spawned processes (LiveView channels)
+# that call it directly without the dynamic repo override.
+Ecto.Adapters.SQL.Sandbox.mode(Jarga.Repo, :manual)
 Ecto.Adapters.SQL.Sandbox.mode(Identity.Repo, :manual)
 Ecto.Adapters.SQL.Sandbox.mode(Agents.Repo, :manual)
 
