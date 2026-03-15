@@ -56,7 +56,9 @@ defmodule Jarga.Documents.Notes.Infrastructure.Repositories.AuthorizationReposit
   Returns {:ok, note} if authorized, {:error, reason} otherwise.
   """
   def verify_note_access_via_document(%User{} = user, note_id) do
-    # Find the note and its associated document via document_components
+    # Find the note and its associated document via document_components.
+    # wm is a raw table reference so UUID params need manual dump.
+    # d.user_id is a schema field — Ecto auto-casts via :binary_id type.
     user_id_bin = Ecto.UUID.dump!(user.id)
 
     query =
