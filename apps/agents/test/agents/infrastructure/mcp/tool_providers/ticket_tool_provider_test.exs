@@ -10,14 +10,17 @@ defmodule Agents.Infrastructure.Mcp.ToolProviders.TicketToolProviderTest do
     "ticket.update",
     "ticket.close",
     "ticket.add_sub_issue",
-    "ticket.remove_sub_issue"
+    "ticket.remove_sub_issue",
+    "ticket.add_dependency",
+    "ticket.remove_dependency",
+    "ticket.search_dependency_targets"
   ]
 
   describe "components/0" do
-    test "returns exactly 7 component specs" do
+    test "returns exactly 10 component specs" do
       components = TicketToolProvider.components()
 
-      assert length(components) == 7
+      assert length(components) == 10
     end
 
     test "each spec is a {module, name} tuple" do
@@ -27,7 +30,7 @@ defmodule Agents.Infrastructure.Mcp.ToolProviders.TicketToolProviderTest do
       end
     end
 
-    test "includes all 7 ticket tool names" do
+    test "includes all 10 ticket tool names" do
       names = Enum.map(TicketToolProvider.components(), fn {_mod, name} -> name end)
 
       for expected <- @expected_names do
