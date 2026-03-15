@@ -25,11 +25,11 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   alias Agents.Sessions.Application.SessionsConfig
   alias Agents.Sessions.Application.Services.AuthRefresher
   alias Agents.Sessions.Domain.Entities.Session
-  alias Agents.Sessions.Domain.Entities.TodoList
   alias Agents.Sessions.Domain.Events.{TaskCompleted, TaskFailed, TaskCancelled}
   alias Agents.Sessions.Infrastructure.SdkEventHandler
   alias Agents.Sessions.Infrastructure.Schemas.TaskSchema
   alias Agents.Sessions.Infrastructure.TaskRunner.TaskBroadcaster
+  alias Agents.Sessions.Infrastructure.TaskRunner.TodoTracker
 
   require Logger
 
@@ -1185,9 +1185,9 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
          state
        )
        when is_map(props) do
-    case parse_todo_event(props) do
+    case TodoTracker.parse_event(props) do
       {:ok, todo_items} ->
-        merged_items = merge_prior_resume_items(state.prior_resume_items, todo_items)
+        merged_items = TodoTracker.merge_prior_items(state.prior_resume_items, todo_items)
         TaskBroadcaster.broadcast_todo_update(state.task_id, merged_items, state.pubsub)
 
         {:continue, %{state | todo_items: merged_items, todo_version: state.todo_version + 1}}
@@ -1354,7 +1354,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
          _prewarmed_opts
        ) do
     existing_parts = restore_output_parts(task.output)
-    existing_todos = restore_todo_items(task.todo_items)
+    existing_todos = TodoTracker.restore_items(task.todo_items)
 
     state = %{
       state
@@ -1469,7 +1469,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
     # Cache structured output parts (or plain text fallback) even on failure
     attrs = put_output_attrs(attrs, state)
-    attrs = put_todo_attrs(attrs, state)
+    attrs = TodoTracker.put_attrs(attrs, state.todo_items)
 
     update_task_status(state, attrs)
 
@@ -1508,7 +1508,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
     # Cache structured output parts (or plain text fallback)
     attrs = put_output_attrs(attrs, state)
-    attrs = put_todo_attrs(attrs, state)
+    attrs = TodoTracker.put_attrs(attrs, state.todo_items)
 
     update_task_status(state, attrs)
 
@@ -1725,41 +1725,11 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
         json -> Map.put(attrs, :output, json)
       end
 
-    attrs = put_todo_attrs(attrs, state)
+    attrs = TodoTracker.put_attrs(attrs, state.todo_items)
 
     if attrs != %{} do
       update_task_status(state, attrs)
     end
-  end
-
-  defp parse_todo_event(properties) when is_map(properties) do
-    case TodoList.from_sse_event(%{"properties" => properties}) do
-      {:ok, %TodoList{} = todo_list} -> {:ok, TodoList.to_maps(todo_list)}
-      {:error, reason} -> {:error, reason}
-    end
-  end
-
-  defp parse_todo_event(_), do: {:error, :invalid_payload}
-
-  defp put_todo_attrs(attrs, %{todo_items: []}), do: attrs
-
-  defp put_todo_attrs(attrs, %{todo_items: todo_items}) when is_list(todo_items) do
-    Map.put(attrs, :todo_items, %{"items" => todo_items})
-  end
-
-  defp merge_prior_resume_items([], current_items), do: current_items
-
-  defp merge_prior_resume_items(prior_items, current_items) do
-    current_ids = MapSet.new(current_items, & &1["id"])
-    kept_prior = Enum.reject(prior_items, &(&1["id"] in current_ids))
-    offset = length(kept_prior)
-
-    shifted_current =
-      Enum.map(current_items, fn item ->
-        Map.update(item, "position", offset, &(&1 + offset))
-      end)
-
-    kept_prior ++ shifted_current
   end
 
   # Restore previously cached output parts from DB on resume.
@@ -1777,7 +1747,4 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   end
 
   defp restore_output_parts(_), do: []
-
-  defp restore_todo_items(%{"items" => items}) when is_list(items), do: items
-  defp restore_todo_items(_), do: []
 end
