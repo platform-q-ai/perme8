@@ -11,6 +11,7 @@ defmodule Chat.Domain do
       Entities.Message,
       Events.ChatSessionStarted,
       Events.ChatMessageSent,
-      Events.ChatSessionDeleted
+      Events.ChatSessionDeleted,
+      Policies.ReferenceValidationPolicy
     ]
 end
