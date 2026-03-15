@@ -16,6 +16,29 @@ defmodule AgentsWeb.DashboardLive.TicketHandlersTest do
   alias Agents.Repo
   alias Ecto.Adapters.SQL.Sandbox
 
+  # Polls until a condition function returns true, with a timeout.
+  # Useful for waiting on LiveView state changes that happen asynchronously.
+  defp await_lv_condition(fun, opts \\ []) do
+    timeout = Keyword.get(opts, :timeout, 2_000)
+    interval = Keyword.get(opts, :interval, 50)
+    deadline = System.monotonic_time(:millisecond) + timeout
+
+    do_await_condition(fun, interval, deadline)
+  end
+
+  defp do_await_condition(fun, interval, deadline) do
+    if fun.() do
+      :ok
+    else
+      if System.monotonic_time(:millisecond) >= deadline do
+        flunk("Timed out waiting for LiveView condition")
+      else
+        Process.sleep(interval)
+        do_await_condition(fun, interval, deadline)
+      end
+    end
+  end
+
   # Polls the database until a task matching the query appears, with exponential backoff.
   # Avoids brittle Process.sleep with a fixed duration.
   defp await_task_created(query, opts \\ []) do
@@ -145,7 +168,16 @@ defmodule AgentsWeb.DashboardLive.TicketHandlersTest do
 
       task = await_task_created(task_query)
 
-      _ = render(lv)
+      # Wait for the LiveView to process the :new_task_created message
+      # which sets current_task. Without this, the :task_event guard
+      # (which checks current_task.id == task_id) will silently discard
+      # the event. Poll render until the LiveView has navigated to the
+      # session (indicated by the composing_new=false state showing the
+      # chat panel instead of the new-session form).
+      await_lv_condition(fn ->
+        html = render(lv)
+        String.contains?(html, "pick up ticket #702")
+      end)
 
       # Simulate a message.part.updated event with assistant text.
       # If current_task was properly set, the event will be processed by
