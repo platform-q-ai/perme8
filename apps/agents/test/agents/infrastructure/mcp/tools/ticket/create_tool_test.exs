@@ -1,35 +1,27 @@
 defmodule Agents.Infrastructure.Mcp.Tools.Ticket.CreateToolTest do
-  use ExUnit.Case, async: false
+  use Agents.DataCase, async: false
 
   import Mox
 
   alias Agents.Infrastructure.Mcp.Tools.Ticket.CreateTool
   alias Agents.Test.TicketFixtures, as: Fixtures
   alias Hermes.Server.Frame
+  alias Perme8.Events.TestEventBus
 
   setup :set_mox_from_context
   setup :verify_on_exit!
 
   setup do
-    prev_client = Application.get_env(:agents, :github_ticket_client)
     prev_identity = Application.get_env(:agents, :identity_module)
-    prev_sessions = Application.get_env(:agents, :sessions)
-
-    Application.put_env(:agents, :github_ticket_client, Agents.Mocks.GithubTicketClientMock)
     Application.put_env(:agents, :identity_module, Agents.Mocks.IdentityMock)
-
-    Application.put_env(:agents, :sessions,
-      github_token: "test-token",
-      github_org: "platform-q-ai",
-      github_repo: "perme8"
-    )
-
     stub(Agents.Mocks.IdentityMock, :api_key_has_permission?, fn _api_key, _scope -> true end)
 
+    TestEventBus.start_global()
+
     on_exit(fn ->
-      restore_or_delete(:agents, :github_ticket_client, prev_client)
-      restore_or_delete(:agents, :identity_module, prev_identity)
-      restore_or_delete(:agents, :sessions, prev_sessions)
+      if prev_identity,
+        do: Application.put_env(:agents, :identity_module, prev_identity),
+        else: Application.delete_env(:agents, :identity_module)
     end)
 
     :ok
@@ -40,49 +32,36 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.CreateToolTest do
   end
 
   describe "execute/2" do
-    test "creates issue with title and body and returns #number" do
+    test "creates ticket locally and returns ticket number" do
       frame = build_frame()
-
-      Agents.Mocks.GithubTicketClientMock
-      |> expect(:create_issue, fn attrs, _opts ->
-        assert attrs.title == "New MCP Ticket"
-        assert attrs.body == "Body"
-        {:ok, Fixtures.issue_map(%{number: 123, title: "New MCP Ticket"})}
-      end)
 
       assert {:reply, response, ^frame} =
                CreateTool.execute(%{"title" => "New MCP Ticket", "body" => "Body"}, frame)
 
       assert %Hermes.Server.Response{isError: false} = response
       assert [%{"text" => text}] = response.content
-      assert text =~ ~r/#[0-9]+/
+      assert text =~ "Created ticket #"
+      assert text =~ "New MCP Ticket"
     end
 
-    test "creates issue with labels" do
+    test "creates ticket with title only (no body)" do
       frame = build_frame()
-
-      Agents.Mocks.GithubTicketClientMock
-      |> expect(:create_issue, fn attrs, _opts ->
-        assert attrs.labels == ["enhancement"]
-        {:ok, Fixtures.issue_map(%{number: 124, labels: ["enhancement"]})}
-      end)
-
-      assert {:reply, _response, ^frame} =
-               CreateTool.execute(%{"title" => "With labels", "labels" => ["enhancement"]}, frame)
-    end
-
-    test "returns error on generic client failure" do
-      frame = build_frame()
-
-      Agents.Mocks.GithubTicketClientMock
-      |> expect(:create_issue, fn _attrs, _opts -> {:error, {:unexpected_status, 422, %{}}} end)
 
       assert {:reply, response, ^frame} =
-               CreateTool.execute(%{"title" => "Will fail"}, frame)
+               CreateTool.execute(%{"title" => "Title Only"}, frame)
+
+      assert %Hermes.Server.Response{isError: false} = response
+      assert [%{"text" => text}] = response.content
+      assert text =~ "Title Only"
+    end
+
+    test "returns error for empty title" do
+      frame = build_frame()
+
+      assert {:reply, response, ^frame} =
+               CreateTool.execute(%{"title" => ""}, frame)
 
       assert %Hermes.Server.Response{isError: true} = response
-      assert [%{"text" => text}] = response.content
-      assert text =~ "unexpected error"
     end
 
     test "denies execution when scope is missing" do
@@ -96,7 +75,4 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.CreateToolTest do
       assert %Hermes.Server.Response{isError: true} = response
     end
   end
-
-  defp restore_or_delete(app, key, nil), do: Application.delete_env(app, key)
-  defp restore_or_delete(app, key, value), do: Application.put_env(app, key, value)
 end

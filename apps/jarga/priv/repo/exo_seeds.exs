@@ -22,6 +22,7 @@ Application.ensure_all_started(:bcrypt_elixir)
 {:ok, _} = Identity.Repo.start_link()
 {:ok, _} = Jarga.Repo.start_link()
 {:ok, _} = Webhooks.Repo.start_link()
+{:ok, _} = Agents.Repo.start_link()
 
 # Start PubSub (required by context modules that broadcast events)
 Application.ensure_all_started(:perme8_events)
@@ -614,5 +615,41 @@ Webhooks.Repo.insert!(%InboundWebhookConfigSchema{
 
 IO.puts("[exo-seeds] Created inbound webhook config for #{product_team.slug}")
 IO.puts("[exo-seeds] Inbound webhook secret: #{inbound_secret}")
+
+# ---------------------------------------------------------------------------
+# Seed project tickets for agents MCP ticket tool tests
+# ---------------------------------------------------------------------------
+
+alias Agents.Tickets.Infrastructure.Schemas.ProjectTicketSchema
+
+Ecto.Adapters.SQL.query!(Agents.Repo, "TRUNCATE sessions_project_tickets CASCADE", [])
+
+%ProjectTicketSchema{}
+|> ProjectTicketSchema.changeset(%{
+  number: 101,
+  title: "Implement user authentication",
+  body: "Add login and registration flows",
+  state: "open",
+  labels: ["feature"],
+  position: 1,
+  created_at: DateTime.utc_now() |> DateTime.truncate(:second),
+  sync_state: "synced"
+})
+|> Agents.Repo.insert!()
+
+%ProjectTicketSchema{}
+|> ProjectTicketSchema.changeset(%{
+  number: 102,
+  title: "Fix dashboard layout",
+  body: "Sidebar overlaps content on mobile",
+  state: "open",
+  labels: ["bug"],
+  position: 2,
+  created_at: DateTime.utc_now() |> DateTime.truncate(:second),
+  sync_state: "synced"
+})
+|> Agents.Repo.insert!()
+
+IO.puts("[exo-seeds] Created 2 project tickets for MCP ticket tool tests")
 
 IO.puts("[exo-seeds] Done!")

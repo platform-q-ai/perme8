@@ -1,5 +1,5 @@
 defmodule Agents.Infrastructure.Mcp.Tools.Ticket.ReadTool do
-  @moduledoc "Read a GitHub issue by number via the MCP ticket tools."
+  @moduledoc "Read a ticket by number from the agents DB."
 
   use Hermes.Server.Component, type: :tool
 
@@ -7,10 +7,11 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.ReadTool do
 
   alias Agents.Infrastructure.Mcp.PermissionGuard
   alias Agents.Infrastructure.Mcp.Tools.Ticket.Helpers
+  alias Agents.Tickets
   alias Hermes.Server.Response
 
   schema do
-    field(:number, {:required, :integer}, description: "Issue number")
+    field(:number, {:required, :integer}, description: "Ticket number")
   end
 
   @impl true
@@ -19,15 +20,15 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.ReadTool do
 
     case PermissionGuard.check_permission(frame, "ticket.read") do
       :ok ->
-        case Helpers.github_client().get_issue(number, Helpers.client_opts()) do
-          {:ok, issue} ->
-            {:reply, Response.text(Response.tool(), Helpers.format_issue(issue)), frame}
+        case Tickets.get_ticket_by_number(number) do
+          {:ok, ticket} ->
+            {:reply, Response.text(Response.tool(), Helpers.format_ticket(ticket)), frame}
 
-          {:error, :not_found} ->
+          {:error, :ticket_not_found} ->
             {:reply,
              Response.error(
                Response.tool(),
-               Helpers.format_error(:not_found, "Issue ##{number}")
+               Helpers.format_error(:ticket_not_found, "Ticket ##{number}")
              ), frame}
 
           {:error, reason} ->
@@ -36,7 +37,7 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.ReadTool do
             {:reply,
              Response.error(
                Response.tool(),
-               Helpers.format_error(reason, "Issue ##{number}")
+               Helpers.format_error(reason, "Ticket ##{number}")
              ), frame}
         end
 

@@ -40,9 +40,11 @@ defmodule Agents.Test.TicketFixtures do
         "mcp:ticket.create",
         "mcp:ticket.update",
         "mcp:ticket.close",
-        "mcp:ticket.comment",
         "mcp:ticket.add_sub_issue",
-        "mcp:ticket.remove_sub_issue"
+        "mcp:ticket.remove_sub_issue",
+        "mcp:ticket.add_dependency",
+        "mcp:ticket.remove_dependency",
+        "mcp:ticket.search_dependency_targets"
       ]
     }
   end

@@ -1,12 +1,13 @@
-defmodule Agents.Infrastructure.Mcp.Tools.Ticket.ListToolTest do
+defmodule Agents.Infrastructure.Mcp.Tools.Ticket.AddDependencyToolTest do
   use Agents.DataCase, async: false
 
   import Mox
 
-  alias Agents.Infrastructure.Mcp.Tools.Ticket.ListTool
+  alias Agents.Infrastructure.Mcp.Tools.Ticket.AddDependencyTool
   alias Agents.Test.TicketFixtures, as: Fixtures
   alias Agents.Tickets.Infrastructure.Repositories.ProjectTicketRepository
   alias Hermes.Server.Frame
+  alias Perme8.Events.TestEventBus
 
   setup :set_mox_from_context
   setup :verify_on_exit!
@@ -16,26 +17,26 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.ListToolTest do
     Application.put_env(:agents, :identity_module, Agents.Mocks.IdentityMock)
     stub(Agents.Mocks.IdentityMock, :api_key_has_permission?, fn _api_key, _scope -> true end)
 
+    TestEventBus.start_global()
+
     on_exit(fn ->
       if prev_identity,
         do: Application.put_env(:agents, :identity_module, prev_identity),
         else: Application.delete_env(:agents, :identity_module)
     end)
 
-    {:ok, _t1} =
+    {:ok, _blocker} =
       ProjectTicketRepository.sync_remote_ticket(%{
-        number: 500,
-        title: "First ticket",
-        state: "open",
-        labels: ["agents"]
+        number: 1100,
+        title: "Blocker",
+        state: "open"
       })
 
-    {:ok, _t2} =
+    {:ok, _blocked} =
       ProjectTicketRepository.sync_remote_ticket(%{
-        number: 501,
-        title: "Second ticket",
-        state: "closed",
-        labels: ["bug"]
+        number: 1101,
+        title: "Blocked",
+        state: "open"
       })
 
     :ok
@@ -46,34 +47,46 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.ListToolTest do
   end
 
   describe "execute/2" do
-    test "lists tickets from the DB" do
-      frame = build_frame()
-
-      assert {:reply, response, ^frame} = ListTool.execute(%{}, frame)
-
-      assert %Hermes.Server.Response{isError: false} = response
-      assert [%{"text" => text}] = response.content
-      assert text =~ "First ticket"
-    end
-
-    test "filters by state" do
-      frame = build_frame()
-
-      assert {:reply, response, ^frame} = ListTool.execute(%{"state" => "closed"}, frame)
-
-      assert [%{"text" => text}] = response.content
-      assert text =~ "Second ticket"
-      refute text =~ "First ticket"
-    end
-
-    test "returns 'no tickets' when no matches" do
+    test "adds dependency between two tickets" do
       frame = build_frame()
 
       assert {:reply, response, ^frame} =
-               ListTool.execute(%{"query" => "nonexistent999"}, frame)
+               AddDependencyTool.execute(
+                 %{"blocker_number" => 1100, "blocked_number" => 1101},
+                 frame
+               )
 
+      assert %Hermes.Server.Response{isError: false} = response
       assert [%{"text" => text}] = response.content
-      assert text =~ "No tickets found"
+      assert text =~ "ticket #1100 blocks #1101"
+    end
+
+    test "returns error for self-dependency" do
+      frame = build_frame()
+
+      assert {:reply, response, ^frame} =
+               AddDependencyTool.execute(
+                 %{"blocker_number" => 1100, "blocked_number" => 1100},
+                 frame
+               )
+
+      assert %Hermes.Server.Response{isError: true} = response
+      assert [%{"text" => text}] = response.content
+      assert text =~ "cannot depend on itself"
+    end
+
+    test "returns error when ticket not found" do
+      frame = build_frame()
+
+      assert {:reply, response, ^frame} =
+               AddDependencyTool.execute(
+                 %{"blocker_number" => 99_999, "blocked_number" => 1101},
+                 frame
+               )
+
+      assert %Hermes.Server.Response{isError: true} = response
+      assert [%{"text" => text}] = response.content
+      assert text =~ "not found"
     end
 
     test "denies execution when scope is missing" do
@@ -81,11 +94,16 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.ListToolTest do
       frame = build_frame(api_key)
 
       expect(Agents.Mocks.IdentityMock, :api_key_has_permission?, fn ^api_key,
-                                                                     "mcp:ticket.list" ->
+                                                                     "mcp:ticket.add_dependency" ->
         false
       end)
 
-      assert {:reply, response, ^frame} = ListTool.execute(%{}, frame)
+      assert {:reply, response, ^frame} =
+               AddDependencyTool.execute(
+                 %{"blocker_number" => 1100, "blocked_number" => 1101},
+                 frame
+               )
+
       assert %Hermes.Server.Response{isError: true} = response
     end
   end

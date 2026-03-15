@@ -368,6 +368,144 @@ defmodule Agents.Tickets.Infrastructure.Repositories.ProjectTicketRepository do
     |> Repo.insert()
   end
 
+  @doc """
+  Loads a single ticket by number with full preloads.
+  """
+  @spec get_by_number(integer()) :: {:ok, ProjectTicketSchema.t()} | nil
+  def get_by_number(number) when is_integer(number) do
+    lifecycle_events_query = lifecycle_events_query()
+
+    sub_tickets_query =
+      ProjectTicketSchema
+      |> order_by([ticket], desc: ticket.position, desc: ticket.created_at)
+      |> preload([ticket], lifecycle_events: ^lifecycle_events_query)
+
+    case Repo.get_by(ProjectTicketSchema, number: number) do
+      nil ->
+        nil
+
+      ticket ->
+        {:ok,
+         Repo.preload(ticket,
+           lifecycle_events: lifecycle_events_query,
+           sub_tickets: sub_tickets_query,
+           blocking: [],
+           blocked_by: []
+         )}
+    end
+  end
+
+  @doc """
+  Updates arbitrary fields on a ticket identified by number.
+  """
+  @spec update_fields(integer(), map()) ::
+          {:ok, ProjectTicketSchema.t()} | {:error, :not_found} | {:error, Ecto.Changeset.t()}
+  def update_fields(number, attrs) when is_integer(number) and is_map(attrs) do
+    case Repo.get_by(ProjectTicketSchema, number: number) do
+      nil -> {:error, :not_found}
+      ticket -> ticket |> ProjectTicketSchema.changeset(attrs) |> Repo.update()
+    end
+  end
+
+  @doc """
+  Sets `parent_ticket_id` on the child ticket, linking it as a sub-issue of the parent.
+  """
+  @spec set_parent_ticket(integer(), integer()) ::
+          {:ok, ProjectTicketSchema.t()} | {:error, :child_not_found | :parent_not_found}
+  def set_parent_ticket(child_number, parent_number) do
+    with {:parent, parent} when not is_nil(parent) <-
+           {:parent, Repo.get_by(ProjectTicketSchema, number: parent_number)},
+         {:child, child} when not is_nil(child) <-
+           {:child, Repo.get_by(ProjectTicketSchema, number: child_number)} do
+      child
+      |> ProjectTicketSchema.changeset(%{parent_ticket_id: parent.id, sync_state: "pending_push"})
+      |> Repo.update()
+    else
+      {:parent, nil} -> {:error, :parent_not_found}
+      {:child, nil} -> {:error, :child_not_found}
+    end
+  end
+
+  @doc """
+  Clears `parent_ticket_id` on a ticket, unlinking it from its parent.
+  """
+  @spec clear_parent_ticket(integer()) ::
+          {:ok, ProjectTicketSchema.t()} | {:error, :not_found}
+  def clear_parent_ticket(child_number) do
+    case Repo.get_by(ProjectTicketSchema, number: child_number) do
+      nil ->
+        {:error, :not_found}
+
+      child ->
+        child
+        |> ProjectTicketSchema.changeset(%{parent_ticket_id: nil, sync_state: "pending_push"})
+        |> Repo.update()
+    end
+  end
+
+  @doc """
+  Lists tickets with optional filters. Designed for MCP tool use
+  where no user context or session enrichment is needed.
+
+  Options:
+    - `:state` - Filter by state ("open" or "closed")
+    - `:labels` - Filter by labels (tickets must have all specified labels)
+    - `:query` - Search by title (ilike) or exact number match
+    - `:per_page` - Limit results (default: 30)
+  """
+  @spec list_filtered(keyword()) :: [ProjectTicketSchema.t()]
+  def list_filtered(opts \\ []) do
+    lifecycle_events_query = lifecycle_events_query()
+
+    sub_tickets_query =
+      ProjectTicketSchema
+      |> order_by([ticket], desc: ticket.position, desc: ticket.created_at)
+      |> preload([ticket], lifecycle_events: ^lifecycle_events_query)
+
+    per_page = Keyword.get(opts, :per_page, 30)
+
+    ProjectTicketSchema
+    |> where([t], is_nil(t.parent_ticket_id))
+    |> maybe_filter_state(opts[:state])
+    |> maybe_filter_labels(opts[:labels])
+    |> maybe_filter_query(opts[:query])
+    |> order_by([t], desc: t.position, desc: t.created_at)
+    |> limit(^per_page)
+    |> preload([t],
+      lifecycle_events: ^lifecycle_events_query,
+      sub_tickets: ^sub_tickets_query,
+      blocking: [],
+      blocked_by: []
+    )
+    |> Repo.all()
+  end
+
+  defp maybe_filter_state(query, nil), do: query
+  defp maybe_filter_state(query, state), do: where(query, [t], t.state == ^state)
+
+  defp maybe_filter_labels(query, nil), do: query
+  defp maybe_filter_labels(query, []), do: query
+
+  defp maybe_filter_labels(query, labels) when is_list(labels) do
+    Enum.reduce(labels, query, fn label, q ->
+      where(q, [t], ^label in t.labels)
+    end)
+  end
+
+  defp maybe_filter_query(query, nil), do: query
+  defp maybe_filter_query(query, ""), do: query
+
+  defp maybe_filter_query(query, search) do
+    case Integer.parse(search) do
+      {number, ""} ->
+        where(query, [t], t.number == ^number)
+
+      _ ->
+        sanitized = "%" <> String.replace(search, ~r/[%_\\]/, "\\\\\\0") <> "%"
+        where(query, [t], ilike(t.title, ^sanitized))
+    end
+  end
+
   @remote_attr_keys ~w(number title body labels url state created_at parent_ticket_id)a
 
   defp normalize_remote_attrs(attrs) do

@@ -1,8 +1,8 @@
 @http
 Feature: Ticket MCP Tools - HTTP API
   As an API consumer
-  I want to manage GitHub issues through ticket MCP tools over JSON-RPC
-  So that agents can read, list, create, update, close, and organize issues consistently
+  I want to manage tickets through ticket MCP tools over JSON-RPC
+  So that agents can read, list, create, update, close, and organize tickets consistently
 
   The ticket MCP endpoint uses JSON-RPC 2.0 over HTTP POST /.
   Each tool scenario follows this MCP flow:
@@ -20,7 +20,7 @@ Feature: Ticket MCP Tools - HTTP API
   # ticket.read
   # ==========================================================================
 
-  Scenario: Read an issue by number
+  Scenario: Read a ticket by number
     Given I set bearer token to "${valid-doc-key-product-team}"
     When I POST to "/" with body:
       """
@@ -57,7 +57,7 @@ Feature: Ticket MCP Tools - HTTP API
         "params": {
           "name": "ticket.read",
           "arguments": {
-            "number": 1
+             "number": 101
           }
         },
         "id": 102
@@ -71,7 +71,7 @@ Feature: Ticket MCP Tools - HTTP API
     And the response body path "$.result.content[0].text" should contain "Labels"
     And the response body path "$.result.content[0].text" should contain "State"
 
-  Scenario: Read non-existent issue
+  Scenario: Read non-existent ticket
     Given I set bearer token to "${valid-doc-key-product-team}"
     When I POST to "/" with body:
       """
@@ -170,7 +170,7 @@ Feature: Ticket MCP Tools - HTTP API
   # ticket.list
   # ==========================================================================
 
-  Scenario: List issues with no filters
+  Scenario: List tickets with no filters
     Given I set bearer token to "${valid-doc-key-product-team}"
     When I POST to "/" with body:
       """
@@ -214,9 +214,9 @@ Feature: Ticket MCP Tools - HTTP API
     Then the response status should be 200
     And the response body should be valid JSON
     And the response body path "$.result.isError" should be false
-    And the response body path "$.result.content[0].text" should contain "Issue"
+    And the response body path "$.result.content[0].text" should contain "Ticket"
 
-  Scenario: List issues filtered by state
+  Scenario: List tickets filtered by state
     Given I set bearer token to "${valid-doc-key-product-team}"
     When I POST to "/" with body:
       """
@@ -263,7 +263,7 @@ Feature: Ticket MCP Tools - HTTP API
     And the response body should be valid JSON
     And the response body path "$.result.isError" should be false
 
-  Scenario: List issues filtered by labels
+  Scenario: List tickets filtered by labels
     Given I set bearer token to "${valid-doc-key-product-team}"
     When I POST to "/" with body:
       """
@@ -300,7 +300,7 @@ Feature: Ticket MCP Tools - HTTP API
         "params": {
           "name": "ticket.list",
           "arguments": {
-            "labels": ["enhancement"]
+             "labels": ["feature"]
           }
         },
         "id": 112
@@ -309,9 +309,9 @@ Feature: Ticket MCP Tools - HTTP API
     Then the response status should be 200
     And the response body should be valid JSON
     And the response body path "$.result.isError" should be false
-    And the response body path "$.result.content[0].text" should contain "enhancement"
+    And the response body path "$.result.content[0].text" should contain "feature"
 
-  Scenario: List issues with search query
+  Scenario: List tickets with search query
     Given I set bearer token to "${valid-doc-key-product-team}"
     When I POST to "/" with body:
       """
@@ -348,7 +348,7 @@ Feature: Ticket MCP Tools - HTTP API
         "params": {
           "name": "ticket.list",
           "arguments": {
-            "query": "MCP"
+             "query": "authentication"
           }
         },
         "id": 114
@@ -362,7 +362,7 @@ Feature: Ticket MCP Tools - HTTP API
   # ticket.create
   # ==========================================================================
 
-  Scenario: Create issue with title and body
+  Scenario: Create ticket with title and body
     Given I set bearer token to "${valid-doc-key-product-team}"
     When I POST to "/" with body:
       """
@@ -409,9 +409,9 @@ Feature: Ticket MCP Tools - HTTP API
     Then the response status should be 200
     And the response body should be valid JSON
     And the response body path "$.result.isError" should be false
-    And the response body path "$.result.content[0].text" should match ".*#[0-9]+.*"
+    And the response body path "$.result.content[0].text" should match ".*#-?[0-9]+.*"
 
-  Scenario: Create issue with labels
+  Scenario: Create ticket with title only
     Given I set bearer token to "${valid-doc-key-product-team}"
     When I POST to "/" with body:
       """
@@ -448,9 +448,7 @@ Feature: Ticket MCP Tools - HTTP API
         "params": {
           "name": "ticket.create",
           "arguments": {
-            "title": "Labeled test issue",
-            "body": "Has labels.",
-            "labels": ["test"]
+            "title": "Title only ticket"
           }
         },
         "id": 118
@@ -460,7 +458,7 @@ Feature: Ticket MCP Tools - HTTP API
     And the response body should be valid JSON
     And the response body path "$.result.isError" should be false
 
-  Scenario: Create fails without title
+  Scenario: Create ticket fails without title
     Given I set bearer token to "${valid-doc-key-product-team}"
     When I POST to "/" with body:
       """
@@ -513,7 +511,7 @@ Feature: Ticket MCP Tools - HTTP API
   # ticket.update
   # ==========================================================================
 
-  Scenario: Update issue title
+  Scenario: Update ticket title
     Given I set bearer token to "${valid-doc-key-product-team}"
     When I POST to "/" with body:
       """
@@ -550,7 +548,7 @@ Feature: Ticket MCP Tools - HTTP API
         "params": {
           "name": "ticket.update",
           "arguments": {
-            "number": 1,
+             "number": 101,
             "title": "Updated title"
           }
         },
@@ -561,7 +559,7 @@ Feature: Ticket MCP Tools - HTTP API
     And the response body should be valid JSON
     And the response body path "$.result.isError" should be false
 
-  Scenario: Update non-existent issue
+  Scenario: Update non-existent ticket
     Given I set bearer token to "${valid-doc-key-product-team}"
     When I POST to "/" with body:
       """
@@ -663,7 +661,7 @@ Feature: Ticket MCP Tools - HTTP API
   # ticket.close
   # ==========================================================================
 
-  Scenario: Close issue with comment
+  Scenario: Close ticket
     Given I set bearer token to "${valid-doc-key-product-team}"
     When I POST to "/" with body:
       """
@@ -698,10 +696,9 @@ Feature: Ticket MCP Tools - HTTP API
         "jsonrpc": "2.0",
         "method": "tools/call",
         "params": {
-          "name": "ticket.close",
+           "name": "ticket.close",
           "arguments": {
-            "number": 1,
-            "comment": "Closing via MCP"
+             "number": 101
           }
         },
         "id": 128
@@ -711,7 +708,7 @@ Feature: Ticket MCP Tools - HTTP API
     And the response body should be valid JSON
     And the response body path "$.result.isError" should be false
 
-  Scenario: Close non-existent issue
+  Scenario: Close non-existent ticket succeeds (treated as already closed)
     Given I set bearer token to "${valid-doc-key-product-team}"
     When I POST to "/" with body:
       """
@@ -756,7 +753,7 @@ Feature: Ticket MCP Tools - HTTP API
       """
     Then the response status should be 200
     And the response body should be valid JSON
-    And the response body path "$.result.isError" should be true
+    And the response body path "$.result.isError" should be false
 
   Scenario: Close missing number
     Given I set bearer token to "${valid-doc-key-product-team}"
@@ -806,155 +803,6 @@ Feature: Ticket MCP Tools - HTTP API
     And the response body path "$.result" should not exist
 
   # ==========================================================================
-  # ticket.comment
-  # ==========================================================================
-
-  Scenario: Add comment to issue
-    Given I set bearer token to "${valid-doc-key-product-team}"
-    When I POST to "/" with body:
-      """
-      {
-        "jsonrpc": "2.0",
-        "method": "initialize",
-        "params": {
-          "protocolVersion": "2025-03-26",
-          "capabilities": {},
-          "clientInfo": {"name": "exo-bdd-test", "version": "1.0.0"}
-        },
-        "id": 133
-      }
-      """
-    Then the response status should be 200
-    And I store response header "mcp-session-id" as "mcpSessionId"
-    Given I set header "Mcp-Session-Id" to "${mcpSessionId}"
-    And I set bearer token to "${valid-doc-key-product-team}"
-    When I POST to "/" with body:
-      """
-      {
-        "jsonrpc": "2.0",
-        "method": "notifications/initialized"
-      }
-      """
-    Then the response status should be 202
-    Given I set bearer token to "${valid-doc-key-product-team}"
-    And I set header "Mcp-Session-Id" to "${mcpSessionId}"
-    When I POST to "/" with body:
-      """
-      {
-        "jsonrpc": "2.0",
-        "method": "tools/call",
-        "params": {
-          "name": "ticket.comment",
-          "arguments": {
-            "number": 1,
-            "body": "Test comment from exo-bdd"
-          }
-        },
-        "id": 134
-      }
-      """
-    Then the response status should be 200
-    And the response body should be valid JSON
-    And the response body path "$.result.isError" should be false
-
-  Scenario: Comment on non-existent issue
-    Given I set bearer token to "${valid-doc-key-product-team}"
-    When I POST to "/" with body:
-      """
-      {
-        "jsonrpc": "2.0",
-        "method": "initialize",
-        "params": {
-          "protocolVersion": "2025-03-26",
-          "capabilities": {},
-          "clientInfo": {"name": "exo-bdd-test", "version": "1.0.0"}
-        },
-        "id": 135
-      }
-      """
-    Then the response status should be 200
-    And I store response header "mcp-session-id" as "mcpSessionId"
-    Given I set header "Mcp-Session-Id" to "${mcpSessionId}"
-    And I set bearer token to "${valid-doc-key-product-team}"
-    When I POST to "/" with body:
-      """
-      {
-        "jsonrpc": "2.0",
-        "method": "notifications/initialized"
-      }
-      """
-    Then the response status should be 202
-    Given I set bearer token to "${valid-doc-key-product-team}"
-    And I set header "Mcp-Session-Id" to "${mcpSessionId}"
-    When I POST to "/" with body:
-      """
-      {
-        "jsonrpc": "2.0",
-        "method": "tools/call",
-        "params": {
-          "name": "ticket.comment",
-          "arguments": {
-            "number": 999999,
-            "body": "Nope"
-          }
-        },
-        "id": 136
-      }
-      """
-    Then the response status should be 200
-    And the response body should be valid JSON
-    And the response body path "$.result.isError" should be true
-
-  Scenario: Comment missing body
-    Given I set bearer token to "${valid-doc-key-product-team}"
-    When I POST to "/" with body:
-      """
-      {
-        "jsonrpc": "2.0",
-        "method": "initialize",
-        "params": {
-          "protocolVersion": "2025-03-26",
-          "capabilities": {},
-          "clientInfo": {"name": "exo-bdd-test", "version": "1.0.0"}
-        },
-        "id": 137
-      }
-      """
-    Then the response status should be 200
-    And I store response header "mcp-session-id" as "mcpSessionId"
-    Given I set header "Mcp-Session-Id" to "${mcpSessionId}"
-    And I set bearer token to "${valid-doc-key-product-team}"
-    When I POST to "/" with body:
-      """
-      {
-        "jsonrpc": "2.0",
-        "method": "notifications/initialized"
-      }
-      """
-    Then the response status should be 202
-    Given I set bearer token to "${valid-doc-key-product-team}"
-    And I set header "Mcp-Session-Id" to "${mcpSessionId}"
-    When I POST to "/" with body:
-      """
-      {
-        "jsonrpc": "2.0",
-        "method": "tools/call",
-        "params": {
-          "name": "ticket.comment",
-          "arguments": {
-            "number": 1
-          }
-        },
-        "id": 138
-      }
-      """
-    Then the response status should be 200
-    And the response body should be valid JSON
-    And the response body path "$.error" should exist
-    And the response body path "$.error.code" should equal -32602
-    And the response body path "$.result" should not exist
-
-  # ==========================================================================
   # ticket.add_sub_issue
   # ==========================================================================
 
@@ -995,8 +843,8 @@ Feature: Ticket MCP Tools - HTTP API
         "params": {
           "name": "ticket.add_sub_issue",
           "arguments": {
-            "parent_number": 1,
-            "child_number": 2
+             "parent_number": 101,
+            "child_number": 102
           }
         },
         "id": 140
@@ -1094,8 +942,8 @@ Feature: Ticket MCP Tools - HTTP API
         "params": {
           "name": "ticket.remove_sub_issue",
           "arguments": {
-            "parent_number": 1,
-            "child_number": 2
+             "parent_number": 101,
+            "child_number": 102
           }
         },
         "id": 144

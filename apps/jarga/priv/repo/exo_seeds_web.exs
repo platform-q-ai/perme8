@@ -789,7 +789,7 @@ alias Agents.Tickets.Infrastructure.Schemas.ProjectTicketSchema
   sync_state: "synced",
   last_synced_at: DateTime.utc_now() |> DateTime.truncate(:second)
 })
-|> Jarga.Repo.insert!()
+|> Agents.Repo.insert!()
 
 %ProjectTicketSchema{}
 |> ProjectTicketSchema.changeset(%{
@@ -805,7 +805,7 @@ alias Agents.Tickets.Infrastructure.Schemas.ProjectTicketSchema
   sync_state: "synced",
   last_synced_at: DateTime.utc_now() |> DateTime.truncate(:second)
 })
-|> Jarga.Repo.insert!()
+|> Agents.Repo.insert!()
 
 IO.puts("[exo-seeds-web] Created 2 project tickets for ticket-sync tests")
 

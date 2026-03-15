@@ -1,46 +1,8 @@
 defmodule Agents.Infrastructure.Mcp.Tools.Ticket.HelpersTest do
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
 
   alias Agents.Infrastructure.Mcp.Tools.Ticket.Helpers
-  alias Agents.Test.TicketFixtures, as: Fixtures
-
-  setup do
-    prev_sessions = Application.get_env(:agents, :sessions)
-    prev_client = Application.get_env(:agents, :github_ticket_client)
-
-    Application.put_env(:agents, :sessions,
-      github_token: "token-123",
-      github_org: "platform-q-ai",
-      github_repo: "perme8"
-    )
-
-    on_exit(fn ->
-      restore_or_delete(:agents, :sessions, prev_sessions)
-      restore_or_delete(:agents, :github_ticket_client, prev_client)
-    end)
-
-    :ok
-  end
-
-  describe "client_opts/0" do
-    test "returns token, org, and repo from TicketsConfig" do
-      assert Helpers.client_opts() == [token: "token-123", org: "platform-q-ai", repo: "perme8"]
-    end
-  end
-
-  describe "github_client/0" do
-    test "returns configured override module" do
-      Application.put_env(:agents, :github_ticket_client, Agents.Mocks.GithubTicketClientMock)
-
-      assert Helpers.github_client() == Agents.Mocks.GithubTicketClientMock
-    end
-
-    test "returns default github client module when no override configured" do
-      Application.delete_env(:agents, :github_ticket_client)
-
-      assert Helpers.github_client() == Agents.Tickets.Infrastructure.Clients.GithubProjectClient
-    end
-  end
+  alias Agents.Tickets.Domain.Entities.Ticket
 
   describe "get_param/2" do
     test "finds value by atom key" do
@@ -56,53 +18,62 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.HelpersTest do
     end
   end
 
-  describe "format_issue/1" do
-    test "formats full issue details as markdown" do
-      issue =
-        Fixtures.issue_map(%{
-          number: 77,
-          title: "MCP ticket helpers",
-          labels: ["enhancement", "mcp"],
-          state: "open",
-          comments: [Fixtures.comment_map(%{body: "looks good"})],
-          sub_issue_numbers: [11, 12]
-        })
+  describe "format_ticket/1" do
+    test "formats ticket entity as detailed markdown" do
+      ticket = %Ticket{
+        number: 77,
+        title: "MCP ticket helpers",
+        state: "open",
+        labels: ["enhancement", "mcp"],
+        body: "Some body text",
+        url: "https://github.com/platform-q-ai/perme8/issues/77",
+        sub_tickets: [%Ticket{number: 11, title: "Sub 1"}, %Ticket{number: 12, title: "Sub 2"}],
+        blocked_by: [%Ticket{number: 5, title: "Blocker"}],
+        blocks: []
+      }
 
-      text = Helpers.format_issue(issue)
+      text = Helpers.format_ticket(ticket)
 
-      assert text =~ "Title"
-      assert text =~ "State"
-      assert text =~ "Labels"
-      assert text =~ "Comments"
-      assert text =~ "Sub-issues"
+      assert text =~ "Ticket #77"
       assert text =~ "MCP ticket helpers"
+      assert text =~ "enhancement, mcp"
+      assert text =~ "Some body text"
+      assert text =~ "#11"
+      assert text =~ "#12"
+      assert text =~ "#5"
     end
 
-    test "handles nil body and empty collections gracefully" do
-      issue =
-        Fixtures.issue_map(%{
-          number: 99,
-          body: nil,
-          labels: [],
-          comments: [],
-          sub_issue_numbers: []
-        })
+    test "handles nil body and empty collections" do
+      ticket = %Ticket{
+        number: 99,
+        title: "Empty",
+        state: "open",
+        body: nil,
+        labels: [],
+        sub_tickets: [],
+        blocked_by: [],
+        blocks: []
+      }
 
-      text = Helpers.format_issue(issue)
+      text = Helpers.format_ticket(ticket)
 
       assert text =~ "(empty)"
       assert text =~ "None"
     end
   end
 
-  describe "format_issue_summary/1" do
-    test "formats compact issue summary" do
-      issue = Fixtures.issue_map(%{number: 88, title: "Summary item", labels: ["enhancement"]})
+  describe "format_ticket_summary/1" do
+    test "formats compact ticket summary" do
+      ticket = %Ticket{
+        number: 88,
+        title: "Summary item",
+        state: "open",
+        labels: ["enhancement"]
+      }
 
-      text = Helpers.format_issue_summary(issue)
+      text = Helpers.format_ticket_summary(ticket)
 
-      assert text =~ "Issue"
-      assert text =~ "#88"
+      assert text =~ "Ticket #88"
       assert text =~ "Summary item"
       assert text =~ "enhancement"
     end
@@ -110,7 +81,23 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.HelpersTest do
 
   describe "format_error/2" do
     test "formats not found" do
-      assert Helpers.format_error(:not_found, "Issue #9") =~ "not found"
+      assert Helpers.format_error(:not_found, "Ticket #9") =~ "not found"
+    end
+
+    test "formats ticket_not_found" do
+      assert Helpers.format_error(:ticket_not_found, "Ticket #9") =~ "not found"
+    end
+
+    test "formats no_changes" do
+      assert Helpers.format_error(:no_changes, nil) =~ "No updatable fields"
+    end
+
+    test "formats parent_not_found" do
+      assert Helpers.format_error(:parent_not_found, nil) =~ "Parent ticket not found"
+    end
+
+    test "formats child_not_found" do
+      assert Helpers.format_error(:child_not_found, nil) =~ "Child ticket not found"
     end
 
     test "formats missing token" do
@@ -123,7 +110,4 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.HelpersTest do
       refute text =~ "boom"
     end
   end
-
-  defp restore_or_delete(app, key, nil), do: Application.delete_env(app, key)
-  defp restore_or_delete(app, key, value), do: Application.put_env(app, key, value)
 end

@@ -11,6 +11,8 @@ defmodule Agents.Tickets.Domain do
       Events.TicketCreated,
       Events.TicketDependencyChanged,
       Events.TicketStageChanged,
+      Events.TicketSubIssueChanged,
+      Events.TicketUpdated,
       Policies.TicketDependencyPolicy,
       Policies.TicketHierarchyPolicy,
       Policies.TicketEnrichmentPolicy,
