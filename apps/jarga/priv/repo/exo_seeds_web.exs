@@ -50,8 +50,10 @@ Ecto.Adapters.SQL.query!(Notifications.Repo, "TRUNCATE notifications CASCADE", [
 Ecto.Adapters.SQL.query!(Agents.Repo, "TRUNCATE sessions_tasks CASCADE", [])
 Ecto.Adapters.SQL.query!(Agents.Repo, "TRUNCATE sessions_project_tickets CASCADE", [])
 Ecto.Adapters.SQL.query!(Identity.Repo, "TRUNCATE api_keys CASCADE", [])
-Ecto.Adapters.SQL.query!(Chat.Repo, "TRUNCATE chat_messages CASCADE", [])
-Ecto.Adapters.SQL.query!(Chat.Repo, "TRUNCATE chat_sessions CASCADE", [])
+# Chat.Repo is not started by this seed script; use Identity.Repo since all
+# repos share the same database and chat tables are accessible from any connection.
+Ecto.Adapters.SQL.query!(Identity.Repo, "TRUNCATE chat_messages CASCADE", [])
+Ecto.Adapters.SQL.query!(Identity.Repo, "TRUNCATE chat_sessions CASCADE", [])
 Ecto.Adapters.SQL.query!(Agents.Repo, "TRUNCATE workspace_agents CASCADE", [])
 Ecto.Adapters.SQL.query!(Agents.Repo, "TRUNCATE agents CASCADE", [])
 # Identity-owned tables
