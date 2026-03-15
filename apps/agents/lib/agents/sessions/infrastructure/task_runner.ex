@@ -890,12 +890,9 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     {:noreply, state}
   end
 
-  # Track subtask message IDs for two purposes:
-  # 1. Add to `subtask_message_ids` so subsequent user messages from the same
-  #    message are suppressed (they are the subagent's prompt, not user input)
-  # 2. Register the child session ID in `child_session_ids` so events from
-  #    that session are correctly routed to `process_child_session_event/3`
-
+  # Cache the subtask part in output_parts. Subtask message tracking
+  # (subtask_message_ids, child_session_ids) is handled separately by
+  # SseEventRouter.track_subtask_message_id/3 in the calling functions.
   defp do_cache_subtask_part(
          %{
            "type" => "message.part.updated",
