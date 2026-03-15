@@ -17,15 +17,7 @@ defmodule Agents.Sessions.Application.UseCases.RefreshAuthAndResume do
   require Logger
 
   @default_task_repo Agents.Sessions.Infrastructure.Repositories.TaskRepository
-  # Read at runtime so config/test.exs NoopContainerProvider is respected
-  defp default_container_provider do
-    Application.get_env(
-      :agents,
-      :container_provider,
-      Agents.Sessions.Infrastructure.Adapters.DockerAdapter
-    )
-  end
-
+  @default_container_provider Agents.Sessions.Infrastructure.Adapters.DockerAdapter
   @default_opencode_client Agents.Sessions.Infrastructure.Clients.OpencodeClient
   @default_auth_refresher Agents.Sessions.Application.Services.AuthRefresher
 
@@ -55,7 +47,7 @@ defmodule Agents.Sessions.Application.UseCases.RefreshAuthAndResume do
           {:ok, Agents.Sessions.Domain.Entities.Task.t()} | {:error, term()}
   def execute(task_id, user_id, opts \\ []) do
     task_repo = Keyword.get(opts, :task_repo, @default_task_repo)
-    container_provider = Keyword.get(opts, :container_provider, default_container_provider())
+    container_provider = Keyword.get(opts, :container_provider, @default_container_provider)
     opencode_client = Keyword.get(opts, :opencode_client, @default_opencode_client)
     auth_refresher = Keyword.get(opts, :auth_refresher, @default_auth_refresher)
 

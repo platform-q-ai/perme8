@@ -15,6 +15,7 @@ defmodule Agents.Sessions.Application.UseCases.DeleteSession do
   require Logger
 
   @default_task_repo Agents.Sessions.Infrastructure.Repositories.TaskRepository
+  @default_container_provider Agents.Sessions.Infrastructure.Adapters.DockerAdapter
 
   @active_statuses ["pending", "starting", "running", "awaiting_feedback"]
 
@@ -23,15 +24,7 @@ defmodule Agents.Sessions.Application.UseCases.DeleteSession do
   @spec execute(String.t(), String.t(), keyword()) :: :ok | {:error, term()}
   def execute(container_id, user_id, opts \\ []) do
     task_repo = Keyword.get(opts, :task_repo, @default_task_repo)
-
-    default_provider =
-      Application.get_env(
-        :agents,
-        :container_provider,
-        Agents.Sessions.Infrastructure.Adapters.DockerAdapter
-      )
-
-    container_provider = Keyword.get(opts, :container_provider, default_provider)
+    container_provider = Keyword.get(opts, :container_provider, @default_container_provider)
     cancel_fn = Keyword.get(opts, :task_runner_cancel, &default_cancel/1)
 
     tasks = task_repo.list_tasks_for_container(container_id, user_id)

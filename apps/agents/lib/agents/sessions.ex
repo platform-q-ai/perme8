@@ -108,6 +108,7 @@ defmodule Agents.Sessions do
   """
   @spec delete_session(String.t(), String.t(), keyword()) :: :ok | {:error, term()}
   def delete_session(container_id, user_id, opts \\ []) do
+    opts = inject_container_provider(opts)
     DeleteSession.execute(container_id, user_id, opts)
   end
 
@@ -259,17 +260,8 @@ defmodule Agents.Sessions do
   """
   @spec get_container_stats(String.t(), keyword()) :: {:ok, map()} | {:error, term()}
   def get_container_stats(container_id, opts \\ []) do
-    container_provider =
-      Keyword.get(
-        opts,
-        :container_provider,
-        Application.get_env(
-          :agents,
-          :container_provider,
-          Agents.Sessions.Infrastructure.Adapters.DockerAdapter
-        )
-      )
-
+    opts = inject_container_provider(opts)
+    container_provider = Keyword.fetch!(opts, :container_provider)
     container_provider.stats(container_id)
   end
 
@@ -392,6 +384,7 @@ defmodule Agents.Sessions do
   @spec refresh_auth_and_resume(String.t(), String.t(), keyword()) ::
           {:ok, struct()} | {:error, term()}
   def refresh_auth_and_resume(task_id, user_id, opts \\ []) do
+    opts = inject_container_provider(opts)
     opts = inject_task_runner_starter(opts)
     opts = Keyword.put_new(opts, :resume_fn, &resume_task/3)
     RefreshAuthAndResume.execute(task_id, user_id, opts)
@@ -636,6 +629,16 @@ defmodule Agents.Sessions do
   end
 
   # Wire the real TaskRunnerSupervisor starter
+  defp inject_container_provider(opts) do
+    Keyword.put_new_lazy(opts, :container_provider, fn ->
+      Application.get_env(
+        :agents,
+        :container_provider,
+        Agents.Sessions.Infrastructure.Adapters.DockerAdapter
+      )
+    end)
+  end
+
   defp inject_task_runner_starter(opts) do
     if Keyword.has_key?(opts, :task_runner_starter) do
       opts
