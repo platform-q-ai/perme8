@@ -5,6 +5,8 @@ defmodule AgentsWeb.DashboardLive.Index do
 
   import AgentsWeb.DashboardLive.Components.SessionComponents
   import AgentsWeb.DashboardLive.Components.QueueLaneComponents
+  import AgentsWeb.DashboardLive.Components.SidebarComponents
+  import AgentsWeb.DashboardLive.Components.DetailPanelComponents
   import AgentsWeb.DashboardLive.Helpers
   import AgentsWeb.DashboardLive.SessionDataHelpers
 
@@ -14,9 +16,7 @@ defmodule AgentsWeb.DashboardLive.Index do
   alias Agents.Sessions
   alias Agents.Sessions.Domain.Entities.QueueSnapshot
   alias Agents.Tickets
-  alias Agents.Tickets.Domain.Entities.Ticket
   alias Agents.Tickets.Domain.Events.TicketStageChanged
-  alias Agents.Tickets.Domain.Policies.TicketHierarchyPolicy
 
   alias AgentsWeb.DashboardLive.AuthRefreshHandlers
   alias AgentsWeb.DashboardLive.DependencyHandlers
@@ -25,7 +25,6 @@ defmodule AgentsWeb.DashboardLive.Index do
   alias AgentsWeb.DashboardLive.PubSubHandlers
   alias AgentsWeb.DashboardLive.QuestionHandlers
   alias AgentsWeb.DashboardLive.SessionHandlers
-  alias AgentsWeb.DashboardLive.SessionStateMachine
   alias AgentsWeb.DashboardLive.TaskExecutionHandlers
   alias AgentsWeb.DashboardLive.TicketHandlers
 
