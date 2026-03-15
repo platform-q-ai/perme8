@@ -41,9 +41,8 @@ defmodule Chat.Domain.Policies.ReferenceValidationPolicy do
   @spec validate_references(boolean() | {:error, term()}, nil | :ok | {:error, atom()}) ::
           :ok | {:error, atom()}
   def validate_references(user_result, workspace_result) do
-    with :ok <- validate_user_reference(user_result),
-         :ok <- validate_workspace_reference(workspace_result) do
-      :ok
+    with :ok <- validate_user_reference(user_result) do
+      validate_workspace_reference(workspace_result)
     end
   end
 end

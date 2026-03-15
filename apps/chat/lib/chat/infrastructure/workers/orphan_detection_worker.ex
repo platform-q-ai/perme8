@@ -21,6 +21,8 @@ defmodule Chat.Infrastructure.Workers.OrphanDetectionWorker do
 
   require Logger
 
+  alias Chat.Infrastructure.Queries.Queries
+
   @default_identity_api Chat.Infrastructure.Adapters.IdentityApiAdapter
   @default_repo Chat.Repo
   @default_poll_interval 300_000
@@ -54,49 +56,51 @@ defmodule Chat.Infrastructure.Workers.OrphanDetectionWorker do
   def handle_info(_msg, state), do: {:noreply, state}
 
   defp run_detection(state) do
-    try do
-      user_ids = sample_user_ids(state)
+    user_ids = sample_user_ids(state)
 
-      orphaned_user_ids =
-        Enum.reject(user_ids, fn user_id ->
-          try do
-            state.identity_api.user_exists?(user_id)
-          rescue
-            _ -> true
-          end
-        end)
+    orphaned_user_ids =
+      Enum.reject(user_ids, fn user_id ->
+        safe_user_exists?(state.identity_api, user_id)
+      end)
 
-      total_deleted =
-        Enum.reduce(orphaned_user_ids, 0, fn user_id, acc ->
-          try do
-            {count, _} =
-              Chat.Infrastructure.Queries.Queries.sessions_for_user(user_id)
-              |> state.repo.delete_all()
+    total_deleted =
+      Enum.reduce(orphaned_user_ids, 0, fn user_id, acc ->
+        acc + safe_delete_sessions(user_id, state)
+      end)
 
-            acc + count
-          rescue
-            error ->
-              Logger.error(
-                "OrphanDetectionWorker: failed to delete sessions for orphan user #{user_id}: #{inspect(error)}"
-              )
+    Logger.info(
+      "OrphanDetectionWorker: checked #{length(user_ids)} users, " <>
+        "found #{length(orphaned_user_ids)} orphaned, " <>
+        "deleted #{total_deleted} sessions"
+    )
+  rescue
+    error ->
+      Logger.error("OrphanDetectionWorker: detection run failed: #{inspect(error)}")
+  end
 
-              acc
-          end
-        end)
+  defp safe_user_exists?(identity_api, user_id) do
+    identity_api.user_exists?(user_id)
+  rescue
+    _ -> true
+  end
 
-      Logger.info(
-        "OrphanDetectionWorker: checked #{length(user_ids)} users, " <>
-          "found #{length(orphaned_user_ids)} orphaned, " <>
-          "deleted #{total_deleted} sessions"
+  defp safe_delete_sessions(user_id, state) do
+    {count, _} =
+      Queries.sessions_for_user(user_id)
+      |> state.repo.delete_all()
+
+    count
+  rescue
+    error ->
+      Logger.error(
+        "OrphanDetectionWorker: failed to delete sessions for orphan user #{user_id}: #{inspect(error)}"
       )
-    rescue
-      error ->
-        Logger.error("OrphanDetectionWorker: detection run failed: #{inspect(error)}")
-    end
+
+      0
   end
 
   defp sample_user_ids(state) do
-    Chat.Infrastructure.Queries.Queries.sample_distinct_user_ids(state.sample_size)
+    Queries.sample_distinct_user_ids(state.sample_size)
     |> state.repo.all()
   end
 
