@@ -187,7 +187,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.OutputCache do
   def build_answer_entry(request_id, message, answers) do
     text =
       case message do
-        msg when is_binary(msg) and msg != "" -> msg
+        msg when is_binary(msg) -> String.trim(msg)
         _ -> format_answers_for_cache(answers)
       end
 
