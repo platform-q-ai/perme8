@@ -170,12 +170,11 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.OutputCache do
     end
   end
 
-  @doc """
-  Conditionally adds a field to an entry map if the value is non-nil and non-empty.
-  """
-  def maybe_put_payload_field(entry, _key, nil), do: entry
-  def maybe_put_payload_field(entry, _key, ""), do: entry
-  def maybe_put_payload_field(entry, key, value), do: Map.put(entry, key, value)
+  # Conditionally adds a field to an entry map if the value is non-nil
+  # and non-empty-string. Used internally by build_queued_user_entry/2.
+  defp maybe_put_payload_field(entry, _key, nil), do: entry
+  defp maybe_put_payload_field(entry, _key, ""), do: entry
+  defp maybe_put_payload_field(entry, key, value), do: Map.put(entry, key, value)
 
   # ---- Answer caching ----
 
