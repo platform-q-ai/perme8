@@ -21,7 +21,7 @@ defmodule EntityRelationshipManager do
     top_level?: true,
     deps: [
       Identity,
-      Jarga.Repo
+      EntityRelationshipManager.Repo
     ],
     exports: [
       Endpoint,

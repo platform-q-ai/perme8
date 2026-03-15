@@ -12,7 +12,13 @@ defmodule EntityRelationshipManager.Infrastructure.Repositories.SchemaRepository
 
   alias EntityRelationshipManager.Infrastructure.Schemas.SchemaDefinitionSchema
 
-  defp repo, do: Application.get_env(:entity_relationship_manager, :ecto_repo, Jarga.Repo)
+  defp repo,
+    do:
+      Application.get_env(
+        :entity_relationship_manager,
+        :ecto_repo,
+        EntityRelationshipManager.Repo
+      )
 
   @impl true
   def get_schema(workspace_id) do

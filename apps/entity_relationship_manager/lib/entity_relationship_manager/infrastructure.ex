@@ -13,7 +13,7 @@ defmodule EntityRelationshipManager.Infrastructure do
     deps: [
       EntityRelationshipManager,
       EntityRelationshipManager.Domain,
-      Jarga.Repo
+      EntityRelationshipManager.Repo
     ],
     exports: [
       {Repositories.SchemaRepository, []},

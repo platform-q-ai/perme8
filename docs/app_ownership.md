@@ -14,7 +14,7 @@ Each app has a single owner and a clear set of responsibilities. No two apps own
 | **jarga** | Domain context | Projects, documents, notes, collaboration (Yjs), slugs | `Jarga.Repo` | `identity`, `notifications`, `perme8_events` |
 | **agents** | Domain context | Agent definitions, LLM orchestration, perme8-mcp server, ToolProvider infrastructure, Sessions (task lifecycle, containers, queues), Tickets (GitHub issue sync, triage, ordering) | `Agents.Repo` | `identity`, `perme8_events` |
 | **webhooks** | Domain context | Outbound/inbound webhooks, HMAC signing, audit logging | `Webhooks.Repo` | `identity`, `perme8_events` |
-| **entity_relationship_manager** | Domain context + API | Schema definitions, entities, edges, graph traversal | Needs own Repo (currently borrows `Jarga.Repo`) | `identity`, `perme8_events` |
+| **entity_relationship_manager** | Domain context + API | Schema definitions, entities, edges, graph traversal | `EntityRelationshipManager.Repo` | `identity`, `perme8_events` |
 | **perme8_events** | Shared infrastructure | Eventbus facade (`Perme8.Events`), EventBus dispatcher, EventHandler behaviour, DomainEvent macro, PubSub server | None | Nothing (foundational) |
 | **perme8_plugs** | Shared infrastructure | Shared Plug modules (`Perme8.Plugs.SecurityHeaders`) | None | Nothing (foundational) |
 | **jarga_web** | Interface (LiveView) | UI shell, mounts companion `_web` apps | None | `jarga`, `agents`, `chat`, `chat_web`, `identity`, `notifications`, `perme8_events` |
@@ -57,10 +57,10 @@ Each context has its own `domain/`, `application/`, and `infrastructure/` layers
 ### Pending Changes
 
 - **perme8-mcp** -- The MCP server in `agents` is being renamed from `knowledge-mcp` to `perme8-mcp` with a `ToolProvider` abstraction in [#181](https://github.com/platform-q-ai/perme8/issues/181). The `agents` ownership description above reflects the target state.
-- **entity_relationship_manager** -- Currently borrows `Jarga.Repo`. Needs its own Repo as part of the Standalone App Principle enforcement.
 
 ### Completed Migrations
 
+- **entity_relationship_manager** -- Given its own `EntityRelationshipManager.Repo` in [#451](https://github.com/platform-q-ai/perme8/issues/451). Removed dependency on `Jarga.Repo`.
 - **perme8_events** -- Extracted in [#200](https://github.com/platform-q-ai/perme8/issues/200). EventBus, EventHandler, DomainEvent macro, and PubSub server now live in `apps/perme8_events/`.
 - **notifications** -- Extracted from `jarga` in [#38](https://github.com/platform-q-ai/perme8/issues/38). Now lives in `apps/notifications/` with its own `Notifications.Repo`.
 - **chat** -- Extracted from `jarga` in [#60](https://github.com/platform-q-ai/perme8/issues/60). Now lives in `apps/chat/` with its own `Chat.Repo`. Web layer in `apps/chat_web/`.

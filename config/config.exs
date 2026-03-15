@@ -52,6 +52,10 @@ config :entity_relationship_manager, EntityRelationshipManager.Endpoint,
   ],
   pubsub_server: Perme8.Events.PubSub
 
+config :entity_relationship_manager,
+  ecto_repos: [EntityRelationshipManager.Repo],
+  generators: [timestamp_type: :utc_datetime, binary_id: true]
+
 # Configures the JargaApi endpoint (JSON API)
 config :jarga_api, JargaApi.Endpoint,
   url: [host: "localhost"],
