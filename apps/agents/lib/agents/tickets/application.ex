@@ -6,9 +6,12 @@ defmodule Agents.Tickets.Application do
     deps: [Agents.Tickets.Domain, Perme8.Events],
     exports: [
       TicketsConfig,
+      UseCases.AddSubIssue,
       UseCases.AddTicketDependency,
       UseCases.CreateTicket,
       UseCases.RecordStageTransition,
-      UseCases.RemoveTicketDependency
+      UseCases.RemoveSubIssue,
+      UseCases.RemoveTicketDependency,
+      UseCases.UpdateTicket
     ]
 end
