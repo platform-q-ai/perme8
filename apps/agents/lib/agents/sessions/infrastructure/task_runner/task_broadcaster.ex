@@ -2,9 +2,12 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.TaskBroadcaster do
   @moduledoc """
   PubSub broadcast functions extracted from TaskRunner.
 
-  All functions are stateless — they take explicit parameters (task_id, pubsub, etc.)
+  All functions are pure — they take explicit parameters (task_id, pubsub, etc.)
   and broadcast messages to the `"task:\#{task_id}"` topic. No GenServer state is
   accessed directly; the calling GenServer passes in the values it needs broadcast.
+
+  Lifecycle state transitions are computed here via `SessionLifecyclePolicy` to
+  keep the broadcast-with-lifecycle operation atomic and self-contained.
   """
 
   alias Agents.Sessions.Domain.Policies.SessionLifecyclePolicy
@@ -118,43 +121,17 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.TaskBroadcaster do
   end
 
   @doc """
-  Broadcasts container resource stats (CPU, memory).
-
-  Fetches stats from the container provider and broadcasts them.
-  Silently handles errors — stats are best-effort telemetry.
+  Broadcasts a pre-computed container stats payload.
 
   Message: `{:container_stats_updated, task_id, container_id, payload}`
   """
-  def broadcast_container_stats(container_id, container_provider, task_id, pubsub)
-      when is_binary(container_id) do
-    case container_provider.stats(container_id) do
-      {:ok, stats} ->
-        mem_percent =
-          if stats.memory_limit > 0,
-            do: Float.round(stats.memory_usage / stats.memory_limit * 100, 1),
-            else: 0.0
-
-        payload = %{
-          cpu_percent: stats.cpu_percent,
-          memory_percent: mem_percent,
-          memory_usage: stats.memory_usage,
-          memory_limit: stats.memory_limit
-        }
-
-        Phoenix.PubSub.broadcast(
-          pubsub,
-          "task:#{task_id}",
-          {:container_stats_updated, task_id, container_id, payload}
-        )
-
-      {:error, _} ->
-        :ok
-    end
-  rescue
-    _ -> :ok
+  def broadcast_container_stats(task_id, container_id, payload, pubsub) do
+    Phoenix.PubSub.broadcast(
+      pubsub,
+      "task:#{task_id}",
+      {:container_stats_updated, task_id, container_id, payload}
+    )
   end
-
-  def broadcast_container_stats(_container_id, _container_provider, _task_id, _pubsub), do: :ok
 
   @doc """
   Broadcasts a todo list update.

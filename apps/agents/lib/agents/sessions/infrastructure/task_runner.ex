@@ -519,12 +519,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
           from_task
         )
 
-        TaskBroadcaster.broadcast_container_stats(
-          state.container_id,
-          state.container_provider,
-          state.task_id,
-          state.pubsub
-        )
+        maybe_broadcast_container_stats(state)
 
         flush_ref = schedule_output_flush()
 
@@ -604,12 +599,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
       end
 
     # Push container stats to subscribers (event-driven, replaces LiveView polling)
-    TaskBroadcaster.broadcast_container_stats(
-      state.container_id,
-      state.container_provider,
-      state.task_id,
-      state.pubsub
-    )
+    maybe_broadcast_container_stats(state)
 
     # Schedule the next flush if we're still running
     flush_ref = schedule_output_flush()
@@ -1381,6 +1371,38 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
       :ok
   end
+
+  defp maybe_broadcast_container_stats(%{container_id: container_id} = state)
+       when is_binary(container_id) do
+    case state.container_provider.stats(container_id) do
+      {:ok, stats} ->
+        mem_percent =
+          if stats.memory_limit > 0,
+            do: Float.round(stats.memory_usage / stats.memory_limit * 100, 1),
+            else: 0.0
+
+        payload = %{
+          cpu_percent: stats.cpu_percent,
+          memory_percent: mem_percent,
+          memory_usage: stats.memory_usage,
+          memory_limit: stats.memory_limit
+        }
+
+        TaskBroadcaster.broadcast_container_stats(
+          state.task_id,
+          container_id,
+          payload,
+          state.pubsub
+        )
+
+      {:error, _} ->
+        :ok
+    end
+  rescue
+    _ -> :ok
+  end
+
+  defp maybe_broadcast_container_stats(_state), do: :ok
 
   defp cleanup_container(%{container_id: nil}), do: :ok
 

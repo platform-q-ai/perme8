@@ -63,77 +63,24 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.TaskBroadcasterTest do
   end
 
   describe "broadcast_container_stats/4" do
-    test "computes mem_percent and broadcasts stats payload" do
+    test "broadcasts pre-computed stats payload" do
       container_id = "container-xyz"
 
-      container_provider =
-        stub_container_provider(%{
-          cpu_percent: 25.5,
-          memory_usage: 512_000_000,
-          memory_limit: 1_024_000_000
-        })
-
-      TaskBroadcaster.broadcast_container_stats(
-        container_id,
-        container_provider,
-        @task_id,
-        @pubsub
-      )
-
-      assert_receive {:container_stats_updated, @task_id, ^container_id, payload}
-      assert payload.cpu_percent == 25.5
-      assert payload.memory_percent == 50.0
-      assert payload.memory_usage == 512_000_000
-      assert payload.memory_limit == 1_024_000_000
-    end
-
-    test "handles zero memory_limit without division error" do
-      container_id = "container-xyz"
-
-      container_provider =
-        stub_container_provider(%{
-          cpu_percent: 10.0,
-          memory_usage: 0,
-          memory_limit: 0
-        })
-
-      TaskBroadcaster.broadcast_container_stats(
-        container_id,
-        container_provider,
-        @task_id,
-        @pubsub
-      )
-
-      assert_receive {:container_stats_updated, @task_id, ^container_id, payload}
-      assert payload.memory_percent == 0.0
-    end
-
-    test "silently handles stats errors" do
-      container_id = "container-xyz"
-
-      container_provider = %{
-        stats: fn _id -> {:error, :not_found} end
+      payload = %{
+        cpu_percent: 25.5,
+        memory_percent: 50.0,
+        memory_usage: 512_000_000,
+        memory_limit: 1_024_000_000
       }
 
-      # Module-based mock that responds to stats/1
-      defmodule ErrorProvider do
-        def stats(_id), do: {:error, :not_found}
-      end
-
       TaskBroadcaster.broadcast_container_stats(
-        container_id,
-        ErrorProvider,
         @task_id,
+        container_id,
+        payload,
         @pubsub
       )
 
-      refute_receive {:container_stats_updated, _, _, _}
-    end
-
-    test "returns :ok for nil container_id" do
-      result = TaskBroadcaster.broadcast_container_stats(nil, nil, @task_id, @pubsub)
-      assert result == :ok
-      refute_receive {:container_stats_updated, _, _, _}
+      assert_receive {:container_stats_updated, @task_id, ^container_id, ^payload}
     end
   end
 
@@ -192,28 +139,5 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.TaskBroadcasterTest do
       # Should return some lifecycle state atom, not nil
       assert is_atom(result)
     end
-  end
-
-  # Helper to create a module-like struct that responds to stats/1
-  defp stub_container_provider(stats_response) do
-    # We need a module that implements stats/1
-    # Use a simple approach: define the test module inline
-    {:ok, pid} = Agent.start_link(fn -> stats_response end)
-
-    # Create a module dynamically for each test
-    mod_name = :"StubProvider_#{System.unique_integer([:positive])}"
-
-    Module.create(
-      mod_name,
-      quote do
-        def stats(_container_id) do
-          {:ok, unquote(Macro.escape(stats_response))}
-        end
-      end,
-      Macro.Env.location(__ENV__)
-    )
-
-    Agent.stop(pid)
-    mod_name
   end
 end
