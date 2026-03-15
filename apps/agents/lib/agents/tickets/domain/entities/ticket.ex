@@ -27,6 +27,8 @@ defmodule Agents.Tickets.Domain.Entities.Ticket do
           remote_updated_at: DateTime.t() | nil,
           parent_ticket_id: integer() | nil,
           sub_tickets: [t()],
+          blocks: [t()],
+          blocked_by: [t()],
           created_at: DateTime.t() | nil,
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil,
@@ -71,6 +73,8 @@ defmodule Agents.Tickets.Domain.Entities.Ticket do
     position: 0,
     sync_state: "synced",
     sub_tickets: [],
+    blocks: [],
+    blocked_by: [],
     session_state: "idle",
     lifecycle_stage: "open",
     lifecycle_events: []
@@ -104,6 +108,8 @@ defmodule Agents.Tickets.Domain.Entities.Ticket do
       remote_updated_at: schema.remote_updated_at,
       parent_ticket_id: schema.parent_ticket_id,
       sub_tickets: convert_sub_tickets(schema.sub_tickets),
+      blocks: convert_association(Map.get(schema, :blocking, [])),
+      blocked_by: convert_association(Map.get(schema, :blocked_by, [])),
       created_at: schema.created_at,
       inserted_at: schema.inserted_at,
       updated_at: schema.updated_at,
@@ -117,6 +123,40 @@ defmodule Agents.Tickets.Domain.Entities.Ticket do
       lifecycle_events: convert_lifecycle_events(Map.get(schema, :lifecycle_events, []))
     }
   end
+
+  @doc "Returns true if the ticket is actively blocked (at least one open blocker)."
+  @spec blocked?(t()) :: boolean()
+  def blocked?(%__MODULE__{blocked_by: blocked_by}) when is_list(blocked_by) do
+    Enum.any?(blocked_by, &(&1.state == "open"))
+  end
+
+  def blocked?(_), do: false
+
+  @doc """
+  Returns the blocked status of a ticket.
+
+  - `:none` — no blocked_by dependencies
+  - `:active` — at least one blocker is open
+  - `:resolved` — all blockers are closed
+  """
+  @spec blocked_status(t()) :: :none | :active | :resolved
+  def blocked_status(%__MODULE__{blocked_by: []}) do
+    :none
+  end
+
+  def blocked_status(%__MODULE__{blocked_by: blocked_by}) when is_list(blocked_by) do
+    if Enum.any?(blocked_by, &(&1.state == "open")), do: :active, else: :resolved
+  end
+
+  def blocked_status(_), do: :none
+
+  @doc "Returns the count of open blockers."
+  @spec open_blocker_count(t()) :: non_neg_integer()
+  def open_blocker_count(%__MODULE__{blocked_by: blocked_by}) when is_list(blocked_by) do
+    Enum.count(blocked_by, &(&1.state == "open"))
+  end
+
+  def open_blocker_count(_), do: 0
 
   @doc "Returns true if the ticket's state is open."
   @spec open?(t()) :: boolean()
@@ -167,6 +207,10 @@ defmodule Agents.Tickets.Domain.Entities.Ticket do
     do: Enum.map(sub_tickets, &from_schema/1)
 
   defp convert_sub_tickets(_), do: []
+
+  defp convert_association(%Ecto.Association.NotLoaded{}), do: []
+  defp convert_association(assoc) when is_list(assoc), do: Enum.map(assoc, &from_schema/1)
+  defp convert_association(_), do: []
 
   defp convert_lifecycle_events(%Ecto.Association.NotLoaded{}), do: []
 

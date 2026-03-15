@@ -9,9 +9,11 @@ defmodule Agents.Tickets.Domain do
       Entities.TicketLifecycleEvent,
       Entities.Ticket.View,
       Events.TicketCreated,
+      Events.TicketDependencyChanged,
+      Events.TicketStageChanged,
+      Policies.TicketDependencyPolicy,
       Policies.TicketHierarchyPolicy,
       Policies.TicketEnrichmentPolicy,
-      Policies.TicketLifecyclePolicy,
-      Events.TicketStageChanged
+      Policies.TicketLifecyclePolicy
     ]
 end

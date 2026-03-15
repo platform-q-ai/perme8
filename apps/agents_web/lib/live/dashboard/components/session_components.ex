@@ -948,6 +948,7 @@ defmodule AgentsWeb.DashboardLive.Components.SessionComponents do
       data-ticket-depth={@depth}
       data-has-subissues={(@is_ticket && to_string(Ticket.has_sub_tickets?(@ticket))) || "false"}
       data-ticket-state={(@is_ticket && @ticket.state) || nil}
+      data-blocked={(@is_ticket && blocked_data_attr(@ticket)) || nil}
       data-slot-state={slot_state(@variant, @warming)}
       class={
         ticket_card_classes(
@@ -1024,6 +1025,21 @@ defmodule AgentsWeb.DashboardLive.Components.SessionComponents do
                 class="text-[0.6rem] text-base-content/40 whitespace-nowrap shrink-0"
               >
                 {View.current_stage_duration(@ticket, DateTime.utc_now())}
+              </span>
+              <%!-- Blocked indicator --%>
+              <span
+                :if={@is_ticket && Ticket.blocked_status(@ticket) == :active}
+                data-testid="blocked-indicator"
+                class="badge badge-xs badge-error whitespace-nowrap shrink-0"
+              >
+                Blocked by {Ticket.open_blocker_count(@ticket)}
+              </span>
+              <span
+                :if={@is_ticket && Ticket.blocked_status(@ticket) == :resolved}
+                data-testid="blocked-indicator"
+                class="badge badge-xs badge-ghost whitespace-nowrap shrink-0"
+              >
+                Blockers resolved
               </span>
               <%!-- Auth refresh button (failed session-only cards) --%>
               <button
@@ -1294,6 +1310,14 @@ defmodule AgentsWeb.DashboardLive.Components.SessionComponents do
 
   defp ticket_closed?(%{state: "closed"}), do: true
   defp ticket_closed?(_), do: false
+
+  defp blocked_data_attr(ticket) do
+    case Ticket.blocked_status(ticket) do
+      :active -> "active"
+      :resolved -> "resolved"
+      :none -> nil
+    end
+  end
 
   # Duration timer DOM id must be unique per card
   defp duration_timer_id(variant, %{number: n}, _session),
