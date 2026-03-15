@@ -14,7 +14,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.TaskBroadcasterTest do
   describe "broadcast_event/3" do
     test "broadcasts {:task_event, task_id, event}" do
       event = %{"type" => "message.part.updated", "data" => "hello"}
-      TaskBroadcaster.broadcast_event(event, @task_id, @pubsub)
+      TaskBroadcaster.broadcast_event(@task_id, event, @pubsub)
 
       assert_receive {:task_event, @task_id, ^event}
     end
@@ -90,10 +90,10 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.TaskBroadcasterTest do
 
       TaskBroadcaster.broadcast_status_with_lifecycle(
         @task_id,
-        @pubsub,
         "running",
         %{status: "running"},
-        current_task
+        current_task,
+        @pubsub
       )
 
       assert_receive {:task_status_changed, @task_id, "running"}

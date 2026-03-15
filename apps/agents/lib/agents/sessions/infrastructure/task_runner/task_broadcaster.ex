@@ -19,7 +19,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.TaskBroadcaster do
 
   Message: `{:task_event, task_id, event}`
   """
-  def broadcast_event(event, task_id, pubsub) do
+  def broadcast_event(task_id, event, pubsub) do
     Phoenix.PubSub.broadcast(
       pubsub,
       "task:#{task_id}",
@@ -46,7 +46,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.TaskBroadcaster do
   Computes the lifecycle state transition by comparing the current task
   (before update) with the target task (after applying attrs and status).
   """
-  def broadcast_status_with_lifecycle(task_id, pubsub, status, attrs, current_task) do
+  def broadcast_status_with_lifecycle(task_id, status, attrs, current_task, pubsub) do
     to_task = lifecycle_target_task(current_task, attrs, status)
 
     from_state = lifecycle_state_from_task(current_task)

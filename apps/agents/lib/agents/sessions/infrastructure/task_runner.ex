@@ -280,14 +280,14 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
         TaskBroadcaster.broadcast_status_with_lifecycle(
           state.task_id,
-          state.pubsub,
           "starting",
           %{
             status: "starting",
             container_id: container_id,
             container_port: port
           },
-          from_task
+          from_task,
+          state.pubsub
         )
 
         new_state = %{
@@ -323,13 +323,13 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
         TaskBroadcaster.broadcast_status_with_lifecycle(
           state.task_id,
-          state.pubsub,
           "starting",
           %{
             status: "starting",
             container_port: port
           },
-          from_task
+          from_task,
+          state.pubsub
         )
 
         new_state = %{state | container_port: port, status: :health_check}
@@ -357,13 +357,13 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
         TaskBroadcaster.broadcast_status_with_lifecycle(
           state.task_id,
-          state.pubsub,
           "starting",
           %{
             status: "starting",
             container_port: port
           },
-          from_task
+          from_task,
+          state.pubsub
         )
 
         new_state = %{state | container_port: port, status: :health_check}
@@ -513,10 +513,10 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
         TaskBroadcaster.broadcast_status_with_lifecycle(
           state.task_id,
-          state.pubsub,
           "running",
           %{status: "running"},
-          from_task
+          from_task,
+          state.pubsub
         )
 
         maybe_broadcast_container_stats(state)
@@ -707,10 +707,10 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
     TaskBroadcaster.broadcast_status_with_lifecycle(
       state.task_id,
-      state.pubsub,
       "cancelled",
       %{status: "cancelled"},
-      from_task
+      from_task,
+      state.pubsub
     )
 
     state.event_bus.emit(
@@ -799,7 +799,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   # the subtask part event arrives and overwrites it with the real value.
 
   defp process_parent_session_event(event, state) do
-    TaskBroadcaster.broadcast_event(event, state.task_id, state.pubsub)
+    TaskBroadcaster.broadcast_event(state.task_id, event, state.pubsub)
 
     # Track subtask message IDs so we can suppress their user messages
     {subtask_message_ids, child_session_ids} =
@@ -881,12 +881,12 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
           state
       end
 
-    TaskBroadcaster.broadcast_event(event, state.task_id, state.pubsub)
+    TaskBroadcaster.broadcast_event(state.task_id, event, state.pubsub)
     {:noreply, state}
   end
 
   defp process_child_session_event(event, _child_session_id, state) do
-    TaskBroadcaster.broadcast_event(event, state.task_id, state.pubsub)
+    TaskBroadcaster.broadcast_event(state.task_id, event, state.pubsub)
     {:noreply, state}
   end
 
@@ -1295,10 +1295,10 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
     TaskBroadcaster.broadcast_status_with_lifecycle(
       state.task_id,
-      state.pubsub,
       "failed",
       attrs,
-      from_task
+      from_task,
+      state.pubsub
     )
 
     state.event_bus.emit(
@@ -1334,10 +1334,10 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
     TaskBroadcaster.broadcast_status_with_lifecycle(
       state.task_id,
-      state.pubsub,
       "completed",
       attrs,
-      from_task
+      from_task,
+      state.pubsub
     )
 
     state.event_bus.emit(
