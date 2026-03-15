@@ -150,4 +150,48 @@ defmodule Chat.Infrastructure.Queries.Queries do
       select: m
     )
   end
+
+  # --- Orphan detection and cleanup queries ---
+
+  @doc """
+  Returns up to `limit` distinct user_id values from chat_sessions,
+  sampled randomly. Used by OrphanDetectionWorker for sample-based
+  orphan detection (not a full table scan).
+
+  Uses a subquery to first get distinct user_ids, then samples randomly,
+  because PostgreSQL requires ORDER BY expressions to appear in the SELECT
+  list when using DISTINCT.
+  """
+  def sample_distinct_user_ids(limit) do
+    distinct_users =
+      from(s in SessionSchema,
+        distinct: true,
+        select: %{user_id: s.user_id}
+      )
+
+    from(u in subquery(distinct_users),
+      select: u.user_id,
+      order_by: fragment("RANDOM()"),
+      limit: ^limit
+    )
+  end
+
+  @doc """
+  Returns a queryable for all sessions belonging to a specific user.
+  Used by OrphanDetectionWorker to delete sessions for orphaned users.
+  """
+  def sessions_for_user(user_id) do
+    from(s in SessionSchema, where: s.user_id == ^user_id)
+  end
+
+  @doc """
+  Returns a queryable for sessions belonging to a specific user AND workspace.
+  Used by IdentityEventSubscriber to clean up sessions when a user is removed
+  from a workspace.
+  """
+  def sessions_for_user_and_workspace(user_id, workspace_id) do
+    from(s in SessionSchema,
+      where: s.user_id == ^user_id and s.workspace_id == ^workspace_id
+    )
+  end
 end

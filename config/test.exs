@@ -89,6 +89,10 @@ config :chat, Chat.Repo,
   pool_size: 15,
   ownership_timeout: :infinity
 
+# Disable infrastructure children (event subscriber, orphan worker) in tests
+# to avoid sandbox conflicts with GenServers polling outside owned processes
+config :chat, start_infrastructure: false
+
 # Notifications uses the same database as Jarga
 # pool_size 15 required: jarga-web browser tests (exo-bdd) run concurrent
 # scenarios that each load the notification bell component via LiveView,
@@ -238,6 +242,12 @@ config :agents, :mcp_http, port: 5007
 
 # Skip orphan recovery at boot — runs outside sandbox and conflicts with Mox
 config :agents, :skip_orphan_recovery, true
+
+# Use noop container provider in tests so integration tests don't crash
+# when Docker is unavailable (e.g. in CI or development environments without Docker)
+config :agents,
+       :container_provider,
+       Agents.Sessions.Infrastructure.Adapters.NoopContainerProvider
 
 # Agents Ticket MCP tools: use in-memory stub so exo-bdd tests work without
 # a real GitHub token. Unit tests override this with Mox via Application.put_env.

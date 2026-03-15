@@ -78,7 +78,12 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
       task_repo: Keyword.get(opts, :task_repo, TaskRepository),
       event_bus: Keyword.get(opts, :event_bus, Perme8.Events.EventBus),
       task_runner_starter: Keyword.get(opts, :task_runner_starter),
-      container_provider: Keyword.get(opts, :container_provider, DockerAdapter),
+      container_provider:
+        Keyword.get(
+          opts,
+          :container_provider,
+          Application.get_env(:agents, :container_provider, DockerAdapter)
+        ),
       pubsub: Keyword.get(opts, :pubsub, SessionsConfig.pubsub())
     }
 

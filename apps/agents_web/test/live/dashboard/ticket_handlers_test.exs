@@ -179,6 +179,13 @@ defmodule AgentsWeb.DashboardLive.TicketHandlersTest do
         String.contains?(html, "pick up ticket #702")
       end)
 
+      # Starting a ticket session navigates with tab: "ticket", so
+      # output_parts (which render in the chat tab panel) are hidden.
+      # Switch to the chat tab before asserting streamed output content.
+      lv
+      |> element(~s([data-tab-id="chat"]))
+      |> render_click()
+
       # Simulate a message.part.updated event with assistant text.
       # If current_task was properly set, the event will be processed by
       # EventProcessor (not silently discarded by the task_event guard

@@ -100,7 +100,11 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
       Keyword.get(
         opts,
         :container_provider,
-        Agents.Sessions.Infrastructure.Adapters.DockerAdapter
+        Application.get_env(
+          :agents,
+          :container_provider,
+          Agents.Sessions.Infrastructure.Adapters.DockerAdapter
+        )
       )
 
     opencode_client =
