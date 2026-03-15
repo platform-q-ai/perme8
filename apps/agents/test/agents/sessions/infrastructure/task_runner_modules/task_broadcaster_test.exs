@@ -100,44 +100,4 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.TaskBroadcasterTest do
       assert_receive {:lifecycle_state_changed, @task_id, _from, _to}
     end
   end
-
-  describe "lifecycle_target_task/3" do
-    test "creates map from attrs when current_task is nil" do
-      result = TaskBroadcaster.lifecycle_target_task(nil, %{container_id: "c1"}, "starting")
-      assert result == %{container_id: "c1", status: "starting"}
-    end
-
-    test "merges attrs into current task struct" do
-      current = %Agents.Sessions.Infrastructure.Schemas.TaskSchema{
-        id: "t1",
-        status: "starting",
-        container_id: nil,
-        container_port: nil
-      }
-
-      result =
-        TaskBroadcaster.lifecycle_target_task(
-          current,
-          %{container_id: "c1", container_port: 8080},
-          "running"
-        )
-
-      assert result.container_id == "c1"
-      assert result.container_port == 8080
-      assert result.status == "running"
-    end
-  end
-
-  describe "lifecycle_state_from_task/1" do
-    test "returns :idle for nil task" do
-      assert TaskBroadcaster.lifecycle_state_from_task(nil) == :idle
-    end
-
-    test "delegates to SessionLifecyclePolicy for non-nil task" do
-      task = %{status: "running", container_id: "c1", container_port: 8080}
-      result = TaskBroadcaster.lifecycle_state_from_task(task)
-      # Should return some lifecycle state atom, not nil
-      assert is_atom(result)
-    end
-  end
 end

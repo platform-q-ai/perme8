@@ -142,36 +142,32 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.TaskBroadcaster do
     Phoenix.PubSub.broadcast(pubsub, "task:#{task_id}", {:todo_updated, task_id, todo_items})
   end
 
-  @doc """
-  Builds a target task map by merging attrs into the current task and setting the status.
-  Used for computing lifecycle state transitions.
-  """
-  def lifecycle_target_task(nil, attrs, status) do
+  # Builds a target task map by merging attrs into the current task and setting the status.
+  # Used internally for computing lifecycle state transitions.
+  defp lifecycle_target_task(nil, attrs, status) do
     attrs
     |> Map.new()
     |> Map.put_new(:status, status)
   end
 
-  def lifecycle_target_task(%_{} = task, attrs, status) do
+  defp lifecycle_target_task(%_{} = task, attrs, status) do
     task
     |> Map.from_struct()
     |> Map.merge(Map.new(attrs))
     |> Map.put(:status, status)
   end
 
-  def lifecycle_target_task(task, attrs, status) when is_map(task) do
+  defp lifecycle_target_task(task, attrs, status) when is_map(task) do
     task
     |> Map.merge(Map.new(attrs))
     |> Map.put(:status, status)
   end
 
-  @doc """
-  Derives the lifecycle state from a task map.
-  Delegates to `SessionLifecyclePolicy.derive/1`.
-  """
-  def lifecycle_state_from_task(nil), do: :idle
+  # Derives the lifecycle state from a task map.
+  # Returns :idle for nil, otherwise delegates to SessionLifecyclePolicy.derive/1.
+  defp lifecycle_state_from_task(nil), do: :idle
 
-  def lifecycle_state_from_task(task) do
+  defp lifecycle_state_from_task(task) do
     SessionLifecyclePolicy.derive(%{
       status: Map.get(task, :status),
       container_id: Map.get(task, :container_id),
