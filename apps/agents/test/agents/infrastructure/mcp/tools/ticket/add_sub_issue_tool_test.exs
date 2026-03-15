@@ -58,7 +58,7 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.AddSubIssueToolTest do
 
       assert {:reply, response, ^frame} =
                AddSubIssueTool.execute(
-                 %{"parent_number" => 99999, "child_number" => 901},
+                 %{"parent_number" => 99_999, "child_number" => 901},
                  frame
                )
 
@@ -72,7 +72,7 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.AddSubIssueToolTest do
 
       assert {:reply, response, ^frame} =
                AddSubIssueTool.execute(
-                 %{"parent_number" => 900, "child_number" => 99999},
+                 %{"parent_number" => 900, "child_number" => 99_999},
                  frame
                )
 

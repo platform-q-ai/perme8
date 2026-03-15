@@ -5,27 +5,6 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.Helpers do
 
   alias Agents.Tickets.Domain.Entities.Ticket
 
-  # -- GitHub client helpers (deprecated, used by tools not yet migrated) ------
-  # These will be removed once all tools are rewired to the domain layer.
-
-  def github_client do
-    Application.get_env(
-      :agents,
-      :github_ticket_client,
-      Agents.Tickets.Infrastructure.Clients.GithubProjectClient
-    )
-  end
-
-  def client_opts do
-    config = Application.get_env(:agents, :sessions, [])
-
-    [
-      token: config[:github_token],
-      org: config[:github_org] || config[:github_project_org] || "platform-q-ai",
-      repo: config[:github_repo] || "perme8"
-    ]
-  end
-
   # -- Param extraction --------------------------------------------------------
 
   def get_param(params, key) when is_map(params) and is_atom(key) do
@@ -94,57 +73,6 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.Helpers do
       |> blank_to_default("none")
 
     "Ticket ##{ticket.number}: #{ticket.title} (#{ticket.state}) [#{labels}]"
-  end
-
-  # -- Legacy GitHub issue formatters (kept for backward compat during migration)
-
-  def format_issue(issue) do
-    labels = format_list(Map.get(issue, :labels, []))
-    assignees = format_list(Map.get(issue, :assignees, []))
-
-    comments =
-      issue
-      |> Map.get(:comments, [])
-      |> Enum.map_join("\n", fn comment ->
-        "- #{Map.get(comment, :body, "")}" |> String.trim_trailing()
-      end)
-      |> blank_to_default("- None")
-
-    sub_issues =
-      issue
-      |> Map.get(:sub_issue_numbers, [])
-      |> Enum.map_join(", ", &"##{&1}")
-      |> blank_to_default("None")
-
-    """
-    # Issue ##{Map.get(issue, :number)}
-
-    - Title: #{Map.get(issue, :title, "")}
-    - State: #{Map.get(issue, :state, "")}
-    - Labels: #{labels}
-    - Assignees: #{assignees}
-    - URL: #{Map.get(issue, :url, "")}
-
-    ## Body
-    #{Map.get(issue, :body, "") |> blank_to_default("(empty)")}
-
-    ## Comments
-    #{comments}
-
-    ## Sub-issues
-    #{sub_issues}
-    """
-    |> String.trim()
-  end
-
-  def format_issue_summary(issue) do
-    labels =
-      issue
-      |> Map.get(:labels, [])
-      |> Enum.join(", ")
-      |> blank_to_default("none")
-
-    "Issue ##{Map.get(issue, :number)}: #{Map.get(issue, :title)} (#{Map.get(issue, :state)}) [#{labels}]"
   end
 
   # -- Error formatters --------------------------------------------------------

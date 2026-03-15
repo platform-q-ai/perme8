@@ -23,23 +23,20 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.SearchDependencyTargetsTool do
 
     case PermissionGuard.check_permission(frame, "ticket.search_dependency_targets") do
       :ok ->
-        results = Tickets.search_tickets_for_dependency(query, exclude_id)
-
-        case results do
-          [] ->
-            {:reply, Response.text(Response.tool(), "No matching tickets found."), frame}
-
-          tickets ->
-            text =
-              tickets
-              |> Enum.map_join("\n", fn t -> "Ticket ##{t.number}: #{t.title}" end)
-
-            {:reply, Response.text(Response.tool(), text), frame}
-        end
+        format_search_results(Tickets.search_tickets_for_dependency(query, exclude_id), frame)
 
       {:error, scope} ->
         {:reply, Response.error(Response.tool(), "Insufficient permissions: #{scope} required"),
          frame}
     end
+  end
+
+  defp format_search_results([], frame) do
+    {:reply, Response.text(Response.tool(), "No matching tickets found."), frame}
+  end
+
+  defp format_search_results(tickets, frame) do
+    text = Enum.map_join(tickets, "\n", fn t -> "Ticket ##{t.number}: #{t.title}" end)
+    {:reply, Response.text(Response.tool(), text), frame}
   end
 end

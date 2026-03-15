@@ -54,7 +54,7 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.ReadToolTest do
     test "returns error for non-existent ticket" do
       frame = build_frame()
 
-      assert {:reply, response, ^frame} = ReadTool.execute(%{"number" => 99999}, frame)
+      assert {:reply, response, ^frame} = ReadTool.execute(%{"number" => 99_999}, frame)
 
       assert %Hermes.Server.Response{isError: true} = response
       assert [%{"text" => text}] = response.content

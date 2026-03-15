@@ -69,11 +69,11 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.CloseToolTest do
         {:error, :not_found}
       end)
 
-      assert {:reply, response, ^frame} = CloseTool.execute(%{"number" => 99999}, frame)
+      assert {:reply, response, ^frame} = CloseTool.execute(%{"number" => 99_999}, frame)
 
       assert %Hermes.Server.Response{isError: false} = response
       assert [%{"text" => text}] = response.content
-      assert text =~ "Closed ticket #99999"
+      assert text =~ "Closed ticket #99_999"
     end
 
     test "denies execution when scope is missing" do

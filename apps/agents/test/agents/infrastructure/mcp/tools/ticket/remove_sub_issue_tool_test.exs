@@ -69,7 +69,7 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.RemoveSubIssueToolTest do
 
       assert {:reply, response, ^frame} =
                RemoveSubIssueTool.execute(
-                 %{"parent_number" => 1000, "child_number" => 99999},
+                 %{"parent_number" => 1000, "child_number" => 99_999},
                  frame
                )
 

@@ -56,7 +56,7 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.UpdateToolTest do
       frame = build_frame()
 
       assert {:reply, response, ^frame} =
-               UpdateTool.execute(%{"number" => 99999, "title" => "Nope"}, frame)
+               UpdateTool.execute(%{"number" => 99_999, "title" => "Nope"}, frame)
 
       assert %Hermes.Server.Response{isError: true} = response
       assert [%{"text" => text}] = response.content

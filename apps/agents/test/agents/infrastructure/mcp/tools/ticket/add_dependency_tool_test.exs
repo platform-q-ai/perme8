@@ -80,7 +80,7 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.AddDependencyToolTest do
 
       assert {:reply, response, ^frame} =
                AddDependencyTool.execute(
-                 %{"blocker_number" => 99999, "blocked_number" => 1101},
+                 %{"blocker_number" => 99_999, "blocked_number" => 1101},
                  frame
                )
 
