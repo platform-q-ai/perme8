@@ -8,7 +8,7 @@ defmodule Jarga.Documents.Notes.Infrastructure.Repositories.AuthorizationReposit
   For pure authorization business rules, see the domain policy modules.
   """
 
-  alias Identity.Repo, as: Repo
+  alias Jarga.Repo, as: Repo
   alias Identity.Domain.Entities.User
   alias Jarga.Documents.Notes.Infrastructure.Schemas.NoteSchema
   alias Jarga.Documents.Notes.Infrastructure.Queries.Queries

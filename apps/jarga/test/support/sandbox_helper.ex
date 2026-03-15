@@ -10,15 +10,17 @@ defmodule Jarga.Test.SandboxHelper do
   Supports both Jarga.Repo and Identity.Repo for the umbrella app setup.
   """
 
-  # Test support module - top-level boundary for sandbox management
+  # Test support module - top-level boundary for sandbox management.
+  # Jarga.Repo is routed through Identity.Repo via put_dynamic_repo in DataCase,
+  # so sandbox operations only need to target Identity.Repo (not Jarga.Repo).
   use Boundary,
     top_level?: true,
-    deps: [Jarga.Repo, Identity.Repo, Agents.Repo, Notifications.Repo],
+    deps: [Identity.Repo, Agents.Repo, Notifications.Repo],
     exports: []
 
   alias Ecto.Adapters.SQL.Sandbox
 
-  @repos [Jarga.Repo, Identity.Repo, Agents.Repo, Notifications.Repo]
+  @repos [Identity.Repo, Agents.Repo, Notifications.Repo]
 
   @doc """
   Allow a process to access the Ecto Sandbox.

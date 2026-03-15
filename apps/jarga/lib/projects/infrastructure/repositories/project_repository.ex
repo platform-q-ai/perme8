@@ -16,7 +16,7 @@ defmodule Jarga.Projects.Infrastructure.Repositories.ProjectRepository do
 
   import Ecto.Query, warn: false
 
-  alias Identity.Repo, as: Repo
+  alias Jarga.Repo, as: Repo
   alias Jarga.Projects.Domain.Entities.Project
   alias Jarga.Projects.Infrastructure.Schemas.ProjectSchema
 

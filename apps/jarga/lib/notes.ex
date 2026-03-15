@@ -18,14 +18,13 @@ defmodule Jarga.Notes do
       Jarga.Documents.Notes.Infrastructure,
       # Cross-context dependencies
       Identity,
-      Identity.Repo,
       Jarga.Accounts,
       Jarga.Projects,
       Jarga.Repo
     ],
     exports: []
 
-  alias Identity.Repo, as: Repo
+  alias Jarga.Repo, as: Repo
   alias Identity.Domain.Entities.User
   alias Jarga.Documents.Notes.Infrastructure.Schemas.NoteSchema
   alias Jarga.Documents.Notes.Infrastructure.Queries.Queries

@@ -14,7 +14,7 @@ defmodule Jarga.Documents.Infrastructure.Repositories.DocumentRepository do
   @behaviour Jarga.Documents.Application.Behaviours.DocumentRepositoryBehaviour
 
   import Ecto.Query
-  alias Identity.Repo, as: Repo
+  alias Jarga.Repo, as: Repo
   alias Jarga.Documents.Infrastructure.Schemas.DocumentSchema
   alias Jarga.Documents.Domain.Entities.Document
   alias Jarga.Documents.Infrastructure.Queries.DocumentQueries
