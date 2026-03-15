@@ -60,30 +60,19 @@ defmodule Jarga.DataCase do
   """
   def setup_sandbox(tags) do
     # Checkout all repos that share the same database.
-    # IMPORTANT: Jarga.Repo and Identity.Repo share the same PostgreSQL database.
-    # We checkout both and route Jarga.Repo through Identity.Repo's sandbox
-    # connection via put_dynamic_repo so that data inserted via Identity.Repo
-    # (users, workspaces) is visible to Jarga.Repo queries within the same
-    # test transaction. Without this, FK constraints fail because each repo's
-    # sandbox runs in a separate DB transaction with no cross-visibility.
-    #
-    # For spawned processes (LiveView channels, GenServers), shared mode ensures
-    # they can access Jarga.Repo's own pool directly - shared mode makes all
-    # processes in the same sandbox share a single connection, so FK constraints
-    # are satisfied regardless of which repo is used.
+    # IMPORTANT: Jarga.Repo delegates to Identity.Repo via default_dynamic_repo
+    # in test mode (configured in lib/repo.ex). This means all Jarga.Repo calls
+    # — including from spawned processes like LiveView channels — route through
+    # Identity.Repo's sandbox connection. No separate Jarga.Repo checkout is
+    # needed, and FK constraints are satisfied because all data lives in the
+    # same sandbox transaction.
     :ok = Sandbox.checkout(Identity.Repo)
-    :ok = Sandbox.checkout(Jarga.Repo)
     :ok = Sandbox.checkout(Agents.Repo)
     :ok = Sandbox.checkout(Chat.Repo)
     :ok = Sandbox.checkout(Notifications.Repo)
     :ok = Sandbox.checkout(EntityRelationshipManager.Repo)
 
-    # Route Jarga.Repo through Identity.Repo for the test process.
-    # This ensures the test process sees consistent data across repos.
-    Jarga.Repo.put_dynamic_repo(Identity.Repo)
-
     Sandbox.allow(Identity.Repo, self(), self())
-    Sandbox.allow(Jarga.Repo, self(), self())
     Sandbox.allow(Agents.Repo, self(), self())
     Sandbox.allow(Chat.Repo, self(), self())
     Sandbox.allow(Notifications.Repo, self(), self())
@@ -91,10 +80,7 @@ defmodule Jarga.DataCase do
 
     unless tags[:async] do
       # In non-async mode, share the connection with any spawned processes.
-      # Shared mode is critical for LiveView tests where spawned channel
-      # processes call Jarga.Repo directly (without the dynamic repo override).
       Sandbox.mode(Identity.Repo, {:shared, self()})
-      Sandbox.mode(Jarga.Repo, {:shared, self()})
       Sandbox.mode(Agents.Repo, {:shared, self()})
       Sandbox.mode(Chat.Repo, {:shared, self()})
       Sandbox.mode(Notifications.Repo, {:shared, self()})
@@ -103,7 +89,6 @@ defmodule Jarga.DataCase do
 
     on_exit(fn ->
       Sandbox.checkin(Identity.Repo)
-      Sandbox.checkin(Jarga.Repo)
       Sandbox.checkin(Agents.Repo)
       Sandbox.checkin(Chat.Repo)
       Sandbox.checkin(Notifications.Repo)

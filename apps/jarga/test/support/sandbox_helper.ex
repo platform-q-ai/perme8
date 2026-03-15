@@ -7,20 +7,21 @@ defmodule Jarga.Test.SandboxHelper do
 
   This module lives in test/support and is only compiled during tests.
 
-  Supports both Jarga.Repo and Identity.Repo for the umbrella app setup.
+  Jarga.Repo delegates to Identity.Repo via default_dynamic_repo in test mode,
+  so sandbox operations only target Identity.Repo.
   """
 
   # Test support module - top-level boundary for sandbox management.
-  # Jarga.Repo is included because spawned processes (LiveView channels)
-  # use it directly without the dynamic repo override.
+  # Jarga.Repo delegates to Identity.Repo via default_dynamic_repo in test mode,
+  # so sandbox operations only target Identity.Repo.
   use Boundary,
     top_level?: true,
-    deps: [Jarga.Repo, Identity.Repo, Agents.Repo, Notifications.Repo],
+    deps: [Identity.Repo, Agents.Repo, Notifications.Repo],
     exports: []
 
   alias Ecto.Adapters.SQL.Sandbox
 
-  @repos [Jarga.Repo, Identity.Repo, Agents.Repo, Notifications.Repo]
+  @repos [Identity.Repo, Agents.Repo, Notifications.Repo]
 
   @doc """
   Allow a process to access the Ecto Sandbox.
