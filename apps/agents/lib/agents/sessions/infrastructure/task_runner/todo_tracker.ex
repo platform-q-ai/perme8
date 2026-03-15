@@ -1,8 +1,9 @@
 defmodule Agents.Sessions.Infrastructure.TaskRunner.TodoTracker do
   @moduledoc """
-  Todo list parsing, merging, and serialization extracted from TaskRunner.
+  Parsing, merging, and serialization for task todo lists,
+  extracted from TaskRunner.
 
-  All functions are pure — they take todo data as arguments and return
+  All functions are pure — they take data as arguments and return
   transformed results. The GenServer handles persistence and broadcasting.
   """
 
