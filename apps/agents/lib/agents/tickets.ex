@@ -21,10 +21,13 @@ defmodule Agents.Tickets do
   alias Agents.Sessions
   alias Agents.Sessions.Domain.Policies.SessionLifecyclePolicy
   alias Agents.Tickets.Application.TicketsConfig
+  alias Agents.Tickets.Application.UseCases.AddSubIssue
   alias Agents.Tickets.Application.UseCases.AddTicketDependency
   alias Agents.Tickets.Application.UseCases.CreateTicket
   alias Agents.Tickets.Application.UseCases.RecordStageTransition
+  alias Agents.Tickets.Application.UseCases.RemoveSubIssue
   alias Agents.Tickets.Application.UseCases.RemoveTicketDependency
+  alias Agents.Tickets.Application.UseCases.UpdateTicket
   alias Agents.Tickets.Domain.Entities.Ticket
   alias Agents.Tickets.Domain.Policies.TicketEnrichmentPolicy
   alias Agents.Tickets.Infrastructure.Clients.GithubProjectClient
@@ -292,6 +295,80 @@ defmodule Agents.Tickets do
   @spec search_tickets_for_dependency(String.t(), integer()) :: [struct()]
   def search_tickets_for_dependency(query, exclude_ticket_id) do
     TicketDependencyRepository.search_tickets(query, exclude_ticket_id)
+  end
+
+  @doc """
+  Reads a single ticket from the DB by number with full preloads.
+
+  Returns the ticket as a domain entity with lifecycle events, sub-tickets,
+  and dependency relationships preloaded.
+  """
+  @spec get_ticket_by_number(integer()) :: {:ok, Ticket.t()} | {:error, :ticket_not_found}
+  def get_ticket_by_number(number) when is_integer(number) do
+    case ProjectTicketRepository.get_by_number(number) do
+      {:ok, schema} -> {:ok, Ticket.from_schema(schema)}
+      nil -> {:error, :ticket_not_found}
+    end
+  end
+
+  @doc """
+  Updates a ticket's fields locally and marks it for async GitHub sync.
+
+  ## Options
+  - `:actor_id` - (required) The user making the update
+  - `:event_bus` - Event bus module
+  - `:ticket_repo` - Repository module
+  """
+  @spec update_ticket(integer(), map(), keyword()) :: {:ok, struct()} | {:error, term()}
+  def update_ticket(number, attrs, opts \\ []) do
+    UpdateTicket.execute(number, attrs, opts)
+  end
+
+  @doc """
+  Links a child ticket as a sub-issue of a parent ticket.
+
+  Sets `parent_ticket_id` on the child and marks it for async GitHub sync.
+
+  ## Options
+  - `:actor_id` - (required) The user making the change
+  - `:event_bus` - Event bus module
+  - `:ticket_repo` - Repository module
+  """
+  @spec add_sub_issue(integer(), integer(), keyword()) :: {:ok, struct()} | {:error, term()}
+  def add_sub_issue(parent_number, child_number, opts \\ []) do
+    AddSubIssue.execute(parent_number, child_number, opts)
+  end
+
+  @doc """
+  Unlinks a child ticket from its parent.
+
+  Clears `parent_ticket_id` on the child and marks it for async GitHub sync.
+
+  ## Options
+  - `:actor_id` - (required) The user making the change
+  - `:event_bus` - Event bus module
+  - `:ticket_repo` - Repository module
+  """
+  @spec remove_sub_issue(integer(), integer(), keyword()) :: {:ok, struct()} | {:error, term()}
+  def remove_sub_issue(parent_number, child_number, opts \\ []) do
+    RemoveSubIssue.execute(parent_number, child_number, opts)
+  end
+
+  @doc """
+  Lists tickets with optional filters. Designed for MCP tool use where no
+  user context or session enrichment is needed.
+
+  ## Options
+  - `:state` - Filter by state ("open" or "closed")
+  - `:labels` - Filter by labels (tickets must have all specified labels)
+  - `:query` - Search by title (ilike) or exact number match
+  - `:per_page` - Limit results (default: 30)
+  """
+  @spec list_tickets(keyword()) :: [Ticket.t()]
+  def list_tickets(opts \\ []) do
+    opts
+    |> ProjectTicketRepository.list_filtered()
+    |> Enum.map(&Ticket.from_schema/1)
   end
 
   @doc false

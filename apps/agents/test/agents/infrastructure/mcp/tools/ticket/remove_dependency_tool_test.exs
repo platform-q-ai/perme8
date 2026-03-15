@@ -1,10 +1,11 @@
-defmodule Agents.Infrastructure.Mcp.Tools.Ticket.RemoveSubIssueToolTest do
+defmodule Agents.Infrastructure.Mcp.Tools.Ticket.RemoveDependencyToolTest do
   use Agents.DataCase, async: false
 
   import Mox
 
-  alias Agents.Infrastructure.Mcp.Tools.Ticket.RemoveSubIssueTool
+  alias Agents.Infrastructure.Mcp.Tools.Ticket.RemoveDependencyTool
   alias Agents.Test.TicketFixtures, as: Fixtures
+  alias Agents.Tickets
   alias Agents.Tickets.Infrastructure.Repositories.ProjectTicketRepository
   alias Hermes.Server.Frame
   alias Perme8.Events.TestEventBus
@@ -25,22 +26,26 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.RemoveSubIssueToolTest do
         else: Application.delete_env(:agents, :identity_module)
     end)
 
-    {:ok, _parent} =
+    {:ok, blocker} =
       ProjectTicketRepository.sync_remote_ticket(%{
-        number: 1000,
-        title: "Parent",
+        number: 1200,
+        title: "Blocker",
         state: "open"
       })
 
-    {:ok, _child} =
+    {:ok, blocked} =
       ProjectTicketRepository.sync_remote_ticket(%{
-        number: 1001,
-        title: "Child",
+        number: 1201,
+        title: "Blocked",
         state: "open"
       })
 
-    # Link child to parent
-    {:ok, _} = ProjectTicketRepository.set_parent_ticket(1001, 1000)
+    # Add dependency
+    {:ok, _dep} =
+      Tickets.add_dependency(blocker.id, blocked.id, actor_id: "setup", event_bus: TestEventBus)
+
+    # Clear events from setup
+    TestEventBus.start_global()
 
     :ok
   end
@@ -50,26 +55,32 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.RemoveSubIssueToolTest do
   end
 
   describe "execute/2" do
-    test "removes sub-issue link" do
+    test "removes dependency between two tickets" do
       frame = build_frame()
 
       assert {:reply, response, ^frame} =
-               RemoveSubIssueTool.execute(
-                 %{"parent_number" => 1000, "child_number" => 1001},
+               RemoveDependencyTool.execute(
+                 %{"blocker_number" => 1200, "blocked_number" => 1201},
                  frame
                )
 
       assert %Hermes.Server.Response{isError: false} = response
       assert [%{"text" => text}] = response.content
-      assert text =~ "Removed sub-issue #1001 from parent ticket #1000"
+      assert text =~ "no longer blocks"
     end
 
-    test "returns error when child not found" do
+    test "returns error when dependency not found" do
       frame = build_frame()
 
+      # Remove it first, then try again
+      RemoveDependencyTool.execute(
+        %{"blocker_number" => 1200, "blocked_number" => 1201},
+        frame
+      )
+
       assert {:reply, response, ^frame} =
-               RemoveSubIssueTool.execute(
-                 %{"parent_number" => 1000, "child_number" => 99_999},
+               RemoveDependencyTool.execute(
+                 %{"blocker_number" => 1200, "blocked_number" => 1201},
                  frame
                )
 
@@ -83,13 +94,13 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.RemoveSubIssueToolTest do
       frame = build_frame(api_key)
 
       expect(Agents.Mocks.IdentityMock, :api_key_has_permission?, fn ^api_key,
-                                                                     "mcp:ticket.remove_sub_issue" ->
+                                                                     "mcp:ticket.remove_dependency" ->
         false
       end)
 
       assert {:reply, response, ^frame} =
-               RemoveSubIssueTool.execute(
-                 %{"parent_number" => 1000, "child_number" => 1001},
+               RemoveDependencyTool.execute(
+                 %{"blocker_number" => 1200, "blocked_number" => 1201},
                  frame
                )
 

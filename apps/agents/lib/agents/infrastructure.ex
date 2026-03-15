@@ -17,6 +17,9 @@ defmodule Agents.Infrastructure do
       Agents.Domain,
       Agents.Application,
       Agents.Repo,
+      # MCP ticket tools call the Agents.Tickets facade and use Ticket entity for formatting
+      Agents.Tickets,
+      Agents.Tickets.Domain,
       # Cross-context dependencies (compile-time only; runtime-only
       # cross-app calls go through gateways and are whitelisted via
       # @compile {:no_warn_undefined, ...} in the gateway modules)
