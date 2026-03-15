@@ -18,7 +18,13 @@ defmodule Jarga.DataCase do
   # Needs access to Notifications and Chat repo boundaries (for sandboxed repo usage)
   use Boundary,
     top_level?: true,
-    deps: [Jarga.Repo, Jarga.Test.SandboxHelper, Notifications, Notifications.Repo],
+    deps: [
+      Jarga.Repo,
+      Jarga.Test.SandboxHelper,
+      Notifications,
+      Notifications.Repo,
+      EntityRelationshipManager.Repo
+    ],
     exports: []
 
   use ExUnit.CaseTemplate
@@ -46,9 +52,10 @@ defmodule Jarga.DataCase do
   @doc """
   Sets up the sandbox based on the test tags.
 
-  IMPORTANT: Jarga.Repo, Identity.Repo, Agents.Repo, and Notifications.Repo all
-  point to the same PostgreSQL database. We checkout all repos and allow them to
-  share data so foreign key constraints work across repos.
+  IMPORTANT: Jarga.Repo, Identity.Repo, Agents.Repo, Notifications.Repo, and
+  EntityRelationshipManager.Repo all point to the same PostgreSQL database.
+  We checkout all repos and allow them to share data so foreign key constraints
+  work across repos.
   """
   def setup_sandbox(tags) do
     # Checkout all repos that share the same database
@@ -57,6 +64,7 @@ defmodule Jarga.DataCase do
     :ok = Sandbox.checkout(Agents.Repo)
     :ok = Sandbox.checkout(Chat.Repo)
     :ok = Sandbox.checkout(Notifications.Repo)
+    :ok = Sandbox.checkout(EntityRelationshipManager.Repo)
 
     # CRITICAL: Allow all repos to share data by allowing cross-process access
     # Since all repos connect to the same database, we need to allow them
@@ -67,6 +75,7 @@ defmodule Jarga.DataCase do
     Sandbox.allow(Agents.Repo, self(), self())
     Sandbox.allow(Chat.Repo, self(), self())
     Sandbox.allow(Notifications.Repo, self(), self())
+    Sandbox.allow(EntityRelationshipManager.Repo, self(), self())
 
     unless tags[:async] do
       # In non-async mode, share the connection with any spawned processes
@@ -75,6 +84,7 @@ defmodule Jarga.DataCase do
       Sandbox.mode(Agents.Repo, {:shared, self()})
       Sandbox.mode(Chat.Repo, {:shared, self()})
       Sandbox.mode(Notifications.Repo, {:shared, self()})
+      Sandbox.mode(EntityRelationshipManager.Repo, {:shared, self()})
     end
 
     on_exit(fn ->
@@ -83,6 +93,7 @@ defmodule Jarga.DataCase do
       Sandbox.checkin(Agents.Repo)
       Sandbox.checkin(Chat.Repo)
       Sandbox.checkin(Notifications.Repo)
+      Sandbox.checkin(EntityRelationshipManager.Repo)
     end)
 
     # Enable PubSub subscribers for integration tests

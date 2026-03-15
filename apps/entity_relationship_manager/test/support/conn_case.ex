@@ -8,14 +8,14 @@ defmodule EntityRelationshipManager.ConnCase do
     top_level?: true,
     deps: [
       EntityRelationshipManager,
-      Identity,
-      Jarga.Accounts,
-      Jarga.DataCase,
-      Jarga.AccountsFixtures
+      EntityRelationshipManager.Repo,
+      Identity
     ],
     exports: []
 
   use ExUnit.CaseTemplate
+
+  alias Ecto.Adapters.SQL.Sandbox
 
   using do
     quote do
@@ -31,7 +31,12 @@ defmodule EntityRelationshipManager.ConnCase do
   end
 
   setup tags do
-    Jarga.DataCase.setup_sandbox(tags)
+    :ok = Sandbox.checkout(EntityRelationshipManager.Repo)
+
+    unless tags[:async] do
+      Sandbox.mode(EntityRelationshipManager.Repo, {:shared, self()})
+    end
+
     Mox.set_mox_from_context(tags)
     Mox.verify_on_exit!(tags)
     {:ok, conn: Phoenix.ConnTest.build_conn()}
