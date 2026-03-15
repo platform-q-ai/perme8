@@ -7,7 +7,6 @@ defmodule Jarga.Documents.Infrastructure.Queries.DocumentQueries do
   import Ecto.Query
   alias Jarga.Documents.Infrastructure.Schemas.DocumentSchema
   alias Identity.Domain.Entities.User
-  alias Identity.Infrastructure.Schemas.WorkspaceMemberSchema
 
   @doc """
   Base query for documents.
@@ -37,9 +36,11 @@ defmodule Jarga.Documents.Infrastructure.Queries.DocumentQueries do
   def viewable_by_user(query, %User{} = user) do
     user_id = user.id
 
+    user_id_bin = Ecto.UUID.dump!(user_id)
+
     from([document: d] in query,
-      left_join: wm in WorkspaceMemberSchema,
-      on: wm.workspace_id == d.workspace_id and wm.user_id == ^user_id,
+      left_join: wm in "workspace_members",
+      on: wm.workspace_id == d.workspace_id and wm.user_id == ^user_id_bin,
       where: d.user_id == ^user_id or (d.is_public == true and not is_nil(wm.id))
     )
   end

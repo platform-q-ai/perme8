@@ -14,7 +14,7 @@ defmodule Jarga.Documents.Notes.Infrastructure.Repositories.AuthorizationReposit
   alias Jarga.Documents.Notes.Infrastructure.Queries.Queries
   alias Jarga.Documents.Infrastructure.Schemas.DocumentComponentSchema
   alias Jarga.Documents.Infrastructure.Schemas.DocumentSchema
-  alias Identity.Infrastructure.Schemas.WorkspaceMemberSchema
+
   import Ecto.Query
 
   @doc """
@@ -57,14 +57,16 @@ defmodule Jarga.Documents.Notes.Infrastructure.Repositories.AuthorizationReposit
   """
   def verify_note_access_via_document(%User{} = user, note_id) do
     # Find the note and its associated document via document_components
+    user_id_bin = Ecto.UUID.dump!(user.id)
+
     query =
       from(n in NoteSchema,
         join: dc in DocumentComponentSchema,
         on: dc.component_id == n.id and dc.component_type == "note",
         join: d in DocumentSchema,
         on: d.id == dc.document_id,
-        left_join: wm in WorkspaceMemberSchema,
-        on: wm.workspace_id == d.workspace_id and wm.user_id == ^user.id,
+        left_join: wm in "workspace_members",
+        on: wm.workspace_id == d.workspace_id and wm.user_id == ^user_id_bin,
         where: n.id == ^note_id,
         where: d.user_id == ^user.id or (d.is_public == true and not is_nil(wm.id)),
         select: n
