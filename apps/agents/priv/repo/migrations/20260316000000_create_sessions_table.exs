@@ -5,7 +5,7 @@ defmodule Agents.Repo.Migrations.CreateSessionsTable do
     create table(:sessions, primary_key: false) do
       add(:id, :uuid, primary_key: true, default: fragment("gen_random_uuid()"))
       add(:user_id, :uuid, null: false)
-      add(:title, :string)
+      add(:title, :text)
       add(:status, :string, null: false, default: "active")
       add(:container_id, :string)
       add(:container_port, :integer)
