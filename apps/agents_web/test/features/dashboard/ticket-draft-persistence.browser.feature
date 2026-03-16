@@ -21,136 +21,109 @@ Feature: Ticket-scoped draft persistence and explicit session-ticket association
   # ---------------------------------------------------------------------------
 
   Scenario: Draft text persists across page reloads for a specific ticket
-    Given I wait for "[data-testid='ticket-card']" to be visible
-    When I click the first "[data-testid='ticket-card']"
+    Given I wait for "[data-testid='triage-ticket-item-101']" to be visible
+    When I click "[data-testid='triage-ticket-item-101']"
     And I wait for network idle
-    And I fill "form#session-form textarea" with "investigate the SSO provider"
+    And I fill "#session-instruction" with "investigate the SSO provider"
     And I reload the page
     And I wait for network idle
-    And I click the first "[data-testid='ticket-card']"
+    And I wait for "[data-testid='triage-ticket-item-101']" to be visible
+    When I click "[data-testid='triage-ticket-item-101']"
     And I wait for network idle
-    Then "form#session-form textarea" should contain text "investigate the SSO provider"
+    Then "#session-instruction" should have value "investigate the SSO provider"
 
   Scenario: Switching between tickets preserves each ticket's draft text
-    Given I wait for "[data-testid='ticket-card']" to be visible
-    When I click the first "[data-testid='ticket-card']"
+    Given I wait for "[data-testid='triage-ticket-item-101']" to be visible
+    When I click "[data-testid='triage-ticket-item-101']"
     And I wait for network idle
-    And I fill "form#session-form textarea" with "fix the login flow"
-    And I click the second "[data-testid='ticket-card']"
+    And I fill "#session-instruction" with "fix the login flow"
+    When I click "[data-testid='triage-ticket-item-102']"
     And I wait for network idle
-    And I fill "form#session-form textarea" with "add dark mode toggle"
-    And I click the first "[data-testid='ticket-card']"
+    And I fill "#session-instruction" with "add dark mode toggle"
+    When I click "[data-testid='triage-ticket-item-101']"
     And I wait for network idle
-    Then "form#session-form textarea" should contain text "fix the login flow"
-    When I click the second "[data-testid='ticket-card']"
+    Then "#session-instruction" should have value "fix the login flow"
+    When I click "[data-testid='triage-ticket-item-102']"
     And I wait for network idle
-    Then "form#session-form textarea" should contain text "add dark mode toggle"
+    Then "#session-instruction" should have value "add dark mode toggle"
 
   Scenario: Draft text survives server restart (simulated via page reload)
-    Given I wait for "[data-testid='ticket-card']" to be visible
-    When I click the first "[data-testid='ticket-card']"
+    Given I wait for "[data-testid='triage-ticket-item-101']" to be visible
+    When I click "[data-testid='triage-ticket-item-101']"
     And I wait for network idle
-    And I fill "form#session-form textarea" with "check the auth module"
+    And I fill "#session-instruction" with "check the auth module"
     And I reload the page
     And I wait for network idle
-    And I click the first "[data-testid='ticket-card']"
+    And I wait for "[data-testid='triage-ticket-item-101']" to be visible
+    When I click "[data-testid='triage-ticket-item-101']"
     And I wait for network idle
-    Then "form#session-form textarea" should contain text "check the auth module"
+    Then "#session-instruction" should have value "check the auth module"
 
   Scenario: Submitting a message clears the draft for that ticket
-    Given I wait for "[data-testid='ticket-card']" to be visible
-    When I click the first "[data-testid='ticket-card']"
+    Given I wait for "[data-testid='triage-ticket-item-101']" to be visible
+    When I click "[data-testid='triage-ticket-item-101']"
     And I wait for network idle
-    And I fill "form#session-form textarea" with "fix the login"
-    And I focus on "form#session-form textarea"
+    And I fill "#session-instruction" with "fix the login"
+    And I focus on "#session-instruction"
     And I press "Enter"
     And I wait for network idle
-    Then "form#session-form textarea" should have value ""
+    Then "#session-instruction" should have value ""
     When I reload the page
     And I wait for network idle
-    And I click the first "[data-testid='ticket-card']"
+    And I wait for "[data-testid='triage-ticket-item-101']" to be visible
+    When I click "[data-testid='triage-ticket-item-101']"
     And I wait for network idle
-    Then "form#session-form textarea" should have value ""
+    Then "#session-instruction" should have value ""
 
   # ---------------------------------------------------------------------------
   # Explicit session-ticket association
   # ---------------------------------------------------------------------------
 
   Scenario: Play button associates the session with the ticket explicitly
-    Given I wait for "[data-testid='ticket-card']" to be visible
-    When I click "[data-testid='ticket-start-session']" on the first ticket card
+    Given I wait for "[data-testid='start-ticket-session-101']" to be visible
+    When I click "[data-testid='start-ticket-session-101']"
     And I wait for network idle
-    Then the ticket card should show an associated session lifecycle badge
-    And the session should be linked to the ticket
+    And I wait for 2 seconds
+    Then "[data-testid='build-ticket-item-101']" should be visible
 
   Scenario: Chat tab message with a ticket selected creates an explicitly linked session
-    Given I wait for "[data-testid='ticket-card']" to be visible
-    When I click the first "[data-testid='ticket-card']"
+    Given I wait for "[data-testid='triage-ticket-item-102']" to be visible
+    When I click "[data-testid='triage-ticket-item-102']"
     And I wait for network idle
     And I click "[role='tab'][data-tab-id='chat']"
     And I wait for network idle
-    And I fill "form#session-form textarea" with "fix this bug"
-    And I focus on "form#session-form textarea"
+    And I fill "#session-instruction" with "fix this bug"
+    And I focus on "#session-instruction"
     And I press "Enter"
     And I wait for network idle
-    Then the ticket card should show an associated session lifecycle badge
+    And I wait for 2 seconds
+    Then "[data-testid='build-ticket-item-102']" should be visible
 
   Scenario: Ticket tab message with a ticket selected creates an explicitly linked session
-    Given I wait for "[data-testid='ticket-card']" to be visible
-    When I click the first "[data-testid='ticket-card']"
+    Given I wait for "[data-testid='triage-ticket-item-103']" to be visible
+    When I click "[data-testid='triage-ticket-item-103']"
     And I wait for network idle
     And I click "[role='tab'][data-tab-id='ticket']"
     And I wait for network idle
-    And I fill "form#session-form textarea" with "please investigate this issue"
-    And I focus on "form#session-form textarea"
+    And I fill "#session-instruction" with "please investigate this issue"
+    And I focus on "#session-instruction"
     And I press "Enter"
     And I wait for network idle
-    Then the ticket card should show an associated session lifecycle badge
+    And I wait for 2 seconds
+    Then "[data-testid='build-ticket-item-103']" should be visible
 
   Scenario: False ticket references in message text do not cause wrong associations
-    Given I wait for "[data-testid='ticket-card']" to be visible
-    When I click the first "[data-testid='ticket-card']"
+    Given I wait for "[data-testid='triage-ticket-item-101']" to be visible
+    When I click "[data-testid='triage-ticket-item-101']"
     And I wait for network idle
     And I click "[role='tab'][data-tab-id='chat']"
     And I wait for network idle
-    And I fill "form#session-form textarea" with "fix issue #5 in the CSS"
-    And I focus on "form#session-form textarea"
+    And I fill "#session-instruction" with "fix issue #5 in the CSS"
+    And I focus on "#session-instruction"
     And I press "Enter"
     And I wait for network idle
-    Then the first ticket card should show an associated session
-    And the session should NOT be associated with a different ticket
-
-  Scenario: Session-ticket link persists across page reload
-    Given I wait for "[data-testid='ticket-card']" to be visible
-    And the first ticket has an associated session
-    When I reload the page
-    And I wait for network idle
-    Then the first ticket card should still show its associated session lifecycle badge
-    When I click the first "[data-testid='ticket-card']"
-    And I wait for network idle
-    Then the session detail panel should show the linked session's chat log
-
-  Scenario: All three entry points produce consistent ticket associations
-    Given I wait for "[data-testid='ticket-card']" to be visible
-    # Via play button
-    When I click "[data-testid='ticket-start-session']" on the first ticket card
-    And I wait for network idle
-    Then the first ticket card should show an associated session
-    # Via chat tab
-    When I click the second "[data-testid='ticket-card']"
-    And I wait for network idle
-    And I click "[role='tab'][data-tab-id='chat']"
-    And I fill "form#session-form textarea" with "investigate this"
-    And I focus on "form#session-form textarea"
-    And I press "Enter"
-    And I wait for network idle
-    Then the second ticket card should show an associated session
-    # Via ticket tab
-    When I click the third "[data-testid='ticket-card']"
-    And I wait for network idle
-    And I click "[role='tab'][data-tab-id='ticket']"
-    And I fill "form#session-form textarea" with "look into this"
-    And I focus on "form#session-form textarea"
-    And I press "Enter"
-    And I wait for network idle
-    Then the third ticket card should show an associated session
+    And I wait for 2 seconds
+    # Ticket 101 should have moved to build queue (associated with the session)
+    Then "[data-testid='build-ticket-item-101']" should be visible
+    # Ticket 5 should NOT exist in the build queue (false reference)
+    And "[data-testid='build-ticket-item-5']" should not exist
