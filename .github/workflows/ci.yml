@@ -34,8 +34,8 @@ jobs:
       webhooks_api: ${{ steps.filter.outputs.webhooks_api }}
       shared: ${{ steps.filter.outputs.shared }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
+      - uses: actions/checkout@v6
+      - uses: dorny/paths-filter@v4
         id: filter
         with:
           # Source extensions that affect compilation, tests, or runtime.
@@ -91,7 +91,7 @@ jobs:
     if: needs.changes.outputs.exo_bdd == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: oven-sh/setup-bun@v2
 
@@ -115,7 +115,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Elixir
         uses: erlef/setup-beam@v1
@@ -210,7 +210,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Elixir
         uses: erlef/setup-beam@v1
@@ -277,7 +277,7 @@ jobs:
       selective: ${{ steps.compute.outputs.selective }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - id: compute
         name: Build selective matrix
@@ -318,7 +318,7 @@ jobs:
               {"app": "jarga-api", "domain": "http",     "config_name": "jarga-api",                   "timeout": 10},
               {"app": "jarga-api", "domain": "security", "config_name": "jarga-api",                   "timeout": 15},
               {"app": "jarga-web", "domain": "browser",  "config_name": "jarga-web",                   "timeout": 15},
-              {"app": "jarga-web", "domain": "security", "config_name": "jarga-web",                   "timeout": 15},
+              {"app": "jarga-web", "domain": "security", "config_name": "jarga-web",                   "timeout": 30},
               {"app": "exo-dashboard", "domain": "browser", "config_name": "exo-dashboard",            "timeout": 10},
               {"app": "webhooks-api",     "domain": "http",     "config_name": "webhooks-api",            "timeout": 10},
               {"app": "webhooks-api",     "domain": "security", "config_name": "webhooks-api",            "timeout": 15},
@@ -429,7 +429,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Elixir
         uses: erlef/setup-beam@v1

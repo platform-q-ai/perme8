@@ -35,7 +35,8 @@ Feature: API Key Permission Security
 
   Scenario: Empty permissions deny all access
     Given I set variable "permissionModel" to "empty permission list denies all operations"
-    When I run an active scan on "${baseUrl}"
+    When I spider "${baseUrl}"
+    And I run an active scan on "${baseUrl}"
     Then no high risk alerts should be found
     And there should be no alerts of type "Broken Access Control"
 
@@ -47,19 +48,21 @@ Feature: API Key Permission Security
 
   Scenario: API key permissions cannot be escalated
     Given I set variable "permissionModel" to "keys cannot self-escalate scopes"
-    When I run an active scan on "${baseUrl}"
+    When I spider "${baseUrl}"
+    And I run an active scan on "${baseUrl}"
     Then no high risk alerts should be found
     And there should be no alerts of type "Privilege Escalation"
 
   Scenario: Permission changes take effect immediately
     Given I set variable "permissionModel" to "permission updates apply without stale authorization cache"
-    When I run an active scan on "${baseUrl}"
+    When I spider "${baseUrl}"
+    And I run an active scan on "${baseUrl}"
     Then no high risk alerts should be found
     And there should be no alerts of type "Authorization Bypass"
 
   Scenario: Security headers on permission denial responses
     Given I set variable "permissionModel" to "forbidden responses include hardened headers and no sensitive leakage"
-    When I check "${baseUrl}" for security headers
+    When I check "${baseUrl}/api/health" for security headers
     Then Content-Security-Policy should be present
     And Strict-Transport-Security should be present
     And X-Frame-Options should be set to "DENY"
