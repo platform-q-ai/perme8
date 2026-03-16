@@ -105,7 +105,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.QuestionTest do
     test "persists pending question to database", %{task: task} do
       start_runner_with_question(task)
 
-      {:ok, _pid} =
+      {:ok, pid} =
         GenServer.start(
           TaskRunner,
           {task.id,
@@ -116,6 +116,14 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.QuestionTest do
              pubsub: Perme8.Events.PubSub
            ]}
         )
+
+      on_exit(fn ->
+        try do
+          if Process.alive?(pid), do: GenServer.stop(pid, :normal, 5_000)
+        rescue
+          _ -> :ok
+        end
+      end)
 
       assert_receive {:question_persisted, question_data}, 5000
       assert question_data["request_id"] == "q-request-1"
@@ -127,7 +135,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.QuestionTest do
     test "broadcasts question event via PubSub", %{task: task} do
       start_runner_with_question(task)
 
-      {:ok, _pid} =
+      {:ok, pid} =
         GenServer.start(
           TaskRunner,
           {task.id,
@@ -138,6 +146,14 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.QuestionTest do
              pubsub: Perme8.Events.PubSub
            ]}
         )
+
+      on_exit(fn ->
+        try do
+          if Process.alive?(pid), do: GenServer.stop(pid, :normal, 5_000)
+        rescue
+          _ -> :ok
+        end
+      end)
 
       assert_receive {:task_event, _, %{"type" => "question.asked"}}, 5000
     end
@@ -167,6 +183,14 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.QuestionTest do
              pubsub: Perme8.Events.PubSub
            ]}
         )
+
+      on_exit(fn ->
+        try do
+          if Process.alive?(pid), do: GenServer.stop(pid, :normal, 5_000)
+        rescue
+          _ -> :ok
+        end
+      end)
 
       # Wait for the question to be persisted first
       assert_receive {:question_persisted, %{"request_id" => "q-request-1"}}, 5000
@@ -207,6 +231,14 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.QuestionTest do
            ]}
         )
 
+      on_exit(fn ->
+        try do
+          if Process.alive?(pid), do: GenServer.stop(pid, :normal, 5_000)
+        rescue
+          _ -> :ok
+        end
+      end)
+
       # Wait for question to arrive
       assert_receive {:question_persisted, %{"request_id" => "q-request-1"}}, 5000
 
@@ -242,6 +274,14 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.QuestionTest do
              pubsub: Perme8.Events.PubSub
            ]}
         )
+
+      on_exit(fn ->
+        try do
+          if Process.alive?(pid), do: GenServer.stop(pid, :normal, 5_000)
+        rescue
+          _ -> :ok
+        end
+      end)
 
       # Wait for question to arrive
       assert_receive {:question_persisted, %{"request_id" => "q-request-1"}}, 5000
@@ -317,7 +357,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.QuestionTest do
         :ok
       end)
 
-      {:ok, _pid} =
+      {:ok, pid} =
         GenServer.start(
           TaskRunner,
           {task.id,
@@ -328,6 +368,14 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.QuestionTest do
              pubsub: Perme8.Events.PubSub
            ]}
         )
+
+      on_exit(fn ->
+        try do
+          if Process.alive?(pid), do: GenServer.stop(pid, :normal, 5_000)
+        rescue
+          _ -> :ok
+        end
+      end)
 
       assert_receive :empty_question_rejected, 5000
       # Should NOT persist a pending question for empty questions
@@ -349,7 +397,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.QuestionTest do
         :ok
       end)
 
-      {:ok, _pid} =
+      {:ok, pid} =
         GenServer.start(
           TaskRunner,
           {task.id,
@@ -360,6 +408,14 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.QuestionTest do
              pubsub: Perme8.Events.PubSub
            ]}
         )
+
+      on_exit(fn ->
+        try do
+          if Process.alive?(pid), do: GenServer.stop(pid, :normal, 5_000)
+        rescue
+          _ -> :ok
+        end
+      end)
 
       assert_receive :nil_question_rejected, 5000
       refute_receive {:question_persisted, _}, 500
@@ -379,7 +435,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.QuestionTest do
         :ok
       end)
 
-      {:ok, _pid} =
+      {:ok, pid} =
         GenServer.start(
           TaskRunner,
           {task.id,
@@ -390,6 +446,14 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.QuestionTest do
              pubsub: Perme8.Events.PubSub
            ]}
         )
+
+      on_exit(fn ->
+        try do
+          if Process.alive?(pid), do: GenServer.stop(pid, :normal, 5_000)
+        rescue
+          _ -> :ok
+        end
+      end)
 
       assert_receive :missing_question_rejected, 5000
       refute_receive {:question_persisted, _}, 500

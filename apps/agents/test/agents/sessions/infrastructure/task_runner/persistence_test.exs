@@ -78,9 +78,11 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.PersistenceTest do
       end)
       |> expect(:send_prompt_async, fn _url, "sess-persist", _parts, _opts -> :ok end)
 
-      {:ok, _pid} = GenServer.start(TaskRunner, {task.id, opts})
+      {:ok, pid} = GenServer.start(TaskRunner, {task.id, opts})
+      ref = Process.monitor(pid)
 
       assert_receive {:task_status_changed, _, "completed"}, 5000
+      assert_receive {:DOWN, ^ref, :process, ^pid, _reason}, 5_000
 
       # Assert session_id was persisted to the DB
       updated_task = Repo.get!(TaskSchema, task.id)
@@ -133,13 +135,15 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.PersistenceTest do
       end)
       |> expect(:send_prompt_async, fn _url, "sess-broadcast", _parts, _opts -> :ok end)
 
-      {:ok, _pid} = GenServer.start(TaskRunner, {task.id, opts})
+      {:ok, pid} = GenServer.start(TaskRunner, {task.id, opts})
+      ref = Process.monitor(pid)
 
       # Should receive session_id_set broadcast before the task completes
       task_id = task.id
 
       assert_receive {:task_session_id_set, ^task_id, "sess-broadcast"}, 5000
       assert_receive {:task_status_changed, _, "completed"}, 5000
+      assert_receive {:DOWN, ^ref, :process, ^pid, _reason}, 5_000
     end
   end
 
@@ -183,9 +187,11 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.PersistenceTest do
       end)
       |> expect(:send_prompt_async, fn _url, "sess-fail", _parts, _opts -> :ok end)
 
-      {:ok, _pid} = GenServer.start(TaskRunner, {task.id, opts})
+      {:ok, pid} = GenServer.start(TaskRunner, {task.id, opts})
+      ref = Process.monitor(pid)
 
       assert_receive {:task_status_changed, _, "failed"}, 5000
+      assert_receive {:DOWN, ^ref, :process, ^pid, _reason}, 5_000
 
       # Assert output was cached in DB despite failure
       updated_task = Repo.get!(TaskSchema, task.id)
@@ -238,9 +244,11 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.PersistenceTest do
       end)
       |> expect(:send_prompt_async, fn _url, "sess-sse-fail", _parts, _opts -> :ok end)
 
-      {:ok, _pid} = GenServer.start(TaskRunner, {task.id, opts})
+      {:ok, pid} = GenServer.start(TaskRunner, {task.id, opts})
+      ref = Process.monitor(pid)
 
       assert_receive {:task_status_changed, _, "failed"}, 5000
+      assert_receive {:DOWN, ^ref, :process, ^pid, _reason}, 5_000
 
       # Assert output was cached in DB despite SSE failure
       updated_task = Repo.get!(TaskSchema, task.id)
