@@ -65,12 +65,13 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.EventsTest do
          ]}
       )
 
+    ref = Process.monitor(pid)
+
     assert_receive {:failed, error}, 5000
     assert String.contains?(error, "SSE connection failed")
 
-    # Allow time for GenServer to stop
-    Process.sleep(100)
-    refute Process.alive?(pid)
+    # Wait for GenServer to stop
+    assert_receive {:DOWN, ^ref, :process, ^pid, _reason}, 5_000
   end
 
   test "broadcasts events via PubSub and detects completion via session.status idle", %{
@@ -150,6 +151,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.EventsTest do
          ]}
       )
 
+    ref = Process.monitor(pid)
+
     assert_receive {:task_status_changed, _, "starting"}, 5000
     assert_receive {:task_update_starting, starting_attrs}, 5000
     assert starting_attrs.completed_at == nil
@@ -160,9 +163,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.EventsTest do
     assert_receive {:task_event, _, %{"type" => "message.part.updated"}}, 5000
     assert_receive {:task_status_changed, _, "completed"}, 5000
 
-    # Allow time for GenServer to stop
-    Process.sleep(100)
-    refute Process.alive?(pid)
+    # Wait for GenServer to stop
+    assert_receive {:DOWN, ^ref, :process, ^pid, _reason}, 5_000
   end
 
   test "handles session.error event by failing the task", %{task: task} do
@@ -215,10 +217,12 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.EventsTest do
          ]}
       )
 
+    ref = Process.monitor(pid)
+
     assert_receive {:failed, "Model rate limit exceeded"}, 5000
 
-    Process.sleep(100)
-    refute Process.alive?(pid)
+    # Wait for GenServer to stop
+    assert_receive {:DOWN, ^ref, :process, ^pid, _reason}, 5_000
   end
 
   test "auto-approves permission.asked events", %{task: task} do
@@ -282,7 +286,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.EventsTest do
       :ok
     end)
 
-    {:ok, _pid} =
+    {:ok, pid} =
       GenServer.start(
         TaskRunner,
         {task.id,
@@ -294,8 +298,13 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.EventsTest do
          ]}
       )
 
+    ref = Process.monitor(pid)
+
     assert_receive :permission_replied, 5000
     assert_receive {:task_status_changed, _, "completed"}, 5000
+
+    # Wait for GenServer to stop
+    assert_receive {:DOWN, ^ref, :process, ^pid, _reason}, 5_000
   end
 
   test "persists user follow-up parts with lower-camel messageId in cached output", %{task: task} do
@@ -378,7 +387,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.EventsTest do
     end)
     |> expect(:send_prompt_async, fn _url, "sess-1", _parts, _opts -> :ok end)
 
-    {:ok, _pid} =
+    {:ok, pid} =
       GenServer.start(
         TaskRunner,
         {task.id,
@@ -390,6 +399,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.EventsTest do
          ]}
       )
 
+    ref = Process.monitor(pid)
+
     assert_receive {:output_flushed, output_json}, 5000
     assert_receive {:task_status_changed, _, "completed"}, 5000
 
@@ -398,6 +409,9 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.EventsTest do
     assert Enum.any?(output_parts, fn part ->
              part["type"] == "user" and part["text"] == "Applied follow-up"
            end)
+
+    # Wait for GenServer to stop
+    assert_receive {:DOWN, ^ref, :process, ^pid, _reason}, 5_000
   end
 
   test "persists queued follow-up immediately so reload does not lose it", %{task: task} do
@@ -434,6 +448,14 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.EventsTest do
            pubsub: Perme8.Events.PubSub
          ]}
       )
+
+    on_exit(fn ->
+      try do
+        if Process.alive?(pid), do: GenServer.stop(pid, :normal, 5_000)
+      rescue
+        _ -> :ok
+      end
+    end)
 
     assert_receive {:task_status_changed, _, "running"}, 5000
 
@@ -488,7 +510,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.EventsTest do
     end)
     |> expect(:send_prompt_async, fn _url, "sess-1", _parts, _opts -> :ok end)
 
-    {:ok, _pid} =
+    {:ok, pid} =
       GenServer.start(
         TaskRunner,
         {task.id,
@@ -499,6 +521,14 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.EventsTest do
            pubsub: Perme8.Events.PubSub
          ]}
       )
+
+    on_exit(fn ->
+      try do
+        if Process.alive?(pid), do: GenServer.stop(pid, :normal, 5_000)
+      rescue
+        _ -> :ok
+      end
+    end)
 
     assert_receive {:session_summary_persisted, ^summary}, 5000
     assert_receive {:task_event, _, %{"type" => "session.updated"}}, 5000
@@ -543,9 +573,11 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.EventsTest do
     end)
     |> expect(:send_prompt_async, fn _url, "sess-1", _parts, _opts -> :ok end)
 
+    pid_ref = make_ref()
+
     log =
       capture_log(fn ->
-        {:ok, _pid} =
+        {:ok, pid} =
           GenServer.start(
             TaskRunner,
             {task.id,
@@ -557,9 +589,21 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.EventsTest do
              ]}
           )
 
+        send(test_pid, {pid_ref, pid})
+
         assert_receive {:task_event, _, %{"type" => "session.updated"}}, 5000
         refute_receive {:session_summary_persisted, _}, 200
       end)
+
+    assert_receive {^pid_ref, pid}, 5_000
+
+    on_exit(fn ->
+      try do
+        if Process.alive?(pid), do: GenServer.stop(pid, :normal, 5_000)
+      rescue
+        _ -> :ok
+      end
+    end)
 
     assert log =~ "invalid session summary"
     assert log =~ "not_an_int"
@@ -610,9 +654,11 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.EventsTest do
     end)
     |> expect(:send_prompt_async, fn _url, "sess-1", _parts, _opts -> :ok end)
 
+    pid_ref = make_ref()
+
     log =
       capture_log(fn ->
-        {:ok, _pid} =
+        {:ok, pid} =
           GenServer.start(
             TaskRunner,
             {task.id,
@@ -624,11 +670,23 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.EventsTest do
              ]}
           )
 
+        send(test_pid, {pid_ref, pid})
+
         assert_receive :session_summary_update_attempted, 5000
         assert_receive {:task_event, _, %{"type" => "session.updated"}}, 5000
         # Allow time for the Logger to flush
         Process.sleep(100)
       end)
+
+    assert_receive {^pid_ref, pid}, 5_000
+
+    on_exit(fn ->
+      try do
+        if Process.alive?(pid), do: GenServer.stop(pid, :normal, 5_000)
+      rescue
+        _ -> :ok
+      end
+    end)
 
     assert log =~ "failed to update task status"
     assert log =~ task.id

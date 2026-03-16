@@ -31,7 +31,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.InitTest do
     |> stub(:start, fn _image, _opts -> {:error, :test_stop} end)
 
     # Use start instead of start_link to avoid being linked to the test process
-    {:ok, _pid} =
+    {:ok, pid} =
       GenServer.start(
         TaskRunner,
         {task.id,
@@ -43,8 +43,13 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.InitTest do
          ]}
       )
 
+    ref = Process.monitor(pid)
+
     assert_receive {:get_task_called, id}, 5000
     assert id == task.id
+
+    # Ensure GenServer terminates before test exits
+    assert_receive {:DOWN, ^ref, :process, ^pid, _reason}, 5_000
   end
 
   test "on container start success, updates status to starting", %{task: task} do
@@ -115,7 +120,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.InitTest do
     Agents.Mocks.ContainerProviderMock
     |> stub(:start, fn _image, _opts -> {:error, :image_not_found} end)
 
-    {:ok, _pid} =
+    {:ok, pid} =
       GenServer.start(
         TaskRunner,
         {task.id,
@@ -127,8 +132,13 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.InitTest do
          ]}
       )
 
+    ref = Process.monitor(pid)
+
     assert_receive {:failed, error}, 5000
     assert String.contains?(error, "Container start failed")
+
+    # Ensure GenServer terminates before test exits
+    assert_receive {:DOWN, ^ref, :process, ^pid, _reason}, 5_000
   end
 
   test "prewarmed fresh container runs preparation and auth refresh before first prompt", %{
@@ -245,7 +255,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.InitTest do
     Agents.Mocks.OpencodeClientMock
     |> stub(:health, fn _url -> :ok end)
 
-    {:ok, _pid} =
+    {:ok, pid} =
       GenServer.start(
         TaskRunner,
         {task.id,
@@ -259,9 +269,14 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.InitTest do
          ]}
       )
 
+    ref = Process.monitor(pid)
+
     assert_receive {:failed, error}, 5000
     assert error =~ "Fresh warm start preparation failed"
     assert error =~ "exit 128"
     refute error =~ "SECRET"
+
+    # Ensure GenServer terminates before test exits
+    assert_receive {:DOWN, ^ref, :process, ^pid, _reason}, 5_000
   end
 end

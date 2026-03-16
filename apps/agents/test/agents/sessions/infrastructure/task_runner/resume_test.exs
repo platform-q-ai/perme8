@@ -93,12 +93,14 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.ResumeTest do
           session_id: "existing-session"
         ]
 
-    {:ok, _pid} = GenServer.start(TaskRunner, {task.id, resume_opts})
+    {:ok, pid} = GenServer.start(TaskRunner, {task.id, resume_opts})
+    ref = Process.monitor(pid)
 
     assert_receive :prompt_sent, 5000
     assert_receive {:task_status_changed, _, "starting"}, 5000
     assert_receive {:task_status_changed, _, "running"}, 5000
     assert_receive {:task_status_changed, _, "completed"}, 5000
+    assert_receive {:DOWN, ^ref, :process, ^pid, _reason}, 5_000
   end
 
   test "resume path fails when container restart fails", %{task: task} do
@@ -125,10 +127,12 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.ResumeTest do
           session_id: "existing-session"
         ]
 
-    {:ok, _pid} = GenServer.start(TaskRunner, {task.id, resume_opts})
+    {:ok, pid} = GenServer.start(TaskRunner, {task.id, resume_opts})
+    ref = Process.monitor(pid)
 
     assert_receive {:failed, error}, 5000
     assert String.contains?(error, "Container restart failed")
+    assert_receive {:DOWN, ^ref, :process, ^pid, _reason}, 5_000
   end
 
   test "resume path preserves prior-run todos and prepends them to new todo events", %{
@@ -217,7 +221,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.ResumeTest do
           session_id: "existing-session"
         ]
 
-    {:ok, _pid} = GenServer.start(TaskRunner, {task_id, resume_opts})
+    {:ok, pid} = GenServer.start(TaskRunner, {task_id, resume_opts})
+    ref = Process.monitor(pid)
 
     # Should receive merged todos: prior-run + current-run
     assert_receive {:todo_updated, ^task_id, merged_todos}, 5000
@@ -238,6 +243,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.ResumeTest do
 
     # Wait for completion to clean up
     assert_receive {:task_status_changed, ^task_id, "completed"}, 5000
+    assert_receive {:DOWN, ^ref, :process, ^pid, _reason}, 5_000
   end
 
   test "resume path dedupes prior-run todos that share IDs with current-run todos", %{
@@ -303,7 +309,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.ResumeTest do
           session_id: "existing-session"
         ]
 
-    {:ok, _pid} = GenServer.start(TaskRunner, {task_id, resume_opts})
+    {:ok, pid} = GenServer.start(TaskRunner, {task_id, resume_opts})
+    ref = Process.monitor(pid)
 
     assert_receive {:todo_updated, ^task_id, merged_todos}, 5000
 
@@ -324,6 +331,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.ResumeTest do
     assert length(merged_todos) == 3
 
     assert_receive {:task_status_changed, ^task_id, "completed"}, 5000
+    assert_receive {:DOWN, ^ref, :process, ^pid, _reason}, 5_000
   end
 
   test "resume path fails when SSE subscription fails after health check", %{task: task} do
@@ -356,10 +364,12 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.ResumeTest do
           session_id: "existing-session"
         ]
 
-    {:ok, _pid} = GenServer.start(TaskRunner, {task.id, resume_opts})
+    {:ok, pid} = GenServer.start(TaskRunner, {task.id, resume_opts})
+    ref = Process.monitor(pid)
 
     assert_receive {:failed, error}, 5000
     assert String.contains?(error, "SSE subscription failed on resume")
+    assert_receive {:DOWN, ^ref, :process, ^pid, _reason}, 5_000
   end
 
   test "resume with prompt_instruction persists pending user message before reconnect", %{
@@ -397,6 +407,14 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.ResumeTest do
 
     {:ok, pid} = GenServer.start(TaskRunner, {task.id, resume_opts})
 
+    on_exit(fn ->
+      try do
+        if Process.alive?(pid), do: GenServer.stop(pid, :normal, 5_000)
+      rescue
+        _ -> :ok
+      end
+    end)
+
     assert_receive {:output_flushed, output_json}, 5000
     assert {:ok, output_parts} = Jason.decode(output_json)
 
@@ -405,8 +423,6 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.ResumeTest do
                part["text"] == "Follow-up after reconnect" and
                part["pending"] == true
            end)
-
-    GenServer.stop(pid, :normal, 1000)
   end
 
   defp session_status(status) do

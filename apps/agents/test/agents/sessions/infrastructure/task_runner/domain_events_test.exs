@@ -82,6 +82,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.DomainEventsTest do
          ]}
       )
 
+    ref = Process.monitor(pid)
+
     # Allow the runner process to store events under our test process
     TestEventBus.allow(TestEventBus, self(), pid)
 
@@ -90,7 +92,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.DomainEventsTest do
     task_id = task.id
     assert_receive {:queue_notified, ^user_id, ^task_id, :completed}, 5000
 
-    Process.sleep(100)
+    # Wait for GenServer to fully stop before inspecting events
+    assert_receive {:DOWN, ^ref, :process, ^pid, _reason}, 5_000
 
     events = TestEventBus.get_events()
     assert [%TaskCompleted{} = event] = events
@@ -150,6 +153,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.DomainEventsTest do
          ]}
       )
 
+    ref = Process.monitor(pid)
     TestEventBus.allow(TestEventBus, self(), pid)
 
     assert_receive {:task_status_changed, _, "failed"}, 5000
@@ -157,7 +161,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.DomainEventsTest do
     task_id = task.id
     assert_receive {:queue_notified, ^user_id, ^task_id, :failed}, 5000
 
-    Process.sleep(100)
+    # Wait for GenServer to fully stop before inspecting events
+    assert_receive {:DOWN, ^ref, :process, ^pid, _reason}, 5_000
 
     events = TestEventBus.get_events()
     assert [%TaskFailed{} = event] = events
@@ -203,6 +208,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.DomainEventsTest do
          ]}
       )
 
+    ref = Process.monitor(pid)
     TestEventBus.allow(TestEventBus, self(), pid)
 
     # Wait for running state
@@ -216,7 +222,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.DomainEventsTest do
     task_id = task.id
     assert_receive {:queue_notified, ^user_id, ^task_id, :cancelled}, 5000
 
-    Process.sleep(100)
+    # Wait for GenServer to fully stop before inspecting events
+    assert_receive {:DOWN, ^ref, :process, ^pid, _reason}, 5_000
 
     events = TestEventBus.get_events()
     assert [%TaskCancelled{} = event] = events

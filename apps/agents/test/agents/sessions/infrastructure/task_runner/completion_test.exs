@@ -46,6 +46,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.CompletionTest do
          ]}
       )
 
+    ref = Process.monitor(pid)
+
     # Wait for running state
     assert_receive {:task_status_changed, _, "running"}, 5000
 
@@ -54,8 +56,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.CompletionTest do
 
     assert_receive {:task_status_changed, _, "cancelled"}, 5000
 
-    # Allow time for GenServer to stop
-    Process.sleep(100)
-    refute Process.alive?(pid)
+    # Wait for GenServer to stop
+    assert_receive {:DOWN, ^ref, :process, ^pid, _reason}, 5_000
   end
 end
