@@ -68,8 +68,21 @@ defmodule Agents.Sessions.Application.UseCases.DeleteSession do
 
   defp maybe_delete_session(session_id, session_repo) do
     case session_repo.get_session(session_id) do
-      nil -> :ok
-      session -> session_repo.delete_session(session)
+      nil ->
+        :ok
+
+      session ->
+        case session_repo.delete_session(session) do
+          {:ok, _} ->
+            :ok
+
+          {:error, reason} ->
+            Logger.warning(
+              "DeleteSession: failed to delete session record #{session_id}: #{inspect(reason)}"
+            )
+
+            :ok
+        end
     end
   end
 

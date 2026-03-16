@@ -7,17 +7,20 @@ defmodule Agents.Sessions.Application.UseCases.ResumeSession do
   as an interaction record.
   """
 
+  alias Agents.Sessions.Domain.Events.SessionResumed
   alias Agents.Sessions.Domain.Policies.SessionStateMachinePolicy
 
   @default_session_repo Agents.Sessions.Infrastructure.Repositories.SessionRepository
   @default_task_repo Agents.Sessions.Infrastructure.Repositories.TaskRepository
   @default_interaction_repo Agents.Sessions.Infrastructure.Repositories.InteractionRepository
+  @default_event_bus Perme8.Events.EventBus
 
   @spec execute(String.t(), String.t(), String.t(), keyword()) :: {:ok, map()} | {:error, term()}
   def execute(session_id, user_id, instruction, opts \\ []) do
     session_repo = Keyword.get(opts, :session_repo, @default_session_repo)
     task_repo = Keyword.get(opts, :task_repo, @default_task_repo)
     interaction_repo = Keyword.get(opts, :interaction_repo, @default_interaction_repo)
+    event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
 
     case session_repo.get_session_for_user(session_id, user_id) do
       nil ->
@@ -46,6 +49,17 @@ defmodule Agents.Sessions.Application.UseCases.ResumeSession do
                 direction: "inbound",
                 payload: %{text: instruction}
               })
+
+            _ =
+              event_bus.emit(
+                SessionResumed.new(%{
+                  aggregate_id: session_id,
+                  actor_id: user_id,
+                  session_id: session_id,
+                  user_id: user_id,
+                  resumed_at: DateTime.utc_now()
+                })
+              )
 
             {:ok, updated_session}
           end
