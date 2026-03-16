@@ -3,17 +3,17 @@ defmodule Agents.Sessions.Application.Behaviours.SessionRepositoryBehaviour do
   Behaviour for session repository operations.
 
   Defines the contract for session persistence, enabling dependency injection
-  and testability via mocks.
+  and testability via mocks. Uses generic struct/map types to avoid coupling
+  the Application layer to Infrastructure schemas.
   """
 
-  alias Agents.Sessions.Infrastructure.Schemas.SessionSchema
+  @type session :: struct()
 
-  @callback create_session(map()) :: {:ok, SessionSchema.t()} | {:error, Ecto.Changeset.t()}
-  @callback get_session(String.t()) :: SessionSchema.t() | nil
-  @callback get_session_for_user(String.t(), String.t()) :: SessionSchema.t() | nil
-  @callback update_session(SessionSchema.t(), map()) ::
-              {:ok, SessionSchema.t()} | {:error, Ecto.Changeset.t()}
-  @callback list_sessions_for_user(String.t(), keyword()) :: [SessionSchema.t()]
-  @callback delete_session(SessionSchema.t()) :: {:ok, SessionSchema.t()} | {:error, term()}
-  @callback get_session_by_container_id(String.t()) :: SessionSchema.t() | nil
+  @callback create_session(map()) :: {:ok, session()} | {:error, Ecto.Changeset.t()}
+  @callback get_session(String.t()) :: session() | nil
+  @callback get_session_for_user(String.t(), String.t()) :: session() | nil
+  @callback update_session(session(), map()) :: {:ok, session()} | {:error, Ecto.Changeset.t()}
+  @callback list_sessions_for_user(String.t(), keyword()) :: [session()]
+  @callback delete_session(session()) :: {:ok, session()} | {:error, term()}
+  @callback get_session_by_container_id(String.t()) :: session() | nil
 end
