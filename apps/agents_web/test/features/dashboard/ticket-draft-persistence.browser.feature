@@ -25,7 +25,9 @@ Feature: Ticket-scoped draft persistence and explicit session-ticket association
     When I click "[data-testid='triage-ticket-item-101']"
     And I wait for network idle
     And I wait for "#session-instruction" to be visible
-    And I fill "#session-instruction" with "investigate the SSO provider"
+    And I clear "#session-instruction"
+    And I type "investigate the SSO provider" into "#session-instruction"
+    And I wait for 1 seconds
     And I reload the page
     And I wait for network idle
     And I wait for "[data-testid='triage-ticket-item-101']" to be visible
