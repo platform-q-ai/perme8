@@ -52,6 +52,20 @@ defmodule AgentsWeb.DashboardLive.Helpers.TaskExecutionHelpers do
   end
 
   def resolve_active_ticket_number(
+        %{"new" => "true", "ticket" => ticket_str},
+        _selected_container_id,
+        _sessions,
+        _tickets,
+        _current
+      )
+      when is_binary(ticket_str) do
+    case Integer.parse(ticket_str) do
+      {n, ""} when n > 0 -> n
+      _ -> nil
+    end
+  end
+
+  def resolve_active_ticket_number(
         %{"new" => "true"},
         _selected_container_id,
         _sessions,
@@ -59,6 +73,21 @@ defmodule AgentsWeb.DashboardLive.Helpers.TaskExecutionHelpers do
         current
       ) do
     current
+  end
+
+  def resolve_active_ticket_number(
+        %{"ticket" => ticket_str} = _params,
+        selected_container_id,
+        _sessions,
+        _tickets,
+        _current
+      )
+      when is_binary(selected_container_id) and selected_container_id != "" and
+             is_binary(ticket_str) do
+    case Integer.parse(ticket_str) do
+      {n, ""} when n > 0 -> n
+      _ -> nil
+    end
   end
 
   def resolve_active_ticket_number(_params, selected_container_id, sessions, tickets, _current)

@@ -104,8 +104,9 @@ defmodule AgentsWeb.DashboardLive.TicketHandlers do
        |> assign(:composing_new, false)
        |> assign(:events, [])
        |> assign_session_state()
-       |> push_event("switch_draft_key", %{key: "ticket:#{number}"})
-       |> push_patch(to: ~p"/sessions?#{%{container: container_id, tab: "ticket"}}")}
+       |> push_patch(
+         to: ~p"/sessions?#{%{container: container_id, tab: "ticket", ticket: number}}"
+       )}
     else
       {:noreply,
        socket
@@ -115,8 +116,7 @@ defmodule AgentsWeb.DashboardLive.TicketHandlers do
        |> assign(:composing_new, true)
        |> assign(:events, [])
        |> assign_session_state()
-       |> push_event("switch_draft_key", %{key: "ticket:#{number}"})
-       |> push_patch(to: ~p"/sessions?#{%{new: true, tab: "ticket"}}")
+       |> push_patch(to: ~p"/sessions?#{%{new: true, tab: "ticket", ticket: number}}")
        |> push_event("focus_input", %{})}
     end
   end
