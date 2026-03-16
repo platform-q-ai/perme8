@@ -45,12 +45,12 @@ defmodule Agents.Sessions.Application.UseCases.CreateTask do
       user_id = attrs[:user_id] || attrs["user_id"]
 
       concurrency_lock.(user_id, fn ->
-        create_queued_task(attrs, user_id, task_repo, session_repo, event_bus)
+        create_queued_task(attrs, user_id, task_repo, session_repo, event_bus, opts)
       end)
     end
   end
 
-  defp create_queued_task(attrs, user_id, task_repo, session_repo, event_bus) do
+  defp create_queued_task(attrs, user_id, task_repo, session_repo, event_bus, opts) do
     max_pos = task_repo.get_max_queue_position(user_id)
     queue_position = QueuePolicy.next_queue_position(max_pos)
 
@@ -70,6 +70,7 @@ defmodule Agents.Sessions.Application.UseCases.CreateTask do
     case task_repo.create_task(queued_attrs) do
       {:ok, schema} ->
         _ = emit_task_queued(schema, queue_position, event_bus)
+        _ = maybe_link_ticket(attrs, session_ref_id, opts)
         {:ok, Task.from_schema(schema)}
 
       error ->
@@ -138,4 +139,31 @@ defmodule Agents.Sessions.Application.UseCases.CreateTask do
   end
 
   defp no_concurrency_lock(_user_id, fun), do: fun.()
+
+  defp maybe_link_ticket(attrs, session_ref_id, opts) do
+    require Logger
+
+    ticket_number = Map.get(attrs, :ticket_number)
+    ticket_linker = Keyword.get(opts, :ticket_linker, &default_ticket_linker/2)
+
+    if is_integer(ticket_number) and ticket_number > 0 and is_binary(session_ref_id) do
+      try do
+        ticket_linker.(ticket_number, session_ref_id)
+      rescue
+        error ->
+          Logger.warning(
+            "CreateTask: failed to link ticket ##{ticket_number} to session #{session_ref_id}: #{inspect(error)}"
+          )
+
+          {:error, error}
+      end
+    else
+      :skip
+    end
+  end
+
+  defp default_ticket_linker(ticket_number, session_id) do
+    # Runtime call to avoid compile-time boundary dependency
+    apply(Agents.Tickets, :link_ticket_to_session, [ticket_number, session_id])
+  end
 end
