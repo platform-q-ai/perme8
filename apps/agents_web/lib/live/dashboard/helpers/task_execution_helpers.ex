@@ -371,7 +371,9 @@ defmodule AgentsWeb.DashboardLive.Helpers.TaskExecutionHelpers do
         socket.assigns[:sticky_warm_task_ids] || MapSet.new()
       )
 
-    socket = TicketSessionLinker.link_and_refresh(socket, task)
+    ticket_number = socket.assigns[:active_ticket_number]
+    link_opts = if is_integer(ticket_number), do: [ticket_number: ticket_number], else: []
+    socket = TicketSessionLinker.link_and_refresh(socket, task, link_opts)
 
     {:noreply,
      socket
