@@ -17,7 +17,9 @@ defmodule Agents.Sessions do
       Agents.Repo
     ],
     exports: [
-      {Domain.Entities.Task, []}
+      {Domain.Entities.Task, []},
+      {Domain.Entities.Session, []},
+      {Infrastructure.Schemas.SessionSchema, []}
     ]
 
   alias Agents.Sessions.Application.UseCases.{
@@ -36,7 +38,7 @@ defmodule Agents.Sessions do
   alias Agents.Sessions.Infrastructure.QueueOrchestrator
   alias Agents.Sessions.Infrastructure.QueueOrchestratorSupervisor
   alias Agents.Sessions.Domain.Entities.{Session, Task}
-  alias Agents.Sessions.Infrastructure.Repositories.TaskRepository
+  alias Agents.Sessions.Infrastructure.Repositories.{TaskRepository, SessionRepository}
   alias Agents.Repo
   alias Agents.Sessions.Infrastructure.OrphanRecovery
   alias Agents.Sessions.Infrastructure.TaskRunnerSupervisor
@@ -214,6 +216,40 @@ defmodule Agents.Sessions do
       )
 
     task_repo.list_sessions_for_user(user_id, opts)
+  end
+
+  @doc """
+  Gets a session by ID for a specific user.
+
+  Returns nil if not found or not owned by the user.
+  """
+  def get_session_for_user(session_id, user_id, opts \\ []) do
+    session_repo = Keyword.get(opts, :session_repo, SessionRepository)
+    session_repo.get_session_for_user(session_id, user_id)
+  end
+
+  @doc """
+  Gets a session by ID.
+  """
+  def get_session(session_id, opts \\ []) do
+    session_repo = Keyword.get(opts, :session_repo, SessionRepository)
+    session_repo.get_session(session_id)
+  end
+
+  @doc """
+  Creates a new session.
+  """
+  def create_session(attrs, opts \\ []) do
+    session_repo = Keyword.get(opts, :session_repo, SessionRepository)
+    session_repo.create_session(attrs)
+  end
+
+  @doc """
+  Updates a session's mutable fields.
+  """
+  def update_session(session, attrs, opts \\ []) do
+    session_repo = Keyword.get(opts, :session_repo, SessionRepository)
+    session_repo.update_session(session, attrs)
   end
 
   @doc """

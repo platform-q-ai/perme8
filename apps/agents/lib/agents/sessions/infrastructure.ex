@@ -20,8 +20,11 @@ defmodule Agents.Sessions.Infrastructure do
     ],
     exports: [
       Schemas.TaskSchema,
+      Schemas.SessionSchema,
       Repositories.TaskRepository,
+      Repositories.SessionRepository,
       Queries.TaskQueries,
+      Queries.SessionQueries,
       OrphanRecovery,
       TaskRunnerSupervisor,
       QueueOrchestrator,
