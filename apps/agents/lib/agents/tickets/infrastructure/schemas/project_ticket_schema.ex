@@ -64,6 +64,7 @@ defmodule Agents.Tickets.Infrastructure.Schemas.ProjectTicketSchema do
     field(:lifecycle_stage, :string, default: "open")
     field(:lifecycle_stage_entered_at, :utc_datetime)
     field(:task_id, Ecto.UUID)
+    field(:session_id, Ecto.UUID)
     belongs_to(:parent_ticket, __MODULE__)
     has_many(:sub_tickets, __MODULE__, foreign_key: :parent_ticket_id)
 
@@ -112,7 +113,8 @@ defmodule Agents.Tickets.Infrastructure.Schemas.ProjectTicketSchema do
       :lifecycle_stage,
       :lifecycle_stage_entered_at,
       :parent_ticket_id,
-      :task_id
+      :task_id,
+      :session_id
     ])
     |> validate_required([:number, :title])
     |> validate_inclusion(:sync_state, @sync_states)
@@ -120,5 +122,6 @@ defmodule Agents.Tickets.Infrastructure.Schemas.ProjectTicketSchema do
     |> validate_inclusion(:lifecycle_stage, @lifecycle_stages)
     |> unique_constraint(:number)
     |> foreign_key_constraint(:task_id)
+    |> foreign_key_constraint(:session_id)
   end
 end

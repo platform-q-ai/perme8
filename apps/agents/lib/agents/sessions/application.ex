@@ -26,6 +26,11 @@ defmodule Agents.Sessions.Application do
       UseCases.BuildSnapshot,
       UseCases.PromoteTask,
       UseCases.ScheduleRetry,
+      UseCases.CreateInteraction,
+      UseCases.PauseSession,
+      UseCases.ResumeSession,
+      UseCases.CompleteSession,
+      UseCases.FailSession,
       SessionsConfig
     ]
 end
