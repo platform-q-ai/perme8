@@ -32,7 +32,7 @@ Feature: Ticket-scoped draft persistence and explicit session-ticket association
     When I click "[data-testid='triage-ticket-item-101']"
     And I wait for network idle
     And I wait for "#session-instruction" to be visible
-    And I wait for 1 seconds
+    And I wait for 2 seconds
     Then "#session-instruction" should have value "investigate the SSO provider"
 
   Scenario: Switching between tickets preserves each ticket's draft text
@@ -69,7 +69,7 @@ Feature: Ticket-scoped draft persistence and explicit session-ticket association
     When I click "[data-testid='triage-ticket-item-101']"
     And I wait for network idle
     And I wait for "#session-instruction" to be visible
-    And I wait for 1 seconds
+    And I wait for 2 seconds
     Then "#session-instruction" should have value "check the auth module"
 
   Scenario: Submitting a message clears the draft for that ticket
