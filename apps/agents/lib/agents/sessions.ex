@@ -17,7 +17,11 @@ defmodule Agents.Sessions do
       Agents.Repo
     ],
     exports: [
-      {Domain.Entities.Task, []}
+      {Domain.Entities.Task, []},
+      {Domain.Entities.Session, []},
+      {Domain.Entities.Interaction, []},
+      {Infrastructure.Schemas.SessionSchema, []},
+      {Infrastructure.Schemas.InteractionSchema, []}
     ]
 
   alias Agents.Sessions.Application.UseCases.{
@@ -28,7 +32,12 @@ defmodule Agents.Sessions do
     RefreshAuthAndResume,
     ResumeTask,
     GetTask,
-    ListTasks
+    ListTasks,
+    CreateInteraction,
+    PauseSession,
+    ResumeSession,
+    CompleteSession,
+    FailSession
   }
 
   alias Agents.Sessions.Application.SessionsConfig
@@ -36,7 +45,7 @@ defmodule Agents.Sessions do
   alias Agents.Sessions.Infrastructure.QueueOrchestrator
   alias Agents.Sessions.Infrastructure.QueueOrchestratorSupervisor
   alias Agents.Sessions.Domain.Entities.{Session, Task}
-  alias Agents.Sessions.Infrastructure.Repositories.TaskRepository
+  alias Agents.Sessions.Infrastructure.Repositories.{TaskRepository, SessionRepository}
   alias Agents.Repo
   alias Agents.Sessions.Infrastructure.OrphanRecovery
   alias Agents.Sessions.Infrastructure.TaskRunnerSupervisor
@@ -214,6 +223,93 @@ defmodule Agents.Sessions do
       )
 
     task_repo.list_sessions_for_user(user_id, opts)
+  end
+
+  @doc """
+  Gets a session by ID for a specific user.
+
+  Returns nil if not found or not owned by the user.
+  """
+  def get_session_for_user(session_id, user_id, opts \\ []) do
+    session_repo = Keyword.get(opts, :session_repo, SessionRepository)
+    session_repo.get_session_for_user(session_id, user_id)
+  end
+
+  @doc """
+  Gets a session by ID.
+  """
+  def get_session(session_id, opts \\ []) do
+    session_repo = Keyword.get(opts, :session_repo, SessionRepository)
+    session_repo.get_session(session_id)
+  end
+
+  @doc """
+  Creates a new session.
+  """
+  def create_session(attrs, opts \\ []) do
+    session_repo = Keyword.get(opts, :session_repo, SessionRepository)
+    session_repo.create_session(attrs)
+  end
+
+  @doc """
+  Updates a session's mutable fields.
+  """
+  def update_session(session, attrs, opts \\ []) do
+    session_repo = Keyword.get(opts, :session_repo, SessionRepository)
+    session_repo.update_session(session, attrs)
+  end
+
+  # --- Interaction facade functions (Phase 2) ---
+
+  @doc "Creates a new interaction record for a session."
+  def create_interaction(attrs, opts \\ []) do
+    CreateInteraction.execute(attrs, opts)
+  end
+
+  @doc "Lists interactions for a session in chronological order."
+  def list_interactions(session_id, opts \\ []) do
+    interaction_repo =
+      Keyword.get(
+        opts,
+        :interaction_repo,
+        Agents.Sessions.Infrastructure.Repositories.InteractionRepository
+      )
+
+    interaction_repo.list_for_session(session_id, opts)
+  end
+
+  @doc "Gets the latest pending question for a session."
+  def get_pending_interaction(session_id, opts \\ []) do
+    interaction_repo =
+      Keyword.get(
+        opts,
+        :interaction_repo,
+        Agents.Sessions.Infrastructure.Repositories.InteractionRepository
+      )
+
+    interaction_repo.get_pending_question(session_id)
+  end
+
+  # --- Session lifecycle facade functions (Phase 5) ---
+
+  @doc "Pauses an active session."
+  def pause_session(session_id, user_id, opts \\ []) do
+    PauseSession.execute(session_id, user_id, opts)
+  end
+
+  @doc "Resumes a paused session with an instruction."
+  def resume_session(session_id, user_id, instruction, opts \\ []) do
+    ResumeSession.execute(session_id, user_id, instruction, opts)
+  end
+
+  @doc "Marks a session as completed."
+  def complete_session(session_id, opts \\ []) do
+    CompleteSession.execute(session_id, opts)
+  end
+
+  @doc "Marks a session as failed."
+  def fail_session(session_id, opts \\ []) do
+    FailSession.execute(session_id, opts)
   end
 
   @doc """

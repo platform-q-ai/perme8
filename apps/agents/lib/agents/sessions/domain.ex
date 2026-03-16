@@ -18,7 +18,11 @@ defmodule Agents.Sessions.Domain do
       Entities.Session,
       Entities.QueueSnapshot,
       Entities.LaneEntry,
+      Entities.Interaction,
       Policies.TaskPolicy,
+      Policies.InteractionPolicy,
+      Policies.ContainerLifecyclePolicy,
+      Policies.SessionStateMachinePolicy,
       Policies.ImagePolicy,
       Policies.QueuePolicy,
       Policies.QueueEngine,
@@ -49,6 +53,9 @@ defmodule Agents.Sessions.Domain do
       Events.SessionPermissionRequested,
       Events.SessionPermissionResolved,
       Events.SessionRetrying,
-      Events.SessionServerConnected
+      Events.SessionServerConnected,
+      Events.SessionContainerStatusChanged,
+      Events.SessionPaused,
+      Events.SessionResumed
     ]
 end

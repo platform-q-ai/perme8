@@ -81,6 +81,7 @@ defmodule Agents.Sessions.Infrastructure.Schemas.TaskSchema do
     field(:queued_at, :utc_datetime)
     field(:started_at, :utc_datetime)
     field(:completed_at, :utc_datetime)
+    field(:session_ref_id, Ecto.UUID)
 
     timestamps(type: :utc_datetime)
   end
@@ -116,7 +117,8 @@ defmodule Agents.Sessions.Infrastructure.Schemas.TaskSchema do
       :next_retry_at,
       :queued_at,
       :started_at,
-      :completed_at
+      :completed_at,
+      :session_ref_id
     ])
     |> validate_required([:instruction, :user_id])
     |> maybe_derive_lifecycle_state()
@@ -124,6 +126,7 @@ defmodule Agents.Sessions.Infrastructure.Schemas.TaskSchema do
     |> validate_inclusion(:lifecycle_state, @valid_lifecycle_states)
     |> foreign_key_constraint(:user_id)
     |> foreign_key_constraint(:parent_task_id)
+    |> foreign_key_constraint(:session_ref_id)
   end
 
   @doc """
@@ -152,11 +155,13 @@ defmodule Agents.Sessions.Infrastructure.Schemas.TaskSchema do
       :next_retry_at,
       :queued_at,
       :started_at,
-      :completed_at
+      :completed_at,
+      :session_ref_id
     ])
     |> maybe_derive_lifecycle_state()
     |> validate_inclusion(:status, @valid_statuses)
     |> validate_inclusion(:lifecycle_state, @valid_lifecycle_states)
+    |> foreign_key_constraint(:session_ref_id)
   end
 
   defp maybe_derive_lifecycle_state(changeset) do
