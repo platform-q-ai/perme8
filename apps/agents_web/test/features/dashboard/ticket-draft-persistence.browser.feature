@@ -121,8 +121,8 @@ Feature: Ticket-scoped draft persistence and explicit session-ticket association
     Then I wait for "[data-testid='build-ticket-item-103']" to be visible
 
   Scenario: False ticket references in message text do not cause wrong associations
-    Given I wait for "[data-testid='triage-ticket-item-101']" to be visible
-    When I click "[data-testid='triage-ticket-item-101']"
+    Given I wait for "[data-testid='triage-ticket-item-104']" to be visible
+    When I click "[data-testid='triage-ticket-item-104']"
     And I wait for network idle
     And I wait for "#session-instruction" to be visible
     And I click "[role='tab'][data-tab-id='chat']"
@@ -131,7 +131,7 @@ Feature: Ticket-scoped draft persistence and explicit session-ticket association
     And I focus on "#session-instruction"
     And I press "Enter"
     And I wait for network idle
-    # Ticket 101 should have moved to build queue (associated with the session)
-    Then I wait for "[data-testid='build-ticket-item-101']" to be visible
+    # Ticket 104 should have moved to build queue (associated with the session)
+    Then I wait for "[data-testid='build-ticket-item-104']" to be visible
     # Ticket 5 should NOT exist in the build queue (false reference)
     And "[data-testid='build-ticket-item-5']" should not exist
