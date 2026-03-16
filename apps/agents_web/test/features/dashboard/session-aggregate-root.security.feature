@@ -111,14 +111,11 @@ Feature: Session aggregate root security
   # Security Headers and Transport
   # ---------------------------------------------------------------------------
 
-  Scenario: Sessions endpoint returns proper security headers
-    Given I am authenticated
-    When I access the sessions page
-    Then the response should include Content-Security-Policy header
-    And X-Content-Type-Options should be "nosniff"
-    And X-Frame-Options should be present
+  # NOTE: General security headers for the sessions page are already covered
+  # in queue-orchestration.security.feature. This scenario focuses specifically
+  # on API responses not leaking server version information.
 
-  Scenario: Session API responses include security headers
+  Scenario: Session API responses do not leak server version information
     Given I am authenticated
     When I request session data via the API
     Then the response should include proper security headers

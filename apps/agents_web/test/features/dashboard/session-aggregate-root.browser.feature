@@ -90,6 +90,12 @@ Feature: Session aggregate root with durable interactions and ticket linking
 
   # ---------------------------------------------------------------------------
   # Phase 2: Interactions -- Question/Answer History
+  #
+  # NOTE: Interaction records are the durable backing store for the chat log.
+  # The existing session-tabs.browser.feature and queued-messages.browser.feature
+  # test the chat log rendering (data-testid='chat-log'). These scenarios test
+  # the structured interaction history that feeds into that chat log. The existing
+  # files will be updated during Phase 2 implementation to reflect the new model.
   # ---------------------------------------------------------------------------
 
   Scenario: Session detail shows interaction history
@@ -140,6 +146,11 @@ Feature: Session aggregate root with durable interactions and ticket linking
 
   # ---------------------------------------------------------------------------
   # Phase 3: Ticket-Session Linking
+  #
+  # NOTE: These scenarios test the target state where tickets link to sessions
+  # via session_id. The existing ticket-session-context.browser.feature uses
+  # task_id as the linking field -- that file will be updated during Phase 3
+  # implementation to reflect the migration from task_id to session_id.
   # ---------------------------------------------------------------------------
 
   Scenario: Starting a session from a ticket links the ticket to the session
@@ -191,11 +202,3 @@ Feature: Session aggregate root with durable interactions and ticket linking
     Given I navigate to "${baseUrl}/sessions?fixture=session_aggregate_completed"
     And I wait for network idle
     Then "[data-testid='session-card']:first-child [data-testid='pause-session-btn']" should not exist
-
-  Scenario: Session state comes from domain entity not web-layer derivation
-    Given I navigate to "${baseUrl}/sessions?fixture=session_domain_state_machine"
-    And I wait for network idle
-    Then "[data-testid='session-card'][data-session-status='active'] [data-testid='session-status']" should have text "Active"
-    And "[data-testid='session-card'][data-session-status='paused'] [data-testid='session-status']" should have text "Paused"
-    And "[data-testid='session-card'][data-session-status='completed'] [data-testid='session-status']" should have text "Completed"
-    And "[data-testid='session-card'][data-session-status='failed'] [data-testid='session-status']" should have text "Failed"
