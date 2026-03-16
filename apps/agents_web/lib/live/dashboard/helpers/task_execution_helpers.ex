@@ -319,11 +319,18 @@ defmodule AgentsWeb.DashboardLive.Helpers.TaskExecutionHelpers do
     if socket.assigns.composing_new || is_nil(current_task) do
       instruction = ensure_ticket_reference(instruction, ticket_number, ticket)
 
-      Sessions.create_task(%{
+      attrs = %{
         instruction: instruction,
         user_id: user.id,
         image: socket.assigns.selected_image
-      })
+      }
+
+      attrs =
+        if is_integer(ticket_number) and ticket_number > 0,
+          do: Map.put(attrs, :ticket_number, ticket_number),
+          else: attrs
+
+      Sessions.create_task(attrs)
     else
       Sessions.resume_task(current_task.id, %{instruction: instruction, user_id: user.id})
     end

@@ -105,6 +105,7 @@ defmodule AgentsWeb.DashboardLive.TicketHandlers do
        |> assign(:events, [])
        |> assign_session_state()
        |> clear_form()
+       |> push_event("switch_draft_key", %{key: "ticket:#{number}"})
        |> push_patch(to: ~p"/sessions?#{%{container: container_id, tab: "ticket"}}")}
     else
       {:noreply,
@@ -116,6 +117,7 @@ defmodule AgentsWeb.DashboardLive.TicketHandlers do
        |> assign(:events, [])
        |> assign_session_state()
        |> clear_form()
+       |> push_event("switch_draft_key", %{key: "ticket:#{number}"})
        |> push_patch(to: ~p"/sessions?#{%{new: true, tab: "ticket"}}")
        |> push_event("focus_input", %{})}
     end
@@ -209,7 +211,8 @@ defmodule AgentsWeb.DashboardLive.TicketHandlers do
               Sessions.create_task(%{
                 instruction: instruction,
                 user_id: user.id,
-                image: image
+                image: image,
+                ticket_number: number
               })
 
             send(parent, {:new_task_created, client_id, result})

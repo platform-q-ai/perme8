@@ -10,7 +10,9 @@ defmodule AgentsWeb.DashboardLive.TaskExecutionHandlers do
 
   def run_task(%{"instruction" => instruction} = params, socket) do
     instruction = String.trim(instruction)
-    ticket_number = parse_ticket_number_param(params)
+
+    ticket_number =
+      parse_ticket_number_param(params) || socket.assigns[:active_ticket_number]
 
     ticket =
       if ticket_number,
