@@ -17,42 +17,44 @@ defmodule Agents.Sessions.Application.UseCases.PauseSession do
     session_repo = Keyword.get(opts, :session_repo, @default_session_repo)
     event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
 
-    case session_repo.get_session_for_user(session_id, user_id) do
-      nil ->
-        {:error, :not_found}
-
-      session ->
-        if SessionStateMachinePolicy.can_pause?(session.status) do
-          now = DateTime.utc_now()
-
-          result =
-            session_repo.update_session(session, %{
-              status: "paused",
-              paused_at: now,
-              container_status: "stopped"
-            })
-
-          case result do
-            {:ok, updated} ->
-              _ =
-                event_bus.emit(
-                  SessionPaused.new(%{
-                    aggregate_id: session_id,
-                    actor_id: user_id,
-                    session_id: session_id,
-                    user_id: user_id,
-                    paused_at: now
-                  })
-                )
-
-              {:ok, updated}
-
-            error ->
-              error
-          end
-        else
-          {:error, :invalid_transition}
-        end
+    with {:ok, session} <- fetch_session(session_id, user_id, session_repo),
+         :ok <- validate_transition(session),
+         {:ok, updated} <- do_pause(session, session_repo) do
+      emit_paused(session_id, user_id, event_bus)
+      {:ok, updated}
     end
+  end
+
+  defp fetch_session(session_id, user_id, session_repo) do
+    case session_repo.get_session_for_user(session_id, user_id) do
+      nil -> {:error, :not_found}
+      session -> {:ok, session}
+    end
+  end
+
+  defp validate_transition(session) do
+    if SessionStateMachinePolicy.can_pause?(session.status),
+      do: :ok,
+      else: {:error, :invalid_transition}
+  end
+
+  defp do_pause(session, session_repo) do
+    session_repo.update_session(session, %{
+      status: "paused",
+      paused_at: DateTime.utc_now(),
+      container_status: "stopped"
+    })
+  end
+
+  defp emit_paused(session_id, user_id, event_bus) do
+    event_bus.emit(
+      SessionPaused.new(%{
+        aggregate_id: session_id,
+        actor_id: user_id,
+        session_id: session_id,
+        user_id: user_id,
+        paused_at: DateTime.utc_now()
+      })
+    )
   end
 end
