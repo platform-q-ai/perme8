@@ -11,6 +11,7 @@ defmodule Agents.Sessions.Application.UseCases.CreateTask do
   alias Agents.Sessions.Domain.Policies.QueuePolicy
 
   @default_task_repo Agents.Sessions.Infrastructure.Repositories.TaskRepository
+  @default_session_repo Agents.Sessions.Infrastructure.Repositories.SessionRepository
   @default_event_bus Perme8.Events.EventBus
 
   @doc """
@@ -36,6 +37,7 @@ defmodule Agents.Sessions.Application.UseCases.CreateTask do
           {:ok, Agents.Sessions.Domain.Entities.Task.t()} | {:error, term()}
   def execute(attrs, opts \\ []) do
     task_repo = Keyword.get(opts, :task_repo, @default_task_repo)
+    session_repo = Keyword.get(opts, :session_repo, @default_session_repo)
     event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
     concurrency_lock = Keyword.get(opts, :concurrency_lock, &no_concurrency_lock/2)
 
@@ -43,21 +45,27 @@ defmodule Agents.Sessions.Application.UseCases.CreateTask do
       user_id = attrs[:user_id] || attrs["user_id"]
 
       concurrency_lock.(user_id, fn ->
-        create_queued_task(attrs, user_id, task_repo, event_bus)
+        create_queued_task(attrs, user_id, task_repo, session_repo, event_bus)
       end)
     end
   end
 
-  defp create_queued_task(attrs, user_id, task_repo, event_bus) do
+  defp create_queued_task(attrs, user_id, task_repo, session_repo, event_bus) do
     max_pos = task_repo.get_max_queue_position(user_id)
     queue_position = QueuePolicy.next_queue_position(max_pos)
 
+    # Ensure a session exists for this task. Reuse an existing session if
+    # session_ref_id is provided, otherwise create a new one.
+    session_ref_id = resolve_session(attrs, user_id, session_repo)
+
     queued_attrs =
-      Map.merge(attrs, %{
+      attrs
+      |> Map.merge(%{
         status: "queued",
         queue_position: queue_position,
         queued_at: DateTime.utc_now()
       })
+      |> maybe_put_session_ref_id(session_ref_id)
 
     case task_repo.create_task(queued_attrs) do
       {:ok, schema} ->
@@ -68,6 +76,36 @@ defmodule Agents.Sessions.Application.UseCases.CreateTask do
         error
     end
   end
+
+  defp resolve_session(attrs, user_id, session_repo) do
+    cond do
+      # Explicit session_ref_id provided — reuse it
+      Map.has_key?(attrs, :session_ref_id) && attrs[:session_ref_id] ->
+        attrs[:session_ref_id]
+
+      # No session yet — create one
+      true ->
+        instruction = attrs[:instruction] || attrs["instruction"]
+
+        session_attrs = %{
+          user_id: user_id,
+          title: instruction,
+          status: "active",
+          container_status: "pending",
+          image: Map.get(attrs, :image, "perme8-opencode")
+        }
+
+        case session_repo.create_session(session_attrs) do
+          {:ok, session} -> session.id
+          _error -> nil
+        end
+    end
+  end
+
+  defp maybe_put_session_ref_id(attrs, nil), do: attrs
+
+  defp maybe_put_session_ref_id(attrs, session_ref_id),
+    do: Map.put(attrs, :session_ref_id, session_ref_id)
 
   defp validate_instruction(%{instruction: instruction})
        when is_binary(instruction) and instruction != "" do
