@@ -1,4 +1,4 @@
-@browser @sessions @tickets @drafts @wip
+@browser @sessions @tickets @drafts
 Feature: Ticket-scoped draft persistence and explicit session-ticket association
   As a user working with tickets
   I want each ticket to own its own chat/ticket text area state that survives
