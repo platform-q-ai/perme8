@@ -55,7 +55,6 @@ defmodule Agents.Sessions.Infrastructure.Schemas.SessionSchema do
     |> validate_required([:user_id])
     |> validate_inclusion(:status, @valid_statuses)
     |> validate_inclusion(:container_status, @valid_container_statuses)
-    |> foreign_key_constraint(:user_id)
   end
 
   @doc "Creates a changeset for updating session mutable fields."
