@@ -42,13 +42,19 @@ defmodule Agents.Sessions.Infrastructure.StartupReconciliation do
     results
   end
 
-  defp list_active_sessions(session_repo) do
-    # List all sessions -- filter in memory for active container statuses
-    # In production, this would use a query filter
-    session_repo.list_sessions_for_user("__all__", limit: 1000)
-    |> Enum.filter(fn s -> s.container_status in @active_container_statuses end)
-  rescue
-    _ -> []
+  defp list_active_sessions(_session_repo) do
+    # Query sessions with active container statuses directly via Ecto
+    import Ecto.Query, warn: false
+    alias Agents.Sessions.Infrastructure.Schemas.SessionSchema
+
+    try do
+      from(s in SessionSchema,
+        where: s.container_status in ^@active_container_statuses
+      )
+      |> Agents.Repo.all()
+    rescue
+      _ -> []
+    end
   end
 
   defp reconcile_session(session, container_provider, session_repo, acc) do

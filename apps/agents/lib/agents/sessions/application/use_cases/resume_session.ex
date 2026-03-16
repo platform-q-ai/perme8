@@ -25,33 +25,30 @@ defmodule Agents.Sessions.Application.UseCases.ResumeSession do
 
       session ->
         if SessionStateMachinePolicy.can_resume?(session.status) do
-          # Update session status
-          {:ok, updated_session} =
-            session_repo.update_session(session, %{
-              status: "active",
-              resumed_at: DateTime.utc_now()
-            })
+          with {:ok, updated_session} <-
+                 session_repo.update_session(session, %{
+                   status: "active",
+                   resumed_at: DateTime.utc_now()
+                 }),
+               {:ok, _task} <-
+                 task_repo.create_task(%{
+                   instruction: instruction,
+                   user_id: user_id,
+                   session_ref_id: session_id,
+                   status: "queued",
+                   queued_at: DateTime.utc_now()
+                 }) do
+            # Store instruction as interaction record (best-effort, don't fail resume)
+            _ =
+              interaction_repo.create_interaction(%{
+                session_id: session_id,
+                type: "instruction",
+                direction: "inbound",
+                payload: %{text: instruction}
+              })
 
-          # Create resume task
-          task_attrs = %{
-            instruction: instruction,
-            user_id: user_id,
-            session_ref_id: session_id,
-            status: "queued",
-            queued_at: DateTime.utc_now()
-          }
-
-          {:ok, _task} = task_repo.create_task(task_attrs)
-
-          # Store instruction as interaction record
-          interaction_repo.create_interaction(%{
-            session_id: session_id,
-            type: "instruction",
-            direction: "inbound",
-            payload: %{text: instruction}
-          })
-
-          {:ok, updated_session}
+            {:ok, updated_session}
+          end
         else
           {:error, :invalid_transition}
         end

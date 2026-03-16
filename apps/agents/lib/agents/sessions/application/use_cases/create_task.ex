@@ -96,8 +96,17 @@ defmodule Agents.Sessions.Application.UseCases.CreateTask do
         }
 
         case session_repo.create_session(session_attrs) do
-          {:ok, session} -> session.id
-          _error -> nil
+          {:ok, session} ->
+            session.id
+
+          {:error, reason} ->
+            require Logger
+
+            Logger.warning(
+              "CreateTask: failed to create session for user #{user_id}: #{inspect(reason)}"
+            )
+
+            nil
         end
     end
   end

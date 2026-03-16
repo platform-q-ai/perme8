@@ -91,6 +91,12 @@ defmodule Agents.Sessions.Domain.Entities.Interaction do
   def valid_statuses, do: @valid_statuses
 
   defp to_atom(val) when is_atom(val), do: val
-  defp to_atom(val) when is_binary(val), do: String.to_existing_atom(val)
+
+  defp to_atom(val) when is_binary(val) do
+    String.to_existing_atom(val)
+  rescue
+    ArgumentError -> nil
+  end
+
   defp to_atom(_), do: nil
 end

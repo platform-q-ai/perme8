@@ -64,6 +64,12 @@ defmodule Agents.Sessions.Application.UseCases.CreateInteraction do
   end
 
   defp to_atom(val) when is_atom(val), do: val
-  defp to_atom(val) when is_binary(val), do: String.to_existing_atom(val)
+
+  defp to_atom(val) when is_binary(val) do
+    String.to_existing_atom(val)
+  rescue
+    ArgumentError -> nil
+  end
+
   defp to_atom(_), do: nil
 end
