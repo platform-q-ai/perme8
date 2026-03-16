@@ -26,8 +26,9 @@ defmodule Agents.Sessions.Domain.Policies.ContainerLifecyclePolicy do
   @doc "Returns true if the status is valid."
   def valid_status?(status), do: status in @valid_statuses
 
-  @doc "Returns true if the transition from -> to is allowed."
-  def can_transition?(from, to), do: MapSet.member?(@valid_transitions, {from, to})
+  @doc "Returns true if the transition between statuses is allowed."
+  def can_transition?(current_status, target_status),
+    do: MapSet.member?(@valid_transitions, {current_status, target_status})
 
   @doc """
   Returns the compensation action for a failure at the given stage.

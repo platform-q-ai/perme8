@@ -16,18 +16,23 @@ defmodule Agents.Sessions.Domain.Policies.SessionStateMachinePolicy do
                      ])
 
   @doc "Returns true if the transition is valid."
-  def can_transition?(from, to) when is_atom(from) and is_atom(to) do
-    MapSet.member?(@valid_transitions, {from, to})
+  def can_transition?(current_status, target_status)
+      when is_atom(current_status) and is_atom(target_status) do
+    MapSet.member?(@valid_transitions, {current_status, target_status})
   end
 
-  def can_transition?(from, to) when is_binary(from) and is_binary(to) do
-    can_transition?(String.to_existing_atom(from), String.to_existing_atom(to))
+  def can_transition?(current_status, target_status)
+      when is_binary(current_status) and is_binary(target_status) do
+    can_transition?(
+      String.to_existing_atom(current_status),
+      String.to_existing_atom(target_status)
+    )
   end
 
   @doc "Attempts a transition, returning {:ok, new_status} or {:error, :invalid_transition}."
-  def transition(from, to) do
-    if can_transition?(from, to) do
-      {:ok, to}
+  def transition(current_status, target_status) do
+    if can_transition?(current_status, target_status) do
+      {:ok, target_status}
     else
       {:error, :invalid_transition}
     end
