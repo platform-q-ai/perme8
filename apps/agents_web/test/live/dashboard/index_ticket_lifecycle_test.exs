@@ -501,6 +501,11 @@ defmodule AgentsWeb.DashboardLive.IndexTicketLifecycleTest do
       html = render(lv)
       refute html =~ ~s(data-testid="start-ticket-session-701")
 
+      # Update DB status so the async task refresh reads the correct state
+      task
+      |> Ecto.Changeset.change(status: "completed")
+      |> Repo.update!()
+
       # Now simulate task completing
       send(lv.pid, {:task_status_changed, task.id, "completed"})
 
@@ -537,6 +542,11 @@ defmodule AgentsWeb.DashboardLive.IndexTicketLifecycleTest do
       # Initially hidden (task is running)
       refute render(lv) =~ ~s(data-testid="start-ticket-session-702")
 
+      # Update DB status so the async task refresh reads the correct state
+      task
+      |> Ecto.Changeset.change(status: "failed")
+      |> Repo.update!()
+
       # Simulate task failure
       send(lv.pid, {:task_status_changed, task.id, "failed"})
 
@@ -571,6 +581,11 @@ defmodule AgentsWeb.DashboardLive.IndexTicketLifecycleTest do
 
       # Initially hidden
       refute render(lv) =~ ~s(data-testid="start-ticket-session-703")
+
+      # Update DB status so the async task refresh reads the correct state
+      task
+      |> Ecto.Changeset.change(status: "cancelled")
+      |> Repo.update!()
 
       # Simulate task cancellation
       send(lv.pid, {:task_status_changed, task.id, "cancelled"})
