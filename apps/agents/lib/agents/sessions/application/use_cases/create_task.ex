@@ -78,36 +78,38 @@ defmodule Agents.Sessions.Application.UseCases.CreateTask do
   end
 
   defp resolve_session(attrs, user_id, session_repo) do
-    cond do
-      # Explicit session_ref_id provided — reuse it
-      Map.has_key?(attrs, :session_ref_id) && attrs[:session_ref_id] ->
-        attrs[:session_ref_id]
+    existing_ref = Map.get(attrs, :session_ref_id)
 
-      # No session yet — create one
-      true ->
-        instruction = attrs[:instruction] || attrs["instruction"]
+    if existing_ref do
+      existing_ref
+    else
+      create_new_session(attrs, user_id, session_repo)
+    end
+  end
 
-        session_attrs = %{
-          user_id: user_id,
-          title: instruction,
-          status: "active",
-          container_status: "pending",
-          image: Map.get(attrs, :image, "perme8-opencode")
-        }
+  defp create_new_session(attrs, user_id, session_repo) do
+    require Logger
 
-        case session_repo.create_session(session_attrs) do
-          {:ok, session} ->
-            session.id
+    instruction = attrs[:instruction] || attrs["instruction"]
 
-          {:error, reason} ->
-            require Logger
+    session_attrs = %{
+      user_id: user_id,
+      title: instruction,
+      status: "active",
+      container_status: "pending",
+      image: Map.get(attrs, :image, "perme8-opencode")
+    }
 
-            Logger.warning(
-              "CreateTask: failed to create session for user #{user_id}: #{inspect(reason)}"
-            )
+    case session_repo.create_session(session_attrs) do
+      {:ok, session} ->
+        session.id
 
-            nil
-        end
+      {:error, reason} ->
+        Logger.warning(
+          "CreateTask: failed to create session for user #{user_id}: #{inspect(reason)}"
+        )
+
+        nil
     end
   end
 
