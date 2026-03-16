@@ -38,6 +38,10 @@ type DraftEntry = {
  * Returns true if a draft entry is stale (older than the TTL).
  * Exported for testability.
  */
+/**
+ * Returns true if a draft entry is stale (older than the TTL).
+ * Exported for testability.
+ */
 export function isStaleDraft(
   entry: DraftEntry | null,
   ttlMs: number = DRAFT_STALE_TTL_MS
@@ -46,15 +50,74 @@ export function isStaleDraft(
   return Date.now() - entry.savedAt > ttlMs
 }
 
+/**
+ * Builds a localStorage key from a scoped key string.
+ * Exported for testability.
+ */
+export function buildStorageKeyFromScope(scopedKey: string | undefined): string {
+  return `sessions:draft:${scopedKey || 'session-form'}`
+}
+
+/**
+ * Switches between draft keys: saves the current value under the old key
+ * and returns the draft text stored under the new key.
+ * Exported for testability.
+ */
+export function switchDraftKey(
+  oldKey: string,
+  newKey: string,
+  currentValue: string,
+  storage: Storage = localStorage
+): string {
+  if (oldKey === newKey) return currentValue
+
+  // Save current value under old key
+  try {
+    if (currentValue.trim() === '') {
+      storage.removeItem(oldKey)
+    } else {
+      const entry: DraftEntry = { text: currentValue, savedAt: Date.now() }
+      storage.setItem(oldKey, JSON.stringify(entry))
+    }
+  } catch {
+    // ignore storage errors
+  }
+
+  // Read from new key
+  try {
+    const raw = storage.getItem(newKey)
+    if (!raw) return ''
+
+    try {
+      const parsed = JSON.parse(raw) as DraftEntry
+      if (parsed.text !== undefined && parsed.savedAt !== undefined) {
+        if (isStaleDraft(parsed)) {
+          storage.removeItem(newKey)
+          return ''
+        }
+        return parsed.text
+      }
+    } catch {
+      // Not JSON — treat as legacy plain string format
+    }
+
+    return raw
+  } catch {
+    return ''
+  }
+}
+
 export class SessionFormHook extends ViewHook<HTMLTextAreaElement> {
   private handleKeydown?: (e: KeyboardEvent) => void
   private handleInput?: () => void
   private handleSubmit?: () => void
   private storageKey = ''
+  private draftKeyObserver?: MutationObserver
 
   private buildStorageKey(): string {
-    const scopedKey = this.el.dataset.draftKey || this.el.id || 'session-form'
-    return `sessions:draft:${scopedKey}`
+    return buildStorageKeyFromScope(
+      this.el.dataset.draftKey || this.el.id || undefined
+    )
   }
 
   private readDraft(): string {
@@ -179,6 +242,36 @@ export class SessionFormHook extends ViewHook<HTMLTextAreaElement> {
       this.clearDraft()
     })
 
+    // Server pushes "switch_draft_key" when the user selects a different ticket.
+    // Saves the current draft under the old key and restores any draft from the new key.
+    // This is the primary mechanism for ticket-scoped draft persistence (works despite phx-update="ignore").
+    this.handleEvent('switch_draft_key', ({ key }: { key: string }) => {
+      const newStorageKey = buildStorageKeyFromScope(key)
+      const restoredText = switchDraftKey(this.storageKey, newStorageKey, this.el.value)
+      this.storageKey = newStorageKey
+      this.el.value = restoredText
+    })
+
+    // MutationObserver fallback: detect data-draft-key attribute changes
+    // in case the push event fails or for programmatic DOM updates.
+    this.draftKeyObserver = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'data-draft-key') {
+          const newScopedKey = this.el.dataset.draftKey || ''
+          const newStorageKey = buildStorageKeyFromScope(newScopedKey || undefined)
+          if (newStorageKey !== this.storageKey) {
+            const restoredText = switchDraftKey(this.storageKey, newStorageKey, this.el.value)
+            this.storageKey = newStorageKey
+            this.el.value = restoredText
+          }
+        }
+      }
+    })
+    this.draftKeyObserver.observe(this.el, {
+      attributes: true,
+      attributeFilter: ['data-draft-key'],
+    })
+
     // Auto-focus on mount
     this.el.focus()
   }
@@ -208,6 +301,10 @@ export class SessionFormHook extends ViewHook<HTMLTextAreaElement> {
     const form = this.el.closest('form')
     if (form && this.handleSubmit) {
       form.removeEventListener('submit', this.handleSubmit)
+    }
+
+    if (this.draftKeyObserver) {
+      this.draftKeyObserver.disconnect()
     }
   }
 }
