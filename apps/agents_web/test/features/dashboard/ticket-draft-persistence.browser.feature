@@ -30,9 +30,10 @@ Feature: Ticket-scoped draft persistence and explicit session-ticket association
     And I wait for network idle
     And I wait for "[data-testid='triage-ticket-item-101']" to be visible
     When I click "[data-testid='triage-ticket-item-101']"
+    And I wait for the URL to contain "tab=ticket"
     And I wait for network idle
     And I wait for "#session-instruction" to be visible
-    And I wait for 2 seconds
+    And I wait for 3 seconds
     Then "#session-instruction" should have value "investigate the SSO provider"
 
   Scenario: Switching between tickets preserves each ticket's draft text
@@ -58,18 +59,19 @@ Feature: Ticket-scoped draft persistence and explicit session-ticket association
     Then "#session-instruction" should have value "add dark mode toggle"
 
   Scenario: Draft text survives server restart (simulated via page reload)
-    Given I wait for "[data-testid='triage-ticket-item-101']" to be visible
-    When I click "[data-testid='triage-ticket-item-101']"
+    Given I wait for "[data-testid='triage-ticket-item-102']" to be visible
+    When I click "[data-testid='triage-ticket-item-102']"
     And I wait for network idle
     And I wait for "#session-instruction" to be visible
     And I fill "#session-instruction" with "check the auth module"
     And I reload the page
     And I wait for network idle
-    And I wait for "[data-testid='triage-ticket-item-101']" to be visible
-    When I click "[data-testid='triage-ticket-item-101']"
+    And I wait for "[data-testid='triage-ticket-item-102']" to be visible
+    When I click "[data-testid='triage-ticket-item-102']"
+    And I wait for the URL to contain "tab=ticket"
     And I wait for network idle
     And I wait for "#session-instruction" to be visible
-    And I wait for 2 seconds
+    And I wait for 3 seconds
     Then "#session-instruction" should have value "check the auth module"
 
   Scenario: Submitting a message clears the draft for that ticket
