@@ -124,9 +124,13 @@ defmodule AgentsWeb.DashboardLive.TicketSessionLinker do
   # -- Private helpers -------------------------------------------------------
 
   defp persist_explicit_ticket_link(ticket_number, task) do
-    session_ref_id = Map.get(task, :session_ref_id) || Map.get(task, :session_id)
+    # session_ref_id is the UUID FK to the sessions table (not the SDK session ID).
+    # It is available on the Task domain entity since it's mapped from TaskSchema.
+    session_ref_id = Map.get(task, :session_ref_id)
 
-    # Link both session and task for backward compatibility
+    # Link both session and task for backward compatibility.
+    # Session linking is the preferred mechanism; task linking will be
+    # phased out once session-based enrichment is verified stable.
     if is_binary(session_ref_id) do
       case Tickets.link_ticket_to_session(ticket_number, session_ref_id) do
         {:ok, _} ->
