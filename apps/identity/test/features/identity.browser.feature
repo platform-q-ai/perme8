@@ -46,7 +46,7 @@ Feature: Identity Browser UI
 
   Scenario: User registers successfully via UI
     Given I navigate to "${baseUrl}/users/register"
-    And I wait for the page to load
+    And I wait for network idle
     When I fill "#user_first_name" with "Bob"
     And I fill "#user_last_name" with "Tester"
     And I fill "#user_email" with "bob.tester@example.com"

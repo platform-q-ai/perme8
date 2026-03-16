@@ -719,7 +719,8 @@ defmodule IdentityWeb.ApiKeysLive do
   end
 
   @impl true
-  def handle_event("select_permission_preset", %{"value" => preset}, socket) do
+  def handle_event("select_permission_preset", %{"value" => preset}, socket)
+      when is_map_key(@preset_scopes, preset) do
     permissions = Map.fetch!(@preset_scopes, preset)
 
     socket =
@@ -729,6 +730,11 @@ defmodule IdentityWeb.ApiKeysLive do
       |> assign(:show_custom_scopes, false)
       |> assign(:show_empty_permissions_warning, false)
 
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("select_permission_preset", %{"value" => _unknown}, socket) do
     {:noreply, socket}
   end
 
