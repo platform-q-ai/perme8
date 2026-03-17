@@ -43,4 +43,13 @@ defmodule Agents.Sessions.Infrastructure.Repositories.InteractionRepository do
     |> InteractionQueries.by_correlation_id(correlation_id)
     |> Repo.one()
   end
+
+  def get_pending_question_by_correlation_id(session_id, correlation_id) do
+    InteractionQueries.base()
+    |> InteractionQueries.for_session(session_id)
+    |> InteractionQueries.by_correlation_id(correlation_id)
+    |> InteractionQueries.by_type("question")
+    |> InteractionQueries.pending()
+    |> Repo.one()
+  end
 end

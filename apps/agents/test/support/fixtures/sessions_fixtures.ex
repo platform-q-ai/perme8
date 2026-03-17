@@ -1,6 +1,6 @@
 defmodule Agents.SessionsFixtures do
   @moduledoc """
-  Test helpers for creating session task entities.
+  Test helpers for creating session and task entities.
   """
 
   use Boundary,
@@ -10,8 +10,33 @@ defmodule Agents.SessionsFixtures do
 
   import Agents.Test.AccountsFixtures
 
-  alias Agents.Sessions.Infrastructure.Schemas.TaskSchema
+  alias Agents.Sessions.Infrastructure.Schemas.{SessionSchema, TaskSchema}
   alias Agents.Repo
+
+  def session_fixture(attrs \\ %{}) do
+    user_id = attrs[:user_id] || user_fixture().id
+
+    changeset_attrs =
+      %{
+        user_id: user_id,
+        title: attrs[:title] || "Test Session",
+        status: attrs[:status] || "active",
+        container_status: attrs[:container_status] || "pending"
+      }
+      |> maybe_put(:container_id, attrs[:container_id])
+      |> maybe_put(:container_port, attrs[:container_port])
+      |> maybe_put(:image, attrs[:image])
+      |> maybe_put(:sdk_session_id, attrs[:sdk_session_id])
+      |> maybe_put(:paused_at, attrs[:paused_at])
+      |> maybe_put(:resumed_at, attrs[:resumed_at])
+
+    {:ok, session} =
+      %SessionSchema{}
+      |> SessionSchema.changeset(changeset_attrs)
+      |> Repo.insert()
+
+    session
+  end
 
   def task_fixture(attrs \\ %{}) do
     user_id = attrs[:user_id] || user_fixture().id
