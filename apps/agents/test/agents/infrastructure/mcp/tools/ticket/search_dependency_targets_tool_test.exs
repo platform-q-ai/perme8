@@ -44,12 +44,13 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.SearchDependencyTargetsToolTest
   end
 
   describe "execute/2" do
-    test "searches tickets by title", %{ticket: ticket} do
+    test "searches tickets by title, excluding by ticket number" do
       frame = build_frame()
 
+      # Exclude ticket 1301 so ticket 1300 IS returned
       assert {:reply, response, ^frame} =
                SearchDependencyTargetsTool.execute(
-                 %{"query" => "Searchable", "exclude_ticket_id" => ticket.id + 100},
+                 %{"query" => "Searchable", "exclude_ticket_number" => 1301},
                  frame
                )
 
@@ -59,17 +60,45 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.SearchDependencyTargetsToolTest
       assert text =~ "Searchable ticket"
     end
 
-    test "returns no matches message when nothing found", %{ticket: ticket} do
+    test "excludes the ticket matching the given number", %{ticket: _ticket} do
       frame = build_frame()
 
+      # Exclude ticket 1300 — searching for "Searchable" should return no results
       assert {:reply, response, ^frame} =
                SearchDependencyTargetsTool.execute(
-                 %{"query" => "nonexistent", "exclude_ticket_id" => ticket.id},
+                 %{"query" => "Searchable", "exclude_ticket_number" => 1300},
                  frame
                )
 
       assert [%{"text" => text}] = response.content
       assert text =~ "No matching tickets found"
+    end
+
+    test "returns no matches message when nothing found", %{ticket: _ticket} do
+      frame = build_frame()
+
+      assert {:reply, response, ^frame} =
+               SearchDependencyTargetsTool.execute(
+                 %{"query" => "nonexistent", "exclude_ticket_number" => 1300},
+                 frame
+               )
+
+      assert [%{"text" => text}] = response.content
+      assert text =~ "No matching tickets found"
+    end
+
+    test "returns error when excluded ticket number does not exist" do
+      frame = build_frame()
+
+      assert {:reply, response, ^frame} =
+               SearchDependencyTargetsTool.execute(
+                 %{"query" => "test", "exclude_ticket_number" => 999_999},
+                 frame
+               )
+
+      assert %Hermes.Server.Response{isError: true} = response
+      assert [%{"text" => text}] = response.content
+      assert text =~ "not found"
     end
 
     test "denies execution when scope is missing" do
@@ -83,7 +112,7 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.SearchDependencyTargetsToolTest
 
       assert {:reply, response, ^frame} =
                SearchDependencyTargetsTool.execute(
-                 %{"query" => "test", "exclude_ticket_id" => 1},
+                 %{"query" => "test", "exclude_ticket_number" => 1},
                  frame
                )
 
