@@ -54,11 +54,11 @@ defmodule Agents.Sessions.Application.UseCases.CreateInteraction do
   end
 
   defp mark_question_delivered(session_id, correlation_id, interaction_repo) do
-    case interaction_repo.get_by_correlation_id(session_id, correlation_id) do
-      %{type: "question", status: "pending"} = question ->
+    case interaction_repo.get_pending_question_by_correlation_id(session_id, correlation_id) do
+      %{} = question ->
         interaction_repo.update_status(question, %{status: "delivered"})
 
-      _ ->
+      nil ->
         :ok
     end
   end
