@@ -16,6 +16,7 @@ defmodule Agents.Sessions.Domain do
       Entities.TodoItem,
       Entities.TodoList,
       Entities.Session,
+      Entities.SessionRecord,
       Entities.QueueSnapshot,
       Entities.LaneEntry,
       Entities.Interaction,

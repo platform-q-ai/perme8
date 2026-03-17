@@ -46,12 +46,35 @@ defmodule Agents.Sessions.Infrastructure.StartupReconciliation do
     # Query sessions with active container statuses directly via Ecto
     import Ecto.Query, warn: false
     alias Agents.Sessions.Infrastructure.Schemas.SessionSchema
+    alias Agents.Sessions.Domain.Entities.SessionRecord
 
     try do
-      from(s in SessionSchema,
-        where: s.container_status in ^@active_container_statuses
-      )
-      |> Agents.Repo.all()
+      schemas =
+        from(s in SessionSchema,
+          where: s.container_status in ^@active_container_statuses
+        )
+        |> Agents.Repo.all()
+
+      # Convert to domain records so they match the session_repo contract.
+      # If using the real SessionRepository, its callbacks already return
+      # SessionRecord, but here we query directly for efficiency.
+      Enum.map(schemas, fn schema ->
+        SessionRecord.new(%{
+          id: schema.id,
+          user_id: schema.user_id,
+          title: schema.title,
+          status: schema.status,
+          container_id: schema.container_id,
+          container_port: schema.container_port,
+          container_status: schema.container_status,
+          image: schema.image,
+          sdk_session_id: schema.sdk_session_id,
+          paused_at: schema.paused_at,
+          resumed_at: schema.resumed_at,
+          inserted_at: schema.inserted_at,
+          updated_at: schema.updated_at
+        })
+      end)
     rescue
       _ -> []
     end
