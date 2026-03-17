@@ -37,6 +37,10 @@ Mox.defmock(Agents.Mocks.TaskRepositoryMock,
   for: Agents.Sessions.Application.Behaviours.TaskRepositoryBehaviour
 )
 
+Mox.defmock(Agents.Mocks.SessionRepositoryMock,
+  for: Agents.Sessions.Application.Behaviours.SessionRepositoryBehaviour
+)
+
 Mox.defmock(Agents.Mocks.GithubTicketClientMock,
   for: Agents.Application.Behaviours.GithubTicketClientBehaviour
 )
