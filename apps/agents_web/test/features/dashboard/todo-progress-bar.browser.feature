@@ -99,5 +99,5 @@ Feature: Agent Session Todo Progress Bar
     And I wait for 1 seconds
     Then "[data-testid='session-todo-progress']" should exist
 
-  # Scenario: Progress bar updates active step during live execution — removed, requires live agent runtime (see ticket)
-  # Scenario: Progress bar resets when the agent replaces the todo list — removed, requires live agent runtime (see ticket)
+  # Scenario: Progress bar updates active step during live execution — removed, requires live agent runtime (see #488)
+  # Scenario: Progress bar resets when the agent replaces the todo list — removed, requires live agent runtime (see #488)

@@ -36,7 +36,7 @@ Feature: Coding Sessions Management
     Then "form#sidebar-new-ticket-form" should exist
     And "textarea#sidebar-new-ticket-instruction" should exist
 
-  # Scenario: Sessions page shows empty state when no sessions exist — removed, empty state text not yet implemented (see ticket)
+  # Scenario: Sessions page shows empty state when no sessions exist — removed, empty state text not yet implemented (see #488)
 
   # ---------------------------------------------------------------------------
   # Instruction Forms

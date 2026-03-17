@@ -297,7 +297,7 @@ Feature: Agents REST API
   # Agent Query — POST /api/agents/:id/query
   # ===========================================================================
 
-  # Scenario: Query agent successfully — removed, requires live LLM backend (see ticket #XXX)
+  # Scenario: Query agent successfully — removed, requires live LLM backend (see #487)
 
   Scenario: Query agent without authentication is rejected
     When I POST to "/api/agents/00000000-0000-0000-0000-000000000000/query" with body:
@@ -360,4 +360,4 @@ Feature: Agents REST API
     And the response body should be valid JSON
     And the response body path "$.error" should equal "question is required"
 
-  # Scenario: Query agent with optional context — removed, requires live LLM backend (see ticket #XXX)
+  # Scenario: Query agent with optional context — removed, requires live LLM backend (see #487)

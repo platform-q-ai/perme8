@@ -35,7 +35,7 @@ Feature: Queued Messages in Sessions
     Then I should see "Follow-up instruction"
     And I should see "Queued"
 
-  # Scenario: Queued message has muted visual styling — removed, data-testid='queued-message' not yet implemented (see ticket)
+  # Scenario: Queued message has muted visual styling — removed, data-testid='queued-message' not yet implemented (see #488)
 
   Scenario: Multiple queued messages shown in submission order
     Given I navigate to "${baseUrl}/sessions"
