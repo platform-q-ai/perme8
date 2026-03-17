@@ -60,6 +60,73 @@ defmodule Agents.Sessions.Domain.Entities.SessionRecordTest do
     end
   end
 
+  describe "from_schema/1" do
+    test "returns nil for nil input" do
+      assert is_nil(SessionRecord.from_schema(nil))
+    end
+
+    test "converts a schema-like struct to a SessionRecord" do
+      # Simulate a schema struct with all persistence fields
+      schema = %{
+        __struct__: SomeSchema,
+        id: "550e8400-e29b-41d4-a716-446655440000",
+        user_id: "660e8400-e29b-41d4-a716-446655440000",
+        title: "Fix the build",
+        status: "active",
+        container_id: "abc123",
+        container_port: 8080,
+        container_status: "running",
+        image: "perme8-opencode",
+        sdk_session_id: "sdk-123",
+        paused_at: ~U[2026-01-01 12:00:00Z],
+        resumed_at: ~U[2026-01-02 12:00:00Z],
+        inserted_at: ~U[2026-01-01 10:00:00Z],
+        updated_at: ~U[2026-01-01 11:00:00Z]
+      }
+
+      record = SessionRecord.from_schema(schema)
+
+      assert %SessionRecord{} = record
+      assert record.id == "550e8400-e29b-41d4-a716-446655440000"
+      assert record.user_id == "660e8400-e29b-41d4-a716-446655440000"
+      assert record.title == "Fix the build"
+      assert record.status == "active"
+      assert record.container_id == "abc123"
+      assert record.container_port == 8080
+      assert record.container_status == "running"
+      assert record.image == "perme8-opencode"
+      assert record.sdk_session_id == "sdk-123"
+      assert record.paused_at == ~U[2026-01-01 12:00:00Z]
+      assert record.resumed_at == ~U[2026-01-02 12:00:00Z]
+      assert record.inserted_at == ~U[2026-01-01 10:00:00Z]
+      assert record.updated_at == ~U[2026-01-01 11:00:00Z]
+      assert is_nil(record.task_count)
+    end
+
+    test "captures task_count virtual field when present" do
+      schema = %{
+        __struct__: SomeSchema,
+        id: "550e8400-e29b-41d4-a716-446655440000",
+        user_id: "660e8400-e29b-41d4-a716-446655440000",
+        title: "Test",
+        status: "active",
+        container_id: nil,
+        container_port: nil,
+        container_status: "pending",
+        image: "perme8-opencode",
+        sdk_session_id: nil,
+        paused_at: nil,
+        resumed_at: nil,
+        inserted_at: ~U[2026-01-01 10:00:00Z],
+        updated_at: ~U[2026-01-01 10:00:00Z],
+        task_count: 5
+      }
+
+      record = SessionRecord.from_schema(schema)
+      assert record.task_count == 5
+    end
+  end
+
   describe "struct" do
     test "has all persistence fields" do
       fields = SessionRecord.__struct__() |> Map.keys() |> MapSet.new()

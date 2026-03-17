@@ -28,7 +28,7 @@ defmodule Agents.Sessions.Infrastructure.Repositories.SessionRepository do
   def get_session(id) do
     SessionSchema
     |> Repo.get(id)
-    |> to_record()
+    |> SessionRecord.from_schema()
   end
 
   @impl true
@@ -37,7 +37,7 @@ defmodule Agents.Sessions.Infrastructure.Repositories.SessionRepository do
     |> SessionQueries.by_id(id)
     |> SessionQueries.for_user(user_id)
     |> Repo.one()
-    |> to_record()
+    |> SessionRecord.from_schema()
   end
 
   @impl true
@@ -66,7 +66,7 @@ defmodule Agents.Sessions.Infrastructure.Repositories.SessionRepository do
     |> SessionQueries.recent_first()
     |> SessionQueries.limit(limit)
     |> Repo.all()
-    |> Enum.map(&to_record/1)
+    |> Enum.map(&SessionRecord.from_schema/1)
   end
 
   @impl true
@@ -87,40 +87,11 @@ defmodule Agents.Sessions.Infrastructure.Repositories.SessionRepository do
     SessionQueries.base()
     |> SessionQueries.by_container_id(container_id)
     |> Repo.one()
-    |> to_record()
+    |> SessionRecord.from_schema()
   end
 
   # -- Private helpers --
 
-  defp map_result({:ok, schema}), do: {:ok, to_record(schema)}
+  defp map_result({:ok, schema}), do: {:ok, SessionRecord.from_schema(schema)}
   defp map_result({:error, _} = error), do: error
-
-  defp to_record(nil), do: nil
-
-  defp to_record(%SessionSchema{} = schema) do
-    attrs = %{
-      id: schema.id,
-      user_id: schema.user_id,
-      title: schema.title,
-      status: schema.status,
-      container_id: schema.container_id,
-      container_port: schema.container_port,
-      container_status: schema.container_status,
-      image: schema.image,
-      sdk_session_id: schema.sdk_session_id,
-      paused_at: schema.paused_at,
-      resumed_at: schema.resumed_at,
-      inserted_at: schema.inserted_at,
-      updated_at: schema.updated_at
-    }
-
-    # Include virtual fields from query projections (e.g., with_task_count)
-    attrs =
-      case Map.get(schema, :task_count) do
-        nil -> attrs
-        count -> Map.put(attrs, :task_count, count)
-      end
-
-    SessionRecord.new(attrs)
-  end
 end

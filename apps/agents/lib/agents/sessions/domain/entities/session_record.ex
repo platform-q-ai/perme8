@@ -47,4 +47,33 @@ defmodule Agents.Sessions.Domain.Entities.SessionRecord do
   @doc "Creates a new SessionRecord from a map of attributes."
   @spec new(map()) :: t()
   def new(attrs) when is_map(attrs), do: struct(__MODULE__, attrs)
+
+  @doc """
+  Builds a SessionRecord from an Ecto schema struct.
+
+  Extracts persistence fields from the schema, including virtual fields
+  injected by query projections (e.g., `task_count` from `with_task_count`).
+  Returns `nil` when given `nil`.
+  """
+  @spec from_schema(struct() | nil) :: t() | nil
+  def from_schema(nil), do: nil
+
+  def from_schema(schema) do
+    new(%{
+      id: schema.id,
+      user_id: schema.user_id,
+      title: schema.title,
+      status: schema.status,
+      container_id: schema.container_id,
+      container_port: schema.container_port,
+      container_status: schema.container_status,
+      image: schema.image,
+      sdk_session_id: schema.sdk_session_id,
+      paused_at: schema.paused_at,
+      resumed_at: schema.resumed_at,
+      inserted_at: schema.inserted_at,
+      updated_at: schema.updated_at,
+      task_count: Map.get(schema, :task_count)
+    })
+  end
 end
