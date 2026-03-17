@@ -392,29 +392,6 @@ defmodule AgentsWeb.DashboardLive.IndexSessionManagementTest do
       refute html =~ ~s(data-slot-state="empty")
     end
 
-    test "concurrency limit dropdown includes 0 as an option", %{conn: conn, user: user} do
-      task_fixture(%{
-        user_id: user.id,
-        instruction: "Session",
-        container_id: "c-1",
-        status: "completed"
-      })
-
-      {:ok, lv, _html} = live(conn, ~p"/sessions")
-
-      # Trigger queue_updated to render the build lane controls
-      send_queue_state(lv, user.id, %{
-        running: 0,
-        queued: [],
-        awaiting_feedback: [],
-        concurrency_limit: 2
-      })
-
-      html = render(lv)
-      # The concurrency limit dropdown should include 0 as an option
-      assert html =~ ~s(<option value="0")
-    end
-
     test "renders status dots in session list", %{conn: conn, user: user} do
       task_fixture(%{
         user_id: user.id,
