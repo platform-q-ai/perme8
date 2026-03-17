@@ -44,7 +44,6 @@ defmodule AgentsWeb.DashboardLive.Components.SessionComponents do
 
   defdelegate status_badge(assigns), to: AgentsWeb.DashboardLive.Components.TicketCardComponent
   defdelegate status_dot(assigns), to: AgentsWeb.DashboardLive.Components.TicketCardComponent
-  defdelegate queue_panel(assigns), to: AgentsWeb.DashboardLive.Components.TicketCardComponent
 
   defdelegate container_stats_bars(assigns),
     to: AgentsWeb.DashboardLive.Components.TicketCardComponent

@@ -7,8 +7,6 @@
 import { SessionLogHook } from './presentation/hooks/session-log-hook'
 import { SessionFormHook } from './presentation/hooks/session-form-hook'
 import { SessionOptimisticStateHook } from './presentation/hooks/session-optimistic-state-hook'
-import { ConcurrencyLimitHook } from './presentation/hooks/concurrency-limit-hook'
-import { WarmCacheLimitHook } from './presentation/hooks/warm-cache-limit-hook'
 import { TriageLaneDndHook } from './presentation/hooks/triage-lane-dnd-hook'
 import { DurationTimerHook } from './presentation/hooks/duration-timer-hook'
 
@@ -16,8 +14,6 @@ export {
   SessionLogHook as SessionLog,
   SessionFormHook as SessionForm,
   SessionOptimisticStateHook as SessionOptimisticState,
-  ConcurrencyLimitHook as ConcurrencyLimit,
-  WarmCacheLimitHook as WarmCacheLimit,
   TriageLaneDndHook as TriageLaneDnd,
   DurationTimerHook as DurationTimer
 }
@@ -26,8 +22,6 @@ export default {
   SessionLog: SessionLogHook,
   SessionForm: SessionFormHook,
   SessionOptimisticState: SessionOptimisticStateHook,
-  ConcurrencyLimit: ConcurrencyLimitHook,
-  WarmCacheLimit: WarmCacheLimitHook,
   TriageLaneDnd: TriageLaneDndHook,
   DurationTimer: DurationTimerHook
 }
