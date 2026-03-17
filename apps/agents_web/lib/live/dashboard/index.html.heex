@@ -1,7 +1,10 @@
 <Layouts.admin flash={@flash} current_scope={@current_scope} full_width={true}>
-  <div class="flex flex-1 min-h-0">
+  <div class="flex flex-col lg:flex-row flex-1 min-h-0">
     <%!-- Left Panel: Session List --%>
-    <div class="w-1/2 shrink-0 border-r border-base-300 flex flex-col bg-base-100">
+    <div class={[
+      "lg:w-1/2 lg:shrink-0 border-r border-base-300 flex flex-col bg-base-100",
+      if(@mobile_panel == :detail, do: "hidden lg:flex", else: "flex-1 lg:flex-initial")
+    ]}>
       <.sidebar_header
         syncing_tickets={@syncing_tickets}
         auth_refreshing={@auth_refreshing}
@@ -224,7 +227,7 @@
               else: 0
             ) %>
 
-          <div class="flex-1 min-h-0 grid grid-cols-2 gap-2 p-2 w-full h-full items-stretch">
+          <div class="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-2 gap-2 p-2 w-full h-full items-stretch">
             <.triage_column
               non_ticket_triage_sessions={non_ticket_triage_sessions}
               idle_tickets={idle_tickets}
@@ -277,7 +280,21 @@
         else: [%{id: "chat", label: "Chat"}] %>
 
     <%!-- Right Panel: Active Session Detail --%>
-    <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+    <div class={[
+      "flex-1 flex flex-col min-w-0 overflow-hidden",
+      if(@mobile_panel == :list, do: "hidden lg:flex", else: "flex")
+    ]}>
+      <%!-- Mobile back button (visible only on small screens) --%>
+      <button
+        type="button"
+        phx-click="show_mobile_panel"
+        phx-value-panel="list"
+        class="lg:hidden flex items-center gap-1 px-3 py-2 text-sm text-base-content/70 hover:text-base-content border-b border-base-300 bg-base-100"
+      >
+        <.icon name="hero-chevron-left" class="size-4" />
+        <span>Sessions</span>
+      </button>
+
       <%= if @active_container_id || @current_task || @composing_new do %>
         <.session_detail_header
           current_task={@current_task}

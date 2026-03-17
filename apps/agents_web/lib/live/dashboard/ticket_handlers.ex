@@ -102,6 +102,7 @@ defmodule AgentsWeb.DashboardLive.TicketHandlers do
        socket
        |> assign(:active_ticket_number, number)
        |> assign(:composing_new, false)
+       |> assign(:mobile_panel, :detail)
        |> assign(:events, [])
        |> assign_session_state()
        |> push_patch(
@@ -114,6 +115,7 @@ defmodule AgentsWeb.DashboardLive.TicketHandlers do
        |> assign(:active_container_id, nil)
        |> assign(:current_task, nil)
        |> assign(:composing_new, true)
+       |> assign(:mobile_panel, :detail)
        |> assign(:events, [])
        |> assign_session_state()
        |> push_patch(to: ~p"/sessions?#{%{new: true, tab: "ticket", ticket: number}}")

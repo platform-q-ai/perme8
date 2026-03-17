@@ -87,6 +87,7 @@ defmodule AgentsWeb.DashboardLive.Index do
      |> assign(:selected_dependency_target, nil)
      |> assign(:dependency_direction, nil)
      |> assign_session_state()
+     |> assign(:mobile_panel, :list)
      |> assign(:form, to_form(%{"instruction" => ""}))}
   end
 
@@ -221,6 +222,14 @@ defmodule AgentsWeb.DashboardLive.Index do
   @impl true
   def handle_event("remove_dependency", params, socket),
     do: DependencyHandlers.remove_dependency(params, socket)
+
+  # -- Mobile Panel Toggle ------------------------------------------------------
+
+  @impl true
+  def handle_event("show_mobile_panel", %{"panel" => panel}, socket) do
+    panel_atom = if panel == "detail", do: :detail, else: :list
+    {:noreply, assign(socket, :mobile_panel, panel_atom)}
+  end
 
   # -- Session Handlers --------------------------------------------------------
 
