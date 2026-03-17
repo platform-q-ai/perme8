@@ -1,14 +1,8 @@
 defmodule Agents.Sessions.Infrastructure.Repositories.SessionRepositoryTest do
-  use ExUnit.Case, async: true
+  use Agents.DataCase, async: true
 
   alias Agents.Sessions.Domain.Entities.SessionRecord
   alias Agents.Sessions.Infrastructure.Repositories.SessionRepository
-  alias Agents.Sessions.Infrastructure.Schemas.SessionSchema
-
-  setup do
-    :ok = Ecto.Adapters.SQL.Sandbox.checkout(Agents.Repo)
-    :ok
-  end
 
   @user_id Ecto.UUID.generate()
 
