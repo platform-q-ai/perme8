@@ -30,7 +30,7 @@ Feature: Lightweight Container Image Selection and Queue Bypass
     And I have 1 running light image task
     When I create a new task with the "OpenCode" image
     Then the new task should start with status "pending"
-    And the queue panel should not count the light image task against the concurrency limit
+    And the light image task should not count against the concurrency limit
 
   Scenario: Multiple light image tasks can run simultaneously regardless of concurrency limit
     Given the concurrency limit is 1

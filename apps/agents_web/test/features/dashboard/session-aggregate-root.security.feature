@@ -111,9 +111,8 @@ Feature: Session aggregate root security
   # Security Headers and Transport
   # ---------------------------------------------------------------------------
 
-  # NOTE: General security headers for the sessions page are already covered
-  # in queue-orchestration.security.feature. This scenario focuses specifically
-  # on API responses not leaking server version information.
+  # NOTE: This scenario focuses specifically on API responses not leaking
+  # server version information.
 
   Scenario: Session API responses do not leak server version information
     Given I am authenticated

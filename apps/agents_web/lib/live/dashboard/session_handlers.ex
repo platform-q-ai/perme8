@@ -179,33 +179,6 @@ defmodule AgentsWeb.DashboardLive.SessionHandlers do
     {:noreply, push_patch(socket, to: ~p"/sessions?#{params}")}
   end
 
-  def update_concurrency_limit(%{"concurrency_limit" => limit_str}, socket) do
-    user = socket.assigns.current_scope.user
-
-    case Integer.parse(limit_str) do
-      {limit, ""} when limit >= 0 and limit <= 5 ->
-        Sessions.set_concurrency_limit(user.id, limit)
-        # Queue state will be updated via PubSub broadcast from QueueOrchestrator
-        {:noreply, socket}
-
-      _ ->
-        {:noreply, socket}
-    end
-  end
-
-  def update_warm_cache_limit(%{"warm_cache_limit" => limit_str}, socket) do
-    user = socket.assigns.current_scope.user
-
-    case Integer.parse(limit_str) do
-      {limit, ""} when limit >= 0 and limit <= 5 ->
-        Sessions.set_warm_cache_limit(user.id, limit)
-        {:noreply, socket}
-
-      _ ->
-        {:noreply, socket}
-    end
-  end
-
   def pause_session(%{"task-id" => task_id}, socket) do
     user = socket.assigns.current_scope.user
 
