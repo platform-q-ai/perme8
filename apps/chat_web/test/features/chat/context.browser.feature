@@ -32,7 +32,6 @@ Feature: Chat Context Integration
     And I wait for "div#chat-panel-content" to be visible
     Then I should see "Ask me anything about this document"
 
-  @wip
   Scenario: Send message with document context and receive response
     Given I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
     And I wait for network idle
@@ -44,7 +43,6 @@ Feature: Chat Context Integration
     And I wait for "div.chat.chat-start" to be visible
     Then "div.chat.chat-start" should be visible
 
-  @wip
   Scenario: Chat without document context works from general page
     Given I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}"
     And I wait for network idle

@@ -32,6 +32,7 @@ defmodule AgentsWeb.DashboardLive.SessionHandlers do
      |> assign(:active_container_id, nil)
      |> assign(:current_task, nil)
      |> assign(:composing_new, true)
+     |> assign(:mobile_panel, :detail)
      |> assign(:selected_image, Sessions.default_image())
      |> assign(:events, [])
      |> assign_session_state()
@@ -52,6 +53,7 @@ defmodule AgentsWeb.DashboardLive.SessionHandlers do
      socket
      |> assign(:active_ticket_number, active_ticket_number)
      |> assign(:composing_new, false)
+     |> assign(:mobile_panel, :detail)
      |> assign(:events, [])
      |> assign_session_state()
      |> clear_form()

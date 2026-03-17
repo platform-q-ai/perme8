@@ -1,5 +1,5 @@
-# Exclude evaluation tests and WIP features by default
-ExUnit.start(exclude: [:evaluation, :wip], capture_log: true)
+# Exclude evaluation tests by default
+ExUnit.start(exclude: [:evaluation], capture_log: true)
 
 # Jarga.Repo delegates to Identity.Repo via default_dynamic_repo in test mode,
 # so only Identity.Repo needs sandbox mode set here.

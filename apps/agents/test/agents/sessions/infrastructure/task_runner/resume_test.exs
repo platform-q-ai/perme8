@@ -407,14 +407,6 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.ResumeTest do
 
     {:ok, pid} = GenServer.start(TaskRunner, {task.id, resume_opts})
 
-    on_exit(fn ->
-      try do
-        if Process.alive?(pid), do: GenServer.stop(pid, :normal, 5_000)
-      rescue
-        _ -> :ok
-      end
-    end)
-
     assert_receive {:output_flushed, output_json}, 5000
     assert {:ok, output_parts} = Jason.decode(output_json)
 
@@ -423,6 +415,17 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.ResumeTest do
                part["text"] == "Follow-up after reconnect" and
                part["pending"] == true
            end)
+
+    # Wait for the full resume flow to complete (:restart_container ->
+    # :wait_for_health_resume -> :send_prompt) so that all mock calls
+    # finish while the test process is alive and Mox stubs are accessible.
+    # Without this, the test process exits, NimbleOwnership switches from
+    # shared mode to private mode, and any mock calls the GenServer makes
+    # after that point raise Mox.UnexpectedCallError.
+    assert_receive {:task_status_changed, _, "starting"}, 5000
+    assert_receive {:task_status_changed, _, "running"}, 5000
+
+    GenServer.stop(pid, :normal, 5_000)
   end
 
   defp session_status(status) do

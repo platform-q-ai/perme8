@@ -36,11 +36,7 @@ Feature: Coding Sessions Management
     Then "form#sidebar-new-ticket-form" should exist
     And "textarea#sidebar-new-ticket-instruction" should exist
 
-  @wip
-  Scenario: Sessions page shows empty state when no sessions exist
-    When I navigate to "${baseUrl}/sessions"
-    And I wait for network idle
-    Then I should see "No sessions yet"
+  # Scenario: Sessions page shows empty state when no sessions exist — removed, empty state text not yet implemented (see #488)
 
   # ---------------------------------------------------------------------------
   # Instruction Forms

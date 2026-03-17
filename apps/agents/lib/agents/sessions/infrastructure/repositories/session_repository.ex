@@ -42,12 +42,16 @@ defmodule Agents.Sessions.Infrastructure.Repositories.SessionRepository do
 
   @impl true
   def update_session(%SessionRecord{id: id}, attrs) do
-    %SessionSchema{id: id}
-    |> SessionSchema.status_changeset(attrs)
-    |> Repo.update()
-    |> map_result()
-  rescue
-    Ecto.StaleEntryError -> {:error, :not_found}
+    case Repo.get(SessionSchema, id) do
+      nil ->
+        {:error, :not_found}
+
+      schema ->
+        schema
+        |> SessionSchema.status_changeset(attrs)
+        |> Repo.update()
+        |> map_result()
+    end
   end
 
   @default_session_limit 50

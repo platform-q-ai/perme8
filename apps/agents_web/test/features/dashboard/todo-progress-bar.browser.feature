@@ -99,20 +99,5 @@ Feature: Agent Session Todo Progress Bar
     And I wait for 1 seconds
     Then "[data-testid='session-todo-progress']" should exist
 
-  @wip
-  Scenario: Progress bar updates active step during live execution
-    # Requires live agent runtime and real-time PubSub transitions; cannot be
-    # reliably triggered from static browser fixtures in early-pipeline mode.
-    When I click "[data-testid='session-item-live-todo-run']"
-    And I wait for network idle
-    Then "[data-testid='todo-step-2']" should have class "is-in-progress"
-    And "[data-testid='todo-progress-summary']" should contain text "steps complete"
-
-  @wip
-  Scenario: Progress bar resets when the agent replaces the todo list
-    # Requires live agent interaction to replace one todo list with another in
-    # the same session; static seeded state cannot verify replacement behavior.
-    When I click "[data-testid='session-item-live-todo-replaced']"
-    And I wait for network idle
-    Then there should be 3 "[data-testid^='todo-step-']" elements
-    And "[data-testid='todo-progress-summary']" should have text "0/3 steps complete"
+  # Scenario: Progress bar updates active step during live execution — removed, requires live agent runtime (see #488)
+  # Scenario: Progress bar resets when the agent replaces the todo list — removed, requires live agent runtime (see #488)

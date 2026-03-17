@@ -1422,7 +1422,7 @@ npx cucumber-js --tags "@smoke or @regression"
 npx cucumber-js --tags "not @slow"
 
 # Complex expressions
-npx cucumber-js --tags "(@api or @web) and not @wip"
+npx cucumber-js --tags "(@api or @web) and not @slow"
 ```
 
 ### 9.3 Parallel Execution

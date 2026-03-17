@@ -36,7 +36,6 @@ Feature: Chat Agent Selection
   Scenario: Agent selector contains agent options
     Then "select#agent-selector option" should exist
 
-  @wip
   Scenario: Agent selection persists after navigating away and back
     When I select "${agentName}" from "select#agent-selector"
     And I wait for network idle
@@ -50,7 +49,6 @@ Feature: Chat Agent Selection
     And I wait for "div#chat-panel-content" to be visible
     Then "select#agent-selector" should be visible
 
-  @wip
   Scenario: Sending message with selected agent gets response
     When I select "${agentName}" from "select#agent-selector"
     And I fill "textarea#chat-input" with "Hello agent"

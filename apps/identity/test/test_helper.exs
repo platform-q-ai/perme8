@@ -1,4 +1,4 @@
-# Exclude evaluation tests, browser-based tests, and WIP features by default
-ExUnit.start(exclude: [:evaluation, :javascript, :wip], capture_log: true)
+# Exclude evaluation tests and browser-based tests by default
+ExUnit.start(exclude: [:evaluation, :javascript], capture_log: true)
 
 Ecto.Adapters.SQL.Sandbox.mode(Identity.Repo, :manual)

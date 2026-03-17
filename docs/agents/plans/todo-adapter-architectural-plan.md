@@ -46,8 +46,8 @@ The implementation plan is designed to satisfy all scenarios in `todo-progress-b
 | Progress bar hidden when no todo list | `todo-progress` should not exist | Phase 2: conditional rendering on empty todo_items |
 | Progress bar persists after page reload | Summary text matches before/after reload | Phase 1: DB persistence + Phase 2: reconnect restoration |
 | Completed session shows final todo state | `todo-progress` exists, summary contains "steps complete" | Phase 1: final flush + Phase 2: reconnect restoration |
-| @wip: Live execution updates | Real-time PubSub → LiveView updates | Phase 1: TaskRunner broadcast + Phase 2: LiveView handler |
-| @wip: Todo list replacement | Reset to new list | Phase 1: TaskRunner replaces todo_items on new list |
+| Live execution updates | Real-time PubSub → LiveView updates | Phase 1: TaskRunner broadcast + Phase 2: LiveView handler |
+| Todo list replacement | Reset to new list | Phase 1: TaskRunner replaces todo_items on new list |
 
 ---
 
