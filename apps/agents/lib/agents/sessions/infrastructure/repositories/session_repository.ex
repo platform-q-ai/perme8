@@ -46,6 +46,8 @@ defmodule Agents.Sessions.Infrastructure.Repositories.SessionRepository do
     |> SessionSchema.status_changeset(attrs)
     |> Repo.update()
     |> map_result()
+  rescue
+    Ecto.StaleEntryError -> {:error, :not_found}
   end
 
   @default_session_limit 50
@@ -68,6 +70,8 @@ defmodule Agents.Sessions.Infrastructure.Repositories.SessionRepository do
     %SessionSchema{id: id}
     |> Repo.delete()
     |> map_result()
+  rescue
+    Ecto.StaleEntryError -> {:error, :not_found}
   end
 
   @impl true
