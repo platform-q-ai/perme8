@@ -64,7 +64,6 @@ Main sessions interface for running coding tasks in ephemeral opencode container
 | `SessionLog` | `assets/js/presentation/hooks/session-log-hook.ts` | Auto-scrolls event log using MutationObserver |
 | `SessionForm` | `assets/js/presentation/hooks/session-form-hook.ts` | Enter-to-submit, Shift+Enter-for-newline, draft persistence with staleness TTL |
 | `SessionOptimisticState` | `assets/js/presentation/hooks/session-optimistic-state-hook.ts` | localStorage bridge for optimistic queue state with staleness TTL |
-| `ConcurrencyLimit` | `assets/js/presentation/hooks/concurrency-limit-hook.ts` | Synchronizes queue concurrency selector with LiveView events |
 
 ## Architectural Patterns
 

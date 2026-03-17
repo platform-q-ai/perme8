@@ -123,9 +123,3 @@ Feature: Session lifecycle state display in Sessions UI
     Then "[data-testid='triage-ticket-item']:first-child [data-testid='ticket-lifecycle-state']" should have text "Queued (cold)"
     And "[data-testid='triage-ticket-item']:first-child [data-testid='ticket-status-running']" should not exist
 
-  Scenario: Queue lane shows lifecycle-aware warm state indicator
-    Given I navigate to "${baseUrl}/sessions?fixture=session_lifecycle_queue_indicators"
-    And I wait for network idle
-    Then "[data-testid='lane-cold'] [data-testid='warm-state-indicator-cold']" should exist
-    And "[data-testid='lane-warming'] [data-testid='warm-state-indicator-warming']" should exist
-    And "[data-testid='lane-warm'] [data-testid='warm-state-indicator-warm']" should exist
