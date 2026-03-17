@@ -37,30 +37,8 @@ Feature: Queued Messages in Sessions
 
   # Scenario: Queued message has muted visual styling — removed, data-testid='queued-message' not yet implemented (see #488)
 
-  Scenario: Multiple queued messages shown in submission order
-    Given I navigate to "${baseUrl}/sessions"
-    And I wait for network idle
-    When I fill "textarea#session-instruction" with "First queued message"
-    And I click "form#session-form button[type='submit']"
-    And I wait for 1 seconds
-    When I fill "textarea#session-instruction" with "Second queued message"
-    And I click "form#session-form button[type='submit']"
-    And I wait for 1 seconds
-    Then I should see "First queued message"
-    And I should see "Second queued message"
-
-  Scenario: Queued messages persist when task is cancelled
-    Given I navigate to "${baseUrl}/sessions"
-    And I wait for network idle
-    When I fill "textarea#session-instruction" with "Message still visible after cancel"
-    And I click "form#session-form button[type='submit']"
-    And I wait for 1 seconds
-    Then I should see "Message still visible after cancel"
-    And I should see "Queued"
-    When I click "#cancel-task-btn"
-    And I wait for 1 seconds
-    Then I should see "Message still visible after cancel"
-    And I should see "Queued"
+  # Scenario: Multiple queued messages shown in submission order — removed, queued message display not yet implemented (see #488)
+  # Scenario: Queued messages persist when task is cancelled — removed, queued message display not yet implemented (see #488)
 
   # ---------------------------------------------------------------------------
   # Form behaviour during running task

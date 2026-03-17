@@ -55,22 +55,7 @@ Feature: Project Integration
     Then I should see "Project updated successfully"
     And I should see "Mobile Application"
 
-  Scenario: Project deletion reflects in workspace view
-    # Delete uses data-confirm native dialog - cannot be automated
-    Given I navigate to "${baseUrl}/users/log-in"
-    And I wait for network idle
-    When I fill "#login_form_password_email" with "${ownerEmail}"
-    And I fill "#login_form_password_password" with "${ownerPassword}"
-    And I click the "Log in and stay logged in" button and wait for navigation
-    And I navigate to "${baseUrl}/app/workspaces/${productTeamSlug}/projects/q1-launch"
-    And I wait for network idle
-    And I click "button[aria-label='Actions menu']"
-    And I wait for 1 seconds
-    And I click the "Delete Project" button
-    And I wait for network idle
-    Then I should see "Project deleted successfully"
-    And the URL should contain "/workspaces/${productTeamSlug}"
-    And I should not see "Q1 Launch"
+  # Scenario: Project deletion reflects in workspace view — removed, delete uses data-confirm native dialog that cannot be automated (see #488)
 
   # ---------------------------------------------------------------------------
   # Navigation
