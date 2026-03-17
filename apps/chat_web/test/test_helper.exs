@@ -1,6 +1,6 @@
-# Exclude evaluation tests (require real LLM) and WIP features by default
+# Exclude evaluation tests (require real LLM) by default
 # Browser tests are run externally via exo-bdd (mix exo_test --name chat-web)
-ExUnit.start(exclude: [:evaluation, :wip], capture_log: true)
+ExUnit.start(exclude: [:evaluation], capture_log: true)
 
 Ecto.Adapters.SQL.Sandbox.mode(Chat.Repo, :manual)
 Ecto.Adapters.SQL.Sandbox.mode(Identity.Repo, :manual)
