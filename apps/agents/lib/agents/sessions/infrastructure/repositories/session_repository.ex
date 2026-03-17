@@ -42,16 +42,10 @@ defmodule Agents.Sessions.Infrastructure.Repositories.SessionRepository do
 
   @impl true
   def update_session(%SessionRecord{id: id}, attrs) do
-    case Repo.get(SessionSchema, id) do
-      nil ->
-        {:error, :not_found}
-
-      schema ->
-        schema
-        |> SessionSchema.status_changeset(attrs)
-        |> Repo.update()
-        |> map_result()
-    end
+    %SessionSchema{id: id}
+    |> SessionSchema.status_changeset(attrs)
+    |> Repo.update()
+    |> map_result()
   end
 
   @default_session_limit 50
@@ -71,15 +65,9 @@ defmodule Agents.Sessions.Infrastructure.Repositories.SessionRepository do
 
   @impl true
   def delete_session(%SessionRecord{id: id}) do
-    case Repo.get(SessionSchema, id) do
-      nil ->
-        {:error, :not_found}
-
-      schema ->
-        schema
-        |> Repo.delete()
-        |> map_result()
-    end
+    %SessionSchema{id: id}
+    |> Repo.delete()
+    |> map_result()
   end
 
   @impl true
