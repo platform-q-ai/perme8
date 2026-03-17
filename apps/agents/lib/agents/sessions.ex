@@ -19,8 +19,8 @@ defmodule Agents.Sessions do
     exports: [
       {Domain.Entities.Task, []},
       {Domain.Entities.Session, []},
+      {Domain.Entities.SessionRecord, []},
       {Domain.Entities.Interaction, []},
-      {Infrastructure.Schemas.SessionSchema, []},
       {Infrastructure.Schemas.InteractionSchema, []}
     ]
 

@@ -4,7 +4,6 @@ defmodule AgentsWeb.DashboardLive.Index do
   use AgentsWeb, :live_view
 
   import AgentsWeb.DashboardLive.Components.SessionComponents
-  import AgentsWeb.DashboardLive.Components.QueueLaneComponents
   import AgentsWeb.DashboardLive.Components.SidebarComponents
   import AgentsWeb.DashboardLive.Components.DetailPanelComponents
   import AgentsWeb.DashboardLive.Helpers
@@ -268,14 +267,6 @@ defmodule AgentsWeb.DashboardLive.Index do
   @impl true
   def handle_event("switch_tab", params, socket),
     do: SessionHandlers.switch_tab(params, socket)
-
-  @impl true
-  def handle_event("update_concurrency_limit", params, socket),
-    do: SessionHandlers.update_concurrency_limit(params, socket)
-
-  @impl true
-  def handle_event("update_warm_cache_limit", params, socket),
-    do: SessionHandlers.update_warm_cache_limit(params, socket)
 
   @impl true
   def handle_event("pause_session", params, socket),
