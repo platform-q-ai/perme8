@@ -6,29 +6,24 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.CloseToolTest do
   alias Agents.Infrastructure.Mcp.Tools.Ticket.CloseTool
   alias Agents.Test.TicketFixtures, as: Fixtures
   alias Agents.Tickets.Infrastructure.Repositories.ProjectTicketRepository
+  alias Agents.Tickets.Infrastructure.Schemas.ProjectTicketSchema
   alias Hermes.Server.Frame
+  alias Perme8.Events.TestEventBus
 
   setup :set_mox_from_context
   setup :verify_on_exit!
 
   setup do
     prev_identity = Application.get_env(:agents, :identity_module)
-    prev_client = Application.get_env(:agents, :github_ticket_client)
-
     Application.put_env(:agents, :identity_module, Agents.Mocks.IdentityMock)
-    # CloseTool uses close_project_ticket which still calls GitHub client for remote close
-    Application.put_env(:agents, :github_ticket_client, Agents.Mocks.GithubTicketClientMock)
-
     stub(Agents.Mocks.IdentityMock, :api_key_has_permission?, fn _api_key, _scope -> true end)
+
+    TestEventBus.start_global()
 
     on_exit(fn ->
       if prev_identity,
         do: Application.put_env(:agents, :identity_module, prev_identity),
         else: Application.delete_env(:agents, :identity_module)
-
-      if prev_client,
-        do: Application.put_env(:agents, :github_ticket_client, prev_client),
-        else: Application.delete_env(:agents, :github_ticket_client)
     end)
 
     {:ok, _ticket} =
@@ -49,31 +44,28 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.CloseToolTest do
     test "closes a ticket" do
       frame = build_frame()
 
-      # close_project_ticket calls update_issue on GitHub client first, then closes locally
-      stub(Agents.Mocks.GithubTicketClientMock, :update_issue, fn _number, _attrs, _opts ->
-        {:ok, %{number: 800, state: "closed"}}
-      end)
-
-      assert {:reply, response, ^frame} = CloseTool.execute(%{"number" => 800}, frame)
+      assert {:reply, response, ^frame} =
+               CloseTool.execute(%{"number" => 800}, frame)
 
       assert %Hermes.Server.Response{isError: false} = response
       assert [%{"text" => text}] = response.content
       assert text =~ "Closed ticket #800"
+
+      # Verify ticket is closed locally with pending_push sync state
+      refreshed = Agents.Repo.get_by!(ProjectTicketSchema, number: 800)
+      assert refreshed.state == "closed"
+      assert refreshed.sync_state == "pending_push"
     end
 
-    test "succeeds even when ticket doesn't exist on GitHub (treated as already closed)" do
+    test "returns error when ticket doesn't exist locally" do
       frame = build_frame()
 
-      # The close facade treats GitHub :not_found as "already closed"
-      stub(Agents.Mocks.GithubTicketClientMock, :update_issue, fn _number, _attrs, _opts ->
-        {:error, :not_found}
-      end)
+      assert {:reply, response, ^frame} =
+               CloseTool.execute(%{"number" => 99_999}, frame)
 
-      assert {:reply, response, ^frame} = CloseTool.execute(%{"number" => 99_999}, frame)
-
-      assert %Hermes.Server.Response{isError: false} = response
+      assert %Hermes.Server.Response{isError: true} = response
       assert [%{"text" => text}] = response.content
-      assert text =~ "Closed ticket #99999"
+      assert text =~ "not found"
     end
 
     test "denies execution when scope is missing" do

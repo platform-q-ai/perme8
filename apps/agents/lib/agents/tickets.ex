@@ -23,6 +23,7 @@ defmodule Agents.Tickets do
   alias Agents.Tickets.Application.TicketsConfig
   alias Agents.Tickets.Application.UseCases.AddSubIssue
   alias Agents.Tickets.Application.UseCases.AddTicketDependency
+  alias Agents.Tickets.Application.UseCases.CloseTicket
   alias Agents.Tickets.Application.UseCases.CreateTicket
   alias Agents.Tickets.Application.UseCases.RecordStageTransition
   alias Agents.Tickets.Application.UseCases.RemoveSubIssue
@@ -136,45 +137,22 @@ defmodule Agents.Tickets do
   end
 
   @doc """
-  Closes a project ticket on GitHub first, then marks it as closed locally.
+  Closes a project ticket locally and asynchronously pushes the close to GitHub.
 
-  If the GitHub close fails, the local record is left unchanged and an error
-  is returned so the caller can surface it to the user. This prevents the
-  local state from drifting out of sync with GitHub.
+  The ticket is marked as `state: "closed"` with `sync_state: "pending_push"`
+  in the local database and a `TicketClosed` domain event is emitted. The
+  `GithubTicketPushHandler` subscriber reacts to this event to close the
+  corresponding GitHub issue.
 
   ## Options
 
-    * `:github_client` - module implementing `GithubTicketClientBehaviour`
-      (defaults to application config `:github_ticket_client` or
-      `GithubProjectClient`)
+    * `:actor_id` - (required) The user closing the ticket
+    * `:event_bus` - Event bus module (default: EventBus)
+    * `:ticket_repo` - Repository module (default: ProjectTicketRepository)
   """
   @spec close_project_ticket(integer(), keyword()) :: :ok | {:error, term()}
   def close_project_ticket(number, opts \\ []) when is_integer(number) do
-    client = Keyword.get_lazy(opts, :github_client, &github_client/0)
-
-    github_opts = [
-      token: TicketsConfig.github_token(),
-      org: TicketsConfig.github_org(),
-      repo: TicketsConfig.github_repo()
-    ]
-
-    case client.update_issue(number, %{state: "closed"}, github_opts) do
-      {:ok, _issue} ->
-        case ProjectTicketRepository.close_by_number(number) do
-          {:ok, _ticket} -> :ok
-          {:error, :not_found} -> :ok
-        end
-
-      # Issue doesn't exist on GitHub -- treat as already closed
-      {:error, :not_found} ->
-        case ProjectTicketRepository.close_by_number(number) do
-          {:ok, _ticket} -> :ok
-          {:error, :not_found} -> :ok
-        end
-
-      {:error, reason} ->
-        {:error, reason}
-    end
+    CloseTicket.execute(number, opts)
   end
 
   @doc """

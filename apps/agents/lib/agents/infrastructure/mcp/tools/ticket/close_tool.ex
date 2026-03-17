@@ -20,7 +20,9 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.CloseTool do
 
     case PermissionGuard.check_permission(frame, "ticket.close") do
       :ok ->
-        case Tickets.close_project_ticket(number, []) do
+        opts = [actor_id: Helpers.actor_id(frame)]
+
+        case Tickets.close_project_ticket(number, opts) do
           :ok ->
             {:reply, Response.text(Response.tool(), "Closed ticket ##{number}."), frame}
 

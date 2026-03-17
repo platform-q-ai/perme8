@@ -143,13 +143,14 @@ defmodule AgentsWeb.DashboardLive.TicketHandlers do
   def close_ticket(%{"number" => number_str}, socket) do
     case Integer.parse(number_str) do
       {number, ""} ->
-        case Tickets.close_project_ticket(number) do
+        user = socket.assigns.current_scope.user
+
+        case Tickets.close_project_ticket(number, actor_id: user.id) do
           :ok ->
             {:noreply, apply_ticket_closed(socket, number)}
 
           {:error, _reason} ->
-            {:noreply,
-             put_flash(socket, :error, "Failed to close ticket on GitHub. Please try again.")}
+            {:noreply, put_flash(socket, :error, "Failed to close ticket. Please try again.")}
         end
 
       _ ->
