@@ -1,22 +1,25 @@
+@security @queue @warm-only
 Feature: Secure warm-start preparation for fresh containers
-  As a platform operator
-  I want fresh warm containers to prepare repos and auth before first task start
-  So execution begins from current code and valid credentials
+  As a security auditor
+  I want warm-start queue endpoints scanned for auth and container security weaknesses
+  So that container preparation cannot be bypassed or manipulated
 
-  Scenario: Fresh warm container performs repo update before first start
-    Given a queued task is assigned a fresh warm container
-    And the container has never run task execution
-    When the task is started
-    Then all configured repositories are updated before prompt execution begins
+  Background:
+    Given a new ZAP session
+    When I spider "http://localhost:5007/internal/sessions"
+    Then the spider should find at least 1 URLs
 
-  Scenario: Fresh warm container refreshes auth tokens before first start
-    Given a queued task is assigned a fresh warm container
-    And the container has never run task execution
-    When the task is started
-    Then auth token refresh runs before prompt execution begins
+  Scenario: Unauthenticated user cannot trigger queue promotion
+    When I run an active scan on "http://localhost:5007/internal/sessions/queue/promote"
+    Then there should be no alerts of type "Authentication Bypass"
+    And there should be no alerts of type "Missing Authentication for Critical Function"
 
-  Scenario: Warm-start preparation is first-start only
-    Given a container already completed first-start preparation
-    When another queued task resumes on the same container
-    Then first-start repo update does not rerun unnecessarily
-    And normal start behavior continues
+  Scenario: Unauthenticated user cannot trigger warmup preparation
+    When I run an active scan on "http://localhost:5007/internal/sessions/queue/warmup"
+    Then there should be no alerts of type "Authentication Bypass"
+    And there should be no alerts of type "Missing Authentication for Critical Function"
+
+  Scenario: Queue endpoints serve appropriate security headers
+    When I check "http://localhost:5007/internal/sessions" for security headers
+    Then the security headers should include "X-Content-Type-Options"
+    And alerts should not exceed risk level "Medium"

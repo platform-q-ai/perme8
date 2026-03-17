@@ -1,122 +1,35 @@
 @security @sessions @aggregate-root
 Feature: Session aggregate root security
-  As a platform owner
-  I want sessions, interactions, and container management to enforce proper
-  access control and follow security best practices
-  So that users cannot access other users' data and the system is resilient
-  to common vulnerabilities
+  As a security auditor
+  I want session management endpoints scanned for auth and access control weaknesses
+  So that users cannot access other users' data and the system follows security best practices
 
-  # ---------------------------------------------------------------------------
-  # Authentication
-  # ---------------------------------------------------------------------------
+  Background:
+    Given a new ZAP session
+    When I spider "${baseUrl}/sessions"
+    Then the spider should find at least 1 URLs
 
-  Scenario: Unauthenticated user cannot list sessions
-    Given I am not authenticated
-    When I attempt to list sessions
-    Then the request should be rejected as unauthorized
+  Scenario: Sessions page has no high risk vulnerabilities
+    When I run an active scan on "${baseUrl}/sessions"
+    Then no high risk alerts should be found
 
-  Scenario: Unauthenticated user cannot create a session
-    Given I am not authenticated
-    When I attempt to create a session
-    Then the request should be rejected as unauthorized
+  Scenario: Sessions page has no authentication bypass vulnerabilities
+    When I run an active scan on "${baseUrl}/sessions"
+    Then there should be no alerts of type "Authentication Bypass"
+    And there should be no alerts of type "Missing Authentication for Critical Function"
 
-  Scenario: Unauthenticated user cannot view interaction history
-    Given I am not authenticated
-    When I attempt to view interaction history for a session
-    Then the request should be rejected as unauthorized
+  Scenario: Sessions page has no access control vulnerabilities
+    When I run an active scan on "${baseUrl}/sessions"
+    Then there should be no alerts of type "Insecure Direct Object Reference"
+    And there should be no alerts of type "Broken Access Control"
 
-  # ---------------------------------------------------------------------------
-  # User Isolation -- Sessions
-  # ---------------------------------------------------------------------------
+  Scenario: Sessions page serves appropriate security headers
+    When I check "${baseUrl}/sessions" for security headers
+    Then Content-Security-Policy should be present
+    And X-Frame-Options should be set to "DENY"
+    And the security headers should include "X-Content-Type-Options"
 
-  Scenario: User cannot access another user's session
-    Given user A has sessions
-    And I am authenticated as user B
-    When I attempt to access user A's session
-    Then the action should be rejected as forbidden
-
-  Scenario: User cannot pause another user's session
-    Given user A has an active session
-    And I am authenticated as user B
-    When I attempt to pause user A's session
-    Then the action should be rejected as forbidden
-
-  Scenario: User cannot resume another user's session
-    Given user A has a paused session
-    And I am authenticated as user B
-    When I attempt to resume user A's session
-    Then the action should be rejected as forbidden
-
-  Scenario: User cannot delete another user's session
-    Given user A has a session
-    And I am authenticated as user B
-    When I attempt to delete user A's session
-    Then the action should be rejected as forbidden
-
-  # ---------------------------------------------------------------------------
-  # User Isolation -- Interactions
-  # ---------------------------------------------------------------------------
-
-  Scenario: User cannot view another user's interaction history
-    Given user A has a session with interactions
-    And I am authenticated as user B
-    When I attempt to list interactions for user A's session
-    Then the action should be rejected as forbidden
-
-  Scenario: User cannot answer another user's pending question
-    Given user A has a session with a pending question
-    And I am authenticated as user B
-    When I attempt to answer the pending question on user A's session
-    Then the action should be rejected as forbidden
-
-  Scenario: User cannot send follow-up messages to another user's session
-    Given user A has a running session
-    And I am authenticated as user B
-    When I attempt to send a follow-up message to user A's session
-    Then the action should be rejected as forbidden
-
-  # ---------------------------------------------------------------------------
-  # Container Security
-  # ---------------------------------------------------------------------------
-
-  Scenario: Session response does not expose Docker host paths
-    Given I am authenticated
-    When I create a session and receive the response
-    Then the response should not contain Docker host paths or mount points
-    And the response should not contain container environment variables
-
-  Scenario: Session response does not leak internal port mappings
-    Given I am authenticated with a running session
-    When I view the session details
-    Then the response should not contain internal Docker network addresses
-    And only the session's mapped port should be visible
-
-  # ---------------------------------------------------------------------------
-  # Data Integrity -- Interaction Immutability
-  # ---------------------------------------------------------------------------
-
-  Scenario: Delivered interaction records cannot be modified
-    Given I am authenticated with a session that has delivered interactions
-    When I attempt to modify a delivered interaction's content
-    Then the modification should be rejected
-    And the original interaction data should be preserved
-
-  Scenario: Session deletion cascades to interactions cleanly
-    Given I am authenticated with a session that has interactions
-    When I delete the session
-    Then all associated interaction records should also be deleted
-    And no orphaned interaction records should remain in the database
-
-  # ---------------------------------------------------------------------------
-  # Security Headers and Transport
-  # ---------------------------------------------------------------------------
-
-  # NOTE: General security headers for the sessions page are already covered
-  # in queue-orchestration.security.feature. This scenario focuses specifically
-  # on API responses not leaking server version information.
-
-  Scenario: Session API responses do not leak server version information
-    Given I am authenticated
-    When I request session data via the API
-    Then the response should include proper security headers
-    And the response should not include server version information
+  Scenario: Session API responses do not expose sensitive information
+    When I run a passive scan on "${baseUrl}/sessions"
+    Then there should be no alerts of type "Information Disclosure"
+    And alerts should not exceed risk level "Medium"

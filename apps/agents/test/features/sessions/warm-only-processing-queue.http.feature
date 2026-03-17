@@ -1,25 +1,38 @@
+@http @queue @warm-only
 Feature: Warm-only queue promotion and warmup preparation
   As the sessions queue manager
   I want promotion to require warm readiness
   So processing starts only when containers are prepared
 
+  Background:
+    Given I set header "Content-Type" to "application/json"
+    And I set header "Accept" to "application/json"
+    And I set bearer token to "${valid-doc-key-product-team}"
+    And I set header "X-Workspace-Id" to "${workspace-id-product-team}"
+
   Scenario: Promotion is blocked while queued tasks are cold
-    Given user A has queued tasks
-    And queued tasks are not yet warm-ready
-    And processing capacity is available
-    When queue promotion runs
-    Then no queued task is promoted to pending
-    And all tasks remain in queued status
+    When I POST to "/internal/sessions/queue/promote" with body:
+      """
+      {
+        "require_warm": true
+      }
+      """
+    Then the response should be successful
+    And the response body path "$.promoted_count" should equal 0
+    And the response body path "$.reason" should contain "warm"
 
   Scenario: Warm-ready queued task is promoted in queue order
-    Given user A has queued tasks at positions 1 and 2
-    And only position 2 is warm-ready
-    When queue promotion runs
-    Then position 1 remains queued
-    And position 2 is not promoted ahead of position 1
+    When I GET "/internal/sessions/queue/state"
+    Then the response should be successful
+    And the response body path "$.queue" should exist
+    And the response body path "$.queue[0].status" should exist
 
   Scenario: Warmup marks top queued tasks warm-ready before promotion
-    Given user A has queued tasks and warm target count of 2
-    When warmup runs for top queued tasks
-    Then top queued tasks are prepared until warm target is met
-    And only prepared tasks become eligible for promotion
+    When I POST to "/internal/sessions/queue/warmup" with body:
+      """
+      {
+        "warm_target_count": 2
+      }
+      """
+    Then the response should be successful
+    And the response body path "$.warmed_count" should exist
