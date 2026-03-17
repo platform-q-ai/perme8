@@ -10,7 +10,7 @@ defmodule Agents.SessionsFixtures do
 
   import Agents.Test.AccountsFixtures
 
-  alias Agents.Sessions.Infrastructure.Schemas.{SessionSchema, TaskSchema}
+  alias Agents.Sessions.Infrastructure.Schemas.{InteractionSchema, SessionSchema, TaskSchema}
   alias Agents.Repo
 
   def session_fixture(attrs \\ %{}) do
@@ -36,6 +36,26 @@ defmodule Agents.SessionsFixtures do
       |> Repo.insert()
 
     session
+  end
+
+  def interaction_fixture(attrs \\ %{}) do
+    changeset_attrs =
+      %{
+        session_id: attrs[:session_id],
+        type: attrs[:type] || "question",
+        direction: attrs[:direction] || "outbound",
+        payload: attrs[:payload] || %{},
+        status: attrs[:status] || "pending"
+      }
+      |> maybe_put(:correlation_id, attrs[:correlation_id])
+      |> maybe_put(:task_id, attrs[:task_id])
+
+    {:ok, interaction} =
+      %InteractionSchema{}
+      |> InteractionSchema.changeset(changeset_attrs)
+      |> Repo.insert()
+
+    interaction
   end
 
   def task_fixture(attrs \\ %{}) do
