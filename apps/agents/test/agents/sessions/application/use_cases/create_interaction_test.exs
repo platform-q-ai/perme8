@@ -8,8 +8,6 @@ defmodule Agents.Sessions.Application.UseCases.CreateInteractionTest do
   alias Agents.Sessions.Domain.Entities.Interaction
   alias Agents.Sessions.Infrastructure.Schemas.InteractionSchema
 
-  import Ecto.Query
-
   @user_id Ecto.UUID.generate()
 
   describe "execute/2 question/answer pairing" do
@@ -38,18 +36,16 @@ defmodule Agents.Sessions.Application.UseCases.CreateInteractionTest do
       session = session_fixture(%{user_id: @user_id})
       correlation_id = "corr-#{System.unique_integer([:positive])}"
 
-      # First create a pending question
-      {:ok, _question_schema} =
-        Repo.insert(
-          InteractionSchema.changeset(%InteractionSchema{}, %{
-            session_id: session.id,
-            type: "question",
-            direction: "outbound",
-            payload: %{text: "What file?"},
-            correlation_id: correlation_id,
-            status: "pending"
-          })
-        )
+      # First create a pending question via fixture
+      question =
+        interaction_fixture(%{
+          session_id: session.id,
+          type: "question",
+          direction: "outbound",
+          payload: %{text: "What file?"},
+          correlation_id: correlation_id,
+          status: "pending"
+        })
 
       # Now create an answer with the same correlation_id
       answer_attrs = %{
@@ -66,16 +62,8 @@ defmodule Agents.Sessions.Application.UseCases.CreateInteractionTest do
       assert answer.direction == :inbound
 
       # Verify the original question was marked as delivered
-      question =
-        Repo.one!(
-          from(i in InteractionSchema,
-            where:
-              i.session_id == ^session.id and i.correlation_id == ^correlation_id and
-                i.type == "question"
-          )
-        )
-
-      assert question.status == "delivered"
+      reloaded = Repo.get!(InteractionSchema, question.id)
+      assert reloaded.status == "delivered"
     end
 
     test "persists the interaction to the database" do
@@ -94,6 +82,22 @@ defmodule Agents.Sessions.Application.UseCases.CreateInteractionTest do
       assert persisted.type == "instruction"
       assert persisted.direction == "inbound"
       assert persisted.session_id == session.id
+    end
+
+    test "creates interaction with string type and direction" do
+      session = session_fixture(%{user_id: @user_id})
+
+      attrs = %{
+        session_id: session.id,
+        type: "question",
+        direction: "outbound",
+        payload: %{text: "String type test"}
+      }
+
+      assert {:ok, %Interaction{} = interaction} = CreateInteraction.execute(attrs)
+
+      assert interaction.type == :question
+      assert interaction.direction == :outbound
     end
   end
 
@@ -145,23 +149,28 @@ defmodule Agents.Sessions.Application.UseCases.CreateInteractionTest do
 
       assert {:error, :invalid_direction} = CreateInteraction.execute(attrs)
     end
+
+    test "returns error when session_id does not exist" do
+      attrs = %{
+        session_id: Ecto.UUID.generate(),
+        type: :question,
+        direction: :outbound
+      }
+
+      assert {:error, %Ecto.Changeset{}} = CreateInteraction.execute(attrs)
+    end
   end
 
   describe "execute/2 correlation_id matching" do
     test "does not mark question as delivered when correlation_id does not match" do
       session = session_fixture(%{user_id: @user_id})
 
-      # Create a pending question with one correlation_id
-      {:ok, question} =
-        Repo.insert(
-          InteractionSchema.changeset(%InteractionSchema{}, %{
-            session_id: session.id,
-            type: "question",
-            direction: "outbound",
-            correlation_id: "question-corr",
-            status: "pending"
-          })
-        )
+      question =
+        interaction_fixture(%{
+          session_id: session.id,
+          correlation_id: "question-corr",
+          status: "pending"
+        })
 
       # Create an answer with a different correlation_id
       answer_attrs = %{
@@ -182,17 +191,13 @@ defmodule Agents.Sessions.Application.UseCases.CreateInteractionTest do
       session = session_fixture(%{user_id: @user_id})
       correlation_id = "corr-#{System.unique_integer([:positive])}"
 
-      # Create a question that is already delivered
-      {:ok, question} =
-        Repo.insert(
-          InteractionSchema.changeset(%InteractionSchema{}, %{
-            session_id: session.id,
-            type: "question",
-            direction: "outbound",
-            correlation_id: correlation_id,
-            status: "delivered"
-          })
-        )
+      # Query filters by status: "pending", so delivered questions are not found
+      question =
+        interaction_fixture(%{
+          session_id: session.id,
+          correlation_id: correlation_id,
+          status: "delivered"
+        })
 
       # Create an answer with the same correlation_id
       answer_attrs = %{
@@ -212,17 +217,12 @@ defmodule Agents.Sessions.Application.UseCases.CreateInteractionTest do
     test "answer without correlation_id does not affect any questions" do
       session = session_fixture(%{user_id: @user_id})
 
-      # Create a pending question
-      {:ok, question} =
-        Repo.insert(
-          InteractionSchema.changeset(%InteractionSchema{}, %{
-            session_id: session.id,
-            type: "question",
-            direction: "outbound",
-            correlation_id: "some-corr",
-            status: "pending"
-          })
-        )
+      question =
+        interaction_fixture(%{
+          session_id: session.id,
+          correlation_id: "some-corr",
+          status: "pending"
+        })
 
       # Create an answer without correlation_id
       answer_attrs = %{
@@ -237,22 +237,6 @@ defmodule Agents.Sessions.Application.UseCases.CreateInteractionTest do
       # Question should still be pending
       reloaded = Repo.get!(InteractionSchema, question.id)
       assert reloaded.status == "pending"
-    end
-
-    test "creates interaction with string type and direction" do
-      session = session_fixture(%{user_id: @user_id})
-
-      attrs = %{
-        session_id: session.id,
-        type: "question",
-        direction: "outbound",
-        payload: %{text: "String type test"}
-      }
-
-      assert {:ok, %Interaction{} = interaction} = CreateInteraction.execute(attrs)
-
-      assert interaction.type == :question
-      assert interaction.direction == :outbound
     end
   end
 end
