@@ -33,18 +33,30 @@ defmodule AgentsWeb.DashboardLive.TicketSessionLinker do
   alias Agents.Tickets.Domain.Policies.TicketEnrichmentPolicy
 
   @doc """
-  Persists a ticket-task association (if the task's instruction references a
-  ticket number) and reloads tickets from DB.
+  Persists a ticket-task association and reloads tickets from DB.
+
+  When `opts` includes `ticket_number`, the association is created explicitly
+  via `Tickets.link_ticket_to_session/2` — no regex extraction. When no
+  `ticket_number` is provided, falls back to regex extraction from instruction
+  text (deprecated, for backward compatibility only).
 
   The task is also upserted into `tasks_snapshot` so enrichment can derive
-  display state immediately. Exceptions from `link_ticket_to_task` are rescued
-  to match the existing fault-tolerant behaviour.
+  display state immediately.
 
   Returns the updated socket.
   """
-  @spec link_and_refresh(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
-  def link_and_refresh(socket, task) do
-    persist_ticket_link(task)
+  @spec link_and_refresh(Phoenix.LiveView.Socket.t(), map(), keyword()) ::
+          Phoenix.LiveView.Socket.t()
+  def link_and_refresh(socket, task, opts \\ []) do
+    ticket_number = Keyword.get(opts, :ticket_number)
+
+    if is_integer(ticket_number) and ticket_number > 0 do
+      persist_explicit_ticket_link(ticket_number, task)
+    else
+      # Deprecated: regex-based fallback. Will be removed once all callers
+      # pass ticket_number explicitly.
+      persist_ticket_link(task)
+    end
 
     tasks_snapshot = upsert_task_snapshot(socket.assigns[:tasks_snapshot], task)
     user_id = socket.assigns.current_scope.user.id
@@ -111,6 +123,43 @@ defmodule AgentsWeb.DashboardLive.TicketSessionLinker do
 
   # -- Private helpers -------------------------------------------------------
 
+  defp persist_explicit_ticket_link(ticket_number, task) do
+    # session_ref_id is the UUID FK to the sessions table (not the SDK session ID).
+    # It is available on the Task domain entity since it's mapped from TaskSchema.
+    session_ref_id = Map.get(task, :session_ref_id)
+
+    # Link both session and task for backward compatibility.
+    # Session linking is the preferred mechanism; task linking will be
+    # phased out once session-based enrichment is verified stable.
+    if is_binary(session_ref_id) do
+      case Tickets.link_ticket_to_session(ticket_number, session_ref_id) do
+        {:ok, _} ->
+          :ok
+
+        {:error, reason} ->
+          Logger.warning(
+            "persist_explicit_ticket_link (session) failed for ticket ##{ticket_number}: #{inspect(reason)}"
+          )
+      end
+    end
+
+    case Tickets.link_ticket_to_task(ticket_number, task.id) do
+      {:ok, _} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning(
+          "persist_explicit_ticket_link (task) failed for ticket ##{ticket_number}: #{inspect(reason)}"
+        )
+    end
+  rescue
+    error ->
+      Logger.warning("persist_explicit_ticket_link crashed: #{inspect(error)}")
+      :ok
+  end
+
+  # Deprecated: regex-based fallback. Will be removed once all callers
+  # pass ticket_number explicitly via link_and_refresh/3.
   defp persist_ticket_link(task) do
     instruction = Map.get(task, :instruction, "")
 

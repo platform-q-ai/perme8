@@ -52,6 +52,20 @@ defmodule AgentsWeb.DashboardLive.Helpers.TaskExecutionHelpers do
   end
 
   def resolve_active_ticket_number(
+        %{"new" => "true", "ticket" => ticket_str},
+        _selected_container_id,
+        _sessions,
+        _tickets,
+        _current
+      )
+      when is_binary(ticket_str) do
+    case Integer.parse(ticket_str) do
+      {n, ""} when n > 0 -> n
+      _ -> nil
+    end
+  end
+
+  def resolve_active_ticket_number(
         %{"new" => "true"},
         _selected_container_id,
         _sessions,
@@ -59,6 +73,21 @@ defmodule AgentsWeb.DashboardLive.Helpers.TaskExecutionHelpers do
         current
       ) do
     current
+  end
+
+  def resolve_active_ticket_number(
+        %{"ticket" => ticket_str} = _params,
+        selected_container_id,
+        _sessions,
+        _tickets,
+        _current
+      )
+      when is_binary(selected_container_id) and selected_container_id != "" and
+             is_binary(ticket_str) do
+    case Integer.parse(ticket_str) do
+      {n, ""} when n > 0 -> n
+      _ -> nil
+    end
   end
 
   def resolve_active_ticket_number(_params, selected_container_id, sessions, tickets, _current)
@@ -319,11 +348,18 @@ defmodule AgentsWeb.DashboardLive.Helpers.TaskExecutionHelpers do
     if socket.assigns.composing_new || is_nil(current_task) do
       instruction = ensure_ticket_reference(instruction, ticket_number, ticket)
 
-      Sessions.create_task(%{
+      attrs = %{
         instruction: instruction,
         user_id: user.id,
         image: socket.assigns.selected_image
-      })
+      }
+
+      attrs =
+        if is_integer(ticket_number) and ticket_number > 0,
+          do: Map.put(attrs, :ticket_number, ticket_number),
+          else: attrs
+
+      Sessions.create_task(attrs)
     else
       Sessions.resume_task(current_task.id, %{instruction: instruction, user_id: user.id})
     end
@@ -364,7 +400,9 @@ defmodule AgentsWeb.DashboardLive.Helpers.TaskExecutionHelpers do
         socket.assigns[:sticky_warm_task_ids] || MapSet.new()
       )
 
-    socket = TicketSessionLinker.link_and_refresh(socket, task)
+    ticket_number = socket.assigns[:active_ticket_number]
+    link_opts = if is_integer(ticket_number), do: [ticket_number: ticket_number], else: []
+    socket = TicketSessionLinker.link_and_refresh(socket, task, link_opts)
 
     {:noreply,
      socket

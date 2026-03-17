@@ -330,6 +330,154 @@ defmodule Agents.Tickets.Domain.Policies.TicketEnrichmentPolicyTest do
     end
   end
 
+  describe "session-based enrichment" do
+    test "matches ticket to task by session_id -> session_ref_id" do
+      ticket = Ticket.new(%{number: 382, title: "Root ticket", session_id: "session-abc"})
+
+      tasks = [
+        Task.new(%{
+          id: "task-1",
+          instruction: "some unrelated instruction",
+          status: "running",
+          container_id: "container-1",
+          session_ref_id: "session-abc",
+          user_id: "user-1"
+        })
+      ]
+
+      enriched = TicketEnrichmentPolicy.enrich(ticket, tasks, @lifecycle_resolver)
+
+      assert enriched.associated_task_id == "task-1"
+      assert enriched.associated_container_id == "container-1"
+      assert enriched.session_state == "running"
+    end
+
+    test "session-based match takes priority over regex fallback" do
+      ticket = Ticket.new(%{number: 382, title: "Root ticket", session_id: "session-abc"})
+
+      tasks = [
+        Task.new(%{
+          id: "task-session",
+          instruction: "some unrelated instruction",
+          status: "running",
+          container_id: "container-session",
+          session_ref_id: "session-abc",
+          user_id: "user-1"
+        }),
+        Task.new(%{
+          id: "task-regex",
+          instruction: "pick up ticket #382",
+          status: "queued",
+          container_id: "container-regex",
+          user_id: "user-1"
+        })
+      ]
+
+      enriched = TicketEnrichmentPolicy.enrich(ticket, tasks, @lifecycle_resolver)
+
+      assert enriched.associated_task_id == "task-session"
+      assert enriched.associated_container_id == "container-session"
+    end
+
+    test "associated_task_id still wins over session-based match" do
+      ticket =
+        Ticket.new(%{
+          number: 382,
+          title: "Root ticket",
+          associated_task_id: "task-persisted",
+          session_id: "session-abc"
+        })
+
+      tasks = [
+        Task.new(%{
+          id: "task-persisted",
+          instruction: "persisted task",
+          status: "completed",
+          container_id: "container-persisted",
+          user_id: "user-1"
+        }),
+        Task.new(%{
+          id: "task-session",
+          instruction: "session task",
+          status: "running",
+          container_id: "container-session",
+          session_ref_id: "session-abc",
+          user_id: "user-1"
+        })
+      ]
+
+      enriched = TicketEnrichmentPolicy.enrich(ticket, tasks, @lifecycle_resolver)
+
+      assert enriched.associated_task_id == "task-persisted"
+      assert enriched.associated_container_id == "container-persisted"
+    end
+
+    test "when associated_task_id missing from tasks, falls through to session match" do
+      ticket =
+        Ticket.new(%{
+          number: 382,
+          title: "Root ticket",
+          associated_task_id: "deleted-task",
+          session_id: "session-abc"
+        })
+
+      tasks = [
+        Task.new(%{
+          id: "task-session",
+          instruction: "session task",
+          status: "running",
+          container_id: "container-session",
+          session_ref_id: "session-abc",
+          user_id: "user-1"
+        })
+      ]
+
+      enriched = TicketEnrichmentPolicy.enrich(ticket, tasks, @lifecycle_resolver)
+
+      assert enriched.associated_task_id == "task-session"
+      assert enriched.associated_container_id == "container-session"
+    end
+
+    test "when session_id is nil, falls through to regex fallback" do
+      ticket = Ticket.new(%{number: 382, title: "Root ticket", session_id: nil})
+
+      tasks = [
+        Task.new(%{
+          id: "task-regex",
+          instruction: "pick up ticket #382",
+          status: "running",
+          container_id: "container-regex",
+          user_id: "user-1"
+        })
+      ]
+
+      enriched = TicketEnrichmentPolicy.enrich(ticket, tasks, @lifecycle_resolver)
+
+      assert enriched.associated_task_id == "task-regex"
+      assert enriched.associated_container_id == "container-regex"
+    end
+
+    test "session index excludes terminal tasks" do
+      ticket = Ticket.new(%{number: 382, title: "Root ticket", session_id: "session-abc"})
+
+      tasks = [
+        Task.new(%{
+          id: "task-cancelled",
+          instruction: "cancelled task",
+          status: "cancelled",
+          container_id: "container-cancelled",
+          session_ref_id: "session-abc",
+          user_id: "user-1"
+        })
+      ]
+
+      enriched = TicketEnrichmentPolicy.enrich(ticket, tasks, @lifecycle_resolver)
+
+      assert enriched.session_state == "idle"
+      assert enriched.associated_task_id == nil
+    end
+  end
+
   describe "extract_ticket_number/1" do
     test "extracts ticket number from instruction text" do
       assert TicketEnrichmentPolicy.extract_ticket_number("pick up ticket #382") == 382

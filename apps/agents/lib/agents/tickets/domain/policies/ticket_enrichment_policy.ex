@@ -27,7 +27,15 @@ defmodule Agents.Tickets.Domain.Policies.TicketEnrichmentPolicy do
   def enrich(%Ticket{} = ticket, tasks, lifecycle_resolver) when is_list(tasks) do
     task_by_ticket_number = build_task_index(tasks)
     task_by_id = build_task_id_index(tasks)
-    resolve_and_apply(ticket, task_by_id, task_by_ticket_number, lifecycle_resolver)
+    task_by_session_id = build_session_index(tasks)
+
+    resolve_and_apply(
+      ticket,
+      task_by_id,
+      task_by_session_id,
+      task_by_ticket_number,
+      lifecycle_resolver
+    )
   end
 
   def enrich(%Ticket{} = ticket, _tasks, _lifecycle_resolver), do: ticket
@@ -36,10 +44,17 @@ defmodule Agents.Tickets.Domain.Policies.TicketEnrichmentPolicy do
   def enrich_all(tickets, tasks, lifecycle_resolver) when is_list(tickets) and is_list(tasks) do
     task_by_ticket_number = build_task_index(tasks)
     task_by_id = build_task_id_index(tasks)
+    task_by_session_id = build_session_index(tasks)
 
     Enum.map(
       tickets,
-      &enrich_ticket_tree(&1, task_by_id, task_by_ticket_number, lifecycle_resolver)
+      &enrich_ticket_tree(
+        &1,
+        task_by_id,
+        task_by_session_id,
+        task_by_ticket_number,
+        lifecycle_resolver
+      )
     )
   end
 
@@ -58,36 +73,66 @@ defmodule Agents.Tickets.Domain.Policies.TicketEnrichmentPolicy do
   defp enrich_ticket_tree(
          %Ticket{} = ticket,
          task_by_id,
+         task_by_session_id,
          task_by_ticket_number,
          lifecycle_resolver
        ) do
-    enriched = resolve_and_apply(ticket, task_by_id, task_by_ticket_number, lifecycle_resolver)
+    enriched =
+      resolve_and_apply(
+        ticket,
+        task_by_id,
+        task_by_session_id,
+        task_by_ticket_number,
+        lifecycle_resolver
+      )
 
     %{
       enriched
       | sub_tickets:
           Enum.map(
             enriched.sub_tickets || [],
-            &enrich_ticket_tree(&1, task_by_id, task_by_ticket_number, lifecycle_resolver)
+            &enrich_ticket_tree(
+              &1,
+              task_by_id,
+              task_by_session_id,
+              task_by_ticket_number,
+              lifecycle_resolver
+            )
           )
     }
   end
 
-  defp resolve_and_apply(ticket, task_by_id, task_by_ticket_number, lifecycle_resolver) do
-    task = resolve_task(ticket, task_by_id, task_by_ticket_number)
+  defp resolve_and_apply(
+         ticket,
+         task_by_id,
+         task_by_session_id,
+         task_by_ticket_number,
+         lifecycle_resolver
+       ) do
+    task = resolve_task(ticket, task_by_id, task_by_session_id, task_by_ticket_number)
     apply_enrichment(ticket, task, lifecycle_resolver)
   end
 
-  defp resolve_task(%Ticket{} = ticket, task_by_id, task_by_ticket_number)
+  # Priority: associated_task_id → session_id match → regex fallback
+  defp resolve_task(%Ticket{} = ticket, task_by_id, task_by_session_id, task_by_ticket_number)
        when is_binary(ticket.associated_task_id) and ticket.associated_task_id != "" do
     case Map.get(task_by_id, ticket.associated_task_id) do
-      nil -> Map.get(task_by_ticket_number, ticket.number)
+      nil -> resolve_by_session_or_regex(ticket, task_by_session_id, task_by_ticket_number)
       task -> task
     end
   end
 
-  defp resolve_task(%Ticket{number: number}, _task_by_id, task_by_ticket_number) do
-    Map.get(task_by_ticket_number, number)
+  defp resolve_task(%Ticket{} = ticket, _task_by_id, task_by_session_id, task_by_ticket_number) do
+    resolve_by_session_or_regex(ticket, task_by_session_id, task_by_ticket_number)
+  end
+
+  defp resolve_by_session_or_regex(ticket, task_by_session_id, task_by_ticket_number) do
+    session_id = Map.get(ticket, :session_id)
+
+    case session_id && Map.get(task_by_session_id, session_id) do
+      nil -> Map.get(task_by_ticket_number, ticket.number)
+      task -> task
+    end
   end
 
   defp build_task_index(tasks) do
@@ -103,6 +148,15 @@ defmodule Agents.Tickets.Domain.Policies.TicketEnrichmentPolicy do
 
   defp build_task_id_index(tasks) do
     Map.new(tasks, fn task -> {Map.get(task, :id), task} end)
+  end
+
+  defp build_session_index(tasks) do
+    tasks
+    |> Enum.reject(&terminal?/1)
+    |> Enum.reduce(%{}, fn task, acc ->
+      session_ref_id = Map.get(task, :session_ref_id)
+      if session_ref_id, do: Map.put_new(acc, session_ref_id, task), else: acc
+    end)
   end
 
   defp terminal?(task), do: Map.get(task, :status) in @terminal_statuses

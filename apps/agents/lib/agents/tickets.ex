@@ -247,6 +247,25 @@ defmodule Agents.Tickets do
   end
 
   @doc """
+  Links a session to a ticket by persisting the session ID on the ticket record.
+
+  This is the preferred linking mechanism (over task-based linking). The
+  association survives page reloads, ticket syncs, and re-enrichment cycles.
+  """
+  @spec link_ticket_to_session(integer(), String.t()) :: {:ok, struct()} | {:error, term()}
+  def link_ticket_to_session(ticket_number, session_id) do
+    ProjectTicketRepository.link_session(ticket_number, session_id)
+  end
+
+  @doc """
+  Removes the session association from a ticket.
+  """
+  @spec unlink_ticket_from_session(integer()) :: {:ok, struct()} | {:error, term()}
+  def unlink_ticket_from_session(ticket_number) do
+    ProjectTicketRepository.unlink_session(ticket_number)
+  end
+
+  @doc """
   Creates a new ticket locally and asynchronously pushes it to GitHub.
 
   The first line of `body` is used as the ticket title; the rest becomes the

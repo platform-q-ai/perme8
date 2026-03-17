@@ -807,7 +807,39 @@ alias Agents.Tickets.Infrastructure.Schemas.ProjectTicketSchema
 })
 |> Agents.Repo.insert!()
 
-IO.puts("[exo-seeds-web] Created 2 project tickets for ticket-sync tests")
+%ProjectTicketSchema{}
+|> ProjectTicketSchema.changeset(%{
+  number: 103,
+  title: "Add dark mode support",
+  body: "Implement theme switching with system preference detection",
+  status: "Ready",
+  priority: "Need",
+  size: "L",
+  labels: ["feature", "ui"],
+  position: 3,
+  created_at: DateTime.utc_now() |> DateTime.truncate(:second),
+  sync_state: "synced",
+  last_synced_at: DateTime.utc_now() |> DateTime.truncate(:second)
+})
+|> Agents.Repo.insert!()
+
+%ProjectTicketSchema{}
+|> ProjectTicketSchema.changeset(%{
+  number: 104,
+  title: "Improve error messages",
+  body: "Make error messages more descriptive for debugging",
+  status: "Ready",
+  priority: "Want",
+  size: "S",
+  labels: ["dx"],
+  position: 4,
+  created_at: DateTime.utc_now() |> DateTime.truncate(:second),
+  sync_state: "synced",
+  last_synced_at: DateTime.utc_now() |> DateTime.truncate(:second)
+})
+|> Agents.Repo.insert!()
+
+IO.puts("[exo-seeds-web] Created 4 project tickets for ticket-sync and draft-persistence tests")
 
 # ---------------------------------------------------------------------------
 # 9. Create notifications (for notifications browser tests)

@@ -851,7 +851,8 @@ defmodule AgentsWeb.DashboardLive.IndexFormSubmissionTest do
         |> limit(1)
         |> Repo.one!()
 
-      assert created_task.instruction =~ "#910 implement now"
+      # ensure_ticket_reference no longer prepends #N — only appends context
+      assert created_task.instruction =~ "implement now"
       assert created_task.instruction =~ "## Ticket #910: Ticket context for run_task"
       assert created_task.instruction =~ "Labels: #triage"
       assert created_task.instruction =~ "Body:\nInclude this body in session instruction."
@@ -900,7 +901,7 @@ defmodule AgentsWeb.DashboardLive.IndexFormSubmissionTest do
       assert created_task.instruction =~ "Body:\nEdge case body."
     end
 
-    test "ticket_number present but ticket not found falls back to prefix-only", %{
+    test "ticket_number present but ticket not found returns instruction unchanged", %{
       conn: conn,
       user: user
     } do
@@ -920,8 +921,8 @@ defmodule AgentsWeb.DashboardLive.IndexFormSubmissionTest do
         |> limit(1)
         |> Repo.one!()
 
-      # Falls back to the prefix-only clause (ticket struct is nil)
-      assert created_task.instruction =~ "#999 work on this"
+      # ensure_ticket_reference now returns instruction unchanged when ticket is nil
+      assert created_task.instruction == "work on this"
       # No context block since ticket couldn't be found
       refute created_task.instruction =~ "<ticket-context>"
     end
@@ -1001,8 +1002,9 @@ defmodule AgentsWeb.DashboardLive.IndexFormSubmissionTest do
         |> where([t], t.user_id == ^user.id and t.id != ^running_task.id)
         |> Repo.one!()
 
-      assert new_task.instruction =~ "#422"
       assert new_task.instruction =~ "fix the bug in this ticket"
+      # Ticket context is appended (contains ticket number in context block)
+      assert new_task.instruction =~ "## Ticket #422"
     end
   end
 end

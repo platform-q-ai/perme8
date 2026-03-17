@@ -348,6 +348,39 @@ defmodule Agents.Tickets.Infrastructure.Repositories.ProjectTicketRepository do
   end
 
   @doc """
+  Links a session to a ticket by ticket number.
+
+  Sets the `session_id` on the ticket record so the association persists
+  across page reloads and re-enrichment cycles. This is the preferred
+  linking mechanism (over task-based linking via `link_task/2`).
+  """
+  @spec link_session(integer(), String.t()) :: {:ok, ProjectTicketSchema.t()} | {:error, term()}
+  def link_session(ticket_number, session_id)
+      when is_integer(ticket_number) and is_binary(session_id) do
+    case Repo.get_by(ProjectTicketSchema, number: ticket_number) do
+      nil ->
+        {:error, :ticket_not_found}
+
+      ticket ->
+        ticket |> ProjectTicketSchema.changeset(%{session_id: session_id}) |> Repo.update()
+    end
+  end
+
+  @doc """
+  Unlinks a session from a ticket by ticket number.
+
+  Clears the persisted `session_id` so the ticket is no longer associated
+  with any session.
+  """
+  @spec unlink_session(integer()) :: {:ok, ProjectTicketSchema.t()} | {:error, term()}
+  def unlink_session(ticket_number) when is_integer(ticket_number) do
+    case Repo.get_by(ProjectTicketSchema, number: ticket_number) do
+      nil -> {:error, :ticket_not_found}
+      ticket -> ticket |> ProjectTicketSchema.changeset(%{session_id: nil}) |> Repo.update()
+    end
+  end
+
+  @doc """
   Returns the next available position value for a new ticket.
   """
   @spec next_position() :: integer()

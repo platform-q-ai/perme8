@@ -132,25 +132,21 @@ defmodule AgentsWeb.DashboardLive.Helpers.TicketDataHelpers do
 
   def ticket_owns_current_task?(_ticket, _current_task), do: false
 
+  @doc """
+  Appends ticket context to the instruction for the agent.
+
+  Ticket linking is now handled explicitly via `ticket_number` parameter
+  in `Sessions.create_task/2`, so this function no longer prepends `#<number>`
+  to the instruction text. It only appends the structured context block.
+  """
   def ensure_ticket_reference(instruction, nil, _ticket), do: instruction
 
   def ensure_ticket_reference(instruction, _ticket_number, %Ticket{} = ticket) do
     context = Tickets.build_ticket_context(ticket)
-
-    if Tickets.extract_ticket_number(instruction) do
-      "#{instruction}\n\n#{context}"
-    else
-      "##{ticket.number} #{instruction}\n\n#{context}"
-    end
+    "#{instruction}\n\n#{context}"
   end
 
-  def ensure_ticket_reference(instruction, ticket_number, nil) do
-    if Tickets.extract_ticket_number(instruction) do
-      instruction
-    else
-      "##{ticket_number} #{instruction}"
-    end
-  end
+  def ensure_ticket_reference(instruction, _ticket_number, nil), do: instruction
 
   def parse_ticket_number_param(%{"ticket_number" => value}) when is_binary(value) do
     case Integer.parse(value) do

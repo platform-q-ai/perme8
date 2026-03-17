@@ -124,7 +124,8 @@ defmodule AgentsWeb.DashboardLive.Index do
      |> EventProcessor.maybe_load_pending_question(current_task)
      |> EventProcessor.maybe_load_todos(current_task)
      |> push_event("scroll_to_bottom", %{})
-     |> push_event("focus_input", %{})}
+     |> push_event("focus_input", %{})
+     |> maybe_push_draft_key(active_ticket_number)}
   end
 
   # -- Task Execution Handlers ------------------------------------------------
@@ -464,4 +465,13 @@ defmodule AgentsWeb.DashboardLive.Index do
         metadata: %{concurrency_limit: 2, running_count: 0, warm_cache_limit: 2}
       })
   end
+
+  # Push a switch_draft_key event to the SessionFormHook when a ticket is active.
+  # This fires AFTER handle_params completes, ensuring the LiveView socket is
+  # stable and the hook receives the event reliably.
+  defp maybe_push_draft_key(socket, ticket_number) when is_integer(ticket_number) do
+    Phoenix.LiveView.push_event(socket, "switch_draft_key", %{key: "ticket:#{ticket_number}"})
+  end
+
+  defp maybe_push_draft_key(socket, _), do: socket
 end

@@ -661,7 +661,7 @@ defmodule AgentsWeb.DashboardLive.Components.DetailPanelComponents do
           <.progress_bar todo_items={@todo_items} />
 
           <input
-            :if={@active_session_tab == "ticket" && is_integer(@active_ticket_number)}
+            :if={is_integer(@active_ticket_number)}
             type="hidden"
             name="ticket_number"
             value={@active_ticket_number}
@@ -673,9 +673,19 @@ defmodule AgentsWeb.DashboardLive.Components.DetailPanelComponents do
               id="session-instruction"
               phx-hook="SessionForm"
               data-draft-key={
-                if @active_container_id,
-                  do: "session:#{@active_container_id}",
-                  else: if(@current_task, do: "task:#{@current_task.id}", else: "session:new")
+                cond do
+                  is_integer(@active_ticket_number) ->
+                    "ticket:#{@active_ticket_number}"
+
+                  @active_container_id ->
+                    "session:#{@active_container_id}"
+
+                  @current_task ->
+                    "task:#{@current_task.id}"
+
+                  true ->
+                    "session:new"
+                end
               }
               rows="2"
               class="textarea textarea-bordered w-full text-sm leading-snug"
