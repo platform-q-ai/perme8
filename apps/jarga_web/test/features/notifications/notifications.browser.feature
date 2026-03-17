@@ -248,7 +248,6 @@ Feature: Notification Management
     Then the URL should contain "/app/workspaces/${productTeamSlug}"
     And I should see "Product Team"
 
-  @wip
   Scenario: Decline workspace invitation from notification
     # Log in as a user who has a pending workspace invitation notification
     Given I navigate to "${baseUrl}/users/log-in"

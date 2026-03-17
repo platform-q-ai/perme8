@@ -1,4 +1,4 @@
-@browser @sessions @aggregate-root @wip
+@browser @sessions @aggregate-root
 Feature: Session aggregate root with durable interactions and ticket linking
   As a user managing agent sessions linked to tickets
   I want sessions, tasks, containers, and interactions to be durably tracked

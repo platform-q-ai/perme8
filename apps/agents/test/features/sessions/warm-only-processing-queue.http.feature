@@ -1,4 +1,3 @@
-@wip
 Feature: Warm-only queue promotion and warmup preparation
   As the sessions queue manager
   I want promotion to require warm readiness

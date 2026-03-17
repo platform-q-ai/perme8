@@ -1,4 +1,3 @@
-@wip
 Feature: Build Queue with Concurrency Limiting
   As a developer using the sessions UI
   I want to see a build queue that manages concurrent task execution

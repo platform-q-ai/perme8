@@ -1,4 +1,4 @@
-@security @sessions @aggregate-root @wip
+@security @sessions @aggregate-root
 Feature: Session aggregate root security
   As a platform owner
   I want sessions, interactions, and container management to enforce proper

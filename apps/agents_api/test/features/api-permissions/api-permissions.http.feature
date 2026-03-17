@@ -1,4 +1,4 @@
-@http @wip
+@http
 Feature: API key permission enforcement on REST API
   As an API consumer
   I want agents endpoints to enforce API key permission scopes

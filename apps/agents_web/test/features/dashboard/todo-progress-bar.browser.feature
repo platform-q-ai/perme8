@@ -99,7 +99,6 @@ Feature: Agent Session Todo Progress Bar
     And I wait for 1 seconds
     Then "[data-testid='session-todo-progress']" should exist
 
-  @wip
   Scenario: Progress bar updates active step during live execution
     # Requires live agent runtime and real-time PubSub transitions; cannot be
     # reliably triggered from static browser fixtures in early-pipeline mode.
@@ -108,7 +107,6 @@ Feature: Agent Session Todo Progress Bar
     Then "[data-testid='todo-step-2']" should have class "is-in-progress"
     And "[data-testid='todo-progress-summary']" should contain text "steps complete"
 
-  @wip
   Scenario: Progress bar resets when the agent replaces the todo list
     # Requires live agent interaction to replace one todo list with another in
     # the same session; static seeded state cannot verify replacement behavior.

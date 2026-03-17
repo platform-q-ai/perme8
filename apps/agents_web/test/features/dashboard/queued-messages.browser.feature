@@ -10,8 +10,8 @@ Feature: Queued Messages in Sessions
   # with distinct visual styling and clear insertion position.
   #
   # NOTE: Actual task execution requires Docker + opencode and cannot be
-  # tested end-to-end in browser tests. Most scenarios are tagged @wip.
-  # The form placeholder scenario can run without Docker.
+  # tested end-to-end in browser tests. The form placeholder scenario can
+  # run without Docker.
 
   Background:
     Given I am on "${identityUrl}/users/log-in"
@@ -25,7 +25,6 @@ Feature: Queued Messages in Sessions
   # Queued message visibility
   # ---------------------------------------------------------------------------
 
-  @wip
   Scenario: Queued message appears in output log after sending
     Given I navigate to "${baseUrl}/sessions"
     And I wait for network idle
@@ -36,7 +35,6 @@ Feature: Queued Messages in Sessions
     Then I should see "Follow-up instruction"
     And I should see "Queued"
 
-  @wip
   Scenario: Queued message has muted visual styling
     Given I navigate to "${baseUrl}/sessions"
     And I wait for network idle
@@ -45,7 +43,6 @@ Feature: Queued Messages in Sessions
     And I wait for 1 seconds
     Then "[data-testid='queued-message']" should be visible
 
-  @wip
   Scenario: Multiple queued messages shown in submission order
     Given I navigate to "${baseUrl}/sessions"
     And I wait for network idle
@@ -58,7 +55,6 @@ Feature: Queued Messages in Sessions
     Then I should see "First queued message"
     And I should see "Second queued message"
 
-  @wip
   Scenario: Queued messages persist when task is cancelled
     Given I navigate to "${baseUrl}/sessions"
     And I wait for network idle

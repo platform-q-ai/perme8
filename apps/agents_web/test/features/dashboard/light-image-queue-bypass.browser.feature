@@ -1,4 +1,3 @@
-@wip
 Feature: Lightweight Container Image Selection and Queue Bypass
   As a developer using the sessions UI
   I want to select a lightweight discussion-only container image

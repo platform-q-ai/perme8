@@ -38,7 +38,6 @@ Feature: Chat Messaging
     And I wait for "div.chat.chat-end" to be visible
     Then "div.chat.chat-end" should be visible
 
-  @wip
   Scenario: Receive agent response after sending message
     When I fill "textarea#chat-input" with "What is TDD?"
     And I click the "Send" button
@@ -54,7 +53,6 @@ Feature: Chat Messaging
     And I wait for 1 seconds
     Then I should not see "Message before clear"
 
-  @wip
   Scenario: Delete a user message
     When I fill "textarea#chat-input" with "Message to delete"
     And I click the "Send" button

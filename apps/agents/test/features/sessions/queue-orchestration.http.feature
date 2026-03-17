@@ -1,4 +1,4 @@
-@http @wip
+@http
 Feature: Queue orchestration engine and snapshot API
   As the queue orchestration system
   I want lane assignment, transitions, and snapshot generation to be rule-based

@@ -1,4 +1,4 @@
-@http @sessions @aggregate-root @wip
+@http @sessions @aggregate-root
 Feature: Session aggregate root with durable interactions, ticket linking, and container management
   As a user managing agent sessions via the API
   I want sessions, tasks, containers, and interactions to be durably tracked

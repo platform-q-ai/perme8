@@ -1,4 +1,4 @@
-@browser @wip
+@browser
 Feature: Queue orchestration with rule-based lanes and reactive UI
   As a developer using the sessions UI
   I want to see a build queue that organizes tasks into explicit lanes

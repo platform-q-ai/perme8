@@ -38,7 +38,6 @@ Feature: Session Detail Tabbed Layout
     Then "[role='tab'][data-tab-id]" should exist
     And "[role='tab'][data-tab-id='chat']" should exist
 
-  @wip
   Scenario: Tab state is reflected in the URL
     # Requires multiple tabs; will be enabled when a second tab is added
     Given I store the URL as "chatTabUrl"

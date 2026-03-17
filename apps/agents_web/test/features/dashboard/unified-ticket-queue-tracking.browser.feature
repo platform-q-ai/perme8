@@ -1,4 +1,4 @@
-@browser @sessions @tickets @queue @wip
+@browser @sessions @tickets @queue
 Feature: Unified ticket queue tracking
   As a developer using the sessions UI
   I want tickets to remain as a single entity as they move through the queue

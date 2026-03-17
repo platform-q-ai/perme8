@@ -1,4 +1,4 @@
-@browser @sessions @ticket-hierarchy @wip
+@browser @sessions @ticket-hierarchy
 Feature: Ticket subticket hierarchy in Sessions triage
   As a developer using the Sessions UI
   I want tickets with sub-issues displayed hierarchically in the triage column

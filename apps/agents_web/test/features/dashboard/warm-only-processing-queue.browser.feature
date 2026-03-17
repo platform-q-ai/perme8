@@ -1,4 +1,3 @@
-@wip
 Feature: Warm-only processing queue controls in Sessions UI
   As a user managing agent sessions
   I want to configure fresh warm-container capacity

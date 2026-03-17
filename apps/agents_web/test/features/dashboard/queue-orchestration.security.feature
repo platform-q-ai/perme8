@@ -1,4 +1,4 @@
-@security @wip
+@security
 Feature: Queue orchestration security baseline
   As a security auditor
   I want queue orchestration endpoints scanned for auth and integrity weaknesses

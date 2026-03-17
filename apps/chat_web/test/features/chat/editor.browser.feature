@@ -46,7 +46,6 @@ Feature: Chat Editor Integration
     And I wait for "div#chat-panel-content" to be visible
     Then "select#agent-selector" should be visible
 
-  @wip
   Scenario: Chat response appears while on workspace page
     When I click ".drawer-content > .navbar label[for='chat-drawer-global-chat-panel']"
     And I wait for "div#chat-panel-content" to be visible

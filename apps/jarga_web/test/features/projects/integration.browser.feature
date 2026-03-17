@@ -55,7 +55,6 @@ Feature: Project Integration
     Then I should see "Project updated successfully"
     And I should see "Mobile Application"
 
-  @wip
   Scenario: Project deletion reflects in workspace view
     # Delete uses data-confirm native dialog - cannot be automated
     Given I navigate to "${baseUrl}/users/log-in"

@@ -1,4 +1,4 @@
-@browser @sessions @lifecycle @wip
+@browser @sessions @lifecycle
 Feature: Session lifecycle state display in Sessions UI
   As a user viewing my session list
   I want to see whether my task is cold-queued, warming up, or actively running

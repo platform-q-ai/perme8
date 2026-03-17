@@ -1,4 +1,4 @@
-@browser @sessions @ticket-dependencies @wip
+@browser @sessions @ticket-dependencies
 Feature: Ticket dependency management (blocks/blocked-by) in Sessions
   As a developer using the Sessions UI
   I want to manage directional dependency relationships between tickets

@@ -1,4 +1,4 @@
-@browser @sessions @tickets @context @wip
+@browser @sessions @tickets @context
 Feature: Ticket-session context preservation
   As a developer starting a chat from a ticket
   I want the message to include the ticket's context and maintain the association

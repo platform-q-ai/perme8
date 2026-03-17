@@ -1,4 +1,4 @@
-@browser @sessions @ticket-sync @wip
+@browser @sessions @ticket-sync
 Feature: Drag and drop triage tickets in Sessions sidebar
   As an authenticated user
   I want to reorder tickets in the triage column
