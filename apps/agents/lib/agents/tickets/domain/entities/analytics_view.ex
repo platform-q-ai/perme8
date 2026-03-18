@@ -70,23 +70,7 @@ defmodule Agents.Tickets.Domain.Entities.AnalyticsView do
 
       Map.new(by_stage, fn {stage, data} ->
         data_by_bucket = Map.new(data, &{&1.bucket, Map.get(&1, value_key, 0)})
-
-        points =
-          buckets
-          |> Enum.with_index()
-          |> Enum.map(fn {bucket, i} ->
-            value = Map.get(data_by_bucket, bucket, 0)
-            x = Float.round(i * x_step, 1)
-
-            y =
-              if max_val > 0,
-                do: Float.round(height - value / max_val * height, 1),
-                else: height
-
-            "#{x},#{y}"
-          end)
-          |> Enum.join(" ")
-
+        points = build_polyline_points(buckets, data_by_bucket, x_step, max_val, height)
         {stage, points}
       end)
     end
@@ -116,6 +100,22 @@ defmodule Agents.Tickets.Domain.Entities.AnalyticsView do
   end
 
   # Private helpers
+
+  defp build_polyline_points(buckets, data_by_bucket, x_step, max_val, height) do
+    buckets
+    |> Enum.with_index()
+    |> Enum.map_join(" ", fn {bucket, i} ->
+      value = Map.get(data_by_bucket, bucket, 0)
+      x = Float.round(i * x_step, 1)
+
+      y =
+        if max_val > 0,
+          do: Float.round(height - value / max_val * height, 1),
+          else: height
+
+      "#{x},#{y}"
+    end)
+  end
 
   defp format_bucket_label(date, :daily) do
     "#{date.month}/#{date.day}"
