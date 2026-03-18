@@ -10,6 +10,8 @@ defmodule Agents.Tickets.Application.UseCases.CloseTicket do
   `GithubTicketPushHandler` event subscriber.
   """
 
+  require Logger
+
   alias Agents.Tickets.Domain.Events.TicketClosed
 
   @default_event_bus Perme8.Events.EventBus
@@ -42,8 +44,7 @@ defmodule Agents.Tickets.Application.UseCases.CloseTicket do
 
     case ticket_repo.update_fields(number, close_attrs) do
       {:ok, schema} ->
-        emit_event(schema, actor_id, event_bus)
-        broadcast_tickets_refresh()
+        safely_emit_and_broadcast(schema, actor_id, event_bus)
         :ok
 
       {:error, :not_found} ->
@@ -52,6 +53,16 @@ defmodule Agents.Tickets.Application.UseCases.CloseTicket do
       {:error, reason} ->
         {:error, reason}
     end
+  end
+
+  defp safely_emit_and_broadcast(schema, actor_id, event_bus) do
+    emit_event(schema, actor_id, event_bus)
+    broadcast_tickets_refresh()
+  rescue
+    e ->
+      Logger.error(
+        "Failed to emit TicketClosed event for ticket ##{schema.number}: #{Exception.message(e)}"
+      )
   end
 
   defp emit_event(schema, actor_id, event_bus) do
