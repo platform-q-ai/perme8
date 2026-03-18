@@ -5,7 +5,7 @@ defmodule Agents.Sessions.Application.UseCases.FailSession do
   Called when a task fails and the session should be marked as failed.
   """
 
-  alias Agents.Sessions.Domain.Policies.SessionStateMachinePolicy
+  alias Agents.Sessions.Application.SessionTransition
 
   @default_session_repo Agents.Sessions.Infrastructure.Repositories.SessionRepository
 
@@ -13,16 +13,13 @@ defmodule Agents.Sessions.Application.UseCases.FailSession do
   def execute(session_id, opts \\ []) do
     session_repo = Keyword.get(opts, :session_repo, @default_session_repo)
 
-    case session_repo.get_session(session_id) do
-      nil ->
-        {:error, :not_found}
-
-      session ->
-        if SessionStateMachinePolicy.can_fail?(session.status) do
-          session_repo.update_session(session, %{status: "failed"})
-        else
-          {:error, :invalid_transition}
-        end
-    end
+    SessionTransition.with_session_transition(
+      session_id,
+      "failed",
+      fn session ->
+        session_repo.update_session(session, %{status: "failed"})
+      end,
+      opts
+    )
   end
 end

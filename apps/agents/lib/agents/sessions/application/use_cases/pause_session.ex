@@ -6,8 +6,8 @@ defmodule Agents.Sessions.Application.UseCases.PauseSession do
   and updates the container status to stopped.
   """
 
+  alias Agents.Sessions.Application.SessionTransition
   alias Agents.Sessions.Domain.Events.SessionPaused
-  alias Agents.Sessions.Domain.Policies.SessionStateMachinePolicy
 
   @default_session_repo Agents.Sessions.Infrastructure.Repositories.SessionRepository
   @default_event_bus Perme8.Events.EventBus
@@ -17,25 +17,18 @@ defmodule Agents.Sessions.Application.UseCases.PauseSession do
     session_repo = Keyword.get(opts, :session_repo, @default_session_repo)
     event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
 
-    with {:ok, session} <- fetch_session(session_id, user_id, session_repo),
-         :ok <- validate_transition(session),
-         {:ok, updated} <- do_pause(session, session_repo) do
-      emit_paused(session_id, user_id, event_bus)
-      {:ok, updated}
-    end
-  end
-
-  defp fetch_session(session_id, user_id, session_repo) do
-    case session_repo.get_session_for_user(session_id, user_id) do
-      nil -> {:error, :not_found}
-      session -> {:ok, session}
-    end
-  end
-
-  defp validate_transition(session) do
-    if SessionStateMachinePolicy.can_pause?(session.status),
-      do: :ok,
-      else: {:error, :invalid_transition}
+    SessionTransition.with_session_transition(
+      session_id,
+      user_id,
+      "paused",
+      fn session ->
+        with {:ok, updated} <- do_pause(session, session_repo) do
+          emit_paused(session_id, user_id, event_bus)
+          {:ok, updated}
+        end
+      end,
+      opts
+    )
   end
 
   defp do_pause(session, session_repo) do

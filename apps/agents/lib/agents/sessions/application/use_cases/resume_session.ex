@@ -7,8 +7,8 @@ defmodule Agents.Sessions.Application.UseCases.ResumeSession do
   as an interaction record.
   """
 
+  alias Agents.Sessions.Application.SessionTransition
   alias Agents.Sessions.Domain.Events.SessionResumed
-  alias Agents.Sessions.Domain.Policies.SessionStateMachinePolicy
 
   @default_session_repo Agents.Sessions.Infrastructure.Repositories.SessionRepository
   @default_task_repo Agents.Sessions.Infrastructure.Repositories.TaskRepository
@@ -22,50 +22,48 @@ defmodule Agents.Sessions.Application.UseCases.ResumeSession do
     interaction_repo = Keyword.get(opts, :interaction_repo, @default_interaction_repo)
     event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
 
-    case session_repo.get_session_for_user(session_id, user_id) do
-      nil ->
-        {:error, :not_found}
+    SessionTransition.with_session_transition(
+      session_id,
+      user_id,
+      "active",
+      fn session ->
+        with {:ok, updated_session} <-
+               session_repo.update_session(session, %{
+                 status: "active",
+                 resumed_at: DateTime.utc_now()
+               }),
+             {:ok, _task} <-
+               task_repo.create_task(%{
+                 instruction: instruction,
+                 user_id: user_id,
+                 session_ref_id: session_id,
+                 status: "queued",
+                 queued_at: DateTime.utc_now()
+               }) do
+          # Store instruction as interaction record (best-effort, don't fail resume)
+          _ =
+            interaction_repo.create_interaction(%{
+              session_id: session_id,
+              type: "instruction",
+              direction: "inbound",
+              payload: %{text: instruction}
+            })
 
-      session ->
-        if SessionStateMachinePolicy.can_resume?(session.status) do
-          with {:ok, updated_session} <-
-                 session_repo.update_session(session, %{
-                   status: "active",
-                   resumed_at: DateTime.utc_now()
-                 }),
-               {:ok, _task} <-
-                 task_repo.create_task(%{
-                   instruction: instruction,
-                   user_id: user_id,
-                   session_ref_id: session_id,
-                   status: "queued",
-                   queued_at: DateTime.utc_now()
-                 }) do
-            # Store instruction as interaction record (best-effort, don't fail resume)
-            _ =
-              interaction_repo.create_interaction(%{
+          _ =
+            event_bus.emit(
+              SessionResumed.new(%{
+                aggregate_id: session_id,
+                actor_id: user_id,
                 session_id: session_id,
-                type: "instruction",
-                direction: "inbound",
-                payload: %{text: instruction}
+                user_id: user_id,
+                resumed_at: DateTime.utc_now()
               })
+            )
 
-            _ =
-              event_bus.emit(
-                SessionResumed.new(%{
-                  aggregate_id: session_id,
-                  actor_id: user_id,
-                  session_id: session_id,
-                  user_id: user_id,
-                  resumed_at: DateTime.utc_now()
-                })
-              )
-
-            {:ok, updated_session}
-          end
-        else
-          {:error, :invalid_transition}
+          {:ok, updated_session}
         end
-    end
+      end,
+      opts
+    )
   end
 end
