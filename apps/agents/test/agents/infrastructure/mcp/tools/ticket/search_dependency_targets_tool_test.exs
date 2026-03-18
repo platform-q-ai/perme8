@@ -99,7 +99,7 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.SearchDependencyTargetsToolTest
 
       assert {:reply, response, ^frame} =
                SearchDependencyTargetsTool.execute(
-                 %{"query" => "test", "exclude_ticket_number" => 1},
+                 %{"query" => "test", "exclude_ticket_number" => 1300},
                  frame
                )
 
