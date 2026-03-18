@@ -27,28 +27,25 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.RemoveDependencyTool do
       :ok ->
         opts = [actor_id: Helpers.actor_id(frame)]
 
-        with {:ok, blocker} <- Tickets.get_ticket_by_number(blocker_number),
-             {:ok, blocked} <- Tickets.get_ticket_by_number(blocked_number) do
-          case Tickets.remove_dependency(blocker.id, blocked.id, opts) do
-            :ok ->
-              {:reply,
-               Response.text(
-                 Response.tool(),
-                 "Removed dependency: ticket ##{blocker_number} no longer blocks ##{blocked_number}."
-               ), frame}
+        case Tickets.remove_dependency_by_number(blocker_number, blocked_number, opts) do
+          :ok ->
+            {:reply,
+             Response.text(
+               Response.tool(),
+               "Removed dependency: ticket ##{blocker_number} no longer blocks ##{blocked_number}."
+             ), frame}
 
-            {:error, :dependency_not_found} ->
-              {:reply, Response.error(Response.tool(), "Dependency not found."), frame}
-
-            {:error, reason} ->
-              Logger.error("ticket.remove_dependency error: #{inspect(reason)}")
-
-              {:reply,
-               Response.error(Response.tool(), Helpers.format_error(reason, "Dependency")), frame}
-          end
-        else
           {:error, :ticket_not_found} ->
             {:reply, Response.error(Response.tool(), "One or both tickets not found."), frame}
+
+          {:error, :dependency_not_found} ->
+            {:reply, Response.error(Response.tool(), "Dependency not found."), frame}
+
+          {:error, reason} ->
+            Logger.error("ticket.remove_dependency error: #{inspect(reason)}")
+
+            {:reply, Response.error(Response.tool(), Helpers.format_error(reason, "Dependency")),
+             frame}
         end
 
       {:error, scope} ->

@@ -946,6 +946,24 @@ defmodule Agents.Tickets.Infrastructure.Repositories.ProjectTicketRepositoryTest
     end
   end
 
+  describe "get_id_by_number/1" do
+    test "returns {:ok, id} for an existing ticket" do
+      {:ok, ticket} =
+        ProjectTicketRepository.sync_remote_ticket(%{
+          number: 1300,
+          title: "Ticket for ID lookup",
+          labels: []
+        })
+
+      assert {:ok, id} = ProjectTicketRepository.get_id_by_number(1300)
+      assert id == ticket.id
+    end
+
+    test "returns {:error, :ticket_not_found} for non-existent ticket" do
+      assert {:error, :ticket_not_found} = ProjectTicketRepository.get_id_by_number(99_999)
+    end
+  end
+
   describe "update_labels/2" do
     test "updates labels on an existing ticket" do
       {:ok, _ticket} =
