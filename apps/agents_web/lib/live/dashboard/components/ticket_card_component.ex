@@ -78,10 +78,9 @@ defmodule AgentsWeb.DashboardLive.Components.TicketCardComponent do
   # ---- Question Card ----
 
   @doc """
-  Renders the AI assistant's question with selectable options.
+  Renders the AI assistant's question with selectable options and a submit button.
 
-  When rejected (dismissed/timed out), the card stays visible with muted styling.
-  Submitting an answer to a rejected question sends it as a follow-up message.
+  Questions remain active indefinitely until the user answers or dismisses them.
   """
   attr(:pending, :map, required: true)
 

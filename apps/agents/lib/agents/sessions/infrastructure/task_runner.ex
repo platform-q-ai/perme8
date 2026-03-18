@@ -1444,8 +1444,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     {:continue, state}
   end
 
-  # Mark the question as rejected in DB but keep the data so the UI
-  # can still display the card and let the user send an answer as a message
+  # Mark the question as rejected in DB so reconnect won't restore the
+  # dismissed card, then clear pending state from the GenServer.
   defp mark_question_rejected(state) do
     case state.pending_question_data do
       %{} = pq ->
