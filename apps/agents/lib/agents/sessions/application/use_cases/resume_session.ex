@@ -5,6 +5,7 @@ defmodule Agents.Sessions.Application.UseCases.ResumeSession do
   Sets the session status to active, records the resume timestamp,
   creates a new task of type "resume", and stores the resume instruction
   as an interaction record.
+  Delegates session fetch and state-machine validation to `SessionTransition`.
   """
 
   alias Agents.Sessions.Application.SessionTransition
