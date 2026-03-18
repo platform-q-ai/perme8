@@ -70,25 +70,20 @@ defmodule Agents.Tickets.Infrastructure.Subscribers.GithubTicketPushHandler do
     ]
 
     case GithubProjectClient.update_issue(number, %{state: "closed"}, opts) do
-      {:ok, _issue} ->
-        mark_synced(ticket_id)
-        broadcast_tickets_refresh()
-        :ok
-
-      {:error, :not_found} ->
-        # Issue doesn't exist on GitHub -- treat as already closed
-        mark_synced(ticket_id)
-        broadcast_tickets_refresh()
-        :ok
-
-      {:error, reason} ->
+      {:error, reason} when reason != :not_found ->
         Logger.error("Failed to close ticket ##{number} on GitHub: #{inspect(reason)}")
         mark_sync_error(ticket_id, reason)
         {:error, reason}
+
+      _ok_or_not_found ->
+        mark_synced(ticket_id)
+        broadcast_tickets_refresh()
+        :ok
     end
   rescue
     e ->
       Logger.error("Failed to close ticket ##{number} on GitHub: #{Exception.message(e)}")
+      mark_sync_error(ticket_id, Exception.message(e))
       :ok
   end
 
@@ -98,12 +93,19 @@ defmodule Agents.Tickets.Infrastructure.Subscribers.GithubTicketPushHandler do
         :ok
 
       ticket ->
-        ticket
-        |> ProjectTicketSchema.changeset(%{
-          sync_state: "synced",
-          last_synced_at: DateTime.utc_now() |> DateTime.truncate(:second)
-        })
-        |> Agents.Repo.update()
+        changeset =
+          ProjectTicketSchema.changeset(ticket, %{
+            sync_state: "synced",
+            last_synced_at: DateTime.utc_now() |> DateTime.truncate(:second)
+          })
+
+        case Agents.Repo.update(changeset) do
+          {:ok, _} ->
+            :ok
+
+          {:error, reason} ->
+            Logger.error("Failed to mark ticket #{ticket_id} as synced: #{inspect(reason)}")
+        end
     end
   rescue
     e ->
