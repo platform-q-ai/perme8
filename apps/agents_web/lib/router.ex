@@ -32,6 +32,7 @@ defmodule AgentsWeb.Router do
     live_session :sessions,
       on_mount: [{AgentsWeb.UserAuth, :require_authenticated}] do
       live("/sessions", DashboardLive.Index, :index)
+      live("/analytics", AnalyticsLive.Index, :index)
     end
   end
 end
