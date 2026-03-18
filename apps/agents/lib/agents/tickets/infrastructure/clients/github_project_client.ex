@@ -313,6 +313,8 @@ defmodule Agents.Tickets.Infrastructure.Clients.GithubProjectClient do
   defp parse_comments(_), do: []
 
   defp enrich_with_sub_issues(issues, token, owner, repo, opts) do
+    enrichment_timeout = Keyword.get(opts, :enrichment_timeout, 15_000)
+
     issues
     |> Task.async_stream(
       fn ticket ->
@@ -326,14 +328,14 @@ defmodule Agents.Tickets.Infrastructure.Clients.GithubProjectClient do
         Map.put(ticket, :sub_issue_numbers, sub_issue_numbers)
       end,
       max_concurrency: 10,
-      timeout: 15_000,
+      timeout: enrichment_timeout,
       on_timeout: :kill_task
     )
+    |> Enum.zip(issues)
     |> Enum.map(fn
-      {:ok, ticket} -> ticket
-      {:exit, _reason} -> nil
+      {{:ok, enriched_ticket}, _original} -> enriched_ticket
+      {{:exit, _reason}, original} -> original
     end)
-    |> Enum.reject(&is_nil/1)
   end
 
   defp extract_sub_issue_numbers(body) when is_list(body) do
