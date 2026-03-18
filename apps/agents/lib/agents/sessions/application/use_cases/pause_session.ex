@@ -4,6 +4,7 @@ defmodule Agents.Sessions.Application.UseCases.PauseSession do
 
   Sets the session status to paused, records the pause timestamp,
   and updates the container status to stopped.
+  Delegates session fetch and state-machine validation to `SessionTransition`.
   """
 
   alias Agents.Sessions.Application.SessionTransition
@@ -22,32 +23,27 @@ defmodule Agents.Sessions.Application.UseCases.PauseSession do
       user_id,
       "paused",
       fn session ->
-        with {:ok, updated} <- do_pause(session, session_repo) do
-          emit_paused(session_id, user_id, event_bus)
+        with {:ok, updated} <-
+               session_repo.update_session(session, %{
+                 status: "paused",
+                 paused_at: DateTime.utc_now(),
+                 container_status: "stopped"
+               }) do
+          _ =
+            event_bus.emit(
+              SessionPaused.new(%{
+                aggregate_id: session_id,
+                actor_id: user_id,
+                session_id: session_id,
+                user_id: user_id,
+                paused_at: DateTime.utc_now()
+              })
+            )
+
           {:ok, updated}
         end
       end,
       opts
-    )
-  end
-
-  defp do_pause(session, session_repo) do
-    session_repo.update_session(session, %{
-      status: "paused",
-      paused_at: DateTime.utc_now(),
-      container_status: "stopped"
-    })
-  end
-
-  defp emit_paused(session_id, user_id, event_bus) do
-    event_bus.emit(
-      SessionPaused.new(%{
-        aggregate_id: session_id,
-        actor_id: user_id,
-        session_id: session_id,
-        user_id: user_id,
-        paused_at: DateTime.utc_now()
-      })
     )
   end
 end
