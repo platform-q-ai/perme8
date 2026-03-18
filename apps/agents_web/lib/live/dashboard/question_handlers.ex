@@ -2,6 +2,7 @@ defmodule AgentsWeb.DashboardLive.QuestionHandlers do
   @moduledoc "Handles interactive question prompts and answer submissions from the dashboard UI."
 
   import Phoenix.Component, only: [assign: 3]
+  import Phoenix.LiveView, only: [put_flash: 3]
   import AgentsWeb.DashboardLive.SessionDataHelpers
 
   alias Agents.Sessions
@@ -62,8 +63,16 @@ defmodule AgentsWeb.DashboardLive.QuestionHandlers do
         {:noreply, socket}
 
       {pending, %{id: task_id}} ->
-        Sessions.reject_question(task_id, pending.request_id)
-        {:noreply, assign(socket, :pending_question, nil)}
+        case Sessions.reject_question(task_id, pending.request_id) do
+          :ok ->
+            {:noreply, assign(socket, :pending_question, nil)}
+
+          {:error, :task_not_running} ->
+            {:noreply, assign(socket, :pending_question, nil)}
+
+          {:error, _} ->
+            {:noreply, put_flash(socket, :error, "Failed to dismiss question — please try again")}
+        end
 
       _ ->
         {:noreply, socket}
