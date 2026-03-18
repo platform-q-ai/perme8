@@ -9,13 +9,15 @@ import { SessionFormHook } from './presentation/hooks/session-form-hook'
 import { SessionOptimisticStateHook } from './presentation/hooks/session-optimistic-state-hook'
 import { TriageLaneDndHook } from './presentation/hooks/triage-lane-dnd-hook'
 import { DurationTimerHook } from './presentation/hooks/duration-timer-hook'
+import { FlashHook } from './presentation/hooks/flash-hook'
 
 export {
   SessionLogHook as SessionLog,
   SessionFormHook as SessionForm,
   SessionOptimisticStateHook as SessionOptimisticState,
   TriageLaneDndHook as TriageLaneDnd,
-  DurationTimerHook as DurationTimer
+  DurationTimerHook as DurationTimer,
+  FlashHook as AutoHideFlash
 }
 
 export default {
@@ -23,5 +25,6 @@ export default {
   SessionForm: SessionFormHook,
   SessionOptimisticState: SessionOptimisticStateHook,
   TriageLaneDnd: TriageLaneDndHook,
-  DurationTimer: DurationTimerHook
+  DurationTimer: DurationTimerHook,
+  AutoHideFlash: FlashHook
 }

@@ -129,6 +129,12 @@
   background-color: #EFEFF3 !important;
 }
 
+/* Flash message fade-out animation */
+.fade-out {
+  opacity: 0;
+  transition: opacity 300ms ease-out;
+}
+
 /* Animation Styles */
 @import './animations.css';
 

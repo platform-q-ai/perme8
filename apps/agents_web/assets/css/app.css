@@ -65,5 +65,11 @@
 /* Make LiveView wrapper divs transparent for layout */
 [data-phx-session], [data-phx-teleported-src] { display: contents }
 
+/* Flash message fade-out animation */
+.fade-out {
+  opacity: 0;
+  transition: opacity 300ms ease-out;
+}
+
 /* Session Output Styles */
 @import './sessions.css';
