@@ -87,20 +87,6 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.SearchDependencyTargetsToolTest
       assert text =~ "No matching tickets found"
     end
 
-    test "returns error when excluded ticket number does not exist" do
-      frame = build_frame()
-
-      assert {:reply, response, ^frame} =
-               SearchDependencyTargetsTool.execute(
-                 %{"query" => "test", "exclude_ticket_number" => 999_999},
-                 frame
-               )
-
-      assert %Hermes.Server.Response{isError: true} = response
-      assert [%{"text" => text}] = response.content
-      assert text =~ "not found"
-    end
-
     test "denies execution when scope is missing" do
       api_key = %{id: "k-1", permissions: []}
       frame = build_frame(api_key)

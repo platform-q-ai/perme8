@@ -80,14 +80,14 @@ defmodule Agents.Tickets.Infrastructure.Repositories.TicketDependencyRepositoryT
   end
 
   describe "search_tickets/2" do
-    test "finds tickets by exact number", %{ticket_a: a, ticket_b: b} do
-      results = TicketDependencyRepository.search_tickets("600", b.id)
+    test "finds tickets by exact number", %{ticket_a: a} do
+      results = TicketDependencyRepository.search_tickets("600", 601)
       assert length(results) == 1
       assert hd(results).id == a.id
     end
 
     test "finds tickets by title substring", %{ticket_a: a, ticket_b: b} do
-      results = TicketDependencyRepository.search_tickets("Repo Test", a.id)
+      results = TicketDependencyRepository.search_tickets("Repo Test", 600)
       # Should find B and C but not A (excluded)
       ids = Enum.map(results, & &1.id)
       refute a.id in ids
@@ -95,19 +95,19 @@ defmodule Agents.Tickets.Infrastructure.Repositories.TicketDependencyRepositoryT
     end
 
     test "excludes the specified ticket", %{ticket_a: a} do
-      results = TicketDependencyRepository.search_tickets("Repo Test A", a.id)
+      results = TicketDependencyRepository.search_tickets("Repo Test A", 600)
       ids = Enum.map(results, & &1.id)
       refute a.id in ids
     end
 
-    test "returns empty for no matches", %{ticket_a: a} do
-      results = TicketDependencyRepository.search_tickets("zzz_nonexistent_zzz", a.id)
+    test "returns empty for no matches" do
+      results = TicketDependencyRepository.search_tickets("zzz_nonexistent_zzz", 600)
       assert results == []
     end
 
-    test "sanitizes SQL wildcards in search", %{ticket_a: a} do
+    test "sanitizes SQL wildcards in search" do
       # Searching for "%" should not match all tickets
-      results = TicketDependencyRepository.search_tickets("%", a.id)
+      results = TicketDependencyRepository.search_tickets("%", 600)
       assert results == []
     end
   end

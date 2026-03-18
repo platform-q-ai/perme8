@@ -295,12 +295,12 @@ defmodule Agents.Tickets do
   end
 
   @doc """
-  Searches tickets by number or title, excluding the given ticket ID.
+  Searches tickets by number or title, excluding the given ticket number.
   Used for the dependency typeahead search.
   """
   @spec search_tickets_for_dependency(String.t(), integer()) :: [struct()]
-  def search_tickets_for_dependency(query, exclude_ticket_id) do
-    TicketDependencyRepository.search_tickets(query, exclude_ticket_id)
+  def search_tickets_for_dependency(query, exclude_ticket_number) do
+    TicketDependencyRepository.search_tickets(query, exclude_ticket_number)
   end
 
   @doc """

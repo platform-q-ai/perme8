@@ -36,7 +36,7 @@ defmodule AgentsWeb.DashboardLive.DependencyHandlers do
 
       results =
         if active_ticket do
-          Tickets.search_tickets_for_dependency(query, active_ticket.id)
+          Tickets.search_tickets_for_dependency(query, active_ticket.number)
         else
           []
         end

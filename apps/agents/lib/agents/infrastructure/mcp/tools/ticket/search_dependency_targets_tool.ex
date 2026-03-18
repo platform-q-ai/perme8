@@ -23,19 +23,10 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.SearchDependencyTargetsTool do
 
     case PermissionGuard.check_permission(frame, "ticket.search_dependency_targets") do
       :ok ->
-        with {:ok, ticket} <- Tickets.get_ticket_by_number(exclude_number) do
-          format_search_results(
-            Tickets.search_tickets_for_dependency(query, ticket.id),
-            frame
-          )
-        else
-          {:error, :ticket_not_found} ->
-            {:reply,
-             Response.error(
-               Response.tool(),
-               "Ticket ##{exclude_number} not found."
-             ), frame}
-        end
+        format_search_results(
+          Tickets.search_tickets_for_dependency(query, exclude_number),
+          frame
+        )
 
       {:error, scope} ->
         {:reply, Response.error(Response.tool(), "Insufficient permissions: #{scope} required"),
