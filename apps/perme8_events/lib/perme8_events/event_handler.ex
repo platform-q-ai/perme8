@@ -74,13 +74,26 @@ defmodule Perme8.Events.EventHandler do
         # the return type of handle_event/1 into the case clauses, which would
         # cause unreachable-clause warnings in handlers that only return :ok
         # or only return {:error, _}.
-        case Function.identity(handle_event(event)) do
-          :ok ->
-            :ok
+        #
+        # The try/rescue wraps the entire handler invocation so that a sandbox
+        # or connection error (e.g. owner process exited during tests) never
+        # crashes the GenServer. With one_for_one supervision and default
+        # max_restarts: 3, repeated crashes would kill the entire supervisor
+        # — including Repo — causing mass "could not lookup Ecto repo" failures.
+        try do
+          case Function.identity(handle_event(event)) do
+            :ok ->
+              :ok
 
-          {:error, reason} ->
-            Logger.error(
-              "[#{inspect(__MODULE__)}] Error handling event #{inspect(event.__struct__)}: #{inspect(reason)}"
+            {:error, reason} ->
+              Logger.error(
+                "[#{inspect(__MODULE__)}] Error handling event #{inspect(event.__struct__)}: #{inspect(reason)}"
+              )
+          end
+        rescue
+          e ->
+            Logger.warning(
+              "[#{inspect(__MODULE__)}] Event handler rescued from #{inspect(e.__struct__)}: #{Exception.message(e)}"
             )
         end
 
