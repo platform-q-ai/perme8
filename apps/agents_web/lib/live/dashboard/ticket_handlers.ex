@@ -273,9 +273,11 @@ defmodule AgentsWeb.DashboardLive.TicketHandlers do
 
         socket = assign(socket, :tickets, tickets)
 
-        # Persist to GitHub + local DB
-        case Tickets.update_ticket_labels(number, labels) do
-          :ok ->
+        user = socket.assigns.current_scope.user
+
+        # Persist locally (domain-first); GitHub sync happens async via event handler
+        case Tickets.update_ticket_labels(number, labels, actor_id: user.id) do
+          {:ok, _schema} ->
             {:noreply, socket}
 
           {:error, _reason} ->
@@ -285,7 +287,7 @@ defmodule AgentsWeb.DashboardLive.TicketHandlers do
             {:noreply,
              socket
              |> assign(:tickets, tickets)
-             |> put_flash(:error, "Failed to update labels on GitHub. Please try again.")}
+             |> put_flash(:error, "Failed to update labels. Please try again.")}
         end
 
       _ ->

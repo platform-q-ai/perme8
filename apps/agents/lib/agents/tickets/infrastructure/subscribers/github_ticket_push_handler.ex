@@ -7,8 +7,14 @@ defmodule Agents.Tickets.Infrastructure.Subscribers.GithubTicketPushHandler do
 
   - `tickets.ticket_created` -- creates a new GitHub issue and updates
     the local record with the real issue number and URL.
+  - `tickets.ticket_updated` -- pushes field changes (title, body, labels,
+    state, etc.) to the corresponding GitHub issue via PATCH. Skips tickets
+    with temporary (negative) numbers that haven't been created on GitHub yet.
   - `tickets.ticket_closed` -- closes the corresponding GitHub issue
     and marks the local record as synced.
+
+  On success, marks the ticket as `sync_state: "synced"`. On failure,
+  marks it as `sync_state: "sync_error"` and logs the error.
   """
 
   use Perme8.Events.EventHandler
@@ -30,11 +36,46 @@ defmodule Agents.Tickets.Infrastructure.Subscribers.GithubTicketPushHandler do
     push_to_github(event.ticket_id, event.title, event.body)
   end
 
+  def handle_event(%{event_type: "tickets.ticket_updated"} = event) do
+    push_update_to_github(event.ticket_id, event.number, event.changes)
+  end
+
   def handle_event(%{event_type: "tickets.ticket_closed"} = event) do
     close_on_github(event.ticket_id, event.number)
   end
 
   def handle_event(_event), do: :ok
+
+  defp push_update_to_github(_ticket_id, number, _changes) when number < 0 do
+    # Ticket hasn't been pushed to GitHub yet (temporary number).
+    # The pending changes will be included when the ticket is eventually
+    # created on GitHub via the ticket_created handler.
+    :ok
+  end
+
+  defp push_update_to_github(ticket_id, number, changes) do
+    opts = [
+      token: TicketsConfig.github_token(),
+      org: TicketsConfig.github_org(),
+      repo: TicketsConfig.github_repo(),
+      api_base: TicketsConfig.github_api_base()
+    ]
+
+    case GithubProjectClient.update_issue(number, changes, opts) do
+      {:ok, _issue} ->
+        mark_synced(ticket_id)
+        broadcast_tickets_refresh()
+        :ok
+
+      {:error, reason} ->
+        Logger.error(
+          "Failed to push ticket update #{ticket_id} (issue ##{number}) to GitHub: #{inspect(reason)}"
+        )
+
+        mark_sync_error(ticket_id, reason)
+        {:error, reason}
+    end
+  end
 
   defp push_to_github(ticket_id, title, body) do
     opts = [
