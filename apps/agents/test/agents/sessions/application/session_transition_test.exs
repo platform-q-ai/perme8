@@ -7,7 +7,7 @@ defmodule Agents.Sessions.Application.SessionTransitionTest do
 
   @user_id Ecto.UUID.generate()
 
-  describe "with_session_transition/4 using get_session (no user scoping)" do
+  describe "with_session_transition/2 unscoped fetch (no user scoping)" do
     test "returns {:ok, session} when transition is valid" do
       session = session_fixture(%{user_id: @user_id, status: "active"})
 
@@ -28,19 +28,19 @@ defmodule Agents.Sessions.Application.SessionTransitionTest do
     end
   end
 
-  describe "with_session_transition/5 using get_session_for_user (user scoping)" do
+  describe "with_user_session_transition/3 user-scoped fetch" do
     test "returns {:ok, session} when transition is valid and user matches" do
       session = session_fixture(%{user_id: @user_id, status: "active"})
 
       assert {:ok, fetched} =
-               SessionTransition.with_session_transition(session.id, @user_id, "paused")
+               SessionTransition.with_user_session_transition(session.id, @user_id, "paused")
 
       assert fetched.id == session.id
     end
 
     test "returns {:error, :not_found} when session does not exist" do
       assert {:error, :not_found} =
-               SessionTransition.with_session_transition(
+               SessionTransition.with_user_session_transition(
                  Ecto.UUID.generate(),
                  @user_id,
                  "paused"
@@ -52,19 +52,19 @@ defmodule Agents.Sessions.Application.SessionTransitionTest do
       session = session_fixture(%{user_id: other_user_id, status: "active"})
 
       assert {:error, :not_found} =
-               SessionTransition.with_session_transition(session.id, @user_id, "paused")
+               SessionTransition.with_user_session_transition(session.id, @user_id, "paused")
     end
 
     test "returns {:error, :invalid_transition} when transition is not allowed" do
       session = session_fixture(%{user_id: @user_id, status: "paused"})
 
       assert {:error, :invalid_transition} =
-               SessionTransition.with_session_transition(session.id, @user_id, "paused")
+               SessionTransition.with_user_session_transition(session.id, @user_id, "paused")
     end
   end
 
   describe "callback function" do
-    test "invokes callback with session on valid transition (no user scoping)" do
+    test "invokes callback with session on valid transition (unscoped)" do
       session = session_fixture(%{user_id: @user_id, status: "active"})
 
       assert {:ok, fetched} =
@@ -75,11 +75,11 @@ defmodule Agents.Sessions.Application.SessionTransitionTest do
       assert fetched.id == session.id
     end
 
-    test "invokes callback with session on valid transition (user scoping)" do
+    test "invokes callback with session on valid transition (user-scoped)" do
       session = session_fixture(%{user_id: @user_id, status: "active"})
 
       assert {:ok, fetched} =
-               SessionTransition.with_session_transition(
+               SessionTransition.with_user_session_transition(
                  session.id,
                  @user_id,
                  "paused",
@@ -112,25 +112,56 @@ defmodule Agents.Sessions.Application.SessionTransitionTest do
                  callback
                )
     end
-  end
 
-  describe "session_repo injection" do
-    test "accepts custom session_repo via opts (no user scoping)" do
+    test "propagates callback error tuple transparently" do
       session = session_fixture(%{user_id: @user_id, status: "active"})
 
-      assert {:ok, _} =
-               SessionTransition.with_session_transition(session.id, "completed",
-                 session_repo: Agents.Sessions.Infrastructure.Repositories.SessionRepository
-               )
+      assert {:error, :db_failure} =
+               SessionTransition.with_session_transition(session.id, "completed", fn _s ->
+                 {:error, :db_failure}
+               end)
     end
 
-    test "accepts custom session_repo via opts (user scoping)" do
+    test "propagates callback return value unchanged" do
       session = session_fixture(%{user_id: @user_id, status: "active"})
 
-      assert {:ok, _} =
-               SessionTransition.with_session_transition(session.id, @user_id, "paused",
+      assert {:ok, :custom_return} =
+               SessionTransition.with_session_transition(session.id, "completed", fn _s ->
+                 {:ok, :custom_return}
+               end)
+    end
+  end
+
+  describe "with_session_transition/4 unscoped with callback and opts" do
+    test "uses injected session_repo for fetch" do
+      session = session_fixture(%{user_id: @user_id, status: "active"})
+
+      assert {:ok, fetched} =
+               SessionTransition.with_session_transition(
+                 session.id,
+                 "completed",
+                 fn s -> {:ok, s} end,
                  session_repo: Agents.Sessions.Infrastructure.Repositories.SessionRepository
                )
+
+      assert fetched.id == session.id
+    end
+  end
+
+  describe "with_user_session_transition/5 user-scoped with callback and opts" do
+    test "uses injected session_repo for fetch" do
+      session = session_fixture(%{user_id: @user_id, status: "active"})
+
+      assert {:ok, fetched} =
+               SessionTransition.with_user_session_transition(
+                 session.id,
+                 @user_id,
+                 "paused",
+                 fn s -> {:ok, s} end,
+                 session_repo: Agents.Sessions.Infrastructure.Repositories.SessionRepository
+               )
+
+      assert fetched.id == session.id
     end
   end
 end

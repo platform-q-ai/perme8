@@ -7,9 +7,19 @@ defmodule Agents.Sessions.Application.SessionTransition do
   allowed by `SessionStateMachinePolicy`, and either returns the session
   or invokes an optional callback with it.
 
-  Supports two fetch modes:
-  - **Unscoped** (`get_session/1`) -- used by CompleteSession, FailSession
-  - **User-scoped** (`get_session_for_user/2`) -- used by PauseSession, ResumeSession
+  Two public functions correspond to two fetch modes:
+
+  - `with_session_transition/3` -- **Unscoped** fetch via `get_session/1`.
+    Used by `CompleteSession` and `FailSession`.
+  - `with_user_session_transition/4` -- **User-scoped** fetch via
+    `get_session_for_user/2`. Used by `PauseSession` and `ResumeSession`.
+
+  ## Callback contract
+
+  The optional `fun` callback receives the fetched session (a map) after
+  the transition has been validated. It must return `{:ok, result}` or
+  `{:error, reason}`. If no callback is provided, `{:ok, session}` is
+  returned by default.
   """
 
   alias Agents.Sessions.Domain.Policies.SessionStateMachinePolicy
@@ -19,107 +29,71 @@ defmodule Agents.Sessions.Application.SessionTransition do
   @type session_id :: String.t()
   @type user_id :: String.t()
   @type target_status :: String.t()
+  @type transition_callback :: (map() -> {:ok, map()} | {:error, term()})
+
+  # ── Unscoped (no user filtering) ──────────────────────────────────
 
   @doc """
-  Fetches a session (unscoped), validates the transition, and returns `{:ok, session}`.
+  Fetches a session (unscoped), validates the transition, and returns
+  `{:ok, session}` or invokes `fun` with the session.
+
+  ## Options
+
+  - `:session_repo` -- override the default session repository (useful for tests).
   """
-  @spec with_session_transition(session_id, target_status) ::
-          {:ok, map()} | {:error, :not_found | :invalid_transition}
-  def with_session_transition(session_id, target_status) do
-    with_session_transition(session_id, target_status, fn session -> {:ok, session} end, [])
-  end
-
-  @doc """
-  Overloaded /3 variant.
-
-  - When the third argument is a function, fetches unscoped and invokes the callback.
-  - When the third argument is a keyword list, fetches unscoped with custom opts.
-  - When the third argument is a binary (user_id), fetches user-scoped.
-  """
-  def with_session_transition(session_id, target_status, fun)
-      when is_function(fun, 1) do
-    with_session_transition(session_id, target_status, fun, [])
-  end
-
-  def with_session_transition(session_id, target_status, opts)
-      when is_list(opts) do
-    with_session_transition(session_id, target_status, fn session -> {:ok, session} end, opts)
-  end
-
-  def with_session_transition(session_id, user_id, target_status)
-      when is_binary(user_id) and is_binary(target_status) do
-    with_session_transition(
-      session_id,
-      user_id,
-      target_status,
-      fn session -> {:ok, session} end,
-      []
-    )
-  end
-
-  @doc """
-  Overloaded /4 variant.
-
-  - When the fourth argument is a function, fetches user-scoped and invokes the callback.
-  - When the fourth argument is a keyword list, fetches user-scoped with custom opts.
-  - When the second argument is a binary (target_status) and the third is a function,
-    this is the unscoped variant with callback and opts.
-  """
-  def with_session_transition(session_id, user_id, target_status, fun)
-      when is_binary(user_id) and is_binary(target_status) and is_function(fun, 1) do
-    with_session_transition(session_id, user_id, target_status, fun, [])
-  end
-
-  def with_session_transition(session_id, user_id, target_status, opts)
-      when is_binary(user_id) and is_binary(target_status) and is_list(opts) do
-    with_session_transition(
-      session_id,
-      user_id,
-      target_status,
-      fn session -> {:ok, session} end,
-      opts
-    )
-  end
-
-  def with_session_transition(session_id, target_status, fun, opts)
-      when is_binary(target_status) and is_function(fun, 1) and is_list(opts) do
+  @spec with_session_transition(session_id, target_status, transition_callback, keyword()) ::
+          {:ok, map()} | {:error, term()}
+  def with_session_transition(session_id, target_status, fun \\ &default_callback/1, opts \\ []) do
     session_repo = Keyword.get(opts, :session_repo, @default_session_repo)
 
-    case session_repo.get_session(session_id) do
-      nil ->
-        {:error, :not_found}
+    session_repo.get_session(session_id)
+    |> do_transition(target_status, fun)
+  end
 
-      session ->
-        if SessionStateMachinePolicy.can_transition?(session.status, target_status) do
-          fun.(session)
-        else
-          {:error, :invalid_transition}
-        end
+  # ── User-scoped ───────────────────────────────────────────────────
+
+  @doc """
+  Fetches a user-scoped session, validates the transition, and returns
+  `{:ok, session}` or invokes `fun` with the session.
+
+  Uses `get_session_for_user/2` to ensure the session belongs to the
+  given user, returning `{:error, :not_found}` if it does not.
+
+  ## Options
+
+  - `:session_repo` -- override the default session repository (useful for tests).
+  """
+  @spec with_user_session_transition(
+          session_id,
+          user_id,
+          target_status,
+          transition_callback,
+          keyword()
+        ) :: {:ok, map()} | {:error, term()}
+  def with_user_session_transition(
+        session_id,
+        user_id,
+        target_status,
+        fun \\ &default_callback/1,
+        opts \\ []
+      ) do
+    session_repo = Keyword.get(opts, :session_repo, @default_session_repo)
+
+    session_repo.get_session_for_user(session_id, user_id)
+    |> do_transition(target_status, fun)
+  end
+
+  # ── Private ───────────────────────────────────────────────────────
+
+  defp do_transition(nil, _target_status, _fun), do: {:error, :not_found}
+
+  defp do_transition(session, target_status, fun) do
+    if SessionStateMachinePolicy.can_transition?(session.status, target_status) do
+      fun.(session)
+    else
+      {:error, :invalid_transition}
     end
   end
 
-  @doc """
-  Fetches a user-scoped session, validates the transition, and invokes the callback.
-
-  This is the fully-expanded form with all parameters.
-  """
-  @spec with_session_transition(session_id, user_id, target_status, function(), keyword()) ::
-          {:ok, map()} | {:error, :not_found | :invalid_transition}
-  def with_session_transition(session_id, user_id, target_status, fun, opts)
-      when is_binary(user_id) and is_binary(target_status) and is_function(fun, 1) and
-             is_list(opts) do
-    session_repo = Keyword.get(opts, :session_repo, @default_session_repo)
-
-    case session_repo.get_session_for_user(session_id, user_id) do
-      nil ->
-        {:error, :not_found}
-
-      session ->
-        if SessionStateMachinePolicy.can_transition?(session.status, target_status) do
-          fun.(session)
-        else
-          {:error, :invalid_transition}
-        end
-    end
-  end
+  defp default_callback(session), do: {:ok, session}
 end

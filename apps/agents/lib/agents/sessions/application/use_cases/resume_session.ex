@@ -22,7 +22,7 @@ defmodule Agents.Sessions.Application.UseCases.ResumeSession do
     interaction_repo = Keyword.get(opts, :interaction_repo, @default_interaction_repo)
     event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
 
-    SessionTransition.with_session_transition(
+    SessionTransition.with_user_session_transition(
       session_id,
       user_id,
       "active",

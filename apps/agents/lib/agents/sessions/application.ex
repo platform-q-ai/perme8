@@ -27,7 +27,6 @@ defmodule Agents.Sessions.Application do
       UseCases.PromoteTask,
       UseCases.ScheduleRetry,
       UseCases.CreateInteraction,
-      SessionTransition,
       UseCases.PauseSession,
       UseCases.ResumeSession,
       UseCases.CompleteSession,

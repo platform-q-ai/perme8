@@ -17,7 +17,7 @@ defmodule Agents.Sessions.Application.UseCases.PauseSession do
     session_repo = Keyword.get(opts, :session_repo, @default_session_repo)
     event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
 
-    SessionTransition.with_session_transition(
+    SessionTransition.with_user_session_transition(
       session_id,
       user_id,
       "paused",
