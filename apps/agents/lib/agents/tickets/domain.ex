@@ -5,6 +5,7 @@ defmodule Agents.Tickets.Domain do
     top_level?: true,
     deps: [],
     exports: [
+      Entities.AnalyticsView,
       Entities.Ticket,
       Entities.TicketLifecycleEvent,
       Entities.Ticket.View,
@@ -14,6 +15,7 @@ defmodule Agents.Tickets.Domain do
       Events.TicketStageChanged,
       Events.TicketSubIssueChanged,
       Events.TicketUpdated,
+      Policies.AnalyticsPolicy,
       Policies.TicketDependencyPolicy,
       Policies.TicketHierarchyPolicy,
       Policies.TicketEnrichmentPolicy,
