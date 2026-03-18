@@ -202,8 +202,7 @@ defmodule AgentsWeb.DashboardLive.EventProcessor do
       session_id: properties["sessionID"],
       questions: questions,
       selected: initial_selections,
-      custom_text: Enum.map(questions, fn _q -> "" end),
-      rejected: false
+      custom_text: Enum.map(questions, fn _q -> "" end)
     }
 
     assign(socket, :pending_question, pending)
@@ -593,8 +592,7 @@ defmodule AgentsWeb.DashboardLive.EventProcessor do
       session_id: session_id,
       questions: questions,
       selected: initial_selections,
-      custom_text: Enum.map(questions, fn _q -> "" end),
-      rejected: false
+      custom_text: Enum.map(questions, fn _q -> "" end)
     }
 
     assign(socket, :pending_question, pending)
