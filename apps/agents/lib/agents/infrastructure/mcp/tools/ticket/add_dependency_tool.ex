@@ -27,44 +27,35 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.AddDependencyTool do
       :ok ->
         opts = [actor_id: Helpers.actor_id(frame)]
 
-        # add_dependency uses internal ticket IDs, so we need to look them up
-        with {:ok, blocker} <- Tickets.get_ticket_by_number(blocker_number),
-             {:ok, blocked} <- Tickets.get_ticket_by_number(blocked_number) do
-          case Tickets.add_dependency(blocker.id, blocked.id, opts) do
-            {:ok, _dep} ->
-              {:reply,
-               Response.text(
-                 Response.tool(),
-                 "Added dependency: ticket ##{blocker_number} blocks ##{blocked_number}."
-               ), frame}
+        case Tickets.add_dependency_by_number(blocker_number, blocked_number, opts) do
+          {:ok, _dep} ->
+            {:reply,
+             Response.text(
+               Response.tool(),
+               "Added dependency: ticket ##{blocker_number} blocks ##{blocked_number}."
+             ), frame}
 
-            {:error, :self_dependency} ->
-              {:reply, Response.error(Response.tool(), "A ticket cannot depend on itself."),
-               frame}
-
-            {:error, :duplicate_dependency} ->
-              {:reply, Response.error(Response.tool(), "This dependency already exists."), frame}
-
-            {:error, :circular_dependency} ->
-              {:reply,
-               Response.error(
-                 Response.tool(),
-                 "Cannot add dependency — it would create a circular chain."
-               ), frame}
-
-            {:error, reason} ->
-              Logger.error("ticket.add_dependency error: #{inspect(reason)}")
-
-              {:reply,
-               Response.error(Response.tool(), Helpers.format_error(reason, "Dependency")), frame}
-          end
-        else
           {:error, :ticket_not_found} ->
+            {:reply, Response.error(Response.tool(), "One or both tickets not found."), frame}
+
+          {:error, :self_dependency} ->
+            {:reply, Response.error(Response.tool(), "A ticket cannot depend on itself."), frame}
+
+          {:error, :duplicate_dependency} ->
+            {:reply, Response.error(Response.tool(), "This dependency already exists."), frame}
+
+          {:error, :circular_dependency} ->
             {:reply,
              Response.error(
                Response.tool(),
-               "One or both tickets not found."
+               "Cannot add dependency — it would create a circular chain."
              ), frame}
+
+          {:error, reason} ->
+            Logger.error("ticket.add_dependency error: #{inspect(reason)}")
+
+            {:reply, Response.error(Response.tool(), Helpers.format_error(reason, "Dependency")),
+             frame}
         end
 
       {:error, scope} ->

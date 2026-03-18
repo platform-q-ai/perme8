@@ -272,6 +272,26 @@ defmodule Agents.Tickets do
   end
 
   @doc """
+  Adds a dependency using ticket numbers instead of internal IDs.
+
+  Resolves each ticket number to its internal ID via a lightweight lookup
+  (no preloads), then delegates to `add_dependency/3`.
+
+  ## Options
+  - `:actor_id` - (required)
+  - `:event_bus` - Event bus module
+  - `:dependency_repo` - Repository module
+  """
+  @spec add_dependency_by_number(integer(), integer(), keyword()) ::
+          {:ok, struct()} | {:error, term()}
+  def add_dependency_by_number(blocker_number, blocked_number, opts \\ []) do
+    with {:ok, blocker_id} <- ProjectTicketRepository.get_id_by_number(blocker_number),
+         {:ok, blocked_id} <- ProjectTicketRepository.get_id_by_number(blocked_number) do
+      add_dependency(blocker_id, blocked_id, opts)
+    end
+  end
+
+  @doc """
   Removes a dependency: blocker_ticket_id no longer blocks blocked_ticket_id.
 
   ## Options
@@ -283,6 +303,26 @@ defmodule Agents.Tickets do
           :ok | {:error, :dependency_not_found}
   def remove_dependency(blocker_ticket_id, blocked_ticket_id, opts \\ []) do
     RemoveTicketDependency.execute(blocker_ticket_id, blocked_ticket_id, opts)
+  end
+
+  @doc """
+  Removes a dependency using ticket numbers instead of internal IDs.
+
+  Resolves each ticket number to its internal ID via a lightweight lookup
+  (no preloads), then delegates to `remove_dependency/3`.
+
+  ## Options
+  - `:actor_id` - (required)
+  - `:event_bus` - Event bus module
+  - `:dependency_repo` - Repository module
+  """
+  @spec remove_dependency_by_number(integer(), integer(), keyword()) ::
+          :ok | {:error, :ticket_not_found | :dependency_not_found}
+  def remove_dependency_by_number(blocker_number, blocked_number, opts \\ []) do
+    with {:ok, blocker_id} <- ProjectTicketRepository.get_id_by_number(blocker_number),
+         {:ok, blocked_id} <- ProjectTicketRepository.get_id_by_number(blocked_number) do
+      remove_dependency(blocker_id, blocked_id, opts)
+    end
   end
 
   @doc """

@@ -223,4 +223,65 @@ defmodule Agents.TicketsTest do
       assert refreshed.labels == []
     end
   end
+
+  describe "add_dependency_by_number/3" do
+    @dep_opts [actor_id: "user-dep", event_bus: TestEventBus]
+
+    test "adds dependency using ticket numbers instead of IDs" do
+      create_ticket!(800)
+      create_ticket!(801)
+
+      assert {:ok, _dep} = Tickets.add_dependency_by_number(800, 801, @dep_opts)
+    end
+
+    test "returns :self_dependency when numbers are the same" do
+      create_ticket!(802)
+
+      assert {:error, :self_dependency} =
+               Tickets.add_dependency_by_number(802, 802, @dep_opts)
+    end
+
+    test "returns :ticket_not_found when blocker does not exist" do
+      create_ticket!(803)
+
+      assert {:error, :ticket_not_found} =
+               Tickets.add_dependency_by_number(99_999, 803, @dep_opts)
+    end
+
+    test "returns :ticket_not_found when blocked does not exist" do
+      create_ticket!(804)
+
+      assert {:error, :ticket_not_found} =
+               Tickets.add_dependency_by_number(804, 99_999, @dep_opts)
+    end
+  end
+
+  describe "remove_dependency_by_number/3" do
+    @dep_opts [actor_id: "user-dep", event_bus: TestEventBus]
+
+    test "removes dependency using ticket numbers" do
+      blocker = create_ticket!(810)
+      blocked = create_ticket!(811)
+
+      {:ok, _dep} =
+        Tickets.add_dependency(blocker.id, blocked.id, @dep_opts)
+
+      assert :ok = Tickets.remove_dependency_by_number(810, 811, @dep_opts)
+    end
+
+    test "returns :ticket_not_found when blocker does not exist" do
+      create_ticket!(812)
+
+      assert {:error, :ticket_not_found} =
+               Tickets.remove_dependency_by_number(99_999, 812, @dep_opts)
+    end
+
+    test "returns :dependency_not_found when no dependency exists" do
+      create_ticket!(813)
+      create_ticket!(814)
+
+      assert {:error, :dependency_not_found} =
+               Tickets.remove_dependency_by_number(813, 814, @dep_opts)
+    end
+  end
 end

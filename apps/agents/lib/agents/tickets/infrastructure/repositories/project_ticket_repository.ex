@@ -402,6 +402,20 @@ defmodule Agents.Tickets.Infrastructure.Repositories.ProjectTicketRepository do
   end
 
   @doc """
+  Returns the internal database ID for a ticket identified by its issue number.
+
+  This is a lightweight lookup with no preloads, suitable for operations
+  that only need the ticket ID (e.g. dependency management).
+  """
+  @spec get_id_by_number(integer()) :: {:ok, integer()} | {:error, :ticket_not_found}
+  def get_id_by_number(number) when is_integer(number) do
+    case Repo.get_by(ProjectTicketSchema, number: number) do
+      nil -> {:error, :ticket_not_found}
+      ticket -> {:ok, ticket.id}
+    end
+  end
+
+  @doc """
   Loads a single ticket by number with full preloads.
   """
   @spec get_by_number(integer()) :: {:ok, ProjectTicketSchema.t()} | nil
