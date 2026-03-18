@@ -19,11 +19,11 @@ defmodule Agents.Tickets.Infrastructure.Queries.AnalyticsQueries do
   @doc "Returns lifecycle events within a date range, ordered by transitioned_at."
   @spec lifecycle_events_in_range(Date.t(), Date.t()) :: Ecto.Query.t()
   def lifecycle_events_in_range(date_from, date_to) do
-    from_dt = date_to_datetime(date_from)
-    to_dt = date_to_end_of_day(date_to)
+    from_dt = start_of_day(date_from)
+    to_dt = start_of_next_day(date_to)
 
     from(e in TicketLifecycleEventSchema,
-      where: e.transitioned_at >= ^from_dt and e.transitioned_at <= ^to_dt,
+      where: e.transitioned_at >= ^from_dt and e.transitioned_at < ^to_dt,
       order_by: [asc: e.transitioned_at],
       select: %{
         id: e.id,
@@ -36,11 +36,11 @@ defmodule Agents.Tickets.Infrastructure.Queries.AnalyticsQueries do
     )
   end
 
-  defp date_to_datetime(%Date{} = date) do
+  defp start_of_day(%Date{} = date) do
     DateTime.new!(date, ~T[00:00:00], "Etc/UTC")
   end
 
-  defp date_to_end_of_day(%Date{} = date) do
-    DateTime.new!(date, ~T[23:59:59], "Etc/UTC")
+  defp start_of_next_day(%Date{} = date) do
+    DateTime.new!(Date.add(date, 1), ~T[00:00:00], "Etc/UTC")
   end
 end

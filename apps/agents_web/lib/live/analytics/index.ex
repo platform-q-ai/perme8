@@ -28,14 +28,17 @@ defmodule AgentsWeb.AnalyticsLive.Index do
       |> assign(:granularity, :daily)
       |> assign(:date_from, date_from)
       |> assign(:date_to, date_to)
+      |> assign(:refresh_timer, nil)
       |> load_analytics()
 
     {:ok, socket}
   end
 
+  @valid_granularities %{"daily" => :daily, "weekly" => :weekly, "monthly" => :monthly}
+
   @impl true
   def handle_event("change_granularity", %{"granularity" => granularity}, socket) do
-    granularity = String.to_existing_atom(granularity)
+    granularity = Map.get(@valid_granularities, granularity, socket.assigns.granularity)
 
     socket =
       socket
@@ -47,11 +50,12 @@ defmodule AgentsWeb.AnalyticsLive.Index do
 
   @impl true
   def handle_event("filter_dates", params, socket) do
-    date_from_str = params["date_from"] || params["value"]
+    date_from_str = params["date_from"] || Date.to_iso8601(socket.assigns.date_from)
     date_to_str = params["date_to"] || Date.to_iso8601(socket.assigns.date_to)
 
     with {:ok, date_from} <- Date.from_iso8601(date_from_str || ""),
-         {:ok, date_to} <- Date.from_iso8601(date_to_str || "") do
+         {:ok, date_to} <- Date.from_iso8601(date_to_str || ""),
+         :ok <- validate_date_range(date_from, date_to) do
       socket =
         socket
         |> assign(:date_from, date_from)
@@ -60,24 +64,44 @@ defmodule AgentsWeb.AnalyticsLive.Index do
 
       {:noreply, socket}
     else
+      {:error, :invalid_range} ->
+        {:noreply, put_flash(socket, :error, "Start date must be before end date")}
+
       _ ->
         {:noreply, put_flash(socket, :error, "Invalid date format")}
     end
   end
 
+  defp validate_date_range(date_from, date_to) do
+    if Date.after?(date_from, date_to), do: {:error, :invalid_range}, else: :ok
+  end
+
+  @refresh_debounce_ms 500
+
   @impl true
   def handle_info(%Agents.Tickets.Domain.Events.TicketStageChanged{}, socket) do
-    {:noreply, load_analytics(socket)}
+    {:noreply, schedule_refresh(socket)}
   end
 
   @impl true
   def handle_info({:ticket_stage_changed, _ticket_id, _stage, _at}, socket) do
-    {:noreply, load_analytics(socket)}
+    {:noreply, schedule_refresh(socket)}
+  end
+
+  @impl true
+  def handle_info(:do_refresh, socket) do
+    {:noreply, socket |> assign(:refresh_timer, nil) |> load_analytics()}
   end
 
   @impl true
   def handle_info(_msg, socket) do
     {:noreply, socket}
+  end
+
+  defp schedule_refresh(socket) do
+    if socket.assigns.refresh_timer, do: Process.cancel_timer(socket.assigns.refresh_timer)
+    timer = Process.send_after(self(), :do_refresh, @refresh_debounce_ms)
+    assign(socket, :refresh_timer, timer)
   end
 
   defp load_analytics(socket) do

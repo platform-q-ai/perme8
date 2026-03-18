@@ -144,6 +144,47 @@ defmodule AgentsWeb.AnalyticsLive.IndexTest do
       assert has_element?(view, "[data-testid='date-range-start']")
       assert has_element?(view, "[data-testid='date-range-end']")
     end
+
+    test "changing start date triggers filter update", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/analytics")
+
+      view
+      |> element("[data-testid='date-range-start']")
+      |> render_change(%{"date_from" => "2026-01-01"})
+
+      # Should not crash and should still render analytics
+      assert render(view) =~ "Analytics"
+    end
+
+    test "changing end date triggers filter update", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/analytics")
+
+      view
+      |> element("[data-testid='date-range-end']")
+      |> render_change(%{"date_to" => "2026-03-31"})
+
+      assert render(view) =~ "Analytics"
+    end
+
+    test "rejects invalid date range where start is after end", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/analytics")
+
+      view
+      |> element("[data-testid='date-range-start']")
+      |> render_change(%{"date_from" => "2026-12-31"})
+
+      assert render(view) =~ "Start date must be before end date"
+    end
+
+    test "rejects invalid date format", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/analytics")
+
+      view
+      |> element("[data-testid='date-range-start']")
+      |> render_change(%{"date_from" => "not-a-date"})
+
+      assert render(view) =~ "Invalid date format"
+    end
   end
 
   describe "empty state" do
@@ -155,7 +196,7 @@ defmodule AgentsWeb.AnalyticsLive.IndexTest do
   end
 
   describe "real-time updates" do
-    test "updates when TicketStageChanged event is received", %{conn: conn} do
+    test "schedules debounced refresh on TicketStageChanged event", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/analytics")
 
       event = %Agents.Tickets.Domain.Events.TicketStageChanged{
@@ -174,7 +215,8 @@ defmodule AgentsWeb.AnalyticsLive.IndexTest do
 
       send(view.pid, event)
 
-      # The view should re-render without crashing
+      # After the debounce timer fires, the view should re-render without crashing
+      send(view.pid, :do_refresh)
       assert render(view) =~ "Analytics"
     end
   end
