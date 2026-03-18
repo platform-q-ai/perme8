@@ -233,6 +233,147 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.QuestionTest do
       # Pending question should be cleared
       assert_receive {:question_persisted, nil}, 5000
     end
+
+    test "falls back to send_prompt_async when reply_question fails", %{task: task} do
+      test_pid = self()
+
+      start_runner_with_question(task)
+
+      Agents.Mocks.OpencodeClientMock
+      |> expect(:reply_question, fn _url, "q-request-1", [["Option A"]], _opts ->
+        {:error, :question_expired}
+      end)
+      |> expect(:send_prompt_async, fn _url, "sess-1", parts, _opts ->
+        send(test_pid, {:fallback_sent, parts})
+        :ok
+      end)
+
+      {:ok, pid} =
+        GenServer.start(
+          TaskRunner,
+          {task.id,
+           [
+             container_provider: Agents.Mocks.ContainerProviderMock,
+             opencode_client: Agents.Mocks.OpencodeClientMock,
+             task_repo: Agents.Mocks.TaskRepositoryMock,
+             pubsub: Perme8.Events.PubSub
+           ]}
+        )
+
+      on_exit(fn ->
+        try do
+          if Process.alive?(pid), do: GenServer.stop(pid, :normal, 5_000)
+        rescue
+          _ -> :ok
+        end
+      end)
+
+      assert_receive {:question_persisted, %{"request_id" => "q-request-1"}}, 5000
+
+      result =
+        GenServer.call(
+          pid,
+          {:answer_question, "q-request-1", [["Option A"]], "Re: Choose — Option A"}
+        )
+
+      assert result == :ok
+
+      # Fallback message was sent
+      assert_receive {:fallback_sent, [%{"type" => "text", "text" => "Re: Choose — Option A"}]},
+                     5000
+
+      # Pending question should be cleared
+      assert_receive {:question_persisted, nil}, 5000
+
+      # question.replied broadcast should have been sent
+      assert_receive {:task_event, _, %{"type" => "question.replied"}}, 5000
+    end
+
+    test "returns error when both reply_question and send_prompt_async fail", %{task: task} do
+      start_runner_with_question(task)
+
+      Agents.Mocks.OpencodeClientMock
+      |> expect(:reply_question, fn _url, "q-request-1", [["Option A"]], _opts ->
+        {:error, :question_expired}
+      end)
+      |> expect(:send_prompt_async, fn _url, "sess-1", _parts, _opts ->
+        {:error, :connection_refused}
+      end)
+
+      {:ok, pid} =
+        GenServer.start(
+          TaskRunner,
+          {task.id,
+           [
+             container_provider: Agents.Mocks.ContainerProviderMock,
+             opencode_client: Agents.Mocks.OpencodeClientMock,
+             task_repo: Agents.Mocks.TaskRepositoryMock,
+             pubsub: Perme8.Events.PubSub
+           ]}
+        )
+
+      on_exit(fn ->
+        try do
+          if Process.alive?(pid), do: GenServer.stop(pid, :normal, 5_000)
+        rescue
+          _ -> :ok
+        end
+      end)
+
+      assert_receive {:question_persisted, %{"request_id" => "q-request-1"}}, 5000
+
+      result =
+        GenServer.call(
+          pid,
+          {:answer_question, "q-request-1", [["Option A"]], "Re: Choose — Option A"}
+        )
+
+      # Returns the original reply_question error reason
+      assert result == {:error, :question_expired}
+
+      # Pending question should NOT be cleared (still active)
+      refute_receive {:question_persisted, nil}, 500
+    end
+
+    test "returns error when reply_question fails and message is nil", %{task: task} do
+      start_runner_with_question(task)
+
+      Agents.Mocks.OpencodeClientMock
+      |> expect(:reply_question, fn _url, "q-request-1", [["Option A"]], _opts ->
+        {:error, :question_expired}
+      end)
+
+      {:ok, pid} =
+        GenServer.start(
+          TaskRunner,
+          {task.id,
+           [
+             container_provider: Agents.Mocks.ContainerProviderMock,
+             opencode_client: Agents.Mocks.OpencodeClientMock,
+             task_repo: Agents.Mocks.TaskRepositoryMock,
+             pubsub: Perme8.Events.PubSub
+           ]}
+        )
+
+      on_exit(fn ->
+        try do
+          if Process.alive?(pid), do: GenServer.stop(pid, :normal, 5_000)
+        rescue
+          _ -> :ok
+        end
+      end)
+
+      assert_receive {:question_persisted, %{"request_id" => "q-request-1"}}, 5000
+
+      # Use 3-arity call (no message) — falls through to {:error, :no_message_for_fallback}
+      result = GenServer.call(pid, {:answer_question, "q-request-1", [["Option A"]]})
+
+      # Returns the original reply_question error reason
+      assert result == {:error, :question_expired}
+
+      # Pending question should NOT be cleared (still active)
+      refute_receive {:question_persisted, nil}, 500
+    end
   end
 
   describe "reject_question" do
