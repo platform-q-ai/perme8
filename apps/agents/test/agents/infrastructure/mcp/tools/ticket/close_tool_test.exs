@@ -18,6 +18,10 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.CloseToolTest do
     Application.put_env(:agents, :identity_module, Agents.Mocks.IdentityMock)
     stub(Agents.Mocks.IdentityMock, :api_key_has_permission?, fn _api_key, _scope -> true end)
 
+    # TestEventBus is started for process isolation but is NOT injected into
+    # the tool's opts — the real EventBus is used. This is intentional and
+    # matches CreateToolTest/UpdateToolTest. The handler's rescue blocks
+    # prevent crashes from async GitHub push attempts in test.
     TestEventBus.start_global()
 
     on_exit(fn ->
