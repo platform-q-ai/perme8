@@ -60,18 +60,19 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.SearchDependencyTargetsToolTest
       assert text =~ "Searchable ticket"
     end
 
-    test "excludes the ticket matching the given number", %{ticket: _ticket} do
+    test "excludes the ticket matching the given number" do
       frame = build_frame()
 
-      # Exclude ticket 1300 — searching for "Searchable" should return no results
+      # Both tickets contain "ticket" in their title; excluding #1300 should return only #1301
       assert {:reply, response, ^frame} =
                SearchDependencyTargetsTool.execute(
-                 %{"query" => "Searchable", "exclude_ticket_number" => 1300},
+                 %{"query" => "ticket", "exclude_ticket_number" => 1300},
                  frame
                )
 
       assert [%{"text" => text}] = response.content
-      assert text =~ "No matching tickets found"
+      assert text =~ "Ticket #1301"
+      refute text =~ "Ticket #1300"
     end
 
     test "returns no matches message when nothing found", %{ticket: _ticket} do
