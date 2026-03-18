@@ -78,33 +78,19 @@ defmodule AgentsWeb.DashboardLive.Components.TicketCardComponent do
   # ---- Question Card ----
 
   @doc """
-  Renders the AI assistant's question with selectable options.
+  Renders the AI assistant's question with selectable options and a submit button.
 
-  When rejected (dismissed/timed out), the card stays visible with muted styling.
-  Submitting an answer to a rejected question sends it as a follow-up message.
+  Questions remain active indefinitely until the user answers or dismisses them.
   """
   attr(:pending, :map, required: true)
 
   def question_card(assigns) do
-    assigns = assign(assigns, :rejected, assigns.pending.rejected || false)
-
     ~H"""
-    <div class={[
-      "mt-3 rounded-lg border-2 p-4",
-      if(@rejected, do: "border-base-300 bg-base-200/50", else: "border-warning/40 bg-warning/5")
-    ]}>
+    <div class="mt-3 rounded-lg border-2 p-4 border-warning/40 bg-warning/5">
       <div class="flex items-center gap-2 mb-3">
-        <.icon
-          name={if(@rejected, do: "hero-arrow-path", else: "hero-question-mark-circle")}
-          class={if(@rejected, do: "size-5 text-base-content/50", else: "size-5 text-warning")}
-        />
-        <span class={[
-          "font-semibold text-sm",
-          if(@rejected, do: "text-base-content/50", else: "text-warning")
-        ]}>
-          {if @rejected,
-            do: "Question dismissed — you can still respond",
-            else: "Question from Assistant"}
+        <.icon name="hero-question-mark-circle" class="size-5 text-warning" />
+        <span class="font-semibold text-sm text-warning">
+          Question from Assistant
         </span>
       </div>
 
@@ -158,15 +144,14 @@ defmodule AgentsWeb.DashboardLive.Components.TicketCardComponent do
             type="submit"
             class="btn btn-primary btn-sm"
           >
-            <.icon name="hero-check" class="size-4" />
-            {if @rejected, do: "Send as Message", else: "Submit Answer"}
+            <.icon name="hero-check" class="size-4" /> Submit Answer
           </button>
           <button
             type="button"
             phx-click="dismiss_question"
             class="btn btn-ghost btn-sm"
           >
-            {if @rejected, do: "Close", else: "Dismiss"}
+            Dismiss
           </button>
         </div>
       </form>

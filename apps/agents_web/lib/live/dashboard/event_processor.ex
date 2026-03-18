@@ -202,8 +202,7 @@ defmodule AgentsWeb.DashboardLive.EventProcessor do
       session_id: properties["sessionID"],
       questions: questions,
       selected: initial_selections,
-      custom_text: Enum.map(questions, fn _q -> "" end),
-      rejected: false
+      custom_text: Enum.map(questions, fn _q -> "" end)
     }
 
     assign(socket, :pending_question, pending)
@@ -214,13 +213,9 @@ defmodule AgentsWeb.DashboardLive.EventProcessor do
     assign(socket, :pending_question, nil)
   end
 
-  # Question rejected — keep the card visible so the user can still
-  # submit an answer (which will be sent as a follow-up message)
+  # Question rejected (explicit user dismiss) — clear the card
   def process_event(%{"type" => "question.rejected"}, socket) do
-    case socket.assigns.pending_question do
-      nil -> socket
-      pending -> assign(socket, :pending_question, %{pending | rejected: true})
-    end
+    assign(socket, :pending_question, nil)
   end
 
   # The "todo.updated" event is handled via the dedicated {:todo_updated, ...}
@@ -313,8 +308,12 @@ defmodule AgentsWeb.DashboardLive.EventProcessor do
         pending_question: %{"request_id" => request_id, "questions" => questions} = pq
       })
       when is_binary(request_id) and is_list(questions) and questions != [] do
-    rejected = pq["rejected"] || false
-    restore_question_card(socket, questions, pq["session_id"], request_id, rejected)
+    # Don't restore dismissed questions — the user already chose to close them
+    if pq["rejected"] do
+      socket
+    else
+      restore_question_card(socket, questions, pq["session_id"], request_id)
+    end
   end
 
   # Do not restore from cached tool output. Only persisted pending_question
@@ -585,7 +584,7 @@ defmodule AgentsWeb.DashboardLive.EventProcessor do
 
   defp format_model(info), do: SdkFieldResolver.resolve_model_id(info)
 
-  defp restore_question_card(socket, questions, session_id, request_id, rejected) do
+  defp restore_question_card(socket, questions, session_id, request_id) do
     initial_selections = Enum.map(questions, fn _q -> [] end)
 
     pending = %{
@@ -593,8 +592,7 @@ defmodule AgentsWeb.DashboardLive.EventProcessor do
       session_id: session_id,
       questions: questions,
       selected: initial_selections,
-      custom_text: Enum.map(questions, fn _q -> "" end),
-      rejected: rejected
+      custom_text: Enum.map(questions, fn _q -> "" end)
     }
 
     assign(socket, :pending_question, pending)

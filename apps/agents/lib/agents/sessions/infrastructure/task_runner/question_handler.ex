@@ -4,8 +4,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.QuestionHandler do
 
   Contains pure functions for extracting tool names, validating session
   summaries, and sanitizing error messages. Side-effect functions
-  (cancel_question_timeout, auto_reject, clear_pending_question) remain
-  in TaskRunner.
+  (auto_reject, clear_pending_question) remain in TaskRunner.
   """
 
   @doc """
