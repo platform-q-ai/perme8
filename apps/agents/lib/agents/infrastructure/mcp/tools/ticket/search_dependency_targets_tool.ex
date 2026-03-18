@@ -11,19 +11,22 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.SearchDependencyTargetsTool do
   schema do
     field(:query, {:required, :string}, description: "Search query (title or number)")
 
-    field(:exclude_ticket_id, {:required, :integer},
-      description: "Ticket ID to exclude from results"
+    field(:exclude_ticket_number, {:required, :integer},
+      description: "Ticket number to exclude from results"
     )
   end
 
   @impl true
   def execute(params, frame) do
     query = Helpers.get_param(params, :query)
-    exclude_id = Helpers.get_param(params, :exclude_ticket_id)
+    exclude_number = Helpers.get_param(params, :exclude_ticket_number)
 
     case PermissionGuard.check_permission(frame, "ticket.search_dependency_targets") do
       :ok ->
-        format_search_results(Tickets.search_tickets_for_dependency(query, exclude_id), frame)
+        format_search_results(
+          Tickets.search_tickets_for_dependency(query, exclude_number),
+          frame
+        )
 
       {:error, scope} ->
         {:reply, Response.error(Response.tool(), "Insufficient permissions: #{scope} required"),

@@ -44,12 +44,13 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.SearchDependencyTargetsToolTest
   end
 
   describe "execute/2" do
-    test "searches tickets by title", %{ticket: ticket} do
+    test "searches tickets by title, excluding by ticket number" do
       frame = build_frame()
 
+      # Exclude ticket 1301 so ticket 1300 IS returned
       assert {:reply, response, ^frame} =
                SearchDependencyTargetsTool.execute(
-                 %{"query" => "Searchable", "exclude_ticket_id" => ticket.id + 100},
+                 %{"query" => "Searchable", "exclude_ticket_number" => 1301},
                  frame
                )
 
@@ -59,12 +60,27 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.SearchDependencyTargetsToolTest
       assert text =~ "Searchable ticket"
     end
 
-    test "returns no matches message when nothing found", %{ticket: ticket} do
+    test "excludes the ticket matching the given number" do
+      frame = build_frame()
+
+      # Both tickets contain "ticket" in their title; excluding #1300 should return only #1301
+      assert {:reply, response, ^frame} =
+               SearchDependencyTargetsTool.execute(
+                 %{"query" => "ticket", "exclude_ticket_number" => 1300},
+                 frame
+               )
+
+      assert [%{"text" => text}] = response.content
+      assert text =~ "Ticket #1301"
+      refute text =~ "Ticket #1300"
+    end
+
+    test "returns no matches message when nothing found", %{ticket: _ticket} do
       frame = build_frame()
 
       assert {:reply, response, ^frame} =
                SearchDependencyTargetsTool.execute(
-                 %{"query" => "nonexistent", "exclude_ticket_id" => ticket.id},
+                 %{"query" => "nonexistent", "exclude_ticket_number" => 1300},
                  frame
                )
 
@@ -83,7 +99,7 @@ defmodule Agents.Infrastructure.Mcp.Tools.Ticket.SearchDependencyTargetsToolTest
 
       assert {:reply, response, ^frame} =
                SearchDependencyTargetsTool.execute(
-                 %{"query" => "test", "exclude_ticket_id" => 1},
+                 %{"query" => "test", "exclude_ticket_number" => 1300},
                  frame
                )
 

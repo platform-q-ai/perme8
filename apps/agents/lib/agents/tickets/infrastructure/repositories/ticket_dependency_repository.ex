@@ -58,15 +58,15 @@ defmodule Agents.Tickets.Infrastructure.Repositories.TicketDependencyRepository 
 
   @doc """
   Searches tickets by number (exact match) or title (ilike),
-  excluding the given ticket ID.
+  excluding the given ticket number.
   """
   @spec search_tickets(String.t(), integer()) :: [ProjectTicketSchema.t()]
-  def search_tickets(query_string, exclude_ticket_id) do
+  def search_tickets(query_string, exclude_ticket_number) do
     query_string = String.trim(query_string)
 
     base_query =
       from(t in ProjectTicketSchema,
-        where: t.id != ^exclude_ticket_id,
+        where: t.number != ^exclude_ticket_number,
         order_by: [desc: t.position, desc: t.created_at],
         limit: 10
       )
