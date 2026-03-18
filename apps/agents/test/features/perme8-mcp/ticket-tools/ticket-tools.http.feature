@@ -708,7 +708,7 @@ Feature: Ticket MCP Tools - HTTP API
     And the response body should be valid JSON
     And the response body path "$.result.isError" should be false
 
-  Scenario: Close non-existent ticket succeeds (treated as already closed)
+  Scenario: Close non-existent ticket returns not-found error
     Given I set bearer token to "${valid-doc-key-product-team}"
     When I POST to "/" with body:
       """
@@ -753,7 +753,7 @@ Feature: Ticket MCP Tools - HTTP API
       """
     Then the response status should be 200
     And the response body should be valid JSON
-    And the response body path "$.result.isError" should be false
+    And the response body path "$.result.isError" should be true
 
   Scenario: Close missing number
     Given I set bearer token to "${valid-doc-key-product-team}"
