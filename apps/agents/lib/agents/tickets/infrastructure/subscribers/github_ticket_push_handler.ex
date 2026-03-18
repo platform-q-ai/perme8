@@ -1,11 +1,14 @@
 defmodule Agents.Tickets.Infrastructure.Subscribers.GithubTicketPushHandler do
   @moduledoc """
-  Event handler that pushes locally-created tickets to GitHub.
+  Event handler that synchronises local ticket changes to GitHub.
 
-  Listens for `tickets.ticket_created` domain events and creates the
-  corresponding GitHub issue via the REST API. On success, updates the
-  local ticket record with the real GitHub issue number and URL, and
-  triggers a UI refresh.
+  Listens for ticket domain events on the `events:tickets:ticket` topic
+  and pushes changes to GitHub via the REST API:
+
+  - `tickets.ticket_created` -- creates a new GitHub issue and updates
+    the local record with the real issue number and URL.
+  - `tickets.ticket_closed` -- closes the corresponding GitHub issue
+    and marks the local record as synced.
   """
 
   use Perme8.Events.EventHandler
@@ -25,6 +28,10 @@ defmodule Agents.Tickets.Infrastructure.Subscribers.GithubTicketPushHandler do
   @impl Perme8.Events.EventHandler
   def handle_event(%{event_type: "tickets.ticket_created"} = event) do
     push_to_github(event.ticket_id, event.title, event.body)
+  end
+
+  def handle_event(%{event_type: "tickets.ticket_closed"} = event) do
+    close_on_github(event.ticket_id, event.number)
   end
 
   def handle_event(_event), do: :ok
@@ -52,6 +59,58 @@ defmodule Agents.Tickets.Infrastructure.Subscribers.GithubTicketPushHandler do
         mark_sync_error(ticket_id, reason)
         {:error, reason}
     end
+  end
+
+  defp close_on_github(ticket_id, number) do
+    opts = [
+      token: TicketsConfig.github_token(),
+      org: TicketsConfig.github_org(),
+      repo: TicketsConfig.github_repo(),
+      api_base: TicketsConfig.github_api_base()
+    ]
+
+    case GithubProjectClient.update_issue(number, %{state: "closed"}, opts) do
+      {:error, reason} when reason != :not_found ->
+        Logger.error("Failed to close ticket ##{number} on GitHub: #{inspect(reason)}")
+        mark_sync_error(ticket_id, reason)
+        {:error, reason}
+
+      _ok_or_not_found ->
+        mark_synced(ticket_id)
+        broadcast_tickets_refresh()
+        :ok
+    end
+  rescue
+    e ->
+      Logger.error("Failed to close ticket ##{number} on GitHub: #{Exception.message(e)}")
+      mark_sync_error(ticket_id, Exception.message(e))
+      :ok
+  end
+
+  defp mark_synced(ticket_id) do
+    case Agents.Repo.get(ProjectTicketSchema, ticket_id) do
+      nil ->
+        :ok
+
+      ticket ->
+        changeset =
+          ProjectTicketSchema.changeset(ticket, %{
+            sync_state: "synced",
+            last_synced_at: DateTime.utc_now() |> DateTime.truncate(:second)
+          })
+
+        case Agents.Repo.update(changeset) do
+          {:ok, _} ->
+            :ok
+
+          {:error, reason} ->
+            Logger.error("Failed to mark ticket #{ticket_id} as synced: #{inspect(reason)}")
+        end
+    end
+  rescue
+    e ->
+      Logger.error("Failed to mark ticket #{ticket_id} as synced: #{Exception.message(e)}")
+      :ok
   end
 
   defp update_local_ticket(ticket_id, issue) do
