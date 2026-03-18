@@ -159,18 +159,9 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.QuestionTest do
     end
   end
 
-  describe "question timeout" do
-    test "auto-rejects question after timeout", %{task: task} do
-      test_pid = self()
-
+  describe "question persistence" do
+    test "question remains active indefinitely (no auto-timeout)", %{task: task} do
       start_runner_with_question(task)
-
-      # Expect reject_question to be called when timeout fires
-      Agents.Mocks.OpencodeClientMock
-      |> expect(:reject_question, fn _url, "q-request-1", _opts ->
-        send(test_pid, :question_auto_rejected)
-        :ok
-      end)
 
       {:ok, pid} =
         GenServer.start(
@@ -192,18 +183,11 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.QuestionTest do
         end
       end)
 
-      # Wait for the question to be persisted first
+      # Wait for the question to be persisted
       assert_receive {:question_persisted, %{"request_id" => "q-request-1"}}, 5000
 
-      # Now send the timeout message directly to the runner (instead of waiting for real timeout)
-      send(pid, :question_timeout)
-
-      # The question should be auto-rejected
-      assert_receive :question_auto_rejected, 5000
-
-      # Question stays in DB but marked as rejected (so UI can still show it)
-      assert_receive {:question_persisted, %{"rejected" => true, "request_id" => "q-request-1"}},
-                     5000
+      # Question should remain persisted — no auto-rejection occurs
+      refute_receive {:question_persisted, %{"rejected" => true}}, 500
     end
   end
 

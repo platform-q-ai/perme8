@@ -285,7 +285,7 @@ defmodule AgentsWeb.DashboardLive.EventProcessorTest do
   end
 
   describe "process_event/2 — question.rejected" do
-    test "marks pending_question as rejected" do
+    test "clears pending_question on rejection (explicit dismiss)" do
       socket =
         build_socket(%{
           pending_question: %{
@@ -300,7 +300,7 @@ defmodule AgentsWeb.DashboardLive.EventProcessorTest do
       event = %{"type" => "question.rejected"}
 
       result = EventProcessor.process_event(event, socket)
-      assert result.assigns.pending_question.rejected == true
+      assert result.assigns.pending_question == nil
     end
 
     test "returns unchanged socket when no pending_question" do
