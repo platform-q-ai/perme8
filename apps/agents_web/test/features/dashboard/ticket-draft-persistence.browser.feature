@@ -25,6 +25,7 @@ Feature: Ticket-scoped draft persistence and explicit session-ticket association
     When I click "[data-testid='triage-ticket-item-101']"
     And I wait for network idle
     And I wait for "#session-instruction" to be visible
+    And I wait for 1 seconds
     And I clear "#session-instruction"
     And I type "investigate the SSO provider" into "#session-instruction"
     And I wait for 1 seconds
@@ -43,21 +44,26 @@ Feature: Ticket-scoped draft persistence and explicit session-ticket association
     When I click "[data-testid='triage-ticket-item-101']"
     And I wait for network idle
     And I wait for "#session-instruction" to be visible
-    And I fill "#session-instruction" with "fix the login flow"
+    And I wait for 1 seconds
+    And I clear "#session-instruction"
+    And I type "fix the login flow" into "#session-instruction"
+    And I wait for 1 seconds
     When I click "[data-testid='triage-ticket-item-102']"
     And I wait for network idle
     And I wait for "#session-instruction" to be visible
     And I wait for 1 seconds
-    And I fill "#session-instruction" with "add dark mode toggle"
+    And I clear "#session-instruction"
+    And I type "add dark mode toggle" into "#session-instruction"
+    And I wait for 1 seconds
     When I click "[data-testid='triage-ticket-item-101']"
     And I wait for network idle
     And I wait for "#session-instruction" to be visible
-    And I wait for 1 seconds
+    And I wait for 2 seconds
     Then "#session-instruction" should have value "fix the login flow"
     When I click "[data-testid='triage-ticket-item-102']"
     And I wait for network idle
     And I wait for "#session-instruction" to be visible
-    And I wait for 1 seconds
+    And I wait for 2 seconds
     Then "#session-instruction" should have value "add dark mode toggle"
 
   Scenario: Draft text survives server restart (simulated via page reload)
@@ -65,7 +71,10 @@ Feature: Ticket-scoped draft persistence and explicit session-ticket association
     When I click "[data-testid='triage-ticket-item-102']"
     And I wait for network idle
     And I wait for "#session-instruction" to be visible
-    And I fill "#session-instruction" with "check the auth module"
+    And I wait for 1 seconds
+    And I clear "#session-instruction"
+    And I type "check the auth module" into "#session-instruction"
+    And I wait for 1 seconds
     And I reload the page
     And I wait for network idle
     And I wait for "[data-testid='triage-ticket-item-102']" to be visible

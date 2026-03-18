@@ -8,6 +8,7 @@ defmodule Agents.Tickets.Application do
       TicketsConfig,
       UseCases.AddSubIssue,
       UseCases.AddTicketDependency,
+      UseCases.CloseTicket,
       UseCases.CreateTicket,
       UseCases.RecordStageTransition,
       UseCases.RemoveSubIssue,

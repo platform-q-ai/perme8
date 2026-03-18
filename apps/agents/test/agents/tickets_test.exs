@@ -5,6 +5,7 @@ defmodule Agents.TicketsTest do
   alias Agents.Tickets
   alias Agents.Tickets.Infrastructure.Repositories.ProjectTicketRepository
   alias Agents.Tickets.Infrastructure.Schemas.ProjectTicketSchema
+  alias Perme8.Events.TestEventBus
 
   defmodule SuccessGithubClient do
     @behaviour Agents.Application.Behaviours.GithubTicketClientBehaviour
@@ -73,6 +74,11 @@ defmodule Agents.TicketsTest do
     def add_sub_issue(_, _, _), do: {:error, :not_implemented}
     @impl true
     def remove_sub_issue(_, _, _), do: {:error, :not_implemented}
+  end
+
+  setup do
+    TestEventBus.start_global()
+    :ok
   end
 
   defp create_ticket!(number, attrs \\ %{}) do
@@ -146,28 +152,31 @@ defmodule Agents.TicketsTest do
   end
 
   describe "close_project_ticket/2" do
-    test "closes on GitHub first, then marks as closed locally" do
+    @close_opts [actor_id: "user-close", event_bus: TestEventBus]
+
+    test "closes ticket locally with pending_push sync state" do
       create_ticket!(700, %{state: "open"})
 
-      assert :ok = Tickets.close_project_ticket(700, github_client: SuccessGithubClient)
+      assert :ok = Tickets.close_project_ticket(700, @close_opts)
 
       refreshed = Repo.get_by!(ProjectTicketSchema, number: 700)
       assert refreshed.state == "closed"
+      assert refreshed.sync_state == "pending_push"
     end
 
-    test "returns error and does not close locally when GitHub fails" do
+    test "emits TicketClosed domain event" do
       create_ticket!(701, %{state: "open"})
 
-      assert {:error, {:unexpected_status, 502, "Bad Gateway"}} =
-               Tickets.close_project_ticket(701, github_client: FailingGithubClient)
+      assert :ok = Tickets.close_project_ticket(701, @close_opts)
 
-      # Ticket must remain open locally
-      refreshed = Repo.get_by!(ProjectTicketSchema, number: 701)
-      assert refreshed.state == "open"
+      events = TestEventBus.get_events()
+      assert [%Agents.Tickets.Domain.Events.TicketClosed{} = event] = events
+      assert event.number == 701
+      assert event.actor_id == "user-close"
     end
 
-    test "succeeds even when ticket does not exist locally (GitHub already closed)" do
-      assert :ok = Tickets.close_project_ticket(9999, github_client: SuccessGithubClient)
+    test "returns error when ticket does not exist locally" do
+      assert {:error, :not_found} = Tickets.close_project_ticket(9999, @close_opts)
     end
   end
 

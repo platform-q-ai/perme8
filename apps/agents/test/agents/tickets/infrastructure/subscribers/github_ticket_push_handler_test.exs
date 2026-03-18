@@ -2,6 +2,7 @@ defmodule Agents.Tickets.Infrastructure.Subscribers.GithubTicketPushHandlerTest 
   use Agents.DataCase, async: false
 
   alias Agents.Repo
+  alias Agents.Tickets.Domain.Events.TicketClosed
   alias Agents.Tickets.Domain.Events.TicketCreated
   alias Agents.Tickets.Infrastructure.Schemas.ProjectTicketSchema
   alias Agents.Tickets.Infrastructure.Subscribers.GithubTicketPushHandler
@@ -131,6 +132,132 @@ defmodule Agents.Tickets.Infrastructure.Subscribers.GithubTicketPushHandlerTest 
     test "ignores non-matching events" do
       assert :ok ==
                GithubTicketPushHandler.handle_event(%{event_type: "sessions.task_completed"})
+    end
+  end
+
+  describe "handle_event/1 with TicketClosed" do
+    test "closes on GitHub and marks ticket as synced" do
+      ticket = insert_pending_ticket!(%{number: 500, title: "Close me", state: "closed"})
+      bypass = Bypass.open()
+      with_bypass_config(bypass)
+
+      Bypass.expect_once(bypass, "PATCH", "/repos/platform-q-ai/perme8/issues/500", fn conn ->
+        {:ok, req_body, conn} = Plug.Conn.read_body(conn)
+        payload = Jason.decode!(req_body)
+        assert payload["state"] == "closed"
+
+        conn
+        |> Plug.Conn.put_resp_content_type("application/json")
+        |> Plug.Conn.resp(
+          200,
+          Jason.encode!(%{
+            "number" => 500,
+            "state" => "closed",
+            "title" => "Close me",
+            "html_url" => "https://github.com/platform-q-ai/perme8/issues/500",
+            "labels" => [],
+            "created_at" => DateTime.to_iso8601(DateTime.utc_now())
+          })
+        )
+      end)
+
+      event =
+        TicketClosed.new(%{
+          aggregate_id: to_string(ticket.id),
+          actor_id: "user-123",
+          ticket_id: ticket.id,
+          number: 500
+        })
+
+      assert :ok == GithubTicketPushHandler.handle_event(event)
+
+      updated = Repo.get!(ProjectTicketSchema, ticket.id)
+      assert updated.sync_state == "synced"
+      assert updated.last_synced_at != nil
+
+      assert_received {:tickets_synced, _}
+    end
+
+    test "marks synced when GitHub returns not found (already closed)" do
+      ticket = insert_pending_ticket!(%{number: 501, title: "Already gone", state: "closed"})
+      bypass = Bypass.open()
+      with_bypass_config(bypass)
+
+      Bypass.expect_once(bypass, "PATCH", "/repos/platform-q-ai/perme8/issues/501", fn conn ->
+        conn
+        |> Plug.Conn.put_resp_content_type("application/json")
+        |> Plug.Conn.resp(404, Jason.encode!(%{"message" => "Not Found"}))
+      end)
+
+      event =
+        TicketClosed.new(%{
+          aggregate_id: to_string(ticket.id),
+          actor_id: "user-123",
+          ticket_id: ticket.id,
+          number: 501
+        })
+
+      assert :ok == GithubTicketPushHandler.handle_event(event)
+
+      updated = Repo.get!(ProjectTicketSchema, ticket.id)
+      assert updated.sync_state == "synced"
+    end
+
+    test "marks sync_error when GitHub close fails" do
+      ticket = insert_pending_ticket!(%{number: 502, title: "Will fail", state: "closed"})
+      bypass = Bypass.open()
+      with_bypass_config(bypass)
+
+      Bypass.expect_once(bypass, "PATCH", "/repos/platform-q-ai/perme8/issues/502", fn conn ->
+        conn
+        |> Plug.Conn.put_resp_content_type("application/json")
+        |> Plug.Conn.resp(422, Jason.encode!(%{"message" => "Validation Failed"}))
+      end)
+
+      event =
+        TicketClosed.new(%{
+          aggregate_id: to_string(ticket.id),
+          actor_id: "user-123",
+          ticket_id: ticket.id,
+          number: 502
+        })
+
+      assert {:error, _} = GithubTicketPushHandler.handle_event(event)
+
+      updated = Repo.get!(ProjectTicketSchema, ticket.id)
+      assert updated.sync_state == "sync_error"
+    end
+
+    test "returns ok when ticket no longer exists locally" do
+      event =
+        TicketClosed.new(%{
+          aggregate_id: "999999",
+          actor_id: "user-123",
+          ticket_id: 999_999,
+          number: 503
+        })
+
+      bypass = Bypass.open()
+      with_bypass_config(bypass)
+
+      Bypass.expect_once(bypass, "PATCH", "/repos/platform-q-ai/perme8/issues/503", fn conn ->
+        conn
+        |> Plug.Conn.put_resp_content_type("application/json")
+        |> Plug.Conn.resp(
+          200,
+          Jason.encode!(%{
+            "number" => 503,
+            "state" => "closed",
+            "title" => "Gone",
+            "html_url" => "https://github.com/platform-q-ai/perme8/issues/503",
+            "labels" => [],
+            "created_at" => DateTime.to_iso8601(DateTime.utc_now())
+          })
+        )
+      end)
+
+      # Should not crash even though ticket_id doesn't exist in DB
+      assert :ok == GithubTicketPushHandler.handle_event(event)
     end
   end
 end
