@@ -20,7 +20,6 @@ defmodule Agents.Tickets do
 
   alias Agents.Sessions
   alias Agents.Sessions.Domain.Policies.SessionLifecyclePolicy
-  alias Agents.Tickets.Application.TicketsConfig
   alias Agents.Tickets.Application.UseCases.AddSubIssue
   alias Agents.Tickets.Application.UseCases.AddTicketDependency
   alias Agents.Tickets.Application.UseCases.CloseTicket
@@ -31,7 +30,6 @@ defmodule Agents.Tickets do
   alias Agents.Tickets.Application.UseCases.UpdateTicket
   alias Agents.Tickets.Domain.Entities.Ticket
   alias Agents.Tickets.Domain.Policies.TicketEnrichmentPolicy
-  alias Agents.Tickets.Infrastructure.Clients.GithubProjectClient
   alias Agents.Tickets.Infrastructure.Repositories.ProjectTicketRepository
   alias Agents.Tickets.Infrastructure.Repositories.TicketDependencyRepository
   alias Agents.Tickets.Infrastructure.TicketSyncServer
@@ -156,53 +154,24 @@ defmodule Agents.Tickets do
   end
 
   @doc """
-  Updates labels on a project ticket on GitHub first, then persists locally.
+  Updates labels on a project ticket locally and marks it for async GitHub sync.
 
-  If the GitHub update fails (except :not_found), the local record is left
-  unchanged and an error is returned so the caller can surface it to the user.
+  The labels are written to the local database immediately with
+  `sync_state: "pending_push"`, and a `TicketUpdated` domain event is emitted.
+  The `GithubTicketPushHandler` subscriber reacts to this event to push the
+  label change to GitHub asynchronously.
 
   ## Options
 
-    * `:github_client` - module implementing `GithubTicketClientBehaviour`
-      (defaults to application config `:github_ticket_client` or
-      `GithubProjectClient`)
+    * `:actor_id` - (required) The user making the update
+    * `:event_bus` - Event bus module (default: EventBus)
+    * `:ticket_repo` - Repository module (default: ProjectTicketRepository)
   """
-  @spec update_ticket_labels(integer(), [String.t()], keyword()) :: :ok | {:error, term()}
+  @spec update_ticket_labels(integer(), [String.t()], keyword()) ::
+          {:ok, struct()} | {:error, term()}
   def update_ticket_labels(number, labels, opts \\ [])
       when is_integer(number) and is_list(labels) do
-    client = Keyword.get_lazy(opts, :github_client, &github_client/0)
-
-    github_opts = [
-      token: TicketsConfig.github_token(),
-      org: TicketsConfig.github_org(),
-      repo: TicketsConfig.github_repo()
-    ]
-
-    case client.update_issue(number, %{labels: labels}, github_opts) do
-      {:ok, _issue} ->
-        case ProjectTicketRepository.update_labels(number, labels) do
-          {:ok, _ticket} -> :ok
-          {:error, :not_found} -> :ok
-        end
-
-      # Issue doesn't exist on GitHub -- still update locally
-      {:error, :not_found} ->
-        case ProjectTicketRepository.update_labels(number, labels) do
-          {:ok, _ticket} -> :ok
-          {:error, :not_found} -> :ok
-        end
-
-      {:error, reason} ->
-        {:error, reason}
-    end
-  end
-
-  defp github_client do
-    Application.get_env(
-      :agents,
-      :github_ticket_client,
-      GithubProjectClient
-    )
+    UpdateTicket.execute(number, %{labels: labels}, opts)
   end
 
   @doc """

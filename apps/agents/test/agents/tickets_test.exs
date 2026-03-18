@@ -7,75 +7,6 @@ defmodule Agents.TicketsTest do
   alias Agents.Tickets.Infrastructure.Schemas.ProjectTicketSchema
   alias Perme8.Events.TestEventBus
 
-  defmodule SuccessGithubClient do
-    @behaviour Agents.Application.Behaviours.GithubTicketClientBehaviour
-
-    @impl true
-    def update_issue(number, _attrs, _opts),
-      do: {:ok, %{number: number, state: "closed"}}
-
-    @impl true
-    def get_issue(_, _), do: {:error, :not_implemented}
-    @impl true
-    def list_issues(_), do: {:error, :not_implemented}
-    @impl true
-    def create_issue(_, _), do: {:error, :not_implemented}
-    @impl true
-    def close_issue_with_comment(_, _), do: {:error, :not_implemented}
-    @impl true
-    def add_comment(_, _, _), do: {:error, :not_implemented}
-    @impl true
-    def add_sub_issue(_, _, _), do: {:error, :not_implemented}
-    @impl true
-    def remove_sub_issue(_, _, _), do: {:error, :not_implemented}
-  end
-
-  defmodule NotFoundGithubClient do
-    @behaviour Agents.Application.Behaviours.GithubTicketClientBehaviour
-
-    @impl true
-    def update_issue(_number, _attrs, _opts),
-      do: {:error, :not_found}
-
-    @impl true
-    def get_issue(_, _), do: {:error, :not_implemented}
-    @impl true
-    def list_issues(_), do: {:error, :not_implemented}
-    @impl true
-    def create_issue(_, _), do: {:error, :not_implemented}
-    @impl true
-    def close_issue_with_comment(_, _), do: {:error, :not_implemented}
-    @impl true
-    def add_comment(_, _, _), do: {:error, :not_implemented}
-    @impl true
-    def add_sub_issue(_, _, _), do: {:error, :not_implemented}
-    @impl true
-    def remove_sub_issue(_, _, _), do: {:error, :not_implemented}
-  end
-
-  defmodule FailingGithubClient do
-    @behaviour Agents.Application.Behaviours.GithubTicketClientBehaviour
-
-    @impl true
-    def update_issue(_number, _attrs, _opts),
-      do: {:error, {:unexpected_status, 502, "Bad Gateway"}}
-
-    @impl true
-    def get_issue(_, _), do: {:error, :not_implemented}
-    @impl true
-    def list_issues(_), do: {:error, :not_implemented}
-    @impl true
-    def create_issue(_, _), do: {:error, :not_implemented}
-    @impl true
-    def close_issue_with_comment(_, _), do: {:error, :not_implemented}
-    @impl true
-    def add_comment(_, _, _), do: {:error, :not_implemented}
-    @impl true
-    def add_sub_issue(_, _, _), do: {:error, :not_implemented}
-    @impl true
-    def remove_sub_issue(_, _, _), do: {:error, :not_implemented}
-  end
-
   setup do
     TestEventBus.start_global()
     :ok
@@ -181,43 +112,65 @@ defmodule Agents.TicketsTest do
   end
 
   describe "update_ticket_labels/3" do
-    test "updates labels on GitHub first, then persists locally" do
+    @actor_id "user-labels-test"
+
+    setup do
+      TestEventBus.start_global()
+      :ok
+    end
+
+    test "updates labels locally with sync_state pending_push" do
       create_ticket!(750, %{labels: ["old-label"]})
 
-      assert :ok =
+      assert {:ok, schema} =
                Tickets.update_ticket_labels(750, ["bug", "agents"],
-                 github_client: SuccessGithubClient
+                 actor_id: @actor_id,
+                 event_bus: TestEventBus
                )
+
+      assert schema.labels == ["bug", "agents"]
+      assert schema.sync_state == "pending_push"
 
       refreshed = Repo.get_by!(ProjectTicketSchema, number: 750)
       assert refreshed.labels == ["bug", "agents"]
+      assert refreshed.sync_state == "pending_push"
     end
 
-    test "still updates locally when GitHub returns :not_found (issue deleted)" do
+    test "emits TicketUpdated event with label changes" do
       create_ticket!(751, %{labels: ["old"]})
 
-      assert :ok =
-               Tickets.update_ticket_labels(751, ["new"], github_client: NotFoundGithubClient)
+      assert {:ok, _} =
+               Tickets.update_ticket_labels(751, ["new"],
+                 actor_id: @actor_id,
+                 event_bus: TestEventBus
+               )
 
-      refreshed = Repo.get_by!(ProjectTicketSchema, number: 751)
-      assert refreshed.labels == ["new"]
+      events = TestEventBus.get_events()
+      assert [%{event_type: "tickets.ticket_updated"} = event] = events
+      assert event.number == 751
+      assert event.changes == %{labels: ["new"]}
+      assert event.actor_id == @actor_id
     end
 
-    test "returns error and does NOT update locally when GitHub fails" do
-      create_ticket!(752, %{labels: ["original"]})
-
-      assert {:error, {:unexpected_status, 502, "Bad Gateway"}} =
-               Tickets.update_ticket_labels(752, ["new"], github_client: FailingGithubClient)
-
-      refreshed = Repo.get_by!(ProjectTicketSchema, number: 752)
-      assert refreshed.labels == ["original"]
+    test "returns error when ticket does not exist" do
+      assert {:error, :not_found} =
+               Tickets.update_ticket_labels(99_999, ["bug"],
+                 actor_id: @actor_id,
+                 event_bus: TestEventBus
+               )
     end
 
     test "can set labels to empty list" do
       create_ticket!(753, %{labels: ["bug", "frontend"]})
 
-      assert :ok =
-               Tickets.update_ticket_labels(753, [], github_client: SuccessGithubClient)
+      assert {:ok, schema} =
+               Tickets.update_ticket_labels(753, [],
+                 actor_id: @actor_id,
+                 event_bus: TestEventBus
+               )
+
+      assert schema.labels == []
+      assert schema.sync_state == "pending_push"
 
       refreshed = Repo.get_by!(ProjectTicketSchema, number: 753)
       assert refreshed.labels == []

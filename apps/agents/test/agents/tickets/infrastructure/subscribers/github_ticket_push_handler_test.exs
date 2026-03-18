@@ -4,6 +4,7 @@ defmodule Agents.Tickets.Infrastructure.Subscribers.GithubTicketPushHandlerTest 
   alias Agents.Repo
   alias Agents.Tickets.Domain.Events.TicketClosed
   alias Agents.Tickets.Domain.Events.TicketCreated
+  alias Agents.Tickets.Domain.Events.TicketUpdated
   alias Agents.Tickets.Infrastructure.Schemas.ProjectTicketSchema
   alias Agents.Tickets.Infrastructure.Subscribers.GithubTicketPushHandler
 
@@ -132,6 +133,138 @@ defmodule Agents.Tickets.Infrastructure.Subscribers.GithubTicketPushHandlerTest 
     test "ignores non-matching events" do
       assert :ok ==
                GithubTicketPushHandler.handle_event(%{event_type: "sessions.task_completed"})
+    end
+  end
+
+  describe "handle_event/1 with TicketUpdated" do
+    test "pushes label changes to GitHub and marks ticket as synced" do
+      ticket = insert_pending_ticket!(%{number: 800, title: "Has labels", labels: ["old"]})
+      bypass = Bypass.open()
+      with_bypass_config(bypass)
+
+      Bypass.expect_once(bypass, "PATCH", "/repos/platform-q-ai/perme8/issues/800", fn conn ->
+        {:ok, req_body, conn} = Plug.Conn.read_body(conn)
+        payload = Jason.decode!(req_body)
+        assert payload["labels"] == ["bug", "agents"]
+
+        conn
+        |> Plug.Conn.put_resp_content_type("application/json")
+        |> Plug.Conn.resp(
+          200,
+          Jason.encode!(%{
+            "number" => 800,
+            "title" => "Has labels",
+            "body" => "",
+            "html_url" => "https://github.com/platform-q-ai/perme8/issues/800",
+            "state" => "open",
+            "labels" => [%{"name" => "bug"}, %{"name" => "agents"}],
+            "created_at" => DateTime.to_iso8601(DateTime.utc_now())
+          })
+        )
+      end)
+
+      event =
+        TicketUpdated.new(%{
+          aggregate_id: to_string(ticket.id),
+          actor_id: "user-123",
+          ticket_id: ticket.id,
+          number: 800,
+          changes: %{labels: ["bug", "agents"]}
+        })
+
+      assert :ok == GithubTicketPushHandler.handle_event(event)
+
+      updated = Repo.get!(ProjectTicketSchema, ticket.id)
+      assert updated.sync_state == "synced"
+
+      assert_received {:tickets_synced, _}
+    end
+
+    test "pushes title and body changes to GitHub" do
+      ticket = insert_pending_ticket!(%{number: 801, title: "Old title"})
+      bypass = Bypass.open()
+      with_bypass_config(bypass)
+
+      Bypass.expect_once(bypass, "PATCH", "/repos/platform-q-ai/perme8/issues/801", fn conn ->
+        {:ok, req_body, conn} = Plug.Conn.read_body(conn)
+        payload = Jason.decode!(req_body)
+        assert payload["title"] == "New title"
+        assert payload["body"] == "New body"
+
+        conn
+        |> Plug.Conn.put_resp_content_type("application/json")
+        |> Plug.Conn.resp(
+          200,
+          Jason.encode!(%{
+            "number" => 801,
+            "title" => "New title",
+            "body" => "New body",
+            "html_url" => "https://github.com/platform-q-ai/perme8/issues/801",
+            "state" => "open",
+            "labels" => [],
+            "created_at" => DateTime.to_iso8601(DateTime.utc_now())
+          })
+        )
+      end)
+
+      event =
+        TicketUpdated.new(%{
+          aggregate_id: to_string(ticket.id),
+          actor_id: "user-123",
+          ticket_id: ticket.id,
+          number: 801,
+          changes: %{title: "New title", body: "New body"}
+        })
+
+      assert :ok == GithubTicketPushHandler.handle_event(event)
+
+      updated = Repo.get!(ProjectTicketSchema, ticket.id)
+      assert updated.sync_state == "synced"
+    end
+
+    test "marks ticket as sync_error when GitHub push fails" do
+      ticket = insert_pending_ticket!(%{number: 802, title: "Will fail"})
+      bypass = Bypass.open()
+      with_bypass_config(bypass)
+
+      Bypass.expect_once(bypass, "PATCH", "/repos/platform-q-ai/perme8/issues/802", fn conn ->
+        conn
+        |> Plug.Conn.put_resp_content_type("application/json")
+        |> Plug.Conn.resp(422, Jason.encode!(%{"message" => "Validation Failed"}))
+      end)
+
+      event =
+        TicketUpdated.new(%{
+          aggregate_id: to_string(ticket.id),
+          actor_id: "user-123",
+          ticket_id: ticket.id,
+          number: 802,
+          changes: %{labels: ["bug"]}
+        })
+
+      assert {:error, _} = GithubTicketPushHandler.handle_event(event)
+
+      updated = Repo.get!(ProjectTicketSchema, ticket.id)
+      assert updated.sync_state == "sync_error"
+    end
+
+    test "skips push for tickets with temporary numbers (negative)" do
+      ticket = insert_pending_ticket!(%{number: -50, title: "Not pushed yet"})
+
+      event =
+        TicketUpdated.new(%{
+          aggregate_id: to_string(ticket.id),
+          actor_id: "user-123",
+          ticket_id: ticket.id,
+          number: -50,
+          changes: %{labels: ["bug"]}
+        })
+
+      assert :ok == GithubTicketPushHandler.handle_event(event)
+
+      # Ticket should remain pending_push since we can't push to a temp number
+      updated = Repo.get!(ProjectTicketSchema, ticket.id)
+      assert updated.sync_state == "pending_push"
     end
   end
 
