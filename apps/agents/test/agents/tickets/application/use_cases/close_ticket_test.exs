@@ -50,6 +50,20 @@ defmodule Agents.Tickets.Application.UseCases.CloseTicketTest do
       assert TestEventBus.get_events() == []
     end
 
+    test "closing an already-closed ticket succeeds (idempotent)" do
+      assert :ok = CloseTicket.execute(300, @default_opts)
+      TestEventBus.reset()
+
+      # Second close should also succeed
+      assert :ok = CloseTicket.execute(300, @default_opts)
+
+      refreshed = Repo.get_by!(ProjectTicketSchema, number: 300)
+      assert refreshed.state == "closed"
+      assert refreshed.sync_state == "pending_push"
+      # Re-emits the event (handler is idempotent for GitHub close)
+      assert [%TicketClosed{}] = TestEventBus.get_events()
+    end
+
     test "requires actor_id" do
       assert_raise KeyError, ~r/key :actor_id not found/, fn ->
         CloseTicket.execute(300, event_bus: TestEventBus)
