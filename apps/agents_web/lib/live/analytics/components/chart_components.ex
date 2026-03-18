@@ -6,6 +6,7 @@ defmodule AgentsWeb.AnalyticsLive.Components.ChartComponents do
   use AgentsWeb, :html
 
   alias Agents.Tickets.Domain.Entities.AnalyticsView
+  alias Agents.Tickets.Domain.Policies.TicketLifecyclePolicy
 
   @chart_width 700
   @chart_height 250
@@ -336,7 +337,7 @@ defmodule AgentsWeb.AnalyticsLive.Components.ChartComponents do
   # Helpers
 
   defp stage_color(stage) do
-    Agents.Tickets.Domain.Policies.TicketLifecyclePolicy.stage_color(stage)
+    TicketLifecyclePolicy.stage_color(stage)
   end
 
   defp x_step(label_count, width) when label_count > 1, do: width / (label_count - 1)

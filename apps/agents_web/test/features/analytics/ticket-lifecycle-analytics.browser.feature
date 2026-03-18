@@ -107,14 +107,14 @@ Feature: Analytics Dashboard for Ticket Lifecycle Events
     And I wait for network idle
     And I click the "Weekly" button
     And I wait for network idle
-    Then "[data-testid='granularity-toggle'] [aria-pressed='true']" should contain text "Weekly"
+    Then "[data-testid='granularity-toggle'] .btn-active" should have text "Weekly"
 
   Scenario: Clicking Monthly granularity updates trend charts
     When I navigate to "${baseUrl}/analytics"
     And I wait for network idle
     And I click the "Monthly" button
     And I wait for network idle
-    Then "[data-testid='granularity-toggle'] [aria-pressed='true']" should contain text "Monthly"
+    Then "[data-testid='granularity-toggle'] .btn-active" should have text "Monthly"
 
   # ---------------------------------------------------------------------------
   # Date Range Filter
@@ -131,11 +131,14 @@ Feature: Analytics Dashboard for Ticket Lifecycle Events
   # Empty States
   # ---------------------------------------------------------------------------
 
-  Scenario: Analytics page shows empty state when no lifecycle data exists
-    # No lifecycle event seeds exist, so the default owner account sees empty state
+  Scenario: Analytics page renders with no lifecycle event data
+    # Seed data includes tickets but no lifecycle events.
+    # The dashboard renders with zero-count charts rather than the full empty state
+    # because tickets exist (summary.total > 0).
     When I navigate to "${baseUrl}/analytics"
     And I wait for network idle
-    Then I should see "No lifecycle data yet"
+    Then "[data-testid='summary-card-total-tickets']" should exist
+    And "[data-testid='stage-distribution-chart']" should exist
 
   # ---------------------------------------------------------------------------
   # Default Date Range
