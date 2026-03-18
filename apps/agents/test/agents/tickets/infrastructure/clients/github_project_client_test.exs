@@ -411,6 +411,60 @@ defmodule Agents.Tickets.Infrastructure.Clients.GithubProjectClientTest do
     end
   end
 
+  describe "fetch_tickets/1" do
+    test "keeps tickets when sub-issue enrichment times out" do
+      # Simulate two issues: one whose sub-issue call succeeds,
+      # one whose sub-issue call hangs long enough to be killed by Task.async_stream.
+      # Both tickets must appear in the result.
+      stub(__MODULE__, fn conn ->
+        case {conn.method, conn.request_path} do
+          {"GET", "/repos/platform-q-ai/perme8/issues"} ->
+            json(conn, [
+              %{
+                "number" => 700,
+                "title" => "Fast ticket",
+                "state" => "open",
+                "html_url" => "https://github.com/platform-q-ai/perme8/issues/700",
+                "labels" => [],
+                "assignees" => [],
+                "created_at" => "2025-01-01T00:00:00Z"
+              },
+              %{
+                "number" => 701,
+                "title" => "Slow ticket",
+                "state" => "open",
+                "html_url" => "https://github.com/platform-q-ai/perme8/issues/701",
+                "labels" => [],
+                "assignees" => [],
+                "created_at" => "2025-01-01T00:00:00Z"
+              }
+            ])
+
+          {"GET", "/repos/platform-q-ai/perme8/issues/700/sub_issues"} ->
+            json(conn, [])
+
+          {"GET", "/repos/platform-q-ai/perme8/issues/701/sub_issues"} ->
+            # Simulate a timeout by sleeping longer than the task timeout
+            Process.sleep(20_000)
+            json(conn, [])
+        end
+      end)
+
+      # Use a very short timeout to trigger the :kill_task on issue 701
+      assert {:ok, tickets} =
+               GithubProjectClient.fetch_tickets(client_opts(enrichment_timeout: 100))
+
+      numbers = Enum.map(tickets, & &1.number) |> Enum.sort()
+
+      assert numbers == [700, 701],
+             "Both tickets must be returned even when sub-issue call times out"
+
+      # The timed-out ticket should have empty sub_issue_numbers
+      slow_ticket = Enum.find(tickets, &(&1.number == 701))
+      assert slow_ticket.sub_issue_numbers == []
+    end
+  end
+
   describe "fetch_sub_issues/4" do
     test "calls the sub-issues endpoint and returns sub-issue numbers" do
       stub(__MODULE__, fn conn ->
