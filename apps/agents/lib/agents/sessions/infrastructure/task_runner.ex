@@ -214,7 +214,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
         # If the question reply fails (e.g. opencode moved on or timed out
         # internally), fall back to sending the answer as a follow-up message
         # so the session continues seamlessly from the user's perspective.
-        Logger.info(
+        Logger.warning(
           "TaskRunner: reply_question failed for #{request_id} (#{inspect(reason)}), " <>
             "falling back to send_message for task #{state.task_id}"
         )
@@ -237,7 +237,12 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
             TaskBroadcaster.broadcast_question_replied(state.task_id, state.pubsub)
             {:reply, :ok, clear_pending_question(state)}
 
-          {:error, _} ->
+          {:error, fallback_reason} ->
+            Logger.warning(
+              "TaskRunner: fallback send_prompt_async also failed for #{request_id} " <>
+                "on task #{state.task_id}: #{inspect(fallback_reason)}"
+            )
+
             {:reply, {:error, reason}, state}
         end
     end
