@@ -78,7 +78,7 @@ defmodule Agents.Tickets.Application.UseCases.GetAnalyticsTest do
       assert Map.has_key?(analytics.distribution, "closed")
 
       # Buckets should be generated
-      assert length(analytics.buckets) > 0
+      assert analytics.buckets != []
     end
 
     test "respects custom granularity" do

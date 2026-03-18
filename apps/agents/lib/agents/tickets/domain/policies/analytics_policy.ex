@@ -72,19 +72,7 @@ defmodule Agents.Tickets.Domain.Policies.AnalyticsPolicy do
 
       cycle_times =
         Enum.flat_map(events_by_ticket, fn {_ticket_id, ticket_events} ->
-          sorted = Enum.sort_by(ticket_events, & &1.transitioned_at, DateTime)
-
-          first_event = List.first(sorted)
-          last_close = sorted |> Enum.filter(&(&1.to_stage == "closed")) |> List.last()
-
-          if first_event && last_close do
-            [
-              DateTime.diff(last_close.transitioned_at, first_event.transitioned_at, :second)
-              |> max(0)
-            ]
-          else
-            []
-          end
+          compute_ticket_cycle_time(ticket_events)
         end)
 
       if cycle_times == [] do
@@ -150,23 +138,7 @@ defmodule Agents.Tickets.Domain.Policies.AnalyticsPolicy do
     # For each ticket, compute stage durations from consecutive events
     stage_durations =
       Enum.flat_map(events_by_ticket, fn {_ticket_id, ticket_events} ->
-        sorted = Enum.sort_by(ticket_events, & &1.transitioned_at, DateTime)
-
-        sorted
-        |> Enum.with_index()
-        |> Enum.flat_map(fn {event, index} ->
-          next = Enum.at(sorted, index + 1)
-
-          if next do
-            duration =
-              DateTime.diff(next.transitioned_at, event.transitioned_at, :second) |> max(0)
-
-            bucket = bucket_key(event.transitioned_at, granularity)
-            [%{bucket: bucket, stage: event.to_stage, duration: duration}]
-          else
-            []
-          end
-        end)
+        compute_stage_durations(ticket_events, granularity)
       end)
 
     # Group by bucket + stage, compute averages
@@ -237,6 +209,38 @@ defmodule Agents.Tickets.Domain.Policies.AnalyticsPolicy do
       Date.new!(year + 1, 1, 1)
     else
       Date.new!(year, month + 1, 1)
+    end
+  end
+
+  defp compute_stage_durations(ticket_events, granularity) do
+    sorted = Enum.sort_by(ticket_events, & &1.transitioned_at, DateTime)
+
+    sorted
+    |> Enum.with_index()
+    |> Enum.flat_map(fn {event, index} ->
+      next = Enum.at(sorted, index + 1)
+
+      if next do
+        duration =
+          DateTime.diff(next.transitioned_at, event.transitioned_at, :second) |> max(0)
+
+        bucket = bucket_key(event.transitioned_at, granularity)
+        [%{bucket: bucket, stage: event.to_stage, duration: duration}]
+      else
+        []
+      end
+    end)
+  end
+
+  defp compute_ticket_cycle_time(ticket_events) do
+    sorted = Enum.sort_by(ticket_events, & &1.transitioned_at, DateTime)
+    first_event = List.first(sorted)
+    last_close = sorted |> Enum.filter(&(&1.to_stage == "closed")) |> List.last()
+
+    if first_event && last_close do
+      [DateTime.diff(last_close.transitioned_at, first_event.transitioned_at, :second) |> max(0)]
+    else
+      []
     end
   end
 
