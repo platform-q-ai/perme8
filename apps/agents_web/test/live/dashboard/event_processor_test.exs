@@ -254,7 +254,7 @@ defmodule AgentsWeb.DashboardLive.EventProcessorTest do
       assert pending.session_id == "sess-1"
       assert length(pending.questions) == 1
       assert pending.selected == [[]]
-      assert pending.rejected == false
+      refute Map.has_key?(pending, :rejected)
     end
 
     test "ignores empty questions list" do
@@ -274,7 +274,7 @@ defmodule AgentsWeb.DashboardLive.EventProcessorTest do
     test "clears pending_question" do
       socket =
         build_socket(%{
-          pending_question: %{request_id: "req-1", questions: [], selected: [], rejected: false}
+          pending_question: %{request_id: "req-1", questions: [], selected: []}
         })
 
       event = %{"type" => "question.replied"}
@@ -285,22 +285,21 @@ defmodule AgentsWeb.DashboardLive.EventProcessorTest do
   end
 
   describe "process_event/2 — question.rejected" do
-    test "marks pending_question as rejected" do
+    test "clears pending_question on rejection (explicit dismiss)" do
       socket =
         build_socket(%{
           pending_question: %{
             request_id: "req-1",
             questions: [],
             selected: [],
-            custom_text: [],
-            rejected: false
+            custom_text: []
           }
         })
 
       event = %{"type" => "question.rejected"}
 
       result = EventProcessor.process_event(event, socket)
-      assert result.assigns.pending_question.rejected == true
+      assert result.assigns.pending_question == nil
     end
 
     test "returns unchanged socket when no pending_question" do

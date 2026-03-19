@@ -305,13 +305,6 @@ defmodule AgentsWeb.DashboardLive.Helpers.TaskExecutionHelpers do
     end)
   end
 
-  def submit_rejected_question(socket, pending, task_id) do
-    message = format_question_answer_as_message(pending, build_question_answers(pending))
-
-    Sessions.send_message(task_id, message)
-    |> handle_question_result_basic(socket, pending, "Failed to send message — please try again")
-  end
-
   def submit_active_question(socket, pending, task_id) do
     answers = build_question_answers(pending)
     message = format_question_answer_as_message(pending, answers)
@@ -321,23 +314,6 @@ defmodule AgentsWeb.DashboardLive.Helpers.TaskExecutionHelpers do
     socket
     |> append_answer_submitted_message(message)
     |> assign(:pending_question, nil)
-  end
-
-  def handle_question_result_basic(:ok, socket, _pending, _error_msg) do
-    assign(socket, :pending_question, nil)
-  end
-
-  def handle_question_result_basic({:error, :task_not_running}, socket, pending, _error_msg) do
-    message = format_question_answer_as_message(pending, build_question_answers(pending))
-
-    socket
-    |> assign(:pending_question, nil)
-    |> prefill_form(message)
-    |> put_flash(:info, "Session ended. Your answer is in the input — submit to resume.")
-  end
-
-  def handle_question_result_basic({:error, _}, socket, _pending, error_msg) do
-    socket |> assign(:pending_question, nil) |> put_flash(:error, error_msg)
   end
 
   @doc "Creates a new task or resumes the current one, returning `{:ok, task}` or `{:error, reason}`."

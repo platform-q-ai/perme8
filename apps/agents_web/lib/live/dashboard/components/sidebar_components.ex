@@ -12,6 +12,7 @@ defmodule AgentsWeb.DashboardLive.Components.SidebarComponents do
   import AgentsWeb.DashboardLive.Helpers
 
   alias Agents.Tickets.Domain.Entities.Ticket
+  alias AgentsWeb.DashboardLive.Helpers.TicketDataHelpers
 
   # -- Sidebar Header --
 
@@ -263,7 +264,7 @@ defmodule AgentsWeb.DashboardLive.Components.SidebarComponents do
               Tickets
             </span>
             <span class="text-[0.6rem] text-base-content/40">
-              ({length(@idle_tickets)})
+              ({length(TicketDataHelpers.all_tickets(@idle_tickets))})
             </span>
             <div class="ml-auto">
               <button

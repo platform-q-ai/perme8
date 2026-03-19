@@ -250,13 +250,7 @@ defmodule AgentsWeb.DashboardLive.SessionDataHelpers do
   defdelegate format_question_answer_as_message(pending, answers),
     to: AgentsWeb.DashboardLive.Helpers.TaskExecutionHelpers
 
-  defdelegate submit_rejected_question(socket, pending, task_id),
-    to: AgentsWeb.DashboardLive.Helpers.TaskExecutionHelpers
-
   defdelegate submit_active_question(socket, pending, task_id),
-    to: AgentsWeb.DashboardLive.Helpers.TaskExecutionHelpers
-
-  defdelegate handle_question_result_basic(result, socket, pending, error_msg),
     to: AgentsWeb.DashboardLive.Helpers.TaskExecutionHelpers
 
   defdelegate run_or_resume_task(socket, instruction, ticket_number),
