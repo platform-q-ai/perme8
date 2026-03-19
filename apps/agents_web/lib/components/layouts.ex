@@ -151,6 +151,12 @@ defmodule AgentsWeb.Layouts do
                 </.link>
               </li>
               <li>
+                <.link navigate={~p"/analytics"} class="flex items-center gap-3">
+                  <.icon name="hero-chart-bar-square" class="size-5" />
+                  <span>Analytics</span>
+                </.link>
+              </li>
+              <li>
                 <.link href={identity_log_out_url()} method="delete" class="flex items-center gap-3">
                   <.icon name="hero-arrow-right-on-rectangle" class="size-5" />
                   <span>Log out</span>

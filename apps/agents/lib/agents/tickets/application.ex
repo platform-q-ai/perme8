@@ -10,6 +10,7 @@ defmodule Agents.Tickets.Application do
       UseCases.AddTicketDependency,
       UseCases.CloseTicket,
       UseCases.CreateTicket,
+      UseCases.GetAnalytics,
       UseCases.RecordStageTransition,
       UseCases.RemoveSubIssue,
       UseCases.RemoveTicketDependency,

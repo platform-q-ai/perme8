@@ -20,6 +20,7 @@ defmodule Agents.Tickets do
 
   alias Agents.Sessions
   alias Agents.Sessions.Domain.Policies.SessionLifecyclePolicy
+  alias Agents.Tickets.Application.UseCases.GetAnalytics
   alias Agents.Tickets.Application.UseCases.AddSubIssue
   alias Agents.Tickets.Application.UseCases.AddTicketDependency
   alias Agents.Tickets.Application.UseCases.CloseTicket
@@ -33,6 +34,20 @@ defmodule Agents.Tickets do
   alias Agents.Tickets.Infrastructure.Repositories.ProjectTicketRepository
   alias Agents.Tickets.Infrastructure.Repositories.TicketDependencyRepository
   alias Agents.Tickets.Infrastructure.TicketSyncServer
+
+  @doc """
+  Fetches analytics for ticket lifecycle events.
+
+  ## Options
+
+    * `:date_from` - Start date (default: 30 days ago)
+    * `:date_to` - End date (default: today)
+    * `:granularity` - `:daily` | `:weekly` | `:monthly` (default: `:daily`)
+  """
+  @spec get_analytics(keyword()) :: {:ok, map()}
+  def get_analytics(opts \\ []) do
+    GetAnalytics.execute(opts)
+  end
 
   @doc """
   Lists persisted project tickets enriched with per-user session state.
