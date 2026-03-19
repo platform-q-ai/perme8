@@ -1,0 +1,357 @@
+version: 1
+
+# Environment variables available to all pipeline stages.
+# Variable interpolation (${VAR}) is resolved at execution time, not parse time.
+env:
+  REPO_URL: "${GITHUB_REPO_URL}"
+  MIX_ENV: test
+  DATABASE_URL: "${DATABASE_URL}"
+  SECRET_KEY_BASE: "${SECRET_KEY_BASE}"
+  PHX_HOST: "${PHX_HOST}"
+
+# Toolchain versions used for container provisioning.
+toolchain:
+  elixir: "1.19"
+  erlang: "27"
+  node: "22"
+
+# Service dependencies required by the pipeline.
+services:
+  postgres:
+    image: postgres:16
+    env:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: perme8_test
+  redis:
+    image: redis:7
+
+# Change detection rules — map file path patterns to app names.
+# Used by CI stages to determine which apps were affected by a change.
+change_detection:
+  "apps/agents/**":
+    app: agents
+  "apps/agents_web/**":
+    app: agents_web
+  "apps/agents_api/**":
+    app: agents_api
+  "apps/identity/**":
+    app: identity
+  "apps/jarga/**":
+    app: jarga
+  "apps/jarga_web/**":
+    app: jarga_web
+  "apps/jarga_api/**":
+    app: jarga_api
+  "apps/chat/**":
+    app: chat
+  "apps/chat_web/**":
+    app: chat_web
+  "apps/webhooks/**":
+    app: webhooks
+  "apps/webhooks_api/**":
+    app: webhooks_api
+  "apps/notifications/**":
+    app: notifications
+  "apps/entity_relationship_manager/**":
+    app: entity_relationship_manager
+  "apps/perme8_events/**":
+    app: perme8_events
+  "apps/perme8_plugs/**":
+    app: perme8_plugs
+  "apps/exo_dashboard/**":
+    app: exo_dashboard
+  "apps/alkali/**":
+    app: alkali
+  "apps/perme8_tools/**":
+    app: perme8_tools
+  "config/**":
+    app: _all
+  "mix.exs":
+    app: _all
+  "mix.lock":
+    app: _all
+
+# App surface map — categorises apps by type for selective testing.
+app_surface_map:
+  umbrella_apps:
+    - agents
+    - agents_web
+    - agents_api
+    - identity
+    - jarga
+    - jarga_web
+    - jarga_api
+    - chat
+    - chat_web
+    - webhooks
+    - webhooks_api
+    - notifications
+    - entity_relationship_manager
+    - perme8_events
+    - perme8_plugs
+    - exo_dashboard
+    - alkali
+    - perme8_tools
+  js_apps:
+    - agents_web
+    - jarga_web
+    - identity
+
+# Exo-BDD test matrix configuration.
+exo_bdd_matrix:
+  adapters:
+    - browser
+    - http
+    - security
+    - cli
+    - graph
+  default_timeout: 120
+
+# JavaScript app build configuration.
+js_apps:
+  agents_web:
+    assets_path: apps/agents_web/assets
+    build_command: npm run build
+  jarga_web:
+    assets_path: apps/jarga_web/assets
+    build_command: npm run build
+  identity:
+    assets_path: apps/identity/assets
+    build_command: npm run build
+
+# Dependency caching configuration.
+cache:
+  deps:
+    key: "deps-${MIX_ENV}-mix.lock"
+    paths:
+      - deps
+      - _build
+  node_modules:
+    key: "node-${NODE_VERSION}"
+    paths:
+      - apps/agents_web/assets/node_modules
+      - apps/jarga_web/assets/node_modules
+      - apps/identity/assets/node_modules
+
+# Container image definitions.
+images:
+  opencode:
+    dockerfile: infra/opencode/Dockerfile
+    description: Full coding environment with all tools
+  opencode-light:
+    dockerfile: infra/opencode-light/Dockerfile
+    description: Lightweight image for fast tasks
+  pi:
+    dockerfile: infra/pi/Dockerfile
+    description: PI environment for inference tasks
+
+# Session lifecycle configuration.
+sessions:
+  idle_timeout: 1800
+  terminate_on:
+    - merged
+    - closed
+  on_create:
+    - git checkout -b "${BRANCH_NAME}"
+  on_resume:
+    - git fetch origin
+    - git checkout "${BRANCH_NAME}"
+
+# Pull request configuration.
+pull_requests:
+  states:
+    - draft
+    - open
+    - in_review
+    - approved
+    - merged
+    - closed
+  merge_methods:
+    - squash
+    - merge
+    - rebase
+  default_merge_method: squash
+
+# Pipeline stages — the core of the DSL.
+stages:
+  # Warm pool: pre-provision containers so sessions start instantly.
+  - name: warm-pool
+    description: Pre-provision containers so sessions start instantly
+    trigger:
+      events:
+        - schedule
+        - on_demand
+      schedule: "*/5 * * * *"
+    pool:
+      target_count: 2
+      image: opencode
+    steps:
+      - name: provision-container
+        type: provision_container
+        image: "${pool.image}"
+      - name: clone-repo
+        command: "git clone ${REPO_URL} /workspace"
+      - name: install-deps
+        commands:
+          - mix deps.get
+          - mix deps.compile
+          - cd apps/jarga_web/assets && npm ci
+          - cd apps/identity/assets && npm ci
+          - cd apps/agents_web/assets && npm ci
+      - name: compile
+        command: mix compile
+      - name: setup-database
+        commands:
+          - mix ecto.create
+          - mix ecto.migrate
+      - name: mark-ready
+        type: mark_container_ready
+
+  # Change detection: determine which apps were affected.
+  - name: changes
+    description: Detect which apps changed since main
+    trigger:
+      events:
+        - on_session_complete
+    steps:
+      - name: detect-changes
+        command: "git diff --name-only origin/main...HEAD"
+
+  # Build: compile the project.
+  - name: build
+    description: Compile the project with warnings as errors
+    trigger:
+      events:
+        - on_session_complete
+    gate:
+      requires:
+        - changes
+      evaluation: all_of
+    steps:
+      - name: compile
+        command: mix compile --warnings-as-errors
+      - name: format-check
+        command: mix format --check-formatted
+      - name: credo
+        command: mix credo --strict
+
+  # Test: run the test suite.
+  - name: test
+    description: Run the Elixir test suite
+    trigger:
+      events:
+        - on_session_complete
+    gate:
+      requires:
+        - build
+      evaluation: all_of
+    steps:
+      - name: run-tests
+        command: mix test
+        env:
+          MIX_ENV: test
+    timeout: 600
+    failure_action: reopen_session
+
+  # Exo-BDD 360: run BDD tests across all adapters.
+  - name: exo-bdd-360
+    description: Run BDD tests across browser, HTTP, security, CLI, and graph adapters
+    trigger:
+      events:
+        - on_session_complete
+    gate:
+      requires:
+        - test
+      evaluation: all_of
+    steps:
+      - name: browser-tests
+        command: "mix exo_bdd --adapter browser"
+      - name: http-tests
+        command: "mix exo_bdd --adapter http"
+      - name: security-tests
+        command: "mix exo_bdd --adapter security"
+    timeout: 900
+
+  # Selective matrix: re-run tests for changed apps on PR.
+  - name: selective-matrix
+    description: Run tests selectively for changed apps
+    trigger:
+      events:
+        - on_pull_request
+    gate:
+      requires:
+        - changes
+      evaluation: all_of
+    steps:
+      - name: selective-test
+        command: "mix test --only ${changed_apps}"
+
+  # CI gate: final check before merge eligibility.
+  - name: ci-gate
+    description: All CI checks must pass before merge
+    trigger:
+      events:
+        - on_pull_request
+    gate:
+      requires:
+        - build
+        - test
+        - exo-bdd-360
+        - selective-matrix
+      evaluation: all_of
+    steps:
+      - name: gate-check
+        command: "echo 'All CI checks passed'"
+
+  # Integration test: re-test against merge result.
+  - name: integration-test
+    description: Re-run tests against the merge result
+    trigger:
+      events:
+        - on_merge
+    steps:
+      - name: merge-test
+        command: mix test
+    timeout: 600
+
+  # Deploy: deploy to production.
+  - name: deploy
+    description: Deploy to production via Render
+    trigger:
+      events:
+        - on_merge
+    gate:
+      requires:
+        - integration-test
+      evaluation: all_of
+    steps:
+      - name: deploy-render
+        command: "render deploy --service ${RENDER_SERVICE_ID}"
+
+# Deployment target configuration.
+deploy:
+  targets:
+    - name: production
+      type: render
+      auto_deploy: true
+      config:
+        service_id: "${RENDER_SERVICE_ID}"
+        region: oregon
+    - name: staging-k3s
+      type: k3s
+      auto_deploy: false
+      config:
+        namespace: perme8-staging
+        manifest_path: infra/k8s/
+
+# Merge queue configuration.
+merge_queue:
+  strategy: optimistic
+  required_stages:
+    - build
+    - test
+    - exo-bdd-360
+    - ci-gate
+  required_review: true
+  pre_merge_validation: true
