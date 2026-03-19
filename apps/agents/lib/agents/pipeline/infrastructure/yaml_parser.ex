@@ -103,7 +103,21 @@ defmodule Agents.Pipeline.Infrastructure.YamlParser do
   end
 
   defp parse_trigger(nil), do: %{}
-  defp parse_trigger(trigger) when is_map(trigger), do: trigger
+
+  defp parse_trigger(trigger) when is_map(trigger) do
+    trigger
+    |> normalize_trigger_keys()
+  end
+
+  defp normalize_trigger_keys(trigger) do
+    trigger
+    |> Enum.map(fn
+      {"events", v} -> {:events, v}
+      {"schedule", v} -> {:schedule, v}
+      {k, v} -> {k, v}
+    end)
+    |> Map.new()
+  end
 
   defp parse_steps(steps) when is_list(steps) do
     Enum.map(steps, &parse_step/1)

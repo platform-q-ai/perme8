@@ -246,8 +246,8 @@ defmodule Agents.Pipeline.Infrastructure.YamlParserTest do
       warm_pool = Enum.find(config.stages, &(&1.name == "warm-pool"))
 
       assert warm_pool.trigger == %{
-               "events" => ["schedule", "on_demand"],
-               "schedule" => "*/5 * * * *"
+               events: ["schedule", "on_demand"],
+               schedule: "*/5 * * * *"
              }
     end
   end
