@@ -60,6 +60,7 @@ defmodule Agents.MixProject do
       # Utilities
       {:jason, "~> 1.2"},
       {:decimal, "~> 2.0"},
+      {:yaml_elixir, "~> 2.11"},
 
       # MCP
       {:hermes_mcp, "~> 0.14"},
