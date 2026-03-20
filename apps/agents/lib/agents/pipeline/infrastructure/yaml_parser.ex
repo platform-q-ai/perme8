@@ -72,9 +72,11 @@ defmodule Agents.Pipeline.Infrastructure.YamlParser do
 
     errors = []
     errors = maybe_add_type_error(errors, name, "pipeline.name", &is_binary/1, "must be a string")
+    errors = maybe_add_optional_string_error(errors, description, "pipeline.description")
 
     {deploy_targets, errors} = build_deploy_targets(deploy_targets_raw, errors)
-    {stages, errors} = build_stages(stages_raw, errors)
+    deploy_target_ids = MapSet.new(deploy_targets, & &1.id)
+    {stages, errors} = build_stages(stages_raw, deploy_target_ids, errors)
 
     errors =
       if Enum.any?(stages, &(&1.id == "warm-pool")) do
@@ -111,10 +113,10 @@ defmodule Agents.Pipeline.Infrastructure.YamlParser do
   defp build_deploy_targets(_, errors),
     do: {[], errors ++ ["pipeline.deploy_targets must be a non-empty list"]}
 
-  defp build_stages(raw, errors) when is_list(raw) and raw != [] do
+  defp build_stages(raw, deploy_target_ids, errors) when is_list(raw) and raw != [] do
     Enum.with_index(raw)
     |> Enum.reduce({[], errors}, fn {item, index}, {stages, acc_errors} ->
-      case build_stage(item, "pipeline.stages[#{index}]") do
+      case build_stage(item, "pipeline.stages[#{index}]", deploy_target_ids) do
         {:ok, stage} -> {[stage | stages], acc_errors}
         {:error, item_errors} -> {stages, acc_errors ++ item_errors}
       end
@@ -122,7 +124,8 @@ defmodule Agents.Pipeline.Infrastructure.YamlParser do
     |> then(fn {stages, acc_errors} -> {Enum.reverse(stages), acc_errors} end)
   end
 
-  defp build_stages(_, errors), do: {[], errors ++ ["pipeline.stages must be a non-empty list"]}
+  defp build_stages(_, _deploy_target_ids, errors),
+    do: {[], errors ++ ["pipeline.stages must be a non-empty list"]}
 
   defp build_steps(raw, stage_path, errors) when is_list(raw) and raw != [] do
     Enum.with_index(raw)
@@ -195,7 +198,7 @@ defmodule Agents.Pipeline.Infrastructure.YamlParser do
 
   defp build_deploy_target(_, path), do: {:error, ["#{path} must be a map"]}
 
-  defp build_stage(item, path) when is_map(item) do
+  defp build_stage(item, path, deploy_target_ids) when is_map(item) do
     id = fetch(item, "id")
     type = fetch(item, "type")
     deploy_target = fetch(item, "deploy_target")
@@ -204,6 +207,9 @@ defmodule Agents.Pipeline.Infrastructure.YamlParser do
     errors = maybe_add_type_error(errors, id, "#{path}.id", &is_binary/1, "must be a string")
     errors = maybe_add_type_error(errors, type, "#{path}.type", &is_binary/1, "must be a string")
     errors = maybe_add_optional_string_error(errors, deploy_target, "#{path}.deploy_target")
+
+    errors =
+      maybe_add_deploy_target_reference_error(errors, deploy_target, deploy_target_ids, path)
 
     {steps, errors} = build_steps(fetch(item, "steps"), path, errors)
     {gates, errors} = build_gates(fetch(item, "gates"), path, errors)
@@ -219,19 +225,21 @@ defmodule Agents.Pipeline.Infrastructure.YamlParser do
     end)
   end
 
-  defp build_stage(_, path), do: {:error, ["#{path} must be a map"]}
+  defp build_stage(_, path, _deploy_target_ids), do: {:error, ["#{path} must be a map"]}
 
   defp build_step(item, path) when is_map(item) do
     name = fetch(item, "name")
     run = fetch(item, "run")
     timeout_seconds = fetch(item, "timeout_seconds")
     retries = fetch(item, "retries") || 0
+    env = fetch(item, "env") || %{}
 
     errors = []
     errors = maybe_add_type_error(errors, name, "#{path}.name", &is_binary/1, "must be a string")
     errors = maybe_add_type_error(errors, run, "#{path}.run", &is_binary/1, "must be a string")
     errors = maybe_add_timeout_error(errors, timeout_seconds, "#{path}.timeout_seconds")
     errors = maybe_add_retries_error(errors, retries, "#{path}.retries")
+    errors = maybe_add_type_error(errors, env, "#{path}.env", &is_map/1, "must be a map")
 
     build_result(errors, fn ->
       Step.new(%{
@@ -239,7 +247,7 @@ defmodule Agents.Pipeline.Infrastructure.YamlParser do
         run: run,
         timeout_seconds: timeout_seconds,
         retries: retries,
-        env: fetch(item, "env") || %{}
+        env: env
       })
     end)
   end
@@ -265,6 +273,14 @@ defmodule Agents.Pipeline.Infrastructure.YamlParser do
 
   defp build_result([], builder), do: {:ok, builder.()}
   defp build_result(errors, _builder), do: {:error, errors}
+
+  defp maybe_add_deploy_target_reference_error(errors, deploy_target, deploy_target_ids, path) do
+    if is_nil(deploy_target) or MapSet.member?(deploy_target_ids, deploy_target) do
+      errors
+    else
+      errors ++ ["#{path}.deploy_target must reference a declared deploy target"]
+    end
+  end
 
   defp maybe_add_type_error(errors, value, path, predicate, message) do
     if predicate.(value), do: errors, else: errors ++ ["#{path} #{message}"]
@@ -299,7 +315,14 @@ defmodule Agents.Pipeline.Infrastructure.YamlParser do
   end
 
   defp fetch(map, key) when is_map(map) do
-    Map.get(map, key) || Map.get(map, String.to_existing_atom(key))
+    case Map.fetch(map, key) do
+      {:ok, value} -> value
+      :error -> fetch_atom_key(map, key)
+    end
+  end
+
+  defp fetch_atom_key(map, key) do
+    Map.get(map, String.to_existing_atom(key))
   rescue
     ArgumentError ->
       Map.get(map, key)

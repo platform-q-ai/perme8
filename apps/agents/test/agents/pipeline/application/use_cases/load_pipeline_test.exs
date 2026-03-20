@@ -1,7 +1,12 @@
+defmodule Agents.Pipeline.TestDoubles.ParserStub do
+  def parse_file(path), do: Process.get({__MODULE__, :parse_file}).(path)
+end
+
 defmodule Agents.Pipeline.Application.UseCases.LoadPipelineTest do
   use ExUnit.Case, async: true
 
   alias Agents.Pipeline.Application.UseCases.LoadPipeline
+  alias Agents.Pipeline.TestDoubles.ParserStub
 
   describe "execute/1" do
     test "loads and validates pipeline config from file" do
@@ -41,6 +46,13 @@ defmodule Agents.Pipeline.Application.UseCases.LoadPipelineTest do
       assert {:error, errors} = LoadPipeline.execute(path)
       assert "pipeline.deploy_targets must be a non-empty list" in errors
       assert "pipeline.stages must be a non-empty list" in errors
+    end
+
+    test "supports parser injection for alternate loaders" do
+      Process.put({ParserStub, :parse_file}, fn path -> {:ok, %{path: path}} end)
+
+      assert {:ok, %{path: "custom.yml"}} =
+               LoadPipeline.execute("custom.yml", parser: ParserStub)
     end
   end
 

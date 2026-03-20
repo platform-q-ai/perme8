@@ -45,8 +45,20 @@ defmodule Agents.Pipeline.Infrastructure.YamlParserTest do
       assert {:ok, config} = YamlParser.parse_string(yaml)
       assert config.version == 1
       assert config.name == "perme8-core"
+      assert config.description == "Core agent execution pipeline"
       assert Enum.any?(config.stages, &(&1.id == "warm-pool"))
       assert Enum.map(config.deploy_targets, & &1.id) == ["dev", "prod"]
+
+      assert [%{strategy: "rolling"}, %{strategy: "canary", region: "us-east-1"}] =
+               config.deploy_targets
+
+      warm_pool = Enum.find(config.stages, &(&1.id == "warm-pool"))
+
+      assert [%{timeout_seconds: nil, retries: 0}, %{timeout_seconds: nil, retries: 0}] =
+               warm_pool.steps
+
+      assert [%{type: "quality", required: true, params: %{"checks" => ["smoke"]}}] =
+               warm_pool.gates
     end
 
     test "returns actionable errors for invalid config" do
@@ -85,5 +97,97 @@ defmodule Agents.Pipeline.Infrastructure.YamlParserTest do
       assert {:error, errors} = YamlParser.parse_string(yaml)
       assert "pipeline.stages must include a stage with id 'warm-pool'" in errors
     end
+
+    test "preserves false gate requirements" do
+      yaml = """
+      version: 1
+      pipeline:
+        name: optional-gate
+        deploy_targets:
+          - id: dev
+            environment: development
+            provider: docker
+        stages:
+          - id: warm-pool
+            type: warm_pool
+            deploy_target: dev
+            steps:
+              - name: prestart
+                run: scripts/warm_pool.sh
+            gates:
+              - type: manual_approval
+                required: false
+      """
+
+      assert {:ok, config} = YamlParser.parse_string(yaml)
+      [%{gates: [%{required: required}]}] = config.stages
+      assert required == false
+    end
+
+    test "rejects invalid optional and referenced fields" do
+      yaml = """
+      version: 1
+      pipeline:
+        name: broken-details
+        description:
+          nested: nope
+        deploy_targets:
+          - id: dev
+            environment: development
+            provider: docker
+        stages:
+          - id: warm-pool
+            type: warm_pool
+            deploy_target: prod
+            steps:
+              - name: prestart
+                run: scripts/warm_pool.sh
+                env:
+                  - invalid
+      """
+
+      assert {:error, errors} = YamlParser.parse_string(yaml)
+      assert "pipeline.description must be a string when present" in errors
+
+      assert "pipeline.stages[0].deploy_target must reference a declared deploy target" in errors
+
+      assert "pipeline.stages[0].steps[0].env must be a map" in errors
+    end
+  end
+
+  describe "parse_file/1" do
+    test "loads the checked-in pipeline file" do
+      path = Path.expand("../../../../../../perme8-pipeline.yml", __DIR__)
+
+      assert {:ok, config} = YamlParser.parse_file(path)
+      assert Enum.any?(config.stages, &(&1.id == "warm-pool"))
+    end
+
+    test "returns a file error when the path is unreadable" do
+      assert {:error, [message]} = YamlParser.parse_file("/definitely/missing/pipeline.yml")
+      assert message =~ "invalid YAML"
+    end
+
+    test "returns an invalid YAML error for malformed content" do
+      path = write_tmp_file("version: [unterminated")
+
+      assert {:error, [message]} = YamlParser.parse_file(path)
+      assert message =~ "invalid YAML"
+    end
+
+    test "rejects YAML roots that are not maps" do
+      path = write_tmp_file("- just\n- a\n- list\n")
+
+      assert {:error, [message]} = YamlParser.parse_file(path)
+      assert message =~ "invalid YAML root: expected map"
+    end
+  end
+
+  defp write_tmp_file(content) do
+    path =
+      Path.join(System.tmp_dir!(), "pipeline-parser-#{System.unique_integer([:positive])}.yml")
+
+    File.write!(path, content)
+    path
   end
 end
