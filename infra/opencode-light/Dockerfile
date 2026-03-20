@@ -1,7 +1,9 @@
 # Stage 1: fetch the opencode binary
 FROM alpine:3.21 AS fetcher
-RUN apk add --no-cache curl bash
-RUN curl -fsSL https://opencode.ai/install | bash
+ARG OPENCODE_VERSION=1.2.27
+RUN apk add --no-cache curl bash libstdc++ libgcc
+RUN curl -fsSL https://opencode.ai/install | bash -s -- --version "$OPENCODE_VERSION" --no-modify-path
+RUN test "$(/root/.opencode/bin/opencode --version)" = "$OPENCODE_VERSION"
 RUN cp /root/.opencode/bin/opencode /usr/local/bin/opencode
 
 # Stage 2: lightweight Alpine image for discussion/planning only
@@ -13,7 +15,7 @@ FROM alpine:3.21
 #
 # NOT included (heavyweight build tools):
 #   elixir/erlang, postgresql, build-base, nodejs/npm, bun, chromium
-RUN apk add --no-cache git bash openssl curl python3 github-cli ripgrep fd
+RUN apk add --no-cache git bash openssl curl python3 github-cli ripgrep fd jq
 
 # Copy opencode binary from fetcher stage
 COPY --from=fetcher /usr/local/bin/opencode /usr/local/bin/opencode

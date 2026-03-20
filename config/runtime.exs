@@ -377,6 +377,8 @@ config :agents, :sessions_env, %{
   GITHUB_REVIEW_APP_PEM: github_review_app_pem,
   GITHUB_REVIEW_APP_ID: System.get_env("GITHUB_REVIEW_APP_ID"),
   GITHUB_REVIEW_APP_OWNER: System.get_env("GITHUB_REVIEW_APP_OWNER", "platform-q-ai"),
+  PERME8_MCP_API_KEY: System.get_env("PERME8_MCP_API_KEY"),
+  PERME8_MCP_URL: System.get_env("PERME8_MCP_URL"),
   OPENCODE_AUTH: opencode_auth_source,
   REPO_BRANCH: System.get_env("REPO_BRANCH")
 }
