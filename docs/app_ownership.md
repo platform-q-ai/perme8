@@ -12,7 +12,7 @@ Each app has a single owner and a clear set of responsibilities. No two apps own
 |-----|------|------|------|------------|
 | **identity** | Domain context | Users, auth, sessions, workspaces, memberships, roles, API keys | `Identity.Repo` | `perme8_events` |
 | **jarga** | Domain context | Projects, documents, notes, collaboration (Yjs), slugs | `Jarga.Repo` | `identity`, `notifications`, `perme8_events` |
-| **agents** | Domain context | Agent definitions, LLM orchestration, perme8-mcp server, ToolProvider infrastructure, Sessions (task lifecycle, containers, queues), Tickets (GitHub issue sync, triage, ordering) | `Agents.Repo` | `identity`, `perme8_events` |
+| **agents** | Domain context | Agent definitions, LLM orchestration, perme8-mcp server, ToolProvider infrastructure, Sessions (task lifecycle, containers, queues), Tickets (GitHub issue sync, triage, ordering), internal Pull Requests (local PR artifacts, reviews, comments, diffs, merge orchestration) | `Agents.Repo` | `identity`, `perme8_events` |
 | **webhooks** | Domain context | Outbound/inbound webhooks, HMAC signing, audit logging | `Webhooks.Repo` | `identity`, `perme8_events` |
 | **entity_relationship_manager** | Domain context + API | Schema definitions, entities, edges, graph traversal | `EntityRelationshipManager.Repo` | `identity`, `perme8_events` |
 | **perme8_events** | Shared infrastructure | Eventbus facade (`Perme8.Events`), EventBus dispatcher, EventHandler behaviour, DomainEvent macro, PubSub server | None | Nothing (foundational) |
