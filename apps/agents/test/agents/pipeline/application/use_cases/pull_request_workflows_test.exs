@@ -86,6 +86,23 @@ defmodule Agents.Pipeline.Application.UseCases.PullRequestWorkflowsTest do
       assert length(reviewed.reviews) == 1
     end
 
+    test "review enforces transition policy" do
+      {:ok, pr} =
+        CreatePullRequest.execute(%{
+          source_branch: "feature/review-policy",
+          target_branch: "main",
+          title: "Review policy",
+          status: "open"
+        })
+
+      assert {:error, :invalid_transition} =
+               ReviewPullRequest.execute(pr.number, %{
+                 actor_id: "reviewer-2",
+                 event: "approve",
+                 body: "Looks good"
+               })
+    end
+
     test "gets PR diff using injected diff computer" do
       {:ok, pr} =
         CreatePullRequest.execute(%{

@@ -2,6 +2,7 @@ defmodule Agents.Pipeline.Application.UseCases.ReviewPullRequest do
   @moduledoc "Adds a review decision to an internal pull request."
 
   alias Agents.Pipeline.Domain.Entities.PullRequest
+  alias Agents.Pipeline.Domain.Policies.PullRequestPolicy
   alias Agents.Pipeline.Infrastructure.Repositories.PullRequestRepository
 
   @review_to_status %{
@@ -26,7 +27,9 @@ defmodule Agents.Pipeline.Application.UseCases.ReviewPullRequest do
         body: Map.get(attrs, :body) || Map.get(attrs, "body")
       }
 
-      with {:ok, _review} <- repo_module.add_review(number, review_attrs),
+      with {:ok, existing} <- repo_module.get_by_number(number),
+           :ok <- PullRequestPolicy.valid_transition?(existing.status, next_status),
+           {:ok, _review} <- repo_module.add_review(number, review_attrs),
            {:ok, _updated} <- repo_module.update_pull_request(number, %{status: next_status}),
            {:ok, reloaded} <- repo_module.get_by_number(number) do
         {:ok, PullRequest.from_schema(reloaded)}
