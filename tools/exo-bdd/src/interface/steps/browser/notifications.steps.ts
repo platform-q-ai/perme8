@@ -44,9 +44,6 @@ Given<TestWorld>('browser notifications are allowed for the site', async functio
       value: FakeNotification,
     })
   })
-
-  await this.browser.page.reload()
-  await this.browser.waitForLoadState('networkidle')
 })
 
 Given<TestWorld>('browser notification permission is undecided', async function () {
@@ -67,9 +64,6 @@ Given<TestWorld>('browser notification permission is undecided', async function 
 
     window.localStorage.removeItem('browser-notifications-dismissed')
   })
-
-  await this.browser.page.reload()
-  await this.browser.waitForLoadState('networkidle')
 })
 
 When<TestWorld>('the sessions tab is in the background', async function () {
