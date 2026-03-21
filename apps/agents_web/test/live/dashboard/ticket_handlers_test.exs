@@ -205,11 +205,13 @@ defmodule AgentsWeb.DashboardLive.TicketHandlersTest do
          }}
       )
 
-      html = render(lv)
+      await_lv_condition(fn ->
+        html = render(lv)
 
-      # The assistant text should appear in output_parts — proving
-      # current_task was set and the task_event guard matched.
-      assert html =~ "Working on ticket 702"
+        # The assistant text should appear in output_parts — proving
+        # current_task was set and the task_event guard matched.
+        String.contains?(html, "Working on ticket 702")
+      end)
     end
 
     test "ticket moves to build queue after successful task creation", %{conn: conn, user: user} do
