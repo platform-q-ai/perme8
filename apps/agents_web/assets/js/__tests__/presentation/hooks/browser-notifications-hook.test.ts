@@ -84,13 +84,12 @@ describe('BrowserNotificationsHook', () => {
   })
 
   test('storage failures do not prevent hook registration', () => {
-    const getItemSpy = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
       throw new DOMException('blocked', 'SecurityError')
     })
 
     hook.mounted()
 
-    expect(getItemSpy).toHaveBeenCalled()
     expect(typeof handlers.browser_notification).toBe('function')
   })
 

@@ -434,9 +434,35 @@ defmodule AgentsWeb.DashboardLive.IndexPubsubTest do
 
       assert_push_event(lv, "browser_notification", %{
         title: "Session completed",
-        body: "Implement browser notifications for sessions",
+        body: "One of your sessions completed. Open Sessions to review it.",
         type: "session_completed"
       })
+    end
+
+    test "receiving task_status_changed for another user's task does not push a browser notification",
+         %{conn: conn} do
+      user = user_fixture()
+      other_user = user_fixture()
+
+      conn = log_in_user(conn, user)
+
+      task =
+        task_fixture(%{
+          user_id: other_user.id,
+          status: "running",
+          instruction: "Private work",
+          container_id: "c-other-user"
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      Repo.get!(TaskSchema, task.id)
+      |> Ecto.Changeset.change(status: "completed")
+      |> Repo.update!()
+
+      send(lv.pid, {:task_status_changed, task.id, "completed"})
+
+      refute_push_event(lv, "browser_notification", _)
     end
 
     test "receiving task_status_changed to failed pushes a browser notification with the error",
@@ -462,7 +488,7 @@ defmodule AgentsWeb.DashboardLive.IndexPubsubTest do
 
       assert_push_event(lv, "browser_notification", %{
         title: "Session failed",
-        body: "Debug the notification pipeline (Error: Container exited with status 1)",
+        body: "One of your sessions failed. Open Sessions to review details.",
         type: "session_failed"
       })
     end
