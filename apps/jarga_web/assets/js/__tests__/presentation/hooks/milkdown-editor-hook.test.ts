@@ -33,6 +33,8 @@ describe('MilkdownEditorHook', () => {
   })
 
   afterEach(() => {
+    hook?.destroyed()
+
     // Clean up DOM
     document.body.innerHTML = ''
   })
