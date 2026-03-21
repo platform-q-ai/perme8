@@ -232,4 +232,32 @@ config :agents, :sessions,
   health_check_interval_ms: 1_000
 ```
 
+**Pipeline warm pool** -- the scheduler-driven warm-pool replenishment flow is configured through
+`perme8-pipeline.yml` plus optional runtime overrides:
+
+```yaml
+- id: warm-pool
+  type: warm_pool
+  schedule:
+    cron: "*/5 * * * *"
+  warm_pool:
+    target_count: 2
+    image: ghcr.io/platform-q-ai/perme8-runtime:latest
+    readiness:
+      strategy: command_success
+      required_step: prewarm-session-pool
+```
+
+```elixir
+config :agents,
+  pipeline_scheduler_enabled: true,
+  pipeline_warm_pool_counter: Agents.Pipeline.Infrastructure.WarmPoolCounter,
+  pipeline_parser: Agents.Pipeline.Infrastructure.YamlParser,
+  pipeline_stage_executor: Agents.Pipeline.Infrastructure.StageExecutor
+```
+
+`Agents.Pipeline.replenish_warm_pool/1` uses the configured parser, warm-pool counter, and
+stage executor to evaluate the warm-pool stage and run its steps when the pool is below the
+configured target.
+
 The exo-bdd config is at `apps/agents/test/exo-bdd-agents.config.ts`.
