@@ -1,6 +1,8 @@
 defmodule Agents.Pipeline.Infrastructure.Repositories.PullRequestRepository do
   @moduledoc "Persistence operations for internal pull requests, comments, and reviews."
 
+  @behaviour Agents.Pipeline.Application.Behaviours.PullRequestRepositoryBehaviour
+
   import Ecto.Query, warn: false
 
   alias Agents.Pipeline.Infrastructure.Schemas.PullRequestSchema

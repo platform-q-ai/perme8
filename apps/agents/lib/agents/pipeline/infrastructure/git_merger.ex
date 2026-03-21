@@ -21,10 +21,8 @@ defmodule Agents.Pipeline.Infrastructure.GitMerger do
 
     with :ok <-
            run_command(runner, ["git", "checkout", target_branch], opts, :git_checkout_failed),
-         :ok <- run_command(runner, merge_command, opts, :git_merge_failed),
-         :ok <-
-           run_command(runner, ["git", "push", remote, target_branch], opts, :git_push_failed) do
-      :ok
+         :ok <- run_command(runner, merge_command, opts, :git_merge_failed) do
+      run_command(runner, ["git", "push", remote, target_branch], opts, :git_push_failed)
     end
   end
 

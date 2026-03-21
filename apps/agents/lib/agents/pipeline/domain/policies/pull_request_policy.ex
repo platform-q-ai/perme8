@@ -11,10 +11,11 @@ defmodule Agents.Pipeline.Domain.Policies.PullRequestPolicy do
   }
 
   @spec valid_transition?(String.t(), String.t()) :: :ok | {:error, :invalid_transition}
-  def valid_transition?(from, to) when is_binary(from) and is_binary(to) do
-    allowed = Map.get(@transitions, from, MapSet.new())
+  def valid_transition?(current_status, next_status)
+      when is_binary(current_status) and is_binary(next_status) do
+    allowed = Map.get(@transitions, current_status, MapSet.new())
 
-    if MapSet.member?(allowed, to), do: :ok, else: {:error, :invalid_transition}
+    if MapSet.member?(allowed, next_status), do: :ok, else: {:error, :invalid_transition}
   end
 
   def valid_transition?(_, _), do: {:error, :invalid_transition}

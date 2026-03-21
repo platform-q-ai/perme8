@@ -5,6 +5,7 @@ defmodule Agents.Pipeline.Application do
     top_level?: true,
     deps: [Agents.Pipeline.Domain],
     exports: [
+      Behaviours.PullRequestRepositoryBehaviour,
       Behaviours.GitDiffComputerBehaviour,
       Behaviours.GitMergerBehaviour,
       Behaviours.PipelineParserBehaviour,

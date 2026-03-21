@@ -1,9 +1,9 @@
 defmodule Agents.Pipeline.Application.UseCases.ReviewPullRequest do
   @moduledoc "Adds a review decision to an internal pull request."
 
+  alias Agents.Pipeline.Application.PipelineRuntimeConfig
   alias Agents.Pipeline.Domain.Entities.PullRequest
   alias Agents.Pipeline.Domain.Policies.PullRequestPolicy
-  alias Agents.Pipeline.Infrastructure.Repositories.PullRequestRepository
 
   @review_to_status %{
     "approve" => "approved",
@@ -13,7 +13,8 @@ defmodule Agents.Pipeline.Application.UseCases.ReviewPullRequest do
 
   @spec execute(integer(), map(), keyword()) :: {:ok, PullRequest.t()} | {:error, term()}
   def execute(number, attrs, opts \\ []) when is_integer(number) and is_map(attrs) do
-    repo_module = Keyword.get(opts, :pull_request_repo, PullRequestRepository)
+    repo_module =
+      Keyword.get(opts, :pull_request_repo, PipelineRuntimeConfig.pull_request_repository())
 
     event = Map.get(attrs, :event) || Map.get(attrs, "event")
     next_status = Map.get(@review_to_status, event)

@@ -1,12 +1,13 @@
 defmodule Agents.Pipeline.Application.UseCases.ListPullRequests do
   @moduledoc "Lists internal pull requests with optional filters."
 
+  alias Agents.Pipeline.Application.PipelineRuntimeConfig
   alias Agents.Pipeline.Domain.Entities.PullRequest
-  alias Agents.Pipeline.Infrastructure.Repositories.PullRequestRepository
 
   @spec execute(keyword(), keyword()) :: {:ok, [PullRequest.t()]}
   def execute(filters \\ [], opts \\ []) do
-    repo_module = Keyword.get(opts, :pull_request_repo, PullRequestRepository)
+    repo_module =
+      Keyword.get(opts, :pull_request_repo, PipelineRuntimeConfig.pull_request_repository())
 
     prs =
       filters

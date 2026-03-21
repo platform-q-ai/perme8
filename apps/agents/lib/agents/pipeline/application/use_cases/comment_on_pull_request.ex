@@ -1,12 +1,13 @@
 defmodule Agents.Pipeline.Application.UseCases.CommentOnPullRequest do
   @moduledoc "Adds a review comment to an internal pull request."
 
+  alias Agents.Pipeline.Application.PipelineRuntimeConfig
   alias Agents.Pipeline.Domain.Entities.PullRequest
-  alias Agents.Pipeline.Infrastructure.Repositories.PullRequestRepository
 
   @spec execute(integer(), map(), keyword()) :: {:ok, PullRequest.t()} | {:error, term()}
   def execute(number, attrs, opts \\ []) when is_integer(number) and is_map(attrs) do
-    repo_module = Keyword.get(opts, :pull_request_repo, PullRequestRepository)
+    repo_module =
+      Keyword.get(opts, :pull_request_repo, PipelineRuntimeConfig.pull_request_repository())
 
     comment_attrs = %{
       author_id: Map.get(attrs, :actor_id) || Map.get(attrs, "actor_id") || "mcp-system",
