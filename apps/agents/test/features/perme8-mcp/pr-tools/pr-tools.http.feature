@@ -124,9 +124,9 @@ Feature: Pull Request MCP Tools - HTTP API
     And the response body should be valid JSON
     And the response body path "$.result.isError" should be false
     And the response body path "$.result.content[0].text" should contain "Title"
-    And the response body path "$.result.content[0].text" should contain "source"
-    And the response body path "$.result.content[0].text" should contain "target"
-    And the response body path "$.result.content[0].text" should contain "status"
+    And the response body path "$.result.content[0].text" should contain "Source"
+    And the response body path "$.result.content[0].text" should contain "Target"
+    And the response body path "$.result.content[0].text" should contain "Status"
 
   Scenario: Read missing pull request returns not-found
     Given I set bearer token to "${valid-doc-key-product-team}"
@@ -304,7 +304,7 @@ Feature: Pull Request MCP Tools - HTTP API
     Then the response status should be 200
     And the response body should be valid JSON
     And the response body path "$.result.isError" should be false
-    And the response body path "$.result.content[0].text" should contain "comment"
+    And the response body path "$.result.content[0].text" should contain "PR #301"
 
   # ==========================================================================
   # pr.review
@@ -354,9 +354,8 @@ Feature: Pull Request MCP Tools - HTTP API
       """
     Then the response status should be 200
     And the response body should be valid JSON
-    And the response body path "$.error" should exist
-    And the response body path "$.error.code" should equal -32602
-    And the response body path "$.result" should not exist
+    And the response body path "$.result.isError" should be true
+    And the response body path "$.result.content[0].text" should contain "Invalid review event"
 
   # ==========================================================================
   # pr.merge

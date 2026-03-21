@@ -5,6 +5,8 @@ defmodule Agents.Pipeline.Infrastructure do
     top_level?: true,
     deps: [Agents.Pipeline.Domain, Agents.Pipeline.Application, Agents.Repo],
     exports: [
+      ExoBddGitDiffComputer,
+      ExoBddGitMerger,
       GitCommandRunner,
       GitDiffComputer,
       GitMerger,
