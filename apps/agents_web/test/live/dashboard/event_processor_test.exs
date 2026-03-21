@@ -1394,6 +1394,8 @@ defmodule AgentsWeb.DashboardLive.EventProcessorTest do
   end
 
   describe "process_event/2 — telemetry for unhandled events" do
+    import ExUnit.CaptureLog
+
     setup do
       test_pid = self()
 
@@ -1444,6 +1446,70 @@ defmodule AgentsWeb.DashboardLive.EventProcessorTest do
       )
 
       refute_received {:telemetry_event, [:agents_web, :event_processor, :unhandled], _, _}
+    end
+
+    test "does not emit :unhandled telemetry for session.diff" do
+      socket = build_socket()
+
+      EventProcessor.process_event(
+        %{"type" => "session.diff", "properties" => %{"summary" => "+10 -3 lib/foo.ex"}},
+        socket
+      )
+
+      refute_received {:telemetry_event, [:agents_web, :event_processor, :unhandled], _, _}
+    end
+
+    test "does not emit :unhandled telemetry for lsp.client.diagnostics" do
+      socket = build_socket()
+
+      EventProcessor.process_event(
+        %{
+          "type" => "lsp.client.diagnostics",
+          "properties" => %{"uri" => "file:///tmp/foo.ex", "items" => []}
+        },
+        socket
+      )
+
+      refute_received {:telemetry_event, [:agents_web, :event_processor, :unhandled], _, _}
+    end
+
+    test "does not emit :unhandled telemetry for file.edited" do
+      socket = build_socket()
+
+      EventProcessor.process_event(
+        %{
+          "type" => "file.edited",
+          "properties" => %{"path" => "lib/foo.ex", "summary" => "updated file"}
+        },
+        socket
+      )
+
+      refute_received {:telemetry_event, [:agents_web, :event_processor, :unhandled], _, _}
+    end
+
+    test "does not emit :unhandled telemetry for file.watcher.updated" do
+      socket = build_socket()
+
+      EventProcessor.process_event(
+        %{"type" => "file.watcher.updated", "properties" => %{"paths" => ["lib/foo.ex"]}},
+        socket
+      )
+
+      refute_received {:telemetry_event, [:agents_web, :event_processor, :unhandled], _, _}
+    end
+
+    test "does not log warnings for explicitly ignored informational events" do
+      socket = build_socket()
+
+      log =
+        capture_log(fn ->
+          EventProcessor.process_event(%{"type" => "session.diff"}, socket)
+          EventProcessor.process_event(%{"type" => "lsp.client.diagnostics"}, socket)
+          EventProcessor.process_event(%{"type" => "file.edited"}, socket)
+          EventProcessor.process_event(%{"type" => "file.watcher.updated"}, socket)
+        end)
+
+      refute log =~ "unhandled event"
     end
   end
 end

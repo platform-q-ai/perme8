@@ -229,10 +229,14 @@ defmodule AgentsWeb.DashboardLive.EventProcessor do
   # content, so deltas are redundant for our rendering pipeline.
   def process_event(%{"type" => "message.part.delta"}, socket), do: socket
 
-  # Events handled elsewhere (TaskRunner, LiveView) but not relevant to
-  # part rendering — silence the catch-all warning.
+  # Events handled elsewhere (TaskRunner, LiveView) or currently informational
+  # only — silence the catch-all warning.
+  def process_event(%{"type" => "session.diff"}, socket), do: socket
   def process_event(%{"type" => "session.status"}, socket), do: socket
   def process_event(%{"type" => "session.error"}, socket), do: socket
+  def process_event(%{"type" => "file.edited"}, socket), do: socket
+  def process_event(%{"type" => "file.watcher.updated"}, socket), do: socket
+  def process_event(%{"type" => "lsp.client.diagnostics"}, socket), do: socket
   def process_event(%{"type" => "server.connected"}, socket), do: socket
   def process_event(%{"type" => "server.heartbeat"}, socket), do: socket
   def process_event(%{"type" => "permission.asked"}, socket), do: socket
