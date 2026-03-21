@@ -12,7 +12,7 @@ defmodule Agents.Pipeline.Application.PipelineRuntimeConfig do
   @default_session_reopener :"Elixir.Agents.Pipeline.Infrastructure.SessionReopener"
   @default_task_context_provider :"Elixir.Agents.Pipeline.Infrastructure.TaskContextProvider"
   @default_warm_pool_counter :"Elixir.Agents.Pipeline.Infrastructure.WarmPoolCounter"
-  @default_pipeline_scheduler_enabled true
+  @default_pipeline_scheduler_enabled false
   @default_event_bus Perme8.Events.EventBus
   @default_emit_pipeline_events true
 

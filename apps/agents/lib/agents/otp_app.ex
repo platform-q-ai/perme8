@@ -55,7 +55,7 @@ defmodule Agents.OTPApp do
   end
 
   defp pipeline_scheduler_children do
-    if Application.get_env(:agents, :pipeline_scheduler_enabled, true) do
+    if Application.get_env(:agents, :pipeline_scheduler_enabled, false) do
       [PipelineScheduler]
     else
       []

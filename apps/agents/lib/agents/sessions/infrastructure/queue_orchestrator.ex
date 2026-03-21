@@ -154,7 +154,7 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
 
   @impl true
   def handle_info({:retry_task, task_id}, state) do
-    case state.task_repo.get_task(task_id) do
+    case safe_get_task(state, task_id) do
       nil ->
         {:noreply, state}
 
@@ -203,7 +203,7 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
     light_entries = QueueEngine.light_image_tasks_to_promote(snapshot)
 
     Enum.each(light_entries, fn entry ->
-      case state.task_repo.get_task(entry.task_id) do
+      case safe_get_task(state, entry.task_id) do
         nil -> :ok
         task -> promote_single_task(state, task, entry)
       end
@@ -214,7 +214,7 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
     heavyweight_entries = QueueEngine.heavyweight_tasks_to_promote(snapshot, available)
 
     Enum.each(heavyweight_entries, fn entry ->
-      case state.task_repo.get_task(entry.task_id) do
+      case safe_get_task(state, entry.task_id) do
         nil -> :ok
         task -> promote_single_task(state, task, entry)
       end
@@ -224,7 +224,7 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
   defp promote_single_task(state, task, entry) do
     resume_prompt = queued_resume_prompt(task.pending_question)
 
-    case state.task_repo.update_task_status(task, %{
+    case safe_update_task_status(state, task, %{
            status: "pending",
            queue_position: nil,
            queued_at: nil,
@@ -266,7 +266,7 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
   end
 
   defp handle_task_failure(state, task_id) do
-    case state.task_repo.get_task(task_id) do
+    case safe_get_task(state, task_id) do
       nil ->
         state
 
@@ -287,7 +287,7 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
     delay_ms = RetryPolicy.next_retry_delay(task.retry_count || 0)
     next_retry_at = DateTime.add(now, delay_ms, :millisecond)
 
-    case state.task_repo.update_task_status(task, %{
+    case safe_update_task_status(state, task, %{
            status: "queued",
            retry_count: new_count,
            last_retry_at: now,
@@ -337,12 +337,12 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
   end
 
   defp maybe_move_to_awaiting_feedback(state, task_id) do
-    case state.task_repo.get_task_for_user(task_id, state.user_id) do
+    case safe_get_task_for_user(state, task_id) do
       nil ->
         :ok
 
       %{status: status} = task when status in ["pending", "starting", "running"] ->
-        case state.task_repo.update_task_status(task, %{status: "awaiting_feedback"}) do
+        case safe_update_task_status(state, task, %{status: "awaiting_feedback"}) do
           {:ok, updated_task} ->
             broadcast_task_status_and_lifecycle(state, task, updated_task, "awaiting_feedback")
 
@@ -356,14 +356,14 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
   end
 
   defp maybe_requeue_after_feedback(state, task_id) do
-    case state.task_repo.get_task_for_user(task_id, state.user_id) do
+    case safe_get_task_for_user(state, task_id) do
       nil ->
         :ok
 
       %{status: "awaiting_feedback"} = task ->
-        queue_position = (state.task_repo.get_max_queue_position(state.user_id) || 0) + 1
+        queue_position = (safe_get_max_queue_position(state) || 0) + 1
 
-        case state.task_repo.update_task_status(task, %{
+        case safe_update_task_status(state, task, %{
                status: "queued",
                queue_position: queue_position,
                queued_at: DateTime.utc_now(),
@@ -395,10 +395,11 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
           "QueueOrchestrator: failed to start runner for #{task.id}: #{inspect(reason)}"
         )
 
-        state.task_repo.update_task_status(task, %{
-          status: "failed",
-          error: "Runner failed to start: #{inspect(reason)}"
-        })
+        _ =
+          safe_update_task_status(state, task, %{
+            status: "failed",
+            error: "Runner failed to start: #{inspect(reason)}"
+          })
 
         :error
     end
@@ -460,6 +461,44 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
   end
 
   defp clear_resume_prompt(other), do: other
+
+  defp safe_get_task(state, task_id) do
+    state.task_repo.get_task(task_id)
+  rescue
+    error ->
+      Logger.warning("QueueOrchestrator: failed to load task #{task_id}: #{inspect(error)}")
+      nil
+  end
+
+  defp safe_get_task_for_user(state, task_id) do
+    state.task_repo.get_task_for_user(task_id, state.user_id)
+  rescue
+    error ->
+      Logger.warning(
+        "QueueOrchestrator: failed to load task #{task_id} for user #{state.user_id}: #{inspect(error)}"
+      )
+
+      nil
+  end
+
+  defp safe_get_max_queue_position(state) do
+    state.task_repo.get_max_queue_position(state.user_id)
+  rescue
+    error ->
+      Logger.warning(
+        "QueueOrchestrator: failed to load max queue position for user #{state.user_id}: #{inspect(error)}"
+      )
+
+      nil
+  end
+
+  defp safe_update_task_status(state, task, attrs) do
+    state.task_repo.update_task_status(task, attrs)
+  rescue
+    error ->
+      Logger.warning("QueueOrchestrator: failed to update task #{task.id}: #{inspect(error)}")
+      {:error, error}
+  end
 
   defp broadcast_snapshot(state, snapshot) do
     Phoenix.PubSub.broadcast(

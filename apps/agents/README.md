@@ -250,11 +250,14 @@ config :agents, :sessions,
 
 ```elixir
 config :agents,
-  pipeline_scheduler_enabled: true,
+  pipeline_scheduler_enabled: false,
   pipeline_warm_pool_counter: Agents.Pipeline.Infrastructure.WarmPoolCounter,
   pipeline_parser: Agents.Pipeline.Infrastructure.YamlParser,
   pipeline_stage_executor: Agents.Pipeline.Infrastructure.StageExecutor
 ```
+
+`pipeline_scheduler_enabled` defaults to `false` until a real warm-pool inventory counter is
+configured. Enable it explicitly in environments where the warm-pool stage can safely run.
 
 `Agents.Pipeline.replenish_warm_pool/1` uses the configured parser, warm-pool counter, and
 stage executor to evaluate the warm-pool stage and run its steps when the pool is below the

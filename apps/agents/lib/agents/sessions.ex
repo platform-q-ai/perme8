@@ -676,16 +676,7 @@ defmodule Agents.Sessions do
 
   defp default_queue_backend_opts do
     [
-      task_runner_starter: fn task_id, runner_opts ->
-        runner_opts =
-          Keyword.put_new(
-            runner_opts,
-            :queue_terminal_notifier,
-            &notify_task_terminal_status/3
-          )
-
-        TaskRunnerSupervisor.start_child(task_id, runner_opts)
-      end
+      task_runner_starter: default_task_runner_starter()
     ]
   end
 
@@ -715,16 +706,20 @@ defmodule Agents.Sessions do
     if Keyword.has_key?(opts, :task_runner_starter) do
       opts
     else
-      Keyword.put(opts, :task_runner_starter, fn task_id, runner_opts ->
-        runner_opts =
-          Keyword.put_new(
-            runner_opts,
-            :queue_terminal_notifier,
-            &notify_task_terminal_status/3
-          )
-
-        TaskRunnerSupervisor.start_child(task_id, runner_opts)
-      end)
+      Keyword.put(opts, :task_runner_starter, default_task_runner_starter())
     end
+  end
+
+  defp default_task_runner_starter do
+    Application.get_env(:agents, :task_runner_starter, fn task_id, runner_opts ->
+      runner_opts =
+        Keyword.put_new(
+          runner_opts,
+          :queue_terminal_notifier,
+          &notify_task_terminal_status/3
+        )
+
+      TaskRunnerSupervisor.start_child(task_id, runner_opts)
+    end)
   end
 end

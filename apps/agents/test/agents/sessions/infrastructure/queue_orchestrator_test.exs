@@ -9,6 +9,17 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestratorTest do
 
   import Agents.Test.AccountsFixtures
 
+  defmodule RaisingTaskRepo do
+    def list_non_terminal_tasks(_user_id), do: []
+    def get_task(_task_id), do: raise(DBConnection.OwnershipError, message: "sandbox")
+    def get_task_for_user(_task_id, _user_id), do: nil
+
+    def update_task_status(_task, _attrs),
+      do: raise(DBConnection.OwnershipError, message: "sandbox")
+
+    def get_max_queue_position(_user_id), do: 0
+  end
+
   # Fields that require status_changeset (not in the creation changeset)
   @status_only_fields [:pending_question, :todo_items, :session_summary]
 
@@ -260,6 +271,22 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestratorTest do
       assert snapshot.metadata.available_slots == 1
       # Both tasks are in the processing lane
       assert length(snapshot.lanes.processing) == 2
+    end
+  end
+
+  describe "sandbox resilience" do
+    test "notify_task_queued/2 does not crash when the task repo raises" do
+      user = user_fixture()
+
+      orchestrator =
+        start_orchestrator!(user.id,
+          task_repo: RaisingTaskRepo,
+          pubsub: Perme8.Events.PubSub,
+          task_runner_starter: fn _task_id, _opts -> {:ok, self()} end
+        )
+
+      assert :ok = QueueOrchestrator.notify_task_queued(user.id, Ecto.UUID.generate())
+      assert Process.alive?(orchestrator)
     end
   end
 

@@ -206,10 +206,13 @@ defmodule AgentsWeb.DashboardLive.TicketHandlers do
         client_id = Ecto.UUID.generate()
         parent = self()
 
+        task_creator =
+          Application.get_env(:agents_web, :ticket_session_task_creator, &Sessions.create_task/1)
+
         {_pid, monitor_ref} =
           spawn_monitor(fn ->
             result =
-              Sessions.create_task(%{
+              task_creator.(%{
                 instruction: instruction,
                 user_id: user.id,
                 image: image,
@@ -217,6 +220,10 @@ defmodule AgentsWeb.DashboardLive.TicketHandlers do
               })
 
             send(parent, {:new_task_created, client_id, result})
+
+            # Give the LiveView a brief chance to process the success message
+            # before the monitor :DOWN arrives from this short-lived task.
+            Process.sleep(10)
           end)
 
         # Optimistically move the ticket to the build queue immediately.
