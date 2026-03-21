@@ -16,20 +16,20 @@ Feature: Session browser notifications
     When I navigate to "${baseUrl}/sessions"
     And I wait for network idle
     Then "#browser-notifications-permission-prompt" should exist
-    And the page should contain "Enable browser notifications"
+    And I should see "Enable browser notifications"
 
   Scenario: Background session completion raises a browser notification
     Given browser notifications are allowed for the site
     And I navigate to "${baseUrl}/sessions"
     And I wait for network idle
-    When a running session completes for the current user
-    And the sessions tab is in the background
+    When the sessions tab is in the background
+    And a running session completes for the current user
     Then a browser notification should be shown with the session outcome
 
   Scenario: Background session failure raises a browser notification with the error
     Given browser notifications are allowed for the site
     And I navigate to "${baseUrl}/sessions"
     And I wait for network idle
-    When a running session fails for the current user with an error message
-    And the sessions tab is in the background
+    When the sessions tab is in the background
+    And a running session fails for the current user with an error message
     Then a browser notification should be shown with the failure message
