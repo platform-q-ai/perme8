@@ -13,7 +13,7 @@ defmodule Agents.Pipeline.Application.UseCases.CreatePullRequest do
     event_bus = Keyword.get(opts, :event_bus, PipelineRuntimeConfig.event_bus())
 
     emit_events? =
-      Keyword.get(opts, :emit_events?, Application.get_env(:agents, :emit_pipeline_events, true))
+      Keyword.get(opts, :emit_events?, PipelineRuntimeConfig.emit_pipeline_events?())
 
     actor_id = Map.get(attrs, :actor_id) || Map.get(attrs, "actor_id") || "pipeline"
 

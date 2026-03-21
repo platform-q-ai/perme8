@@ -14,55 +14,57 @@ defmodule Agents.Pipeline.Application.UseCases.TriggerPipelineRun do
     auto_run? = Keyword.get(opts, :auto_run, true)
 
     with {:ok, config} <- load_pipeline(pipeline_path, opts) do
-      stage_ids = select_stage_ids(config.stages, trigger_type(attrs))
+      trigger = trigger_type(attrs)
+      stage_ids = select_stage_ids(config.stages, trigger)
 
-      if stage_ids == [] do
-        {:ok, nil}
+      maybe_create_run(
+        stage_ids,
+        build_run_attrs(attrs, trigger, stage_ids),
+        repo_module,
+        auto_run?,
+        opts
+      )
+    end
+  end
+
+  defp maybe_create_run([], _run_attrs, _repo_module, _auto_run?, _opts), do: {:ok, nil}
+
+  defp maybe_create_run(stage_ids, run_attrs, repo_module, auto_run?, opts)
+       when is_list(stage_ids) do
+    with {:ok, run} <- repo_module.create_run(run_attrs) do
+      if auto_run? do
+        RunStage.execute(run.id, opts)
       else
-        run_attrs = %{
-          trigger_type: trigger_type(attrs),
-          trigger_reference: trigger_reference(attrs),
-          task_id: Map.get(attrs, :task_id) || Map.get(attrs, "task_id"),
-          session_id: Map.get(attrs, :session_id) || Map.get(attrs, "session_id"),
-          pull_request_number:
-            Map.get(attrs, :pull_request_number) || Map.get(attrs, "pull_request_number"),
-          source_branch:
-            Map.get(attrs, :source_branch) ||
-              Map.get(attrs, "source_branch") ||
-              event_field(attrs, :source_branch),
-          target_branch:
-            Map.get(attrs, :target_branch) ||
-              Map.get(attrs, "target_branch") ||
-              event_field(attrs, :target_branch),
-          status: "idle",
-          remaining_stage_ids: stage_ids,
-          stage_results: %{}
-        }
-
-        with {:ok, run} <- repo_module.create_run(run_attrs) do
-          if auto_run? do
-            RunStage.execute(run.id, opts)
-          else
-            {:ok, PipelineRun.from_schema(run)}
-          end
-        end
+        {:ok, PipelineRun.from_schema(run)}
       end
     end
   end
 
+  defp build_run_attrs(attrs, trigger, stage_ids) do
+    %{
+      trigger_type: trigger,
+      trigger_reference: trigger_reference(attrs),
+      task_id: value_from_attrs(attrs, :task_id),
+      session_id: value_from_attrs(attrs, :session_id),
+      pull_request_number: value_from_attrs(attrs, :pull_request_number),
+      source_branch:
+        value_from_attrs(attrs, :source_branch) || event_field(attrs, :source_branch),
+      target_branch:
+        value_from_attrs(attrs, :target_branch) || event_field(attrs, :target_branch),
+      status: "idle",
+      remaining_stage_ids: stage_ids,
+      stage_results: %{}
+    }
+  end
+
   defp trigger_type(attrs) do
-    Map.get(attrs, :trigger_type) || Map.get(attrs, "trigger_type") ||
-      infer_trigger_from_event(Map.get(attrs, :event))
+    value_from_attrs(attrs, :trigger_type) || infer_trigger_from_event(Map.get(attrs, :event))
   end
 
   defp trigger_reference(attrs) do
-    Map.get(attrs, :trigger_reference) ||
-      Map.get(attrs, "trigger_reference") ||
-      Map.get(attrs, :task_id) ||
-      Map.get(attrs, "task_id") ||
-      to_string(
-        Map.get(attrs, :pull_request_number) || Map.get(attrs, "pull_request_number") || "unknown"
-      )
+    value_from_attrs(attrs, :trigger_reference) ||
+      value_from_attrs(attrs, :task_id) ||
+      to_string(value_from_attrs(attrs, :pull_request_number) || "unknown")
   end
 
   defp infer_trigger_from_event(%{event_type: "sessions.task_completed"}),
@@ -87,6 +89,9 @@ defmodule Agents.Pipeline.Application.UseCases.TriggerPipelineRun do
       event -> Map.get(event, key) || Map.get(event, Atom.to_string(key))
     end
   end
+
+  defp value_from_attrs(attrs, key),
+    do: Map.get(attrs, key) || Map.get(attrs, Atom.to_string(key))
 
   defp select_stage_ids(stages, "on_session_complete") do
     stages |> Enum.filter(&(&1.type == "verification")) |> Enum.map(& &1.id)

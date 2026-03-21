@@ -10,9 +10,9 @@ defmodule Agents.Pipeline.Infrastructure.PipelineEventHandlerTest do
     def execute(_stage, _context), do: {:ok, %{output: "ok", exit_code: 0, metadata: %{}}}
   end
 
-  defmodule TaskRepoStub do
-    def get_task(_task_id),
-      do: %{user_id: Ecto.UUID.generate(), container_id: nil, instruction: "rerun"}
+  defmodule TaskContextProviderStub do
+    def get_task_context(_task_id),
+      do: {:ok, %{user_id: Ecto.UUID.generate(), container_id: nil, instruction: "rerun"}}
   end
 
   defmodule PipelineRunRepoStub do
@@ -49,13 +49,13 @@ defmodule Agents.Pipeline.Infrastructure.PipelineEventHandlerTest do
     Application.put_env(:agents, :pipeline_stage_executor, StageExecutorStub)
     Application.put_env(:agents, :pipeline_event_bus, TestEventBus)
     Application.put_env(:agents, :pipeline_run_repository, PipelineRunRepoStub)
-    Application.put_env(:agents, :pipeline_task_repo, TaskRepoStub)
+    Application.put_env(:agents, :pipeline_task_context_provider, TaskContextProviderStub)
 
     on_exit(fn ->
       Application.delete_env(:agents, :pipeline_stage_executor)
       Application.delete_env(:agents, :pipeline_event_bus)
       Application.delete_env(:agents, :pipeline_run_repository)
-      Application.delete_env(:agents, :pipeline_task_repo)
+      Application.delete_env(:agents, :pipeline_task_context_provider)
     end)
 
     :ok

@@ -23,14 +23,20 @@ defmodule Agents.Pipeline.Infrastructure.StageExecutor do
   end
 
   defp run_step_with_retries(step, context) do
-    0..step.retries
-    |> Enum.reduce_while(nil, fn attempt, _last_result ->
-      case run_step(step, context, attempt + 1) do
-        {:ok, result} -> {:halt, {:ok, result}}
-        {:error, result} when attempt < step.retries -> {:cont, {:error, result}}
-        {:error, result} -> {:halt, {:error, result}}
-      end
-    end)
+    do_run_step_with_retries(step, context, 1)
+  end
+
+  defp do_run_step_with_retries(step, context, attempt) do
+    case run_step(step, context, attempt) do
+      {:ok, result} ->
+        {:ok, result}
+
+      {:error, _result} when attempt <= step.retries ->
+        do_run_step_with_retries(step, context, attempt + 1)
+
+      {:error, result} ->
+        {:error, result}
+    end
   end
 
   defp run_step(step, context, attempt) do
@@ -55,38 +61,10 @@ defmodule Agents.Pipeline.Infrastructure.StageExecutor do
         end
       end)
 
-    case Task.yield(task, timeout_ms) || Task.shutdown(task, :brutal_kill) do
-      {:ok, {:ok, output, exit_code}} ->
-        result = %{
-          output: output,
-          exit_code: exit_code,
-          metadata: %{"step" => step.name, "attempt" => attempt}
-        }
-
-        if exit_code == 0 do
-          {:ok, result}
-        else
-          {:error, Map.put(result, :reason, :non_zero_exit)}
-        end
-
-      {:ok, {:raised, error}} ->
-        {:error,
-         %{
-           output: Exception.message(error),
-           exit_code: nil,
-           reason: error.__struct__,
-           metadata: %{"step" => step.name, "attempt" => attempt}
-         }}
-
-      nil ->
-        {:error,
-         %{
-           output: "command timed out after #{timeout_ms}ms",
-           exit_code: nil,
-           reason: :timeout,
-           metadata: %{"step" => step.name, "attempt" => attempt}
-         }}
-    end
+    task
+    |> Task.yield(timeout_ms)
+    |> Kernel.||(Task.shutdown(task, :brutal_kill))
+    |> normalize_command_result(step, attempt, timeout_ms)
   end
 
   defp merge_success_result(result),
@@ -124,4 +102,38 @@ defmodule Agents.Pipeline.Infrastructure.StageExecutor do
 
   defp timeout_ms(nil), do: 30_000
   defp timeout_ms(seconds), do: seconds * 1000
+
+  defp normalize_command_result({:ok, {:ok, output, exit_code}}, step, attempt, _timeout_ms) do
+    result = %{
+      output: output,
+      exit_code: exit_code,
+      metadata: %{"step" => step.name, "attempt" => attempt}
+    }
+
+    if exit_code == 0 do
+      {:ok, result}
+    else
+      {:error, Map.put(result, :reason, :non_zero_exit)}
+    end
+  end
+
+  defp normalize_command_result({:ok, {:raised, error}}, step, attempt, _timeout_ms) do
+    {:error,
+     %{
+       output: Exception.message(error),
+       exit_code: nil,
+       reason: error.__struct__,
+       metadata: %{"step" => step.name, "attempt" => attempt}
+     }}
+  end
+
+  defp normalize_command_result(nil, step, attempt, timeout_ms) do
+    {:error,
+     %{
+       output: "command timed out after #{timeout_ms}ms",
+       exit_code: nil,
+       reason: :timeout,
+       metadata: %{"step" => step.name, "attempt" => attempt}
+     }}
+  end
 end

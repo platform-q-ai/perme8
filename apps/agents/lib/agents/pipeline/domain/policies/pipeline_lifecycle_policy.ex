@@ -12,8 +12,9 @@ defmodule Agents.Pipeline.Domain.Policies.PipelineLifecyclePolicy do
   }
 
   @spec valid_transition?(String.t(), String.t()) :: :ok | {:error, :invalid_transition}
-  def valid_transition?(from, to) when is_binary(from) and is_binary(to) do
-    if to in Map.get(@transitions, from, []) do
+  def valid_transition?(current_status, next_status)
+      when is_binary(current_status) and is_binary(next_status) do
+    if next_status in Map.get(@transitions, current_status, []) do
       :ok
     else
       {:error, :invalid_transition}
@@ -21,9 +22,9 @@ defmodule Agents.Pipeline.Domain.Policies.PipelineLifecyclePolicy do
   end
 
   @spec transition(String.t(), String.t()) :: {:ok, String.t()} | {:error, :invalid_transition}
-  def transition(from, to) do
-    case valid_transition?(from, to) do
-      :ok -> {:ok, to}
+  def transition(current_status, next_status) do
+    case valid_transition?(current_status, next_status) do
+      :ok -> {:ok, next_status}
       error -> error
     end
   end

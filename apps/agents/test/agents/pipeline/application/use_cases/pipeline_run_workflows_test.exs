@@ -72,9 +72,12 @@ defmodule Agents.Pipeline.Application.UseCases.PipelineRunWorkflowsTest do
     end
   end
 
-  defmodule TaskRepoStub do
-    def get_task(task_id) do
-      Process.get({__MODULE__, :task, task_id})
+  defmodule TaskContextProviderStub do
+    def get_task_context(task_id) do
+      case Process.get({__MODULE__, :task, task_id}) do
+        nil -> {:error, :task_not_found}
+        task -> {:ok, task}
+      end
     end
   end
 
@@ -156,7 +159,7 @@ defmodule Agents.Pipeline.Application.UseCases.PipelineRunWorkflowsTest do
 
     task_id = Ecto.UUID.generate()
 
-    Process.put({TaskRepoStub, :task, task_id}, %{
+    Process.put({TaskContextProviderStub, :task, task_id}, %{
       user_id: Ecto.UUID.generate(),
       container_id: nil,
       instruction: "ship it"
@@ -177,7 +180,7 @@ defmodule Agents.Pipeline.Application.UseCases.PipelineRunWorkflowsTest do
              RunStage.execute(created.id,
                pipeline_run_repo: PipelineRunRepoStub,
                stage_executor: StageExecutorStub,
-               task_repo: TaskRepoStub,
+               task_context_provider: TaskContextProviderStub,
                event_bus: EventBusStub,
                session_reopener: SessionReopenerStub
              )
@@ -205,7 +208,7 @@ defmodule Agents.Pipeline.Application.UseCases.PipelineRunWorkflowsTest do
     task_id = Ecto.UUID.generate()
     user_id = Ecto.UUID.generate()
 
-    Process.put({TaskRepoStub, :task, task_id}, %{
+    Process.put({TaskContextProviderStub, :task, task_id}, %{
       user_id: user_id,
       container_id: nil,
       instruction: "fix failures"
@@ -224,7 +227,7 @@ defmodule Agents.Pipeline.Application.UseCases.PipelineRunWorkflowsTest do
              RunStage.execute(created.id,
                pipeline_run_repo: PipelineRunRepoStub,
                stage_executor: StageExecutorStub,
-               task_repo: TaskRepoStub,
+               task_context_provider: TaskContextProviderStub,
                event_bus: EventBusStub,
                session_reopener: SessionReopenerStub
              )
@@ -244,7 +247,7 @@ defmodule Agents.Pipeline.Application.UseCases.PipelineRunWorkflowsTest do
 
     task_id = Ecto.UUID.generate()
 
-    Process.put({TaskRepoStub, :task, task_id}, %{
+    Process.put({TaskContextProviderStub, :task, task_id}, %{
       user_id: Ecto.UUID.generate(),
       container_id: nil,
       instruction: "fix failures"
@@ -263,7 +266,7 @@ defmodule Agents.Pipeline.Application.UseCases.PipelineRunWorkflowsTest do
              RunStage.execute(created.id,
                pipeline_run_repo: PipelineRunRepoStub,
                stage_executor: StageExecutorStub,
-               task_repo: TaskRepoStub,
+               task_context_provider: TaskContextProviderStub,
                event_bus: EventBusStub,
                session_reopener: SessionReopenerStub
              )

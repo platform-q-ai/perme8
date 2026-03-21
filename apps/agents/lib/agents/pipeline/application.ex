@@ -9,6 +9,7 @@ defmodule Agents.Pipeline.Application do
       Behaviours.PullRequestRepositoryBehaviour,
       Behaviours.SessionReopenerBehaviour,
       Behaviours.StageExecutorBehaviour,
+      Behaviours.TaskContextProviderBehaviour,
       Behaviours.GitDiffComputerBehaviour,
       Behaviours.GitMergerBehaviour,
       Behaviours.PipelineParserBehaviour,

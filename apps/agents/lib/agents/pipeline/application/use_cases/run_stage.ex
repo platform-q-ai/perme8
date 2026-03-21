@@ -5,8 +5,6 @@ defmodule Agents.Pipeline.Application.UseCases.RunStage do
   alias Agents.Pipeline.Domain.Entities.{PipelineRun, StageResult}
   alias Agents.Pipeline.Domain.Events.PipelineStageChanged
   alias Agents.Pipeline.Domain.Policies.PipelineLifecyclePolicy
-  alias Agents.Sessions.Infrastructure.Repositories.TaskRepository
-
   @spec execute(Ecto.UUID.t(), keyword()) :: {:ok, PipelineRun.t()} | {:error, term()}
   def execute(run_id, opts \\ []) do
     repo_module =
@@ -18,51 +16,41 @@ defmodule Agents.Pipeline.Application.UseCases.RunStage do
     session_reopener =
       Keyword.get(opts, :session_reopener, PipelineRuntimeConfig.session_reopener())
 
+    task_context_provider =
+      Keyword.get(opts, :task_context_provider, PipelineRuntimeConfig.task_context_provider())
+
     pipeline_path = Keyword.get(opts, :pipeline_path, default_pipeline_path())
 
     with {:ok, config} <- load_pipeline(pipeline_path, opts),
          {:ok, schema} <- repo_module.get_run(run_id) do
       run = PipelineRun.from_schema(schema)
 
-      do_execute(
-        run,
-        config.stages,
-        repo_module,
-        stage_executor,
-        session_reopener,
-        event_bus,
-        opts
-      )
+      deps = %{
+        stages: config.stages,
+        repo_module: repo_module,
+        stage_executor: stage_executor,
+        session_reopener: session_reopener,
+        event_bus: event_bus,
+        task_context_provider: task_context_provider,
+        opts: opts
+      }
+
+      do_execute(run, deps)
     end
   end
 
-  defp do_execute(run, stages, repo_module, stage_executor, session_reopener, event_bus, opts) do
+  defp do_execute(run, deps) do
     {stage_id, run} = PipelineRun.pop_next_stage(run)
 
     with true <- is_binary(stage_id),
-         {:ok, stage} <- fetch_stage(stages, stage_id),
-         {:ok, running} <-
-           transition_and_store(run, repo_module, event_bus, "running_stage", stage_id),
-         {:ok, awaiting} <-
-           transition_and_store(running, repo_module, event_bus, "awaiting_result", stage_id) do
-      context = execution_context(awaiting, opts)
+         {:ok, stage} <- fetch_stage(deps.stages, stage_id),
+         {:ok, running} <- transition_and_store(run, deps, "running_stage", stage_id),
+         {:ok, awaiting} <- transition_and_store(running, deps, "awaiting_result", stage_id) do
+      context = execution_context(awaiting, deps)
 
-      case stage_executor.execute(stage, context) do
-        {:ok, result} ->
-          handle_success(
-            awaiting,
-            stage,
-            result,
-            stages,
-            repo_module,
-            event_bus,
-            stage_executor,
-            session_reopener,
-            opts
-          )
-
-        {:error, result} ->
-          handle_failure(awaiting, stage, result, repo_module, event_bus, session_reopener, opts)
+      case deps.stage_executor.execute(stage, context) do
+        {:ok, result} -> handle_success(awaiting, stage, result, deps)
+        {:error, result} -> handle_failure(awaiting, stage, result, deps)
       end
     else
       false -> {:ok, run}
@@ -70,17 +58,7 @@ defmodule Agents.Pipeline.Application.UseCases.RunStage do
     end
   end
 
-  defp handle_success(
-         run,
-         stage,
-         result,
-         stages,
-         repo_module,
-         event_bus,
-         stage_executor,
-         session_reopener,
-         opts
-       ) do
+  defp handle_success(run, stage, result, deps) do
     stage_result =
       StageResult.new(%{
         stage_id: stage.id,
@@ -101,31 +79,21 @@ defmodule Agents.Pipeline.Application.UseCases.RunStage do
       failure_reason: nil
     }
 
-    with {:ok, passed_schema} <- repo_module.update_run(run.id, attrs),
-         :ok <- emit_stage_changed(event_bus, run, "awaiting_result", "passed", stage.id),
+    with {:ok, passed_schema} <- deps.repo_module.update_run(run.id, attrs),
+         :ok <- emit_stage_changed(deps.event_bus, run, "awaiting_result", "passed", stage.id),
          {:ok, passed_run} <- {:ok, PipelineRun.from_schema(passed_schema)} do
       case passed_run.remaining_stage_ids do
         [] ->
           {:ok, passed_run}
 
         [next_stage_id | _] ->
-          passed_run =
-            maybe_mark_deploy(passed_run, stages, next_stage_id, repo_module, event_bus)
-
-          do_execute(
-            passed_run,
-            stages,
-            repo_module,
-            stage_executor,
-            session_reopener,
-            event_bus,
-            opts
-          )
+          passed_run = maybe_mark_deploy(passed_run, next_stage_id, deps)
+          do_execute(passed_run, deps)
       end
     end
   end
 
-  defp handle_failure(run, stage, result, repo_module, event_bus, session_reopener, opts) do
+  defp handle_failure(run, stage, result, deps) do
     stage_result =
       StageResult.new(%{
         stage_id: stage.id,
@@ -147,35 +115,41 @@ defmodule Agents.Pipeline.Application.UseCases.RunStage do
       failure_reason: inspect(result.reason)
     }
 
-    with {:ok, failed_schema} <- repo_module.update_run(run.id, attrs),
-         :ok <- emit_stage_changed(event_bus, run, "awaiting_result", "failed", stage.id) do
+    with {:ok, failed_schema} <- deps.repo_module.update_run(run.id, attrs),
+         :ok <- emit_stage_changed(deps.event_bus, run, "awaiting_result", "failed", stage.id) do
       failed_run = PipelineRun.from_schema(failed_schema)
 
       if failed_run.trigger_type == "on_session_complete" do
-        reopen_failed_session(failed_run, repo_module, event_bus, session_reopener, opts)
+        reopen_failed_session(failed_run, deps)
       else
         {:ok, failed_run}
       end
     end
   end
 
-  defp reopen_failed_session(run, repo_module, event_bus, session_reopener, opts) do
-    with %{user_id: user_id} when is_binary(user_id) <- task_context(run.task_id, opts),
+  defp reopen_failed_session(run, deps) do
+    with %{user_id: user_id} when is_binary(user_id) <- task_context(run.task_id, deps),
          :ok <- PipelineLifecyclePolicy.valid_transition?("failed", "reopen_session"),
          :ok <-
-           session_reopener.reopen(%{
+           deps.session_reopener.reopen(%{
              task_id: run.task_id,
              user_id: user_id,
              instruction: "Pipeline stage failed. Please fix the failing checks and continue."
            }),
          {:ok, reopened_schema} <-
-           repo_module.update_run(run.id, %{
+           deps.repo_module.update_run(run.id, %{
              status: "reopen_session",
              remaining_stage_ids: run.remaining_stage_ids,
              reopened_at: DateTime.utc_now() |> DateTime.truncate(:second)
            }),
          :ok <-
-           emit_stage_changed(event_bus, run, "failed", "reopen_session", run.current_stage_id) do
+           emit_stage_changed(
+             deps.event_bus,
+             run,
+             "failed",
+             "reopen_session",
+             run.current_stage_id
+           ) do
       {:ok, PipelineRun.from_schema(reopened_schema)}
     else
       %{} -> {:error, :missing_task_user}
@@ -184,16 +158,16 @@ defmodule Agents.Pipeline.Application.UseCases.RunStage do
     end
   end
 
-  defp maybe_mark_deploy(run, stages, next_stage_id, repo_module, event_bus) do
-    case Enum.find(stages, &(&1.id == next_stage_id)) do
+  defp maybe_mark_deploy(run, next_stage_id, deps) do
+    case Enum.find(deps.stages, &(&1.id == next_stage_id)) do
       %{type: "deploy"} ->
         with :ok <- PipelineLifecyclePolicy.valid_transition?(run.status, "deploy"),
              {:ok, schema} <-
-               repo_module.update_run(run.id, %{
+               deps.repo_module.update_run(run.id, %{
                  status: "deploy",
                  remaining_stage_ids: run.remaining_stage_ids
                }),
-             :ok <- emit_stage_changed(event_bus, run, run.status, "deploy", next_stage_id) do
+             :ok <- emit_stage_changed(deps.event_bus, run, run.status, "deploy", next_stage_id) do
           PipelineRun.from_schema(schema)
         else
           _ -> run
@@ -204,8 +178,8 @@ defmodule Agents.Pipeline.Application.UseCases.RunStage do
     end
   end
 
-  defp execution_context(run, opts) do
-    task = task_context(run.task_id, opts)
+  defp execution_context(run, deps) do
+    task = task_context(run.task_id, deps)
 
     %{
       "task_id" => run.task_id,
@@ -221,32 +195,22 @@ defmodule Agents.Pipeline.Application.UseCases.RunStage do
 
   defp task_context(nil, _opts), do: %{}
 
-  defp task_context(task_id, opts) do
-    task_repo =
-      Keyword.get(
-        opts,
-        :task_repo,
-        Application.get_env(:agents, :pipeline_task_repo, TaskRepository)
-      )
-
-    case task_repo.get_task(task_id) do
-      nil ->
-        %{}
-
-      task ->
-        %{user_id: task.user_id, container_id: task.container_id, instruction: task.instruction}
+  defp task_context(task_id, deps) do
+    case deps.task_context_provider.get_task_context(task_id) do
+      {:ok, task_context} -> task_context
+      {:error, _reason} -> %{}
     end
   end
 
-  defp transition_and_store(run, repo_module, event_bus, next_status, stage_id) do
+  defp transition_and_store(run, deps, next_status, stage_id) do
     with :ok <- PipelineLifecyclePolicy.valid_transition?(run.status, next_status),
          {:ok, schema} <-
-           repo_module.update_run(run.id, %{
+           deps.repo_module.update_run(run.id, %{
              status: next_status,
              current_stage_id: stage_id,
              remaining_stage_ids: run.remaining_stage_ids
            }),
-         :ok <- emit_stage_changed(event_bus, run, run.status, next_status, stage_id) do
+         :ok <- emit_stage_changed(deps.event_bus, run, run.status, next_status, stage_id) do
       {:ok, PipelineRun.from_schema(schema)}
     end
   end

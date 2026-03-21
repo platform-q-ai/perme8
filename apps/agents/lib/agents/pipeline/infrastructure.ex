@@ -15,6 +15,7 @@ defmodule Agents.Pipeline.Infrastructure do
       Repositories.PullRequestRepository,
       SessionReopener,
       StageExecutor,
+      TaskContextProvider,
       Schemas.PipelineRunSchema,
       Schemas.PullRequestSchema,
       Schemas.ReviewCommentSchema,

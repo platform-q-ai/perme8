@@ -10,7 +10,9 @@ defmodule Agents.Pipeline.Application.PipelineRuntimeConfig do
   @default_git_merger :"Elixir.Agents.Pipeline.Infrastructure.GitMerger"
   @default_stage_executor :"Elixir.Agents.Pipeline.Infrastructure.StageExecutor"
   @default_session_reopener :"Elixir.Agents.Pipeline.Infrastructure.SessionReopener"
+  @default_task_context_provider :"Elixir.Agents.Pipeline.Infrastructure.TaskContextProvider"
   @default_event_bus Perme8.Events.EventBus
+  @default_emit_pipeline_events true
 
   @doc "Returns the configured pipeline parser implementation."
   @spec pipeline_parser() :: module()
@@ -58,5 +60,17 @@ defmodule Agents.Pipeline.Application.PipelineRuntimeConfig do
   @spec event_bus() :: module()
   def event_bus do
     Application.get_env(:agents, :pipeline_event_bus, @default_event_bus)
+  end
+
+  @doc "Returns the configured task context provider implementation."
+  @spec task_context_provider() :: module()
+  def task_context_provider do
+    Application.get_env(:agents, :pipeline_task_context_provider, @default_task_context_provider)
+  end
+
+  @doc "Returns whether pipeline domain events should be emitted."
+  @spec emit_pipeline_events?() :: boolean()
+  def emit_pipeline_events? do
+    Application.get_env(:agents, :emit_pipeline_events, @default_emit_pipeline_events)
   end
 end
