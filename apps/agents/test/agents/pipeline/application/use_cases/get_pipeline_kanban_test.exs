@@ -14,6 +14,12 @@ defmodule Agents.Pipeline.Application.UseCases.GetPipelineKanbanTest do
          deploy_targets: [],
          stages: [
            %Agents.Pipeline.Domain.Entities.Stage{
+             id: "warm-pool",
+             type: "warm_pool",
+             steps: [],
+             gates: []
+           },
+           %Agents.Pipeline.Domain.Entities.Stage{
              id: "test",
              type: "verification",
              steps: [],

@@ -14,6 +14,7 @@ defmodule Agents.Pipeline.Application do
       Behaviours.GitMergerBehaviour,
       Behaviours.PipelineParserBehaviour,
       PipelineRuntimeConfig,
+      TicketFacingStageCatalog,
       UseCases.CommentOnPullRequest,
       UseCases.ClosePullRequest,
       UseCases.CreatePullRequest,

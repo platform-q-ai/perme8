@@ -2,22 +2,16 @@ defmodule Agents.Pipeline.Application.UseCases.GetPipelineKanban do
   @moduledoc "Builds a ticket-facing kanban model for the sessions dashboard."
 
   alias Agents.Pipeline.Application.PipelineRuntimeConfig
-  alias Agents.Tickets.Domain.Policies.TicketLifecyclePolicy
+  alias Agents.Pipeline.Application.TicketFacingStageCatalog
 
   @active_task_statuses ["pending", "starting", "running", "queued", "awaiting_feedback"]
-  @pre_pipeline_stage_defs [
-    %{id: "ready", label: "Ready"},
-    %{id: "in_progress", label: "In Progress"},
-    %{id: "in_review", label: "In Review"}
-  ]
-
   @spec execute([map()], keyword()) :: {:ok, map()} | {:error, term()}
   def execute(tickets, opts \\ []) when is_list(tickets) do
     parser = Keyword.get(opts, :pipeline_parser, PipelineRuntimeConfig.pipeline_parser())
     pipeline_path = Keyword.get(opts, :pipeline_path, default_pipeline_path())
 
     with {:ok, config} <- parser.parse_file(pipeline_path) do
-      stage_defs = stage_definitions(config.stages)
+      stage_defs = TicketFacingStageCatalog.from_pipeline_config(config)
       stage_ids = MapSet.new(stage_defs, & &1.id)
 
       grouped_tickets =
@@ -96,26 +90,6 @@ defmodule Agents.Pipeline.Application.UseCases.GetPipelineKanban do
       true ->
         nil
     end
-  end
-
-  defp stage_definitions(stages) do
-    pipeline_defs =
-      stages
-      |> Enum.reduce([], fn stage, acc ->
-        case stage.type do
-          "verification" ->
-            acc ++ [%{id: "ci_testing", label: TicketLifecyclePolicy.stage_label("ci_testing")}]
-
-          "deploy" ->
-            acc ++ [%{id: "deployed", label: TicketLifecyclePolicy.stage_label("deployed")}]
-
-          _ ->
-            acc
-        end
-      end)
-
-    (@pre_pipeline_stage_defs ++ pipeline_defs)
-    |> Enum.uniq_by(& &1.id)
   end
 
   defp flatten_ticket_tree(tickets) do
