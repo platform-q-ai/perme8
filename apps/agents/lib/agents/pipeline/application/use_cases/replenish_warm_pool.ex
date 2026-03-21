@@ -48,6 +48,7 @@ defmodule Agents.Pipeline.Application.UseCases.ReplenishWarmPool do
   defp fetch_current_count(warm_pool_counter, policy) do
     case warm_pool_counter.current_warm_count(policy) do
       current_count when is_integer(current_count) and current_count >= 0 -> {:ok, current_count}
+      {:error, _} = error -> error
       other -> {:error, {:invalid_warm_pool_count, other}}
     end
   end

@@ -22,6 +22,10 @@ defmodule Agents.Pipeline.Application.UseCases.ReplenishWarmPoolTest do
     end
   end
 
+  defmodule InventoryErrorCounterStub do
+    def current_warm_count(_policy), do: {:error, :warm_pool_inventory_unavailable}
+  end
+
   test "skips replenishment when current count meets target" do
     Process.put(:pipeline_config, {:ok, pipeline_config(2)})
     Process.put(:current_warm_count, 2)
@@ -57,6 +61,20 @@ defmodule Agents.Pipeline.Application.UseCases.ReplenishWarmPoolTest do
     [step] = stage.steps
     assert step.env["WARM_POOL_SHORTAGE"] == "2"
     assert context["warm_pool_shortage"] == 2
+  end
+
+  test "returns inventory errors without executing the stage" do
+    Process.put(:pipeline_config, {:ok, pipeline_config(3)})
+
+    assert {:error, :warm_pool_inventory_unavailable} =
+             ReplenishWarmPool.execute(
+               pipeline_path: "ignored.yml",
+               pipeline_parser: ParserStub,
+               warm_pool_counter: InventoryErrorCounterStub,
+               stage_executor: StageExecutorStub
+             )
+
+    refute_received {:execute, _, _}
   end
 
   defp pipeline_config(target_count) do
