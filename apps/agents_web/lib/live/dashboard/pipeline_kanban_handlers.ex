@@ -3,6 +3,7 @@ defmodule AgentsWeb.DashboardLive.PipelineKanbanHandlers do
 
   import Phoenix.Component, only: [assign: 3]
 
+  alias AgentsWeb.DashboardLive.PipelineKanbanState
   alias AgentsWeb.DashboardLive.TicketHandlers
 
   def toggle_pipeline_kanban(_params, socket) do
@@ -60,7 +61,9 @@ defmodule AgentsWeb.DashboardLive.PipelineKanbanHandlers do
         end
       end)
 
-    assign(socket, :tickets, tickets)
+    socket
+    |> assign(:tickets, tickets)
+    |> PipelineKanbanState.assign_pipeline_kanban()
   end
 
   defp pipeline_ticket_match?(ticket, event) do

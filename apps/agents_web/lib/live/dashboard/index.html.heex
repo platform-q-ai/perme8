@@ -14,7 +14,6 @@
       />
 
       <div class="flex-1 overflow-hidden flex flex-col">
-        <% {:ok, pipeline_kanban} = Agents.get_pipeline_kanban(@tickets) %>
         <%= if @sessions == [] and @tickets == [] do %>
           <div class="p-6 text-center text-base-content/50 text-sm">
             <.icon name="hero-chat-bubble-left-right" class="size-8 mx-auto mb-2 opacity-40" />
@@ -179,7 +178,7 @@
 
       <.pipeline_kanban
         :if={@sessions != [] or @tickets != []}
-        kanban={pipeline_kanban}
+        kanban={@pipeline_kanban}
         collapsed={@pipeline_kanban_collapsed}
         collapsed_columns={@collapsed_kanban_columns}
         active_ticket_number={@active_ticket_number}

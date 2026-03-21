@@ -23,6 +23,7 @@ defmodule AgentsWeb.DashboardLive.Index do
   alias AgentsWeb.DashboardLive.EventProcessor
   alias AgentsWeb.DashboardLive.FollowUpDispatchHandlers
   alias AgentsWeb.DashboardLive.PipelineKanbanHandlers
+  alias AgentsWeb.DashboardLive.PipelineKanbanState
   alias AgentsWeb.DashboardLive.PubSubHandlers
   alias AgentsWeb.DashboardLive.QuestionHandlers
   alias AgentsWeb.DashboardLive.SessionHandlers
@@ -84,12 +85,14 @@ defmodule AgentsWeb.DashboardLive.Index do
      |> assign(:fixture, nil)
      |> assign(:pipeline_kanban_collapsed, false)
      |> assign(:collapsed_kanban_columns, MapSet.new())
+     |> assign(:pipeline_kanban, %{stages: [], generated_at: nil})
      |> assign(:syncing_tickets, false)
      |> assign(:dependency_search_mode, false)
      |> assign(:dependency_search_results, [])
      |> assign(:dependency_search_query, "")
      |> assign(:selected_dependency_target, nil)
      |> assign(:dependency_direction, nil)
+     |> PipelineKanbanState.assign_pipeline_kanban()
      |> assign_session_state()
      |> assign(:mobile_panel, :list)
      |> assign(:form, to_form(%{"instruction" => ""}))}
@@ -128,6 +131,7 @@ defmodule AgentsWeb.DashboardLive.Index do
      |> EventProcessor.maybe_load_cached_output(current_task)
      |> EventProcessor.maybe_load_pending_question(current_task)
      |> EventProcessor.maybe_load_todos(current_task)
+     |> PipelineKanbanState.assign_pipeline_kanban()
      |> push_event("scroll_to_bottom", %{})
      |> push_event("focus_input", %{})
      |> maybe_push_draft_key(active_ticket_number)}

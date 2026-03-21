@@ -13,6 +13,7 @@ defmodule AgentsWeb.DashboardLive.TicketHandlers do
   alias Agents.Sessions
   alias Agents.Tickets
   alias Agents.Tickets.Domain.Entities.Ticket
+  alias AgentsWeb.DashboardLive.PipelineKanbanState
   alias AgentsWeb.DashboardLive.TicketSessionLinker
 
   require Logger
@@ -51,7 +52,8 @@ defmodule AgentsWeb.DashboardLive.TicketHandlers do
     # Reload from DB to get the canonical order
     tickets = reload_tickets(socket)
 
-    {:noreply, assign(socket, :tickets, tickets)}
+    {:noreply,
+     socket |> assign(:tickets, tickets) |> PipelineKanbanState.assign_pipeline_kanban()}
   end
 
   def send_ticket_to_top(%{"number" => number_str}, socket) do
@@ -59,7 +61,9 @@ defmodule AgentsWeb.DashboardLive.TicketHandlers do
       {number, ""} ->
         Tickets.send_ticket_to_top(number)
         tickets = reload_tickets(socket)
-        {:noreply, assign(socket, :tickets, tickets)}
+
+        {:noreply,
+         socket |> assign(:tickets, tickets) |> PipelineKanbanState.assign_pipeline_kanban()}
 
       _ ->
         {:noreply, socket}
@@ -71,7 +75,9 @@ defmodule AgentsWeb.DashboardLive.TicketHandlers do
       {number, ""} ->
         Tickets.send_ticket_to_bottom(number)
         tickets = reload_tickets(socket)
-        {:noreply, assign(socket, :tickets, tickets)}
+
+        {:noreply,
+         socket |> assign(:tickets, tickets) |> PipelineKanbanState.assign_pipeline_kanban()}
 
       _ ->
         {:noreply, socket}
@@ -249,7 +255,8 @@ defmodule AgentsWeb.DashboardLive.TicketHandlers do
            :pending_ticket_starts,
            Map.put(socket.assigns.pending_ticket_starts, client_id, number)
          )
-         |> assign(:tickets, tickets)}
+         |> assign(:tickets, tickets)
+         |> PipelineKanbanState.assign_pipeline_kanban()}
     end
   end
 
@@ -278,7 +285,8 @@ defmodule AgentsWeb.DashboardLive.TicketHandlers do
             %{ticket | labels: labels}
           end)
 
-        socket = assign(socket, :tickets, tickets)
+        socket =
+          socket |> assign(:tickets, tickets) |> PipelineKanbanState.assign_pipeline_kanban()
 
         user = socket.assigns.current_scope.user
 
@@ -294,6 +302,7 @@ defmodule AgentsWeb.DashboardLive.TicketHandlers do
             {:noreply,
              socket
              |> assign(:tickets, tickets)
+             |> PipelineKanbanState.assign_pipeline_kanban()
              |> put_flash(:error, "Failed to update labels. Please try again.")}
         end
 

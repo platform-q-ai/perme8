@@ -44,13 +44,26 @@ defmodule Agents.Pipeline.Application.UseCases.GetPipelineKanban do
     %{
       number: ticket.number,
       title: ticket.title,
-      status: ticket.session_state || ticket.task_status || ticket.lifecycle_stage || "idle",
+      status: ticket_status(ticket),
       lifecycle_stage: ticket.lifecycle_stage,
       labels: Map.get(ticket, :labels, []),
       task_id: ticket.associated_task_id,
       session_id: Map.get(ticket, :session_id),
       container_id: ticket.associated_container_id
     }
+  end
+
+  defp ticket_status(ticket) do
+    session_state = Map.get(ticket, :session_state)
+    task_status = Map.get(ticket, :task_status)
+
+    cond do
+      is_binary(session_state) and session_state not in ["", "idle"] -> session_state
+      is_binary(task_status) and task_status != "" -> task_status
+      is_binary(session_state) and session_state != "" -> session_state
+      is_binary(ticket.lifecycle_stage) -> ticket.lifecycle_stage
+      true -> "idle"
+    end
   end
 
   defp aggregate_status([], _stage_id), do: "idle"

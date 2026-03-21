@@ -11,6 +11,7 @@ defmodule AgentsWeb.DashboardLive.TicketLifecycleFixtures do
 
   alias Agents.Tickets.Domain.Entities.Ticket
   alias Agents.Tickets.Domain.Entities.TicketLifecycleEvent
+  alias AgentsWeb.DashboardLive.PipelineKanbanState
 
   def maybe_apply_ticket_lifecycle_fixture(socket, %{"fixture" => fixture})
       when is_binary(fixture) do
@@ -30,6 +31,7 @@ defmodule AgentsWeb.DashboardLive.TicketLifecycleFixtures do
         |> assign(:tickets, payload.tickets)
         |> assign(:active_ticket_number, active_ticket_number)
         |> assign(:pipeline_kanban_collapsed, Map.get(payload, :pipeline_kanban_collapsed, false))
+        |> PipelineKanbanState.assign_pipeline_kanban()
     end
   end
 
@@ -37,6 +39,7 @@ defmodule AgentsWeb.DashboardLive.TicketLifecycleFixtures do
     socket
     |> assign(:fixture, nil)
     |> assign(:pipeline_kanban_collapsed, false)
+    |> PipelineKanbanState.assign_pipeline_kanban()
   end
 
   defp fixture_payload(fixture) do

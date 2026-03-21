@@ -24,6 +24,7 @@ defmodule AgentsWeb.DashboardLive.Helpers.TaskExecutionHelpers do
   alias Agents.Tickets.Domain.Policies.TicketEnrichmentPolicy
 
   alias AgentsWeb.DashboardLive.EventProcessor
+  alias AgentsWeb.DashboardLive.PipelineKanbanState
   alias AgentsWeb.DashboardLive.TicketSessionLinker
 
   require Logger
@@ -645,7 +646,7 @@ defmodule AgentsWeb.DashboardLive.Helpers.TaskExecutionHelpers do
         %{t | task_status: nil, associated_task_id: nil, session_state: "idle"}
       end)
 
-    assign(socket, :tickets, tickets)
+    socket |> assign(:tickets, tickets) |> PipelineKanbanState.assign_pipeline_kanban()
   end
 
   def update_ticket_lifecycle_assigns(socket, ticket_id, to_stage, transitioned_at) do
@@ -658,7 +659,7 @@ defmodule AgentsWeb.DashboardLive.Helpers.TaskExecutionHelpers do
         end
       end)
 
-    assign(socket, :tickets, tickets)
+    socket |> assign(:tickets, tickets) |> PipelineKanbanState.assign_pipeline_kanban()
   end
 
   def maybe_delete_session(container_id, user_id) when is_binary(container_id) do

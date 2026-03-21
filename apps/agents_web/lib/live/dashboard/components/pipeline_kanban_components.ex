@@ -209,6 +209,7 @@ defmodule AgentsWeb.DashboardLive.Components.PipelineKanbanComponents do
       case status do
         status when status in ["active", "running", "starting", "pending"] -> "bg-warning"
         status when status in ["queued_warm", "warming"] -> "bg-warning"
+        "queued_cold" -> "bg-info"
         "queued" -> "bg-info"
         "review" -> "bg-primary"
         "done" -> "bg-success"
@@ -223,6 +224,7 @@ defmodule AgentsWeb.DashboardLive.Components.PipelineKanbanComponents do
     case status do
       "warming" -> "warming"
       "queued_warm" -> "warm"
+      "queued_cold" -> "queued"
       status when status in ["running", "starting", "pending"] -> "used"
       "queued" -> "queued"
       "failed" -> "failed"
@@ -232,6 +234,14 @@ defmodule AgentsWeb.DashboardLive.Components.PipelineKanbanComponents do
 
   defp show_pause_ticket?(status, task_id) do
     is_binary(task_id) and
-      status in ["queued", "queued_warm", "warming", "running", "starting", "pending"]
+      status in [
+        "queued",
+        "queued_cold",
+        "queued_warm",
+        "warming",
+        "running",
+        "starting",
+        "pending"
+      ]
   end
 end
