@@ -18,10 +18,13 @@ defmodule Agents.Pipeline do
   alias Agents.Pipeline.Application.UseCases.GetPipelineKanban
   alias Agents.Pipeline.Application.UseCases.GetPipelineStatus
   alias Agents.Pipeline.Application.UseCases.GetPullRequest
+  alias Agents.Pipeline.Application.UseCases.GetPullRequestByLinkedTicket
   alias Agents.Pipeline.Application.UseCases.GetPullRequestDiff
   alias Agents.Pipeline.Application.UseCases.ListPullRequests
   alias Agents.Pipeline.Application.UseCases.MergePullRequest
   alias Agents.Pipeline.Application.UseCases.ReplenishWarmPool
+  alias Agents.Pipeline.Application.UseCases.ReplyToPullRequestComment
+  alias Agents.Pipeline.Application.UseCases.ResolvePullRequestThread
   alias Agents.Pipeline.Application.UseCases.RunStage
   alias Agents.Pipeline.Application.UseCases.ReviewPullRequest
   alias Agents.Pipeline.Application.UseCases.TriggerPipelineRun
@@ -63,6 +66,12 @@ defmodule Agents.Pipeline do
   @spec list_pull_requests(keyword(), keyword()) :: {:ok, [Domain.Entities.PullRequest.t()]}
   defdelegate list_pull_requests(filters \\ [], opts \\ []), to: ListPullRequests, as: :execute
 
+  @spec get_pull_request_by_linked_ticket(integer(), keyword()) ::
+          {:ok, Domain.Entities.PullRequest.t()} | {:error, :not_found}
+  defdelegate get_pull_request_by_linked_ticket(ticket_number, opts \\ []),
+    to: GetPullRequestByLinkedTicket,
+    as: :execute
+
   @spec update_pull_request(integer(), map(), keyword()) ::
           {:ok, Domain.Entities.PullRequest.t()} | {:error, term()}
   defdelegate update_pull_request(number, attrs, opts \\ []),
@@ -79,6 +88,18 @@ defmodule Agents.Pipeline do
           {:ok, Domain.Entities.PullRequest.t()} | {:error, term()}
   defdelegate review_pull_request(number, attrs, opts \\ []),
     to: ReviewPullRequest,
+    as: :execute
+
+  @spec reply_to_pull_request_comment(integer(), Ecto.UUID.t(), map(), keyword()) ::
+          {:ok, Domain.Entities.PullRequest.t()} | {:error, term()}
+  defdelegate reply_to_pull_request_comment(number, comment_id, attrs, opts \\ []),
+    to: ReplyToPullRequestComment,
+    as: :execute
+
+  @spec resolve_pull_request_thread(integer(), Ecto.UUID.t(), map(), keyword()) ::
+          {:ok, Domain.Entities.PullRequest.t()} | {:error, term()}
+  defdelegate resolve_pull_request_thread(number, comment_id, attrs, opts \\ []),
+    to: ResolvePullRequestThread,
     as: :execute
 
   @spec merge_pull_request(integer(), keyword()) ::

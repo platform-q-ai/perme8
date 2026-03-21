@@ -8,6 +8,10 @@ defmodule Agents.Pipeline.Domain.Entities.ReviewComment do
           body: String.t() | nil,
           path: String.t() | nil,
           line: integer() | nil,
+          parent_comment_id: Ecto.UUID.t() | nil,
+          resolved: boolean(),
+          resolved_at: DateTime.t() | nil,
+          resolved_by: String.t() | nil,
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil
         }
@@ -19,8 +23,12 @@ defmodule Agents.Pipeline.Domain.Entities.ReviewComment do
     :body,
     :path,
     :line,
+    :parent_comment_id,
+    :resolved_at,
+    :resolved_by,
     :inserted_at,
-    :updated_at
+    :updated_at,
+    resolved: false
   ]
 
   @spec new(map()) :: t()
@@ -35,6 +43,10 @@ defmodule Agents.Pipeline.Domain.Entities.ReviewComment do
       body: schema.body,
       path: schema.path,
       line: schema.line,
+      parent_comment_id: Map.get(schema, :parent_comment_id),
+      resolved: Map.get(schema, :resolved, false),
+      resolved_at: Map.get(schema, :resolved_at),
+      resolved_by: Map.get(schema, :resolved_by),
       inserted_at: schema.inserted_at,
       updated_at: schema.updated_at
     }

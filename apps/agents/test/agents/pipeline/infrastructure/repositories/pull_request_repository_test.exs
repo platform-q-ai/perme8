@@ -21,6 +21,20 @@ defmodule Agents.Pipeline.Infrastructure.Repositories.PullRequestRepositoryTest 
       assert loaded.source_branch == "feature/new-pr"
       assert loaded.target_branch == "main"
     end
+
+    test "gets pull request by linked ticket" do
+      {:ok, created} =
+        PullRequestRepository.create_pull_request(%{
+          source_branch: "feature/ticket-lookup",
+          target_branch: "main",
+          title: "Lookup by ticket",
+          linked_ticket: 506
+        })
+
+      assert {:ok, loaded} = PullRequestRepository.get_by_linked_ticket(506)
+      assert loaded.id == created.id
+      assert loaded.number == created.number
+    end
   end
 
   describe "list_filtered/1" do
@@ -82,6 +96,73 @@ defmodule Agents.Pipeline.Infrastructure.Repositories.PullRequestRepositoryTest 
       assert {:ok, loaded} = PullRequestRepository.get_by_number(pr.number)
       assert length(loaded.comments) == 1
       assert length(loaded.reviews) == 1
+    end
+
+    test "persists reply threading metadata and supports resolving threads" do
+      {:ok, pr} =
+        PullRequestRepository.create_pull_request(%{
+          source_branch: "feature/threads",
+          target_branch: "main",
+          title: "Thread me",
+          status: "in_review"
+        })
+
+      assert {:ok, root_comment} =
+               PullRequestRepository.add_comment(pr.number, %{
+                 author_id: "u1",
+                 body: "Please refactor this function",
+                 path: "lib/app.ex",
+                 line: 12
+               })
+
+      assert {:ok, reply_comment} =
+               PullRequestRepository.add_comment(pr.number, %{
+                 author_id: "u2",
+                 body: "Thanks, updating now",
+                 parent_comment_id: root_comment.id
+               })
+
+      assert reply_comment.parent_comment_id == root_comment.id
+      refute reply_comment.resolved
+      assert is_nil(reply_comment.resolved_at)
+      assert is_nil(reply_comment.resolved_by)
+
+      assert {:ok, resolved_comment} =
+               PullRequestRepository.resolve_comment_thread(root_comment.id, "u3")
+
+      assert resolved_comment.resolved
+      assert resolved_comment.resolved_by == "u3"
+      assert resolved_comment.resolved_at
+
+      assert {:ok, loaded} = PullRequestRepository.get_by_number(pr.number)
+
+      reloaded_root = Enum.find(loaded.comments, &(&1.id == root_comment.id))
+      reloaded_reply = Enum.find(loaded.comments, &(&1.id == reply_comment.id))
+
+      assert reloaded_root.resolved
+      assert reloaded_root.resolved_by == "u3"
+      assert reloaded_reply.parent_comment_id == root_comment.id
+    end
+
+    test "preserves legacy flat comment creation behavior" do
+      {:ok, pr} =
+        PullRequestRepository.create_pull_request(%{
+          source_branch: "feature/flat-comments",
+          target_branch: "main",
+          title: "Flat comments remain",
+          status: "open"
+        })
+
+      assert {:ok, comment} =
+               PullRequestRepository.add_comment(pr.number, %{
+                 author_id: "u-flat",
+                 body: "Legacy comment body"
+               })
+
+      assert is_nil(comment.parent_comment_id)
+      refute comment.resolved
+      assert is_nil(comment.resolved_at)
+      assert is_nil(comment.resolved_by)
     end
   end
 end

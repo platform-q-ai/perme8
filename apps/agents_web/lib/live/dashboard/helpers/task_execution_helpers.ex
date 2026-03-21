@@ -19,6 +19,7 @@ defmodule AgentsWeb.DashboardLive.Helpers.TaskExecutionHelpers do
   import AgentsWeb.DashboardLive.Helpers.SessionStateHelpers
 
   alias Agents.Sessions
+  alias Agents.Pipeline
   alias Agents.Sessions.Domain.Policies.SessionLifecyclePolicy
   alias Agents.Tickets
   alias Agents.Tickets.Domain.Policies.TicketEnrichmentPolicy
@@ -30,20 +31,22 @@ defmodule AgentsWeb.DashboardLive.Helpers.TaskExecutionHelpers do
   require Logger
 
   @doc "Returns the list of available session panel tabs."
-  def session_tabs do
-    [
+  def session_tabs(has_pr_tab? \\ false) do
+    base_tabs = [
       %{id: "chat", label: "Chat"},
       %{id: "ticket", label: "Ticket"}
     ]
+
+    if has_pr_tab?, do: base_tabs ++ [%{id: "pr", label: "PR"}], else: base_tabs
   end
 
-  def resolve_active_tab(params, has_ticket_tab?) do
+  def resolve_active_tab(params, has_ticket_tab?, has_pr_tab? \\ false) do
     tab = params["tab"] || "chat"
 
     valid_tabs =
       Enum.map(
         if(has_ticket_tab?,
-          do: session_tabs(),
+          do: session_tabs(has_pr_tab?),
           else: [%{id: "chat"}]
         ),
         & &1.id
@@ -51,6 +54,12 @@ defmodule AgentsWeb.DashboardLive.Helpers.TaskExecutionHelpers do
 
     if tab in valid_tabs, do: tab, else: "chat"
   end
+
+  def linked_pull_request_for_ticket(%{number: number}) when is_integer(number) do
+    Pipeline.get_pull_request_by_linked_ticket(number)
+  end
+
+  def linked_pull_request_for_ticket(_), do: {:error, :not_found}
 
   def resolve_active_ticket_number(
         %{"new" => "true", "ticket" => ticket_str},

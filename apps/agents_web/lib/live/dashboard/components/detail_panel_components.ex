@@ -8,6 +8,7 @@ defmodule AgentsWeb.DashboardLive.Components.DetailPanelComponents do
   use Phoenix.Component
 
   import AgentsWeb.CoreComponents
+  import AgentsWeb.DashboardLive.Components.PRComponents
   import AgentsWeb.DashboardLive.Components.SessionComponents
   import AgentsWeb.DashboardLive.Helpers
 
@@ -614,6 +615,68 @@ defmodule AgentsWeb.DashboardLive.Components.DetailPanelComponents do
   end
 
   # -- Session Input Form --
+
+  @doc "Renders the PR tab panel for local internal review workflows."
+  attr(:selected_pull_request, :map, default: nil)
+  attr(:pr_diff_payload, :any, required: true)
+  attr(:pr_review_threads, :list, required: true)
+  attr(:pr_loading, :boolean, required: true)
+  attr(:pr_error, :any, default: nil)
+  attr(:show_inline_comment_form, :boolean, default: false)
+  attr(:pr_review_decision, :string, default: "comment")
+
+  def pr_tab_panel(assigns) do
+    ~H"""
+    <div
+      role="tabpanel"
+      id="tabpanel-pr"
+      aria-labelledby="tab-pr"
+      class="flex-1 min-h-0 overflow-y-auto p-4 space-y-4"
+    >
+      <%= if @selected_pull_request do %>
+        <.pr_header selected_pull_request={@selected_pull_request} />
+        <.pr_description selected_pull_request={@selected_pull_request} />
+
+        <button
+          type="button"
+          class="btn btn-sm btn-outline"
+          phx-click="pr_start_inline_comment"
+          data-testid="pr-add-inline-comment-button"
+        >
+          Add inline comment
+        </button>
+
+        <form
+          :if={@show_inline_comment_form}
+          id="pr-inline-comment-form"
+          phx-submit="pr_add_inline_comment"
+        >
+          <textarea
+            name="comment[body]"
+            class="textarea textarea-bordered textarea-sm w-full"
+            data-testid="pr-inline-comment-input"
+          ></textarea>
+          <button type="submit" class="btn btn-sm mt-1">Add comment</button>
+        </form>
+
+        <%= if @pr_loading do %>
+          <div class="text-sm text-base-content/60">Loading pull request...</div>
+        <% else %>
+          <.pr_diff pr_diff_payload={@pr_diff_payload} />
+          <.pr_threads threads={@pr_review_threads} />
+          <.pr_review_actions
+            selected_pull_request={@selected_pull_request}
+            pr_review_decision={@pr_review_decision}
+          />
+        <% end %>
+
+        <div :if={@pr_error} class="text-xs text-warning">{inspect(@pr_error)}</div>
+      <% else %>
+        <div class="text-sm text-base-content/60">No pull request linked to this ticket.</div>
+      <% end %>
+    </div>
+    """
+  end
 
   @doc """
   Renders the bottom input area: image picker, instruction textarea,

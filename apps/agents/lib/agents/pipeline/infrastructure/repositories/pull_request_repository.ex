@@ -31,6 +31,15 @@ defmodule Agents.Pipeline.Infrastructure.Repositories.PullRequestRepository do
     end
   end
 
+  @spec get_by_linked_ticket(integer(), module()) ::
+          {:ok, PullRequestSchema.t()} | {:error, :not_found}
+  def get_by_linked_ticket(ticket_number, repo \\ Repo) when is_integer(ticket_number) do
+    case repo.get_by(PullRequestSchema, linked_ticket: ticket_number) do
+      nil -> {:error, :not_found}
+      pr -> {:ok, repo.preload(pr, @preloads)}
+    end
+  end
+
   @spec list_filtered(keyword(), module()) :: [PullRequestSchema.t()]
   def list_filtered(opts \\ [], repo \\ Repo) do
     per_page = Keyword.get(opts, :per_page, 30)
@@ -70,6 +79,25 @@ defmodule Agents.Pipeline.Infrastructure.Repositories.PullRequestRepository do
         %ReviewCommentSchema{}
         |> ReviewCommentSchema.changeset(Map.put(attrs, :pull_request_id, pr.id))
         |> repo.insert()
+    end
+  end
+
+  @spec resolve_comment_thread(Ecto.UUID.t(), String.t(), module()) ::
+          {:ok, ReviewCommentSchema.t()} | {:error, :not_found} | {:error, Ecto.Changeset.t()}
+  def resolve_comment_thread(comment_id, actor_id, repo \\ Repo)
+      when is_binary(comment_id) and is_binary(actor_id) do
+    case repo.get(ReviewCommentSchema, comment_id) do
+      nil ->
+        {:error, :not_found}
+
+      comment ->
+        comment
+        |> ReviewCommentSchema.changeset(%{
+          resolved: true,
+          resolved_at: DateTime.utc_now() |> DateTime.truncate(:second),
+          resolved_by: actor_id
+        })
+        |> repo.update()
     end
   end
 

@@ -180,8 +180,15 @@ defmodule AgentsWeb.DashboardLive.SessionDataHelpers do
 
   # -- TaskExecutionHelpers --
   defdelegate session_tabs(), to: AgentsWeb.DashboardLive.Helpers.TaskExecutionHelpers
+  defdelegate session_tabs(has_pr_tab), to: AgentsWeb.DashboardLive.Helpers.TaskExecutionHelpers
 
   defdelegate resolve_active_tab(params, has_ticket_tab?),
+    to: AgentsWeb.DashboardLive.Helpers.TaskExecutionHelpers
+
+  defdelegate resolve_active_tab(params, has_ticket_tab?, has_pr_tab?),
+    to: AgentsWeb.DashboardLive.Helpers.TaskExecutionHelpers
+
+  defdelegate linked_pull_request_for_ticket(ticket),
     to: AgentsWeb.DashboardLive.Helpers.TaskExecutionHelpers
 
   defdelegate resolve_active_ticket_number(

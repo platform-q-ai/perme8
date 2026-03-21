@@ -195,11 +195,9 @@
       />
     </div>
 
-    <% selected_ticket = find_ticket_by_number(@tickets, @active_ticket_number) %>
-    <% detail_tabs =
-      if selected_ticket,
-        do: AgentsWeb.DashboardLive.SessionDataHelpers.session_tabs(),
-        else: [%{id: "chat", label: "Chat"}] %>
+    <% selected_ticket =
+      @selected_ticket || find_ticket_by_number(@tickets, @active_ticket_number) %>
+    <% detail_tabs = @detail_tabs || [%{id: "chat", label: "Chat"}] %>
 
     <%!-- Right Panel: Active Session Detail --%>
     <div class={[
@@ -259,6 +257,17 @@
           selected_dependency_target={@selected_dependency_target}
           dependency_direction={@dependency_direction}
           fixture={@fixture}
+        />
+
+        <.pr_tab_panel
+          :if={@active_session_tab == "pr"}
+          selected_pull_request={@selected_pull_request}
+          pr_diff_payload={@pr_diff_payload}
+          pr_review_threads={@pr_review_threads}
+          pr_loading={@pr_loading}
+          pr_error={@pr_error}
+          show_inline_comment_form={@show_inline_comment_form}
+          pr_review_decision={@pr_review_decision}
         />
 
         <%!-- Input form stays visible across tabs --%>

@@ -5,9 +5,12 @@ defmodule Agents.Pipeline.Application.UseCases.PullRequestWorkflowsTest do
   alias Agents.Pipeline.Application.UseCases.ClosePullRequest
   alias Agents.Pipeline.Application.UseCases.CreatePullRequest
   alias Agents.Pipeline.Application.UseCases.GetPullRequest
+  alias Agents.Pipeline.Application.UseCases.GetPullRequestByLinkedTicket
   alias Agents.Pipeline.Application.UseCases.GetPullRequestDiff
   alias Agents.Pipeline.Application.UseCases.ListPullRequests
   alias Agents.Pipeline.Application.UseCases.MergePullRequest
+  alias Agents.Pipeline.Application.UseCases.ReplyToPullRequestComment
+  alias Agents.Pipeline.Application.UseCases.ResolvePullRequestThread
   alias Agents.Pipeline.Application.UseCases.ReviewPullRequest
   alias Agents.Pipeline.Application.UseCases.UpdatePullRequest
 
@@ -39,6 +42,20 @@ defmodule Agents.Pipeline.Application.UseCases.PullRequestWorkflowsTest do
 
       assert {:ok, prs} = ListPullRequests.execute(state: "draft")
       assert Enum.any?(prs, &(&1.number == pr.number))
+    end
+
+    test "gets pull request by linked ticket" do
+      assert {:ok, created} =
+               CreatePullRequest.execute(%{
+                 source_branch: "feature/ticket-lookup",
+                 target_branch: "main",
+                 title: "Lookup linked ticket",
+                 linked_ticket: 506
+               })
+
+      assert {:ok, loaded} = GetPullRequestByLinkedTicket.execute(506)
+      assert loaded.number == created.number
+      assert loaded.linked_ticket == 506
     end
 
     test "update transitions state using policy" do
@@ -84,6 +101,67 @@ defmodule Agents.Pipeline.Application.UseCases.PullRequestWorkflowsTest do
       assert reviewed.status == "approved"
       assert length(reviewed.comments) == 1
       assert length(reviewed.reviews) == 1
+    end
+
+    test "replies to an existing review comment thread" do
+      {:ok, pr} =
+        CreatePullRequest.execute(%{
+          source_branch: "feature/reply-thread",
+          target_branch: "main",
+          title: "Reply flow",
+          status: "in_review"
+        })
+
+      {:ok, with_comment} =
+        CommentOnPullRequest.execute(pr.number, %{
+          actor_id: "reviewer-1",
+          body: "Can we simplify this?",
+          path: "lib/reply_flow.ex",
+          line: 7
+        })
+
+      root_comment = hd(with_comment.comments)
+
+      assert {:ok, updated} =
+               ReplyToPullRequestComment.execute(pr.number, root_comment.id, %{
+                 actor_id: "author-1",
+                 body: "Yes, I will split it out."
+               })
+
+      reply = Enum.find(updated.comments, &(&1.parent_comment_id == root_comment.id))
+      assert reply
+      assert reply.body == "Yes, I will split it out."
+      assert reply.author_id == "author-1"
+    end
+
+    test "resolves a review thread" do
+      {:ok, pr} =
+        CreatePullRequest.execute(%{
+          source_branch: "feature/resolve-thread",
+          target_branch: "main",
+          title: "Resolve flow",
+          status: "in_review"
+        })
+
+      {:ok, with_comment} =
+        CommentOnPullRequest.execute(pr.number, %{
+          actor_id: "reviewer-1",
+          body: "Please add tests",
+          path: "test/sample_test.exs",
+          line: 11
+        })
+
+      root_comment = hd(with_comment.comments)
+
+      assert {:ok, updated} =
+               ResolvePullRequestThread.execute(pr.number, root_comment.id, %{
+                 actor_id: "maintainer-1"
+               })
+
+      resolved = Enum.find(updated.comments, &(&1.id == root_comment.id))
+      assert resolved.resolved
+      assert resolved.resolved_by == "maintainer-1"
+      assert resolved.resolved_at
     end
 
     test "review enforces transition policy" do

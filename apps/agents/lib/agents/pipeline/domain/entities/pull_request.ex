@@ -65,6 +65,43 @@ defmodule Agents.Pipeline.Domain.Entities.PullRequest do
     }
   end
 
+  @spec group_comment_threads([ReviewComment.t()]) :: [map()]
+  def group_comment_threads(comments) when is_list(comments) do
+    comments_by_id = Map.new(comments, &{&1.id, &1})
+
+    roots =
+      Enum.filter(comments, fn comment ->
+        is_nil(comment.parent_comment_id) or
+          !Map.has_key?(comments_by_id, comment.parent_comment_id)
+      end)
+
+    roots
+    |> Enum.sort_by(&sort_key/1)
+    |> Enum.map(fn root ->
+      replies =
+        comments
+        |> Enum.filter(&(&1.parent_comment_id == root.id))
+        |> Enum.sort_by(&sort_key/1)
+
+      %{
+        id: root.id,
+        path: root.path,
+        line: root.line,
+        resolved: root.resolved,
+        resolved_at: root.resolved_at,
+        resolved_by: root.resolved_by,
+        comments: [root | replies]
+      }
+    end)
+  end
+
+  def group_comment_threads(_), do: []
+
+  defp sort_key(comment) do
+    timestamp = comment.inserted_at || ~U[1970-01-01 00:00:00Z]
+    {DateTime.to_unix(timestamp, :microsecond), comment.id || ""}
+  end
+
   defp convert_comments(%Ecto.Association.NotLoaded{}), do: []
 
   defp convert_comments(comments) when is_list(comments),
