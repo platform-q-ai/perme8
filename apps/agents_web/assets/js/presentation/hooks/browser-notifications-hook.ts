@@ -37,8 +37,10 @@ export class BrowserNotificationsHook extends ViewHook {
 
     const prompt = document.createElement('div')
     prompt.id = 'browser-notifications-permission-prompt'
-    prompt.className =
-      'fixed bottom-4 right-4 z-50 max-w-sm rounded-lg border border-base-300 bg-base-100 p-4 shadow-lg'
+    prompt.className = 'fixed bottom-4 right-4 z-50 max-w-sm pointer-events-none'
+
+    const panel = document.createElement('div')
+    panel.className = 'rounded-lg border border-base-300 bg-base-100 p-4 shadow-lg pointer-events-auto'
 
     const text = document.createElement('p')
     text.className = 'text-sm'
@@ -73,8 +75,9 @@ export class BrowserNotificationsHook extends ViewHook {
 
     actions.appendChild(enable)
     actions.appendChild(dismiss)
-    prompt.appendChild(text)
-    prompt.appendChild(actions)
+    panel.appendChild(text)
+    panel.appendChild(actions)
+    prompt.appendChild(panel)
 
     document.body.appendChild(prompt)
     this.promptEl = prompt

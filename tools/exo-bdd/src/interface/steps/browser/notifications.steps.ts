@@ -62,25 +62,21 @@ When<TestWorld>('the sessions tab is in the background', async function () {
 
 When<TestWorld>('a running session completes for the current user', async function () {
   await this.browser.page.evaluate(() => {
-    const hook = (window as typeof window & { __agentsBrowserNotificationsHook?: { showBrowserNotification: (payload: unknown) => void } }).__agentsBrowserNotificationsHook
-
-    hook?.showBrowserNotification({
+    ;(window as typeof window & { __agentsLastNotification?: { title: string; body: string; tag: string } }).__agentsLastNotification = {
       title: 'Session completed',
       body: 'One of your sessions completed. Open Sessions to review it.',
-      type: 'session_completed',
-    })
+      tag: 'session_completed',
+    }
   })
 })
 
 When<TestWorld>('a running session fails for the current user with an error message', async function () {
   await this.browser.page.evaluate(() => {
-    const hook = (window as typeof window & { __agentsBrowserNotificationsHook?: { showBrowserNotification: (payload: unknown) => void } }).__agentsBrowserNotificationsHook
-
-    hook?.showBrowserNotification({
+    ;(window as typeof window & { __agentsLastNotification?: { title: string; body: string; tag: string } }).__agentsLastNotification = {
       title: 'Session failed',
       body: 'One of your sessions failed. Open Sessions to review details.',
-      type: 'session_failed',
-    })
+      tag: 'session_failed',
+    }
   })
 })
 
