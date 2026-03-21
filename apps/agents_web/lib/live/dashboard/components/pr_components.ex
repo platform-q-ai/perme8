@@ -15,20 +15,22 @@ defmodule AgentsWeb.DashboardLive.Components.PRComponents do
         |> String.split("diff --git ", trim: true)
         |> Enum.map(fn chunk ->
           lines = String.split(chunk, "\n")
-          first = List.first(lines) || ""
-
-          path =
-            case String.split(first, " b/") do
-              [_left, right] when is_binary(right) and right != "" -> right
-              _ -> "unknown"
-            end
-
+          path = lines |> List.first() |> diff_path_from_header()
           %{path: path, body: Enum.join(lines, "\n")}
         end)
     end
   end
 
   def parse_unified_diff(_), do: [%{path: "No local diff available", body: ""}]
+
+  defp diff_path_from_header(nil), do: "unknown"
+
+  defp diff_path_from_header(header) do
+    case String.split(header, " b/") do
+      [_left, right] when is_binary(right) and right != "" -> right
+      _ -> "unknown"
+    end
+  end
 
   def review_outcome_label("approve"), do: "Approved"
   def review_outcome_label("request_changes"), do: "Changes requested"
