@@ -490,8 +490,7 @@ defmodule Agents.Sessions do
   Returns the current queue state for a user as a legacy map.
 
   Ensures the queue backend is started for the user.
-  Returns a map with `:running`, `:queued`, `:awaiting_feedback`, `:concurrency_limit`, and
-  `:warm_cache_limit`.
+  Returns a map with `:running`, `:queued`, `:awaiting_feedback`, and `:concurrency_limit`.
   """
   @spec get_queue_state(String.t()) :: map()
   def get_queue_state(user_id) do
@@ -542,27 +541,6 @@ defmodule Agents.Sessions do
   end
 
   @doc """
-  Returns how many queued cold sessions will be prewarmed.
-  """
-  @spec get_warm_cache_limit(String.t()) :: non_neg_integer()
-  def get_warm_cache_limit(user_id) do
-    case ensure_queue_backend_started(user_id) do
-      {:ok, _pid} -> QueueOrchestrator.get_warm_cache_limit(user_id)
-      {:error, _reason} -> 2
-    end
-  end
-
-  @doc """
-  Sets how many queued cold sessions should be prewarmed.
-  """
-  @spec set_warm_cache_limit(String.t(), non_neg_integer()) :: :ok | {:error, term()}
-  def set_warm_cache_limit(user_id, limit) do
-    with {:ok, _pid} <- ensure_queue_backend_started(user_id) do
-      QueueOrchestrator.set_warm_cache_limit(user_id, limit)
-    end
-  end
-
-  @doc """
   Notifies queue management when a task reaches a terminal status.
 
   Used by TaskRunner terminal paths to trigger promotion of queued tasks
@@ -592,8 +570,7 @@ defmodule Agents.Sessions do
   @doc """
   Notifies queue management when a new task is queued.
 
-  Triggers prewarming for top queued sessions so they are faster to start
-  when promoted into an available concurrency slot.
+  Triggers queue promotion when concurrency allows it.
   """
   @spec notify_task_queued(String.t(), String.t(), keyword()) :: :ok
   def notify_task_queued(user_id, task_id, opts \\ []) do
@@ -612,8 +589,7 @@ defmodule Agents.Sessions do
       running: 0,
       queued: [],
       awaiting_feedback: [],
-      concurrency_limit: SessionsConfig.default_concurrency_limit(),
-      warm_cache_limit: 2
+      concurrency_limit: SessionsConfig.default_concurrency_limit()
     }
   end
 

@@ -22,6 +22,13 @@ defmodule Agents.Pipeline.Application.UseCases.LoadPipelineTest do
           - id: warm-pool
             type: warm_pool
             deploy_target: dev
+            schedule:
+              cron: "*/5 * * * *"
+            warm_pool:
+              target_count: 2
+              image: ghcr.io/platform-q-ai/perme8-runtime:latest
+              readiness:
+                strategy: command_success
             steps:
               - name: prestart
                 run: scripts/warm_pool.sh
@@ -32,6 +39,7 @@ defmodule Agents.Pipeline.Application.UseCases.LoadPipelineTest do
       assert {:ok, config} = LoadPipeline.execute(path)
       assert config.name == "perme8-core"
       assert length(config.stages) == 1
+      assert hd(config.stages).schedule == %{"cron" => "*/5 * * * *"}
     end
 
     test "returns validation errors for invalid file content" do

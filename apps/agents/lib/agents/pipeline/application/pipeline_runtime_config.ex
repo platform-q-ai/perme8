@@ -11,6 +11,8 @@ defmodule Agents.Pipeline.Application.PipelineRuntimeConfig do
   @default_stage_executor :"Elixir.Agents.Pipeline.Infrastructure.StageExecutor"
   @default_session_reopener :"Elixir.Agents.Pipeline.Infrastructure.SessionReopener"
   @default_task_context_provider :"Elixir.Agents.Pipeline.Infrastructure.TaskContextProvider"
+  @default_warm_pool_counter :"Elixir.Agents.Pipeline.Infrastructure.WarmPoolCounter"
+  @default_pipeline_scheduler_enabled true
   @default_event_bus Perme8.Events.EventBus
   @default_emit_pipeline_events true
 
@@ -66,6 +68,18 @@ defmodule Agents.Pipeline.Application.PipelineRuntimeConfig do
   @spec task_context_provider() :: module()
   def task_context_provider do
     Application.get_env(:agents, :pipeline_task_context_provider, @default_task_context_provider)
+  end
+
+  @doc "Returns the configured warm pool counter implementation."
+  @spec warm_pool_counter() :: module()
+  def warm_pool_counter do
+    Application.get_env(:agents, :pipeline_warm_pool_counter, @default_warm_pool_counter)
+  end
+
+  @doc "Returns whether the pipeline scheduler should start."
+  @spec pipeline_scheduler_enabled?() :: boolean()
+  def pipeline_scheduler_enabled? do
+    Application.get_env(:agents, :pipeline_scheduler_enabled, @default_pipeline_scheduler_enabled)
   end
 
   @doc "Returns whether pipeline domain events should be emitted."

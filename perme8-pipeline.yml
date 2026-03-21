@@ -19,6 +19,14 @@ pipeline:
     - id: warm-pool
       type: warm_pool
       deploy_target: dev
+      schedule:
+        cron: "*/5 * * * *"
+      warm_pool:
+        target_count: 2
+        image: ghcr.io/platform-q-ai/perme8-runtime:latest
+        readiness:
+          strategy: command_success
+          required_step: prewarm-session-pool
       steps:
         - name: build-runtime-image
           run: mix release

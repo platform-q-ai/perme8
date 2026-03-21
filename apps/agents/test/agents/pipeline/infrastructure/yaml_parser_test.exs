@@ -24,6 +24,14 @@ defmodule Agents.Pipeline.Infrastructure.YamlParserTest do
           - id: warm-pool
             type: warm_pool
             deploy_target: dev
+            schedule:
+              cron: "*/5 * * * *"
+            warm_pool:
+              target_count: 2
+              image: ghcr.io/platform-q-ai/perme8-runtime:latest
+              readiness:
+                strategy: command_success
+                required_step: prestart containers
             steps:
               - name: prebuild image
                 run: mix release
@@ -57,6 +65,19 @@ defmodule Agents.Pipeline.Infrastructure.YamlParserTest do
       assert [%{timeout_seconds: nil, retries: 0}, %{timeout_seconds: nil, retries: 0}] =
                warm_pool.steps
 
+      assert warm_pool.schedule == %{"cron" => "*/5 * * * *"}
+
+      assert warm_pool.config == %{
+               "warm_pool" => %{
+                 "target_count" => 2,
+                 "image" => "ghcr.io/platform-q-ai/perme8-runtime:latest",
+                 "readiness" => %{
+                   "strategy" => "command_success",
+                   "required_step" => "prestart containers"
+                 }
+               }
+             }
+
       assert [%{type: "quality", required: true, params: %{"checks" => ["smoke"]}}] =
                warm_pool.gates
     end
@@ -69,6 +90,13 @@ defmodule Agents.Pipeline.Infrastructure.YamlParserTest do
         stages:
           - id: warm-pool
             type: warm_pool
+            schedule:
+              cron: "*/5 * * * *"
+            warm_pool:
+              target_count: 2
+              image: ghcr.io/platform-q-ai/perme8-runtime:latest
+              readiness:
+                strategy: command_success
             steps: []
       """
 
@@ -111,6 +139,13 @@ defmodule Agents.Pipeline.Infrastructure.YamlParserTest do
           - id: warm-pool
             type: warm_pool
             deploy_target: dev
+            schedule:
+              cron: "*/5 * * * *"
+            warm_pool:
+              target_count: 2
+              image: ghcr.io/platform-q-ai/perme8-runtime:latest
+              readiness:
+                strategy: command_success
             steps:
               - name: prestart
                 run: scripts/warm_pool.sh
@@ -139,6 +174,12 @@ defmodule Agents.Pipeline.Infrastructure.YamlParserTest do
           - id: warm-pool
             type: warm_pool
             deploy_target: prod
+            schedule:
+              cron: "*/5 * * * *"
+            warm_pool:
+              target_count: nope
+              image: 123
+              readiness: []
             steps:
               - name: prestart
                 run: scripts/warm_pool.sh
@@ -150,6 +191,10 @@ defmodule Agents.Pipeline.Infrastructure.YamlParserTest do
       assert "pipeline.description must be a string when present" in errors
 
       assert "pipeline.stages[0].deploy_target must reference a declared deploy target" in errors
+
+      assert "pipeline.stages[0].warm_pool.target_count must be a non-negative integer" in errors
+      assert "pipeline.stages[0].warm_pool.image must be a string" in errors
+      assert "pipeline.stages[0].warm_pool.readiness must be a map" in errors
 
       assert "pipeline.stages[0].steps[0].env must be a map" in errors
     end

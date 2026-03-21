@@ -5,12 +5,11 @@ defmodule Agents.Sessions.Domain.Entities.QueueSnapshot do
 
   alias Agents.Sessions.Domain.Entities.LaneEntry
 
-  @type lane :: :processing | :warm | :cold | :awaiting_feedback | :retry_pending
+  @type lane :: :processing | :cold | :awaiting_feedback | :retry_pending
   @type lanes :: %{required(lane()) => [LaneEntry.t()]}
 
   @type metadata :: %{
           concurrency_limit: non_neg_integer(),
-          warm_cache_limit: non_neg_integer(),
           running_count: non_neg_integer(),
           available_slots: non_neg_integer(),
           total_queued: non_neg_integer()
@@ -25,7 +24,6 @@ defmodule Agents.Sessions.Domain.Entities.QueueSnapshot do
 
   @default_lanes %{
     processing: [],
-    warm: [],
     cold: [],
     awaiting_feedback: [],
     retry_pending: []
@@ -33,7 +31,6 @@ defmodule Agents.Sessions.Domain.Entities.QueueSnapshot do
 
   @default_metadata %{
     concurrency_limit: 2,
-    warm_cache_limit: 2,
     running_count: 0,
     available_slots: 2,
     total_queued: 0
@@ -58,12 +55,11 @@ defmodule Agents.Sessions.Domain.Entities.QueueSnapshot do
   end
 
   @doc """
-  Returns total queued tasks from warm, cold, and retry lanes.
+  Returns total queued tasks from cold and retry lanes.
   """
   @spec total_queued(t()) :: non_neg_integer()
   def total_queued(%__MODULE__{} = snapshot) do
-    snapshot.lanes.warm
-    |> Kernel.++(snapshot.lanes.cold)
+    snapshot.lanes.cold
     |> Kernel.++(snapshot.lanes.retry_pending)
     |> length()
   end
@@ -93,7 +89,7 @@ defmodule Agents.Sessions.Domain.Entities.QueueSnapshot do
       running: snapshot.metadata.running_count,
       queued:
         Enum.map(
-          snapshot.lanes.cold ++ snapshot.lanes.warm ++ snapshot.lanes.retry_pending,
+          snapshot.lanes.cold ++ snapshot.lanes.retry_pending,
           fn e ->
             %{
               id: e.task_id,
@@ -107,16 +103,7 @@ defmodule Agents.Sessions.Domain.Entities.QueueSnapshot do
         Enum.map(snapshot.lanes.awaiting_feedback, fn e ->
           %{id: e.task_id, instruction: e.instruction, status: e.status}
         end),
-      concurrency_limit: snapshot.metadata.concurrency_limit,
-      warm_cache_limit: snapshot.metadata.warm_cache_limit,
-      warm_task_ids:
-        snapshot.lanes.warm
-        |> Enum.filter(&LaneEntry.warm?/1)
-        |> Enum.map(& &1.task_id),
-      warming_task_ids:
-        snapshot.lanes.warm
-        |> Enum.filter(fn e -> e.warm_state == :warming end)
-        |> Enum.map(& &1.task_id)
+      concurrency_limit: snapshot.metadata.concurrency_limit
     }
   end
 
@@ -142,7 +129,7 @@ defmodule Agents.Sessions.Domain.Entities.QueueSnapshot do
 
   defp metadata_total_queued(attrs) do
     lanes = Map.merge(default_lanes(), Map.get(attrs, :lanes, %{}))
-    length(lanes.warm) + length(lanes.cold) + length(lanes.retry_pending)
+    length(lanes.cold) + length(lanes.retry_pending)
   end
 
   defp default_lanes do
