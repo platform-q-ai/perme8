@@ -202,14 +202,20 @@ defmodule Agents.Pipeline.Infrastructure.YamlParser do
     id = fetch(item, "id")
     type = fetch(item, "type")
     deploy_target = fetch(item, "deploy_target")
+    schedule = fetch(item, "schedule")
+    stage_config = Map.drop(item, ["id", "type", "deploy_target", "steps", "gates", "schedule"])
 
     errors = []
     errors = maybe_add_type_error(errors, id, "#{path}.id", &is_binary/1, "must be a string")
     errors = maybe_add_type_error(errors, type, "#{path}.type", &is_binary/1, "must be a string")
     errors = maybe_add_optional_string_error(errors, deploy_target, "#{path}.deploy_target")
+    errors = maybe_add_optional_map_error(errors, schedule, "#{path}.schedule")
 
     errors =
       maybe_add_deploy_target_reference_error(errors, deploy_target, deploy_target_ids, path)
+
+    errors =
+      maybe_add_warm_pool_stage_errors(errors, type, path, stage_config, schedule)
 
     {steps, errors} = build_steps(fetch(item, "steps"), path, errors)
     {gates, errors} = build_gates(fetch(item, "gates"), path, errors)
@@ -219,6 +225,8 @@ defmodule Agents.Pipeline.Infrastructure.YamlParser do
         id: id,
         type: type,
         deploy_target: deploy_target,
+        schedule: schedule,
+        config: stage_config,
         steps: steps,
         gates: gates
       })
@@ -292,6 +300,65 @@ defmodule Agents.Pipeline.Infrastructure.YamlParser do
     else
       errors ++ ["#{path} must be a string when present"]
     end
+  end
+
+  defp maybe_add_optional_map_error(errors, value, path) do
+    if is_nil(value) or is_map(value) do
+      errors
+    else
+      errors ++ ["#{path} must be a map when present"]
+    end
+  end
+
+  defp maybe_add_warm_pool_stage_errors(errors, "warm_pool", path, config, schedule) do
+    errors
+    |> maybe_add_type_error(
+      Map.get(config, "warm_pool"),
+      "#{path}.warm_pool",
+      &is_map/1,
+      "must be a map"
+    )
+    |> maybe_add_type_error(schedule, "#{path}.schedule", &is_map/1, "must be a map")
+    |> maybe_add_warm_pool_config_errors(config, path)
+    |> maybe_add_schedule_errors(schedule, path)
+  end
+
+  defp maybe_add_warm_pool_stage_errors(errors, _type, _path, _config, _schedule), do: errors
+
+  defp maybe_add_warm_pool_config_errors(errors, config, path) do
+    warm_pool = Map.get(config, "warm_pool") || %{}
+    readiness = Map.get(warm_pool, "readiness")
+
+    errors
+    |> maybe_add_type_error(
+      Map.get(warm_pool, "target_count"),
+      "#{path}.warm_pool.target_count",
+      &(is_integer(&1) and &1 >= 0),
+      "must be a non-negative integer"
+    )
+    |> maybe_add_type_error(
+      Map.get(warm_pool, "image"),
+      "#{path}.warm_pool.image",
+      &is_binary/1,
+      "must be a string"
+    )
+    |> maybe_add_type_error(readiness, "#{path}.warm_pool.readiness", &is_map/1, "must be a map")
+    |> maybe_add_type_error(
+      if(is_map(readiness), do: Map.get(readiness, "strategy")),
+      "#{path}.warm_pool.readiness.strategy",
+      &is_binary/1,
+      "must be a string"
+    )
+  end
+
+  defp maybe_add_schedule_errors(errors, schedule, path) do
+    maybe_add_type_error(
+      errors,
+      if(is_map(schedule), do: Map.get(schedule, "cron")),
+      "#{path}.schedule.cron",
+      &is_binary/1,
+      "must be a string"
+    )
   end
 
   defp maybe_add_boolean_error(errors, value, path) do

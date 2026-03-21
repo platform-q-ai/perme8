@@ -8,11 +8,15 @@ defmodule Agents.Pipeline.Domain.Entities.StageTest do
       Stage.new(%{
         id: "warm-pool",
         type: "warm_pool",
+        schedule: %{"cron" => "*/5 * * * *"},
+        config: %{"warm_pool" => %{"target_count" => 2}},
         steps: [Step.new(%{name: "boot", run: "./boot.sh"})],
         gates: [Gate.new(%{type: "health-check"})]
       })
 
     assert stage.id == "warm-pool"
+    assert stage.schedule == %{"cron" => "*/5 * * * *"}
+    assert stage.config == %{"warm_pool" => %{"target_count" => 2}}
     assert [%Step{name: "boot"}] = stage.steps
     assert [%Gate{type: "health-check"}] = stage.gates
   end

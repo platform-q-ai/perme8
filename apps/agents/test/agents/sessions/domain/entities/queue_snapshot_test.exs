@@ -10,7 +10,6 @@ defmodule Agents.Sessions.Domain.Entities.QueueSnapshotTest do
       assert %QueueSnapshot{} = snapshot
       assert snapshot.user_id == "user-123"
       assert snapshot.lanes.processing == []
-      assert snapshot.lanes.warm == []
       assert snapshot.lanes.cold == []
       assert snapshot.lanes.awaiting_feedback == []
       assert snapshot.lanes.retry_pending == []
@@ -20,7 +19,6 @@ defmodule Agents.Sessions.Domain.Entities.QueueSnapshotTest do
       snapshot = QueueSnapshot.new(%{user_id: "user-123"})
 
       assert snapshot.metadata.concurrency_limit == 2
-      assert snapshot.metadata.warm_cache_limit == 2
       assert snapshot.metadata.running_count == 0
       assert snapshot.metadata.available_slots == 2
       assert snapshot.metadata.total_queued == 0
@@ -28,12 +26,11 @@ defmodule Agents.Sessions.Domain.Entities.QueueSnapshotTest do
   end
 
   describe "total_queued/1" do
-    test "sums warm, cold, and retry_pending lanes" do
+    test "sums cold and retry_pending lanes" do
       snapshot =
         QueueSnapshot.new(%{
           user_id: "user-123",
           lanes: %{
-            warm: [LaneEntry.new(%{task_id: "warm-1"})],
             cold: [LaneEntry.new(%{task_id: "cold-1"}), LaneEntry.new(%{task_id: "cold-2"})],
             retry_pending: [LaneEntry.new(%{task_id: "retry-1"})],
             processing: [LaneEntry.new(%{task_id: "proc-1"})],
@@ -41,7 +38,7 @@ defmodule Agents.Sessions.Domain.Entities.QueueSnapshotTest do
           }
         })
 
-      assert QueueSnapshot.total_queued(snapshot) == 4
+      assert QueueSnapshot.total_queued(snapshot) == 3
     end
   end
 
@@ -64,36 +61,16 @@ defmodule Agents.Sessions.Domain.Entities.QueueSnapshotTest do
       snapshot =
         QueueSnapshot.new(%{
           user_id: "user-123",
-          lanes: %{warm: [entry]}
+          lanes: %{cold: [entry]}
         })
 
-      assert QueueSnapshot.lane_for(snapshot, :warm) == [entry]
+      assert QueueSnapshot.lane_for(snapshot, :cold) == [entry]
       assert QueueSnapshot.lane_for(snapshot, :processing) == []
     end
   end
 
   describe "to_legacy_map/1" do
     test "converts snapshot to legacy queue map shape" do
-      warm =
-        LaneEntry.new(%{
-          task_id: "warm-1",
-          instruction: "Warm task",
-          status: "queued",
-          lane: :warm,
-          warm_state: :warm,
-          queue_position: 1
-        })
-
-      warming =
-        LaneEntry.new(%{
-          task_id: "warm-2",
-          instruction: "Warming task",
-          status: "queued",
-          lane: :warm,
-          warm_state: :warming,
-          queue_position: 2
-        })
-
       cold =
         LaneEntry.new(%{
           task_id: "cold-1",
@@ -125,23 +102,19 @@ defmodule Agents.Sessions.Domain.Entities.QueueSnapshotTest do
           user_id: "user-123",
           lanes: %{
             processing: [],
-            warm: [warm, warming],
             cold: [cold],
             retry_pending: [retry],
             awaiting_feedback: [awaiting]
           },
-          metadata: %{running_count: 1, concurrency_limit: 3, warm_cache_limit: 2}
+          metadata: %{running_count: 1, concurrency_limit: 3}
         })
 
       legacy = QueueSnapshot.to_legacy_map(snapshot)
 
       assert legacy.running == 1
-      assert Enum.map(legacy.queued, & &1.id) == ["cold-1", "warm-1", "warm-2", "retry-1"]
+      assert Enum.map(legacy.queued, & &1.id) == ["cold-1", "retry-1"]
       assert Enum.map(legacy.awaiting_feedback, & &1.id) == ["awaiting-1"]
       assert legacy.concurrency_limit == 3
-      assert legacy.warm_cache_limit == 2
-      assert legacy.warm_task_ids == ["warm-1"]
-      assert legacy.warming_task_ids == ["warm-2"]
     end
   end
 end

@@ -250,7 +250,11 @@ defmodule AgentsWeb.DashboardLive.PubSubHandlers do
     task = resolve_new_task_ack_task(task, user.id, optimistic_entry)
 
     # Check if this task was started from a ticket before clearing the map.
-    ticket_number = Map.get(socket.assigns.pending_ticket_starts, client_id)
+    ticket_number =
+      Map.get(socket.assigns.pending_ticket_starts, client_id) ||
+        Agents.Tickets.extract_ticket_number(
+          Map.get(task, :instruction) || Map.get(task, "instruction")
+        )
 
     # Subscribe to this task's PubSub topic so we receive status updates
     # (starting, running, completed, etc.). Must happen before the refresh

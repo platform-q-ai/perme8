@@ -531,7 +531,10 @@ defmodule AgentsWeb.DashboardLive.IndexSessionManagementTest do
       assert warm_pos < limit_pos
     end
 
-    test "renders empty warm slots based on warm cache limit", %{conn: conn, user: user} do
+    test "renders empty warm slots when warmed queued sessions leave open warm capacity", %{
+      conn: conn,
+      user: user
+    } do
       task_fixture(%{
         user_id: user.id,
         instruction: "Warm queued session",
@@ -545,14 +548,12 @@ defmodule AgentsWeb.DashboardLive.IndexSessionManagementTest do
         running: 0,
         queued: [],
         awaiting_feedback: [],
-        concurrency_limit: 2,
-        warm_cache_limit: 3
+        concurrency_limit: 2
       })
 
       html = render(lv)
 
       assert html =~ ~s(data-testid="empty-warm-slot-1")
-      assert html =~ ~s(data-testid="empty-warm-slot-2")
     end
 
     test "queued session with real container keeps warm styling outside warm queue window", %{
@@ -601,7 +602,7 @@ defmodule AgentsWeb.DashboardLive.IndexSessionManagementTest do
       assert html =~ "bg-base-content/35"
     end
 
-    test "queued session in warm slot remains cold until warming starts", %{
+    test "queued session remains queued when queue metadata no longer marks warm slots", %{
       conn: conn,
       user: user
     } do
@@ -619,19 +620,18 @@ defmodule AgentsWeb.DashboardLive.IndexSessionManagementTest do
         running: 0,
         queued: [%{id: task.id}],
         awaiting_feedback: [],
-        concurrency_limit: 2,
-        warm_cache_limit: 1
+        concurrency_limit: 2
       })
 
       html = render(lv)
 
       assert html =~ ~s(data-testid="session-item-warming-queued-session")
-      assert html =~ ~s(data-slot-state="warm")
+      assert html =~ ~s(data-slot-state="queued")
       refute html =~ "Warming..."
       assert html =~ "bg-base-content/35"
     end
 
-    test "warm-lane queued session shows warming animation when queue marks it warming", %{
+    test "queued session no longer shows warming animation from removed queue metadata", %{
       conn: conn,
       user: user
     } do
@@ -649,19 +649,16 @@ defmodule AgentsWeb.DashboardLive.IndexSessionManagementTest do
         running: 0,
         queued: [%{id: task.id}],
         awaiting_feedback: [],
-        concurrency_limit: 2,
-        warm_cache_limit: 1,
-        warming_task_ids: [task.id]
+        concurrency_limit: 2
       })
 
       html = render(lv)
 
       assert html =~ ~s(data-testid="session-item-warming-queued-session")
-      assert html =~ ~s(data-slot-state="warming")
-      assert html =~ "Warming..."
-      assert html =~ "animate-pulse"
-      assert html =~ "bg-neutral"
-      refute html =~ "bg-base-content/35"
+      assert html =~ ~s(data-slot-state="queued")
+      refute html =~ "Warming..."
+      refute html =~ "animate-pulse"
+      assert html =~ "bg-base-content/35"
     end
 
     test "warm-lane queued session clears warming animation once container is real", %{
@@ -682,8 +679,7 @@ defmodule AgentsWeb.DashboardLive.IndexSessionManagementTest do
         running: 0,
         queued: [%{id: task.id}],
         awaiting_feedback: [],
-        concurrency_limit: 2,
-        warm_cache_limit: 1
+        concurrency_limit: 2
       })
 
       html = render(lv)
@@ -713,10 +709,7 @@ defmodule AgentsWeb.DashboardLive.IndexSessionManagementTest do
         running: 0,
         queued: [],
         awaiting_feedback: [],
-        concurrency_limit: 2,
-        warm_cache_limit: 1,
-        warm_task_ids: [],
-        warming_task_ids: []
+        concurrency_limit: 2
       })
 
       html = render(lv)
@@ -747,7 +740,7 @@ defmodule AgentsWeb.DashboardLive.IndexSessionManagementTest do
       refute html =~ "Delete queued from header"
     end
 
-    test "warm-task and warming-task ids from queue state keep warming indicator visible", %{
+    test "removed warm queue metadata no longer drives warming indicator", %{
       conn: conn,
       user: user
     } do
@@ -765,20 +758,18 @@ defmodule AgentsWeb.DashboardLive.IndexSessionManagementTest do
         running: 0,
         queued: [%{id: task.id}],
         awaiting_feedback: [],
-        concurrency_limit: 2,
-        warm_cache_limit: 1,
-        warming_task_ids: [task.id]
+        concurrency_limit: 2
       })
 
       html = render(lv)
 
       assert html =~ ~s(data-testid="session-item-warm-via-queue-state-ids")
-      assert html =~ ~s(data-slot-state="warming")
-      assert html =~ "Warming..."
-      assert html =~ "animate-pulse"
+      assert html =~ ~s(data-slot-state="queued")
+      refute html =~ "Warming..."
+      refute html =~ "animate-pulse"
     end
 
-    test "queued ticket in warm slot renders as ticket card not session card", %{
+    test "queued ticket still renders as ticket card without warm slot metadata", %{
       conn: conn,
       user: user
     } do
@@ -808,8 +799,7 @@ defmodule AgentsWeb.DashboardLive.IndexSessionManagementTest do
         running: 0,
         queued: [%{id: task.id}],
         awaiting_feedback: [],
-        concurrency_limit: 2,
-        warm_cache_limit: 1
+        concurrency_limit: 2
       })
 
       html = render(lv)
@@ -823,8 +813,7 @@ defmodule AgentsWeb.DashboardLive.IndexSessionManagementTest do
       assert html =~ "Warm ticket test"
       assert html =~ "warm-test"
 
-      # Should be in a warm slot
-      assert html =~ ~s(data-slot-state="warm")
+      assert html =~ ~s(data-slot-state="queued")
     end
 
     test "renders queue limit rule above the slot at concurrency threshold", %{

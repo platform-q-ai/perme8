@@ -11,6 +11,7 @@ defmodule AgentsWeb.DashboardLive.TicketHandlersTest do
   import Agents.SessionsFixtures
   import Ecto.Query
 
+  alias Agents.Sessions.Infrastructure.Repositories.TaskRepository
   alias Agents.Sessions.Infrastructure.Schemas.TaskSchema
   alias Agents.Tickets.Infrastructure.Repositories.ProjectTicketRepository
   alias Agents.Repo
@@ -67,11 +68,25 @@ defmodule AgentsWeb.DashboardLive.TicketHandlersTest do
   describe "start_ticket_session" do
     setup %{conn: conn} do
       user = user_fixture()
+
+      Application.put_env(:agents, :task_runner_starter, fn _task_id, _runner_opts ->
+        {:ok, self()}
+      end)
+
+      Application.put_env(
+        :agents_web,
+        :ticket_session_task_creator,
+        &TaskRepository.create_task/1
+      )
+
       # Allow sandbox access from spawned processes (start_ticket_session
       # uses spawn_monitor to create the task asynchronously).
       Sandbox.mode(Repo, {:shared, self()})
 
       on_exit(fn ->
+        Application.delete_env(:agents, :task_runner_starter)
+        Application.delete_env(:agents_web, :ticket_session_task_creator)
+
         # Give in-flight DB operations (ticket linking, task updates) time
         # to finish before the sandbox connection is reclaimed.
         Process.sleep(100)
@@ -167,6 +182,7 @@ defmodule AgentsWeb.DashboardLive.TicketHandlersTest do
         |> limit(1)
 
       task = await_task_created(task_query)
+      task_id = task.id
 
       # Wait for the LiveView to process the :new_task_created message
       # which sets current_task. Without this, the :task_event guard
@@ -175,16 +191,11 @@ defmodule AgentsWeb.DashboardLive.TicketHandlersTest do
       # session (indicated by the composing_new=false state showing the
       # chat panel instead of the new-session form).
       await_lv_condition(fn ->
-        html = render(lv)
-        String.contains?(html, "pick up ticket #702")
+        case :sys.get_state(lv.pid) do
+          %{socket: %{assigns: %{current_task: %{id: ^task_id}}}} -> true
+          _ -> false
+        end
       end)
-
-      # Starting a ticket session navigates with tab: "ticket", so
-      # output_parts (which render in the chat tab panel) are hidden.
-      # Switch to the chat tab before asserting streamed output content.
-      lv
-      |> element(~s([data-tab-id="chat"]))
-      |> render_click()
 
       # Simulate a message.part.updated event with assistant text.
       # If current_task was properly set, the event will be processed by
@@ -205,11 +216,18 @@ defmodule AgentsWeb.DashboardLive.TicketHandlersTest do
          }}
       )
 
-      html = render(lv)
+      await_lv_condition(fn ->
+        case :sys.get_state(lv.pid) do
+          %{socket: %{assigns: %{output_parts: output_parts}}} ->
+            Enum.any?(output_parts, fn
+              {:text, _part_id, "Working on ticket 702", _status} -> true
+              _ -> false
+            end)
 
-      # The assistant text should appear in output_parts — proving
-      # current_task was set and the task_event guard matched.
-      assert html =~ "Working on ticket 702"
+          _ ->
+            false
+        end
+      end)
     end
 
     test "ticket moves to build queue after successful task creation", %{conn: conn, user: user} do

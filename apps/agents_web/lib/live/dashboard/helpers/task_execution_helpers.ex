@@ -552,7 +552,7 @@ defmodule AgentsWeb.DashboardLive.Helpers.TaskExecutionHelpers do
 
   def request_task_refresh(socket, _task_id), do: socket
 
-  def derive_sticky_warm_task_ids(sessions, queue_state, previous_sticky) do
+  def derive_sticky_warm_task_ids(sessions, _queue_state, previous_sticky) do
     queued_session_ids =
       sessions
       |> Enum.filter(&(&1.latest_status == "queued"))
@@ -567,28 +567,12 @@ defmodule AgentsWeb.DashboardLive.Helpers.TaskExecutionHelpers do
       |> Enum.filter(&is_binary/1)
       |> MapSet.new()
 
-    warm_limit = Map.get(queue_state || %{}, :warm_cache_limit, 0)
-
-    queue_window_ids =
-      queue_state
-      |> Map.get(:queued, [])
-      |> Enum.take(warm_limit)
-      |> Enum.map(& &1.id)
-      |> Enum.filter(&is_binary/1)
-
-    queue_signaled_ids =
-      (Map.get(queue_state || %{}, :warm_task_ids, []) || []) ++
-        (Map.get(queue_state || %{}, :warming_task_ids, []) || []) ++ queue_window_ids
-
-    queue_signaled_ids = queue_signaled_ids |> Enum.filter(&is_binary/1) |> MapSet.new()
-
     previous_still_queued =
       previous_sticky
       |> MapSet.new()
       |> MapSet.intersection(queued_session_ids)
 
-    queue_signaled_ids
-    |> MapSet.union(previous_still_queued)
+    previous_still_queued
     |> MapSet.union(queued_real_container_ids)
   end
 
@@ -603,10 +587,7 @@ defmodule AgentsWeb.DashboardLive.Helpers.TaskExecutionHelpers do
       running: 0,
       queued: [],
       awaiting_feedback: [],
-      concurrency_limit: 2,
-      warm_cache_limit: 2,
-      warm_task_ids: [],
-      warming_task_ids: []
+      concurrency_limit: 2
     }
   end
 

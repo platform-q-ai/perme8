@@ -26,11 +26,10 @@ defmodule Agents.Sessions.Application.UseCases.BuildSnapshotTest do
           started_at: ~U[2026-01-01 00:00:00Z]
         },
         %{
-          id: "warm-1",
-          instruction: "Queued warm",
+          id: "queued-1",
+          instruction: "Queued task",
           status: "queued",
-          queue_position: 1,
-          container_id: "container-1"
+          queue_position: 1
         }
       ])
 
@@ -46,7 +45,7 @@ defmodule Agents.Sessions.Application.UseCases.BuildSnapshotTest do
       assert_receive {:list_tasks_for_user, "user-1", [status: :active]}
       assert_receive {:list_awaiting_feedback_tasks, "user-1"}
       assert Enum.map(snapshot.lanes.processing, & &1.task_id) == ["running-1"]
-      assert Enum.map(snapshot.lanes.warm, & &1.task_id) == ["warm-1"]
+      assert Enum.map(snapshot.lanes.cold, & &1.task_id) == ["queued-1"]
       assert Enum.map(snapshot.lanes.awaiting_feedback, & &1.task_id) == ["feedback-1"]
     end
 
@@ -60,7 +59,6 @@ defmodule Agents.Sessions.Application.UseCases.BuildSnapshotTest do
                )
 
       assert snapshot.lanes.processing == []
-      assert snapshot.lanes.warm == []
       assert snapshot.lanes.cold == []
       assert snapshot.lanes.awaiting_feedback == []
       assert snapshot.lanes.retry_pending == []
@@ -85,7 +83,6 @@ defmodule Agents.Sessions.Application.UseCases.BuildSnapshotTest do
                )
 
       assert snapshot.metadata.concurrency_limit == 2
-      assert snapshot.metadata.warm_cache_limit == 2
       assert snapshot.metadata.running_count == 1
       assert snapshot.metadata.available_slots == 1
     end

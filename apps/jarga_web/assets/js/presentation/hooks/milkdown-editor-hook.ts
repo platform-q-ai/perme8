@@ -86,6 +86,8 @@ export class MilkdownEditorHook extends ViewHook {
   // Cleanup functions
   private cleanupDocumentSync?: () => void;
   private cleanupAwarenessSync?: () => void;
+  private readonlyEditor?: Editor;
+  private isDestroyed = false;
 
   // Configuration
   private isReadonly = false;
@@ -103,6 +105,8 @@ export class MilkdownEditorHook extends ViewHook {
    * 5. Register LiveView events
    */
   mounted(): void {
+    this.isDestroyed = false;
+
     // Step 1: Read configuration from data attributes
     const yjsState = this.el.dataset.yjsState || "";
     const initialContent = this.el.dataset.initialContent || "";
@@ -156,6 +160,14 @@ export class MilkdownEditorHook extends ViewHook {
         },
       })
       .then((result) => {
+        if (this.isDestroyed) {
+          result.collaborationAdapter.destroy();
+          result.milkdownAdapter.destroy();
+          result.yjsAwarenessAdapter.destroy();
+          result.yjsDocumentAdapter.destroy();
+          return;
+        }
+
         // Store adapters for lifecycle management
         this.yjsDocumentAdapter = result.yjsDocumentAdapter;
         this.yjsAwarenessAdapter = result.yjsAwarenessAdapter;
@@ -205,9 +217,19 @@ export class MilkdownEditorHook extends ViewHook {
     editor.use(gfm);
 
     // Create editor
+    this.readonlyEditor = editor;
+
     editor
       .create()
       .then(() => {
+        if (this.isDestroyed) {
+          editor.destroy();
+          if (this.readonlyEditor === editor) {
+            this.readonlyEditor = undefined;
+          }
+          return;
+        }
+
         // After editor is created, set it to non-editable
         editor.action((ctx) => {
           const view = ctx.get(editorViewCtx);
@@ -531,9 +553,12 @@ export class MilkdownEditorHook extends ViewHook {
    * This is critical for preventing memory leaks.
    */
   destroyed(): void {
+    this.isDestroyed = true;
+
     // Clean up document sync listener
     if (this.cleanupDocumentSync) {
       this.cleanupDocumentSync();
+      this.cleanupDocumentSync = undefined;
     }
 
     // Destroy awareness adapter BEFORE cleaning up sync listener.
@@ -546,6 +571,7 @@ export class MilkdownEditorHook extends ViewHook {
     // Now clean up awareness sync (sets isCleanedUp flag)
     if (this.cleanupAwarenessSync) {
       this.cleanupAwarenessSync();
+      this.cleanupAwarenessSync = undefined;
     }
 
     // Destroy remaining adapters in reverse order
@@ -554,6 +580,10 @@ export class MilkdownEditorHook extends ViewHook {
     }
     if (this.milkdownAdapter) {
       this.milkdownAdapter.destroy();
+    }
+    if (this.readonlyEditor) {
+      this.readonlyEditor.destroy();
+      this.readonlyEditor = undefined;
     }
     if (this.yjsDocumentAdapter) {
       this.yjsDocumentAdapter.destroy();

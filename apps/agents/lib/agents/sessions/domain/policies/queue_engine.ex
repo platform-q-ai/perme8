@@ -6,7 +6,7 @@ defmodule Agents.Sessions.Domain.Policies.QueueEngine do
   alias Agents.Sessions.Domain.Entities.{LaneEntry, QueueSnapshot}
   alias Agents.Sessions.Domain.Policies.SessionLifecyclePolicy
 
-  @type lane :: :processing | :warm | :cold | :awaiting_feedback | :retry_pending | :terminal
+  @type lane :: :processing | :cold | :awaiting_feedback | :retry_pending | :terminal
 
   @valid_transitions MapSet.new([
                        {"queued", "pending"},
@@ -38,11 +38,7 @@ defmodule Agents.Sessions.Domain.Policies.QueueEngine do
   defp assign_queued_lane(task) do
     retry_count = value(task, :retry_count) || 0
 
-    cond do
-      retry_count > 0 -> :retry_pending
-      real_container?(value(task, :container_id)) -> :warm
-      true -> :cold
-    end
+    if retry_count > 0, do: :retry_pending, else: :cold
   end
 
   @doc """
@@ -78,7 +74,6 @@ defmodule Agents.Sessions.Domain.Policies.QueueEngine do
 
     lanes = %{
       processing: lane_entries |> filter_lane(:processing) |> sort_processing(),
-      warm: lane_entries |> filter_lane(:warm) |> sort_by_queue_position(),
       cold: lane_entries |> filter_lane(:cold) |> sort_by_queue_position(),
       awaiting_feedback: lane_entries |> filter_lane(:awaiting_feedback),
       retry_pending: lane_entries |> filter_lane(:retry_pending) |> sort_by_queue_position()
@@ -90,17 +85,15 @@ defmodule Agents.Sessions.Domain.Policies.QueueEngine do
       |> length()
 
     concurrency_limit = config[:concurrency_limit] || 2
-    warm_cache_limit = config[:warm_cache_limit] || 2
 
     QueueSnapshot.new(%{
       user_id: config[:user_id],
       lanes: lanes,
       metadata: %{
         concurrency_limit: concurrency_limit,
-        warm_cache_limit: warm_cache_limit,
         running_count: running_count,
         available_slots: concurrency_limit - running_count,
-        total_queued: length(lanes.warm) + length(lanes.cold) + length(lanes.retry_pending)
+        total_queued: length(lanes.cold) + length(lanes.retry_pending)
       }
     })
   end
@@ -114,13 +107,12 @@ defmodule Agents.Sessions.Domain.Policies.QueueEngine do
   end
 
   @doc """
-  Returns warm + cold tasks sorted by promotion priority.
+  Returns queued tasks sorted by promotion priority.
   """
   @spec promotable_tasks(QueueSnapshot.t()) :: [LaneEntry.t()]
   def promotable_tasks(%QueueSnapshot{} = snapshot) do
-    warm = sort_by_queue_position(snapshot.lanes.warm)
     cold = sort_by_queue_position(snapshot.lanes.cold)
-    warm ++ cold
+    cold
   end
 
   @doc """
@@ -199,12 +191,6 @@ defmodule Agents.Sessions.Domain.Policies.QueueEngine do
       end
     end)
   end
-
-  defp real_container?(container_id) when is_binary(container_id) do
-    container_id != "" and not String.starts_with?(container_id, "task:")
-  end
-
-  defp real_container?(_), do: false
 
   defp value(map, key) do
     case Map.fetch(map, key) do

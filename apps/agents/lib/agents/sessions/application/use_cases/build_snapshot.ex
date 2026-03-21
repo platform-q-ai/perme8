@@ -22,9 +22,7 @@ defmodule Agents.Sessions.Application.UseCases.BuildSnapshot do
     config = %{
       user_id: user_id,
       concurrency_limit:
-        Keyword.get(opts, :concurrency_limit, SessionsConfig.default_concurrency_limit()),
-      warm_cache_limit:
-        Keyword.get(opts, :warm_cache_limit, SessionsConfig.default_warm_cache_limit())
+        Keyword.get(opts, :concurrency_limit, SessionsConfig.default_concurrency_limit())
     }
 
     snapshot = QueueEngine.build_snapshot(all_tasks, config)

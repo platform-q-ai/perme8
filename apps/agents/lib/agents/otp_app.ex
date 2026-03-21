@@ -12,6 +12,7 @@ defmodule Agents.OTPApp do
   alias Agents.Sessions.Infrastructure.QueueOrchestratorSupervisor
   alias Agents.Sessions.Infrastructure.TaskRunnerSupervisor
   alias Agents.Pipeline.Infrastructure.PipelineEventHandler
+  alias Agents.Pipeline.Infrastructure.PipelineScheduler
   alias Agents.Tickets.Infrastructure.Subscribers.GithubTicketPushHandler
   alias Agents.Tickets.Infrastructure.TicketSyncServer
 
@@ -31,7 +32,7 @@ defmodule Agents.OTPApp do
           TicketSyncServer,
           PipelineEventHandler,
           GithubTicketPushHandler
-        ] ++ mcp_children() ++ mcp_http_children()
+        ] ++ pipeline_scheduler_children() ++ mcp_children() ++ mcp_http_children()
 
     opts = [strategy: :one_for_one, name: Agents.Supervisor]
     Supervisor.start_link(children, opts)
@@ -51,6 +52,14 @@ defmodule Agents.OTPApp do
     transport = mcp_transport()
 
     [{Agents.Infrastructure.Mcp.Server, transport: transport}]
+  end
+
+  defp pipeline_scheduler_children do
+    if Application.get_env(:agents, :pipeline_scheduler_enabled, false) do
+      [PipelineScheduler]
+    else
+      []
+    end
   end
 
   defp mcp_transport do

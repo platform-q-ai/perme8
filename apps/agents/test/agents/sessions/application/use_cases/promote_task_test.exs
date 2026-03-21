@@ -25,16 +25,15 @@ defmodule Agents.Sessions.Application.UseCases.PromoteTaskTest do
   alias Agents.Sessions.Domain.Events.{TaskLaneChanged, TaskPromoted}
 
   describe "execute/2" do
-    test "promotes warm tasks before cold" do
+    test "promotes queued tasks by queue position" do
       snapshot =
         QueueSnapshot.new(%{
           user_id: "user-1",
           lanes: %{
-            warm: [
-              LaneEntry.new(%{task_id: "warm-2", queue_position: 2, lane: :warm}),
-              LaneEntry.new(%{task_id: "warm-1", queue_position: 1, lane: :warm})
-            ],
-            cold: [LaneEntry.new(%{task_id: "cold-1", queue_position: 1, lane: :cold})]
+            cold: [
+              LaneEntry.new(%{task_id: "cold-2", queue_position: 2, lane: :cold}),
+              LaneEntry.new(%{task_id: "cold-1", queue_position: 1, lane: :cold})
+            ]
           },
           metadata: %{concurrency_limit: 2, running_count: 1}
         })
@@ -45,13 +44,13 @@ defmodule Agents.Sessions.Application.UseCases.PromoteTaskTest do
                  event_bus: Agents.Sessions.Application.UseCases.PromoteTaskMockEventBus
                )
 
-      assert promoted.id == "warm-1"
-      assert_receive {:get_task, "warm-1"}
+      assert promoted.id == "cold-1"
+      assert_receive {:get_task, "cold-1"}
 
-      assert_receive {:update_task_status, "warm-1",
+      assert_receive {:update_task_status, "cold-1",
                       %{status: "pending", queue_position: nil, queued_at: nil}}
 
-      refute_received {:get_task, "cold-1"}
+      refute_received {:get_task, "cold-2"}
     end
 
     test "respects available_slots limit" do
@@ -59,8 +58,8 @@ defmodule Agents.Sessions.Application.UseCases.PromoteTaskTest do
         QueueSnapshot.new(%{
           user_id: "user-1",
           lanes: %{
-            warm: [LaneEntry.new(%{task_id: "warm-1", queue_position: 1, lane: :warm})],
             cold: [
+              LaneEntry.new(%{task_id: "cold-0", queue_position: 1, lane: :cold}),
               LaneEntry.new(%{task_id: "cold-1", queue_position: 2, lane: :cold}),
               LaneEntry.new(%{task_id: "cold-2", queue_position: 3, lane: :cold})
             ]
@@ -74,7 +73,7 @@ defmodule Agents.Sessions.Application.UseCases.PromoteTaskTest do
                  event_bus: Agents.Sessions.Application.UseCases.PromoteTaskMockEventBus
                )
 
-      assert Enum.map(promoted, & &1.id) == ["warm-1", "cold-1"]
+      assert Enum.map(promoted, & &1.id) == ["cold-0", "cold-1"]
       refute_received {:get_task, "cold-2"}
     end
 
@@ -83,7 +82,7 @@ defmodule Agents.Sessions.Application.UseCases.PromoteTaskTest do
         QueueSnapshot.new(%{
           user_id: "user-1",
           lanes: %{
-            warm: [LaneEntry.new(%{task_id: "warm-1", queue_position: 1, lane: :warm})]
+            cold: [LaneEntry.new(%{task_id: "cold-1", queue_position: 1, lane: :cold})]
           },
           metadata: %{concurrency_limit: 1, running_count: 0}
         })
@@ -95,12 +94,12 @@ defmodule Agents.Sessions.Application.UseCases.PromoteTaskTest do
                )
 
       assert_receive {:emit, %TaskPromoted{} = promoted_event}
-      assert promoted_event.task_id == "warm-1"
+      assert promoted_event.task_id == "cold-1"
       assert promoted_event.user_id == "user-1"
 
       assert_receive {:emit, %TaskLaneChanged{} = lane_event}
-      assert lane_event.task_id == "warm-1"
-      assert lane_event.from_lane == :warm
+      assert lane_event.task_id == "cold-1"
+      assert lane_event.from_lane == :cold
       assert lane_event.to_lane == :processing
     end
 
@@ -109,7 +108,7 @@ defmodule Agents.Sessions.Application.UseCases.PromoteTaskTest do
         QueueSnapshot.new(%{
           user_id: "user-1",
           lanes: %{
-            warm: [LaneEntry.new(%{task_id: "warm-1", queue_position: 1, lane: :warm})]
+            cold: [LaneEntry.new(%{task_id: "cold-1", queue_position: 1, lane: :cold})]
           },
           metadata: %{concurrency_limit: 1, running_count: 1}
         })
@@ -128,7 +127,7 @@ defmodule Agents.Sessions.Application.UseCases.PromoteTaskTest do
       snapshot =
         QueueSnapshot.new(%{
           user_id: "user-1",
-          lanes: %{warm: [], cold: []},
+          lanes: %{cold: []},
           metadata: %{concurrency_limit: 2, running_count: 0}
         })
 
@@ -151,15 +150,13 @@ defmodule Agents.Sessions.Application.UseCases.PromoteTaskTest do
                 lane: :processing
               })
             ],
-            warm: [
+            cold: [
               LaneEntry.new(%{
                 task_id: "light-1",
                 image: "perme8-opencode-light",
                 queue_position: 1,
-                lane: :warm
-              })
-            ],
-            cold: [
+                lane: :cold
+              }),
               LaneEntry.new(%{
                 task_id: "heavy-queued",
                 image: "perme8-opencode",
@@ -177,7 +174,6 @@ defmodule Agents.Sessions.Application.UseCases.PromoteTaskTest do
                  event_bus: Agents.Sessions.Application.UseCases.PromoteTaskMockEventBus
                )
 
-      # Light image promoted, heavyweight blocked
       assert Enum.map(promoted, & &1.id) == ["light-1"]
       assert_receive {:get_task, "light-1"}
       refute_received {:get_task, "heavy-queued"}
@@ -188,21 +184,20 @@ defmodule Agents.Sessions.Application.UseCases.PromoteTaskTest do
         QueueSnapshot.new(%{
           user_id: "user-1",
           lanes: %{
-            warm: [
+            cold: [
               LaneEntry.new(%{
                 task_id: "light-1",
                 image: "perme8-opencode-light",
                 queue_position: 1,
-                lane: :warm
+                lane: :cold
               }),
               LaneEntry.new(%{
                 task_id: "heavy-1",
                 image: "perme8-opencode",
                 queue_position: 2,
-                lane: :warm
+                lane: :cold
               })
-            ],
-            cold: []
+            ]
           },
           metadata: %{concurrency_limit: 2, running_count: 0}
         })
@@ -213,9 +208,7 @@ defmodule Agents.Sessions.Application.UseCases.PromoteTaskTest do
                  event_bus: Agents.Sessions.Application.UseCases.PromoteTaskMockEventBus
                )
 
-      promoted_ids = Enum.map(promoted, & &1.id)
-      assert "light-1" in promoted_ids
-      assert "heavy-1" in promoted_ids
+      assert Enum.map(promoted, & &1.id) == ["light-1", "heavy-1"]
     end
 
     test "does not double-promote light image tasks" do
@@ -223,15 +216,14 @@ defmodule Agents.Sessions.Application.UseCases.PromoteTaskTest do
         QueueSnapshot.new(%{
           user_id: "user-1",
           lanes: %{
-            warm: [
+            cold: [
               LaneEntry.new(%{
                 task_id: "light-1",
                 image: "perme8-opencode-light",
                 queue_position: 1,
-                lane: :warm
+                lane: :cold
               })
-            ],
-            cold: []
+            ]
           },
           metadata: %{concurrency_limit: 2, running_count: 0}
         })
@@ -242,7 +234,6 @@ defmodule Agents.Sessions.Application.UseCases.PromoteTaskTest do
                  event_bus: Agents.Sessions.Application.UseCases.PromoteTaskMockEventBus
                )
 
-      # Should only promote light-1 once, not twice
       assert Enum.map(promoted, & &1.id) == ["light-1"]
     end
   end
