@@ -4,6 +4,7 @@ defmodule AgentsWeb.DashboardLive.Index do
   use AgentsWeb, :live_view
 
   import AgentsWeb.DashboardLive.Components.SessionComponents
+  import AgentsWeb.DashboardLive.Components.PipelineKanbanComponents
   import AgentsWeb.DashboardLive.Components.SidebarComponents
   import AgentsWeb.DashboardLive.Components.DetailPanelComponents
   import AgentsWeb.DashboardLive.Helpers
@@ -21,6 +22,7 @@ defmodule AgentsWeb.DashboardLive.Index do
   alias AgentsWeb.DashboardLive.DependencyHandlers
   alias AgentsWeb.DashboardLive.EventProcessor
   alias AgentsWeb.DashboardLive.FollowUpDispatchHandlers
+  alias AgentsWeb.DashboardLive.PipelineKanbanHandlers
   alias AgentsWeb.DashboardLive.PubSubHandlers
   alias AgentsWeb.DashboardLive.QuestionHandlers
   alias AgentsWeb.DashboardLive.SessionHandlers
@@ -42,6 +44,7 @@ defmodule AgentsWeb.DashboardLive.Index do
       Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "queue:user:#{user.id}")
       Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "sessions:user:#{user.id}")
       Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "sessions:tickets")
+      Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "events:pipeline:pipeline_run")
     end
 
     available_images = Sessions.available_images()
@@ -79,6 +82,8 @@ defmodule AgentsWeb.DashboardLive.Index do
      |> assign(:status_filter, :open)
      |> assign(:collapsed_parents, MapSet.new())
      |> assign(:fixture, nil)
+     |> assign(:pipeline_kanban_collapsed, false)
+     |> assign(:collapsed_kanban_columns, MapSet.new())
      |> assign(:syncing_tickets, false)
      |> assign(:dependency_search_mode, false)
      |> assign(:dependency_search_results, [])
@@ -229,6 +234,18 @@ defmodule AgentsWeb.DashboardLive.Index do
     panel_atom = if panel == "detail", do: :detail, else: :list
     {:noreply, assign(socket, :mobile_panel, panel_atom)}
   end
+
+  @impl true
+  def handle_event("toggle_pipeline_kanban", params, socket),
+    do: PipelineKanbanHandlers.toggle_pipeline_kanban(params, socket)
+
+  @impl true
+  def handle_event("toggle_kanban_column", params, socket),
+    do: PipelineKanbanHandlers.toggle_kanban_column(params, socket)
+
+  @impl true
+  def handle_event("select_kanban_ticket", params, socket),
+    do: PipelineKanbanHandlers.select_kanban_ticket(params, socket)
 
   # -- Session Handlers --------------------------------------------------------
 
@@ -383,6 +400,10 @@ defmodule AgentsWeb.DashboardLive.Index do
   @impl true
   def handle_info(%TicketStageChanged{} = event, socket),
     do: PubSubHandlers.ticket_stage_changed_event(event, socket)
+
+  @impl true
+  def handle_info(%{event_type: "pipeline.pipeline_stage_changed"} = event, socket),
+    do: PipelineKanbanHandlers.pipeline_stage_changed_event(event, socket)
 
   @impl true
   def handle_info({:ticket_sync_finished, _result}, socket),

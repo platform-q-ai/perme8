@@ -14,24 +14,34 @@ defmodule AgentsWeb.DashboardLive.TicketLifecycleFixtures do
 
   def maybe_apply_ticket_lifecycle_fixture(socket, %{"fixture" => fixture})
       when is_binary(fixture) do
-    case ticket_lifecycle_fixture_tickets(fixture) do
-      [] ->
+    case fixture_payload(fixture) do
+      %{tickets: []} ->
         assign(socket, :fixture, fixture)
 
-      tickets ->
-        active_ticket_number = tickets |> List.first() |> then(&(&1 && &1.number))
+      payload ->
+        active_ticket_number =
+          payload[:active_ticket_number] ||
+            payload.tickets |> List.first() |> then(&(&1 && &1.number))
 
         socket
         |> assign(:fixture, fixture)
-        |> assign(:sessions, [])
+        |> assign(:sessions, Map.get(payload, :sessions, []))
         |> assign(:tasks_snapshot, [])
-        |> assign(:tickets, tickets)
+        |> assign(:tickets, payload.tickets)
         |> assign(:active_ticket_number, active_ticket_number)
+        |> assign(:pipeline_kanban_collapsed, Map.get(payload, :pipeline_kanban_collapsed, false))
     end
   end
 
   def maybe_apply_ticket_lifecycle_fixture(socket, _params) do
-    assign(socket, :fixture, nil)
+    socket
+    |> assign(:fixture, nil)
+    |> assign(:pipeline_kanban_collapsed, false)
+  end
+
+  defp fixture_payload(fixture) do
+    %{tickets: ticket_lifecycle_fixture_tickets(fixture)}
+    |> Map.merge(pipeline_kanban_fixture_payload(fixture))
   end
 
   def ticket_lifecycle_fixture_tickets("ticket_lifecycle_in_progress") do
@@ -195,7 +205,91 @@ defmodule AgentsWeb.DashboardLive.TicketLifecycleFixtures do
     ]
   end
 
+  def ticket_lifecycle_fixture_tickets("pipeline_kanban_layout_enabled") do
+    pipeline_kanban_fixture_tickets()
+  end
+
+  def ticket_lifecycle_fixture_tickets("pipeline_kanban_stage_columns") do
+    pipeline_kanban_fixture_tickets()
+  end
+
+  def ticket_lifecycle_fixture_tickets("pipeline_kanban_ticket_positions") do
+    pipeline_kanban_fixture_tickets()
+  end
+
+  def ticket_lifecycle_fixture_tickets("pipeline_kanban_rollup") do
+    pipeline_kanban_fixture_tickets(:rollup)
+  end
+
+  def ticket_lifecycle_fixture_tickets("pipeline_kanban_collapsible") do
+    pipeline_kanban_fixture_tickets()
+  end
+
+  def ticket_lifecycle_fixture_tickets("pipeline_kanban_ticket_to_session_selection") do
+    [
+      lifecycle_fixture_ticket(402, "Add pipeline kanban row",
+        lifecycle_stage: "in_progress",
+        associated_container_id: "c-pipeline-402"
+      )
+    ]
+  end
+
+  def ticket_lifecycle_fixture_tickets("pipeline_kanban_live_stage_change") do
+    [
+      lifecycle_fixture_ticket(425, "Live pipeline movement",
+        lifecycle_stage: "ready",
+        associated_task_id: "task-425"
+      )
+    ]
+  end
+
+  def ticket_lifecycle_fixture_tickets("pipeline_kanban_header_status_summary") do
+    [
+      lifecycle_fixture_ticket(431, "Review check one", lifecycle_stage: "in_review"),
+      lifecycle_fixture_ticket(432, "Review check two", lifecycle_stage: "in_review")
+    ]
+  end
+
   def ticket_lifecycle_fixture_tickets(_fixture), do: []
+
+  defp pipeline_kanban_fixture_payload("pipeline_kanban_collapsible"),
+    do: %{pipeline_kanban_collapsed: true}
+
+  defp pipeline_kanban_fixture_payload("pipeline_kanban_ticket_to_session_selection") do
+    %{
+      sessions: [
+        %{
+          container_id: "c-pipeline-402",
+          latest_task_id: "task-402",
+          latest_status: "running",
+          latest_at: DateTime.utc_now() |> DateTime.truncate(:second),
+          title: "Selected session: #402"
+        }
+      ]
+    }
+  end
+
+  defp pipeline_kanban_fixture_payload(_fixture), do: %{}
+
+  defp pipeline_kanban_fixture_tickets(mode \\ :default) do
+    rollup_tickets =
+      if mode == :rollup do
+        [
+          lifecycle_fixture_ticket(410, "Rollup ticket one", lifecycle_stage: "in_progress"),
+          lifecycle_fixture_ticket(411, "Rollup ticket two", lifecycle_stage: "in_progress"),
+          lifecycle_fixture_ticket(412, "Rollup ticket three", lifecycle_stage: "in_progress")
+        ]
+      else
+        []
+      end
+
+    [
+      lifecycle_fixture_ticket(402, "Add pipeline kanban row", lifecycle_stage: "in_progress"),
+      lifecycle_fixture_ticket(403, "Prepare review state", lifecycle_stage: "in_review"),
+      lifecycle_fixture_ticket(404, "CI verification", lifecycle_stage: "ci_testing"),
+      lifecycle_fixture_ticket(405, "Deploy release", lifecycle_stage: "deployed")
+    ] ++ rollup_tickets
+  end
 
   def lifecycle_fixture_ticket(number, title, attrs) do
     defaults = %{

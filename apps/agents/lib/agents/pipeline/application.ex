@@ -3,7 +3,7 @@ defmodule Agents.Pipeline.Application do
 
   use Boundary,
     top_level?: true,
-    deps: [Agents.Pipeline.Domain, Agents.Sessions],
+    deps: [Agents.Pipeline.Domain, Agents.Sessions, Agents.Tickets.Domain],
     exports: [
       Behaviours.PipelineRunRepositoryBehaviour,
       Behaviours.PullRequestRepositoryBehaviour,
@@ -17,6 +17,7 @@ defmodule Agents.Pipeline.Application do
       UseCases.CommentOnPullRequest,
       UseCases.ClosePullRequest,
       UseCases.CreatePullRequest,
+      UseCases.GetPipelineKanban,
       UseCases.GetPipelineStatus,
       UseCases.GetPullRequest,
       UseCases.GetPullRequestDiff,

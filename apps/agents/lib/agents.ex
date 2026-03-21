@@ -35,6 +35,7 @@ defmodule Agents do
       Agents.Domain,
       Agents.Application,
       Agents.Infrastructure,
+      Agents.Pipeline,
       Agents.Sessions.Infrastructure,
       Agents.Tickets.Infrastructure,
       Agents.Repo
@@ -44,6 +45,7 @@ defmodule Agents do
     ]
 
   alias Agents.Infrastructure.Services.LlmClient
+  alias Agents.Pipeline
 
   alias Agents.Application.UseCases.{
     AgentQuery,
@@ -182,6 +184,10 @@ defmodule Agents do
   """
   @spec validate_agent_params(map()) :: Ecto.Changeset.t()
   defdelegate validate_agent_params(attrs), to: ValidateAgentParams, as: :execute
+
+  @doc "Builds the sessions dashboard pipeline kanban model."
+  @spec get_pipeline_kanban([map()], keyword()) :: {:ok, map()} | {:error, term()}
+  defdelegate get_pipeline_kanban(tickets, opts \\ []), to: Pipeline, as: :get_pipeline_kanban
 
   @doc """
   Updates an agent owned by the user.

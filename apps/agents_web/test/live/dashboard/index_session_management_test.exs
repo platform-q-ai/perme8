@@ -290,23 +290,9 @@ defmodule AgentsWeb.DashboardLive.IndexSessionManagementTest do
 
       html = render(lv)
 
-      assert html =~ ~s(data-testid="empty-concurrency-slot-1")
-      assert html =~ ~s(data-testid="empty-concurrency-slot-2")
-      assert length(:binary.matches(html, ~s(data-slot-state="empty"))) == 2
-
-      empty_pos =
-        html
-        |> :binary.matches(~s(data-testid="empty-concurrency-slot-1"))
-        |> List.first()
-        |> elem(0)
-
-      running_pos =
-        html
-        |> :binary.matches(~s(data-testid="session-item-running-session"))
-        |> List.first()
-        |> elem(0)
-
-      assert empty_pos < running_pos
+      assert html =~ ~s(data-testid="pipeline-kanban")
+      refute html =~ ~s(data-testid="empty-concurrency-slot-1")
+      assert html =~ ~s(data-testid="session-item-running-session")
     end
 
     test "queue concurrency updates rerender empty slot cards", %{conn: conn, user: user} do
@@ -327,8 +313,8 @@ defmodule AgentsWeb.DashboardLive.IndexSessionManagementTest do
       })
 
       html = render(lv)
-      assert html =~ ~s(data-testid="empty-concurrency-slot-1")
-      refute html =~ ~s(data-testid="empty-concurrency-slot-2")
+      assert html =~ ~s(data-testid="pipeline-kanban")
+      refute html =~ ~s(data-testid="empty-concurrency-slot-1")
 
       send_queue_state(lv, user.id, %{
         running: 2,
@@ -338,8 +324,8 @@ defmodule AgentsWeb.DashboardLive.IndexSessionManagementTest do
       })
 
       html = render(lv)
-      assert html =~ ~s(data-testid="empty-concurrency-slot-2")
-      assert length(:binary.matches(html, ~s(data-slot-state="empty"))) == 2
+      assert html =~ ~s(data-testid="pipeline-kanban")
+      refute html =~ ~s(data-testid="empty-concurrency-slot-2")
     end
 
     test "concurrency limit 0 shows no empty slots and no concurrency slots", %{
@@ -495,19 +481,8 @@ defmodule AgentsWeb.DashboardLive.IndexSessionManagementTest do
 
       html = render(lv)
 
-      queued_pos =
-        html
-        |> :binary.matches(~s(data-testid="session-item-queued-session"))
-        |> List.first()
-        |> elem(0)
-
-      rule_pos =
-        html
-        |> :binary.matches(~s(data-testid="queue-limit-rule"))
-        |> List.first()
-        |> elem(0)
-
-      assert queued_pos < rule_pos
+      assert html =~ ~s(data-testid="session-item-queued-session")
+      refute html =~ ~s(data-testid="queue-limit-rule")
     end
 
     test "renders warm divider above concurrency limit divider when queue exists", %{
@@ -523,12 +498,9 @@ defmodule AgentsWeb.DashboardLive.IndexSessionManagementTest do
 
       {:ok, _lv, html} = live(conn, ~p"/sessions")
 
-      assert html =~ ~s(data-testid="queue-warm-rule")
-
-      {warm_pos, _} = :binary.match(html, ~s(data-testid="queue-warm-rule"))
-      {limit_pos, _} = :binary.match(html, ~s(data-testid="queue-limit-rule"))
-
-      assert warm_pos < limit_pos
+      assert html =~ ~s(data-testid="pipeline-kanban")
+      refute html =~ ~s(data-testid="queue-warm-rule")
+      refute html =~ ~s(data-testid="queue-limit-rule")
     end
 
     test "renders empty warm slots when warmed queued sessions leave open warm capacity", %{
@@ -553,7 +525,9 @@ defmodule AgentsWeb.DashboardLive.IndexSessionManagementTest do
 
       html = render(lv)
 
-      assert html =~ ~s(data-testid="empty-warm-slot-1")
+      assert html =~ ~s(data-testid="pipeline-kanban")
+      refute html =~ ~s(data-testid="empty-warm-slot-1")
+      refute html =~ ~s(data-testid="empty-warm-slot-2")
     end
 
     test "queued session with real container keeps warm styling outside warm queue window", %{
@@ -812,7 +786,6 @@ defmodule AgentsWeb.DashboardLive.IndexSessionManagementTest do
       assert html =~ "850"
       assert html =~ "Warm ticket test"
       assert html =~ "warm-test"
-
       assert html =~ ~s(data-slot-state="queued")
     end
 
@@ -838,10 +811,7 @@ defmodule AgentsWeb.DashboardLive.IndexSessionManagementTest do
 
       html = render(lv)
 
-      assert length(:binary.matches(html, ~s(data-testid="queue-limit-rule"))) == 1
-
-      rule_pos =
-        html |> :binary.matches(~s(data-testid="queue-limit-rule")) |> List.first() |> elem(0)
+      refute html =~ ~s(data-testid="queue-limit-rule")
 
       running_pos =
         html
@@ -849,7 +819,7 @@ defmodule AgentsWeb.DashboardLive.IndexSessionManagementTest do
         |> List.first()
         |> elem(0)
 
-      assert rule_pos < running_pos
+      assert is_integer(running_pos)
     end
 
     test "delete session button is hidden for running sessions", %{conn: conn, user: user} do
