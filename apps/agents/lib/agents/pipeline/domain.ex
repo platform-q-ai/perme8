@@ -5,14 +5,21 @@ defmodule Agents.Pipeline.Domain do
     top_level?: true,
     deps: [],
     exports: [
+      Events.PipelineStageChanged,
+      Events.PullRequestCreated,
+      Events.PullRequestMerged,
+      Events.PullRequestUpdated,
       Entities.DeployTarget,
       Entities.Gate,
       Entities.PipelineConfig,
+      Entities.PipelineRun,
       Entities.PullRequest,
       Entities.Review,
       Entities.ReviewComment,
+      Entities.StageResult,
       Entities.Stage,
       Entities.Step,
+      Policies.PipelineLifecyclePolicy,
       Policies.PullRequestPolicy
     ]
 end

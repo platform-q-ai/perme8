@@ -5,8 +5,14 @@ defmodule Agents.Pipeline.Application.PipelineRuntimeConfig do
 
   @default_parser :"Elixir.Agents.Pipeline.Infrastructure.YamlParser"
   @default_pull_request_repository :"Elixir.Agents.Pipeline.Infrastructure.Repositories.PullRequestRepository"
+  @default_pipeline_run_repository :"Elixir.Agents.Pipeline.Infrastructure.Repositories.PipelineRunRepository"
   @default_git_diff_computer :"Elixir.Agents.Pipeline.Infrastructure.GitDiffComputer"
   @default_git_merger :"Elixir.Agents.Pipeline.Infrastructure.GitMerger"
+  @default_stage_executor :"Elixir.Agents.Pipeline.Infrastructure.StageExecutor"
+  @default_session_reopener :"Elixir.Agents.Pipeline.Infrastructure.SessionReopener"
+  @default_task_context_provider :"Elixir.Agents.Pipeline.Infrastructure.TaskContextProvider"
+  @default_event_bus Perme8.Events.EventBus
+  @default_emit_pipeline_events true
 
   @doc "Returns the configured pipeline parser implementation."
   @spec pipeline_parser() :: module()
@@ -20,6 +26,12 @@ defmodule Agents.Pipeline.Application.PipelineRuntimeConfig do
     Application.get_env(:agents, :pull_request_repository, @default_pull_request_repository)
   end
 
+  @doc "Returns the configured pipeline run repository implementation."
+  @spec pipeline_run_repository() :: module()
+  def pipeline_run_repository do
+    Application.get_env(:agents, :pipeline_run_repository, @default_pipeline_run_repository)
+  end
+
   @doc "Returns the configured pull request diff computer implementation."
   @spec git_diff_computer() :: module()
   def git_diff_computer do
@@ -30,5 +42,35 @@ defmodule Agents.Pipeline.Application.PipelineRuntimeConfig do
   @spec git_merger() :: module()
   def git_merger do
     Application.get_env(:agents, :pr_git_merger, @default_git_merger)
+  end
+
+  @doc "Returns the configured stage executor implementation."
+  @spec stage_executor() :: module()
+  def stage_executor do
+    Application.get_env(:agents, :pipeline_stage_executor, @default_stage_executor)
+  end
+
+  @doc "Returns the configured session reopener implementation."
+  @spec session_reopener() :: module()
+  def session_reopener do
+    Application.get_env(:agents, :pipeline_session_reopener, @default_session_reopener)
+  end
+
+  @doc "Returns the configured event bus implementation."
+  @spec event_bus() :: module()
+  def event_bus do
+    Application.get_env(:agents, :pipeline_event_bus, @default_event_bus)
+  end
+
+  @doc "Returns the configured task context provider implementation."
+  @spec task_context_provider() :: module()
+  def task_context_provider do
+    Application.get_env(:agents, :pipeline_task_context_provider, @default_task_context_provider)
+  end
+
+  @doc "Returns whether pipeline domain events should be emitted."
+  @spec emit_pipeline_events?() :: boolean()
+  def emit_pipeline_events? do
+    Application.get_env(:agents, :emit_pipeline_events, @default_emit_pipeline_events)
   end
 end

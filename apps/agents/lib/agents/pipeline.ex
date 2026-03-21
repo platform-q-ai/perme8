@@ -5,6 +5,7 @@ defmodule Agents.Pipeline do
     top_level?: true,
     deps: [Agents.Pipeline.Domain, Agents.Pipeline.Application, Agents.Pipeline.Infrastructure],
     exports: [
+      {Domain.Entities.PipelineRun, []},
       {Domain.Entities.PullRequest, []},
       {Domain.Entities.Review, []},
       {Domain.Entities.ReviewComment, []}
@@ -14,11 +15,14 @@ defmodule Agents.Pipeline do
   alias Agents.Pipeline.Application.UseCases.CommentOnPullRequest
   alias Agents.Pipeline.Application.UseCases.ClosePullRequest
   alias Agents.Pipeline.Application.UseCases.CreatePullRequest
+  alias Agents.Pipeline.Application.UseCases.GetPipelineStatus
   alias Agents.Pipeline.Application.UseCases.GetPullRequest
   alias Agents.Pipeline.Application.UseCases.GetPullRequestDiff
   alias Agents.Pipeline.Application.UseCases.ListPullRequests
   alias Agents.Pipeline.Application.UseCases.MergePullRequest
+  alias Agents.Pipeline.Application.UseCases.RunStage
   alias Agents.Pipeline.Application.UseCases.ReviewPullRequest
+  alias Agents.Pipeline.Application.UseCases.TriggerPipelineRun
   alias Agents.Pipeline.Application.UseCases.UpdatePullRequest
 
   @spec load_pipeline(Path.t(), keyword()) ::
@@ -30,6 +34,18 @@ defmodule Agents.Pipeline do
   @spec create_pull_request(map(), keyword()) ::
           {:ok, Domain.Entities.PullRequest.t()} | {:error, term()}
   defdelegate create_pull_request(attrs, opts \\ []), to: CreatePullRequest, as: :execute
+
+  @spec trigger_pipeline_run(map(), keyword()) ::
+          {:ok, Domain.Entities.PipelineRun.t()} | {:ok, nil} | {:error, term()}
+  defdelegate trigger_pipeline_run(attrs, opts \\ []), to: TriggerPipelineRun, as: :execute
+
+  @spec run_stage(Ecto.UUID.t(), keyword()) ::
+          {:ok, Domain.Entities.PipelineRun.t()} | {:error, term()}
+  defdelegate run_stage(run_id, opts \\ []), to: RunStage, as: :execute
+
+  @spec get_pipeline_status(Ecto.UUID.t(), keyword()) ::
+          {:ok, Domain.Entities.PipelineRun.t()} | {:error, term()}
+  defdelegate get_pipeline_status(run_id, opts \\ []), to: GetPipelineStatus, as: :execute
 
   @spec get_pull_request(integer(), keyword()) ::
           {:ok, Domain.Entities.PullRequest.t()} | {:error, :not_found}

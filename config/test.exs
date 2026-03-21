@@ -246,6 +246,7 @@ config :agents, :mcp_http, port: 5007
 
 # Skip orphan recovery at boot — runs outside sandbox and conflicts with Mox
 config :agents, :skip_orphan_recovery, true
+config :agents, :emit_pipeline_events, false
 
 # Use noop container provider in tests so integration tests don't crash
 # when Docker is unavailable (e.g. in CI or development environments without Docker)
