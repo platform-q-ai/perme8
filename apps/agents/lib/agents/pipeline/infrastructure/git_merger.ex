@@ -10,17 +10,28 @@ defmodule Agents.Pipeline.Infrastructure.GitMerger do
   def merge(source_branch, target_branch, method, opts \\ [])
       when is_binary(source_branch) and is_binary(target_branch) and is_binary(method) do
     runner = Keyword.get(opts, :command_runner, GitCommandRunner)
+    remote = Keyword.get(opts, :remote, "origin")
 
-    command =
+    merge_command =
       case method do
         "merge" -> ["git", "merge", "--no-ff", source_branch]
         "squash" -> ["git", "merge", "--squash", source_branch]
         _ -> ["git", "merge", "--no-ff", source_branch]
       end
 
+    with :ok <-
+           run_command(runner, ["git", "checkout", target_branch], opts, :git_checkout_failed),
+         :ok <- run_command(runner, merge_command, opts, :git_merge_failed),
+         :ok <-
+           run_command(runner, ["git", "push", remote, target_branch], opts, :git_push_failed) do
+      :ok
+    end
+  end
+
+  defp run_command(runner, command, opts, error_tag) do
     case runner.run(command, opts) do
       {0, _stdout, _stderr} -> :ok
-      {_code, _stdout, stderr} -> {:error, {:git_merge_failed, stderr}}
+      {_code, _stdout, stderr} -> {:error, {error_tag, stderr}}
     end
   end
 end
