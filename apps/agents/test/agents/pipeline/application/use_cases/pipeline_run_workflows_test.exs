@@ -65,8 +65,10 @@ defmodule Agents.Pipeline.Application.UseCases.PipelineRunWorkflowsTest do
 
   defmodule SessionReopenerStub do
     def reopen(attrs) do
-      send(self(), {:reopen_called, attrs})
-      :ok
+      Process.get({__MODULE__, :reopen}, fn payload ->
+        send(self(), {:reopen_called, payload})
+        :ok
+      end).(attrs)
     end
   end
 
@@ -79,6 +81,12 @@ defmodule Agents.Pipeline.Application.UseCases.PipelineRunWorkflowsTest do
   setup do
     PipelineRunRepoStub.reset()
     EventBusStub.reset()
+
+    Process.put({SessionReopenerStub, :reopen}, fn payload ->
+      send(self(), {:reopen_called, payload})
+      :ok
+    end)
+
     :ok
   end
 
@@ -223,5 +231,41 @@ defmodule Agents.Pipeline.Application.UseCases.PipelineRunWorkflowsTest do
 
     assert run.status == "reopen_session"
     assert_receive {:reopen_called, %{task_id: ^task_id, user_id: ^user_id}}
+  end
+
+  test "run_stage surfaces reopen failures" do
+    Process.put({StageExecutorStub, :execute}, fn _stage, _context ->
+      {:error, %{output: "tests failed", exit_code: 1, reason: :non_zero_exit, metadata: %{}}}
+    end)
+
+    Process.put({SessionReopenerStub, :reopen}, fn _payload ->
+      {:error, :session_resume_failed}
+    end)
+
+    task_id = Ecto.UUID.generate()
+
+    Process.put({TaskRepoStub, :task, task_id}, %{
+      user_id: Ecto.UUID.generate(),
+      container_id: nil,
+      instruction: "fix failures"
+    })
+
+    {:ok, created} =
+      PipelineRunRepoStub.create_run(%{
+        trigger_type: "on_session_complete",
+        trigger_reference: task_id,
+        task_id: task_id,
+        remaining_stage_ids: ["test"],
+        stage_results: %{}
+      })
+
+    assert {:error, {:reopen_session_failed, :session_resume_failed}} =
+             RunStage.execute(created.id,
+               pipeline_run_repo: PipelineRunRepoStub,
+               stage_executor: StageExecutorStub,
+               task_repo: TaskRepoStub,
+               event_bus: EventBusStub,
+               session_reopener: SessionReopenerStub
+             )
   end
 end

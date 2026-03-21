@@ -178,7 +178,9 @@ defmodule Agents.Pipeline.Application.UseCases.RunStage do
            emit_stage_changed(event_bus, run, "failed", "reopen_session", run.current_stage_id) do
       {:ok, PipelineRun.from_schema(reopened_schema)}
     else
-      _ -> {:ok, run}
+      %{} -> {:error, :missing_task_user}
+      {:error, reason} -> {:error, {:reopen_session_failed, reason}}
+      other -> {:error, {:reopen_session_failed, other}}
     end
   end
 
