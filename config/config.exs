@@ -214,7 +214,8 @@ config :agents, :mcp_tool_providers, [
   Agents.Infrastructure.Mcp.ToolProviders.KnowledgeToolProvider,
   Agents.Infrastructure.Mcp.ToolProviders.JargaToolProvider,
   Agents.Infrastructure.Mcp.ToolProviders.ToolsToolProvider,
-  Agents.Infrastructure.Mcp.ToolProviders.TicketToolProvider
+  Agents.Infrastructure.Mcp.ToolProviders.TicketToolProvider,
+  Agents.Infrastructure.Mcp.ToolProviders.PrToolProvider
 ]
 
 # Configures Elixir's Logger
