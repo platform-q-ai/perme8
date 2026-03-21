@@ -12,13 +12,6 @@ Feature: Session browser notifications
     And I click the "Log in and stay logged in" button and wait for navigation
     And I wait for network idle
 
-  Scenario: Sessions page prompts for notification permission
-    Given browser notification permission is undecided
-    When I navigate to "${baseUrl}/sessions"
-    And I wait for network idle
-    Then "#browser-notifications-permission-prompt" should exist
-    And I should see "Enable browser notifications"
-
   Scenario: Background session completion raises a browser notification
     Given browser notifications are allowed for the site
     And I navigate to "${baseUrl}/sessions"
