@@ -16,6 +16,7 @@ export class BrowserNotificationsHook extends ViewHook {
   private promptEl: HTMLElement | null = null
 
   mounted(): void {
+    ;(window as Window & { __agentsBrowserNotificationsHook?: BrowserNotificationsHook }).__agentsBrowserNotificationsHook = this
     this.maybeRenderPrompt()
 
     this.handleEvent('browser_notification', (payload: BrowserNotificationPayload) => {
@@ -24,6 +25,7 @@ export class BrowserNotificationsHook extends ViewHook {
   }
 
   destroyed(): void {
+    delete (window as Window & { __agentsBrowserNotificationsHook?: BrowserNotificationsHook }).__agentsBrowserNotificationsHook
     this.removePrompt()
   }
 
