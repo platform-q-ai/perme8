@@ -1,7 +1,9 @@
 # Stage 1: fetch the opencode binary
 FROM alpine:3.21 AS fetcher
-RUN apk add --no-cache curl bash
-RUN curl -fsSL https://opencode.ai/install | bash
+ARG OPENCODE_VERSION=1.2.27
+RUN apk add --no-cache curl bash libstdc++ libgcc
+RUN curl -fsSL https://opencode.ai/install | bash -s -- --version "$OPENCODE_VERSION" --no-modify-path
+RUN test "$(/root/.opencode/bin/opencode --version)" = "$OPENCODE_VERSION"
 RUN cp /root/.opencode/bin/opencode /usr/local/bin/opencode
 
 # Stage 2: minimal Elixir runtime on Alpine
@@ -14,7 +16,7 @@ FROM hexpm/elixir:1.19.4-erlang-28.3.2-alpine-3.21.6
 # unzip: required by bun installer
 # nodejs: required by esbuild/tailwind asset pipeline and npm test
 # chromium + runtime libs: required for Playwright browser adapter tests
-RUN apk add --no-cache git bash openssl curl python3 github-cli ripgrep fd postgresql16 postgresql16-contrib build-base unzip nodejs npm chromium nss freetype harfbuzz ca-certificates ttf-freefont
+RUN apk add --no-cache git bash openssl curl python3 github-cli ripgrep fd jq postgresql16 postgresql16-contrib build-base unzip nodejs npm chromium nss freetype harfbuzz ca-certificates ttf-freefont
 
 # Install Bun (JavaScript runtime/toolkit)
 RUN curl -fsSL https://bun.sh/install | bash \
