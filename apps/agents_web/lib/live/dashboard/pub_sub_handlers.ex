@@ -7,7 +7,7 @@ defmodule AgentsWeb.DashboardLive.PubSubHandlers do
     statics: AgentsWeb.static_paths()
 
   import Phoenix.Component, only: [assign: 3]
-  import Phoenix.LiveView, only: [clear_flash: 1, push_patch: 2, put_flash: 3]
+  import Phoenix.LiveView, only: [clear_flash: 1, push_event: 3, push_patch: 2, put_flash: 3]
   import AgentsWeb.DashboardLive.SessionDataHelpers
 
   import AgentsWeb.DashboardLive.Helpers,
@@ -140,6 +140,7 @@ defmodule AgentsWeb.DashboardLive.PubSubHandlers do
       |> assign(:tickets, tickets)
       |> request_task_refresh(task_id)
       |> apply_status_change_to_ui(is_current_task, status, task_id)
+      |> maybe_push_browser_notification(changed_task, status)
 
     {:noreply, socket}
   end
@@ -522,6 +523,40 @@ defmodule AgentsWeb.DashboardLive.PubSubHandlers do
   end
 
   # -- Private Helpers ---------------------------------------------------------
+
+  defp maybe_push_browser_notification(socket, changed_task, status)
+       when status in ["completed", "failed"] do
+    case browser_notification_payload(changed_task, status, socket) do
+      nil -> socket
+      payload -> push_event(socket, "browser_notification", payload)
+    end
+  end
+
+  defp maybe_push_browser_notification(socket, _changed_task, _status), do: socket
+
+  defp browser_notification_payload(changed_task, status, socket) do
+    user_id = socket.assigns.current_scope.user.id
+
+    if Map.get(changed_task, :user_id) == user_id do
+      %{
+        title: browser_notification_title(status),
+        body: browser_notification_body(status),
+        type: browser_notification_type(status)
+      }
+    end
+  end
+
+  defp browser_notification_title("completed"), do: "Session completed"
+  defp browser_notification_title("failed"), do: "Session failed"
+
+  defp browser_notification_body("completed"),
+    do: "One of your sessions completed. Open Sessions to review it."
+
+  defp browser_notification_body("failed"),
+    do: "One of your sessions failed. Open Sessions to review details."
+
+  defp browser_notification_type("completed"), do: "session_completed"
+  defp browser_notification_type("failed"), do: "session_failed"
 
   # If this task was started from a ticket, set current_task and navigate
   # to the session so the user sees the chat and streaming output.
