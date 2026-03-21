@@ -49,6 +49,29 @@ Given<TestWorld>('browser notifications are allowed for the site', async functio
   await this.browser.waitForLoadState('networkidle')
 })
 
+Given<TestWorld>('browser notification permission is undecided', async function () {
+  await this.browser.page.addInitScript(() => {
+    class DefaultNotification {
+      static permission = 'default'
+
+      static requestPermission() {
+        return Promise.resolve('default' as NotificationPermission)
+      }
+    }
+
+    Object.defineProperty(window, 'Notification', {
+      configurable: true,
+      writable: true,
+      value: DefaultNotification,
+    })
+
+    window.localStorage.removeItem('browser-notifications-dismissed')
+  })
+
+  await this.browser.page.reload()
+  await this.browser.waitForLoadState('networkidle')
+})
+
 When<TestWorld>('the sessions tab is in the background', async function () {
   await this.browser.page.evaluate(() => {
     Object.defineProperty(document, 'visibilityState', {

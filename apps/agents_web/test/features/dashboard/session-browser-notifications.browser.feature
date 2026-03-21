@@ -13,6 +13,7 @@ Feature: Session browser notifications
     And I wait for network idle
 
   Scenario: Sessions page prompts for notification permission
+    Given browser notification permission is undecided
     When I navigate to "${baseUrl}/sessions"
     And I wait for network idle
     Then "#browser-notifications-permission-prompt" should exist
