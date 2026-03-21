@@ -26,6 +26,14 @@ defmodule Agents.Pipeline.Application.UseCases.TriggerPipelineRun do
           session_id: Map.get(attrs, :session_id) || Map.get(attrs, "session_id"),
           pull_request_number:
             Map.get(attrs, :pull_request_number) || Map.get(attrs, "pull_request_number"),
+          source_branch:
+            Map.get(attrs, :source_branch) ||
+              Map.get(attrs, "source_branch") ||
+              event_field(attrs, :source_branch),
+          target_branch:
+            Map.get(attrs, :target_branch) ||
+              Map.get(attrs, "target_branch") ||
+              event_field(attrs, :target_branch),
           status: "idle",
           remaining_stage_ids: stage_ids,
           stage_results: %{}
@@ -72,6 +80,13 @@ defmodule Agents.Pipeline.Application.UseCases.TriggerPipelineRun do
   defp infer_trigger_from_event(%{event_type: "pipeline.pull_request_merged"}), do: "on_merge"
 
   defp infer_trigger_from_event(_), do: "unknown"
+
+  defp event_field(attrs, key) do
+    case Map.get(attrs, :event) || Map.get(attrs, "event") do
+      nil -> nil
+      event -> Map.get(event, key) || Map.get(event, Atom.to_string(key))
+    end
+  end
 
   defp select_stage_ids(stages, "on_session_complete") do
     stages |> Enum.filter(&(&1.type == "verification")) |> Enum.map(& &1.id)

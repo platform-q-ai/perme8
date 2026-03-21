@@ -23,7 +23,7 @@ defmodule Agents.Pipeline.Infrastructure.StageExecutor do
   end
 
   defp run_step(step, context) do
-    command = step.run
+    command = compose_command(step, context)
 
     {program, args} =
       case Map.get(context, :container_id) || Map.get(context, "container_id") do
@@ -65,5 +65,26 @@ defmodule Agents.Pipeline.Infrastructure.StageExecutor do
       reason: result.reason,
       metadata: result.metadata
     }
+  end
+
+  defp compose_command(step, context) do
+    case branch_checkout_prefix(context) do
+      nil -> step.run
+      prefix -> prefix <> step.run
+    end
+  end
+
+  defp branch_checkout_prefix(context) do
+    branch =
+      case Map.get(context, "trigger_type") do
+        "on_merge" -> Map.get(context, "target_branch")
+        _ -> Map.get(context, "source_branch") || Map.get(context, "target_branch")
+      end
+
+    if is_binary(branch) and branch != "" do
+      "git checkout #{branch} >/dev/null 2>&1 && "
+    else
+      nil
+    end
   end
 end

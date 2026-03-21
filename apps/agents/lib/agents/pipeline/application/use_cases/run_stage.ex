@@ -95,6 +95,7 @@ defmodule Agents.Pipeline.Application.UseCases.RunStage do
     attrs = %{
       status: "passed",
       current_stage_id: nil,
+      remaining_stage_ids: run.remaining_stage_ids,
       stage_results:
         run |> PipelineRun.record_stage_result(stage_result) |> PipelineRun.stage_results_to_map(),
       failure_reason: nil
@@ -140,6 +141,7 @@ defmodule Agents.Pipeline.Application.UseCases.RunStage do
     attrs = %{
       status: "failed",
       current_stage_id: stage.id,
+      remaining_stage_ids: run.remaining_stage_ids,
       stage_results:
         run |> PipelineRun.record_stage_result(stage_result) |> PipelineRun.stage_results_to_map(),
       failure_reason: inspect(result.reason)
@@ -169,6 +171,7 @@ defmodule Agents.Pipeline.Application.UseCases.RunStage do
          {:ok, reopened_schema} <-
            repo_module.update_run(run.id, %{
              status: "reopen_session",
+             remaining_stage_ids: run.remaining_stage_ids,
              reopened_at: DateTime.utc_now() |> DateTime.truncate(:second)
            }),
          :ok <-
@@ -183,7 +186,11 @@ defmodule Agents.Pipeline.Application.UseCases.RunStage do
     case Enum.find(stages, &(&1.id == next_stage_id)) do
       %{type: "deploy"} ->
         with :ok <- PipelineLifecyclePolicy.valid_transition?(run.status, "deploy"),
-             {:ok, schema} <- repo_module.update_run(run.id, %{status: "deploy"}),
+             {:ok, schema} <-
+               repo_module.update_run(run.id, %{
+                 status: "deploy",
+                 remaining_stage_ids: run.remaining_stage_ids
+               }),
              :ok <- emit_stage_changed(event_bus, run, run.status, "deploy", next_stage_id) do
           PipelineRun.from_schema(schema)
         else
@@ -202,6 +209,9 @@ defmodule Agents.Pipeline.Application.UseCases.RunStage do
       "task_id" => run.task_id,
       "session_id" => run.session_id,
       "pull_request_number" => run.pull_request_number,
+      "source_branch" => run.source_branch,
+      "target_branch" => run.target_branch,
+      "trigger_type" => run.trigger_type,
       "container_id" => task[:container_id],
       "instruction" => task[:instruction]
     }
@@ -229,7 +239,11 @@ defmodule Agents.Pipeline.Application.UseCases.RunStage do
   defp transition_and_store(run, repo_module, event_bus, next_status, stage_id) do
     with :ok <- PipelineLifecyclePolicy.valid_transition?(run.status, next_status),
          {:ok, schema} <-
-           repo_module.update_run(run.id, %{status: next_status, current_stage_id: stage_id}),
+           repo_module.update_run(run.id, %{
+             status: next_status,
+             current_stage_id: stage_id,
+             remaining_stage_ids: run.remaining_stage_ids
+           }),
          :ok <- emit_stage_changed(event_bus, run, run.status, next_status, stage_id) do
       {:ok, PipelineRun.from_schema(schema)}
     end

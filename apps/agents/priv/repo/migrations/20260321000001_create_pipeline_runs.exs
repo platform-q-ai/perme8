@@ -9,6 +9,8 @@ defmodule Agents.Repo.Migrations.CreatePipelineRuns do
       add(:task_id, :binary_id)
       add(:session_id, :binary_id)
       add(:pull_request_number, :integer)
+      add(:source_branch, :string)
+      add(:target_branch, :string)
       add(:status, :string, null: false, default: "idle")
       add(:current_stage_id, :string)
       add(:remaining_stage_ids, {:array, :string}, null: false, default: [])

@@ -23,6 +23,8 @@ defmodule Agents.Pipeline.Infrastructure.Schemas.PipelineRunSchema do
     field(:task_id, :binary_id)
     field(:session_id, :binary_id)
     field(:pull_request_number, :integer)
+    field(:source_branch, :string)
+    field(:target_branch, :string)
     field(:status, :string, default: "idle")
     field(:current_stage_id, :string)
     field(:remaining_stage_ids, {:array, :string}, default: [])
@@ -41,6 +43,8 @@ defmodule Agents.Pipeline.Infrastructure.Schemas.PipelineRunSchema do
       :task_id,
       :session_id,
       :pull_request_number,
+      :source_branch,
+      :target_branch,
       :status,
       :current_stage_id,
       :remaining_stage_ids,

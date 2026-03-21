@@ -30,6 +30,8 @@ defmodule Agents.Pipeline.Application.UseCases.UpdatePullRequest do
               number: updated.number,
               status: updated.status,
               title: updated.title,
+              source_branch: updated.source_branch,
+              target_branch: updated.target_branch,
               linked_ticket: updated.linked_ticket,
               changes: attrs
             })

@@ -1,9 +1,8 @@
 defmodule Agents.Pipeline.Application.UseCases.PipelineRunWorkflowsTest do
-  use Agents.DataCase, async: true
+  use Agents.DataCase, async: false
 
   alias Agents.Pipeline.Application.UseCases.{GetPipelineStatus, RunStage, TriggerPipelineRun}
   alias Agents.Pipeline.Infrastructure.Schemas.PipelineRunSchema
-  alias Perme8.Events.TestEventBus
 
   defmodule PipelineRunRepoStub do
     def create_run(attrs, _repo \\ nil) do
@@ -53,6 +52,17 @@ defmodule Agents.Pipeline.Application.UseCases.PipelineRunWorkflowsTest do
     end
   end
 
+  defmodule EventBusStub do
+    def emit(event) do
+      events = Process.get({__MODULE__, :events}, [])
+      Process.put({__MODULE__, :events}, events ++ [event])
+      :ok
+    end
+
+    def events, do: Process.get({__MODULE__, :events}, [])
+    def reset, do: Process.put({__MODULE__, :events}, [])
+  end
+
   defmodule SessionReopenerStub do
     def reopen(attrs) do
       send(self(), {:reopen_called, attrs})
@@ -67,8 +77,8 @@ defmodule Agents.Pipeline.Application.UseCases.PipelineRunWorkflowsTest do
   end
 
   setup do
-    TestEventBus.start_global()
     PipelineRunRepoStub.reset()
+    EventBusStub.reset()
     :ok
   end
 
@@ -103,10 +113,36 @@ defmodule Agents.Pipeline.Application.UseCases.PipelineRunWorkflowsTest do
     assert run.remaining_stage_ids == ["deploy"]
   end
 
+  test "trigger_pipeline_run persists pull request branch context" do
+    event = %{
+      event_type: "pipeline.pull_request_created",
+      number: 14,
+      source_branch: "feat/a",
+      target_branch: "main"
+    }
+
+    assert {:ok, run} =
+             TriggerPipelineRun.execute(
+               %{
+                 event: event,
+                 trigger_type: "on_pull_request",
+                 trigger_reference: "14",
+                 pull_request_number: 14
+               },
+               auto_run: false,
+               pipeline_run_repo: PipelineRunRepoStub
+             )
+
+    assert run.source_branch == "feat/a"
+    assert run.target_branch == "main"
+  end
+
   test "run_stage executes a stage and records stage change events" do
     Process.put({StageExecutorStub, :execute}, fn stage, context ->
       assert stage.id == "test"
       assert context["task_id"]
+      assert context["source_branch"] == "feat/a"
+      assert context["target_branch"] == "main"
       {:ok, %{output: "all green", exit_code: 0, metadata: %{}}}
     end)
 
@@ -123,6 +159,8 @@ defmodule Agents.Pipeline.Application.UseCases.PipelineRunWorkflowsTest do
         trigger_type: "on_session_complete",
         trigger_reference: task_id,
         task_id: task_id,
+        source_branch: "feat/a",
+        target_branch: "main",
         remaining_stage_ids: ["test"],
         stage_results: %{}
       })
@@ -132,14 +170,14 @@ defmodule Agents.Pipeline.Application.UseCases.PipelineRunWorkflowsTest do
                pipeline_run_repo: PipelineRunRepoStub,
                stage_executor: StageExecutorStub,
                task_repo: TaskRepoStub,
-               event_bus: TestEventBus,
+               event_bus: EventBusStub,
                session_reopener: SessionReopenerStub
              )
 
     assert run.status == "passed"
     assert run.stage_results["test"].status == :passed
 
-    assert Enum.map(TestEventBus.get_events(), &{&1.from_status, &1.to_status}) == [
+    assert Enum.map(EventBusStub.events(), &{&1.from_status, &1.to_status}) == [
              {"idle", "running_stage"},
              {"running_stage", "awaiting_result"},
              {"awaiting_result", "passed"}
@@ -179,7 +217,7 @@ defmodule Agents.Pipeline.Application.UseCases.PipelineRunWorkflowsTest do
                pipeline_run_repo: PipelineRunRepoStub,
                stage_executor: StageExecutorStub,
                task_repo: TaskRepoStub,
-               event_bus: TestEventBus,
+               event_bus: EventBusStub,
                session_reopener: SessionReopenerStub
              )
 
