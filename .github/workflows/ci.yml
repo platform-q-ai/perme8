@@ -409,7 +409,7 @@ jobs:
     runs-on: ubuntu-latest
 
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix: ${{ fromJson(needs.selective-matrix.outputs.matrix) }}
 
     services:
