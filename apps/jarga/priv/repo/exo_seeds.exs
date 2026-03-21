@@ -621,8 +621,12 @@ IO.puts("[exo-seeds] Inbound webhook secret: #{inbound_secret}")
 # ---------------------------------------------------------------------------
 
 alias Agents.Tickets.Infrastructure.Schemas.ProjectTicketSchema
+alias Agents.Pipeline.Infrastructure.Schemas.PullRequestSchema
 
 Ecto.Adapters.SQL.query!(Agents.Repo, "TRUNCATE sessions_project_tickets CASCADE", [])
+Ecto.Adapters.SQL.query!(Agents.Repo, "TRUNCATE pr_reviews CASCADE", [])
+Ecto.Adapters.SQL.query!(Agents.Repo, "TRUNCATE pr_comments CASCADE", [])
+Ecto.Adapters.SQL.query!(Agents.Repo, "TRUNCATE pull_requests CASCADE", [])
 
 %ProjectTicketSchema{}
 |> ProjectTicketSchema.changeset(%{
@@ -651,5 +655,51 @@ Ecto.Adapters.SQL.query!(Agents.Repo, "TRUNCATE sessions_project_tickets CASCADE
 |> Agents.Repo.insert!()
 
 IO.puts("[exo-seeds] Created 2 project tickets for MCP ticket tool tests")
+
+now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+seed_pr = fn attrs ->
+  %PullRequestSchema{}
+  |> PullRequestSchema.changeset(attrs)
+  |> Agents.Repo.insert!()
+end
+
+seed_pr.(%{
+  number: 301,
+  source_branch: "feature/seeded-pr-read",
+  target_branch: "main",
+  title: "Seeded PR for MCP read/update/comment/review",
+  body: "Used by exo-bdd HTTP scenarios for PR MCP tools.",
+  linked_ticket: 101,
+  status: "open",
+  inserted_at: now,
+  updated_at: now
+})
+
+seed_pr.(%{
+  number: 305,
+  source_branch: "feature/seeded-pr-merge",
+  target_branch: "main",
+  title: "Seeded approved PR for merge scenario",
+  body: "Used by exo-bdd HTTP merge scenario.",
+  linked_ticket: 101,
+  status: "approved",
+  inserted_at: now,
+  updated_at: now
+})
+
+seed_pr.(%{
+  number: 306,
+  source_branch: "feature/seeded-pr-close",
+  target_branch: "main",
+  title: "Seeded open PR for close scenario",
+  body: "Used by exo-bdd HTTP close scenario.",
+  linked_ticket: 102,
+  status: "open",
+  inserted_at: now,
+  updated_at: now
+})
+
+IO.puts("[exo-seeds] Created seeded internal pull requests for MCP PR tool tests")
 
 IO.puts("[exo-seeds] Done!")

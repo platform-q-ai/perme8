@@ -44,7 +44,16 @@ defmodule Agents.Test.TicketFixtures do
         "mcp:ticket.remove_sub_issue",
         "mcp:ticket.add_dependency",
         "mcp:ticket.remove_dependency",
-        "mcp:ticket.search_dependency_targets"
+        "mcp:ticket.search_dependency_targets",
+        "mcp:pr.create",
+        "mcp:pr.read",
+        "mcp:pr.update",
+        "mcp:pr.list",
+        "mcp:pr.diff",
+        "mcp:pr.comment",
+        "mcp:pr.review",
+        "mcp:pr.merge",
+        "mcp:pr.close"
       ]
     }
   end

@@ -80,6 +80,10 @@ config :agents, Agents.Repo,
   pool_size: 10,
   ownership_timeout: :infinity
 
+config :agents,
+  pr_diff_computer: Agents.Pipeline.Infrastructure.ExoBddGitDiffComputer,
+  pr_git_merger: Agents.Pipeline.Infrastructure.ExoBddGitMerger
+
 # Chat uses the same database as Jarga
 # pool_size 15: cursor/document browser tests open multiple concurrent LiveView
 # sessions that each hold a Chat.Repo connection under sandbox ownership.

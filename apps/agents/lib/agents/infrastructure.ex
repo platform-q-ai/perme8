@@ -16,6 +16,8 @@ defmodule Agents.Infrastructure do
     deps: [
       Agents.Domain,
       Agents.Application,
+      Agents.Pipeline,
+      Agents.Pipeline.Domain,
       Agents.Repo,
       # MCP ticket tools call the Agents.Tickets facade and use Ticket entity for formatting
       Agents.Tickets,

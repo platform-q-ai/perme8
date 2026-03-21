@@ -21,10 +21,10 @@ defmodule Agents.Infrastructure.Mcp.ToolProvider.LoaderTest do
     # Application.compile_env/3 and emits component() calls.
     # We test this indirectly through the Server module which uses the Loader.
 
-    test "Server.__components__(:tool) returns all 25 tools from configured providers" do
+    test "Server.__components__(:tool) returns all 34 tools from configured providers" do
       components = Server.__components__(:tool)
 
-      assert length(components) == 25
+      assert length(components) == 34
     end
 
     test "Server includes all knowledge tools loaded by KnowledgeToolProvider" do
@@ -86,6 +86,28 @@ defmodule Agents.Infrastructure.Mcp.ToolProvider.LoaderTest do
       ]
 
       for name <- ticket_names do
+        assert name in names, "expected #{name} in #{inspect(names)}"
+      end
+    end
+
+    test "Server includes all PR tools loaded by PrToolProvider" do
+      names =
+        Server.__components__(:tool)
+        |> Enum.map(& &1.name)
+
+      pr_names = [
+        "pr.create",
+        "pr.read",
+        "pr.update",
+        "pr.list",
+        "pr.diff",
+        "pr.comment",
+        "pr.review",
+        "pr.merge",
+        "pr.close"
+      ]
+
+      for name <- pr_names do
         assert name in names, "expected #{name} in #{inspect(names)}"
       end
     end

@@ -33,7 +33,7 @@ The token is short-lived (9 minutes). Re-generate if a command fails with a 401.
 
 ### GitHub Issues via perme8-mcp Ticket Tools
 
-Use perme8-mcp ticket tools for all GitHub **issue** operations. Keep using `gh` for **pull request** operations.
+Use perme8-mcp ticket tools for all GitHub **issue** operations. Internal pipeline pull request artifacts can be managed through perme8-mcp `pr.*` tools. Keep using `gh` for **GitHub pull request** operations.
 
 #### Ticket MCP Tools
 
@@ -46,10 +46,23 @@ Use perme8-mcp ticket tools for all GitHub **issue** operations. Keep using `gh`
 - `ticket.add_sub_issue` - params: `parent_number`, `child_number`
 - `ticket.remove_sub_issue` - params: `parent_number`, `child_number`
 
+#### Internal PR MCP Tools
+
+- `pr.create` - params: `source_branch`, `target_branch`, `title`, `body`, `linked_ticket`, `status`
+- `pr.read` - params: `number`
+- `pr.update` - params: `number`, `title`, `body`, `status`, `linked_ticket`
+- `pr.list` - params: `state`, `query`, `per_page`
+- `pr.diff` - params: `number`
+- `pr.comment` - params: `number`, `body`, `path`, `line`
+- `pr.review` - params: `number`, `event`, `body`
+- `pr.merge` - params: `number`, `merge_method`
+- `pr.close` - params: `number`
+
 #### Operation Split
 
 - **Use ticket MCP tools for issues**: read/list/create/update/close/comment/sub-issue linking.
-- **Use `gh` CLI for PRs**: `gh pr create`, `gh pr view`, `gh api repos/.../pulls/...`.
+- **Use perme8-mcp `pr.*` tools for internal pipeline PR artifacts**: create/read/update/list/diff/comment/review/merge/close local PR records.
+- **Use `gh` CLI for GitHub PRs**: `gh pr create`, `gh pr view`, `gh api repos/.../pulls/...`.
 - `gh issue ...` command usage is being migrated away from skills in a separate ticket.
 
 Automated review workflows must skip events where the sender/reviewer identity is `platformqbot` to avoid review loops.
