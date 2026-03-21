@@ -412,6 +412,61 @@ defmodule AgentsWeb.DashboardLive.IndexPubsubTest do
       assert html =~ "failed"
     end
 
+    test "receiving task_status_changed to completed pushes a browser notification", %{
+      conn: conn,
+      user: user
+    } do
+      task =
+        task_fixture(%{
+          user_id: user.id,
+          status: "running",
+          instruction: "Implement browser notifications for sessions",
+          container_id: "c-complete"
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      Repo.get!(TaskSchema, task.id)
+      |> Ecto.Changeset.change(status: "completed")
+      |> Repo.update!()
+
+      send(lv.pid, {:task_status_changed, task.id, "completed"})
+
+      assert_push_event(lv, "browser_notification", %{
+        title: "Session completed",
+        body: "Implement browser notifications for sessions",
+        type: "session_completed"
+      })
+    end
+
+    test "receiving task_status_changed to failed pushes a browser notification with the error",
+         %{
+           conn: conn,
+           user: user
+         } do
+      task =
+        task_fixture(%{
+          user_id: user.id,
+          status: "running",
+          instruction: "Debug the notification pipeline",
+          container_id: "c-failed"
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      Repo.get!(TaskSchema, task.id)
+      |> Ecto.Changeset.change(status: "failed", error: "Container exited with status 1")
+      |> Repo.update!()
+
+      send(lv.pid, {:task_status_changed, task.id, "failed"})
+
+      assert_push_event(lv, "browser_notification", %{
+        title: "Session failed",
+        body: "Debug the notification pipeline (Error: Container exited with status 1)",
+        type: "session_failed"
+      })
+    end
+
     test "shows error message when viewing failed task", %{conn: conn, user: user} do
       task_fixture(%{
         user_id: user.id,
