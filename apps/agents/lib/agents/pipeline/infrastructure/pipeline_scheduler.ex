@@ -5,6 +5,7 @@ defmodule Agents.Pipeline.Infrastructure.PipelineScheduler do
 
   use GenServer
 
+  alias Agents.Pipeline.Application.PipelineRuntimeConfig
   alias Agents.Pipeline.Application.UseCases.ReplenishWarmPool
 
   require Logger
@@ -20,9 +21,11 @@ defmodule Agents.Pipeline.Infrastructure.PipelineScheduler do
   def init(opts) do
     state = %{
       pipeline_path: Keyword.get(opts, :pipeline_path, default_pipeline_path()),
-      pipeline_parser: Keyword.get(opts, :pipeline_parser),
-      stage_executor: Keyword.get(opts, :stage_executor),
-      warm_pool_counter: Keyword.get(opts, :warm_pool_counter),
+      pipeline_parser:
+        Keyword.get(opts, :pipeline_parser, PipelineRuntimeConfig.pipeline_parser()),
+      stage_executor: Keyword.get(opts, :stage_executor, PipelineRuntimeConfig.stage_executor()),
+      warm_pool_counter:
+        Keyword.get(opts, :warm_pool_counter, PipelineRuntimeConfig.warm_pool_counter()),
       replenish_warm_pool: Keyword.get(opts, :replenish_warm_pool, ReplenishWarmPool)
     }
 
