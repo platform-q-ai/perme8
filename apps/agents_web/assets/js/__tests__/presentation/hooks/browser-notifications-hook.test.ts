@@ -7,10 +7,12 @@ describe('BrowserNotificationsHook', () => {
   let el: HTMLElement
   let handlers: Record<string, (payload: unknown) => void>
   let notificationSpy: ReturnType<typeof vi.fn>
+  let originalVisibilityState: DocumentVisibilityState
 
   beforeEach(() => {
     document.body.innerHTML = ''
     handlers = {}
+    originalVisibilityState = document.visibilityState
     el = document.createElement('div')
     ;(el as any).phxPrivate = {}
 
@@ -34,6 +36,10 @@ describe('BrowserNotificationsHook', () => {
     vi.restoreAllMocks()
     document.body.innerHTML = ''
     window.localStorage.clear()
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      value: originalVisibilityState
+    })
   })
 
   test('renders a permission prompt when notifications are undecided', () => {
@@ -50,6 +56,42 @@ describe('BrowserNotificationsHook', () => {
     hook.mounted()
 
     expect(document.getElementById('browser-notifications-permission-prompt')).toBeNull()
+  })
+
+  test('clicking enable requests permission and removes the prompt', async () => {
+    const requestPermission = vi.fn().mockResolvedValue('granted')
+    Object.assign(Notification, { requestPermission })
+
+    hook.mounted()
+
+    const enableButton = document.querySelector('button.btn-primary') as HTMLButtonElement
+    enableButton.click()
+
+    await Promise.resolve()
+
+    expect(requestPermission).toHaveBeenCalled()
+    expect(document.getElementById('browser-notifications-permission-prompt')).toBeNull()
+  })
+
+  test('clicking not now persists dismissal and removes the prompt', () => {
+    hook.mounted()
+
+    const dismissButton = document.querySelector('button.btn-ghost') as HTMLButtonElement
+    dismissButton.click()
+
+    expect(window.localStorage.getItem('browser-notifications-dismissed')).toBe('true')
+    expect(document.getElementById('browser-notifications-permission-prompt')).toBeNull()
+  })
+
+  test('storage failures do not prevent hook registration', () => {
+    const getItemSpy = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new DOMException('blocked', 'SecurityError')
+    })
+
+    hook.mounted()
+
+    expect(getItemSpy).toHaveBeenCalled()
+    expect(typeof handlers.browser_notification).toBe('function')
   })
 
   test('shows a browser notification for background session completion', () => {

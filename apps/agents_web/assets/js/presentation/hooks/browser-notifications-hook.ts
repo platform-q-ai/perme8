@@ -8,6 +8,10 @@ type BrowserNotificationPayload = {
   type?: string
 }
 
+/**
+ * Mounts on the sessions page to request browser notification permission and
+ * display `browser_notification` events sent by the LiveView while the page is backgrounded.
+ */
 export class BrowserNotificationsHook extends ViewHook {
   private promptEl: HTMLElement | null = null
 
@@ -26,7 +30,7 @@ export class BrowserNotificationsHook extends ViewHook {
   private maybeRenderPrompt(): void {
     if (!this.supportsBrowserNotifications()) return
     if (Notification.permission !== 'default') return
-    if (window.localStorage.getItem(DISMISSED_KEY) === 'true') return
+    if (this.isDismissed()) return
     if (this.promptEl) return
 
     const prompt = document.createElement('div')
@@ -47,11 +51,13 @@ export class BrowserNotificationsHook extends ViewHook {
     enable.className = 'btn btn-primary btn-sm'
     enable.textContent = 'Enable'
     enable.addEventListener('click', () => {
-      Notification.requestPermission().then((permission) => {
-        if (permission !== 'default') {
-          this.removePrompt()
-        }
-      })
+      void Notification.requestPermission()
+        .then((permission) => {
+          if (permission !== 'default') {
+            this.removePrompt()
+          }
+        })
+        .catch(() => undefined)
     })
 
     const dismiss = document.createElement('button')
@@ -59,7 +65,7 @@ export class BrowserNotificationsHook extends ViewHook {
     dismiss.className = 'btn btn-ghost btn-sm'
     dismiss.textContent = 'Not now'
     dismiss.addEventListener('click', () => {
-      window.localStorage.setItem(DISMISSED_KEY, 'true')
+      this.setDismissed()
       this.removePrompt()
     })
 
@@ -93,6 +99,22 @@ export class BrowserNotificationsHook extends ViewHook {
 
   private supportsBrowserNotifications(): boolean {
     return typeof window !== 'undefined' && 'Notification' in window
+  }
+
+  private isDismissed(): boolean {
+    try {
+      return window.localStorage.getItem(DISMISSED_KEY) === 'true'
+    } catch {
+      return false
+    }
+  }
+
+  private setDismissed(): void {
+    try {
+      window.localStorage.setItem(DISMISSED_KEY, 'true')
+    } catch {
+      return
+    }
   }
 
   private removePrompt(): void {
