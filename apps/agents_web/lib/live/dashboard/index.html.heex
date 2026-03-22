@@ -148,18 +148,28 @@
               priority =
                 case s.latest_status do
                   "awaiting_feedback" -> 0
-                  status when status in ["running", "starting", "pending"] -> 1
-                  "queued" -> 2
-                  "failed" -> 3
-                  _ -> 4
+                  status when status in ["completed", "cancelled"] -> 1
+                  "failed" -> 2
+                  "queued" -> 3
+                  status when status in ["running", "starting", "pending"] -> 4
+                  _ -> 5
                 end
 
               {priority, -latest_at_unix(s)}
+            end) %>
+          <% optimistic_queued_sessions =
+            @optimistic_new_sessions
+            |> Enum.sort_by(fn entry ->
+              case entry[:queued_at] do
+                %DateTime{} = dt -> -DateTime.to_unix(dt, :microsecond)
+                _ -> 0
+              end
             end) %>
 
           <div class="flex-1 min-h-0 p-2 w-full h-full items-stretch">
             <.triage_column
               non_ticket_triage_sessions={non_ticket_triage_sessions}
+              optimistic_queued_sessions={optimistic_queued_sessions}
               idle_tickets={idle_tickets}
               active_ticket_numbers={active_ticket_numbers}
               active_container_id={@active_container_id}

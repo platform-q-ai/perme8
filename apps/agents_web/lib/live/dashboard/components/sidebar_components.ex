@@ -197,6 +197,7 @@ defmodule AgentsWeb.DashboardLive.Components.SidebarComponents do
   Renders the triage column with non-ticket triage sessions and idle tickets.
   """
   attr(:non_ticket_triage_sessions, :list, required: true)
+  attr(:optimistic_queued_sessions, :list, required: true)
   attr(:idle_tickets, :list, required: true)
   attr(:active_ticket_numbers, :any, required: true)
   attr(:active_container_id, :string, default: nil)
@@ -234,6 +235,10 @@ defmodule AgentsWeb.DashboardLive.Components.SidebarComponents do
             warming={@session_warming?.(session)}
             active={session.container_id == @active_container_id}
           />
+        </li>
+
+        <li :for={session <- @optimistic_queued_sessions} class="w-full">
+          <.ticket_card variant={:optimistic} session={session} active={false} />
         </li>
 
         <%!-- Sync tickets button when no tickets exist --%>
