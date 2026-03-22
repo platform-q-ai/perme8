@@ -8,6 +8,24 @@ defmodule AgentsWeb.DashboardLive.IndexPubsubTest do
 
   alias Agents.Sessions.Infrastructure.Schemas.TaskSchema
   alias Agents.Repo
+  alias Agents.Tickets.Infrastructure.Repositories.ProjectTicketRepository
+
+  defp create_ticket!(attrs) do
+    {:ok, ticket} =
+      ProjectTicketRepository.sync_remote_ticket(
+        Map.merge(
+          %{
+            status: "Ready",
+            priority: "Need",
+            size: "M",
+            labels: []
+          },
+          attrs
+        )
+      )
+
+    ticket
+  end
 
   describe "real-time PubSub events" do
     setup %{conn: conn} do
@@ -434,7 +452,74 @@ defmodule AgentsWeb.DashboardLive.IndexPubsubTest do
 
       assert_push_event(lv, "browser_notification", %{
         title: "Session completed",
-        body: "One of your sessions completed. Open Sessions to review it.",
+        body: "Session completed: Implement browser notifications for sessions",
+        type: "session_completed"
+      })
+    end
+
+    test "receiving task_status_changed to completed still notifies when task snapshot lacks user_id",
+         %{conn: conn, user: user} do
+      task =
+        task_fixture(%{
+          user_id: user.id,
+          status: "running",
+          instruction: "Finish linked ticket work",
+          container_id: "c-snapshot-missing-user"
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      :sys.replace_state(lv.pid, fn state ->
+        update_in(state.socket.assigns.tasks_snapshot, fn tasks ->
+          Enum.map(tasks, fn snapshot_task ->
+            if snapshot_task.id == task.id,
+              do: Map.delete(snapshot_task, :user_id),
+              else: snapshot_task
+          end)
+        end)
+      end)
+
+      Repo.get!(TaskSchema, task.id)
+      |> Ecto.Changeset.change(status: "completed")
+      |> Repo.update!()
+
+      send(lv.pid, {:task_status_changed, task.id, "completed"})
+
+      assert_push_event(lv, "browser_notification", %{
+        title: "Session completed",
+        body: "Session completed: Finish linked ticket work",
+        type: "session_completed"
+      })
+    end
+
+    test "receiving task_status_changed for a ticket-linked task includes the ticket number and title",
+         %{conn: conn, user: user} do
+      task =
+        task_fixture(%{
+          user_id: user.id,
+          status: "running",
+          instruction: "finish ticket 42",
+          container_id: "c-ticket-notify"
+        })
+
+      create_ticket!(%{
+        number: 42,
+        title: "Fix login bug",
+        associated_task_id: task.id,
+        associated_container_id: task.container_id
+      })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      Repo.get!(TaskSchema, task.id)
+      |> Ecto.Changeset.change(status: "completed")
+      |> Repo.update!()
+
+      send(lv.pid, {:task_status_changed, task.id, "completed"})
+
+      assert_push_event(lv, "browser_notification", %{
+        title: "Session completed",
+        body: "Ticket #42 completed: Fix login bug",
         type: "session_completed"
       })
     end
@@ -488,7 +573,7 @@ defmodule AgentsWeb.DashboardLive.IndexPubsubTest do
 
       assert_push_event(lv, "browser_notification", %{
         title: "Session failed",
-        body: "One of your sessions failed. Open Sessions to review details.",
+        body: "Session failed: Debug the notification pipeline",
         type: "session_failed"
       })
     end
