@@ -858,13 +858,6 @@ root_seed_comment = hd(with_seed_comment.comments)
     body: "Good point, I will update it."
   })
 
-{:ok, _with_seed_review} =
-  Pipeline.review_pull_request(seeded_pr.number, %{
-    actor_id: alice.id,
-    event: "comment",
-    body: "Seeded review comment"
-  })
-
 IO.puts("[exo-seeds-web] Created PR tab fixture sessions for bob")
 
 # ---------------------------------------------------------------------------
