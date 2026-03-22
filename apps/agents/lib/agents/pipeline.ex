@@ -15,6 +15,7 @@ defmodule Agents.Pipeline do
   alias Agents.Pipeline.Application.UseCases.CommentOnPullRequest
   alias Agents.Pipeline.Application.UseCases.ClosePullRequest
   alias Agents.Pipeline.Application.UseCases.CreatePullRequest
+  alias Agents.Pipeline.Application.UseCases.GetPipelineKanban
   alias Agents.Pipeline.Application.UseCases.GetPipelineStatus
   alias Agents.Pipeline.Application.UseCases.GetPullRequest
   alias Agents.Pipeline.Application.UseCases.GetPullRequestDiff
@@ -51,6 +52,9 @@ defmodule Agents.Pipeline do
   @spec get_pipeline_status(Ecto.UUID.t(), keyword()) ::
           {:ok, Domain.Entities.PipelineRun.t()} | {:error, term()}
   defdelegate get_pipeline_status(run_id, opts \\ []), to: GetPipelineStatus, as: :execute
+
+  @spec get_pipeline_kanban([map()], keyword()) :: {:ok, map()} | {:error, term()}
+  defdelegate get_pipeline_kanban(tickets, opts \\ []), to: GetPipelineKanban, as: :execute
 
   @spec get_pull_request(integer(), keyword()) ::
           {:ok, Domain.Entities.PullRequest.t()} | {:error, :not_found}

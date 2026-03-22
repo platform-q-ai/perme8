@@ -22,5 +22,5 @@ Feature: GitHub ticket sync sidebar in Sessions
   Scenario: Auth refresh bulk action is hidden without failed auth tickets
     Then "button[phx-click='refresh_all_auth']" should not exist
 
-  Scenario: Builds header is visible in the build column
-    Then I should see "Builds"
+  Scenario: Pipeline row is visible beneath the triage list
+    Then I should see "Pipeline"

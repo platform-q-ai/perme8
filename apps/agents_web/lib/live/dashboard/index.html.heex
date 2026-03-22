@@ -35,7 +35,7 @@
 
           <.search_and_filter session_search={@session_search} status_filter={@status_filter} />
 
-          <%!-- Partition tickets into idle (triage) vs active (build) --%>
+          <%!-- Partition tickets into idle (triage) vs active pipeline work --%>
           <%!-- Sub-tickets participate identically to root tickets in lane partitioning --%>
           <% build_statuses = ["pending", "starting", "running", "queued"] %>
           <% filtered_tickets_flat =
@@ -43,6 +43,39 @@
           <% active_tickets =
             Enum.filter(filtered_tickets_flat, fn t -> t.task_status in build_statuses end) %>
           <% active_ticket_numbers = MapSet.new(active_tickets, & &1.number) %>
+          <% warming_task_ids =
+            if @queue_state,
+              do: MapSet.new(Map.get(@queue_state, :warming_task_ids, [])),
+              else: MapSet.new() %>
+          <% warm_candidate_ids = @sticky_warm_task_ids || MapSet.new() %>
+          <% has_real_container? = fn session ->
+            is_binary(session.container_id) and
+              not String.starts_with?(session.container_id, "task:")
+          end %>
+          <% session_variant = fn session ->
+            cond do
+              session.latest_status in ["running", "starting", "pending"] ->
+                :in_progress
+
+              session.latest_status == "failed" ->
+                :failed
+
+              session.latest_status == "queued" and is_binary(session.latest_task_id) and
+                  MapSet.member?(warm_candidate_ids, session.latest_task_id) ->
+                :warm
+
+              session.latest_status == "queued" ->
+                :queued
+
+              true ->
+                :triage_session
+            end
+          end %>
+          <% session_warming? = fn session ->
+            is_binary(session.latest_task_id) and
+              MapSet.member?(warming_task_ids, session.latest_task_id) and
+              not has_real_container?.(session)
+          end %>
           <%!-- idle_tickets: root tickets not in build. Sub-tickets render in the parent accordion --%>
           <% idle_tickets =
             filtered_tickets
@@ -109,45 +142,21 @@
           <% non_ticket_triage_sessions =
             filtered_sessions
             |> Enum.filter(fn s ->
-              s.latest_status in ["completed", "cancelled", "awaiting_feedback"] and
-                is_nil(ticket_for_session.(s))
+              is_nil(ticket_for_session.(s))
             end)
             |> Enum.sort_by(fn s ->
-              priority = if s.latest_status == "awaiting_feedback", do: 0, else: 1
+              priority =
+                case s.latest_status do
+                  "awaiting_feedback" -> 0
+                  status when status in ["completed", "cancelled"] -> 1
+                  "failed" -> 2
+                  "queued" -> 3
+                  status when status in ["running", "starting", "pending"] -> 4
+                  _ -> 5
+                end
+
               {priority, -latest_at_unix(s)}
             end) %>
-
-          <% non_ticket_failed_sessions =
-            filtered_sessions
-            |> Enum.filter(fn s ->
-              s.latest_status == "failed" and is_nil(ticket_for_session.(s))
-            end)
-            |> Enum.sort_by(&(-latest_at_unix(&1))) %>
-
-          <% non_ticket_queued_sessions =
-            filtered_sessions
-            |> Enum.filter(fn s ->
-              s.latest_status == "queued" and is_nil(ticket_for_session.(s))
-            end)
-            |> Enum.sort_by(&(-latest_at_unix(&1))) %>
-
-          <% non_ticket_in_progress_sessions =
-            filtered_sessions
-            |> Enum.filter(fn s ->
-              s.latest_status in ["pending", "starting", "running"] and
-                is_nil(ticket_for_session.(s))
-            end)
-            |> Enum.sort_by(&(-latest_at_unix(&1))) %>
-
-          <%!-- Ticket build lane partitions --%>
-          <% build_ticket_queued =
-            Enum.filter(active_tickets, fn t -> t.task_status == "queued" end) %>
-          <% build_ticket_in_progress =
-            Enum.filter(active_tickets, fn t ->
-              t.task_status in ["pending", "starting", "running"]
-            end) %>
-          <%!-- awaiting_feedback tickets now appear at the top of triage instead of build --%>
-
           <% optimistic_queued_sessions =
             @optimistic_new_sessions
             |> Enum.sort_by(fn entry ->
@@ -156,81 +165,11 @@
                 _ -> 0
               end
             end) %>
-          <% warm_limit =
-            if(@queue_state, do: Map.get(@queue_state, :warm_cache_limit, 2), else: 0) %>
-          <% warming_task_ids =
-            if @queue_state,
-              do: MapSet.new(Map.get(@queue_state, :warming_task_ids, [])),
-              else: MapSet.new() %>
-          <% has_real_container? = fn session ->
-            is_binary(session.container_id) and
-              not String.starts_with?(session.container_id, "task:")
-          end %>
-          <% warm_candidate_ids =
-            if @queue_state do
-              @sticky_warm_task_ids || MapSet.new()
-            else
-              MapSet.new()
-            end %>
 
-          <%!-- Warm partitions for non-ticket queued sessions --%>
-          <% warm_primary_sessions =
-            Enum.filter(non_ticket_queued_sessions, fn session ->
-              is_binary(session.latest_task_id) and
-                MapSet.member?(warm_candidate_ids, session.latest_task_id)
-            end) %>
-          <% warm_primary_ids =
-            warm_primary_sessions
-            |> Enum.map(& &1.latest_task_id)
-            |> MapSet.new() %>
-
-          <%!-- Warm partitions for ticket queued items --%>
-          <% warm_ticket_items =
-            Enum.filter(build_ticket_queued, fn ticket ->
-              is_binary(ticket.associated_task_id) and
-                MapSet.member?(warm_candidate_ids, ticket.associated_task_id)
-            end) %>
-          <% warm_ticket_ids =
-            warm_ticket_items
-            |> Enum.map(& &1.associated_task_id)
-            |> MapSet.new() %>
-
-          <% overflow_ticket_items =
-            Enum.reject(build_ticket_queued, fn ticket ->
-              is_binary(ticket.associated_task_id) and
-                MapSet.member?(warm_ticket_ids, ticket.associated_task_id)
-            end) %>
-
-          <% warming_ticket? = fn ticket ->
-            session = session_for_ticket.(ticket)
-
-            is_binary(ticket.associated_task_id) and
-              MapSet.member?(warming_task_ids, ticket.associated_task_id) and
-              (is_nil(session) or not has_real_container?.(session))
-          end %>
-
-          <% warming_session? = fn session ->
-            is_binary(session.latest_task_id) and
-              MapSet.member?(warming_task_ids, session.latest_task_id) and
-              not has_real_container?.(session)
-          end %>
-          <% overflow_queued_sessions =
-            Enum.reject(non_ticket_queued_sessions, fn session ->
-              is_binary(session.latest_task_id) and
-                MapSet.member?(warm_primary_ids, session.latest_task_id)
-            end) %>
-
-          <% all_warm_count = length(warm_primary_sessions) + length(warm_ticket_items) %>
-          <% empty_warm_slot_count = max(warm_limit - all_warm_count, 0) %>
-          <% empty_slot_count =
-            if(@queue_state,
-              do: max(@queue_state.concurrency_limit - @queue_state.running, 0),
-              else: 0
-            ) %>
-
-          <div class="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-2 gap-2 p-2 w-full h-full items-stretch">
+          <div class="flex-1 min-h-0 p-2 w-full h-full items-stretch">
             <.triage_column
               non_ticket_triage_sessions={non_ticket_triage_sessions}
+              optimistic_queued_sessions={optimistic_queued_sessions}
               idle_tickets={idle_tickets}
               active_ticket_numbers={active_ticket_numbers}
               active_container_id={@active_container_id}
@@ -239,32 +178,21 @@
               syncing_tickets={@syncing_tickets}
               container_stats={@container_stats}
               session_for_ticket={session_for_ticket}
+              session_variant={session_variant}
+              session_warming?={session_warming?}
               ticket_data_id={&ticket_data_id/1}
-            />
-
-            <.build_column
-              non_ticket_failed_sessions={non_ticket_failed_sessions}
-              overflow_queued_sessions={overflow_queued_sessions}
-              overflow_ticket_items={overflow_ticket_items}
-              optimistic_queued_sessions={optimistic_queued_sessions}
-              warm_primary_sessions={warm_primary_sessions}
-              warm_ticket_items={warm_ticket_items}
-              build_ticket_in_progress={build_ticket_in_progress}
-              non_ticket_in_progress_sessions={non_ticket_in_progress_sessions}
-              empty_warm_slot_count={empty_warm_slot_count}
-              empty_slot_count={empty_slot_count}
-              queue_state={@queue_state}
-              active_container_id={@active_container_id}
-              active_ticket_number={@active_ticket_number}
-              auth_refreshing={@auth_refreshing}
-              container_stats={@container_stats}
-              session_for_ticket={session_for_ticket}
-              warming_session?={warming_session?}
-              warming_ticket?={warming_ticket?}
             />
           </div>
         <% end %>
       </div>
+
+      <.pipeline_kanban
+        :if={@sessions != [] or @tickets != []}
+        kanban={@pipeline_kanban}
+        collapsed={@pipeline_kanban_collapsed}
+        collapsed_columns={@collapsed_kanban_columns}
+        active_ticket_number={@active_ticket_number}
+      />
     </div>
 
     <% selected_ticket = find_ticket_by_number(@tickets, @active_ticket_number) %>

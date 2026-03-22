@@ -85,10 +85,10 @@ Feature: Session Search and Filtering
   # Column Structure Preserved
   # ---------------------------------------------------------------------------
 
-  Scenario: Both Triage and Build columns remain visible with filters active
+  Scenario: Triage lane remains visible with the pipeline row active
     When I navigate to "${baseUrl}/sessions"
     And I wait for network idle
     And I click "button[phx-click='status_filter'][phx-value-status='completed']"
     And I wait for network idle
     Then I should see "TRIAGE"
-    And I should see "BUILD"
+    And I should see "Pipeline"

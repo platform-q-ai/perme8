@@ -21,6 +21,7 @@ defmodule AgentsWeb.DashboardLive.PubSubHandlers do
   alias Agents.Tickets.Domain.Policies.TicketEnrichmentPolicy
 
   alias AgentsWeb.DashboardLive.EventProcessor
+  alias AgentsWeb.DashboardLive.PipelineKanbanState
   alias AgentsWeb.DashboardLive.TicketSessionLinker
 
   require Logger
@@ -138,6 +139,7 @@ defmodule AgentsWeb.DashboardLive.PubSubHandlers do
       |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)
       |> assign(:tasks_snapshot, tasks_snapshot)
       |> assign(:tickets, tickets)
+      |> PipelineKanbanState.assign_pipeline_kanban()
       |> request_task_refresh(task_id)
       |> apply_status_change_to_ui(is_current_task, status, task_id)
       |> maybe_push_browser_notification(changed_task, status)
@@ -231,6 +233,7 @@ defmodule AgentsWeb.DashboardLive.PubSubHandlers do
          &SessionLifecyclePolicy.derive/1
        )
      )
+     |> PipelineKanbanState.assign_pipeline_kanban()
      |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)}
   end
 
@@ -308,7 +311,7 @@ defmodule AgentsWeb.DashboardLive.PubSubHandlers do
             %{t | task_status: nil, associated_task_id: nil, session_state: "idle"}
           end)
 
-        assign(socket, :tickets, tickets)
+        socket |> assign(:tickets, tickets) |> PipelineKanbanState.assign_pipeline_kanban()
       else
         socket
       end
@@ -371,6 +374,7 @@ defmodule AgentsWeb.DashboardLive.PubSubHandlers do
          &SessionLifecyclePolicy.derive/1
        )
      )
+     |> PipelineKanbanState.assign_pipeline_kanban()
      |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)}
   end
 
@@ -441,7 +445,10 @@ defmodule AgentsWeb.DashboardLive.PubSubHandlers do
           next_active_ticket_number(tickets, socket.assigns[:active_ticket_number])
       end
 
-    {:noreply, assign(socket, :active_ticket_number, active_ticket_number)}
+    {:noreply,
+     socket
+     |> assign(:active_ticket_number, active_ticket_number)
+     |> PipelineKanbanState.assign_pipeline_kanban()}
   end
 
   def ticket_stage_changed(ticket_id, to_stage, transitioned_at, socket) do
@@ -493,6 +500,7 @@ defmodule AgentsWeb.DashboardLive.PubSubHandlers do
          &SessionLifecyclePolicy.derive/1
        )
      )
+     |> PipelineKanbanState.assign_pipeline_kanban()
      |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)}
   end
 
@@ -523,6 +531,7 @@ defmodule AgentsWeb.DashboardLive.PubSubHandlers do
      |> assign(:sessions, sessions)
      |> assign(:tasks_snapshot, tasks)
      |> assign(:tickets, tickets)
+     |> PipelineKanbanState.assign_pipeline_kanban()
      |> put_flash(:info, message)}
   end
 
