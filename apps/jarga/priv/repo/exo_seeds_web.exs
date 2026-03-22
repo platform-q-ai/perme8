@@ -774,7 +774,6 @@ IO.puts("[exo-seeds-web] Created all session-card-stats fixture sessions")
 # 7d. Create PR tab fixture sessions (for pr-tab browser tests)
 # ---------------------------------------------------------------------------
 
-linked_pr_session_id = Ecto.UUID.generate()
 linked_pr_container = "pr-linked-#{Ecto.UUID.generate() |> String.slice(0..7)}"
 
 {:ok, linked_pr_task} =
@@ -783,12 +782,10 @@ linked_pr_container = "pr-linked-#{Ecto.UUID.generate() |> String.slice(0..7)}"
     user_id: bob.id,
     instruction: "Session with linked PR",
     status: "completed",
-    container_id: linked_pr_container,
-    session_ref_id: linked_pr_session_id
+    container_id: linked_pr_container
   })
   |> Jarga.Repo.insert()
 
-without_pr_session_id = Ecto.UUID.generate()
 without_pr_container = "pr-without-#{Ecto.UUID.generate() |> String.slice(0..7)}"
 
 {:ok, without_pr_task} =
@@ -797,8 +794,7 @@ without_pr_container = "pr-without-#{Ecto.UUID.generate() |> String.slice(0..7)}
     user_id: bob.id,
     instruction: "Session without linked PR",
     status: "completed",
-    container_id: without_pr_container,
-    session_ref_id: without_pr_session_id
+    container_id: without_pr_container
   })
   |> Jarga.Repo.insert()
 
@@ -815,8 +811,7 @@ without_pr_container = "pr-without-#{Ecto.UUID.generate() |> String.slice(0..7)}
   created_at: DateTime.utc_now() |> DateTime.truncate(:second),
   sync_state: "synced",
   last_synced_at: DateTime.utc_now() |> DateTime.truncate(:second),
-  task_id: linked_pr_task.id,
-  session_id: linked_pr_session_id
+  task_id: linked_pr_task.id
 })
 |> Agents.Repo.insert!()
 
@@ -833,8 +828,7 @@ without_pr_container = "pr-without-#{Ecto.UUID.generate() |> String.slice(0..7)}
   created_at: DateTime.utc_now() |> DateTime.truncate(:second),
   sync_state: "synced",
   last_synced_at: DateTime.utc_now() |> DateTime.truncate(:second),
-  task_id: without_pr_task.id,
-  session_id: without_pr_session_id
+  task_id: without_pr_task.id
 })
 |> Agents.Repo.insert!()
 
