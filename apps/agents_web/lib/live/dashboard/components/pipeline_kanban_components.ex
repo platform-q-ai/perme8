@@ -122,6 +122,7 @@ defmodule AgentsWeb.DashboardLive.Components.PipelineKanbanComponents do
             <.kanban_ticket_card
               :for={ticket <- @stage.tickets}
               ticket={ticket}
+              stage_label={@stage.label}
               active={ticket.number == @active_ticket_number}
             />
           </div>
@@ -131,6 +132,7 @@ defmodule AgentsWeb.DashboardLive.Components.PipelineKanbanComponents do
   end
 
   attr(:ticket, :map, required: true)
+  attr(:stage_label, :string, required: true)
   attr(:active, :boolean, default: false)
 
   def kanban_ticket_card(assigns) do
@@ -155,6 +157,9 @@ defmodule AgentsWeb.DashboardLive.Components.PipelineKanbanComponents do
             <div class="min-w-0 flex-1">
               <div class="text-xs font-semibold text-base-content/70">##{@ticket.number}</div>
               <div class="text-sm leading-snug text-base-content truncate">{@ticket.title}</div>
+              <div class="text-[0.65rem] uppercase tracking-[0.18em] text-base-content/45">
+                ##{@ticket.number} in {@stage_label}
+              </div>
               <div :if={@ticket.labels != []} class="mt-1 flex flex-wrap gap-1">
                 <span
                   :for={label <- Enum.take(@ticket.labels, 2)}

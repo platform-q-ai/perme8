@@ -70,7 +70,7 @@ Feature: Pipeline Phase 5 - Pipeline Kanban Row UI
     And I should see "Ready"
     When I wait for 2 seconds
     Then I should not see "#425 in Ready"
-    And I should see "CI Testing"
+    And I should see "#425 in CI Testing"
 
   Scenario: Column header status summary
     Given I navigate to "${baseUrl}/sessions?fixture=pipeline_kanban_header_status_summary"
