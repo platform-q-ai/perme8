@@ -463,6 +463,7 @@ IO.puts("[exo-seeds-web] Created agents: code-helper, doc-writer")
 # ---------------------------------------------------------------------------
 
 alias Agents.Sessions.Infrastructure.Schemas.TaskSchema
+alias Agents.Pipeline
 
 {:ok, _completed_task} =
   %TaskSchema{}
@@ -768,6 +769,109 @@ no_file_stats_container = "no-file-stats-#{Ecto.UUID.generate() |> String.slice(
 IO.puts("[exo-seeds-web] Created no-file-stats session")
 
 IO.puts("[exo-seeds-web] Created all session-card-stats fixture sessions")
+
+# ---------------------------------------------------------------------------
+# 7d. Create PR tab fixture sessions (for pr-tab browser tests)
+# ---------------------------------------------------------------------------
+
+linked_pr_session_id = Ecto.UUID.generate()
+linked_pr_container = "pr-linked-#{Ecto.UUID.generate() |> String.slice(0..7)}"
+
+{:ok, linked_pr_task} =
+  %TaskSchema{}
+  |> TaskSchema.changeset(%{
+    user_id: bob.id,
+    instruction: "Session with linked PR",
+    status: "completed",
+    container_id: linked_pr_container,
+    session_ref_id: linked_pr_session_id
+  })
+  |> Jarga.Repo.insert()
+
+without_pr_session_id = Ecto.UUID.generate()
+without_pr_container = "pr-without-#{Ecto.UUID.generate() |> String.slice(0..7)}"
+
+{:ok, without_pr_task} =
+  %TaskSchema{}
+  |> TaskSchema.changeset(%{
+    user_id: bob.id,
+    instruction: "Session without linked PR",
+    status: "completed",
+    container_id: without_pr_container,
+    session_ref_id: without_pr_session_id
+  })
+  |> Jarga.Repo.insert()
+
+%ProjectTicketSchema{}
+|> ProjectTicketSchema.changeset(%{
+  number: 506,
+  title: "PR tab linked ticket",
+  body: "Ticket body for seeded PR tab review",
+  status: "Ready",
+  priority: "Need",
+  size: "M",
+  labels: ["enhancement", "agents"],
+  position: 5,
+  created_at: DateTime.utc_now() |> DateTime.truncate(:second),
+  sync_state: "synced",
+  last_synced_at: DateTime.utc_now() |> DateTime.truncate(:second),
+  task_id: linked_pr_task.id,
+  session_id: linked_pr_session_id
+})
+|> Agents.Repo.insert!()
+
+%ProjectTicketSchema{}
+|> ProjectTicketSchema.changeset(%{
+  number: 507,
+  title: "PR tab unlinked ticket",
+  body: "Ticket body for seeded non-PR session",
+  status: "Backlog",
+  priority: "Want",
+  size: "S",
+  labels: ["agents"],
+  position: 6,
+  created_at: DateTime.utc_now() |> DateTime.truncate(:second),
+  sync_state: "synced",
+  last_synced_at: DateTime.utc_now() |> DateTime.truncate(:second),
+  task_id: without_pr_task.id,
+  session_id: without_pr_session_id
+})
+|> Agents.Repo.insert!()
+
+{:ok, seeded_pr} =
+  Pipeline.create_pull_request(%{
+    source_branch: "HEAD",
+    target_branch: "HEAD",
+    title: "Seeded PR tab review",
+    body: "# Seeded PR\n\nReview this internal pull request in Perme8.",
+    status: "in_review",
+    linked_ticket: 506
+  })
+
+{:ok, with_seed_comment} =
+  Pipeline.comment_on_pull_request(seeded_pr.number, %{
+    actor_id: bob.id,
+    body: "Please extract this helper.",
+    path: "lib/demo.ex",
+    line: 12
+  })
+
+root_seed_comment = hd(with_seed_comment.comments)
+
+{:ok, _with_seed_reply} =
+  Pipeline.reply_to_pull_request_comment(seeded_pr.number, root_seed_comment.id, %{
+    actor_id: alice.id,
+    body: "Good point, I will update it."
+  })
+
+{:ok, _with_seed_review} =
+  Pipeline.review_pull_request(seeded_pr.number, %{
+    actor_id: alice.id,
+    event: "comment",
+    body: "Seeded review comment"
+  })
+
+IO.puts("[exo-seeds-web] Created PR tab fixture sessions for bob")
 
 # ---------------------------------------------------------------------------
 # 8. Create project tickets (for ticket-sync browser tests)
