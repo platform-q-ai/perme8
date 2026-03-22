@@ -27,11 +27,12 @@ defmodule AgentsWeb.DashboardLive.TicketLifecycleFixtures do
         socket
         |> assign(:fixture, fixture)
         |> assign(:sessions, Map.get(payload, :sessions, []))
-        |> assign(:tasks_snapshot, [])
+        |> assign(:tasks_snapshot, Map.get(payload, :tasks_snapshot, []))
         |> assign(:tickets, payload.tickets)
         |> assign(:active_ticket_number, active_ticket_number)
         |> assign(:pipeline_kanban_collapsed, Map.get(payload, :pipeline_kanban_collapsed, false))
         |> PipelineKanbanState.assign_pipeline_kanban()
+        |> maybe_schedule_pipeline_fixture_event(fixture)
     end
   end
 
@@ -41,6 +42,24 @@ defmodule AgentsWeb.DashboardLive.TicketLifecycleFixtures do
     |> assign(:pipeline_kanban_collapsed, false)
     |> PipelineKanbanState.assign_pipeline_kanban()
   end
+
+  defp maybe_schedule_pipeline_fixture_event(socket, "pipeline_kanban_live_stage_change") do
+    Process.send_after(
+      self(),
+      %{
+        event_type: "pipeline.pipeline_stage_changed",
+        stage_id: "test",
+        task_id: "task-425",
+        session_id: nil,
+        occurred_at: DateTime.utc_now() |> DateTime.truncate(:second)
+      },
+      500
+    )
+
+    socket
+  end
+
+  defp maybe_schedule_pipeline_fixture_event(socket, _fixture), do: socket
 
   defp fixture_payload(fixture) do
     %{tickets: ticket_lifecycle_fixture_tickets(fixture)}
@@ -267,6 +286,16 @@ defmodule AgentsWeb.DashboardLive.TicketLifecycleFixtures do
           latest_status: "running",
           latest_at: DateTime.utc_now() |> DateTime.truncate(:second),
           title: "Selected session: #402"
+        }
+      ],
+      tasks_snapshot: [
+        %{
+          id: "task-402",
+          session_id: "sdk-session-402",
+          container_id: "c-pipeline-402",
+          status: "running",
+          instruction: "Selected session: #402",
+          image: "perme8-opencode"
         }
       ]
     }

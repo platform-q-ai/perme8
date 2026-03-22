@@ -39,8 +39,8 @@ Feature: Pipeline Phase 5 - Pipeline Kanban Row UI
     Given I navigate to "${baseUrl}/sessions?fixture=pipeline_kanban_rollup"
     And I wait for network idle
     Then I should see "In Progress"
-    And I should see "3 in In Progress"
-    When I click the "3 in In Progress" button
+    And I should see "4 in In Progress"
+    When I click the "4 in In Progress" button
     Then I should see "#410"
     And I should see "#411"
     And I should see "#412"
