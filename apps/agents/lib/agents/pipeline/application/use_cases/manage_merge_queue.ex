@@ -5,7 +5,6 @@ defmodule Agents.Pipeline.Application.UseCases.ManageMergeQueue do
   alias Agents.Pipeline.Application.UseCases.MergePullRequest
   alias Agents.Pipeline.Domain.Entities.{PipelineRun, PullRequest, Stage, Step}
   alias Agents.Pipeline.Domain.Policies.MergeQueuePolicy
-  alias Agents.Pipeline.Infrastructure.MergeQueueWorker
 
   @spec execute(integer(), keyword()) :: {:ok, map()} | {:error, term()}
   def execute(number, opts \\ []) when is_integer(number) do
@@ -17,7 +16,10 @@ defmodule Agents.Pipeline.Application.UseCases.ManageMergeQueue do
 
     parser = Keyword.get(opts, :pipeline_parser, PipelineRuntimeConfig.pipeline_parser())
     stage_executor = Keyword.get(opts, :stage_executor, PipelineRuntimeConfig.stage_executor())
-    merge_queue_worker = Keyword.get(opts, :merge_queue_worker, MergeQueueWorker)
+
+    merge_queue_worker =
+      Keyword.get(opts, :merge_queue_worker, PipelineRuntimeConfig.merge_queue_worker())
+
     merge_pull_request = Keyword.get(opts, :merge_pull_request, MergePullRequest)
     pipeline_path = Keyword.get(opts, :pipeline_path, default_pipeline_path())
     worker_opts = merge_queue_worker_opts(opts)
@@ -40,29 +42,57 @@ defmodule Agents.Pipeline.Application.UseCases.ManageMergeQueue do
           {:ok, %{status: :queued, decision: decision, pull_request: pull_request}}
 
         :claimed ->
-          case run_pre_merge_validation(config, pull_request, decision, stage_executor, opts) do
-            {:ok, validation} ->
-              with {:ok, merged} <- merge_pull_request.execute(number, opts) do
-                :ok = merge_queue_worker.complete(number, worker_opts)
-
-                {:ok,
-                 %{
-                   status: :merged,
-                   decision: decision,
-                   validation: validation,
-                   pull_request: merged
-                 }}
-              else
-                error ->
-                  :ok = merge_queue_worker.fail(number, error, worker_opts)
-                  error
-              end
-
-            {:error, reason} ->
-              :ok = merge_queue_worker.fail(number, reason, worker_opts)
-              {:error, {:pre_merge_validation_failed, reason, decision}}
-          end
+          handle_claimed_pull_request(
+            number,
+            config,
+            pull_request,
+            decision,
+            %{
+              stage_executor: stage_executor,
+              merge_pull_request: merge_pull_request,
+              merge_queue_worker: merge_queue_worker,
+              worker_opts: worker_opts
+            },
+            opts
+          )
       end
+    end
+  end
+
+  defp handle_claimed_pull_request(
+         number,
+         config,
+         pull_request,
+         decision,
+         deps,
+         opts
+       ) do
+    case run_pre_merge_validation(config, pull_request, decision, deps.stage_executor, opts) do
+      {:ok, validation} ->
+        finalize_merge(number, validation, decision, deps, opts)
+
+      {:error, reason} ->
+        :ok = deps.merge_queue_worker.fail(number, reason, deps.worker_opts)
+        {:error, {:pre_merge_validation_failed, reason, decision}}
+    end
+  end
+
+  defp finalize_merge(number, validation, decision, deps, opts) do
+    case deps.merge_pull_request.execute(number, opts) do
+      {:ok, merged} ->
+        :ok = deps.merge_queue_worker.complete(number, deps.worker_opts)
+
+        {:ok,
+         %{
+           status: :merged,
+           decision: decision,
+           validation: validation,
+           pull_request: merged
+         }}
+
+      error ->
+        :ok = deps.merge_queue_worker.fail(number, error, deps.worker_opts)
+        error
     end
   end
 

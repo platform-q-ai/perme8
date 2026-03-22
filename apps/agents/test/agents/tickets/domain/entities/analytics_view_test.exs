@@ -11,13 +11,14 @@ defmodule Agents.Tickets.Domain.Entities.AnalyticsViewTest do
         "in_progress" => 3,
         "in_review" => 0,
         "ci_testing" => 0,
+        "merge_queue" => 0,
         "deployed" => 0,
         "closed" => 8
       }
 
       bars = AnalyticsView.distribution_bars(stage_counts, 200.0)
 
-      assert length(bars) == 7
+      assert length(bars) == 8
 
       open_bar = Enum.find(bars, &(&1.stage == "open"))
       assert open_bar.count == 10
@@ -42,6 +43,7 @@ defmodule Agents.Tickets.Domain.Entities.AnalyticsViewTest do
         "in_progress" => 0,
         "in_review" => 0,
         "ci_testing" => 0,
+        "merge_queue" => 0,
         "deployed" => 0,
         "closed" => 0
       }
