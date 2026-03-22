@@ -13,7 +13,7 @@ defmodule Agents.Pipeline.Application.UseCases.ResolvePullRequestThread do
 
     actor_id = Map.get(attrs, :actor_id) || Map.get(attrs, "actor_id") || "mcp-system"
 
-    with {:ok, _comment} <- repo_module.resolve_comment_thread(comment_id, actor_id),
+    with {:ok, _comment} <- repo_module.resolve_comment_thread(number, comment_id, actor_id),
          {:ok, updated} <- repo_module.get_by_number(number) do
       {:ok, PullRequest.from_schema(updated)}
     end

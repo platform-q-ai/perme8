@@ -7,6 +7,7 @@ defmodule Agents.Pipeline.Application.Behaviours.PullRequestRepositoryBehaviour 
   @callback list_filtered(keyword()) :: [term()]
   @callback update_pull_request(integer(), map()) :: {:ok, term()} | {:error, term()}
   @callback add_comment(integer(), map()) :: {:ok, term()} | {:error, term()}
-  @callback resolve_comment_thread(Ecto.UUID.t(), String.t()) :: {:ok, term()} | {:error, term()}
+  @callback resolve_comment_thread(integer(), Ecto.UUID.t(), String.t()) ::
+              {:ok, term()} | {:error, term()}
   @callback add_review(integer(), map()) :: {:ok, term()} | {:error, term()}
 end

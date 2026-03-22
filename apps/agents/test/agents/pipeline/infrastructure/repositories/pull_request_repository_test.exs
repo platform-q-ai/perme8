@@ -128,7 +128,7 @@ defmodule Agents.Pipeline.Infrastructure.Repositories.PullRequestRepositoryTest 
       assert is_nil(reply_comment.resolved_by)
 
       assert {:ok, resolved_comment} =
-               PullRequestRepository.resolve_comment_thread(root_comment.id, "u3")
+               PullRequestRepository.resolve_comment_thread(pr.number, root_comment.id, "u3")
 
       assert resolved_comment.resolved
       assert resolved_comment.resolved_by == "u3"
@@ -163,6 +163,64 @@ defmodule Agents.Pipeline.Infrastructure.Repositories.PullRequestRepositoryTest 
       refute comment.resolved
       assert is_nil(comment.resolved_at)
       assert is_nil(comment.resolved_by)
+    end
+
+    test "rejects replies that target a comment from another pull request" do
+      {:ok, pr_one} =
+        PullRequestRepository.create_pull_request(%{
+          source_branch: "feature/one",
+          target_branch: "main",
+          title: "PR one",
+          status: "in_review"
+        })
+
+      {:ok, pr_two} =
+        PullRequestRepository.create_pull_request(%{
+          source_branch: "feature/two",
+          target_branch: "main",
+          title: "PR two",
+          status: "in_review"
+        })
+
+      {:ok, root_comment} =
+        PullRequestRepository.add_comment(pr_one.number, %{
+          author_id: "u1",
+          body: "Root"
+        })
+
+      assert {:error, :not_found} =
+               PullRequestRepository.add_comment(pr_two.number, %{
+                 author_id: "u2",
+                 body: "Cross PR reply",
+                 parent_comment_id: root_comment.id
+               })
+    end
+
+    test "rejects resolving a comment from another pull request" do
+      {:ok, pr_one} =
+        PullRequestRepository.create_pull_request(%{
+          source_branch: "feature/one",
+          target_branch: "main",
+          title: "PR one",
+          status: "in_review"
+        })
+
+      {:ok, pr_two} =
+        PullRequestRepository.create_pull_request(%{
+          source_branch: "feature/two",
+          target_branch: "main",
+          title: "PR two",
+          status: "in_review"
+        })
+
+      {:ok, root_comment} =
+        PullRequestRepository.add_comment(pr_one.number, %{
+          author_id: "u1",
+          body: "Root"
+        })
+
+      assert {:error, :not_found} =
+               PullRequestRepository.resolve_comment_thread(pr_two.number, root_comment.id, "u2")
     end
   end
 end

@@ -164,6 +164,73 @@ defmodule Agents.Pipeline.Application.UseCases.PullRequestWorkflowsTest do
       assert resolved.resolved_at
     end
 
+    test "rejects replies when parent comment belongs to another pull request" do
+      {:ok, pr_one} =
+        CreatePullRequest.execute(%{
+          source_branch: "feature/pr-one",
+          target_branch: "main",
+          title: "PR one",
+          status: "in_review"
+        })
+
+      {:ok, pr_two} =
+        CreatePullRequest.execute(%{
+          source_branch: "feature/pr-two",
+          target_branch: "main",
+          title: "PR two",
+          status: "in_review"
+        })
+
+      {:ok, with_comment} =
+        CommentOnPullRequest.execute(pr_one.number, %{
+          actor_id: "reviewer-1",
+          body: "Wrong PR",
+          path: "lib/reply_flow.ex",
+          line: 3
+        })
+
+      root_comment = hd(with_comment.comments)
+
+      assert {:error, :not_found} =
+               ReplyToPullRequestComment.execute(pr_two.number, root_comment.id, %{
+                 actor_id: "author-1",
+                 body: "This should fail"
+               })
+    end
+
+    test "rejects resolving a thread from another pull request" do
+      {:ok, pr_one} =
+        CreatePullRequest.execute(%{
+          source_branch: "feature/pr-one",
+          target_branch: "main",
+          title: "PR one",
+          status: "in_review"
+        })
+
+      {:ok, pr_two} =
+        CreatePullRequest.execute(%{
+          source_branch: "feature/pr-two",
+          target_branch: "main",
+          title: "PR two",
+          status: "in_review"
+        })
+
+      {:ok, with_comment} =
+        CommentOnPullRequest.execute(pr_one.number, %{
+          actor_id: "reviewer-1",
+          body: "Wrong PR",
+          path: "lib/reply_flow.ex",
+          line: 3
+        })
+
+      root_comment = hd(with_comment.comments)
+
+      assert {:error, :not_found} =
+               ResolvePullRequestThread.execute(pr_two.number, root_comment.id, %{
+                 actor_id: "maintainer-1"
+               })
+    end
+
     test "review enforces transition policy" do
       {:ok, pr} =
         CreatePullRequest.execute(%{

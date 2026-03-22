@@ -50,7 +50,7 @@ Feature: Session PR tab for internal code review
     When I click "[role='tab'][data-tab-id='pr']"
     And I wait for "#tabpanel-pr" to be visible
     Then "#tabpanel-pr [data-testid='pr-review-thread']" should exist
-    And "#tabpanel-pr [data-testid='pr-review-reply']" should exist
+    And "#tabpanel-pr [data-testid='pr-reply-input']" should exist
     And "#tabpanel-pr [data-testid='pr-thread-resolved-state']" should exist
 
   Scenario: Reviewer can add comments and replies
