@@ -779,7 +779,7 @@ linked_pr_container = "pr-linked-#{Ecto.UUID.generate() |> String.slice(0..7)}"
 {:ok, linked_pr_task} =
   %TaskSchema{}
   |> TaskSchema.changeset(%{
-    user_id: bob.id,
+    user_id: alice.id,
     instruction: "Session with linked PR",
     status: "completed",
     container_id: linked_pr_container
@@ -791,7 +791,7 @@ without_pr_container = "pr-without-#{Ecto.UUID.generate() |> String.slice(0..7)}
 {:ok, without_pr_task} =
   %TaskSchema{}
   |> TaskSchema.changeset(%{
-    user_id: bob.id,
+    user_id: alice.id,
     instruction: "Session without linked PR",
     status: "completed",
     container_id: without_pr_container
@@ -858,7 +858,7 @@ root_seed_comment = hd(with_seed_comment.comments)
     body: "Good point, I will update it."
   })
 
-IO.puts("[exo-seeds-web] Created PR tab fixture sessions for bob")
+IO.puts("[exo-seeds-web] Created PR tab fixture sessions for alice")
 
 # ---------------------------------------------------------------------------
 # 8. Create project tickets (for ticket-sync browser tests)

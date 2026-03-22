@@ -13,14 +13,14 @@ Feature: Session PR tab for internal code review
     And I wait for network idle
     And I navigate to "${baseUrl}/sessions"
     And I wait for network idle
-    And I click "[data-testid='session-with-linked-pr']"
+    And I click "[data-testid='triage-ticket-item-506']"
     And I wait for "[role='tablist']" to be visible
 
   Scenario: PR tab appears when a linked internal PR exists
     Then "[role='tab'][data-tab-id='pr']" should be visible
 
   Scenario: PR tab does not appear when no linked internal PR exists
-    When I click "[data-testid='session-without-linked-pr']"
+    When I click "[data-testid='triage-ticket-item-507']"
     And I wait for "[role='tablist']" to be visible
     Then "[role='tab'][data-tab-id='pr']" should not exist
 
