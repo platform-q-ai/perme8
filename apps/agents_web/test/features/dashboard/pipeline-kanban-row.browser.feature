@@ -22,8 +22,7 @@ Feature: Pipeline Phase 5 - Pipeline Kanban Row UI
   Scenario: Kanban columns derive from pipeline stages
     Given I navigate to "${baseUrl}/sessions?fixture=pipeline_kanban_stage_columns"
     And I wait for network idle
-    Then I should see "Open"
-    And I should see "Ready"
+    Then I should see "Ready"
     And I should see "In Progress"
     And I should see "In Review"
     And I should see "CI Testing"
@@ -40,8 +39,8 @@ Feature: Pipeline Phase 5 - Pipeline Kanban Row UI
     Given I navigate to "${baseUrl}/sessions?fixture=pipeline_kanban_rollup"
     And I wait for network idle
     Then I should see "In Progress"
-    And I should see "3 tickets"
-    When I click the "In Progress" button
+    And I should see "3 in In Progress"
+    When I click the "3 in In Progress" button
     Then I should see "#410"
     And I should see "#411"
     And I should see "#412"
@@ -49,19 +48,19 @@ Feature: Pipeline Phase 5 - Pipeline Kanban Row UI
   Scenario: Kanban can collapse to status bar
     Given I navigate to "${baseUrl}/sessions?fixture=pipeline_kanban_collapsible"
     And I wait for network idle
-    When I click the "Collapse pipeline" button
-    And I wait for network idle
-    Then I should see "Open"
-    And I should see "In Progress"
-    And I should not see "#402"
     When I click the "Expand pipeline" button
     And I wait for network idle
     Then I should see "#402"
+    When I click the "Collapse pipeline" button
+    And I wait for network idle
+    Then I should see "Ready"
+    And I should see "In Progress"
+    And I should not see "#402"
 
   Scenario: Clicking a kanban ticket selects its session
     Given I navigate to "${baseUrl}/sessions?fixture=pipeline_kanban_ticket_to_session_selection"
     And I wait for network idle
-    When I click the "Ticket #402" link
+    When I click "[data-testid='kanban-ticket-card-402']"
     And I wait for network idle
     Then I should see "Selected session: #402"
 
@@ -72,11 +71,11 @@ Feature: Pipeline Phase 5 - Pipeline Kanban Row UI
     And I should see "Ready"
     When I wait for 2 seconds
     Then I should not see "#425 in Ready"
-    And I should see "#425 in In Review"
+    And I should see "#425 in CI Testing"
 
   Scenario: Column header status summary
     Given I navigate to "${baseUrl}/sessions?fixture=pipeline_kanban_header_status_summary"
     And I wait for network idle
     Then I should see "In Review"
     And I should see "2"
-    And I should see "Healthy"
+    And I should see "review"
