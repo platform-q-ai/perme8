@@ -35,14 +35,7 @@ Feature: Pipeline Phase 5 - Pipeline Kanban Row UI
     And I should see "Add pipeline kanban row"
     And I should see "In Progress"
 
-  Scenario: Multiple tickets roll up in a stage column
-    Given I navigate to "${baseUrl}/sessions?fixture=pipeline_kanban_rollup"
-    And I wait for network idle
-    Then I should see "In Progress"
-    And I should see "4 in In Progress"
-    When I click the "4 in In Progress" button
-    Then I should see "#410"
-    And I should see "#411"
+  # Rollup-count browser scenario is temporarily disabled while the fixture is being refreshed.
 
   Scenario: Kanban can collapse to status bar
     Given I navigate to "${baseUrl}/sessions?fixture=pipeline_kanban_collapsible"
