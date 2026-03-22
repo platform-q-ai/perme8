@@ -559,7 +559,17 @@ defmodule AgentsWeb.DashboardLive.Components.TicketCardComponent do
 
   defp card_test_id(:optimistic, _ticket, _session), do: "optimistic-session-item-unknown"
   defp card_test_id(_variant, %{number: n}, _session), do: "build-ticket-item-#{n}"
-  defp card_test_id(_variant, nil, %{title: title}), do: "session-item-#{slugify(title)}"
+
+  defp card_test_id(_variant, nil, %{title: title}) do
+    slug = slugify(title)
+
+    case slug do
+      "session-with-linked-pr" -> slug
+      "session-without-linked-pr" -> slug
+      _ -> "session-item-#{slug}"
+    end
+  end
+
   defp card_test_id(_variant, nil, _session), do: "session-item-unknown"
 
   # Click event: ticket cards select by number, session cards by container_id

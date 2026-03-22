@@ -31,6 +31,15 @@ defmodule Agents.Pipeline.Infrastructure.Repositories.PullRequestRepository do
     end
   end
 
+  @spec get_by_linked_ticket(integer(), module()) ::
+          {:ok, PullRequestSchema.t()} | {:error, :not_found}
+  def get_by_linked_ticket(ticket_number, repo \\ Repo) when is_integer(ticket_number) do
+    case repo.get_by(PullRequestSchema, linked_ticket: ticket_number) do
+      nil -> {:error, :not_found}
+      pr -> {:ok, repo.preload(pr, @preloads)}
+    end
+  end
+
   @spec list_filtered(keyword(), module()) :: [PullRequestSchema.t()]
   def list_filtered(opts \\ [], repo \\ Repo) do
     per_page = Keyword.get(opts, :per_page, 30)
@@ -67,9 +76,32 @@ defmodule Agents.Pipeline.Infrastructure.Repositories.PullRequestRepository do
         {:error, :not_found}
 
       pr ->
-        %ReviewCommentSchema{}
-        |> ReviewCommentSchema.changeset(Map.put(attrs, :pull_request_id, pr.id))
-        |> repo.insert()
+        with :ok <- validate_parent_comment(attrs, pr.id, repo) do
+          %ReviewCommentSchema{}
+          |> ReviewCommentSchema.changeset(Map.put(attrs, :pull_request_id, pr.id))
+          |> repo.insert()
+        end
+    end
+  end
+
+  @spec resolve_comment_thread(integer(), Ecto.UUID.t(), String.t(), module()) ::
+          {:ok, ReviewCommentSchema.t()} | {:error, :not_found} | {:error, Ecto.Changeset.t()}
+  def resolve_comment_thread(number, comment_id, actor_id, repo \\ Repo)
+      when is_integer(number) and is_binary(comment_id) and is_binary(actor_id) do
+    with {:ok, pr} <- get_by_number(number, repo),
+         %ReviewCommentSchema{} = comment <- repo.get(ReviewCommentSchema, comment_id),
+         true <- comment.pull_request_id == pr.id do
+      comment
+      |> ReviewCommentSchema.changeset(%{
+        resolved: true,
+        resolved_at: DateTime.utc_now() |> DateTime.truncate(:second),
+        resolved_by: actor_id
+      })
+      |> repo.update()
+    else
+      nil -> {:error, :not_found}
+      false -> {:error, :not_found}
+      {:error, :not_found} = error -> error
     end
   end
 
@@ -108,5 +140,18 @@ defmodule Agents.Pipeline.Infrastructure.Repositories.PullRequestRepository do
   defp maybe_filter_query(query, text) do
     pattern = "%#{text}%"
     where(query, [pr], ilike(pr.title, ^pattern))
+  end
+
+  defp validate_parent_comment(attrs, pull_request_id, repo) do
+    case Map.get(attrs, :parent_comment_id) || Map.get(attrs, "parent_comment_id") do
+      nil ->
+        :ok
+
+      parent_comment_id ->
+        case repo.get(ReviewCommentSchema, parent_comment_id) do
+          %ReviewCommentSchema{pull_request_id: ^pull_request_id} -> :ok
+          _ -> {:error, :not_found}
+        end
+    end
   end
 end

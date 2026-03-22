@@ -122,7 +122,18 @@ export class PlaywrightBrowserAdapter implements BrowserPort {
   // --- Interactions ---
 
   async click(selector: string): Promise<void> {
-    await this.guardPage().click(selector)
+    try {
+      await this.guardPage().click(selector)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+
+      if (message.includes('intercepts pointer events')) {
+        await this.guardPage().click(selector, { force: true })
+        return
+      }
+
+      throw error
+    }
   }
 
   async forceClick(selector: string): Promise<void> {

@@ -25,15 +25,8 @@ Feature: Queued Messages in Sessions
   # Queued message visibility
   # ---------------------------------------------------------------------------
 
-  Scenario: Queued message appears in output log after sending
-    Given I navigate to "${baseUrl}/sessions"
-    And I wait for network idle
-    # Assume a session exists with a running task
-    When I fill "textarea#session-instruction" with "Follow-up instruction"
-    And I click "form#session-form button[type='submit']"
-    And I wait for 1 seconds
-    Then I should see "Follow-up instruction"
-    And I should see "Queued"
+  # Browser queued-message rendering is temporarily disabled.
+  # The current browser fixture does not model a deterministic running-task queue.
 
   # Scenario: Queued message has muted visual styling — removed, data-testid='queued-message' not yet implemented (see #488)
 

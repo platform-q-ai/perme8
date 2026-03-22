@@ -10,6 +10,7 @@ defmodule AgentsWeb do
     deps: [
       Agents,
       Agents.Domain,
+      Agents.Pipeline,
       Agents.Sessions,
       Agents.Sessions.Domain,
       Agents.Tickets,

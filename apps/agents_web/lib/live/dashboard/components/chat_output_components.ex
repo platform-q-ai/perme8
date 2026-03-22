@@ -559,6 +559,8 @@ defmodule AgentsWeb.DashboardLive.Components.ChatOutputComponents do
 
   @doc false
   def render_markdown(text) when is_binary(text) do
+    escaped_text = Phoenix.HTML.html_escape(text) |> Phoenix.HTML.safe_to_string()
+
     opts = [
       extension: [
         strikethrough: true,
@@ -568,7 +570,7 @@ defmodule AgentsWeb.DashboardLive.Components.ChatOutputComponents do
       ]
     ]
 
-    case MDEx.to_html(text, opts) do
+    case MDEx.to_html(escaped_text, opts) do
       {:ok, html} -> Phoenix.HTML.raw(html)
       {:error, _} -> text
     end

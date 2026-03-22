@@ -26,6 +26,7 @@ defmodule AgentsWeb.DashboardLive.Index do
   alias AgentsWeb.DashboardLive.PipelineKanbanState
   alias AgentsWeb.DashboardLive.PubSubHandlers
   alias AgentsWeb.DashboardLive.QuestionHandlers
+  alias AgentsWeb.DashboardLive.PRHandlers
   alias AgentsWeb.DashboardLive.SessionHandlers
   alias AgentsWeb.DashboardLive.TaskExecutionHandlers
   alias AgentsWeb.DashboardLive.TicketHandlers
@@ -66,6 +67,7 @@ defmodule AgentsWeb.DashboardLive.Index do
      |> assign(:current_task, nil)
      |> assign(:composing_new, false)
      |> assign(:active_session_tab, "chat")
+     |> assign(:detail_tabs, [%{id: "chat", label: "Chat"}])
      |> assign(:container_stats, %{})
      |> assign(:auth_refreshing, %{})
      |> assign(:events, [])
@@ -93,6 +95,15 @@ defmodule AgentsWeb.DashboardLive.Index do
      |> assign(:selected_dependency_target, nil)
      |> assign(:dependency_direction, nil)
      |> PipelineKanbanState.assign_pipeline_kanban()
+     |> assign(:selected_ticket, nil)
+     |> assign(:selected_pull_request, nil)
+     |> assign(:pr_diff_payload, [])
+     |> assign(:pr_review_threads, [])
+     |> assign(:pr_loading, false)
+     |> assign(:pr_error, nil)
+     |> assign(:pr_lookup_error, nil)
+     |> assign(:show_inline_comment_form, false)
+     |> assign(:pr_review_decision, "comment")
      |> assign_session_state()
      |> assign(:mobile_panel, :list)
      |> assign(:form, to_form(%{"instruction" => ""}))}
@@ -115,7 +126,15 @@ defmodule AgentsWeb.DashboardLive.Index do
         socket.assigns.active_ticket_number
       )
 
-    active_tab = resolve_active_tab(params, is_integer(active_ticket_number))
+    socket =
+      socket
+      |> PRHandlers.load_pr_tab(active_ticket_number, "chat")
+
+    has_ticket_tab? = is_integer(active_ticket_number)
+    has_pr_tab? = Enum.any?(socket.assigns[:detail_tabs] || [], &(&1.id == "pr"))
+    active_tab = resolve_active_tab(params, has_ticket_tab?, has_pr_tab?)
+
+    socket = PRHandlers.load_pr_tab(socket, active_ticket_number, active_tab)
 
     {:noreply,
      socket
@@ -288,6 +307,30 @@ defmodule AgentsWeb.DashboardLive.Index do
   @impl true
   def handle_event("switch_tab", params, socket),
     do: SessionHandlers.switch_tab(params, socket)
+
+  @impl true
+  def handle_event("pr_start_inline_comment", params, socket),
+    do: PRHandlers.start_inline_comment(params, socket)
+
+  @impl true
+  def handle_event("pr_add_inline_comment", params, socket),
+    do: PRHandlers.add_inline_comment(params, socket)
+
+  @impl true
+  def handle_event("pr_reply_to_thread", params, socket),
+    do: PRHandlers.reply_to_thread(params, socket)
+
+  @impl true
+  def handle_event("pr_resolve_thread", params, socket),
+    do: PRHandlers.resolve_thread(params, socket)
+
+  @impl true
+  def handle_event("pr_select_review_decision", params, socket),
+    do: PRHandlers.select_review_decision(params, socket)
+
+  @impl true
+  def handle_event("pr_submit_review", params, socket),
+    do: PRHandlers.submit_review(params, socket)
 
   @impl true
   def handle_event("pause_session", params, socket),

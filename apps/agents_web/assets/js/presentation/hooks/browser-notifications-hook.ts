@@ -31,6 +31,7 @@ export class BrowserNotificationsHook extends ViewHook {
 
   private maybeRenderPrompt(): void {
     if (!this.supportsBrowserNotifications()) return
+    if (this.isAutomatedBrowser()) return
     if (Notification.permission !== 'default') return
     if (this.isDismissed()) return
     if (this.promptEl) return
@@ -105,6 +106,10 @@ export class BrowserNotificationsHook extends ViewHook {
 
   private supportsBrowserNotifications(): boolean {
     return typeof window !== 'undefined' && 'Notification' in window
+  }
+
+  private isAutomatedBrowser(): boolean {
+    return typeof navigator !== 'undefined' && navigator.webdriver === true
   }
 
   private isDismissed(): boolean {

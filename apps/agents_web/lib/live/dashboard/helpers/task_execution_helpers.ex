@@ -19,6 +19,7 @@ defmodule AgentsWeb.DashboardLive.Helpers.TaskExecutionHelpers do
   import AgentsWeb.DashboardLive.Helpers.SessionStateHelpers
 
   alias Agents.Sessions
+  alias Agents.Pipeline
   alias Agents.Sessions.Domain.Policies.SessionLifecyclePolicy
   alias Agents.Tickets
   alias Agents.Tickets.Domain.Policies.TicketEnrichmentPolicy
@@ -30,20 +31,22 @@ defmodule AgentsWeb.DashboardLive.Helpers.TaskExecutionHelpers do
   require Logger
 
   @doc "Returns the list of available session panel tabs."
-  def session_tabs do
-    [
+  def session_tabs(has_pr_tab? \\ false) do
+    base_tabs = [
       %{id: "chat", label: "Chat"},
       %{id: "ticket", label: "Ticket"}
     ]
+
+    if has_pr_tab?, do: base_tabs ++ [%{id: "pr", label: "PR"}], else: base_tabs
   end
 
-  def resolve_active_tab(params, has_ticket_tab?) do
+  def resolve_active_tab(params, has_ticket_tab?, has_pr_tab? \\ false) do
     tab = params["tab"] || "chat"
 
     valid_tabs =
       Enum.map(
         if(has_ticket_tab?,
-          do: session_tabs(),
+          do: session_tabs(has_pr_tab?),
           else: [%{id: "chat"}]
         ),
         & &1.id
@@ -51,6 +54,12 @@ defmodule AgentsWeb.DashboardLive.Helpers.TaskExecutionHelpers do
 
     if tab in valid_tabs, do: tab, else: "chat"
   end
+
+  def linked_pull_request_for_ticket(%{number: number}) when is_integer(number) do
+    Pipeline.get_pull_request_by_linked_ticket(number)
+  end
+
+  def linked_pull_request_for_ticket(_), do: {:error, :not_found}
 
   def resolve_active_ticket_number(
         %{"new" => "true", "ticket" => ticket_str},
@@ -626,6 +635,12 @@ defmodule AgentsWeb.DashboardLive.Helpers.TaskExecutionHelpers do
         do: nil,
         else: socket.assigns.active_ticket_number
 
+    selected_ticket =
+      case socket.assigns[:selected_ticket] do
+        %{number: ^number} -> nil
+        ticket -> ticket
+      end
+
     tab = tab_after_ticket_close(socket.assigns, number)
 
     socket = maybe_clear_active_session(socket, container_id)
@@ -635,6 +650,11 @@ defmodule AgentsWeb.DashboardLive.Helpers.TaskExecutionHelpers do
     |> assign(:tickets, tickets)
     |> assign(:sessions, sessions)
     |> assign(:active_ticket_number, active_ticket_number)
+    |> assign(:selected_ticket, selected_ticket)
+    |> assign(:selected_pull_request, nil)
+    |> assign(:pr_diff_payload, [])
+    |> assign(:pr_review_threads, [])
+    |> assign(:detail_tabs, [%{id: "chat", label: "Chat"}])
     |> assign(:active_session_tab, tab)
   end
 

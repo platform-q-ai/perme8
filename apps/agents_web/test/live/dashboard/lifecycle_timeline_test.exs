@@ -1,5 +1,5 @@
 defmodule AgentsWeb.DashboardLive.LifecycleTimelineTest do
-  use AgentsWeb.ConnCase, async: true
+  use AgentsWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
 
