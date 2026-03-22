@@ -802,8 +802,8 @@ without_pr_container = "pr-without-#{Ecto.UUID.generate() |> String.slice(0..7)}
   })
   |> Jarga.Repo.insert()
 
-%ProjectTicketSchema{}
-|> ProjectTicketSchema.changeset(%{
+%Agents.Tickets.Infrastructure.Schemas.ProjectTicketSchema{}
+|> Agents.Tickets.Infrastructure.Schemas.ProjectTicketSchema.changeset(%{
   number: 506,
   title: "PR tab linked ticket",
   body: "Ticket body for seeded PR tab review",
@@ -820,8 +820,8 @@ without_pr_container = "pr-without-#{Ecto.UUID.generate() |> String.slice(0..7)}
 })
 |> Agents.Repo.insert!()
 
-%ProjectTicketSchema{}
-|> ProjectTicketSchema.changeset(%{
+%Agents.Tickets.Infrastructure.Schemas.ProjectTicketSchema{}
+|> Agents.Tickets.Infrastructure.Schemas.ProjectTicketSchema.changeset(%{
   number: 507,
   title: "PR tab unlinked ticket",
   body: "Ticket body for seeded non-PR session",
