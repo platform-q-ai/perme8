@@ -14,6 +14,7 @@ defmodule Agents.Tickets.Infrastructure.Schemas.ProjectTicketSchema do
     "in_progress",
     "in_review",
     "ci_testing",
+    "merge_queue",
     "deployed",
     "closed"
   ]

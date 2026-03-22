@@ -3,7 +3,16 @@ defmodule Agents.Tickets.Domain.Policies.TicketLifecyclePolicy do
   Pure lifecycle stage validation and duration calculations.
   """
 
-  @valid_stages ["open", "ready", "in_progress", "in_review", "ci_testing", "deployed", "closed"]
+  @valid_stages [
+    "open",
+    "ready",
+    "in_progress",
+    "in_review",
+    "ci_testing",
+    "merge_queue",
+    "deployed",
+    "closed"
+  ]
 
   @spec valid_stage?(term()) :: boolean()
   def valid_stage?(stage), do: stage in @valid_stages
@@ -52,6 +61,7 @@ defmodule Agents.Tickets.Domain.Policies.TicketLifecyclePolicy do
   def stage_label("in_progress"), do: "In Progress"
   def stage_label("in_review"), do: "In Review"
   def stage_label("ci_testing"), do: "CI Testing"
+  def stage_label("merge_queue"), do: "Merge Queue"
   def stage_label("deployed"), do: "Deployed"
   def stage_label("closed"), do: "Closed"
   def stage_label(_), do: "Unknown"
@@ -62,6 +72,7 @@ defmodule Agents.Tickets.Domain.Policies.TicketLifecyclePolicy do
   def stage_color("in_progress"), do: "warning"
   def stage_color("in_review"), do: "primary"
   def stage_color("ci_testing"), do: "accent"
+  def stage_color("merge_queue"), do: "secondary"
   def stage_color("deployed"), do: "success"
   def stage_color("closed"), do: "base"
   def stage_color(_), do: "neutral"

@@ -3,6 +3,8 @@ defmodule Agents.Pipeline.Infrastructure.Repositories.PipelineRunRepository do
 
   @behaviour Agents.Pipeline.Application.Behaviours.PipelineRunRepositoryBehaviour
 
+  import Ecto.Query, warn: false
+
   alias Agents.Pipeline.Infrastructure.Schemas.PipelineRunSchema
   alias Agents.Repo
 
@@ -19,6 +21,14 @@ defmodule Agents.Pipeline.Infrastructure.Repositories.PipelineRunRepository do
       nil -> {:error, :not_found}
       run -> {:ok, run}
     end
+  end
+
+  @impl true
+  def list_runs_for_pull_request(number, repo \\ Repo) when is_integer(number) do
+    PipelineRunSchema
+    |> where([run], run.pull_request_number == ^number)
+    |> order_by([run], desc: run.inserted_at)
+    |> repo.all()
   end
 
   @impl true

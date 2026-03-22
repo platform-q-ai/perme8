@@ -69,6 +69,7 @@ defmodule Agents.Pipeline.Infrastructure.YamlParser do
     description = fetch(pipeline, "description")
     deploy_targets_raw = fetch(pipeline, "deploy_targets")
     stages_raw = fetch(pipeline, "stages")
+    merge_queue_raw = fetch(pipeline, "merge_queue") || %{}
 
     errors = []
     errors = maybe_add_type_error(errors, name, "pipeline.name", &is_binary/1, "must be a string")
@@ -77,6 +78,7 @@ defmodule Agents.Pipeline.Infrastructure.YamlParser do
     {deploy_targets, errors} = build_deploy_targets(deploy_targets_raw, errors)
     deploy_target_ids = MapSet.new(deploy_targets, & &1.id)
     {stages, errors} = build_stages(stages_raw, deploy_target_ids, errors)
+    {merge_queue, errors} = build_merge_queue(merge_queue_raw, errors)
 
     errors =
       if Enum.any?(stages, &(&1.id == "warm-pool")) do
@@ -92,7 +94,8 @@ defmodule Agents.Pipeline.Infrastructure.YamlParser do
          name: name,
          description: if(is_binary(description), do: description, else: nil),
          stages: stages,
-         deploy_targets: deploy_targets
+         deploy_targets: deploy_targets,
+         merge_queue: merge_queue
        })}
     else
       {:error, errors}
@@ -126,6 +129,50 @@ defmodule Agents.Pipeline.Infrastructure.YamlParser do
 
   defp build_stages(_, _deploy_target_ids, errors),
     do: {[], errors ++ ["pipeline.stages must be a non-empty list"]}
+
+  defp build_merge_queue(raw, errors) when raw in [%{}, nil], do: {%{}, errors}
+
+  defp build_merge_queue(raw, errors) when is_map(raw) do
+    strategy = fetch(raw, "strategy") || "disabled"
+    required_stages = fetch(raw, "required_stages") || []
+    required_review = Map.get(raw, "required_review", true)
+    pre_merge_validation = fetch(raw, "pre_merge_validation") || %{}
+
+    errors =
+      maybe_add_type_error(
+        errors,
+        strategy,
+        "pipeline.merge_queue.strategy",
+        &is_binary/1,
+        "must be a string"
+      )
+
+    errors =
+      maybe_add_string_list_error(errors, required_stages, "pipeline.merge_queue.required_stages")
+
+    errors =
+      maybe_add_boolean_error(errors, required_review, "pipeline.merge_queue.required_review")
+
+    errors =
+      maybe_add_type_error(
+        errors,
+        pre_merge_validation,
+        "pipeline.merge_queue.pre_merge_validation",
+        &is_map/1,
+        "must be a map"
+      )
+
+    merge_queue = %{
+      "strategy" => strategy,
+      "required_stages" => required_stages,
+      "required_review" => required_review,
+      "pre_merge_validation" => pre_merge_validation
+    }
+
+    {merge_queue, errors}
+  end
+
+  defp build_merge_queue(_, errors), do: {%{}, errors ++ ["pipeline.merge_queue must be a map"]}
 
   defp build_steps(raw, stage_path, errors) when is_list(raw) and raw != [] do
     Enum.with_index(raw)
@@ -308,6 +355,18 @@ defmodule Agents.Pipeline.Infrastructure.YamlParser do
     else
       errors ++ ["#{path} must be a map when present"]
     end
+  end
+
+  defp maybe_add_string_list_error(errors, values, path) when is_list(values) do
+    if Enum.all?(values, &is_binary/1) do
+      errors
+    else
+      errors ++ ["#{path} must be a list of strings"]
+    end
+  end
+
+  defp maybe_add_string_list_error(errors, _values, path) do
+    errors ++ ["#{path} must be a list of strings"]
   end
 
   defp maybe_add_warm_pool_stage_errors(errors, "warm_pool", path, config, schedule) do

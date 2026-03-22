@@ -8,7 +8,16 @@ defmodule Agents.Tickets.Infrastructure.Schemas.TicketLifecycleEventSchema do
 
   alias Agents.Tickets.Infrastructure.Schemas.ProjectTicketSchema
 
-  @valid_stages ["open", "ready", "in_progress", "in_review", "ci_testing", "deployed", "closed"]
+  @valid_stages [
+    "open",
+    "ready",
+    "in_progress",
+    "in_review",
+    "ci_testing",
+    "merge_queue",
+    "deployed",
+    "closed"
+  ]
   @valid_triggers ["system", "sync", "manual"]
 
   @type t :: %__MODULE__{
