@@ -635,6 +635,12 @@ defmodule AgentsWeb.DashboardLive.Helpers.TaskExecutionHelpers do
         do: nil,
         else: socket.assigns.active_ticket_number
 
+    selected_ticket =
+      case socket.assigns[:selected_ticket] do
+        %{number: ^number} -> nil
+        ticket -> ticket
+      end
+
     tab = tab_after_ticket_close(socket.assigns, number)
 
     socket = maybe_clear_active_session(socket, container_id)
@@ -644,6 +650,11 @@ defmodule AgentsWeb.DashboardLive.Helpers.TaskExecutionHelpers do
     |> assign(:tickets, tickets)
     |> assign(:sessions, sessions)
     |> assign(:active_ticket_number, active_ticket_number)
+    |> assign(:selected_ticket, selected_ticket)
+    |> assign(:selected_pull_request, nil)
+    |> assign(:pr_diff_payload, [])
+    |> assign(:pr_review_threads, [])
+    |> assign(:detail_tabs, [%{id: "chat", label: "Chat"}])
     |> assign(:active_session_tab, tab)
   end
 
