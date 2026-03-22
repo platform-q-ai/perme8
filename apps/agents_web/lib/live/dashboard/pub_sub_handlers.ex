@@ -537,26 +537,111 @@ defmodule AgentsWeb.DashboardLive.PubSubHandlers do
   defp browser_notification_payload(changed_task, status, socket) do
     user_id = socket.assigns.current_scope.user.id
 
-    if Map.get(changed_task, :user_id) == user_id do
+    if task_belongs_to_current_user?(changed_task, user_id, socket) do
       %{
         title: browser_notification_title(status),
-        body: browser_notification_body(status),
+        body: browser_notification_body(changed_task, status, socket),
         type: browser_notification_type(status)
       }
+    end
+  end
+
+  defp task_belongs_to_current_user?(changed_task, user_id, socket) do
+    Map.get(changed_task, :user_id) == user_id or
+      current_task_matches?(changed_task, socket) or
+      persisted_task_matches?(changed_task, user_id)
+  end
+
+  defp current_task_matches?(changed_task, socket) do
+    case socket.assigns.current_task do
+      %{id: task_id, user_id: user_id} when not is_nil(user_id) and task_id == changed_task.id ->
+        user_id == socket.assigns.current_scope.user.id
+
+      _ ->
+        false
+    end
+  end
+
+  defp persisted_task_matches?(changed_task, user_id) do
+    case Sessions.get_task(Map.get(changed_task, :id), user_id) do
+      {:ok, _task} -> true
+      _ -> false
     end
   end
 
   defp browser_notification_title("completed"), do: "Session completed"
   defp browser_notification_title("failed"), do: "Session failed"
 
-  defp browser_notification_body("completed"),
-    do: "One of your sessions completed. Open Sessions to review it."
+  defp browser_notification_body(changed_task, "completed", socket) do
+    case notification_subject(changed_task, socket) do
+      {:ticket, number, title} -> "Ticket ##{number} completed: #{title}"
+      {:ticket, number} -> "Ticket ##{number} completed. Open Sessions to review it."
+      {:session, title} -> "Session completed: #{title}"
+      nil -> "One of your sessions completed. Open Sessions to review it."
+    end
+  end
 
-  defp browser_notification_body("failed"),
-    do: "One of your sessions failed. Open Sessions to review details."
+  defp browser_notification_body(changed_task, "failed", socket) do
+    case notification_subject(changed_task, socket) do
+      {:ticket, number, title} -> "Ticket ##{number} failed: #{title}"
+      {:ticket, number} -> "Ticket ##{number} failed. Open Sessions to review details."
+      {:session, title} -> "Session failed: #{title}"
+      nil -> "One of your sessions failed. Open Sessions to review details."
+    end
+  end
 
   defp browser_notification_type("completed"), do: "session_completed"
   defp browser_notification_type("failed"), do: "session_failed"
+
+  defp notification_subject(changed_task, socket) do
+    case notification_ticket(changed_task, socket) do
+      %{number: number, title: title}
+      when is_integer(number) and is_binary(title) and title != "" ->
+        {:ticket, number, title}
+
+      %{number: number} when is_integer(number) ->
+        {:ticket, number}
+
+      _ ->
+        case notification_session_title(changed_task, socket) do
+          title when is_binary(title) and title != "" -> {:session, title}
+          _ -> nil
+        end
+    end
+  end
+
+  defp notification_ticket(changed_task, socket) do
+    changed_task_id = Map.get(changed_task, :id)
+    changed_container_id = Map.get(changed_task, :container_id)
+
+    socket.assigns.tickets
+    |> List.wrap()
+    |> Enum.flat_map(fn ticket -> [ticket | Map.get(ticket, :sub_tickets, [])] end)
+    |> Enum.find(fn ticket ->
+      Map.get(ticket, :associated_task_id) == changed_task_id or
+        (is_binary(changed_container_id) and
+           Map.get(ticket, :associated_container_id) == changed_container_id)
+    end)
+  end
+
+  defp notification_session_title(changed_task, socket) do
+    changed_task_id = Map.get(changed_task, :id)
+    changed_container_id = Map.get(changed_task, :container_id)
+
+    socket.assigns.sessions
+    |> List.wrap()
+    |> Enum.find_value(fn session ->
+      if Map.get(session, :latest_task_id) == changed_task_id or
+           (is_binary(changed_container_id) and
+              Map.get(session, :container_id) == changed_container_id) do
+        Map.get(session, :title)
+      end
+    end)
+    |> case do
+      title when is_binary(title) and title != "" -> title
+      _ -> Map.get(changed_task, :instruction)
+    end
+  end
 
   # If this task was started from a ticket, set current_task and navigate
   # to the session so the user sees the chat and streaming output.
