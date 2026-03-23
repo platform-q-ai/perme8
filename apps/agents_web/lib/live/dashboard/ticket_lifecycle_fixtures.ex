@@ -272,6 +272,13 @@ defmodule AgentsWeb.DashboardLive.TicketLifecycleFixtures do
     ]
   end
 
+  def ticket_lifecycle_fixture_tickets("pipeline_kanban_merge_queue") do
+    [
+      lifecycle_fixture_ticket(610, "Queued for merge", lifecycle_stage: "merge_queue"),
+      lifecycle_fixture_ticket(611, "Still validating in CI", lifecycle_stage: "ci_testing")
+    ]
+  end
+
   def ticket_lifecycle_fixture_tickets(_fixture), do: []
 
   defp pipeline_kanban_fixture_payload("pipeline_kanban_collapsible"),
