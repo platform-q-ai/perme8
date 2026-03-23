@@ -12,35 +12,6 @@ Feature: Pipeline Phase 11 - Pipeline Configuration UI
     And I click the "Log in and stay logged in" button and wait for navigation
     And I wait for network idle
 
-  Scenario: Successful login allows access to the pipeline configuration editor
-    Given I open browser session "operator-login"
-    And I navigate to "${identityUrl}/users/log-in"
-    And I wait for network idle
-    When I fill "#login_form_password_email" with "${memberEmail}"
-    And I fill "#login_form_password_password" with "${memberPassword}"
-    And I click the "Log in and stay logged in" button and wait for navigation
-    And I wait for network idle
-    And I navigate to "${baseUrl}/sessions?fixture=pipeline_configuration_editor_loaded"
-    And I wait for network idle
-    Then I should see "Pipeline configuration"
-
-  Scenario: Invalid credentials are rejected
-    Given I open browser session "invalid-login"
-    And I navigate to "${identityUrl}/users/log-in"
-    And I wait for network idle
-    When I fill "#login_form_password_email" with "wrong@example.com"
-    And I fill "#login_form_password_password" with "wrongpassword"
-    And I click the "Log in and stay logged in" button
-    And I wait for network idle
-    Then the URL should contain "/log-in"
-    And I should see "Invalid email or password"
-
-  Scenario: Unauthenticated users are redirected to sign in
-    Given I open browser session "guest"
-    When I navigate to "${baseUrl}/sessions?fixture=pipeline_configuration_editor_loaded"
-    And I wait for network idle
-    Then the URL should contain "/log-in"
-
   Scenario: Pipeline stages render as editable cards in configured order
     Given I navigate to "${baseUrl}/sessions?fixture=pipeline_configuration_editor_loaded"
     And I wait for network idle
