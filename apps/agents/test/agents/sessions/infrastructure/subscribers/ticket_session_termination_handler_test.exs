@@ -112,4 +112,35 @@ defmodule Agents.Sessions.Infrastructure.Subscribers.TicketSessionTerminationHan
                linked_ticket: nil
              })
   end
+
+  test "rescues ticket lookup failures for ticket_stage_changed events" do
+    Application.put_env(:agents, :ticket_session_terminator, fn _ticket_number, _opts ->
+      flunk("terminator should not be called when ticket lookup fails")
+    end)
+
+    defmodule FailingTicketRepoStub do
+      def get_by_id(_ticket_id), do: raise(DBConnection.ConnectionError, message: "owner exited")
+    end
+
+    Application.put_env(:agents, :ticket_session_ticket_repo, FailingTicketRepoStub)
+
+    assert :ok =
+             TicketSessionTerminationHandler.handle_event(%{
+               event_type: "tickets.ticket_stage_changed",
+               ticket_id: 507,
+               to_stage: "closed"
+             })
+  end
+
+  test "rescues termination failures for merged pull request events" do
+    Application.put_env(:agents, :ticket_session_terminator, fn _ticket_number, _opts ->
+      raise(DBConnection.ConnectionError, message: "owner exited")
+    end)
+
+    assert :ok =
+             TicketSessionTerminationHandler.handle_event(%{
+               event_type: "pipeline.pull_request_merged",
+               linked_ticket: 507
+             })
+  end
 end
