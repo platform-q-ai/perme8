@@ -79,20 +79,24 @@ defmodule Agents.Pipeline.Domain.Policies.MergeQueuePolicy do
 
   defp passed_stage_ids(pipeline_runs) do
     pipeline_runs
-    |> Enum.flat_map(fn
-      %PipelineRun{stage_results: stage_results} ->
-        stage_results
-
-      %{stage_results: stage_results} when is_map(stage_results) ->
-        PipelineRun.new(%{stage_results: stage_results}).stage_results
-
-      _ ->
-        %{}
+    |> Enum.reduce(%{}, fn pipeline_run, latest_results ->
+      pipeline_run
+      |> stage_results_for_run()
+      |> Enum.reduce(latest_results, fn {stage_id, result}, acc ->
+        Map.put_new(acc, stage_id, result)
+      end)
     end)
-    |> Enum.filter(fn {_stage_id, result} -> Map.get(result, :status) == :passed end)
+    |> Enum.filter(fn {_stage_id, result} -> result.status == :passed end)
     |> Enum.map(fn {stage_id, _result} -> stage_id end)
-    |> Enum.uniq()
   end
+
+  defp stage_results_for_run(%PipelineRun{stage_results: stage_results}), do: stage_results
+
+  defp stage_results_for_run(%{stage_results: stage_results}) when is_map(stage_results) do
+    PipelineRun.new(%{stage_results: stage_results}).stage_results
+  end
+
+  defp stage_results_for_run(_pipeline_run), do: %{}
 
   defp approved_review?(%PullRequest{status: "approved"}), do: true
 

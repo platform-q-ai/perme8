@@ -53,4 +53,34 @@ defmodule Agents.Pipeline.Domain.Policies.MergeQueuePolicyTest do
     assert :required_stages_not_passed in decision.reasons
     assert :approved_review_missing in decision.reasons
   end
+
+  test "uses the latest stage result for readiness when runs disagree" do
+    pull_request =
+      PullRequest.new(%{
+        number: 510,
+        status: "approved",
+        reviews: [Review.new(%{event: "approve"})]
+      })
+
+    latest_failed_run =
+      PipelineRun.new(%{
+        stage_results: %{"test" => %{"stage_id" => "test", "status" => "failed"}}
+      })
+
+    older_passed_run =
+      PipelineRun.new(%{
+        stage_results: %{"test" => %{"stage_id" => "test", "status" => "passed"}}
+      })
+
+    decision =
+      MergeQueuePolicy.evaluate(pull_request, [latest_failed_run, older_passed_run], %{
+        "strategy" => "merge_queue",
+        "required_stages" => ["test"],
+        "required_review" => true
+      })
+
+    refute decision.eligible?
+    assert decision.missing_stages == ["test"]
+    assert :required_stages_not_passed in decision.reasons
+  end
 end
