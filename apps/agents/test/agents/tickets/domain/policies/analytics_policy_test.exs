@@ -20,6 +20,7 @@ defmodule Agents.Tickets.Domain.Policies.AnalyticsPolicyTest do
       assert result["ready"] == 0
       assert result["in_review"] == 0
       assert result["ci_testing"] == 0
+      assert result["merge_queue"] == 0
       assert result["deployed"] == 0
     end
 
@@ -32,6 +33,7 @@ defmodule Agents.Tickets.Domain.Policies.AnalyticsPolicyTest do
                "in_progress" => 0,
                "in_review" => 0,
                "ci_testing" => 0,
+               "merge_queue" => 0,
                "deployed" => 0,
                "closed" => 0
              }
@@ -47,7 +49,16 @@ defmodule Agents.Tickets.Domain.Policies.AnalyticsPolicyTest do
       assert result["open"] == 1
       # unknown_stage is silently ignored
       assert Map.keys(result) |> Enum.sort() ==
-               ["ci_testing", "closed", "deployed", "in_progress", "in_review", "open", "ready"]
+               [
+                 "ci_testing",
+                 "closed",
+                 "deployed",
+                 "in_progress",
+                 "in_review",
+                 "merge_queue",
+                 "open",
+                 "ready"
+               ]
     end
   end
 

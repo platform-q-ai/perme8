@@ -6,7 +6,16 @@ defmodule Agents.Tickets.Domain.Policies.AnalyticsPolicy do
   no I/O, no Repo.
   """
 
-  @valid_stages ["open", "ready", "in_progress", "in_review", "ci_testing", "deployed", "closed"]
+  @valid_stages [
+    "open",
+    "ready",
+    "in_progress",
+    "in_review",
+    "ci_testing",
+    "merge_queue",
+    "deployed",
+    "closed"
+  ]
 
   @doc """
   Counts tickets grouped by their current lifecycle_stage.

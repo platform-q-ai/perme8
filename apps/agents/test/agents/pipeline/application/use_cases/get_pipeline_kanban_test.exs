@@ -11,6 +11,7 @@ defmodule Agents.Pipeline.Application.UseCases.GetPipelineKanbanTest do
          version: 1,
          name: "test",
          description: nil,
+         merge_queue: %{"strategy" => "merge_queue"},
          deploy_targets: [],
          stages: [
            %Agents.Pipeline.Domain.Entities.Stage{
@@ -53,6 +54,12 @@ defmodule Agents.Pipeline.Application.UseCases.GetPipelineKanbanTest do
         state: "open"
       }),
       Ticket.new(%{
+        number: 106,
+        title: "Queued for merge",
+        lifecycle_stage: "merge_queue",
+        state: "open"
+      }),
+      Ticket.new(%{
         number: 105,
         title: "Closed ticket",
         lifecycle_stage: "deployed",
@@ -68,6 +75,7 @@ defmodule Agents.Pipeline.Application.UseCases.GetPipelineKanbanTest do
              "in_progress",
              "in_review",
              "ci_testing",
+             "merge_queue",
              "deployed"
            ]
 
@@ -75,6 +83,7 @@ defmodule Agents.Pipeline.Application.UseCases.GetPipelineKanbanTest do
     assert stage_ticket_numbers(kanban, "in_progress") == [102]
     assert stage_ticket_numbers(kanban, "in_review") == [103]
     assert stage_ticket_numbers(kanban, "ci_testing") == [104]
+    assert stage_ticket_numbers(kanban, "merge_queue") == [106]
     assert stage_ticket_numbers(kanban, "deployed") == []
   end
 

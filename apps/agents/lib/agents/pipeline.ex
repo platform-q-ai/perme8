@@ -12,6 +12,7 @@ defmodule Agents.Pipeline do
     ]
 
   alias Agents.Pipeline.Application.UseCases.LoadPipeline
+  alias Agents.Pipeline.Application.UseCases.ManageMergeQueue
   alias Agents.Pipeline.Application.UseCases.CommentOnPullRequest
   alias Agents.Pipeline.Application.UseCases.ClosePullRequest
   alias Agents.Pipeline.Application.UseCases.CreatePullRequest
@@ -105,6 +106,9 @@ defmodule Agents.Pipeline do
   @spec merge_pull_request(integer(), keyword()) ::
           {:ok, Domain.Entities.PullRequest.t()} | {:error, term()}
   defdelegate merge_pull_request(number, opts \\ []), to: MergePullRequest, as: :execute
+
+  @spec manage_merge_queue(integer(), keyword()) :: {:ok, map()} | {:error, term()}
+  defdelegate manage_merge_queue(number, opts \\ []), to: ManageMergeQueue, as: :execute
 
   @spec close_pull_request(integer(), keyword()) ::
           {:ok, Domain.Entities.PullRequest.t()} | {:error, term()}

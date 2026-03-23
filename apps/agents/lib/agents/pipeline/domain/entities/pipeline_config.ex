@@ -10,10 +10,11 @@ defmodule Agents.Pipeline.Domain.Entities.PipelineConfig do
           name: String.t(),
           description: String.t() | nil,
           stages: [Stage.t()],
-          deploy_targets: [DeployTarget.t()]
+          deploy_targets: [DeployTarget.t()],
+          merge_queue: map()
         }
 
-  defstruct [:version, :name, :description, stages: [], deploy_targets: []]
+  defstruct [:version, :name, :description, stages: [], deploy_targets: [], merge_queue: %{}]
 
   @doc "Builds a pipeline config value object from attributes."
   @spec new(map()) :: t()

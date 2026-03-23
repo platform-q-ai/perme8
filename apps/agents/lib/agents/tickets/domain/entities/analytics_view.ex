@@ -18,7 +18,16 @@ defmodule Agents.Tickets.Domain.Entities.AnalyticsView do
   def distribution_bars(stage_counts, max_height) when is_map(stage_counts) do
     max_count = stage_counts |> Map.values() |> Enum.max(fn -> 0 end)
 
-    stages = ["open", "ready", "in_progress", "in_review", "ci_testing", "deployed", "closed"]
+    stages = [
+      "open",
+      "ready",
+      "in_progress",
+      "in_review",
+      "ci_testing",
+      "merge_queue",
+      "deployed",
+      "closed"
+    ]
 
     stages
     |> Enum.with_index()

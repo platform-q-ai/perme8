@@ -10,6 +10,7 @@ defmodule Agents.Pipeline.Infrastructure do
       GitCommandRunner,
       GitDiffComputer,
       GitMerger,
+      MergeQueueWorker,
       PipelineEventHandler,
       PipelineScheduler,
       Repositories.PipelineRunRepository,

@@ -68,4 +68,20 @@ defmodule AgentsWeb.DashboardLive.PipelineKanbanTest do
              "[data-testid='kanban-column-ready'] [data-testid='kanban-ticket-card-425']"
            )
   end
+
+  test "renders merge queue column and queued tickets", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/sessions?fixture=pipeline_kanban_merge_queue")
+
+    assert has_element?(view, "[data-testid='kanban-column-merge_queue']")
+
+    assert has_element?(
+             view,
+             "[data-testid='kanban-column-merge_queue'] [data-testid='kanban-ticket-card-610']"
+           )
+
+    assert has_element?(
+             view,
+             "[data-testid='kanban-column-ci_testing'] [data-testid='kanban-ticket-card-611']"
+           )
+  end
 end

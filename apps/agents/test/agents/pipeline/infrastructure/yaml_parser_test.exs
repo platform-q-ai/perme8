@@ -159,6 +159,53 @@ defmodule Agents.Pipeline.Infrastructure.YamlParserTest do
       assert required == false
     end
 
+    test "parses merge queue policy configuration" do
+      yaml = """
+      version: 1
+      pipeline:
+        name: merge-queue-enabled
+        deploy_targets:
+          - id: dev
+            environment: development
+            provider: docker
+        merge_queue:
+          strategy: merge_queue
+          required_stages:
+            - test
+            - boundary
+          required_review: true
+          pre_merge_validation:
+            strategy: re_run_required_stages
+            use_existing_container: true
+        stages:
+          - id: warm-pool
+            type: warm_pool
+            deploy_target: dev
+            schedule:
+              cron: "*/5 * * * *"
+            warm_pool:
+              target_count: 2
+              image: ghcr.io/platform-q-ai/perme8-runtime:latest
+              readiness:
+                strategy: command_success
+            steps:
+              - name: prestart
+                run: scripts/warm_pool.sh
+          - id: test
+            type: verification
+            deploy_target: dev
+            steps:
+              - name: unit
+                run: mix test
+      """
+
+      assert {:ok, config} = YamlParser.parse_string(yaml)
+      assert config.merge_queue["strategy"] == "merge_queue"
+      assert config.merge_queue["required_stages"] == ["test", "boundary"]
+      assert config.merge_queue["required_review"] == true
+      assert config.merge_queue["pre_merge_validation"]["strategy"] == "re_run_required_stages"
+    end
+
     test "rejects invalid optional and referenced fields" do
       yaml = """
       version: 1

@@ -2,6 +2,14 @@ version: 1
 pipeline:
   name: perme8-core
   description: Core CI/CD and runtime warm-pool orchestration pipeline.
+  merge_queue:
+    strategy: merge_queue
+    required_stages:
+      - test
+    required_review: true
+    pre_merge_validation:
+      strategy: re_run_required_stages
+      use_existing_container: true
   deploy_targets:
     - id: dev
       environment: development
