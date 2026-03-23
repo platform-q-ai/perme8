@@ -5,6 +5,8 @@ defmodule Agents.Tickets.Infrastructure.Repositories.ProjectTicketRepository do
   Stores open GitHub issues synced from the configured repo.
   """
 
+  @behaviour Agents.Tickets.Application.Behaviours.ProjectTicketRepositoryBehaviour
+
   import Ecto.Query, warn: false
 
   alias Agents.Repo

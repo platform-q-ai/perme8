@@ -75,19 +75,17 @@ defmodule Agents.Sessions.Application.UseCases.CreateInteraction do
 
   defp maybe_notify_session_activity(session_id, session_repo, queue_orchestrator)
        when is_binary(session_id) do
-    try do
-      case session_repo.get_session(session_id) do
-        %{user_id: user_id} when is_binary(user_id) ->
-          queue_orchestrator.notify_session_activity(user_id, session_id)
+    case session_repo.get_session(session_id) do
+      %{user_id: user_id} when is_binary(user_id) ->
+        queue_orchestrator.notify_session_activity(user_id, session_id)
 
-        _ ->
-          :ok
-      end
-    rescue
-      _ -> :ok
-    catch
-      :exit, _ -> :ok
+      _ ->
+        :ok
     end
+  rescue
+    _ -> :ok
+  catch
+    :exit, _ -> :ok
   end
 
   defp maybe_notify_session_activity(_session_id, _session_repo, _queue_orchestrator), do: :ok

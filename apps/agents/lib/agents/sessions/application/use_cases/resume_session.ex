@@ -74,12 +74,10 @@ defmodule Agents.Sessions.Application.UseCases.ResumeSession do
   end
 
   defp maybe_notify_session_activity(queue_orchestrator, user_id, session_id) do
-    try do
-      queue_orchestrator.notify_session_activity(user_id, session_id)
-    rescue
-      _ -> :ok
-    catch
-      :exit, _ -> :ok
-    end
+    queue_orchestrator.notify_session_activity(user_id, session_id)
+  rescue
+    _ -> :ok
+  catch
+    :exit, _ -> :ok
   end
 end

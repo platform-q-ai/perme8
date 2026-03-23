@@ -6,15 +6,22 @@ defmodule Agents.Sessions.Application.UseCases.TerminateTicketSession do
   its linked pull request is merged.
   """
 
-  alias Agents.Sessions.Infrastructure.Repositories.SessionRepository
-  alias Agents.Tickets.Infrastructure.Repositories.ProjectTicketRepository
-
   @default_container_provider Agents.Sessions.Infrastructure.Adapters.DockerAdapter
+  @default_session_repo Application.compile_env(
+                          :agents,
+                          :session_repository,
+                          Agents.Sessions.Infrastructure.Repositories.SessionRepository
+                        )
+  @default_ticket_repo Application.compile_env(
+                         :agents,
+                         :project_ticket_repository,
+                         Agents.Tickets.Infrastructure.Repositories.ProjectTicketRepository
+                       )
 
   @spec execute(integer(), keyword()) :: :ok
   def execute(ticket_number, opts \\ []) when is_integer(ticket_number) do
-    session_repo = Keyword.get(opts, :session_repo, SessionRepository)
-    ticket_repo = Keyword.get(opts, :ticket_repo, ProjectTicketRepository)
+    session_repo = Keyword.get(opts, :session_repo, @default_session_repo)
+    ticket_repo = Keyword.get(opts, :ticket_repo, @default_ticket_repo)
     container_provider = Keyword.get(opts, :container_provider, @default_container_provider)
 
     case ticket_repo.get_by_number(ticket_number) do

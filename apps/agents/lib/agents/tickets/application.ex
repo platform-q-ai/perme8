@@ -5,6 +5,7 @@ defmodule Agents.Tickets.Application do
     top_level?: true,
     deps: [Agents.Tickets.Domain, Perme8.Events],
     exports: [
+      Behaviours.ProjectTicketRepositoryBehaviour,
       TicketsConfig,
       UseCases.AddSubIssue,
       UseCases.AddTicketDependency,
