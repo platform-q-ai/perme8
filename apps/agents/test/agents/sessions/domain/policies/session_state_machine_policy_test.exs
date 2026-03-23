@@ -24,6 +24,13 @@ defmodule Agents.Sessions.Domain.Policies.SessionStateMachinePolicyTest do
       assert SessionStateMachinePolicy.can_transition?(:paused, :failed)
     end
 
+    test "terminalization transitions are valid" do
+      assert SessionStateMachinePolicy.can_transition?(:active, :terminated)
+      assert SessionStateMachinePolicy.can_transition?(:paused, :terminated)
+      assert SessionStateMachinePolicy.can_transition?(:completed, :terminated)
+      assert SessionStateMachinePolicy.can_transition?(:failed, :terminated)
+    end
+
     test "completed -> paused is invalid" do
       refute SessionStateMachinePolicy.can_transition?(:completed, :paused)
     end
@@ -79,6 +86,14 @@ defmodule Agents.Sessions.Domain.Policies.SessionStateMachinePolicyTest do
       assert SessionStateMachinePolicy.can_fail?(:paused)
       refute SessionStateMachinePolicy.can_fail?(:completed)
       refute SessionStateMachinePolicy.can_fail?(:failed)
+    end
+
+    test "can_terminate? is true for active, paused, completed, and failed" do
+      assert SessionStateMachinePolicy.can_terminate?(:active)
+      assert SessionStateMachinePolicy.can_terminate?(:paused)
+      assert SessionStateMachinePolicy.can_terminate?(:completed)
+      assert SessionStateMachinePolicy.can_terminate?(:failed)
+      refute SessionStateMachinePolicy.can_terminate?(:terminated)
     end
   end
 end

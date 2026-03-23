@@ -69,6 +69,30 @@ defmodule AgentsWeb.DashboardLive.IndexPubsubTest do
       assert html =~ "Fix login bug"
     end
 
+    test "receiving task_setup_phase updates current task assigns", %{conn: conn, user: user} do
+      task = task_fixture(%{user_id: user.id, status: "running", container_id: "c1"})
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      send(lv.pid, {:task_setup_phase, task.id, :on_resume, "restore repository context"})
+
+      current_task = socket_assign(lv, :current_task)
+      assert current_task.id == task.id
+      assert current_task.setup_phase == :on_resume
+      assert current_task.setup_instruction == "restore repository context"
+
+      html = render(lv)
+      assert html =~ "Setup phase: On resume"
+      assert html =~ "restore repository context"
+      assert has_element?(lv, ~s([data-testid="task-setup-phase"]))
+
+      assert has_element?(
+               lv,
+               ~s([data-testid="task-setup-instruction"]),
+               "restore repository context"
+             )
+    end
+
     test "session.status idle refreshes task status from DB", %{conn: conn, user: user} do
       task = task_fixture(%{user_id: user.id, status: "running", container_id: "c1"})
 
@@ -692,5 +716,13 @@ defmodule AgentsWeb.DashboardLive.IndexPubsubTest do
       assert html =~ "Working on it..."
       refute html =~ "Waiting for response"
     end
+  end
+
+  defp socket_assign(view, key) do
+    view.pid
+    |> :sys.get_state()
+    |> Map.fetch!(:socket)
+    |> Map.fetch!(:assigns)
+    |> Map.fetch!(key)
   end
 end

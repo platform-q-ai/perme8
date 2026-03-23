@@ -80,7 +80,10 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     task_repo: nil,
     pubsub: nil,
     event_bus: nil,
-    queue_terminal_notifier: nil
+    queue_terminal_notifier: nil,
+    setup_phase: nil,
+    setup_instruction: nil,
+    preserve_container: false
   ]
 
   # ---- Public API ----
@@ -165,6 +168,12 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
           auth_refresher: auth_refresher,
           fresh_warm_container: fresh_warm_container,
           queue_terminal_notifier: queue_terminal_notifier,
+          setup_phase: if(resume?, do: :on_resume, else: :on_create),
+          setup_instruction:
+            if(resume?,
+              do: SessionsConfig.setup_phase_instruction(:on_resume),
+              else: SessionsConfig.setup_phase_instruction(:on_create)
+            ),
           health_retries: SessionsConfig.health_check_max_retries()
         }
 
@@ -443,7 +452,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
         # Resume path: session already exists, just subscribe and send prompt
         case subscribe_to_events(state) do
           {:ok, state} ->
-            send(self(), :send_prompt)
+            queue_initial_prompt_phase(state)
             {:noreply, %{state | status: :prompting}}
 
           {:error, reason} ->
@@ -518,7 +527,7 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
         # Subscribe to SSE events
         case subscribe_to_events(state) do
           {:ok, state} ->
-            send(self(), :send_prompt)
+            queue_initial_prompt_phase(state)
             {:noreply, %{state | status: :prompting}}
 
           {:error, reason} ->
@@ -528,6 +537,29 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
 
       {:error, reason} ->
         fail_task(state, "Session creation failed: #{inspect(reason)}")
+        {:stop, :normal, state}
+    end
+  end
+
+  @impl true
+  def handle_info(:run_setup_phase, state) do
+    base_url = "http://localhost:#{state.container_port}"
+    parts = [%{type: "text", text: state.setup_instruction}]
+
+    TaskBroadcaster.broadcast_setup_phase(
+      state.task_id,
+      state.setup_phase,
+      state.setup_instruction,
+      state.pubsub
+    )
+
+    case state.opencode_client.send_prompt_async(base_url, state.session_id, parts, []) do
+      :ok ->
+        send(self(), :send_prompt)
+        {:noreply, state}
+
+      {:error, reason} ->
+        fail_task(state, "Setup phase failed: #{inspect(reason)}")
         {:stop, :normal, state}
     end
   end
@@ -750,8 +782,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   defp handle_sdk_result(event, state) do
     case handle_sdk_event(event, state) do
       {:completed, new_state} ->
-        complete_task(new_state)
-        {:stop, :normal, new_state}
+        completed_state = complete_task(new_state)
+        {:stop, :normal, completed_state}
 
       {:error, error_msg, new_state} ->
         fail_task(new_state, error_msg)
@@ -1181,6 +1213,17 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     end
   end
 
+  defp queue_initial_prompt_phase(%{setup_instruction: instruction} = state)
+       when is_binary(instruction) and instruction != "" do
+    send(self(), :run_setup_phase)
+    state
+  end
+
+  defp queue_initial_prompt_phase(state) do
+    send(self(), :send_prompt)
+    state
+  end
+
   defp initialize_lifecycle(
          state,
          task,
@@ -1347,6 +1390,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
     )
 
     notify_queue_terminal(state, :completed)
+
+    %{state | preserve_container: true}
   end
 
   defp notify_queue_terminal(state, status) when status in [:completed, :failed, :cancelled] do
@@ -1400,6 +1445,8 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner do
   defp maybe_broadcast_container_stats(_state), do: :ok
 
   defp cleanup_container(%{container_id: nil}), do: :ok
+
+  defp cleanup_container(%{preserve_container: true}), do: :ok
 
   defp cleanup_container(state) do
     state.container_provider.stop(state.container_id)

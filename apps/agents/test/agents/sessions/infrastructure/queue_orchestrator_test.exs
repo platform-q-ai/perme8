@@ -4,7 +4,7 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestratorTest do
   alias Agents.Repo
   alias Agents.Sessions.Domain.Entities.QueueSnapshot
   alias Agents.Sessions.Infrastructure.QueueOrchestrator
-  alias Agents.Sessions.Infrastructure.Schemas.TaskSchema
+  alias Agents.Sessions.Infrastructure.Schemas.{SessionSchema, TaskSchema}
   alias Perme8.Events.TestEventBus
 
   import Agents.Test.AccountsFixtures
@@ -209,7 +209,7 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestratorTest do
   end
 
   describe "light image promotion" do
-    test "promotes light image tasks even when at concurrency limit" do
+    test "does not promote queued tasks when at concurrency limit" do
       user = user_fixture()
       _heavy_running = create_task(user, %{status: "running", image: "perme8-opencode"})
 
@@ -231,7 +231,7 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestratorTest do
       assert :ok = QueueOrchestrator.notify_task_queued(user.id, light_queued.id)
 
       updated = Repo.get!(TaskSchema, light_queued.id)
-      assert updated.status == "pending"
+      assert updated.status == "queued"
     end
 
     test "does not promote heavyweight tasks when at concurrency limit" do
@@ -335,7 +335,7 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestratorTest do
       assert updated.pending_question == %{"other_key" => "keep"}
     end
 
-    test "passes prewarmed opts with already_healthy when task has container_id and port" do
+    test "uses default runner opts for queued tasks without a resume session" do
       user = user_fixture()
       _running = create_task(user, %{status: "running"})
 
@@ -367,48 +367,7 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestratorTest do
       assert :ok = QueueOrchestrator.notify_task_completed(user.id, queued.id)
 
       assert_receive {:runner_started, _task_id, opts}
-      assert opts[:prewarmed_container_id] == "warm-cid"
-      assert opts[:container_port] == 4001
-      assert opts[:already_healthy] == true
-      assert opts[:fresh_warm_container] == true
-      refute opts[:resume]
-    end
-
-    test "passes prewarmed opts without already_healthy when task has container_id but no port" do
-      user = user_fixture()
-      _running = create_task(user, %{status: "running"})
-
-      queued =
-        create_task(user, %{
-          status: "queued",
-          queue_position: 1,
-          container_id: "warm-cid",
-          session_id: nil
-        })
-
-      test_pid = self()
-
-      runner_starter = fn task_id, opts ->
-        send(test_pid, {:runner_started, task_id, opts})
-        {:ok, self()}
-      end
-
-      TestEventBus.start_global()
-
-      start_orchestrator!(user.id,
-        concurrency_limit: 2,
-        pubsub: Perme8.Events.PubSub,
-        event_bus: TestEventBus,
-        task_runner_starter: runner_starter
-      )
-
-      assert :ok = QueueOrchestrator.notify_task_completed(user.id, queued.id)
-
-      assert_receive {:runner_started, _task_id, opts}
-      assert opts[:prewarmed_container_id] == "warm-cid"
-      assert opts[:fresh_warm_container] == true
-      refute opts[:already_healthy]
-      refute opts[:resume]
+      assert opts == []
     end
 
     test "passes empty opts for cold start task" do
@@ -504,4 +463,81 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestratorTest do
       assert is_nil(updated.container_port)
     end
   end
+
+  describe "idle session suspension" do
+    test "suspends a ticket-linked session after idle timeout" do
+      user = user_fixture()
+
+      session =
+        Agents.SessionsFixtures.session_fixture(%{
+          user_id: user.id,
+          status: "active",
+          container_status: "running",
+          container_id: "idle-container"
+        })
+
+      completed_task =
+        create_task(user, %{
+          status: "completed",
+          session_ref_id: session.id
+        })
+
+      start_orchestrator!(user.id,
+        idle_timeout_ms: 1,
+        container_provider: Agents.Sessions.Infrastructure.Adapters.NoopContainerProvider
+      )
+
+      assert :ok = QueueOrchestrator.notify_task_completed(user.id, completed_task.id)
+
+      assert_eventually(fn ->
+        refreshed = Repo.get!(SessionSchema, session.id)
+        refreshed.status == "paused" and refreshed.container_status == "stopped"
+      end)
+    end
+
+    test "cancels scheduled suspension when new session activity is reported" do
+      user = user_fixture()
+
+      session =
+        Agents.SessionsFixtures.session_fixture(%{
+          user_id: user.id,
+          status: "active",
+          container_status: "running",
+          container_id: "still-active-container"
+        })
+
+      completed_task =
+        create_task(user, %{
+          status: "completed",
+          session_ref_id: session.id
+        })
+
+      start_orchestrator!(user.id,
+        idle_timeout_ms: 25,
+        container_provider: Agents.Sessions.Infrastructure.Adapters.NoopContainerProvider
+      )
+
+      assert :ok = QueueOrchestrator.notify_task_completed(user.id, completed_task.id)
+      assert :ok = QueueOrchestrator.notify_session_activity(user.id, session.id)
+
+      Process.sleep(60)
+
+      refreshed = Repo.get!(SessionSchema, session.id)
+      assert refreshed.status == "active"
+      assert refreshed.container_status == "running"
+    end
+  end
+
+  defp assert_eventually(fun, attempts \\ 20)
+
+  defp assert_eventually(fun, attempts) when attempts > 0 do
+    if fun.() do
+      assert true
+    else
+      Process.sleep(20)
+      assert_eventually(fun, attempts - 1)
+    end
+  end
+
+  defp assert_eventually(_fun, 0), do: flunk("condition did not become true")
 end

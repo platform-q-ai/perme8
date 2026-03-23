@@ -33,8 +33,20 @@ defmodule Agents.Sessions.Infrastructure.Repositories.SessionRepositoryTest do
       assert record.container_port == 9090
       assert record.container_status == "pending"
       assert record.image == "perme8-opencode"
+      assert is_nil(record.last_activity_at)
       assert %DateTime{} = record.inserted_at
       assert %DateTime{} = record.updated_at
+    end
+
+    test "persists last_activity_at when provided" do
+      last_activity_at = DateTime.utc_now() |> DateTime.truncate(:second)
+
+      assert {:ok, %SessionRecord{} = record} =
+               SessionRepository.create_session(
+                 create_session_attrs(%{last_activity_at: last_activity_at})
+               )
+
+      assert record.last_activity_at == last_activity_at
     end
   end
 

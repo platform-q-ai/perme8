@@ -4,6 +4,7 @@ defmodule Agents.Sessions.Application.UseCases.CreateTaskTest do
   import Mox
 
   alias Agents.Mocks.TaskRepositoryMock
+  alias Agents.Mocks.SessionRepositoryMock
   alias Agents.Sessions.Application.UseCases.CreateTask
   alias Agents.Sessions.Domain.Events.TaskQueued
   alias Agents.Sessions.Infrastructure.Schemas.TaskSchema
@@ -166,6 +167,87 @@ defmodule Agents.Sessions.Application.UseCases.CreateTaskTest do
                )
 
       assert TestEventBus.get_events() == []
+    end
+
+    test "reuses an existing ticket-scoped session when resolver returns session_ref_id" do
+      task_schema = %{
+        id: "task-2",
+        instruction: "#507 continue implementation",
+        user_id: "user-123",
+        status: "queued",
+        queue_position: 1,
+        session_ref_id: "session-from-ticket"
+      }
+
+      TaskRepositoryMock
+      |> expect(:get_max_queue_position, fn "user-123" -> nil end)
+      |> expect(:create_task, fn attrs ->
+        assert attrs.session_ref_id == "session-from-ticket"
+        {:ok, struct(TaskSchema, task_schema)}
+      end)
+
+      SessionRepositoryMock
+      |> expect(:create_session, 0, fn _attrs ->
+        {:ok, %{id: "unused"}}
+      end)
+
+      resolver = fn 507 -> "session-from-ticket" end
+
+      assert {:ok, task} =
+               CreateTask.execute(
+                 %{instruction: "#507 continue implementation", user_id: "user-123"},
+                 task_repo: TaskRepositoryMock,
+                 session_repo: SessionRepositoryMock,
+                 ticket_session_resolver: resolver
+               )
+
+      assert task.id == "task-2"
+    end
+
+    test "creates and links a new ticket-scoped session when resolver misses" do
+      task_schema = %{
+        id: "task-3",
+        instruction: "ticket 507 bootstrap",
+        user_id: "user-123",
+        status: "queued",
+        queue_position: 1,
+        session_ref_id: "new-session-id"
+      }
+
+      TaskRepositoryMock
+      |> expect(:get_max_queue_position, fn "user-123" -> nil end)
+      |> expect(:create_task, fn attrs ->
+        assert attrs.session_ref_id == "new-session-id"
+        {:ok, struct(TaskSchema, task_schema)}
+      end)
+
+      parent = self()
+
+      SessionRepositoryMock
+      |> expect(:create_session, fn _attrs ->
+        send(parent, :session_created)
+        {:ok, %{id: "new-session-id"}}
+      end)
+
+      resolver = fn 507 -> nil end
+
+      linker = fn 507, "new-session-id" ->
+        send(parent, :session_linked)
+        :ok
+      end
+
+      assert {:ok, task} =
+               CreateTask.execute(
+                 %{instruction: "ticket 507 bootstrap", user_id: "user-123"},
+                 task_repo: TaskRepositoryMock,
+                 session_repo: SessionRepositoryMock,
+                 ticket_session_resolver: resolver,
+                 ticket_session_linker: linker
+               )
+
+      assert task.id == "task-3"
+      assert_receive :session_created
+      assert_receive :session_linked
     end
   end
 end

@@ -29,6 +29,7 @@ defmodule Agents.SessionsFixtures do
       |> maybe_put(:sdk_session_id, attrs[:sdk_session_id])
       |> maybe_put(:paused_at, attrs[:paused_at])
       |> maybe_put(:resumed_at, attrs[:resumed_at])
+      |> maybe_put(:last_activity_at, attrs[:last_activity_at])
 
     {:ok, session} =
       %SessionSchema{}

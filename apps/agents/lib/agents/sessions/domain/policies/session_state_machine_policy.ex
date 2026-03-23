@@ -12,7 +12,11 @@ defmodule Agents.Sessions.Domain.Policies.SessionStateMachinePolicy do
                        {:paused, :active},
                        {:active, :completed},
                        {:active, :failed},
-                       {:paused, :failed}
+                       {:paused, :failed},
+                       {:active, :terminated},
+                       {:paused, :terminated},
+                       {:completed, :terminated},
+                       {:failed, :terminated}
                      ])
 
   @doc "Returns true if the transition is valid."
@@ -55,4 +59,14 @@ defmodule Agents.Sessions.Domain.Policies.SessionStateMachinePolicy do
   def can_fail?(:paused), do: true
   def can_fail?("paused"), do: true
   def can_fail?(_), do: false
+
+  def can_terminate?(:active), do: true
+  def can_terminate?("active"), do: true
+  def can_terminate?(:paused), do: true
+  def can_terminate?("paused"), do: true
+  def can_terminate?(:completed), do: true
+  def can_terminate?("completed"), do: true
+  def can_terminate?(:failed), do: true
+  def can_terminate?("failed"), do: true
+  def can_terminate?(_), do: false
 end

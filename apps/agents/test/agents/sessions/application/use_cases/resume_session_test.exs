@@ -13,6 +13,13 @@ defmodule Agents.Sessions.Application.UseCases.ResumeSessionTest do
 
   @user_id Ecto.UUID.generate()
 
+  defmodule QueueOrchestratorStub do
+    def notify_session_activity(user_id, session_id) do
+      send(Process.get(:test_pid), {:session_activity, user_id, session_id})
+      :ok
+    end
+  end
+
   setup do
     TestEventBus.start_global()
     :ok
@@ -39,6 +46,20 @@ defmodule Agents.Sessions.Application.UseCases.ResumeSessionTest do
       persisted = Repo.get!(SessionSchema, session.id)
       assert persisted.status == "active"
       assert persisted.resumed_at != nil
+    end
+
+    test "notifies queue orchestrator of renewed session activity" do
+      session = session_fixture(%{user_id: @user_id, status: "paused"})
+      Process.put(:test_pid, self())
+      session_id = session.id
+
+      assert {:ok, _updated} =
+               ResumeSession.execute(session_id, @user_id, "Resume",
+                 event_bus: TestEventBus,
+                 queue_orchestrator: QueueOrchestratorStub
+               )
+
+      assert_receive {:session_activity, @user_id, ^session_id}
     end
   end
 

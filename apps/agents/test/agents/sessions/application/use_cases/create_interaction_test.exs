@@ -5,10 +5,24 @@ defmodule Agents.Sessions.Application.UseCases.CreateInteractionTest do
 
   alias Agents.Repo
   alias Agents.Sessions.Application.UseCases.CreateInteraction
+  alias Agents.Sessions.Domain.Entities.SessionRecord
   alias Agents.Sessions.Domain.Entities.Interaction
   alias Agents.Sessions.Infrastructure.Schemas.InteractionSchema
 
   @user_id Ecto.UUID.generate()
+
+  defmodule SessionRepoStub do
+    def get_session(session_id) do
+      %SessionRecord{id: session_id, user_id: Process.get(:test_user_id)}
+    end
+  end
+
+  defmodule QueueOrchestratorStub do
+    def notify_session_activity(user_id, session_id) do
+      send(Process.get(:test_pid), {:session_activity, user_id, session_id})
+      :ok
+    end
+  end
 
   describe "execute/2 question/answer pairing" do
     test "creates a question interaction" do
@@ -82,6 +96,28 @@ defmodule Agents.Sessions.Application.UseCases.CreateInteractionTest do
       assert persisted.type == "instruction"
       assert persisted.direction == "inbound"
       assert persisted.session_id == session.id
+    end
+
+    test "notifies session activity after creating an interaction" do
+      session = session_fixture(%{user_id: @user_id})
+      Process.put(:test_pid, self())
+      Process.put(:test_user_id, @user_id)
+      session_id = session.id
+
+      attrs = %{
+        session_id: session_id,
+        type: :instruction,
+        direction: :inbound,
+        payload: %{text: "Run the tests"}
+      }
+
+      assert {:ok, %Interaction{}} =
+               CreateInteraction.execute(attrs,
+                 session_repo: SessionRepoStub,
+                 queue_orchestrator: QueueOrchestratorStub
+               )
+
+      assert_receive {:session_activity, @user_id, ^session_id}
     end
 
     test "creates interaction with string type and direction" do

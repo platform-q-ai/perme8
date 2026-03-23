@@ -45,18 +45,18 @@ defmodule Agents.Sessions.Application.UseCases.CreateTask do
       user_id = attrs[:user_id] || attrs["user_id"]
 
       concurrency_lock.(user_id, fn ->
-        create_queued_task(attrs, user_id, task_repo, session_repo, event_bus)
+        create_queued_task(attrs, user_id, task_repo, session_repo, event_bus, opts)
       end)
     end
   end
 
-  defp create_queued_task(attrs, user_id, task_repo, session_repo, event_bus) do
+  defp create_queued_task(attrs, user_id, task_repo, session_repo, event_bus, opts) do
     max_pos = task_repo.get_max_queue_position(user_id)
     queue_position = QueuePolicy.next_queue_position(max_pos)
 
     # Ensure a session exists for this task. Reuse an existing session if
     # session_ref_id is provided, otherwise create a new one.
-    session_ref_id = resolve_session(attrs, user_id, session_repo)
+    session_ref_id = resolve_session(attrs, user_id, session_repo, opts)
 
     queued_attrs =
       attrs
@@ -77,15 +77,63 @@ defmodule Agents.Sessions.Application.UseCases.CreateTask do
     end
   end
 
-  defp resolve_session(attrs, user_id, session_repo) do
+  defp resolve_session(attrs, user_id, session_repo, opts) do
     existing_ref = Map.get(attrs, :session_ref_id)
 
     if existing_ref do
       existing_ref
     else
-      create_new_session(attrs, user_id, session_repo)
+      ticket_number = extract_ticket_number(attrs)
+
+      with {:ticket, ticket_number} when is_integer(ticket_number) <- {:ticket, ticket_number},
+           resolver when is_function(resolver, 1) <- Keyword.get(opts, :ticket_session_resolver),
+           session_id when is_binary(session_id) <- resolver.(ticket_number) do
+        session_id
+      else
+        _ ->
+          session_id = create_new_session(attrs, user_id, session_repo)
+
+          maybe_link_ticket_session(
+            ticket_number,
+            session_id,
+            Keyword.get(opts, :ticket_session_linker)
+          )
+
+          session_id
+      end
     end
   end
+
+  defp extract_ticket_number(attrs) do
+    attrs
+    |> instruction_from_attrs()
+    |> parse_ticket_number()
+  end
+
+  defp instruction_from_attrs(attrs) do
+    Map.get(attrs, :instruction) || Map.get(attrs, "instruction")
+  end
+
+  @ticket_number_regex ~r/(?:^|\s)(?:#|ticket\s+)(\d+)\b/i
+
+  defp parse_ticket_number(instruction) when is_binary(instruction) do
+    case Regex.run(@ticket_number_regex, instruction) do
+      [_, value] -> String.to_integer(value)
+      _ -> nil
+    end
+  end
+
+  defp parse_ticket_number(_), do: nil
+
+  defp maybe_link_ticket_session(ticket_number, session_id, linker)
+       when is_integer(ticket_number) and is_binary(session_id) and is_function(linker, 2) do
+    _ = linker.(ticket_number, session_id)
+    :ok
+  rescue
+    _ -> :ok
+  end
+
+  defp maybe_link_ticket_session(_ticket_number, _session_id, _linker), do: :ok
 
   defp create_new_session(attrs, user_id, session_repo) do
     require Logger

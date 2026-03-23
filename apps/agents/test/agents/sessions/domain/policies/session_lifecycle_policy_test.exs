@@ -204,6 +204,52 @@ defmodule Agents.Sessions.Domain.Policies.SessionLifecyclePolicyTest do
     end
   end
 
+  describe "ticket session lifecycle" do
+    test "returns the supported ticket session states" do
+      assert SessionLifecyclePolicy.ticket_session_states() == [
+               :active,
+               :idle,
+               :suspended,
+               :terminated
+             ]
+    end
+
+    test "derives active state from in-flight task statuses" do
+      for status <- ["queued", "pending", "starting", "running", "awaiting_feedback"] do
+        assert SessionLifecyclePolicy.derive_ticket_session_state(status) == :active
+      end
+    end
+
+    test "derives idle state from successful task completion" do
+      assert SessionLifecyclePolicy.derive_ticket_session_state("completed") == :idle
+    end
+
+    test "derives suspended state from cancelled and failed tasks" do
+      assert SessionLifecyclePolicy.derive_ticket_session_state("cancelled") == :suspended
+      assert SessionLifecyclePolicy.derive_ticket_session_state("failed") == :suspended
+    end
+
+    test "validates ticket session transitions" do
+      assert SessionLifecyclePolicy.can_transition_ticket_session?(:active, :idle)
+      assert SessionLifecyclePolicy.can_transition_ticket_session?(:idle, :active)
+      assert SessionLifecyclePolicy.can_transition_ticket_session?(:idle, :suspended)
+      assert SessionLifecyclePolicy.can_transition_ticket_session?(:active, :terminated)
+      refute SessionLifecyclePolicy.can_transition_ticket_session?(:terminated, :active)
+      refute SessionLifecyclePolicy.can_transition_ticket_session?(:idle, :terminated)
+    end
+
+    test "suspends an idle session when timeout elapses" do
+      now = DateTime.utc_now()
+      last_active_at = DateTime.add(now, -121, :second)
+
+      assert SessionLifecyclePolicy.apply_idle_timeout(:idle, last_active_at, now, 120_000) ==
+               :suspended
+
+      assert SessionLifecyclePolicy.apply_idle_timeout(:active, last_active_at, now, 120_000) ==
+               :active
+    end
+  end
+
   defp task(overrides) do
     Map.merge(
       %{

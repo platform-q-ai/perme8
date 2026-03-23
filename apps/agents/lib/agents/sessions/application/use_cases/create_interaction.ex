@@ -10,10 +10,14 @@ defmodule Agents.Sessions.Application.UseCases.CreateInteraction do
   alias Agents.Sessions.Domain.Policies.InteractionPolicy
 
   @default_interaction_repo Agents.Sessions.Infrastructure.Repositories.InteractionRepository
+  @default_session_repo Agents.Sessions.Infrastructure.Repositories.SessionRepository
+  @default_queue_orchestrator Agents.Sessions.Infrastructure.QueueOrchestrator
 
   @spec execute(map(), keyword()) :: {:ok, Interaction.t()} | {:error, term()}
   def execute(attrs, opts \\ []) do
     interaction_repo = Keyword.get(opts, :interaction_repo, @default_interaction_repo)
+    session_repo = Keyword.get(opts, :session_repo, @default_session_repo)
+    queue_orchestrator = Keyword.get(opts, :queue_orchestrator, @default_queue_orchestrator)
 
     type = to_atom(attrs[:type] || attrs["type"])
     direction = to_atom(attrs[:direction] || attrs["direction"])
@@ -36,6 +40,12 @@ defmodule Agents.Sessions.Application.UseCases.CreateInteraction do
           if type == :answer && attrs[:correlation_id] do
             mark_question_delivered(attrs[:session_id], attrs[:correlation_id], interaction_repo)
           end
+
+          maybe_notify_session_activity(
+            attrs[:session_id],
+            session_repo,
+            queue_orchestrator
+          )
 
           {:ok, Interaction.from_schema(schema)}
 
@@ -62,6 +72,25 @@ defmodule Agents.Sessions.Application.UseCases.CreateInteraction do
         :ok
     end
   end
+
+  defp maybe_notify_session_activity(session_id, session_repo, queue_orchestrator)
+       when is_binary(session_id) do
+    try do
+      case session_repo.get_session(session_id) do
+        %{user_id: user_id} when is_binary(user_id) ->
+          queue_orchestrator.notify_session_activity(user_id, session_id)
+
+        _ ->
+          :ok
+      end
+    rescue
+      _ -> :ok
+    catch
+      :exit, _ -> :ok
+    end
+  end
+
+  defp maybe_notify_session_activity(_session_id, _session_repo, _queue_orchestrator), do: :ok
 
   defp to_atom(val) when is_atom(val), do: val
 

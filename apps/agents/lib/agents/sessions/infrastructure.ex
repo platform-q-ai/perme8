@@ -33,6 +33,7 @@ defmodule Agents.Sessions.Infrastructure do
       TaskRunnerSupervisor,
       QueueOrchestrator,
       QueueOrchestratorSupervisor,
+      Subscribers.TicketSessionTerminationHandler,
       SdkEventDebouncer,
       SdkEventHandler
     ]

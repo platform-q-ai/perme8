@@ -142,6 +142,15 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.TaskBroadcaster do
     Phoenix.PubSub.broadcast(pubsub, "task:#{task_id}", {:todo_updated, task_id, todo_items})
   end
 
+  @doc "Broadcasts setup phase metadata for the task runtime."
+  def broadcast_setup_phase(task_id, phase, instruction, pubsub) do
+    Phoenix.PubSub.broadcast(
+      pubsub,
+      "task:#{task_id}",
+      {:task_setup_phase, task_id, phase, instruction}
+    )
+  end
+
   # Builds a target task map by merging attrs into the current task and setting the status.
   # Used internally for computing lifecycle state transitions.
   defp lifecycle_target_task(nil, attrs, status) do
