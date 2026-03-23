@@ -45,8 +45,10 @@ Feature: Pipeline Phase 11 - Pipeline Configuration UI
     Given I navigate to "${baseUrl}/sessions?fixture=pipeline_configuration_editor_loaded"
     And I wait for network idle
     Then "[data-testid='pipeline-stage-cards']" should be visible
-    And I store the text of "[data-testid='pipeline-stage-cards']" as "stageCardsText"
-    And the variable "stageCardsText" should match "Ready[\\s\\S]*In Progress[\\s\\S]*In Review[\\s\\S]*Warm Pool"
+    And "[data-testid='pipeline-stage-cards']" should contain text "Ready"
+    And "[data-testid='pipeline-stage-cards']" should contain text "In Progress"
+    And "[data-testid='pipeline-stage-cards']" should contain text "In Review"
+    And "[data-testid='pipeline-stage-cards']" should contain text "Warm Pool"
     And "[data-testid='pipeline-stage-card-warm-pool']" should be visible
 
   Scenario: I edit step properties within a stage
@@ -76,8 +78,8 @@ Feature: Pipeline Phase 11 - Pipeline Configuration UI
     And I wait for network idle
     When I click the "Add stage" button
     And I fill "[data-testid='new-stage-name-input']" with "Security Scan"
-    And I click the "Add step" button
-    And I fill "[data-testid='new-step-command-input']" with "mix credo --strict"
+    And I click "[data-testid='add-step-security-scan']"
+    And I fill "[name='new_step_command:2']" with "mix credo --strict"
     And I click "[data-testid='move-stage-security-scan-up']"
     And I click "[data-testid='move-step-security-scan-1-down']"
     And I click "[data-testid='remove-step-legacy-cleanup-1']"

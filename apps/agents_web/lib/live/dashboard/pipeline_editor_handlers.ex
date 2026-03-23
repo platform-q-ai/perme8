@@ -30,6 +30,9 @@ defmodule AgentsWeb.DashboardLive.PipelineEditorHandlers do
   defp apply_change(draft, "step_run", stage_index, step_index, value),
     do: update_step_field(draft, stage_index, step_index, "run", value)
 
+  defp apply_change(draft, "warm_pool_step_run", stage_index, _step_index, value),
+    do: update_step_field(draft, stage_index, 0, "run", value)
+
   defp apply_change(draft, "step_timeout", stage_index, step_index, value),
     do: update_step_field(draft, stage_index, step_index, "timeout_seconds", parse_integer(value))
 
@@ -48,6 +51,13 @@ defmodule AgentsWeb.DashboardLive.PipelineEditorHandlers do
   defp apply_change(draft, _field, _stage_index, _step_index, _value), do: draft
 
   defp extract_change(params) do
+    case Map.get(params, "_target") do
+      [target] -> {target, Map.get(params, target, "")}
+      _ -> fallback_change_pair(params)
+    end
+  end
+
+  defp fallback_change_pair(params) do
     params
     |> Enum.find(fn {key, _value} -> key != "_target" end)
     |> case do

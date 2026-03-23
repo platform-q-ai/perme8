@@ -47,163 +47,165 @@ defmodule AgentsWeb.DashboardLive.Components.PipelineEditorComponents do
         <div>Changes were not saved</div>
       </div>
 
-      <div class="px-3 py-3 overflow-x-auto">
-        <div class="flex gap-3 min-w-max" data-testid="pipeline-stage-cards">
-          <article
-            :for={{stage, stage_index} <- Enum.with_index(@stages)}
-            class="w-72 rounded-lg border border-base-300 bg-base-200/40 p-3"
-            data-testid={"pipeline-stage-card-#{stage_dom_id(stage)}"}
-          >
-            <div class="flex items-center gap-2">
-              <h4 class="text-sm font-semibold">{stage_label(stage)}</h4>
-              <button
-                type="button"
-                phx-click="pipeline_editor_move_stage_up"
-                phx-value-stage={stage_index}
-                data-testid={"move-stage-#{stage_dom_id(stage)}-up"}
-                class="btn btn-ghost btn-xs ml-auto"
-              >
-                ↑
-              </button>
-              <button
-                type="button"
-                phx-click="pipeline_editor_move_stage_down"
-                phx-value-stage={stage_index}
-                class="btn btn-ghost btn-xs"
-              >
-                ↓
-              </button>
-              <button
-                type="button"
-                phx-click="pipeline_editor_remove_stage"
-                phx-value-stage={stage_index}
-                data-testid={"remove-stage-#{stage_dom_id(stage)}"}
-                class="btn btn-ghost btn-xs text-error"
-              >
-                ✕
-              </button>
-            </div>
+      <form id="pipeline-editor-form" phx-change="pipeline_editor_change">
+        <div class="px-3 py-3 overflow-x-auto">
+          <div class="flex gap-3 min-w-max" data-testid="pipeline-stage-cards">
+            <article
+              :for={{stage, stage_index} <- Enum.with_index(@stages)}
+              class="w-72 rounded-lg border border-base-300 bg-base-200/40 p-3"
+              data-testid={"pipeline-stage-card-#{stage_dom_id(stage)}"}
+            >
+              <div class="flex items-center gap-2">
+                <h4 class="text-sm font-semibold">{stage_label(stage)}</h4>
+                <button
+                  type="button"
+                  phx-click="pipeline_editor_move_stage_up"
+                  phx-value-stage={stage_index}
+                  data-testid={"move-stage-#{stage_dom_id(stage)}-up"}
+                  class="btn btn-ghost btn-xs ml-auto"
+                >
+                  ↑
+                </button>
+                <button
+                  type="button"
+                  phx-click="pipeline_editor_move_stage_down"
+                  phx-value-stage={stage_index}
+                  class="btn btn-ghost btn-xs"
+                >
+                  ↓
+                </button>
+                <button
+                  type="button"
+                  phx-click="pipeline_editor_remove_stage"
+                  phx-value-stage={stage_index}
+                  data-testid={"remove-stage-#{stage_dom_id(stage)}"}
+                  class="btn btn-ghost btn-xs text-error"
+                >
+                  ✕
+                </button>
+              </div>
 
-            <div :if={stage_dom_id(stage) == "warm-pool"} class="mt-3 space-y-2">
-              <input
-                data-testid="warm-pool-target-count-input"
-                type="number"
-                name={"warm_pool_target_count:#{stage_index}"}
-                value={warm_pool_value(stage, ["target_count"]) || 0}
-                phx-change="pipeline_editor_change"
-                class="input input-xs input-bordered w-full"
-              />
-              <input
-                data-testid="warm-pool-image-input"
-                type="text"
-                name={"warm_pool_image:#{stage_index}"}
-                value={warm_pool_value(stage, ["image"]) || ""}
-                phx-change="pipeline_editor_change"
-                class="input input-xs input-bordered w-full"
-              />
-              <input
-                data-testid="warm-pool-step-command-input"
-                type="text"
-                name={"step_run:#{stage_index}:0"}
-                value={first_step_field(stage, "run")}
-                phx-change="pipeline_editor_change"
-                class="input input-xs input-bordered w-full"
-              />
-            </div>
-
-            <div class="mt-3 space-y-2">
-              <div
-                :for={{step, step_index} <- Enum.with_index(Map.get(stage, "steps", []))}
-                class="rounded border border-base-300 p-2"
-              >
+              <div :if={stage_dom_id(stage) == "warm-pool"} class="mt-3 space-y-2">
                 <input
-                  data-testid="step-command-input"
-                  type="text"
-                  name={"step_run:#{stage_index}:#{step_index}"}
-                  value={Map.get(step, "run", "")}
-                  phx-change="pipeline_editor_change"
-                  class="input input-xs input-bordered w-full mb-1"
-                />
-                <input
-                  data-testid="step-timeout-input"
+                  data-testid="warm-pool-target-count-input"
                   type="number"
-                  name={"step_timeout:#{stage_index}:#{step_index}"}
-                  value={Map.get(step, "timeout_seconds", "")}
-                  phx-change="pipeline_editor_change"
-                  class="input input-xs input-bordered w-full mb-1"
-                />
-                <input
-                  data-testid="step-conditions-input"
-                  type="text"
-                  name={"step_conditions:#{stage_index}:#{step_index}"}
-                  value={Map.get(step, "conditions", "")}
-                  phx-change="pipeline_editor_change"
-                  class="input input-xs input-bordered w-full mb-1"
-                />
-                <input
-                  data-testid="step-env-input"
-                  type="text"
-                  name={"step_env:#{stage_index}:#{step_index}"}
-                  value={first_env_pair(step)}
+                  name={"warm_pool_target_count:#{stage_index}"}
+                  value={warm_pool_value(stage, ["target_count"]) || 0}
                   phx-change="pipeline_editor_change"
                   class="input input-xs input-bordered w-full"
                 />
-                <div class="mt-1 flex gap-1">
-                  <button
-                    type="button"
-                    phx-click="pipeline_editor_move_step_down"
-                    phx-value-stage={stage_index}
-                    phx-value-step={step_index}
-                    data-testid={"move-step-#{stage_dom_id(stage)}-#{step_index + 1}-down"}
-                    class="btn btn-ghost btn-xs"
-                  >
-                    ↓
-                  </button>
-                  <button
-                    type="button"
-                    phx-click="pipeline_editor_remove_step"
-                    phx-value-stage={stage_index}
-                    phx-value-step={step_index}
-                    data-testid={"remove-step-#{stage_dom_id(stage)}-#{step_index + 1}"}
-                    class="btn btn-ghost btn-xs text-error"
-                  >
-                    Remove step
-                  </button>
-                </div>
+                <input
+                  data-testid="warm-pool-image-input"
+                  type="text"
+                  name={"warm_pool_image:#{stage_index}"}
+                  value={warm_pool_value(stage, ["image"]) || ""}
+                  phx-change="pipeline_editor_change"
+                  class="input input-xs input-bordered w-full"
+                />
+                <input
+                  data-testid="warm-pool-step-command-input"
+                  type="text"
+                  name={"warm_pool_step_run:#{stage_index}"}
+                  value={first_step_field(stage, "run")}
+                  phx-change="pipeline_editor_change"
+                  class="input input-xs input-bordered w-full"
+                />
               </div>
 
-              <button
-                type="button"
-                phx-click="pipeline_editor_add_step"
-                phx-value-stage={stage_index}
-                data-testid={"add-step-#{stage_dom_id(stage)}"}
-                class="btn btn-xs btn-outline"
-              >
-                Add step
-              </button>
-              <input
-                data-testid="new-step-command-input"
-                type="text"
-                name={"new_step_command:#{stage_index}"}
-                value=""
-                phx-change="pipeline_editor_change"
-                class="input input-xs input-bordered w-full"
-              />
-            </div>
-          </article>
-        </div>
-      </div>
+              <div class="mt-3 space-y-2">
+                <div
+                  :for={{step, step_index} <- Enum.with_index(Map.get(stage, "steps", []))}
+                  class="rounded border border-base-300 p-2"
+                >
+                  <input
+                    data-testid="step-command-input"
+                    type="text"
+                    name={"step_run:#{stage_index}:#{step_index}"}
+                    value={Map.get(step, "run", "")}
+                    phx-change="pipeline_editor_change"
+                    class="input input-xs input-bordered w-full mb-1"
+                  />
+                  <input
+                    data-testid="step-timeout-input"
+                    type="number"
+                    name={"step_timeout:#{stage_index}:#{step_index}"}
+                    value={Map.get(step, "timeout_seconds", "")}
+                    phx-change="pipeline_editor_change"
+                    class="input input-xs input-bordered w-full mb-1"
+                  />
+                  <input
+                    data-testid="step-conditions-input"
+                    type="text"
+                    name={"step_conditions:#{stage_index}:#{step_index}"}
+                    value={Map.get(step, "conditions", "")}
+                    phx-change="pipeline_editor_change"
+                    class="input input-xs input-bordered w-full mb-1"
+                  />
+                  <input
+                    data-testid="step-env-input"
+                    type="text"
+                    name={"step_env:#{stage_index}:#{step_index}"}
+                    value={first_env_pair(step)}
+                    phx-change="pipeline_editor_change"
+                    class="input input-xs input-bordered w-full"
+                  />
+                  <div class="mt-1 flex gap-1">
+                    <button
+                      type="button"
+                      phx-click="pipeline_editor_move_step_down"
+                      phx-value-stage={stage_index}
+                      phx-value-step={step_index}
+                      data-testid={"move-step-#{stage_dom_id(stage)}-#{step_index + 1}-down"}
+                      class="btn btn-ghost btn-xs"
+                    >
+                      ↓
+                    </button>
+                    <button
+                      type="button"
+                      phx-click="pipeline_editor_remove_step"
+                      phx-value-stage={stage_index}
+                      phx-value-step={step_index}
+                      data-testid={"remove-step-#{stage_dom_id(stage)}-#{step_index + 1}"}
+                      class="btn btn-ghost btn-xs text-error"
+                    >
+                      Remove step
+                    </button>
+                  </div>
+                </div>
 
-      <div class="px-3 pb-3">
-        <input
-          data-testid="new-stage-name-input"
-          type="text"
-          name="new_stage_name"
-          value=""
-          phx-change="pipeline_editor_change"
-          class="input input-xs input-bordered w-full"
-        />
-      </div>
+                <button
+                  type="button"
+                  phx-click="pipeline_editor_add_step"
+                  phx-value-stage={stage_index}
+                  data-testid={"add-step-#{stage_dom_id(stage)}"}
+                  class="btn btn-xs btn-outline"
+                >
+                  Add step
+                </button>
+                <input
+                  data-testid="new-step-command-input"
+                  type="text"
+                  name={"new_step_command:#{stage_index}"}
+                  value=""
+                  phx-change="pipeline_editor_change"
+                  class="input input-xs input-bordered w-full"
+                />
+              </div>
+            </article>
+          </div>
+        </div>
+
+        <div class="px-3 pb-3">
+          <input
+            data-testid="new-stage-name-input"
+            type="text"
+            name="new_stage_name"
+            value=""
+            phx-change="pipeline_editor_change"
+            class="input input-xs input-bordered w-full"
+          />
+        </div>
+      </form>
 
       <pre
         class="px-3 py-2 text-xs bg-base-200 border-t border-base-300"
