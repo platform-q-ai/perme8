@@ -288,6 +288,7 @@ defmodule Agents.Pipeline.Infrastructure.YamlParser do
     timeout_seconds = fetch(item, "timeout_seconds")
     retries = fetch(item, "retries") || 0
     env = fetch(item, "env") || %{}
+    conditions = fetch(item, "conditions")
 
     errors = []
     errors = maybe_add_type_error(errors, name, "#{path}.name", &is_binary/1, "must be a string")
@@ -295,6 +296,7 @@ defmodule Agents.Pipeline.Infrastructure.YamlParser do
     errors = maybe_add_timeout_error(errors, timeout_seconds, "#{path}.timeout_seconds")
     errors = maybe_add_retries_error(errors, retries, "#{path}.retries")
     errors = maybe_add_type_error(errors, env, "#{path}.env", &is_map/1, "must be a map")
+    errors = maybe_add_optional_string_error(errors, conditions, "#{path}.conditions")
 
     build_result(errors, fn ->
       Step.new(%{
@@ -302,7 +304,8 @@ defmodule Agents.Pipeline.Infrastructure.YamlParser do
         run: run,
         timeout_seconds: timeout_seconds,
         retries: retries,
-        env: env
+        env: env,
+        conditions: conditions
       })
     end)
   end

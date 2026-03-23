@@ -35,6 +35,7 @@ defmodule Agents.Pipeline.Infrastructure.YamlParserTest do
             steps:
               - name: prebuild image
                 run: mix release
+                conditions: branch == main
               - name: prestart containers
                 run: scripts/warm_pool.sh
             gates:
@@ -62,7 +63,10 @@ defmodule Agents.Pipeline.Infrastructure.YamlParserTest do
 
       warm_pool = Enum.find(config.stages, &(&1.id == "warm-pool"))
 
-      assert [%{timeout_seconds: nil, retries: 0}, %{timeout_seconds: nil, retries: 0}] =
+      assert [
+               %{timeout_seconds: nil, retries: 0, conditions: "branch == main"},
+               %{timeout_seconds: nil, retries: 0, conditions: nil}
+             ] =
                warm_pool.steps
 
       assert warm_pool.schedule == %{"cron" => "*/5 * * * *"}

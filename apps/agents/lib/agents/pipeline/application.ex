@@ -33,6 +33,7 @@ defmodule Agents.Pipeline.Application do
       UseCases.RunStage,
       UseCases.ReviewPullRequest,
       UseCases.TriggerPipelineRun,
+      UseCases.UpdatePipelineConfig,
       UseCases.UpdatePullRequest
     ]
 end
