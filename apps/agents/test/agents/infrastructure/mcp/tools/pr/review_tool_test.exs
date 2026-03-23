@@ -17,12 +17,15 @@ defmodule Agents.Infrastructure.Mcp.Tools.Pr.ReviewToolTest do
     stub(Agents.Mocks.IdentityMock, :api_key_has_permission?, fn _api_key, _scope -> true end)
 
     {:ok, pr} =
-      Pipeline.create_pull_request(%{
-        source_branch: "feature/review-tool",
-        target_branch: "main",
-        title: "Review me",
-        status: "in_review"
-      })
+      Pipeline.create_pull_request(
+        %{
+          source_branch: "feature/review-tool",
+          target_branch: "main",
+          title: "Review me",
+          status: "in_review"
+        },
+        emit_events?: false
+      )
 
     on_exit(fn ->
       if prev_identity,

@@ -3,6 +3,20 @@ defmodule Agents.Sessions.Application.SessionsConfigTest do
 
   alias Agents.Sessions.Application.SessionsConfig
 
+  setup do
+    original = Application.get_env(:agents, :sessions)
+
+    on_exit(fn ->
+      if original == nil do
+        Application.delete_env(:agents, :sessions)
+      else
+        Application.put_env(:agents, :sessions, original)
+      end
+    end)
+
+    :ok
+  end
+
   describe "image/0" do
     test "returns configured image name" do
       assert is_binary(SessionsConfig.image())
@@ -58,6 +72,29 @@ defmodule Agents.Sessions.Application.SessionsConfigTest do
 
     test "returns list of 3 images" do
       assert length(SessionsConfig.available_images()) == 3
+    end
+  end
+
+  describe "idle_suspend_timeout_ms/0" do
+    test "returns configured idle suspension timeout" do
+      assert is_integer(SessionsConfig.idle_suspend_timeout_ms())
+      assert SessionsConfig.idle_suspend_timeout_ms() > 0
+    end
+  end
+
+  describe "setup_phase_instruction/1" do
+    test "returns configured setup instructions" do
+      Application.put_env(:agents, :sessions,
+        setup_phases: %{on_create: "prepare repo", on_resume: "restore context"}
+      )
+
+      assert SessionsConfig.setup_phase_instruction(:on_create) == "prepare repo"
+      assert SessionsConfig.setup_phase_instruction(:on_resume) == "restore context"
+    end
+
+    test "returns nil when setup instruction is not configured" do
+      Application.put_env(:agents, :sessions, [])
+      assert SessionsConfig.setup_phase_instruction(:on_create) == nil
     end
   end
 end

@@ -4,7 +4,7 @@ defmodule Agents.Sessions.Infrastructure.Schemas.SessionSchema do
 
   Sessions are the aggregate root for coding sessions. Each session owns:
   - Container metadata (container_id, port, image, container_status)
-  - Lifecycle state (status, paused_at, resumed_at)
+  - Lifecycle state (status, paused_at, resumed_at, last_activity_at)
   - SDK session tracking (sdk_session_id)
   - A collection of tasks (via has_many)
   """
@@ -14,7 +14,7 @@ defmodule Agents.Sessions.Infrastructure.Schemas.SessionSchema do
 
   alias Agents.Sessions.Infrastructure.Schemas.TaskSchema
 
-  @valid_statuses ["active", "paused", "completed", "failed"]
+  @valid_statuses ["active", "paused", "completed", "failed", "terminated"]
   @valid_container_statuses ["pending", "starting", "running", "stopped", "removed"]
 
   @primary_key {:id, Ecto.UUID, autogenerate: true}
@@ -31,6 +31,7 @@ defmodule Agents.Sessions.Infrastructure.Schemas.SessionSchema do
     field(:sdk_session_id, :string)
     field(:paused_at, :utc_datetime)
     field(:resumed_at, :utc_datetime)
+    field(:last_activity_at, :utc_datetime)
 
     has_many(:tasks, TaskSchema, foreign_key: :session_ref_id)
 
@@ -50,7 +51,8 @@ defmodule Agents.Sessions.Infrastructure.Schemas.SessionSchema do
       :image,
       :sdk_session_id,
       :paused_at,
-      :resumed_at
+      :resumed_at,
+      :last_activity_at
     ])
     |> validate_required([:user_id])
     |> validate_inclusion(:status, @valid_statuses)
@@ -68,7 +70,8 @@ defmodule Agents.Sessions.Infrastructure.Schemas.SessionSchema do
       :container_status,
       :sdk_session_id,
       :paused_at,
-      :resumed_at
+      :resumed_at,
+      :last_activity_at
     ])
     |> validate_inclusion(:status, @valid_statuses)
     |> validate_inclusion(:container_status, @valid_container_statuses)

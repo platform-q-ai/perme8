@@ -19,6 +19,7 @@ defmodule Agents.Sessions do
     exports: [
       {Domain.Entities.Task, []},
       {Domain.Entities.Session, []},
+      {Domain.Entities.TicketSession, []},
       {Domain.Entities.SessionRecord, []},
       {Domain.Entities.Interaction, []},
       {Infrastructure.Schemas.InteractionSchema, []}
@@ -31,6 +32,7 @@ defmodule Agents.Sessions do
     DeleteSession,
     RefreshAuthAndResume,
     ResumeTask,
+    TerminateTicketSession,
     GetTask,
     ListTasks,
     CreateInteraction,
@@ -310,6 +312,11 @@ defmodule Agents.Sessions do
   @doc "Marks a session as failed."
   def fail_session(session_id, opts \\ []) do
     FailSession.execute(session_id, opts)
+  end
+
+  @doc "Terminates the ticket-linked session for a ticket number, if present."
+  def terminate_ticket_session(ticket_number, opts \\ []) do
+    TerminateTicketSession.execute(ticket_number, opts)
   end
 
   @doc """

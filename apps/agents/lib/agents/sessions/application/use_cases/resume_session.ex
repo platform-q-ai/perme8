@@ -14,6 +14,7 @@ defmodule Agents.Sessions.Application.UseCases.ResumeSession do
   @default_session_repo Agents.Sessions.Infrastructure.Repositories.SessionRepository
   @default_task_repo Agents.Sessions.Infrastructure.Repositories.TaskRepository
   @default_interaction_repo Agents.Sessions.Infrastructure.Repositories.InteractionRepository
+  @default_queue_orchestrator Agents.Sessions.Infrastructure.QueueOrchestrator
   @default_event_bus Perme8.Events.EventBus
 
   @spec execute(String.t(), String.t(), String.t(), keyword()) :: {:ok, map()} | {:error, term()}
@@ -21,6 +22,7 @@ defmodule Agents.Sessions.Application.UseCases.ResumeSession do
     session_repo = Keyword.get(opts, :session_repo, @default_session_repo)
     task_repo = Keyword.get(opts, :task_repo, @default_task_repo)
     interaction_repo = Keyword.get(opts, :interaction_repo, @default_interaction_repo)
+    queue_orchestrator = Keyword.get(opts, :queue_orchestrator, @default_queue_orchestrator)
     event_bus = Keyword.get(opts, :event_bus, @default_event_bus)
 
     SessionTransition.with_user_session_transition(
@@ -31,7 +33,8 @@ defmodule Agents.Sessions.Application.UseCases.ResumeSession do
         with {:ok, updated_session} <-
                session_repo.update_session(session, %{
                  status: "active",
-                 resumed_at: DateTime.utc_now()
+                 resumed_at: DateTime.utc_now(),
+                 last_activity_at: DateTime.utc_now()
                }),
              {:ok, _task} <-
                task_repo.create_task(%{
@@ -50,6 +53,8 @@ defmodule Agents.Sessions.Application.UseCases.ResumeSession do
               payload: %{text: instruction}
             })
 
+          _ = maybe_notify_session_activity(queue_orchestrator, user_id, session_id)
+
           _ =
             event_bus.emit(
               SessionResumed.new(%{
@@ -66,5 +71,13 @@ defmodule Agents.Sessions.Application.UseCases.ResumeSession do
       end,
       opts
     )
+  end
+
+  defp maybe_notify_session_activity(queue_orchestrator, user_id, session_id) do
+    queue_orchestrator.notify_session_activity(user_id, session_id)
+  rescue
+    _ -> :ok
+  catch
+    :exit, _ -> :ok
   end
 end

@@ -105,6 +105,18 @@ defmodule Agents.Sessions.Application.SessionsConfig do
     config()[:github_sync_enabled] != false
   end
 
+  @doc "Returns idle timeout (ms) before an idle ticket session is suspended."
+  def idle_suspend_timeout_ms do
+    config()[:idle_suspend_timeout_ms] || :timer.minutes(10)
+  end
+
+  @doc "Returns the optional setup instruction for a setup phase."
+  def setup_phase_instruction(phase) when phase in [:on_create, :on_resume] do
+    config()
+    |> Keyword.get(:setup_phases, %{})
+    |> Map.get(phase)
+  end
+
   @doc "Returns the GitHub org/owner for issue queries."
   def github_org do
     config()[:github_org] || config()[:github_project_org] || "platform-q-ai"

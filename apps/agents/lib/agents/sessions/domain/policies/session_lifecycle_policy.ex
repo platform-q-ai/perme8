@@ -20,6 +20,18 @@ defmodule Agents.Sessions.Domain.Policies.SessionLifecyclePolicy do
   @warm_states [:queued_warm, :warming, :running, :starting]
   @cold_states [:queued_cold, :idle]
 
+  @ticket_session_states [:active, :idle, :suspended, :terminated]
+
+  @ticket_session_transitions MapSet.new([
+                                {:active, :idle},
+                                {:active, :suspended},
+                                {:active, :terminated},
+                                {:idle, :active},
+                                {:idle, :suspended},
+                                {:suspended, :active},
+                                {:suspended, :terminated}
+                              ])
+
   @valid_transitions MapSet.new([
                        {:idle, :queued_cold},
                        {:idle, :queued_warm},
@@ -97,6 +109,45 @@ defmodule Agents.Sessions.Domain.Policies.SessionLifecyclePolicy do
   @doc "Returns true if a message can be submitted in the given state."
   @spec can_submit_message?(atom()) :: boolean()
   def can_submit_message?(state), do: active?(state)
+
+  @doc "Supported lifecycle states for ticket-scoped sessions."
+  @spec ticket_session_states() :: [atom()]
+  def ticket_session_states, do: @ticket_session_states
+
+  @doc "Derives ticket-session lifecycle state from task status."
+  @spec derive_ticket_session_state(String.t() | nil) :: :active | :idle | :suspended
+  def derive_ticket_session_state(status)
+
+  def derive_ticket_session_state(status)
+      when status in ["queued", "pending", "starting", "running", "awaiting_feedback"],
+      do: :active
+
+  def derive_ticket_session_state("completed"), do: :idle
+  def derive_ticket_session_state("failed"), do: :suspended
+  def derive_ticket_session_state("cancelled"), do: :suspended
+  def derive_ticket_session_state(_), do: :idle
+
+  @doc "Validates transitions for ticket-scoped session states."
+  @spec can_transition_ticket_session?(atom(), atom()) :: boolean()
+  def can_transition_ticket_session?(from_state, to_state) do
+    MapSet.member?(@ticket_session_transitions, {from_state, to_state})
+  end
+
+  @doc "Applies idle timeout; idle sessions suspend after timeout."
+  @spec apply_idle_timeout(atom(), DateTime.t() | nil, DateTime.t(), non_neg_integer()) :: atom()
+  def apply_idle_timeout(state, _last_active_at, _now, timeout_ms)
+      when state != :idle or timeout_ms <= 0,
+      do: state
+
+  def apply_idle_timeout(:idle, nil, _now, _timeout_ms), do: :idle
+
+  def apply_idle_timeout(:idle, %DateTime{} = last_active_at, %DateTime{} = now, timeout_ms) do
+    if DateTime.diff(now, last_active_at, :millisecond) >= timeout_ms do
+      :suspended
+    else
+      :idle
+    end
+  end
 
   defp derive_queued_state(task) do
     container_id = value(task, :container_id)

@@ -44,15 +44,12 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.ContainerLifecycleTest do
   end
 
   describe "container lifecycle" do
-    test "calls stop (not remove) on task completion", %{task: task, opts: opts} do
-      test_pid = self()
-
+    test "does not stop container on task completion (ticket session stays warm)", %{
+      task: task,
+      opts: opts
+    } do
       Agents.Mocks.ContainerProviderMock
       |> expect(:start, fn _image, _opts -> {:ok, %{container_id: "ctr-complete", port: 4096}} end)
-      |> expect(:stop, fn "ctr-complete" ->
-        send(test_pid, :container_stopped)
-        :ok
-      end)
 
       # Intentionally no remove expectation: any remove/1 call would violate
       # the lifecycle contract and fail this test via Mox.
@@ -92,7 +89,6 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.ContainerLifecycleTest do
       ref = Process.monitor(pid)
 
       assert_receive {:task_status_changed, _, "completed"}, 5000
-      assert_receive :container_stopped, 5000
 
       task = assert_task_status(task.id, "completed")
       assert task.completed_at != nil

@@ -170,6 +170,32 @@ defmodule AgentsWeb.DashboardLive.PubSubHandlers do
      |> assign(:tasks_snapshot, tasks_snapshot)}
   end
 
+  def task_setup_phase(task_id, phase, instruction, socket) do
+    updated_current_task =
+      case socket.assigns.current_task do
+        %{id: ^task_id} = current_task ->
+          current_task
+          |> Map.put(:setup_phase, phase)
+          |> Map.put(:setup_instruction, instruction)
+
+        other ->
+          other
+      end
+
+    tasks_snapshot =
+      update_task_setup_phase(
+        socket.assigns[:tasks_snapshot] || [],
+        task_id,
+        phase,
+        instruction
+      )
+
+    {:noreply,
+     socket
+     |> assign(:current_task, updated_current_task)
+     |> assign(:tasks_snapshot, tasks_snapshot)}
+  end
+
   def container_stats_updated(container_id, stats, socket) do
     {:noreply,
      assign(
@@ -177,6 +203,18 @@ defmodule AgentsWeb.DashboardLive.PubSubHandlers do
        :container_stats,
        Map.put(socket.assigns.container_stats, container_id, stats)
      )}
+  end
+
+  defp update_task_setup_phase(tasks_snapshot, task_id, phase, instruction) do
+    Enum.map(tasks_snapshot, fn
+      %{id: ^task_id} = task ->
+        task
+        |> Map.put(:setup_phase, phase)
+        |> Map.put(:setup_instruction, instruction)
+
+      task ->
+        task
+    end)
   end
 
   # Tagged async result from per-session auth refresh (success)

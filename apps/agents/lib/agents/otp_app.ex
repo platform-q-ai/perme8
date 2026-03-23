@@ -10,6 +10,7 @@ defmodule Agents.OTPApp do
 
   alias Agents.Sessions.Infrastructure.OrphanRecovery
   alias Agents.Sessions.Infrastructure.QueueOrchestratorSupervisor
+  alias Agents.Sessions.Infrastructure.Subscribers.TicketSessionTerminationHandler
   alias Agents.Sessions.Infrastructure.TaskRunnerSupervisor
   alias Agents.Pipeline.Infrastructure.MergeQueueWorker
   alias Agents.Pipeline.Infrastructure.PipelineEventHandler
@@ -30,6 +31,7 @@ defmodule Agents.OTPApp do
         [
           TaskRunnerSupervisor,
           QueueOrchestratorSupervisor,
+          TicketSessionTerminationHandler,
           TicketSyncServer,
           MergeQueueWorker,
           PipelineEventHandler,

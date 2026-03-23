@@ -145,6 +145,7 @@ defmodule Agents.Sessions.Domain.Entities.SessionRecordTest do
           :sdk_session_id,
           :paused_at,
           :resumed_at,
+          :last_activity_at,
           :inserted_at,
           :updated_at,
           :task_count

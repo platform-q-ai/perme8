@@ -17,7 +17,7 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
     SessionLifecyclePolicy
   }
 
-  alias Agents.Sessions.Infrastructure.Repositories.TaskRepository
+  alias Agents.Sessions.Infrastructure.Repositories.{SessionRepository, TaskRepository}
 
   require Logger
 
@@ -47,6 +47,9 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
   def notify_feedback_provided(user_id, task_id),
     do: GenServer.call(via_tuple(user_id), {:notify_feedback_provided, task_id})
 
+  def notify_session_activity(user_id, session_id),
+    do: GenServer.call(via_tuple(user_id), {:notify_session_activity, session_id})
+
   def set_concurrency_limit(user_id, limit),
     do: GenServer.call(via_tuple(user_id), {:set_concurrency_limit, limit})
 
@@ -66,6 +69,20 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
       concurrency_limit:
         Keyword.get(opts, :concurrency_limit, SessionsConfig.default_concurrency_limit()),
       task_repo: Keyword.get(opts, :task_repo, TaskRepository),
+      session_repo: Keyword.get(opts, :session_repo, SessionRepository),
+      container_provider:
+        Keyword.get(
+          opts,
+          :container_provider,
+          Application.get_env(
+            :agents,
+            :container_provider,
+            Agents.Sessions.Infrastructure.Adapters.DockerAdapter
+          )
+        ),
+      idle_timeout_ms:
+        Keyword.get(opts, :idle_timeout_ms, SessionsConfig.idle_suspend_timeout_ms()),
+      idle_timers: %{},
       event_bus: Keyword.get(opts, :event_bus, Perme8.Events.EventBus),
       task_runner_starter: Keyword.get(opts, :task_runner_starter),
       pubsub: Keyword.get(opts, :pubsub, SessionsConfig.pubsub())
@@ -99,7 +116,8 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
   end
 
   @impl true
-  def handle_call({:notify_task_completed, _task_id}, _from, state) do
+  def handle_call({:notify_task_completed, task_id}, _from, state) do
+    state = schedule_idle_suspend_for_task(state, task_id)
     state = promote_and_broadcast(state)
     {:reply, :ok, state}
   end
@@ -136,8 +154,15 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
   end
 
   @impl true
-  def handle_call({:notify_task_queued, _task_id}, _from, state) do
+  def handle_call({:notify_task_queued, task_id}, _from, state) do
+    state = cancel_idle_suspend_for_task(state, task_id)
     state = promote_and_broadcast(state)
+    {:reply, :ok, state}
+  end
+
+  @impl true
+  def handle_call({:notify_session_activity, session_id}, _from, state) do
+    state = cancel_idle_suspend_for_session(state, session_id)
     {:reply, :ok, state}
   end
 
@@ -166,6 +191,12 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
           {:noreply, state}
         end
     end
+  end
+
+  @impl true
+  def handle_info({:suspend_idle_session, session_id}, state) do
+    state = maybe_suspend_idle_session(state, session_id)
+    {:noreply, %{state | idle_timers: Map.delete(state.idle_timers, session_id)}}
   end
 
   defp build_current_snapshot(state) do
@@ -199,21 +230,12 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
   end
 
   defp promote_from_snapshot(state, snapshot) do
-    # Pass 1: promote all queued light image tasks (bypass concurrency limit)
-    light_entries = QueueEngine.light_image_tasks_to_promote(snapshot)
-
-    Enum.each(light_entries, fn entry ->
-      case safe_get_task(state, entry.task_id) do
-        nil -> :ok
-        task -> promote_single_task(state, task, entry)
-      end
-    end)
-
-    # Pass 2: promote heavyweight tasks up to available concurrency slots
     available = QueueSnapshot.available_slots(snapshot)
-    heavyweight_entries = QueueEngine.heavyweight_tasks_to_promote(snapshot, available)
 
-    Enum.each(heavyweight_entries, fn entry ->
+    snapshot
+    |> QueueEngine.promotable_tasks()
+    |> Enum.take(available)
+    |> Enum.each(fn entry ->
       case safe_get_task(state, entry.task_id) do
         nil -> :ok
         task -> promote_single_task(state, task, entry)
@@ -421,33 +443,6 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
     ]
   end
 
-  # Note: `already_healthy: true` reflects container health at warming time.
-  # There is a TOCTOU gap — by promotion time the container could have crashed.
-  # This is an accepted tradeoff: if TaskRunner's `prepare_fresh_start` fails,
-  # the task is marked failed and will be retried via RetryPolicy. A pre-promotion
-  # health check would add latency to every promotion without meaningfully
-  # narrowing the race window.
-  defp runner_opts_for(
-         %{container_id: cid, session_id: nil, container_port: port},
-         _resume_prompt
-       )
-       when is_binary(cid) and cid != "" and is_integer(port) do
-    [
-      prewarmed_container_id: cid,
-      container_port: port,
-      already_healthy: true,
-      fresh_warm_container: true
-    ]
-  end
-
-  defp runner_opts_for(%{container_id: cid, session_id: nil}, _resume_prompt)
-       when is_binary(cid) and cid != "" do
-    [
-      prewarmed_container_id: cid,
-      fresh_warm_container: true
-    ]
-  end
-
   defp runner_opts_for(_task, _resume_prompt), do: []
 
   defp queued_resume_prompt(%{"resume_prompt" => prompt}) when is_binary(prompt), do: prompt
@@ -498,6 +493,94 @@ defmodule Agents.Sessions.Infrastructure.QueueOrchestrator do
     error ->
       Logger.warning("QueueOrchestrator: failed to update task #{task.id}: #{inspect(error)}")
       {:error, error}
+  end
+
+  defp schedule_idle_suspend_for_task(state, task_id) do
+    with %{session_ref_id: session_id, status: status}
+         when is_binary(session_id) <- safe_get_task(state, task_id),
+         :idle <- SessionLifecyclePolicy.derive_ticket_session_state(status) do
+      timer_ref =
+        Process.send_after(self(), {:suspend_idle_session, session_id}, state.idle_timeout_ms)
+
+      maybe_cancel_timer(Map.get(state.idle_timers, session_id))
+      %{state | idle_timers: Map.put(state.idle_timers, session_id, timer_ref)}
+    else
+      _ -> state
+    end
+  end
+
+  defp cancel_idle_suspend_for_task(state, task_id) do
+    case safe_get_task(state, task_id) do
+      %{session_ref_id: session_id} when is_binary(session_id) ->
+        cancel_idle_suspend_for_session(state, session_id)
+
+      _ ->
+        state
+    end
+  end
+
+  defp cancel_idle_suspend_for_session(state, session_id) when is_binary(session_id) do
+    maybe_cancel_timer(Map.get(state.idle_timers, session_id))
+    touch_session_activity(state, session_id)
+    %{state | idle_timers: Map.delete(state.idle_timers, session_id)}
+  end
+
+  defp cancel_idle_suspend_for_session(state, _session_id), do: state
+
+  defp maybe_suspend_idle_session(state, session_id) do
+    case state.session_repo.get_session_for_user(session_id, state.user_id) do
+      %{status: "active"} = session ->
+        if no_active_tasks_for_session?(state, session_id) do
+          _ = maybe_stop_session_container(state.container_provider, session.container_id)
+
+          _ =
+            state.session_repo.update_session(session, %{
+              status: "paused",
+              container_status: "stopped",
+              paused_at: DateTime.utc_now(),
+              last_activity_at: DateTime.utc_now(),
+              container_port: nil
+            })
+
+          state
+        else
+          state
+        end
+
+      _ ->
+        state
+    end
+  end
+
+  defp no_active_tasks_for_session?(state, session_id) do
+    state
+    |> load_all_active_tasks()
+    |> Enum.any?(fn task -> Map.get(task, :session_ref_id) == session_id end)
+    |> Kernel.not()
+  end
+
+  defp maybe_stop_session_container(_container_provider, nil), do: :ok
+
+  defp maybe_stop_session_container(container_provider, container_id) do
+    container_provider.stop(container_id)
+  rescue
+    _ -> :ok
+  end
+
+  defp maybe_cancel_timer(nil), do: :ok
+  defp maybe_cancel_timer(timer_ref), do: Process.cancel_timer(timer_ref)
+
+  defp touch_session_activity(state, session_id) do
+    case state.session_repo.get_session_for_user(session_id, state.user_id) do
+      %{status: status} = session when status in ["active", "paused"] ->
+        _ = state.session_repo.update_session(session, %{last_activity_at: DateTime.utc_now()})
+        :ok
+
+      _ ->
+        :ok
+    end
+  rescue
+    _ -> :ok
   end
 
   defp broadcast_snapshot(state, snapshot) do

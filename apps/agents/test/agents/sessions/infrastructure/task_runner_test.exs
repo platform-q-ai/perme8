@@ -358,6 +358,76 @@ defmodule Agents.Sessions.Infrastructure.TaskRunnerTest do
     end
   end
 
+  describe "setup phases" do
+    test "fresh session runs on_create setup before main prompt" do
+      user = user_fixture()
+      task = insert_task(user, %{instruction: "main task instruction"})
+      task_id = task.id
+      test_pid = self()
+      original = Application.get_env(:agents, :sessions)
+
+      on_exit(fn ->
+        if original == nil do
+          Application.delete_env(:agents, :sessions)
+        else
+          Application.put_env(:agents, :sessions, original)
+        end
+
+        if Process.whereis(:task_runner_setup_probe) do
+          Process.unregister(:task_runner_setup_probe)
+        end
+      end)
+
+      Process.register(test_pid, :task_runner_setup_probe)
+      Application.put_env(:agents, :sessions, setup_phases: %{on_create: "bootstrap workspace"})
+      Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "task:#{task_id}")
+
+      stub_container_provider = Module.concat(__MODULE__, :SetupPhaseProvider)
+      stub_opencode = Module.concat(__MODULE__, :SetupPhaseOpencode)
+
+      {:module, provider_mod, _, _} =
+        defmodule stub_container_provider do
+          def start(_image, _opts), do: {:ok, %{container_id: "setup-container", port: 9999}}
+          def stop(_cid, _opts \\ []), do: :ok
+          def remove(_cid, _opts \\ []), do: :ok
+          def restart(_cid, _opts \\ []), do: {:ok, %{port: 9999}}
+          def status(_cid, _opts \\ []), do: {:ok, :running}
+
+          def stats(_cid, _opts \\ []),
+            do: {:ok, %{cpu_percent: 0.0, memory_usage: 0, memory_limit: 0}}
+
+          def prepare_fresh_start(_cid, _opts \\ []), do: :ok
+        end
+
+      {:module, opencode_mod, _, _} =
+        defmodule stub_opencode do
+          def health(_url), do: :ok
+          def create_session(_url, _opts), do: {:ok, %{"id" => "sess-setup"}}
+          def subscribe_events(_url, _pid), do: {:ok, self()}
+
+          def send_prompt_async(_url, _session_id, [%{text: text}], _opts) do
+            send(Process.whereis(:task_runner_setup_probe), {:prompt_sent, text})
+            :ok
+          end
+
+          def reply_question(_url, _req_id, _answers, _opts), do: :ok
+          def reject_question(_url, _req_id, _opts), do: :ok
+        end
+
+      {:ok, pid} =
+        TaskRunner.start_link({
+          task_id,
+          common_opts(container_provider: provider_mod, opencode_client: opencode_mod)
+        })
+
+      assert_receive {:task_setup_phase, ^task_id, :on_create, "bootstrap workspace"}, 5_000
+      assert_receive {:prompt_sent, "bootstrap workspace"}, 5_000
+      assert_receive {:prompt_sent, "main task instruction"}, 5_000
+
+      GenServer.stop(pid, :normal, 5_000)
+    end
+  end
+
   describe "session event isolation" do
     defmodule NoopTaskRepo do
       @moduledoc false

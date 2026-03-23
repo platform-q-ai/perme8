@@ -74,11 +74,25 @@ defmodule Agents.Sessions.Infrastructure.Schemas.SessionSchemaTest do
           image: "custom-image",
           sdk_session_id: "sdk-123",
           paused_at: DateTime.utc_now(),
-          resumed_at: DateTime.utc_now()
+          resumed_at: DateTime.utc_now(),
+          last_activity_at: DateTime.utc_now()
         })
 
       changeset = SessionSchema.changeset(%SessionSchema{}, attrs)
       assert changeset.valid?
+    end
+
+    test "accepts last_activity_at" do
+      timestamp = DateTime.utc_now() |> DateTime.truncate(:second)
+
+      changeset =
+        SessionSchema.changeset(
+          %SessionSchema{},
+          Map.put(@valid_attrs, :last_activity_at, timestamp)
+        )
+
+      assert changeset.valid?
+      assert Ecto.Changeset.get_field(changeset, :last_activity_at) == timestamp
     end
   end
 

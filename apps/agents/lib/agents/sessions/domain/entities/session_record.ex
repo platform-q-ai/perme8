@@ -22,6 +22,7 @@ defmodule Agents.Sessions.Domain.Entities.SessionRecord do
           sdk_session_id: String.t() | nil,
           paused_at: DateTime.t() | nil,
           resumed_at: DateTime.t() | nil,
+          last_activity_at: DateTime.t() | nil,
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil,
           task_count: non_neg_integer() | nil
@@ -39,6 +40,7 @@ defmodule Agents.Sessions.Domain.Entities.SessionRecord do
     :sdk_session_id,
     :paused_at,
     :resumed_at,
+    :last_activity_at,
     :inserted_at,
     :updated_at,
     :task_count
@@ -71,6 +73,7 @@ defmodule Agents.Sessions.Domain.Entities.SessionRecord do
       sdk_session_id: schema.sdk_session_id,
       paused_at: schema.paused_at,
       resumed_at: schema.resumed_at,
+      last_activity_at: Map.get(schema, :last_activity_at),
       inserted_at: schema.inserted_at,
       updated_at: schema.updated_at,
       task_count: Map.get(schema, :task_count)

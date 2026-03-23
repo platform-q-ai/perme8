@@ -395,6 +395,10 @@ defmodule AgentsWeb.DashboardLive.Index do
     do: PubSubHandlers.lifecycle_state_changed(task_id, to_state, socket)
 
   @impl true
+  def handle_info({:task_setup_phase, task_id, phase, instruction}, socket),
+    do: PubSubHandlers.task_setup_phase(task_id, phase, instruction, socket)
+
+  @impl true
   def handle_info({:container_stats_updated, _task_id, container_id, stats}, socket),
     do: PubSubHandlers.container_stats_updated(container_id, stats, socket)
 

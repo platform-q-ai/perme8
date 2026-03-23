@@ -428,6 +428,60 @@ defmodule Agents.Sessions.Infrastructure.TaskRunner.ResumeTest do
     GenServer.stop(pid, :normal, 5_000)
   end
 
+  test "resume path runs on_resume setup before sending follow-up prompt", %{task: task} do
+    test_pid = self()
+    task_id = task.id
+    original = Application.get_env(:agents, :sessions)
+
+    on_exit(fn ->
+      if original == nil do
+        Application.delete_env(:agents, :sessions)
+      else
+        Application.put_env(:agents, :sessions, original)
+      end
+    end)
+
+    Application.put_env(:agents, :sessions,
+      setup_phases: %{on_resume: "restore repository context"}
+    )
+
+    Phoenix.PubSub.subscribe(Perme8.Events.PubSub, "task:#{task_id}")
+
+    Agents.Mocks.TaskRepositoryMock
+    |> stub(:get_task, fn _id -> task end)
+    |> stub(:update_task_status, fn _task, _attrs -> {:ok, task} end)
+
+    Agents.Mocks.ContainerProviderMock
+    |> expect(:restart, fn "existing-container" -> {:ok, %{port: 5000}} end)
+    |> stub(:stop, fn _id -> :ok end)
+
+    Agents.Mocks.OpencodeClientMock
+    |> expect(:health, fn _url -> :ok end)
+    |> expect(:subscribe_events, fn _url, _pid -> {:ok, self()} end)
+    |> expect(:send_prompt_async, 2, fn _url, "existing-session", [%{text: text}], _opts ->
+      send(test_pid, {:prompt_sent, text})
+      :ok
+    end)
+
+    resume_opts =
+      @default_opts ++
+        [
+          resume: true,
+          container_id: "existing-container",
+          session_id: "existing-session",
+          prompt_instruction: "Follow-up after reconnect"
+        ]
+
+    {:ok, pid} = GenServer.start(TaskRunner, {task_id, resume_opts})
+
+    assert_receive {:task_setup_phase, ^task_id, :on_resume, "restore repository context"}, 5_000
+    assert_receive {:prompt_sent, "restore repository context"}, 5_000
+    assert_receive {:prompt_sent, "Follow-up after reconnect"}, 5_000
+    assert_receive {:task_status_changed, _, "running"}, 5_000
+
+    GenServer.stop(pid, :normal, 5_000)
+  end
+
   defp session_status(status) do
     %{
       "type" => "session.status",

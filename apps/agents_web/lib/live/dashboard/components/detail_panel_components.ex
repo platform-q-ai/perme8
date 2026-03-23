@@ -182,6 +182,25 @@ defmodule AgentsWeb.DashboardLive.Components.DetailPanelComponents do
         </div>
       </div>
 
+      <div
+        :if={
+          @current_task && Map.get(@current_task, :setup_phase) &&
+            Map.get(@current_task, :setup_instruction)
+        }
+        class="mx-4 mt-3 rounded-lg border border-info/20 bg-info/5 px-3 py-2"
+        data-testid="task-setup-phase"
+      >
+        <div class="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-info">
+          <.icon name="hero-wrench-screwdriver" class="size-4" />
+          <span>
+            Setup phase: {setup_phase_label(Map.get(@current_task, :setup_phase))}
+          </span>
+        </div>
+        <p class="mt-1 text-sm text-base-content/80" data-testid="task-setup-instruction">
+          {Map.get(@current_task, :setup_instruction)}
+        </p>
+      </div>
+
       <%!-- Error alert --%>
       <div
         :if={@current_task && @current_task.status == "failed" && @current_task.error}
@@ -613,6 +632,11 @@ defmodule AgentsWeb.DashboardLive.Components.DetailPanelComponents do
     </div>
     """
   end
+
+  defp setup_phase_label(:on_create), do: "On create"
+  defp setup_phase_label(:on_resume), do: "On resume"
+  defp setup_phase_label(phase) when is_binary(phase), do: phase
+  defp setup_phase_label(phase), do: phase |> to_string() |> String.replace("_", " ")
 
   # -- Session Input Form --
 
