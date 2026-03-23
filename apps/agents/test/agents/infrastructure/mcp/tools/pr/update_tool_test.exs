@@ -17,12 +17,15 @@ defmodule Agents.Infrastructure.Mcp.Tools.Pr.UpdateToolTest do
     stub(Agents.Mocks.IdentityMock, :api_key_has_permission?, fn _api_key, _scope -> true end)
 
     {:ok, pr} =
-      Pipeline.create_pull_request(%{
-        source_branch: "feature/update-tool",
-        target_branch: "main",
-        title: "Update me",
-        status: "open"
-      })
+      Pipeline.create_pull_request(
+        %{
+          source_branch: "feature/update-tool",
+          target_branch: "main",
+          title: "Update me",
+          status: "open"
+        },
+        emit_events?: false
+      )
 
     on_exit(fn ->
       if prev_identity,

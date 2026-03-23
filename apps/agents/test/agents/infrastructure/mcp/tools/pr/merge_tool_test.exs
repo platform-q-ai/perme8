@@ -24,12 +24,15 @@ defmodule Agents.Infrastructure.Mcp.Tools.Pr.MergeToolTest do
     Application.put_env(:agents, :pr_git_merger, GitMergerStub)
 
     {:ok, pr} =
-      Pipeline.create_pull_request(%{
-        source_branch: "feature/merge-tool",
-        target_branch: "main",
-        title: "Merge me",
-        status: "approved"
-      })
+      Pipeline.create_pull_request(
+        %{
+          source_branch: "feature/merge-tool",
+          target_branch: "main",
+          title: "Merge me",
+          status: "approved"
+        },
+        emit_events?: false
+      )
 
     on_exit(fn ->
       if prev_identity,

@@ -24,11 +24,14 @@ defmodule Agents.Infrastructure.Mcp.Tools.Pr.DiffToolTest do
     Application.put_env(:agents, :pr_diff_computer, DiffComputerStub)
 
     {:ok, pr} =
-      Pipeline.create_pull_request(%{
-        source_branch: "feature/diff-tool",
-        target_branch: "main",
-        title: "Diff me"
-      })
+      Pipeline.create_pull_request(
+        %{
+          source_branch: "feature/diff-tool",
+          target_branch: "main",
+          title: "Diff me"
+        },
+        emit_events?: false
+      )
 
     on_exit(fn ->
       if prev_identity,

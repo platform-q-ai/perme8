@@ -17,12 +17,15 @@ defmodule Agents.Infrastructure.Mcp.Tools.Pr.ListToolTest do
     stub(Agents.Mocks.IdentityMock, :api_key_has_permission?, fn _api_key, _scope -> true end)
 
     {:ok, _} =
-      Pipeline.create_pull_request(%{
-        source_branch: "feature/list-tool",
-        target_branch: "main",
-        title: "Listable PR",
-        status: "open"
-      })
+      Pipeline.create_pull_request(
+        %{
+          source_branch: "feature/list-tool",
+          target_branch: "main",
+          title: "Listable PR",
+          status: "open"
+        },
+        emit_events?: false
+      )
 
     on_exit(fn ->
       if prev_identity,
