@@ -39,28 +39,34 @@ defmodule AgentsWeb.DashboardLive.TicketLifecycleFixtures do
           payload[:active_ticket_number] ||
             payload.tickets |> List.first() |> then(&(&1 && &1.number))
 
-        socket
-        |> assign(:fixture, fixture)
-        |> assign(:sessions, Map.get(payload, :sessions, []))
-        |> assign(:tasks_snapshot, Map.get(payload, :tasks_snapshot, []))
-        |> assign(:tickets, payload.tickets)
-        |> assign(
-          :pipeline_editor_draft,
-          Map.get(
-            payload,
+        socket =
+          socket
+          |> assign(:fixture, fixture)
+          |> assign(:sessions, Map.get(payload, :sessions, []))
+          |> assign(:tasks_snapshot, Map.get(payload, :tasks_snapshot, []))
+          |> assign(:tickets, payload.tickets)
+          |> assign(
             :pipeline_editor_draft,
-            socket.assigns[:pipeline_editor_draft] || %{"stages" => []}
+            Map.get(
+              payload,
+              :pipeline_editor_draft,
+              socket.assigns[:pipeline_editor_draft] || %{"stages" => []}
+            )
           )
-        )
-        |> assign(:pipeline_editor_errors, Map.get(payload, :pipeline_editor_errors, []))
-        |> assign(:pipeline_editor_saved_at, Map.get(payload, :pipeline_editor_saved_at, nil))
-        |> assign(
-          :pipeline_editor_path,
-          Map.get(payload, :pipeline_editor_path, "perme8-pipeline.yml")
-        )
-        |> assign(:active_ticket_number, active_ticket_number)
-        |> assign(:pipeline_kanban_collapsed, Map.get(payload, :pipeline_kanban_collapsed, false))
-        |> PipelineKanbanState.assign_pipeline_kanban()
+          |> assign(:pipeline_editor_errors, Map.get(payload, :pipeline_editor_errors, []))
+          |> assign(:pipeline_editor_saved_at, Map.get(payload, :pipeline_editor_saved_at, nil))
+          |> assign(
+            :pipeline_editor_path,
+            Map.get(payload, :pipeline_editor_path, "perme8-pipeline.yml")
+          )
+          |> assign(:active_ticket_number, active_ticket_number)
+          |> assign(
+            :pipeline_kanban_collapsed,
+            Map.get(payload, :pipeline_kanban_collapsed, false)
+          )
+
+        socket
+        |> assign_fixture_pipeline_kanban(payload)
         |> maybe_schedule_pipeline_fixture_event(fixture)
     end
   end
@@ -89,6 +95,12 @@ defmodule AgentsWeb.DashboardLive.TicketLifecycleFixtures do
   end
 
   defp maybe_schedule_pipeline_fixture_event(socket, _fixture), do: socket
+
+  defp assign_fixture_pipeline_kanban(socket, %{pipeline_kanban: kanban}),
+    do: assign(socket, :pipeline_kanban, kanban)
+
+  defp assign_fixture_pipeline_kanban(socket, _payload),
+    do: PipelineKanbanState.assign_pipeline_kanban(socket)
 
   defp fixture_payload(fixture) do
     %{tickets: ticket_lifecycle_fixture_tickets(fixture)}
@@ -335,6 +347,48 @@ defmodule AgentsWeb.DashboardLive.TicketLifecycleFixtures do
           image: "perme8-opencode"
         }
       ]
+    }
+  end
+
+  defp pipeline_kanban_fixture_payload("pipeline_kanban_merge_queue") do
+    %{
+      pipeline_kanban: %{
+        generated_at: DateTime.utc_now() |> DateTime.truncate(:second),
+        stages: [
+          %{id: "ready", label: "Ready", count: 0, aggregate_status: "idle", tickets: []},
+          %{
+            id: "in_progress",
+            label: "In Progress",
+            count: 0,
+            aggregate_status: "idle",
+            tickets: []
+          },
+          %{
+            id: "in_review",
+            label: "In Review",
+            count: 0,
+            aggregate_status: "idle",
+            tickets: []
+          },
+          %{
+            id: "ci_testing",
+            label: "CI Testing",
+            count: 1,
+            aggregate_status: "running",
+            tickets: [
+              %{number: 611, title: "Still validating in CI", status: "running", labels: []}
+            ]
+          },
+          %{
+            id: "merge_queue",
+            label: "Merge Queue",
+            count: 1,
+            aggregate_status: "queued",
+            tickets: [%{number: 610, title: "Queued for merge", status: "queued", labels: []}]
+          },
+          %{id: "deployed", label: "Deployed", count: 0, aggregate_status: "idle", tickets: []}
+        ]
+      }
     }
   end
 

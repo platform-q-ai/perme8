@@ -10,48 +10,42 @@ defmodule AgentsWeb.DashboardLive.PipelineEditorHandlers do
 
     draft = socket.assigns[:pipeline_editor_draft] || %{"stages" => []}
 
-    draft =
-      case field do
-        "new_stage_name" ->
-          draft
-          |> Map.put("new_stage_name", value)
-          |> maybe_rename_latest_stage(value)
-
-        "new_step_command" ->
-          draft
-          |> Map.put("new_step_command", value)
-          |> maybe_update_latest_step(stage_index, value)
-
-        "step_run" ->
-          update_step_field(draft, stage_index, step_index, "run", value)
-
-        "step_timeout" ->
-          update_step_field(
-            draft,
-            stage_index,
-            step_index,
-            "timeout_seconds",
-            parse_integer(value)
-          )
-
-        "step_conditions" ->
-          update_step_field(draft, stage_index, step_index, "conditions", blank_to_nil(value))
-
-        "step_env" ->
-          update_step_field(draft, stage_index, step_index, "env", parse_env(value))
-
-        "warm_pool_target_count" ->
-          update_warm_pool_field(draft, stage_index, "target_count", parse_integer(value) || 0)
-
-        "warm_pool_image" ->
-          update_warm_pool_field(draft, stage_index, "image", value)
-
-        _ ->
-          draft
-      end
+    draft = apply_change(draft, field, stage_index, step_index, value)
 
     {:noreply, assign(socket, :pipeline_editor_draft, draft)}
   end
+
+  defp apply_change(draft, "new_stage_name", _stage_index, _step_index, value) do
+    draft
+    |> Map.put("new_stage_name", value)
+    |> maybe_rename_latest_stage(value)
+  end
+
+  defp apply_change(draft, "new_step_command", stage_index, _step_index, value) do
+    draft
+    |> Map.put("new_step_command", value)
+    |> maybe_update_latest_step(stage_index, value)
+  end
+
+  defp apply_change(draft, "step_run", stage_index, step_index, value),
+    do: update_step_field(draft, stage_index, step_index, "run", value)
+
+  defp apply_change(draft, "step_timeout", stage_index, step_index, value),
+    do: update_step_field(draft, stage_index, step_index, "timeout_seconds", parse_integer(value))
+
+  defp apply_change(draft, "step_conditions", stage_index, step_index, value),
+    do: update_step_field(draft, stage_index, step_index, "conditions", blank_to_nil(value))
+
+  defp apply_change(draft, "step_env", stage_index, step_index, value),
+    do: update_step_field(draft, stage_index, step_index, "env", parse_env(value))
+
+  defp apply_change(draft, "warm_pool_target_count", stage_index, _step_index, value),
+    do: update_warm_pool_field(draft, stage_index, "target_count", parse_integer(value) || 0)
+
+  defp apply_change(draft, "warm_pool_image", stage_index, _step_index, value),
+    do: update_warm_pool_field(draft, stage_index, "image", value)
+
+  defp apply_change(draft, _field, _stage_index, _step_index, _value), do: draft
 
   defp extract_change(params) do
     params

@@ -261,36 +261,38 @@ defmodule AgentsWeb.DashboardLive.Components.PipelineEditorComponents do
     Enum.map_join(stages, "\n", fn stage ->
       stage_header = "stage: #{stage_label(stage)}"
 
-      warm_pool_lines =
-        case Map.get(stage, "warm_pool") do
-          nil ->
-            []
-
-          warm_pool ->
-            [
-              "target_count: #{Map.get(warm_pool, "target_count")}",
-              "image: #{Map.get(warm_pool, "image")}"
-            ]
-        end
-
-      step_lines =
-        stage
-        |> Map.get("steps", [])
-        |> Enum.flat_map(fn step ->
-          env_line =
-            case Map.get(step, "env", %{}) |> Enum.to_list() |> List.first() do
-              {k, v} -> ["#{k}=#{v}"]
-              _ -> []
-            end
-
-          [
-            "run: #{Map.get(step, "run")}",
-            "timeout_seconds: #{Map.get(step, "timeout_seconds")}",
-            "conditions: #{Map.get(step, "conditions")}" | env_line
-          ]
-        end)
+      warm_pool_lines = preview_warm_pool_lines(stage)
+      step_lines = stage |> Map.get("steps", []) |> Enum.flat_map(&preview_step_lines/1)
 
       Enum.join([stage_header | warm_pool_lines ++ step_lines], "\n")
     end)
+  end
+
+  defp preview_warm_pool_lines(stage) do
+    case Map.get(stage, "warm_pool") do
+      nil ->
+        []
+
+      warm_pool ->
+        [
+          "target_count: #{Map.get(warm_pool, "target_count")}",
+          "image: #{Map.get(warm_pool, "image")}"
+        ]
+    end
+  end
+
+  defp preview_step_lines(step) do
+    [
+      "run: #{Map.get(step, "run")}",
+      "timeout_seconds: #{Map.get(step, "timeout_seconds")}",
+      "conditions: #{Map.get(step, "conditions")}"
+    ] ++ preview_step_env_lines(step)
+  end
+
+  defp preview_step_env_lines(step) do
+    case Map.get(step, "env", %{}) |> Enum.to_list() |> List.first() do
+      {k, v} -> ["#{k}=#{v}"]
+      _ -> []
+    end
   end
 end

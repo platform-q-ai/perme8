@@ -110,28 +110,7 @@ defmodule Agents.Pipeline.Infrastructure.YamlWriter do
   defp encode_pipeline(pipeline, indent) do
     keys = ordered_keys(pipeline, @pipeline_key_order)
 
-    Enum.flat_map(keys, fn key ->
-      value = Map.get(pipeline, key)
-
-      cond do
-        key == "merge_queue" and is_map(value) and map_size(value) > 0 ->
-          [line(indent, "merge_queue:")] ++
-            encode_map_with_order(stringify_keys(value), indent + 2, @merge_queue_key_order)
-
-        key == "deploy_targets" and is_list(value) and value != [] ->
-          [line(indent, "deploy_targets:")] ++
-            encode_ordered_map_list(value, indent + 2, @deploy_target_key_order)
-
-        key == "stages" and is_list(value) and value != [] ->
-          [line(indent, "stages:")] ++ encode_stages(value, indent + 2)
-
-        present_scalar?(value) ->
-          [line(indent, "#{key}: #{scalar(value)}")]
-
-        true ->
-          []
-      end
-    end)
+    Enum.flat_map(keys, &encode_pipeline_entry(&1, Map.get(pipeline, &1), indent))
   end
 
   defp encode_stages(stages, indent) do
@@ -141,26 +120,7 @@ defmodule Agents.Pipeline.Infrastructure.YamlWriter do
 
       Enum.with_index(keys)
       |> Enum.flat_map(fn {key, index} ->
-        prefix = if index == 0, do: "- ", else: ""
-        item_indent = if index == 0, do: indent, else: indent + 2
-        value = Map.get(stage, key)
-
-        cond do
-          key == "steps" and is_list(value) and value != [] ->
-            [line(item_indent, "#{prefix}steps:")] ++ encode_steps(value, item_indent + 2)
-
-          key == "gates" and is_list(value) and value != [] ->
-            [line(item_indent, "#{prefix}gates:")] ++ encode_gates(value, item_indent + 2)
-
-          is_map(value) and map_size(value) > 0 ->
-            [line(item_indent, "#{prefix}#{key}:")] ++ encode_generic_map(value, item_indent + 2)
-
-          present_scalar?(value) ->
-            [line(item_indent, "#{prefix}#{key}: #{scalar(value)}")]
-
-          true ->
-            []
-        end
+        encode_stage_entry(key, Map.get(stage, key), index, indent)
       end)
     end)
   end
@@ -172,20 +132,7 @@ defmodule Agents.Pipeline.Infrastructure.YamlWriter do
 
       Enum.with_index(keys)
       |> Enum.flat_map(fn {key, index} ->
-        prefix = if index == 0, do: "- ", else: ""
-        item_indent = if index == 0, do: indent, else: indent + 2
-        value = Map.get(step, key)
-
-        cond do
-          key == "env" and is_map(value) and map_size(value) > 0 ->
-            [line(item_indent, "#{prefix}env:")] ++ encode_generic_map(value, item_indent + 2)
-
-          present_scalar?(value) ->
-            [line(item_indent, "#{prefix}#{key}: #{scalar(value)}")]
-
-          true ->
-            []
-        end
+        encode_step_entry(key, Map.get(step, key), index, indent)
       end)
     end)
   end
@@ -197,23 +144,7 @@ defmodule Agents.Pipeline.Infrastructure.YamlWriter do
 
       Enum.with_index(keys)
       |> Enum.flat_map(fn {key, index} ->
-        prefix = if index == 0, do: "- ", else: ""
-        item_indent = if index == 0, do: indent, else: indent + 2
-        value = Map.get(gate, key)
-
-        cond do
-          is_map(value) and map_size(value) > 0 ->
-            [line(item_indent, "#{prefix}#{key}:")] ++ encode_generic_map(value, item_indent + 2)
-
-          is_list(value) and value != [] ->
-            [line(item_indent, "#{prefix}#{key}:")] ++ encode_scalar_list(value, item_indent + 2)
-
-          present_scalar?(value) ->
-            [line(item_indent, "#{prefix}#{key}: #{scalar(value)}")]
-
-          true ->
-            []
-        end
+        encode_gate_entry(key, Map.get(gate, key), index, indent)
       end)
     end)
   end
@@ -225,15 +156,88 @@ defmodule Agents.Pipeline.Infrastructure.YamlWriter do
 
       Enum.with_index(keys)
       |> Enum.flat_map(fn {key, index} ->
-        prefix = if index == 0, do: "- ", else: ""
-        item_indent = if index == 0, do: indent, else: indent + 2
-        value = Map.get(map, key)
-
-        if present_scalar?(value),
-          do: [line(item_indent, "#{prefix}#{key}: #{scalar(value)}")],
-          else: []
+        encode_ordered_list_entry(key, Map.get(map, key), index, indent)
       end)
     end)
+  end
+
+  defp encode_pipeline_entry("merge_queue", value, indent)
+       when is_map(value) and map_size(value) > 0 do
+    [line(indent, "merge_queue:")] ++
+      encode_map_with_order(stringify_keys(value), indent + 2, @merge_queue_key_order)
+  end
+
+  defp encode_pipeline_entry("deploy_targets", value, indent)
+       when is_list(value) and value != [] do
+    [line(indent, "deploy_targets:")] ++
+      encode_ordered_map_list(value, indent + 2, @deploy_target_key_order)
+  end
+
+  defp encode_pipeline_entry("stages", value, indent) when is_list(value) and value != [] do
+    [line(indent, "stages:")] ++ encode_stages(value, indent + 2)
+  end
+
+  defp encode_pipeline_entry(key, value, indent) do
+    encode_scalar_entry(key, value, "", indent)
+  end
+
+  defp encode_stage_entry("steps", value, index, indent) when is_list(value) and value != [] do
+    {prefix, item_indent} = list_entry_prefix(index, indent)
+    [line(item_indent, "#{prefix}steps:")] ++ encode_steps(value, item_indent + 2)
+  end
+
+  defp encode_stage_entry("gates", value, index, indent) when is_list(value) and value != [] do
+    {prefix, item_indent} = list_entry_prefix(index, indent)
+    [line(item_indent, "#{prefix}gates:")] ++ encode_gates(value, item_indent + 2)
+  end
+
+  defp encode_stage_entry(key, value, index, indent) when is_map(value) and map_size(value) > 0 do
+    {prefix, item_indent} = list_entry_prefix(index, indent)
+    [line(item_indent, "#{prefix}#{key}:")] ++ encode_generic_map(value, item_indent + 2)
+  end
+
+  defp encode_stage_entry(key, value, index, indent) do
+    {prefix, item_indent} = list_entry_prefix(index, indent)
+    encode_scalar_entry(key, value, prefix, item_indent)
+  end
+
+  defp encode_step_entry("env", value, index, indent)
+       when is_map(value) and map_size(value) > 0 do
+    {prefix, item_indent} = list_entry_prefix(index, indent)
+    [line(item_indent, "#{prefix}env:")] ++ encode_generic_map(value, item_indent + 2)
+  end
+
+  defp encode_step_entry(key, value, index, indent) do
+    {prefix, item_indent} = list_entry_prefix(index, indent)
+    encode_scalar_entry(key, value, prefix, item_indent)
+  end
+
+  defp encode_gate_entry(key, value, index, indent) when is_map(value) and map_size(value) > 0 do
+    {prefix, item_indent} = list_entry_prefix(index, indent)
+    [line(item_indent, "#{prefix}#{key}:")] ++ encode_generic_map(value, item_indent + 2)
+  end
+
+  defp encode_gate_entry(key, value, index, indent) when is_list(value) and value != [] do
+    {prefix, item_indent} = list_entry_prefix(index, indent)
+    [line(item_indent, "#{prefix}#{key}:")] ++ encode_scalar_list(value, item_indent + 2)
+  end
+
+  defp encode_gate_entry(key, value, index, indent) do
+    {prefix, item_indent} = list_entry_prefix(index, indent)
+    encode_scalar_entry(key, value, prefix, item_indent)
+  end
+
+  defp encode_ordered_list_entry(key, value, index, indent) do
+    {prefix, item_indent} = list_entry_prefix(index, indent)
+    encode_scalar_entry(key, value, prefix, item_indent)
+  end
+
+  defp list_entry_prefix(index, indent) do
+    if index == 0, do: {"- ", indent}, else: {"", indent + 2}
+  end
+
+  defp encode_scalar_entry(key, value, prefix, indent) do
+    if present_scalar?(value), do: [line(indent, "#{prefix}#{key}: #{scalar(value)}")], else: []
   end
 
   defp encode_map_with_order(map, indent, key_order) do

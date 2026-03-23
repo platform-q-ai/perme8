@@ -162,25 +162,32 @@ defmodule Agents.Pipeline.Application.UseCases.UpdatePipelineConfig do
       existing_steps = Map.get(existing, "steps", [])
       incoming = Enum.map(update["steps"] || [], &stringify_keys/1)
 
-      steps =
-        if truthy?(update["replace_steps"]) do
-          Enum.map(incoming, fn step_update ->
-            existing_step =
-              Enum.find(
-                existing_steps,
-                &(Map.get(stringify_keys(&1), "name") == step_update["name"])
-              ) || %{}
-
-            deep_merge(stringify_keys(existing_step), step_update)
-          end)
-        else
-          merge_partial_steps(existing_steps, incoming)
-        end
+      steps = merge_steps(existing_steps, incoming, update)
 
       Map.put(merged, "steps", steps)
     else
       merged
     end
+  end
+
+  defp merge_steps(existing_steps, incoming, update) do
+    if truthy?(update["replace_steps"]),
+      do: replace_steps(existing_steps, incoming),
+      else: merge_partial_steps(existing_steps, incoming)
+  end
+
+  defp replace_steps(existing_steps, incoming) do
+    Enum.map(incoming, fn step_update ->
+      existing_steps
+      |> find_existing_step(step_update["name"])
+      |> deep_merge(step_update)
+    end)
+  end
+
+  defp find_existing_step(existing_steps, step_name) do
+    existing_steps
+    |> Enum.find(%{}, fn step -> Map.get(stringify_keys(step), "name") == step_name end)
+    |> stringify_keys()
   end
 
   defp merge_stage_gates(merged, _existing, update) do
