@@ -129,6 +129,7 @@ defmodule AgentsWeb.DashboardLive.Index do
     socket = maybe_apply_ticket_lifecycle_fixture(socket, params)
     sessions = socket.assigns.sessions
     tasks = tasks_snapshot_or_reload(socket)
+    status_filter = resolve_status_filter(params)
     selected_container_id = resolve_selected_container_id(params, sessions)
     current_task = resolve_current_task(params, tasks, selected_container_id)
 
@@ -154,6 +155,7 @@ defmodule AgentsWeb.DashboardLive.Index do
     {:noreply,
      socket
      |> assign(:active_session_tab, active_tab)
+     |> assign(:status_filter, status_filter)
      |> assign(:active_container_id, selected_container_id)
      |> assign(:active_ticket_number, active_ticket_number)
      |> assign_new(:collapsed_parents, fn -> MapSet.new() end)
@@ -167,8 +169,7 @@ defmodule AgentsWeb.DashboardLive.Index do
      |> EventProcessor.maybe_load_todos(current_task)
      |> PipelineKanbanState.assign_pipeline_kanban()
      |> push_event("scroll_to_bottom", %{})
-     |> push_event("focus_input", %{})
-     |> maybe_push_draft_key(active_ticket_number)}
+     |> push_event("focus_input", %{})}
   end
 
   # -- Task Execution Handlers ------------------------------------------------
@@ -592,12 +593,6 @@ defmodule AgentsWeb.DashboardLive.Index do
   # Push a switch_draft_key event to the SessionFormHook when a ticket is active.
   # This fires AFTER handle_params completes, ensuring the LiveView socket is
   # stable and the hook receives the event reliably.
-  defp maybe_push_draft_key(socket, ticket_number) when is_integer(ticket_number) do
-    Phoenix.LiveView.push_event(socket, "switch_draft_key", %{key: "ticket:#{ticket_number}"})
-  end
-
-  defp maybe_push_draft_key(socket, _), do: socket
-
   defp pipeline_editor_authorized?(user) do
     user
     |> Identity.list_workspaces_for_user()
@@ -625,4 +620,20 @@ defmodule AgentsWeb.DashboardLive.Index do
       &Agents.load_editable_pipeline_config/1
     )
   end
+
+  defp resolve_status_filter(%{"status" => status}) do
+    case status do
+      "all" -> :all
+      "closed" -> :closed
+      "awaiting_feedback" -> :awaiting_feedback
+      "completed" -> :completed
+      "cancelled" -> :cancelled
+      "running" -> :running
+      "queued" -> :queued
+      "failed" -> :failed
+      _ -> :open
+    end
+  end
+
+  defp resolve_status_filter(_params), do: :open
 end

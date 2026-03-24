@@ -164,8 +164,21 @@ defmodule AgentsWeb.DashboardLive.SessionHandlers do
 
   def status_filter(%{"status" => status}, socket) do
     case Map.get(@valid_status_filters, status) do
-      nil -> {:noreply, socket}
-      filter -> {:noreply, assign(socket, :status_filter, filter)}
+      nil ->
+        {:noreply, socket}
+
+      filter ->
+        params =
+          %{}
+          |> maybe_put_status(status)
+          |> maybe_put_ticket(socket.assigns.active_ticket_number, socket.assigns.composing_new)
+          |> maybe_put_container(socket.assigns.active_container_id)
+          |> maybe_put_new(socket.assigns.composing_new)
+
+        {:noreply,
+         socket
+         |> assign(:status_filter, filter)
+         |> push_patch(to: ~p"/sessions?#{params}")}
     end
   end
 
@@ -225,6 +238,9 @@ defmodule AgentsWeb.DashboardLive.SessionHandlers do
 
   defp maybe_put_ticket(params, ticket_number, _composing_new),
     do: Map.put(params, "ticket", ticket_number)
+
+  defp maybe_put_status(params, "open"), do: params
+  defp maybe_put_status(params, status), do: Map.put(params, "status", status)
 
   def hydrate_optimistic_new_sessions(%{"entries" => entries}, socket)
       when is_list(entries) do

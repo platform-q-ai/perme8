@@ -754,7 +754,21 @@ defmodule AgentsWeb.DashboardLive.Components.DetailPanelComponents do
             value={@active_ticket_number}
           />
 
-          <div id="session-instruction-wrap" phx-update="ignore">
+          <div id={
+            cond do
+              is_integer(@active_ticket_number) ->
+                "session-instruction-wrap-ticket-#{@active_ticket_number}"
+
+              @active_container_id ->
+                "session-instruction-wrap-session-#{@active_container_id}"
+
+              @current_task ->
+                "session-instruction-wrap-task-#{@current_task.id}"
+
+              true ->
+                "session-instruction-wrap-new"
+            end
+          }>
             <textarea
               name="instruction"
               id="session-instruction"
