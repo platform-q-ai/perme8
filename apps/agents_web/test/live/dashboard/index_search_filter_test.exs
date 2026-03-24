@@ -175,6 +175,25 @@ defmodule AgentsWeb.DashboardLive.IndexSearchFilterTest do
       refute html =~ "session-item-failed-task"
     end
 
+    test "status filter updates the active pill classes", %{conn: conn, user: user} do
+      task_fixture(%{
+        user_id: user.id,
+        instruction: "Completed task",
+        container_id: "c-filter-class-done",
+        status: "completed"
+      })
+
+      {:ok, lv, _html} = live(conn, ~p"/sessions")
+
+      html =
+        lv
+        |> element(~s(button[phx-click="status_filter"][phx-value-status="running"]))
+        |> render_click()
+
+      assert html =~ ~s(phx-value-status="running" class="btn btn-xs rounded-full btn-success")
+      assert html =~ ~s(phx-value-status="open" class="btn btn-xs rounded-full btn-ghost")
+    end
+
     test "status filter shows only failed sessions", %{conn: conn, user: user} do
       task_fixture(%{
         user_id: user.id,

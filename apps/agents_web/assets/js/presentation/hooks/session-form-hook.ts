@@ -279,7 +279,10 @@ export class SessionFormHook extends ViewHook<HTMLTextAreaElement> {
   updated(): void {
     const nextKey = this.buildStorageKey()
     if (nextKey !== this.storageKey) {
+      const restoredText = switchDraftKey(this.storageKey, nextKey, this.el.value)
       this.storageKey = nextKey
+      this.el.value = restoredText
+      return
     }
 
     this.restoreDraft()

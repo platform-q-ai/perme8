@@ -189,6 +189,19 @@ defmodule Agents do
   @spec get_pipeline_kanban([map()], keyword()) :: {:ok, map()} | {:error, term()}
   defdelegate get_pipeline_kanban(tickets, opts \\ []), to: Pipeline, as: :get_pipeline_kanban
 
+  @doc "Loads editable pipeline configuration for dashboard UI."
+  @spec load_editable_pipeline_config(Path.t(), keyword()) ::
+          {:ok, map()} | {:error, [String.t()]}
+  defdelegate load_editable_pipeline_config(path \\ "perme8-pipeline.yml", opts \\ []),
+    to: Pipeline,
+    as: :load_editable_pipeline_config
+
+  @doc "Saves pipeline configuration updates back to YAML."
+  @spec update_pipeline_config(map(), keyword()) :: {:ok, map()} | {:error, map()}
+  defdelegate update_pipeline_config(updates, opts \\ []),
+    to: Pipeline,
+    as: :update_pipeline_config
+
   @doc """
   Updates an agent owned by the user.
 

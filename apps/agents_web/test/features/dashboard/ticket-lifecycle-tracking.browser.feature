@@ -53,22 +53,14 @@ Feature: Ticket lifecycle time tracking in Sessions UI
     And "[data-testid='triage-ticket-item'][data-lifecycle-stage='closed'] [data-testid='ticket-lifecycle-stage']" should have text "Closed"
 
   Scenario: Ticket detail tab shows lifecycle timeline
-    Given I navigate to "${baseUrl}/sessions?fixture=ticket_lifecycle_timeline"
-    And I wait for network idle
-    When I click "[data-testid='triage-ticket-item'][data-ticket-id='timeline-ticket']"
-    And I wait for network idle
-    And I click "button[data-tab-id='ticket']"
+    Given I navigate to "${baseUrl}/sessions?fixture=ticket_lifecycle_timeline&new=true&tab=ticket&ticket=430"
     And I wait for network idle
     Then "[data-testid='ticket-lifecycle-timeline']" should be visible
     And there should be 3 "[data-testid='ticket-lifecycle-timeline-stage']" elements
     And "[data-testid='ticket-lifecycle-timeline-stage-duration']" should exist
 
   Scenario: Lifecycle timeline shows relative duration bars
-    Given I navigate to "${baseUrl}/sessions?fixture=ticket_lifecycle_relative_durations"
-    And I wait for network idle
-    When I click "[data-testid='triage-ticket-item'][data-ticket-id='relative-durations-ticket']"
-    And I wait for network idle
-    And I click "button[data-tab-id='ticket']"
+    Given I navigate to "${baseUrl}/sessions?fixture=ticket_lifecycle_relative_durations&new=true&tab=ticket&ticket=431"
     And I wait for network idle
     Then "[data-testid='ticket-lifecycle-timeline']" should be visible
     And there should be 3 "[data-testid='ticket-lifecycle-duration-bar']" elements

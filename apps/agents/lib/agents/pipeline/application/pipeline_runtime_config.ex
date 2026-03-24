@@ -11,6 +11,7 @@ defmodule Agents.Pipeline.Application.PipelineRuntimeConfig do
   @default_stage_executor :"Elixir.Agents.Pipeline.Infrastructure.StageExecutor"
   @default_session_reopener :"Elixir.Agents.Pipeline.Infrastructure.SessionReopener"
   @default_task_context_provider :"Elixir.Agents.Pipeline.Infrastructure.TaskContextProvider"
+  @default_pipeline_writer :"Elixir.Agents.Pipeline.Infrastructure.YamlWriter"
   @default_warm_pool_counter :"Elixir.Agents.Pipeline.Infrastructure.WarmPoolCounter"
   @default_merge_queue_worker :"Elixir.Agents.Pipeline.Infrastructure.MergeQueueWorker"
   @default_pipeline_scheduler_enabled false
@@ -69,6 +70,12 @@ defmodule Agents.Pipeline.Application.PipelineRuntimeConfig do
   @spec task_context_provider() :: module()
   def task_context_provider do
     Application.get_env(:agents, :pipeline_task_context_provider, @default_task_context_provider)
+  end
+
+  @doc "Returns the configured pipeline writer implementation."
+  @spec pipeline_writer() :: module()
+  def pipeline_writer do
+    Application.get_env(:agents, :pipeline_writer, @default_pipeline_writer)
   end
 
   @doc "Returns the configured warm pool counter implementation."

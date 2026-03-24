@@ -4,6 +4,7 @@ defmodule AgentsWeb.DashboardLive.Index do
   use AgentsWeb, :live_view
 
   import AgentsWeb.DashboardLive.Components.SessionComponents
+  import AgentsWeb.DashboardLive.Components.PipelineEditorComponents
   import AgentsWeb.DashboardLive.Components.PipelineKanbanComponents
   import AgentsWeb.DashboardLive.Components.SidebarComponents
   import AgentsWeb.DashboardLive.Components.DetailPanelComponents
@@ -13,6 +14,8 @@ defmodule AgentsWeb.DashboardLive.Index do
   import AgentsWeb.DashboardLive.TicketLifecycleFixtures,
     only: [maybe_apply_ticket_lifecycle_fixture: 2]
 
+  alias Agents
+  alias Identity
   alias Agents.Sessions
   alias Agents.Sessions.Domain.Entities.QueueSnapshot
   alias Agents.Tickets
@@ -24,6 +27,7 @@ defmodule AgentsWeb.DashboardLive.Index do
   alias AgentsWeb.DashboardLive.FollowUpDispatchHandlers
   alias AgentsWeb.DashboardLive.PipelineKanbanHandlers
   alias AgentsWeb.DashboardLive.PipelineKanbanState
+  alias AgentsWeb.DashboardLive.PipelineEditorHandlers
   alias AgentsWeb.DashboardLive.PubSubHandlers
   alias AgentsWeb.DashboardLive.QuestionHandlers
   alias AgentsWeb.DashboardLive.PRHandlers
@@ -51,6 +55,10 @@ defmodule AgentsWeb.DashboardLive.Index do
 
     available_images = Sessions.available_images()
     default_image = Sessions.default_image()
+    pipeline_editor_authorized? = pipeline_editor_authorized?(user)
+
+    {pipeline_editor_draft, pipeline_editor_errors, pipeline_editor_load_failed?} =
+      load_pipeline_editor_state(pipeline_editor_authorized?)
 
     sessions = merge_unassigned_active_tasks(sessions, tasks)
     sticky_warm_task_ids = derive_sticky_warm_task_ids(sessions, queue_state, MapSet.new())
@@ -94,6 +102,13 @@ defmodule AgentsWeb.DashboardLive.Index do
      |> assign(:dependency_search_query, "")
      |> assign(:selected_dependency_target, nil)
      |> assign(:dependency_direction, nil)
+     |> assign(:pipeline_editor_authorized?, pipeline_editor_authorized?)
+     |> assign(:pipeline_editor_draft, pipeline_editor_draft)
+     |> assign(:pipeline_editor_errors, pipeline_editor_errors)
+     |> assign(:pipeline_editor_load_failed?, pipeline_editor_load_failed?)
+     |> assign(:pipeline_editor_saving, false)
+     |> assign(:pipeline_editor_saved_at, nil)
+     |> assign(:pipeline_editor_path, "perme8-pipeline.yml")
      |> PipelineKanbanState.assign_pipeline_kanban()
      |> assign(:selected_ticket, nil)
      |> assign(:selected_pull_request, nil)
@@ -114,6 +129,7 @@ defmodule AgentsWeb.DashboardLive.Index do
     socket = maybe_apply_ticket_lifecycle_fixture(socket, params)
     sessions = socket.assigns.sessions
     tasks = tasks_snapshot_or_reload(socket)
+    status_filter = resolve_status_filter(params)
     selected_container_id = resolve_selected_container_id(params, sessions)
     current_task = resolve_current_task(params, tasks, selected_container_id)
 
@@ -139,6 +155,7 @@ defmodule AgentsWeb.DashboardLive.Index do
     {:noreply,
      socket
      |> assign(:active_session_tab, active_tab)
+     |> assign(:status_filter, status_filter)
      |> assign(:active_container_id, selected_container_id)
      |> assign(:active_ticket_number, active_ticket_number)
      |> assign_new(:collapsed_parents, fn -> MapSet.new() end)
@@ -152,8 +169,7 @@ defmodule AgentsWeb.DashboardLive.Index do
      |> EventProcessor.maybe_load_todos(current_task)
      |> PipelineKanbanState.assign_pipeline_kanban()
      |> push_event("scroll_to_bottom", %{})
-     |> push_event("focus_input", %{})
-     |> maybe_push_draft_key(active_ticket_number)}
+     |> push_event("focus_input", %{})}
   end
 
   # -- Task Execution Handlers ------------------------------------------------
@@ -269,6 +285,42 @@ defmodule AgentsWeb.DashboardLive.Index do
   @impl true
   def handle_event("select_kanban_ticket", params, socket),
     do: PipelineKanbanHandlers.select_kanban_ticket(params, socket)
+
+  @impl true
+  def handle_event("pipeline_editor_change", params, socket),
+    do: PipelineEditorHandlers.change(params, socket)
+
+  @impl true
+  def handle_event("pipeline_editor_add_stage", params, socket),
+    do: PipelineEditorHandlers.add_stage(params, socket)
+
+  @impl true
+  def handle_event("pipeline_editor_add_step", params, socket),
+    do: PipelineEditorHandlers.add_step(params, socket)
+
+  @impl true
+  def handle_event("pipeline_editor_move_stage_up", params, socket),
+    do: PipelineEditorHandlers.move_stage_up(params, socket)
+
+  @impl true
+  def handle_event("pipeline_editor_move_stage_down", params, socket),
+    do: PipelineEditorHandlers.move_stage_down(params, socket)
+
+  @impl true
+  def handle_event("pipeline_editor_remove_stage", params, socket),
+    do: PipelineEditorHandlers.remove_stage(params, socket)
+
+  @impl true
+  def handle_event("pipeline_editor_move_step_down", params, socket),
+    do: PipelineEditorHandlers.move_step_down(params, socket)
+
+  @impl true
+  def handle_event("pipeline_editor_remove_step", params, socket),
+    do: PipelineEditorHandlers.remove_step(params, socket)
+
+  @impl true
+  def handle_event("pipeline_editor_save", params, socket),
+    do: PipelineEditorHandlers.save(params, socket)
 
   # -- Session Handlers --------------------------------------------------------
 
@@ -541,9 +593,47 @@ defmodule AgentsWeb.DashboardLive.Index do
   # Push a switch_draft_key event to the SessionFormHook when a ticket is active.
   # This fires AFTER handle_params completes, ensuring the LiveView socket is
   # stable and the hook receives the event reliably.
-  defp maybe_push_draft_key(socket, ticket_number) when is_integer(ticket_number) do
-    Phoenix.LiveView.push_event(socket, "switch_draft_key", %{key: "ticket:#{ticket_number}"})
+  defp pipeline_editor_authorized?(user) do
+    user
+    |> Identity.list_workspaces_for_user()
+    |> Enum.any?(fn workspace ->
+      case Identity.get_member(user, workspace.id) do
+        {:ok, member} -> member.role in [:admin, :owner]
+        _ -> false
+      end
+    end)
   end
 
-  defp maybe_push_draft_key(socket, _), do: socket
+  defp load_pipeline_editor_state(false), do: {%{"stages" => []}, [], false}
+
+  defp load_pipeline_editor_state(true) do
+    case pipeline_editor_loader().("perme8-pipeline.yml") do
+      {:ok, draft} -> {draft, [], false}
+      {:error, errors} -> {nil, ["Unable to load pipeline configuration" | errors], true}
+    end
+  end
+
+  defp pipeline_editor_loader do
+    Application.get_env(
+      :agents_web,
+      :pipeline_editor_loader,
+      &Agents.load_editable_pipeline_config/1
+    )
+  end
+
+  @status_filter_by_param %{
+    "all" => :all,
+    "closed" => :closed,
+    "awaiting_feedback" => :awaiting_feedback,
+    "completed" => :completed,
+    "cancelled" => :cancelled,
+    "running" => :running,
+    "queued" => :queued,
+    "failed" => :failed
+  }
+
+  defp resolve_status_filter(%{"status" => status}),
+    do: Map.get(@status_filter_by_param, status, :open)
+
+  defp resolve_status_filter(_params), do: :open
 end

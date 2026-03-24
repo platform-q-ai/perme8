@@ -10,5 +10,12 @@ defmodule Agents.Pipeline.Domain.Entities.StepTest do
     assert step.run == "mix compile"
     assert step.retries == 0
     assert step.env == %{}
+    assert step.conditions == nil
+  end
+
+  test "new/1 preserves optional conditions" do
+    step = Step.new(%{name: "test", run: "mix test", conditions: "branch == main"})
+
+    assert step.conditions == "branch == main"
   end
 end

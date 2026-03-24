@@ -29,18 +29,17 @@ Feature: Session Detail Tabbed Layout
     And "[role='tab'][data-tab-id='chat']" should exist
 
   Scenario: Tab state is reflected in the URL
-    # Requires multiple tabs; will be enabled when a second tab is added
-    Given I store the URL as "chatTabUrl"
-    When I click "[role='tab'][data-tab-id='ticket']"
+    Given I store the URL as "ticketTabUrl"
+    When I click "[role='tab'][data-tab-id='chat']"
     And I wait for network idle
     Then the URL should contain "tab="
     And I store the URL as "otherTabUrl"
     When I go back
     And I wait for network idle
-    Then the URL should be "${chatTabUrl}"
+    Then the URL should be "${ticketTabUrl}"
     When I go forward
     And I wait for network idle
-    Then the URL should contain "tab=ticket"
+    Then the URL should contain "tab=chat"
 
   Scenario: Mobile responsive behaviour maintained
     When I wait for "[role='tablist']" to be visible

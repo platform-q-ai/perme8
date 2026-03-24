@@ -8,10 +8,11 @@ defmodule Agents.Pipeline.Domain.Entities.Step do
           run: String.t(),
           timeout_seconds: pos_integer() | nil,
           retries: non_neg_integer(),
-          env: map()
+          env: map(),
+          conditions: String.t() | nil
         }
 
-  defstruct [:name, :run, :timeout_seconds, retries: 0, env: %{}]
+  defstruct [:name, :run, :timeout_seconds, :conditions, retries: 0, env: %{}]
 
   @doc "Builds a step value object from attributes."
   @spec new(map()) :: t()

@@ -299,6 +299,7 @@ defmodule AgentsWeb.DashboardLive.Components.SidebarComponents do
           data-lifecycle-stage={ticket.lifecycle_stage}
           data-ticket-id={@ticket_data_id.(ticket)}
           data-triage-ticket-item
+          onclick="if (!event.target.closest('button')) { this.querySelector('[data-card-click-target]')?.click() }"
         >
           <% t_session = @session_for_ticket.(ticket) %>
           <div class="flex items-start gap-1">
