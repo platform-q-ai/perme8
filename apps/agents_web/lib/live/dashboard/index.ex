@@ -621,19 +621,19 @@ defmodule AgentsWeb.DashboardLive.Index do
     )
   end
 
-  defp resolve_status_filter(%{"status" => status}) do
-    case status do
-      "all" -> :all
-      "closed" -> :closed
-      "awaiting_feedback" -> :awaiting_feedback
-      "completed" -> :completed
-      "cancelled" -> :cancelled
-      "running" -> :running
-      "queued" -> :queued
-      "failed" -> :failed
-      _ -> :open
-    end
-  end
+  @status_filter_by_param %{
+    "all" => :all,
+    "closed" => :closed,
+    "awaiting_feedback" => :awaiting_feedback,
+    "completed" => :completed,
+    "cancelled" => :cancelled,
+    "running" => :running,
+    "queued" => :queued,
+    "failed" => :failed
+  }
+
+  defp resolve_status_filter(%{"status" => status}),
+    do: Map.get(@status_filter_by_param, status, :open)
 
   defp resolve_status_filter(_params), do: :open
 end
