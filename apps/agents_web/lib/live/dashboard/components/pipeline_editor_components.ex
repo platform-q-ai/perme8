@@ -141,14 +141,13 @@ defmodule AgentsWeb.DashboardLive.Components.PipelineEditorComponents do
                     phx-change="pipeline_editor_change"
                     class="input input-xs input-bordered w-full mb-1"
                   />
-                  <input
+                  <textarea
                     data-testid="step-env-input"
-                    type="text"
                     name={"step_env:#{stage_index}:#{step_index}"}
-                    value={first_env_pair(step)}
+                    value={env_lines(step)}
                     phx-change="pipeline_editor_change"
-                    class="input input-xs input-bordered w-full"
-                  />
+                    class="textarea textarea-xs textarea-bordered w-full"
+                  ><%= env_lines(step) %></textarea>
                   <div class="mt-1 flex gap-1">
                     <button
                       type="button"
@@ -250,11 +249,11 @@ defmodule AgentsWeb.DashboardLive.Components.PipelineEditorComponents do
     end
   end
 
-  defp first_env_pair(step) do
-    case Map.get(step, "env", %{}) |> Enum.to_list() |> List.first() do
-      {k, v} -> "#{k}=#{v}"
-      _ -> ""
-    end
+  defp env_lines(step) do
+    step
+    |> Map.get("env", %{})
+    |> Enum.sort()
+    |> Enum.map_join("\n", fn {key, value} -> "#{key}=#{value}" end)
   end
 
   defp preview_lines(draft) do
@@ -292,9 +291,9 @@ defmodule AgentsWeb.DashboardLive.Components.PipelineEditorComponents do
   end
 
   defp preview_step_env_lines(step) do
-    case Map.get(step, "env", %{}) |> Enum.to_list() |> List.first() do
-      {k, v} -> ["#{k}=#{v}"]
-      _ -> []
-    end
+    step
+    |> Map.get("env", %{})
+    |> Enum.sort()
+    |> Enum.map(fn {key, value} -> "#{key}=#{value}" end)
   end
 end

@@ -52,13 +52,14 @@ defmodule AgentsWeb.DashboardLive.PipelineEditorTest do
 
     view
     |> element("[name='step_env:1:0']")
-    |> render_change(%{"step_env:1:0" => "MIX_ENV=test"})
+    |> render_change(%{"step_env:1:0" => "LOG_LEVEL=debug\nMIX_ENV=test"})
 
     preview = render(view)
     assert preview =~ "mix test"
     assert preview =~ "600"
     assert preview =~ "branch == main"
     assert preview =~ "MIX_ENV=test"
+    assert preview =~ "LOG_LEVEL=debug"
   end
 
   test "supports add remove and reorder stage and step actions", %{conn: conn} do

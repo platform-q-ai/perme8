@@ -294,10 +294,15 @@ defmodule AgentsWeb.DashboardLive.PipelineEditorHandlers do
   end
 
   defp parse_env(value) do
-    case String.split(value || "", "=", parts: 2) do
-      [k, v] when k != "" -> %{k => v}
-      _ -> %{}
-    end
+    value
+    |> to_string()
+    |> String.split("\n")
+    |> Enum.reduce(%{}, fn line, acc ->
+      case String.split(String.trim(line), "=", parts: 2) do
+        [key, env_value] when key != "" -> Map.put(acc, key, env_value)
+        _ -> acc
+      end
+    end)
   end
 
   defp parse_integer(value) when is_binary(value) do
