@@ -179,6 +179,9 @@ defmodule AgentsWeb.DashboardLive.PipelineEditorHandlers do
     fixture = socket.assigns[:fixture]
 
     cond do
+      socket.assigns[:pipeline_editor_load_failed?] ->
+        {:noreply, put_error_flash(socket)}
+
       fixture == "pipeline_configuration_editor_invalid_changes" ->
         {:noreply,
          socket

@@ -5,6 +5,7 @@ defmodule AgentsWeb.DashboardLive.Components.PipelineEditorComponents do
 
   attr(:draft, :map, required: true)
   attr(:errors, :list, required: true)
+  attr(:load_failed, :boolean, required: true)
   attr(:saved_at, :any, required: true)
   attr(:saving, :boolean, required: true)
   attr(:file_path, :string, required: true)
@@ -34,6 +35,7 @@ defmodule AgentsWeb.DashboardLive.Components.PipelineEditorComponents do
           phx-click="pipeline_editor_save"
           class="btn btn-xs btn-primary"
           data-testid="pipeline-editor-save"
+          disabled={@load_failed}
         >
           Save configuration
         </button>
@@ -43,8 +45,10 @@ defmodule AgentsWeb.DashboardLive.Components.PipelineEditorComponents do
         :if={@errors != []}
         class="px-3 py-2 text-xs text-error bg-error/10 border-b border-base-300/70"
       >
-        <div>Please resolve validation errors before saving</div>
-        <div>Changes were not saved</div>
+        <div :if={@load_failed}>Unable to load pipeline configuration</div>
+        <div :if={!@load_failed}>Please resolve validation errors before saving</div>
+        <div :for={error <- @errors}>{error}</div>
+        <div :if={!@load_failed}>Changes were not saved</div>
       </div>
 
       <form id="pipeline-editor-form" phx-change="pipeline_editor_change">

@@ -56,7 +56,9 @@ defmodule AgentsWeb.DashboardLive.Index do
     available_images = Sessions.available_images()
     default_image = Sessions.default_image()
     pipeline_editor_authorized? = pipeline_editor_authorized?(user)
-    pipeline_editor_draft = load_pipeline_editor_draft()
+
+    {pipeline_editor_draft, pipeline_editor_errors, pipeline_editor_load_failed?} =
+      load_pipeline_editor_state(pipeline_editor_authorized?)
 
     sessions = merge_unassigned_active_tasks(sessions, tasks)
     sticky_warm_task_ids = derive_sticky_warm_task_ids(sessions, queue_state, MapSet.new())
@@ -102,7 +104,8 @@ defmodule AgentsWeb.DashboardLive.Index do
      |> assign(:dependency_direction, nil)
      |> assign(:pipeline_editor_authorized?, pipeline_editor_authorized?)
      |> assign(:pipeline_editor_draft, pipeline_editor_draft)
-     |> assign(:pipeline_editor_errors, [])
+     |> assign(:pipeline_editor_errors, pipeline_editor_errors)
+     |> assign(:pipeline_editor_load_failed?, pipeline_editor_load_failed?)
      |> assign(:pipeline_editor_saving, false)
      |> assign(:pipeline_editor_saved_at, nil)
      |> assign(:pipeline_editor_path, "perme8-pipeline.yml")
@@ -606,10 +609,20 @@ defmodule AgentsWeb.DashboardLive.Index do
     end)
   end
 
-  defp load_pipeline_editor_draft do
-    case Agents.load_editable_pipeline_config("perme8-pipeline.yml") do
-      {:ok, draft} -> draft
-      {:error, _} -> %{"stages" => []}
+  defp load_pipeline_editor_state(false), do: {%{"stages" => []}, [], false}
+
+  defp load_pipeline_editor_state(true) do
+    case pipeline_editor_loader().("perme8-pipeline.yml") do
+      {:ok, draft} -> {draft, [], false}
+      {:error, errors} -> {nil, ["Unable to load pipeline configuration" | errors], true}
     end
+  end
+
+  defp pipeline_editor_loader do
+    Application.get_env(
+      :agents_web,
+      :pipeline_editor_loader,
+      &Agents.load_editable_pipeline_config/1
+    )
   end
 end

@@ -30,6 +30,14 @@ defmodule AgentsWeb.DashboardLive.TicketLifecycleFixtures do
         |> assign(:pipeline_editor_errors, Map.get(payload, :pipeline_editor_errors, []))
         |> assign(:pipeline_editor_saved_at, Map.get(payload, :pipeline_editor_saved_at, nil))
         |> assign(
+          :pipeline_editor_load_failed?,
+          Map.get(
+            payload,
+            :pipeline_editor_load_failed?,
+            socket.assigns[:pipeline_editor_load_failed?]
+          )
+        )
+        |> assign(
           :pipeline_editor_authorized?,
           Map.get(
             payload,
@@ -63,6 +71,14 @@ defmodule AgentsWeb.DashboardLive.TicketLifecycleFixtures do
           )
           |> assign(:pipeline_editor_errors, Map.get(payload, :pipeline_editor_errors, []))
           |> assign(:pipeline_editor_saved_at, Map.get(payload, :pipeline_editor_saved_at, nil))
+          |> assign(
+            :pipeline_editor_load_failed?,
+            Map.get(
+              payload,
+              :pipeline_editor_load_failed?,
+              socket.assigns[:pipeline_editor_load_failed?]
+            )
+          )
           |> assign(
             :pipeline_editor_authorized?,
             Map.get(

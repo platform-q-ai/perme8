@@ -116,4 +116,24 @@ defmodule AgentsWeb.DashboardLive.PipelineEditorTest do
 
     assert File.read!(path) =~ "mix test --trace"
   end
+
+  test "surfaces pipeline load failures instead of showing an empty editor", %{
+    conn: conn,
+    user: user
+  } do
+    Application.put_env(:agents_web, :pipeline_editor_loader, fn _path ->
+      {:error, ["pipeline file missing"]}
+    end)
+
+    on_exit(fn -> Application.delete_env(:agents_web, :pipeline_editor_loader) end)
+
+    WorkspacesFixtures.workspace_fixture(user)
+
+    {:ok, view, _html} = live(conn, ~p"/sessions")
+
+    html = render(view)
+    assert html =~ "Unable to load pipeline configuration"
+    assert html =~ "pipeline file missing"
+    assert has_element?(view, "[data-testid='pipeline-editor-save'][disabled]")
+  end
 end
