@@ -240,11 +240,18 @@ defmodule AgentsWeb.DashboardLive.Components.TicketCardComponent do
           @card_status
         )
       }
+      onclick={
+        if @variant == :triage && @is_ticket,
+          do:
+            "if (!event.target.closest('button')) { this.querySelector('[data-card-click-target]')?.click() }",
+          else: nil
+      }
     >
       <%!-- Main row: content area + action strip --%>
       <div class="flex flex-1 min-w-0 min-h-0">
         <%!-- Card content area (clickable to select) --%>
         <div
+          data-card-click-target={@is_ticket || nil}
           class="flex-1 min-w-0 flex flex-col items-start gap-1 p-2"
           phx-click={card_click_event(@is_ticket)}
           phx-value-number={(@is_ticket && @ticket.number) || nil}
