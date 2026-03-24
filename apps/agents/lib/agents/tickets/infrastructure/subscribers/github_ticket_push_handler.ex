@@ -73,7 +73,7 @@ defmodule Agents.Tickets.Infrastructure.Subscribers.GithubTicketPushHandler do
         )
 
         mark_sync_error(ticket_id, reason)
-        :ok
+        {:error, reason}
     end
   end
 
@@ -98,7 +98,7 @@ defmodule Agents.Tickets.Infrastructure.Subscribers.GithubTicketPushHandler do
       {:error, reason} ->
         Logger.error("Failed to push ticket #{ticket_id} to GitHub: #{inspect(reason)}")
         mark_sync_error(ticket_id, reason)
-        :ok
+        {:error, reason}
     end
   end
 
@@ -129,24 +129,30 @@ defmodule Agents.Tickets.Infrastructure.Subscribers.GithubTicketPushHandler do
   end
 
   defp mark_synced(ticket_id) do
-    case Agents.Repo.get(ProjectTicketSchema, ticket_id) do
-      nil ->
+    try do
+      case Agents.Repo.get(ProjectTicketSchema, ticket_id) do
+        nil ->
+          :ok
+
+        ticket ->
+          changeset =
+            ProjectTicketSchema.changeset(ticket, %{
+              sync_state: "synced",
+              last_synced_at: DateTime.utc_now() |> DateTime.truncate(:second)
+            })
+
+          case Agents.Repo.update(changeset) do
+            {:ok, _} ->
+              :ok
+
+            {:error, reason} ->
+              Logger.error("Failed to mark ticket #{ticket_id} as synced: #{inspect(reason)}")
+          end
+      end
+    catch
+      :exit, reason ->
+        Logger.error("Failed to mark ticket #{ticket_id} as synced: #{inspect(reason)}")
         :ok
-
-      ticket ->
-        changeset =
-          ProjectTicketSchema.changeset(ticket, %{
-            sync_state: "synced",
-            last_synced_at: DateTime.utc_now() |> DateTime.truncate(:second)
-          })
-
-        case Agents.Repo.update(changeset) do
-          {:ok, _} ->
-            :ok
-
-          {:error, reason} ->
-            Logger.error("Failed to mark ticket #{ticket_id} as synced: #{inspect(reason)}")
-        end
     end
   rescue
     e ->
@@ -157,19 +163,28 @@ defmodule Agents.Tickets.Infrastructure.Subscribers.GithubTicketPushHandler do
   defp update_local_ticket(ticket_id, issue) do
     import Ecto.Query, warn: false
 
-    changeset =
-      ProjectTicketSchema
-      |> Agents.Repo.get!(ticket_id)
-      |> ProjectTicketSchema.changeset(%{
-        number: issue.number,
-        url: issue.url,
-        sync_state: "synced",
-        last_synced_at: DateTime.utc_now() |> DateTime.truncate(:second)
-      })
+    try do
+      changeset =
+        ProjectTicketSchema
+        |> Agents.Repo.get!(ticket_id)
+        |> ProjectTicketSchema.changeset(%{
+          number: issue.number,
+          url: issue.url,
+          sync_state: "synced",
+          last_synced_at: DateTime.utc_now() |> DateTime.truncate(:second)
+        })
 
-    case Agents.Repo.update(changeset) do
-      {:ok, _} -> :ok
-      {:error, reason} -> Logger.error("Failed to update ticket #{ticket_id}: #{inspect(reason)}")
+      case Agents.Repo.update(changeset) do
+        {:ok, _} ->
+          :ok
+
+        {:error, reason} ->
+          Logger.error("Failed to update ticket #{ticket_id}: #{inspect(reason)}")
+      end
+    catch
+      :exit, reason ->
+        Logger.error("Failed to update ticket #{ticket_id}: #{inspect(reason)}")
+        :ok
     end
   rescue
     e ->
@@ -180,17 +195,23 @@ defmodule Agents.Tickets.Infrastructure.Subscribers.GithubTicketPushHandler do
   defp mark_sync_error(ticket_id, reason) do
     import Ecto.Query, warn: false
 
-    case Agents.Repo.get(ProjectTicketSchema, ticket_id) do
-      nil ->
-        :ok
+    try do
+      case Agents.Repo.get(ProjectTicketSchema, ticket_id) do
+        nil ->
+          :ok
 
-      ticket ->
-        ticket
-        |> ProjectTicketSchema.changeset(%{
-          sync_state: "sync_error",
-          last_sync_error: inspect(reason)
-        })
-        |> Agents.Repo.update()
+        ticket ->
+          ticket
+          |> ProjectTicketSchema.changeset(%{
+            sync_state: "sync_error",
+            last_sync_error: inspect(reason)
+          })
+          |> Agents.Repo.update()
+      end
+    catch
+      :exit, exit_reason ->
+        Logger.error("Failed to mark ticket #{ticket_id} as sync_error: #{inspect(exit_reason)}")
+        :ok
     end
   rescue
     e ->
