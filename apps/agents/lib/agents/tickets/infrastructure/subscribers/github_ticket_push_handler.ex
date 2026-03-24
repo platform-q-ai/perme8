@@ -73,7 +73,7 @@ defmodule Agents.Tickets.Infrastructure.Subscribers.GithubTicketPushHandler do
         )
 
         mark_sync_error(ticket_id, reason)
-        {:error, reason}
+        :ok
     end
   end
 
@@ -98,7 +98,7 @@ defmodule Agents.Tickets.Infrastructure.Subscribers.GithubTicketPushHandler do
       {:error, reason} ->
         Logger.error("Failed to push ticket #{ticket_id} to GitHub: #{inspect(reason)}")
         mark_sync_error(ticket_id, reason)
-        {:error, reason}
+        :ok
     end
   end
 
