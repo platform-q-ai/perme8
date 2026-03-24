@@ -431,7 +431,13 @@ defmodule AgentsWeb.DashboardLive.TicketLifecycleFixtures do
   end
 
   defp pipeline_editor_fixture_payload("pipeline_configuration_editor_valid_changes") do
-    %{pipeline_editor_authorized?: true, pipeline_editor_draft: pipeline_editor_valid_draft()}
+    draft = pipeline_editor_valid_draft()
+
+    %{
+      pipeline_editor_authorized?: true,
+      pipeline_editor_draft: draft,
+      pipeline_editor_path: write_pipeline_editor_fixture(draft, "valid-changes")
+    }
   end
 
   defp pipeline_editor_fixture_payload(_fixture), do: %{}
@@ -478,6 +484,8 @@ defmodule AgentsWeb.DashboardLive.TicketLifecycleFixtures do
           "id" => "warm-pool",
           "label" => "Warm Pool",
           "type" => "warm_pool",
+          "deploy_target" => "dev",
+          "schedule" => %{"cron" => "*/5 * * * *"},
           "warm_pool" => %{
             "target_count" => 2,
             "image" => "ghcr.io/platform-q-ai/perme8-runtime:latest",
@@ -506,6 +514,8 @@ defmodule AgentsWeb.DashboardLive.TicketLifecycleFixtures do
         "id" => "warm-pool",
         "label" => "Warm Pool",
         "type" => "warm_pool",
+        "deploy_target" => "dev",
+        "schedule" => %{"cron" => "*/5 * * * *"},
         "warm_pool" => %{
           "target_count" => 2,
           "image" => "ghcr.io/platform-q-ai/perme8-runtime:latest",
@@ -527,6 +537,63 @@ defmodule AgentsWeb.DashboardLive.TicketLifecycleFixtures do
   defp pipeline_editor_valid_draft do
     pipeline_editor_base_draft()
     |> put_in(["stages", Access.at(1), "steps", Access.at(0), "run"], "mix test --trace")
+  end
+
+  defp write_pipeline_editor_fixture(draft, fixture_name) do
+    path =
+      Path.join(
+        System.tmp_dir!(),
+        "pipeline-editor-#{fixture_name}-#{System.unique_integer([:positive])}-perme8-pipeline.yml"
+      )
+
+    File.write!(path, pipeline_editor_fixture_yaml(draft))
+    path
+  end
+
+  defp pipeline_editor_fixture_yaml(draft) do
+    in_progress_run = get_in(draft, ["stages", Access.at(1), "steps", Access.at(0), "run"])
+
+    """
+    version: 1
+    pipeline:
+      name: perme8-core
+      merge_queue:
+        strategy: merge_queue
+      deploy_targets:
+        - id: dev
+          environment: development
+          provider: docker
+      stages:
+        - id: ready
+          type: triage
+          steps:
+            - name: queue
+              run: noop
+        - id: in-progress
+          type: verification
+          steps:
+            - name: test
+              run: #{in_progress_run}
+              timeout_seconds: 300
+        - id: in-review
+          type: review
+          steps:
+            - name: review
+              run: mix credo
+        - id: warm-pool
+          type: warm_pool
+          deploy_target: dev
+          schedule:
+            cron: "*/5 * * * *"
+          warm_pool:
+            target_count: 2
+            image: ghcr.io/platform-q-ai/perme8-runtime:latest
+            readiness:
+              strategy: command_success
+          steps:
+            - name: prestart
+              run: scripts/warm_pool.sh
+    """
   end
 
   defp pipeline_kanban_fixture_tickets(mode \\ :default) do

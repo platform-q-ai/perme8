@@ -107,9 +107,13 @@ defmodule AgentsWeb.DashboardLive.PipelineEditorTest do
 
     view |> element("button", "Save configuration") |> render_click()
 
+    path = :sys.get_state(view.pid).socket.assigns.pipeline_editor_path
+
     html = render(view)
     assert html =~ "Configuration saved"
     assert html =~ "perme8-pipeline.yml"
     assert html =~ "No staged changes"
+
+    assert File.read!(path) =~ "mix test --trace"
   end
 end

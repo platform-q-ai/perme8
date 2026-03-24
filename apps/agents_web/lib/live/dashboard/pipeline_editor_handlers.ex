@@ -185,10 +185,7 @@ defmodule AgentsWeb.DashboardLive.PipelineEditorHandlers do
          |> assign(:pipeline_editor_errors, ["invalid pipeline config"])
          |> put_error_flash()}
 
-      fixture in [
-        "pipeline_configuration_editor_valid_changes",
-        "pipeline_configuration_editor_loaded"
-      ] ->
+      fixture == "pipeline_configuration_editor_loaded" ->
         {:noreply,
          socket
          |> assign(:pipeline_editor_errors, [])
