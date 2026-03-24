@@ -15,6 +15,7 @@ defmodule AgentsWeb.DashboardLive.Index do
     only: [maybe_apply_ticket_lifecycle_fixture: 2]
 
   alias Agents
+  alias Identity
   alias Agents.Sessions
   alias Agents.Sessions.Domain.Entities.QueueSnapshot
   alias Agents.Tickets
@@ -54,6 +55,7 @@ defmodule AgentsWeb.DashboardLive.Index do
 
     available_images = Sessions.available_images()
     default_image = Sessions.default_image()
+    pipeline_editor_authorized? = pipeline_editor_authorized?(user)
     pipeline_editor_draft = load_pipeline_editor_draft()
 
     sessions = merge_unassigned_active_tasks(sessions, tasks)
@@ -98,6 +100,7 @@ defmodule AgentsWeb.DashboardLive.Index do
      |> assign(:dependency_search_query, "")
      |> assign(:selected_dependency_target, nil)
      |> assign(:dependency_direction, nil)
+     |> assign(:pipeline_editor_authorized?, pipeline_editor_authorized?)
      |> assign(:pipeline_editor_draft, pipeline_editor_draft)
      |> assign(:pipeline_editor_errors, [])
      |> assign(:pipeline_editor_saving, false)
@@ -591,6 +594,17 @@ defmodule AgentsWeb.DashboardLive.Index do
   end
 
   defp maybe_push_draft_key(socket, _), do: socket
+
+  defp pipeline_editor_authorized?(user) do
+    user
+    |> Identity.list_workspaces_for_user()
+    |> Enum.any?(fn workspace ->
+      case Identity.get_member(user, workspace.id) do
+        {:ok, member} -> member.role in [:admin, :owner]
+        _ -> false
+      end
+    end)
+  end
 
   defp load_pipeline_editor_draft do
     case Agents.load_editable_pipeline_config("perme8-pipeline.yml") do

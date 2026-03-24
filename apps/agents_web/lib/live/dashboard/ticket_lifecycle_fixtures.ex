@@ -30,6 +30,14 @@ defmodule AgentsWeb.DashboardLive.TicketLifecycleFixtures do
         |> assign(:pipeline_editor_errors, Map.get(payload, :pipeline_editor_errors, []))
         |> assign(:pipeline_editor_saved_at, Map.get(payload, :pipeline_editor_saved_at, nil))
         |> assign(
+          :pipeline_editor_authorized?,
+          Map.get(
+            payload,
+            :pipeline_editor_authorized?,
+            socket.assigns[:pipeline_editor_authorized?]
+          )
+        )
+        |> assign(
           :pipeline_editor_path,
           Map.get(payload, :pipeline_editor_path, "perme8-pipeline.yml")
         )
@@ -55,6 +63,14 @@ defmodule AgentsWeb.DashboardLive.TicketLifecycleFixtures do
           )
           |> assign(:pipeline_editor_errors, Map.get(payload, :pipeline_editor_errors, []))
           |> assign(:pipeline_editor_saved_at, Map.get(payload, :pipeline_editor_saved_at, nil))
+          |> assign(
+            :pipeline_editor_authorized?,
+            Map.get(
+              payload,
+              :pipeline_editor_authorized?,
+              socket.assigns[:pipeline_editor_authorized?]
+            )
+          )
           |> assign(
             :pipeline_editor_path,
             Map.get(payload, :pipeline_editor_path, "perme8-pipeline.yml")
@@ -395,27 +411,27 @@ defmodule AgentsWeb.DashboardLive.TicketLifecycleFixtures do
   defp pipeline_kanban_fixture_payload(_fixture), do: %{}
 
   defp pipeline_editor_fixture_payload("pipeline_configuration_editor_loaded") do
-    %{pipeline_editor_draft: pipeline_editor_base_draft()}
+    %{pipeline_editor_authorized?: true, pipeline_editor_draft: pipeline_editor_base_draft()}
   end
 
   defp pipeline_editor_fixture_payload("pipeline_configuration_editor_step_editing") do
-    %{pipeline_editor_draft: pipeline_editor_base_draft()}
+    %{pipeline_editor_authorized?: true, pipeline_editor_draft: pipeline_editor_base_draft()}
   end
 
   defp pipeline_editor_fixture_payload("pipeline_configuration_editor_warm_pool_editing") do
-    %{pipeline_editor_draft: pipeline_editor_base_draft()}
+    %{pipeline_editor_authorized?: true, pipeline_editor_draft: pipeline_editor_base_draft()}
   end
 
   defp pipeline_editor_fixture_payload("pipeline_configuration_editor_structure_editing") do
-    %{pipeline_editor_draft: pipeline_editor_structure_draft()}
+    %{pipeline_editor_authorized?: true, pipeline_editor_draft: pipeline_editor_structure_draft()}
   end
 
   defp pipeline_editor_fixture_payload("pipeline_configuration_editor_invalid_changes") do
-    %{pipeline_editor_draft: pipeline_editor_invalid_draft()}
+    %{pipeline_editor_authorized?: true, pipeline_editor_draft: pipeline_editor_invalid_draft()}
   end
 
   defp pipeline_editor_fixture_payload("pipeline_configuration_editor_valid_changes") do
-    %{pipeline_editor_draft: pipeline_editor_valid_draft()}
+    %{pipeline_editor_authorized?: true, pipeline_editor_draft: pipeline_editor_valid_draft()}
   end
 
   defp pipeline_editor_fixture_payload(_fixture), do: %{}

@@ -195,6 +195,7 @@
       />
 
       <.pipeline_editor
+        :if={@pipeline_editor_authorized?}
         draft={@pipeline_editor_draft}
         errors={@pipeline_editor_errors}
         saved_at={@pipeline_editor_saved_at}

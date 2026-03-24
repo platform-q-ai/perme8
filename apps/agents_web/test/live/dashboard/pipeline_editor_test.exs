@@ -1,9 +1,25 @@
 defmodule AgentsWeb.DashboardLive.PipelineEditorTest do
   use AgentsWeb.ConnCase, async: true
 
+  alias Agents.Test.WorkspacesFixtures
+
   import Phoenix.LiveViewTest
 
   setup :register_and_log_in_user
+
+  test "hides the pipeline editor for users without operator access", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/sessions")
+
+    refute has_element?(view, "[data-testid='pipeline-editor']")
+  end
+
+  test "shows the pipeline editor for workspace owners", %{conn: conn, user: user} do
+    WorkspacesFixtures.workspace_fixture(user)
+
+    {:ok, view, _html} = live(conn, ~p"/sessions")
+
+    assert has_element?(view, "[data-testid='pipeline-editor']")
+  end
 
   test "renders editable pipeline stage cards in fixture order", %{conn: conn} do
     {:ok, view, _html} = live(conn, ~p"/sessions?fixture=pipeline_configuration_editor_loaded")
