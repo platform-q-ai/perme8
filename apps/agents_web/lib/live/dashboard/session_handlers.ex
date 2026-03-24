@@ -175,7 +175,7 @@ defmodule AgentsWeb.DashboardLive.SessionHandlers do
 
     params =
       %{"tab" => tab}
-      |> maybe_put_ticket(socket.assigns.active_ticket_number)
+      |> maybe_put_ticket(socket.assigns.active_ticket_number, socket.assigns.composing_new)
       |> maybe_put_container(socket.assigns.active_container_id)
       |> maybe_put_new(socket.assigns.composing_new)
 
@@ -220,8 +220,11 @@ defmodule AgentsWeb.DashboardLive.SessionHandlers do
 
   def hydrate_optimistic_queue(_params, socket), do: {:noreply, socket}
 
-  defp maybe_put_ticket(params, nil), do: params
-  defp maybe_put_ticket(params, ticket_number), do: Map.put(params, "ticket", ticket_number)
+  defp maybe_put_ticket(params, _ticket_number, false), do: params
+  defp maybe_put_ticket(params, nil, _composing_new), do: params
+
+  defp maybe_put_ticket(params, ticket_number, _composing_new),
+    do: Map.put(params, "ticket", ticket_number)
 
   def hydrate_optimistic_new_sessions(%{"entries" => entries}, socket)
       when is_list(entries) do
