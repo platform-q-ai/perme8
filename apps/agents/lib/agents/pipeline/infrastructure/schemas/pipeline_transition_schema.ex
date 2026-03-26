@@ -12,6 +12,8 @@ defmodule Agents.Pipeline.Infrastructure.Schemas.PipelineTransitionSchema do
     field(:on, :string)
     field(:to_stage, :string)
     field(:reason, :string)
+    field(:ticket_stage_override, :string)
+    field(:ticket_reason, :string)
     field(:params, :map, default: %{})
 
     belongs_to(:pipeline_stage, Agents.Pipeline.Infrastructure.Schemas.PipelineStageSchema)
@@ -21,7 +23,16 @@ defmodule Agents.Pipeline.Infrastructure.Schemas.PipelineTransitionSchema do
 
   def changeset(transition, attrs) do
     transition
-    |> cast(attrs, [:pipeline_stage_id, :position, :on, :to_stage, :reason, :params])
+    |> cast(attrs, [
+      :pipeline_stage_id,
+      :position,
+      :on,
+      :to_stage,
+      :reason,
+      :ticket_stage_override,
+      :ticket_reason,
+      :params
+    ])
     |> validate_required([:pipeline_stage_id, :position, :on])
   end
 end

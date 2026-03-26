@@ -36,6 +36,7 @@ defmodule Agents.Pipeline.Application.PipelineConfigBuilderTest do
             "schedule" => %{"cron" => "*/5 * * * *"},
             "triggers" => ["on_ticket_play"],
             "ticket_concurrency" => 1,
+            "ticket_stage" => "in_progress",
             "warm_pool" => %{
               "target_count" => 2,
               "image" => "ghcr.io/platform-q-ai/perme8-runtime:latest",
@@ -56,6 +57,7 @@ defmodule Agents.Pipeline.Application.PipelineConfigBuilderTest do
             "schedule" => %{"cron" => "*/10 * * * *"},
             "triggers" => ["on_merge_window"],
             "ticket_concurrency" => 0,
+            "ticket_stage" => "merge_queue",
             "steps" => [
               %{"name" => "merge-batch", "run" => "scripts/merge_queue.sh", "depends_on" => []}
             ]

@@ -114,6 +114,7 @@ defmodule Agents.Pipeline.Application.PipelineConfigBuilder do
     triggers = fetch(item, "triggers")
     depends_on = default_stage_dependencies(index, stages_raw, fetch(item, "depends_on"))
     ticket_concurrency = fetch(item, "ticket_concurrency")
+    ticket_stage = fetch(item, "ticket_stage")
 
     stage_config =
       Map.drop(item, [
@@ -123,6 +124,7 @@ defmodule Agents.Pipeline.Application.PipelineConfigBuilder do
         "triggers",
         "depends_on",
         "ticket_concurrency",
+        "ticket_stage",
         "steps",
         "gates",
         "transitions"
@@ -134,6 +136,7 @@ defmodule Agents.Pipeline.Application.PipelineConfigBuilder do
     errors = maybe_add_optional_map_error(errors, schedule, "#{path}.schedule")
     errors = maybe_add_string_list_error(errors, triggers || [], "#{path}.triggers")
     errors = maybe_add_string_list_error(errors, depends_on, "#{path}.depends_on")
+    errors = maybe_add_optional_string_error(errors, ticket_stage, "#{path}.ticket_stage")
 
     errors =
       maybe_add_optional_non_neg_integer_error(
@@ -156,6 +159,7 @@ defmodule Agents.Pipeline.Application.PipelineConfigBuilder do
         triggers: triggers || [],
         depends_on: depends_on,
         ticket_concurrency: ticket_concurrency,
+        ticket_stage: ticket_stage,
         config: stage_config,
         steps: steps,
         gates: gates,
@@ -220,18 +224,32 @@ defmodule Agents.Pipeline.Application.PipelineConfigBuilder do
     on = fetch(item, "on")
     to_stage = fetch(item, "to_stage")
     reason = fetch(item, "reason")
+    ticket_stage_override = fetch(item, "ticket_stage_override")
+    ticket_reason = fetch(item, "ticket_reason")
 
     errors = []
     errors = maybe_add_type_error(errors, on, "#{path}.on", &is_binary/1, "must be a string")
     errors = maybe_add_optional_string_error(errors, to_stage, "#{path}.to_stage")
     errors = maybe_add_optional_string_error(errors, reason, "#{path}.reason")
 
+    errors =
+      maybe_add_optional_string_error(
+        errors,
+        ticket_stage_override,
+        "#{path}.ticket_stage_override"
+      )
+
+    errors = maybe_add_optional_string_error(errors, ticket_reason, "#{path}.ticket_reason")
+
     build_result(errors, fn ->
       Transition.new(%{
         on: on,
         to_stage: to_stage,
         reason: reason,
-        params: Map.drop(item, ["on", "to_stage", "reason"])
+        ticket_stage_override: ticket_stage_override,
+        ticket_reason: ticket_reason,
+        params:
+          Map.drop(item, ["on", "to_stage", "reason", "ticket_stage_override", "ticket_reason"])
       })
     end)
   end

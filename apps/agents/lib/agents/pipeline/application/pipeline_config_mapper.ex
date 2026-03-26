@@ -45,6 +45,7 @@ defmodule Agents.Pipeline.Application.PipelineConfigMapper do
             triggers: stage.triggers || [],
             depends_on: stage.depends_on || [],
             ticket_concurrency: stage.ticket_concurrency,
+            ticket_stage: stage.ticket_stage,
             config: stage.config || %{},
             transitions:
               Enum.with_index(stage.transitions || [])
@@ -54,6 +55,8 @@ defmodule Agents.Pipeline.Application.PipelineConfigMapper do
                   on: transition.on,
                   to_stage: transition.to_stage,
                   reason: transition.reason,
+                  ticket_stage_override: transition.ticket_stage_override,
+                  ticket_reason: transition.ticket_reason,
                   params: transition.params || %{}
                 }
               end),
@@ -107,6 +110,7 @@ defmodule Agents.Pipeline.Application.PipelineConfigMapper do
       "triggers" => stage.triggers || [],
       "depends_on" => stage.depends_on || [],
       "ticket_concurrency" => stage.ticket_concurrency,
+      "ticket_stage" => stage.ticket_stage,
       "transitions" => Enum.map(stage.transitions || [], &transition_to_map/1),
       "steps" => Enum.map(stage.steps, &step_to_map/1),
       "gates" => Enum.map(stage.gates, &gate_to_map/1)
@@ -138,6 +142,7 @@ defmodule Agents.Pipeline.Application.PipelineConfigMapper do
       triggers: stage.triggers || [],
       depends_on: stage.depends_on || [],
       ticket_concurrency: stage.ticket_concurrency,
+      ticket_stage: stage.ticket_stage,
       config: stage.config || %{},
       transitions:
         (stage.transitions || [])
@@ -176,7 +181,13 @@ defmodule Agents.Pipeline.Application.PipelineConfigMapper do
 
   defp transition_to_map(transition) do
     Map.merge(
-      %{"on" => transition.on, "to_stage" => transition.to_stage, "reason" => transition.reason},
+      %{
+        "on" => transition.on,
+        "to_stage" => transition.to_stage,
+        "reason" => transition.reason,
+        "ticket_stage_override" => transition.ticket_stage_override,
+        "ticket_reason" => transition.ticket_reason
+      },
       transition.params || %{}
     )
   end
@@ -186,6 +197,8 @@ defmodule Agents.Pipeline.Application.PipelineConfigMapper do
       on: transition.on,
       to_stage: transition.to_stage,
       reason: transition.reason,
+      ticket_stage_override: transition.ticket_stage_override,
+      ticket_reason: transition.ticket_reason,
       params: transition.params || %{}
     })
   end

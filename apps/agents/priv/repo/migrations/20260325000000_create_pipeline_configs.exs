@@ -30,6 +30,7 @@ defmodule Agents.Repo.Migrations.CreatePipelineConfigs do
       add(:triggers, {:array, :string}, null: false, default: [])
       add(:depends_on, {:array, :string}, null: false, default: [])
       add(:ticket_concurrency, :integer)
+      add(:ticket_stage, :string)
       add(:config, :map, null: false, default: %{})
 
       timestamps(type: :utc_datetime)
@@ -92,6 +93,8 @@ defmodule Agents.Repo.Migrations.CreatePipelineConfigs do
       add(:on, :string, null: false)
       add(:to_stage, :string)
       add(:reason, :string)
+      add(:ticket_stage_override, :string)
+      add(:ticket_reason, :string)
       add(:params, :map, null: false, default: %{})
 
       timestamps(type: :utc_datetime)
@@ -133,6 +136,7 @@ defmodule Agents.Repo.Migrations.CreatePipelineConfigs do
         triggers: ["on_ticket_play", "on_warm_pool"],
         depends_on: [],
         ticket_concurrency: 1,
+        ticket_stage: "in_progress",
         config: %{
           "warm_pool" => %{
             "target_count" => 2,
@@ -156,6 +160,7 @@ defmodule Agents.Repo.Migrations.CreatePipelineConfigs do
         triggers: [],
         depends_on: ["warm-pool"],
         ticket_concurrency: 1,
+        ticket_stage: "ci_testing",
         config: %{},
         inserted_at: now,
         updated_at: now
@@ -170,6 +175,7 @@ defmodule Agents.Repo.Migrations.CreatePipelineConfigs do
         triggers: ["on_merge_window"],
         depends_on: ["test"],
         ticket_concurrency: 0,
+        ticket_stage: "merge_queue",
         config: %{
           "batch" => %{"size" => 10, "branch" => "main"},
           "merge" => %{"method" => "merge"}
@@ -187,6 +193,7 @@ defmodule Agents.Repo.Migrations.CreatePipelineConfigs do
         triggers: [],
         depends_on: ["merge-queue"],
         ticket_concurrency: 1,
+        ticket_stage: "deployed",
         config: %{},
         inserted_at: now,
         updated_at: now
@@ -307,6 +314,8 @@ defmodule Agents.Repo.Migrations.CreatePipelineConfigs do
         on: "passed",
         to_stage: "test",
         reason: nil,
+        ticket_stage_override: "ci_testing",
+        ticket_reason: nil,
         params: %{},
         inserted_at: now,
         updated_at: now
@@ -318,6 +327,8 @@ defmodule Agents.Repo.Migrations.CreatePipelineConfigs do
         on: "passed",
         to_stage: "merge-queue",
         reason: nil,
+        ticket_stage_override: "merge_queue",
+        ticket_reason: nil,
         params: %{},
         inserted_at: now,
         updated_at: now
@@ -329,6 +340,8 @@ defmodule Agents.Repo.Migrations.CreatePipelineConfigs do
         on: "passed",
         to_stage: "deploy",
         reason: nil,
+        ticket_stage_override: "deployed",
+        ticket_reason: nil,
         params: %{},
         inserted_at: now,
         updated_at: now
