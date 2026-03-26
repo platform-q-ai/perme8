@@ -1,7 +1,7 @@
 defmodule Agents.Pipeline.Application.PipelineConfigMapper do
   @moduledoc false
 
-  alias Agents.Pipeline.Domain.Entities.{Gate, PipelineConfig, Stage, Step}
+  alias Agents.Pipeline.Domain.Entities.{Gate, PipelineConfig, Stage, Step, Transition}
 
   @spec to_root_map(PipelineConfig.t()) :: map()
   def to_root_map(config) do
@@ -46,6 +46,17 @@ defmodule Agents.Pipeline.Application.PipelineConfigMapper do
             depends_on: stage.depends_on || [],
             ticket_concurrency: stage.ticket_concurrency,
             config: stage.config || %{},
+            transitions:
+              Enum.with_index(stage.transitions || [])
+              |> Enum.map(fn {transition, transition_position} ->
+                %{
+                  position: transition_position,
+                  on: transition.on,
+                  to_stage: transition.to_stage,
+                  reason: transition.reason,
+                  params: transition.params || %{}
+                }
+              end),
             steps:
               Enum.with_index(stage.steps)
               |> Enum.map(fn {step, step_position} ->
@@ -96,6 +107,7 @@ defmodule Agents.Pipeline.Application.PipelineConfigMapper do
       "triggers" => stage.triggers || [],
       "depends_on" => stage.depends_on || [],
       "ticket_concurrency" => stage.ticket_concurrency,
+      "transitions" => Enum.map(stage.transitions || [], &transition_to_map/1),
       "steps" => Enum.map(stage.steps, &step_to_map/1),
       "gates" => Enum.map(stage.gates, &gate_to_map/1)
     }
@@ -127,6 +139,10 @@ defmodule Agents.Pipeline.Application.PipelineConfigMapper do
       depends_on: stage.depends_on || [],
       ticket_concurrency: stage.ticket_concurrency,
       config: stage.config || %{},
+      transitions:
+        (stage.transitions || [])
+        |> Enum.sort_by(& &1.position)
+        |> Enum.map(&transition_from_record/1),
       steps:
         stage.steps
         |> Enum.sort_by(& &1.position)
@@ -155,6 +171,22 @@ defmodule Agents.Pipeline.Application.PipelineConfigMapper do
       type: gate.type,
       required: gate.required,
       params: gate.params || %{}
+    })
+  end
+
+  defp transition_to_map(transition) do
+    Map.merge(
+      %{"on" => transition.on, "to_stage" => transition.to_stage, "reason" => transition.reason},
+      transition.params || %{}
+    )
+  end
+
+  defp transition_from_record(transition) do
+    Transition.new(%{
+      on: transition.on,
+      to_stage: transition.to_stage,
+      reason: transition.reason,
+      params: transition.params || %{}
     })
   end
 end

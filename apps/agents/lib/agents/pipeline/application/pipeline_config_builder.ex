@@ -1,7 +1,7 @@
 defmodule Agents.Pipeline.Application.PipelineConfigBuilder do
   @moduledoc false
 
-  alias Agents.Pipeline.Domain.Entities.{Gate, PipelineConfig, Stage, Step}
+  alias Agents.Pipeline.Domain.Entities.{Gate, PipelineConfig, Stage, Step, Transition}
 
   @spec build(map()) :: {:ok, PipelineConfig.t()} | {:error, [String.t()]}
   def build(raw) when is_map(raw) do
@@ -90,6 +90,23 @@ defmodule Agents.Pipeline.Application.PipelineConfigBuilder do
   defp build_gates(_, stage_path, errors),
     do: {[], errors ++ ["#{stage_path}.gates must be a list"]}
 
+  defp build_transitions(nil, _stage_path, index, stages_raw, errors),
+    do: {default_transitions(index, stages_raw), errors}
+
+  defp build_transitions(raw, stage_path, _index, _stages_raw, errors) when is_list(raw) do
+    Enum.with_index(raw)
+    |> Enum.reduce({[], errors}, fn {item, index}, {transitions, acc_errors} ->
+      case build_transition(item, "#{stage_path}.transitions[#{index}]") do
+        {:ok, transition} -> {[transition | transitions], acc_errors}
+        {:error, item_errors} -> {transitions, acc_errors ++ item_errors}
+      end
+    end)
+    |> then(fn {transitions, acc_errors} -> {Enum.reverse(transitions), acc_errors} end)
+  end
+
+  defp build_transitions(_, stage_path, _index, _stages_raw, errors),
+    do: {[], errors ++ ["#{stage_path}.transitions must be a list when present"]}
+
   defp build_stage(item, path, index, stages_raw) when is_map(item) do
     id = fetch(item, "id")
     type = fetch(item, "type")
@@ -107,7 +124,8 @@ defmodule Agents.Pipeline.Application.PipelineConfigBuilder do
         "depends_on",
         "ticket_concurrency",
         "steps",
-        "gates"
+        "gates",
+        "transitions"
       ])
 
     errors = []
@@ -127,6 +145,9 @@ defmodule Agents.Pipeline.Application.PipelineConfigBuilder do
     {steps, errors} = build_steps(fetch(item, "steps"), path, errors)
     {gates, errors} = build_gates(fetch(item, "gates"), path, errors)
 
+    {transitions, errors} =
+      build_transitions(fetch(item, "transitions"), path, index, stages_raw, errors)
+
     build_result(errors, fn ->
       Stage.new(%{
         id: id,
@@ -137,7 +158,8 @@ defmodule Agents.Pipeline.Application.PipelineConfigBuilder do
         ticket_concurrency: ticket_concurrency,
         config: stage_config,
         steps: steps,
-        gates: gates
+        gates: gates,
+        transitions: transitions
       })
     end)
   end
@@ -193,6 +215,28 @@ defmodule Agents.Pipeline.Application.PipelineConfigBuilder do
   end
 
   defp build_gate(_, path), do: {:error, ["#{path} must be a map"]}
+
+  defp build_transition(item, path) when is_map(item) do
+    on = fetch(item, "on")
+    to_stage = fetch(item, "to_stage")
+    reason = fetch(item, "reason")
+
+    errors = []
+    errors = maybe_add_type_error(errors, on, "#{path}.on", &is_binary/1, "must be a string")
+    errors = maybe_add_optional_string_error(errors, to_stage, "#{path}.to_stage")
+    errors = maybe_add_optional_string_error(errors, reason, "#{path}.reason")
+
+    build_result(errors, fn ->
+      Transition.new(%{
+        on: on,
+        to_stage: to_stage,
+        reason: reason,
+        params: Map.drop(item, ["on", "to_stage", "reason"])
+      })
+    end)
+  end
+
+  defp build_transition(_, path), do: {:error, ["#{path} must be a map"]}
 
   defp build_result([], builder), do: {:ok, builder.()}
   defp build_result(errors, _builder), do: {:error, errors}
@@ -277,7 +321,8 @@ defmodule Agents.Pipeline.Application.PipelineConfigBuilder do
         else: []
 
     unknown_dependency_errors = dependency_errors(stages)
-    root_count_error ++ unknown_dependency_errors
+    unknown_transition_errors = transition_errors(stages)
+    root_count_error ++ unknown_dependency_errors ++ unknown_transition_errors
   end
 
   defp dependency_errors(stages) do
@@ -292,6 +337,34 @@ defmodule Agents.Pipeline.Application.PipelineConfigBuilder do
         end
       end)
     end)
+  end
+
+  defp transition_errors(stages) do
+    stage_ids = MapSet.new(stages, & &1.id)
+
+    Enum.flat_map(stages, fn stage ->
+      Enum.flat_map(stage.transitions || [], fn transition ->
+        cond do
+          is_nil(transition.to_stage) ->
+            []
+
+          MapSet.member?(stage_ids, transition.to_stage) ->
+            []
+
+          true ->
+            [
+              "pipeline stage #{stage.id} transition #{transition.on} points to unknown stage #{transition.to_stage}"
+            ]
+        end
+      end)
+    end)
+  end
+
+  defp default_transitions(index, stages_raw) do
+    case Enum.at(stages_raw, index + 1) do
+      nil -> []
+      next_stage -> [Transition.new(%{on: "passed", to_stage: fetch(next_stage, "id")})]
+    end
   end
 
   defp fetch(map, key) when is_map(map) do

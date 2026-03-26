@@ -10,7 +10,8 @@ defmodule Agents.Pipeline.Infrastructure.Repositories.PipelineConfigRepository d
     PipelineConfigSchema,
     PipelineGateSchema,
     PipelineStageSchema,
-    PipelineStepSchema
+    PipelineStepSchema,
+    PipelineTransitionSchema
   }
 
   alias Agents.Repo
@@ -89,6 +90,7 @@ defmodule Agents.Pipeline.Infrastructure.Repositories.PipelineConfigRepository d
              %PipelineStageSchema{}
              |> PipelineStageSchema.changeset(stage_attrs)
              |> repo.insert(),
+           :ok <- insert_transitions(repo, stage.id, attrs.transitions),
            :ok <- insert_steps(repo, stage.id, attrs.steps),
            :ok <- insert_gates(repo, stage.id, attrs.gates) do
         {:cont, :ok}
@@ -106,6 +108,19 @@ defmodule Agents.Pipeline.Infrastructure.Repositories.PipelineConfigRepository d
            |> PipelineStepSchema.changeset(attrs)
            |> repo.insert() do
         {:ok, _step} -> {:cont, :ok}
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
+  end
+
+  defp insert_transitions(repo, pipeline_stage_id, transitions) do
+    Enum.reduce_while(transitions, :ok, fn attrs, _acc ->
+      attrs = Map.put(attrs, :pipeline_stage_id, pipeline_stage_id)
+
+      case %PipelineTransitionSchema{}
+           |> PipelineTransitionSchema.changeset(attrs)
+           |> repo.insert() do
+        {:ok, _transition} -> {:cont, :ok}
         {:error, reason} -> {:halt, {:error, reason}}
       end
     end)
@@ -135,10 +150,13 @@ defmodule Agents.Pipeline.Infrastructure.Repositories.PipelineConfigRepository d
     steps_query = from(step in PipelineStepSchema, order_by: step.position)
     gates_query = from(gate in PipelineGateSchema, order_by: gate.position)
 
+    transitions_query =
+      from(transition in PipelineTransitionSchema, order_by: transition.position)
+
     stages_query =
       from(stage in PipelineStageSchema,
         order_by: stage.position,
-        preload: [steps: ^steps_query, gates: ^gates_query]
+        preload: [steps: ^steps_query, gates: ^gates_query, transitions: ^transitions_query]
       )
 
     repo.preload(config, stages: stages_query)

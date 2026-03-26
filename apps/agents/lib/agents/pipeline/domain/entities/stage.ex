@@ -3,7 +3,7 @@ defmodule Agents.Pipeline.Domain.Entities.Stage do
   Value object representing a pipeline stage.
   """
 
-  alias Agents.Pipeline.Domain.Entities.{Gate, Step}
+  alias Agents.Pipeline.Domain.Entities.{Gate, Step, Transition}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -14,7 +14,8 @@ defmodule Agents.Pipeline.Domain.Entities.Stage do
           ticket_concurrency: non_neg_integer() | nil,
           config: map(),
           steps: [Step.t()],
-          gates: [Gate.t()]
+          gates: [Gate.t()],
+          transitions: [Transition.t()]
         }
 
   defstruct [
@@ -26,7 +27,8 @@ defmodule Agents.Pipeline.Domain.Entities.Stage do
     depends_on: [],
     config: %{},
     steps: [],
-    gates: []
+    gates: [],
+    transitions: []
   ]
 
   @doc "Builds a stage value object from attributes."

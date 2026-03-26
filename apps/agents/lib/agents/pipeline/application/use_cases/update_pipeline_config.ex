@@ -93,7 +93,7 @@ defmodule Agents.Pipeline.Application.UseCases.UpdatePipelineConfig do
       existing =
         (Enum.find(existing_stages, &(Map.get(stringify_keys(&1), "id") == stage_id)) || %{})
         |> stringify_keys()
-        |> Map.drop(["depends_on", "triggers", "ticket_concurrency"])
+        |> Map.drop(["depends_on", "triggers", "ticket_concurrency", "transitions"])
 
       merge_stage(existing, stage_update)
     end)

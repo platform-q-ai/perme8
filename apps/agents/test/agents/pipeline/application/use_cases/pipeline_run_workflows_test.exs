@@ -119,6 +119,7 @@ defmodule Agents.Pipeline.Application.UseCases.PipelineRunWorkflowsTest do
               "schedule" => %{"cron" => "*/5 * * * *"},
               "triggers" => ["on_ticket_play", "on_warm_pool"],
               "ticket_concurrency" => 1,
+              "transitions" => [%{"on" => "passed", "to_stage" => "test"}],
               "warm_pool" => %{
                 "target_count" => 2,
                 "image" => "ghcr.io/platform-q-ai/perme8-runtime:latest",
@@ -132,6 +133,9 @@ defmodule Agents.Pipeline.Application.UseCases.PipelineRunWorkflowsTest do
               "id" => "test",
               "type" => "verification",
               "triggers" => ["on_session_complete", "on_pull_request"],
+              "transitions" => [
+                %{"on" => "failed", "to_stage" => "warm-pool", "reason" => "local_checks_failed"}
+              ],
               "steps" => [%{"name" => "unit-tests", "run" => "mix test", "depends_on" => []}]
             },
             %{
@@ -140,6 +144,7 @@ defmodule Agents.Pipeline.Application.UseCases.PipelineRunWorkflowsTest do
               "schedule" => %{"cron" => "*/10 * * * *"},
               "triggers" => ["on_merge_window"],
               "ticket_concurrency" => 0,
+              "transitions" => [%{"on" => "passed", "to_stage" => "deploy"}],
               "steps" => [
                 %{"name" => "merge-batch", "run" => "scripts/merge_queue.sh", "depends_on" => []}
               ]
@@ -159,6 +164,7 @@ defmodule Agents.Pipeline.Application.UseCases.PipelineRunWorkflowsTest do
   setup do
     PipelineRunRepoStub.reset()
     EventBusStub.reset()
+    Process.delete({PipelineConfigRepoStub, :config})
 
     Process.put({SessionReopenerStub, :reopen}, fn payload ->
       send(self(), {:reopen_called, payload})
@@ -324,10 +330,85 @@ defmodule Agents.Pipeline.Application.UseCases.PipelineRunWorkflowsTest do
     assert run.stage_results["test"].status == :blocked
   end
 
+  test "run_stage follows failure transitions back to a recovery stage" do
+    {:ok, recovery_config} =
+      PipelineConfigBuilder.build(%{
+        "version" => 1,
+        "pipeline" => %{
+          "name" => "perme8-core",
+          "stages" => [
+            %{
+              "id" => "test",
+              "type" => "verification",
+              "triggers" => ["on_session_complete"],
+              "transitions" => [%{"on" => "failed", "to_stage" => "repair"}],
+              "steps" => [%{"name" => "unit-tests", "run" => "mix test", "depends_on" => []}]
+            },
+            %{
+              "id" => "repair",
+              "type" => "automation",
+              "steps" => [%{"name" => "repair", "run" => "scripts/repair.sh", "depends_on" => []}]
+            }
+          ]
+        }
+      })
+
+    Process.put({PipelineConfigRepoStub, :config}, recovery_config)
+
+    Process.put({StageExecutorStub, :execute}, fn stage, _context ->
+      if stage.id == "test" do
+        {:error, %{output: "tests failed", exit_code: 1, reason: :non_zero_exit, metadata: %{}}}
+      else
+        {:ok, %{output: "recovered", exit_code: 0, metadata: %{"steps" => []}}}
+      end
+    end)
+
+    {:ok, created} =
+      PipelineRunRepoStub.create_run(%{
+        trigger_type: "on_session_complete",
+        trigger_reference: "task-3",
+        task_id: Ecto.UUID.generate(),
+        remaining_stage_ids: ["test"],
+        stage_results: %{}
+      })
+
+    assert {:ok, run} =
+             RunStage.execute(created.id,
+               pipeline_run_repo: PipelineRunRepoStub,
+               stage_executor: StageExecutorStub,
+               gate_evaluator: GateEvaluatorStub,
+               task_context_provider: TaskContextProviderStub,
+               event_bus: EventBusStub,
+               session_reopener: SessionReopenerStub
+             )
+
+    assert run.status == "passed"
+    assert run.stage_results["test"].status == :failed
+    assert run.stage_results["repair"].status == :passed
+  end
+
   test "run_stage reopens the task when session-complete verification fails" do
     Process.put({StageExecutorStub, :execute}, fn _stage, _context ->
       {:error, %{output: "tests failed", exit_code: 1, reason: :non_zero_exit, metadata: %{}}}
     end)
+
+    {:ok, config_without_failure_transition} =
+      PipelineConfigBuilder.build(%{
+        "version" => 1,
+        "pipeline" => %{
+          "name" => "perme8-core",
+          "stages" => [
+            %{
+              "id" => "test",
+              "type" => "verification",
+              "triggers" => ["on_session_complete"],
+              "steps" => [%{"name" => "unit-tests", "run" => "mix test", "depends_on" => []}]
+            }
+          ]
+        }
+      })
+
+    Process.put({PipelineConfigRepoStub, :config}, config_without_failure_transition)
 
     task_id = Ecto.UUID.generate()
     user_id = Ecto.UUID.generate()
@@ -365,6 +446,24 @@ defmodule Agents.Pipeline.Application.UseCases.PipelineRunWorkflowsTest do
     Process.put({StageExecutorStub, :execute}, fn _stage, _context ->
       {:error, %{output: "tests failed", exit_code: 1, reason: :non_zero_exit, metadata: %{}}}
     end)
+
+    {:ok, config_without_failure_transition} =
+      PipelineConfigBuilder.build(%{
+        "version" => 1,
+        "pipeline" => %{
+          "name" => "perme8-core",
+          "stages" => [
+            %{
+              "id" => "test",
+              "type" => "verification",
+              "triggers" => ["on_session_complete"],
+              "steps" => [%{"name" => "unit-tests", "run" => "mix test", "depends_on" => []}]
+            }
+          ]
+        }
+      })
+
+    Process.put({PipelineConfigRepoStub, :config}, config_without_failure_transition)
 
     Process.put({SessionReopenerStub, :reopen}, fn _payload ->
       {:error, :session_resume_failed}

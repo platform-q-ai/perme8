@@ -257,4 +257,8 @@ config :agents,
 then gates evaluate and decide whether the stage result is `passed`, `blocked`, or `failed`.
 Required gates stop downstream progression until they pass or are explicitly overridden.
 
+**Stage transitions** -- transitions are first-class outcome-routing rules on each stage. They
+decide where the flow goes next on `passed`, `blocked`, or `failed`, which allows explicit
+loopbacks like `verify -> develop` without relying on stage list order.
+
 The exo-bdd config is at `apps/agents/test/exo-bdd-agents.config.ts`.

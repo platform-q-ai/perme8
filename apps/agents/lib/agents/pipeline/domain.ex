@@ -19,6 +19,7 @@ defmodule Agents.Pipeline.Domain do
       Entities.StageResult,
       Entities.Stage,
       Entities.Step,
+      Entities.Transition,
       Policies.PipelineLifecyclePolicy,
       Policies.PullRequestPolicy
     ]

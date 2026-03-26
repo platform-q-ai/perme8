@@ -27,6 +27,10 @@ defmodule Agents.Pipeline.Infrastructure.Schemas.PipelineStageSchema do
       foreign_key: :pipeline_stage_id
     )
 
+    has_many(:transitions, Agents.Pipeline.Infrastructure.Schemas.PipelineTransitionSchema,
+      foreign_key: :pipeline_stage_id
+    )
+
     timestamps(type: :utc_datetime)
   end
 

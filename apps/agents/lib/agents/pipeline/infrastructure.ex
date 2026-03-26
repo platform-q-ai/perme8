@@ -20,6 +20,7 @@ defmodule Agents.Pipeline.Infrastructure do
       Schemas.PipelineGateSchema,
       Schemas.PipelineStageSchema,
       Schemas.PipelineStepSchema,
+      Schemas.PipelineTransitionSchema,
       SessionReopener,
       StageExecutor,
       TaskContextProvider,

@@ -94,6 +94,7 @@ defmodule Agents.Pipeline.Application.UseCases.RunStage do
 
   defp persist_gate_outcome(run, stage, result, gate_outcome, deps, run_status, failure_reason) do
     stage_status = if(run_status == "passed", do: :passed, else: String.to_atom(run_status))
+    next_stage_ids = next_stage_ids(stage, run_status, run.remaining_stage_ids)
 
     stage_result =
       StageResult.new(%{
@@ -110,7 +111,7 @@ defmodule Agents.Pipeline.Application.UseCases.RunStage do
     attrs = %{
       status: run_status,
       current_stage_id: if(run_status == "passed", do: nil, else: stage.id),
-      remaining_stage_ids: run.remaining_stage_ids,
+      remaining_stage_ids: next_stage_ids,
       stage_results:
         run |> PipelineRun.record_stage_result(stage_result) |> PipelineRun.stage_results_to_map(),
       failure_reason: if(is_nil(failure_reason), do: nil, else: to_string(failure_reason))
@@ -128,6 +129,8 @@ defmodule Agents.Pipeline.Application.UseCases.RunStage do
   end
 
   defp handle_failure(run, stage, result, deps) do
+    next_stage_ids = next_stage_ids(stage, "failed", run.remaining_stage_ids)
+
     stage_result =
       StageResult.new(%{
         stage_id: stage.id,
@@ -143,7 +146,7 @@ defmodule Agents.Pipeline.Application.UseCases.RunStage do
     attrs = %{
       status: "failed",
       current_stage_id: stage.id,
-      remaining_stage_ids: run.remaining_stage_ids,
+      remaining_stage_ids: next_stage_ids,
       stage_results:
         run |> PipelineRun.record_stage_result(stage_result) |> PipelineRun.stage_results_to_map(),
       failure_reason: inspect(result.reason)
@@ -153,11 +156,27 @@ defmodule Agents.Pipeline.Application.UseCases.RunStage do
          :ok <- emit_stage_changed(deps.event_bus, run, "awaiting_result", "failed", stage.id) do
       failed_run = PipelineRun.from_schema(failed_schema)
 
-      if failed_run.trigger_type == "on_session_complete" do
-        reopen_failed_session(failed_run, deps)
+      if failed_run.remaining_stage_ids != [] do
+        do_execute(%{failed_run | status: "passed", current_stage_id: nil}, deps)
       else
-        {:ok, failed_run}
+        handle_failure_fallback(failed_run, deps)
       end
+    end
+  end
+
+  defp handle_failure_fallback(failed_run, deps) do
+    if failed_run.trigger_type == "on_session_complete" do
+      reopen_failed_session(failed_run, deps)
+    else
+      {:ok, failed_run}
+    end
+  end
+
+  defp next_stage_ids(stage, outcome, fallback_remaining) do
+    case Enum.find(stage.transitions || [], &(&1.on == outcome)) do
+      %{to_stage: nil} -> []
+      %{to_stage: to_stage} when is_binary(to_stage) -> [to_stage]
+      _ -> if(outcome == "passed", do: fallback_remaining, else: [])
     end
   end
 

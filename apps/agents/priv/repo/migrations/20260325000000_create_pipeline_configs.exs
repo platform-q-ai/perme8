@@ -79,6 +79,26 @@ defmodule Agents.Repo.Migrations.CreatePipelineConfigs do
 
     create(index(:pipeline_gates, [:pipeline_stage_id, :position]))
 
+    create table(:pipeline_transitions, primary_key: false) do
+      add(:id, :binary_id, primary_key: true)
+
+      add(
+        :pipeline_stage_id,
+        references(:pipeline_stages, type: :binary_id, on_delete: :delete_all),
+        null: false
+      )
+
+      add(:position, :integer, null: false)
+      add(:on, :string, null: false)
+      add(:to_stage, :string)
+      add(:reason, :string)
+      add(:params, :map, null: false, default: %{})
+
+      timestamps(type: :utc_datetime)
+    end
+
+    create(index(:pipeline_transitions, [:pipeline_stage_id, :position]))
+
     execute(&seed_default_pipeline/0, &delete_default_pipeline/0)
   end
 
@@ -274,6 +294,42 @@ defmodule Agents.Repo.Migrations.CreatePipelineConfigs do
         type: "manual_approval",
         required: true,
         params: %{"approvers" => ["release-managers"]},
+        inserted_at: now,
+        updated_at: now
+      }
+    ])
+
+    repo().insert_all("pipeline_transitions", [
+      %{
+        id: uuid(),
+        pipeline_stage_id: warm_pool_stage_id,
+        position: 0,
+        on: "passed",
+        to_stage: "test",
+        reason: nil,
+        params: %{},
+        inserted_at: now,
+        updated_at: now
+      },
+      %{
+        id: uuid(),
+        pipeline_stage_id: test_stage_id,
+        position: 0,
+        on: "passed",
+        to_stage: "merge-queue",
+        reason: nil,
+        params: %{},
+        inserted_at: now,
+        updated_at: now
+      },
+      %{
+        id: uuid(),
+        pipeline_stage_id: merge_queue_stage_id,
+        position: 0,
+        on: "passed",
+        to_stage: "deploy",
+        reason: nil,
+        params: %{},
         inserted_at: now,
         updated_at: now
       }

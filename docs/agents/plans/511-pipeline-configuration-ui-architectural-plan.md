@@ -57,6 +57,7 @@ Use a normalized editable payload in the UI and use case layers:
   - `triggers`
   - `depends_on`
   - `ticket_concurrency`
+  - `transitions`
   - `config`
   - `steps`
   - `gates`
@@ -68,6 +69,10 @@ Use a normalized editable payload in the UI and use case layers:
   - `timeout_seconds`
   - `retries`
   - `env`
+- each transition:
+  - `on`
+  - `to_stage`
+  - `reason`
 
 `UpdatePipelineConfig` should accept partial updates against this shape, merge them into the currently loaded config, validate/build the resulting aggregate, and only then persist the normalized records.
 
@@ -77,9 +82,10 @@ Use a normalized editable payload in the UI and use case layers:
 2. Convert the `PipelineConfig` struct tree into a plain editable map.
 3. Apply the partial update to that map with explicit merge helpers for:
    - root metadata
-   - stage list reorder/add/remove/update
-   - step list reorder/add/remove/update within a stage
-   - stage gate list reorder/add/remove/update within a stage
+    - stage list reorder/add/remove/update
+    - step list reorder/add/remove/update within a stage
+    - transition list reorder/add/remove/update within a stage
+    - stage gate list reorder/add/remove/update within a stage
 4. Validate/build the merged map into a `PipelineConfig` aggregate.
 5. If validation fails, return actionable errors and do not persist changes.
 6. If validation succeeds, persist the normalized config/stage/step/gate records in `Agents.Repo` and return the validated `PipelineConfig` plus a UI-ready projection.
@@ -111,6 +117,7 @@ This keeps one validation source of truth and guarantees the writer never persis
 - Reorder operations need stable UI-only ids so unsaved draft items can move safely before they have durable names.
 - `conditions` are mentioned in the ticket, but the current parser does not model them on `Step`. The plan should treat them as a new optional step field that must be added consistently to parser, writer, entity projection, and tests.
 - Gates now affect runtime progression, so editor changes to gates must preserve both ordering and required/blocking semantics.
+- Transitions now affect runtime routing, so editor changes to transitions must preserve valid target stages and avoid accidental infinite loops.
 
 ## RED / GREEN / REFACTOR Plan
 
