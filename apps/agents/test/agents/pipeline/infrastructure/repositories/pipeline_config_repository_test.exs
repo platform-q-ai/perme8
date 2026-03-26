@@ -44,7 +44,6 @@ defmodule Agents.Pipeline.Infrastructure.Repositories.PipelineConfigRepositoryTe
     schema = Repo.get_by!(PipelineConfigSchema, slug: PipelineConfigRepository.current_slug())
     assert schema.name == "repo-backed"
     assert schema.version == 1
-    assert schema.merge_queue == %{}
 
     assert {:ok, fetched} = PipelineConfigRepository.get_current()
     assert fetched.name == "repo-backed"

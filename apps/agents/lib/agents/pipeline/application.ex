@@ -17,7 +17,6 @@ defmodule Agents.Pipeline.Application do
       PipelineConfigStore,
       PipelineRuntimeConfig,
       TicketFacingStageCatalog,
-      UseCases.ManageMergeQueue,
       UseCases.CommentOnPullRequest,
       UseCases.ClosePullRequest,
       UseCases.CreatePullRequest,

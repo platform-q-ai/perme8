@@ -12,7 +12,6 @@ defmodule Agents.OTPApp do
   alias Agents.Sessions.Infrastructure.QueueOrchestratorSupervisor
   alias Agents.Sessions.Infrastructure.Subscribers.TicketSessionTerminationHandler
   alias Agents.Sessions.Infrastructure.TaskRunnerSupervisor
-  alias Agents.Pipeline.Infrastructure.MergeQueueWorker
   alias Agents.Pipeline.Infrastructure.PipelineEventHandler
   alias Agents.Pipeline.Infrastructure.PipelineScheduler
   alias Agents.Tickets.Infrastructure.Subscribers.GithubTicketPushHandler
@@ -33,7 +32,6 @@ defmodule Agents.OTPApp do
           QueueOrchestratorSupervisor,
           TicketSessionTerminationHandler,
           TicketSyncServer,
-          MergeQueueWorker,
           PipelineEventHandler,
           GithubTicketPushHandler
         ] ++ pipeline_scheduler_children() ++ mcp_children() ++ mcp_http_children()

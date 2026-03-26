@@ -448,7 +448,6 @@ defmodule AgentsWeb.DashboardLive.TicketLifecycleFixtures do
     %{
       "version" => 1,
       "name" => "perme8-core",
-      "merge_queue" => %{"strategy" => "merge_queue"},
       "stages" => [
         %{
           "id" => "ready",
@@ -514,6 +513,25 @@ defmodule AgentsWeb.DashboardLive.TicketLifecycleFixtures do
             %{
               "name" => "prestart",
               "run" => "scripts/warm_pool.sh",
+              "retries" => 0,
+              "env" => %{},
+              "depends_on" => []
+            }
+          ],
+          "gates" => []
+        },
+        %{
+          "id" => "merge-queue",
+          "label" => "Merge Queue",
+          "type" => "automation",
+          "schedule" => %{"cron" => "*/10 * * * *"},
+          "triggers" => ["on_merge_window"],
+          "depends_on" => ["in-progress"],
+          "ticket_concurrency" => 0,
+          "steps" => [
+            %{
+              "name" => "merge-batch",
+              "run" => "scripts/merge_queue.sh",
               "retries" => 0,
               "env" => %{},
               "depends_on" => []

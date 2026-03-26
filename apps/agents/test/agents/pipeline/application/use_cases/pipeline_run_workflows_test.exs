@@ -104,11 +104,6 @@ defmodule Agents.Pipeline.Application.UseCases.PipelineRunWorkflowsTest do
         "version" => 1,
         "pipeline" => %{
           "name" => "perme8-core",
-          "merge_queue" => %{
-            "strategy" => "merge_queue",
-            "required_stages" => ["test"],
-            "required_review" => true
-          },
           "stages" => [
             %{
               "id" => "warm-pool",
@@ -130,6 +125,16 @@ defmodule Agents.Pipeline.Application.UseCases.PipelineRunWorkflowsTest do
               "type" => "verification",
               "triggers" => ["on_session_complete", "on_pull_request"],
               "steps" => [%{"name" => "unit-tests", "run" => "mix test", "depends_on" => []}]
+            },
+            %{
+              "id" => "merge-queue",
+              "type" => "automation",
+              "schedule" => %{"cron" => "*/10 * * * *"},
+              "triggers" => ["on_merge_window"],
+              "ticket_concurrency" => 0,
+              "steps" => [
+                %{"name" => "merge-batch", "run" => "scripts/merge_queue.sh", "depends_on" => []}
+              ]
             },
             %{
               "id" => "deploy",

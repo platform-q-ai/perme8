@@ -53,7 +53,7 @@ defmodule Agents.Pipeline.Infrastructure.Repositories.PipelineConfigRepository d
   end
 
   defp upsert_root(repo, attrs) do
-    root_attrs = Map.take(attrs, [:slug, :version, :name, :description, :merge_queue])
+    root_attrs = Map.take(attrs, [:slug, :version, :name, :description])
 
     case repo.get_by(PipelineConfigSchema, slug: @current_slug) do
       nil ->

@@ -11,7 +11,6 @@ defmodule Agents.Pipeline.Application.UseCases.GetPipelineKanbanTest do
          version: 1,
          name: "test",
          description: nil,
-         merge_queue: %{"strategy" => "merge_queue"},
          stages: [
            %Agents.Pipeline.Domain.Entities.Stage{
              id: "warm-pool",
@@ -23,6 +22,15 @@ defmodule Agents.Pipeline.Application.UseCases.GetPipelineKanbanTest do
            %Agents.Pipeline.Domain.Entities.Stage{
              id: "test",
              type: "verification",
+             steps: [],
+             gates: []
+           },
+           %Agents.Pipeline.Domain.Entities.Stage{
+             id: "merge-queue",
+             type: "automation",
+             schedule: %{"cron" => "*/10 * * * *"},
+             triggers: ["on_merge_window"],
+             ticket_concurrency: 0,
              steps: [],
              gates: []
            },

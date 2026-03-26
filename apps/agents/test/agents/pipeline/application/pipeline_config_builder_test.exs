@@ -6,7 +6,7 @@ defmodule Agents.Pipeline.Application.PipelineConfigBuilderTest do
   test "builds a pipeline config from normalized map data" do
     assert {:ok, config} = PipelineConfigBuilder.build(base_map())
     assert config.name == "perme8-core"
-    assert Enum.map(config.stages, & &1.id) == ["warm-pool", "test", "deploy"]
+    assert Enum.map(config.stages, & &1.id) == ["warm-pool", "test", "merge-queue", "deploy"]
   end
 
   test "returns validation errors for invalid nested step data" do
@@ -29,11 +29,6 @@ defmodule Agents.Pipeline.Application.PipelineConfigBuilderTest do
       "version" => 1,
       "pipeline" => %{
         "name" => "perme8-core",
-        "merge_queue" => %{
-          "strategy" => "merge_queue",
-          "required_stages" => ["test"],
-          "required_review" => true
-        },
         "stages" => [
           %{
             "id" => "warm-pool",
@@ -54,6 +49,16 @@ defmodule Agents.Pipeline.Application.PipelineConfigBuilderTest do
             "id" => "test",
             "type" => "verification",
             "steps" => [%{"name" => "unit-tests", "run" => "mix test", "depends_on" => []}]
+          },
+          %{
+            "id" => "merge-queue",
+            "type" => "automation",
+            "schedule" => %{"cron" => "*/10 * * * *"},
+            "triggers" => ["on_merge_window"],
+            "ticket_concurrency" => 0,
+            "steps" => [
+              %{"name" => "merge-batch", "run" => "scripts/merge_queue.sh", "depends_on" => []}
+            ]
           },
           %{
             "id" => "deploy",

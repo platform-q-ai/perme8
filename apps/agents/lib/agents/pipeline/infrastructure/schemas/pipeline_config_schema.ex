@@ -12,7 +12,6 @@ defmodule Agents.Pipeline.Infrastructure.Schemas.PipelineConfigSchema do
     field(:version, :integer)
     field(:name, :string)
     field(:description, :string)
-    field(:merge_queue, :map, default: %{})
 
     has_many(:stages, Agents.Pipeline.Infrastructure.Schemas.PipelineStageSchema,
       foreign_key: :pipeline_config_id
@@ -23,8 +22,8 @@ defmodule Agents.Pipeline.Infrastructure.Schemas.PipelineConfigSchema do
 
   def changeset(config, attrs) do
     config
-    |> cast(attrs, [:slug, :version, :name, :description, :merge_queue])
-    |> validate_required([:slug, :version, :name, :merge_queue])
+    |> cast(attrs, [:slug, :version, :name, :description])
+    |> validate_required([:slug, :version, :name])
     |> unique_constraint(:slug)
   end
 end

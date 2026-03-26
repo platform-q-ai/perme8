@@ -10,20 +10,20 @@
 
 ## Phases
 
-- [x] RED: add merge queue policy coverage for readiness, required stages, and review approval
-- [x] GREEN: implement `MergeQueuePolicy` and YAML-backed `PipelineConfig.merge_queue`
+- [x] RED: add merge queue stage coverage for scheduled entry, batching config, and lifecycle exposure
+- [x] GREEN: model merge queue as a normal persisted pipeline stage
 - [x] RED: add orchestration tests for queued, merged, and blocked pull requests
-- [x] GREEN: implement `ManageMergeQueue`, queue state management, and pre-merge validation orchestration
-- [x] RED: add merge queue worker tests for ordering and failure handling
-- [x] GREEN: implement `MergeQueueWorker` and wire it into the agents supervisor
-- [x] RED: add kanban and YAML parser tests for merge queue exposure
+- [x] GREEN: keep merge-window batching and merge execution in generic stage/step flow
+- [x] RED: add scheduled merge-stage tests for ordering and failure handling
+- [x] GREEN: remove dedicated merge queue worker runtime state
+- [x] RED: add kanban and pipeline-config tests for merge queue exposure
 - [x] GREEN: surface `Merge Queue` in ticket-facing stage catalogs and ticket lifecycle helpers
-- [x] REFACTOR: keep queue integration behind the `Agents.Pipeline` facade and repository behaviours
+- [x] REFACTOR: keep merge queue behavior behind the generic `Agents.Pipeline` flow model
 
 ## Integration Points
 
-- `PipelineConfig` and the normalized pipeline config loader carry merge queue policy from the persisted pipeline configuration
-- `ManageMergeQueue` composes PR lookup, pipeline run history, queue state, validation reruns, and merge execution
-- `MergeQueueWorker` owns in-memory queue ordering and active validation ownership
+- `PipelineConfig` and the normalized pipeline config loader carry merge queue stage config from the persisted pipeline configuration
+- Merge-window batching and merge execution are expressed through normal stage config plus executable steps
+- Stage concurrency and lifecycle state own queueing behavior instead of a dedicated in-memory merge queue worker
 - `TicketFacingStageCatalog` and ticket lifecycle helpers expose the `merge_queue` stage to the kanban
 - `PipelineRunRepository` lists PR-linked verification history for readiness checks

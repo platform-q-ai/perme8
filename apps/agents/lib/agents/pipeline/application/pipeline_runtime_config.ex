@@ -11,7 +11,6 @@ defmodule Agents.Pipeline.Application.PipelineRuntimeConfig do
   @default_session_reopener :"Elixir.Agents.Pipeline.Infrastructure.SessionReopener"
   @default_task_context_provider :"Elixir.Agents.Pipeline.Infrastructure.TaskContextProvider"
   @default_pipeline_config_repository :"Elixir.Agents.Pipeline.Infrastructure.Repositories.PipelineConfigRepository"
-  @default_merge_queue_worker :"Elixir.Agents.Pipeline.Infrastructure.MergeQueueWorker"
   @default_pipeline_scheduler_enabled false
   @default_event_bus Perme8.Events.EventBus
   @default_emit_pipeline_events true
@@ -72,12 +71,6 @@ defmodule Agents.Pipeline.Application.PipelineRuntimeConfig do
       :pipeline_config_repository,
       @default_pipeline_config_repository
     )
-  end
-
-  @doc "Returns the configured merge queue worker implementation."
-  @spec merge_queue_worker() :: module()
-  def merge_queue_worker do
-    Application.get_env(:agents, :pipeline_merge_queue_worker, @default_merge_queue_worker)
   end
 
   @doc "Returns whether the pipeline scheduler should start."

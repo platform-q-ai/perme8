@@ -200,7 +200,7 @@ defmodule AgentsWeb.DashboardLive.PipelineEditorHandlers do
 
         updates =
           draft
-          |> Map.take(["name", "description", "merge_queue", "stages"])
+          |> Map.take(["name", "description", "stages"])
           |> Map.put("replace_stages", true)
 
         case Agents.update_pipeline_config(updates) do

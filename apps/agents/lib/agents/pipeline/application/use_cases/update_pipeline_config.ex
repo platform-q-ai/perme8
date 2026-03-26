@@ -61,7 +61,7 @@ defmodule Agents.Pipeline.Application.UseCases.UpdatePipelineConfig do
   end
 
   defp apply_root_updates(pipeline, updates) do
-    root_keys = ["name", "description", "merge_queue"]
+    root_keys = ["name", "description"]
 
     Enum.reduce(root_keys, pipeline, fn key, acc ->
       if Map.has_key?(updates, key), do: Map.put(acc, key, updates[key]), else: acc
@@ -198,7 +198,6 @@ defmodule Agents.Pipeline.Application.UseCases.UpdatePipelineConfig do
       "version" => version,
       "name" => Map.get(pipeline, "name"),
       "description" => Map.get(pipeline, "description"),
-      "merge_queue" => Map.get(pipeline, "merge_queue", %{}),
       "stages" => Map.get(pipeline, "stages", [])
     }
   end

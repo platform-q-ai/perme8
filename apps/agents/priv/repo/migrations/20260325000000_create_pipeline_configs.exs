@@ -8,7 +8,6 @@ defmodule Agents.Repo.Migrations.CreatePipelineConfigs do
       add(:version, :integer, null: false)
       add(:name, :string, null: false)
       add(:description, :text)
-      add(:merge_queue, :map, null: false, default: %{})
 
       timestamps(type: :utc_datetime)
     end
@@ -88,6 +87,7 @@ defmodule Agents.Repo.Migrations.CreatePipelineConfigs do
     pipeline_id = uuid()
     warm_pool_stage_id = uuid()
     test_stage_id = uuid()
+    merge_queue_stage_id = uuid()
     deploy_stage_id = uuid()
 
     repo().insert_all("pipeline_configs", [
@@ -97,15 +97,6 @@ defmodule Agents.Repo.Migrations.CreatePipelineConfigs do
         version: 1,
         name: "perme8-core",
         description: "Core CI/CD and runtime warm-pool orchestration pipeline.",
-        merge_queue: %{
-          "strategy" => "merge_queue",
-          "required_stages" => ["test"],
-          "required_review" => true,
-          "pre_merge_validation" => %{
-            "strategy" => "re_run_required_stages",
-            "use_existing_container" => true
-          }
-        },
         inserted_at: now,
         updated_at: now
       }
@@ -150,14 +141,31 @@ defmodule Agents.Repo.Migrations.CreatePipelineConfigs do
         updated_at: now
       },
       %{
-        id: deploy_stage_id,
+        id: merge_queue_stage_id,
         pipeline_config_id: pipeline_id,
         position: 2,
+        stage_id: "merge-queue",
+        type: "automation",
+        schedule: %{"cron" => "*/10 * * * *"},
+        triggers: ["on_merge_window"],
+        depends_on: ["test"],
+        ticket_concurrency: 0,
+        config: %{
+          "batch" => %{"size" => 10, "branch" => "main"},
+          "merge" => %{"method" => "merge"}
+        },
+        inserted_at: now,
+        updated_at: now
+      },
+      %{
+        id: deploy_stage_id,
+        pipeline_config_id: pipeline_id,
+        position: 3,
         stage_id: "deploy",
         type: "automation",
         schedule: nil,
         triggers: [],
-        depends_on: ["test"],
+        depends_on: ["merge-queue"],
         ticket_concurrency: 1,
         config: %{},
         inserted_at: now,

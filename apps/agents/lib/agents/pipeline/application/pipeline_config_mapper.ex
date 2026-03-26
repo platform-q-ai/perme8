@@ -10,7 +10,6 @@ defmodule Agents.Pipeline.Application.PipelineConfigMapper do
       "pipeline" => %{
         "name" => config.name,
         "description" => config.description,
-        "merge_queue" => config.merge_queue,
         "stages" => Enum.map(config.stages, &stage_to_map/1)
       }
     }
@@ -24,7 +23,6 @@ defmodule Agents.Pipeline.Application.PipelineConfigMapper do
       "version" => config.version,
       "name" => pipeline["name"],
       "description" => pipeline["description"],
-      "merge_queue" => pipeline["merge_queue"],
       "stages" => pipeline["stages"]
     }
   end
@@ -36,7 +34,6 @@ defmodule Agents.Pipeline.Application.PipelineConfigMapper do
       version: config.version,
       name: config.name,
       description: config.description,
-      merge_queue: config.merge_queue || %{},
       stages:
         Enum.with_index(config.stages)
         |> Enum.map(fn {stage, position} ->
@@ -84,7 +81,6 @@ defmodule Agents.Pipeline.Application.PipelineConfigMapper do
       version: record.version,
       name: record.name,
       description: record.description,
-      merge_queue: record.merge_queue || %{},
       stages:
         record.stages
         |> Enum.sort_by(& &1.position)

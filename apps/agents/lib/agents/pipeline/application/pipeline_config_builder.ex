@@ -25,14 +25,12 @@ defmodule Agents.Pipeline.Application.PipelineConfigBuilder do
     name = fetch(pipeline, "name")
     description = fetch(pipeline, "description")
     stages_raw = fetch(pipeline, "stages")
-    merge_queue_raw = fetch(pipeline, "merge_queue") || %{}
 
     errors = []
     errors = maybe_add_type_error(errors, name, "pipeline.name", &is_binary/1, "must be a string")
     errors = maybe_add_optional_string_error(errors, description, "pipeline.description")
 
     {stages, errors} = build_stages(stages_raw, errors)
-    {merge_queue, errors} = build_merge_queue(merge_queue_raw, errors)
     errors = errors ++ flow_errors(stages)
 
     if errors == [] do
@@ -41,8 +39,7 @@ defmodule Agents.Pipeline.Application.PipelineConfigBuilder do
          version: version,
          name: name,
          description: if(is_binary(description), do: description, else: nil),
-         stages: stages,
-         merge_queue: merge_queue
+         stages: stages
        })}
     else
       {:error, errors}
@@ -62,50 +59,6 @@ defmodule Agents.Pipeline.Application.PipelineConfigBuilder do
 
   defp build_stages(_, errors),
     do: {[], errors ++ ["pipeline.stages must be a non-empty list"]}
-
-  defp build_merge_queue(raw, errors) when raw in [%{}, nil], do: {%{}, errors}
-
-  defp build_merge_queue(raw, errors) when is_map(raw) do
-    strategy = fetch(raw, "strategy") || "disabled"
-    required_stages = fetch(raw, "required_stages") || []
-    required_review = Map.get(raw, "required_review", true)
-    pre_merge_validation = fetch(raw, "pre_merge_validation") || %{}
-
-    errors =
-      maybe_add_type_error(
-        errors,
-        strategy,
-        "pipeline.merge_queue.strategy",
-        &is_binary/1,
-        "must be a string"
-      )
-
-    errors =
-      maybe_add_string_list_error(errors, required_stages, "pipeline.merge_queue.required_stages")
-
-    errors =
-      maybe_add_boolean_error(errors, required_review, "pipeline.merge_queue.required_review")
-
-    errors =
-      maybe_add_type_error(
-        errors,
-        pre_merge_validation,
-        "pipeline.merge_queue.pre_merge_validation",
-        &is_map/1,
-        "must be a map"
-      )
-
-    merge_queue = %{
-      "strategy" => strategy,
-      "required_stages" => required_stages,
-      "required_review" => required_review,
-      "pre_merge_validation" => pre_merge_validation
-    }
-
-    {merge_queue, errors}
-  end
-
-  defp build_merge_queue(_, errors), do: {%{}, errors ++ ["pipeline.merge_queue must be a map"]}
 
   defp build_steps(raw, stage_path, errors) when is_list(raw) and raw != [] do
     Enum.with_index(raw)
