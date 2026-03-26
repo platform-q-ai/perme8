@@ -11,6 +11,7 @@ defmodule Agents.Pipeline.Application do
       Behaviours.StageExecutorBehaviour,
       Behaviours.TaskContextProviderBehaviour,
       Behaviours.GitDiffComputerBehaviour,
+      Behaviours.GateEvaluatorBehaviour,
       Behaviours.GitMergerBehaviour,
       PipelineConfigBuilder,
       PipelineConfigMapper,

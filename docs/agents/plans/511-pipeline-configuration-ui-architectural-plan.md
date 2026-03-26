@@ -33,7 +33,7 @@ Add a dashboard pipeline configuration editor that renders pipeline stages as ed
 
 - New domain-facing use case:
   - `Agents.Pipeline.Application.UseCases.UpdatePipelineConfig`
-- New normalized persistence schemas/repository for config, stages, steps, gates, and deploy targets
+- New normalized persistence schemas/repository for config, stages, steps, and gates
 - New facade delegates in `Agents.Pipeline` for loading editable config and saving updates
 - New dashboard component module:
   - `AgentsWeb.DashboardLive.Components.PipelineEditorComponents`
@@ -48,7 +48,6 @@ Use a normalized editable payload in the UI and use case layers:
   - `version`
   - `name`
   - `description`
-  - `merge_queue`
   - `stages`
 - each stage:
   - `client_id` (UI-only stable identifier for drag/reorder)
@@ -78,13 +77,12 @@ Use a normalized editable payload in the UI and use case layers:
 2. Convert the `PipelineConfig` struct tree into a plain editable map.
 3. Apply the partial update to that map with explicit merge helpers for:
    - root metadata
-   - deploy targets
    - stage list reorder/add/remove/update
    - step list reorder/add/remove/update within a stage
-   - warm pool nested config
+   - stage gate list reorder/add/remove/update within a stage
 4. Validate/build the merged map into a `PipelineConfig` aggregate.
 5. If validation fails, return actionable errors and do not persist changes.
-6. If validation succeeds, persist the normalized config/stage/step/gate/deploy-target records in `Agents.Repo` and return the validated `PipelineConfig` plus a UI-ready projection.
+6. If validation succeeds, persist the normalized config/stage/step/gate records in `Agents.Repo` and return the validated `PipelineConfig` plus a UI-ready projection.
 
 This keeps one validation source of truth and guarantees the writer never persists a config the parser would reject.
 
@@ -110,9 +108,9 @@ This keeps one validation source of truth and guarantees the writer never persis
 ## Risks and Ambiguities
 
 - The ticket asks for "kanban column order reflects the pipeline stage order", but the current kanban shows ticket lifecycle stages, not literal pipeline config stages. The implementation should align ordering only for the real pipeline-backed stages and avoid regressing the existing ticket-facing kanban behavior.
-- YAML formatting should be deterministic enough to avoid noisy diffs. The writer should preserve semantic ordering even if comments/whitespace are not preserved.
 - Reorder operations need stable UI-only ids so unsaved draft items can move safely before they have durable names.
 - `conditions` are mentioned in the ticket, but the current parser does not model them on `Step`. The plan should treat them as a new optional step field that must be added consistently to parser, writer, entity projection, and tests.
+- Gates now affect runtime progression, so editor changes to gates must preserve both ordering and required/blocking semantics.
 
 ## RED / GREEN / REFACTOR Plan
 

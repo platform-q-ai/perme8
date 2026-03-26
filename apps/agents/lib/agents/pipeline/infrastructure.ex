@@ -7,6 +7,7 @@ defmodule Agents.Pipeline.Infrastructure do
     exports: [
       ExoBddGitDiffComputer,
       ExoBddGitMerger,
+      GateEvaluator,
       GitCommandRunner,
       GitDiffComputer,
       GitMerger,

@@ -253,4 +253,8 @@ config :agents,
 `pipeline_scheduler_enabled` defaults to `false`. When enabled, the scheduler emits the
 `on_warm_pool` trigger on the configured cron cadence and the normal pipeline flow handles the rest.
 
+**Stage gates** -- gates are first-class stage-boundary progression checks. Steps execute first,
+then gates evaluate and decide whether the stage result is `passed`, `blocked`, or `failed`.
+Required gates stop downstream progression until they pass or are explicitly overridden.
+
 The exo-bdd config is at `apps/agents/test/exo-bdd-agents.config.ts`.

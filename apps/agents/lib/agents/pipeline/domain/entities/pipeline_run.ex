@@ -8,6 +8,7 @@ defmodule Agents.Pipeline.Domain.Entities.PipelineRun do
     "running_stage",
     "awaiting_result",
     "passed",
+    "blocked",
     "failed",
     "reopen_session"
   ]

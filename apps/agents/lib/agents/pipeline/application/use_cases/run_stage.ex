@@ -12,6 +12,7 @@ defmodule Agents.Pipeline.Application.UseCases.RunStage do
       Keyword.get(opts, :pipeline_run_repo, PipelineRuntimeConfig.pipeline_run_repository())
 
     stage_executor = Keyword.get(opts, :stage_executor, PipelineRuntimeConfig.stage_executor())
+    gate_evaluator = Keyword.get(opts, :gate_evaluator, PipelineRuntimeConfig.gate_evaluator())
     event_bus = Keyword.get(opts, :event_bus, PipelineRuntimeConfig.event_bus())
 
     session_reopener =
@@ -28,6 +29,7 @@ defmodule Agents.Pipeline.Application.UseCases.RunStage do
         stages: config.stages,
         repo_module: repo_module,
         stage_executor: stage_executor,
+        gate_evaluator: gate_evaluator,
         session_reopener: session_reopener,
         event_bus: event_bus,
         task_context_provider: task_context_provider,
@@ -48,7 +50,7 @@ defmodule Agents.Pipeline.Application.UseCases.RunStage do
       context = execution_context(awaiting, stage, deps)
 
       case deps.stage_executor.execute(stage, context) do
-        {:ok, result} -> handle_success(awaiting, stage, result, deps)
+        {:ok, result} -> handle_success(awaiting, stage, result, context, deps)
         {:error, result} -> handle_failure(awaiting, stage, result, deps)
       end
     else
@@ -57,36 +59,70 @@ defmodule Agents.Pipeline.Application.UseCases.RunStage do
     end
   end
 
-  defp handle_success(run, stage, result, deps) do
+  defp handle_success(run, stage, result, context, deps) do
+    gate_context = Map.put(context, "stage_execution", result.metadata || %{})
+
+    with {:ok, gate_outcome} <- deps.gate_evaluator.evaluate(stage, stage.gates, gate_context) do
+      case gate_outcome.status do
+        :passed ->
+          persist_gate_outcome(run, stage, result, gate_outcome, deps, "passed", nil)
+
+        :blocked ->
+          persist_gate_outcome(
+            run,
+            stage,
+            result,
+            gate_outcome,
+            deps,
+            "blocked",
+            gate_outcome.reason
+          )
+
+        :failed ->
+          persist_gate_outcome(
+            run,
+            stage,
+            result,
+            gate_outcome,
+            deps,
+            "failed",
+            gate_outcome.reason
+          )
+      end
+    end
+  end
+
+  defp persist_gate_outcome(run, stage, result, gate_outcome, deps, run_status, failure_reason) do
+    stage_status = if(run_status == "passed", do: :passed, else: String.to_atom(run_status))
+
     stage_result =
       StageResult.new(%{
         stage_id: stage.id,
-        status: :passed,
+        status: stage_status,
         output: result.output,
         exit_code: result.exit_code,
         started_at: DateTime.utc_now() |> DateTime.truncate(:second),
         completed_at: DateTime.utc_now() |> DateTime.truncate(:second),
-        metadata: result.metadata || %{}
+        failure_reason: if(is_nil(failure_reason), do: nil, else: to_string(failure_reason)),
+        metadata: Map.merge(result.metadata || %{}, gate_outcome.metadata || %{})
       })
 
     attrs = %{
-      status: "passed",
-      current_stage_id: nil,
+      status: run_status,
+      current_stage_id: if(run_status == "passed", do: nil, else: stage.id),
       remaining_stage_ids: run.remaining_stage_ids,
       stage_results:
         run |> PipelineRun.record_stage_result(stage_result) |> PipelineRun.stage_results_to_map(),
-      failure_reason: nil
+      failure_reason: if(is_nil(failure_reason), do: nil, else: to_string(failure_reason))
     }
 
-    with {:ok, passed_schema} <- deps.repo_module.update_run(run.id, attrs),
-         :ok <- emit_stage_changed(deps.event_bus, run, "awaiting_result", "passed", stage.id),
-         {:ok, passed_run} <- {:ok, PipelineRun.from_schema(passed_schema)} do
-      case passed_run.remaining_stage_ids do
-        [] ->
-          {:ok, passed_run}
-
-        [_next_stage_id | _] ->
-          do_execute(passed_run, deps)
+    with {:ok, schema} <- deps.repo_module.update_run(run.id, attrs),
+         :ok <- emit_stage_changed(deps.event_bus, run, "awaiting_result", run_status, stage.id),
+         {:ok, updated_run} <- {:ok, PipelineRun.from_schema(schema)} do
+      case {run_status, updated_run.remaining_stage_ids} do
+        {"passed", []} -> {:ok, updated_run}
+        {"passed", [_ | _]} -> do_execute(updated_run, deps)
+        _ -> {:ok, updated_run}
       end
     end
   end

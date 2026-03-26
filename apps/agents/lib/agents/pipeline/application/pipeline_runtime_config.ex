@@ -7,6 +7,7 @@ defmodule Agents.Pipeline.Application.PipelineRuntimeConfig do
   @default_pipeline_run_repository :"Elixir.Agents.Pipeline.Infrastructure.Repositories.PipelineRunRepository"
   @default_git_diff_computer :"Elixir.Agents.Pipeline.Infrastructure.GitDiffComputer"
   @default_git_merger :"Elixir.Agents.Pipeline.Infrastructure.GitMerger"
+  @default_gate_evaluator :"Elixir.Agents.Pipeline.Infrastructure.GateEvaluator"
   @default_stage_executor :"Elixir.Agents.Pipeline.Infrastructure.StageExecutor"
   @default_session_reopener :"Elixir.Agents.Pipeline.Infrastructure.SessionReopener"
   @default_task_context_provider :"Elixir.Agents.Pipeline.Infrastructure.TaskContextProvider"
@@ -37,6 +38,12 @@ defmodule Agents.Pipeline.Application.PipelineRuntimeConfig do
   @spec git_merger() :: module()
   def git_merger do
     Application.get_env(:agents, :pr_git_merger, @default_git_merger)
+  end
+
+  @doc "Returns the configured gate evaluator implementation."
+  @spec gate_evaluator() :: module()
+  def gate_evaluator do
+    Application.get_env(:agents, :pipeline_gate_evaluator, @default_gate_evaluator)
   end
 
   @doc "Returns the configured stage executor implementation."

@@ -10,6 +10,7 @@ defmodule Agents.Pipeline.Domain do
       Events.PullRequestMerged,
       Events.PullRequestUpdated,
       Entities.Gate,
+      Entities.GateResult,
       Entities.PipelineConfig,
       Entities.PipelineRun,
       Entities.PullRequest,

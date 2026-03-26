@@ -64,6 +64,14 @@ defmodule Agents.Pipeline.Application.UseCases.PipelineRunWorkflowsTest do
     def reset, do: Process.put({__MODULE__, :events}, [])
   end
 
+  defmodule GateEvaluatorStub do
+    def evaluate(stage, gates, context) do
+      Process.get({__MODULE__, :evaluate}, fn _stage, _gates, _context ->
+        {:ok, %{status: :passed, gate_results: [], metadata: %{}, reason: nil}}
+      end).(stage, gates, context)
+    end
+  end
+
   defmodule SessionReopenerStub do
     def reopen(attrs) do
       Process.get({__MODULE__, :reopen}, fn payload ->
@@ -253,6 +261,7 @@ defmodule Agents.Pipeline.Application.UseCases.PipelineRunWorkflowsTest do
              RunStage.execute(created.id,
                pipeline_run_repo: PipelineRunRepoStub,
                stage_executor: StageExecutorStub,
+               gate_evaluator: GateEvaluatorStub,
                task_context_provider: TaskContextProviderStub,
                event_bus: EventBusStub,
                session_reopener: SessionReopenerStub
@@ -271,6 +280,48 @@ defmodule Agents.Pipeline.Application.UseCases.PipelineRunWorkflowsTest do
              GetPipelineStatus.execute(run.id, pipeline_run_repo: PipelineRunRepoStub)
 
     assert fetched.status == "passed"
+  end
+
+  test "run_stage blocks when required gates do not pass" do
+    Process.put({StageExecutorStub, :execute}, fn _stage, _context ->
+      {:ok,
+       %{output: "all green", exit_code: 0, metadata: %{"steps" => [%{"name" => "unit-tests"}]}}}
+    end)
+
+    Process.put({GateEvaluatorStub, :evaluate}, fn stage, _gates, _context ->
+      assert stage.id == "test"
+
+      {:ok,
+       %{
+         status: :blocked,
+         gate_results: [],
+         metadata: %{"gate_results" => []},
+         reason: "approval_required"
+       }}
+    end)
+
+    {:ok, created} =
+      PipelineRunRepoStub.create_run(%{
+        trigger_type: "on_session_complete",
+        trigger_reference: "task-2",
+        task_id: Ecto.UUID.generate(),
+        remaining_stage_ids: ["test"],
+        stage_results: %{}
+      })
+
+    assert {:ok, run} =
+             RunStage.execute(created.id,
+               pipeline_run_repo: PipelineRunRepoStub,
+               stage_executor: StageExecutorStub,
+               gate_evaluator: GateEvaluatorStub,
+               task_context_provider: TaskContextProviderStub,
+               event_bus: EventBusStub,
+               session_reopener: SessionReopenerStub
+             )
+
+    assert run.status == "blocked"
+    assert run.current_stage_id == "test"
+    assert run.stage_results["test"].status == :blocked
   end
 
   test "run_stage reopens the task when session-complete verification fails" do
@@ -300,6 +351,7 @@ defmodule Agents.Pipeline.Application.UseCases.PipelineRunWorkflowsTest do
              RunStage.execute(created.id,
                pipeline_run_repo: PipelineRunRepoStub,
                stage_executor: StageExecutorStub,
+               gate_evaluator: GateEvaluatorStub,
                task_context_provider: TaskContextProviderStub,
                event_bus: EventBusStub,
                session_reopener: SessionReopenerStub
@@ -339,6 +391,7 @@ defmodule Agents.Pipeline.Application.UseCases.PipelineRunWorkflowsTest do
              RunStage.execute(created.id,
                pipeline_run_repo: PipelineRunRepoStub,
                stage_executor: StageExecutorStub,
+               gate_evaluator: GateEvaluatorStub,
                task_context_provider: TaskContextProviderStub,
                event_bus: EventBusStub,
                session_reopener: SessionReopenerStub
