@@ -4,8 +4,8 @@ defmodule Agents.Pipeline.Application.UseCases.GetPipelineKanbanTest do
   alias Agents.Pipeline.Application.UseCases.GetPipelineKanban
   alias Agents.Tickets.Domain.Entities.Ticket
 
-  defmodule PipelineParserStub do
-    def parse_file(_path) do
+  defmodule PipelineConfigRepoStub do
+    def get_current do
       {:ok,
        %Agents.Pipeline.Domain.Entities.PipelineConfig{
          version: 1,
@@ -68,10 +68,7 @@ defmodule Agents.Pipeline.Application.UseCases.GetPipelineKanbanTest do
     ]
 
     assert {:ok, kanban} =
-             GetPipelineKanban.execute(tickets,
-               pipeline_parser: PipelineParserStub,
-               pipeline_path: "ignored.yml"
-             )
+             GetPipelineKanban.execute(tickets, pipeline_config_repo: PipelineConfigRepoStub)
 
     assert Enum.map(kanban.stages, & &1.id) == [
              "ready",

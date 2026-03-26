@@ -4,19 +4,19 @@ defmodule Agents.Pipeline.Infrastructure.PipelineSchedulerTest do
   alias Agents.Pipeline.Infrastructure.PipelineScheduler
   alias Agents.Pipeline.Domain.Entities.Stage
 
-  defmodule ParserStub do
-    def parse_file(_path),
-      do:
-        {:ok,
-         %{
-           stages: [
-             Stage.new(%{
-               id: "warm-pool",
-               type: "warm_pool",
-               schedule: %{"cron" => "*/1 * * * *"}
-             })
-           ]
-         }}
+  defmodule PipelineConfigRepoStub do
+    def get_current do
+      {:ok,
+       %{
+         stages: [
+           Stage.new(%{
+             id: "warm-pool",
+             type: "warm_pool",
+             schedule: %{"cron" => "*/1 * * * *"}
+           })
+         ]
+       }}
+    end
   end
 
   defmodule ReplenishWarmPoolStub do
@@ -33,17 +33,22 @@ defmodule Agents.Pipeline.Infrastructure.PipelineSchedulerTest do
     Process.register(self(), :pipeline_scheduler_test_observer)
     name = String.to_atom("pipeline_scheduler_test_#{System.unique_integer([:positive])}")
 
+    Application.put_env(:agents, :pipeline_config_repository, PipelineConfigRepoStub)
+
+    on_exit(fn ->
+      Application.delete_env(:agents, :pipeline_config_repository)
+
+      if Process.whereis(:pipeline_scheduler_test_observer) == self() do
+        Process.unregister(:pipeline_scheduler_test_observer)
+      end
+    end)
+
     {:ok, pid} =
       start_supervised(
-        {PipelineScheduler,
-         pipeline_path: "ignored.yml",
-         pipeline_parser: ParserStub,
-         replenish_warm_pool: ReplenishWarmPoolStub,
-         name: name}
+        {PipelineScheduler, replenish_warm_pool: ReplenishWarmPoolStub, name: name}
       )
 
     send(pid, :tick)
     assert_receive :replenish_called
-    Process.unregister(:pipeline_scheduler_test_observer)
   end
 end

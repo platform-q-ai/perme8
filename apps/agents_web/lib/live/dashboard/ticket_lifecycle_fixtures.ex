@@ -45,10 +45,6 @@ defmodule AgentsWeb.DashboardLive.TicketLifecycleFixtures do
             socket.assigns[:pipeline_editor_authorized?]
           )
         )
-        |> assign(
-          :pipeline_editor_path,
-          Map.get(payload, :pipeline_editor_path, nil)
-        )
 
       payload ->
         active_ticket_number =
@@ -86,10 +82,6 @@ defmodule AgentsWeb.DashboardLive.TicketLifecycleFixtures do
               :pipeline_editor_authorized?,
               socket.assigns[:pipeline_editor_authorized?]
             )
-          )
-          |> assign(
-            :pipeline_editor_path,
-            Map.get(payload, :pipeline_editor_path, nil)
           )
           |> assign(:active_ticket_number, active_ticket_number)
           |> assign(

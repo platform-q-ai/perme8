@@ -4,8 +4,8 @@ defmodule Agents.Pipeline.Application.UseCases.ReplenishWarmPoolTest do
   alias Agents.Pipeline.Application.UseCases.ReplenishWarmPool
   alias Agents.Pipeline.Domain.Entities.{Stage, Step}
 
-  defmodule ParserStub do
-    def parse_file(_path), do: Process.get(:pipeline_config)
+  defmodule PipelineConfigRepoStub do
+    def get_current, do: Process.get(:pipeline_config)
   end
 
   defmodule WarmPoolCounterStub do
@@ -32,8 +32,7 @@ defmodule Agents.Pipeline.Application.UseCases.ReplenishWarmPoolTest do
 
     assert {:ok, result} =
              ReplenishWarmPool.execute(
-               pipeline_path: "ignored.yml",
-               pipeline_parser: ParserStub,
+               pipeline_config_repo: PipelineConfigRepoStub,
                warm_pool_counter: WarmPoolCounterStub,
                stage_executor: StageExecutorStub
              )
@@ -48,8 +47,7 @@ defmodule Agents.Pipeline.Application.UseCases.ReplenishWarmPoolTest do
 
     assert {:ok, result} =
              ReplenishWarmPool.execute(
-               pipeline_path: "ignored.yml",
-               pipeline_parser: ParserStub,
+               pipeline_config_repo: PipelineConfigRepoStub,
                warm_pool_counter: WarmPoolCounterStub,
                stage_executor: StageExecutorStub
              )
@@ -68,8 +66,7 @@ defmodule Agents.Pipeline.Application.UseCases.ReplenishWarmPoolTest do
 
     assert {:error, :warm_pool_inventory_unavailable} =
              ReplenishWarmPool.execute(
-               pipeline_path: "ignored.yml",
-               pipeline_parser: ParserStub,
+               pipeline_config_repo: PipelineConfigRepoStub,
                warm_pool_counter: InventoryErrorCounterStub,
                stage_executor: StageExecutorStub
              )

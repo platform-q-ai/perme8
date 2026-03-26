@@ -33,17 +33,15 @@ defmodule Agents.Pipeline do
   alias Agents.Pipeline.Application.UseCases.UpdatePullRequest
   alias Agents.Pipeline.Application.PipelineConfigMapper
 
-  @spec load_pipeline(Path.t() | nil, keyword()) ::
+  @spec load_pipeline(keyword()) ::
           {:ok, Agents.Pipeline.Domain.Entities.PipelineConfig.t()} | {:error, [String.t()]}
-  defdelegate load_pipeline(path \\ nil, opts \\ []),
-    to: LoadPipeline,
-    as: :execute
+  defdelegate load_pipeline(opts \\ []), to: LoadPipeline, as: :execute
 
   @doc "Loads the current pipeline config as an editable map."
-  @spec load_editable_pipeline_config(Path.t() | nil, keyword()) ::
+  @spec load_editable_pipeline_config(keyword()) ::
           {:ok, map()} | {:error, [String.t()]}
-  def load_editable_pipeline_config(path \\ nil, opts \\ []) do
-    case load_pipeline(path, opts) do
+  def load_editable_pipeline_config(opts \\ []) do
+    case load_pipeline(opts) do
       {:ok, config} -> {:ok, PipelineConfigMapper.to_editable_map(config)}
       {:error, errors} -> {:error, errors}
     end

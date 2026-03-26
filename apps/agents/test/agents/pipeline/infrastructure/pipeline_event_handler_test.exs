@@ -3,7 +3,7 @@ defmodule Agents.Pipeline.Infrastructure.PipelineEventHandlerTest do
 
   alias Agents.Pipeline.Infrastructure.PipelineEventHandler
   alias Agents.Pipeline.Infrastructure.Schemas.PipelineRunSchema
-  alias Agents.Pipeline.Infrastructure.YamlParser
+  alias Agents.Pipeline.Application.PipelineConfigBuilder
   alias Agents.Sessions.Domain.Events.TaskCompleted
   alias Perme8.Events.TestEventBus
 
@@ -50,35 +50,35 @@ defmodule Agents.Pipeline.Infrastructure.PipelineEventHandlerTest do
         case Process.get({__MODULE__, :config}) do
           nil ->
             {:ok, config} =
-              YamlParser.parse_string("""
-              version: 1
-              pipeline:
-                name: perme8-core
-                deploy_targets:
-                  - id: dev
-                    environment: development
-                    provider: docker
-                stages:
-                  - id: warm-pool
-                    type: warm_pool
-                    deploy_target: dev
-                    schedule:
-                      cron: \"*/5 * * * *\"
-                    warm_pool:
-                      target_count: 2
-                      image: ghcr.io/platform-q-ai/perme8-runtime:latest
-                      readiness:
-                        strategy: command_success
-                    steps:
-                      - name: prestart
-                        run: scripts/warm_pool.sh
-                  - id: test
-                    type: verification
-                    deploy_target: dev
-                    steps:
-                      - name: unit-tests
-                        run: mix test
-              """)
+              PipelineConfigBuilder.build(%{
+                "version" => 1,
+                "pipeline" => %{
+                  "name" => "perme8-core",
+                  "deploy_targets" => [
+                    %{"id" => "dev", "environment" => "development", "provider" => "docker"}
+                  ],
+                  "stages" => [
+                    %{
+                      "id" => "warm-pool",
+                      "type" => "warm_pool",
+                      "deploy_target" => "dev",
+                      "schedule" => %{"cron" => "*/5 * * * *"},
+                      "warm_pool" => %{
+                        "target_count" => 2,
+                        "image" => "ghcr.io/platform-q-ai/perme8-runtime:latest",
+                        "readiness" => %{"strategy" => "command_success"}
+                      },
+                      "steps" => [%{"name" => "prestart", "run" => "scripts/warm_pool.sh"}]
+                    },
+                    %{
+                      "id" => "test",
+                      "type" => "verification",
+                      "deploy_target" => "dev",
+                      "steps" => [%{"name" => "unit-tests", "run" => "mix test"}]
+                    }
+                  ]
+                }
+              })
 
             Process.put({__MODULE__, :config}, config)
             config

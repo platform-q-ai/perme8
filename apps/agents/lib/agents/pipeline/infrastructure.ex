@@ -28,8 +28,6 @@ defmodule Agents.Pipeline.Infrastructure do
       Schemas.PipelineRunSchema,
       Schemas.PullRequestSchema,
       Schemas.ReviewCommentSchema,
-      Schemas.ReviewSchema,
-      YamlParser,
-      YamlWriter
+      Schemas.ReviewSchema
     ]
 end

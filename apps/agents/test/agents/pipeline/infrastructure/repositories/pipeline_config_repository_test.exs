@@ -1,7 +1,7 @@
 defmodule Agents.Pipeline.Infrastructure.Repositories.PipelineConfigRepositoryTest do
   use Agents.DataCase, async: true
 
-  alias Agents.Pipeline.Infrastructure.YamlParser
+  alias Agents.Pipeline.Application.PipelineConfigBuilder
   alias Agents.Pipeline.Infrastructure.Repositories.PipelineConfigRepository
   alias Agents.Pipeline.Infrastructure.Schemas.PipelineConfigSchema
 
@@ -10,29 +10,29 @@ defmodule Agents.Pipeline.Infrastructure.Repositories.PipelineConfigRepositoryTe
     assert initial.name == "perme8-core"
 
     assert {:ok, updated_config} =
-             YamlParser.parse_string("""
-             version: 1
-             pipeline:
-               name: repo-backed
-               deploy_targets:
-                 - id: dev
-                   environment: development
-                   provider: docker
-               stages:
-                 - id: warm-pool
-                   type: warm_pool
-                   deploy_target: dev
-                   schedule:
-                     cron: \"*/5 * * * *\"
-                   warm_pool:
-                     target_count: 3
-                     image: ghcr.io/platform-q-ai/perme8-runtime:latest
-                     readiness:
-                       strategy: command_success
-                   steps:
-                     - name: prestart
-                       run: scripts/warm_pool.sh
-             """)
+             PipelineConfigBuilder.build(%{
+               "version" => 1,
+               "pipeline" => %{
+                 "name" => "repo-backed",
+                 "deploy_targets" => [
+                   %{"id" => "dev", "environment" => "development", "provider" => "docker"}
+                 ],
+                 "stages" => [
+                   %{
+                     "id" => "warm-pool",
+                     "type" => "warm_pool",
+                     "deploy_target" => "dev",
+                     "schedule" => %{"cron" => "*/5 * * * *"},
+                     "warm_pool" => %{
+                       "target_count" => 3,
+                       "image" => "ghcr.io/platform-q-ai/perme8-runtime:latest",
+                       "readiness" => %{"strategy" => "command_success"}
+                     },
+                     "steps" => [%{"name" => "prestart", "run" => "scripts/warm_pool.sh"}]
+                   }
+                 ]
+               }
+             })
 
     assert {:ok, persisted} = PipelineConfigRepository.upsert_current(updated_config)
     assert persisted.name == "repo-backed"

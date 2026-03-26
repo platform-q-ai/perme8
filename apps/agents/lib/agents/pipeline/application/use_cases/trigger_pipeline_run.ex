@@ -11,10 +11,9 @@ defmodule Agents.Pipeline.Application.UseCases.TriggerPipelineRun do
     repo_module =
       Keyword.get(opts, :pipeline_run_repo, PipelineRuntimeConfig.pipeline_run_repository())
 
-    pipeline_path = Keyword.get(opts, :pipeline_path)
     auto_run? = Keyword.get(opts, :auto_run, true)
 
-    with {:ok, config} <- load_pipeline(pipeline_path, opts) do
+    with {:ok, config} <- load_pipeline(opts) do
       trigger = trigger_type(attrs)
       stage_ids = select_stage_ids(config.stages, trigger)
 
@@ -108,14 +107,8 @@ defmodule Agents.Pipeline.Application.UseCases.TriggerPipelineRun do
 
   defp select_stage_ids(_stages, _trigger_type), do: []
 
-  defp load_pipeline(path, opts) do
-    parser = Keyword.get(opts, :pipeline_parser, PipelineRuntimeConfig.pipeline_parser())
-
-    [parser: parser]
-    |> maybe_put(:pipeline_source, Keyword.get(opts, :pipeline_source))
-    |> maybe_put(:pipeline_config_repo, Keyword.get(opts, :pipeline_config_repo))
-    |> then(&LoadPipeline.execute(path, &1))
-  end
+  defp load_pipeline(opts),
+    do: LoadPipeline.execute(maybe_put([], :pipeline_config_repo, opts[:pipeline_config_repo]))
 
   defp maybe_put(opts, _key, nil), do: opts
   defp maybe_put(opts, key, value), do: Keyword.put(opts, key, value)

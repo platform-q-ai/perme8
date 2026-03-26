@@ -22,7 +22,7 @@
 
 ## Integration Points
 
-- `PipelineConfig` and `YamlParser` carry merge queue policy from the persisted pipeline configuration
+- `PipelineConfig` and the normalized pipeline config loader carry merge queue policy from the persisted pipeline configuration
 - `ManageMergeQueue` composes PR lookup, pipeline run history, queue state, validation reruns, and merge execution
 - `MergeQueueWorker` owns in-memory queue ordering and active validation ownership
 - `TicketFacingStageCatalog` and ticket lifecycle helpers expose the `merge_queue` stage to the kanban

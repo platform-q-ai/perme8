@@ -20,9 +20,7 @@ defmodule Agents.Pipeline.Application.UseCases.RunStage do
     task_context_provider =
       Keyword.get(opts, :task_context_provider, PipelineRuntimeConfig.task_context_provider())
 
-    pipeline_path = Keyword.get(opts, :pipeline_path)
-
-    with {:ok, config} <- load_pipeline(pipeline_path, opts),
+    with {:ok, config} <- load_pipeline(opts),
          {:ok, schema} <- repo_module.get_run(run_id) do
       run = PipelineRun.from_schema(schema)
 
@@ -240,14 +238,8 @@ defmodule Agents.Pipeline.Application.UseCases.RunStage do
     end
   end
 
-  defp load_pipeline(path, opts) do
-    parser = Keyword.get(opts, :pipeline_parser, PipelineRuntimeConfig.pipeline_parser())
-
-    [parser: parser]
-    |> maybe_put(:pipeline_source, Keyword.get(opts, :pipeline_source))
-    |> maybe_put(:pipeline_config_repo, Keyword.get(opts, :pipeline_config_repo))
-    |> then(&LoadPipeline.execute(path, &1))
-  end
+  defp load_pipeline(opts),
+    do: LoadPipeline.execute(maybe_put([], :pipeline_config_repo, opts[:pipeline_config_repo]))
 
   defp maybe_put(opts, _key, nil), do: opts
   defp maybe_put(opts, key, value), do: Keyword.put(opts, key, value)

@@ -5,7 +5,6 @@ defmodule Agents.Pipeline.Infrastructure.PipelineScheduler do
 
   use GenServer
 
-  alias Agents.Pipeline.Application.PipelineRuntimeConfig
   alias Agents.Pipeline.Application.UseCases.LoadPipeline
   alias Agents.Pipeline.Application.UseCases.ReplenishWarmPool
 
@@ -21,12 +20,8 @@ defmodule Agents.Pipeline.Infrastructure.PipelineScheduler do
   @impl true
   def init(opts) do
     state = %{
-      pipeline_path: Keyword.get(opts, :pipeline_path),
-      pipeline_parser:
-        Keyword.get(opts, :pipeline_parser, PipelineRuntimeConfig.pipeline_parser()),
-      stage_executor: Keyword.get(opts, :stage_executor, PipelineRuntimeConfig.stage_executor()),
-      warm_pool_counter:
-        Keyword.get(opts, :warm_pool_counter, PipelineRuntimeConfig.warm_pool_counter()),
+      stage_executor: Keyword.get(opts, :stage_executor),
+      warm_pool_counter: Keyword.get(opts, :warm_pool_counter),
       replenish_warm_pool: Keyword.get(opts, :replenish_warm_pool, ReplenishWarmPool)
     }
 
@@ -44,8 +39,6 @@ defmodule Agents.Pipeline.Infrastructure.PipelineScheduler do
   defp run_replenishment(state) do
     opts =
       []
-      |> maybe_put(:pipeline_path, state.pipeline_path)
-      |> maybe_put(:pipeline_parser, state.pipeline_parser)
       |> maybe_put(:stage_executor, state.stage_executor)
       |> maybe_put(:warm_pool_counter, state.warm_pool_counter)
 
@@ -62,13 +55,8 @@ defmodule Agents.Pipeline.Infrastructure.PipelineScheduler do
     Process.send_after(self(), :tick, interval_ms(state))
   end
 
-  defp interval_ms(state) do
-    with parser when not is_nil(parser) <- state.pipeline_parser,
-         {:ok, config} <-
-           LoadPipeline.execute(state.pipeline_path,
-             parser: parser,
-             pipeline_source: :auto
-           ),
+  defp interval_ms(_state) do
+    with {:ok, config} <- LoadPipeline.execute(),
          stage when not is_nil(stage) <-
            Enum.find(config.stages, &(&1.type == "warm_pool" or &1.id == "warm-pool")),
          cron when is_binary(cron) <- stage.schedule && Map.get(stage.schedule, "cron"),

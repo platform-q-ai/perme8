@@ -252,7 +252,6 @@ structured pipeline records in `Agents.Repo` (`pipeline_configs`, `pipeline_stag
 config :agents,
   pipeline_scheduler_enabled: false,
   pipeline_warm_pool_counter: Agents.Pipeline.Infrastructure.WarmPoolCounter,
-  pipeline_parser: Agents.Pipeline.Infrastructure.YamlParser,
   pipeline_stage_executor: Agents.Pipeline.Infrastructure.StageExecutor
 ```
 

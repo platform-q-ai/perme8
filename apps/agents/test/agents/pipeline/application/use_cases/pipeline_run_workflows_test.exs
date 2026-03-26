@@ -2,7 +2,7 @@ defmodule Agents.Pipeline.Application.UseCases.PipelineRunWorkflowsTest do
   use Agents.DataCase, async: false
 
   alias Agents.Pipeline.Application.UseCases.{GetPipelineStatus, RunStage, TriggerPipelineRun}
-  alias Agents.Pipeline.Infrastructure.YamlParser
+  alias Agents.Pipeline.Application.PipelineConfigBuilder
   alias Agents.Pipeline.Infrastructure.Schemas.PipelineRunSchema
 
   defmodule PipelineRunRepoStub do
@@ -87,50 +87,7 @@ defmodule Agents.Pipeline.Application.UseCases.PipelineRunWorkflowsTest do
       config =
         case Process.get({__MODULE__, :config}) do
           nil ->
-            {:ok, config} =
-              YamlParser.parse_string("""
-              version: 1
-              pipeline:
-                name: perme8-core
-                merge_queue:
-                  strategy: merge_queue
-                  required_stages:
-                    - test
-                  required_review: true
-                deploy_targets:
-                  - id: dev
-                    environment: development
-                    provider: docker
-                  - id: prod
-                    environment: production
-                    provider: kubernetes
-                stages:
-                  - id: warm-pool
-                    type: warm_pool
-                    deploy_target: dev
-                    schedule:
-                      cron: \"*/5 * * * *\"
-                    warm_pool:
-                      target_count: 2
-                      image: ghcr.io/platform-q-ai/perme8-runtime:latest
-                      readiness:
-                        strategy: command_success
-                    steps:
-                      - name: prestart
-                        run: scripts/warm_pool.sh
-                  - id: test
-                    type: verification
-                    deploy_target: dev
-                    steps:
-                      - name: unit-tests
-                        run: mix test
-                  - id: deploy
-                    type: deploy
-                    deploy_target: prod
-                    steps:
-                      - name: deploy
-                        run: scripts/deploy.sh
-              """)
+            {:ok, config} = PipelineConfigBuilder.build(base_pipeline_map())
 
             Process.put({__MODULE__, :config}, config)
             config
@@ -140,6 +97,50 @@ defmodule Agents.Pipeline.Application.UseCases.PipelineRunWorkflowsTest do
         end
 
       {:ok, config}
+    end
+
+    defp base_pipeline_map do
+      %{
+        "version" => 1,
+        "pipeline" => %{
+          "name" => "perme8-core",
+          "merge_queue" => %{
+            "strategy" => "merge_queue",
+            "required_stages" => ["test"],
+            "required_review" => true
+          },
+          "deploy_targets" => [
+            %{"id" => "dev", "environment" => "development", "provider" => "docker"},
+            %{"id" => "prod", "environment" => "production", "provider" => "kubernetes"}
+          ],
+          "stages" => [
+            %{
+              "id" => "warm-pool",
+              "type" => "warm_pool",
+              "deploy_target" => "dev",
+              "schedule" => %{"cron" => "*/5 * * * *"},
+              "warm_pool" => %{
+                "target_count" => 2,
+                "image" => "ghcr.io/platform-q-ai/perme8-runtime:latest",
+                "readiness" => %{"strategy" => "command_success"}
+              },
+              "steps" => [%{"name" => "prestart", "run" => "scripts/warm_pool.sh"}]
+            },
+            %{
+              "id" => "test",
+              "type" => "verification",
+              "deploy_target" => "dev",
+              "steps" => [%{"name" => "unit-tests", "run" => "mix test"}]
+            },
+            %{
+              "id" => "deploy",
+              "type" => "deploy",
+              "deploy_target" => "prod",
+              "steps" => [%{"name" => "deploy", "run" => "scripts/deploy.sh"}]
+            }
+          ]
+        }
+      }
     end
   end
 

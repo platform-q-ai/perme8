@@ -15,17 +15,15 @@ defmodule Agents.Pipeline.Application.UseCases.ManageMergeQueue do
     pipeline_run_repo =
       Keyword.get(opts, :pipeline_run_repo, PipelineRuntimeConfig.pipeline_run_repository())
 
-    parser = Keyword.get(opts, :pipeline_parser, PipelineRuntimeConfig.pipeline_parser())
     stage_executor = Keyword.get(opts, :stage_executor, PipelineRuntimeConfig.stage_executor())
 
     merge_queue_worker =
       Keyword.get(opts, :merge_queue_worker, PipelineRuntimeConfig.merge_queue_worker())
 
     merge_pull_request = Keyword.get(opts, :merge_pull_request, MergePullRequest)
-    pipeline_path = Keyword.get(opts, :pipeline_path)
     worker_opts = merge_queue_worker_opts(opts)
 
-    with {:ok, config} <- LoadPipeline.execute(pipeline_path, load_pipeline_opts(opts, parser)),
+    with {:ok, config} <- LoadPipeline.execute(load_pipeline_opts(opts)),
          {:ok, pr_schema} <- pull_request_repo.get_by_number(number),
          {:ok, run_schemas} <- list_runs(pipeline_run_repo, number),
          pull_request = PullRequest.from_schema(pr_schema),
@@ -198,11 +196,8 @@ defmodule Agents.Pipeline.Application.UseCases.ManageMergeQueue do
     end
   end
 
-  defp load_pipeline_opts(opts, parser) do
-    opts
-    |> Keyword.put(:parser, parser)
-    |> maybe_put(:pipeline_source, opts[:pipeline_source])
-    |> maybe_put(:pipeline_config_repo, opts[:pipeline_config_repo])
+  defp load_pipeline_opts(opts) do
+    maybe_put([], :pipeline_config_repo, opts[:pipeline_config_repo])
   end
 
   defp maybe_put(opts, _key, nil), do: opts

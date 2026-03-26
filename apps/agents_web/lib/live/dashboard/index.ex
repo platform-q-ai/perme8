@@ -108,7 +108,6 @@ defmodule AgentsWeb.DashboardLive.Index do
      |> assign(:pipeline_editor_load_failed?, pipeline_editor_load_failed?)
      |> assign(:pipeline_editor_saving, false)
      |> assign(:pipeline_editor_saved_at, nil)
-     |> assign(:pipeline_editor_path, nil)
      |> PipelineKanbanState.assign_pipeline_kanban()
      |> assign(:selected_ticket, nil)
      |> assign(:selected_pull_request, nil)
@@ -607,7 +606,7 @@ defmodule AgentsWeb.DashboardLive.Index do
   defp load_pipeline_editor_state(false), do: {%{"stages" => []}, [], false}
 
   defp load_pipeline_editor_state(true) do
-    case pipeline_editor_loader().(nil) do
+    case pipeline_editor_loader().() do
       {:ok, draft} -> {draft, [], false}
       {:error, errors} -> {nil, ["Unable to load pipeline configuration" | errors], true}
     end
@@ -617,7 +616,7 @@ defmodule AgentsWeb.DashboardLive.Index do
     Application.get_env(
       :agents_web,
       :pipeline_editor_loader,
-      &Agents.load_editable_pipeline_config/1
+      &Agents.load_editable_pipeline_config/0
     )
   end
 

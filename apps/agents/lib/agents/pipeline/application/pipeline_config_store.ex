@@ -4,40 +4,8 @@ defmodule Agents.Pipeline.Application.PipelineConfigStore do
   alias Agents.Pipeline.Application.PipelineRuntimeConfig
   alias Agents.Pipeline.Domain.Entities.PipelineConfig
 
-  @spec load(Path.t() | nil, keyword()) :: {:ok, PipelineConfig.t()} | {:error, [String.t()]}
-  def load(path \\ nil, opts \\ []) when is_nil(path) or is_binary(path) do
-    parser = Keyword.get(opts, :parser, PipelineRuntimeConfig.pipeline_parser())
-
-    case source_mode(path, opts) do
-      :file -> parser.parse_file(path)
-      :repo -> load_from_repo(opts)
-    end
-  end
-
-  @spec fetch_document(Path.t() | nil, keyword()) ::
-          {:ok, %{config: PipelineConfig.t()}} | {:error, [String.t()]}
-  def fetch_document(path \\ nil, opts \\ []) when is_nil(path) or is_binary(path) do
-    parser = Keyword.get(opts, :parser, PipelineRuntimeConfig.pipeline_parser())
-
-    case source_mode(path, opts) do
-      :file ->
-        with {:ok, config} <- parser.parse_file(path), do: {:ok, %{config: config}}
-
-      :repo ->
-        with {:ok, config} <- safe_get_current(repo_module(opts)), do: {:ok, %{config: config}}
-    end
-  end
-
-  @spec persist_config(PipelineConfig.t(), Path.t() | nil, keyword()) ::
-          :ok | {:error, String.t() | [String.t()]}
-  def persist_config(%PipelineConfig{} = config, path \\ nil, opts \\ []) do
-    case source_mode(path, opts) do
-      :file -> persist_file_config(config, path, opts)
-      :repo -> persist_repo_config(config, opts)
-    end
-  end
-
-  defp load_from_repo(opts) do
+  @spec load(keyword()) :: {:ok, PipelineConfig.t()} | {:error, [String.t()]}
+  def load(opts \\ []) do
     case safe_get_current(repo_module(opts)) do
       {:ok, config} ->
         {:ok, config}
@@ -50,21 +18,26 @@ defmodule Agents.Pipeline.Application.PipelineConfigStore do
     end
   end
 
-  defp persist_repo_config(config, opts) do
+  @spec fetch_document(keyword()) :: {:ok, %{config: PipelineConfig.t()}} | {:error, [String.t()]}
+  def fetch_document(opts \\ []) do
+    with {:ok, config} <- safe_get_current(repo_module(opts)) do
+      {:ok, %{config: config}}
+    else
+      {:error, :not_found} ->
+        {:error, ["pipeline config not found in Agents.Repo"]}
+
+      {:error, reason} ->
+        {:error, ["unable to load pipeline config from Agents.Repo: #{inspect(reason)}"]}
+    end
+  end
+
+  @spec persist_config(PipelineConfig.t(), keyword()) :: :ok | {:error, String.t() | [String.t()]}
+  def persist_config(%PipelineConfig{} = config, opts \\ []) do
     case safe_upsert_current(repo_module(opts), config) do
       {:ok, _record} -> :ok
       {:error, %Ecto.Changeset{} = changeset} -> {:error, changeset_error_messages(changeset)}
       {:error, :repo_unavailable} -> {:error, "Agents.Repo is unavailable"}
       {:error, reason} -> {:error, "failed to persist pipeline config: #{inspect(reason)}"}
-    end
-  end
-
-  defp persist_file_config(config, path, opts) do
-    writer = Keyword.get(opts, :writer, PipelineRuntimeConfig.pipeline_writer())
-
-    with {:ok, yaml} <- writer.dump(config),
-         :ok <- write_yaml(path, yaml, Keyword.get(opts, :file_io, File)) do
-      :ok
     end
   end
 
@@ -86,25 +59,6 @@ defmodule Agents.Pipeline.Application.PipelineConfigStore do
   rescue
     DBConnection.ConnectionError -> {:error, :repo_unavailable}
     RuntimeError -> {:error, :repo_unavailable}
-  end
-
-  defp write_yaml(path, yaml, %{write: write_fun}) when is_function(write_fun, 2),
-    do: write_fun.(path, yaml)
-
-  defp write_yaml(path, yaml, file_module) do
-    case file_module.write(path, yaml) do
-      :ok -> :ok
-      {:error, reason} -> {:error, "failed to write pipeline config document: #{inspect(reason)}"}
-    end
-  end
-
-  defp source_mode(path, opts) do
-    case Keyword.get(opts, :pipeline_source, :auto) do
-      nil -> if(is_nil(path), do: :repo, else: :file)
-      :file -> :file
-      :repo -> :repo
-      :auto -> if(is_nil(path), do: :repo, else: :file)
-    end
   end
 
   defp changeset_error_messages(changeset) do

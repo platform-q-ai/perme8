@@ -121,7 +121,7 @@ defmodule AgentsWeb.DashboardLive.PipelineEditorTest do
     conn: conn,
     user: user
   } do
-    Application.put_env(:agents_web, :pipeline_editor_loader, fn _path ->
+    Application.put_env(:agents_web, :pipeline_editor_loader, fn ->
       {:error, ["pipeline config missing"]}
     end)
 

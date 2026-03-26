@@ -6,8 +6,8 @@ defmodule Agents.Pipeline.Application.UseCases.ManageMergeQueueTest do
   alias Agents.Pipeline.Infrastructure.MergeQueueWorker
   alias Agents.Pipeline.Infrastructure.Schemas.{PipelineRunSchema, PullRequestSchema}
 
-  defmodule ParserStub do
-    def parse_file(_path) do
+  defmodule PipelineConfigRepoStub do
+    def get_current do
       {:ok,
        PipelineConfig.new(%{
          version: 1,
@@ -92,8 +92,7 @@ defmodule Agents.Pipeline.Application.UseCases.ManageMergeQueueTest do
 
     assert {:ok, result} =
              ManageMergeQueue.execute(508,
-               pipeline_parser: ParserStub,
-               pipeline_path: "ignored.yml",
+               pipeline_config_repo: PipelineConfigRepoStub,
                pull_request_repo: PullRequestRepoReady,
                pipeline_run_repo: PipelineRunRepoReady,
                stage_executor: StageExecutorStub,
@@ -116,8 +115,7 @@ defmodule Agents.Pipeline.Application.UseCases.ManageMergeQueueTest do
 
     assert {:error, {:not_ready, reasons}} =
              ManageMergeQueue.execute(509,
-               pipeline_parser: ParserStub,
-               pipeline_path: "ignored.yml",
+               pipeline_config_repo: PipelineConfigRepoStub,
                pull_request_repo: PullRequestRepoNotApproved,
                pipeline_run_repo: PipelineRunRepoReady,
                stage_executor: StageExecutorStub,
@@ -136,8 +134,7 @@ defmodule Agents.Pipeline.Application.UseCases.ManageMergeQueueTest do
 
     assert {:ok, result} =
              ManageMergeQueue.execute(510,
-               pipeline_parser: ParserStub,
-               pipeline_path: "ignored.yml",
+               pipeline_config_repo: PipelineConfigRepoStub,
                pull_request_repo: PullRequestRepoReady,
                pipeline_run_repo: PipelineRunRepoReady,
                stage_executor: StageExecutorStub,

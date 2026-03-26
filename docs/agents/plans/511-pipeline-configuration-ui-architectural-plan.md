@@ -16,7 +16,7 @@ Add a dashboard pipeline configuration editor that renders pipeline stages as ed
 ## Current Baseline
 
 - `Agents.Pipeline.Application.UseCases.LoadPipeline` should load the current pipeline from normalized records in `Agents.Repo`.
-- `YamlParser` already performs schema-style validation and builds `PipelineConfig`, `Stage`, `Step`, `Gate`, and `DeployTarget` value objects.
+- Pipeline validation/building now happens in application code and produces `PipelineConfig`, `Stage`, `Step`, `Gate`, and `DeployTarget` value objects from normalized maps.
 - `PipelineConfig` is currently read-only from the application's perspective: there is no update use case, no YAML serializer, and no facade entrypoint for config edits.
 - The sessions dashboard already has pipeline-aware UI patterns through `PipelineKanbanState`, `PipelineKanbanHandlers`, and `PipelineKanbanComponents`.
 - The dashboard template already renders a bottom pipeline section, so the new editor should fit into the existing dashboard composition rather than introduce a second disconnected pipeline surface.
@@ -120,7 +120,7 @@ This keeps one validation source of truth and guarantees the writer never persis
 - [x] RED: add parser/entity tests for editable step and stage fields missing from the current model, especially `conditions` and nested warm-pool config round-trips
 - [x] RED: add writer tests that assert a validated config serializes to YAML in the expected field order and reparses cleanly
 - [x] GREEN: extend `Step` and any related projections to carry `conditions` and other editable step fields required by the ticket
-- [x] GREEN: implement `YamlWriter` to convert a normalized config map or `PipelineConfig` struct into YAML with stable ordering for version, pipeline metadata, merge queue, deploy targets, stages, steps, and gates
+- [x] GREEN: implement normalized persistence mapping so validated config aggregates save into structured pipeline tables with stable ordering
 - [x] GREEN: add conversion helpers between `PipelineConfig` structs and editable plain maps so the UI/use case can work with a serializable shape
 - [x] REFACTOR: isolate YAML field ordering and struct-to-map conversion in private infrastructure helpers so parser and writer stay symmetric
 
@@ -153,7 +153,7 @@ This keeps one validation source of truth and guarantees the writer never persis
 
 ## Testing Strategy
 
-- Unit-test `YamlWriter` for field ordering, nested warm-pool serialization, env map serialization, optional field omission, and parse/write/parse round-trips
+- Unit-test the pipeline config builder/mapper for nested warm-pool validation, env handling, optional field omission, and aggregate reconstruction
 - Unit-test `UpdatePipelineConfig` with temporary files and injected doubles for parser/writer dependencies
 - Extend parser/entity tests where the ticket requires new editable fields such as `conditions`
 - Add LiveView tests around `AgentsWeb.DashboardLive.Index` for:
@@ -168,7 +168,7 @@ This keeps one validation source of truth and guarantees the writer never persis
 ## Suggested Implementation Order
 
 1. Extend the editable config shape and add parser/writer round-trip coverage
-2. Implement `YamlWriter` and `UpdatePipelineConfig`
+2. Implement normalized pipeline persistence and `UpdatePipelineConfig`
 3. Expose facade entrypoints and a UI-ready config projection
 4. Add dashboard editor state and handlers
 5. Extract/render editor card components and wire save flow

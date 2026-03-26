@@ -18,14 +18,12 @@ defmodule Agents.Pipeline.Application.UseCases.ReplenishWarmPool do
   @doc "Executes a warm-pool replenishment cycle from the configured warm-pool stage."
   @spec execute(keyword()) :: {:ok, result()} | {:error, term()}
   def execute(opts \\ []) do
-    pipeline_path = Keyword.get(opts, :pipeline_path)
-    parser = Keyword.get(opts, :pipeline_parser, PipelineRuntimeConfig.pipeline_parser())
     stage_executor = Keyword.get(opts, :stage_executor, PipelineRuntimeConfig.stage_executor())
 
     warm_pool_counter =
       Keyword.get(opts, :warm_pool_counter, PipelineRuntimeConfig.warm_pool_counter())
 
-    with {:ok, config} <- LoadPipeline.execute(pipeline_path, load_pipeline_opts(opts, parser)),
+    with {:ok, config} <- LoadPipeline.execute(load_pipeline_opts(opts)),
          {:ok, stage} <- fetch_warm_pool_stage(config.stages),
          {:ok, policy} <- WarmPoolPolicy.from_stage(stage) do
       execute_replenishment(stage, policy, warm_pool_counter, stage_executor)
@@ -124,11 +122,8 @@ defmodule Agents.Pipeline.Application.UseCases.ReplenishWarmPool do
     }
   end
 
-  defp load_pipeline_opts(opts, parser) do
-    opts
-    |> Keyword.put(:parser, parser)
-    |> maybe_put(:pipeline_source, opts[:pipeline_source])
-    |> maybe_put(:pipeline_config_repo, opts[:pipeline_config_repo])
+  defp load_pipeline_opts(opts) do
+    maybe_put([], :pipeline_config_repo, opts[:pipeline_config_repo])
   end
 
   defp maybe_put(opts, _key, nil), do: opts

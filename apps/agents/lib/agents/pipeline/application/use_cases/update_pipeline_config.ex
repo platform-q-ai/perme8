@@ -11,18 +11,15 @@ defmodule Agents.Pipeline.Application.UseCases.UpdatePipelineConfig do
   def execute(updates, opts \\ [])
 
   def execute(updates, opts) when is_map(updates) do
-    path = Keyword.get(opts, :pipeline_path)
-
-    with {:ok, %{config: current_config}} <- PipelineConfigStore.fetch_document(path, opts),
+    with {:ok, %{config: current_config}} <- PipelineConfigStore.fetch_document(opts),
          current_map <- PipelineConfigMapper.to_root_map(current_config),
          merged_map <- merge_updates(current_map, updates),
          {:ok, validated_config} <- PipelineConfigBuilder.build(merged_map),
-         :ok <- PipelineConfigStore.persist_config(validated_config, path, opts) do
+         :ok <- PipelineConfigStore.persist_config(validated_config, opts) do
       {:ok,
        %{
          pipeline_config: validated_config,
-         editable_config: PipelineConfigMapper.to_editable_map(validated_config),
-         path: path
+         editable_config: PipelineConfigMapper.to_editable_map(validated_config)
        }}
     else
       {:error, errors} when is_list(errors) ->
@@ -37,9 +34,7 @@ defmodule Agents.Pipeline.Application.UseCases.UpdatePipelineConfig do
   def execute(_updates, _opts), do: {:error, %{errors: ["updates must be a map"]}}
 
   defp safe_merge_preview(opts, updates) do
-    path = Keyword.get(opts, :pipeline_path)
-
-    case PipelineConfigStore.fetch_document(path, opts) do
+    case PipelineConfigStore.fetch_document(opts) do
       {:ok, %{config: config}} ->
         config |> PipelineConfigMapper.to_root_map() |> merge_updates(updates)
 

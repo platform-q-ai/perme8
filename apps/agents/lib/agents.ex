@@ -190,13 +190,12 @@ defmodule Agents do
   defdelegate get_pipeline_kanban(tickets, opts \\ []), to: Pipeline, as: :get_pipeline_kanban
 
   @doc "Loads editable pipeline configuration for dashboard UI."
-  @spec load_editable_pipeline_config(Path.t() | nil, keyword()) ::
-          {:ok, map()} | {:error, [String.t()]}
-  defdelegate load_editable_pipeline_config(path \\ nil, opts \\ []),
+  @spec load_editable_pipeline_config(keyword()) :: {:ok, map()} | {:error, [String.t()]}
+  defdelegate load_editable_pipeline_config(opts \\ []),
     to: Pipeline,
     as: :load_editable_pipeline_config
 
-  @doc "Saves pipeline configuration updates back to YAML."
+  @doc "Saves pipeline configuration updates to the persisted pipeline model."
   @spec update_pipeline_config(map(), keyword()) :: {:ok, map()} | {:error, map()}
   defdelegate update_pipeline_config(updates, opts \\ []),
     to: Pipeline,

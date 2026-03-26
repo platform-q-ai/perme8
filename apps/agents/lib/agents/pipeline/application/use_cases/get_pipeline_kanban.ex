@@ -7,9 +7,7 @@ defmodule Agents.Pipeline.Application.UseCases.GetPipelineKanban do
   @active_task_statuses ["pending", "starting", "running", "queued", "awaiting_feedback"]
   @spec execute([map()], keyword()) :: {:ok, map()} | {:error, term()}
   def execute(tickets, opts \\ []) when is_list(tickets) do
-    pipeline_path = Keyword.get(opts, :pipeline_path)
-
-    with {:ok, config} <- LoadPipeline.execute(pipeline_path, load_pipeline_opts(opts)) do
+    with {:ok, config} <- LoadPipeline.execute(load_pipeline_opts(opts)) do
       stage_defs = TicketFacingStageCatalog.from_pipeline_config(config)
       stage_ids = MapSet.new(stage_defs, & &1.id)
 
@@ -111,10 +109,7 @@ defmodule Agents.Pipeline.Application.UseCases.GetPipelineKanban do
   end
 
   defp load_pipeline_opts(opts) do
-    opts
-    |> maybe_put(:parser, opts[:pipeline_parser])
-    |> maybe_put(:pipeline_source, opts[:pipeline_source])
-    |> maybe_put(:pipeline_config_repo, opts[:pipeline_config_repo])
+    maybe_put([], :pipeline_config_repo, opts[:pipeline_config_repo])
   end
 
   defp maybe_put(opts, _key, nil), do: opts
