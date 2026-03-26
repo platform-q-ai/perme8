@@ -10,7 +10,7 @@
 | Sessions queue orchestration | `agents` | `Agents.Repo` | `apps/agents/lib/agents/sessions/infrastructure/` |
 | Sessions queue domain policies/entities | `agents` | `Agents.Repo` | `apps/agents/lib/agents/sessions/domain/` |
 | OTP supervision wiring | `agents` | `Agents.Repo` | `apps/agents/lib/agents/otp_app.ex` |
-| Pipeline config | `agents` | - | `perme8-pipeline.yml` |
+| Pipeline config | `agents` | - | `Agents.Repo` persisted document |
 | Tests | `agents` | - | `apps/agents/test/agents/` |
 
 ## Overview
@@ -31,7 +31,7 @@ This is an internal backend feature. No browser/http/security feature files are 
 
 ## Config Shape
 
-The warm-pool stage should continue to live in `perme8-pipeline.yml`, but its stage config needs explicit warm-pool metadata beyond steps:
+The warm-pool stage should continue to live in the persisted pipeline configuration, but its stage config needs explicit warm-pool metadata beyond steps:
 
 ```yaml
 - id: warm-pool
@@ -195,7 +195,7 @@ Exact field names can be finalized during implementation, but the plan assumes:
   - `apps/agents/test/agents/pipeline/application/use_cases/pipeline_run_workflows_test.exs`
   - optionally `apps/agents/test/agents/pipeline/infrastructure/pipeline_event_handler_test.exs` if scheduler/run creation shares runtime behavior with existing triggers
   - ensure adding/changing warm-pool steps in YAML changes executed commands without code changes
-- [ ] **GREEN**: Ensure the scheduler/use case/executor path reads `perme8-pipeline.yml` and executes the stage steps exactly as configured
+- [ ] **GREEN**: Ensure the scheduler/use case/executor path reads the persisted pipeline configuration and executes the stage steps exactly as configured
 - [ ] **GREEN**: Ensure warm count, target count, image, and readiness criteria are all driven from YAML-derived stage config
 - [ ] **REFACTOR**: tighten logging and returned metadata so operations can observe why a replenish run was skipped or executed
 

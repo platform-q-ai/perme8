@@ -7,7 +7,7 @@ defmodule Agents.Pipeline.Infrastructure.YamlParser do
 
   alias Agents.Pipeline.Domain.Entities.{DeployTarget, Gate, PipelineConfig, Stage, Step}
 
-  @doc "Parses a YAML pipeline file into a validated pipeline config."
+  @doc "Parses a YAML pipeline document into a validated pipeline config."
   @spec parse_file(Path.t()) :: {:ok, PipelineConfig.t()} | {:error, [String.t()]}
   def parse_file(path) when is_binary(path) do
     with {:ok, parsed} <- decode_file(path) do

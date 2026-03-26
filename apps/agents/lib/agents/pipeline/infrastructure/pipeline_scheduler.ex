@@ -6,6 +6,7 @@ defmodule Agents.Pipeline.Infrastructure.PipelineScheduler do
   use GenServer
 
   alias Agents.Pipeline.Application.PipelineRuntimeConfig
+  alias Agents.Pipeline.Application.UseCases.LoadPipeline
   alias Agents.Pipeline.Application.UseCases.ReplenishWarmPool
 
   require Logger
@@ -20,7 +21,7 @@ defmodule Agents.Pipeline.Infrastructure.PipelineScheduler do
   @impl true
   def init(opts) do
     state = %{
-      pipeline_path: Keyword.get(opts, :pipeline_path, default_pipeline_path()),
+      pipeline_path: Keyword.get(opts, :pipeline_path),
       pipeline_parser:
         Keyword.get(opts, :pipeline_parser, PipelineRuntimeConfig.pipeline_parser()),
       stage_executor: Keyword.get(opts, :stage_executor, PipelineRuntimeConfig.stage_executor()),
@@ -63,7 +64,11 @@ defmodule Agents.Pipeline.Infrastructure.PipelineScheduler do
 
   defp interval_ms(state) do
     with parser when not is_nil(parser) <- state.pipeline_parser,
-         {:ok, config} <- parser.parse_file(state.pipeline_path),
+         {:ok, config} <-
+           LoadPipeline.execute(state.pipeline_path,
+             parser: parser,
+             pipeline_source: :auto
+           ),
          stage when not is_nil(stage) <-
            Enum.find(config.stages, &(&1.type == "warm_pool" or &1.id == "warm-pool")),
          cron when is_binary(cron) <- stage.schedule && Map.get(stage.schedule, "cron"),
@@ -85,8 +90,4 @@ defmodule Agents.Pipeline.Infrastructure.PipelineScheduler do
 
   defp maybe_put(opts, _key, nil), do: opts
   defp maybe_put(opts, key, value), do: Keyword.put(opts, key, value)
-
-  defp default_pipeline_path do
-    Path.expand("../../../../../../../perme8-pipeline.yml", __DIR__)
-  end
 end

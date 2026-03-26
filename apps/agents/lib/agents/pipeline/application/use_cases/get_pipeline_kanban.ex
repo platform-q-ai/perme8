@@ -1,16 +1,15 @@
 defmodule Agents.Pipeline.Application.UseCases.GetPipelineKanban do
   @moduledoc "Builds a ticket-facing kanban model for the sessions dashboard."
 
-  alias Agents.Pipeline.Application.PipelineRuntimeConfig
+  alias Agents.Pipeline.Application.UseCases.LoadPipeline
   alias Agents.Pipeline.Application.TicketFacingStageCatalog
 
   @active_task_statuses ["pending", "starting", "running", "queued", "awaiting_feedback"]
   @spec execute([map()], keyword()) :: {:ok, map()} | {:error, term()}
   def execute(tickets, opts \\ []) when is_list(tickets) do
-    parser = Keyword.get(opts, :pipeline_parser, PipelineRuntimeConfig.pipeline_parser())
-    pipeline_path = Keyword.get(opts, :pipeline_path, default_pipeline_path())
+    pipeline_path = Keyword.get(opts, :pipeline_path)
 
-    with {:ok, config} <- parser.parse_file(pipeline_path) do
+    with {:ok, config} <- LoadPipeline.execute(pipeline_path, load_pipeline_opts(opts)) do
       stage_defs = TicketFacingStageCatalog.from_pipeline_config(config)
       stage_ids = MapSet.new(stage_defs, & &1.id)
 
@@ -111,7 +110,14 @@ defmodule Agents.Pipeline.Application.UseCases.GetPipelineKanban do
     end)
   end
 
-  defp default_pipeline_path do
-    Path.expand("../../../../../../../perme8-pipeline.yml", __DIR__)
+  defp load_pipeline_opts(opts) do
+    opts
+    |> maybe_put(:parser, opts[:pipeline_parser])
+    |> maybe_put(:pipeline_source, opts[:pipeline_source])
+    |> maybe_put(:pipeline_config_repo, opts[:pipeline_config_repo])
+    |> maybe_put(:bootstrap_yaml, opts[:bootstrap_yaml])
   end
+
+  defp maybe_put(opts, _key, nil), do: opts
+  defp maybe_put(opts, key, value), do: Keyword.put(opts, key, value)
 end

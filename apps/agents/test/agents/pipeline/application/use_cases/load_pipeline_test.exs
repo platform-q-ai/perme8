@@ -1,5 +1,8 @@
 defmodule Agents.Pipeline.TestDoubles.ParserStub do
   def parse_file(path), do: Process.get({__MODULE__, :parse_file}).(path)
+
+  def parse_string(yaml),
+    do: Process.get({__MODULE__, :parse_string}, fn value -> {:ok, %{yaml: value}} end).(yaml)
 end
 
 defmodule Agents.Pipeline.Application.UseCases.LoadPipelineTest do
@@ -7,6 +10,21 @@ defmodule Agents.Pipeline.Application.UseCases.LoadPipelineTest do
 
   alias Agents.Pipeline.Application.UseCases.LoadPipeline
   alias Agents.Pipeline.TestDoubles.ParserStub
+
+  defmodule PipelineConfigRepoStub do
+    def get_current do
+      case Process.get({__MODULE__, :current}) do
+        nil -> {:error, :not_found}
+        current -> {:ok, current}
+      end
+    end
+
+    def upsert_current(attrs) do
+      current = %{yaml: Map.get(attrs, :yaml) || Map.get(attrs, "yaml")}
+      Process.put({__MODULE__, :current}, current)
+      {:ok, current}
+    end
+  end
 
   describe "execute/1" do
     test "loads and validates pipeline config from file" do
@@ -61,6 +79,36 @@ defmodule Agents.Pipeline.Application.UseCases.LoadPipelineTest do
 
       assert {:ok, %{path: "custom.yml"}} =
                LoadPipeline.execute("custom.yml", parser: ParserStub)
+    end
+
+    test "loads the default pipeline from Agents.Repo" do
+      Process.put({PipelineConfigRepoStub, :current}, %{yaml: "version: 1\n"})
+      Process.put({ParserStub, :parse_string}, fn yaml -> {:ok, %{source: :repo, yaml: yaml}} end)
+
+      assert {:ok, %{source: :repo, yaml: "version: 1\n"}} =
+               LoadPipeline.execute(nil,
+                 parser: ParserStub,
+                 pipeline_config_repo: PipelineConfigRepoStub
+               )
+    end
+
+    test "bootstraps the default pipeline document when the database is empty" do
+      yaml = "version: 1\n"
+
+      Process.delete({PipelineConfigRepoStub, :current})
+
+      Process.put({ParserStub, :parse_string}, fn value ->
+        {:ok, %{source: :bootstrapped, yaml: value}}
+      end)
+
+      assert {:ok, %{source: :bootstrapped, yaml: ^yaml}} =
+               LoadPipeline.execute(nil,
+                 parser: ParserStub,
+                 pipeline_config_repo: PipelineConfigRepoStub,
+                 bootstrap_yaml: yaml
+               )
+
+      assert {:ok, %{yaml: ^yaml}} = PipelineConfigRepoStub.get_current()
     end
   end
 

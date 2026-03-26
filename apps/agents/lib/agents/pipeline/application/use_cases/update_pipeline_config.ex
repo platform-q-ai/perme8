@@ -3,9 +3,8 @@ defmodule Agents.Pipeline.Application.UseCases.UpdatePipelineConfig do
   Applies editable pipeline configuration updates, validates via parser, and persists YAML.
   """
 
+  alias Agents.Pipeline.Application.PipelineConfigStore
   alias Agents.Pipeline.Application.PipelineRuntimeConfig
-
-  @default_path "perme8-pipeline.yml"
 
   @spec execute(map(), keyword()) :: {:ok, map()} | {:error, map()}
   def execute(updates, opts \\ [])
@@ -13,15 +12,14 @@ defmodule Agents.Pipeline.Application.UseCases.UpdatePipelineConfig do
   def execute(updates, opts) when is_map(updates) do
     parser = Keyword.get(opts, :parser, PipelineRuntimeConfig.pipeline_parser())
     writer = Keyword.get(opts, :writer, pipeline_writer())
-    path = Keyword.get(opts, :pipeline_path, @default_path)
-    file_io = Keyword.get(opts, :file_io, File)
+    path = Keyword.get(opts, :pipeline_path)
 
-    with {:ok, current_config} <- parser.parse_file(path),
+    with {:ok, %{config: current_config}} <- PipelineConfigStore.fetch_document(path, opts),
          current_map <- pipeline_config_to_map(current_config),
          merged_map <- merge_updates(current_map, updates),
          {:ok, yaml} <- writer.dump(merged_map),
          {:ok, validated_config} <- parser.parse_string(yaml),
-         :ok <- write_file(file_io, path, yaml) do
+         :ok <- PipelineConfigStore.persist(yaml, path, opts) do
       {:ok,
        %{
          pipeline_config: validated_config,
@@ -50,25 +48,14 @@ defmodule Agents.Pipeline.Application.UseCases.UpdatePipelineConfig do
   end
 
   defp safe_merge_preview(opts, updates) do
-    parser = Keyword.get(opts, :parser, PipelineRuntimeConfig.pipeline_parser())
-    path = Keyword.get(opts, :pipeline_path, @default_path)
+    path = Keyword.get(opts, :pipeline_path)
 
-    case parser.parse_file(path) do
-      {:ok, config} -> config |> pipeline_config_to_map() |> merge_updates(updates)
+    case PipelineConfigStore.fetch_document(path, opts) do
+      {:ok, %{config: config}} -> config |> pipeline_config_to_map() |> merge_updates(updates)
       _ -> %{}
     end
   rescue
     _ -> %{}
-  end
-
-  defp write_file(%{write: write_fun}, path, yaml) when is_function(write_fun, 2),
-    do: write_fun.(path, yaml)
-
-  defp write_file(file_module, path, yaml) do
-    case file_module.write(path, yaml) do
-      :ok -> :ok
-      {:error, reason} -> {:error, "failed to write pipeline file: #{inspect(reason)}"}
-    end
   end
 
   defp merge_updates(current_map, updates) do

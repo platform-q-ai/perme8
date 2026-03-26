@@ -2,6 +2,7 @@ defmodule Agents.Pipeline.Application.UseCases.ManageMergeQueue do
   @moduledoc "Evaluates merge readiness, runs pre-merge validation, and merges eligible pull requests."
 
   alias Agents.Pipeline.Application.PipelineRuntimeConfig
+  alias Agents.Pipeline.Application.UseCases.LoadPipeline
   alias Agents.Pipeline.Application.UseCases.MergePullRequest
   alias Agents.Pipeline.Domain.Entities.{PipelineRun, PullRequest, Stage, Step}
   alias Agents.Pipeline.Domain.Policies.MergeQueuePolicy
@@ -21,10 +22,10 @@ defmodule Agents.Pipeline.Application.UseCases.ManageMergeQueue do
       Keyword.get(opts, :merge_queue_worker, PipelineRuntimeConfig.merge_queue_worker())
 
     merge_pull_request = Keyword.get(opts, :merge_pull_request, MergePullRequest)
-    pipeline_path = Keyword.get(opts, :pipeline_path, default_pipeline_path())
+    pipeline_path = Keyword.get(opts, :pipeline_path)
     worker_opts = merge_queue_worker_opts(opts)
 
-    with {:ok, config} <- parser.parse_file(pipeline_path),
+    with {:ok, config} <- LoadPipeline.execute(pipeline_path, load_pipeline_opts(opts, parser)),
          {:ok, pr_schema} <- pull_request_repo.get_by_number(number),
          {:ok, run_schemas} <- list_runs(pipeline_run_repo, number),
          pull_request = PullRequest.from_schema(pr_schema),
@@ -197,7 +198,14 @@ defmodule Agents.Pipeline.Application.UseCases.ManageMergeQueue do
     end
   end
 
-  defp default_pipeline_path do
-    Path.expand("../../../../../../../perme8-pipeline.yml", __DIR__)
+  defp load_pipeline_opts(opts, parser) do
+    opts
+    |> Keyword.put(:parser, parser)
+    |> maybe_put(:pipeline_source, opts[:pipeline_source])
+    |> maybe_put(:pipeline_config_repo, opts[:pipeline_config_repo])
+    |> maybe_put(:bootstrap_yaml, opts[:bootstrap_yaml])
   end
+
+  defp maybe_put(opts, _key, nil), do: opts
+  defp maybe_put(opts, key, value), do: Keyword.put(opts, key, value)
 end

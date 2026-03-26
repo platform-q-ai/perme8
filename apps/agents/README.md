@@ -233,7 +233,7 @@ config :agents, :sessions,
 ```
 
 **Pipeline warm pool** -- the scheduler-driven warm-pool replenishment flow is configured through
-`perme8-pipeline.yml` plus optional runtime overrides:
+the persisted pipeline configuration in `Agents.Repo` plus optional runtime overrides:
 
 ```yaml
 - id: warm-pool

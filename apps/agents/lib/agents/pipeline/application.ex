@@ -13,6 +13,8 @@ defmodule Agents.Pipeline.Application do
       Behaviours.GitDiffComputerBehaviour,
       Behaviours.GitMergerBehaviour,
       Behaviours.PipelineParserBehaviour,
+      DefaultPipelineConfig,
+      PipelineConfigStore,
       PipelineRuntimeConfig,
       TicketFacingStageCatalog,
       UseCases.ManageMergeQueue,

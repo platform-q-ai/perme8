@@ -190,9 +190,9 @@ defmodule Agents do
   defdelegate get_pipeline_kanban(tickets, opts \\ []), to: Pipeline, as: :get_pipeline_kanban
 
   @doc "Loads editable pipeline configuration for dashboard UI."
-  @spec load_editable_pipeline_config(Path.t(), keyword()) ::
+  @spec load_editable_pipeline_config(Path.t() | nil, keyword()) ::
           {:ok, map()} | {:error, [String.t()]}
-  defdelegate load_editable_pipeline_config(path \\ "perme8-pipeline.yml", opts \\ []),
+  defdelegate load_editable_pipeline_config(path \\ nil, opts \\ []),
     to: Pipeline,
     as: :load_editable_pipeline_config
 

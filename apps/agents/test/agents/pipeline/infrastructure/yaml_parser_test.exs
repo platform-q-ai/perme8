@@ -252,8 +252,8 @@ defmodule Agents.Pipeline.Infrastructure.YamlParserTest do
   end
 
   describe "parse_file/1" do
-    test "loads the checked-in pipeline file" do
-      path = Path.expand("../../../../../../perme8-pipeline.yml", __DIR__)
+    test "loads a pipeline document from disk" do
+      path = write_tmp_file(Agents.Pipeline.Application.DefaultPipelineConfig.yaml())
 
       assert {:ok, config} = YamlParser.parse_file(path)
       assert Enum.any?(config.stages, &(&1.id == "warm-pool"))

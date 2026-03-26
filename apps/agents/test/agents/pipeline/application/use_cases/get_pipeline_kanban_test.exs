@@ -68,7 +68,10 @@ defmodule Agents.Pipeline.Application.UseCases.GetPipelineKanbanTest do
     ]
 
     assert {:ok, kanban} =
-             GetPipelineKanban.execute(tickets, pipeline_parser: PipelineParserStub)
+             GetPipelineKanban.execute(tickets,
+               pipeline_parser: PipelineParserStub,
+               pipeline_path: "ignored.yml"
+             )
 
     assert Enum.map(kanban.stages, & &1.id) == [
              "ready",

@@ -47,7 +47,7 @@ defmodule AgentsWeb.DashboardLive.TicketLifecycleFixtures do
         )
         |> assign(
           :pipeline_editor_path,
-          Map.get(payload, :pipeline_editor_path, "perme8-pipeline.yml")
+          Map.get(payload, :pipeline_editor_path, nil)
         )
 
       payload ->
@@ -89,7 +89,7 @@ defmodule AgentsWeb.DashboardLive.TicketLifecycleFixtures do
           )
           |> assign(
             :pipeline_editor_path,
-            Map.get(payload, :pipeline_editor_path, "perme8-pipeline.yml")
+            Map.get(payload, :pipeline_editor_path, nil)
           )
           |> assign(:active_ticket_number, active_ticket_number)
           |> assign(
@@ -559,7 +559,7 @@ defmodule AgentsWeb.DashboardLive.TicketLifecycleFixtures do
     path =
       Path.join(
         System.tmp_dir!(),
-        "pipeline-editor-#{fixture_name}-#{System.unique_integer([:positive])}-perme8-pipeline.yml"
+        "pipeline-editor-#{fixture_name}-#{System.unique_integer([:positive])}.yml"
       )
 
     File.write!(path, pipeline_editor_fixture_yaml(draft))

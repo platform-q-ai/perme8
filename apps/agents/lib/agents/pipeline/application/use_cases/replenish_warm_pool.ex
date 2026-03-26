@@ -1,9 +1,10 @@
 defmodule Agents.Pipeline.Application.UseCases.ReplenishWarmPool do
   @moduledoc """
-  Replenishes the configured warm pool by executing the YAML-defined warm-pool stage.
+  Replenishes the configured warm pool by executing the persisted warm-pool stage.
   """
 
   alias Agents.Pipeline.Application.PipelineRuntimeConfig
+  alias Agents.Pipeline.Application.UseCases.LoadPipeline
   alias Agents.Pipeline.Domain.Policies.WarmPoolPolicy
 
   @type result :: %{
@@ -14,17 +15,17 @@ defmodule Agents.Pipeline.Application.UseCases.ReplenishWarmPool do
           stage_id: String.t()
         }
 
-  @doc "Executes a warm-pool replenishment cycle from the configured YAML stage."
+  @doc "Executes a warm-pool replenishment cycle from the configured warm-pool stage."
   @spec execute(keyword()) :: {:ok, result()} | {:error, term()}
   def execute(opts \\ []) do
-    pipeline_path = Keyword.get(opts, :pipeline_path, default_pipeline_path())
+    pipeline_path = Keyword.get(opts, :pipeline_path)
     parser = Keyword.get(opts, :pipeline_parser, PipelineRuntimeConfig.pipeline_parser())
     stage_executor = Keyword.get(opts, :stage_executor, PipelineRuntimeConfig.stage_executor())
 
     warm_pool_counter =
       Keyword.get(opts, :warm_pool_counter, PipelineRuntimeConfig.warm_pool_counter())
 
-    with {:ok, config} <- parser.parse_file(pipeline_path),
+    with {:ok, config} <- LoadPipeline.execute(pipeline_path, load_pipeline_opts(opts, parser)),
          {:ok, stage} <- fetch_warm_pool_stage(config.stages),
          {:ok, policy} <- WarmPoolPolicy.from_stage(stage) do
       execute_replenishment(stage, policy, warm_pool_counter, stage_executor)
@@ -123,7 +124,14 @@ defmodule Agents.Pipeline.Application.UseCases.ReplenishWarmPool do
     }
   end
 
-  defp default_pipeline_path do
-    Path.expand("../../../../../../../perme8-pipeline.yml", __DIR__)
+  defp load_pipeline_opts(opts, parser) do
+    opts
+    |> Keyword.put(:parser, parser)
+    |> maybe_put(:pipeline_source, opts[:pipeline_source])
+    |> maybe_put(:pipeline_config_repo, opts[:pipeline_config_repo])
+    |> maybe_put(:bootstrap_yaml, opts[:bootstrap_yaml])
   end
+
+  defp maybe_put(opts, _key, nil), do: opts
+  defp maybe_put(opts, key, value), do: Keyword.put(opts, key, value)
 end

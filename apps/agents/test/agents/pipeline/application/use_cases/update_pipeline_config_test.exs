@@ -4,6 +4,21 @@ defmodule Agents.Pipeline.Application.UseCases.UpdatePipelineConfigTest do
   alias Agents.Pipeline.Application.UseCases.UpdatePipelineConfig
   alias Agents.Pipeline.Infrastructure.YamlParser
 
+  defmodule PipelineConfigRepoStub do
+    def get_current do
+      case Process.get({__MODULE__, :current}) do
+        nil -> {:error, :not_found}
+        current -> {:ok, current}
+      end
+    end
+
+    def upsert_current(attrs) do
+      current = %{yaml: Map.get(attrs, :yaml) || Map.get(attrs, "yaml")}
+      Process.put({__MODULE__, :current}, current)
+      {:ok, current}
+    end
+  end
+
   describe "execute/2" do
     test "applies partial step edits including conditions and persists" do
       path = write_tmp_file(base_yaml())
@@ -135,6 +150,36 @@ defmodule Agents.Pipeline.Application.UseCases.UpdatePipelineConfigTest do
       assert {:ok, persisted} = YamlParser.parse_file(path)
       stage = Enum.find(persisted.stages, &(&1.id == "test"))
       assert hd(stage.steps).run == "mix test"
+    end
+
+    test "persists the default pipeline config in Agents.Repo" do
+      Process.put({PipelineConfigRepoStub, :current}, %{yaml: base_yaml()})
+
+      updates = %{
+        "stages" => [
+          %{
+            "id" => "test",
+            "steps" => [
+              %{
+                "name" => "unit-tests",
+                "run" => "mix test --trace"
+              }
+            ]
+          }
+        ]
+      }
+
+      assert {:ok, result} =
+               UpdatePipelineConfig.execute(updates,
+                 pipeline_config_repo: PipelineConfigRepoStub
+               )
+
+      assert hd(Enum.find(result.pipeline_config.stages, &(&1.id == "test")).steps).run ==
+               "mix test --trace"
+
+      assert {:ok, %{yaml: yaml}} = PipelineConfigRepoStub.get_current()
+      assert yaml =~ "mix test --trace"
+      refute yaml =~ "run: mix test\n"
     end
   end
 

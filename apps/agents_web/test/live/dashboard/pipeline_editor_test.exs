@@ -111,7 +111,7 @@ defmodule AgentsWeb.DashboardLive.PipelineEditorTest do
 
     html = render(view)
     assert html =~ "Configuration saved"
-    assert html =~ "perme8-pipeline.yml"
+    assert html =~ path
     assert html =~ "No staged changes"
 
     assert File.read!(path) =~ "mix test --trace"
@@ -122,7 +122,7 @@ defmodule AgentsWeb.DashboardLive.PipelineEditorTest do
     user: user
   } do
     Application.put_env(:agents_web, :pipeline_editor_loader, fn _path ->
-      {:error, ["pipeline file missing"]}
+      {:error, ["pipeline config missing"]}
     end)
 
     on_exit(fn -> Application.delete_env(:agents_web, :pipeline_editor_loader) end)
@@ -133,7 +133,7 @@ defmodule AgentsWeb.DashboardLive.PipelineEditorTest do
 
     html = render(view)
     assert html =~ "Unable to load pipeline configuration"
-    assert html =~ "pipeline file missing"
+    assert html =~ "pipeline config missing"
     assert has_element?(view, "[data-testid='pipeline-editor-save'][disabled]")
   end
 end

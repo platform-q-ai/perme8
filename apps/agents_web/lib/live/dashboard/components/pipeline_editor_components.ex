@@ -218,7 +218,7 @@ defmodule AgentsWeb.DashboardLive.Components.PipelineEditorComponents do
       </pre>
 
       <div class="px-3 py-2 text-xs text-base-content/60 border-t border-base-300">
-        <span>{@file_path}</span>
+        <span>{display_file_path(@file_path)}</span>
         <span class="ml-2">No staged changes</span>
       </div>
     </section>
@@ -300,4 +300,7 @@ defmodule AgentsWeb.DashboardLive.Components.PipelineEditorComponents do
     |> Enum.sort()
     |> Enum.map(fn {key, value} -> "#{key}=#{value}" end)
   end
+
+  defp display_file_path(nil), do: "Agents.Repo"
+  defp display_file_path(path), do: path
 end

@@ -1,0 +1,88 @@
+defmodule Agents.Pipeline.Application.DefaultPipelineConfig do
+  @moduledoc false
+
+  @yaml """
+  version: 1
+  pipeline:
+    name: perme8-core
+    description: Core CI/CD and runtime warm-pool orchestration pipeline.
+    merge_queue:
+      strategy: merge_queue
+      required_stages:
+        - test
+      required_review: true
+      pre_merge_validation:
+        strategy: re_run_required_stages
+        use_existing_container: true
+    deploy_targets:
+      - id: dev
+        environment: development
+        provider: docker
+        strategy: rolling
+        region: local
+        cluster: perme8-dev
+      - id: prod
+        environment: production
+        provider: kubernetes
+        strategy: canary
+        region: us-east-1
+        cluster: perme8-prod
+    stages:
+      - id: warm-pool
+        type: warm_pool
+        deploy_target: dev
+        schedule:
+          cron: "*/5 * * * *"
+        warm_pool:
+          target_count: 2
+          image: ghcr.io/platform-q-ai/perme8-runtime:latest
+          readiness:
+            strategy: command_success
+            required_step: prewarm-session-pool
+        steps:
+          - name: build-runtime-image
+            run: mix release
+            timeout_seconds: 900
+            retries: 1
+          - name: prewarm-session-pool
+            run: scripts/warm_pool.sh
+            timeout_seconds: 600
+        gates:
+          - type: quality
+            required: true
+            checks:
+              - smoke
+              - health
+      - id: test
+        type: verification
+        deploy_target: dev
+        steps:
+          - name: unit-tests
+            run: mix test
+            timeout_seconds: 900
+          - name: boundary-check
+            run: mix boundary
+            timeout_seconds: 300
+        gates:
+          - type: quality
+            required: true
+            checks:
+              - unit
+              - boundary
+      - id: deploy
+        type: deploy
+        deploy_target: prod
+        steps:
+          - name: deploy
+            run: scripts/deploy.sh
+            timeout_seconds: 1200
+        gates:
+          - type: manual_approval
+            required: true
+            approvers:
+              - release-managers
+  """
+
+  @spec yaml() :: String.t()
+  def yaml, do: @yaml
+end

@@ -5,6 +5,6 @@ defmodule Agents.Pipeline.Application.Behaviours.PipelineParserBehaviour do
 
   alias Agents.Pipeline.Domain.Entities.PipelineConfig
 
-  @doc "Parses a pipeline file and returns a validated pipeline config."
+  @doc "Parses a pipeline document and returns a validated pipeline config."
   @callback parse_file(Path.t()) :: {:ok, PipelineConfig.t()} | {:error, [String.t()]}
 end

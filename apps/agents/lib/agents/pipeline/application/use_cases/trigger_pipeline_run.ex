@@ -2,6 +2,7 @@ defmodule Agents.Pipeline.Application.UseCases.TriggerPipelineRun do
   @moduledoc "Creates a pipeline run for a trigger and optionally starts execution."
 
   alias Agents.Pipeline.Application.PipelineRuntimeConfig
+  alias Agents.Pipeline.Application.UseCases.LoadPipeline
   alias Agents.Pipeline.Application.UseCases.RunStage
   alias Agents.Pipeline.Domain.Entities.PipelineRun
 
@@ -10,7 +11,7 @@ defmodule Agents.Pipeline.Application.UseCases.TriggerPipelineRun do
     repo_module =
       Keyword.get(opts, :pipeline_run_repo, PipelineRuntimeConfig.pipeline_run_repository())
 
-    pipeline_path = Keyword.get(opts, :pipeline_path, default_pipeline_path())
+    pipeline_path = Keyword.get(opts, :pipeline_path)
     auto_run? = Keyword.get(opts, :auto_run, true)
 
     with {:ok, config} <- load_pipeline(pipeline_path, opts) do
@@ -109,10 +110,12 @@ defmodule Agents.Pipeline.Application.UseCases.TriggerPipelineRun do
 
   defp load_pipeline(path, opts) do
     parser = Keyword.get(opts, :pipeline_parser, PipelineRuntimeConfig.pipeline_parser())
-    parser.parse_file(path)
-  end
 
-  defp default_pipeline_path do
-    Path.expand("../../../../../../../perme8-pipeline.yml", __DIR__)
+    LoadPipeline.execute(path,
+      parser: parser,
+      pipeline_source: Keyword.get(opts, :pipeline_source),
+      pipeline_config_repo: Keyword.get(opts, :pipeline_config_repo),
+      bootstrap_yaml: Keyword.get(opts, :bootstrap_yaml)
+    )
   end
 end
