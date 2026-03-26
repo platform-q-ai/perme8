@@ -3,6 +3,7 @@ defmodule Agents.Pipeline.Infrastructure.PipelineEventHandlerTest do
 
   alias Agents.Pipeline.Infrastructure.PipelineEventHandler
   alias Agents.Pipeline.Infrastructure.Schemas.PipelineRunSchema
+  alias Agents.Pipeline.Infrastructure.YamlParser
   alias Agents.Sessions.Domain.Events.TaskCompleted
   alias Perme8.Events.TestEventBus
 
@@ -43,6 +44,53 @@ defmodule Agents.Pipeline.Infrastructure.PipelineEventHandlerTest do
     end
   end
 
+  defmodule PipelineConfigRepoStub do
+    def get_current do
+      config =
+        case Process.get({__MODULE__, :config}) do
+          nil ->
+            {:ok, config} =
+              YamlParser.parse_string("""
+              version: 1
+              pipeline:
+                name: perme8-core
+                deploy_targets:
+                  - id: dev
+                    environment: development
+                    provider: docker
+                stages:
+                  - id: warm-pool
+                    type: warm_pool
+                    deploy_target: dev
+                    schedule:
+                      cron: \"*/5 * * * *\"
+                    warm_pool:
+                      target_count: 2
+                      image: ghcr.io/platform-q-ai/perme8-runtime:latest
+                      readiness:
+                        strategy: command_success
+                    steps:
+                      - name: prestart
+                        run: scripts/warm_pool.sh
+                  - id: test
+                    type: verification
+                    deploy_target: dev
+                    steps:
+                      - name: unit-tests
+                        run: mix test
+              """)
+
+            Process.put({__MODULE__, :config}, config)
+            config
+
+          config ->
+            config
+        end
+
+      {:ok, config}
+    end
+  end
+
   setup do
     TestEventBus.start_global()
 
@@ -50,12 +98,14 @@ defmodule Agents.Pipeline.Infrastructure.PipelineEventHandlerTest do
     Application.put_env(:agents, :pipeline_event_bus, TestEventBus)
     Application.put_env(:agents, :pipeline_run_repository, PipelineRunRepoStub)
     Application.put_env(:agents, :pipeline_task_context_provider, TaskContextProviderStub)
+    Application.put_env(:agents, :pipeline_config_repository, PipelineConfigRepoStub)
 
     on_exit(fn ->
       Application.delete_env(:agents, :pipeline_stage_executor)
       Application.delete_env(:agents, :pipeline_event_bus)
       Application.delete_env(:agents, :pipeline_run_repository)
       Application.delete_env(:agents, :pipeline_task_context_provider)
+      Application.delete_env(:agents, :pipeline_config_repository)
     end)
 
     :ok

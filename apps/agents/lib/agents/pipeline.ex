@@ -31,6 +31,7 @@ defmodule Agents.Pipeline do
   alias Agents.Pipeline.Application.UseCases.TriggerPipelineRun
   alias Agents.Pipeline.Application.UseCases.UpdatePipelineConfig
   alias Agents.Pipeline.Application.UseCases.UpdatePullRequest
+  alias Agents.Pipeline.Application.PipelineConfigMapper
 
   @spec load_pipeline(Path.t() | nil, keyword()) ::
           {:ok, Agents.Pipeline.Domain.Entities.PipelineConfig.t()} | {:error, [String.t()]}
@@ -43,7 +44,7 @@ defmodule Agents.Pipeline do
           {:ok, map()} | {:error, [String.t()]}
   def load_editable_pipeline_config(path \\ nil, opts \\ []) do
     case load_pipeline(path, opts) do
-      {:ok, config} -> {:ok, pipeline_config_to_editable_map(config)}
+      {:ok, config} -> {:ok, PipelineConfigMapper.to_editable_map(config)}
       {:error, errors} -> {:error, errors}
     end
   end
@@ -132,49 +133,4 @@ defmodule Agents.Pipeline do
           {:ok, %{pull_request: Domain.Entities.PullRequest.t(), diff: String.t()}}
           | {:error, term()}
   defdelegate get_pull_request_diff(number, opts \\ []), to: GetPullRequestDiff, as: :execute
-
-  defp pipeline_config_to_editable_map(config) do
-    %{
-      "version" => config.version,
-      "name" => config.name,
-      "description" => config.description,
-      "merge_queue" => config.merge_queue,
-      "deploy_targets" =>
-        Enum.map(config.deploy_targets, fn target ->
-          %{
-            "id" => target.id,
-            "environment" => target.environment,
-            "provider" => target.provider,
-            "strategy" => target.strategy,
-            "region" => target.region
-          }
-          |> Map.merge(target.config || %{})
-        end),
-      "stages" =>
-        Enum.map(config.stages, fn stage ->
-          %{
-            "id" => stage.id,
-            "type" => stage.type,
-            "deploy_target" => stage.deploy_target,
-            "schedule" => stage.schedule,
-            "steps" =>
-              Enum.map(stage.steps, fn step ->
-                %{
-                  "name" => step.name,
-                  "run" => step.run,
-                  "timeout_seconds" => step.timeout_seconds,
-                  "retries" => step.retries,
-                  "conditions" => Map.get(step, :conditions),
-                  "env" => step.env
-                }
-              end),
-            "gates" =>
-              Enum.map(stage.gates, fn gate ->
-                Map.merge(%{"type" => gate.type, "required" => gate.required}, gate.params)
-              end)
-          }
-          |> Map.merge(stage.config || %{})
-        end)
-    }
-  end
 end

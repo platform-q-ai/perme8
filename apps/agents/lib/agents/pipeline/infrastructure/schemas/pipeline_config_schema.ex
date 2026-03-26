@@ -9,15 +9,26 @@ defmodule Agents.Pipeline.Infrastructure.Schemas.PipelineConfigSchema do
 
   schema "pipeline_configs" do
     field(:slug, :string)
-    field(:yaml, :string)
+    field(:version, :integer)
+    field(:name, :string)
+    field(:description, :string)
+    field(:merge_queue, :map, default: %{})
+
+    has_many(:deploy_targets, Agents.Pipeline.Infrastructure.Schemas.PipelineDeployTargetSchema,
+      foreign_key: :pipeline_config_id
+    )
+
+    has_many(:stages, Agents.Pipeline.Infrastructure.Schemas.PipelineStageSchema,
+      foreign_key: :pipeline_config_id
+    )
 
     timestamps(type: :utc_datetime)
   end
 
   def changeset(config, attrs) do
     config
-    |> cast(attrs, [:slug, :yaml])
-    |> validate_required([:slug, :yaml])
+    |> cast(attrs, [:slug, :version, :name, :description, :merge_queue])
+    |> validate_required([:slug, :version, :name, :merge_queue])
     |> unique_constraint(:slug)
   end
 end

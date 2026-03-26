@@ -107,14 +107,14 @@ defmodule AgentsWeb.DashboardLive.PipelineEditorTest do
 
     view |> element("button", "Save configuration") |> render_click()
 
-    path = :sys.get_state(view.pid).socket.assigns.pipeline_editor_path
-
     html = render(view)
     assert html =~ "Configuration saved"
-    assert html =~ path
+    assert html =~ "Agents.Repo"
     assert html =~ "No staged changes"
 
-    assert File.read!(path) =~ "mix test --trace"
+    assert {:ok, editable} = Agents.load_editable_pipeline_config()
+    test_stage = Enum.find(editable["stages"], &(&1["id"] == "in-progress"))
+    assert hd(test_stage["steps"])["run"] == "mix test --trace"
   end
 
   test "surfaces pipeline load failures instead of showing an empty editor", %{

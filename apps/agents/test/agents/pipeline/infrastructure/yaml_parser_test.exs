@@ -253,7 +253,30 @@ defmodule Agents.Pipeline.Infrastructure.YamlParserTest do
 
   describe "parse_file/1" do
     test "loads a pipeline document from disk" do
-      path = write_tmp_file(Agents.Pipeline.Application.DefaultPipelineConfig.yaml())
+      path =
+        write_tmp_file("""
+        version: 1
+        pipeline:
+          name: perme8-core
+          deploy_targets:
+            - id: dev
+              environment: development
+              provider: docker
+          stages:
+            - id: warm-pool
+              type: warm_pool
+              deploy_target: dev
+              schedule:
+                cron: \"*/5 * * * *\"
+              warm_pool:
+                target_count: 2
+                image: ghcr.io/platform-q-ai/perme8-runtime:latest
+                readiness:
+                  strategy: command_success
+              steps:
+                - name: prestart
+                  run: scripts/warm_pool.sh
+        """)
 
       assert {:ok, config} = YamlParser.parse_file(path)
       assert Enum.any?(config.stages, &(&1.id == "warm-pool"))

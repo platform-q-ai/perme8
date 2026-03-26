@@ -15,14 +15,14 @@
 
 ## Overview
 
-Ticket #504 moves warm pool provisioning out of `QueueOrchestrator` and into the pipeline subsystem. The YAML pipeline becomes the source of truth for how warm containers are provisioned, while queue orchestration becomes concurrency-only. The main architectural shift is that "warm pool" stops being a queue lane optimization and becomes a scheduler-driven pipeline stage with explicit policy/config.
+Ticket #504 moves warm pool provisioning out of `QueueOrchestrator` and into the pipeline subsystem. The persisted pipeline model becomes the source of truth for how warm containers are provisioned, while queue orchestration becomes concurrency-only. The main architectural shift is that "warm pool" stops being a queue lane optimization and becomes a scheduler-driven pipeline stage with explicit policy/config.
 
 This is an internal backend feature. No browser/http/security feature files are required because there is no user-facing adapter surface to express with the available exo-BDD domains.
 
 ## Design Decisions
 
-- Introduce a dedicated `WarmPoolPolicy` value/policy layer that interprets warm-pool stage config from YAML instead of reading queue settings from `SessionsConfig`.
-- Extend the pipeline `Stage` entity to preserve stage-specific config so warm-pool metadata survives YAML parsing.
+- Introduce a dedicated `WarmPoolPolicy` value/policy layer that interprets warm-pool stage config from persisted pipeline stage records instead of reading queue settings from `SessionsConfig`.
+- Extend the pipeline `Stage` entity to preserve stage-specific config so warm-pool metadata survives record loading.
 - Keep warm-pool execution on top of the existing generic stage execution path rather than inventing a second executor.
 - Add a dedicated `ReplenishWarmPool` use case that decides whether provisioning is needed, then triggers execution of the `warm-pool` stage.
 - Add `PipelineScheduler` as a GenServer that periodically calls `ReplenishWarmPool`; wire it into `Agents.OTPApp`.

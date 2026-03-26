@@ -11,11 +11,11 @@
 
 ## Scope
 
-Add a dashboard pipeline configuration editor that renders pipeline stages as editable cards, lets operators change stage and step configuration without hand-editing YAML, validates changes before save, and persists valid updates back to `Agents.Repo`.
+Add a dashboard pipeline configuration editor that renders pipeline stages as editable cards, lets operators change stage and step configuration without hand-editing YAML, validates changes before save, and persists valid updates back to normalized pipeline tables in `Agents.Repo`.
 
 ## Current Baseline
 
-- `Agents.Pipeline.Application.UseCases.LoadPipeline` already loads the persisted pipeline document through `Agents.Pipeline.Infrastructure.YamlParser`.
+- `Agents.Pipeline.Application.UseCases.LoadPipeline` should load the current pipeline from normalized records in `Agents.Repo`.
 - `YamlParser` already performs schema-style validation and builds `PipelineConfig`, `Stage`, `Step`, `Gate`, and `DeployTarget` value objects.
 - `PipelineConfig` is currently read-only from the application's perspective: there is no update use case, no YAML serializer, and no facade entrypoint for config edits.
 - The sessions dashboard already has pipeline-aware UI patterns through `PipelineKanbanState`, `PipelineKanbanHandlers`, and `PipelineKanbanComponents`.
@@ -25,8 +25,7 @@ Add a dashboard pipeline configuration editor that renders pipeline stages as ed
 ## Key Design Decisions
 
 - Treat the editor as a config-management surface for the persisted pipeline document, not an editor for the ticket-facing kanban abstraction.
-- Reuse `YamlParser` as the canonical validation gate after merging edits; do not duplicate validation rules in LiveView.
-- Introduce a dedicated `YamlWriter` infrastructure module that serializes the same normalized shape `YamlParser` expects so parse/write/parse round-trips stay stable.
+- Centralize validation/building in pipeline application code so repo-backed edits do not depend on serializing through a YAML blob.
 - Keep the LiveView state in a UI-friendly editable map/tree and convert it at save time through `UpdatePipelineConfig`.
 - Use the same parsed pipeline config as the source of truth for both editor card order and any pipeline-backed kanban ordering so the acceptance criterion about order stays aligned with the persisted pipeline document.
 
@@ -34,8 +33,7 @@ Add a dashboard pipeline configuration editor that renders pipeline stages as ed
 
 - New domain-facing use case:
   - `Agents.Pipeline.Application.UseCases.UpdatePipelineConfig`
-- New infrastructure writer:
-  - `Agents.Pipeline.Infrastructure.YamlWriter`
+- New normalized persistence schemas/repository for config, stages, steps, gates, and deploy targets
 - New facade delegates in `Agents.Pipeline` for loading editable config and saving updates
 - New dashboard component module:
   - `AgentsWeb.DashboardLive.Components.PipelineEditorComponents`
@@ -71,22 +69,21 @@ Use a normalized editable payload in the UI and use case layers:
   - `retries`
   - `env`
 
-`UpdatePipelineConfig` should accept partial updates against this shape, merge them into the currently loaded config, convert the result into the YAML parser input shape, validate by reparsing, and only then write to disk.
+`UpdatePipelineConfig` should accept partial updates against this shape, merge them into the currently loaded config, validate/build the resulting aggregate, and only then persist the normalized records.
 
 ## Merge and Validation Strategy
 
-1. Load the current config from disk.
-2. Convert the `PipelineConfig` struct tree into a plain YAML-compatible map.
+1. Load the current config from `Agents.Repo`.
+2. Convert the `PipelineConfig` struct tree into a plain editable map.
 3. Apply the partial update to that map with explicit merge helpers for:
    - root metadata
    - deploy targets
    - stage list reorder/add/remove/update
    - step list reorder/add/remove/update within a stage
    - warm pool nested config
-4. Serialize the merged map to YAML with `YamlWriter`.
-5. Re-parse the YAML string with `YamlParser.parse_string/1`.
-6. If parsing fails, return actionable validation errors and do not write the file.
-7. If parsing succeeds, persist the YAML-backed document in `Agents.Repo` and return the validated `PipelineConfig` plus a UI-ready projection.
+4. Validate/build the merged map into a `PipelineConfig` aggregate.
+5. If validation fails, return actionable errors and do not persist changes.
+6. If validation succeeds, persist the normalized config/stage/step/gate/deploy-target records in `Agents.Repo` and return the validated `PipelineConfig` plus a UI-ready projection.
 
 This keeps one validation source of truth and guarantees the writer never persists a config the parser would reject.
 

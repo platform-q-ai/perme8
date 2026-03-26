@@ -1,14 +1,12 @@
 defmodule Agents.Pipeline.TestDoubles.ParserStub do
   def parse_file(path), do: Process.get({__MODULE__, :parse_file}).(path)
-
-  def parse_string(yaml),
-    do: Process.get({__MODULE__, :parse_string}, fn value -> {:ok, %{yaml: value}} end).(yaml)
 end
 
 defmodule Agents.Pipeline.Application.UseCases.LoadPipelineTest do
   use ExUnit.Case, async: true
 
   alias Agents.Pipeline.Application.UseCases.LoadPipeline
+  alias Agents.Pipeline.Infrastructure.YamlParser
   alias Agents.Pipeline.TestDoubles.ParserStub
 
   defmodule PipelineConfigRepoStub do
@@ -20,10 +18,38 @@ defmodule Agents.Pipeline.Application.UseCases.LoadPipelineTest do
     end
 
     def upsert_current(attrs) do
-      current = %{yaml: Map.get(attrs, :yaml) || Map.get(attrs, "yaml")}
-      Process.put({__MODULE__, :current}, current)
-      {:ok, current}
+      Process.put({__MODULE__, :current}, attrs)
+      {:ok, attrs}
     end
+  end
+
+  defp base_config do
+    {:ok, config} =
+      YamlParser.parse_string("""
+      version: 1
+      pipeline:
+        name: perme8-core
+        deploy_targets:
+          - id: dev
+            environment: development
+            provider: docker
+        stages:
+          - id: warm-pool
+            type: warm_pool
+            deploy_target: dev
+            schedule:
+              cron: \"*/5 * * * *\"
+            warm_pool:
+              target_count: 2
+              image: ghcr.io/platform-q-ai/perme8-runtime:latest
+              readiness:
+                strategy: command_success
+            steps:
+              - name: prestart
+                run: scripts/warm_pool.sh
+      """)
+
+    config
   end
 
   describe "execute/1" do
@@ -82,33 +108,29 @@ defmodule Agents.Pipeline.Application.UseCases.LoadPipelineTest do
     end
 
     test "loads the default pipeline from Agents.Repo" do
-      Process.put({PipelineConfigRepoStub, :current}, %{yaml: "version: 1\n"})
-      Process.put({ParserStub, :parse_string}, fn yaml -> {:ok, %{source: :repo, yaml: yaml}} end)
+      config = base_config()
+      Process.put({PipelineConfigRepoStub, :current}, config)
 
-      assert {:ok, %{source: :repo, yaml: "version: 1\n"}} =
+      assert {:ok, loaded} =
                LoadPipeline.execute(nil,
                  parser: ParserStub,
                  pipeline_config_repo: PipelineConfigRepoStub
                )
+
+      assert loaded.name == config.name
+      assert Enum.map(loaded.stages, & &1.id) == Enum.map(config.stages, & &1.id)
     end
 
-    test "bootstraps the default pipeline document when the database is empty" do
-      yaml = "version: 1\n"
-
+    test "returns a clear error when the repo-backed pipeline config is missing" do
       Process.delete({PipelineConfigRepoStub, :current})
 
-      Process.put({ParserStub, :parse_string}, fn value ->
-        {:ok, %{source: :bootstrapped, yaml: value}}
-      end)
-
-      assert {:ok, %{source: :bootstrapped, yaml: ^yaml}} =
+      assert {:error, [message]} =
                LoadPipeline.execute(nil,
                  parser: ParserStub,
-                 pipeline_config_repo: PipelineConfigRepoStub,
-                 bootstrap_yaml: yaml
+                 pipeline_config_repo: PipelineConfigRepoStub
                )
 
-      assert {:ok, %{yaml: ^yaml}} = PipelineConfigRepoStub.get_current()
+      assert message =~ "pipeline config not found in Agents.Repo"
     end
   end
 

@@ -111,11 +111,12 @@ defmodule Agents.Pipeline.Application.UseCases.TriggerPipelineRun do
   defp load_pipeline(path, opts) do
     parser = Keyword.get(opts, :pipeline_parser, PipelineRuntimeConfig.pipeline_parser())
 
-    LoadPipeline.execute(path,
-      parser: parser,
-      pipeline_source: Keyword.get(opts, :pipeline_source),
-      pipeline_config_repo: Keyword.get(opts, :pipeline_config_repo),
-      bootstrap_yaml: Keyword.get(opts, :bootstrap_yaml)
-    )
+    [parser: parser]
+    |> maybe_put(:pipeline_source, Keyword.get(opts, :pipeline_source))
+    |> maybe_put(:pipeline_config_repo, Keyword.get(opts, :pipeline_config_repo))
+    |> then(&LoadPipeline.execute(path, &1))
   end
+
+  defp maybe_put(opts, _key, nil), do: opts
+  defp maybe_put(opts, key, value), do: Keyword.put(opts, key, value)
 end

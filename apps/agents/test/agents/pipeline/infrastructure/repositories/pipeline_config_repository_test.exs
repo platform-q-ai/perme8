@@ -1,23 +1,50 @@
 defmodule Agents.Pipeline.Infrastructure.Repositories.PipelineConfigRepositoryTest do
   use Agents.DataCase, async: true
 
+  alias Agents.Pipeline.Infrastructure.YamlParser
   alias Agents.Pipeline.Infrastructure.Repositories.PipelineConfigRepository
   alias Agents.Pipeline.Infrastructure.Schemas.PipelineConfigSchema
 
   test "creates and updates the current pipeline config through Agents.Repo" do
-    assert {:error, :not_found} = PipelineConfigRepository.get_current()
+    assert {:ok, initial} = PipelineConfigRepository.get_current()
+    assert initial.name == "perme8-core"
 
-    assert {:ok, created} = PipelineConfigRepository.upsert_current(%{yaml: "version: 1\n"})
-    assert created.slug == PipelineConfigRepository.current_slug()
+    assert {:ok, updated_config} =
+             YamlParser.parse_string("""
+             version: 1
+             pipeline:
+               name: repo-backed
+               deploy_targets:
+                 - id: dev
+                   environment: development
+                   provider: docker
+               stages:
+                 - id: warm-pool
+                   type: warm_pool
+                   deploy_target: dev
+                   schedule:
+                     cron: \"*/5 * * * *\"
+                   warm_pool:
+                     target_count: 3
+                     image: ghcr.io/platform-q-ai/perme8-runtime:latest
+                     readiness:
+                       strategy: command_success
+                   steps:
+                     - name: prestart
+                       run: scripts/warm_pool.sh
+             """)
+
+    assert {:ok, persisted} = PipelineConfigRepository.upsert_current(updated_config)
+    assert persisted.name == "repo-backed"
+    assert hd(persisted.stages).config["warm_pool"]["target_count"] == 3
+
+    schema = Repo.get_by!(PipelineConfigSchema, slug: PipelineConfigRepository.current_slug())
+    assert schema.name == "repo-backed"
+    assert schema.version == 1
+    assert schema.merge_queue == %{}
 
     assert {:ok, fetched} = PipelineConfigRepository.get_current()
-    assert fetched.id == created.id
-    assert fetched.yaml == "version: 1\n"
-
-    assert {:ok, updated} = PipelineConfigRepository.upsert_current(%{yaml: "version: 2\n"})
-    assert updated.id == created.id
-
-    persisted = Repo.get!(PipelineConfigSchema, created.id)
-    assert persisted.yaml == "version: 2\n"
+    assert fetched.name == "repo-backed"
+    assert hd(fetched.stages).steps |> hd() |> Map.get(:run) == "scripts/warm_pool.sh"
   end
 end

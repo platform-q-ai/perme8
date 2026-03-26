@@ -13,9 +13,8 @@ defmodule Agents.Pipeline.Application.UseCases.UpdatePipelineConfigTest do
     end
 
     def upsert_current(attrs) do
-      current = %{yaml: Map.get(attrs, :yaml) || Map.get(attrs, "yaml")}
-      Process.put({__MODULE__, :current}, current)
-      {:ok, current}
+      Process.put({__MODULE__, :current}, attrs)
+      {:ok, attrs}
     end
   end
 
@@ -153,7 +152,8 @@ defmodule Agents.Pipeline.Application.UseCases.UpdatePipelineConfigTest do
     end
 
     test "persists the default pipeline config in Agents.Repo" do
-      Process.put({PipelineConfigRepoStub, :current}, %{yaml: base_yaml()})
+      assert {:ok, config} = YamlParser.parse_string(base_yaml())
+      Process.put({PipelineConfigRepoStub, :current}, config)
 
       updates = %{
         "stages" => [
@@ -177,9 +177,9 @@ defmodule Agents.Pipeline.Application.UseCases.UpdatePipelineConfigTest do
       assert hd(Enum.find(result.pipeline_config.stages, &(&1.id == "test")).steps).run ==
                "mix test --trace"
 
-      assert {:ok, %{yaml: yaml}} = PipelineConfigRepoStub.get_current()
-      assert yaml =~ "mix test --trace"
-      refute yaml =~ "run: mix test\n"
+      assert {:ok, persisted} = PipelineConfigRepoStub.get_current()
+      stage = Enum.find(persisted.stages, &(&1.id == "test"))
+      assert hd(stage.steps).run == "mix test --trace"
     end
   end
 

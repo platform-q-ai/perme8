@@ -115,7 +115,6 @@ defmodule Agents.Pipeline.Application.UseCases.GetPipelineKanban do
     |> maybe_put(:parser, opts[:pipeline_parser])
     |> maybe_put(:pipeline_source, opts[:pipeline_source])
     |> maybe_put(:pipeline_config_repo, opts[:pipeline_config_repo])
-    |> maybe_put(:bootstrap_yaml, opts[:bootstrap_yaml])
   end
 
   defp maybe_put(opts, _key, nil), do: opts
