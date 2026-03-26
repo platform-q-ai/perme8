@@ -23,7 +23,6 @@ defmodule Agents.Pipeline do
   alias Agents.Pipeline.Application.UseCases.GetPullRequestDiff
   alias Agents.Pipeline.Application.UseCases.ListPullRequests
   alias Agents.Pipeline.Application.UseCases.MergePullRequest
-  alias Agents.Pipeline.Application.UseCases.ReplenishWarmPool
   alias Agents.Pipeline.Application.UseCases.ReplyToPullRequestComment
   alias Agents.Pipeline.Application.UseCases.ResolvePullRequestThread
   alias Agents.Pipeline.Application.UseCases.RunStage
@@ -61,10 +60,6 @@ defmodule Agents.Pipeline do
   @spec run_stage(Ecto.UUID.t(), keyword()) ::
           {:ok, Domain.Entities.PipelineRun.t()} | {:error, term()}
   defdelegate run_stage(run_id, opts \\ []), to: RunStage, as: :execute
-
-  @doc "Runs a warm-pool replenishment cycle using the configured pipeline stage."
-  @spec replenish_warm_pool(keyword()) :: {:ok, map()} | {:error, term()}
-  defdelegate replenish_warm_pool(opts \\ []), to: ReplenishWarmPool, as: :execute
 
   @spec get_pipeline_status(Ecto.UUID.t(), keyword()) ::
           {:ok, Domain.Entities.PipelineRun.t()} | {:error, term()}

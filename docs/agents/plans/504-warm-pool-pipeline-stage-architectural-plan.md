@@ -21,29 +21,25 @@ This is an internal backend feature. No browser/http/security feature files are 
 
 ## Design Decisions
 
-- Introduce a dedicated `WarmPoolPolicy` value/policy layer that interprets warm-pool stage config from persisted pipeline stage records instead of reading queue settings from `SessionsConfig`.
-- Extend the pipeline `Stage` entity to preserve stage-specific config so warm-pool metadata survives record loading.
-- Keep warm-pool execution on top of the existing generic stage execution path rather than inventing a second executor.
-- Add a dedicated `ReplenishWarmPool` use case that decides whether provisioning is needed, then triggers execution of the `warm-pool` stage.
-- Add `PipelineScheduler` as a GenServer that periodically calls `ReplenishWarmPool`; wire it into `Agents.OTPApp`.
+- Keep stage config generic so warm-pool-specific concerns stay in stage config and shell commands rather than pipeline-specific policies.
+- Extend the pipeline `Stage` entity to preserve stage-specific config so scheduled stage metadata survives record loading.
+- Keep scheduled execution on top of the existing generic stage execution path rather than inventing a second executor.
+- Use the normal pipeline run flow for scheduled stages instead of a dedicated replenishment use case.
+- Add `PipelineScheduler` as a GenServer that periodically emits a scheduled trigger into the pipeline flow; wire it into `Agents.OTPApp`.
 - Remove warm lane and warm cache metadata from queue snapshots so `QueueOrchestrator` and `QueueEngine` only model processing, queued cold tasks, retry-pending tasks, and awaiting feedback.
 - Preserve task/session lifecycle behavior where possible; only remove queue-owned warming logic, not unrelated session/container behavior.
 
 ## Config Shape
 
-The warm-pool stage should continue to live in the persisted pipeline configuration, but its stage config needs explicit warm-pool metadata beyond steps:
+The scheduled stage should continue to live in the persisted pipeline configuration, but the engine treats any warm-pool-specific config as opaque stage data:
 
 ```yaml
 - id: warm-pool
-  type: warm_pool
+  type: automation
   schedule:
     cron: "*/5 * * * *"
-  warm_pool:
-    target_count: 2
-    image: ghcr.io/platform-q-ai/perme8-runtime:latest
-    readiness:
-      strategy: command_success
-      required_step: prewarm-session-pool
+  triggers:
+    - on_warm_pool
   steps:
     - name: build-runtime-image
       run: mix release
@@ -56,7 +52,7 @@ The warm-pool stage should continue to live in the persisted pipeline configurat
 Exact field names can be finalized during implementation, but the plan assumes:
 
 - schedule metadata lives on the stage and includes cron
-- warm-pool-specific config lives in a dedicated nested map
+- stage-specific config lives in an opaque nested map
 - steps remain generic and executable by the existing stage executor
 
 ## Phase 1: Pipeline Config + Policy Modeling (phoenix-tdd)
@@ -76,69 +72,49 @@ Exact field names can be finalized during implementation, but the plan assumes:
   - validate that `warm-pool` exists and has the required config keys
 - [ ] **REFACTOR**: Extract parser helpers for warm-pool config validation instead of growing `build_stage/3` inline
 
-### 1.2 Implement WarmPoolPolicy
+### 1.2 Keep scheduled stage config generic
 
-- [ ] **RED**: Add `apps/agents/test/agents/pipeline/domain/policies/warm_pool_policy_test.exs`
-  - parse target count, image, readiness criteria, and cron from the stage config
-  - reject missing/invalid target count
-  - reject missing image/readiness config
-  - expose helpers for determining shortage and whether replenishment is required
-- [ ] **GREEN**: Create `apps/agents/lib/agents/pipeline/domain/policies/warm_pool_policy.ex`
-  - construct a policy from the parsed warm-pool stage
-  - expose functions like `from_stage/1`, `target_count/1`, `image/1`, `readiness_criteria/1`, `shortage/2`, `replenishment_required?/2`
-- [ ] **REFACTOR**: Keep the policy pure; no repo/process access
+- [ ] **RED**: Add tests proving scheduled stages can carry arbitrary config without engine-specific interpretation
+- [ ] **GREEN**: Preserve stage config in the generic `Stage` entity and pass it through unchanged to runtime consumers
+- [ ] **REFACTOR**: Keep the pipeline engine unaware of warm-pool-specific keys
 
 ### Phase 1 Validation
 
 - [ ] `mix test apps/agents/test/agents/pipeline/domain/entities/stage_test.exs`
 - [ ] `mix test apps/agents/test/agents/pipeline/infrastructure/yaml_parser_test.exs`
-- [ ] `mix test apps/agents/test/agents/pipeline/domain/policies/warm_pool_policy_test.exs`
+- [ ] targeted tests for generic stage-config preservation
 
 ---
 
 ## Phase 2: Warm Pool Replenishment + Scheduler (phoenix-tdd)
 
-### 2.1 Implement ReplenishWarmPool use case
+### 2.1 Implement scheduled trigger flow
 
-- [ ] **RED**: Add `apps/agents/test/agents/pipeline/application/use_cases/replenish_warm_pool_test.exs`
-  - loads the pipeline, finds the `warm-pool` stage, and builds policy from it
-  - compares current warm count against target count
-  - does nothing when current warm count meets/exceeds target
-  - triggers warm-pool stage execution when below target
-  - executes provisioning count based on shortage
-  - returns a useful result map/struct for scheduler observability
-- [ ] **GREEN**: Create `apps/agents/lib/agents/pipeline/application/use_cases/replenish_warm_pool.ex`
-  - load pipeline config
-  - resolve warm-pool stage
-  - derive policy with `WarmPoolPolicy`
-  - consult injected dependency for current warm count
-  - trigger generic stage execution for replenishment
-  - inject dependencies for parser, runner repo, stage executor, and warm-count provider to keep tests isolated
-- [ ] **REFACTOR**: Prefer composition over embedding scheduler logic inside the use case
+- [ ] **RED**: Add tests proving cron-triggered flows emit the expected pipeline run trigger
+- [ ] **GREEN**: Reuse `TriggerPipelineRun` for scheduled stages
+- [ ] **GREEN**: Keep provisioning/counting logic in shell commands or external event producers rather than core pipeline runtime
+- [ ] **REFACTOR**: Prefer composition over embedding scheduling rules inside stage execution
 
 ### 2.2 Scheduler support and trigger integration
 
 - [ ] **RED**: Add `apps/agents/test/agents/pipeline/infrastructure/pipeline_scheduler_test.exs`
-  - scheduler reads cron config from the warm-pool stage
-  - scheduler invokes `ReplenishWarmPool` on startup/tick
+  - scheduler reads cron config from scheduled stages
+  - scheduler invokes `TriggerPipelineRun` on startup/tick
   - scheduler reschedules after each run
   - scheduler handles use case failures without crashing
   - scheduler can be disabled/skipped in tests via injected options or app config
 - [ ] **GREEN**: Create `apps/agents/lib/agents/pipeline/infrastructure/pipeline_scheduler.ex`
-  - GenServer responsible for computing next tick from cron expression and calling `ReplenishWarmPool`
+  - GenServer responsible for computing next tick from cron expression and calling `TriggerPipelineRun`
   - guard against sandbox/repo failures with defensive error handling
   - make the scheduler dependency-injected enough for deterministic unit tests
 - [ ] **GREEN**: Wire scheduler into `apps/agents/lib/agents/otp_app.ex`
   - start it under supervision
   - add any runtime config flags needed to suppress the scheduler in test
-- [ ] **GREEN**: Update `apps/agents/lib/agents/pipeline/application/use_cases/trigger_pipeline_run.ex` only if needed for consistency
-  - do not overload existing session/PR triggers with warm-pool scheduling unless it simplifies the design cleanly
-  - if direct trigger support is added, ensure `warm_pool` stages are explicitly selected only for the scheduler/warm-pool trigger
+- [ ] **GREEN**: Update `apps/agents/lib/agents/pipeline/application/use_cases/trigger_pipeline_run.ex` to support scheduled trigger entry stages
 - [ ] **REFACTOR**: Export/inject scheduler dependencies via pipeline runtime config if that keeps wiring consistent with existing pipeline use cases
 
 ### Phase 2 Validation
 
-- [ ] `mix test apps/agents/test/agents/pipeline/application/use_cases/replenish_warm_pool_test.exs`
 - [ ] `mix test apps/agents/test/agents/pipeline/infrastructure/pipeline_scheduler_test.exs`
 - [ ] targeted regression tests for `trigger_pipeline_run`
 

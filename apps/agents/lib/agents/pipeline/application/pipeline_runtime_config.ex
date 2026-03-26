@@ -11,7 +11,6 @@ defmodule Agents.Pipeline.Application.PipelineRuntimeConfig do
   @default_session_reopener :"Elixir.Agents.Pipeline.Infrastructure.SessionReopener"
   @default_task_context_provider :"Elixir.Agents.Pipeline.Infrastructure.TaskContextProvider"
   @default_pipeline_config_repository :"Elixir.Agents.Pipeline.Infrastructure.Repositories.PipelineConfigRepository"
-  @default_warm_pool_counter :"Elixir.Agents.Pipeline.Infrastructure.WarmPoolCounter"
   @default_merge_queue_worker :"Elixir.Agents.Pipeline.Infrastructure.MergeQueueWorker"
   @default_pipeline_scheduler_enabled false
   @default_event_bus Perme8.Events.EventBus
@@ -73,12 +72,6 @@ defmodule Agents.Pipeline.Application.PipelineRuntimeConfig do
       :pipeline_config_repository,
       @default_pipeline_config_repository
     )
-  end
-
-  @doc "Returns the configured warm pool counter implementation."
-  @spec warm_pool_counter() :: module()
-  def warm_pool_counter do
-    Application.get_env(:agents, :pipeline_warm_pool_counter, @default_warm_pool_counter)
   end
 
   @doc "Returns the configured merge queue worker implementation."

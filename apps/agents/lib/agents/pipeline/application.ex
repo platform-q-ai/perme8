@@ -29,7 +29,6 @@ defmodule Agents.Pipeline.Application do
       UseCases.ListPullRequests,
       UseCases.LoadPipeline,
       UseCases.MergePullRequest,
-      UseCases.ReplenishWarmPool,
       UseCases.ReplyToPullRequestComment,
       UseCases.ResolvePullRequestThread,
       UseCases.RunStage,

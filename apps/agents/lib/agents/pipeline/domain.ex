@@ -19,7 +19,6 @@ defmodule Agents.Pipeline.Domain do
       Entities.Stage,
       Entities.Step,
       Policies.MergeQueuePolicy,
-      Policies.WarmPoolPolicy,
       Policies.PipelineLifecyclePolicy,
       Policies.PullRequestPolicy
     ]

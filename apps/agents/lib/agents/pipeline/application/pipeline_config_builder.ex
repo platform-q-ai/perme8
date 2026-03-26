@@ -35,13 +35,6 @@ defmodule Agents.Pipeline.Application.PipelineConfigBuilder do
     {merge_queue, errors} = build_merge_queue(merge_queue_raw, errors)
     errors = errors ++ flow_errors(stages)
 
-    errors =
-      if Enum.any?(stages, &(&1.id == "warm-pool")) do
-        errors
-      else
-        errors ++ ["pipeline.stages must include a stage with id 'warm-pool'"]
-      end
-
     if errors == [] do
       {:ok,
        PipelineConfig.new(%{
@@ -178,8 +171,6 @@ defmodule Agents.Pipeline.Application.PipelineConfigBuilder do
         "#{path}.ticket_concurrency"
       )
 
-    errors = maybe_add_warm_pool_stage_errors(errors, type, path, stage_config, schedule)
-
     {steps, errors} = build_steps(fetch(item, "steps"), path, errors)
     {gates, errors} = build_gates(fetch(item, "gates"), path, errors)
 
@@ -283,57 +274,6 @@ defmodule Agents.Pipeline.Application.PipelineConfigBuilder do
 
   defp maybe_add_string_list_error(errors, _values, path) do
     errors ++ ["#{path} must be a list of strings"]
-  end
-
-  defp maybe_add_warm_pool_stage_errors(errors, "warm_pool", path, config, schedule) do
-    errors
-    |> maybe_add_type_error(
-      Map.get(config, "warm_pool"),
-      "#{path}.warm_pool",
-      &is_map/1,
-      "must be a map"
-    )
-    |> maybe_add_type_error(schedule, "#{path}.schedule", &is_map/1, "must be a map")
-    |> maybe_add_warm_pool_config_errors(config, path)
-    |> maybe_add_schedule_errors(schedule, path)
-  end
-
-  defp maybe_add_warm_pool_stage_errors(errors, _type, _path, _config, _schedule), do: errors
-
-  defp maybe_add_warm_pool_config_errors(errors, config, path) do
-    warm_pool = Map.get(config, "warm_pool") || %{}
-    readiness = Map.get(warm_pool, "readiness")
-
-    errors
-    |> maybe_add_type_error(
-      Map.get(warm_pool, "target_count"),
-      "#{path}.warm_pool.target_count",
-      &(is_integer(&1) and &1 >= 0),
-      "must be a non-negative integer"
-    )
-    |> maybe_add_type_error(
-      Map.get(warm_pool, "image"),
-      "#{path}.warm_pool.image",
-      &is_binary/1,
-      "must be a string"
-    )
-    |> maybe_add_type_error(readiness, "#{path}.warm_pool.readiness", &is_map/1, "must be a map")
-    |> maybe_add_type_error(
-      if(is_map(readiness), do: Map.get(readiness, "strategy")),
-      "#{path}.warm_pool.readiness.strategy",
-      &is_binary/1,
-      "must be a string"
-    )
-  end
-
-  defp maybe_add_schedule_errors(errors, schedule, path) do
-    maybe_add_type_error(
-      errors,
-      if(is_map(schedule), do: Map.get(schedule, "cron")),
-      "#{path}.schedule.cron",
-      &is_binary/1,
-      "must be a string"
-    )
   end
 
   defp maybe_add_boolean_error(errors, value, path) do

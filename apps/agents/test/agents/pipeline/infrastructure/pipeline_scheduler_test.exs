@@ -12,6 +12,7 @@ defmodule Agents.Pipeline.Infrastructure.PipelineSchedulerTest do
            Stage.new(%{
              id: "warm-pool",
              type: "warm_pool",
+             triggers: ["on_warm_pool"],
              schedule: %{"cron" => "*/1 * * * *"}
            })
          ]
@@ -19,17 +20,17 @@ defmodule Agents.Pipeline.Infrastructure.PipelineSchedulerTest do
     end
   end
 
-  defmodule ReplenishWarmPoolStub do
-    def execute(_opts) do
+  defmodule TriggerPipelineRunStub do
+    def execute(_attrs) do
       if pid = Process.whereis(:pipeline_scheduler_test_observer) do
-        send(pid, :replenish_called)
+        send(pid, :trigger_called)
       end
 
-      {:ok, %{status: :replenished}}
+      {:ok, %{status: "started"}}
     end
   end
 
-  test "runs warm-pool replenishment on tick without crashing" do
+  test "triggers scheduled pipeline flow on tick without crashing" do
     Process.register(self(), :pipeline_scheduler_test_observer)
     name = String.to_atom("pipeline_scheduler_test_#{System.unique_integer([:positive])}")
 
@@ -45,10 +46,10 @@ defmodule Agents.Pipeline.Infrastructure.PipelineSchedulerTest do
 
     {:ok, pid} =
       start_supervised(
-        {PipelineScheduler, replenish_warm_pool: ReplenishWarmPoolStub, name: name}
+        {PipelineScheduler, trigger_pipeline_run: TriggerPipelineRunStub, name: name}
       )
 
     send(pid, :tick)
-    assert_receive :replenish_called
+    assert_receive :trigger_called
   end
 end

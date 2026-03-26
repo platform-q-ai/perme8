@@ -4,9 +4,7 @@ defmodule Agents.Pipeline.Application.TicketFacingStageCatalog do
   alias Agents.Pipeline.Domain.Entities.PipelineConfig
   alias Agents.Tickets.Domain.Policies.TicketLifecyclePolicy
 
-  @pre_pipeline_stage_groups %{
-    warm_pool: ["ready", "in_progress", "in_review"]
-  }
+  @ticket_entry_stage_groups ["ready", "in_progress", "in_review"]
 
   @type stage_def :: %{
           id: String.t(),
@@ -26,10 +24,12 @@ defmodule Agents.Pipeline.Application.TicketFacingStageCatalog do
     |> Enum.uniq_by(& &1.id)
   end
 
-  defp stage_group_for(%{type: type}) when is_binary(type) do
-    case type do
-      "warm_pool" -> Map.fetch!(@pre_pipeline_stage_groups, :warm_pool)
-      other -> downstream_stage_ids(other)
+  defp stage_group_for(%{triggers: triggers, type: type})
+       when is_list(triggers) and is_binary(type) do
+    if "on_ticket_play" in triggers do
+      @ticket_entry_stage_groups
+    else
+      downstream_stage_ids(type)
     end
   end
 

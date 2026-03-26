@@ -232,34 +232,25 @@ config :agents, :sessions,
   health_check_interval_ms: 1_000
 ```
 
-**Pipeline warm pool** -- the scheduler-driven warm-pool replenishment flow is configured through
-structured pipeline records in `Agents.Repo` (`pipeline_configs`, `pipeline_stages`, `pipeline_steps`, and `pipeline_gates`) plus optional runtime overrides:
+**Scheduled pipeline flows** -- cron-triggered flows are configured through structured pipeline
+records in `Agents.Repo` (`pipeline_configs`, `pipeline_stages`, `pipeline_steps`, and `pipeline_gates`):
 
 ```yaml
 - id: warm-pool
-  type: warm_pool
+  type: automation
   schedule:
     cron: "*/5 * * * *"
-  warm_pool:
-    target_count: 2
-    image: ghcr.io/platform-q-ai/perme8-runtime:latest
-    readiness:
-      strategy: command_success
-      required_step: prewarm-session-pool
+  triggers:
+    - on_warm_pool
 ```
 
 ```elixir
 config :agents,
   pipeline_scheduler_enabled: false,
-  pipeline_warm_pool_counter: Agents.Pipeline.Infrastructure.WarmPoolCounter,
   pipeline_stage_executor: Agents.Pipeline.Infrastructure.StageExecutor
 ```
 
-`pipeline_scheduler_enabled` defaults to `false` until a real warm-pool inventory counter is
-configured. Enable it explicitly in environments where the warm-pool stage can safely run.
-
-`Agents.Pipeline.replenish_warm_pool/1` uses the configured parser, warm-pool counter, and
-stage executor to evaluate the warm-pool stage and run its steps when the pool is below the
-configured target.
+`pipeline_scheduler_enabled` defaults to `false`. When enabled, the scheduler emits the
+`on_warm_pool` trigger on the configured cron cadence and the normal pipeline flow handles the rest.
 
 The exo-bdd config is at `apps/agents/test/exo-bdd-agents.config.ts`.

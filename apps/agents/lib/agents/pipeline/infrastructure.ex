@@ -23,7 +23,6 @@ defmodule Agents.Pipeline.Infrastructure do
       SessionReopener,
       StageExecutor,
       TaskContextProvider,
-      WarmPoolCounter,
       Schemas.PipelineRunSchema,
       Schemas.PullRequestSchema,
       Schemas.ReviewCommentSchema,

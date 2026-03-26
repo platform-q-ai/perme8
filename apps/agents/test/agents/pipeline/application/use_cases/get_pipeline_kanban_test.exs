@@ -16,6 +16,7 @@ defmodule Agents.Pipeline.Application.UseCases.GetPipelineKanbanTest do
            %Agents.Pipeline.Domain.Entities.Stage{
              id: "warm-pool",
              type: "warm_pool",
+             triggers: ["on_ticket_play"],
              steps: [],
              gates: []
            },
