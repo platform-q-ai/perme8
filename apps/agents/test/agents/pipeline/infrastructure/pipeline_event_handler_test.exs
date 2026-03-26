@@ -42,6 +42,9 @@ defmodule Agents.Pipeline.Infrastructure.PipelineEventHandlerTest do
           {:error, :not_found}
       end
     end
+
+    def count_active_for_stage(_stage_id, _repo \\ nil), do: 0
+    def list_queued_for_stage(_stage_id, _repo \\ nil), do: []
   end
 
   defmodule PipelineConfigRepoStub do
@@ -116,7 +119,7 @@ defmodule Agents.Pipeline.Infrastructure.PipelineEventHandlerTest do
     :ok
   end
 
-  test "task completion creates and executes a pipeline run" do
+  test "task completion creates a pipeline run request" do
     event =
       TaskCompleted.new(%{
         aggregate_id: Ecto.UUID.generate(),
@@ -129,6 +132,6 @@ defmodule Agents.Pipeline.Infrastructure.PipelineEventHandlerTest do
     assert :ok = PipelineEventHandler.handle_event(event)
 
     assert %PipelineRunSchema{} = run = Process.get({PipelineRunRepoStub, :last_run})
-    assert run.status == "passed"
+    assert run.status == "idle"
   end
 end

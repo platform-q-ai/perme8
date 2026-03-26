@@ -261,4 +261,8 @@ Required gates stop downstream progression until they pass or are explicitly ove
 decide where the flow goes next on `passed`, `blocked`, or `failed`, which allows explicit
 loopbacks like `verify -> develop` without relying on stage list order.
 
+**Stage concurrency** -- stage admission is persisted and event-driven. If a stage is at capacity,
+pipeline runs move into `queued` with queue metadata stored on the run record so queue state
+survives crashes and restarts.
+
 The exo-bdd config is at `apps/agents/test/exo-bdd-agents.config.ts`.

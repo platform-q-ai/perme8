@@ -3,11 +3,19 @@ defmodule Agents.Pipeline.Infrastructure.PipelineEventHandler do
 
   use Perme8.Events.EventHandler
 
+  alias Agents.Pipeline.Application.PipelineRuntimeConfig
+  alias Agents.Pipeline.Application.UseCases.RunStage
   alias Agents.Pipeline.Application.UseCases.TriggerPipelineRun
 
   @impl Perme8.Events.EventHandler
   def subscriptions,
-    do: ["events:sessions:task", "events:sessions:session", "events:pipeline:pull_request"]
+    do: [
+      "events:sessions:task",
+      "events:sessions:session",
+      "events:pipeline:pull_request",
+      "events:pipeline:pipeline_run",
+      "events:pipeline:pipeline_run_stage_changed"
+    ]
 
   @impl Perme8.Events.EventHandler
   def handle_event(%{event_type: "sessions.task_completed"} = event) do
@@ -44,6 +52,17 @@ defmodule Agents.Pipeline.Infrastructure.PipelineEventHandler do
     trigger_pr_event("on_merge", event)
   end
 
+  def handle_event(%{event_type: "pipeline.pipeline_run_requested", pipeline_run_id: run_id}) do
+    RunStage.execute(run_id)
+    :ok
+  end
+
+  def handle_event(%{event_type: "pipeline.pipeline_stage_changed", to_status: to_status} = event)
+      when to_status in ["passed", "failed", "blocked"] do
+    maybe_resume_queued_for_stage(event.stage_id)
+    :ok
+  end
+
   def handle_event(_event), do: :ok
 
   defp trigger_pr_event(trigger_type, event) do
@@ -57,5 +76,16 @@ defmodule Agents.Pipeline.Infrastructure.PipelineEventHandler do
     :ok
   rescue
     error -> {:error, error}
+  end
+
+  defp maybe_resume_queued_for_stage(nil), do: :ok
+
+  defp maybe_resume_queued_for_stage(stage_id) do
+    repo = PipelineRuntimeConfig.pipeline_run_repository()
+
+    case repo.list_queued_for_stage(stage_id) do
+      [run | _] -> RunStage.execute(run.id)
+      _ -> :ok
+    end
   end
 end

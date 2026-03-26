@@ -45,17 +45,57 @@ defmodule Agents.Pipeline.Application.UseCases.RunStage do
 
     with true <- is_binary(stage_id),
          {:ok, stage} <- fetch_stage(deps.stages, stage_id),
-         {:ok, running} <- transition_and_store(run, deps, "running_stage", stage_id),
-         {:ok, awaiting} <- transition_and_store(running, deps, "awaiting_result", stage_id) do
-      context = execution_context(awaiting, stage, deps)
+         {:ok, admitted_run} <- admit_or_queue(run, stage, deps) do
+      case admitted_run.status do
+        "queued" ->
+          {:ok, admitted_run}
 
-      case deps.stage_executor.execute(stage, context) do
-        {:ok, result} -> handle_success(awaiting, stage, result, context, deps)
-        {:error, result} -> handle_failure(awaiting, stage, result, deps)
+        "running_stage" ->
+          with {:ok, awaiting} <-
+                 transition_and_store(admitted_run, deps, "awaiting_result", stage_id) do
+            context = execution_context(awaiting, stage, deps)
+
+            case deps.stage_executor.execute(stage, context) do
+              {:ok, result} -> handle_success(awaiting, stage, result, context, deps)
+              {:error, result} -> handle_failure(awaiting, stage, result, deps)
+            end
+          end
       end
     else
-      false -> {:ok, run}
-      error -> error
+      false ->
+        {:ok, run}
+
+      error ->
+        error
+    end
+  end
+
+  defp admit_or_queue(run, stage, deps) do
+    capacity = stage.ticket_concurrency
+    active_count = deps.repo_module.count_active_for_stage(stage.id)
+
+    cond do
+      is_nil(capacity) or active_count < capacity ->
+        transition_and_store(run, deps, "running_stage", stage.id)
+
+      true ->
+        queue_run(run, stage, deps)
+    end
+  end
+
+  defp queue_run(run, stage, deps) do
+    with :ok <- PipelineLifecyclePolicy.valid_transition?(run.status, "queued"),
+         {:ok, schema} <-
+           deps.repo_module.update_run(run.id, %{
+             status: "queued",
+             current_stage_id: nil,
+             queued_stage_id: stage.id,
+             queue_reason: "capacity",
+             enqueued_at: DateTime.utc_now() |> DateTime.truncate(:second),
+             remaining_stage_ids: [stage.id | run.remaining_stage_ids]
+           }),
+         :ok <- emit_stage_changed(deps.event_bus, run, run.status, "queued", nil, stage.id) do
+      {:ok, PipelineRun.from_schema(schema)}
     end
   end
 
@@ -111,6 +151,9 @@ defmodule Agents.Pipeline.Application.UseCases.RunStage do
     attrs = %{
       status: run_status,
       current_stage_id: if(run_status == "passed", do: nil, else: stage.id),
+      queued_stage_id: nil,
+      queue_reason: nil,
+      enqueued_at: nil,
       remaining_stage_ids: next_stage_ids,
       stage_results:
         run |> PipelineRun.record_stage_result(stage_result) |> PipelineRun.stage_results_to_map(),
@@ -118,7 +161,8 @@ defmodule Agents.Pipeline.Application.UseCases.RunStage do
     }
 
     with {:ok, schema} <- deps.repo_module.update_run(run.id, attrs),
-         :ok <- emit_stage_changed(deps.event_bus, run, "awaiting_result", run_status, stage.id),
+         :ok <-
+           emit_stage_changed(deps.event_bus, run, "awaiting_result", run_status, stage.id, nil),
          {:ok, updated_run} <- {:ok, PipelineRun.from_schema(schema)} do
       case {run_status, updated_run.remaining_stage_ids} do
         {"passed", []} -> {:ok, updated_run}
@@ -146,6 +190,9 @@ defmodule Agents.Pipeline.Application.UseCases.RunStage do
     attrs = %{
       status: "failed",
       current_stage_id: stage.id,
+      queued_stage_id: nil,
+      queue_reason: nil,
+      enqueued_at: nil,
       remaining_stage_ids: next_stage_ids,
       stage_results:
         run |> PipelineRun.record_stage_result(stage_result) |> PipelineRun.stage_results_to_map(),
@@ -153,7 +200,8 @@ defmodule Agents.Pipeline.Application.UseCases.RunStage do
     }
 
     with {:ok, failed_schema} <- deps.repo_module.update_run(run.id, attrs),
-         :ok <- emit_stage_changed(deps.event_bus, run, "awaiting_result", "failed", stage.id) do
+         :ok <-
+           emit_stage_changed(deps.event_bus, run, "awaiting_result", "failed", stage.id, nil) do
       failed_run = PipelineRun.from_schema(failed_schema)
 
       if failed_run.remaining_stage_ids != [] do
@@ -201,7 +249,8 @@ defmodule Agents.Pipeline.Application.UseCases.RunStage do
              run,
              "failed",
              "reopen_session",
-             run.current_stage_id
+             run.current_stage_id,
+             nil
            ) do
       {:ok, PipelineRun.from_schema(reopened_schema)}
     else
@@ -244,20 +293,24 @@ defmodule Agents.Pipeline.Application.UseCases.RunStage do
            deps.repo_module.update_run(run.id, %{
              status: next_status,
              current_stage_id: stage_id,
+             queued_stage_id: nil,
+             queue_reason: nil,
+             enqueued_at: nil,
              remaining_stage_ids: run.remaining_stage_ids
            }),
-         :ok <- emit_stage_changed(deps.event_bus, run, run.status, next_status, stage_id) do
+         :ok <- emit_stage_changed(deps.event_bus, run, run.status, next_status, stage_id, nil) do
       {:ok, PipelineRun.from_schema(schema)}
     end
   end
 
-  defp emit_stage_changed(event_bus, run, from_status, to_status, stage_id) do
+  defp emit_stage_changed(event_bus, run, from_status, to_status, stage_id, queued_stage_id) do
     event_bus.emit(
       PipelineStageChanged.new(%{
         aggregate_id: to_string(run.id),
         actor_id: run.trigger_type,
         pipeline_run_id: run.id,
         stage_id: stage_id,
+        queued_stage_id: queued_stage_id,
         from_status: from_status,
         to_status: to_status,
         trigger_type: run.trigger_type,

@@ -41,6 +41,21 @@ defmodule Agents.Pipeline.Application.UseCases.PipelineRunWorkflowsTest do
       end
     end
 
+    def count_active_for_stage(stage_id, _repo \\ nil) do
+      runs()
+      |> Map.values()
+      |> Enum.count(
+        &(&1.current_stage_id == stage_id and &1.status in ["running_stage", "awaiting_result"])
+      )
+    end
+
+    def list_queued_for_stage(stage_id, _repo \\ nil) do
+      runs()
+      |> Map.values()
+      |> Enum.filter(&(&1.queued_stage_id == stage_id and &1.status == "queued"))
+      |> Enum.sort_by(& &1.enqueued_at)
+    end
+
     def reset, do: Process.put({__MODULE__, :runs}, %{})
 
     defp runs, do: Process.get({__MODULE__, :runs}, %{})
@@ -328,6 +343,52 @@ defmodule Agents.Pipeline.Application.UseCases.PipelineRunWorkflowsTest do
     assert run.status == "blocked"
     assert run.current_stage_id == "test"
     assert run.stage_results["test"].status == :blocked
+  end
+
+  test "run_stage queues when stage concurrency is exhausted" do
+    {:ok, queued_config} =
+      PipelineConfigBuilder.build(%{
+        "version" => 1,
+        "pipeline" => %{
+          "name" => "perme8-core",
+          "stages" => [
+            %{
+              "id" => "test",
+              "type" => "verification",
+              "triggers" => ["on_session_complete"],
+              "ticket_concurrency" => 0,
+              "steps" => [%{"name" => "unit-tests", "run" => "mix test", "depends_on" => []}]
+            }
+          ]
+        }
+      })
+
+    Process.put({PipelineConfigRepoStub, :config}, queued_config)
+
+    {:ok, created} =
+      PipelineRunRepoStub.create_run(%{
+        trigger_type: "on_session_complete",
+        trigger_reference: "task-queue",
+        task_id: Ecto.UUID.generate(),
+        remaining_stage_ids: ["test"],
+        stage_results: %{}
+      })
+
+    assert {:ok, run} =
+             RunStage.execute(created.id,
+               pipeline_run_repo: PipelineRunRepoStub,
+               stage_executor: StageExecutorStub,
+               gate_evaluator: GateEvaluatorStub,
+               task_context_provider: TaskContextProviderStub,
+               event_bus: EventBusStub,
+               session_reopener: SessionReopenerStub
+             )
+
+    assert run.status == "queued"
+    assert run.remaining_stage_ids == ["test"]
+
+    assert {:ok, persisted} = PipelineRunRepoStub.get_run(created.id)
+    assert persisted.status == "queued"
   end
 
   test "run_stage follows failure transitions back to a recovery stage" do

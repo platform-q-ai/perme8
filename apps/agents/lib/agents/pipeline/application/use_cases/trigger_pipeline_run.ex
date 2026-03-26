@@ -3,13 +3,15 @@ defmodule Agents.Pipeline.Application.UseCases.TriggerPipelineRun do
 
   alias Agents.Pipeline.Application.PipelineRuntimeConfig
   alias Agents.Pipeline.Application.UseCases.LoadPipeline
-  alias Agents.Pipeline.Application.UseCases.RunStage
+  alias Agents.Pipeline.Domain.Events.PipelineRunRequested
   alias Agents.Pipeline.Domain.Entities.PipelineRun
 
   @spec execute(map(), keyword()) :: {:ok, PipelineRun.t()} | {:ok, nil} | {:error, term()}
   def execute(attrs, opts \\ []) when is_map(attrs) do
     repo_module =
       Keyword.get(opts, :pipeline_run_repo, PipelineRuntimeConfig.pipeline_run_repository())
+
+    event_bus = Keyword.get(opts, :event_bus, PipelineRuntimeConfig.event_bus())
 
     auto_run? = Keyword.get(opts, :auto_run, true)
 
@@ -21,19 +23,29 @@ defmodule Agents.Pipeline.Application.UseCases.TriggerPipelineRun do
         stage_ids,
         build_run_attrs(attrs, trigger, stage_ids),
         repo_module,
+        event_bus,
         auto_run?,
         opts
       )
     end
   end
 
-  defp maybe_create_run([], _run_attrs, _repo_module, _auto_run?, _opts), do: {:ok, nil}
+  defp maybe_create_run([], _run_attrs, _repo_module, _event_bus, _auto_run?, _opts),
+    do: {:ok, nil}
 
-  defp maybe_create_run(stage_ids, run_attrs, repo_module, auto_run?, opts)
+  defp maybe_create_run(stage_ids, run_attrs, repo_module, event_bus, auto_run?, _opts)
        when is_list(stage_ids) do
     with {:ok, run} <- repo_module.create_run(run_attrs) do
       if auto_run? do
-        RunStage.execute(run.id, opts)
+        event_bus.emit(
+          PipelineRunRequested.new(%{
+            aggregate_id: to_string(run.id),
+            actor_id: Map.get(run, :trigger_type),
+            pipeline_run_id: run.id
+          })
+        )
+
+        {:ok, PipelineRun.from_schema(run)}
       else
         {:ok, PipelineRun.from_schema(run)}
       end
