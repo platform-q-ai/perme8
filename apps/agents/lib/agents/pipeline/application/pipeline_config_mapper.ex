@@ -1,7 +1,7 @@
 defmodule Agents.Pipeline.Application.PipelineConfigMapper do
   @moduledoc false
 
-  alias Agents.Pipeline.Domain.Entities.{DeployTarget, Gate, PipelineConfig, Stage, Step}
+  alias Agents.Pipeline.Domain.Entities.{Gate, PipelineConfig, Stage, Step}
 
   @spec to_root_map(PipelineConfig.t()) :: map()
   def to_root_map(config) do
@@ -11,7 +11,6 @@ defmodule Agents.Pipeline.Application.PipelineConfigMapper do
         "name" => config.name,
         "description" => config.description,
         "merge_queue" => config.merge_queue,
-        "deploy_targets" => Enum.map(config.deploy_targets, &deploy_target_to_map/1),
         "stages" => Enum.map(config.stages, &stage_to_map/1)
       }
     }
@@ -26,7 +25,6 @@ defmodule Agents.Pipeline.Application.PipelineConfigMapper do
       "name" => pipeline["name"],
       "description" => pipeline["description"],
       "merge_queue" => pipeline["merge_queue"],
-      "deploy_targets" => pipeline["deploy_targets"],
       "stages" => pipeline["stages"]
     }
   end
@@ -39,19 +37,6 @@ defmodule Agents.Pipeline.Application.PipelineConfigMapper do
       name: config.name,
       description: config.description,
       merge_queue: config.merge_queue || %{},
-      deploy_targets:
-        Enum.with_index(config.deploy_targets)
-        |> Enum.map(fn {target, position} ->
-          %{
-            position: position,
-            target_id: target.id,
-            environment: target.environment,
-            provider: target.provider,
-            strategy: target.strategy,
-            region: target.region,
-            config: target.config || %{}
-          }
-        end),
       stages:
         Enum.with_index(config.stages)
         |> Enum.map(fn {stage, position} ->
@@ -59,8 +44,10 @@ defmodule Agents.Pipeline.Application.PipelineConfigMapper do
             position: position,
             stage_id: stage.id,
             type: stage.type,
-            deploy_target: stage.deploy_target,
             schedule: stage.schedule,
+            triggers: stage.triggers || [],
+            depends_on: stage.depends_on || [],
+            ticket_concurrency: stage.ticket_concurrency,
             config: stage.config || %{},
             steps:
               Enum.with_index(stage.steps)
@@ -72,7 +59,8 @@ defmodule Agents.Pipeline.Application.PipelineConfigMapper do
                   timeout_seconds: step.timeout_seconds,
                   retries: step.retries,
                   conditions: step.conditions,
-                  env: step.env || %{}
+                  env: step.env || %{},
+                  depends_on: step.depends_on || []
                 }
               end),
             gates:
@@ -97,10 +85,6 @@ defmodule Agents.Pipeline.Application.PipelineConfigMapper do
       name: record.name,
       description: record.description,
       merge_queue: record.merge_queue || %{},
-      deploy_targets:
-        record.deploy_targets
-        |> Enum.sort_by(& &1.position)
-        |> Enum.map(&deploy_target_from_record/1),
       stages:
         record.stages
         |> Enum.sort_by(& &1.position)
@@ -108,23 +92,14 @@ defmodule Agents.Pipeline.Application.PipelineConfigMapper do
     })
   end
 
-  defp deploy_target_to_map(target) do
-    %{
-      "id" => target.id,
-      "environment" => target.environment,
-      "provider" => target.provider,
-      "strategy" => target.strategy,
-      "region" => target.region
-    }
-    |> Map.merge(target.config || %{})
-  end
-
   defp stage_to_map(stage) do
     %{
       "id" => stage.id,
       "type" => stage.type,
-      "deploy_target" => stage.deploy_target,
       "schedule" => stage.schedule,
+      "triggers" => stage.triggers || [],
+      "depends_on" => stage.depends_on || [],
+      "ticket_concurrency" => stage.ticket_concurrency,
       "steps" => Enum.map(stage.steps, &step_to_map/1),
       "gates" => Enum.map(stage.gates, &gate_to_map/1)
     }
@@ -138,7 +113,8 @@ defmodule Agents.Pipeline.Application.PipelineConfigMapper do
       "timeout_seconds" => step.timeout_seconds,
       "retries" => step.retries,
       "conditions" => step.conditions,
-      "env" => step.env || %{}
+      "env" => step.env || %{},
+      "depends_on" => step.depends_on || []
     }
   end
 
@@ -146,23 +122,14 @@ defmodule Agents.Pipeline.Application.PipelineConfigMapper do
     Map.merge(%{"type" => gate.type, "required" => gate.required}, gate.params || %{})
   end
 
-  defp deploy_target_from_record(target) do
-    DeployTarget.new(%{
-      id: target.target_id,
-      environment: target.environment,
-      provider: target.provider,
-      strategy: target.strategy,
-      region: target.region,
-      config: target.config || %{}
-    })
-  end
-
   defp stage_from_record(stage) do
     Stage.new(%{
       id: stage.stage_id,
       type: stage.type,
-      deploy_target: stage.deploy_target,
       schedule: stage.schedule,
+      triggers: stage.triggers || [],
+      depends_on: stage.depends_on || [],
+      ticket_concurrency: stage.ticket_concurrency,
       config: stage.config || %{},
       steps:
         stage.steps
@@ -182,7 +149,8 @@ defmodule Agents.Pipeline.Application.PipelineConfigMapper do
       timeout_seconds: step.timeout_seconds,
       retries: step.retries,
       conditions: step.conditions,
-      env: step.env || %{}
+      env: step.env || %{},
+      depends_on: step.depends_on || []
     })
   end
 

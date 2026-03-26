@@ -13,7 +13,6 @@ defmodule Agents.Pipeline.Infrastructure.Schemas.PipelineRunSchema do
     "awaiting_result",
     "passed",
     "failed",
-    "deploy",
     "reopen_session"
   ]
 

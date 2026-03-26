@@ -9,7 +9,6 @@ defmodule Agents.Pipeline.Domain.Policies.PipelineLifecyclePolicyTest do
     assert :ok = PipelineLifecyclePolicy.valid_transition?("awaiting_result", "passed")
     assert :ok = PipelineLifecyclePolicy.valid_transition?("awaiting_result", "failed")
     assert :ok = PipelineLifecyclePolicy.valid_transition?("passed", "running_stage")
-    assert :ok = PipelineLifecyclePolicy.valid_transition?("passed", "deploy")
     assert :ok = PipelineLifecyclePolicy.valid_transition?("failed", "reopen_session")
   end
 

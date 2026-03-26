@@ -12,7 +12,6 @@ defmodule Agents.Pipeline.Application.UseCases.GetPipelineKanbanTest do
          name: "test",
          description: nil,
          merge_queue: %{"strategy" => "merge_queue"},
-         deploy_targets: [],
          stages: [
            %Agents.Pipeline.Domain.Entities.Stage{
              id: "warm-pool",
@@ -28,7 +27,7 @@ defmodule Agents.Pipeline.Application.UseCases.GetPipelineKanbanTest do
            },
            %Agents.Pipeline.Domain.Entities.Stage{
              id: "deploy",
-             type: "deploy",
+             type: "automation",
              steps: [],
              gates: []
            }

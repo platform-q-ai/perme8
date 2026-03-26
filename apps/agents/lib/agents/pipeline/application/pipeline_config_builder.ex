@@ -1,7 +1,7 @@
 defmodule Agents.Pipeline.Application.PipelineConfigBuilder do
   @moduledoc false
 
-  alias Agents.Pipeline.Domain.Entities.{DeployTarget, Gate, PipelineConfig, Stage, Step}
+  alias Agents.Pipeline.Domain.Entities.{Gate, PipelineConfig, Stage, Step}
 
   @spec build(map()) :: {:ok, PipelineConfig.t()} | {:error, [String.t()]}
   def build(raw) when is_map(raw) do
@@ -24,7 +24,6 @@ defmodule Agents.Pipeline.Application.PipelineConfigBuilder do
   defp build_pipeline(version, pipeline) do
     name = fetch(pipeline, "name")
     description = fetch(pipeline, "description")
-    deploy_targets_raw = fetch(pipeline, "deploy_targets")
     stages_raw = fetch(pipeline, "stages")
     merge_queue_raw = fetch(pipeline, "merge_queue") || %{}
 
@@ -32,10 +31,9 @@ defmodule Agents.Pipeline.Application.PipelineConfigBuilder do
     errors = maybe_add_type_error(errors, name, "pipeline.name", &is_binary/1, "must be a string")
     errors = maybe_add_optional_string_error(errors, description, "pipeline.description")
 
-    {deploy_targets, errors} = build_deploy_targets(deploy_targets_raw, errors)
-    deploy_target_ids = MapSet.new(deploy_targets, & &1.id)
-    {stages, errors} = build_stages(stages_raw, deploy_target_ids, errors)
+    {stages, errors} = build_stages(stages_raw, errors)
     {merge_queue, errors} = build_merge_queue(merge_queue_raw, errors)
+    errors = errors ++ flow_errors(stages)
 
     errors =
       if Enum.any?(stages, &(&1.id == "warm-pool")) do
@@ -51,7 +49,6 @@ defmodule Agents.Pipeline.Application.PipelineConfigBuilder do
          name: name,
          description: if(is_binary(description), do: description, else: nil),
          stages: stages,
-         deploy_targets: deploy_targets,
          merge_queue: merge_queue
        })}
     else
@@ -59,24 +56,10 @@ defmodule Agents.Pipeline.Application.PipelineConfigBuilder do
     end
   end
 
-  defp build_deploy_targets(raw, errors) when is_list(raw) and raw != [] do
-    Enum.with_index(raw)
-    |> Enum.reduce({[], errors}, fn {item, index}, {targets, acc_errors} ->
-      case build_deploy_target(item, "pipeline.deploy_targets[#{index}]") do
-        {:ok, target} -> {[target | targets], acc_errors}
-        {:error, item_errors} -> {targets, acc_errors ++ item_errors}
-      end
-    end)
-    |> then(fn {targets, acc_errors} -> {Enum.reverse(targets), acc_errors} end)
-  end
-
-  defp build_deploy_targets(_, errors),
-    do: {[], errors ++ ["pipeline.deploy_targets must be a non-empty list"]}
-
-  defp build_stages(raw, deploy_target_ids, errors) when is_list(raw) and raw != [] do
+  defp build_stages(raw, errors) when is_list(raw) and raw != [] do
     Enum.with_index(raw)
     |> Enum.reduce({[], errors}, fn {item, index}, {stages, acc_errors} ->
-      case build_stage(item, "pipeline.stages[#{index}]", deploy_target_ids) do
+      case build_stage(item, "pipeline.stages[#{index}]", index, raw) do
         {:ok, stage} -> {[stage | stages], acc_errors}
         {:error, item_errors} -> {stages, acc_errors ++ item_errors}
       end
@@ -84,7 +67,7 @@ defmodule Agents.Pipeline.Application.PipelineConfigBuilder do
     |> then(fn {stages, acc_errors} -> {Enum.reverse(stages), acc_errors} end)
   end
 
-  defp build_stages(_, _deploy_target_ids, errors),
+  defp build_stages(_, errors),
     do: {[], errors ++ ["pipeline.stages must be a non-empty list"]}
 
   defp build_merge_queue(raw, errors) when raw in [%{}, nil], do: {%{}, errors}
@@ -161,62 +144,39 @@ defmodule Agents.Pipeline.Application.PipelineConfigBuilder do
   defp build_gates(_, stage_path, errors),
     do: {[], errors ++ ["#{stage_path}.gates must be a list"]}
 
-  defp build_deploy_target(item, path) when is_map(item) do
-    id = fetch(item, "id")
-    environment = fetch(item, "environment")
-    provider = fetch(item, "provider")
-    strategy = fetch(item, "strategy") || "rolling"
-    region = fetch(item, "region")
-
-    errors = []
-    errors = maybe_add_type_error(errors, id, "#{path}.id", &is_binary/1, "must be a string")
-
-    errors =
-      maybe_add_type_error(
-        errors,
-        environment,
-        "#{path}.environment",
-        &is_binary/1,
-        "must be a string"
-      )
-
-    errors =
-      maybe_add_type_error(errors, provider, "#{path}.provider", &is_binary/1, "must be a string")
-
-    errors =
-      maybe_add_type_error(errors, strategy, "#{path}.strategy", &is_binary/1, "must be a string")
-
-    errors = maybe_add_optional_string_error(errors, region, "#{path}.region")
-
-    build_result(errors, fn ->
-      DeployTarget.new(%{
-        id: id,
-        environment: environment,
-        provider: provider,
-        strategy: strategy,
-        region: region,
-        config: Map.drop(item, ["id", "environment", "provider", "strategy", "region"])
-      })
-    end)
-  end
-
-  defp build_deploy_target(_, path), do: {:error, ["#{path} must be a map"]}
-
-  defp build_stage(item, path, deploy_target_ids) when is_map(item) do
+  defp build_stage(item, path, index, stages_raw) when is_map(item) do
     id = fetch(item, "id")
     type = fetch(item, "type")
-    deploy_target = fetch(item, "deploy_target")
     schedule = fetch(item, "schedule")
-    stage_config = Map.drop(item, ["id", "type", "deploy_target", "steps", "gates", "schedule"])
+    triggers = fetch(item, "triggers")
+    depends_on = default_stage_dependencies(index, stages_raw, fetch(item, "depends_on"))
+    ticket_concurrency = fetch(item, "ticket_concurrency")
+
+    stage_config =
+      Map.drop(item, [
+        "id",
+        "type",
+        "schedule",
+        "triggers",
+        "depends_on",
+        "ticket_concurrency",
+        "steps",
+        "gates"
+      ])
 
     errors = []
     errors = maybe_add_type_error(errors, id, "#{path}.id", &is_binary/1, "must be a string")
     errors = maybe_add_type_error(errors, type, "#{path}.type", &is_binary/1, "must be a string")
-    errors = maybe_add_optional_string_error(errors, deploy_target, "#{path}.deploy_target")
     errors = maybe_add_optional_map_error(errors, schedule, "#{path}.schedule")
+    errors = maybe_add_string_list_error(errors, triggers || [], "#{path}.triggers")
+    errors = maybe_add_string_list_error(errors, depends_on, "#{path}.depends_on")
 
     errors =
-      maybe_add_deploy_target_reference_error(errors, deploy_target, deploy_target_ids, path)
+      maybe_add_optional_non_neg_integer_error(
+        errors,
+        ticket_concurrency,
+        "#{path}.ticket_concurrency"
+      )
 
     errors = maybe_add_warm_pool_stage_errors(errors, type, path, stage_config, schedule)
 
@@ -227,8 +187,10 @@ defmodule Agents.Pipeline.Application.PipelineConfigBuilder do
       Stage.new(%{
         id: id,
         type: type,
-        deploy_target: deploy_target,
         schedule: schedule,
+        triggers: triggers || [],
+        depends_on: depends_on,
+        ticket_concurrency: ticket_concurrency,
         config: stage_config,
         steps: steps,
         gates: gates
@@ -236,7 +198,7 @@ defmodule Agents.Pipeline.Application.PipelineConfigBuilder do
     end)
   end
 
-  defp build_stage(_, path, _deploy_target_ids), do: {:error, ["#{path} must be a map"]}
+  defp build_stage(_, path, _index, _stages_raw), do: {:error, ["#{path} must be a map"]}
 
   defp build_step(item, path) when is_map(item) do
     name = fetch(item, "name")
@@ -245,6 +207,7 @@ defmodule Agents.Pipeline.Application.PipelineConfigBuilder do
     retries = fetch(item, "retries") || 0
     env = fetch(item, "env") || %{}
     conditions = fetch(item, "conditions")
+    depends_on = fetch(item, "depends_on") || []
 
     errors = []
     errors = maybe_add_type_error(errors, name, "#{path}.name", &is_binary/1, "must be a string")
@@ -253,6 +216,7 @@ defmodule Agents.Pipeline.Application.PipelineConfigBuilder do
     errors = maybe_add_retries_error(errors, retries, "#{path}.retries")
     errors = maybe_add_type_error(errors, env, "#{path}.env", &is_map/1, "must be a map")
     errors = maybe_add_optional_string_error(errors, conditions, "#{path}.conditions")
+    errors = maybe_add_string_list_error(errors, depends_on, "#{path}.depends_on")
 
     build_result(errors, fn ->
       Step.new(%{
@@ -261,7 +225,8 @@ defmodule Agents.Pipeline.Application.PipelineConfigBuilder do
         timeout_seconds: timeout_seconds,
         retries: retries,
         env: env,
-        conditions: conditions
+        conditions: conditions,
+        depends_on: depends_on
       })
     end)
   end
@@ -287,14 +252,6 @@ defmodule Agents.Pipeline.Application.PipelineConfigBuilder do
 
   defp build_result([], builder), do: {:ok, builder.()}
   defp build_result(errors, _builder), do: {:error, errors}
-
-  defp maybe_add_deploy_target_reference_error(errors, deploy_target, deploy_target_ids, path) do
-    if is_nil(deploy_target) or MapSet.member?(deploy_target_ids, deploy_target) do
-      errors
-    else
-      errors ++ ["#{path}.deploy_target must reference a declared deploy target"]
-    end
-  end
 
   defp maybe_add_type_error(errors, value, path, predicate, message) do
     if predicate.(value), do: errors, else: errors ++ ["#{path} #{message}"]
@@ -397,6 +354,51 @@ defmodule Agents.Pipeline.Application.PipelineConfigBuilder do
     else
       errors ++ ["#{path} must be a non-negative integer"]
     end
+  end
+
+  defp maybe_add_optional_non_neg_integer_error(errors, value, path) do
+    if is_nil(value) or (is_integer(value) and value >= 0) do
+      errors
+    else
+      errors ++ ["#{path} must be a non-negative integer when present"]
+    end
+  end
+
+  defp default_stage_dependencies(0, _stages_raw, nil), do: []
+
+  defp default_stage_dependencies(_index, _stages_raw, depends_on) when is_list(depends_on),
+    do: depends_on
+
+  defp default_stage_dependencies(index, stages_raw, nil) do
+    previous_stage = Enum.at(stages_raw, index - 1) || %{}
+    previous_id = fetch(previous_stage, "id")
+    if is_binary(previous_id), do: [previous_id], else: []
+  end
+
+  defp flow_errors(stages) do
+    root_stages = Enum.filter(stages, &(Enum.empty?(&1.depends_on) and &1.triggers != []))
+
+    root_count_error =
+      if root_stages == [],
+        do: ["pipeline must define at least one entry stage with triggers"],
+        else: []
+
+    unknown_dependency_errors = dependency_errors(stages)
+    root_count_error ++ unknown_dependency_errors
+  end
+
+  defp dependency_errors(stages) do
+    stage_ids = MapSet.new(stages, & &1.id)
+
+    Enum.flat_map(stages, fn stage ->
+      Enum.flat_map(stage.depends_on, fn dependency ->
+        if MapSet.member?(stage_ids, dependency) do
+          []
+        else
+          ["pipeline stage #{stage.id} depends_on unknown stage #{dependency}"]
+        end
+      end)
+    end)
   end
 
   defp fetch(map, key) when is_map(map) do

@@ -93,19 +93,62 @@ defmodule Agents.Pipeline.Application.UseCases.TriggerPipelineRun do
   defp value_from_attrs(attrs, key),
     do: Map.get(attrs, key) || Map.get(attrs, Atom.to_string(key))
 
-  defp select_stage_ids(stages, "on_session_complete") do
-    stages |> Enum.filter(&(&1.type == "verification")) |> Enum.map(& &1.id)
+  defp select_stage_ids(stages, trigger_type) do
+    dependencies = stage_dependencies(stages)
+
+    root_ids =
+      stages
+      |> Enum.filter(&(trigger_type in (&1.triggers || [])))
+      |> Enum.map(& &1.id)
+
+    reachable_stage_ids(stages, dependencies, root_ids, trigger_type)
   end
 
-  defp select_stage_ids(stages, "on_pull_request") do
-    stages |> Enum.filter(&(&1.type == "verification")) |> Enum.map(& &1.id)
+  defp stage_dependencies(stages) do
+    previous_ids =
+      stages
+      |> Enum.map(& &1.id)
+      |> Enum.with_index()
+      |> Map.new()
+
+    Enum.with_index(stages)
+    |> Map.new(fn {stage, index} ->
+      deps =
+        case stage.depends_on || [] do
+          [] when index > 0 -> [Enum.at(stages, index - 1).id]
+          explicit -> explicit
+        end
+
+      {stage.id, Enum.filter(deps, &Map.has_key?(previous_ids, &1))}
+    end)
   end
 
-  defp select_stage_ids(stages, "on_merge") do
-    stages |> Enum.filter(&(&1.type == "deploy")) |> Enum.map(& &1.id)
-  end
+  defp reachable_stage_ids(stages, dependencies, root_ids, trigger_type) do
+    stage_ids = Enum.map(stages, & &1.id)
+    stages_by_id = Map.new(stages, &{&1.id, &1})
 
-  defp select_stage_ids(_stages, _trigger_type), do: []
+    Enum.reduce(stage_ids, MapSet.new(root_ids), fn stage_id, selected ->
+      deps = Map.get(dependencies, stage_id, [])
+      stage = Map.get(stages_by_id, stage_id)
+      stage_triggers = (stage && stage.triggers) || []
+      eligible_by_trigger? = Enum.empty?(stage_triggers) or trigger_type in stage_triggers
+
+      cond do
+        MapSet.member?(selected, stage_id) ->
+          selected
+
+        deps == [] ->
+          selected
+
+        eligible_by_trigger? and Enum.all?(deps, &MapSet.member?(selected, &1)) ->
+          MapSet.put(selected, stage_id)
+
+        true ->
+          selected
+      end
+    end)
+    |> then(fn selected -> Enum.filter(stage_ids, &MapSet.member?(selected, &1)) end)
+  end
 
   defp load_pipeline(opts),
     do: LoadPipeline.execute(maybe_put([], :pipeline_config_repo, opts[:pipeline_config_repo]))

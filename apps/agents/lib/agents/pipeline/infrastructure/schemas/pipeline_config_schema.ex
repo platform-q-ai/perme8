@@ -14,10 +14,6 @@ defmodule Agents.Pipeline.Infrastructure.Schemas.PipelineConfigSchema do
     field(:description, :string)
     field(:merge_queue, :map, default: %{})
 
-    has_many(:deploy_targets, Agents.Pipeline.Infrastructure.Schemas.PipelineDeployTargetSchema,
-      foreign_key: :pipeline_config_id
-    )
-
     has_many(:stages, Agents.Pipeline.Infrastructure.Schemas.PipelineStageSchema,
       foreign_key: :pipeline_config_id
     )

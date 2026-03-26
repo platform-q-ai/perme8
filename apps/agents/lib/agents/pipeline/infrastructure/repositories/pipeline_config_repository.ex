@@ -8,7 +8,6 @@ defmodule Agents.Pipeline.Infrastructure.Repositories.PipelineConfigRepository d
 
   alias Agents.Pipeline.Infrastructure.Schemas.{
     PipelineConfigSchema,
-    PipelineDeployTargetSchema,
     PipelineGateSchema,
     PipelineStageSchema,
     PipelineStepSchema
@@ -71,32 +70,12 @@ defmodule Agents.Pipeline.Infrastructure.Repositories.PipelineConfigRepository d
 
   defp replace_children(repo, pipeline_config_id, attrs) do
     repo.delete_all(
-      from(target in PipelineDeployTargetSchema,
-        where: target.pipeline_config_id == ^pipeline_config_id
-      )
-    )
-
-    repo.delete_all(
       from(stage in PipelineStageSchema, where: stage.pipeline_config_id == ^pipeline_config_id)
     )
 
-    with :ok <- insert_deploy_targets(repo, pipeline_config_id, attrs.deploy_targets),
-         :ok <- insert_stages(repo, pipeline_config_id, attrs.stages) do
+    with :ok <- insert_stages(repo, pipeline_config_id, attrs.stages) do
       {:ok, :replaced}
     end
-  end
-
-  defp insert_deploy_targets(repo, pipeline_config_id, deploy_targets) do
-    Enum.reduce_while(deploy_targets, :ok, fn attrs, _acc ->
-      attrs = Map.put(attrs, :pipeline_config_id, pipeline_config_id)
-
-      case %PipelineDeployTargetSchema{}
-           |> PipelineDeployTargetSchema.changeset(attrs)
-           |> repo.insert() do
-        {:ok, _target} -> {:cont, :ok}
-        {:error, reason} -> {:halt, {:error, reason}}
-      end
-    end)
   end
 
   defp insert_stages(repo, pipeline_config_id, stages) do
@@ -162,8 +141,6 @@ defmodule Agents.Pipeline.Infrastructure.Repositories.PipelineConfigRepository d
         preload: [steps: ^steps_query, gates: ^gates_query]
       )
 
-    deploy_targets_query = from(target in PipelineDeployTargetSchema, order_by: target.position)
-
-    repo.preload(config, deploy_targets: deploy_targets_query, stages: stages_query)
+    repo.preload(config, stages: stages_query)
   end
 end

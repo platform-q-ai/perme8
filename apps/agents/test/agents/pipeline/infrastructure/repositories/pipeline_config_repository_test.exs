@@ -14,21 +14,24 @@ defmodule Agents.Pipeline.Infrastructure.Repositories.PipelineConfigRepositoryTe
                "version" => 1,
                "pipeline" => %{
                  "name" => "repo-backed",
-                 "deploy_targets" => [
-                   %{"id" => "dev", "environment" => "development", "provider" => "docker"}
-                 ],
                  "stages" => [
                    %{
                      "id" => "warm-pool",
                      "type" => "warm_pool",
-                     "deploy_target" => "dev",
                      "schedule" => %{"cron" => "*/5 * * * *"},
+                     "triggers" => ["on_ticket_play"],
                      "warm_pool" => %{
                        "target_count" => 3,
                        "image" => "ghcr.io/platform-q-ai/perme8-runtime:latest",
                        "readiness" => %{"strategy" => "command_success"}
                      },
-                     "steps" => [%{"name" => "prestart", "run" => "scripts/warm_pool.sh"}]
+                     "steps" => [
+                       %{
+                         "name" => "prestart",
+                         "run" => "scripts/warm_pool.sh",
+                         "depends_on" => []
+                       }
+                     ]
                    }
                  ]
                }

@@ -45,7 +45,7 @@ defmodule Agents.Pipeline.Application.UseCases.RunStage do
          {:ok, stage} <- fetch_stage(deps.stages, stage_id),
          {:ok, running} <- transition_and_store(run, deps, "running_stage", stage_id),
          {:ok, awaiting} <- transition_and_store(running, deps, "awaiting_result", stage_id) do
-      context = execution_context(awaiting, deps)
+      context = execution_context(awaiting, stage, deps)
 
       case deps.stage_executor.execute(stage, context) do
         {:ok, result} -> handle_success(awaiting, stage, result, deps)
@@ -85,8 +85,7 @@ defmodule Agents.Pipeline.Application.UseCases.RunStage do
         [] ->
           {:ok, passed_run}
 
-        [next_stage_id | _] ->
-          passed_run = maybe_mark_deploy(passed_run, next_stage_id, deps)
+        [_next_stage_id | _] ->
           do_execute(passed_run, deps)
       end
     end
@@ -157,27 +156,7 @@ defmodule Agents.Pipeline.Application.UseCases.RunStage do
     end
   end
 
-  defp maybe_mark_deploy(run, next_stage_id, deps) do
-    case Enum.find(deps.stages, &(&1.id == next_stage_id)) do
-      %{type: "deploy"} ->
-        with :ok <- PipelineLifecyclePolicy.valid_transition?(run.status, "deploy"),
-             {:ok, schema} <-
-               deps.repo_module.update_run(run.id, %{
-                 status: "deploy",
-                 remaining_stage_ids: run.remaining_stage_ids
-               }),
-             :ok <- emit_stage_changed(deps.event_bus, run, run.status, "deploy", next_stage_id) do
-          PipelineRun.from_schema(schema)
-        else
-          _ -> run
-        end
-
-      _ ->
-        run
-    end
-  end
-
-  defp execution_context(run, deps) do
+  defp execution_context(run, stage, deps) do
     task = task_context(run.task_id, deps)
 
     %{
@@ -187,6 +166,9 @@ defmodule Agents.Pipeline.Application.UseCases.RunStage do
       "source_branch" => run.source_branch,
       "target_branch" => run.target_branch,
       "trigger_type" => run.trigger_type,
+      "stage_id" => stage.id,
+      "stage_type" => stage.type,
+      "stage_ticket_concurrency" => stage.ticket_concurrency,
       "container_id" => task[:container_id],
       "instruction" => task[:instruction]
     }

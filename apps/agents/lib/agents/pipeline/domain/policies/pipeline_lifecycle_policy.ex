@@ -5,9 +5,8 @@ defmodule Agents.Pipeline.Domain.Policies.PipelineLifecyclePolicy do
     "idle" => ["running_stage"],
     "running_stage" => ["awaiting_result"],
     "awaiting_result" => ["passed", "failed"],
-    "passed" => ["running_stage", "deploy"],
+    "passed" => ["running_stage"],
     "failed" => ["reopen_session"],
-    "deploy" => ["running_stage", "passed"],
     "reopen_session" => []
   }
 

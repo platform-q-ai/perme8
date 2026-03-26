@@ -233,7 +233,7 @@ config :agents, :sessions,
 ```
 
 **Pipeline warm pool** -- the scheduler-driven warm-pool replenishment flow is configured through
-structured pipeline records in `Agents.Repo` (`pipeline_configs`, `pipeline_stages`, `pipeline_steps`, `pipeline_gates`, and `pipeline_deploy_targets`) plus optional runtime overrides:
+structured pipeline records in `Agents.Repo` (`pipeline_configs`, `pipeline_stages`, `pipeline_steps`, and `pipeline_gates`) plus optional runtime overrides:
 
 ```yaml
 - id: warm-pool

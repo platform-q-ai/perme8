@@ -36,7 +36,6 @@ The warm-pool stage should continue to live in the persisted pipeline configurat
 ```yaml
 - id: warm-pool
   type: warm_pool
-  deploy_target: dev
   schedule:
     cron: "*/5 * * * *"
   warm_pool:

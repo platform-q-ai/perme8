@@ -54,27 +54,32 @@ defmodule Agents.Pipeline.Infrastructure.PipelineEventHandlerTest do
                 "version" => 1,
                 "pipeline" => %{
                   "name" => "perme8-core",
-                  "deploy_targets" => [
-                    %{"id" => "dev", "environment" => "development", "provider" => "docker"}
-                  ],
                   "stages" => [
                     %{
                       "id" => "warm-pool",
                       "type" => "warm_pool",
-                      "deploy_target" => "dev",
                       "schedule" => %{"cron" => "*/5 * * * *"},
+                      "triggers" => ["on_ticket_play"],
                       "warm_pool" => %{
                         "target_count" => 2,
                         "image" => "ghcr.io/platform-q-ai/perme8-runtime:latest",
                         "readiness" => %{"strategy" => "command_success"}
                       },
-                      "steps" => [%{"name" => "prestart", "run" => "scripts/warm_pool.sh"}]
+                      "steps" => [
+                        %{
+                          "name" => "prestart",
+                          "run" => "scripts/warm_pool.sh",
+                          "depends_on" => []
+                        }
+                      ]
                     },
                     %{
                       "id" => "test",
                       "type" => "verification",
-                      "deploy_target" => "dev",
-                      "steps" => [%{"name" => "unit-tests", "run" => "mix test"}]
+                      "triggers" => ["on_session_complete", "on_pull_request"],
+                      "steps" => [
+                        %{"name" => "unit-tests", "run" => "mix test", "depends_on" => []}
+                      ]
                     }
                   ]
                 }

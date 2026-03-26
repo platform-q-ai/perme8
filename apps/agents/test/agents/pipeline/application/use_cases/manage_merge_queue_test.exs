@@ -12,7 +12,6 @@ defmodule Agents.Pipeline.Application.UseCases.ManageMergeQueueTest do
        PipelineConfig.new(%{
          version: 1,
          name: "perme8-core",
-         deploy_targets: [],
          merge_queue: %{
            "strategy" => "merge_queue",
            "required_stages" => ["test"],

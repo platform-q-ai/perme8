@@ -15,6 +15,7 @@ defmodule Agents.Pipeline.Infrastructure.Schemas.PipelineStepSchema do
     field(:retries, :integer, default: 0)
     field(:conditions, :string)
     field(:env, :map, default: %{})
+    field(:depends_on, {:array, :string}, default: [])
 
     belongs_to(:pipeline_stage, Agents.Pipeline.Infrastructure.Schemas.PipelineStageSchema)
 
@@ -31,7 +32,8 @@ defmodule Agents.Pipeline.Infrastructure.Schemas.PipelineStepSchema do
       :timeout_seconds,
       :retries,
       :conditions,
-      :env
+      :env,
+      :depends_on
     ])
     |> validate_required([:pipeline_stage_id, :position, :name, :run, :retries])
   end

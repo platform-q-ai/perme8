@@ -17,7 +17,6 @@ defmodule Agents.Pipeline.Infrastructure do
       Repositories.PipelineRunRepository,
       Repositories.PullRequestRepository,
       Schemas.PipelineConfigSchema,
-      Schemas.PipelineDeployTargetSchema,
       Schemas.PipelineGateSchema,
       Schemas.PipelineStageSchema,
       Schemas.PipelineStepSchema,

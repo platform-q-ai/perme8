@@ -16,7 +16,7 @@ Add a dashboard pipeline configuration editor that renders pipeline stages as ed
 ## Current Baseline
 
 - `Agents.Pipeline.Application.UseCases.LoadPipeline` should load the current pipeline from normalized records in `Agents.Repo`.
-- Pipeline validation/building now happens in application code and produces `PipelineConfig`, `Stage`, `Step`, `Gate`, and `DeployTarget` value objects from normalized maps.
+- Pipeline validation/building now happens in application code and produces `PipelineConfig`, `Stage`, `Step`, and `Gate` value objects from normalized maps.
 - `PipelineConfig` is currently read-only from the application's perspective: there is no update use case, no YAML serializer, and no facade entrypoint for config edits.
 - The sessions dashboard already has pipeline-aware UI patterns through `PipelineKanbanState`, `PipelineKanbanHandlers`, and `PipelineKanbanComponents`.
 - The dashboard template already renders a bottom pipeline section, so the new editor should fit into the existing dashboard composition rather than introduce a second disconnected pipeline surface.
@@ -49,14 +49,15 @@ Use a normalized editable payload in the UI and use case layers:
   - `name`
   - `description`
   - `merge_queue`
-  - `deploy_targets`
   - `stages`
 - each stage:
   - `client_id` (UI-only stable identifier for drag/reorder)
   - `id`
   - `type`
-  - `deploy_target`
   - `schedule`
+  - `triggers`
+  - `depends_on`
+  - `ticket_concurrency`
   - `config`
   - `steps`
   - `gates`

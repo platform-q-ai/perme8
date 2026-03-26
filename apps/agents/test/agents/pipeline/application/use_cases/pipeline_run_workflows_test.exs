@@ -109,34 +109,33 @@ defmodule Agents.Pipeline.Application.UseCases.PipelineRunWorkflowsTest do
             "required_stages" => ["test"],
             "required_review" => true
           },
-          "deploy_targets" => [
-            %{"id" => "dev", "environment" => "development", "provider" => "docker"},
-            %{"id" => "prod", "environment" => "production", "provider" => "kubernetes"}
-          ],
           "stages" => [
             %{
               "id" => "warm-pool",
               "type" => "warm_pool",
-              "deploy_target" => "dev",
               "schedule" => %{"cron" => "*/5 * * * *"},
+              "triggers" => ["on_ticket_play", "on_warm_pool"],
+              "ticket_concurrency" => 1,
               "warm_pool" => %{
                 "target_count" => 2,
                 "image" => "ghcr.io/platform-q-ai/perme8-runtime:latest",
                 "readiness" => %{"strategy" => "command_success"}
               },
-              "steps" => [%{"name" => "prestart", "run" => "scripts/warm_pool.sh"}]
+              "steps" => [
+                %{"name" => "prestart", "run" => "scripts/warm_pool.sh", "depends_on" => []}
+              ]
             },
             %{
               "id" => "test",
               "type" => "verification",
-              "deploy_target" => "dev",
-              "steps" => [%{"name" => "unit-tests", "run" => "mix test"}]
+              "triggers" => ["on_session_complete", "on_pull_request"],
+              "steps" => [%{"name" => "unit-tests", "run" => "mix test", "depends_on" => []}]
             },
             %{
               "id" => "deploy",
-              "type" => "deploy",
-              "deploy_target" => "prod",
-              "steps" => [%{"name" => "deploy", "run" => "scripts/deploy.sh"}]
+              "type" => "automation",
+              "triggers" => ["on_merge"],
+              "steps" => [%{"name" => "deploy", "run" => "scripts/deploy.sh", "depends_on" => []}]
             }
           ]
         }

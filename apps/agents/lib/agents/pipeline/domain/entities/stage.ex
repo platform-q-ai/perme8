@@ -8,14 +8,26 @@ defmodule Agents.Pipeline.Domain.Entities.Stage do
   @type t :: %__MODULE__{
           id: String.t(),
           type: String.t(),
-          deploy_target: String.t() | nil,
           schedule: map() | nil,
+          triggers: [String.t()],
+          depends_on: [String.t()],
+          ticket_concurrency: non_neg_integer() | nil,
           config: map(),
           steps: [Step.t()],
           gates: [Gate.t()]
         }
 
-  defstruct [:id, :type, :deploy_target, :schedule, config: %{}, steps: [], gates: []]
+  defstruct [
+    :id,
+    :type,
+    :schedule,
+    :ticket_concurrency,
+    triggers: [],
+    depends_on: [],
+    config: %{},
+    steps: [],
+    gates: []
+  ]
 
   @doc "Builds a stage value object from attributes."
   @spec new(map()) :: t()

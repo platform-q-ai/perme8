@@ -61,7 +61,7 @@ defmodule Agents.Pipeline.Application.UseCases.UpdatePipelineConfig do
   end
 
   defp apply_root_updates(pipeline, updates) do
-    root_keys = ["name", "description", "merge_queue", "deploy_targets"]
+    root_keys = ["name", "description", "merge_queue"]
 
     Enum.reduce(root_keys, pipeline, fn key, acc ->
       if Map.has_key?(updates, key), do: Map.put(acc, key, updates[key]), else: acc
@@ -91,7 +91,9 @@ defmodule Agents.Pipeline.Application.UseCases.UpdatePipelineConfig do
       stage_id = stage_update["id"]
 
       existing =
-        Enum.find(existing_stages, &(Map.get(stringify_keys(&1), "id") == stage_id)) || %{}
+        (Enum.find(existing_stages, &(Map.get(stringify_keys(&1), "id") == stage_id)) || %{})
+        |> stringify_keys()
+        |> Map.drop(["depends_on", "triggers", "ticket_concurrency"])
 
       merge_stage(existing, stage_update)
     end)
@@ -197,7 +199,6 @@ defmodule Agents.Pipeline.Application.UseCases.UpdatePipelineConfig do
       "name" => Map.get(pipeline, "name"),
       "description" => Map.get(pipeline, "description"),
       "merge_queue" => Map.get(pipeline, "merge_queue", %{}),
-      "deploy_targets" => Map.get(pipeline, "deploy_targets", []),
       "stages" => Map.get(pipeline, "stages", [])
     }
   end

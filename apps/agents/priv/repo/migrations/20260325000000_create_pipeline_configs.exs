@@ -15,28 +15,6 @@ defmodule Agents.Repo.Migrations.CreatePipelineConfigs do
 
     create(unique_index(:pipeline_configs, [:slug]))
 
-    create table(:pipeline_deploy_targets, primary_key: false) do
-      add(:id, :binary_id, primary_key: true)
-
-      add(
-        :pipeline_config_id,
-        references(:pipeline_configs, type: :binary_id, on_delete: :delete_all),
-        null: false
-      )
-
-      add(:position, :integer, null: false)
-      add(:target_id, :string, null: false)
-      add(:environment, :string, null: false)
-      add(:provider, :string, null: false)
-      add(:strategy, :string, null: false)
-      add(:region, :string)
-      add(:config, :map, null: false, default: %{})
-
-      timestamps(type: :utc_datetime)
-    end
-
-    create(index(:pipeline_deploy_targets, [:pipeline_config_id, :position]))
-
     create table(:pipeline_stages, primary_key: false) do
       add(:id, :binary_id, primary_key: true)
 
@@ -49,8 +27,10 @@ defmodule Agents.Repo.Migrations.CreatePipelineConfigs do
       add(:position, :integer, null: false)
       add(:stage_id, :string, null: false)
       add(:type, :string, null: false)
-      add(:deploy_target, :string)
       add(:schedule, :map)
+      add(:triggers, {:array, :string}, null: false, default: [])
+      add(:depends_on, {:array, :string}, null: false, default: [])
+      add(:ticket_concurrency, :integer)
       add(:config, :map, null: false, default: %{})
 
       timestamps(type: :utc_datetime)
@@ -74,6 +54,7 @@ defmodule Agents.Repo.Migrations.CreatePipelineConfigs do
       add(:retries, :integer, null: false, default: 0)
       add(:conditions, :text)
       add(:env, :map, null: false, default: %{})
+      add(:depends_on, {:array, :string}, null: false, default: [])
 
       timestamps(type: :utc_datetime)
     end
@@ -130,35 +111,6 @@ defmodule Agents.Repo.Migrations.CreatePipelineConfigs do
       }
     ])
 
-    repo().insert_all("pipeline_deploy_targets", [
-      %{
-        id: uuid(),
-        pipeline_config_id: pipeline_id,
-        position: 0,
-        target_id: "dev",
-        environment: "development",
-        provider: "docker",
-        strategy: "rolling",
-        region: "local",
-        config: %{"cluster" => "perme8-dev"},
-        inserted_at: now,
-        updated_at: now
-      },
-      %{
-        id: uuid(),
-        pipeline_config_id: pipeline_id,
-        position: 1,
-        target_id: "prod",
-        environment: "production",
-        provider: "kubernetes",
-        strategy: "canary",
-        region: "us-east-1",
-        config: %{"cluster" => "perme8-prod"},
-        inserted_at: now,
-        updated_at: now
-      }
-    ])
-
     repo().insert_all("pipeline_stages", [
       %{
         id: warm_pool_stage_id,
@@ -166,8 +118,10 @@ defmodule Agents.Repo.Migrations.CreatePipelineConfigs do
         position: 0,
         stage_id: "warm-pool",
         type: "warm_pool",
-        deploy_target: "dev",
         schedule: %{"cron" => "*/5 * * * *"},
+        triggers: ["on_ticket_play", "on_warm_pool"],
+        depends_on: [],
+        ticket_concurrency: 1,
         config: %{
           "warm_pool" => %{
             "target_count" => 2,
@@ -187,8 +141,10 @@ defmodule Agents.Repo.Migrations.CreatePipelineConfigs do
         position: 1,
         stage_id: "test",
         type: "verification",
-        deploy_target: "dev",
         schedule: nil,
+        triggers: [],
+        depends_on: ["warm-pool"],
+        ticket_concurrency: 1,
         config: %{},
         inserted_at: now,
         updated_at: now
@@ -198,9 +154,11 @@ defmodule Agents.Repo.Migrations.CreatePipelineConfigs do
         pipeline_config_id: pipeline_id,
         position: 2,
         stage_id: "deploy",
-        type: "deploy",
-        deploy_target: "prod",
+        type: "automation",
         schedule: nil,
+        triggers: [],
+        depends_on: ["test"],
+        ticket_concurrency: 1,
         config: %{},
         inserted_at: now,
         updated_at: now
@@ -218,6 +176,7 @@ defmodule Agents.Repo.Migrations.CreatePipelineConfigs do
         retries: 1,
         conditions: nil,
         env: %{},
+        depends_on: [],
         inserted_at: now,
         updated_at: now
       },
@@ -231,6 +190,7 @@ defmodule Agents.Repo.Migrations.CreatePipelineConfigs do
         retries: 0,
         conditions: nil,
         env: %{},
+        depends_on: ["build-runtime-image"],
         inserted_at: now,
         updated_at: now
       },
@@ -244,6 +204,7 @@ defmodule Agents.Repo.Migrations.CreatePipelineConfigs do
         retries: 0,
         conditions: nil,
         env: %{},
+        depends_on: [],
         inserted_at: now,
         updated_at: now
       },
@@ -257,6 +218,7 @@ defmodule Agents.Repo.Migrations.CreatePipelineConfigs do
         retries: 0,
         conditions: nil,
         env: %{},
+        depends_on: ["unit-tests"],
         inserted_at: now,
         updated_at: now
       },
@@ -270,6 +232,7 @@ defmodule Agents.Repo.Migrations.CreatePipelineConfigs do
         retries: 0,
         conditions: nil,
         env: %{},
+        depends_on: [],
         inserted_at: now,
         updated_at: now
       }

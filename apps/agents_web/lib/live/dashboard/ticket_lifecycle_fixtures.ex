@@ -449,14 +449,14 @@ defmodule AgentsWeb.DashboardLive.TicketLifecycleFixtures do
       "version" => 1,
       "name" => "perme8-core",
       "merge_queue" => %{"strategy" => "merge_queue"},
-      "deploy_targets" => [
-        %{"id" => "dev", "environment" => "development", "provider" => "docker"}
-      ],
       "stages" => [
         %{
           "id" => "ready",
           "label" => "Ready",
           "type" => "triage",
+          "triggers" => ["on_ticket_play"],
+          "depends_on" => [],
+          "ticket_concurrency" => 1,
           "steps" => [%{"name" => "queue", "run" => "noop", "retries" => 0, "env" => %{}}],
           "gates" => []
         },
@@ -464,13 +464,17 @@ defmodule AgentsWeb.DashboardLive.TicketLifecycleFixtures do
           "id" => "in-progress",
           "label" => "In Progress",
           "type" => "verification",
+          "triggers" => [],
+          "depends_on" => ["ready"],
+          "ticket_concurrency" => 1,
           "steps" => [
             %{
               "name" => "test",
               "run" => "mix test",
               "timeout_seconds" => 300,
               "retries" => 0,
-              "env" => %{}
+              "env" => %{},
+              "depends_on" => []
             }
           ],
           "gates" => []
@@ -479,22 +483,41 @@ defmodule AgentsWeb.DashboardLive.TicketLifecycleFixtures do
           "id" => "in-review",
           "label" => "In Review",
           "type" => "review",
-          "steps" => [%{"name" => "review", "run" => "mix credo", "retries" => 0, "env" => %{}}],
+          "triggers" => [],
+          "depends_on" => ["in-progress"],
+          "ticket_concurrency" => 1,
+          "steps" => [
+            %{
+              "name" => "review",
+              "run" => "mix credo",
+              "retries" => 0,
+              "env" => %{},
+              "depends_on" => []
+            }
+          ],
           "gates" => []
         },
         %{
           "id" => "warm-pool",
           "label" => "Warm Pool",
           "type" => "warm_pool",
-          "deploy_target" => "dev",
           "schedule" => %{"cron" => "*/5 * * * *"},
+          "triggers" => ["on_warm_pool"],
+          "depends_on" => [],
+          "ticket_concurrency" => 1,
           "warm_pool" => %{
             "target_count" => 2,
             "image" => "ghcr.io/platform-q-ai/perme8-runtime:latest",
             "readiness" => %{"strategy" => "command_success"}
           },
           "steps" => [
-            %{"name" => "prestart", "run" => "scripts/warm_pool.sh", "retries" => 0, "env" => %{}}
+            %{
+              "name" => "prestart",
+              "run" => "scripts/warm_pool.sh",
+              "retries" => 0,
+              "env" => %{},
+              "depends_on" => []
+            }
           ],
           "gates" => []
         }
@@ -509,22 +532,41 @@ defmodule AgentsWeb.DashboardLive.TicketLifecycleFixtures do
         "id" => "legacy-cleanup",
         "label" => "Legacy Cleanup",
         "type" => "verification",
-        "steps" => [%{"name" => "cleanup", "run" => "mix clean", "retries" => 0, "env" => %{}}],
+        "triggers" => ["on_ticket_play"],
+        "depends_on" => [],
+        "ticket_concurrency" => 1,
+        "steps" => [
+          %{
+            "name" => "cleanup",
+            "run" => "mix clean",
+            "retries" => 0,
+            "env" => %{},
+            "depends_on" => []
+          }
+        ],
         "gates" => []
       },
       %{
         "id" => "warm-pool",
         "label" => "Warm Pool",
         "type" => "warm_pool",
-        "deploy_target" => "dev",
         "schedule" => %{"cron" => "*/5 * * * *"},
+        "triggers" => ["on_warm_pool"],
+        "depends_on" => [],
+        "ticket_concurrency" => 1,
         "warm_pool" => %{
           "target_count" => 2,
           "image" => "ghcr.io/platform-q-ai/perme8-runtime:latest",
           "readiness" => %{"strategy" => "command_success"}
         },
         "steps" => [
-          %{"name" => "prestart", "run" => "scripts/warm_pool.sh", "retries" => 0, "env" => %{}}
+          %{
+            "name" => "prestart",
+            "run" => "scripts/warm_pool.sh",
+            "retries" => 0,
+            "env" => %{},
+            "depends_on" => []
+          }
         ],
         "gates" => []
       }

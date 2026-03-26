@@ -11,8 +11,10 @@ defmodule Agents.Pipeline.Infrastructure.Schemas.PipelineStageSchema do
     field(:position, :integer)
     field(:stage_id, :string)
     field(:type, :string)
-    field(:deploy_target, :string)
     field(:schedule, :map)
+    field(:triggers, {:array, :string}, default: [])
+    field(:depends_on, {:array, :string}, default: [])
+    field(:ticket_concurrency, :integer)
     field(:config, :map, default: %{})
 
     belongs_to(:pipeline_config, Agents.Pipeline.Infrastructure.Schemas.PipelineConfigSchema)
@@ -35,8 +37,10 @@ defmodule Agents.Pipeline.Infrastructure.Schemas.PipelineStageSchema do
       :position,
       :stage_id,
       :type,
-      :deploy_target,
       :schedule,
+      :triggers,
+      :depends_on,
+      :ticket_concurrency,
       :config
     ])
     |> validate_required([:pipeline_config_id, :position, :stage_id, :type])
