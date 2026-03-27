@@ -46,6 +46,18 @@ defmodule Agents.Pipeline.Application.PipelineRuntimeConfig do
     Application.get_env(:agents, :pipeline_gate_evaluator, @default_gate_evaluator)
   end
 
+  @doc "Returns the maximum total stage transitions per pipeline run."
+  @spec pipeline_max_attempts() :: pos_integer()
+  def pipeline_max_attempts do
+    Application.get_env(:agents, :pipeline_max_attempts, 25)
+  end
+
+  @doc "Returns the maximum attempts per stage within a pipeline run."
+  @spec pipeline_max_stage_attempts() :: pos_integer()
+  def pipeline_max_stage_attempts do
+    Application.get_env(:agents, :pipeline_max_stage_attempts, 5)
+  end
+
   @doc "Returns the configured stage executor implementation."
   @spec stage_executor() :: module()
   def stage_executor do

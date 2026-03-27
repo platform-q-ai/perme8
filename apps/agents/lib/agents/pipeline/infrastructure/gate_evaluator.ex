@@ -72,6 +72,43 @@ defmodule Agents.Pipeline.Infrastructure.GateEvaluator do
     end
   end
 
+  defp evaluate_gate(
+         _stage,
+         %Gate{type: "time_window", required: required, params: params},
+         context
+       ) do
+    current_time = Map.get(context, "current_time", DateTime.utc_now())
+    after_time = Map.get(params || %{}, "after")
+    before_time = Map.get(params || %{}, "before")
+
+    allowed? = within_time_window?(current_time, after_time, before_time)
+
+    GateResult.new(%{
+      gate_type: "time_window",
+      status: if(allowed?, do: :passed, else: :blocked),
+      required: required,
+      reason: if(allowed?, do: nil, else: "outside_time_window"),
+      metadata: %{"after" => after_time, "before" => before_time}
+    })
+  end
+
+  defp evaluate_gate(
+         _stage,
+         %Gate{type: "environment_ready", required: required, params: params},
+         context
+       ) do
+    env_key = Map.get(params || %{}, "key", "default")
+    ready_envs = Map.get(context, "ready_environments", [])
+
+    GateResult.new(%{
+      gate_type: "environment_ready",
+      status: if(env_key in ready_envs, do: :passed, else: :blocked),
+      required: required,
+      reason: if(env_key in ready_envs, do: nil, else: "environment_not_ready"),
+      metadata: %{"key" => env_key}
+    })
+  end
+
   defp evaluate_gate(_stage, %Gate{type: type, required: required, params: params}, _context) do
     GateResult.new(%{
       gate_type: type,
@@ -92,5 +129,21 @@ defmodule Agents.Pipeline.Infrastructure.GateEvaluator do
       },
       reason: gate_results |> Enum.find(&(&1.status == status)) |> then(&(&1 && &1.reason))
     }
+  end
+
+  defp within_time_window?(%DateTime{}, nil, nil), do: true
+
+  defp within_time_window?(%DateTime{} = current_time, after_time, before_time) do
+    time = Time.truncate(DateTime.to_time(current_time), :second)
+    after_ok? = is_nil(after_time) or compare_time(time, after_time) != :lt
+    before_ok? = is_nil(before_time) or compare_time(time, before_time) != :gt
+    after_ok? and before_ok?
+  end
+
+  defp compare_time(%Time{} = left, value) when is_binary(value) do
+    case Time.from_iso8601(value <> ":00") do
+      {:ok, right} -> Time.compare(left, right)
+      _ -> :lt
+    end
   end
 end

@@ -448,6 +448,51 @@ defmodule Agents.Pipeline.Application.UseCases.PipelineRunWorkflowsTest do
     assert run.stage_results["repair"].status == :passed
   end
 
+  test "run_stage stops when max stage attempts are exceeded" do
+    {:ok, looping_config} =
+      PipelineConfigBuilder.build(%{
+        "version" => 1,
+        "pipeline" => %{
+          "name" => "perme8-core",
+          "stages" => [
+            %{
+              "id" => "test",
+              "type" => "verification",
+              "triggers" => ["on_session_complete"],
+              "transitions" => [%{"on" => "failed", "to_stage" => "test"}],
+              "steps" => [%{"name" => "unit-tests", "run" => "mix test", "depends_on" => []}]
+            }
+          ]
+        }
+      })
+
+    Process.put({PipelineConfigRepoStub, :config}, looping_config)
+
+    Process.put({StageExecutorStub, :execute}, fn _stage, _context ->
+      {:error, %{output: "tests failed", exit_code: 1, reason: :non_zero_exit, metadata: %{}}}
+    end)
+
+    {:ok, created} =
+      PipelineRunRepoStub.create_run(%{
+        trigger_type: "on_session_complete",
+        trigger_reference: "task-loop",
+        task_id: Ecto.UUID.generate(),
+        remaining_stage_ids: ["test"],
+        stage_results: %{}
+      })
+
+    assert {:error, {:max_stage_attempts_exceeded, "test"}} =
+             RunStage.execute(created.id,
+               pipeline_run_repo: PipelineRunRepoStub,
+               stage_executor: StageExecutorStub,
+               gate_evaluator: GateEvaluatorStub,
+               task_context_provider: TaskContextProviderStub,
+               event_bus: EventBusStub,
+               session_reopener: SessionReopenerStub,
+               pipeline_max_stage_attempts: 2
+             )
+  end
+
   test "run_stage reopens the task when session-complete verification fails" do
     Process.put({StageExecutorStub, :execute}, fn _stage, _context ->
       {:error, %{output: "tests failed", exit_code: 1, reason: :non_zero_exit, metadata: %{}}}

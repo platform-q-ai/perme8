@@ -29,6 +29,9 @@ defmodule Agents.Pipeline.Domain.Entities.PipelineRun do
           queue_reason: String.t() | nil,
           enqueued_at: DateTime.t() | nil,
           remaining_stage_ids: [String.t()],
+          attempt_count: non_neg_integer(),
+          stage_attempt_counts: map(),
+          visited_stage_ids: [String.t()],
           stage_results: %{optional(String.t()) => StageResult.t()},
           failure_reason: String.t() | nil,
           reopened_at: DateTime.t() | nil,
@@ -55,6 +58,9 @@ defmodule Agents.Pipeline.Domain.Entities.PipelineRun do
     :updated_at,
     status: "idle",
     remaining_stage_ids: [],
+    attempt_count: 0,
+    stage_attempt_counts: %{},
+    visited_stage_ids: [],
     stage_results: %{}
   ]
 
@@ -81,6 +87,9 @@ defmodule Agents.Pipeline.Domain.Entities.PipelineRun do
       queue_reason: Map.get(schema, :queue_reason),
       enqueued_at: Map.get(schema, :enqueued_at),
       remaining_stage_ids: schema.remaining_stage_ids || [],
+      attempt_count: Map.get(schema, :attempt_count, 0) || 0,
+      stage_attempt_counts: Map.get(schema, :stage_attempt_counts, %{}) || %{},
+      visited_stage_ids: Map.get(schema, :visited_stage_ids, []) || [],
       stage_results: decode_stage_results(schema.stage_results || %{}),
       failure_reason: Map.get(schema, :failure_reason),
       reopened_at: Map.get(schema, :reopened_at),
@@ -106,6 +115,18 @@ defmodule Agents.Pipeline.Domain.Entities.PipelineRun do
   @spec record_stage_result(t(), StageResult.t()) :: t()
   def record_stage_result(%__MODULE__{} = run, %StageResult{} = result) do
     %{run | stage_results: Map.put(run.stage_results, result.stage_id, result)}
+  end
+
+  @spec increment_attempts(t(), String.t()) :: t()
+  def increment_attempts(%__MODULE__{} = run, stage_id) when is_binary(stage_id) do
+    stage_attempt_counts = Map.update(run.stage_attempt_counts || %{}, stage_id, 1, &(&1 + 1))
+
+    %{
+      run
+      | attempt_count: (run.attempt_count || 0) + 1,
+        stage_attempt_counts: stage_attempt_counts,
+        visited_stage_ids: (run.visited_stage_ids || []) ++ [stage_id]
+    }
   end
 
   @spec stage_results_to_map(t()) :: map()

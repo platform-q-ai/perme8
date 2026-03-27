@@ -45,6 +45,8 @@ defmodule Agents.Pipeline.Application.UseCases.RunStage do
 
     with true <- is_binary(stage_id),
          {:ok, stage} <- fetch_stage(deps.stages, stage_id),
+         :ok <- validate_attempt_limits(run, stage_id, deps),
+         run <- PipelineRun.increment_attempts(run, stage_id),
          {:ok, admitted_run} <- admit_or_queue(run, stage, deps) do
       case admitted_run.status do
         "queued" ->
@@ -92,6 +94,9 @@ defmodule Agents.Pipeline.Application.UseCases.RunStage do
              queued_stage_id: stage.id,
              queue_reason: "capacity",
              enqueued_at: DateTime.utc_now() |> DateTime.truncate(:second),
+             attempt_count: run.attempt_count,
+             stage_attempt_counts: run.stage_attempt_counts,
+             visited_stage_ids: run.visited_stage_ids,
              remaining_stage_ids: [stage.id | run.remaining_stage_ids]
            }),
          :ok <- emit_stage_changed(deps.event_bus, run, run.status, "queued", nil, stage.id) do
@@ -154,6 +159,9 @@ defmodule Agents.Pipeline.Application.UseCases.RunStage do
       queued_stage_id: nil,
       queue_reason: nil,
       enqueued_at: nil,
+      attempt_count: run.attempt_count,
+      stage_attempt_counts: run.stage_attempt_counts,
+      visited_stage_ids: run.visited_stage_ids,
       remaining_stage_ids: next_stage_ids,
       stage_results:
         run |> PipelineRun.record_stage_result(stage_result) |> PipelineRun.stage_results_to_map(),
@@ -193,6 +201,9 @@ defmodule Agents.Pipeline.Application.UseCases.RunStage do
       queued_stage_id: nil,
       queue_reason: nil,
       enqueued_at: nil,
+      attempt_count: run.attempt_count,
+      stage_attempt_counts: run.stage_attempt_counts,
+      visited_stage_ids: run.visited_stage_ids,
       remaining_stage_ids: next_stage_ids,
       stage_results:
         run |> PipelineRun.record_stage_result(stage_result) |> PipelineRun.stage_results_to_map(),
@@ -296,6 +307,9 @@ defmodule Agents.Pipeline.Application.UseCases.RunStage do
              queued_stage_id: nil,
              queue_reason: nil,
              enqueued_at: nil,
+             attempt_count: run.attempt_count,
+             stage_attempt_counts: run.stage_attempt_counts,
+             visited_stage_ids: run.visited_stage_ids,
              remaining_stage_ids: run.remaining_stage_ids
            }),
          :ok <- emit_stage_changed(deps.event_bus, run, run.status, next_status, stage_id, nil) do
@@ -330,6 +344,24 @@ defmodule Agents.Pipeline.Application.UseCases.RunStage do
 
   defp load_pipeline(opts),
     do: LoadPipeline.execute(maybe_put([], :pipeline_config_repo, opts[:pipeline_config_repo]))
+
+  defp validate_attempt_limits(run, stage_id, deps) do
+    max_attempts =
+      get_in(deps, [:opts, :pipeline_max_attempts]) ||
+        PipelineRuntimeConfig.pipeline_max_attempts()
+
+    max_stage_attempts =
+      get_in(deps, [:opts, :pipeline_max_stage_attempts]) ||
+        PipelineRuntimeConfig.pipeline_max_stage_attempts()
+
+    stage_attempts = Map.get(run.stage_attempt_counts || %{}, stage_id, 0)
+
+    cond do
+      (run.attempt_count || 0) >= max_attempts -> {:error, :max_pipeline_attempts_exceeded}
+      stage_attempts >= max_stage_attempts -> {:error, {:max_stage_attempts_exceeded, stage_id}}
+      true -> :ok
+    end
+  end
 
   defp maybe_put(opts, _key, nil), do: opts
   defp maybe_put(opts, key, value), do: Keyword.put(opts, key, value)

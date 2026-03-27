@@ -27,4 +27,20 @@ defmodule Agents.Pipeline.Infrastructure.GateEvaluatorTest do
 
     assert result.reason == "approval_required"
   end
+
+  test "blocks time window gates outside configured hours" do
+    stage = Stage.new(%{id: "deploy", type: "automation"})
+    gate = Gate.new(%{type: "time_window", params: %{"after" => "09:00", "before" => "17:00"}})
+
+    assert {:ok, %{status: :blocked}} =
+             GateEvaluator.evaluate(stage, [gate], %{"current_time" => ~U[2026-03-27 08:00:00Z]})
+  end
+
+  test "passes environment ready gates when environment key is present" do
+    stage = Stage.new(%{id: "deploy", type: "automation"})
+    gate = Gate.new(%{type: "environment_ready", params: %{"key" => "render-prod"}})
+
+    assert {:ok, %{status: :passed}} =
+             GateEvaluator.evaluate(stage, [gate], %{"ready_environments" => ["render-prod"]})
+  end
 end
