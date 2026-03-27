@@ -20,9 +20,10 @@ defmodule Agents.Pipeline.Application.PipelineConfigStore do
 
   @spec fetch_document(keyword()) :: {:ok, %{config: PipelineConfig.t()}} | {:error, [String.t()]}
   def fetch_document(opts \\ []) do
-    with {:ok, config} <- safe_get_current(repo_module(opts)) do
-      {:ok, %{config: config}}
-    else
+    case safe_get_current(repo_module(opts)) do
+      {:ok, config} ->
+        {:ok, %{config: config}}
+
       {:error, :not_found} ->
         {:error, ["pipeline config not found in Agents.Repo"]}
 

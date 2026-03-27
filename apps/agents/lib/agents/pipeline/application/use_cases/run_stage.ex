@@ -76,12 +76,10 @@ defmodule Agents.Pipeline.Application.UseCases.RunStage do
     capacity = stage.ticket_concurrency
     active_count = deps.repo_module.count_active_for_stage(stage.id)
 
-    cond do
-      is_nil(capacity) or active_count < capacity ->
-        transition_and_store(run, deps, "running_stage", stage.id)
-
-      true ->
-        queue_run(run, stage, deps)
+    if is_nil(capacity) or active_count < capacity do
+      transition_and_store(run, deps, "running_stage", stage.id)
+    else
+      queue_run(run, stage, deps)
     end
   end
 
@@ -138,35 +136,19 @@ defmodule Agents.Pipeline.Application.UseCases.RunStage do
   end
 
   defp persist_gate_outcome(run, stage, result, gate_outcome, deps, run_status, failure_reason) do
-    stage_status = if(run_status == "passed", do: :passed, else: String.to_atom(run_status))
-    next_stage_ids = next_stage_ids(stage, run_status, run.remaining_stage_ids)
-
     stage_result =
       StageResult.new(%{
         stage_id: stage.id,
-        status: stage_status,
+        status: gate_stage_status(run_status),
         output: result.output,
         exit_code: result.exit_code,
         started_at: DateTime.utc_now() |> DateTime.truncate(:second),
         completed_at: DateTime.utc_now() |> DateTime.truncate(:second),
-        failure_reason: if(is_nil(failure_reason), do: nil, else: to_string(failure_reason)),
+        failure_reason: normalize_failure_reason(failure_reason),
         metadata: Map.merge(result.metadata || %{}, gate_outcome.metadata || %{})
       })
 
-    attrs = %{
-      status: run_status,
-      current_stage_id: if(run_status == "passed", do: nil, else: stage.id),
-      queued_stage_id: nil,
-      queue_reason: nil,
-      enqueued_at: nil,
-      attempt_count: run.attempt_count,
-      stage_attempt_counts: run.stage_attempt_counts,
-      visited_stage_ids: run.visited_stage_ids,
-      remaining_stage_ids: next_stage_ids,
-      stage_results:
-        run |> PipelineRun.record_stage_result(stage_result) |> PipelineRun.stage_results_to_map(),
-      failure_reason: if(is_nil(failure_reason), do: nil, else: to_string(failure_reason))
-    }
+    attrs = gate_outcome_attrs(run, stage, stage_result, run_status, failure_reason)
 
     with {:ok, schema} <- deps.repo_module.update_run(run.id, attrs),
          :ok <-
@@ -344,6 +326,32 @@ defmodule Agents.Pipeline.Application.UseCases.RunStage do
 
   defp load_pipeline(opts),
     do: LoadPipeline.execute(maybe_put([], :pipeline_config_repo, opts[:pipeline_config_repo]))
+
+  defp gate_outcome_attrs(run, stage, stage_result, run_status, failure_reason) do
+    %{
+      status: run_status,
+      current_stage_id: current_stage_id_for(run_status, stage.id),
+      queued_stage_id: nil,
+      queue_reason: nil,
+      enqueued_at: nil,
+      attempt_count: run.attempt_count,
+      stage_attempt_counts: run.stage_attempt_counts,
+      visited_stage_ids: run.visited_stage_ids,
+      remaining_stage_ids: next_stage_ids(stage, run_status, run.remaining_stage_ids),
+      stage_results:
+        run |> PipelineRun.record_stage_result(stage_result) |> PipelineRun.stage_results_to_map(),
+      failure_reason: normalize_failure_reason(failure_reason)
+    }
+  end
+
+  defp current_stage_id_for("passed", _stage_id), do: nil
+  defp current_stage_id_for(_status, stage_id), do: stage_id
+
+  defp gate_stage_status("passed"), do: :passed
+  defp gate_stage_status(status), do: String.to_atom(status)
+
+  defp normalize_failure_reason(nil), do: nil
+  defp normalize_failure_reason(reason), do: to_string(reason)
 
   defp validate_attempt_limits(run, stage_id, deps) do
     max_attempts =

@@ -9,6 +9,7 @@ defmodule Agents.Pipeline.Application.PipelineRuntimeConfig do
   @default_git_merger :"Elixir.Agents.Pipeline.Infrastructure.GitMerger"
   @default_gate_evaluator :"Elixir.Agents.Pipeline.Infrastructure.GateEvaluator"
   @default_stage_executor :"Elixir.Agents.Pipeline.Infrastructure.StageExecutor"
+  @default_ticket_repository :"Elixir.Agents.Tickets.Infrastructure.Repositories.ProjectTicketRepository"
   @default_session_reopener :"Elixir.Agents.Pipeline.Infrastructure.SessionReopener"
   @default_task_context_provider :"Elixir.Agents.Pipeline.Infrastructure.TaskContextProvider"
   @default_pipeline_config_repository :"Elixir.Agents.Pipeline.Infrastructure.Repositories.PipelineConfigRepository"
@@ -44,6 +45,12 @@ defmodule Agents.Pipeline.Application.PipelineRuntimeConfig do
   @spec gate_evaluator() :: module()
   def gate_evaluator do
     Application.get_env(:agents, :pipeline_gate_evaluator, @default_gate_evaluator)
+  end
+
+  @doc "Returns the configured ticket repository implementation."
+  @spec ticket_repository() :: module()
+  def ticket_repository do
+    Application.get_env(:agents, :pipeline_ticket_repository, @default_ticket_repository)
   end
 
   @doc "Returns the maximum total stage transitions per pipeline run."

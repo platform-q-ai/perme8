@@ -347,14 +347,16 @@ defmodule Agents.Pipeline.Application.PipelineConfigBuilder do
     stage_ids = MapSet.new(stages, & &1.id)
 
     Enum.flat_map(stages, fn stage ->
-      Enum.flat_map(stage.depends_on, fn dependency ->
-        if MapSet.member?(stage_ids, dependency) do
-          []
-        else
-          ["pipeline stage #{stage.id} depends_on unknown stage #{dependency}"]
-        end
-      end)
+      Enum.flat_map(stage.depends_on, &missing_dependency_error(stage.id, &1, stage_ids))
     end)
+  end
+
+  defp missing_dependency_error(stage_id, dependency, stage_ids) do
+    if MapSet.member?(stage_ids, dependency) do
+      []
+    else
+      ["pipeline stage #{stage_id} depends_on unknown stage #{dependency}"]
+    end
   end
 
   defp transition_errors(stages) do

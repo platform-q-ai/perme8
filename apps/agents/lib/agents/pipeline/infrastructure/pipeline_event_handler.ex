@@ -4,6 +4,7 @@ defmodule Agents.Pipeline.Infrastructure.PipelineEventHandler do
   use Perme8.Events.EventHandler
 
   alias Agents.Pipeline.Application.PipelineRuntimeConfig
+  alias Agents.Pipeline.Domain.Entities.PipelineRun
   alias Agents.Pipeline.Application.UseCases.ProjectTicketLifecycleFromRun
   alias Agents.Pipeline.Application.UseCases.RunStage
   alias Agents.Pipeline.Application.UseCases.TriggerPipelineRun
@@ -101,10 +102,7 @@ defmodule Agents.Pipeline.Infrastructure.PipelineEventHandler do
     stage_id = event.stage_id || event.queued_stage_id
 
     with {:ok, run} <- repo.get_run(run_id) do
-      ProjectTicketLifecycleFromRun.execute(
-        Agents.Pipeline.Domain.Entities.PipelineRun.from_schema(run),
-        stage_id
-      )
+      ProjectTicketLifecycleFromRun.execute(PipelineRun.from_schema(run), stage_id)
     end
 
     :ok
