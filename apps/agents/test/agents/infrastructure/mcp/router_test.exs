@@ -23,9 +23,6 @@ defmodule Agents.Infrastructure.Mcp.RouterTest do
   setup do
     Application.put_env(:agents, :identity_module, Agents.Mocks.IdentityMock)
 
-    # Hermes.Server.Registry and MCP Server are started by the Agents.OTPApp
-    # supervisor, so we don't need to start them here.
-
     on_exit(fn -> Application.delete_env(:agents, :identity_module) end)
     :ok
   end

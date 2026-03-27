@@ -44,6 +44,8 @@ defmodule Agents.DataCase do
   production boundary dependency on Identity.Repo is needed.
   """
   def setup_sandbox(tags) do
+    ensure_apps_started()
+
     :ok = Sandbox.checkout(Agents.Repo)
     :ok = Sandbox.checkout(Identity.Repo)
 
@@ -54,6 +56,11 @@ defmodule Agents.DataCase do
       Sandbox.mode(Agents.Repo, {:shared, self()})
       Sandbox.mode(Identity.Repo, {:shared, self()})
     end
+  end
+
+  defp ensure_apps_started do
+    {:ok, _} = Application.ensure_all_started(:identity)
+    {:ok, _} = Application.ensure_all_started(:agents)
   end
 
   @doc """
