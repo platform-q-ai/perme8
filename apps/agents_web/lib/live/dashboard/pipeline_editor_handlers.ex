@@ -200,12 +200,10 @@ defmodule AgentsWeb.DashboardLive.PipelineEditorHandlers do
 
         updates =
           draft
-          |> Map.take(["name", "description", "merge_queue", "deploy_targets", "stages"])
+          |> Map.take(["name", "description", "stages"])
           |> Map.put("replace_stages", true)
 
-        case Agents.update_pipeline_config(updates,
-               pipeline_path: socket.assigns[:pipeline_editor_path]
-             ) do
+        case Agents.update_pipeline_config(updates) do
           {:ok, result} ->
             {:noreply,
              socket

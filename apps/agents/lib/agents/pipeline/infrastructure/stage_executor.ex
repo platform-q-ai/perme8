@@ -7,19 +7,15 @@ defmodule Agents.Pipeline.Infrastructure.StageExecutor do
 
   @impl true
   def execute(%Stage{} = stage, context) do
-    Enum.reduce_while(
-      stage.steps,
-      {:ok, %{output: "", exit_code: 0, metadata: %{steps: []}}},
-      fn step, _acc ->
-        case run_step_with_retries(step, context) do
-          {:ok, result} ->
-            {:cont, {:ok, merge_success_result(result)}}
+    Enum.reduce_while(stage.steps, {:ok, initial_result()}, fn step, {:ok, acc} ->
+      case run_step_with_retries(step, context) do
+        {:ok, result} ->
+          {:cont, {:ok, merge_success_result(acc, result)}}
 
-          {:error, result} ->
-            {:halt, {:error, merge_failure_result(result)}}
-        end
+        {:error, result} ->
+          {:halt, {:error, merge_failure_result(acc, result)}}
       end
-    )
+    end)
   end
 
   defp run_step_with_retries(step, context) do
@@ -67,17 +63,31 @@ defmodule Agents.Pipeline.Infrastructure.StageExecutor do
     |> normalize_command_result(step, attempt, timeout_ms)
   end
 
-  defp merge_success_result(result),
-    do: %{output: result.output, exit_code: result.exit_code, metadata: result.metadata}
+  defp initial_result do
+    %{output: "", exit_code: 0, metadata: %{"steps" => []}}
+  end
 
-  defp merge_failure_result(result) do
+  defp merge_success_result(acc, result) do
     %{
-      output: result.output,
+      output: append_output(acc.output, result.output),
       exit_code: result.exit_code,
-      reason: result.reason,
-      metadata: result.metadata
+      metadata: %{"steps" => acc.metadata["steps"] ++ [result.metadata]}
     }
   end
+
+  defp merge_failure_result(acc, result) do
+    %{
+      output: append_output(acc.output, result.output),
+      exit_code: result.exit_code,
+      reason: result.reason,
+      metadata: %{"steps" => acc.metadata["steps"] ++ [result.metadata]}
+    }
+  end
+
+  defp append_output(nil, output), do: output || ""
+  defp append_output(existing, nil), do: existing
+  defp append_output("", output), do: output
+  defp append_output(existing, output), do: existing <> "\n" <> output
 
   defp compose_command(step, context) do
     case branch_checkout_prefix(context) do
@@ -107,7 +117,11 @@ defmodule Agents.Pipeline.Infrastructure.StageExecutor do
     result = %{
       output: output,
       exit_code: exit_code,
-      metadata: %{"step" => step.name, "attempt" => attempt}
+      metadata: %{
+        "name" => step.name,
+        "attempt" => attempt,
+        "status" => if(exit_code == 0, do: "passed", else: "failed")
+      }
     }
 
     if exit_code == 0 do
@@ -123,7 +137,7 @@ defmodule Agents.Pipeline.Infrastructure.StageExecutor do
        output: Exception.message(error),
        exit_code: nil,
        reason: error.__struct__,
-       metadata: %{"step" => step.name, "attempt" => attempt}
+       metadata: %{"name" => step.name, "attempt" => attempt, "status" => "failed"}
      }}
   end
 
@@ -133,7 +147,7 @@ defmodule Agents.Pipeline.Infrastructure.StageExecutor do
        output: "command timed out after #{timeout_ms}ms",
        exit_code: nil,
        reason: :timeout,
-       metadata: %{"step" => step.name, "attempt" => attempt}
+       metadata: %{"name" => step.name, "attempt" => attempt, "status" => "failed"}
      }}
   end
 end

@@ -74,5 +74,5 @@ Feature: Pipeline Phase 11 - Pipeline Configuration UI
     When I click the "Save configuration" button
     And I wait for network idle
     Then I should see "Configuration saved"
-    And I should see "perme8-pipeline.yml"
+    And I should see "Agents.Repo"
     And I should see "No staged changes"

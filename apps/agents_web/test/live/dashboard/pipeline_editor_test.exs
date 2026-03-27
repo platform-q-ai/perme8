@@ -107,22 +107,22 @@ defmodule AgentsWeb.DashboardLive.PipelineEditorTest do
 
     view |> element("button", "Save configuration") |> render_click()
 
-    path = :sys.get_state(view.pid).socket.assigns.pipeline_editor_path
-
     html = render(view)
     assert html =~ "Configuration saved"
-    assert html =~ "perme8-pipeline.yml"
+    assert html =~ "Agents.Repo"
     assert html =~ "No staged changes"
 
-    assert File.read!(path) =~ "mix test --trace"
+    assert {:ok, editable} = Agents.load_editable_pipeline_config()
+    test_stage = Enum.find(editable["stages"], &(&1["id"] == "in-progress"))
+    assert hd(test_stage["steps"])["run"] == "mix test --trace"
   end
 
   test "surfaces pipeline load failures instead of showing an empty editor", %{
     conn: conn,
     user: user
   } do
-    Application.put_env(:agents_web, :pipeline_editor_loader, fn _path ->
-      {:error, ["pipeline file missing"]}
+    Application.put_env(:agents_web, :pipeline_editor_loader, fn ->
+      {:error, ["pipeline config missing"]}
     end)
 
     on_exit(fn -> Application.delete_env(:agents_web, :pipeline_editor_loader) end)
@@ -133,7 +133,7 @@ defmodule AgentsWeb.DashboardLive.PipelineEditorTest do
 
     html = render(view)
     assert html =~ "Unable to load pipeline configuration"
-    assert html =~ "pipeline file missing"
+    assert html =~ "pipeline config missing"
     assert has_element?(view, "[data-testid='pipeline-editor-save'][disabled]")
   end
 end

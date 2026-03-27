@@ -23,9 +23,9 @@ Replace the dashboard build sidebar column with a bottom-of-screen pipeline kanb
 
 ## Ambiguity To Resolve In Code
 
-- The ticket says kanban columns are derived from `perme8-pipeline.yml`, but the current YAML only exposes `warm-pool`, `test`, and `deploy`, while the acceptance language and existing dashboard lifecycle UI use ticket-facing stages such as `open`, `ready`, `in_progress`, `in_review`, `ci_testing`, and `deployed`.
+- The ticket says kanban columns are derived from the pipeline configuration, but the current config only exposes `warm-pool`, `test`, and `deploy`, while the acceptance language and existing dashboard lifecycle UI use ticket-facing stages such as `open`, `ready`, `in_progress`, `in_review`, `ci_testing`, and `deployed`.
 - To keep the implementation minimal and consistent with the existing dashboard, treat the kanban as a ticket-facing view first: derive visible columns from the existing ticket lifecycle stages, and enrich those stages with pipeline-backed activity where available.
-- The new `GetPipelineKanban` use case should still consult `perme8-pipeline.yml` so downstream pipeline-backed stages (`ci_testing`, `deployed`) stay aligned with config, but it should not block the UI on the current YAML's narrower stage list.
+- The new `GetPipelineKanban` use case should still consult the persisted pipeline config so downstream pipeline-backed stages (`ci_testing`, `deployed`) stay aligned with config, but it should not block the UI on the current config's narrower stage list.
 
 ## Proposed Additions
 

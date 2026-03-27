@@ -9,8 +9,8 @@ defmodule Agents.Pipeline.Domain do
       Events.PullRequestCreated,
       Events.PullRequestMerged,
       Events.PullRequestUpdated,
-      Entities.DeployTarget,
       Entities.Gate,
+      Entities.GateResult,
       Entities.PipelineConfig,
       Entities.PipelineRun,
       Entities.PullRequest,
@@ -19,8 +19,8 @@ defmodule Agents.Pipeline.Domain do
       Entities.StageResult,
       Entities.Stage,
       Entities.Step,
-      Policies.MergeQueuePolicy,
-      Policies.WarmPoolPolicy,
+      Entities.Transition,
+      Events.PipelineRunRequested,
       Policies.PipelineLifecyclePolicy,
       Policies.PullRequestPolicy
     ]

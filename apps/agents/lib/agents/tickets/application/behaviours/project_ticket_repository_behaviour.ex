@@ -4,4 +4,5 @@ defmodule Agents.Tickets.Application.Behaviours.ProjectTicketRepositoryBehaviour
   @callback get_by_number(integer()) :: {:ok, map()} | nil
   @callback unlink_session(integer()) :: {:ok, map()} | {:error, term()}
   @callback get_by_id(integer()) :: {:ok, map()} | nil
+  @callback set_lifecycle_projection(integer(), map()) :: {:ok, map()} | {:error, term()}
 end

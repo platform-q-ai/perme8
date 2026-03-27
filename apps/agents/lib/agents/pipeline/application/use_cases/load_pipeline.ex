@@ -1,17 +1,12 @@
 defmodule Agents.Pipeline.Application.UseCases.LoadPipeline do
   @moduledoc """
-  Loads and validates a pipeline YAML file.
+  Loads and validates the current pipeline configuration.
   """
 
-  alias Agents.Pipeline.Application.PipelineRuntimeConfig
+  alias Agents.Pipeline.Application.PipelineConfigStore
 
-  @default_path "perme8-pipeline.yml"
-
-  @doc "Loads and validates the configured pipeline definition file."
-  @spec execute(Path.t(), keyword()) ::
+  @doc "Loads and validates the configured pipeline definition."
+  @spec execute(keyword()) ::
           {:ok, Agents.Pipeline.Domain.Entities.PipelineConfig.t()} | {:error, [String.t()]}
-  def execute(path \\ @default_path, opts \\ []) when is_binary(path) do
-    parser = Keyword.get(opts, :parser, PipelineRuntimeConfig.pipeline_parser())
-    parser.parse_file(path)
-  end
+  def execute(opts \\ []), do: PipelineConfigStore.load(opts)
 end

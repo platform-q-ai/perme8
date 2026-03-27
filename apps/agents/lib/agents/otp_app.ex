@@ -12,7 +12,6 @@ defmodule Agents.OTPApp do
   alias Agents.Sessions.Infrastructure.QueueOrchestratorSupervisor
   alias Agents.Sessions.Infrastructure.Subscribers.TicketSessionTerminationHandler
   alias Agents.Sessions.Infrastructure.TaskRunnerSupervisor
-  alias Agents.Pipeline.Infrastructure.MergeQueueWorker
   alias Agents.Pipeline.Infrastructure.PipelineEventHandler
   alias Agents.Pipeline.Infrastructure.PipelineScheduler
   alias Agents.Tickets.Infrastructure.Subscribers.GithubTicketPushHandler
@@ -31,12 +30,11 @@ defmodule Agents.OTPApp do
         [
           TaskRunnerSupervisor,
           QueueOrchestratorSupervisor,
-          TicketSessionTerminationHandler,
-          TicketSyncServer,
-          MergeQueueWorker,
-          PipelineEventHandler,
-          GithubTicketPushHandler
-        ] ++ pipeline_scheduler_children() ++ mcp_children() ++ mcp_http_children()
+          TicketSessionTerminationHandler
+        ] ++
+        pipeline_children() ++
+        ticket_infra_children() ++
+        pipeline_scheduler_children() ++ mcp_children() ++ mcp_http_children()
 
     opts = [strategy: :one_for_one, name: Agents.Supervisor]
     Supervisor.start_link(children, opts)
@@ -56,6 +54,26 @@ defmodule Agents.OTPApp do
     transport = mcp_transport()
 
     [{Agents.Infrastructure.Mcp.Server, transport: transport}]
+  end
+
+  defp ticket_infra_children do
+    []
+    |> maybe_add_child(
+      Application.get_env(:agents, :start_ticket_sync_server, true),
+      TicketSyncServer
+    )
+    |> maybe_add_child(
+      Application.get_env(:agents, :start_github_ticket_push_handler, true),
+      GithubTicketPushHandler
+    )
+  end
+
+  defp pipeline_children do
+    maybe_add_child(
+      [],
+      Application.get_env(:agents, :start_pipeline_event_handler, true),
+      PipelineEventHandler
+    )
   end
 
   defp pipeline_scheduler_children do
@@ -85,4 +103,7 @@ defmodule Agents.OTPApp do
         ]
     end
   end
+
+  defp maybe_add_child(children, true, child), do: children ++ [child]
+  defp maybe_add_child(children, false, _child), do: children
 end

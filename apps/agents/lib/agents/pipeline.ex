@@ -12,7 +12,6 @@ defmodule Agents.Pipeline do
     ]
 
   alias Agents.Pipeline.Application.UseCases.LoadPipeline
-  alias Agents.Pipeline.Application.UseCases.ManageMergeQueue
   alias Agents.Pipeline.Application.UseCases.CommentOnPullRequest
   alias Agents.Pipeline.Application.UseCases.ClosePullRequest
   alias Agents.Pipeline.Application.UseCases.CreatePullRequest
@@ -23,7 +22,6 @@ defmodule Agents.Pipeline do
   alias Agents.Pipeline.Application.UseCases.GetPullRequestDiff
   alias Agents.Pipeline.Application.UseCases.ListPullRequests
   alias Agents.Pipeline.Application.UseCases.MergePullRequest
-  alias Agents.Pipeline.Application.UseCases.ReplenishWarmPool
   alias Agents.Pipeline.Application.UseCases.ReplyToPullRequestComment
   alias Agents.Pipeline.Application.UseCases.ResolvePullRequestThread
   alias Agents.Pipeline.Application.UseCases.RunStage
@@ -31,19 +29,18 @@ defmodule Agents.Pipeline do
   alias Agents.Pipeline.Application.UseCases.TriggerPipelineRun
   alias Agents.Pipeline.Application.UseCases.UpdatePipelineConfig
   alias Agents.Pipeline.Application.UseCases.UpdatePullRequest
+  alias Agents.Pipeline.Application.PipelineConfigMapper
 
-  @spec load_pipeline(Path.t(), keyword()) ::
+  @spec load_pipeline(keyword()) ::
           {:ok, Agents.Pipeline.Domain.Entities.PipelineConfig.t()} | {:error, [String.t()]}
-  defdelegate load_pipeline(path \\ "perme8-pipeline.yml", opts \\ []),
-    to: LoadPipeline,
-    as: :execute
+  defdelegate load_pipeline(opts \\ []), to: LoadPipeline, as: :execute
 
   @doc "Loads the current pipeline config as an editable map."
-  @spec load_editable_pipeline_config(Path.t(), keyword()) ::
+  @spec load_editable_pipeline_config(keyword()) ::
           {:ok, map()} | {:error, [String.t()]}
-  def load_editable_pipeline_config(path \\ "perme8-pipeline.yml", opts \\ []) do
-    case load_pipeline(path, opts) do
-      {:ok, config} -> {:ok, pipeline_config_to_editable_map(config)}
+  def load_editable_pipeline_config(opts \\ []) do
+    case load_pipeline(opts) do
+      {:ok, config} -> {:ok, PipelineConfigMapper.to_editable_map(config)}
       {:error, errors} -> {:error, errors}
     end
   end
@@ -62,10 +59,6 @@ defmodule Agents.Pipeline do
   @spec run_stage(Ecto.UUID.t(), keyword()) ::
           {:ok, Domain.Entities.PipelineRun.t()} | {:error, term()}
   defdelegate run_stage(run_id, opts \\ []), to: RunStage, as: :execute
-
-  @doc "Runs a warm-pool replenishment cycle using the configured pipeline stage."
-  @spec replenish_warm_pool(keyword()) :: {:ok, map()} | {:error, term()}
-  defdelegate replenish_warm_pool(opts \\ []), to: ReplenishWarmPool, as: :execute
 
   @spec get_pipeline_status(Ecto.UUID.t(), keyword()) ::
           {:ok, Domain.Entities.PipelineRun.t()} | {:error, term()}
@@ -121,9 +114,6 @@ defmodule Agents.Pipeline do
           {:ok, Domain.Entities.PullRequest.t()} | {:error, term()}
   defdelegate merge_pull_request(number, opts \\ []), to: MergePullRequest, as: :execute
 
-  @spec manage_merge_queue(integer(), keyword()) :: {:ok, map()} | {:error, term()}
-  defdelegate manage_merge_queue(number, opts \\ []), to: ManageMergeQueue, as: :execute
-
   @spec close_pull_request(integer(), keyword()) ::
           {:ok, Domain.Entities.PullRequest.t()} | {:error, term()}
   defdelegate close_pull_request(number, opts \\ []), to: ClosePullRequest, as: :execute
@@ -132,49 +122,4 @@ defmodule Agents.Pipeline do
           {:ok, %{pull_request: Domain.Entities.PullRequest.t(), diff: String.t()}}
           | {:error, term()}
   defdelegate get_pull_request_diff(number, opts \\ []), to: GetPullRequestDiff, as: :execute
-
-  defp pipeline_config_to_editable_map(config) do
-    %{
-      "version" => config.version,
-      "name" => config.name,
-      "description" => config.description,
-      "merge_queue" => config.merge_queue,
-      "deploy_targets" =>
-        Enum.map(config.deploy_targets, fn target ->
-          %{
-            "id" => target.id,
-            "environment" => target.environment,
-            "provider" => target.provider,
-            "strategy" => target.strategy,
-            "region" => target.region
-          }
-          |> Map.merge(target.config || %{})
-        end),
-      "stages" =>
-        Enum.map(config.stages, fn stage ->
-          %{
-            "id" => stage.id,
-            "type" => stage.type,
-            "deploy_target" => stage.deploy_target,
-            "schedule" => stage.schedule,
-            "steps" =>
-              Enum.map(stage.steps, fn step ->
-                %{
-                  "name" => step.name,
-                  "run" => step.run,
-                  "timeout_seconds" => step.timeout_seconds,
-                  "retries" => step.retries,
-                  "conditions" => Map.get(step, :conditions),
-                  "env" => step.env
-                }
-              end),
-            "gates" =>
-              Enum.map(stage.gates, fn gate ->
-                Map.merge(%{"type" => gate.type, "required" => gate.required}, gate.params)
-              end)
-          }
-          |> Map.merge(stage.config || %{})
-        end)
-    }
-  end
 end

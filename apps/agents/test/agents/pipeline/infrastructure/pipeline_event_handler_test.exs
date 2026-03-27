@@ -3,6 +3,7 @@ defmodule Agents.Pipeline.Infrastructure.PipelineEventHandlerTest do
 
   alias Agents.Pipeline.Infrastructure.PipelineEventHandler
   alias Agents.Pipeline.Infrastructure.Schemas.PipelineRunSchema
+  alias Agents.Pipeline.Application.PipelineConfigBuilder
   alias Agents.Sessions.Domain.Events.TaskCompleted
   alias Perme8.Events.TestEventBus
 
@@ -41,6 +42,61 @@ defmodule Agents.Pipeline.Infrastructure.PipelineEventHandlerTest do
           {:error, :not_found}
       end
     end
+
+    def count_active_for_stage(_stage_id, _repo \\ nil), do: 0
+    def list_queued_for_stage(_stage_id, _repo \\ nil), do: []
+  end
+
+  defmodule PipelineConfigRepoStub do
+    def get_current do
+      config =
+        case Process.get({__MODULE__, :config}) do
+          nil ->
+            {:ok, config} =
+              PipelineConfigBuilder.build(%{
+                "version" => 1,
+                "pipeline" => %{
+                  "name" => "perme8-core",
+                  "stages" => [
+                    %{
+                      "id" => "warm-pool",
+                      "type" => "warm_pool",
+                      "schedule" => %{"cron" => "*/5 * * * *"},
+                      "triggers" => ["on_ticket_play"],
+                      "warm_pool" => %{
+                        "target_count" => 2,
+                        "image" => "ghcr.io/platform-q-ai/perme8-runtime:latest",
+                        "readiness" => %{"strategy" => "command_success"}
+                      },
+                      "steps" => [
+                        %{
+                          "name" => "prestart",
+                          "run" => "scripts/warm_pool.sh",
+                          "depends_on" => []
+                        }
+                      ]
+                    },
+                    %{
+                      "id" => "test",
+                      "type" => "verification",
+                      "triggers" => ["on_session_complete", "on_pull_request"],
+                      "steps" => [
+                        %{"name" => "unit-tests", "run" => "mix test", "depends_on" => []}
+                      ]
+                    }
+                  ]
+                }
+              })
+
+            Process.put({__MODULE__, :config}, config)
+            config
+
+          config ->
+            config
+        end
+
+      {:ok, config}
+    end
   end
 
   setup do
@@ -50,18 +106,20 @@ defmodule Agents.Pipeline.Infrastructure.PipelineEventHandlerTest do
     Application.put_env(:agents, :pipeline_event_bus, TestEventBus)
     Application.put_env(:agents, :pipeline_run_repository, PipelineRunRepoStub)
     Application.put_env(:agents, :pipeline_task_context_provider, TaskContextProviderStub)
+    Application.put_env(:agents, :pipeline_config_repository, PipelineConfigRepoStub)
 
     on_exit(fn ->
       Application.delete_env(:agents, :pipeline_stage_executor)
       Application.delete_env(:agents, :pipeline_event_bus)
       Application.delete_env(:agents, :pipeline_run_repository)
       Application.delete_env(:agents, :pipeline_task_context_provider)
+      Application.delete_env(:agents, :pipeline_config_repository)
     end)
 
     :ok
   end
 
-  test "task completion creates and executes a pipeline run" do
+  test "task completion creates a pipeline run request" do
     event =
       TaskCompleted.new(%{
         aggregate_id: Ecto.UUID.generate(),
@@ -74,6 +132,6 @@ defmodule Agents.Pipeline.Infrastructure.PipelineEventHandlerTest do
     assert :ok = PipelineEventHandler.handle_event(event)
 
     assert %PipelineRunSchema{} = run = Process.get({PipelineRunRepoStub, :last_run})
-    assert run.status == "passed"
+    assert run.status == "idle"
   end
 end

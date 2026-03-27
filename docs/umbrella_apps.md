@@ -10,7 +10,7 @@ Umbrella applications are a way to organize multiple Elixir applications within 
 | `perme8_plugs` | Elixir (shared infra) | -- | Shared Plug modules (SecurityHeaders with :liveview/:api profiles) |
 | `identity` | Phoenix (auth) | 4001 / 4003 | Users, authentication, workspaces, memberships, roles, API keys |
 | `jarga` | Ecto (domain) | -- | Projects, documents, notes, chat, notifications |
-| `agents` | Elixir + Bandit | -- / 4007 | Agent definitions, LLM orchestration, perme8-mcp tools (15 tools via JSON-RPC), Sessions (ephemeral opencode containers), pipeline-driven warm-pool replenishment |
+| `agents` | Elixir + Bandit | -- / 4007 | Agent definitions, LLM orchestration, perme8-mcp tools (15 tools via JSON-RPC), Sessions (ephemeral opencode containers), event-driven pipeline orchestration |
 | `jarga_web` | Phoenix (UI) | 4000 / 4002 | LiveView browser interface for all domain services |
 | `jarga_api` | Phoenix (API) | 4004 / 4005 | JSON REST API for external integrations |
 | `agents_web` | Phoenix (UI) | 4014 / 4015 | Sessions LiveView browser interface, delegates auth to Identity via shared cookie |

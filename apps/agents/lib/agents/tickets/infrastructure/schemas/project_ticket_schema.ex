@@ -39,6 +39,8 @@ defmodule Agents.Tickets.Infrastructure.Schemas.ProjectTicketSchema do
           remote_updated_at: DateTime.t() | nil,
           lifecycle_stage: String.t(),
           lifecycle_stage_entered_at: DateTime.t() | nil,
+          lifecycle_owner_run_id: Ecto.UUID.t() | nil,
+          lifecycle_reason: String.t() | nil,
           parent_ticket_id: integer() | nil,
           task_id: Ecto.UUID.t() | nil,
           inserted_at: DateTime.t(),
@@ -64,6 +66,8 @@ defmodule Agents.Tickets.Infrastructure.Schemas.ProjectTicketSchema do
     field(:remote_updated_at, :utc_datetime)
     field(:lifecycle_stage, :string, default: "open")
     field(:lifecycle_stage_entered_at, :utc_datetime)
+    field(:lifecycle_owner_run_id, Ecto.UUID)
+    field(:lifecycle_reason, :string)
     field(:task_id, Ecto.UUID)
     field(:session_id, Ecto.UUID)
     belongs_to(:parent_ticket, __MODULE__)
@@ -113,6 +117,8 @@ defmodule Agents.Tickets.Infrastructure.Schemas.ProjectTicketSchema do
       :remote_updated_at,
       :lifecycle_stage,
       :lifecycle_stage_entered_at,
+      :lifecycle_owner_run_id,
+      :lifecycle_reason,
       :parent_ticket_id,
       :task_id,
       :session_id

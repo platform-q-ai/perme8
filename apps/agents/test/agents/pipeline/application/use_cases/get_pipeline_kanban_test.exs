@@ -4,19 +4,18 @@ defmodule Agents.Pipeline.Application.UseCases.GetPipelineKanbanTest do
   alias Agents.Pipeline.Application.UseCases.GetPipelineKanban
   alias Agents.Tickets.Domain.Entities.Ticket
 
-  defmodule PipelineParserStub do
-    def parse_file(_path) do
+  defmodule PipelineConfigRepoStub do
+    def get_current do
       {:ok,
        %Agents.Pipeline.Domain.Entities.PipelineConfig{
          version: 1,
          name: "test",
          description: nil,
-         merge_queue: %{"strategy" => "merge_queue"},
-         deploy_targets: [],
          stages: [
            %Agents.Pipeline.Domain.Entities.Stage{
              id: "warm-pool",
              type: "warm_pool",
+             triggers: ["on_ticket_play"],
              steps: [],
              gates: []
            },
@@ -27,8 +26,17 @@ defmodule Agents.Pipeline.Application.UseCases.GetPipelineKanbanTest do
              gates: []
            },
            %Agents.Pipeline.Domain.Entities.Stage{
+             id: "merge-queue",
+             type: "automation",
+             schedule: %{"cron" => "*/10 * * * *"},
+             triggers: ["on_merge_window"],
+             ticket_concurrency: 0,
+             steps: [],
+             gates: []
+           },
+           %Agents.Pipeline.Domain.Entities.Stage{
              id: "deploy",
-             type: "deploy",
+             type: "automation",
              steps: [],
              gates: []
            }
@@ -68,7 +76,7 @@ defmodule Agents.Pipeline.Application.UseCases.GetPipelineKanbanTest do
     ]
 
     assert {:ok, kanban} =
-             GetPipelineKanban.execute(tickets, pipeline_parser: PipelineParserStub)
+             GetPipelineKanban.execute(tickets, pipeline_config_repo: PipelineConfigRepoStub)
 
     assert Enum.map(kanban.stages, & &1.id) == [
              "ready",

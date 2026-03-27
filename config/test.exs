@@ -82,7 +82,10 @@ config :agents, Agents.Repo,
 
 config :agents,
   pr_diff_computer: Agents.Pipeline.Infrastructure.ExoBddGitDiffComputer,
-  pr_git_merger: Agents.Pipeline.Infrastructure.ExoBddGitMerger
+  pr_git_merger: Agents.Pipeline.Infrastructure.ExoBddGitMerger,
+  start_pipeline_event_handler: false,
+  start_ticket_sync_server: false,
+  start_github_ticket_push_handler: false
 
 # Chat uses the same database as Jarga
 # pool_size 15: cursor/document browser tests open multiple concurrent LiveView

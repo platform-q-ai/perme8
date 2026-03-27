@@ -3,18 +3,16 @@ defmodule Agents.Pipeline.Domain.Entities.PipelineConfig do
   Aggregate root for parsed pipeline configuration.
   """
 
-  alias Agents.Pipeline.Domain.Entities.{DeployTarget, Stage}
+  alias Agents.Pipeline.Domain.Entities.Stage
 
   @type t :: %__MODULE__{
           version: integer(),
           name: String.t(),
           description: String.t() | nil,
-          stages: [Stage.t()],
-          deploy_targets: [DeployTarget.t()],
-          merge_queue: map()
+          stages: [Stage.t()]
         }
 
-  defstruct [:version, :name, :description, stages: [], deploy_targets: [], merge_queue: %{}]
+  defstruct [:version, :name, :description, stages: []]
 
   @doc "Builds a pipeline config value object from attributes."
   @spec new(map()) :: t()

@@ -2,7 +2,8 @@ defmodule Agents.Pipeline.Application.UseCases.TriggerPipelineRun do
   @moduledoc "Creates a pipeline run for a trigger and optionally starts execution."
 
   alias Agents.Pipeline.Application.PipelineRuntimeConfig
-  alias Agents.Pipeline.Application.UseCases.RunStage
+  alias Agents.Pipeline.Application.UseCases.LoadPipeline
+  alias Agents.Pipeline.Domain.Events.PipelineRunRequested
   alias Agents.Pipeline.Domain.Entities.PipelineRun
 
   @spec execute(map(), keyword()) :: {:ok, PipelineRun.t()} | {:ok, nil} | {:error, term()}
@@ -10,10 +11,11 @@ defmodule Agents.Pipeline.Application.UseCases.TriggerPipelineRun do
     repo_module =
       Keyword.get(opts, :pipeline_run_repo, PipelineRuntimeConfig.pipeline_run_repository())
 
-    pipeline_path = Keyword.get(opts, :pipeline_path, default_pipeline_path())
+    event_bus = Keyword.get(opts, :event_bus, PipelineRuntimeConfig.event_bus())
+
     auto_run? = Keyword.get(opts, :auto_run, true)
 
-    with {:ok, config} <- load_pipeline(pipeline_path, opts) do
+    with {:ok, config} <- load_pipeline(opts) do
       trigger = trigger_type(attrs)
       stage_ids = select_stage_ids(config.stages, trigger)
 
@@ -21,19 +23,29 @@ defmodule Agents.Pipeline.Application.UseCases.TriggerPipelineRun do
         stage_ids,
         build_run_attrs(attrs, trigger, stage_ids),
         repo_module,
+        event_bus,
         auto_run?,
         opts
       )
     end
   end
 
-  defp maybe_create_run([], _run_attrs, _repo_module, _auto_run?, _opts), do: {:ok, nil}
+  defp maybe_create_run([], _run_attrs, _repo_module, _event_bus, _auto_run?, _opts),
+    do: {:ok, nil}
 
-  defp maybe_create_run(stage_ids, run_attrs, repo_module, auto_run?, opts)
+  defp maybe_create_run(stage_ids, run_attrs, repo_module, event_bus, auto_run?, _opts)
        when is_list(stage_ids) do
     with {:ok, run} <- repo_module.create_run(run_attrs) do
       if auto_run? do
-        RunStage.execute(run.id, opts)
+        event_bus.emit(
+          PipelineRunRequested.new(%{
+            aggregate_id: to_string(run.id),
+            actor_id: Map.get(run, :trigger_type),
+            pipeline_run_id: run.id
+          })
+        )
+
+        {:ok, PipelineRun.from_schema(run)}
       else
         {:ok, PipelineRun.from_schema(run)}
       end
@@ -93,26 +105,15 @@ defmodule Agents.Pipeline.Application.UseCases.TriggerPipelineRun do
   defp value_from_attrs(attrs, key),
     do: Map.get(attrs, key) || Map.get(attrs, Atom.to_string(key))
 
-  defp select_stage_ids(stages, "on_session_complete") do
-    stages |> Enum.filter(&(&1.type == "verification")) |> Enum.map(& &1.id)
+  defp select_stage_ids(stages, trigger_type) do
+    stages
+    |> Enum.filter(&(trigger_type in (&1.triggers || [])))
+    |> Enum.map(& &1.id)
   end
 
-  defp select_stage_ids(stages, "on_pull_request") do
-    stages |> Enum.filter(&(&1.type == "verification")) |> Enum.map(& &1.id)
-  end
+  defp load_pipeline(opts),
+    do: LoadPipeline.execute(maybe_put([], :pipeline_config_repo, opts[:pipeline_config_repo]))
 
-  defp select_stage_ids(stages, "on_merge") do
-    stages |> Enum.filter(&(&1.type == "deploy")) |> Enum.map(& &1.id)
-  end
-
-  defp select_stage_ids(_stages, _trigger_type), do: []
-
-  defp load_pipeline(path, opts) do
-    parser = Keyword.get(opts, :pipeline_parser, PipelineRuntimeConfig.pipeline_parser())
-    parser.parse_file(path)
-  end
-
-  defp default_pipeline_path do
-    Path.expand("../../../../../../../perme8-pipeline.yml", __DIR__)
-  end
+  defp maybe_put(opts, _key, nil), do: opts
+  defp maybe_put(opts, key, value), do: Keyword.put(opts, key, value)
 end

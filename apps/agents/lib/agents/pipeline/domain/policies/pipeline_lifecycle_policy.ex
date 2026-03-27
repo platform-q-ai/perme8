@@ -2,12 +2,13 @@ defmodule Agents.Pipeline.Domain.Policies.PipelineLifecyclePolicy do
   @moduledoc "State machine for pipeline execution runs."
 
   @transitions %{
-    "idle" => ["running_stage"],
+    "idle" => ["queued", "running_stage"],
+    "queued" => ["running_stage"],
     "running_stage" => ["awaiting_result"],
-    "awaiting_result" => ["passed", "failed"],
-    "passed" => ["running_stage", "deploy"],
+    "awaiting_result" => ["passed", "blocked", "failed"],
+    "passed" => ["running_stage"],
+    "blocked" => ["running_stage", "failed"],
     "failed" => ["reopen_session"],
-    "deploy" => ["running_stage", "passed"],
     "reopen_session" => []
   }
 

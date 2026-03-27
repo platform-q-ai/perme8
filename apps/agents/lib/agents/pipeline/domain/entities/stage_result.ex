@@ -1,7 +1,7 @@
 defmodule Agents.Pipeline.Domain.Entities.StageResult do
   @moduledoc "Value object describing a single executed stage outcome."
 
-  @type status :: :passed | :failed
+  @type status :: :passed | :failed | :blocked
 
   @type t :: %__MODULE__{
           stage_id: String.t(),
@@ -60,8 +60,9 @@ defmodule Agents.Pipeline.Domain.Entities.StageResult do
     }
   end
 
-  defp to_status(status) when status in [:passed, :failed], do: status
+  defp to_status(status) when status in [:passed, :failed, :blocked], do: status
   defp to_status("passed"), do: :passed
+  defp to_status("blocked"), do: :blocked
   defp to_status(_), do: :failed
 
   defp encode_datetime(nil), do: nil

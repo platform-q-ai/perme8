@@ -96,6 +96,22 @@ defmodule Agents.Tickets.Infrastructure.Repositories.ProjectTicketRepository do
     end
   end
 
+  @spec set_lifecycle_projection(integer(), map()) ::
+          {:ok, ProjectTicketSchema.t()}
+          | {:error, :ticket_not_found}
+          | {:error, Ecto.Changeset.t()}
+  def set_lifecycle_projection(ticket_id, attrs) when is_integer(ticket_id) and is_map(attrs) do
+    case Repo.get(ProjectTicketSchema, ticket_id) do
+      nil ->
+        {:error, :ticket_not_found}
+
+      ticket ->
+        ticket
+        |> ProjectTicketSchema.changeset(attrs)
+        |> Repo.update()
+    end
+  end
+
   @doc """
   Updates the position of each ticket to match the given display-order list
   of ticket numbers (first element = shown at top = highest position).

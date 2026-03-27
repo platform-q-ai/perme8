@@ -6,6 +6,7 @@ defmodule Agents.Pipeline.Domain.Events.PipelineStageChanged do
     fields: [
       pipeline_run_id: nil,
       stage_id: nil,
+      queued_stage_id: nil,
       from_status: nil,
       to_status: nil,
       trigger_type: nil,

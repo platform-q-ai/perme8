@@ -32,6 +32,23 @@ defmodule Agents.Pipeline.Infrastructure.Repositories.PipelineRunRepository do
   end
 
   @impl true
+  def count_active_for_stage(stage_id, repo \\ Repo) when is_binary(stage_id) do
+    PipelineRunSchema
+    |> where([run], run.current_stage_id == ^stage_id)
+    |> where([run], run.status in ["running_stage", "awaiting_result"])
+    |> repo.aggregate(:count, :id)
+  end
+
+  @impl true
+  def list_queued_for_stage(stage_id, repo \\ Repo) when is_binary(stage_id) do
+    PipelineRunSchema
+    |> where([run], run.queued_stage_id == ^stage_id)
+    |> where([run], run.status == "queued")
+    |> order_by([run], asc: run.enqueued_at, asc: run.inserted_at)
+    |> repo.all()
+  end
+
+  @impl true
   def update_run(id, attrs, repo \\ Repo) do
     case repo.get(PipelineRunSchema, id) do
       nil -> {:error, :not_found}

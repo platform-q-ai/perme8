@@ -6,6 +6,8 @@ defmodule Agents.Pipeline.Application.Behaviours.PipelineRunRepositoryBehaviour 
   @callback create_run(map(), module()) :: {:ok, persisted_run()} | {:error, Ecto.Changeset.t()}
   @callback get_run(Ecto.UUID.t(), module()) :: {:ok, persisted_run()} | {:error, :not_found}
   @callback list_runs_for_pull_request(integer(), module()) :: [persisted_run()]
+  @callback count_active_for_stage(String.t(), module()) :: non_neg_integer()
+  @callback list_queued_for_stage(String.t(), module()) :: [persisted_run()]
   @callback update_run(Ecto.UUID.t(), map(), module()) ::
               {:ok, persisted_run()} | {:error, :not_found} | {:error, Ecto.Changeset.t()}
 end

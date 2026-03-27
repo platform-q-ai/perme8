@@ -11,12 +11,12 @@
 
 ## Scope
 
-Add a dashboard pipeline configuration editor that renders pipeline stages as editable cards, lets operators change stage and step configuration without hand-editing YAML, validates changes before save, and persists valid updates back to `perme8-pipeline.yml`.
+Add a dashboard pipeline configuration editor that renders pipeline stages as editable cards, lets operators change stage and step configuration without hand-editing YAML, validates changes before save, and persists valid updates back to normalized pipeline tables in `Agents.Repo`.
 
 ## Current Baseline
 
-- `Agents.Pipeline.Application.UseCases.LoadPipeline` already loads `perme8-pipeline.yml` through `Agents.Pipeline.Infrastructure.YamlParser`.
-- `YamlParser` already performs schema-style validation and builds `PipelineConfig`, `Stage`, `Step`, `Gate`, and `DeployTarget` value objects.
+- `Agents.Pipeline.Application.UseCases.LoadPipeline` should load the current pipeline from normalized records in `Agents.Repo`.
+- Pipeline validation/building now happens in application code and produces `PipelineConfig`, `Stage`, `Step`, and `Gate` value objects from normalized maps.
 - `PipelineConfig` is currently read-only from the application's perspective: there is no update use case, no YAML serializer, and no facade entrypoint for config edits.
 - The sessions dashboard already has pipeline-aware UI patterns through `PipelineKanbanState`, `PipelineKanbanHandlers`, and `PipelineKanbanComponents`.
 - The dashboard template already renders a bottom pipeline section, so the new editor should fit into the existing dashboard composition rather than introduce a second disconnected pipeline surface.
@@ -24,18 +24,16 @@ Add a dashboard pipeline configuration editor that renders pipeline stages as ed
 
 ## Key Design Decisions
 
-- Treat the editor as a config-management surface for the real pipeline file, not an editor for the ticket-facing kanban abstraction.
-- Reuse `YamlParser` as the canonical validation gate after merging edits; do not duplicate validation rules in LiveView.
-- Introduce a dedicated `YamlWriter` infrastructure module that serializes the same normalized shape `YamlParser` expects so parse/write/parse round-trips stay stable.
+- Treat the editor as a config-management surface for the persisted pipeline document, not an editor for the ticket-facing kanban abstraction.
+- Centralize validation/building in pipeline application code so repo-backed edits do not depend on serializing through a YAML blob.
 - Keep the LiveView state in a UI-friendly editable map/tree and convert it at save time through `UpdatePipelineConfig`.
-- Use the same parsed pipeline config as the source of truth for both editor card order and any pipeline-backed kanban ordering so the acceptance criterion about order stays aligned with `perme8-pipeline.yml`.
+- Use the same parsed pipeline config as the source of truth for both editor card order and any pipeline-backed kanban ordering so the acceptance criterion about order stays aligned with the persisted pipeline document.
 
 ## Proposed Additions
 
 - New domain-facing use case:
   - `Agents.Pipeline.Application.UseCases.UpdatePipelineConfig`
-- New infrastructure writer:
-  - `Agents.Pipeline.Infrastructure.YamlWriter`
+- New normalized persistence schemas/repository for config, stages, steps, and gates
 - New facade delegates in `Agents.Pipeline` for loading editable config and saving updates
 - New dashboard component module:
   - `AgentsWeb.DashboardLive.Components.PipelineEditorComponents`
@@ -50,15 +48,16 @@ Use a normalized editable payload in the UI and use case layers:
   - `version`
   - `name`
   - `description`
-  - `merge_queue`
-  - `deploy_targets`
   - `stages`
 - each stage:
   - `client_id` (UI-only stable identifier for drag/reorder)
   - `id`
   - `type`
-  - `deploy_target`
   - `schedule`
+  - `triggers`
+  - `depends_on`
+  - `ticket_concurrency`
+  - `transitions`
   - `config`
   - `steps`
   - `gates`
@@ -70,23 +69,26 @@ Use a normalized editable payload in the UI and use case layers:
   - `timeout_seconds`
   - `retries`
   - `env`
+- each transition:
+  - `on`
+  - `to_stage`
+  - `reason`
 
-`UpdatePipelineConfig` should accept partial updates against this shape, merge them into the currently loaded config, convert the result into the YAML parser input shape, validate by reparsing, and only then write to disk.
+`UpdatePipelineConfig` should accept partial updates against this shape, merge them into the currently loaded config, validate/build the resulting aggregate, and only then persist the normalized records.
 
 ## Merge and Validation Strategy
 
-1. Load the current config from disk.
-2. Convert the `PipelineConfig` struct tree into a plain YAML-compatible map.
+1. Load the current config from `Agents.Repo`.
+2. Convert the `PipelineConfig` struct tree into a plain editable map.
 3. Apply the partial update to that map with explicit merge helpers for:
    - root metadata
-   - deploy targets
-   - stage list reorder/add/remove/update
-   - step list reorder/add/remove/update within a stage
-   - warm pool nested config
-4. Serialize the merged map to YAML with `YamlWriter`.
-5. Re-parse the YAML string with `YamlParser.parse_string/1`.
-6. If parsing fails, return actionable validation errors and do not write the file.
-7. If parsing succeeds, write the YAML to `perme8-pipeline.yml` and return the validated `PipelineConfig` plus a UI-ready projection.
+    - stage list reorder/add/remove/update
+    - step list reorder/add/remove/update within a stage
+    - transition list reorder/add/remove/update within a stage
+    - stage gate list reorder/add/remove/update within a stage
+4. Validate/build the merged map into a `PipelineConfig` aggregate.
+5. If validation fails, return actionable errors and do not persist changes.
+6. If validation succeeds, persist the normalized config/stage/step/gate records in `Agents.Repo` and return the validated `PipelineConfig` plus a UI-ready projection.
 
 This keeps one validation source of truth and guarantees the writer never persists a config the parser would reject.
 
@@ -112,9 +114,10 @@ This keeps one validation source of truth and guarantees the writer never persis
 ## Risks and Ambiguities
 
 - The ticket asks for "kanban column order reflects the pipeline stage order", but the current kanban shows ticket lifecycle stages, not literal pipeline config stages. The implementation should align ordering only for the real pipeline-backed stages and avoid regressing the existing ticket-facing kanban behavior.
-- YAML formatting should be deterministic enough to avoid noisy diffs. The writer should preserve semantic ordering even if comments/whitespace are not preserved.
 - Reorder operations need stable UI-only ids so unsaved draft items can move safely before they have durable names.
 - `conditions` are mentioned in the ticket, but the current parser does not model them on `Step`. The plan should treat them as a new optional step field that must be added consistently to parser, writer, entity projection, and tests.
+- Gates now affect runtime progression, so editor changes to gates must preserve both ordering and required/blocking semantics.
+- Transitions now affect runtime routing, so editor changes to transitions must preserve valid target stages and avoid accidental infinite loops.
 
 ## RED / GREEN / REFACTOR Plan
 
@@ -123,7 +126,7 @@ This keeps one validation source of truth and guarantees the writer never persis
 - [x] RED: add parser/entity tests for editable step and stage fields missing from the current model, especially `conditions` and nested warm-pool config round-trips
 - [x] RED: add writer tests that assert a validated config serializes to YAML in the expected field order and reparses cleanly
 - [x] GREEN: extend `Step` and any related projections to carry `conditions` and other editable step fields required by the ticket
-- [x] GREEN: implement `YamlWriter` to convert a normalized config map or `PipelineConfig` struct into YAML with stable ordering for version, pipeline metadata, merge queue, deploy targets, stages, steps, and gates
+- [x] GREEN: implement normalized persistence mapping so validated config aggregates save into structured pipeline tables with stable ordering
 - [x] GREEN: add conversion helpers between `PipelineConfig` structs and editable plain maps so the UI/use case can work with a serializable shape
 - [x] REFACTOR: isolate YAML field ordering and struct-to-map conversion in private infrastructure helpers so parser and writer stay symmetric
 
@@ -149,14 +152,14 @@ This keeps one validation source of truth and guarantees the writer never persis
 
 - [x] RED: add LiveView tests proving invalid saves show clear errors and keep the draft intact
 - [x] RED: add LiveView tests proving valid saves show confirmation and refresh the dashboard/editor from the persisted config
-- [x] RED: add an integration-style test that updates `perme8-pipeline.yml` through the use case using a temporary file and verifies the saved YAML reparses with the expected structure
+- [x] RED: add an integration-style test that updates the persisted pipeline document through the use case and verifies the saved YAML reparses with the expected structure
 - [x] GREEN: wire the save handler to call `UpdatePipelineConfig`, persist to the configured path, and surface success/error flash state in the editor
 - [x] GREEN: ensure the editor refreshes any pipeline-derived UI state after save so displayed stage order stays aligned with the persisted config
 - [x] REFACTOR: funnel post-save refresh into a single helper that updates editor assigns and any dependent pipeline UI from the returned validated config
 
 ## Testing Strategy
 
-- Unit-test `YamlWriter` for field ordering, nested warm-pool serialization, env map serialization, optional field omission, and parse/write/parse round-trips
+- Unit-test the pipeline config builder/mapper for nested warm-pool validation, env handling, optional field omission, and aggregate reconstruction
 - Unit-test `UpdatePipelineConfig` with temporary files and injected doubles for parser/writer dependencies
 - Extend parser/entity tests where the ticket requires new editable fields such as `conditions`
 - Add LiveView tests around `AgentsWeb.DashboardLive.Index` for:
@@ -171,7 +174,7 @@ This keeps one validation source of truth and guarantees the writer never persis
 ## Suggested Implementation Order
 
 1. Extend the editable config shape and add parser/writer round-trip coverage
-2. Implement `YamlWriter` and `UpdatePipelineConfig`
+2. Implement normalized pipeline persistence and `UpdatePipelineConfig`
 3. Expose facade entrypoints and a UI-ready config projection
 4. Add dashboard editor state and handlers
 5. Extract/render editor card components and wire save flow

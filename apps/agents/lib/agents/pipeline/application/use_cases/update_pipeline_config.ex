@@ -1,33 +1,25 @@
 defmodule Agents.Pipeline.Application.UseCases.UpdatePipelineConfig do
   @moduledoc """
-  Applies editable pipeline configuration updates, validates via parser, and persists YAML.
+  Applies editable pipeline configuration updates, validates them, and persists structured records.
   """
 
-  alias Agents.Pipeline.Application.PipelineRuntimeConfig
-
-  @default_path "perme8-pipeline.yml"
+  alias Agents.Pipeline.Application.PipelineConfigBuilder
+  alias Agents.Pipeline.Application.PipelineConfigMapper
+  alias Agents.Pipeline.Application.PipelineConfigStore
 
   @spec execute(map(), keyword()) :: {:ok, map()} | {:error, map()}
   def execute(updates, opts \\ [])
 
   def execute(updates, opts) when is_map(updates) do
-    parser = Keyword.get(opts, :parser, PipelineRuntimeConfig.pipeline_parser())
-    writer = Keyword.get(opts, :writer, pipeline_writer())
-    path = Keyword.get(opts, :pipeline_path, @default_path)
-    file_io = Keyword.get(opts, :file_io, File)
-
-    with {:ok, current_config} <- parser.parse_file(path),
-         current_map <- pipeline_config_to_map(current_config),
+    with {:ok, %{config: current_config}} <- PipelineConfigStore.fetch_document(opts),
+         current_map <- PipelineConfigMapper.to_root_map(current_config),
          merged_map <- merge_updates(current_map, updates),
-         {:ok, yaml} <- writer.dump(merged_map),
-         {:ok, validated_config} <- parser.parse_string(yaml),
-         :ok <- write_file(file_io, path, yaml) do
+         {:ok, validated_config} <- PipelineConfigBuilder.build(merged_map),
+         :ok <- PipelineConfigStore.persist_config(validated_config, opts) do
       {:ok,
        %{
          pipeline_config: validated_config,
-         editable_config: editable_projection(merged_map),
-         yaml: yaml,
-         path: path
+         editable_config: PipelineConfigMapper.to_editable_map(validated_config)
        }}
     else
       {:error, errors} when is_list(errors) ->
@@ -41,34 +33,16 @@ defmodule Agents.Pipeline.Application.UseCases.UpdatePipelineConfig do
 
   def execute(_updates, _opts), do: {:error, %{errors: ["updates must be a map"]}}
 
-  defp pipeline_writer do
-    if function_exported?(PipelineRuntimeConfig, :pipeline_writer, 0) do
-      PipelineRuntimeConfig.pipeline_writer()
-    else
-      :"Elixir.Agents.Pipeline.Infrastructure.YamlWriter"
-    end
-  end
-
   defp safe_merge_preview(opts, updates) do
-    parser = Keyword.get(opts, :parser, PipelineRuntimeConfig.pipeline_parser())
-    path = Keyword.get(opts, :pipeline_path, @default_path)
+    case PipelineConfigStore.fetch_document(opts) do
+      {:ok, %{config: config}} ->
+        config |> PipelineConfigMapper.to_root_map() |> merge_updates(updates)
 
-    case parser.parse_file(path) do
-      {:ok, config} -> config |> pipeline_config_to_map() |> merge_updates(updates)
-      _ -> %{}
+      _ ->
+        %{}
     end
   rescue
     _ -> %{}
-  end
-
-  defp write_file(%{write: write_fun}, path, yaml) when is_function(write_fun, 2),
-    do: write_fun.(path, yaml)
-
-  defp write_file(file_module, path, yaml) do
-    case file_module.write(path, yaml) do
-      :ok -> :ok
-      {:error, reason} -> {:error, "failed to write pipeline file: #{inspect(reason)}"}
-    end
   end
 
   defp merge_updates(current_map, updates) do
@@ -87,7 +61,7 @@ defmodule Agents.Pipeline.Application.UseCases.UpdatePipelineConfig do
   end
 
   defp apply_root_updates(pipeline, updates) do
-    root_keys = ["name", "description", "merge_queue", "deploy_targets"]
+    root_keys = ["name", "description"]
 
     Enum.reduce(root_keys, pipeline, fn key, acc ->
       if Map.has_key?(updates, key), do: Map.put(acc, key, updates[key]), else: acc
@@ -117,7 +91,9 @@ defmodule Agents.Pipeline.Application.UseCases.UpdatePipelineConfig do
       stage_id = stage_update["id"]
 
       existing =
-        Enum.find(existing_stages, &(Map.get(stringify_keys(&1), "id") == stage_id)) || %{}
+        (Enum.find(existing_stages, &(Map.get(stringify_keys(&1), "id") == stage_id)) || %{})
+        |> stringify_keys()
+        |> Map.drop(["depends_on", "triggers", "ticket_concurrency", "transitions"])
 
       merge_stage(existing, stage_update)
     end)
@@ -222,8 +198,6 @@ defmodule Agents.Pipeline.Application.UseCases.UpdatePipelineConfig do
       "version" => version,
       "name" => Map.get(pipeline, "name"),
       "description" => Map.get(pipeline, "description"),
-      "merge_queue" => Map.get(pipeline, "merge_queue", %{}),
-      "deploy_targets" => Map.get(pipeline, "deploy_targets", []),
       "stages" => Map.get(pipeline, "stages", [])
     }
   end
@@ -251,51 +225,4 @@ defmodule Agents.Pipeline.Application.UseCases.UpdatePipelineConfig do
   defp stringify_nested(value) when is_map(value), do: stringify_keys(value)
   defp stringify_nested(value) when is_list(value), do: Enum.map(value, &stringify_nested/1)
   defp stringify_nested(value), do: value
-
-  defp pipeline_config_to_map(config) do
-    %{
-      "version" => config.version,
-      "pipeline" => %{
-        "name" => config.name,
-        "description" => config.description,
-        "merge_queue" => config.merge_queue,
-        "deploy_targets" =>
-          Enum.map(config.deploy_targets, fn target ->
-            %{
-              "id" => target.id,
-              "environment" => target.environment,
-              "provider" => target.provider,
-              "strategy" => target.strategy,
-              "region" => target.region
-            }
-            |> Map.merge(target.config || %{})
-          end),
-        "stages" =>
-          Enum.map(config.stages, fn stage ->
-            %{
-              "id" => stage.id,
-              "type" => stage.type,
-              "deploy_target" => stage.deploy_target,
-              "schedule" => stage.schedule,
-              "steps" =>
-                Enum.map(stage.steps, fn step ->
-                  %{
-                    "name" => step.name,
-                    "run" => step.run,
-                    "timeout_seconds" => step.timeout_seconds,
-                    "retries" => step.retries,
-                    "conditions" => Map.get(step, :conditions),
-                    "env" => step.env
-                  }
-                end),
-              "gates" =>
-                Enum.map(stage.gates, fn gate ->
-                  Map.merge(%{"type" => gate.type, "required" => gate.required}, gate.params)
-                end)
-            }
-            |> Map.merge(stage.config || %{})
-          end)
-      }
-    }
-  end
 end

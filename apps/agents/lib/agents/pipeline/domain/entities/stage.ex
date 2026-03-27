@@ -3,19 +3,35 @@ defmodule Agents.Pipeline.Domain.Entities.Stage do
   Value object representing a pipeline stage.
   """
 
-  alias Agents.Pipeline.Domain.Entities.{Gate, Step}
+  alias Agents.Pipeline.Domain.Entities.{Gate, Step, Transition}
 
   @type t :: %__MODULE__{
           id: String.t(),
           type: String.t(),
-          deploy_target: String.t() | nil,
           schedule: map() | nil,
+          triggers: [String.t()],
+          depends_on: [String.t()],
+          ticket_concurrency: non_neg_integer() | nil,
+          ticket_stage: String.t() | nil,
           config: map(),
           steps: [Step.t()],
-          gates: [Gate.t()]
+          gates: [Gate.t()],
+          transitions: [Transition.t()]
         }
 
-  defstruct [:id, :type, :deploy_target, :schedule, config: %{}, steps: [], gates: []]
+  defstruct [
+    :id,
+    :type,
+    :schedule,
+    :ticket_concurrency,
+    :ticket_stage,
+    triggers: [],
+    depends_on: [],
+    config: %{},
+    steps: [],
+    gates: [],
+    transitions: []
+  ]
 
   @doc "Builds a stage value object from attributes."
   @spec new(map()) :: t()

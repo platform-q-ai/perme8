@@ -22,7 +22,9 @@ defmodule Agents.Pipeline.Infrastructure.StageExecutorTest do
         ]
       })
 
-    assert {:ok, %{exit_code: 0, metadata: %{"attempt" => 2}}} = StageExecutor.execute(stage, %{})
+    assert {:ok,
+            %{exit_code: 0, metadata: %{"steps" => [%{"attempt" => 2, "name" => "retry-once"}]}}} =
+             StageExecutor.execute(stage, %{})
   end
 
   test "times out long-running commands using timeout_seconds" do

@@ -45,10 +45,6 @@ defmodule AgentsWeb.DashboardLive.TicketLifecycleFixtures do
             socket.assigns[:pipeline_editor_authorized?]
           )
         )
-        |> assign(
-          :pipeline_editor_path,
-          Map.get(payload, :pipeline_editor_path, "perme8-pipeline.yml")
-        )
 
       payload ->
         active_ticket_number =
@@ -86,10 +82,6 @@ defmodule AgentsWeb.DashboardLive.TicketLifecycleFixtures do
               :pipeline_editor_authorized?,
               socket.assigns[:pipeline_editor_authorized?]
             )
-          )
-          |> assign(
-            :pipeline_editor_path,
-            Map.get(payload, :pipeline_editor_path, "perme8-pipeline.yml")
           )
           |> assign(:active_ticket_number, active_ticket_number)
           |> assign(
@@ -447,13 +439,7 @@ defmodule AgentsWeb.DashboardLive.TicketLifecycleFixtures do
   end
 
   defp pipeline_editor_fixture_payload("pipeline_configuration_editor_valid_changes") do
-    draft = pipeline_editor_valid_draft()
-
-    %{
-      pipeline_editor_authorized?: true,
-      pipeline_editor_draft: draft,
-      pipeline_editor_path: write_pipeline_editor_fixture(draft, "valid-changes")
-    }
+    %{pipeline_editor_authorized?: true, pipeline_editor_draft: pipeline_editor_valid_draft()}
   end
 
   defp pipeline_editor_fixture_payload(_fixture), do: %{}
@@ -462,15 +448,14 @@ defmodule AgentsWeb.DashboardLive.TicketLifecycleFixtures do
     %{
       "version" => 1,
       "name" => "perme8-core",
-      "merge_queue" => %{"strategy" => "merge_queue"},
-      "deploy_targets" => [
-        %{"id" => "dev", "environment" => "development", "provider" => "docker"}
-      ],
       "stages" => [
         %{
           "id" => "ready",
           "label" => "Ready",
           "type" => "triage",
+          "triggers" => ["on_ticket_play"],
+          "depends_on" => [],
+          "ticket_concurrency" => 1,
           "steps" => [%{"name" => "queue", "run" => "noop", "retries" => 0, "env" => %{}}],
           "gates" => []
         },
@@ -478,13 +463,17 @@ defmodule AgentsWeb.DashboardLive.TicketLifecycleFixtures do
           "id" => "in-progress",
           "label" => "In Progress",
           "type" => "verification",
+          "triggers" => [],
+          "depends_on" => ["ready"],
+          "ticket_concurrency" => 1,
           "steps" => [
             %{
               "name" => "test",
               "run" => "mix test",
               "timeout_seconds" => 300,
               "retries" => 0,
-              "env" => %{}
+              "env" => %{},
+              "depends_on" => []
             }
           ],
           "gates" => []
@@ -493,22 +482,60 @@ defmodule AgentsWeb.DashboardLive.TicketLifecycleFixtures do
           "id" => "in-review",
           "label" => "In Review",
           "type" => "review",
-          "steps" => [%{"name" => "review", "run" => "mix credo", "retries" => 0, "env" => %{}}],
+          "triggers" => [],
+          "depends_on" => ["in-progress"],
+          "ticket_concurrency" => 1,
+          "steps" => [
+            %{
+              "name" => "review",
+              "run" => "mix credo",
+              "retries" => 0,
+              "env" => %{},
+              "depends_on" => []
+            }
+          ],
           "gates" => []
         },
         %{
           "id" => "warm-pool",
           "label" => "Warm Pool",
           "type" => "warm_pool",
-          "deploy_target" => "dev",
           "schedule" => %{"cron" => "*/5 * * * *"},
+          "triggers" => ["on_warm_pool"],
+          "depends_on" => [],
+          "ticket_concurrency" => 1,
           "warm_pool" => %{
             "target_count" => 2,
             "image" => "ghcr.io/platform-q-ai/perme8-runtime:latest",
             "readiness" => %{"strategy" => "command_success"}
           },
           "steps" => [
-            %{"name" => "prestart", "run" => "scripts/warm_pool.sh", "retries" => 0, "env" => %{}}
+            %{
+              "name" => "prestart",
+              "run" => "scripts/warm_pool.sh",
+              "retries" => 0,
+              "env" => %{},
+              "depends_on" => []
+            }
+          ],
+          "gates" => []
+        },
+        %{
+          "id" => "merge-queue",
+          "label" => "Merge Queue",
+          "type" => "automation",
+          "schedule" => %{"cron" => "*/10 * * * *"},
+          "triggers" => ["on_merge_window"],
+          "depends_on" => ["in-progress"],
+          "ticket_concurrency" => 0,
+          "steps" => [
+            %{
+              "name" => "merge-batch",
+              "run" => "scripts/merge_queue.sh",
+              "retries" => 0,
+              "env" => %{},
+              "depends_on" => []
+            }
           ],
           "gates" => []
         }
@@ -523,22 +550,41 @@ defmodule AgentsWeb.DashboardLive.TicketLifecycleFixtures do
         "id" => "legacy-cleanup",
         "label" => "Legacy Cleanup",
         "type" => "verification",
-        "steps" => [%{"name" => "cleanup", "run" => "mix clean", "retries" => 0, "env" => %{}}],
+        "triggers" => ["on_ticket_play"],
+        "depends_on" => [],
+        "ticket_concurrency" => 1,
+        "steps" => [
+          %{
+            "name" => "cleanup",
+            "run" => "mix clean",
+            "retries" => 0,
+            "env" => %{},
+            "depends_on" => []
+          }
+        ],
         "gates" => []
       },
       %{
         "id" => "warm-pool",
         "label" => "Warm Pool",
         "type" => "warm_pool",
-        "deploy_target" => "dev",
         "schedule" => %{"cron" => "*/5 * * * *"},
+        "triggers" => ["on_warm_pool"],
+        "depends_on" => [],
+        "ticket_concurrency" => 1,
         "warm_pool" => %{
           "target_count" => 2,
           "image" => "ghcr.io/platform-q-ai/perme8-runtime:latest",
           "readiness" => %{"strategy" => "command_success"}
         },
         "steps" => [
-          %{"name" => "prestart", "run" => "scripts/warm_pool.sh", "retries" => 0, "env" => %{}}
+          %{
+            "name" => "prestart",
+            "run" => "scripts/warm_pool.sh",
+            "retries" => 0,
+            "env" => %{},
+            "depends_on" => []
+          }
         ],
         "gates" => []
       }
@@ -553,63 +599,6 @@ defmodule AgentsWeb.DashboardLive.TicketLifecycleFixtures do
   defp pipeline_editor_valid_draft do
     pipeline_editor_base_draft()
     |> put_in(["stages", Access.at(1), "steps", Access.at(0), "run"], "mix test --trace")
-  end
-
-  defp write_pipeline_editor_fixture(draft, fixture_name) do
-    path =
-      Path.join(
-        System.tmp_dir!(),
-        "pipeline-editor-#{fixture_name}-#{System.unique_integer([:positive])}-perme8-pipeline.yml"
-      )
-
-    File.write!(path, pipeline_editor_fixture_yaml(draft))
-    path
-  end
-
-  defp pipeline_editor_fixture_yaml(draft) do
-    in_progress_run = get_in(draft, ["stages", Access.at(1), "steps", Access.at(0), "run"])
-
-    """
-    version: 1
-    pipeline:
-      name: perme8-core
-      merge_queue:
-        strategy: merge_queue
-      deploy_targets:
-        - id: dev
-          environment: development
-          provider: docker
-      stages:
-        - id: ready
-          type: triage
-          steps:
-            - name: queue
-              run: noop
-        - id: in-progress
-          type: verification
-          steps:
-            - name: test
-              run: #{in_progress_run}
-              timeout_seconds: 300
-        - id: in-review
-          type: review
-          steps:
-            - name: review
-              run: mix credo
-        - id: warm-pool
-          type: warm_pool
-          deploy_target: dev
-          schedule:
-            cron: "*/5 * * * *"
-          warm_pool:
-            target_count: 2
-            image: ghcr.io/platform-q-ai/perme8-runtime:latest
-            readiness:
-              strategy: command_success
-          steps:
-            - name: prestart
-              run: scripts/warm_pool.sh
-    """
   end
 
   defp pipeline_kanban_fixture_tickets(mode \\ :default) do

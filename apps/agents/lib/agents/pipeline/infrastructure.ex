@@ -7,23 +7,26 @@ defmodule Agents.Pipeline.Infrastructure do
     exports: [
       ExoBddGitDiffComputer,
       ExoBddGitMerger,
+      GateEvaluator,
       GitCommandRunner,
       GitDiffComputer,
       GitMerger,
-      MergeQueueWorker,
       PipelineEventHandler,
       PipelineScheduler,
+      Repositories.PipelineConfigRepository,
       Repositories.PipelineRunRepository,
       Repositories.PullRequestRepository,
+      Schemas.PipelineConfigSchema,
+      Schemas.PipelineGateSchema,
+      Schemas.PipelineStageSchema,
+      Schemas.PipelineStepSchema,
+      Schemas.PipelineTransitionSchema,
       SessionReopener,
       StageExecutor,
       TaskContextProvider,
-      WarmPoolCounter,
       Schemas.PipelineRunSchema,
       Schemas.PullRequestSchema,
       Schemas.ReviewCommentSchema,
-      Schemas.ReviewSchema,
-      YamlParser,
-      YamlWriter
+      Schemas.ReviewSchema
     ]
 end
