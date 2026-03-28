@@ -16,35 +16,9 @@ defmodule AgentsWeb.DashboardLive.TicketLifecycleFixtures do
   def maybe_apply_ticket_lifecycle_fixture(socket, %{"fixture" => fixture})
       when is_binary(fixture) do
     case fixture_payload(fixture) do
-      payload = %{tickets: []} ->
+      %{tickets: []} ->
         socket
         |> assign(:fixture, fixture)
-        |> assign(
-          :pipeline_editor_draft,
-          Map.get(
-            payload,
-            :pipeline_editor_draft,
-            socket.assigns[:pipeline_editor_draft] || %{"stages" => []}
-          )
-        )
-        |> assign(:pipeline_editor_errors, Map.get(payload, :pipeline_editor_errors, []))
-        |> assign(:pipeline_editor_saved_at, Map.get(payload, :pipeline_editor_saved_at, nil))
-        |> assign(
-          :pipeline_editor_load_failed?,
-          Map.get(
-            payload,
-            :pipeline_editor_load_failed?,
-            socket.assigns[:pipeline_editor_load_failed?]
-          )
-        )
-        |> assign(
-          :pipeline_editor_authorized?,
-          Map.get(
-            payload,
-            :pipeline_editor_authorized?,
-            socket.assigns[:pipeline_editor_authorized?]
-          )
-        )
 
       payload ->
         active_ticket_number =
@@ -57,32 +31,6 @@ defmodule AgentsWeb.DashboardLive.TicketLifecycleFixtures do
           |> assign(:sessions, Map.get(payload, :sessions, []))
           |> assign(:tasks_snapshot, Map.get(payload, :tasks_snapshot, []))
           |> assign(:tickets, payload.tickets)
-          |> assign(
-            :pipeline_editor_draft,
-            Map.get(
-              payload,
-              :pipeline_editor_draft,
-              socket.assigns[:pipeline_editor_draft] || %{"stages" => []}
-            )
-          )
-          |> assign(:pipeline_editor_errors, Map.get(payload, :pipeline_editor_errors, []))
-          |> assign(:pipeline_editor_saved_at, Map.get(payload, :pipeline_editor_saved_at, nil))
-          |> assign(
-            :pipeline_editor_load_failed?,
-            Map.get(
-              payload,
-              :pipeline_editor_load_failed?,
-              socket.assigns[:pipeline_editor_load_failed?]
-            )
-          )
-          |> assign(
-            :pipeline_editor_authorized?,
-            Map.get(
-              payload,
-              :pipeline_editor_authorized?,
-              socket.assigns[:pipeline_editor_authorized?]
-            )
-          )
           |> assign(:active_ticket_number, active_ticket_number)
           |> assign(
             :pipeline_kanban_collapsed,
@@ -129,7 +77,6 @@ defmodule AgentsWeb.DashboardLive.TicketLifecycleFixtures do
   defp fixture_payload(fixture) do
     %{tickets: ticket_lifecycle_fixture_tickets(fixture)}
     |> Map.merge(pipeline_kanban_fixture_payload(fixture))
-    |> Map.merge(pipeline_editor_fixture_payload(fixture))
   end
 
   def ticket_lifecycle_fixture_tickets("ticket_lifecycle_in_progress") do
@@ -417,189 +364,6 @@ defmodule AgentsWeb.DashboardLive.TicketLifecycleFixtures do
   end
 
   defp pipeline_kanban_fixture_payload(_fixture), do: %{}
-
-  defp pipeline_editor_fixture_payload("pipeline_configuration_editor_loaded") do
-    %{pipeline_editor_authorized?: true, pipeline_editor_draft: pipeline_editor_base_draft()}
-  end
-
-  defp pipeline_editor_fixture_payload("pipeline_configuration_editor_step_editing") do
-    %{pipeline_editor_authorized?: true, pipeline_editor_draft: pipeline_editor_base_draft()}
-  end
-
-  defp pipeline_editor_fixture_payload("pipeline_configuration_editor_warm_pool_editing") do
-    %{pipeline_editor_authorized?: true, pipeline_editor_draft: pipeline_editor_base_draft()}
-  end
-
-  defp pipeline_editor_fixture_payload("pipeline_configuration_editor_structure_editing") do
-    %{pipeline_editor_authorized?: true, pipeline_editor_draft: pipeline_editor_structure_draft()}
-  end
-
-  defp pipeline_editor_fixture_payload("pipeline_configuration_editor_invalid_changes") do
-    %{pipeline_editor_authorized?: true, pipeline_editor_draft: pipeline_editor_invalid_draft()}
-  end
-
-  defp pipeline_editor_fixture_payload("pipeline_configuration_editor_valid_changes") do
-    %{pipeline_editor_authorized?: true, pipeline_editor_draft: pipeline_editor_valid_draft()}
-  end
-
-  defp pipeline_editor_fixture_payload(_fixture), do: %{}
-
-  defp pipeline_editor_base_draft do
-    %{
-      "version" => 1,
-      "name" => "perme8-core",
-      "stages" => [
-        %{
-          "id" => "ready",
-          "label" => "Ready",
-          "type" => "triage",
-          "triggers" => ["on_ticket_play"],
-          "depends_on" => [],
-          "ticket_concurrency" => 1,
-          "steps" => [%{"name" => "queue", "run" => "noop", "retries" => 0, "env" => %{}}],
-          "gates" => []
-        },
-        %{
-          "id" => "in-progress",
-          "label" => "In Progress",
-          "type" => "verification",
-          "triggers" => [],
-          "depends_on" => ["ready"],
-          "ticket_concurrency" => 1,
-          "steps" => [
-            %{
-              "name" => "test",
-              "run" => "mix test",
-              "timeout_seconds" => 300,
-              "retries" => 0,
-              "env" => %{},
-              "depends_on" => []
-            }
-          ],
-          "gates" => []
-        },
-        %{
-          "id" => "in-review",
-          "label" => "In Review",
-          "type" => "review",
-          "triggers" => [],
-          "depends_on" => ["in-progress"],
-          "ticket_concurrency" => 1,
-          "steps" => [
-            %{
-              "name" => "review",
-              "run" => "mix credo",
-              "retries" => 0,
-              "env" => %{},
-              "depends_on" => []
-            }
-          ],
-          "gates" => []
-        },
-        %{
-          "id" => "warm-pool",
-          "label" => "Warm Pool",
-          "type" => "warm_pool",
-          "schedule" => %{"cron" => "*/5 * * * *"},
-          "triggers" => ["on_warm_pool"],
-          "depends_on" => [],
-          "ticket_concurrency" => 1,
-          "warm_pool" => %{
-            "target_count" => 2,
-            "image" => "ghcr.io/platform-q-ai/perme8-runtime:latest",
-            "readiness" => %{"strategy" => "command_success"}
-          },
-          "steps" => [
-            %{
-              "name" => "prestart",
-              "run" => "scripts/warm_pool.sh",
-              "retries" => 0,
-              "env" => %{},
-              "depends_on" => []
-            }
-          ],
-          "gates" => []
-        },
-        %{
-          "id" => "merge-queue",
-          "label" => "Merge Queue",
-          "type" => "automation",
-          "schedule" => %{"cron" => "*/10 * * * *"},
-          "triggers" => ["on_merge_window"],
-          "depends_on" => ["in-progress"],
-          "ticket_concurrency" => 0,
-          "steps" => [
-            %{
-              "name" => "merge-batch",
-              "run" => "scripts/merge_queue.sh",
-              "retries" => 0,
-              "env" => %{},
-              "depends_on" => []
-            }
-          ],
-          "gates" => []
-        }
-      ]
-    }
-  end
-
-  defp pipeline_editor_structure_draft do
-    pipeline_editor_base_draft()
-    |> put_in(["stages"], [
-      %{
-        "id" => "legacy-cleanup",
-        "label" => "Legacy Cleanup",
-        "type" => "verification",
-        "triggers" => ["on_ticket_play"],
-        "depends_on" => [],
-        "ticket_concurrency" => 1,
-        "steps" => [
-          %{
-            "name" => "cleanup",
-            "run" => "mix clean",
-            "retries" => 0,
-            "env" => %{},
-            "depends_on" => []
-          }
-        ],
-        "gates" => []
-      },
-      %{
-        "id" => "warm-pool",
-        "label" => "Warm Pool",
-        "type" => "warm_pool",
-        "schedule" => %{"cron" => "*/5 * * * *"},
-        "triggers" => ["on_warm_pool"],
-        "depends_on" => [],
-        "ticket_concurrency" => 1,
-        "warm_pool" => %{
-          "target_count" => 2,
-          "image" => "ghcr.io/platform-q-ai/perme8-runtime:latest",
-          "readiness" => %{"strategy" => "command_success"}
-        },
-        "steps" => [
-          %{
-            "name" => "prestart",
-            "run" => "scripts/warm_pool.sh",
-            "retries" => 0,
-            "env" => %{},
-            "depends_on" => []
-          }
-        ],
-        "gates" => []
-      }
-    ])
-  end
-
-  defp pipeline_editor_invalid_draft do
-    pipeline_editor_base_draft()
-    |> put_in(["stages", Access.at(1), "steps", Access.at(0), "run"], nil)
-  end
-
-  defp pipeline_editor_valid_draft do
-    pipeline_editor_base_draft()
-    |> put_in(["stages", Access.at(1), "steps", Access.at(0), "run"], "mix test --trace")
-  end
 
   defp pipeline_kanban_fixture_tickets(mode \\ :default) do
     rollup_tickets =
