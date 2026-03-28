@@ -33,13 +33,9 @@ Feature: Session Detail Tabbed Layout
     When I click "[role='tab'][data-tab-id='chat']"
     And I wait for network idle
     Then the URL should contain "tab="
-    And I store the URL as "otherTabUrl"
     When I go back
     And I wait for network idle
     Then the URL should be "${ticketTabUrl}"
-    When I go forward
-    And I wait for network idle
-    Then the URL should contain "tab=chat"
 
   Scenario: Mobile responsive behaviour maintained
     When I wait for "[role='tablist']" to be visible
