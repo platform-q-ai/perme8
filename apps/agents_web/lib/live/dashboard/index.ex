@@ -4,7 +4,6 @@ defmodule AgentsWeb.DashboardLive.Index do
   use AgentsWeb, :live_view
 
   import AgentsWeb.DashboardLive.Components.SessionComponents
-  import AgentsWeb.DashboardLive.Components.PipelineEditorComponents
   import AgentsWeb.DashboardLive.Components.PipelineKanbanComponents
   import AgentsWeb.DashboardLive.Components.SidebarComponents
   import AgentsWeb.DashboardLive.Components.DetailPanelComponents
@@ -14,8 +13,6 @@ defmodule AgentsWeb.DashboardLive.Index do
   import AgentsWeb.DashboardLive.TicketLifecycleFixtures,
     only: [maybe_apply_ticket_lifecycle_fixture: 2]
 
-  alias Agents
-  alias Identity
   alias Agents.Sessions
   alias Agents.Sessions.Domain.Entities.QueueSnapshot
   alias Agents.Tickets
@@ -27,7 +24,6 @@ defmodule AgentsWeb.DashboardLive.Index do
   alias AgentsWeb.DashboardLive.FollowUpDispatchHandlers
   alias AgentsWeb.DashboardLive.PipelineKanbanHandlers
   alias AgentsWeb.DashboardLive.PipelineKanbanState
-  alias AgentsWeb.DashboardLive.PipelineEditorHandlers
   alias AgentsWeb.DashboardLive.PubSubHandlers
   alias AgentsWeb.DashboardLive.QuestionHandlers
   alias AgentsWeb.DashboardLive.PRHandlers
@@ -55,13 +51,9 @@ defmodule AgentsWeb.DashboardLive.Index do
 
     available_images = Sessions.available_images()
     default_image = Sessions.default_image()
-    pipeline_editor_authorized? = pipeline_editor_authorized?(user)
-
-    {pipeline_editor_draft, pipeline_editor_errors, pipeline_editor_load_failed?} =
-      load_pipeline_editor_state(pipeline_editor_authorized?)
-
     sessions = merge_unassigned_active_tasks(sessions, tasks)
     sticky_warm_task_ids = derive_sticky_warm_task_ids(sessions, queue_state, MapSet.new())
+    show_pipeline_management_note? = pipeline_management_note_visible?(user)
 
     {:ok,
      socket
@@ -87,6 +79,7 @@ defmodule AgentsWeb.DashboardLive.Index do
      |> assign(:queue_snapshot, queue_snapshot)
      |> assign(:queue_state, queue_state)
      |> assign(:sticky_warm_task_ids, sticky_warm_task_ids)
+     |> assign(:show_pipeline_management_note?, show_pipeline_management_note?)
      |> assign(:refreshing_task_ids, MapSet.new())
      |> assign(:pending_follow_ups, %{})
      |> assign(:session_search, "")
@@ -102,12 +95,6 @@ defmodule AgentsWeb.DashboardLive.Index do
      |> assign(:dependency_search_query, "")
      |> assign(:selected_dependency_target, nil)
      |> assign(:dependency_direction, nil)
-     |> assign(:pipeline_editor_authorized?, pipeline_editor_authorized?)
-     |> assign(:pipeline_editor_draft, pipeline_editor_draft)
-     |> assign(:pipeline_editor_errors, pipeline_editor_errors)
-     |> assign(:pipeline_editor_load_failed?, pipeline_editor_load_failed?)
-     |> assign(:pipeline_editor_saving, false)
-     |> assign(:pipeline_editor_saved_at, nil)
      |> PipelineKanbanState.assign_pipeline_kanban()
      |> assign(:selected_ticket, nil)
      |> assign(:selected_pull_request, nil)
@@ -284,42 +271,6 @@ defmodule AgentsWeb.DashboardLive.Index do
   @impl true
   def handle_event("select_kanban_ticket", params, socket),
     do: PipelineKanbanHandlers.select_kanban_ticket(params, socket)
-
-  @impl true
-  def handle_event("pipeline_editor_change", params, socket),
-    do: PipelineEditorHandlers.change(params, socket)
-
-  @impl true
-  def handle_event("pipeline_editor_add_stage", params, socket),
-    do: PipelineEditorHandlers.add_stage(params, socket)
-
-  @impl true
-  def handle_event("pipeline_editor_add_step", params, socket),
-    do: PipelineEditorHandlers.add_step(params, socket)
-
-  @impl true
-  def handle_event("pipeline_editor_move_stage_up", params, socket),
-    do: PipelineEditorHandlers.move_stage_up(params, socket)
-
-  @impl true
-  def handle_event("pipeline_editor_move_stage_down", params, socket),
-    do: PipelineEditorHandlers.move_stage_down(params, socket)
-
-  @impl true
-  def handle_event("pipeline_editor_remove_stage", params, socket),
-    do: PipelineEditorHandlers.remove_stage(params, socket)
-
-  @impl true
-  def handle_event("pipeline_editor_move_step_down", params, socket),
-    do: PipelineEditorHandlers.move_step_down(params, socket)
-
-  @impl true
-  def handle_event("pipeline_editor_remove_step", params, socket),
-    do: PipelineEditorHandlers.remove_step(params, socket)
-
-  @impl true
-  def handle_event("pipeline_editor_save", params, socket),
-    do: PipelineEditorHandlers.save(params, socket)
 
   # -- Session Handlers --------------------------------------------------------
 
@@ -592,7 +543,7 @@ defmodule AgentsWeb.DashboardLive.Index do
   # Push a switch_draft_key event to the SessionFormHook when a ticket is active.
   # This fires AFTER handle_params completes, ensuring the LiveView socket is
   # stable and the hook receives the event reliably.
-  defp pipeline_editor_authorized?(user) do
+  defp pipeline_management_note_visible?(user) do
     user
     |> Identity.list_workspaces_for_user()
     |> Enum.any?(fn workspace ->
@@ -601,23 +552,6 @@ defmodule AgentsWeb.DashboardLive.Index do
         _ -> false
       end
     end)
-  end
-
-  defp load_pipeline_editor_state(false), do: {%{"stages" => []}, [], false}
-
-  defp load_pipeline_editor_state(true) do
-    case pipeline_editor_loader().() do
-      {:ok, draft} -> {draft, [], false}
-      {:error, errors} -> {nil, ["Unable to load pipeline configuration" | errors], true}
-    end
-  end
-
-  defp pipeline_editor_loader do
-    Application.get_env(
-      :agents_web,
-      :pipeline_editor_loader,
-      &Agents.load_editable_pipeline_config/0
-    )
   end
 
   @status_filter_by_param %{

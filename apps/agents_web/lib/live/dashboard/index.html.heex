@@ -194,14 +194,13 @@
         active_ticket_number={@active_ticket_number}
       />
 
-      <.pipeline_editor
-        :if={@pipeline_editor_authorized?}
-        draft={@pipeline_editor_draft}
-        errors={@pipeline_editor_errors}
-        load_failed={@pipeline_editor_load_failed?}
-        saved_at={@pipeline_editor_saved_at}
-        saving={@pipeline_editor_saving}
-      />
+      <section
+        :if={@show_pipeline_management_note?}
+        class="border-t border-base-300 bg-base-100/95 px-3 py-3 text-sm text-base-content/70"
+        data-testid="pipeline-management-note"
+      >
+        Pipeline configuration is being moved out of sessions and into the dedicated pipeline UI in the sidebar.
+      </section>
     </div>
 
     <% selected_ticket =
